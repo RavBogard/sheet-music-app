@@ -128,7 +128,7 @@ export function registerWriteTools(server: McpServer): void {
         "create_setlist",
         {
             description:
-                "Create a new, empty setlist owned by the user. Use when the user wants to start a new service/gig. Returns the new setlist id — follow up with add_track_to_setlist to populate it. eventDate is an ISO date string.",
+                "Create a new, empty setlist owned by the user. Use when the user wants to start a new service/gig. Returns the new setlist id — follow up with add_track_to_setlist to populate it. eventDate is an ISO date string. Requires an admin or band leader account.",
             inputSchema: {
                 name: z.string().min(1).describe("Setlist name, e.g. 'Shabbat Morning — June 7'"),
                 eventDate: z
@@ -149,7 +149,7 @@ export function registerWriteTools(server: McpServer): void {
         "update_setlist",
         {
             description:
-                "Update a setlist's metadata (name, date, service type, rabbi, notes). Metadata only — does NOT touch tracks; use the track tools for that. Only the setlist's owner may update it.",
+                "Update a setlist's metadata (name, date, service type, rabbi, notes). Metadata only — does NOT touch tracks; use the track tools for that. Admins and band leaders may update it.",
             inputSchema: {
                 id: z.string().describe("Setlist id"),
                 name: z.string().min(1).optional().describe("New setlist name"),
@@ -166,7 +166,7 @@ export function registerWriteTools(server: McpServer): void {
         "add_track_to_setlist",
         {
             description:
-                "Add one row to a setlist — either a song (pass songId to pull title/key/vocal-lead from the library AND bond the song's chart so it renders on the row, or pass an explicit title for a free-text row) or a section header (type:'header' with a title). position is a 0-based insert index; omit it to append at the end. Only the setlist's owner may add tracks.",
+                "Add one row to a setlist — either a song (pass songId to pull title/key/vocal-lead from the library AND bond the song's chart so it renders on the row, or pass an explicit title for a free-text row) or a section header (type:'header' with a title). position is a 0-based insert index; omit it to append at the end. Admins and band leaders may add tracks.",
             inputSchema: {
                 setlistId: z.string().describe("Setlist id"),
                 songId: z
@@ -200,7 +200,7 @@ export function registerWriteTools(server: McpServer): void {
         "reorder_setlist",
         {
             description:
-                "Reorder a setlist's tracks. orderedTrackIds must list every current track id of the setlist exactly once, in the new performance order. Get the current ids from get_setlist first. Only the setlist's owner may reorder.",
+                "Reorder a setlist's tracks. orderedTrackIds must list every current track id of the setlist exactly once, in the new performance order. Get the current ids from get_setlist first. Admins and band leaders may reorder.",
             inputSchema: {
                 setlistId: z.string().describe("Setlist id"),
                 orderedTrackIds: z
@@ -215,7 +215,7 @@ export function registerWriteTools(server: McpServer): void {
         "remove_track",
         {
             description:
-                "Remove one track from a setlist by id. The remaining tracks are re-packed to stay contiguous. Only the setlist's owner may remove tracks.",
+                "Remove one track from a setlist by id. The remaining tracks are re-packed to stay contiguous. Admins and band leaders may remove tracks.",
             inputSchema: {
                 setlistId: z.string().describe("Setlist id"),
                 trackId: z.string().describe("Id of the track to remove"),

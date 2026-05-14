@@ -5,7 +5,8 @@ import {
     type SetlistMetadataPatch,
 } from "@/lib/setlist-write"
 import {
-    loadOwnedSetlist,
+    assertEditor,
+    loadEditableSetlist,
     addTrack,
     reorderTracks,
     removeTrack,
@@ -20,8 +21,10 @@ import { getSongById } from "@/lib/mcp/server-songs"
  *  - add_track / reorder / remove wrap @/lib/mcp/server-tracks-write (discrete
  *    track ops the shared module doesn't provide).
  *
- * All five are owner-scoped: the `uid` comes from the verified MCP bearer
- * token, and every mutation of an existing setlist asserts `ownerId === uid`.
+ * All five are role-gated: the `uid` comes from the verified MCP bearer token,
+ * and every tool asserts the account is an `admin` or `band_leader`. Those
+ * roles may create and edit ANY setlist (matches the app's editing model);
+ * everyone else is read-only. See assertEditor in server-tracks-write.
  */
 
 /** A tool result carrying a user-facing error instead of throwing. */
@@ -51,9 +54,16 @@ export interface CreateSetlistArgs {
     rabbi?: string
 }
 
-export async function createSetlist(uid: string, args: CreateSetlistArgs) {
+export async function createSetlist(
+    uid: string,
+    args: CreateSetlistArgs,
+): Promise<{ setlistId: string; trackCount: number } | ToolError> {
     initAdmin()
     const db = getFirestore()
+
+    const editor = await assertEditor(db, uid)
+    if (!editor.ok) return { error: editor.error }
+
     const ownerName = await ownerNameFor(db, uid)
 
     const result = await createSetlistServerSide({
@@ -86,8 +96,8 @@ export async function updateSetlist(
     initAdmin()
     const db = getFirestore()
 
-    const owned = await loadOwnedSetlist(db, args.id, uid)
-    if (!owned.ok) return { error: owned.error }
+    const loaded = await loadEditableSetlist(db, args.id, uid)
+    if (!loaded.ok) return { error: loaded.error }
 
     const patch: SetlistMetadataPatch = {}
     if (args.name !== undefined) patch.name = args.name
@@ -126,8 +136,8 @@ export async function addTrackToSetlist(
     initAdmin()
     const db = getFirestore()
 
-    const owned = await loadOwnedSetlist(db, args.setlistId, uid)
-    if (!owned.ok) return { error: owned.error }
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    if (!loaded.ok) return { error: loaded.error }
 
     const type = args.type ?? "song"
 
@@ -178,8 +188,8 @@ export async function reorderSetlist(
     initAdmin()
     const db = getFirestore()
 
-    const owned = await loadOwnedSetlist(db, args.setlistId, uid)
-    if (!owned.ok) return { error: owned.error }
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    if (!loaded.ok) return { error: loaded.error }
 
     const result = await reorderTracks(db, args.setlistId, args.orderedTrackIds)
     return result.ok ? { ok: true } : { error: result.error }
@@ -199,8 +209,8 @@ export async function removeSetlistTrack(
     initAdmin()
     const db = getFirestore()
 
-    const owned = await loadOwnedSetlist(db, args.setlistId, uid)
-    if (!owned.ok) return { error: owned.error }
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    if (!loaded.ok) return { error: loaded.error }
 
     const result = await removeTrack(db, args.setlistId, args.trackId)
     return result.ok ? { ok: true } : { error: result.error }

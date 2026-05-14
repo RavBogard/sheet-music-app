@@ -17,15 +17,18 @@ import {
  * the trackCount/updatedAt denormalization are inherently Firestore-coupled —
  * mocking would test the mock, not the logic — so this is emulator-only.
  *
- * Covers: create → owner-scoped update → add (append / insert / songId /
- * header) → reorder → remove, plus the ownership and validation guards.
+ * Covers: create → update → add (append / insert / songId / header / chart
+ * bond) → reorder → remove, plus the role gate (admin/band_leader may edit ANY
+ * setlist; everyone else is read-only) and the validation guards.
  *
  * Runs only via `npm run test:emulator` (firebase emulators:exec wrapper).
  */
 describe("MCP setlist write tools (emulator)", () => {
     let app: App
-    const OWNER = "rabbi-daniel"
-    const OTHER = "randy"
+    const ADMIN = "rabbi-daniel" // role: admin — creates setlists in most tests
+    const LEADER = "randy" // role: band_leader — may edit ANY setlist
+    const MEMBER = "guest-musician" // role: musician — read-only, write tools denied
+    const NOT_EDITOR_ERROR = "Write tools require an admin or band leader account"
 
     function db() {
         return getFirestore(app)
@@ -45,9 +48,20 @@ describe("MCP setlist write tools (emulator)", () => {
     beforeAll(async () => {
         expect(process.env.FIRESTORE_EMULATOR_HOST).toBeTruthy()
         app = getApps()[0] ?? initializeApp({ projectId: "demo-mcp-setlist-write" })
-        // Seed the owner's profile (createSetlist denormalizes ownerName) and a
+        // Seed the three role tiers (write tools gate on users/{uid}.role) and a
         // library song (add_track_to_setlist can derive a row from a songId).
-        await db().collection("users").doc(OWNER).set({ displayName: "Rabbi Daniel" })
+        await db()
+            .collection("users")
+            .doc(ADMIN)
+            .set({ displayName: "Rabbi Daniel", role: "admin" })
+        await db()
+            .collection("users")
+            .doc(LEADER)
+            .set({ displayName: "Randy", role: "band_leader" })
+        await db()
+            .collection("users")
+            .doc(MEMBER)
+            .set({ displayName: "Guest Musician", role: "musician" })
         await db()
             .collection("songs")
             .doc("song-oseh")
@@ -65,15 +79,15 @@ describe("MCP setlist write tools (emulator)", () => {
         }
     })
 
-    async function newSetlist(uid = OWNER): Promise<string> {
+    async function newSetlist(uid = ADMIN): Promise<string> {
         const r = (await createSetlist(uid, { name: "Test Service" })) as {
             setlistId: string
         }
         return r.setlistId
     }
 
-    it("create_setlist makes an empty owner-scoped setlist", async () => {
-        const result = (await createSetlist(OWNER, {
+    it("create_setlist makes an empty setlist owned by the creator", async () => {
+        const result = (await createSetlist(ADMIN, {
             name: "Shabbat Morning",
             eventDate: "2026-06-07",
             rabbi: "Daniel",
@@ -84,39 +98,75 @@ describe("MCP setlist write tools (emulator)", () => {
 
         const doc = await db().collection("setlists").doc(result.setlistId).get()
         const data = doc.data()!
-        expect(data.ownerId).toBe(OWNER)
+        expect(data.ownerId).toBe(ADMIN)
         expect(data.ownerName).toBe("Rabbi Daniel")
         expect(data.name).toBe("Shabbat Morning")
         expect(data.trackCount).toBe(0)
         expect(await tracksOf(result.setlistId)).toHaveLength(0)
     })
 
-    it("update_setlist patches metadata for the owner only", async () => {
-        const id = await newSetlist()
+    it("update_setlist: any editor may edit any setlist; members may not", async () => {
+        const id = await newSetlist(ADMIN)
 
-        expect(await updateSetlist(OWNER, { id, name: "Renamed" })).toEqual({ ok: true })
+        // The creator (admin) edits.
+        expect(await updateSetlist(ADMIN, { id, name: "Renamed" })).toEqual({ ok: true })
         expect((await db().collection("setlists").doc(id).get()).data()!.name).toBe("Renamed")
 
-        // Non-owner is rejected without mutating anything.
-        expect(await updateSetlist(OTHER, { id, name: "Hijacked" })).toEqual({
-            error: "You do not own this setlist",
+        // A band leader edits a setlist they did NOT create — role-based, not
+        // owner-based access.
+        expect(await updateSetlist(LEADER, { id, name: "Leader Edit" })).toEqual({ ok: true })
+        expect((await db().collection("setlists").doc(id).get()).data()!.name).toBe(
+            "Leader Edit",
+        )
+
+        // A member is rejected without mutating anything.
+        expect(await updateSetlist(MEMBER, { id, name: "Hijacked" })).toEqual({
+            error: NOT_EDITOR_ERROR,
         })
-        expect((await db().collection("setlists").doc(id).get()).data()!.name).toBe("Renamed")
+        expect((await db().collection("setlists").doc(id).get()).data()!.name).toBe(
+            "Leader Edit",
+        )
 
-        // Missing setlist.
-        expect(await updateSetlist(OWNER, { id: "nope", name: "x" })).toEqual({
+        // Missing setlist (caller IS an editor — the existence check still runs).
+        expect(await updateSetlist(ADMIN, { id: "nope", name: "x" })).toEqual({
             error: "Setlist not found",
         })
+    })
+
+    it("a member account is denied every write tool", async () => {
+        const id = await newSetlist(ADMIN)
+        const t = (await addTrackToSetlist(ADMIN, { setlistId: id, title: "Row" })) as {
+            trackId: string
+        }
+
+        expect(await createSetlist(MEMBER, { name: "Nope" })).toEqual({
+            error: NOT_EDITOR_ERROR,
+        })
+        expect(await updateSetlist(MEMBER, { id, name: "Nope" })).toEqual({
+            error: NOT_EDITOR_ERROR,
+        })
+        expect(await addTrackToSetlist(MEMBER, { setlistId: id, title: "Nope" })).toEqual({
+            error: NOT_EDITOR_ERROR,
+        })
+        expect(
+            await reorderSetlist(MEMBER, { setlistId: id, orderedTrackIds: [t.trackId] }),
+        ).toEqual({ error: NOT_EDITOR_ERROR })
+        expect(
+            await removeSetlistTrack(MEMBER, { setlistId: id, trackId: t.trackId }),
+        ).toEqual({ error: NOT_EDITOR_ERROR })
+
+        // Nothing was mutated.
+        expect(await tracksOf(id)).toHaveLength(1)
     })
 
     it("add_track_to_setlist appends, keeping order contiguous + trackCount in sync", async () => {
         const id = await newSetlist()
 
-        const a = (await addTrackToSetlist(OWNER, { setlistId: id, title: "Song A" })) as {
+        const a = (await addTrackToSetlist(ADMIN, { setlistId: id, title: "Song A" })) as {
             trackId: string
             order: number
         }
-        const b = (await addTrackToSetlist(OWNER, { setlistId: id, title: "Song B" })) as {
+        const b = (await addTrackToSetlist(ADMIN, { setlistId: id, title: "Song B" })) as {
             order: number
         }
         expect(a.order).toBe(0)
@@ -129,10 +179,10 @@ describe("MCP setlist write tools (emulator)", () => {
 
     it("add_track_to_setlist inserts at a position, shifting later rows down", async () => {
         const id = await newSetlist()
-        await addTrackToSetlist(OWNER, { setlistId: id, title: "A" })
-        await addTrackToSetlist(OWNER, { setlistId: id, title: "C" })
+        await addTrackToSetlist(ADMIN, { setlistId: id, title: "A" })
+        await addTrackToSetlist(ADMIN, { setlistId: id, title: "C" })
 
-        const inserted = (await addTrackToSetlist(OWNER, {
+        const inserted = (await addTrackToSetlist(ADMIN, {
             setlistId: id,
             title: "B",
             position: 1,
@@ -144,7 +194,7 @@ describe("MCP setlist write tools (emulator)", () => {
 
     it("add_track_to_setlist derives title/key/lead from a library songId", async () => {
         const id = await newSetlist()
-        await addTrackToSetlist(OWNER, { setlistId: id, songId: "song-oseh" })
+        await addTrackToSetlist(ADMIN, { setlistId: id, songId: "song-oseh" })
 
         const [row] = await tracksOf(id)
         expect(row.title).toBe("Oseh Shalom") // file extension stripped
@@ -156,7 +206,7 @@ describe("MCP setlist write tools (emulator)", () => {
 
     it("add_track_to_setlist bonds the song's chart — fileId/fileName on the row, fileIds on the parent", async () => {
         const id = await newSetlist()
-        await addTrackToSetlist(OWNER, { setlistId: id, songId: "song-oseh" })
+        await addTrackToSetlist(ADMIN, { setlistId: id, songId: "song-oseh" })
 
         // The row carries the chart file id + cached filename — what the app's
         // chart rendering keys off (a songId alone never renders a chart).
@@ -169,7 +219,7 @@ describe("MCP setlist write tools (emulator)", () => {
         expect(setlist.fileIds).toEqual(["song-oseh"])
 
         // A header row contributes no chart — fileIds is unchanged.
-        await addTrackToSetlist(OWNER, { setlistId: id, title: "— Closing —", type: "header" })
+        await addTrackToSetlist(ADMIN, { setlistId: id, title: "— Closing —", type: "header" })
         const after = (await db().collection("setlists").doc(id).get()).data()!
         expect(after.fileIds).toEqual(["song-oseh"])
     })
@@ -177,28 +227,28 @@ describe("MCP setlist write tools (emulator)", () => {
     it("remove_track drops the chart from fileIds only when no other row still uses it", async () => {
         const id = await newSetlist()
         // Two rows bound to the same chart, plus a distinct one.
-        const dup1 = (await addTrackToSetlist(OWNER, {
+        const dup1 = (await addTrackToSetlist(ADMIN, {
             setlistId: id,
             songId: "song-oseh",
         })) as { trackId: string }
-        await addTrackToSetlist(OWNER, { setlistId: id, songId: "song-oseh" })
+        await addTrackToSetlist(ADMIN, { setlistId: id, songId: "song-oseh" })
         await db()
             .collection("songs")
             .doc("song-other")
             .set({ title: "Hinei Ma Tov.pdf" })
-        const other = (await addTrackToSetlist(OWNER, {
+        const other = (await addTrackToSetlist(ADMIN, {
             setlistId: id,
             songId: "song-other",
         })) as { trackId: string }
 
         // Removing one of the duplicates keeps the chart — the other row uses it.
-        await removeSetlistTrack(OWNER, { setlistId: id, trackId: dup1.trackId })
+        await removeSetlistTrack(ADMIN, { setlistId: id, trackId: dup1.trackId })
         let fileIds = (await db().collection("setlists").doc(id).get()).data()!
             .fileIds as string[]
         expect([...fileIds].sort()).toEqual(["song-oseh", "song-other"])
 
         // Removing the last row using a chart drops it from the set.
-        await removeSetlistTrack(OWNER, { setlistId: id, trackId: other.trackId })
+        await removeSetlistTrack(ADMIN, { setlistId: id, trackId: other.trackId })
         fileIds = (await db().collection("setlists").doc(id).get()).data()!
             .fileIds as string[]
         expect(fileIds).toEqual(["song-oseh"])
@@ -206,31 +256,32 @@ describe("MCP setlist write tools (emulator)", () => {
 
     it("add_track_to_setlist supports header rows and rejects a titleless song", async () => {
         const id = await newSetlist()
-        await addTrackToSetlist(OWNER, { setlistId: id, title: "— Opening —", type: "header" })
+        await addTrackToSetlist(ADMIN, { setlistId: id, title: "— Opening —", type: "header" })
         expect((await tracksOf(id))[0].type).toBe("header")
 
-        expect(await addTrackToSetlist(OWNER, { setlistId: id })).toEqual({
+        expect(await addTrackToSetlist(ADMIN, { setlistId: id })).toEqual({
             error: "title is required (or pass a songId to derive it)",
         })
-        expect(await addTrackToSetlist(OTHER, { setlistId: id, title: "x" })).toEqual({
-            error: "You do not own this setlist",
+        expect(await addTrackToSetlist(MEMBER, { setlistId: id, title: "x" })).toEqual({
+            error: NOT_EDITOR_ERROR,
         })
     })
 
     it("reorder_setlist applies a full permutation and rejects a partial list", async () => {
         const id = await newSetlist()
-        const t1 = (await addTrackToSetlist(OWNER, { setlistId: id, title: "1" })) as {
+        const t1 = (await addTrackToSetlist(ADMIN, { setlistId: id, title: "1" })) as {
             trackId: string
         }
-        const t2 = (await addTrackToSetlist(OWNER, { setlistId: id, title: "2" })) as {
+        const t2 = (await addTrackToSetlist(ADMIN, { setlistId: id, title: "2" })) as {
             trackId: string
         }
-        const t3 = (await addTrackToSetlist(OWNER, { setlistId: id, title: "3" })) as {
+        const t3 = (await addTrackToSetlist(ADMIN, { setlistId: id, title: "3" })) as {
             trackId: string
         }
 
+        // A band leader reorders a setlist the admin created (role-based access).
         expect(
-            await reorderSetlist(OWNER, {
+            await reorderSetlist(LEADER, {
                 setlistId: id,
                 orderedTrackIds: [t3.trackId, t1.trackId, t2.trackId],
             }),
@@ -238,7 +289,7 @@ describe("MCP setlist write tools (emulator)", () => {
         expect((await tracksOf(id)).map((t) => t.title)).toEqual(["3", "1", "2"])
 
         // A list that isn't an exact permutation is rejected.
-        const partial = await reorderSetlist(OWNER, {
+        const partial = await reorderSetlist(ADMIN, {
             setlistId: id,
             orderedTrackIds: [t1.trackId, t2.trackId],
         })
@@ -247,23 +298,23 @@ describe("MCP setlist write tools (emulator)", () => {
         expect((await tracksOf(id)).map((t) => t.title)).toEqual(["3", "1", "2"])
 
         expect(
-            await reorderSetlist(OTHER, {
+            await reorderSetlist(MEMBER, {
                 setlistId: id,
                 orderedTrackIds: [t1.trackId, t2.trackId, t3.trackId],
             }),
-        ).toEqual({ error: "You do not own this setlist" })
+        ).toEqual({ error: NOT_EDITOR_ERROR })
     })
 
     it("remove_track deletes the row, re-packs order, and syncs trackCount", async () => {
         const id = await newSetlist()
-        await addTrackToSetlist(OWNER, { setlistId: id, title: "A" })
-        const mid = (await addTrackToSetlist(OWNER, { setlistId: id, title: "B" })) as {
+        await addTrackToSetlist(ADMIN, { setlistId: id, title: "A" })
+        const mid = (await addTrackToSetlist(ADMIN, { setlistId: id, title: "B" })) as {
             trackId: string
         }
-        await addTrackToSetlist(OWNER, { setlistId: id, title: "C" })
+        await addTrackToSetlist(ADMIN, { setlistId: id, title: "C" })
 
         expect(
-            await removeSetlistTrack(OWNER, { setlistId: id, trackId: mid.trackId }),
+            await removeSetlistTrack(ADMIN, { setlistId: id, trackId: mid.trackId }),
         ).toEqual({ ok: true })
 
         const tracks = await tracksOf(id)
@@ -271,12 +322,12 @@ describe("MCP setlist write tools (emulator)", () => {
         expect(tracks.map((t) => t.order)).toEqual([0, 1]) // re-packed, no gap
         expect((await db().collection("setlists").doc(id).get()).data()!.trackCount).toBe(2)
 
-        // Unknown track id and non-owner are both rejected.
+        // Unknown track id and a non-editor caller are both rejected.
         expect(
-            await removeSetlistTrack(OWNER, { setlistId: id, trackId: "ghost" }),
+            await removeSetlistTrack(ADMIN, { setlistId: id, trackId: "ghost" }),
         ).toEqual({ error: "Track not found in this setlist" })
         expect(
-            await removeSetlistTrack(OTHER, { setlistId: id, trackId: tracks[0].id as string }),
-        ).toEqual({ error: "You do not own this setlist" })
+            await removeSetlistTrack(MEMBER, { setlistId: id, trackId: tracks[0].id as string }),
+        ).toEqual({ error: NOT_EDITOR_ERROR })
     })
 })

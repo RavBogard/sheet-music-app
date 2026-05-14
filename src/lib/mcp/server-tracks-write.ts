@@ -18,32 +18,49 @@ import { logger } from "@/lib/logger"
 
 type DB = FirebaseFirestore.Firestore
 
-export interface OwnedSetlist {
+export interface LoadedSetlist {
     ok: true
     data: Record<string, unknown>
 }
-export interface OwnershipError {
+export interface WriteError {
     ok: false
     error: string
 }
 
 /**
- * Load a setlist and assert `uid` owns it. MCP write tools are scoped to the
- * caller's own setlists (MCP-PLAN 4.3 — "NOT exposed: other users' data");
- * reads are public, writes are not.
+ * Assert `uid` may use the MCP write tools. Per Daniel's instruction
+ * (2026-05-14) write access is role-based, not owner-based: any `admin` or
+ * `band_leader` account may create and edit ANY setlist; everyone else is
+ * read-only. Role is read from `users/{uid}.role` — the same source
+ * getServerUser() falls back to (MCP requests carry no session cookie).
  */
-export async function loadOwnedSetlist(
+export async function assertEditor(
+    db: DB,
+    uid: string,
+): Promise<{ ok: true } | WriteError> {
+    const snap = await db.collection("users").doc(uid).get()
+    const role = snap.exists ? (snap.data()?.role as string | undefined) : undefined
+    if (role === "admin" || role === "band_leader") return { ok: true }
+    return {
+        ok: false,
+        error: "Write tools require an admin or band leader account",
+    }
+}
+
+/**
+ * Assert `uid` may edit, then load the setlist. Admins and band leaders may
+ * edit ANY setlist — there is no owner check (see assertEditor).
+ */
+export async function loadEditableSetlist(
     db: DB,
     setlistId: string,
     uid: string,
-): Promise<OwnedSetlist | OwnershipError> {
+): Promise<LoadedSetlist | WriteError> {
+    const editor = await assertEditor(db, uid)
+    if (!editor.ok) return editor
     const snap = await db.collection("setlists").doc(setlistId).get()
     if (!snap.exists) return { ok: false, error: "Setlist not found" }
-    const data = snap.data() as Record<string, unknown>
-    if (data.ownerId !== uid) {
-        return { ok: false, error: "You do not own this setlist" }
-    }
-    return { ok: true, data }
+    return { ok: true, data: snap.data() as Record<string, unknown> }
 }
 
 export interface AddTrackInput {
@@ -137,7 +154,7 @@ export async function reorderTracks(
     db: DB,
     setlistId: string,
     orderedTrackIds: string[],
-): Promise<{ ok: true } | OwnershipError> {
+): Promise<{ ok: true } | WriteError> {
     const existing = await getTracksForSetlist(db, setlistId, {})
     const existingIds = new Set(existing.map((t) => t.id))
 
@@ -178,7 +195,7 @@ export async function removeTrack(
     db: DB,
     setlistId: string,
     trackId: string,
-): Promise<{ ok: true } | OwnershipError> {
+): Promise<{ ok: true } | WriteError> {
     const existing = await getTracksForSetlist(db, setlistId, {})
     const target = existing.find((t) => t.id === trackId)
     if (!target) {
