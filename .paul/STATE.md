@@ -167,6 +167,16 @@ Resume context:
 - HFG counter held at 0/3 throughout v6.0
 - After UAT clears: /paul:complete-milestone closes v6.0 → /paul:plan v70-01 (image-chart support — PNG/JPEG/HEIC; Wave 0 foundation; prereq for v70-05 doc-extraction canary)
 
+### Git State (v70-03 phase transition)
+Last commit: `62c2b7c` — feat(v70-03): per-track media affordances — chart click-through + recording-bind UI
+Branch: master — synced with origin/master after push 2026-05-14 (`9cc346a..62c2b7c`)
+Feature branches merged: none (no feature branch for v70-03)
+Push: ✅ DONE 2026-05-14 — `9cc346a..62c2b7c` pushed to origin master; Vercel auto-deploy triggered
+Bundled phase commit: 17 files (v70-03-01 + v70-03-02 + all .paul/ phase files); 1979 insertions / 29 deletions. Reverted ChartCell.tsx + SetlistGrid.tsx (dead-code first-attempt edits) are NOT in the diff — clean.
+Production deploys: none — v70-03 is app-code only (no firestore.rules / indexes / functions change; recordings rules + index already shipped in v70-02)
+HFG counter: 0/3 held (v70-03 touched no engine / Firestore-data-layer — recordings rules were v70-02)
+UAT-PENDING: .paul/UAT-PENDING.md — 2 entries (v70-03-01 chart click-through + v70-03-02 recording-bind), both against deployed commit `62c2b7c`
+
 ### Git State (v70-02 phase transition)
 Last commit: `e90c6cb` — feat(v70-02): recordings data model — recordings/{id} collection foundation; phase complete
 Branch: master — synced with origin/master after push 2026-05-14 (`e44122f..e90c6cb`)

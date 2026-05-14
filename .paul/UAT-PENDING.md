@@ -15,7 +15,7 @@ plan or an emergent phase.
 
 ## ⏳ v70-03-01 — Chart click-through
 
-**Deployed commit:** _(set on push)_
+**Deployed commit:** `62c2b7c` (pushed to origin master 2026-05-14; Vercel auto-deploy triggered)
 
 What was built: `MobileRowCard`'s chart indicator is a click-through link when a
 chart is bound — `<a target="_blank">` to the chart serving URL
@@ -34,7 +34,7 @@ Check:
 
 ## ⏳ v70-03-02 — Recording-bind UI
 
-**Deployed commit:** _(set on push)_
+**Deployed commit:** `62c2b7c` (pushed to origin master 2026-05-14; Vercel auto-deploy triggered)
 
 What was built: per-track recording affordance in the setlist row card. New
 `AudioLines` icon beside the chart icon opens `RecordingBindPopover` — lists the
