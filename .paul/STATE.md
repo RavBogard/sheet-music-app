@@ -80,10 +80,14 @@ Last activity: 2026-05-13 evening — Daniel-explicit pause post-v60-12 ship + v
 
 ## Session Continuity
 
-Last session: 2026-05-13 night (v60-13 wave 1 shipped + v70-01-01 mid-APPLY; Daniel-explicit pause for context clearing)
-Stopped at: All in-flight work committed + pushed (HEAD `d81c3dc`). v60-13-06 / 14-01 / 70-09-01 PLANs written and ready. v70-01-01 Task 3 deferred.
-Next action: /paul:apply .paul/phases/v60-13-sync-engine-resilience/v60-13-06-PLAN.md (highest priority — Daniel's "real pain" auto-refresh fix)
-Resume file: .paul/HANDOFF-2026-05-13-night.md
+Last session: 2026-05-14 (v60-13-06 LOOP CLOSED — auto-refresh-during-edit fix shipped + UAT'd + UNIFY'd)
+Stopped at: v60-13-06 LOOP COMPLETE @ HEAD `f684563`. PLAN ✓ APPLY ✓ UNIFY ✓. Content-hash dedup at hydrator write sites; 20/20 hydrator tests green; next build clean; Daniel UAT confirmed no mid-edit refresh. SUMMARY at .paul/phases/v60-13-sync-engine-resilience/v60-13-06-SUMMARY.md.
+Next action: Choose next priority — (a) /paul:apply v70-01-01 Task 3 (~20min, finishes image-chart phase), (b) /paul:apply v60-14-01 (mobile date picker — may auto-resolve from v60-13-06; discovery-first), (c) /paul:apply v70-09-01 (setlist metadata editor; needs /ui-ux-pro-max), (d) backfill v60-13-01 SUMMARY for cluster-close hygiene.
+Resume file: .paul/phases/v60-13-sync-engine-resilience/v60-13-06-SUMMARY.md
+
+Loop position (v60-13-06):
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [v60-13-06 LOOP COMPLETE 2026-05-14]
 Git strategy: master (synced @ d81c3dc)
 Resume context:
 - v60-13 wave 1 SHIPPED: incognito blank + 49-row stuck outbox queue both FIXED per Daniel UAT (commits 26797e7 → d81c3dc; 5 plans / 1 STATE-update)
