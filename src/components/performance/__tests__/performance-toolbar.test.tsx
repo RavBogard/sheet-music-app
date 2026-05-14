@@ -114,4 +114,62 @@ describe("PerformanceToolbar", () => {
         fireEvent.click(exitButtons[0])
         expect(mockOnHome).toHaveBeenCalled()
     })
+
+    // v70-01-01 Task 3: image-typed charts disable the transposer trigger
+    // (which gates both transpose UI + AI-chord editing inside TransposerMenu).
+    // The disabled trigger replaces the Popover wrapper entirely, carries a
+    // tooltip via native title=, and is aria-disabled.
+    it("v70-01-01 Task 3: disables transposer trigger when current chart is an image", () => {
+        mockStoreState.playbackQueue = [
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            { fileId: 'upload-abc', type: 'image', title: 'Dodi Li' } as any,
+        ]
+        mockStoreState.queueIndex = 0
+
+        render(<PerformanceToolbar onHome={mockOnHome} />)
+
+        // Both mobile + desktop render the disabled Transpose button.
+        const disabledTriggers = screen.getAllByRole('button', {
+            name: /transposing isn't available for image charts/i,
+        })
+        expect(disabledTriggers.length).toBeGreaterThanOrEqual(2)
+
+        for (const trigger of disabledTriggers) {
+            expect(trigger.getAttribute('aria-disabled')).toBe('true')
+            expect(trigger.getAttribute('title')).toMatch(
+                /re-upload as a pdf or musicxml/i,
+            )
+            expect(trigger.className).toMatch(/cursor-not-allowed/)
+            expect(trigger.className).toMatch(/opacity-50/)
+        }
+
+        // Clicking the disabled trigger does NOT mount TransposerMenu.
+        fireEvent.click(disabledTriggers[0])
+        expect(screen.queryByTestId('transposer-menu')).toBeNull()
+
+        // Restore default mock state for subsequent tests.
+        mockStoreState.playbackQueue = []
+        mockStoreState.queueIndex = 0
+    })
+
+    it("v70-01-01 Task 3: renders the normal transposer Popover when current chart is NOT an image", () => {
+        mockStoreState.playbackQueue = [
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            { fileId: 'pdf-xyz', type: 'pdf', title: 'Adon Olam' } as any,
+        ]
+        mockStoreState.queueIndex = 0
+
+        render(<PerformanceToolbar onHome={mockOnHome} />)
+
+        // Should NOT find the disabled image-chart aria-label anywhere.
+        expect(
+            screen.queryByRole('button', {
+                name: /transposing isn't available for image charts/i,
+            }),
+        ).toBeNull()
+
+        // Restore.
+        mockStoreState.playbackQueue = []
+        mockStoreState.queueIndex = 0
+    })
 })

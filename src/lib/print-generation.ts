@@ -8,6 +8,10 @@ export interface PrintTrackPayload {
     notes: string
     leadMusician: string
     fileId?: string
+    /** v70-01-01 Task 3: forwarded to print-pipeline for image-skip detection. */
+    fileName?: string
+    /** v70-01-01 Task 3: forwarded to print-pipeline for image-skip detection. */
+    mimeType?: string
     transposition: number
     preferFlats: boolean
     capoFret: number

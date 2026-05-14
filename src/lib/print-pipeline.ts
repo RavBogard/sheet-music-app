@@ -26,6 +26,13 @@ export interface PrintTrack {
     notes: string
     leadMusician?: string
     fileId?: string
+    /** v70-01-01 Task 3: optional fileName for the image-track skip guard
+     *  (extension fallback when mimeType isn't persisted on legacy tracks). */
+    fileName?: string
+    /** v70-01-01 Task 3: cached library_index.mimeType. When present and
+     *  starts with `image/`, the print pipeline skips this track for
+     *  v70-01-01 (full image embed lands in v70-01-02). */
+    mimeType?: string
     transposition?: number
     preferFlats?: boolean
     capoFret?: number
@@ -35,6 +42,15 @@ export interface PrintTrack {
     performer?: string
     estimatedMinutes?: number
     description?: string
+}
+
+/** v70-01-01 Task 3: detects image-typed tracks for the print-pipeline skip
+ *  guard. Mirrors PrintModal.isImageTrack and queue-utils image detection.
+ *  v70-01-02 will replace the SKIP with `embedJpg`/`embedPng`. */
+function isImageTrack(t: PrintTrack): boolean {
+    if (t.mimeType?.startsWith('image/')) return true
+    const name = (t.fileName ?? t.fileId ?? '').toLowerCase()
+    return /\.(png|jpe?g|heic|heif)$/.test(name)
 }
 
 export interface PrintRequest {
@@ -620,6 +636,15 @@ export async function generatePrintPdf(
         }
 
         if (!track.fileId || track.omitPdf) continue
+
+        // v70-01-01 Task 3: skip image-typed tracks; v70-01-02 will replace
+        // this guard with an embedJpg/embedPng branch. Skipping (rather than
+        // failing) keeps mixed setlists printable in this phase — the
+        // PrintModal banner notifies Daniel up front.
+        if (isImageTrack(track)) {
+            logger.info(`[PrintPipeline] Skipping image-typed track in v70-01-01: ${track.title}`)
+            continue
+        }
         trackIndex++
 
         onProgress?.({

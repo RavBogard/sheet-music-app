@@ -28,6 +28,16 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
     const {
         aiState, setAiEnabled, capoFret, transposition, zoom, setZoom
     } = useMusicStore()
+    // v70-01-01 Task 3: image-typed charts have no extractable chord data,
+    // so transposition + AI-chord editing are unavailable. Disable the
+    // transposer popover trigger entirely (it gates both the transpose UI
+    // AND the "Edit Chords" entry point inside TransposerMenu) and surface
+    // a tooltip explaining why. Constraint #11: keep the control VISIBLE so
+    // Daniel can see the option exists.
+    const currentType = useMusicStore((s) => s.playbackQueue[s.queueIndex]?.type)
+    const isImageChart = currentType === 'image'
+    const transposeDisabledReason =
+        "Transposing isn't available for image charts. Re-upload as a PDF or MusicXML to change keys."
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const { isBandLeader, isAdmin, isMusician } = useAuth()
     const params = useParams()
@@ -154,38 +164,79 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
         id: string,
         compact = false,
         side: "top" | "left" = "top"
-    ) => (
-        <Popover open={openState} onOpenChange={(open) => {
-            setOpenState(open)
-            trackPopover(id, open)
-            if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
-        }}>
-            <PopoverTrigger asChild>
+    ) => {
+        // v70-01-01 Task 3: when current chart is an image, render the
+        // trigger as a disabled, tooltip-bearing button outside the Popover
+        // entirely. Wrapping inside the Popover with onOpenChange-suppression
+        // would still allow Radix to enter the open state momentarily; this
+        // is cleaner and guarantees no popover menu can ever appear for
+        // image charts. Native `title=` is the iPad long-press / hover
+        // floor (the project does not yet have a shadcn Tooltip primitive
+        // installed; carry-forward note in the SUMMARY).
+        if (isImageChart) {
+            return (
                 <Button
                     variant="ghost"
+                    type="button"
+                    aria-disabled="true"
+                    aria-label={transposeDisabledReason}
+                    title={transposeDisabledReason}
+                    onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                    }}
                     className={cn(
-                        "rounded-xl font-semibold fluid-interaction flex items-center",
+                        "rounded-xl font-semibold flex items-center select-none",
                         compact
                             ? "h-11 px-3 text-xs gap-1.5"
                             : "h-10 px-4 text-xs font-bold gap-2 min-w-[100px] justify-center",
-                        aiState.isEnabled
-                            ? "bg-brand border border-brand/50 text-foreground shadow-lg shadow-brand/20"
-                            : "glass-card text-foreground/80 hover:text-foreground"
+                        "glass-card text-foreground/80 opacity-50 cursor-not-allowed",
+                        "hover:bg-transparent hover:text-foreground/80",
                     )}
                 >
-                    {aiState.scanningPages.length > 0 ? (
-                        <Loader2 className={cn("animate-spin shrink-0", compact ? "h-4 w-4" : "h-3.5 w-3.5")} />
-                    ) : (
-                        <Sparkles className={cn("shrink-0", compact ? "h-4 w-4" : "h-3.5 w-3.5")} />
-                    )}
-                    <span className="truncate">{compact ? buttonLabel : buttonLabel.toUpperCase()}</span>
+                    <Sparkles
+                        className={cn("shrink-0", compact ? "h-4 w-4" : "h-3.5 w-3.5")}
+                        aria-hidden="true"
+                    />
+                    <span className="truncate">
+                        {compact ? "Transpose" : "TRANSPOSE"}
+                    </span>
                 </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 max-w-[85vw] p-0 bg-popover border-border" align={side === "left" ? "start" : "end"} side={side}>
-                <TransposerMenu onRequestClose={() => setOpenState(false)} />
-            </PopoverContent>
-        </Popover>
-    )
+            )
+        }
+        return (
+            <Popover open={openState} onOpenChange={(open) => {
+                setOpenState(open)
+                trackPopover(id, open)
+                if (open && !aiState.isEnabled) setTimeout(() => setAiEnabled(true), 0)
+            }}>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            "rounded-xl font-semibold fluid-interaction flex items-center",
+                            compact
+                                ? "h-11 px-3 text-xs gap-1.5"
+                                : "h-10 px-4 text-xs font-bold gap-2 min-w-[100px] justify-center",
+                            aiState.isEnabled
+                                ? "bg-brand border border-brand/50 text-foreground shadow-lg shadow-brand/20"
+                                : "glass-card text-foreground/80 hover:text-foreground"
+                        )}
+                    >
+                        {aiState.scanningPages.length > 0 ? (
+                            <Loader2 className={cn("animate-spin shrink-0", compact ? "h-4 w-4" : "h-3.5 w-3.5")} />
+                        ) : (
+                            <Sparkles className={cn("shrink-0", compact ? "h-4 w-4" : "h-3.5 w-3.5")} />
+                        )}
+                        <span className="truncate">{compact ? buttonLabel : buttonLabel.toUpperCase()}</span>
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 max-w-[85vw] p-0 bg-popover border-border" align={side === "left" ? "start" : "end"} side={side}>
+                    <TransposerMenu onRequestClose={() => setOpenState(false)} />
+                </PopoverContent>
+            </Popover>
+        )
+    }
 
     // ── BOTTOM BAR LAYOUT (all viewports) ──
     return (
