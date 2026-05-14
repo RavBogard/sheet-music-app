@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .paul/PROJECT.md (updated 2026-05-14 after v70-03 ✅ COMPLETE; v7.0 milestone active — 3 of 8 phases done; next: /paul:plan v70-04)
+See: .paul/PROJECT.md (updated 2026-05-14 after v70-04 ✅ COMPLETE; v7.0 milestone active — 4 of 8 phases done; next: /paul:plan v70-05)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v7.0 — Document-Driven Setlist Creation. 8 phases in 6 waves; 3 of 8 complete (v70-01 image-chart support, v70-02 recordings data model, v70-03 per-track media affordances). Next: v70-04 doc upload + text extraction (Wave 2).
+**Current focus:** v7.0 — Document-Driven Setlist Creation. 8 phases in 6 waves; 4 of 8 complete (v70-01 image-chart support, v70-02 recordings data model, v70-03 per-track media affordances, v70-04 doc upload + text extraction). Next: v70-05 Gemini structured extraction (Wave 3).
 
 ## Current Position
 
 Version: v7.0.0-dev (v6.0 closed 2026-05-13; v70-01 + v70-02 + v70-03 phases COMPLETE 2026-05-14)
 Milestone: v7.0 — Document-Driven Setlist Creation (opened 2026-05-13)
-Phase: 4 of 8 — v70-04 Doc upload + text extraction — Not started
+Phase: 5 of 8 — v70-05 Gemini structured extraction — Not started
 Plan: Not started
-Status: Ready to plan v70-04. Phase v70-03 ✅ COMPLETE 2026-05-14 — 2 plans LOOP CLOSED, phase transition done (PROJECT.md evolved, ROADMAP v70-03 → ✅ Complete, phase commit + push). v70-03 shipped per-track media affordances on MobileRowCard (the sole live render path): v70-03-01 chart click-through (`<a target="_blank">` to the existing /api/drive/file serving URL when bound; stopPropagation isolates the card tap-to-edit), v70-03-02 recording-bind UI (RecordingBindPopover + RecordingCell beside the chart icon — lists a song's recordings with inline `<audio>`, band-leader/admin upload; new /api/recordings/upload + /api/recordings/file/[id] routes + recordings-client.ts + firebase-storage.ts helpers, all on the v70-02 model, NO storage.rules change — admin-side serving route IS the access control). Both plans re-spec'd mid-flow (Spec issue): the original PLANs targeted SetlistGrid's dead TanStack table; MobileRowCard is the sole live path. next build ✓; live-path grid tests green; HFG 0/3 held. NEW standing pattern: human-verify checkpoints accumulate in .paul/UAT-PENDING.md (2 entries: v70-03-01 + v70-03-02), verified against the deployed build at milestone end. Tech debt flagged: the dead SetlistGrid TanStack-table block should be deleted in a future phase.
-Last activity: 2026-05-14 — Phase v70-03 complete + transitioned. v70-03-01 + v70-03-02 LOOP CLOSED; PROJECT.md Current State + Validated + footer evolved; ROADMAP v70-03 → ✅ Complete; bundled phase commit + push (covers v70-03-01 + v70-03-02 + all .paul/ phase files). UAT-PENDING.md deployed-commit SHA recorded for both v70-03 entries. Earlier this session: closed v70-01/v70-02 resume, created + re-spec'd both v70-03 plans, formalized the UAT-PENDING no-block pattern (feedback-uat-checklist memory).
+Status: Ready to plan v70-05. Phase v70-04 ✅ COMPLETE 2026-05-14 — single-plan phase LOOP CLOSED, phase transition done (PROJECT.md evolved, ROADMAP v70-04 → ✅ Complete, bundled phase commit + push). v70-04 shipped the doc text-extraction foundation: `extractDocumentText` lib (.docx→mammoth / .pdf→shared server-side pdfjs loader `getPdfjs` / .txt→utf-8; discriminated never-throws result) + `POST /api/setlists/import/extract-document` route (sibling of import/parse + import/execute). Foundation slice — NO UI, NO Gemini, NO persistence. `mammoth@^1.12.0` added. next build ✓; extract-document 9/9 + pdf-chord-extractor 16/16; HFG 0/3 held. One qualify deviation: the .pdf test mocks pdfjs (jsdom can't run real pdfjs — sibling test mocks it identically; plan's permitted fallback). PRIOR: Phase v70-03 ✅ COMPLETE 2026-05-14 (chart click-through + recording-bind UI; committed `62c2b7c`; 2 UAT-PENDING entries).
+Last activity: 2026-05-14 — Phase v70-04 complete + transitioned. v70-04-01 LOOP CLOSED; PROJECT.md Current State + Validated + footer evolved; ROADMAP v70-04 → ✅ Complete; bundled phase commit + push. Earlier this session: completed + transitioned phase v70-03; created + executed the v70-04 plan.
 
 ### Production Verification (v60-11-01 / 2026-05-13)
 
@@ -85,15 +85,25 @@ Last session: 2026-05-14 (resumed post-reboot; shipped v70-01-02 + closed phase 
 v70-01-02 UAT FOLLOW-UP FIX (in-phase, 2026-05-14, commit `1fef342` pushed): Daniel UAT — PNG image charts not appearing in print packets. Diagnostic classification: SPEC issue. Root cause (confirmed via scripts/diag/diag-image-print.ts against production): the image chart "dodi li (sher).png" was Drive-synced (Drive-style fileId), and its bound track docs carry NO mimeType + NO fileName — so print-pipeline isImageTrack() had zero signal, returned false, image fell through to the PDF merge path and was silently dropped by PDFDocument.load. Fix: server-side library_index.{fileId}.mimeType backstop (batched db.getAll) before per-track routing — parallels v70-01-01 Task 4's client-side useLibraryStore backstop. cacheVersion 3→4. print-pipeline 27/27; next build ✓; suite 1650/52 (zero new regressions). PENDING-UAT: Daniel re-checks the printed packet against deployed `1fef342`.
 Also surfaced: Issue 2 (no UX to edit an existing setlist's name/date while editing) — NOT a regression; v60-14 fixed the *creation wizard* date reset, but editing an existing setlist's metadata was never built — it is phase v70-09 (setlist metadata editor), still 🔵 Not started.
 
-Stopped at: Phase v70-03 COMPLETE + transitioned. Both plans LOOP CLOSED (SUMMARYs at .paul/phases/v70-03-per-track-media-affordances/v70-03-0{1,2}-SUMMARY.md). Transition done: PROJECT.md evolved (Current State → v7.0.0-dev 3 of 8 phases; v70-03 Validated entry; footer), ROADMAP v70-03 → ✅ Complete + milestone status 3 of 8, bundled phase commit + push to origin master. .paul/UAT-PENDING.md holds 2 carry-forward checklists (v70-03-01 chart click-through + v70-03-02 recording-bind) with the deployed-commit SHA — Daniel verifies against the deployed build at milestone end.
-Next action: /paul:plan v70-04 (doc upload + text extraction — Wave 2: new /api/setlist/import/upload route; mammoth for .docx, pdfjs for .pdf, txt trivial; upload modal extends the v51-03 CreationWizard with a 4th "Import from document" option; /ui-ux-pro-max BLOCKING). NOTE for v70-04 planning: heed the v70-03 dead-code lesson — verify any UI target is in the live render path (MobileCardList/MobileRowCard + the v51-03 CreationWizard), NOT SetlistGrid's dead TanStack table.
+Stopped at: Phase v70-04 COMPLETE + transitioned. v70-04-01 LOOP CLOSED (SUMMARY at .paul/phases/v70-04-doc-upload-text-extraction/v70-04-01-SUMMARY.md). Transition done: PROJECT.md evolved (Current State → 4 of 8 phases; v70-04 Validated entry; footer), ROADMAP v70-04 → ✅ Complete + milestone status 4 of 8, bundled phase commit + push to origin master. Doc text-extraction foundation shipped: extractDocumentText lib + extract-document route, mammoth dep, getPdfjs exported. NO UI (foundation slice) — the doc-import UI extends ImporterModal in v70-05/v70-07.
+Next action: /paul:plan v70-05 (Gemini structured extraction — Wave 3, sequential: reuses the chord-detection Gemini setup; prompt returns Zod-validated JSON `{ sections[], tracks[] }`; malformed extraction surfaces for human review; consumes v70-04's extract-document route output; **May 15 canary depends on v70-01 image-chart support** — already shipped). NOTE: the agreed UI direction is to extend the existing ImporterModal (live "Import Setlist AI" modal) with a "Document" option — verify against the real component, not assumptions.
 Resume file: .paul/ROADMAP.md
 
 PENDING-UAT carry-forward (v51-04 pattern, 8th use this milestone): v70-01-01 AC-3/AC-4 + v70-01-02 print human-verify checkpoint — Daniel verifies against the deployed commit over the worship cycle (mixed PDF+image packet downloads correctly, image pages right-side-up + aspect-correct, PrintModal banner gone, personal packet embeds images). Failures route to an in-phase follow-up plan or emergent phase.
 
+Loop position (v70-04 phase — COMPLETE, transitioned):
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [Phase v70-04 COMPLETE 2026-05-14 — single-plan phase LOOP CLOSED; phase transition done; ready for /paul:plan v70-05]
+
+Loop position (v70-04-01 — closed):
+PLAN ──▶ APPLY ──▶ UNIFY
+  ✓        ✓        ✓     [v70-04-01 LOOP COMPLETE 2026-05-14 — doc text extraction foundation; 3/3 auto tasks PASS; autonomous (no checkpoints)]
+
+Phase v70-04 — COMPLETE (1 of 1 plan LOOP CLOSED 2026-05-14; transitioned to v70-05)
+
 Loop position (v70-03 phase — COMPLETE, transitioned):
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Phase v70-03 COMPLETE 2026-05-14 — 2 of 2 plans LOOP CLOSED; phase transition done; ready for /paul:plan v70-04]
+  ✓        ✓        ✓     [Phase v70-03 COMPLETE 2026-05-14 — 2 of 2 plans LOOP CLOSED; phase transition done]
 
 Loop position (v70-03-02 — closed):
 PLAN ──▶ APPLY ──▶ UNIFY

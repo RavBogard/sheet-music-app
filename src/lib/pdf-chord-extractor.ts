@@ -41,7 +41,9 @@ export interface ExtractionResult {
 
 let _pdfjsModule: typeof import('pdfjs-dist') | null = null
 
-async function getPdfjs() {
+// Exported (v70-04) so the setlist-import document extractor reuses the same
+// server-side loader (legacy build, worker disabled) instead of duplicating it.
+export async function getPdfjs() {
     if (!_pdfjsModule) {
         _pdfjsModule = await import("pdfjs-dist/legacy/build/pdf.mjs")
         // Disable worker threads in server/serverless context
