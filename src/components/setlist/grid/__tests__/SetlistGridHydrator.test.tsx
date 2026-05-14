@@ -672,6 +672,112 @@ describe('SetlistGridHydrator', () => {
         expect(stopFn).toHaveBeenCalledTimes(1)
     })
 
+    // v60-13-06: content-hash dedup. The hydrator's hydrate() effect runs once
+    // per [setlistId, initialSetlist, initialTracks] dep change. When the page
+    // re-renders with new prop references whose CONTENT is unchanged but
+    // `updatedAt` has advanced (cached → network snapshot delivering the same
+    // payload with a fresher serverTimestamp), the prior LWW guard would let
+    // the put through and re-fire useLiveQuery — perceived by Daniel as a
+    // mid-edit "auto refresh". Dedup-by-content-hash skips that put.
+    describe('v60-13-06 content-hash dedup', () => {
+        it('skips redundant Dexie writes when re-rendered with identical content but newer updatedAt', async () => {
+            const updatedAt = 1_700_000_000_000
+            const setlist = { ...makeSetlist(updatedAt), hydrated: true }
+            const tracks = makeTracks(updatedAt)
+
+            const setlistsPutSpy = vi.spyOn(getDb().setlists, 'put')
+            const tracksBulkPutSpy = vi.spyOn(getDb().tracks, 'bulkPut')
+
+            const { findByTestId, rerender } = render(
+                <SetlistGridHydrator
+                    setlistId={SETLIST_ID}
+                    initialSetlist={setlist}
+                    initialTracks={tracks}
+                />,
+            )
+
+            await findByTestId('setlist-grid-empty-state')
+            await waitFor(async () => {
+                const local = await getDb().setlists.get(SETLIST_ID)
+                expect(local).toBeDefined()
+            })
+
+            const initialSetlistsPuts = setlistsPutSpy.mock.calls.length
+            const initialTracksBulkPuts = tracksBulkPutSpy.mock.calls.length
+            expect(initialSetlistsPuts).toBeGreaterThanOrEqual(1)
+            expect(initialTracksBulkPuts).toBeGreaterThanOrEqual(1)
+
+            // Re-render with NEW object references and a NEWER updatedAt but
+            // identical content (simulates Firestore cached → network emission
+            // delivering the same payload with a refreshed serverTimestamp).
+            const newerUpdatedAt = updatedAt + 1000
+            rerender(
+                <SetlistGridHydrator
+                    setlistId={SETLIST_ID}
+                    initialSetlist={{ ...makeSetlist(newerUpdatedAt), hydrated: true }}
+                    initialTracks={makeTracks(newerUpdatedAt)}
+                />,
+            )
+
+            // Allow the hydrate() effect to run + settle without firing puts.
+            await new Promise((r) => setTimeout(r, 50))
+
+            expect(setlistsPutSpy.mock.calls.length).toBe(initialSetlistsPuts)
+            expect(tracksBulkPutSpy.mock.calls.length).toBe(initialTracksBulkPuts)
+
+            // Genuine content delta still propagates (AC-2): re-render with a
+            // DIFFERENT setlist name + a different track title.
+            const newestUpdatedAt = newerUpdatedAt + 1000
+            const changedSetlist = {
+                ...makeSetlist(newestUpdatedAt),
+                name: 'Renamed Service',
+                hydrated: true,
+            }
+            const changedTracks: LocalTrack[] = [
+                {
+                    id: 't-1',
+                    setlistId: SETLIST_ID,
+                    order: 0,
+                    title: 'Adon Olam (renamed)',
+                    key: 'Dm',
+                    updatedAt: newestUpdatedAt,
+                },
+                {
+                    id: 't-2',
+                    setlistId: SETLIST_ID,
+                    order: 1,
+                    title: 'Lecha Dodi',
+                    key: 'G',
+                    updatedAt: newestUpdatedAt,
+                },
+            ]
+            rerender(
+                <SetlistGridHydrator
+                    setlistId={SETLIST_ID}
+                    initialSetlist={changedSetlist}
+                    initialTracks={changedTracks}
+                />,
+            )
+
+            await waitFor(async () => {
+                const local = await getDb().setlists.get(SETLIST_ID)
+                expect(local?.name).toBe('Renamed Service')
+                const t1 = await getDb().tracks.get('t-1')
+                expect(t1?.title).toBe('Adon Olam (renamed)')
+            })
+
+            expect(setlistsPutSpy.mock.calls.length).toBeGreaterThan(
+                initialSetlistsPuts,
+            )
+            expect(tracksBulkPutSpy.mock.calls.length).toBeGreaterThan(
+                initialTracksBulkPuts,
+            )
+
+            setlistsPutSpy.mockRestore()
+            tracksBulkPutSpy.mockRestore()
+        })
+    })
+
     // v54-01-03 trackCount reconciler — fires applyEdit on setlists/{id}
     // whenever the live Dexie tracks-by-setlistId count drifts from
     // initialSetlist.trackCount. Fixes the dashboard "0 songs" display

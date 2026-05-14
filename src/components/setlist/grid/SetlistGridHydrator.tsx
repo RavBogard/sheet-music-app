@@ -21,6 +21,24 @@ import {
 
 import { SetlistGrid, type SetlistGridProps } from './SetlistGrid'
 
+/** v60-13-06: stable content hash that EXCLUDES `updatedAt` so the dedup ref
+ *  matches when only the server timestamp advanced. Keys sorted for stable
+ *  ordering across object-literal reshuffles. Cheap on setlist+track payloads
+ *  (~tens of fields, ~50 tracks max). */
+function stableContentHash(obj: Record<string, unknown>): string {
+    const keys = Object.keys(obj)
+        .filter((k) => k !== 'updatedAt')
+        .sort()
+    const parts: string[] = []
+    for (const k of keys) {
+        parts.push(JSON.stringify(k))
+        parts.push(':')
+        parts.push(JSON.stringify(obj[k]))
+        parts.push(',')
+    }
+    return parts.join('')
+}
+
 export interface SetlistGridHydratorProps {
     setlistId: string
     initialSetlist: LocalSetlist
@@ -78,6 +96,15 @@ export function SetlistGridHydrator({
      *  the cascade alongside trackCount. */
     const lastWrittenSongCountRef = useRef<number | null>(null)
     const lastWrittenFileIdsRef = useRef<string[] | null>(null)
+    /** v60-13-06 content-hash dedup. Keyed `${collection}/${docId}`. Value is
+     *  a stable JSON of every field EXCEPT `updatedAt`. Layered ON TOP of the
+     *  existing outbox-pending / tombstone / LWW guards: when initialSetlist
+     *  or initialTracks arrive again with content identical to what we last
+     *  wrote here, skip the Dexie write so useLiveQuery subscribers do not
+     *  re-render and any in-progress mid-edit text in SetlistGrid is preserved.
+     *  Daniel UAT 2026-05-13: "auto refresh thing early on after loading is
+     *  a real pain". */
+    const lastWrittenContentHashRef = useRef<Map<string, string>>(new Map())
 
     useEffect(() => {
         let cancelled = false
@@ -123,13 +150,31 @@ export function SetlistGridHydrator({
                         )
                         .first()
                     if (setlistOutboxRow === undefined && !tombstonedSetlist) {
-                        const localSetlist = await db.setlists.get(setlistId)
+                        // v60-13-06: content-hash dedup gate. Skip the LWW
+                        // probe + put when the incoming payload is content-
+                        // equal to what we last wrote. Prevents the
+                        // useLiveQuery-driven re-render that Daniel reported
+                        // as a mid-edit "auto refresh".
+                        const setlistKey = `setlists/${setlistId}`
+                        const incomingHash = stableContentHash(
+                            initialSetlist as unknown as Record<string, unknown>,
+                        )
                         if (
-                            !localSetlist ||
-                            (localSetlist.updatedAt ?? 0) <
-                                (initialSetlist.updatedAt ?? 0)
+                            lastWrittenContentHashRef.current.get(setlistKey) !==
+                            incomingHash
                         ) {
-                            await db.setlists.put(initialSetlist)
+                            const localSetlist = await db.setlists.get(setlistId)
+                            if (
+                                !localSetlist ||
+                                (localSetlist.updatedAt ?? 0) <
+                                    (initialSetlist.updatedAt ?? 0)
+                            ) {
+                                await db.setlists.put(initialSetlist)
+                                lastWrittenContentHashRef.current.set(
+                                    setlistKey,
+                                    incomingHash,
+                                )
+                            }
                         }
                     }
 
@@ -174,11 +219,28 @@ export function SetlistGridHydrator({
                     for (const t of localTracks) localById.set(t.id, t)
 
                     const toPut: LocalTrack[] = []
+                    // v60-13-06: collect hashes to record only AFTER bulkPut
+                    // succeeds — if we recorded before write and the tx
+                    // rolled back, future emissions would be wrongly skipped.
+                    const trackHashesToRecord: Array<[string, string]> = []
                     for (const t of initialTracks) {
                         if (trackOutboxIds.has(t.id)) continue
                         // Bug 2 fix: tombstone guard — user deleted this
                         // track; server priming must not resurrect it.
                         if (trackTombstoneIds.has(t.id)) continue
+                        // v60-13-06: content-hash dedup. Skip when this exact
+                        // payload (excluding updatedAt) was the last thing we
+                        // wrote — prevents the redundant put that triggers
+                        // useLiveQuery → SetlistGrid re-render mid-edit.
+                        const trackKey = `tracks/${t.id}`
+                        const incomingHash = stableContentHash(
+                            t as unknown as Record<string, unknown>,
+                        )
+                        if (
+                            lastWrittenContentHashRef.current.get(trackKey) ===
+                            incomingHash
+                        )
+                            continue
                         const local = localById.get(t.id)
                         if (
                             !local ||
@@ -186,9 +248,15 @@ export function SetlistGridHydrator({
                                 ((t.updatedAt as number | undefined) ?? 0)
                         ) {
                             toPut.push(t)
+                            trackHashesToRecord.push([trackKey, incomingHash])
                         }
                     }
-                    if (toPut.length > 0) await db.tracks.bulkPut(toPut)
+                    if (toPut.length > 0) {
+                        await db.tracks.bulkPut(toPut)
+                        for (const [k, v] of trackHashesToRecord) {
+                            lastWrittenContentHashRef.current.set(k, v)
+                        }
+                    }
                 },
             )
 
