@@ -1,7 +1,7 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler"
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js"
 import { verifyBearer } from "@/lib/mcp/auth"
-import { registerReadTools } from "@/lib/mcp/tools"
+import { registerReadTools, registerWriteTools } from "@/lib/mcp/tools"
 
 /**
  * MCP route — connects Claude (Desktop / web / Code) to centralreform.live.
@@ -11,9 +11,9 @@ import { registerReadTools } from "@/lib/mcp/tools"
  * tokens). withMcpAuth runs the verifier, stashes the resolved uid on
  * AuthInfo.extra, and the tool handlers read it from there.
  *
- * Phase 4a: read tools only (list_setlists, get_setlist, search_library,
- * get_song). Write tools are added in Phase 4b after reads are verified
- * end-to-end.
+ * Phase 4a: read tools (list_setlists, get_setlist, search_library, get_song).
+ * Phase 4b: write tools (create_setlist, update_setlist, add_track_to_setlist,
+ * reorder_setlist, remove_track) — owner-scoped to the caller's own setlists.
  */
 
 export const maxDuration = 60
@@ -21,6 +21,7 @@ export const maxDuration = 60
 const baseHandler = createMcpHandler(
     (server) => {
         registerReadTools(server)
+        registerWriteTools(server)
     },
     {
         serverInfo: { name: "centralreform-live", version: "1.0.0" },

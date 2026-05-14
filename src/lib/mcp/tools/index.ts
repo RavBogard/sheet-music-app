@@ -2,12 +2,21 @@ import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { listSetlists, getSetlist } from "./setlists"
 import { searchLibrary, getSong } from "./library"
+import {
+    createSetlist,
+    updateSetlist,
+    addTrackToSetlist,
+    reorderSetlist,
+    removeSetlistTrack,
+} from "./setlist-write"
 
 /**
- * Registers the MCP read tools (Phase 4a). Each tool resolves the
- * authenticated uid from `extra.authInfo` (set by withMcpAuth → verifyBearer
- * in the route) and delegates to the plain functions in ./setlists + ./library.
- * Write tools (Phase 4b) are added only after these are verified end-to-end.
+ * Registers the MCP tools. Each tool resolves the authenticated uid from
+ * `extra.authInfo` (set by withMcpAuth → verifyBearer in the route) and
+ * delegates to the plain functions in ./setlists, ./library, ./setlist-write.
+ *
+ * Phase 4a — read tools (registerReadTools). Phase 4b — write tools
+ * (registerWriteTools), owner-scoped to the caller's own setlists.
  */
 
 /** Minimal structural type — decoupled from the SDK's internal extra shape. */
@@ -111,5 +120,107 @@ export function registerReadTools(server: McpServer): void {
             if (!song) return jsonResult({ error: "Song not found" })
             return jsonResult(song)
         },
+    )
+}
+
+export function registerWriteTools(server: McpServer): void {
+    server.registerTool(
+        "create_setlist",
+        {
+            description:
+                "Create a new, empty setlist owned by the user. Use when the user wants to start a new service/gig. Returns the new setlist id — follow up with add_track_to_setlist to populate it. eventDate is an ISO date string.",
+            inputSchema: {
+                name: z.string().min(1).describe("Setlist name, e.g. 'Shabbat Morning — June 7'"),
+                eventDate: z
+                    .string()
+                    .optional()
+                    .describe("ISO date of the service, e.g. '2026-06-07'"),
+                serviceType: z
+                    .string()
+                    .optional()
+                    .describe("Service/template type, e.g. 'shabbat-morning'"),
+                rabbi: z.string().optional().describe("Rabbi leading the service"),
+            },
+        },
+        async (args, extra) => jsonResult(await createSetlist(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "update_setlist",
+        {
+            description:
+                "Update a setlist's metadata (name, date, service type, rabbi, notes). Metadata only — does NOT touch tracks; use the track tools for that. Only the setlist's owner may update it.",
+            inputSchema: {
+                id: z.string().describe("Setlist id"),
+                name: z.string().min(1).optional().describe("New setlist name"),
+                eventDate: z.string().optional().describe("New ISO event date"),
+                serviceType: z.string().optional().describe("New service/template type"),
+                rabbi: z.string().optional().describe("New rabbi leading the service"),
+                serviceNotes: z.string().optional().describe("Free-text service notes"),
+            },
+        },
+        async (args, extra) => jsonResult(await updateSetlist(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "add_track_to_setlist",
+        {
+            description:
+                "Add one row to a setlist — either a song (pass songId to pull title/key/vocal-lead from the library, or pass an explicit title) or a section header (type:'header' with a title). position is a 0-based insert index; omit it to append at the end. Only the setlist's owner may add tracks.",
+            inputSchema: {
+                setlistId: z.string().describe("Setlist id"),
+                songId: z
+                    .string()
+                    .optional()
+                    .describe("Library song id — title/key/lead default from this song"),
+                title: z
+                    .string()
+                    .optional()
+                    .describe("Row title — required for a header, or to override a song's title"),
+                type: z
+                    .enum(["song", "header"])
+                    .optional()
+                    .describe("Row type (default 'song')"),
+                key: z.string().optional().describe("Musical key for this row"),
+                leadMusician: z.string().optional().describe("Vocal Lead for this row"),
+                referenceLink: z.string().optional().describe("Reference URL for this row"),
+                notes: z.string().optional().describe("Free-text notes for this row"),
+                position: z
+                    .number()
+                    .int()
+                    .min(0)
+                    .optional()
+                    .describe("0-based insert index; omit to append"),
+            },
+        },
+        async (args, extra) => jsonResult(await addTrackToSetlist(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "reorder_setlist",
+        {
+            description:
+                "Reorder a setlist's tracks. orderedTrackIds must list every current track id of the setlist exactly once, in the new performance order. Get the current ids from get_setlist first. Only the setlist's owner may reorder.",
+            inputSchema: {
+                setlistId: z.string().describe("Setlist id"),
+                orderedTrackIds: z
+                    .array(z.string())
+                    .describe("All track ids of the setlist, in the new order"),
+            },
+        },
+        async (args, extra) => jsonResult(await reorderSetlist(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "remove_track",
+        {
+            description:
+                "Remove one track from a setlist by id. The remaining tracks are re-packed to stay contiguous. Only the setlist's owner may remove tracks.",
+            inputSchema: {
+                setlistId: z.string().describe("Setlist id"),
+                trackId: z.string().describe("Id of the track to remove"),
+            },
+        },
+        async (args, extra) => jsonResult(await removeSetlistTrack(uidFrom(extra), args)),
     )
 }
