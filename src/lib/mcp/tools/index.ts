@@ -10,6 +10,15 @@ import {
     removeSetlistTrack,
     deleteSetlist,
 } from "./setlist-write"
+import {
+    listMonitorBuses,
+    getMix,
+    setSendLevel,
+    setSendMute,
+    setBusFader,
+    setMatrixFader,
+    setMatrixMute,
+} from "./monitor"
 
 /**
  * Validate that an `eventDate` string is parseable as a date. Previously the
@@ -247,5 +256,143 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) => jsonResult(await deleteSetlist(uidFrom(extra), args)),
+    )
+}
+
+/**
+ * Monitor-control tools. The /monitor route's WebSocket-style mix surface
+ * exposed via MCP so an AI agent can adjust faders, mutes, and bus masters
+ * on the user's behalf ("turn up my guitar, mute the vocalists"). Commands
+ * append to monitor-live/commands/pending — the same path the iPad UI uses —
+ * so the hardware bridge propagation is unchanged.
+ *
+ * Auth mirrors useMonitorAccess: admin, sound engineer, or someone with at
+ * least one assigned bus may use the read tools and adjust THEIR OWN bus.
+ * Touching another user's bus, the bus master of another bus, or matrix
+ * outputs requires admin or the soundEngineer flag.
+ */
+export function registerMonitorTools(server: McpServer): void {
+    server.registerTool(
+        "list_monitor_buses",
+        {
+            description:
+                "List the personal-IEM monitor buses, their assignments, the hardware bridge status, and (for admins/sound engineers) the X32 matrix outputs. Always call this first to discover bus and channel indexes before adjusting faders.",
+            inputSchema: {},
+        },
+        async (_args, extra) =>
+            jsonResult(await listMonitorBuses(uidFrom(extra))),
+    )
+
+    server.registerTool(
+        "get_mix",
+        {
+            description:
+                "Get the current fader, mute, and channel names for one monitor bus. Omit busIndex to default to the caller's first assigned bus — useful for 'show me my mix'. Channel names come from the live X32 state; use them to map a request like 'turn up my guitar' to a channelIndex.",
+            inputSchema: {
+                busIndex: z
+                    .number()
+                    .int()
+                    .min(0)
+                    .optional()
+                    .describe(
+                        "Bus index from list_monitor_buses; omit to use the caller's first assigned bus",
+                    ),
+            },
+        },
+        async (args, extra) => jsonResult(await getMix(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "set_send_level",
+        {
+            description:
+                "Set the fader level for one channel in one monitor bus. level is a normalized fader position in [0.0, 1.0] — NOT dB. To 'turn up by a bit', read get_mix first and write level + ~0.05–0.1. Musicians may only adjust buses assigned to them; admins/sound engineers may adjust any bus.",
+            inputSchema: {
+                busIndex: z.number().int().min(0).describe("Bus index"),
+                channelIndex: z
+                    .number()
+                    .int()
+                    .min(0)
+                    .describe("Channel index (from get_mix sends list)"),
+                level: z
+                    .number()
+                    .min(0)
+                    .max(1)
+                    .describe("Normalized fader position 0.0 (off) to 1.0 (max)"),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await setSendLevel(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "set_send_mute",
+        {
+            description:
+                "Mute or unmute one channel in one monitor bus. muted=true silences the channel for that bus; muted=false unmutes. Affects only the bus, not the channel globally. Musicians may only mute on their own bus; admins/sound engineers may mute on any bus.",
+            inputSchema: {
+                busIndex: z.number().int().min(0).describe("Bus index"),
+                channelIndex: z.number().int().min(0).describe("Channel index"),
+                muted: z.boolean().describe("true = muted; false = unmuted"),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await setSendMute(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "set_bus_fader",
+        {
+            description:
+                "Set the bus master level — the overall in-ear volume for that monitor bus. Use when the user says 'turn up my whole mix' or 'I need more volume in my ears'. Musicians may only adjust their own bus; admins/sound engineers may adjust any bus.",
+            inputSchema: {
+                busIndex: z.number().int().min(0).describe("Bus index"),
+                level: z
+                    .number()
+                    .min(0)
+                    .max(1)
+                    .describe("Normalized fader position 0.0 to 1.0"),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await setBusFader(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "set_matrix_fader",
+        {
+            description:
+                "Set the level of an X32 matrix output (mains, side-fills, sub-mix, etc). Restricted to admins and sound engineers — these outputs feed the FOH PA, not personal mixes.",
+            inputSchema: {
+                matrixIndex: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(6)
+                    .describe("Matrix output index 1–6"),
+                level: z.number().min(0).max(1).describe("Normalized fader position 0.0 to 1.0"),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await setMatrixFader(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "set_matrix_mute",
+        {
+            description:
+                "Mute or unmute one X32 matrix output. Restricted to admins and sound engineers.",
+            inputSchema: {
+                matrixIndex: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(6)
+                    .describe("Matrix output index 1–6"),
+                muted: z.boolean().describe("true = muted; false = unmuted"),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await setMatrixMute(uidFrom(extra), args)),
     )
 }

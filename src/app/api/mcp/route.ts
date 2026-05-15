@@ -1,7 +1,11 @@
 import { createMcpHandler, withMcpAuth } from "mcp-handler"
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js"
 import { verifyBearer } from "@/lib/mcp/auth"
-import { registerReadTools, registerWriteTools } from "@/lib/mcp/tools"
+import {
+    registerReadTools,
+    registerWriteTools,
+    registerMonitorTools,
+} from "@/lib/mcp/tools"
 
 /**
  * MCP route — connects Claude (Desktop / web / Code) to centralreform.live.
@@ -22,6 +26,7 @@ const baseHandler = createMcpHandler(
     (server) => {
         registerReadTools(server)
         registerWriteTools(server)
+        registerMonitorTools(server)
     },
     {
         serverInfo: { name: "centralreform-live", version: "1.0.0" },
