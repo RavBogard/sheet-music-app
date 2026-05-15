@@ -276,6 +276,7 @@ export async function bulkUpdateSetlistTracks(
     | {
           ok: true
           mode: "atomic" | "best-effort"
+          committed: boolean
           results: BulkUpdateResult[]
           dryRun: boolean
       }
@@ -295,6 +296,7 @@ export async function bulkUpdateSetlistTracks(
     return {
         ok: true,
         mode: result.mode,
+        committed: result.committed,
         results: result.results,
         dryRun: result.dryRun,
     }

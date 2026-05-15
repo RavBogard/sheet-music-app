@@ -280,7 +280,65 @@ export async function updateTrack(
     })
 
     const after = (await trackRef.get()).data() as Record<string, unknown>
-    return { ok: true, track: { id: trackId, ...after } }
+    return { ok: true, track: normalizeTrackEcho(trackId, after) }
+}
+
+/**
+ * Convert a raw Firestore track doc into the JSON-friendly echo shape we
+ * return from update_track / bulk_update_tracks. Specifically: surface
+ * `updatedAt` as an ISO string regardless of whether the source was a
+ * Firestore Timestamp (post-commit re-read), a {toMillis}-shaped
+ * normalization (from getTracksForSetlist), or a ms-since-epoch number.
+ *
+ * The cowork CF1 verification (2026-05-15, §3.3) flagged the inconsistent
+ * shape: plan-path rows came through as ms numbers; committed-path rows
+ * came through as raw `{_seconds, _nanoseconds}` Timestamps. Callers had
+ * no portable way to read the field.
+ */
+function normalizeTrackEcho(
+    id: string,
+    data: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+    const echo: Record<string, unknown> = { id }
+    if (!data) return echo
+    for (const [k, v] of Object.entries(data)) {
+        if (k === "updatedAt") {
+            echo[k] = toIsoString(v)
+        } else {
+            echo[k] = v
+        }
+    }
+    return echo
+}
+
+function toIsoString(v: unknown): string | null {
+    if (typeof v === "string") return v
+    if (typeof v === "number") return new Date(v).toISOString()
+    if (
+        v &&
+        typeof v === "object" &&
+        "toDate" in v &&
+        typeof (v as { toDate: unknown }).toDate === "function"
+    ) {
+        try {
+            return (v as { toDate(): Date }).toDate().toISOString()
+        } catch {
+            return null
+        }
+    }
+    if (
+        v &&
+        typeof v === "object" &&
+        "toMillis" in v &&
+        typeof (v as { toMillis: unknown }).toMillis === "function"
+    ) {
+        try {
+            return new Date((v as { toMillis(): number }).toMillis()).toISOString()
+        } catch {
+            return null
+        }
+    }
+    return null
 }
 
 export const BULK_UPDATE_MAX_PATCHES = 50
@@ -306,14 +364,22 @@ export interface BulkUpdateOptions {
  * Apply many per-row patches to one setlist's tracks in a single call.
  *
  * `mode='atomic'` (default) wraps every update in a Firestore transaction —
- * all-or-nothing. If any pre-validation fails, no writes happen and the
- * envelope's results[] reports each row's status.
+ * all-or-nothing. If any pre-validation fails, NO writes happen and the
+ * response carries `committed: false` plus per-row results explaining
+ * exactly which patch failed and which were rolled back.
  *
  * `mode='best-effort'` applies each patch independently, accumulating
  * per-row results. Lossier but partial-success is allowed.
  *
  * `dryRun=true` returns the would-apply plan without writing — useful for
- * confirming a large change before committing.
+ * confirming a large change before committing. `committed: false` in this
+ * case too (intentionally not committed, not failed).
+ *
+ * Response invariant (post-CF1-fix 2026-05-15): `committed` answers
+ * "did Firestore writes actually land?" The cowork eval flagged that
+ * the old envelope used `ok: true` for both "committed" and "rolled back
+ * atomically" — callers couldn't distinguish. `committed: boolean` is the
+ * load-bearing signal now.
  *
  * Cap: 50 patches per call (chunk longer lists).
  */
@@ -326,6 +392,7 @@ export async function bulkUpdateTracks(
     | {
           ok: true
           mode: "atomic" | "best-effort"
+          committed: boolean
           results: BulkUpdateResult[]
           dryRun: boolean
       }
@@ -346,41 +413,84 @@ export async function bulkUpdateTracks(
     const existing = await getTracksForSetlist(db, setlistId, {})
     const byId = new Map(existing.map((t) => [t.id, t]))
 
-    const plan: BulkUpdateResult[] = patches.map(({ trackId, patch }) => {
+    type PlanEntry =
+        | { kind: "preview"; result: BulkUpdateResult }
+        | { kind: "invalid"; result: BulkUpdateResult }
+
+    const planEntries: PlanEntry[] = patches.map(({ trackId, patch }) => {
         const row = byId.get(trackId)
         if (!row) {
             return {
-                trackId,
-                ok: false,
-                error: "Track not found in this setlist",
+                kind: "invalid",
+                result: {
+                    trackId,
+                    ok: false,
+                    error: "Track not found in this setlist",
+                },
             }
         }
         const fields = UPDATABLE_FIELDS.filter((k) => patch[k] !== undefined)
         if (fields.length === 0) {
             return {
-                trackId,
-                ok: false,
-                error: "patch must include at least one field",
+                kind: "invalid",
+                result: {
+                    trackId,
+                    ok: false,
+                    error: "patch must include at least one field",
+                },
             }
         }
-        const previewTrack: Record<string, unknown> = { ...row }
-        for (const k of fields) previewTrack[k] = patch[k]
+        const preview: Record<string, unknown> = { ...row }
+        for (const k of fields) preview[k] = patch[k]
         if (patch.songId !== undefined && patch.songId !== row.songId) {
-            previewTrack.fileId = patch.songId
+            preview.fileId = patch.songId
         }
-        return { trackId, ok: true, track: previewTrack }
+        return {
+            kind: "preview",
+            result: {
+                trackId,
+                ok: true,
+                track: normalizeTrackEcho(trackId, preview),
+            },
+        }
     })
 
-    const anyFailed = plan.some((p) => !p.ok)
+    const anyInvalid = planEntries.some((p) => p.kind === "invalid")
 
     // atomic + any pre-validation failure → reject the whole batch, no writes.
-    if (mode === "atomic" && anyFailed) {
-        return { ok: true, mode, results: plan, dryRun }
+    // The previously-valid rows must be marked ok:false with an explicit
+    // rollback message — they did NOT commit, and a caller reading the
+    // envelope shouldn't be fooled by a stale-looking `ok: true`.
+    if (mode === "atomic" && anyInvalid) {
+        const results: BulkUpdateResult[] = planEntries.map((p) =>
+            p.kind === "invalid"
+                ? p.result
+                : {
+                      trackId: p.result.trackId,
+                      ok: false,
+                      error:
+                          "Rolled back: another patch in the atomic batch failed pre-validation",
+                  },
+        )
+        logger.info("[mcp] bulk track update — atomic rollback", {
+            setlistId,
+            patchCount: patches.length,
+            invalidCount: planEntries.filter((p) => p.kind === "invalid").length,
+        })
+        return { ok: true, mode, committed: false, results, dryRun }
     }
 
     if (dryRun) {
-        return { ok: true, mode, results: plan, dryRun: true }
+        return {
+            ok: true,
+            mode,
+            committed: false,
+            results: planEntries.map((p) => p.result),
+            dryRun: true,
+        }
     }
+
+    const results: BulkUpdateResult[] = planEntries.map((p) => p.result)
 
     if (mode === "atomic") {
         await db.runTransaction(async (tx) => {
@@ -405,25 +515,27 @@ export async function bulkUpdateTracks(
                 updatedAt: FieldValue.serverTimestamp(),
             })
         })
-        // Re-read the affected rows so callers get the same echo shape as
-        // update_track. Cheap relative to the transaction itself.
+        // Re-read the affected rows so callers get the actual post-commit
+        // state (including the server-stamped updatedAt). normalizeTrackEcho
+        // turns the Firestore Timestamp into an ISO string for consistency
+        // with the plan-path echo shape.
         for (let i = 0; i < patches.length; i++) {
-            if (!plan[i].ok) continue
+            if (!results[i].ok) continue
             const after = (
                 await db.collection("tracks").doc(patches[i].trackId).get()
             ).data() as Record<string, unknown> | undefined
             if (after) {
-                plan[i] = {
+                results[i] = {
                     trackId: patches[i].trackId,
                     ok: true,
-                    track: { id: patches[i].trackId, ...after },
+                    track: normalizeTrackEcho(patches[i].trackId, after),
                 }
             }
         }
     } else {
         for (let i = 0; i < patches.length; i++) {
             const entry = patches[i]
-            if (!plan[i].ok) continue
+            if (!results[i].ok) continue
             try {
                 const r = await updateTrack(
                     db,
@@ -431,11 +543,11 @@ export async function bulkUpdateTracks(
                     entry.trackId,
                     entry.patch,
                 )
-                plan[i] = r.ok
+                results[i] = r.ok
                     ? { trackId: entry.trackId, ok: true, track: r.track }
                     : { trackId: entry.trackId, ok: false, error: r.error }
             } catch (err) {
-                plan[i] = {
+                results[i] = {
                     trackId: entry.trackId,
                     ok: false,
                     error: err instanceof Error ? err.message : String(err),
@@ -448,10 +560,10 @@ export async function bulkUpdateTracks(
         setlistId,
         mode,
         patchCount: patches.length,
-        anyFailed: plan.some((p) => !p.ok),
+        anyFailed: results.some((p) => !p.ok),
     })
 
-    return { ok: true, mode, results: plan, dryRun: false }
+    return { ok: true, mode, committed: true, results, dryRun: false }
 }
 
 /**

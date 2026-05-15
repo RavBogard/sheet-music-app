@@ -691,7 +691,7 @@ describe("MCP setlist write tools (emulator)", () => {
 
         // ─── bulk_update_tracks ─────────────────────────────────────────────
 
-        it("bulk_update_tracks atomic happy path — 3 valid patches all land in one transaction", async () => {
+        it("bulk_update_tracks atomic happy path — 3 valid patches all land in one transaction (committed: true)", async () => {
             const id = await newSetlist()
             const t1 = await addRow(id, "A")
             const t2 = await addRow(id, "B")
@@ -707,11 +707,17 @@ describe("MCP setlist write tools (emulator)", () => {
             })) as {
                 ok: true
                 mode: "atomic"
-                results: Array<{ trackId: string; ok: boolean }>
+                committed: boolean
+                results: Array<{
+                    trackId: string
+                    ok: boolean
+                    track?: Record<string, unknown>
+                }>
                 dryRun: boolean
             }
             expect(r.ok).toBe(true)
             expect(r.mode).toBe("atomic")
+            expect(r.committed).toBe(true)
             expect(r.dryRun).toBe(false)
             expect(r.results.every((p) => p.ok)).toBe(true)
 
@@ -719,9 +725,17 @@ describe("MCP setlist write tools (emulator)", () => {
             expect(rows.find((row) => row.id === t1)!.leadMusician).toBe("Daniel")
             expect(rows.find((row) => row.id === t2)!.leadMusician).toBe("Randy")
             expect(rows.find((row) => row.id === t3)!.leadMusician).toBe("Cantor")
+
+            // §3.3 regression: updatedAt in each row's echo is an ISO string,
+            // not a raw Firestore Timestamp or ms-since-epoch number.
+            for (const result of r.results) {
+                const updatedAt = result.track?.updatedAt
+                expect(typeof updatedAt).toBe("string")
+                expect(() => new Date(updatedAt as string).toISOString()).not.toThrow()
+            }
         })
 
-        it("bulk_update_tracks atomic with any invalid trackId rejects the whole batch (no writes)", async () => {
+        it("bulk_update_tracks atomic-rollback (cowork §3.1 regression): committed=false, would-have-written rows ok=false with explicit rollback error", async () => {
             const id = await newSetlist()
             const t1 = await addRow(id, "A")
             const t2 = await addRow(id, "B")
@@ -736,16 +750,25 @@ describe("MCP setlist write tools (emulator)", () => {
             })) as {
                 ok: true
                 mode: "atomic"
+                committed: boolean
                 results: Array<{ trackId: string; ok: boolean; error?: string }>
                 dryRun: boolean
             }
+            // The headline change: callers can now tell from `committed` that
+            // writes didn't land — even though `ok: true` at envelope level.
             expect(r.ok).toBe(true)
-            expect(r.results[0].ok).toBe(true)
+            expect(r.committed).toBe(false)
+            // The bogus row is rejected with the pre-validation error.
             expect(r.results[1].ok).toBe(false)
             expect(r.results[1].error).toBe("Track not found in this setlist")
-            expect(r.results[2].ok).toBe(true)
+            // The previously-valid rows now report ok:false with an explicit
+            // rollback error — NOT the misleading ok:true that cowork flagged.
+            expect(r.results[0].ok).toBe(false)
+            expect(r.results[0].error).toContain("Rolled back")
+            expect(r.results[2].ok).toBe(false)
+            expect(r.results[2].error).toContain("Rolled back")
 
-            // No writes happened: leadMusician on t1 and t2 still undefined.
+            // Confirm no Firestore writes landed.
             const t1Doc = (
                 await db().collection("tracks").doc(t1).get()
             ).data()!
@@ -756,7 +779,7 @@ describe("MCP setlist write tools (emulator)", () => {
             expect(t2Doc.leadMusician).toBeUndefined()
         })
 
-        it("bulk_update_tracks best-effort applies the good rows and reports the bad one", async () => {
+        it("bulk_update_tracks best-effort: committed=true even with one rejected row; per-row results explain", async () => {
             const id = await newSetlist()
             const t1 = await addRow(id, "A")
             const t2 = await addRow(id, "B")
@@ -772,11 +795,14 @@ describe("MCP setlist write tools (emulator)", () => {
             })) as {
                 ok: true
                 mode: "best-effort"
+                committed: boolean
                 results: Array<{ trackId: string; ok: boolean; error?: string }>
             }
             expect(r.mode).toBe("best-effort")
+            expect(r.committed).toBe(true) // at least one write attempted/landed
             expect(r.results[0].ok).toBe(true)
             expect(r.results[1].ok).toBe(false)
+            expect(r.results[1].error).toBe("Track not found in this setlist")
             expect(r.results[2].ok).toBe(true)
 
             // Two writes landed, ghost was skipped.
@@ -790,7 +816,7 @@ describe("MCP setlist write tools (emulator)", () => {
             expect(t2Doc.leadMusician).toBe("Randy")
         })
 
-        it("bulk_update_tracks dryRun returns the plan without writing", async () => {
+        it("bulk_update_tracks dryRun returns committed=false plus the would-apply plan; no writes", async () => {
             const id = await newSetlist()
             const t1 = await addRow(id, "A")
             const t2 = await addRow(id, "B")
@@ -806,6 +832,7 @@ describe("MCP setlist write tools (emulator)", () => {
                 ],
             })) as {
                 ok: true
+                committed: boolean
                 dryRun: boolean
                 results: Array<{
                     trackId: string
@@ -814,9 +841,14 @@ describe("MCP setlist write tools (emulator)", () => {
                 }>
             }
             expect(r.dryRun).toBe(true)
+            expect(r.committed).toBe(false)
             expect(r.results.every((p) => p.ok)).toBe(true)
             // The plan shows the would-apply rows.
             expect(r.results[0].track?.leadMusician).toBe("Daniel")
+            // §3.3: plan-path updatedAt is also normalized to ISO/null,
+            // not a raw ms number.
+            const ua = r.results[0].track?.updatedAt
+            expect(ua === null || typeof ua === "string").toBe(true)
 
             // No writes landed.
             for (const tid of [t1, t2, t3]) {
