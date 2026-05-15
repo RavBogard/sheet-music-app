@@ -114,7 +114,7 @@ describe('MobileRowCard — v60-02 pagehide / visibilitychange draft flush', () 
             />,
         )
 
-        const leadInput = screen.getByLabelText('Lead') as HTMLInputElement
+        const leadInput = screen.getByLabelText('Vocal Lead') as HTMLInputElement
         fireEvent.change(leadInput, { target: { value: 'New Lead' } })
 
         Object.defineProperty(document, 'visibilityState', {

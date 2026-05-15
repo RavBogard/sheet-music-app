@@ -289,7 +289,7 @@ export function MobileRowCard({
 
                             {isSong && track.leadMusician ? (
                                 <div className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-center max-w-[5rem]">
-                                    <p className="text-[9px] text-muted-foreground/70 uppercase font-bold tracking-tighter leading-none mb-0.5">Lead</p>
+                                    <p className="text-[9px] text-muted-foreground/70 uppercase font-bold tracking-tighter leading-none mb-0.5">Vocal Lead</p>
                                     <p className="text-foreground font-bold text-xs leading-none truncate">{track.leadMusician}</p>
                                 </div>
                             ) : null}
@@ -415,7 +415,7 @@ export function MobileRowCard({
                         {isSong && (
                             <>
                                 <label className="block">
-                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">Lead</span>
+                                    <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1 block">Vocal Lead</span>
                                     <input type="text" value={lead} onChange={e => setLead(e.target.value)} onBlur={commitLead} className={inputBase} />
                                 </label>
                                 <label className="block">

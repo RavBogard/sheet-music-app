@@ -17,12 +17,16 @@ vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
     getDocument: ({ data }: { data: Uint8Array }) => {
         // Treat buffers without the %PDF- magic header as corrupt — the mock
         // rejects so extractDocumentText's try/catch yields 'extraction_failed'.
-        const header = Buffer.from(data.slice(0, 5)).toString('latin1')
-        if (header !== '%PDF-') {
+        const content = Buffer.from(data).toString('latin1')
+        if (content.slice(0, 5) !== '%PDF-') {
             return { promise: Promise.reject(new Error('Invalid PDF structure')) }
         }
+        // A `PAGES=N` marker in the buffer lets a test simulate a multi-page PDF
+        // (exercises the MAX_PDF_PAGES cap); absent the marker, a 1-page doc.
+        const pageMatch = content.match(/PAGES=(\d+)/)
+        const numPages = pageMatch ? parseInt(pageMatch[1], 10) : 1
         const pdfDoc = {
-            numPages: 1,
+            numPages,
             getPage: () =>
                 Promise.resolve({
                     getTextContent: () =>
@@ -165,6 +169,35 @@ describe('extractDocumentText', () => {
         )
         expect(result.ok).toBe(false)
         if (!result.ok) expect(result.reason).toBe('empty')
+    })
+
+    it('caps PDF page count — a PDF over the limit fails without parsing unbounded pages', async () => {
+        // 999 pages — well over the 50-page cap. The `PAGES=` marker drives the
+        // mocked loader's numPages; extractPdfText throws before the page loop.
+        const hugePdf = Buffer.from(
+            `%PDF-1.4\nPAGES=999\n${KNOWN_PDF_TEXT}`,
+            'latin1',
+        )
+        const result = await extractDocumentText(hugePdf, {
+            fileName: 'huge.pdf',
+        })
+        expect(result.ok).toBe(false)
+        if (!result.ok) {
+            expect(result.reason).toBe('extraction_failed')
+            expect(result.message).toContain('page limit')
+        }
+    })
+
+    it('extracts text from a PDF at the page-count boundary', async () => {
+        // 50 pages — exactly the cap, must still succeed.
+        const okPdf = Buffer.from(
+            `%PDF-1.4\nPAGES=50\n${KNOWN_PDF_TEXT}`,
+            'latin1',
+        )
+        const result = await extractDocumentText(okPdf, {
+            fileName: 'service.pdf',
+        })
+        expect(result.ok).toBe(true)
     })
 
     it('returns extraction_failed for corrupt input of a supported format (no throw)', async () => {

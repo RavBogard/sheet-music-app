@@ -2,7 +2,10 @@ import { NextResponse } from "next/server"
 
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
-import { extractDocumentText } from "@/lib/setlist-import/extract-document"
+import {
+    detectDocumentFormat,
+    extractDocumentText,
+} from "@/lib/setlist-import/extract-document"
 
 // PDF text extraction can be slow on larger documents — matches import/parse.
 export const maxDuration = 60
@@ -18,8 +21,9 @@ const MAX_FILE_SIZE = 25 * 1024 * 1024
  * and returns it; the setlist gets created later in the v70-05 → v70-07
  * pipeline. Sibling of /api/setlists/import/parse + /execute.
  *
- * Accepts multipart/form-data with a single `file` field. Any authenticated
- * user may call it (no role gate — matches import/parse).
+ * Accepts multipart/form-data with a single `file` field. band_leader only —
+ * the whole doc-import pipeline is a band-leader feature (consistent with
+ * commit-document + execute); it drives billed server-side parsing.
  */
 export const POST = createApiHandler(async (ctx) => {
     const limited = await checkRateLimit(ctx.req, 'upload')
@@ -36,6 +40,14 @@ export const POST = createApiHandler(async (ctx) => {
             {
                 error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`,
             },
+            { status: 400 },
+        )
+    }
+
+    // Reject unsupported types BEFORE buffering the file / invoking mammoth/pdfjs.
+    if (!detectDocumentFormat(file.name, file.type)) {
+        return NextResponse.json(
+            { error: "Only .docx, .pdf, and .txt documents are supported." },
             { status: 400 },
         )
     }
@@ -60,4 +72,4 @@ export const POST = createApiHandler(async (ctx) => {
         fileName: file.name,
         charCount: result.charCount,
     })
-})
+}, { role: 'band_leader' })

@@ -66,10 +66,12 @@ function toTimestamp(value: Date | string): Timestamp {
 // ─── Create ──────────────────────────────────────────────────────────
 
 /**
- * Create a setlist + its top-level tracks server-side. Builds the
- * `setlists/{id}` doc, then seeds one `tracks/{id}` doc per input track via a
- * batched write — the Admin-SDK equivalent of createSetlistService's
- * client-side applyEdit fanout (mirrors import/execute's proven shape).
+ * Create a setlist + its top-level tracks server-side. Writes the
+ * `setlists/{id}` parent doc and one `tracks/{id}` doc per input track in a
+ * SINGLE atomic Firestore batch — the Admin-SDK equivalent of
+ * createSetlistService's client-side applyEdit fanout. One batch means the
+ * whole setlist commits or nothing does (no partial-write window); a worship
+ * setlist is well under the 500-write batch limit.
  */
 export async function createSetlistServerSide(
     input: CreateSetlistInput,
@@ -108,35 +110,31 @@ export async function createSetlistServerSide(
         setlistPayload.rabbi = input.rabbi
     }
 
-    await db.collection('setlists').doc(setlistId).set(setlistPayload)
-
-    // Seed top-level tracks/{id} via a batched write. Sequential after the
-    // parent set() so a partial failure leaves a recoverable state (parent
-    // exists with hydrated:true + trackCount; reader fallback handles the gap).
-    if (input.tracks.length > 0) {
-        const batch = db.batch()
-        input.tracks.forEach((t, i) => {
-            const trackId = crypto.randomUUID()
-            const trackPayload: Record<string, unknown> = {
-                id: trackId,
-                setlistId,
-                order: i,
-                type: t.type ?? 'song',
-                title: t.title,
-            }
-            if (t.key !== undefined) trackPayload.key = t.key
-            if (t.leadMusician !== undefined) {
-                trackPayload.leadMusician = t.leadMusician
-            }
-            if (t.referenceLink !== undefined) {
-                trackPayload.referenceLink = t.referenceLink
-            }
-            if (t.fileId !== undefined) trackPayload.fileId = t.fileId
-            if (t.fileName !== undefined) trackPayload.fileName = t.fileName
-            batch.set(db.collection('tracks').doc(trackId), trackPayload)
-        })
-        await batch.commit()
-    }
+    // One atomic batch: the parent setlists/{id} doc + every top-level
+    // tracks/{id} seed. Either the whole setlist commits or nothing does.
+    const batch = db.batch()
+    batch.set(db.collection('setlists').doc(setlistId), setlistPayload)
+    input.tracks.forEach((t, i) => {
+        const trackId = crypto.randomUUID()
+        const trackPayload: Record<string, unknown> = {
+            id: trackId,
+            setlistId,
+            order: i,
+            type: t.type ?? 'song',
+            title: t.title,
+        }
+        if (t.key !== undefined) trackPayload.key = t.key
+        if (t.leadMusician !== undefined) {
+            trackPayload.leadMusician = t.leadMusician
+        }
+        if (t.referenceLink !== undefined) {
+            trackPayload.referenceLink = t.referenceLink
+        }
+        if (t.fileId !== undefined) trackPayload.fileId = t.fileId
+        if (t.fileName !== undefined) trackPayload.fileName = t.fileName
+        batch.set(db.collection('tracks').doc(trackId), trackPayload)
+    })
+    await batch.commit()
 
     return { setlistId, trackCount: input.tracks.length }
 }

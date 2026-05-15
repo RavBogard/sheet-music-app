@@ -4,7 +4,7 @@ import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { downloadFromStoragePath } from "@/lib/firebase-storage"
 import { checkRateLimit } from "@/lib/rate-limit"
-import { hasBrowserFetchMetadata } from "@/lib/drive-file-auth"
+import { verifySessionCookieRequest } from "@/lib/drive-file-auth"
 import { logger } from "@/lib/logger"
 
 export const dynamic = 'force-dynamic'
@@ -16,14 +16,16 @@ export const dynamic = 'force-dynamic'
  * bypasses Storage rules, so playback needs no client Storage SDK and no
  * `storage.rules` change — this serving route IS the access control.
  *
- * Auth mirrors /api/drive/file: accept a Bearer token OR browser-set
- * Sec-Fetch-* metadata (an <audio> element cannot attach a Bearer header).
+ * Auth: accept a Bearer token OR a verified Firebase `__session` cookie. An
+ * <audio> element cannot attach a Bearer header, but it sends the HttpOnly
+ * session cookie automatically — so this is a real auth boundary, not the
+ * forgeable Sec-Fetch-* heuristic it previously relied on (v70-08-02).
  */
 export const GET = createApiHandler(async (ctx) => {
     const limited = await checkRateLimit(ctx.req, 'api')
     if (limited) return limited
 
-    if (!ctx.auth && !hasBrowserFetchMetadata(ctx.req)) {
+    if (!ctx.auth && !(await verifySessionCookieRequest(ctx.req))) {
         return NextResponse.json(
             { error: "Authentication required" },
             { status: 401 },

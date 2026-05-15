@@ -18,12 +18,12 @@ import { geminiFlash } from '@/lib/gemini'
 // unknown fields even when instructed to omit them. Nulls are normalized to
 // undefined after a successful parse (see normalizeTrack / normalizeSection).
 
-const SectionSchema = z.object({
+export const SectionSchema = z.object({
     name: z.string(),
     order: z.number(),
 })
 
-const TrackSchema = z.object({
+export const TrackSchema = z.object({
     title: z.string(),
     key: z.string().nullish(),
     vocalLead: z.string().nullish(),

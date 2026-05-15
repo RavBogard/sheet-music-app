@@ -22,8 +22,9 @@ export const maxDuration = 60
  * import/extract-structure + import/extract-document + import/parse.
  *
  * Accepts JSON `{ sections, tracks }` (the extract-structure output shape,
- * validated by SetlistStructureSchema). Any authenticated user may call it
- * (no role gate — matches the sibling import routes).
+ * validated by SetlistStructureSchema). band_leader only — the whole doc-import
+ * pipeline is a band-leader feature (consistent with commit-document + execute);
+ * `resolve` also enumerates the full library, which a `member` cannot otherwise read.
  */
 export const POST = createApiHandler(
     async (ctx) => {
@@ -51,5 +52,5 @@ export const POST = createApiHandler(
             tracks: result.tracks,
         })
     },
-    { schema: SetlistStructureSchema },
+    { role: 'band_leader', schema: SetlistStructureSchema },
 )

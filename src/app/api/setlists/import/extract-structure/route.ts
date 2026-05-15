@@ -21,9 +21,10 @@ const schema = z.object({ text: z.string() })
  * and does NOT persist anything (v70-07). Sibling of import/extract-document +
  * import/parse + import/execute.
  *
- * Accepts JSON { text: string }. Any authenticated user may call it (no role
- * gate — matches import/extract-document). Malformed/empty extractions return
- * 422 with the raw Gemini output so a human can review what the model produced.
+ * Accepts JSON { text: string }. band_leader only — the whole doc-import
+ * pipeline is a band-leader feature (consistent with commit-document + execute);
+ * it drives billed Gemini calls. Malformed/empty extractions return 422 with the
+ * raw Gemini output so a human can review what the model produced.
  */
 export const POST = createApiHandler(
     async (ctx) => {
@@ -60,5 +61,5 @@ export const POST = createApiHandler(
             tracks: result.tracks,
         })
     },
-    { schema },
+    { role: 'band_leader', schema },
 )

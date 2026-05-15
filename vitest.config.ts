@@ -42,6 +42,10 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': resolve(__dirname, './src'),
+            // The `server-only` package throws outside a React Server
+            // environment (incl. vitest jsdom). Alias it to a no-op so modules
+            // guarded with `import 'server-only'` are testable. (v70-08-04)
+            'server-only': resolve(__dirname, './src/test-server-only-stub.ts'),
         },
     },
 })

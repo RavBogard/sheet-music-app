@@ -5,12 +5,49 @@
  *
  * S03 (v4.3 P2-02).
  */
+import { initAdmin } from "@/lib/firebase-admin"
+import { getAuth } from "firebase-admin/auth"
+
 /**
  * Minimal shape we need — lets tests fake a request without constructing
  * a full NextRequest + Headers object.
  */
 export interface HeaderReader {
     headers: { get(name: string): string | null }
+}
+
+/** Minimal cookie-reader shape — NextRequest.cookies satisfies it. */
+export interface CookieReader {
+    cookies: { get(name: string): { value: string } | undefined }
+}
+
+const SESSION_COOKIE_NAME = "__session"
+
+/**
+ * Verify the Firebase session cookie (`__session`) on a request.
+ *
+ * Unlike `hasBrowserFetchMetadata`, this IS a real cryptographic auth boundary:
+ * `__session` is HttpOnly + server-minted (see /api/auth/session) and cannot be
+ * forged. Browser fetches (`<audio>`, `<img>`, `<embed>`, prefetches) send it
+ * automatically without needing a Bearer header — the gap that the
+ * `Sec-Fetch-*` heuristic was a (forgeable) stand-in for.
+ *
+ * Returns the verified uid, or null for any failure (no cookie, expired,
+ * revoked, Admin SDK unavailable). Never throws.
+ */
+export async function verifySessionCookieRequest(
+    req: CookieReader,
+): Promise<string | null> {
+    const cookie = req.cookies.get(SESSION_COOKIE_NAME)?.value
+    if (!cookie) return null
+    try {
+        if (!initAdmin()) return null
+        const decoded = await getAuth().verifySessionCookie(cookie, true)
+        return decoded.uid
+    } catch {
+        // Expired / revoked / malformed cookie — treat as unauthenticated.
+        return null
+    }
 }
 
 /**

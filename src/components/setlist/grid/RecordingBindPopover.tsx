@@ -47,6 +47,9 @@ export function RecordingBindPopover({
 
     const [open, setOpen] = useState(false)
     const [recordings, setRecordings] = useState<Recording[]>([])
+    // Tracks whether the first onSnapshot has arrived — without it, the popover
+    // flashes a false "No recordings yet" between open and the first callback.
+    const [loaded, setLoaded] = useState(false)
     const [uploading, setUploading] = useState(false)
     const [uploadError, setUploadError] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -54,8 +57,15 @@ export function RecordingBindPopover({
     // Subscribe only while the popover is open — avoids a live Firestore
     // listener per row across a large setlist.
     useEffect(() => {
-        if (!open) return
-        const unsub = subscribeRecordingsForSong(songId, setRecordings)
+        if (!open) {
+            setLoaded(false)
+            return
+        }
+        setLoaded(false)
+        const unsub = subscribeRecordingsForSong(songId, (recs) => {
+            setRecordings(recs)
+            setLoaded(true)
+        })
         return () => unsub()
     }, [open, songId])
 
@@ -107,7 +117,12 @@ export function RecordingBindPopover({
                 </div>
 
                 <div className="max-h-72 overflow-y-auto p-2">
-                    {recordings.length === 0 ? (
+                    {!loaded ? (
+                        <p className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
+                            <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
+                            Loading recordings…
+                        </p>
+                    ) : recordings.length === 0 ? (
                         <p className="px-2 py-3 text-sm text-muted-foreground">
                             No recordings yet
                             {canUpload ? ' — upload one below.' : '.'}
@@ -130,6 +145,7 @@ export function RecordingBindPopover({
                                     <audio
                                         controls
                                         preload="none"
+                                        aria-label={`Play recording: ${rec.title}`}
                                         src={getRecordingPlaybackUrl(rec)}
                                         className="w-full"
                                     />

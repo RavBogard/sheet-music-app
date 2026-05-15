@@ -8,22 +8,28 @@ import { logger } from "@/lib/logger"
 import crypto from "crypto"
 import { z } from "zod"
 
-interface ParsedItem {
-    type: 'header' | 'song'
-    title?: string
-    key?: string
-    chartUrl?: string
-    performer?: string
-    referenceLink?: string
-    chartError?: string
-    libraryMatchId?: string
-    libraryMatchName?: string
-}
-
 export const maxDuration = 60 // Allow up to 60s for Vercel downloads
 
+// The import/parse route emits `null` for a header item's non-title fields, so
+// optional fields are `.nullish()` (v70-08-02 — replaces the prior
+// z.array(z.any()) escape hatch). Unknown keys (e.g. parse's `similarityScore`)
+// are stripped by z.object's default behavior — execute does not read them.
+const ParsedItemSchema = z.object({
+    type: z.enum(['header', 'song']),
+    title: z.string().nullish(),
+    key: z.string().nullish(),
+    chartUrl: z.string().nullish(),
+    performer: z.string().nullish(),
+    referenceLink: z.string().nullish(),
+    chartError: z.string().nullish(),
+    libraryMatchId: z.string().nullish(),
+    libraryMatchName: z.string().nullish(),
+})
+
+type ParsedItem = z.infer<typeof ParsedItemSchema>
+
 const schema = z.object({
-    items: z.array(z.any()).min(1),
+    items: z.array(ParsedItemSchema).min(1),
     name: z.string().optional(),
 })
 

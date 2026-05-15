@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Link, FileText, AlertTriangle, CheckCircle2, ChevronRight, Music, UploadCloud, FileType2, Calendar, User, ListMusic, FileWarning, Disc3 } from "lucide-react"
 import { toast } from "sonner"
+import { format } from "date-fns"
 import { apiFetch } from "@/lib/api-client"
 import type { ResolvedStructure } from "@/lib/setlist-import/resolve"
 import type { Setlist } from "@/types/models"
@@ -36,7 +37,6 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
     const [step, setStep] = useState<Step>('input')
     const [url, setUrl] = useState("")
     const [csvFile, setCsvFile] = useState<File | null>(null)
-    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const [items, setItems] = useState<ParsedItem[]>([])
     const [isParsing, setIsParsing] = useState(false)
@@ -44,8 +44,10 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
 
     // ── Document-import path (v70-07) ────────────────────────────────────
     const [docFile, setDocFile] = useState<File | null>(null)
-    const docFileInputRef = useRef<HTMLInputElement>(null)
     const [isProcessingDoc, setIsProcessingDoc] = useState(false)
+    // Aborts the in-flight 3-route doc-import chain when the modal closes or the
+    // user starts over (v70-08-04 — closing the modal must cancel server work).
+    const docSubmitAbortRef = useRef<AbortController | null>(null)
     const [resolved, setResolved] = useState<ResolvedStructure | null>(null)
     const [docFileName, setDocFileName] = useState("")
 
@@ -73,6 +75,9 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             setInterviewServiceType('other')
             setInterviewRabbi("")
             setIsCommitting(false)
+        } else {
+            // Modal closed mid-pipeline — cancel any in-flight doc-import chain.
+            docSubmitAbortRef.current?.abort()
         }
     }, [open])
 
@@ -103,6 +108,11 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             return
         }
 
+        // Fresh AbortController per run — abort any prior in-flight chain first.
+        docSubmitAbortRef.current?.abort()
+        const controller = new AbortController()
+        docSubmitAbortRef.current = controller
+
         setIsProcessingDoc(true)
         setStep('processing')
         try {
@@ -113,6 +123,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                 method: 'POST',
                 body: formData,
                 timeout: 60000,
+                signal: controller.signal,
             })
             if (!extractRes.ok) {
                 const data = await extractRes.json().catch(() => ({}))
@@ -125,6 +136,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                 method: 'POST',
                 body: JSON.stringify({ text }),
                 timeout: 60000,
+                signal: controller.signal,
             })
             if (!structureRes.ok) {
                 const data = await structureRes.json().catch(() => ({}))
@@ -136,6 +148,8 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             const resolveRes = await apiFetch('/api/setlists/import/resolve', {
                 method: 'POST',
                 body: JSON.stringify({ sections: structure.sections, tracks: structure.tracks }),
+                timeout: 60000,
+                signal: controller.signal,
             })
             if (!resolveRes.ok) {
                 const data = await resolveRes.json().catch(() => ({}))
@@ -162,10 +176,20 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
             setInterviewRabbi('')
             setStep('interview')
         } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : "Error processing document.")
+            // A deliberate abort (modal closed / "Start over") is not an error
+            // to surface — suppress the toast, just reset processing state.
+            const aborted =
+                controller.signal.aborted ||
+                (err instanceof DOMException && err.name === 'AbortError')
+            if (!aborted) {
+                toast.error(err instanceof Error ? err.message : "Error processing document.")
+            }
             setStep('input')
         } finally {
             setIsProcessingDoc(false)
+            if (docSubmitAbortRef.current === controller) {
+                docSubmitAbortRef.current = null
+            }
         }
     }
 
@@ -214,7 +238,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
     // POSTs to the doc-import commit route (flatten + createSetlistServerSide);
     // on success closes the modal and hands the new setlist id to onComplete.
     const handleCommitDocument = async () => {
-        if (!resolved || !interviewDate) return
+        if (!resolved || !interviewDate || resolved.tracks.length === 0) return
         setIsCommitting(true)
         try {
             const res = await apiFetch('/api/setlists/import/commit-document', {
@@ -272,6 +296,22 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
         const newItems = [...items]
         newItems[index] = { ...newItems[index], [field]: value }
         setItems(newItems)
+    }
+
+    // Interview-step "Start over" — explicitly discards the resolved AI-pipeline
+    // result and returns to input. Named + explicit so the destructive intent is
+    // honest (a plain "Back" silently threw away a 1-3 min pipeline run).
+    const handleStartOver = () => {
+        docSubmitAbortRef.current?.abort()
+        docSubmitAbortRef.current = null
+        setDocFile(null)
+        setResolved(null)
+        setDocFileName("")
+        setInterviewName("")
+        setInterviewDate("")
+        setInterviewServiceType('other')
+        setInterviewRabbi("")
+        setStep('input')
     }
 
     const handleExecute = async () => {
@@ -352,25 +392,26 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                     <FileText className="h-4 w-4 text-violet-500" />
                                     Upload CSV File
                                 </Label>
-                                <div
-                                    className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-colors hover:bg-muted/30 cursor-pointer ${csvFile ? 'border-violet-500 bg-violet-500/5' : 'border-border'}`}
-                                    onClick={() => fileInputRef.current?.click()}
+                                <label
+                                    htmlFor="csv-file-input"
+                                    className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-colors hover:bg-muted/30 cursor-pointer focus-within:ring-2 focus-within:ring-brand ${csvFile ? 'border-violet-500 bg-violet-500/5' : 'border-border'}`}
                                 >
                                     <UploadCloud className={`h-8 w-8 mb-3 ${csvFile ? 'text-violet-500' : 'text-muted-foreground'}`} />
-                                    <p className="text-sm font-medium">
+                                    <p className="text-sm font-medium" aria-live="polite">
                                         {csvFile ? csvFile.name : "Click to select a .csv file"}
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-1">
                                         {csvFile ? `${(csvFile.size / 1024).toFixed(1)} KB` : "Drag and drop intentionally disabled for now."}
                                     </p>
                                     <input
+                                        id="csv-file-input"
                                         type="file"
                                         accept=".csv"
-                                        className="hidden"
-                                        ref={fileInputRef}
+                                        aria-label="Upload a CSV file"
+                                        className="sr-only"
                                         onChange={handleFileSelect}
                                     />
-                                </div>
+                                </label>
                             </div>
 
                             <div className="relative flex items-center py-2">
@@ -385,32 +426,33 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                     <FileType2 className="h-4 w-4 text-emerald-500" />
                                     Upload Document
                                 </Label>
-                                <div
-                                    className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-colors hover:bg-muted/30 cursor-pointer ${docFile ? 'border-emerald-500 bg-emerald-500/5' : 'border-border'}`}
-                                    onClick={() => docFileInputRef.current?.click()}
+                                <label
+                                    htmlFor="doc-file-input"
+                                    className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-colors hover:bg-muted/30 cursor-pointer focus-within:ring-2 focus-within:ring-brand ${docFile ? 'border-emerald-500 bg-emerald-500/5' : 'border-border'}`}
                                 >
                                     <UploadCloud className={`h-8 w-8 mb-3 ${docFile ? 'text-emerald-500' : 'text-muted-foreground'}`} />
-                                    <p className="text-sm font-medium">
+                                    <p className="text-sm font-medium" aria-live="polite">
                                         {docFile ? docFile.name : "Click to select a .docx, .pdf, or .txt file"}
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-1">
                                         {docFile ? `${(docFile.size / 1024).toFixed(1)} KB` : "AI reads the service outline and builds the setlist."}
                                     </p>
                                     <input
+                                        id="doc-file-input"
                                         type="file"
                                         accept=".docx,.pdf,.txt"
-                                        className="hidden"
-                                        ref={docFileInputRef}
+                                        aria-label="Upload a service-outline document"
+                                        className="sr-only"
                                         onChange={handleDocSelect}
                                     />
-                                </div>
+                                </label>
                             </div>
 
                             <div className="pt-4 flex justify-end">
                                 <Button
                                     onClick={docFile ? handleDocSubmit : handleParse}
                                     disabled={(!url && !csvFile && !docFile) || isParsing || isProcessingDoc}
-                                    className="gap-2 shrink-0 bg-blue-600 hover:bg-blue-500"
+                                    className="gap-2 shrink-0 bg-brand hover:bg-brand/90"
                                 >
                                     {(isParsing || isProcessingDoc) ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
                                     {isParsing || isProcessingDoc
@@ -426,9 +468,13 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                     {step === 'processing' && (
                         <div className="flex-1 flex flex-col items-center justify-center p-12 min-h-[400px]">
                             <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-6" />
-                            <h3 className="text-title text-foreground mt-4">Analyzing Rows</h3>
+                            <h3 className="text-title text-foreground mt-4">
+                                {isProcessingDoc ? "Reading your document" : "Analyzing Rows"}
+                            </h3>
                             <p className="text-sm text-muted-foreground w-64">
-                                Passing data to Gemini to map dynamic columns, extract performer names, and verify Google Drive linkage permissions...
+                                {isProcessingDoc
+                                    ? "Reading your file and building the setlist — this can take a minute…"
+                                    : "Passing data to Gemini to map dynamic columns, extract performer names, and verify Google Drive linkage permissions..."}
                             </p>
                         </div>
                     )}
@@ -543,7 +589,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                     <Button variant="ghost" onClick={() => setStep('input')} disabled={isExecuting}>
                                         Back
                                     </Button>
-                                    <Button onClick={handleExecute} disabled={isExecuting} className="bg-blue-600 hover:bg-blue-500 gap-2">
+                                    <Button onClick={handleExecute} disabled={isExecuting} className="bg-brand hover:bg-brand/90 gap-2">
                                         {isExecuting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                                         {isExecuting ? "Executing..." : "Finalize Import"}
                                     </Button>
@@ -593,7 +639,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                         id="interview-service-type"
                                         value={interviewServiceType}
                                         onChange={(e) => setInterviewServiceType(e.target.value as NonNullable<Setlist['templateType']>)}
-                                        className="w-full h-10 rounded-md bg-muted/50 border border-border px-3 text-sm cursor-pointer"
+                                        className="w-full h-10 rounded-md bg-muted/50 border border-border px-3 text-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                                     >
                                         {Object.entries(SERVICE_TYPE_LABELS).map(([value, label]) => (
                                             <option key={value} value={value}>{label}</option>
@@ -620,13 +666,13 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                             </div>
 
                             <div className="p-4 border-t border-border bg-background flex items-center justify-between shrink-0 shadow-[0_-10px_30px_#00000033]">
-                                <Button variant="ghost" onClick={() => setStep('input')}>
-                                    Back
+                                <Button variant="ghost" onClick={handleStartOver}>
+                                    Start over
                                 </Button>
                                 <Button
                                     onClick={() => setStep('preview')}
                                     disabled={!interviewDate}
-                                    className="bg-blue-600 hover:bg-blue-500 gap-2"
+                                    className="bg-brand hover:bg-brand/90 gap-2"
                                 >
                                     <ChevronRight className="h-4 w-4" />
                                     Next: Preview
@@ -645,7 +691,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                 {interviewDate && (
                                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                         <Calendar className="h-3.5 w-3.5" />
-                                        {interviewDate}
+                                        {format(new Date(interviewDate + 'T00:00:00'), 'PPP')}
                                     </span>
                                 )}
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -705,7 +751,7 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                                             </span>
                                                         </span>
                                                     ) : (
-                                                        <span className="flex items-center gap-1 text-xs text-amber-500 shrink-0">
+                                                        <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 shrink-0">
                                                             <FileWarning className="h-3.5 w-3.5" />
                                                             Missing chart
                                                         </span>
@@ -737,8 +783,8 @@ export function ImporterModal({ open, onOpenChange, onComplete }: ImporterModalP
                                     </Button>
                                     <Button
                                         onClick={handleCommitDocument}
-                                        disabled={isCommitting}
-                                        className="bg-blue-600 hover:bg-blue-500 gap-2"
+                                        disabled={isCommitting || resolved.tracks.length === 0}
+                                        className="bg-brand hover:bg-brand/90 gap-2"
                                     >
                                         {isCommitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                                         {isCommitting ? "Creating..." : "Create Setlist"}

@@ -9,13 +9,17 @@
 // route.ts (levenshtein similarity, 0.82 threshold) — that route is not
 // refactored; the logic is intentionally duplicated here.
 
-import { getServerLibrary, type LibraryFile } from '@/lib/server-library'
+import { z } from 'zod'
+
+import { getServerLibraryLean, type LibraryFile } from '@/lib/server-library'
 import { levenshteinDistance } from '@/lib/string-utils'
 
-import type {
-    SetlistSection,
-    SetlistStructure,
-    SetlistTrack,
+import {
+    SectionSchema,
+    TrackSchema,
+    type SetlistSection,
+    type SetlistStructure,
+    type SetlistTrack,
 } from './extract-structure'
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -26,6 +30,28 @@ export interface LibraryMatch {
     /** Normalized similarity score in (0.82, 1]. */
     confidence: number
 }
+
+// ─── Zod schemas (for the commit-document route boundary) ────────────
+// The resolve route's OUTPUT shape — { sections, tracks } where each track
+// carries the resolve annotations. commit-document validates its inbound
+// payload against ResolvedStructureSchema instead of z.array(z.any()).
+
+export const LibraryMatchSchema = z.object({
+    fileId: z.string(),
+    name: z.string(),
+    confidence: z.number(),
+})
+
+export const ResolvedTrackSchema = TrackSchema.extend({
+    libraryMatch: LibraryMatchSchema.optional(),
+    missingChart: z.boolean(),
+    recordingCandidates: z.array(LibraryMatchSchema),
+})
+
+export const ResolvedStructureSchema = z.object({
+    sections: z.array(SectionSchema),
+    tracks: z.array(ResolvedTrackSchema),
+})
 
 export interface ResolvedTrack extends SetlistTrack {
     /** Best chart match (PDF / image library entry) above threshold, if any. */
@@ -122,7 +148,7 @@ function isAudioMime(mimeType: string): boolean {
  *
  * @param structure  the { sections, tracks } output of extractSetlistStructure
  * @param opts.library  inject a fixed library list (tests); when absent the
- *                      library is fetched via getServerLibrary()
+ *                      library is fetched via getServerLibraryLean()
  */
 export async function resolveSetlistStructure(
     structure: SetlistStructure,
@@ -133,11 +159,11 @@ export async function resolveSetlistStructure(
         library = opts.library
     } else {
         try {
-            // getServerLibrary already swallows internal errors and returns
-            // { files: [] } — an empty library is usable, not a failure. The
-            // try/catch only guards a thrown error (e.g. initAdmin throwing).
-            const result = await getServerLibrary()
-            library = result.files
+            // getServerLibraryLean swallows internal errors and returns [] — an
+            // empty library is usable, not a failure. The try/catch only guards
+            // a thrown error (e.g. initAdmin throwing). It uses a .select()
+            // projection + a short-lived module cache (resolve hot path).
+            library = await getServerLibraryLean()
         } catch (err) {
             return {
                 ok: false,

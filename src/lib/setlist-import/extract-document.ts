@@ -3,6 +3,12 @@
 // the foundation slice — v70-05 feeds the text to Gemini for structured
 // extraction. No OCR / image handling (deferred to v7.1).
 
+// Guard: this module statically imports `mammoth` (a heavy server-only dep) and
+// is a plausible client-import target (it also exports the pure
+// `detectDocumentFormat`). `server-only` makes an accidental client import a
+// build error. (v70-08-04)
+import 'server-only'
+
 import mammoth from 'mammoth'
 
 import { getPdfjs } from '@/lib/pdf-chord-extractor'
@@ -19,6 +25,10 @@ export type ExtractResult =
 
 const DOCX_MIME =
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
+// Worship-service outlines are a handful of pages; 50 is generous headroom and
+// caps the per-page parse loop so a pathological PDF cannot run unbounded.
+const MAX_PDF_PAGES = 50
 
 /**
  * Resolve a document format from mimeType (preferred) then filename extension.
@@ -46,6 +56,12 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
     const pdfjs = await getPdfjs()
     const pdfDoc = await pdfjs.getDocument({ data: new Uint8Array(buffer) })
         .promise
+
+    // Cap the page-iteration loop. extractDocumentText's try/catch converts this
+    // throw into a typed { ok: false, reason: 'extraction_failed' } result.
+    if (pdfDoc.numPages > MAX_PDF_PAGES) {
+        throw new Error(`PDF exceeds the ${MAX_PDF_PAGES}-page limit.`)
+    }
 
     const pages: string[] = []
     for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {

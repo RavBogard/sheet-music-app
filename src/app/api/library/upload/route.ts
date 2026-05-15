@@ -8,6 +8,10 @@ import { logger } from "@/lib/logger"
 import crypto from "crypto"
 import { levenshteinDistance } from "@/lib/string-utils"
 import { processMuseScoreFile } from "@/lib/musescore-converter"
+// Guard: this route statically imports `heic-convert` (a heavy server-only
+// dep). A route handler is already server-only, so this is belt-and-suspenders
+// — but it makes the boundary explicit + enforced. (v70-08-04)
+import 'server-only'
 import heicConvert from "heic-convert"
 
 // Max file size: 25MB

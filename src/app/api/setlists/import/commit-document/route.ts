@@ -4,21 +4,32 @@ import { z } from "zod"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { commitDocumentSetlist } from "@/lib/setlist-import/commit"
-import type { SetlistSection } from "@/lib/setlist-import/extract-structure"
-import type { ResolvedTrack } from "@/lib/setlist-import/resolve"
+import {
+    SectionSchema,
+    type SetlistSection,
+} from "@/lib/setlist-import/extract-structure"
+import {
+    ResolvedTrackSchema,
+    type ResolvedTrack,
+} from "@/lib/setlist-import/resolve"
 import { logger } from "@/lib/logger"
 import type { Setlist } from "@/types/models"
 
-// Metadata is validated strictly; sections / tracks follow import/execute's
-// pragmatic precedent (z.array(z.any())) — the payload is produced by our own
-// resolve route, and commitDocumentSetlist's typed input is the real contract.
+// Explicit duration ceiling — parity with the sibling import routes (v70-08-04).
+export const maxDuration = 30
+
+// Inbound payload is the resolve route's output shape + interview metadata.
+// sections / tracks are validated against the real resolve-output schemas
+// (v70-08-02) — no z.array(z.any()) escape hatch.
 const schema = z.object({
     name: z.string().min(1),
-    eventDate: z.string(),
+    eventDate: z
+        .string()
+        .refine((s) => !Number.isNaN(Date.parse(s)), 'invalid date'),
     serviceType: z.string().optional(),
     rabbi: z.string().optional(),
-    sections: z.array(z.any()),
-    tracks: z.array(z.any()),
+    sections: z.array(SectionSchema),
+    tracks: z.array(ResolvedTrackSchema),
 })
 
 /**
@@ -31,9 +42,9 @@ const schema = z.object({
  * sibling of import/extract-document + extract-structure + resolve + execute.
  *
  * Accepts JSON { name, eventDate, serviceType?, rabbi?, sections, tracks }.
- * band_leader only — creating a setlist, consistent with import/execute. No
- * maxDuration override: unlike import/execute (Drive downloads) this route only
- * does a Firestore batch write.
+ * band_leader only — creating a setlist, consistent with import/execute.
+ * maxDuration = 30 (parity with the sibling import routes); the actual work is
+ * a single atomic Firestore batch (createSetlistServerSide).
  */
 export const POST = createApiHandler(
     async (ctx) => {
