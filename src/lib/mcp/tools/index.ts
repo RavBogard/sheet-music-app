@@ -74,7 +74,7 @@ export function registerReadTools(server: McpServer): void {
         "list_setlists",
         {
             description:
-                "List the user's setlists, newest first. Use when the user asks about their upcoming or recent services/gigs. Dates are ISO strings; trackCount counts every row including section headers. Optional from/to filter by service date.",
+                "List the user's setlists, newest first. Use when the user asks about their upcoming or recent services/gigs. Dates are ISO strings; trackCount counts every row including section headers. Optional from/to filter by service date. For larger archives, paging via `offset` is supported up to the 200-record fetch cap — past that, slice with `from`/`to` instead.",
             inputSchema: {
                 from: z
                     .string()
@@ -88,9 +88,17 @@ export function registerReadTools(server: McpServer): void {
                     .number()
                     .int()
                     .positive()
-                    .max(50)
+                    .max(200)
                     .optional()
-                    .describe("Max results (default 20)"),
+                    .describe("Max results (default 20, max 200)"),
+                offset: z
+                    .number()
+                    .int()
+                    .min(0)
+                    .optional()
+                    .describe(
+                        "Skip this many records before returning results (for paging). offset + limit must not exceed 200; for windows beyond that, use `from`/`to` filtering.",
+                    ),
             },
         },
         async (args, extra) => jsonResult(await listSetlists(uidFrom(extra), args)),

@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 
 const mockGetAllSetlists = vi.fn()
 vi.mock("@/lib/server-setlists", () => ({
-    getAllSetlists: () => mockGetAllSetlists(),
+    getAllSetlists: (opts?: { limit?: number }) => mockGetAllSetlists(opts),
+    MAX_SETLIST_FETCH: 200,
 }))
 
 const mockGet = vi.fn()
@@ -81,6 +82,37 @@ describe("listSetlists", () => {
         }>
         expect(r).toHaveLength(1)
         expect(r[0].id).toBe("a")
+    })
+
+    it("§7.7 paging: offset skips records, limit caps results", async () => {
+        // Use a fresh, larger fixture to exercise paging.
+        mockGetAllSetlists.mockResolvedValue(
+            Array.from({ length: 30 }, (_, i) => ({
+                id: `s${i}`,
+                name: `Setlist ${i}`,
+                date: `2026-05-${String(i + 1).padStart(2, "0")}T00:00:00.000Z`,
+                eventDate: `2026-05-${String(i + 1).padStart(2, "0")}T00:00:00.000Z`,
+                trackCount: 10,
+            })),
+        )
+
+        const page1 = (await listSetlists("u", { limit: 10 })) as Array<{
+            id: string
+        }>
+        expect(page1).toHaveLength(10)
+        expect(page1[0].id).toBe("s0")
+        expect(page1[9].id).toBe("s9")
+
+        const page2 = (await listSetlists("u", {
+            limit: 10,
+            offset: 10,
+        })) as Array<{ id: string }>
+        expect(page2).toHaveLength(10)
+        expect(page2[0].id).toBe("s10")
+        expect(page2[9].id).toBe("s19")
+
+        // Upstream getAllSetlists is asked for enough rows to cover offset+limit.
+        expect(mockGetAllSetlists).toHaveBeenLastCalledWith({ limit: 20 })
     })
 
     it("rejects an unparseable `from` / `to` with a validation error (G-14)", async () => {

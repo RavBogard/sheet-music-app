@@ -1,5 +1,5 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { getAllSetlists } from "@/lib/server-setlists"
+import { getAllSetlists, MAX_SETLIST_FETCH } from "@/lib/server-setlists"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { serializeSetlist } from "@/lib/server-auth"
 
@@ -14,6 +14,7 @@ export interface ListSetlistsArgs {
     from?: string
     to?: string
     limit?: number
+    offset?: number
 }
 
 interface SetlistSummary {
@@ -46,10 +47,21 @@ export async function listSetlists(
         return { error: `to must be an ISO date string (got "${args.to}")` }
     }
 
-    const all = await getAllSetlists() // serialized, date desc, capped at 50
+    const limit =
+        args.limit && args.limit > 0
+            ? Math.min(args.limit, MAX_SETLIST_FETCH)
+            : 20
+    const offset = args.offset && args.offset > 0 ? args.offset : 0
+
+    // Fetch enough to cover offset+limit from the underlying query. The
+    // upstream cap is MAX_SETLIST_FETCH (200) — beyond that, callers must
+    // slice the date range via `from`/`to` instead of paging blindly.
+    // Cowork §7.7 regression: David has 41 setlists; default 20 limit
+    // missed 21 of them. Paging closes that gap.
+    const fetchSize = Math.min(offset + limit, MAX_SETLIST_FETCH)
+    const all = await getAllSetlists({ limit: fetchSize })
     const from = args.from ? Date.parse(args.from) : NaN
     const to = args.to ? Date.parse(args.to) : NaN
-    const limit = args.limit && args.limit > 0 ? Math.min(args.limit, 50) : 20
 
     return all
         .filter((s) => {
@@ -61,7 +73,7 @@ export async function listSetlists(
             if (!Number.isNaN(to) && t > to) return false
             return true
         })
-        .slice(0, limit)
+        .slice(offset, offset + limit)
         .map((s) => {
             const row = s as Record<string, unknown>
             const summary: SetlistSummary = {
