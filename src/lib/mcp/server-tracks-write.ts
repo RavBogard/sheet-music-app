@@ -235,11 +235,24 @@ const UPDATABLE_FIELDS = [
  * rejects a trackId that belongs to a different setlist than the one
  * passed in.
  */
+/**
+ * Optional song-row lookup, supplied by the MCP wrapper. On a `songId`
+ * re-bond, the track's `fileName` cache becomes stale — the chart at the
+ * new fileId is a different file. The wrapper has access to `getSongById`
+ * and forwards a thin lookup so server-tracks-write.ts stays decoupled
+ * from the catalog module. Returning `null` (or omitting fileName) keeps
+ * the row's existing fileName in place — fail-soft, never block the patch.
+ */
+export type SongLookup = (
+    songId: string,
+) => Promise<{ fileName?: string } | null>
+
 export async function updateTrack(
     db: DB,
     setlistId: string,
     trackId: string,
     patch: UpdateTrackPatch,
+    songLookup?: SongLookup,
 ): Promise<{ ok: true; track: Record<string, unknown> } | WriteError> {
     const trackRef = db.collection("tracks").doc(trackId)
     const snap = await trackRef.get()
@@ -268,11 +281,46 @@ export async function updateTrack(
     }
 
     // songId re-bond — the library is keyed by Drive file id, so fileId
-    // tracks songId. fileName is left stale; the client-side
-    // SetlistGridHydrator normalizes it on next load (server-side song
-    // lookup per update would double the Firestore read cost).
+    // tracks songId. 2026-05-15 stress test (H-1/H-5/F-2): on a re-bond,
+    // (a) the row's `fileName` cache becomes stale (different chart at the
+    // new fileId), and (b) the parent setlist's `fileIds[]` aggregate
+    // doesn't update — Perform mode prefetches from that aggregate, so
+    // re-bonded charts fail to load with "Image failed to load". Both gaps
+    // close here: refresh fileName via the wrapper's song lookup, and
+    // recompute the canonical `fileIds[]` from the post-patch track state
+    // in the same batch as the field write so the aggregate can't drift.
+    const oldFileId =
+        typeof existing.fileId === "string" ? (existing.fileId as string) : undefined
+    let newFileId: string | undefined
     if (patch.songId !== undefined && patch.songId !== existing.songId) {
         update.fileId = patch.songId
+        newFileId = patch.songId
+        if (songLookup) {
+            try {
+                const song = await songLookup(patch.songId)
+                if (song?.fileName !== undefined) {
+                    update.fileName = song.fileName
+                }
+            } catch (err) {
+                // Fail-soft on lookup error — the patch still lands, fileName
+                // just stays whatever the row had.
+                logger.warn("[mcp] update_track songLookup failed", {
+                    setlistId,
+                    trackId,
+                    songId: patch.songId,
+                    err: err instanceof Error ? err.message : String(err),
+                })
+            }
+        }
+    }
+
+    // Lazy-load all tracks if either path needs them: in-place reorder OR
+    // fileIds[] re-canonicalization on a re-bond. Single read covers both.
+    const wantsFileIdsRebuild =
+        newFileId !== undefined && newFileId !== oldFileId
+    let allTracks: Awaited<ReturnType<typeof getTracksForSetlist>> | null = null
+    if (wantsMove || wantsFileIdsRebuild) {
+        allTracks = await getTracksForSetlist(db, setlistId, {})
     }
 
     const batch = db.batch()
@@ -282,32 +330,48 @@ export async function updateTrack(
     // splice the row out + back in to compute new `order` values for every
     // affected sibling. Single batch keeps the move atomic with the field
     // patch above.
-    if (wantsMove) {
-        const all = await getTracksForSetlist(db, setlistId, {})
-        if (all.length > 0) {
-            const currentIdx = all.findIndex((t) => t.id === trackId)
-            const target = Math.max(
-                0,
-                Math.min(patch.position as number, all.length - 1),
-            )
-            if (currentIdx !== -1 && currentIdx !== target) {
-                const reordered = all.slice()
-                const [moved] = reordered.splice(currentIdx, 1)
-                reordered.splice(target, 0, moved)
-                reordered.forEach((t, i) => {
-                    if (t.order !== i) {
-                        batch.update(db.collection("tracks").doc(t.id), {
-                            order: i,
-                        })
-                    }
-                })
-            }
+    if (wantsMove && allTracks && allTracks.length > 0) {
+        const currentIdx = allTracks.findIndex((t) => t.id === trackId)
+        const target = Math.max(
+            0,
+            Math.min(patch.position as number, allTracks.length - 1),
+        )
+        if (currentIdx !== -1 && currentIdx !== target) {
+            const reordered = allTracks.slice()
+            const [moved] = reordered.splice(currentIdx, 1)
+            reordered.splice(target, 0, moved)
+            reordered.forEach((t, i) => {
+                if (t.order !== i) {
+                    batch.update(db.collection("tracks").doc(t.id), {
+                        order: i,
+                    })
+                }
+            })
         }
     }
 
-    batch.update(db.collection("setlists").doc(setlistId), {
+    const setlistPatch: Record<string, unknown> = {
         updatedAt: FieldValue.serverTimestamp(),
-    })
+    }
+
+    // Re-bond reconcile: replace the parent's `fileIds[]` with the canonical
+    // set derived from the post-patch track state. Self-heals any prior
+    // drift; safer than arrayUnion(new) + arrayRemove(old, if no siblings),
+    // which can leave the aggregate stale if siblings reference the old
+    // chart elsewhere on the setlist.
+    if (wantsFileIdsRebuild && allTracks) {
+        const canonical = new Set<string>()
+        for (const t of allTracks) {
+            const tFileId =
+                t.id === trackId
+                    ? newFileId
+                    : ((t as Record<string, unknown>).fileId as string | undefined)
+            if (typeof tFileId === "string" && tFileId) canonical.add(tFileId)
+        }
+        setlistPatch.fileIds = [...canonical]
+    }
+
+    batch.update(db.collection("setlists").doc(setlistId), setlistPatch)
     await batch.commit()
 
     logger.info("[mcp] track updated", {
@@ -315,6 +379,7 @@ export async function updateTrack(
         trackId,
         fields: Object.keys(update).filter((k) => k !== "updatedAt"),
         moved: wantsMove,
+        rebonded: wantsFileIdsRebuild,
     })
 
     const after = (await trackRef.get()).data() as Record<string, unknown>

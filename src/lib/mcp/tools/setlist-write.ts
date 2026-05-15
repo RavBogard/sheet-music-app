@@ -259,7 +259,21 @@ export async function updateSetlistTrack(
     const loaded = await loadEditableSetlist(db, args.setlistId, uid)
     if (!loaded.ok) return { error: loaded.error }
 
-    const result = await updateTrack(db, args.setlistId, args.trackId, args.patch)
+    const result = await updateTrack(
+        db,
+        args.setlistId,
+        args.trackId,
+        args.patch,
+        // Re-bond paths look up the new song to refresh the row's fileName
+        // (else the row's fileName drifts behind the chart at the new
+        // fileId). Same lookup the bulk_add path uses. Returning null on
+        // miss is fine — updateTrack treats fileName refresh as best-effort.
+        async (songId) => {
+            const song = await getSongById(songId)
+            if (!song) return null
+            return { fileName: song.fileName }
+        },
+    )
     return result.ok ? { ok: true, track: result.track } : { error: result.error }
 }
 

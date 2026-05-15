@@ -613,6 +613,80 @@ describe("MCP setlist write tools (emulator)", () => {
             expect(after.fileId).toBe("song-other")
         })
 
+        it("update_track re-bond rebuilds setlist fileIds[] and refreshes fileName (H-1 + F-2)", async () => {
+            // 2026-05-15 stress test caught Perform mode failing "Image
+            // failed to load" on every re-bonded chart, because the parent
+            // setlist's fileIds[] aggregate (used to prefetch charts) didn't
+            // follow the row's new bond. fileName drifted too (cosmetic but
+            // confusing in logs). Both close in one fix; cover both here.
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf" })
+            const id = await newSetlist()
+            const trackId = await addRow(id, "Oseh Shalom", { songId: "song-oseh" })
+
+            // Starting state: setlist.fileIds[] holds the original bond,
+            // and the row's fileName is the original chart filename.
+            const before = (
+                await db().collection("setlists").doc(id).get()
+            ).data()!
+            expect(before.fileIds).toEqual(["song-oseh"])
+            const rowBefore = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(rowBefore.fileName).toBe("Oseh Shalom.pdf")
+
+            await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId,
+                patch: { songId: "song-other" },
+            })
+
+            // H-1: setlist.fileIds[] now reflects the NEW bond, with the
+            // old bond removed (no other track on the setlist references it).
+            const after = (
+                await db().collection("setlists").doc(id).get()
+            ).data()!
+            expect((after.fileIds as string[]).sort()).toEqual(["song-other"])
+
+            // F-2: the row's fileName comes from the NEW song's catalog
+            // record, not the stale original.
+            const rowAfter = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(rowAfter.fileName).toBe("Hinei Ma Tov.pdf")
+        })
+
+        it("update_track re-bond preserves fileIds entries still bonded by other rows", async () => {
+            // If row A and row B both bond song-oseh, then row A re-bonds to
+            // song-other, song-oseh must STAY in setlist.fileIds because
+            // row B still uses it. The canonical-from-tracks rebuild handles
+            // this naturally; assert it explicitly so a future
+            // arrayRemove-on-rebond optimization can't silently regress it.
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf" })
+            const id = await newSetlist()
+            const trackA = await addRow(id, "Row A", { songId: "song-oseh" })
+            await addRow(id, "Row B", { songId: "song-oseh" }) // second user of song-oseh
+
+            await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId: trackA,
+                patch: { songId: "song-other" },
+            })
+
+            const after = (
+                await db().collection("setlists").doc(id).get()
+            ).data()!
+            expect((after.fileIds as string[]).sort()).toEqual([
+                "song-oseh",
+                "song-other",
+            ])
+        })
+
         it("update_track role gate: musician denied; band_leader and admin allowed", async () => {
             const id = await newSetlist(ADMIN)
             const trackId = await addRow(id, "Adon Olam")

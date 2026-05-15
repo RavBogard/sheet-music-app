@@ -46,6 +46,48 @@ export const eventDateSchema = z
     .optional()
 
 /**
+ * Track-patch field surface — common between update_track and
+ * bulk_update_tracks. `position` is NOT in this base; it's added back
+ * exclusively in updateTrackPatchSchema. bulkTrackPatchSchema instead
+ * explicitly rejects `position` with a guidance message (H-2, 2026-05-15
+ * stress test): the default Zod strip silently dropped the field and
+ * the application layer then complained "patch must include at least
+ * one field", which left the operator with no idea position was unsupported.
+ */
+const trackPatchFields = {
+    key: z.string().optional(),
+    leadMusician: z.string().optional(),
+    title: z.string().optional(),
+    notes: z.string().optional(),
+    type: z
+        .enum(["song", "header", "reading", "prayer", "transition", "note"])
+        .optional(),
+    songId: z.string().optional(),
+    referenceLink: z.string().optional(),
+} as const
+
+export const bulkTrackPatchSchema = z
+    .object(trackPatchFields)
+    .passthrough()
+    .refine((val) => !("position" in val), {
+        message:
+            "position is not supported in bulk_update_tracks. Use update_track for a single move (combine with a field patch in one call), or reorder_setlist for a multi-row reorder.",
+        path: ["position"],
+    })
+
+export const updateTrackPatchSchema = z.object({
+    ...trackPatchFields,
+    position: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe(
+            "0-based target index for in-place reorder. Clamps into [0, trackCount-1]. Combine with field patches to move + edit in one call. NOT supported in bulk_update_tracks.",
+        ),
+})
+
+/**
  * Registers the MCP tools. Each tool resolves the authenticated uid from
  * `extra.authInfo` (set by withMcpAuth → verifyBearer in the route) and
  * delegates to the plain functions in ./setlists, ./library, ./setlist-write.
@@ -398,32 +440,6 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) => jsonResult(await deleteSetlist(uidFrom(extra), args)),
     )
-
-    // CF1 — per-row edit closure. CF3 splits the schemas: update_track adds
-    // `position` for in-place reorder; bulk_update_tracks rejects it (bulk
-    // moves + bulk field patches in one call have ambiguous ordering — use
-    // reorder_setlist for multi-row reorders).
-    const bulkTrackPatchSchema = z.object({
-        key: z.string().optional(),
-        leadMusician: z.string().optional(),
-        title: z.string().optional(),
-        notes: z.string().optional(),
-        type: z
-            .enum(["song", "header", "reading", "prayer", "transition", "note"])
-            .optional(),
-        songId: z.string().optional(),
-        referenceLink: z.string().optional(),
-    })
-    const updateTrackPatchSchema = bulkTrackPatchSchema.extend({
-        position: z
-            .number()
-            .int()
-            .min(0)
-            .optional()
-            .describe(
-                "0-based target index for in-place reorder. Clamps into [0, trackCount-1]. Combine with field patches to move + edit in one call. NOT supported in bulk_update_tracks.",
-            ),
-    })
 
     server.registerTool(
         "update_track",

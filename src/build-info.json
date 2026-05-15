@@ -1,7 +1,9 @@
 {
   "version": "7.0.0",
-  "commit": "284d96abb",
+  "commit": "98094bceb",
   "branch": "feat/mcp-server",
   "buildDate": "5/15/2026",
-  "changelog": []
+  "changelog": [
+    "7.0.0 - H-4 fix: drop CDN cache from /api/library/list?all=true"
+  ]
 }
