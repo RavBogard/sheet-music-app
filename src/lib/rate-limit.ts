@@ -135,8 +135,55 @@ function getKey(req: NextRequest): string {
 }
 
 /**
+ * Per-user rate limit check (request-independent). Used by MCP tools where
+ * the caller's IP is Claude's shared egress, not the user's — so the
+ * request-IP fallback in checkRateLimit would lump all CRC users together
+ * with every other claude.ai tenant. Keying on `u:{uid}` gives each MCP
+ * user their own bucket.
+ *
+ * Returns `null` if OK, or `{ error, retryAfterSec }` if limited.
+ */
+export async function checkUserRateLimit(
+    uid: string,
+    tier: LimiterName = "api",
+): Promise<{ error: string; retryAfterSec: number } | null> {
+    const key = `${tier}:u:${uid}`
+    try {
+        const result = await limiters[tier].limit(key)
+        if (!result.success) {
+            return {
+                error: "Too many requests. Please try again later.",
+                retryAfterSec: 60,
+            }
+        }
+        return null
+    } catch (err) {
+        logger.warn(
+            "[RateLimit] Redis failed in checkUserRateLimit, using in-memory fallback:",
+            err,
+        )
+        try {
+            const fallback = getFallbackLimiter(tier)
+            const result = await fallback.limit(key)
+            if (!result.success) {
+                return {
+                    error: "Too many requests. Please try again later.",
+                    retryAfterSec: 60,
+                }
+            }
+            return null
+        } catch {
+            logger.error(
+                "[RateLimit] Both Redis and fallback failed, allowing request",
+            )
+            return null
+        }
+    }
+}
+
+/**
  * Check rate limit for a request. Returns null if OK, 429 response if limited.
- * 
+ *
  * Usage in route:
  *   const limited = await checkRateLimit(req, 'api')
  *   if (limited) return limited

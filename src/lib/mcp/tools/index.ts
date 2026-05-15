@@ -19,6 +19,11 @@ import {
     setMatrixFader,
     setMatrixMute,
 } from "./monitor"
+import {
+    uploadChart,
+    scrapeChartFromUrl,
+    saveScrapedChart,
+} from "./library-upload"
 
 /**
  * Validate that an `eventDate` string is parseable as a date. Previously the
@@ -394,5 +399,125 @@ export function registerMonitorTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await setMatrixMute(uidFrom(extra), args)),
+    )
+}
+
+/**
+ * Chart-ingestion tools. Three ways to add a chart to the library, all
+ * sharing the same server-side codepath as the HTTP routes — no parallel
+ * pipelines that could drift on dedup/conversion/indexing.
+ *
+ *  - upload_chart            — direct file upload (PDF / image / MusicXML / MuseScore / text).
+ *  - scrape_chart_from_url   — Gemini-extract chord chart from a URL or raw text.
+ *  - save_scraped_chart      — save scraped text content into the library.
+ *
+ * Collection-aware: callers pick 'core' | 'supplemental' | 'uploads' just
+ * like the in-app UploadDialog. Per-user rate limits keyed on the bearer-
+ * token uid (not Claude's egress IP).
+ */
+const collectionSchema = z
+    .enum(["core", "supplemental", "uploads"])
+    .optional()
+    .describe(
+        "Which library section to file the chart under. 'uploads' is the user-uploaded section (default). 'core' is the main CRC catalog. 'supplemental' is the Shireinu songbook.",
+    )
+
+export function registerChartUploadTools(server: McpServer): void {
+    server.registerTool(
+        "upload_chart",
+        {
+            description:
+                "Upload a chart file (PDF, image, MusicXML, MuseScore, text) to the library. Send the bytes base64-encoded with a mimeType. Returns the new fileId, which can be passed as songId to add_track_to_setlist to bond the chart onto a setlist row. The same dedup, conversion (MuseScore→MusicXML, HEIC→JPEG), and indexing logic as the in-app upload runs.",
+            inputSchema: {
+                title: z
+                    .string()
+                    .min(1)
+                    .describe("Display title for the chart (will dedup against existing library entries)"),
+                fileBase64: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "File bytes encoded as base64. Max 25 MB after decoding.",
+                    ),
+                mimeType: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "MIME type, e.g. 'application/pdf', 'image/png', 'application/vnd.recordare.musicxml+xml', 'application/x-musescore', 'text/plain'.",
+                    ),
+                fileName: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Optional original filename including extension. Derived from title + mimeType if omitted.",
+                    ),
+                collection: collectionSchema,
+                key: z
+                    .string()
+                    .optional()
+                    .describe("Optional musical key (e.g. 'G' or 'Am')"),
+                bpm: z
+                    .number()
+                    .int()
+                    .positive()
+                    .optional()
+                    .describe("Optional tempo in BPM"),
+                tags: z
+                    .array(z.string())
+                    .optional()
+                    .describe("Optional list of tags"),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await uploadChart(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "scrape_chart_from_url",
+        {
+            description:
+                "Extract a chord chart from a public webpage URL (or raw HTML/text). Uses Gemini to identify the song title, artist, and lyrics+chords with their monospaced alignment preserved. Falls back to Google Search extraction if the page is Cloudflare-blocked. Returns {title, artist, content} — pipe the result into save_scraped_chart to commit it to the library.",
+            inputSchema: {
+                url: z
+                    .string()
+                    .url()
+                    .optional()
+                    .describe(
+                        "URL of a page containing a chord chart, e.g. Ultimate Guitar",
+                    ),
+                rawText: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Raw HTML or text to extract from instead of a URL",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await scrapeChartFromUrl(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "save_scraped_chart",
+        {
+            description:
+                "Save a chord chart's extracted text content into the library as a .txt entry. Use after scrape_chart_from_url (or with content the user pasted). Mirrors the in-app ScraperModal save path — the chart becomes immediately searchable, bondable to setlist tracks via add_track_to_setlist({songId: returned-fileId}), and visible in the library list under the chosen collection.",
+            inputSchema: {
+                title: z.string().min(1).describe("Chart title"),
+                content: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Chord chart body — keep monospaced alignment of chord lines over lyric lines",
+                    ),
+                artist: z
+                    .string()
+                    .optional()
+                    .describe("Optional artist name, prepended to the saved file"),
+                collection: collectionSchema,
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await saveScrapedChart(uidFrom(extra), args)),
     )
 }

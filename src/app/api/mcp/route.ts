@@ -5,6 +5,7 @@ import {
     registerReadTools,
     registerWriteTools,
     registerMonitorTools,
+    registerChartUploadTools,
 } from "@/lib/mcp/tools"
 
 /**
@@ -27,6 +28,7 @@ const baseHandler = createMcpHandler(
         registerReadTools(server)
         registerWriteTools(server)
         registerMonitorTools(server)
+        registerChartUploadTools(server)
     },
     {
         serverInfo: { name: "centralreform-live", version: "1.0.0" },
