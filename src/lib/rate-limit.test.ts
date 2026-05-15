@@ -75,4 +75,26 @@ describe('rate-limit', () => {
         expect(result?.headers.get('Retry-After')).toBe('60')
         expect(result?.headers.get('X-RateLimit-Remaining')).toBe('0')
     })
+
+    it('checkUserRateLimit bypasses limit entirely for opts.isAdmin', async () => {
+        const { checkUserRateLimit } = await import('./rate-limit')
+        // 10/min upload — sail past it as an "admin".
+        for (let i = 0; i < 50; i++) {
+            const result = await checkUserRateLimit('admin-uid', 'upload', {
+                isAdmin: true,
+            })
+            expect(result).toBeNull()
+        }
+    })
+
+    it('checkUserRateLimit still limits non-admin callers', async () => {
+        const { checkUserRateLimit } = await import('./rate-limit')
+        for (let i = 0; i < 10; i++) {
+            const ok = await checkUserRateLimit('non-admin-uid', 'upload')
+            expect(ok).toBeNull()
+        }
+        const limited = await checkUserRateLimit('non-admin-uid', 'upload')
+        expect(limited).not.toBeNull()
+        expect(limited?.error).toContain('Too many requests')
+    })
 })

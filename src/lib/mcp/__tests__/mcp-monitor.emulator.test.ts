@@ -5,6 +5,7 @@ import { getFirestore } from "firebase-admin/firestore"
 import {
     listMonitorBuses,
     getMix,
+    getMatrix,
     setSendLevel,
     setSendMute,
     setBusFader,
@@ -324,6 +325,44 @@ describe("MCP monitor-control tools (emulator)", () => {
             error: expect.stringContaining("access to bus 2"),
         })
         expect(await pendingCommands()).toHaveLength(0)
+    })
+
+    // ─── get_matrix (admin/SE only) ────────────────────────────────────────
+
+    it("get_matrix returns all matrices for admin/SE; rejects musicians", async () => {
+        const adminAll = (await getMatrix(ADMIN, {})) as {
+            matrices: Array<{ index: number; name: string; fader: number; on: boolean }>
+        }
+        expect(adminAll.matrices).toHaveLength(2)
+        expect(adminAll.matrices[0]).toMatchObject({
+            index: 1,
+            name: "Mains L",
+            fader: 0.8,
+            on: true,
+        })
+
+        const seAll = (await getMatrix(SOUND_ENG, {})) as {
+            matrices: unknown[]
+        }
+        expect(seAll.matrices).toHaveLength(2)
+
+        const denied = await getMatrix(GUITAR, {})
+        expect(denied).toEqual({
+            error: expect.stringContaining("admin or sound engineer"),
+        })
+    })
+
+    it("get_matrix({matrixIndex}) returns a single matrix; unknown index errors", async () => {
+        const one = (await getMatrix(ADMIN, { matrixIndex: 1 })) as {
+            matrices: Array<{ index: number }>
+        }
+        expect(one.matrices).toHaveLength(1)
+        expect(one.matrices[0].index).toBe(1)
+
+        const missing = await getMatrix(ADMIN, { matrixIndex: 6 })
+        expect(missing).toEqual({
+            error: expect.stringContaining("Matrix 6 not found"),
+        })
     })
 
     // ─── matrix tools (admin/SE only) ──────────────────────────────────────

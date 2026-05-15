@@ -25,10 +25,25 @@ vi.mock("@/lib/gemini", () => ({
     geminiFlashWithSearch: () => ({ generateContent: mockGenerateContent }),
 }))
 
+// Bypass per-user rate limiting in tests — the in-memory limiter is module-
+// global state, and ADMIN runs many uploads/deletes in one process which
+// would exhaust the 10/min bucket. Production behavior is unchanged.
+vi.mock("@/lib/rate-limit", () => ({
+    checkUserRateLimit: vi.fn().mockResolvedValue(null),
+}))
+
+// Storage Admin SDK stub — delete_chart calls getStorage().bucket().file(p).delete().
+const mockStorageFileDelete = vi.fn().mockResolvedValue(undefined)
+const mockStorageBucketFile = vi.fn(() => ({ delete: mockStorageFileDelete }))
+vi.mock("firebase-admin/storage", () => ({
+    getStorage: () => ({ bucket: () => ({ file: mockStorageBucketFile }) }),
+}))
+
 import {
     uploadChart,
     saveScrapedChart,
     scrapeChartFromUrl,
+    deleteChart,
 } from "../tools/library-upload"
 
 /**
@@ -95,8 +110,11 @@ describe("MCP chart-upload tools (emulator)", () => {
         mockUploadToStorage.mockReset()
         mockUploadToStorage.mockResolvedValue(undefined)
         mockGenerateContent.mockReset()
+        mockStorageFileDelete.mockReset()
+        mockStorageFileDelete.mockResolvedValue(undefined)
+        mockStorageBucketFile.mockClear()
 
-        for (const col of ["library_index", "songs"]) {
+        for (const col of ["library_index", "songs", "tracks", "setlists"]) {
             const snap = await db().collection(col).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
@@ -368,5 +386,200 @@ describe("MCP chart-upload tools (emulator)", () => {
         })
         // Gemini should NOT have been called.
         expect(mockGenerateContent).not.toHaveBeenCalled()
+    })
+
+    // ─── G-3: curated-catalog admin gate ───────────────────────────────────
+
+    describe("curated-catalog gate (G-3)", () => {
+        it("admin may write to core and supplemental", async () => {
+            const core = await uploadChart(ADMIN, {
+                title: "Core Chart",
+                fileBase64: b64("%PDF-1.4 c"),
+                mimeType: "application/pdf",
+                collection: "core",
+            })
+            expect(core).toMatchObject({ ok: true, collection: "core" })
+
+            const supp = await uploadChart(ADMIN, {
+                title: "Supplemental Chart",
+                fileBase64: b64("%PDF-1.4 s"),
+                mimeType: "application/pdf",
+                collection: "supplemental",
+            })
+            expect(supp).toMatchObject({ ok: true, collection: "supplemental" })
+        })
+
+        it("non-admin (band_leader, musician) blocked from core and supplemental", async () => {
+            for (const caller of [LEADER, MUSICIAN]) {
+                const core = await uploadChart(caller, {
+                    title: `Probe core ${caller}`,
+                    fileBase64: b64("%PDF-1.4 x"),
+                    mimeType: "application/pdf",
+                    collection: "core",
+                })
+                expect(core).toEqual({
+                    error: expect.stringContaining("requires an admin account"),
+                })
+
+                const supp = await uploadChart(caller, {
+                    title: `Probe supp ${caller}`,
+                    fileBase64: b64("%PDF-1.4 y"),
+                    mimeType: "application/pdf",
+                    collection: "supplemental",
+                })
+                expect(supp).toEqual({
+                    error: expect.stringContaining("requires an admin account"),
+                })
+            }
+            // No storage writes attempted on rejected uploads.
+            expect(mockUploadToStorage).not.toHaveBeenCalled()
+        })
+
+        it("non-admin may still write to uploads (default)", async () => {
+            const r = await uploadChart(LEADER, {
+                title: "Leader Default Upload",
+                fileBase64: b64("%PDF-1.4 d"),
+                mimeType: "application/pdf",
+            })
+            expect(r).toMatchObject({ ok: true, collection: "uploads" })
+        })
+
+        it("save_scraped_chart enforces the same gate", async () => {
+            const denied = await saveScrapedChart(MUSICIAN, {
+                title: "Scraped Core Probe",
+                content: "G   D   Em\nlyrics",
+                collection: "core",
+            })
+            expect(denied).toEqual({
+                error: expect.stringContaining("requires an admin account"),
+            })
+
+            const ok = await saveScrapedChart(ADMIN, {
+                title: "Scraped Core Admin",
+                content: "G   D   Em\nlyrics",
+                collection: "core",
+            })
+            expect(ok).toMatchObject({ ok: true, collection: "core" })
+        })
+    })
+
+    // ─── delete_chart ──────────────────────────────────────────────────────
+
+    describe("delete_chart", () => {
+        async function seedChart(
+            uid: string,
+            title: string,
+            collection?: "core" | "supplemental" | "uploads",
+        ): Promise<string> {
+            const r = (await uploadChart(uid, {
+                title,
+                fileBase64: b64(`%PDF-1.4 ${title}`),
+                mimeType: "application/pdf",
+                collection,
+            })) as { ok: true; fileId: string }
+            expect(r.ok).toBe(true)
+            return r.fileId
+        }
+
+        it("happy path: uploader deletes their own upload; library + songs gone; storage cleaned", async () => {
+            const fileId = await seedChart(MUSICIAN, "To Be Deleted")
+
+            const r = await deleteChart(MUSICIAN, { fileId })
+            expect(r).toEqual({ ok: true, deletedTracks: 0 })
+
+            const idx = await db().collection("library_index").doc(fileId).get()
+            expect(idx.exists).toBe(false)
+            const song = await db().collection("songs").doc(fileId).get()
+            expect(song.exists).toBe(false)
+
+            // Best-effort storage cleanup happened.
+            expect(mockStorageBucketFile).toHaveBeenCalled()
+            expect(mockStorageFileDelete).toHaveBeenCalled()
+        })
+
+        it("returns 'Chart not found' for an unknown fileId", async () => {
+            const r = await deleteChart(ADMIN, { fileId: "upload-does-not-exist" })
+            expect(r).toEqual({ error: "Chart not found" })
+        })
+
+        it("only the uploader OR an admin may delete", async () => {
+            const fileId = await seedChart(MUSICIAN, "Musician's Chart")
+
+            // Different musician cannot delete.
+            const otherMusician = "alex-other"
+            await db()
+                .collection("users")
+                .doc(otherMusician)
+                .set({ role: "musician", email: "other@example.com" })
+            const denied = await deleteChart(otherMusician, { fileId })
+            expect(denied).toEqual({
+                error: expect.stringContaining("uploader or an admin"),
+            })
+
+            // Admin can delete it.
+            const ok = await deleteChart(ADMIN, { fileId })
+            expect(ok).toEqual({ ok: true, deletedTracks: 0 })
+        })
+
+        it("refuses to delete a chart bonded to any setlist track", async () => {
+            const fileId = await seedChart(ADMIN, "Bonded Chart")
+
+            await db().collection("tracks").doc("trk-1").set({
+                setlistId: "set-1",
+                fileId,
+                title: "Bonded Chart",
+                order: 0,
+            })
+
+            const refused = await deleteChart(ADMIN, { fileId })
+            expect(refused).toEqual({
+                error: expect.stringContaining("bonded to 1 setlist"),
+            })
+
+            // Chart still exists.
+            const idx = await db().collection("library_index").doc(fileId).get()
+            expect(idx.exists).toBe(true)
+
+            // After removing the bond, delete succeeds.
+            await db().collection("tracks").doc("trk-1").delete()
+            const ok = await deleteChart(ADMIN, { fileId })
+            expect(ok).toEqual({ ok: true, deletedTracks: 0 })
+        })
+
+        it("curated-catalog delete is admin-only (even for the uploader)", async () => {
+            // Seed a core-collection chart whose uploadedBy is LEADER — a
+            // historical state that's no longer possible to create post-G-3
+            // (the gate prevents new non-admin core writes), but tests the
+            // delete-side curated gate independently of the ownership gate.
+            const fileId = "upload-test-core-leader"
+            await db().collection("library_index").doc(fileId).set({
+                name: "Pre-G-3 Core Chart",
+                nameLower: "pre-g-3 core chart",
+                collection: "core",
+                uploadedBy: LEADER,
+                status: "active",
+                storageUrl: `library/${fileId}.pdf`,
+            })
+            await db().collection("songs").doc(fileId).set({
+                title: "Pre-G-3 Core Chart",
+                status: "active",
+            })
+
+            const denied = await deleteChart(LEADER, { fileId })
+            expect(denied).toEqual({
+                error: expect.stringContaining("requires an admin account"),
+            })
+
+            const ok = await deleteChart(ADMIN, { fileId })
+            expect(ok).toEqual({ ok: true, deletedTracks: 0 })
+        })
+
+        it("rejects callers without upload permission", async () => {
+            const fileId = await seedChart(ADMIN, "Admin Upload")
+            const r = await deleteChart(PENDING_NO_FLAG, { fileId })
+            expect(r).toEqual({
+                error: expect.stringContaining("Upload permission required"),
+            })
+        })
     })
 })

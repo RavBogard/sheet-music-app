@@ -5,6 +5,7 @@ import {
     type LibraryCollection,
 } from "@/lib/library-upload"
 import { scrapeChart } from "@/lib/chart-scrape"
+import { logger } from "@/lib/logger"
 
 /**
  * MCP chart-ingestion tools — three ways to add a chart to the library, all
@@ -55,6 +56,23 @@ function isUploadAllowed(roles: UploaderRoles): boolean {
     return roles.canUpload
 }
 
+function curatedCatalogGate(
+    roles: UploaderRoles,
+    collection: LibraryCollection | undefined,
+): ToolError | null {
+    if (
+        (collection === "core" || collection === "supplemental") &&
+        roles.role !== "admin"
+    ) {
+        return {
+            error:
+                `Writing to the '${collection}' catalog requires an admin account. ` +
+                `Pick collection: 'uploads' (default) or ask an admin to add this to the curated catalog.`,
+        }
+    }
+    return null
+}
+
 // ─── upload_chart ───────────────────────────────────────────────────────────
 
 export interface UploadChartArgs {
@@ -88,7 +106,12 @@ export async function uploadChart(
         }
     }
 
-    const limited = await checkUserRateLimit(uid, "upload")
+    const curatedDenial = curatedCatalogGate(roles, args.collection)
+    if (curatedDenial) return curatedDenial
+
+    const limited = await checkUserRateLimit(uid, "upload", {
+        isAdmin: roles.role === "admin",
+    })
     if (limited) return { error: limited.error }
 
     let buffer: Buffer
@@ -125,6 +148,127 @@ export async function uploadChart(
         title: result.title,
         collection: result.collection,
     }
+}
+
+// ─── delete_chart ───────────────────────────────────────────────────────────
+
+export interface DeleteChartArgs {
+    fileId: string
+}
+
+/**
+ * Delete a chart from the library. Closes the asymmetric "anyone can upload
+ * but no MCP path to delete" gap the 2026-05-15 stress test surfaced.
+ *
+ * Auth model:
+ *  - admin OR chart uploader may delete (mirrors delete_setlist's stricter gate).
+ *  - core/supplemental deletes require admin even if the caller uploaded it.
+ *  - Refuses if ANY setlist track still references this fileId — caller must
+ *    clear the bonds via remove_track first. Auto-unbinding would silently
+ *    break the perform view for any published setlist using the chart.
+ *
+ * Storage cleanup is best-effort: the library_index doc is the source of
+ * truth, so an orphan blob is harmless and shouldn't fail the operation.
+ */
+export async function deleteChart(
+    uid: string,
+    args: DeleteChartArgs,
+): Promise<{ ok: true; deletedTracks: number } | ToolError> {
+    if (!args.fileId?.trim()) return { error: "fileId is required" }
+
+    initAdmin()
+    const db = getFirestore()
+
+    const roles = await loadUploader(db, uid)
+    if (!isUploadAllowed(roles)) {
+        return {
+            error: "Upload permission required. Ask an admin to enable uploads for your account.",
+        }
+    }
+
+    const limited = await checkUserRateLimit(uid, "upload", {
+        isAdmin: roles.role === "admin",
+    })
+    if (limited) return { error: limited.error }
+
+    const indexRef = db.collection("library_index").doc(args.fileId)
+    const indexSnap = await indexRef.get()
+    if (!indexSnap.exists) return { error: "Chart not found" }
+    const indexData = indexSnap.data() as Record<string, unknown>
+
+    if (roles.role !== "admin" && indexData.uploadedBy !== uid) {
+        return {
+            error: "Only the chart's uploader or an admin may delete a chart",
+        }
+    }
+
+    const collection = indexData.collection as string | undefined
+    if (
+        (collection === "core" || collection === "supplemental") &&
+        roles.role !== "admin"
+    ) {
+        return {
+            error: `Deleting from the '${collection}' catalog requires an admin account`,
+        }
+    }
+
+    const tracksSnap = await db
+        .collection("tracks")
+        .where("fileId", "==", args.fileId)
+        .limit(50)
+        .get()
+    if (!tracksSnap.empty) {
+        return {
+            error:
+                `Cannot delete: this chart is bonded to ${tracksSnap.size} setlist ` +
+                `track(s). Remove the tracks first via remove_track, then retry.`,
+        }
+    }
+
+    const songRef = db.collection("songs").doc(args.fileId)
+    const batch = db.batch()
+    batch.delete(indexRef)
+    batch.delete(songRef)
+    await batch.commit()
+
+    const storagePaths: string[] = []
+    if (typeof indexData.storageUrl === "string" && indexData.storageUrl) {
+        storagePaths.push(indexData.storageUrl)
+    }
+    if (
+        typeof indexData.originalStorageUrl === "string" &&
+        indexData.originalStorageUrl
+    ) {
+        storagePaths.push(indexData.originalStorageUrl)
+    }
+    if (storagePaths.length > 0) {
+        try {
+            const { getStorage } = await import("firebase-admin/storage")
+            const bucket = getStorage().bucket()
+            await Promise.all(
+                storagePaths.map((p) =>
+                    bucket
+                        .file(p)
+                        .delete()
+                        .catch((err) => {
+                            logger.warn(
+                                `[delete_chart] storage cleanup failed for ${p}: ${
+                                    err instanceof Error ? err.message : err
+                                }`,
+                            )
+                        }),
+                ),
+            )
+        } catch (err) {
+            logger.warn(
+                `[delete_chart] storage module unavailable: ${
+                    err instanceof Error ? err.message : err
+                }`,
+            )
+        }
+    }
+
+    return { ok: true, deletedTracks: 0 }
 }
 
 function deriveFileName(title: string, mimeType: string): string {
@@ -177,7 +321,9 @@ export async function scrapeChartFromUrl(
     }
 
     // Scrape uses Gemini, so meter it under the 'ai' bucket to bound spend.
-    const limited = await checkUserRateLimit(uid, "ai")
+    const limited = await checkUserRateLimit(uid, "ai", {
+        isAdmin: roles.role === "admin",
+    })
     if (limited) return { error: limited.error }
 
     const result = await scrapeChart(args)
@@ -221,7 +367,12 @@ export async function saveScrapedChart(
         }
     }
 
-    const limited = await checkUserRateLimit(uid, "upload")
+    const curatedDenial = curatedCatalogGate(roles, args.collection)
+    if (curatedDenial) return curatedDenial
+
+    const limited = await checkUserRateLimit(uid, "upload", {
+        isAdmin: roles.role === "admin",
+    })
     if (limited) return { error: limited.error }
 
     // Match the ScraperModal payload shape: title + artist + blank line + content.

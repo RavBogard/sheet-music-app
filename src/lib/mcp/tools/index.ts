@@ -13,6 +13,7 @@ import {
 import {
     listMonitorBuses,
     getMix,
+    getMatrix,
     setSendLevel,
     setSendMute,
     setBusFader,
@@ -23,6 +24,7 @@ import {
     uploadChart,
     scrapeChartFromUrl,
     saveScrapedChart,
+    deleteChart,
 } from "./library-upload"
 
 /**
@@ -297,10 +299,10 @@ export function registerMonitorTools(server: McpServer): void {
                 busIndex: z
                     .number()
                     .int()
-                    .min(0)
+                    .min(1)
                     .optional()
                     .describe(
-                        "Bus index from list_monitor_buses; omit to use the caller's first assigned bus",
+                        "Bus index from list_monitor_buses (1-based); omit to use the caller's first assigned bus",
                     ),
             },
         },
@@ -308,17 +310,36 @@ export function registerMonitorTools(server: McpServer): void {
     )
 
     server.registerTool(
+        "get_matrix",
+        {
+            description:
+                "Read the current X32 matrix output state (fader + mute per matrix). Restricted to admins and sound engineers — matrices feed the FOH PA. Omit matrixIndex to return all matrices; pass 1–6 for a single matrix. Use this before set_matrix_fader / set_matrix_mute to capture the pre-write value so you can restore on revert.",
+            inputSchema: {
+                matrixIndex: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(6)
+                    .optional()
+                    .describe("Matrix output index 1–6; omit for all"),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await getMatrix(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
         "set_send_level",
         {
             description:
-                "Set the fader level for one channel in one monitor bus. level is a normalized fader position in [0.0, 1.0] — NOT dB. To 'turn up by a bit', read get_mix first and write level + ~0.05–0.1. Musicians may only adjust buses assigned to them; admins/sound engineers may adjust any bus.",
+                "Set the fader level for one channel in one monitor bus. level is a normalized fader position in [0.0, 1.0] — NOT dB. To 'turn up by a bit', read get_mix first and write level + ~0.05–0.1. Musicians may only adjust buses assigned to them; admins/sound engineers may adjust any bus. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_mix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee.",
             inputSchema: {
-                busIndex: z.number().int().min(0).describe("Bus index"),
+                busIndex: z.number().int().min(1).describe("Bus index (1-based)"),
                 channelIndex: z
                     .number()
                     .int()
-                    .min(0)
-                    .describe("Channel index (from get_mix sends list)"),
+                    .min(1)
+                    .describe("Channel index 1-based (from get_mix sends list)"),
                 level: z
                     .number()
                     .min(0)
@@ -334,10 +355,14 @@ export function registerMonitorTools(server: McpServer): void {
         "set_send_mute",
         {
             description:
-                "Mute or unmute one channel in one monitor bus. muted=true silences the channel for that bus; muted=false unmutes. Affects only the bus, not the channel globally. Musicians may only mute on their own bus; admins/sound engineers may mute on any bus.",
+                "Mute or unmute one channel in one monitor bus. muted=true silences the channel for that bus; muted=false unmutes. Affects only the bus, not the channel globally. Musicians may only mute on their own bus; admins/sound engineers may mute on any bus. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_mix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee.",
             inputSchema: {
-                busIndex: z.number().int().min(0).describe("Bus index"),
-                channelIndex: z.number().int().min(0).describe("Channel index"),
+                busIndex: z.number().int().min(1).describe("Bus index (1-based)"),
+                channelIndex: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .describe("Channel index (1-based)"),
                 muted: z.boolean().describe("true = muted; false = unmuted"),
             },
         },
@@ -349,9 +374,9 @@ export function registerMonitorTools(server: McpServer): void {
         "set_bus_fader",
         {
             description:
-                "Set the bus master level — the overall in-ear volume for that monitor bus. Use when the user says 'turn up my whole mix' or 'I need more volume in my ears'. Musicians may only adjust their own bus; admins/sound engineers may adjust any bus.",
+                "Set the bus master level — the overall in-ear volume for that monitor bus. Use when the user says 'turn up my whole mix' or 'I need more volume in my ears'. Musicians may only adjust their own bus; admins/sound engineers may adjust any bus. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_mix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee.",
             inputSchema: {
-                busIndex: z.number().int().min(0).describe("Bus index"),
+                busIndex: z.number().int().min(1).describe("Bus index (1-based)"),
                 level: z
                     .number()
                     .min(0)
@@ -367,7 +392,7 @@ export function registerMonitorTools(server: McpServer): void {
         "set_matrix_fader",
         {
             description:
-                "Set the level of an X32 matrix output (mains, side-fills, sub-mix, etc). Restricted to admins and sound engineers — these outputs feed the FOH PA, not personal mixes.",
+                "Set the level of an X32 matrix output (mains, side-fills, sub-mix, etc). Restricted to admins and sound engineers — these outputs feed the FOH PA, not personal mixes. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_matrix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee.",
             inputSchema: {
                 matrixIndex: z
                     .number()
@@ -386,7 +411,7 @@ export function registerMonitorTools(server: McpServer): void {
         "set_matrix_mute",
         {
             description:
-                "Mute or unmute one X32 matrix output. Restricted to admins and sound engineers.",
+                "Mute or unmute one X32 matrix output. Restricted to admins and sound engineers. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_matrix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee.",
             inputSchema: {
                 matrixIndex: z
                     .number()
@@ -419,7 +444,7 @@ const collectionSchema = z
     .enum(["core", "supplemental", "uploads"])
     .optional()
     .describe(
-        "Which library section to file the chart under. 'uploads' is the user-uploaded section (default). 'core' is the main CRC catalog. 'supplemental' is the Shireinu songbook.",
+        "Which library section to file the chart under. 'uploads' is the user-uploaded section (default). 'core' is the main CRC catalog — ADMIN-ONLY. 'supplemental' is the Shireinu songbook — ADMIN-ONLY. Non-admin callers should leave this unset or pass 'uploads'.",
     )
 
 export function registerChartUploadTools(server: McpServer): void {
@@ -519,5 +544,23 @@ export function registerChartUploadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await saveScrapedChart(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "delete_chart",
+        {
+            description:
+                "Delete a chart from the library. Only the chart's uploader or an admin may delete. Deleting from 'core' or 'supplemental' (curated catalogs) requires admin. Will REFUSE if any setlist track still references the chart — remove the tracks first via remove_track, then retry. Best-effort Storage cleanup. This action is irreversible.",
+            inputSchema: {
+                fileId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Chart fileId (the upload-{uuid} id returned by upload_chart, or another library_index doc id)",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await deleteChart(uidFrom(extra), args)),
     )
 }

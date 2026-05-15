@@ -151,6 +151,56 @@ export async function getMix(
     }
 }
 
+// ─── get_matrix ─────────────────────────────────────────────────────────────
+
+export interface GetMatrixArgs {
+    /** 1-based matrix output index (1–6 on X32). Omit to return all. */
+    matrixIndex?: number
+}
+
+export async function getMatrix(
+    uid: string,
+    args: GetMatrixArgs,
+): Promise<
+    | {
+          matrices: Array<{
+              index: number
+              name: string
+              fader: number
+              on: boolean
+          }>
+      }
+    | ToolError
+> {
+    initAdmin()
+    const db = getFirestore()
+
+    const access = await assertMonitorAccess(db, uid)
+    if (!access.ok) return { error: access.error }
+    // Matrix outputs are FOH territory — admin/SE only, same as the write tools.
+    if (!isPrivilegedMonitor(access.user)) {
+        return {
+            error: "Matrix read requires an admin or sound engineer account",
+        }
+    }
+
+    const state = await loadMixerState(db)
+    if (!state) return { error: "Mixer state not available — is the bridge online?" }
+
+    const all = (state.matrices ?? []).map((m) => ({
+        index: m.index,
+        name: m.name,
+        fader: m.fader,
+        on: m.on,
+    }))
+    if (args.matrixIndex !== undefined) {
+        const one = all.find((m) => m.index === args.matrixIndex)
+        if (!one) return { error: `Matrix ${args.matrixIndex} not found` }
+        return { matrices: [one] }
+    }
+    return { matrices: all }
+}
+
 // ─── shared write-side preflight ────────────────────────────────────────────
 
 async function preflightBusWrite(
