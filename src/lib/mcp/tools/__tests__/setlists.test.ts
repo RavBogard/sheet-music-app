@@ -117,4 +117,31 @@ describe("getSetlist", () => {
         })
         expect(r!.tracks[1]).toMatchObject({ id: "t2", type: "note", key: null })
     })
+
+    it("projects referenceLink through to the read view (F-4)", async () => {
+        // Regression guard for F-4: write path persists the field but the read
+        // projection used to omit it, silently dropping the value.
+        mockGet.mockResolvedValue({
+            exists: true,
+            id: "a",
+            data: () => ({ name: "Test", trackCount: 2 }),
+        })
+        mockGetTracks.mockResolvedValue([
+            {
+                id: "t1",
+                order: 0,
+                title: "With link",
+                type: "song",
+                referenceLink: "https://youtu.be/example",
+            },
+            { id: "t2", order: 1, title: "No link", type: "song" },
+        ])
+        const r = await getSetlist("u", { id: "a" })
+        expect(r!.tracks[0]).toMatchObject({
+            referenceLink: "https://youtu.be/example",
+        })
+        // Missing field projects as null (the field is always present in the
+        // response shape — never `undefined` or missing).
+        expect(r!.tracks[1]).toMatchObject({ referenceLink: null })
+    })
 })

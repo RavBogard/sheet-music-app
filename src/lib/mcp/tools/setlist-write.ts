@@ -10,6 +10,7 @@ import {
     addTrack,
     reorderTracks,
     removeTrack,
+    readUserRole,
 } from "@/lib/mcp/server-tracks-write"
 import { getSongById } from "@/lib/mcp/server-songs"
 
@@ -214,4 +215,53 @@ export async function removeSetlistTrack(
 
     const result = await removeTrack(db, args.setlistId, args.trackId)
     return result.ok ? { ok: true } : { error: result.error }
+}
+
+// ─── delete_setlist ─────────────────────────────────────────────────────────
+
+export interface DeleteSetlistArgs {
+    id: string
+}
+
+/**
+ * Delete a setlist and cascade-delete all of its tracks. Stricter than the
+ * other write tools: admin OR the setlist's owner. A band_leader cannot delete
+ * a setlist they did not create — delete is destructive and irreversible, and
+ * the surface area of "any leader can torch any service" was deemed too wide.
+ * Admin keeps the override so stuck artifacts (e.g. stress-test setlists) can
+ * still be cleaned up.
+ */
+export async function deleteSetlist(
+    uid: string,
+    args: DeleteSetlistArgs,
+): Promise<{ ok: true; tracksDeleted: number } | ToolError> {
+    initAdmin()
+    const db = getFirestore()
+
+    const editor = await assertEditor(db, uid)
+    if (!editor.ok) return { error: editor.error }
+
+    const setlistRef = db.collection("setlists").doc(args.id)
+    const setlistSnap = await setlistRef.get()
+    if (!setlistSnap.exists) return { error: "Setlist not found" }
+
+    const role = await readUserRole(db, uid)
+    const ownerId = (setlistSnap.data() as Record<string, unknown>).ownerId
+    if (role !== "admin" && ownerId !== uid) {
+        return {
+            error: "Only the setlist owner or an admin may delete a setlist",
+        }
+    }
+
+    const tracksSnap = await db
+        .collection("tracks")
+        .where("setlistId", "==", args.id)
+        .get()
+
+    const batch = db.batch()
+    tracksSnap.docs.forEach((d) => batch.delete(d.ref))
+    batch.delete(setlistRef)
+    await batch.commit()
+
+    return { ok: true, tracksDeleted: tracksSnap.size }
 }

@@ -93,6 +93,8 @@ export async function getSetlist(_uid: string, args: GetSetlistArgs) {
                 key: t.key ?? null,
                 bpm: t.bpm ?? null,
                 leadMusician: t.leadMusician ?? null,
+                referenceLink:
+                    typeof row.referenceLink === "string" ? row.referenceLink : null,
                 notes: typeof row.notes === "string" ? row.notes : null,
             }
         }),

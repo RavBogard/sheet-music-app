@@ -8,7 +8,21 @@ import {
     addTrackToSetlist,
     reorderSetlist,
     removeSetlistTrack,
+    deleteSetlist,
 } from "./setlist-write"
+
+/**
+ * Validate that an `eventDate` string is parseable as a date. Previously the
+ * raw string flowed through to Firestore's Timestamp.fromDate(new Date(s)),
+ * which throws an opaque `Value for argument "seconds" is not a valid integer.`
+ * on bad input. The refine catches it at the MCP layer with a friendly message.
+ */
+export const eventDateSchema = z
+    .string()
+    .refine((s) => !Number.isNaN(Date.parse(s)), {
+        message: "eventDate must be an ISO date string",
+    })
+    .optional()
 
 /**
  * Registers the MCP tools. Each tool resolves the authenticated uid from
@@ -131,10 +145,9 @@ export function registerWriteTools(server: McpServer): void {
                 "Create a new, empty setlist owned by the user. Use when the user wants to start a new service/gig. Returns the new setlist id — follow up with add_track_to_setlist to populate it. eventDate is an ISO date string. Requires an admin or band leader account.",
             inputSchema: {
                 name: z.string().min(1).describe("Setlist name, e.g. 'Shabbat Morning — June 7'"),
-                eventDate: z
-                    .string()
-                    .optional()
-                    .describe("ISO date of the service, e.g. '2026-06-07'"),
+                eventDate: eventDateSchema.describe(
+                    "ISO date of the service, e.g. '2026-06-07'",
+                ),
                 serviceType: z
                     .string()
                     .optional()
@@ -153,7 +166,7 @@ export function registerWriteTools(server: McpServer): void {
             inputSchema: {
                 id: z.string().describe("Setlist id"),
                 name: z.string().min(1).optional().describe("New setlist name"),
-                eventDate: z.string().optional().describe("New ISO event date"),
+                eventDate: eventDateSchema.describe("New ISO event date"),
                 serviceType: z.string().optional().describe("New service/template type"),
                 rabbi: z.string().optional().describe("New rabbi leading the service"),
                 serviceNotes: z.string().optional().describe("Free-text service notes"),
@@ -222,5 +235,17 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) => jsonResult(await removeSetlistTrack(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "delete_setlist",
+        {
+            description:
+                "Delete a setlist and all of its tracks. Only the setlist's owner or an admin may delete it. Use with care — this is irreversible and cascades to every track on the setlist.",
+            inputSchema: {
+                id: z.string().describe("Setlist id"),
+            },
+        },
+        async (args, extra) => jsonResult(await deleteSetlist(uidFrom(extra), args)),
     )
 }

@@ -27,6 +27,15 @@ export interface WriteError {
     error: string
 }
 
+/** Look up a user's role string — undefined when the user doc is missing. */
+export async function readUserRole(
+    db: DB,
+    uid: string,
+): Promise<string | undefined> {
+    const snap = await db.collection("users").doc(uid).get()
+    return snap.exists ? (snap.data()?.role as string | undefined) : undefined
+}
+
 /**
  * Assert `uid` may use the MCP write tools. Per Daniel's instruction
  * (2026-05-14) write access is role-based, not owner-based: any `admin` or
@@ -38,8 +47,7 @@ export async function assertEditor(
     db: DB,
     uid: string,
 ): Promise<{ ok: true } | WriteError> {
-    const snap = await db.collection("users").doc(uid).get()
-    const role = snap.exists ? (snap.data()?.role as string | undefined) : undefined
+    const role = await readUserRole(db, uid)
     if (role === "admin" || role === "band_leader") return { ok: true }
     return {
         ok: false,

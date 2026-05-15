@@ -8,7 +8,9 @@ import {
     addTrackToSetlist,
     reorderSetlist,
     removeSetlistTrack,
+    deleteSetlist,
 } from "../tools/setlist-write"
+import { getSetlist } from "../tools/setlists"
 
 /**
  * MCP Phase 4b — write tools against the Firebase emulator.
@@ -305,6 +307,30 @@ describe("MCP setlist write tools (emulator)", () => {
         ).toEqual({ error: NOT_EDITOR_ERROR })
     })
 
+    it("add_track + getSetlist round-trips referenceLink (F-4)", async () => {
+        // Regression guard for F-4: getSetlist projection used to omit
+        // referenceLink even though the write path persists it correctly,
+        // silently dropping any URL the caller attached.
+        const id = await newSetlist()
+        await addTrackToSetlist(ADMIN, {
+            setlistId: id,
+            title: "Linked Row",
+            referenceLink: "https://example.com/chart-ref",
+        })
+
+        const view = (await getSetlist(ADMIN, { id })) as {
+            tracks: Array<{ referenceLink: string | null }>
+        }
+        expect(view.tracks[0].referenceLink).toBe("https://example.com/chart-ref")
+
+        // A row added without a referenceLink projects null, not missing.
+        await addTrackToSetlist(ADMIN, { setlistId: id, title: "Plain Row" })
+        const view2 = (await getSetlist(ADMIN, { id })) as {
+            tracks: Array<{ referenceLink: string | null }>
+        }
+        expect(view2.tracks[1].referenceLink).toBeNull()
+    })
+
     it("remove_track deletes the row, re-packs order, and syncs trackCount", async () => {
         const id = await newSetlist()
         await addTrackToSetlist(ADMIN, { setlistId: id, title: "A" })
@@ -329,5 +355,86 @@ describe("MCP setlist write tools (emulator)", () => {
         expect(
             await removeSetlistTrack(MEMBER, { setlistId: id, trackId: tracks[0].id as string }),
         ).toEqual({ error: NOT_EDITOR_ERROR })
+    })
+
+    describe("delete_setlist (F-10)", () => {
+        it("admin deletes their own setlist and cascades all its tracks", async () => {
+            const id = await newSetlist(ADMIN)
+            await addTrackToSetlist(ADMIN, { setlistId: id, title: "1" })
+            await addTrackToSetlist(ADMIN, { setlistId: id, title: "2" })
+
+            expect(await deleteSetlist(ADMIN, { id })).toEqual({
+                ok: true,
+                tracksDeleted: 2,
+            })
+            expect((await db().collection("setlists").doc(id).get()).exists).toBe(false)
+            expect(await tracksOf(id)).toHaveLength(0)
+        })
+
+        it("works on a setlist with no tracks", async () => {
+            const id = await newSetlist(ADMIN)
+            expect(await deleteSetlist(ADMIN, { id })).toEqual({
+                ok: true,
+                tracksDeleted: 0,
+            })
+            expect((await db().collection("setlists").doc(id).get()).exists).toBe(false)
+        })
+
+        it("admin can delete a setlist owned by another editor (override)", async () => {
+            const id = await newSetlist(LEADER)
+            expect(await deleteSetlist(ADMIN, { id })).toEqual({
+                ok: true,
+                tracksDeleted: 0,
+            })
+        })
+
+        it("band_leader deletes their own setlist", async () => {
+            const id = await newSetlist(LEADER)
+            await addTrackToSetlist(LEADER, { setlistId: id, title: "x" })
+            expect(await deleteSetlist(LEADER, { id })).toEqual({
+                ok: true,
+                tracksDeleted: 1,
+            })
+            expect((await db().collection("setlists").doc(id).get()).exists).toBe(false)
+        })
+
+        it("band_leader CANNOT delete a setlist owned by someone else", async () => {
+            // Stricter than create/update/add_track, which let any leader edit
+            // any setlist. Delete is destructive + irreversible, so it requires
+            // ownership (or an admin override).
+            const id = await newSetlist(ADMIN)
+            expect(await deleteSetlist(LEADER, { id })).toEqual({
+                error: "Only the setlist owner or an admin may delete a setlist",
+            })
+            expect((await db().collection("setlists").doc(id).get()).exists).toBe(true)
+        })
+
+        it("member is rejected at the role gate", async () => {
+            const id = await newSetlist(ADMIN)
+            expect(await deleteSetlist(MEMBER, { id })).toEqual({
+                error: NOT_EDITOR_ERROR,
+            })
+            expect((await db().collection("setlists").doc(id).get()).exists).toBe(true)
+        })
+
+        it("nonexistent setlist id returns a clean error", async () => {
+            expect(await deleteSetlist(ADMIN, { id: "nope" })).toEqual({
+                error: "Setlist not found",
+            })
+        })
+
+        it("does not touch tracks of other setlists", async () => {
+            const a = await newSetlist(ADMIN)
+            const b = await newSetlist(ADMIN)
+            await addTrackToSetlist(ADMIN, { setlistId: a, title: "a1" })
+            await addTrackToSetlist(ADMIN, { setlistId: b, title: "b1" })
+
+            expect(await deleteSetlist(ADMIN, { id: a })).toEqual({
+                ok: true,
+                tracksDeleted: 1,
+            })
+            expect(await tracksOf(b)).toHaveLength(1)
+            expect((await db().collection("setlists").doc(b).get()).exists).toBe(true)
+        })
     })
 })
