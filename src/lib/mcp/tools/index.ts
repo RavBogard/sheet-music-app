@@ -11,6 +11,7 @@ import {
     deleteSetlist,
     updateSetlistTrack,
     bulkUpdateSetlistTracks,
+    bulkAddSetlistTracks,
 } from "./setlist-write"
 import {
     listMonitorBuses,
@@ -249,6 +250,83 @@ export function registerWriteTools(server: McpServer): void {
     )
 
     server.registerTool(
+        "bulk_add_tracks",
+        {
+            description:
+                "Add many tracks to one setlist in a single call — closes the weekly-flow N+1 ('9 sequential add_track_to_setlist calls'). The `tracks[]` array's order IS the performance order of the new rows. All rows are spliced in starting at `position` (or appended). For per-row positioning of arbitrary rearrangements, use reorder_setlist instead. mode='atomic' (default) wraps everything in one batch — all-or-nothing; mode='best-effort' inserts each row independently and accumulates per-row results. dryRun=true returns the plan without writing. RESPONSE: `committed: boolean` is the load-bearing signal — true iff writes actually landed. Per-row results include `index` (matches the input array), `ok`, `trackId`, `order`, and `error` (when ok=false). Max 50 rows per call. Admins and band leaders only.",
+            inputSchema: {
+                setlistId: z.string().describe("Setlist id"),
+                tracks: z
+                    .array(
+                        z.object({
+                            songId: z
+                                .string()
+                                .optional()
+                                .describe(
+                                    "Library song id — title/key/lead default from this song",
+                                ),
+                            title: z
+                                .string()
+                                .optional()
+                                .describe(
+                                    "Row title — required for non-song rows or to override a song's title",
+                                ),
+                            type: z
+                                .enum([
+                                    "song",
+                                    "header",
+                                    "reading",
+                                    "prayer",
+                                    "transition",
+                                    "note",
+                                ])
+                                .optional()
+                                .describe("Row type (default 'song')"),
+                            key: z.string().optional().describe("Musical key"),
+                            leadMusician: z
+                                .string()
+                                .optional()
+                                .describe("Vocal Lead"),
+                            referenceLink: z
+                                .string()
+                                .optional()
+                                .describe("Reference URL"),
+                            notes: z
+                                .string()
+                                .optional()
+                                .describe("Free-text notes"),
+                        }),
+                    )
+                    .min(1)
+                    .max(50)
+                    .describe("Rows to insert, in performance order; max 50"),
+                position: z
+                    .number()
+                    .int()
+                    .min(0)
+                    .optional()
+                    .describe(
+                        "0-based insert anchor; omit to append at the end of the setlist",
+                    ),
+                mode: z
+                    .enum(["atomic", "best-effort"])
+                    .optional()
+                    .describe(
+                        "atomic (default): all-or-nothing batch. best-effort: per-row results, partial success allowed.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "If true, return the plan without writing. Useful for confirming a large insert before committing.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await bulkAddSetlistTracks(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
         "reorder_setlist",
         {
             description:
@@ -288,8 +366,11 @@ export function registerWriteTools(server: McpServer): void {
         async (args, extra) => jsonResult(await deleteSetlist(uidFrom(extra), args)),
     )
 
-    // CF1 — per-row edit closure. Shared patch schema between the two tools.
-    const trackPatchSchema = z.object({
+    // CF1 — per-row edit closure. CF3 splits the schemas: update_track adds
+    // `position` for in-place reorder; bulk_update_tracks rejects it (bulk
+    // moves + bulk field patches in one call have ambiguous ordering — use
+    // reorder_setlist for multi-row reorders).
+    const bulkTrackPatchSchema = z.object({
         key: z.string().optional(),
         leadMusician: z.string().optional(),
         title: z.string().optional(),
@@ -300,19 +381,29 @@ export function registerWriteTools(server: McpServer): void {
         songId: z.string().optional(),
         referenceLink: z.string().optional(),
     })
+    const updateTrackPatchSchema = bulkTrackPatchSchema.extend({
+        position: z
+            .number()
+            .int()
+            .min(0)
+            .optional()
+            .describe(
+                "0-based target index for in-place reorder. Clamps into [0, trackCount-1]. Combine with field patches to move + edit in one call. NOT supported in bulk_update_tracks.",
+            ),
+    })
 
     server.registerTool(
         "update_track",
         {
             description:
-                "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink). Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Position/order cannot be changed via update_track — use reorder_setlist. Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). Returns the post-update row. Admins and band leaders only.",
+                "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink) and optionally move it to a new position. Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Pass `position` to move the row in place (closes the 'must call reorder_setlist with the full ordered id list to move one row' gap). Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). Returns the post-update row. Admins and band leaders only.",
             inputSchema: {
                 setlistId: z.string().describe("Setlist id"),
                 trackId: z
                     .string()
                     .describe("Track id (from get_setlist tracks[].id)"),
-                patch: trackPatchSchema.describe(
-                    "Fields to update. At least one must be set. Pass `songId` to re-bond the row to a different library song (fileId follows automatically).",
+                patch: updateTrackPatchSchema.describe(
+                    "Fields to update + optional `position` for in-place reorder. At least one field (or `position`) must be set. Pass `songId` to re-bond the row to a different library song (fileId follows automatically).",
                 ),
             },
         },
@@ -331,12 +422,12 @@ export function registerWriteTools(server: McpServer): void {
                     .array(
                         z.object({
                             trackId: z.string(),
-                            patch: trackPatchSchema,
+                            patch: bulkTrackPatchSchema,
                         }),
                     )
                     .min(1)
                     .max(50)
-                    .describe("Per-track patches; max 50"),
+                    .describe("Per-track patches; max 50. `position` is not allowed here — use update_track for a single move or reorder_setlist for a multi-row reorder."),
                 mode: z
                     .enum(["atomic", "best-effort"])
                     .optional()

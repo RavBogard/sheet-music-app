@@ -196,10 +196,15 @@ export async function reorderTracks(
 }
 
 /**
- * CF1: partial-row patch applied to one track on a setlist. `position` and
- * `order` are intentionally excluded — re-ordering routes through
- * `reorderTracks`. Setting `songId` to a new id re-bonds the row's chart;
- * `fileId` follows automatically (the catalog is keyed by Drive file id).
+ * CF1: partial-row patch applied to one track on a setlist. Setting `songId`
+ * to a new id re-bonds the row's chart; `fileId` follows automatically
+ * (the catalog is keyed by Drive file id).
+ *
+ * CF3 extension: `position` (0-based) moves the row to a new index in a
+ * single update_track call — closes the "to move one row I must call
+ * reorder_setlist with the full ordered id list" gap. Single-row only;
+ * bulk_update_tracks rejects `position` because mixing reorders with
+ * field patches in one batch makes the result ordering ambiguous.
  */
 export interface UpdateTrackPatch {
     key?: string
@@ -209,8 +214,11 @@ export interface UpdateTrackPatch {
     type?: "song" | "header" | "reading" | "prayer" | "transition" | "note"
     songId?: string
     referenceLink?: string
+    /** 0-based target position; clamps into [0, trackCount-1]. */
+    position?: number
 }
 
+/** Field patches that survive into the Firestore update (not the reorder). */
 const UPDATABLE_FIELDS = [
     "key",
     "leadMusician",
@@ -251,7 +259,8 @@ export async function updateTrack(
             changed = true
         }
     }
-    if (!changed) {
+    const wantsMove = patch.position !== undefined
+    if (!changed && !wantsMove) {
         return {
             ok: false,
             error: "patch must include at least one field to update",
@@ -268,6 +277,34 @@ export async function updateTrack(
 
     const batch = db.batch()
     batch.update(trackRef, update)
+
+    // CF3: in-place reorder. Clamp the target into the valid range, then
+    // splice the row out + back in to compute new `order` values for every
+    // affected sibling. Single batch keeps the move atomic with the field
+    // patch above.
+    if (wantsMove) {
+        const all = await getTracksForSetlist(db, setlistId, {})
+        if (all.length > 0) {
+            const currentIdx = all.findIndex((t) => t.id === trackId)
+            const target = Math.max(
+                0,
+                Math.min(patch.position as number, all.length - 1),
+            )
+            if (currentIdx !== -1 && currentIdx !== target) {
+                const reordered = all.slice()
+                const [moved] = reordered.splice(currentIdx, 1)
+                reordered.splice(target, 0, moved)
+                reordered.forEach((t, i) => {
+                    if (t.order !== i) {
+                        batch.update(db.collection("tracks").doc(t.id), {
+                            order: i,
+                        })
+                    }
+                })
+            }
+        }
+    }
+
     batch.update(db.collection("setlists").doc(setlistId), {
         updatedAt: FieldValue.serverTimestamp(),
     })
@@ -277,6 +314,7 @@ export async function updateTrack(
         setlistId,
         trackId,
         fields: Object.keys(update).filter((k) => k !== "updatedAt"),
+        moved: wantsMove,
     })
 
     const after = (await trackRef.get()).data() as Record<string, unknown>
@@ -429,6 +467,21 @@ export async function bulkUpdateTracks(
                 },
             }
         }
+        // CF3: `position` is single-track only — bulk reorders + bulk field
+        // patches in one call have ambiguous result ordering. Callers should
+        // use reorder_setlist for multi-row moves or update_track (singular)
+        // for one move.
+        if (patch.position !== undefined) {
+            return {
+                kind: "invalid",
+                result: {
+                    trackId,
+                    ok: false,
+                    error:
+                        "`position` is not supported in bulk_update_tracks — use update_track for a single move or reorder_setlist for a multi-row reorder",
+                },
+            }
+        }
         const fields = UPDATABLE_FIELDS.filter((k) => patch[k] !== undefined)
         if (fields.length === 0) {
             return {
@@ -561,6 +614,284 @@ export async function bulkUpdateTracks(
         mode,
         patchCount: patches.length,
         anyFailed: results.some((p) => !p.ok),
+    })
+
+    return { ok: true, mode, committed: true, results, dryRun: false }
+}
+
+// ─── CF3: bulk_add_tracks ───────────────────────────────────────────────────
+
+export const BULK_ADD_MAX_TRACKS = 50
+
+export interface BulkAddTrackInput {
+    type?: "song" | "header" | "reading" | "prayer" | "transition" | "note"
+    title?: string
+    key?: string
+    leadMusician?: string
+    referenceLink?: string
+    songId?: string
+    fileId?: string
+    fileName?: string
+    notes?: string
+}
+
+export interface BulkAddTracksOptions {
+    /**
+     * Insert anchor — all rows are spliced in starting at this index, in array
+     * order. Out-of-range / omitted → append at the end. There's no per-row
+     * `position` (the array's order IS the desired order of the new rows).
+     */
+    position?: number
+    mode?: "atomic" | "best-effort"
+    dryRun?: boolean
+}
+
+export interface BulkAddResult {
+    index: number
+    ok: boolean
+    error?: string
+    trackId?: string
+    order?: number
+}
+
+/**
+ * Insert many tracks into one setlist in a single call — closes the weekly-
+ * flow N+1 ("9 sequential add_track_to_setlist calls for one new service")
+ * cowork flagged as the top remaining gap.
+ *
+ * The array's order IS the desired performance order of the new rows. All
+ * rows are spliced in starting at `position` (or appended), preserving the
+ * caller's order. No per-row position field — multiple per-row positions in
+ * one batch have ambiguous semantics; for arbitrary reorders use reorder_setlist.
+ *
+ * `mode='atomic'` (default): all-or-nothing batch commit. Pre-validates every
+ * row; if any row fails validation, NO writes happen and the response carries
+ * `committed: false` plus per-row results explaining which row tripped it.
+ *
+ * `mode='best-effort'`: each row is inserted independently via `addTrack`.
+ * Partial success allowed. Lossier but never blocks on one bad row.
+ *
+ * `dryRun=true` returns the would-apply plan without writing.
+ */
+export async function bulkAddTracks(
+    db: DB,
+    setlistId: string,
+    rows: BulkAddTrackInput[],
+    options: BulkAddTracksOptions = {},
+    resolveSongTitle?: (
+        songId: string,
+    ) => Promise<{ title: string; key?: string; lead?: string; fileName?: string } | null>,
+): Promise<
+    | {
+          ok: true
+          mode: "atomic" | "best-effort"
+          committed: boolean
+          results: BulkAddResult[]
+          dryRun: boolean
+      }
+    | WriteError
+> {
+    if (rows.length === 0) {
+        return { ok: false, error: "tracks must include at least one entry" }
+    }
+    if (rows.length > BULK_ADD_MAX_TRACKS) {
+        return {
+            ok: false,
+            error: `tracks exceeds max (${BULK_ADD_MAX_TRACKS}); chunk into multiple calls`,
+        }
+    }
+    const mode = options.mode ?? "atomic"
+    const dryRun = options.dryRun ?? false
+
+    const existing = await getTracksForSetlist(db, setlistId, {})
+    const anchor =
+        options.position === undefined ||
+        options.position < 0 ||
+        options.position > existing.length
+            ? existing.length
+            : options.position
+
+    // Pre-resolve song lookups so the atomic batch has no async surprises.
+    const planned: Array<
+        | { kind: "ok"; index: number; trackId: string; payload: Record<string, unknown>; order: number; fileId?: string }
+        | { kind: "invalid"; index: number; error: string }
+    > = []
+
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i]
+        const type = row.type ?? "song"
+
+        let title = row.title
+        let key = row.key
+        let leadMusician = row.leadMusician
+        let fileId = row.fileId
+        let fileName = row.fileName
+
+        if (row.songId) {
+            if (!resolveSongTitle) {
+                planned.push({
+                    kind: "invalid",
+                    index: i,
+                    error: "songId resolver not provided",
+                })
+                continue
+            }
+            const song = await resolveSongTitle(row.songId)
+            if (!song) {
+                planned.push({
+                    kind: "invalid",
+                    index: i,
+                    error: `Song ${row.songId} not found`,
+                })
+                continue
+            }
+            title = title ?? song.title
+            key = key ?? song.key
+            leadMusician = leadMusician ?? song.lead
+            fileName = fileName ?? song.fileName
+            fileId = fileId ?? row.songId
+        }
+
+        if (!title || !title.trim()) {
+            planned.push({
+                kind: "invalid",
+                index: i,
+                error: "title is required (or pass a songId to derive it)",
+            })
+            continue
+        }
+
+        const trackId = crypto.randomUUID()
+        const order = anchor + planned.filter((p) => p.kind === "ok").length
+
+        const payload: Record<string, unknown> = {
+            id: trackId,
+            setlistId,
+            order,
+            type,
+            title,
+            updatedAt: FieldValue.serverTimestamp(),
+        }
+        if (key !== undefined) payload.key = key
+        if (leadMusician !== undefined) payload.leadMusician = leadMusician
+        if (row.referenceLink !== undefined) payload.referenceLink = row.referenceLink
+        if (row.songId !== undefined) payload.songId = row.songId
+        if (fileId !== undefined) payload.fileId = fileId
+        if (fileName !== undefined) payload.fileName = fileName
+        if (row.notes !== undefined) payload.notes = row.notes
+
+        planned.push({
+            kind: "ok",
+            index: i,
+            trackId,
+            payload,
+            order,
+            fileId,
+        })
+    }
+
+    const anyInvalid = planned.some((p) => p.kind === "invalid")
+
+    if (mode === "atomic" && anyInvalid) {
+        const results: BulkAddResult[] = planned.map((p) =>
+            p.kind === "invalid"
+                ? { index: p.index, ok: false, error: p.error }
+                : {
+                      index: p.index,
+                      ok: false,
+                      error:
+                          "Rolled back: another row in the atomic batch failed pre-validation",
+                  },
+        )
+        logger.info("[mcp] bulk track add — atomic rollback", {
+            setlistId,
+            rowCount: rows.length,
+            invalidCount: planned.filter((p) => p.kind === "invalid").length,
+        })
+        return { ok: true, mode, committed: false, results, dryRun }
+    }
+
+    const results: BulkAddResult[] = planned.map((p) =>
+        p.kind === "invalid"
+            ? { index: p.index, ok: false, error: p.error }
+            : { index: p.index, ok: true, trackId: p.trackId, order: p.order },
+    )
+
+    if (dryRun) {
+        return { ok: true, mode, committed: false, results, dryRun: true }
+    }
+
+    if (mode === "atomic") {
+        const batch = db.batch()
+        // Shift existing rows at/after the anchor down by the insert count.
+        const insertCount = planned.filter((p) => p.kind === "ok").length
+        for (const t of existing) {
+            if (t.order >= anchor) {
+                batch.update(db.collection("tracks").doc(t.id), {
+                    order: t.order + insertCount,
+                })
+            }
+        }
+        const newFileIds = new Set<string>()
+        for (const p of planned) {
+            if (p.kind !== "ok") continue
+            batch.set(db.collection("tracks").doc(p.trackId), p.payload)
+            if (p.fileId) newFileIds.add(p.fileId)
+        }
+        const setlistPatch: Record<string, unknown> = {
+            trackCount: existing.length + insertCount,
+            updatedAt: FieldValue.serverTimestamp(),
+        }
+        if (newFileIds.size > 0) {
+            setlistPatch.fileIds = FieldValue.arrayUnion(...newFileIds)
+        }
+        batch.update(db.collection("setlists").doc(setlistId), setlistPatch)
+        await batch.commit()
+    } else {
+        // Best-effort: insert each row independently. addTrack re-reads the
+        // current setlist state per call, so positions stay contiguous even
+        // if a row in the middle fails. We pass `position: anchor + i` for
+        // the first successful insert and let subsequent ones drift naturally.
+        let writtenSoFar = 0
+        for (let i = 0; i < planned.length; i++) {
+            const p = planned[i]
+            if (p.kind !== "ok") continue
+            try {
+                const inserted = await addTrack(db, {
+                    setlistId,
+                    type: (p.payload.type as BulkAddTrackInput["type"]) ?? "song",
+                    title: p.payload.title as string,
+                    key: p.payload.key as string | undefined,
+                    leadMusician: p.payload.leadMusician as string | undefined,
+                    referenceLink: p.payload.referenceLink as string | undefined,
+                    songId: p.payload.songId as string | undefined,
+                    fileId: p.fileId,
+                    fileName: p.payload.fileName as string | undefined,
+                    notes: p.payload.notes as string | undefined,
+                    position: anchor + writtenSoFar,
+                })
+                results[i] = {
+                    index: p.index,
+                    ok: true,
+                    trackId: inserted.trackId,
+                    order: inserted.order,
+                }
+                writtenSoFar++
+            } catch (err) {
+                results[i] = {
+                    index: p.index,
+                    ok: false,
+                    error: err instanceof Error ? err.message : String(err),
+                }
+            }
+        }
+    }
+
+    logger.info("[mcp] bulk tracks added", {
+        setlistId,
+        mode,
+        rowCount: rows.length,
+        anyFailed: results.some((r) => !r.ok),
     })
 
     return { ok: true, mode, committed: true, results, dryRun: false }

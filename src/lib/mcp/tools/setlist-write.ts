@@ -13,9 +13,12 @@ import {
     readUserRole,
     updateTrack,
     bulkUpdateTracks,
+    bulkAddTracks,
     type UpdateTrackPatch,
     type BulkUpdatePatchEntry,
     type BulkUpdateResult,
+    type BulkAddTrackInput,
+    type BulkAddResult,
 } from "@/lib/mcp/server-tracks-write"
 import { getSongById } from "@/lib/mcp/server-songs"
 
@@ -292,6 +295,65 @@ export async function bulkUpdateSetlistTracks(
         mode: args.mode,
         dryRun: args.dryRun,
     })
+    if (!result.ok) return { error: result.error }
+    return {
+        ok: true,
+        mode: result.mode,
+        committed: result.committed,
+        results: result.results,
+        dryRun: result.dryRun,
+    }
+}
+
+// ─── bulk_add_tracks (CF3) ──────────────────────────────────────────────────
+
+export interface BulkAddTracksArgs {
+    setlistId: string
+    tracks: BulkAddTrackInput[]
+    position?: number
+    mode?: "atomic" | "best-effort"
+    dryRun?: boolean
+}
+
+export async function bulkAddSetlistTracks(
+    uid: string,
+    args: BulkAddTracksArgs,
+): Promise<
+    | {
+          ok: true
+          mode: "atomic" | "best-effort"
+          committed: boolean
+          results: BulkAddResult[]
+          dryRun: boolean
+      }
+    | ToolError
+> {
+    initAdmin()
+    const db = getFirestore()
+
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    if (!loaded.ok) return { error: loaded.error }
+
+    const result = await bulkAddTracks(
+        db,
+        args.setlistId,
+        args.tracks,
+        {
+            position: args.position,
+            mode: args.mode,
+            dryRun: args.dryRun,
+        },
+        async (songId) => {
+            const song = await getSongById(songId)
+            if (!song) return null
+            return {
+                title: song.title,
+                key: song.key,
+                lead: song.lead,
+                fileName: song.fileName,
+            }
+        },
+    )
     if (!result.ok) return { error: result.error }
     return {
         ok: true,

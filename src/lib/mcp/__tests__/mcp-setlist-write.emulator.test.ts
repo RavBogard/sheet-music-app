@@ -11,6 +11,7 @@ import {
     deleteSetlist,
     updateSetlistTrack,
     bulkUpdateSetlistTracks,
+    bulkAddSetlistTracks,
 } from "../tools/setlist-write"
 import { getSetlist } from "../tools/setlists"
 
@@ -877,6 +878,320 @@ describe("MCP setlist write tools (emulator)", () => {
                 await db().collection("tracks").doc(trackId).get()
             ).data()!
             expect(doc.leadMusician).toBeUndefined()
+        })
+    })
+
+    // ─── CF3: bulk_add_tracks + position-in-patch ──────────────────────────
+
+    describe("update_track position-patch (CF3)", () => {
+        async function setlistWithRows(uid: string, titles: string[]) {
+            const id = await newSetlist(uid)
+            const trackIds: string[] = []
+            for (const t of titles) {
+                const r = (await addTrackToSetlist(uid, {
+                    setlistId: id,
+                    title: t,
+                    type: "song",
+                })) as { trackId: string }
+                trackIds.push(r.trackId)
+            }
+            return { setlistId: id, trackIds }
+        }
+
+        it("moves a row to a new position via update_track patch", async () => {
+            const { setlistId, trackIds } = await setlistWithRows(ADMIN, [
+                "A",
+                "B",
+                "C",
+                "D",
+            ])
+            // Move D (index 3) to index 1 → [A, D, B, C].
+            const r = await updateSetlistTrack(ADMIN, {
+                setlistId,
+                trackId: trackIds[3],
+                patch: { position: 1 },
+            })
+            expect(r).toMatchObject({ ok: true })
+
+            const rows = await tracksOf(setlistId)
+            expect(rows.map((t) => t.title)).toEqual(["A", "D", "B", "C"])
+            expect(rows.map((t) => t.order)).toEqual([0, 1, 2, 3])
+        })
+
+        it("moves + field-patches in one call", async () => {
+            const { setlistId, trackIds } = await setlistWithRows(ADMIN, [
+                "A",
+                "B",
+                "C",
+            ])
+            await updateSetlistTrack(ADMIN, {
+                setlistId,
+                trackId: trackIds[0],
+                patch: { position: 2, leadMusician: "Randy" },
+            })
+            const rows = await tracksOf(setlistId)
+            expect(rows.map((t) => t.title)).toEqual(["B", "C", "A"])
+            const movedA = rows.find((t) => t.title === "A")!
+            expect(movedA.leadMusician).toBe("Randy")
+        })
+
+        it("clamps out-of-range position into [0, trackCount-1]", async () => {
+            const { setlistId, trackIds } = await setlistWithRows(ADMIN, [
+                "A",
+                "B",
+                "C",
+            ])
+            // Move A to absurdly large index — clamp to end.
+            await updateSetlistTrack(ADMIN, {
+                setlistId,
+                trackId: trackIds[0],
+                patch: { position: 999 },
+            })
+            const rows = await tracksOf(setlistId)
+            expect(rows.map((t) => t.title)).toEqual(["B", "C", "A"])
+        })
+
+        it("position-only patch (no field changes) is allowed", async () => {
+            const { setlistId, trackIds } = await setlistWithRows(ADMIN, [
+                "A",
+                "B",
+            ])
+            const r = await updateSetlistTrack(ADMIN, {
+                setlistId,
+                trackId: trackIds[1],
+                patch: { position: 0 },
+            })
+            expect(r).toMatchObject({ ok: true })
+            const rows = await tracksOf(setlistId)
+            expect(rows.map((t) => t.title)).toEqual(["B", "A"])
+        })
+
+        it("bulk_update_tracks rejects `position` (single-track only)", async () => {
+            const { setlistId, trackIds } = await setlistWithRows(ADMIN, ["A", "B"])
+            const r = (await bulkUpdateSetlistTracks(ADMIN, {
+                setlistId,
+                patches: [
+                    {
+                        trackId: trackIds[0],
+                        patch: { position: 1 } as never,
+                    },
+                ],
+            })) as {
+                ok: true
+                committed: boolean
+                results: Array<{ ok: boolean; error?: string }>
+            }
+            expect(r.committed).toBe(false)
+            expect(r.results[0].ok).toBe(false)
+            expect(r.results[0].error).toContain("position")
+            // No reorder happened.
+            const rows = await tracksOf(setlistId)
+            expect(rows.map((t) => t.title)).toEqual(["A", "B"])
+        })
+    })
+
+    describe("bulk_add_tracks (CF3)", () => {
+        it("appends rows in array order; one call closes the weekly N+1", async () => {
+            const id = await newSetlist(ADMIN)
+            const r = (await bulkAddSetlistTracks(ADMIN, {
+                setlistId: id,
+                tracks: [
+                    { title: "Lecha Dodi", type: "song", key: "G" },
+                    { title: "Mi Chamocha", type: "song", key: "D" },
+                    { title: "Adon Olam", type: "song", key: "C" },
+                ],
+            })) as {
+                ok: true
+                committed: boolean
+                results: Array<{ ok: boolean; trackId?: string; order?: number }>
+            }
+            expect(r.committed).toBe(true)
+            expect(r.results).toHaveLength(3)
+            expect(r.results.every((x) => x.ok)).toBe(true)
+            expect(r.results.map((x) => x.order)).toEqual([0, 1, 2])
+
+            const rows = await tracksOf(id)
+            expect(rows.map((t) => t.title)).toEqual([
+                "Lecha Dodi",
+                "Mi Chamocha",
+                "Adon Olam",
+            ])
+            expect(rows.map((t) => t.order)).toEqual([0, 1, 2])
+        })
+
+        it("inserts at a given anchor — shifts existing rows down", async () => {
+            // Seed two rows, then bulk-insert two more at position 1.
+            const id = await newSetlist(ADMIN)
+            await addTrackToSetlist(ADMIN, { setlistId: id, title: "First", type: "song" })
+            await addTrackToSetlist(ADMIN, { setlistId: id, title: "Last", type: "song" })
+
+            await bulkAddSetlistTracks(ADMIN, {
+                setlistId: id,
+                position: 1,
+                tracks: [
+                    { title: "Middle-A", type: "song" },
+                    { title: "Middle-B", type: "song" },
+                ],
+            })
+            const rows = await tracksOf(id)
+            expect(rows.map((t) => t.title)).toEqual([
+                "First",
+                "Middle-A",
+                "Middle-B",
+                "Last",
+            ])
+            expect(rows.map((t) => t.order)).toEqual([0, 1, 2, 3])
+        })
+
+        it("derives title/key/lead from songId and bonds fileId", async () => {
+            const id = await newSetlist(ADMIN)
+            const r = (await bulkAddSetlistTracks(ADMIN, {
+                setlistId: id,
+                tracks: [{ songId: "song-oseh" }],
+            })) as {
+                ok: true
+                committed: boolean
+                results: Array<{ ok: boolean; trackId?: string }>
+            }
+            expect(r.committed).toBe(true)
+            const row = (
+                await db()
+                    .collection("tracks")
+                    .doc(r.results[0].trackId!)
+                    .get()
+            ).data()!
+            expect(row.title).toBe("Oseh Shalom")
+            expect(row.key).toBe("G")
+            expect(row.leadMusician).toBe("Cantor")
+            expect(row.fileId).toBe("song-oseh")
+
+            const setlist = (
+                await db().collection("setlists").doc(id).get()
+            ).data()!
+            expect(setlist.fileIds).toContain("song-oseh")
+            expect(setlist.trackCount).toBe(1)
+        })
+
+        it("atomic + bad songId → entire batch rolled back, no writes", async () => {
+            const id = await newSetlist(ADMIN)
+            const r = (await bulkAddSetlistTracks(ADMIN, {
+                setlistId: id,
+                tracks: [
+                    { title: "Good", type: "song" },
+                    { songId: "ghost-song-id" },
+                    { title: "Also Good", type: "song" },
+                ],
+            })) as {
+                ok: true
+                committed: boolean
+                results: Array<{ ok: boolean; error?: string }>
+            }
+            expect(r.committed).toBe(false)
+            expect(r.results[0]).toMatchObject({ ok: false })
+            expect(r.results[1]).toMatchObject({
+                ok: false,
+                error: expect.stringContaining("ghost-song-id"),
+            })
+            expect(r.results[2]).toMatchObject({ ok: false })
+            expect(r.results[0].error).toContain("Rolled back")
+            expect(await tracksOf(id)).toHaveLength(0)
+        })
+
+        it("best-effort + bad songId → other rows still insert", async () => {
+            const id = await newSetlist(ADMIN)
+            const r = (await bulkAddSetlistTracks(ADMIN, {
+                setlistId: id,
+                mode: "best-effort",
+                tracks: [
+                    { title: "Good", type: "song" },
+                    { songId: "ghost-song-id" },
+                    { title: "Also Good", type: "song" },
+                ],
+            })) as {
+                ok: true
+                committed: boolean
+                results: Array<{ ok: boolean; trackId?: string }>
+            }
+            expect(r.committed).toBe(true)
+            expect(r.results[0].ok).toBe(true)
+            expect(r.results[1].ok).toBe(false)
+            expect(r.results[2].ok).toBe(true)
+            const rows = await tracksOf(id)
+            expect(rows.map((t) => t.title)).toEqual(["Good", "Also Good"])
+            expect(rows.map((t) => t.order)).toEqual([0, 1])
+        })
+
+        it("dryRun=true returns the plan without writing", async () => {
+            const id = await newSetlist(ADMIN)
+            const r = (await bulkAddSetlistTracks(ADMIN, {
+                setlistId: id,
+                dryRun: true,
+                tracks: [
+                    { title: "A", type: "song" },
+                    { title: "B", type: "song" },
+                ],
+            })) as {
+                ok: true
+                committed: boolean
+                dryRun: boolean
+                results: Array<{ ok: boolean }>
+            }
+            expect(r.committed).toBe(false)
+            expect(r.dryRun).toBe(true)
+            expect(r.results.every((x) => x.ok)).toBe(true)
+            expect(await tracksOf(id)).toHaveLength(0)
+        })
+
+        it("rejects empty list and >50 rows", async () => {
+            const id = await newSetlist(ADMIN)
+            const empty = await bulkAddSetlistTracks(ADMIN, {
+                setlistId: id,
+                tracks: [],
+            })
+            expect(empty).toMatchObject({
+                error: expect.stringContaining("at least one"),
+            })
+
+            const big = Array.from({ length: 51 }, (_, i) => ({
+                title: `T${i}`,
+                type: "song" as const,
+            }))
+            const tooMany = await bulkAddSetlistTracks(ADMIN, {
+                setlistId: id,
+                tracks: big,
+            })
+            expect(tooMany).toMatchObject({
+                error: expect.stringContaining("exceeds max"),
+            })
+        })
+
+        it("rejects rows with no title and no songId", async () => {
+            const id = await newSetlist(ADMIN)
+            const r = (await bulkAddSetlistTracks(ADMIN, {
+                setlistId: id,
+                mode: "best-effort",
+                tracks: [
+                    { title: "Has title", type: "song" },
+                    { type: "song" }, // no title, no songId → invalid
+                ],
+            })) as {
+                ok: true
+                committed: boolean
+                results: Array<{ ok: boolean; error?: string }>
+            }
+            expect(r.committed).toBe(true)
+            expect(r.results[0].ok).toBe(true)
+            expect(r.results[1].ok).toBe(false)
+            expect(r.results[1].error).toContain("title is required")
+        })
+
+        it("members are denied bulk_add_tracks", async () => {
+            const id = await newSetlist(ADMIN)
+            const r = await bulkAddSetlistTracks(MEMBER, {
+                setlistId: id,
+                tracks: [{ title: "Hijacked", type: "song" }],
+            })
+            expect(r).toEqual({ error: NOT_EDITOR_ERROR })
         })
     })
 })
