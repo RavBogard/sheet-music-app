@@ -196,6 +196,265 @@ export async function reorderTracks(
 }
 
 /**
+ * CF1: partial-row patch applied to one track on a setlist. `position` and
+ * `order` are intentionally excluded — re-ordering routes through
+ * `reorderTracks`. Setting `songId` to a new id re-bonds the row's chart;
+ * `fileId` follows automatically (the catalog is keyed by Drive file id).
+ */
+export interface UpdateTrackPatch {
+    key?: string
+    leadMusician?: string
+    title?: string
+    notes?: string
+    type?: "song" | "header" | "reading" | "prayer" | "transition" | "note"
+    songId?: string
+    referenceLink?: string
+}
+
+const UPDATABLE_FIELDS = [
+    "key",
+    "leadMusician",
+    "title",
+    "notes",
+    "type",
+    "songId",
+    "referenceLink",
+] as const
+
+/**
+ * Update one track's fields on a setlist. Preserves trackId (unlike
+ * remove+add), so external references stay valid. Cross-setlist guard
+ * rejects a trackId that belongs to a different setlist than the one
+ * passed in.
+ */
+export async function updateTrack(
+    db: DB,
+    setlistId: string,
+    trackId: string,
+    patch: UpdateTrackPatch,
+): Promise<{ ok: true; track: Record<string, unknown> } | WriteError> {
+    const trackRef = db.collection("tracks").doc(trackId)
+    const snap = await trackRef.get()
+    if (!snap.exists) return { ok: false, error: "Track not found" }
+    const existing = snap.data() as Record<string, unknown>
+    if (existing.setlistId !== setlistId) {
+        return { ok: false, error: "Track does not belong to this setlist" }
+    }
+
+    const update: Record<string, unknown> = {
+        updatedAt: FieldValue.serverTimestamp(),
+    }
+    let changed = false
+    for (const k of UPDATABLE_FIELDS) {
+        if (patch[k] !== undefined) {
+            update[k] = patch[k]
+            changed = true
+        }
+    }
+    if (!changed) {
+        return {
+            ok: false,
+            error: "patch must include at least one field to update",
+        }
+    }
+
+    // songId re-bond — the library is keyed by Drive file id, so fileId
+    // tracks songId. fileName is left stale; the client-side
+    // SetlistGridHydrator normalizes it on next load (server-side song
+    // lookup per update would double the Firestore read cost).
+    if (patch.songId !== undefined && patch.songId !== existing.songId) {
+        update.fileId = patch.songId
+    }
+
+    const batch = db.batch()
+    batch.update(trackRef, update)
+    batch.update(db.collection("setlists").doc(setlistId), {
+        updatedAt: FieldValue.serverTimestamp(),
+    })
+    await batch.commit()
+
+    logger.info("[mcp] track updated", {
+        setlistId,
+        trackId,
+        fields: Object.keys(update).filter((k) => k !== "updatedAt"),
+    })
+
+    const after = (await trackRef.get()).data() as Record<string, unknown>
+    return { ok: true, track: { id: trackId, ...after } }
+}
+
+export const BULK_UPDATE_MAX_PATCHES = 50
+
+export interface BulkUpdatePatchEntry {
+    trackId: string
+    patch: UpdateTrackPatch
+}
+
+export interface BulkUpdateResult {
+    trackId: string
+    ok: boolean
+    error?: string
+    track?: Record<string, unknown>
+}
+
+export interface BulkUpdateOptions {
+    mode?: "atomic" | "best-effort"
+    dryRun?: boolean
+}
+
+/**
+ * Apply many per-row patches to one setlist's tracks in a single call.
+ *
+ * `mode='atomic'` (default) wraps every update in a Firestore transaction —
+ * all-or-nothing. If any pre-validation fails, no writes happen and the
+ * envelope's results[] reports each row's status.
+ *
+ * `mode='best-effort'` applies each patch independently, accumulating
+ * per-row results. Lossier but partial-success is allowed.
+ *
+ * `dryRun=true` returns the would-apply plan without writing — useful for
+ * confirming a large change before committing.
+ *
+ * Cap: 50 patches per call (chunk longer lists).
+ */
+export async function bulkUpdateTracks(
+    db: DB,
+    setlistId: string,
+    patches: BulkUpdatePatchEntry[],
+    options: BulkUpdateOptions = {},
+): Promise<
+    | {
+          ok: true
+          mode: "atomic" | "best-effort"
+          results: BulkUpdateResult[]
+          dryRun: boolean
+      }
+    | WriteError
+> {
+    if (patches.length === 0) {
+        return { ok: false, error: "patches must include at least one entry" }
+    }
+    if (patches.length > BULK_UPDATE_MAX_PATCHES) {
+        return {
+            ok: false,
+            error: `patches exceeds max (${BULK_UPDATE_MAX_PATCHES}); chunk into multiple calls`,
+        }
+    }
+    const mode = options.mode ?? "atomic"
+    const dryRun = options.dryRun ?? false
+
+    const existing = await getTracksForSetlist(db, setlistId, {})
+    const byId = new Map(existing.map((t) => [t.id, t]))
+
+    const plan: BulkUpdateResult[] = patches.map(({ trackId, patch }) => {
+        const row = byId.get(trackId)
+        if (!row) {
+            return {
+                trackId,
+                ok: false,
+                error: "Track not found in this setlist",
+            }
+        }
+        const fields = UPDATABLE_FIELDS.filter((k) => patch[k] !== undefined)
+        if (fields.length === 0) {
+            return {
+                trackId,
+                ok: false,
+                error: "patch must include at least one field",
+            }
+        }
+        const previewTrack: Record<string, unknown> = { ...row }
+        for (const k of fields) previewTrack[k] = patch[k]
+        if (patch.songId !== undefined && patch.songId !== row.songId) {
+            previewTrack.fileId = patch.songId
+        }
+        return { trackId, ok: true, track: previewTrack }
+    })
+
+    const anyFailed = plan.some((p) => !p.ok)
+
+    // atomic + any pre-validation failure → reject the whole batch, no writes.
+    if (mode === "atomic" && anyFailed) {
+        return { ok: true, mode, results: plan, dryRun }
+    }
+
+    if (dryRun) {
+        return { ok: true, mode, results: plan, dryRun: true }
+    }
+
+    if (mode === "atomic") {
+        await db.runTransaction(async (tx) => {
+            for (const entry of patches) {
+                const ref = db.collection("tracks").doc(entry.trackId)
+                const update: Record<string, unknown> = {
+                    updatedAt: FieldValue.serverTimestamp(),
+                }
+                for (const k of UPDATABLE_FIELDS) {
+                    if (entry.patch[k] !== undefined) update[k] = entry.patch[k]
+                }
+                const existingRow = byId.get(entry.trackId)
+                if (
+                    entry.patch.songId !== undefined &&
+                    entry.patch.songId !== existingRow?.songId
+                ) {
+                    update.fileId = entry.patch.songId
+                }
+                tx.update(ref, update)
+            }
+            tx.update(db.collection("setlists").doc(setlistId), {
+                updatedAt: FieldValue.serverTimestamp(),
+            })
+        })
+        // Re-read the affected rows so callers get the same echo shape as
+        // update_track. Cheap relative to the transaction itself.
+        for (let i = 0; i < patches.length; i++) {
+            if (!plan[i].ok) continue
+            const after = (
+                await db.collection("tracks").doc(patches[i].trackId).get()
+            ).data() as Record<string, unknown> | undefined
+            if (after) {
+                plan[i] = {
+                    trackId: patches[i].trackId,
+                    ok: true,
+                    track: { id: patches[i].trackId, ...after },
+                }
+            }
+        }
+    } else {
+        for (let i = 0; i < patches.length; i++) {
+            const entry = patches[i]
+            if (!plan[i].ok) continue
+            try {
+                const r = await updateTrack(
+                    db,
+                    setlistId,
+                    entry.trackId,
+                    entry.patch,
+                )
+                plan[i] = r.ok
+                    ? { trackId: entry.trackId, ok: true, track: r.track }
+                    : { trackId: entry.trackId, ok: false, error: r.error }
+            } catch (err) {
+                plan[i] = {
+                    trackId: entry.trackId,
+                    ok: false,
+                    error: err instanceof Error ? err.message : String(err),
+                }
+            }
+        }
+    }
+
+    logger.info("[mcp] bulk track update", {
+        setlistId,
+        mode,
+        patchCount: patches.length,
+        anyFailed: plan.some((p) => !p.ok),
+    })
+
+    return { ok: true, mode, results: plan, dryRun: false }
+}
+
+/**
  * Remove one track from a setlist, then re-pack the remaining rows' `order` to
  * stay contiguous and update the parent's `trackCount` + `updatedAt`.
  */

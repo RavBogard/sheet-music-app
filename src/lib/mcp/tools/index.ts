@@ -9,6 +9,8 @@ import {
     reorderSetlist,
     removeSetlistTrack,
     deleteSetlist,
+    updateSetlistTrack,
+    bulkUpdateSetlistTracks,
 } from "./setlist-write"
 import {
     listMonitorBuses,
@@ -274,6 +276,73 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) => jsonResult(await deleteSetlist(uidFrom(extra), args)),
+    )
+
+    // CF1 — per-row edit closure. Shared patch schema between the two tools.
+    const trackPatchSchema = z.object({
+        key: z.string().optional(),
+        leadMusician: z.string().optional(),
+        title: z.string().optional(),
+        notes: z.string().optional(),
+        type: z
+            .enum(["song", "header", "reading", "prayer", "transition", "note"])
+            .optional(),
+        songId: z.string().optional(),
+        referenceLink: z.string().optional(),
+    })
+
+    server.registerTool(
+        "update_track",
+        {
+            description:
+                "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink). Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Position/order cannot be changed via update_track — use reorder_setlist. Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). Returns the post-update row. Admins and band leaders only.",
+            inputSchema: {
+                setlistId: z.string().describe("Setlist id"),
+                trackId: z
+                    .string()
+                    .describe("Track id (from get_setlist tracks[].id)"),
+                patch: trackPatchSchema.describe(
+                    "Fields to update. At least one must be set. Pass `songId` to re-bond the row to a different library song (fileId follows automatically).",
+                ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await updateSetlistTrack(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "bulk_update_tracks",
+        {
+            description:
+                "Update many tracks on one setlist in a single call. mode='atomic' (default) wraps every patch in a Firestore transaction — all-or-nothing; mode='best-effort' applies each patch independently and returns per-row results (prefer atomic for >5 rows; best-effort is N round-trips). dryRun=true returns the plan without writing — useful for confirming a large change before committing. Max 50 patches per call (chunk longer lists). Admins and band leaders only.",
+            inputSchema: {
+                setlistId: z.string().describe("Setlist id"),
+                patches: z
+                    .array(
+                        z.object({
+                            trackId: z.string(),
+                            patch: trackPatchSchema,
+                        }),
+                    )
+                    .min(1)
+                    .max(50)
+                    .describe("Per-track patches; max 50"),
+                mode: z
+                    .enum(["atomic", "best-effort"])
+                    .optional()
+                    .describe(
+                        "atomic (default): all-or-nothing transaction. best-effort: per-row results, partial success allowed.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "If true, return the plan without writing. Useful for confirming a >5-row change before committing.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await bulkUpdateSetlistTracks(uidFrom(extra), args)),
     )
 }
 

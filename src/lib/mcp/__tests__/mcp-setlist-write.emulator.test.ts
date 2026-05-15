@@ -9,6 +9,8 @@ import {
     reorderSetlist,
     removeSetlistTrack,
     deleteSetlist,
+    updateSetlistTrack,
+    bulkUpdateSetlistTracks,
 } from "../tools/setlist-write"
 import { getSetlist } from "../tools/setlists"
 
@@ -511,6 +513,338 @@ describe("MCP setlist write tools (emulator)", () => {
             })
             expect(await tracksOf(b)).toHaveLength(1)
             expect((await db().collection("setlists").doc(b).get()).exists).toBe(true)
+        })
+    })
+
+    describe("update_track + bulk_update_tracks (CF1)", () => {
+        async function addRow(
+            setlistId: string,
+            title: string,
+            extra: Record<string, unknown> = {},
+        ): Promise<string> {
+            const r = (await addTrackToSetlist(ADMIN, {
+                setlistId,
+                title,
+                ...extra,
+            })) as { trackId: string }
+            return r.trackId
+        }
+
+        // ─── update_track ───────────────────────────────────────────────────
+
+        it("update_track happy path — admin updates leadMusician, echoes the row, persists to Firestore", async () => {
+            const id = await newSetlist()
+            const trackId = await addRow(id, "Hinei Ma Tov")
+
+            const r = (await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId,
+                patch: { leadMusician: "Randy" },
+            })) as { ok: true; track: Record<string, unknown> }
+
+            expect(r.ok).toBe(true)
+            expect(r.track.id).toBe(trackId)
+            expect(r.track.leadMusician).toBe("Randy")
+            expect(r.track.title).toBe("Hinei Ma Tov") // untouched
+
+            const persisted = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(persisted.leadMusician).toBe("Randy")
+        })
+
+        it("update_track preserves trackId (regression vs old remove+add path)", async () => {
+            const id = await newSetlist()
+            const before = await addRow(id, "Mi Shebeirach")
+            await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId: before,
+                patch: { key: "Am" },
+            })
+            // Exactly one tracks/{id} doc still keyed by the same trackId.
+            const after = await tracksOf(id)
+            expect(after).toHaveLength(1)
+            expect(after[0].id).toBe(before)
+            expect(after[0].key).toBe("Am")
+        })
+
+        it("update_track accepts the Wave-5 widened type enum (song → reading)", async () => {
+            const id = await newSetlist()
+            const trackId = await addRow(id, "Sh'ma", { type: "song" })
+
+            const r = (await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId,
+                patch: { type: "reading" },
+            })) as { ok: true; track: Record<string, unknown> }
+
+            expect(r.track.type).toBe("reading")
+            const persisted = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(persisted.type).toBe("reading")
+        })
+
+        it("update_track re-bonds: songId change updates fileId on the row", async () => {
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf" })
+            const id = await newSetlist()
+            const trackId = await addRow(id, "Oseh Shalom", { songId: "song-oseh" })
+            // sanity: starting state bonds song-oseh
+            const start = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(start.songId).toBe("song-oseh")
+            expect(start.fileId).toBe("song-oseh")
+
+            await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId,
+                patch: { songId: "song-other" },
+            })
+
+            const after = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(after.songId).toBe("song-other")
+            expect(after.fileId).toBe("song-other")
+        })
+
+        it("update_track role gate: musician denied; band_leader and admin allowed", async () => {
+            const id = await newSetlist(ADMIN)
+            const trackId = await addRow(id, "Adon Olam")
+
+            expect(
+                await updateSetlistTrack(MEMBER, {
+                    setlistId: id,
+                    trackId,
+                    patch: { key: "G" },
+                }),
+            ).toEqual({ error: NOT_EDITOR_ERROR })
+
+            expect(
+                await updateSetlistTrack(LEADER, {
+                    setlistId: id,
+                    trackId,
+                    patch: { key: "G" },
+                }),
+            ).toMatchObject({ ok: true })
+
+            expect(
+                await updateSetlistTrack(ADMIN, {
+                    setlistId: id,
+                    trackId,
+                    patch: { key: "A" },
+                }),
+            ).toMatchObject({ ok: true })
+
+            const persisted = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(persisted.key).toBe("A")
+        })
+
+        it("update_track cross-setlist guard: trackId from setlist A passed with setlist B is rejected", async () => {
+            const a = await newSetlist(ADMIN)
+            const b = await newSetlist(ADMIN)
+            const trackA = await addRow(a, "Lecha Dodi")
+
+            const r = await updateSetlistTrack(ADMIN, {
+                setlistId: b,
+                trackId: trackA,
+                patch: { key: "C" },
+            })
+            expect(r).toEqual({ error: "Track does not belong to this setlist" })
+
+            // No mutation on the actual row.
+            const persisted = (
+                await db().collection("tracks").doc(trackA).get()
+            ).data()!
+            expect(persisted.key).toBeUndefined()
+        })
+
+        it("update_track rejects an empty patch", async () => {
+            const id = await newSetlist()
+            const trackId = await addRow(id, "Yih'yu L'ratzon")
+
+            const r = await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId,
+                patch: {},
+            })
+            expect(r).toEqual({
+                error: "patch must include at least one field to update",
+            })
+        })
+
+        it("update_track rejects a bogus trackId", async () => {
+            const id = await newSetlist()
+            const r = await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId: "ghost-track",
+                patch: { key: "G" },
+            })
+            expect(r).toEqual({ error: "Track not found" })
+        })
+
+        // ─── bulk_update_tracks ─────────────────────────────────────────────
+
+        it("bulk_update_tracks atomic happy path — 3 valid patches all land in one transaction", async () => {
+            const id = await newSetlist()
+            const t1 = await addRow(id, "A")
+            const t2 = await addRow(id, "B")
+            const t3 = await addRow(id, "C")
+
+            const r = (await bulkUpdateSetlistTracks(ADMIN, {
+                setlistId: id,
+                patches: [
+                    { trackId: t1, patch: { leadMusician: "Daniel" } },
+                    { trackId: t2, patch: { leadMusician: "Randy" } },
+                    { trackId: t3, patch: { leadMusician: "Cantor" } },
+                ],
+            })) as {
+                ok: true
+                mode: "atomic"
+                results: Array<{ trackId: string; ok: boolean }>
+                dryRun: boolean
+            }
+            expect(r.ok).toBe(true)
+            expect(r.mode).toBe("atomic")
+            expect(r.dryRun).toBe(false)
+            expect(r.results.every((p) => p.ok)).toBe(true)
+
+            const rows = await tracksOf(id)
+            expect(rows.find((row) => row.id === t1)!.leadMusician).toBe("Daniel")
+            expect(rows.find((row) => row.id === t2)!.leadMusician).toBe("Randy")
+            expect(rows.find((row) => row.id === t3)!.leadMusician).toBe("Cantor")
+        })
+
+        it("bulk_update_tracks atomic with any invalid trackId rejects the whole batch (no writes)", async () => {
+            const id = await newSetlist()
+            const t1 = await addRow(id, "A")
+            const t2 = await addRow(id, "B")
+
+            const r = (await bulkUpdateSetlistTracks(ADMIN, {
+                setlistId: id,
+                patches: [
+                    { trackId: t1, patch: { leadMusician: "Daniel" } },
+                    { trackId: "ghost", patch: { leadMusician: "Nobody" } },
+                    { trackId: t2, patch: { leadMusician: "Randy" } },
+                ],
+            })) as {
+                ok: true
+                mode: "atomic"
+                results: Array<{ trackId: string; ok: boolean; error?: string }>
+                dryRun: boolean
+            }
+            expect(r.ok).toBe(true)
+            expect(r.results[0].ok).toBe(true)
+            expect(r.results[1].ok).toBe(false)
+            expect(r.results[1].error).toBe("Track not found in this setlist")
+            expect(r.results[2].ok).toBe(true)
+
+            // No writes happened: leadMusician on t1 and t2 still undefined.
+            const t1Doc = (
+                await db().collection("tracks").doc(t1).get()
+            ).data()!
+            const t2Doc = (
+                await db().collection("tracks").doc(t2).get()
+            ).data()!
+            expect(t1Doc.leadMusician).toBeUndefined()
+            expect(t2Doc.leadMusician).toBeUndefined()
+        })
+
+        it("bulk_update_tracks best-effort applies the good rows and reports the bad one", async () => {
+            const id = await newSetlist()
+            const t1 = await addRow(id, "A")
+            const t2 = await addRow(id, "B")
+
+            const r = (await bulkUpdateSetlistTracks(ADMIN, {
+                setlistId: id,
+                mode: "best-effort",
+                patches: [
+                    { trackId: t1, patch: { leadMusician: "Daniel" } },
+                    { trackId: "ghost", patch: { leadMusician: "Nobody" } },
+                    { trackId: t2, patch: { leadMusician: "Randy" } },
+                ],
+            })) as {
+                ok: true
+                mode: "best-effort"
+                results: Array<{ trackId: string; ok: boolean; error?: string }>
+            }
+            expect(r.mode).toBe("best-effort")
+            expect(r.results[0].ok).toBe(true)
+            expect(r.results[1].ok).toBe(false)
+            expect(r.results[2].ok).toBe(true)
+
+            // Two writes landed, ghost was skipped.
+            const t1Doc = (
+                await db().collection("tracks").doc(t1).get()
+            ).data()!
+            const t2Doc = (
+                await db().collection("tracks").doc(t2).get()
+            ).data()!
+            expect(t1Doc.leadMusician).toBe("Daniel")
+            expect(t2Doc.leadMusician).toBe("Randy")
+        })
+
+        it("bulk_update_tracks dryRun returns the plan without writing", async () => {
+            const id = await newSetlist()
+            const t1 = await addRow(id, "A")
+            const t2 = await addRow(id, "B")
+            const t3 = await addRow(id, "C")
+
+            const r = (await bulkUpdateSetlistTracks(ADMIN, {
+                setlistId: id,
+                dryRun: true,
+                patches: [
+                    { trackId: t1, patch: { leadMusician: "Daniel" } },
+                    { trackId: t2, patch: { leadMusician: "Randy" } },
+                    { trackId: t3, patch: { leadMusician: "Cantor" } },
+                ],
+            })) as {
+                ok: true
+                dryRun: boolean
+                results: Array<{
+                    trackId: string
+                    ok: boolean
+                    track?: Record<string, unknown>
+                }>
+            }
+            expect(r.dryRun).toBe(true)
+            expect(r.results.every((p) => p.ok)).toBe(true)
+            // The plan shows the would-apply rows.
+            expect(r.results[0].track?.leadMusician).toBe("Daniel")
+
+            // No writes landed.
+            for (const tid of [t1, t2, t3]) {
+                const doc = (await db().collection("tracks").doc(tid).get()).data()!
+                expect(doc.leadMusician).toBeUndefined()
+            }
+        })
+
+        it("bulk_update_tracks rejects >50 patches before writing", async () => {
+            const id = await newSetlist()
+            const trackId = await addRow(id, "Solo")
+            const patches = Array.from({ length: 51 }, () => ({
+                trackId,
+                patch: { leadMusician: "X" },
+            }))
+
+            const r = await bulkUpdateSetlistTracks(ADMIN, {
+                setlistId: id,
+                patches,
+            })
+            expect(r).toMatchObject({
+                error: expect.stringContaining("exceeds max"),
+            })
+            // The single row was not mutated.
+            const doc = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(doc.leadMusician).toBeUndefined()
         })
     })
 })

@@ -11,6 +11,11 @@ import {
     reorderTracks,
     removeTrack,
     readUserRole,
+    updateTrack,
+    bulkUpdateTracks,
+    type UpdateTrackPatch,
+    type BulkUpdatePatchEntry,
+    type BulkUpdateResult,
 } from "@/lib/mcp/server-tracks-write"
 import { getSongById } from "@/lib/mcp/server-songs"
 
@@ -231,6 +236,68 @@ export async function addTrackToSetlist(
         notes: args.notes,
         position: args.position,
     })
+}
+
+// ─── update_track (CF1) ─────────────────────────────────────────────────────
+
+export interface UpdateTrackArgs {
+    setlistId: string
+    trackId: string
+    patch: UpdateTrackPatch
+}
+
+export async function updateSetlistTrack(
+    uid: string,
+    args: UpdateTrackArgs,
+): Promise<{ ok: true; track: Record<string, unknown> } | ToolError> {
+    initAdmin()
+    const db = getFirestore()
+
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    if (!loaded.ok) return { error: loaded.error }
+
+    const result = await updateTrack(db, args.setlistId, args.trackId, args.patch)
+    return result.ok ? { ok: true, track: result.track } : { error: result.error }
+}
+
+// ─── bulk_update_tracks (CF1) ───────────────────────────────────────────────
+
+export interface BulkUpdateTracksArgs {
+    setlistId: string
+    patches: BulkUpdatePatchEntry[]
+    mode?: "atomic" | "best-effort"
+    dryRun?: boolean
+}
+
+export async function bulkUpdateSetlistTracks(
+    uid: string,
+    args: BulkUpdateTracksArgs,
+): Promise<
+    | {
+          ok: true
+          mode: "atomic" | "best-effort"
+          results: BulkUpdateResult[]
+          dryRun: boolean
+      }
+    | ToolError
+> {
+    initAdmin()
+    const db = getFirestore()
+
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    if (!loaded.ok) return { error: loaded.error }
+
+    const result = await bulkUpdateTracks(db, args.setlistId, args.patches, {
+        mode: args.mode,
+        dryRun: args.dryRun,
+    })
+    if (!result.ok) return { error: result.error }
+    return {
+        ok: true,
+        mode: result.mode,
+        results: result.results,
+        dryRun: result.dryRun,
+    }
 }
 
 // ─── reorder_setlist ────────────────────────────────────────────────────────
