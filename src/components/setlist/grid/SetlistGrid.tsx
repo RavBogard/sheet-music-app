@@ -1678,7 +1678,20 @@ export function SetlistGrid({
                             Upcoming Performance
                         </p>
                         <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                            {eventDateLabel || 'Date TBD'}
+                            {displayEventDateLabel
+                                ? displayEventDateLabel
+                                : liveSetlist === undefined
+                                  ? // Setlist doc hasn't loaded into Dexie yet (e.g. first
+                                    // open of a freshly-MCP-created setlist) — render a
+                                    // placeholder bar instead of a confident-looking
+                                    // "Date TBD" that contradicts the topbar's real label.
+                                    // Cowork §7.4: the "Date TBD" flash on first nav was
+                                    // misleading even though it self-corrected.
+                                    <span
+                                        aria-hidden
+                                        className="inline-block h-7 w-40 rounded-md bg-muted/60 animate-pulse align-middle"
+                                    />
+                                  : 'Date TBD'}
                         </p>
                     </div>
                     <div className="flex gap-4 sm:gap-6">
@@ -1687,7 +1700,18 @@ export function SetlistGrid({
                                 Tracks
                             </p>
                             <p className="text-brand text-xl sm:text-2xl font-bold">
-                                {rows.length}
+                                {isLoading ? (
+                                    // Tracks Dexie query is still loading — avoid
+                                    // showing "0" which falsely suggests an empty
+                                    // setlist. Cowork §7.4: TRACKS 0 + Date TBD on
+                                    // first nav to a freshly-MCP-created setlist.
+                                    <span
+                                        aria-hidden
+                                        className="inline-block h-6 w-8 rounded bg-muted/60 animate-pulse align-middle"
+                                    />
+                                ) : (
+                                    rows.length
+                                )}
                             </p>
                         </div>
                     </div>
