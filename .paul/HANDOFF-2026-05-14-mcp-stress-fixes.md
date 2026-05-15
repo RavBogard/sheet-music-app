@@ -133,11 +133,44 @@ No urgency either way. Daniel's call.
 
 ---
 
+## NEW Daniel feature ask (added end-of-session, before /clear)
+
+**"I want to be able to control the monitor mixes via the MCP."**
+
+Context: the `/monitor` route is a real, shipped, WebSocket-driven personal-IEM monitor mixing system — NOT a planned feature. It exists today:
+- Route: `src/app/(main)/monitor/page.tsx` + `MonitorClient.tsx`
+- Components: `FaderStrip`, `VerticalFaderStrip`, `MatrixPanel`, `BusAssignmentPanel`, `QuickMonitorPanel`, `DefaultChannelPicker`, `MonitorTabs`, `ConnectionIndicator`
+- Hooks: `useMonitorAccess` (gates on `config/monitor.busAssignments[uid]` + sound-engineer + admin), `useMonitorConnection` (the WebSocket transport)
+- Feature-flagged at congregation level via `congregation.features.monitor`
+- v1.4 Phase 2 added support for 5 monitor buses
+
+**What "via MCP" implies (Claude's read — verify with Daniel before scoping):**
+
+Likely tools to expose, gated to the same access model that `useMonitorAccess` enforces:
+- `list_monitor_buses` — read bus configuration
+- `get_bus_mix(busId)` — read current fader / mute state for a bus
+- `set_bus_fader(busId, channelId, level)` — adjust a fader
+- `mute_channel(busId, channelId)` / `unmute_channel(busId, channelId)`
+- `set_bus_assignment(busId, uid)` — admin only; sets which user owns which bus
+- Possibly higher-level: `apply_monitor_preset(busId, presetName)` if presets exist
+
+**Open architectural questions to settle before planning:**
+- The existing monitor system uses live WebSocket for fader updates. MCP tools are request/response. The MCP wrapper would presumably write desired state to Firestore (`config/monitor` or similar) and let the existing WebSocket layer propagate. Confirm the data shape + which doc holds authoritative state.
+- Auth model: re-use `useMonitorAccess`'s logic in a server-side check that the MCP tool layer can call, OR mirror its rules in Firestore security rules + let writes fail unauthorized. Need to inspect both paths.
+- Hardware coupling: the monitor system likely terminates at hardware via the `bridge/` daemon (the Windows hardware-bridge daemon flagged in CRIT-003). MCP writes that propagate through bridge will surface the deferred bridge-auth concern — coordinate with CRIT-003 routing.
+- Scope of "control" — adjusting an existing bus is one thing; creating a new bus or reconfiguring channel mappings is bigger. Confirm with Daniel.
+
+**Routing:** new MCP-workstream phase, distinct from `mcp-stress-fixes-2026-05-14`. Suggested name: `mcp-monitor-control` (no date suffix since this is a feature, not a dated remediation). Should run AFTER stress-fixes Wave 1 ships — the F-4 / F-9 / F-10 fixes are tiny and should not be blocked behind a feature design.
+
+**Resume-Claude should NOT scope this without a discovery conversation with Daniel** — the protocol surface area (read-only read-back vs. full fader writes vs. presets vs. bus assignment) needs Daniel's input. Treat this as an item to acknowledge and brainstorm, not to plan unilaterally.
+
+---
+
 ## What's NOT in scope for the resume
 
 - v7.1 work (v71-02 / v71-03 / v71-04 / v71-05) — that resumes on `feature/v71-01-security-auth-fold-forward` whenever you're ready. Don't pull it into the MCP-workstream session.
 - Pushing v71-01 to production — blocked by Thursday-PM cadence (v7.1 constraint #7); wait for Sunday+.
-- Bridge credentials (CRIT-003) — DEFERRED to a future MCP-aware milestone; do not pull into the MCP-stress-fixes phase (different lane, different scope).
+- Bridge credentials (CRIT-003) — DEFERRED to a future MCP-aware milestone; do not pull into the MCP-stress-fixes phase (different lane, different scope). **NOTE:** the monitor-MCP feature ask above will probably surface this concern, since monitor writes may flow through `bridge/`.
 - The drive/file public-aware auth follow-up (new in v71-01) — also routed to a future MCP-aware milestone; not the MCP-stress-fixes phase.
 
 ---
@@ -147,15 +180,26 @@ No urgency either way. Daniel's call.
 Copy-paste this verbatim after `/clear`:
 
 ```
-Resume MCP stress-test fix work. Full context is in
+Resume MCP-workstream work. Full context is in
 `.paul/HANDOFF-2026-05-14-mcp-stress-fixes.md` and the source report at
 `.paul/research/mcp-stress-test-2026-05-14.md`. Read the handoff first.
 
-Then switch to the MCP worktree (`cd ../sheet-music-app-mcp`), confirm
-you're on the `feat/mcp-server` branch, read that worktree's `.paul/STATE.md`
-to see the MCP workstream's current PAUL position, and propose how to
-scaffold a new phase `mcp-stress-fixes-2026-05-14` covering F-4 +
-F-9 + F-10 (the three high-priority findings).
+Two scope items are queued, in priority order:
+
+(1) Scaffold + plan a new phase `mcp-stress-fixes-2026-05-14` covering
+    F-4 + F-9 + F-10 — the three high-priority stress-test findings.
+    Backend, small, three independent fixes; all root causes are
+    already located in the handoff appendix.
+
+(2) Acknowledge but DO NOT plan unilaterally: I want to control the
+    /monitor route (existing WebSocket personal-IEM mixing system) via
+    MCP tools. The handoff has the architectural open questions —
+    surface them, and we'll discuss before scoping.
+
+Switch to the MCP worktree (`cd ../sheet-music-app-mcp`), confirm
+you're on the `feat/mcp-server` branch, read that worktree's
+`.paul/STATE.md` to see the MCP workstream's current PAUL position,
+then bring me a proposal on (1) and the discussion questions on (2).
 
 Do NOT touch v7.1 work or the `feature/v71-01-security-auth-fold-forward`
 branch. Do NOT push anything until I approve.
