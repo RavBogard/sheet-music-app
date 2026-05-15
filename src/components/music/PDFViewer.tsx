@@ -18,6 +18,25 @@ import { getFile } from '@/lib/offline-idb'
 // scripts/copy-pdf-worker.js during postinstall + build). Local worker
 // eliminates CDN dependency and guarantees version match with react-pdf's
 // bundled pdfjs-dist.
+//
+// 2026-05-15 prod incident — "Failed to load PDF" on every chart. Root cause
+// was the previous workerSrc setup living inside the component body, which
+// races with <Document>'s internal worker spawn on the first render. When
+// pdfjs's GlobalWorkerOptions.workerSrc is unset at spawn time, pdfjs's
+// fallback (`./pdf.worker.mjs` relative to window.location) ran instead and
+// resolved to /perform/setlist/pdf.worker.mjs — caught by the dynamic
+// [id] route, returns HTML, browser fails to parse as a JS module.
+// Setting workerSrc at module-evaluation time (here, before the component
+// even registers) guarantees the global is populated before any <Document>
+// can mount. Guarded with `typeof window` so the static-prerender of
+// /perform doesn't trip on it (the module is dynamically imported by
+// PDFOverlay anyway, but defense in depth).
+if (
+    typeof window !== "undefined" &&
+    !pdfjs.GlobalWorkerOptions.workerSrc
+) {
+    pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.${pdfjs.version}.mjs`
+}
 
 interface PDFViewerProps {
     url: string
@@ -31,9 +50,9 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
 
-    // Use versioned worker URL for cache busting — prevents stale Service Worker
-    // or CDN cache from serving a mismatched worker after deploys.
-    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+    // Defense-in-depth — the module-top set above is the primary guarantee,
+    // but if some upstream code accidentally clears it we re-set on render.
+    if (typeof window !== "undefined" && !pdfjs.GlobalWorkerOptions.workerSrc) {
         pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.${pdfjs.version}.mjs`
     }
 
@@ -178,8 +197,21 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     }
 
     function onDocumentLoadError(error: Error) {
-        logger.error('[PDFViewer] react-pdf load error:', error.message)
-        setError(error.message)
+        // Telemetry: surface pdfjs's error class so we can tell apart worker
+        // failures (UnknownErrorException with "fake worker" / "worker"),
+        // corruption (InvalidPDFException), missing files (MissingPDFException),
+        // and protected docs (PasswordException). The previous swallow ate
+        // exactly the signal needed to debug the 2026-05-15 worker race.
+        const errorName = error.name || "Error"
+        const workerSrcAtFail =
+            typeof window !== "undefined"
+                ? pdfjs.GlobalWorkerOptions.workerSrc
+                : "(ssr)"
+        logger.error(
+            `[PDFViewer] react-pdf load error: ${errorName}: ${error.message} ` +
+                `(workerSrc=${workerSrcAtFail || "<EMPTY>"})`,
+        )
+        setError(`${errorName}: ${error.message}`)
     }
 
     // Use selectors to avoid re-render on unrelated store changes
