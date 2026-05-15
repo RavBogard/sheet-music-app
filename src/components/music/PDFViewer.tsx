@@ -19,22 +19,21 @@ import { getFile } from '@/lib/offline-idb'
 // eliminates CDN dependency and guarantees version match with react-pdf's
 // bundled pdfjs-dist.
 //
-// 2026-05-15 prod incident — "Failed to load PDF" on every chart. Root cause
-// was the previous workerSrc setup living inside the component body, which
-// races with <Document>'s internal worker spawn on the first render. When
-// pdfjs's GlobalWorkerOptions.workerSrc is unset at spawn time, pdfjs's
-// fallback (`./pdf.worker.mjs` relative to window.location) ran instead and
-// resolved to /perform/setlist/pdf.worker.mjs — caught by the dynamic
-// [id] route, returns HTML, browser fails to parse as a JS module.
-// Setting workerSrc at module-evaluation time (here, before the component
-// even registers) guarantees the global is populated before any <Document>
-// can mount. Guarded with `typeof window` so the static-prerender of
-// /perform doesn't trip on it (the module is dynamically imported by
-// PDFOverlay anyway, but defense in depth).
-if (
-    typeof window !== "undefined" &&
-    !pdfjs.GlobalWorkerOptions.workerSrc
-) {
+// 2026-05-15 prod incident — "Failed to load PDF" on every chart. Real root
+// cause: react-pdf v10's barrel module `node_modules/react-pdf/dist/index.js`
+// itself contains the line
+//     pdfjs.GlobalWorkerOptions.workerSrc = 'pdf.worker.mjs';
+// at module-load time. That's a placeholder string the consumer is expected
+// to override — but the override has to be UNCONDITIONAL. A defensive
+// `if (!workerSrc)` guard never fires because `'pdf.worker.mjs'` is truthy.
+// Then when <Document> mounts, pdfjs's fake-worker path does
+// `await import('pdf.worker.mjs')` which can't resolve as a bare module
+// specifier and the error surfaces as "Failed to load PDF".
+//
+// Always force-set on module load, regardless of current value. `typeof
+// window` guard keeps the static-prerender of /perform safe (the module is
+// dynamically imported by PDFOverlay anyway, defense in depth).
+if (typeof window !== "undefined") {
     pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.${pdfjs.version}.mjs`
 }
 
@@ -50,10 +49,14 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
 
-    // Defense-in-depth — the module-top set above is the primary guarantee,
-    // but if some upstream code accidentally clears it we re-set on render.
-    if (typeof window !== "undefined" && !pdfjs.GlobalWorkerOptions.workerSrc) {
-        pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.${pdfjs.version}.mjs`
+    // Defense-in-depth — react-pdf's barrel set workerSrc to a stub at
+    // module load, so we re-assert the correct URL on every render rather
+    // than gating on `!workerSrc`. Cheap (one string write per render).
+    if (typeof window !== "undefined") {
+        const want = `/pdf.worker.min.${pdfjs.version}.mjs`
+        if (pdfjs.GlobalWorkerOptions.workerSrc !== want) {
+            pdfjs.GlobalWorkerOptions.workerSrc = want
+        }
     }
 
     // Track which URL we've resolved to avoid re-running

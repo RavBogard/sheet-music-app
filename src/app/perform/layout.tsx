@@ -32,12 +32,13 @@ function PdfWorkerPreload() {
             if (cancelled) return
             const href = `/pdf.worker.min.${pdfjs.version}.mjs`
 
-            // Set workerSrc here so it's resolved before the first <Document>
-            // mounts — PDFViewer otherwise sets it lazily on its own mount,
-            // racing the chart fetch.
-            if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-                pdfjs.GlobalWorkerOptions.workerSrc = href
-            }
+            // Force-set workerSrc — react-pdf's barrel module assigns a
+            // bare-string placeholder (`'pdf.worker.mjs'`) at its own
+            // module-load time, so a `!workerSrc` guard would skip the
+            // override and fake-worker would later try to `import()` that
+            // unresolvable specifier. See PDFViewer.tsx for the full
+            // post-mortem on the 2026-05-15 prod incident.
+            pdfjs.GlobalWorkerOptions.workerSrc = href
 
             // `modulepreload` tells the browser to fetch + compile + cache
             // without executing — exactly the warm-up we want.
