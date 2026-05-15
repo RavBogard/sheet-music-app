@@ -83,18 +83,23 @@ If those don't match, the bridge replayed stale queued commands while the X32 wa
 
 ---
 
-## Open decision (must resolve before Wave 4 starts)
+## G-1/G-2 decision — RESOLVED: PUNT, with documentation
 
-**G-1/G-2 freshness guardrail — include in Wave 4 or punt?**
+**Decision (2026-05-15):** Skip the freshness guardrail. The honest analysis:
 
-- **Background:** Bridge daemon reports `online + x32Connected:true` with fresh `lastSeenIso` heartbeats even when X32 hardware is actually powered off. The bridge can't tell the MCP whether its OSC connection to the X32 is live or cached. This is **bridge-daemon work** — the bridge is in the do-not-touch lane (CRIT-003 territory). Daniel-explicit (2026-05-14): "not important; don't include and leave be."
-- **MCP-side mitigation possible:** Refuse `set_*` writes if `lastSeenIso` is stale beyond N seconds. Doesn't fix the root cause (bridge can't distinguish "alive" from "X32 connected") but does bound the window where a phantom write can land.
-- **Threshold question:** N = 30s? 60s? 120s? Daniel needs to pick. The bridge writes its heartbeat every ~15-30s in normal operation; threshold of 60s would catch a real disconnect within ~1 minute.
-- **Risk:** False positives during transient network blips. Daniel uses iPads on stage; even brief Wi-Fi hiccups could trip the guard.
+- The bridge daemon writes `bridge.lastSeen` heartbeats to indicate THE DAEMON is alive, separately from `bridge.x32Connected: true` which is supposed to indicate THE X32 HARDWARE is reachable via OSC.
+- The stress-test failure mode was specifically: daemon kept heartbeating fresh `lastSeen` while `x32Connected` was stuck stale-true (X32 hardware off, but the flag never flipped to false).
+- A MCP-side staleness check on `lastSeenIso` would only catch "daemon also died" — it would NOT catch the actual stress-test scenario where the daemon is alive but the hardware is unreachable.
+- So the guardrail creates a false sense of safety without fixing the real failure mode, and adds false-positive risk during transient Wi-Fi blips.
+- The real fix is bridge-daemon work (make `x32Connected` actually flip false when OSC stops responding). Bridge is in the do-not-touch lane (CRIT-003 territory); leave it.
 
-**Default if Daniel doesn't decide:** Include the guardrail with `STALE_BRIDGE_THRESHOLD_MS = 120_000` (2 minutes) — generous enough to avoid false positives, tight enough to catch a real "X32 was off when you wrote" scenario. Surface in `list_monitor_buses` as `bridge.staleHeartbeat: boolean` so callers see why writes might be refused.
+**Action:** Update each `set_*` tool description in `src/lib/mcp/tools/index.ts` to add:
 
-If Daniel **excludes**: leave monitor write tools as-is and add a paragraph to each `set_*` tool description noting "writes are fire-and-forget; the bridge may queue commands when the X32 isn't responsive."
+> "Writes are fire-and-forget. The bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_mix (or get_matrix) immediately after writing to confirm propagation. The bridge's `x32Connected` flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee."
+
+This adds zero risk, no false positives, and gives AI agents enough information to be defensive on their own (always read-back after writing, don't trust `x32Connected: true` as a guarantee).
+
+Affected tools: `set_send_level`, `set_send_mute`, `set_bus_fader`, `set_matrix_fader`, `set_matrix_mute` — 5 descriptions to update. Pure documentation; no code change. Add to Wave 4 as a small adjacent task.
 
 ---
 
@@ -353,7 +358,21 @@ server.registerTool(
 
 **Cleanup affordance:** After Wave 4 ships, you (or Daniel) can invoke `delete_chart` on each of the 9 stress-test fileIds in the Daniel-personal action items list above.
 
-### Fix 5 (OPTIONAL — pending Daniel's decision) — G-1/G-2 freshness guardrail
+### Fix 5 — G-1/G-2 documentation update (resolved by PUNT — see top of plan)
+
+Update the descriptions of these 5 tools in `src/lib/mcp/tools/index.ts::registerMonitorTools`:
+
+- `set_send_level`
+- `set_send_mute`
+- `set_bus_fader`
+- `set_matrix_fader`
+- `set_matrix_mute`
+
+Append to each: "Writes are fire-and-forget. The bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_mix (or get_matrix) immediately after writing to confirm propagation. The bridge's `x32Connected` flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee."
+
+No code changes. No tests. Pure tool-description tightening.
+
+### ~~Fix 5-alt — freshness guardrail~~ — SKIPPED per resolved decision above
 
 **Where:** `src/lib/mcp/server-monitor.ts` (helper) + each monitor write tool in `tools/monitor.ts`.
 
@@ -784,26 +803,29 @@ Use this exact prompt after the `/clear`:
 ```
 Resume MCP follow-up work. Full plan is at
 `.paul/research/mcp-wave-4-5-6-PLAN.md`; source stress-test report at
-`.paul/research/mcp-stress-test-2026-05-15.md`. Read the plan first.
+`.paul/research/mcp-stress-test-2026-05-15.md`; carry-forward cleanup
+items at `.paul/research/mcp-next-stress-test-prep.md`. Read the plan
+first.
 
-Top of the queue: Wave 4 (G-3 admin gating + G-4 get_matrix + G-9
-schema fix + new delete_chart tool, plus optionally G-1/G-2 monitor
-freshness guard).
+All decisions are pre-resolved. Top of the queue is Wave 4:
+- G-3 admin gating on core/supplemental upload writes
+- G-4 new get_matrix read tool
+- G-9 Zod schema min:0 → min:1 on bus/channel indices
+- New delete_chart tool (closes asymmetric delete gap)
+- Tool-description tightening on 5 monitor write tools (G-1/G-2 punted,
+  documentation-only adjustment — see plan top)
 
-I need to make ONE decision before you start coding:
+Work the plan top-to-bottom. Switch to the MCP worktree
+(`cd ../sheet-music-app-mcp`), confirm clean tree on `feat/mcp-server`,
+then start. Per-wave deploy: commit Wave 4 → ff-merge to master → push →
+confirm Vercel READY → start Wave 5. Same for Wave 6.
 
-G-1/G-2 freshness guardrail — include in Wave 4 or punt?
-
-If INCLUDE: pick a stale-bridge threshold (60s / 120s / other).
-If PUNT: just leave the monitor write tools as-is and update their
-descriptions to note "writes are fire-and-forget; bridge may queue
-when X32 isn't responsive."
-
-After you have my decision, work the plan top-to-bottom. Switch to the
-MCP worktree (`cd ../sheet-music-app-mcp`), confirm clean tree on
-`feat/mcp-server`, then start. Per-wave deploy: commit Wave 4 →
-ff-merge to master → push → confirm Vercel READY → smoke test → start
-Wave 5. Same for Wave 6.
+After Wave 4 ships and is deployed, generate the next-stress-test prompt
+using the procedure documented in `.paul/research/mcp-next-stress-test-prep.md`
+— that file lists the carry-forward cleanup actions (9 stress-test charts
+to delete via the new delete_chart tool + X32 state verification + Wave 4
+regression sweep) that the next cowork-Claude run should perform as proof
+the new tools work end-to-end.
 
 Do NOT touch v7.1 work or the `feature/v71-01-security-auth-fold-forward`
 branch. Use `git push origin master` (not `:main`).
