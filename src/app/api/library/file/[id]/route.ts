@@ -3,6 +3,20 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 
+/**
+ * LEGACY route — serves `db-*` ids by reading xmlContent from the
+ * `digitized_charts/` Firestore collection.
+ *
+ * Originally paired with /api/library/save-generated, which has since been
+ * removed (the ScraperModal flow unified onto /api/library/upload, so all
+ * new scraped charts land in library_index + songs with `upload-*` ids).
+ * This route is kept ONLY to serve any historical setlist tracks whose
+ * `fileId` still starts with `db-` — the SetlistDrawer (`SetlistDrawer.tsx
+ * :: fileId?.startsWith('db-')`) routes such tracks here for rendering.
+ *
+ * Safe to delete once a production audit confirms no live setlist tracks
+ * reference a `db-*` fileId.
+ */
 export const GET = createApiHandler(
     async (ctx) => {
         // Rate limit
