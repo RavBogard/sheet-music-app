@@ -114,12 +114,25 @@ export async function uploadChart(
     })
     if (limited) return { error: limited.error }
 
-    let buffer: Buffer
-    try {
-        buffer = Buffer.from(args.fileBase64, "base64")
-    } catch {
-        return { error: "fileBase64 is not valid base64 data" }
+    // G-8: Buffer.from(s, "base64") never throws — it just silently produces
+    // a short/empty buffer for non-base64 input — so we need to format-check
+    // before decoding. Standard RFC 4648 alphabet only (no url-safe `-_`,
+    // which Buffer accepts but most MCP callers won't be sending).
+    const stripped = args.fileBase64.replace(/\s/g, "")
+    if (stripped.length === 0) {
+        return { error: "Decoded file is empty" }
     }
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(stripped)) {
+        return {
+            error: "fileBase64 must be standard base64 (RFC 4648). Got non-base64 characters.",
+        }
+    }
+    if (stripped.length % 4 !== 0) {
+        return {
+            error: "fileBase64 length must be a multiple of 4 (padded with '=').",
+        }
+    }
+    const buffer = Buffer.from(stripped, "base64")
     if (buffer.byteLength === 0) {
         return { error: "Decoded file is empty" }
     }

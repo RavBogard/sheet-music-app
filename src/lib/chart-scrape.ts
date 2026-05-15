@@ -33,6 +33,37 @@ export interface ScrapeChartError {
 
 export type ScrapeChartResult = ScrapeChartOk | ScrapeChartError
 
+const NEGATIVE_TITLE_PATTERNS = [
+    "song not found",
+    "no song found",
+    "artist not found",
+    "unknown song",
+    "unknown artist",
+    "no chord chart",
+    "not available",
+    "no results",
+]
+
+const NEGATIVE_CONTENT_PATTERNS = [
+    "no chord chart",
+    "does not contain",
+    "no chords found",
+    "404 not found",
+    "page not found",
+]
+
+function looksLikeNegativeResult(parsed: {
+    title: string
+    content: string
+}): boolean {
+    const tl = parsed.title.toLowerCase().trim()
+    if (NEGATIVE_TITLE_PATTERNS.some((p) => tl.includes(p))) return true
+    if (!parsed.content.trim()) return true
+    const cl = parsed.content.toLowerCase()
+    if (NEGATIVE_CONTENT_PATTERNS.some((p) => cl.includes(p))) return true
+    return false
+}
+
 const USER_AGENT =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
@@ -153,6 +184,20 @@ ${(contentToParse ?? "").slice(0, 100000)}`
         const title = typeof parsed.title === "string" ? parsed.title : ""
         const artist = typeof parsed.artist === "string" ? parsed.artist : ""
         const content = typeof parsed.content === "string" ? parsed.content : ""
+        // G-6: Gemini often hallucinates a placeholder result when a page
+        // contains no chord chart (Cloudflare/404/wrong-URL cases). Detecting
+        // those here and returning an error envelope prevents the caller
+        // from happily save_scraped_chart-ing "Song Not Found" into the
+        // library as a real entry.
+        if (looksLikeNegativeResult({ title, content })) {
+            return {
+                ok: false,
+                status: 404,
+                error:
+                    "No chord chart detected on this page (or the page is gated/empty). " +
+                    "Try a different URL or paste raw text via rawText.",
+            }
+        }
         return { ok: true, title, artist, content }
     } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error"

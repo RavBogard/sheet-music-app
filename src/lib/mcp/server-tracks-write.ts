@@ -73,7 +73,7 @@ export async function loadEditableSetlist(
 
 export interface AddTrackInput {
     setlistId: string
-    type: "song" | "header"
+    type: "song" | "header" | "reading" | "prayer" | "transition" | "note"
     title: string
     key?: string
     leadMusician?: string

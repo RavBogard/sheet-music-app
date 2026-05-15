@@ -119,9 +119,9 @@ export interface AddTrackArgs {
     setlistId: string
     /** Library song id — when given, title/key/leadMusician default from it. */
     songId?: string
-    /** Required for a header row, or to override a song's title. */
+    /** Required for non-song rows, or to override a song's title. */
     title?: string
-    type?: "song" | "header"
+    type?: "song" | "header" | "reading" | "prayer" | "transition" | "note"
     key?: string
     leadMusician?: string
     referenceLink?: string

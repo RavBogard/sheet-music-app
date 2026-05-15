@@ -91,9 +91,6 @@ const ALLOWED_TYPES: Record<string, string> = {
     "image/heif": ".heif",
 }
 
-const FILE_EXT_RE =
-    /\.(pdf|xml|musicxml|mxl|mscz|mscx|txt|png|jpe?g|heic|heif)$/i
-
 function extForContentType(ct: string): string {
     if (ct.includes("pdf")) return ".pdf"
     if (ct.includes("text")) return ".txt"
@@ -131,12 +128,27 @@ export async function processChartUpload(
     const fileName = input.originalFileName
     const mimeType = input.mimeType || "application/octet-stream"
 
-    if (!ALLOWED_TYPES[mimeType] && !FILE_EXT_RE.test(fileName)) {
+    // G-7: a real mimeType is required. Previously `mimeType OR a recognized
+    // file extension` was accepted, but that let octet-stream + .pdf-named
+    // garbage through and stored unknown bytes as "application/pdf". MCP
+    // callers control both fields — they can always send a real mime — and
+    // the in-app UploadDialog uses <input type="file"> which surfaces a real
+    // mime from the OS. Tightening to mime-required closes the bypass.
+    if (mimeType === "application/octet-stream") {
         return {
             ok: false,
             status: 400,
             code: "invalid_type",
-            error: "Only PDF, MusicXML, MuseScore, Text, and Image files are supported",
+            error:
+                "mimeType must be specific (e.g. application/pdf, image/png, application/vnd.recordare.musicxml+xml). 'application/octet-stream' provides no type information and is rejected.",
+        }
+    }
+    if (!ALLOWED_TYPES[mimeType]) {
+        return {
+            ok: false,
+            status: 400,
+            code: "invalid_type",
+            error: `Unsupported mimeType '${mimeType}'. Allowed: ${Object.keys(ALLOWED_TYPES).join(", ")}`,
         }
     }
 
@@ -249,6 +261,14 @@ export async function processChartUpload(
     // ─── 3. Duplicate prevention (exact + fuzzy) ───────────────────────────
 
     const nameLower = title.toLowerCase()
+    // G-5: prefix-range query needs to run against an alphanumeric-only
+    // field, not `nameLower`. For a title like "⚠️ STRESS TEST — Adon Olam",
+    // `nameLower` starts with "⚠️ stress..." but `prefix` is "stress" (the
+    // alphanumeric-only form), so a range query against `nameLower` skips
+    // emoji-prefixed candidates entirely. Index a `normalizedName` field and
+    // query that. Backfill is optional — without it, new uploads still won't
+    // fuzzy-match against pre-G-5 entries that lack `normalizedName`.
+    const normalizedName = nameLower.replace(/[^a-z0-9]/g, "")
     const exactMatch = await db
         .collection("library_index")
         .where("nameLower", "==", nameLower)
@@ -267,32 +287,31 @@ export async function processChartUpload(
         }
     }
 
-    const prefix = nameLower.replace(/[^a-z0-9]/g, "").slice(0, 6)
+    const prefix = normalizedName.slice(0, 6)
     if (prefix.length >= 3) {
         const prefixEnd =
             prefix.slice(0, -1) +
             String.fromCharCode(prefix.charCodeAt(prefix.length - 1) + 1)
         const similarSnap = await db
             .collection("library_index")
-            .where("nameLower", ">=", prefix)
-            .where("nameLower", "<", prefixEnd)
-            .select("name", "status")
+            .where("normalizedName", ">=", prefix)
+            .where("normalizedName", "<", prefixEnd)
+            .select("name", "normalizedName", "status")
             .limit(20)
             .get()
 
-        const normalizedNewTitle = nameLower.replace(/[^a-z0-9]/g, "")
         for (const doc of similarSnap.docs) {
             if (doc.data().status !== "active") continue
             const existingName = doc.data().name as string
-            const normalizedExisting = existingName
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, "")
+            const normalizedExisting =
+                (doc.data().normalizedName as string | undefined) ??
+                existingName.toLowerCase().replace(/[^a-z0-9]/g, "")
             const distance = levenshteinDistance(
-                normalizedNewTitle,
+                normalizedName,
                 normalizedExisting,
             )
             const maxLength = Math.max(
-                normalizedNewTitle.length,
+                normalizedName.length,
                 normalizedExisting.length,
             )
             const similarity = 1 - distance / maxLength
@@ -319,6 +338,7 @@ export async function processChartUpload(
     const indexEntry: Record<string, unknown> = {
         name: title,
         nameLower,
+        normalizedName,
         originalName: fileName,
         mimeType: contentType,
         fileSize: buffer.byteLength,

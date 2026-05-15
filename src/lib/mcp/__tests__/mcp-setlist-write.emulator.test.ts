@@ -269,6 +269,44 @@ describe("MCP setlist write tools (emulator)", () => {
         })
     })
 
+    it("add_track_to_setlist accepts reading / prayer / transition / note (G-10)", async () => {
+        const id = await newSetlist()
+        await addTrackToSetlist(ADMIN, {
+            setlistId: id,
+            title: "V'ahavta",
+            type: "reading",
+        })
+        await addTrackToSetlist(ADMIN, {
+            setlistId: id,
+            title: "Silent Prayer",
+            type: "prayer",
+        })
+        await addTrackToSetlist(ADMIN, {
+            setlistId: id,
+            title: "Instrumental",
+            type: "transition",
+        })
+        await addTrackToSetlist(ADMIN, {
+            setlistId: id,
+            title: "Service Note",
+            type: "note",
+        })
+
+        const tracks = await tracksOf(id)
+        expect(tracks.map((t) => t.type)).toEqual([
+            "reading",
+            "prayer",
+            "transition",
+            "note",
+        ])
+        expect(tracks.map((t) => t.title)).toEqual([
+            "V'ahavta",
+            "Silent Prayer",
+            "Instrumental",
+            "Service Note",
+        ])
+    })
+
     it("reorder_setlist applies a full permutation and rejects a partial list", async () => {
         const id = await newSetlist()
         const t1 = (await addTrackToSetlist(ADMIN, { setlistId: id, title: "1" })) as {

@@ -246,7 +246,7 @@ describe("MCP chart-upload tools (emulator)", () => {
                 fileName: "weird.zip",
             }),
         ).toEqual({
-            error: expect.stringContaining("PDF, MusicXML, MuseScore"),
+            error: expect.stringContaining("Unsupported mimeType"),
         })
 
         expect(mockUploadToStorage).not.toHaveBeenCalled()
@@ -288,6 +288,104 @@ describe("MCP chart-upload tools (emulator)", () => {
         expect(sim).toEqual({
             error: expect.stringContaining("similar name"),
         })
+    })
+
+    it("dedup: fuzzy match fires for emoji-prefixed titles (G-5)", async () => {
+        await uploadChart(ADMIN, {
+            title: "⚠️ STRESS TEST 2026-05-15 — Adon Olam",
+            fileBase64: b64("%PDF-1.4 first"),
+            mimeType: "application/pdf",
+        })
+        // One-char typo on a non-leading word; the original prefix-range query
+        // would have skipped this because both titles start with "⚠️".
+        const sim = await uploadChart(ADMIN, {
+            title: "⚠️ STRESS TEST 2026-05-15 — Adon Olamx",
+            fileBase64: b64("%PDF-1.4 second"),
+            mimeType: "application/pdf",
+        })
+        expect(sim).toEqual({
+            error: expect.stringContaining("similar name"),
+        })
+
+        // A clearly different title under the same prefix passes.
+        const ok = await uploadChart(ADMIN, {
+            title: "⚠️ STRESS TEST 2026-05-15 — Hinei Ma Tov",
+            fileBase64: b64("%PDF-1.4 third"),
+            mimeType: "application/pdf",
+        })
+        expect(ok).toMatchObject({ ok: true })
+    })
+
+    it("library_index entries carry normalizedName for prefix range queries (G-5)", async () => {
+        const r = (await uploadChart(ADMIN, {
+            title: "Lecha Dodi (Take 2)",
+            fileBase64: b64("%PDF-1.4 norm"),
+            mimeType: "application/pdf",
+        })) as { ok: true; fileId: string }
+        const idx = (
+            await db().collection("library_index").doc(r.fileId).get()
+        ).data()!
+        expect(idx.normalizedName).toBe("lechadoditake2")
+    })
+
+    it("upload_chart rejects octet-stream and any non-allowed mime (G-7)", async () => {
+        expect(
+            await uploadChart(ADMIN, {
+                title: "Bad Mime Probe",
+                fileBase64: b64("%PDF-1.4 bytes"),
+                mimeType: "application/octet-stream",
+                fileName: "probe.pdf",
+            }),
+        ).toEqual({
+            error: expect.stringContaining("application/octet-stream"),
+        })
+
+        expect(
+            await uploadChart(ADMIN, {
+                title: "Zip Probe",
+                fileBase64: b64("PK garbage"),
+                mimeType: "application/x-zip-compressed",
+                fileName: "probe.zip",
+            }),
+        ).toEqual({
+            error: expect.stringContaining("Unsupported mimeType"),
+        })
+
+        expect(mockUploadToStorage).not.toHaveBeenCalled()
+    })
+
+    it("upload_chart format-validates fileBase64 (G-8)", async () => {
+        expect(
+            await uploadChart(ADMIN, {
+                title: "Garbage",
+                fileBase64: "!!!not base64!!!",
+                mimeType: "application/pdf",
+            }),
+        ).toEqual({
+            error: expect.stringContaining("RFC 4648"),
+        })
+
+        // Non-padded length (not a multiple of 4).
+        expect(
+            await uploadChart(ADMIN, {
+                title: "Bad Length",
+                fileBase64: "abc",
+                mimeType: "application/pdf",
+            }),
+        ).toEqual({
+            error: expect.stringContaining("multiple of 4"),
+        })
+
+        // Whitespace inside is tolerated (newlines/spaces stripped before check).
+        const ok = await uploadChart(ADMIN, {
+            title: "Good Padding",
+            fileBase64:
+                "JVBERi0xLjQKJcfsj6IKNSAwIG9iaiAg\nPDwKL0xlbmd0aCAyOTcgL0ZpbHRlciAv\nRmxhdGVEZWNvZGUK",
+            mimeType: "application/pdf",
+        })
+        expect(ok).toMatchObject({ ok: true })
+
+        expect(mockUploadToStorage).toHaveBeenCalledTimes(1)
     })
 
     // ─── save_scraped_chart ─────────────────────────────────────────────────
@@ -359,6 +457,58 @@ describe("MCP chart-upload tools (emulator)", () => {
             artist: "Eric Clapton",
             content: "[Intro]\nG D/F# Em7 C\n",
         })
+    })
+
+    it("scrape_chart_from_url detects Gemini negative-result patterns (G-6)", async () => {
+        mockGenerateContent.mockResolvedValueOnce({
+            response: {
+                text: () =>
+                    JSON.stringify({
+                        title: "Song Not Found",
+                        artist: "",
+                        content: "",
+                    }),
+            },
+        })
+        const r1 = await scrapeChartFromUrl(MUSICIAN, {
+            rawText: "<html>generic 404 page</html>",
+        })
+        expect(r1).toEqual({
+            error: expect.stringContaining("No chord chart detected"),
+        })
+
+        mockGenerateContent.mockResolvedValueOnce({
+            response: {
+                text: () =>
+                    JSON.stringify({
+                        title: "Plausible Title",
+                        artist: "Unknown",
+                        content: "This page does not contain a chord chart.",
+                    }),
+            },
+        })
+        const r2 = await scrapeChartFromUrl(MUSICIAN, {
+            rawText: "<html>generic page</html>",
+        })
+        expect(r2).toEqual({
+            error: expect.stringContaining("No chord chart detected"),
+        })
+
+        // Genuine content still goes through.
+        mockGenerateContent.mockResolvedValueOnce({
+            response: {
+                text: () =>
+                    JSON.stringify({
+                        title: "Real Song",
+                        artist: "Real Artist",
+                        content: "G  D  Em\nLine of lyrics",
+                    }),
+            },
+        })
+        const r3 = await scrapeChartFromUrl(MUSICIAN, {
+            rawText: "<html>...</html>",
+        })
+        expect(r3).toMatchObject({ ok: true, title: "Real Song" })
     })
 
     it("scrape_chart_from_url surfaces a Gemini error as a user-facing error", async () => {

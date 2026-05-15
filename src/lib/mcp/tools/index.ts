@@ -195,7 +195,7 @@ export function registerWriteTools(server: McpServer): void {
         "add_track_to_setlist",
         {
             description:
-                "Add one row to a setlist — either a song (pass songId to pull title/key/vocal-lead from the library AND bond the song's chart so it renders on the row, or pass an explicit title for a free-text row) or a section header (type:'header' with a title). position is a 0-based insert index; omit it to append at the end. Admins and band leaders may add tracks.",
+                "Add one row to a setlist. Row types: 'song' (pass songId to pull title/key/vocal-lead from the library AND bond the song's chart so it renders on the row, or pass an explicit title for a free-text row), 'header' (section break with a title), 'reading' (Torah / scripture / D'var / responsive reading — title required), 'prayer' (silent or responsive prayer — title required), 'transition' (instrumental/transition moment), or 'note' (free-text annotation). position is a 0-based insert index; omit it to append at the end. Admins and band leaders may add tracks.",
             inputSchema: {
                 setlistId: z.string().describe("Setlist id"),
                 songId: z
@@ -205,11 +205,22 @@ export function registerWriteTools(server: McpServer): void {
                 title: z
                     .string()
                     .optional()
-                    .describe("Row title — required for a header, or to override a song's title"),
+                    .describe(
+                        "Row title — required for header / reading / prayer / transition / note rows, or to override a song's title",
+                    ),
                 type: z
-                    .enum(["song", "header"])
+                    .enum([
+                        "song",
+                        "header",
+                        "reading",
+                        "prayer",
+                        "transition",
+                        "note",
+                    ])
                     .optional()
-                    .describe("Row type (default 'song')"),
+                    .describe(
+                        "Row type (default 'song'). 'header' = section break; 'reading' = Torah/scripture/responsive; 'prayer' = silent/responsive prayer; 'transition' = instrumental/transition; 'note' = free-text annotation.",
+                    ),
                 key: z.string().optional().describe("Musical key for this row"),
                 leadMusician: z.string().optional().describe("Vocal Lead for this row"),
                 referenceLink: z.string().optional().describe("Reference URL for this row"),
