@@ -32,6 +32,99 @@ Completed milestone log for this project.
 | v5.3 Editor UX Repair (rescoped 2026-05-02 to insert v5h3 hotfix) | 2026-05-02 | 1 session (~12h wall-clock) | 4 phases, 7 plans (PENDING-UAT at close — UAT discipline waiver per Daniel) |
 | v5.4 Hotfix + Harness Fidelity | 2026-05-12 | ~4 days (2026-05-08 → 2026-05-12) | 2 phases shipped + 1 partial (3 deferred fold-forward to v6.0), 4 plans + 8 P0 patches + 2 cleanups, ~18 commits (PENDING-UAT at close — Daniel-loop discipline; HFG counter 1/3 carried into v6.0) |
 | v6.0 Tracks Single-Source-of-Truth | 2026-05-13 | ~2 days (2026-05-12 → 2026-05-13) | 12 phases LOOP COMPLETE (10 original + 2 emergent close-gates v60-11/v60-12), 24 plans, 25 commits (PENDING-UAT at close — 5th consecutive use of v51-04 codified pattern; HFG counter 0/3 held throughout via emulator coverage) |
+| v7.0 Document-Driven Setlist Creation | 2026-05-14 | ~1.5 days (2026-05-13 milestone open → 2026-05-14 close) | 9 phases LOOP COMPLETE (8 roadmap + v70-09 out-of-sequence polish), 16 plans, 2 bundled phase commits at master HEAD (v70-07 `4668e2a8` + v70-08 `f3f86c41`); PENDING-UAT at close (6th consecutive v51-04 use); HFG counter 0/3 held; constraint 12 satisfied (end-of-milestone audit ran, 9 P1s remediated in-phase) |
+
+---
+
+## ✅ v7.0 Document-Driven Setlist Creation
+
+**Completed:** 2026-05-14
+**Duration:** ~1.5 days (2026-05-13 milestone open via /paul:complete-milestone of v6.0 → 2026-05-14 close)
+**Status:** Closed via `/paul:complete-milestone` with PENDING-UAT marker per v51-04 codified pattern (6th consecutive: v5.3 → v5.4 → v6.0 → v7.0). Master HEAD `f3f86c41`; 2 commits ahead of origin (push at milestone close per Daniel's "always push to production" preference). Daniel-loop UAT continues against the deployed build over the upcoming worship cycle (Fri PM + Sat AM); failures route to in-phase follow-up plans per the v51-04 rule.
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 9 LOOP CLOSED (v70-01..v70-08 + v70-09 polish) |
+| Plans | 16 (2 + 1 + 2 + 1 + 1 + 1 + 3 + 4 + 1 across the 9 phase dirs) |
+| Phase commits | 2 bundled at master HEAD: `4668e2a8` feat(v70-07) + `f3f86c41` feat(v70-08); plus 1 interim push during v70-07 for MCP coordination |
+| Audit findings | 0 P0 · 9 unique P1 · 22 P2 · 15 P3 (v70-08-AUDIT.md, 5 parallel dimension agents) |
+| P1 remediation | All 9 P1s closed in-phase across v70-08 plans 02-04 (constraint 12 satisfied) |
+| Tests added | +ImporterModal.a11y (2) + extract-document page-cap tests (2) + extract-structure / resolve / commit suites carried forward green |
+| Harness Fidelity Gate counter | Held at 0/3 throughout v7.0 — v70-02 emulator rules test (10/10) + v70-07-01 emulator commit test (56/56) covered the data-layer phases without a clause-(b) waiver. Counter carried into v7.1 at 0/3. |
+| Build status at close | `next build` ✓ EXIT 0 on every plan; type-check clean |
+| Production deploy | NOT YET — master 2 commits ahead of origin; `git push origin master` is the milestone-close action |
+
+### Key Accomplishments
+
+- **End-to-end doc-driven setlist creation shipped.** Daniel feeds any service-outline document (.docx / .pdf / .txt — May 15 Shir Shabbat canary) and the system produces a complete chart-bound setlist: `extract-document` (mammoth/pdfjs) → `extract-structure` (Gemini, Zod-validated `{ sections, tracks }`) → `resolve` (fuzzy library match + recording candidates) → structured interview form → read-only preview → `commit-document` (atomic batch via the new shared `setlist-write.ts` module).
+- **New `recordings/{id}` data domain.** Firestore collection + rules + composite index + Storage path, plus per-track recording-bind UI (`RecordingBindPopover` + `RecordingCell` on `MobileRowCard`) with inline `<audio>` playback and band-leader uploads.
+- **Image-chart support.** PNG / JPEG / HEIC charts end-to-end — `heic-convert` upload + `ImageScoreViewer` viewer + print-pipeline image embed (aspect-fit, 18pt margins) — with AI chord detection + transposition correctly disabled for image charts.
+- **Setlist metadata editor.** Pencil button in `SetlistGridTopBar` → `SetlistMetaEditSheet` (name / eventDate / serviceType / rabbi) — closes long-standing Issue 2 with a non-engine change-only `applyEdit` patch.
+- **Per-track media affordances.** Chart click-through (new-tab link to the Storage-backed serving URL) + recording-bind popover, both correctly isolated from the row tap-to-edit handler via `stopPropagation`.
+- **Best-practice audit ran + the P1s were remediated.** 5 parallel scope-narrowed dimension agents (security / accessibility / performance / code-quality / UX-consistency) → synthesized `v70-08-AUDIT.md`. Zero P0 — the v7.0 surface held up. P1 remediation across plans 02-04: band_leader role gates on the 3 upstream doc-import routes, real Zod schemas replacing `z.array(z.any())`, MIME + 50-page caps, `recordings/file/[id]` real `__session`-cookie auth boundary (replacing the forgeable `Sec-Fetch-*` heuristic), ImporterModal keyboard-reachable file dropzones (the cascading P1), `getServerLibraryLean` projected + cached fetch for the resolve hot path, ImporterModal `AbortController` so closing the modal cancels in-flight work, `commit-document` `maxDuration` + a single atomic batch write, and `import 'server-only'` guards on the mammoth/heic-convert modules.
+- **MCP workstream proven compatible.** Daniel's parallel MCP-server lane (handoff 2026-05-14) shipped throughout v7.0 without conflict — the shared `setlist-write.ts` module (authored in v70-07-01, interim-pushed) became the single server-side write path consumed by both milestone work + the MCP write tools. Lane discipline (do-not-touch zones, coordinate on shared files) held.
+
+### Key Decisions (12 locked at /paul:discuss-milestone 2026-05-13 + emergent during v7.0)
+
+1. **Recording storage = Firebase Storage** (matches the v1.6 chart pattern) — no separate provider.
+2. **Doc formats v7.0 = .docx + .pdf + .txt only.** Image OCR DEFERRED to v7.1.
+3. **Interview UX = structured form (NOT chat).** Required fields (service date), optional fields (rabbi), inferred fields (service type with user confirmation).
+4. **Recording attribution = `notes` field** on the recording doc (free-form string). No formal "performer" model in v7.0.
+5. **Recordings model = NEW `recordings/{id}` collection** (NOT an embedded array on songs) — independent lifecycle + composite index on `(songId, createdAt)`.
+6. **AI extraction = Gemini API + Zod validation.** Malformed extractions surface with the raw model output for human review (422 + `raw` field).
+7. **Library resolution = fuzzy match with confidence scoring.** Levenshtein, 0.82 threshold (mirrors the existing `import/parse` route). Low-confidence → interview proposal.
+8. **Missing-chart pipeline reuses `/api/library/upload`** from v60-09. No new upload route for setlist-import.
+9. **Service date is REQUIRED.** Auto-suggested from the document filename, user adjusts.
+10. **Service type is auto-inferred** from doc keywords and confirmed by the user.
+11. **Image-chart support = PNG + JPEG + HEIC.** AI chord detection + transposition disabled with explanation tooltip.
+12. **End-of-milestone best-practice audit BLOCKS milestone close.** Satisfied 2026-05-14 — 5 parallel dimension agents → 0 P0 · 9 unique P1 (all remediated in-phase) · 22 P2 + 15 P3 fold-forward.
+
+### Emergent decisions (during v7.0 execution)
+
+- **v70-06 scoped propose-only** (Daniel-confirmed 2026-05-14). The resolve route is a pure compute pass returning annotated proposals; v70-07's commit step does all persistence. The original "pre-creates recordings/* docs" wording was superseded — no orphaned-doc risk.
+- **v70-07 split into 3 plans** (Daniel-confirmed 2026-05-14). Plan 01 = server-callable `setlist-write.ts` module + `import/execute` refactor (MCP coordination point, interim-pushed); plan 02 = ImporterModal "Upload Document" option + interview form + preview; plan 03 = commit wiring + e2e. The MCP write tools consume the same module.
+- **v70-09 pulled forward + back** (Daniel-directed 2026-05-14). Setlist metadata editor jumped ahead of v70-06 to close Issue 2, then sequence resumed.
+- **v70-08-04 added a vitest `server-only` alias** (auto-fix). The `server-only` npm package throws under jsdom — aliased to a no-op stub so the audit-mandated guards coexist with the test suite. New pattern.
+- **v70-08-02 fixed `recordings/file/[id]` properly** (not folded forward). The audit offered a fold-forward option, but the session-cookie infra already existed (`verifySessionCookie` via Firebase Admin), so the proper fix was the right scope.
+
+### Fold-forward to v7.1
+
+P2/P3 items from `v70-08-AUDIT.md` routed to v7.1 / backlog (NOT in v7.0 plans):
+
+- **ImageScoreViewer a11y** — required `alt` prop, `role=status`/`alert` on load/error, an explicit Retry control (the audit P2 + P3 cluster).
+- **Dead `SetlistGrid.tsx` TanStack-table block** — several hundred lines + ~41 stale tests. Sizable; deserves a dedicated cleanup phase.
+- **Duplicated Levenshtein matcher** — `resolve.ts` ↔ `import/parse/route.ts`. Extract a shared module.
+- **3-route doc-import chain collapse** — option (a) from the audit: collapse `extract-document → extract-structure → resolve` into one orchestration route so the document text never leaves the server. Or persist text/structure server-side keyed by import-session id.
+- **`Recording.durationSeconds`** in the model + UI but never written by the upload route — populate it or drop the field.
+- **`/api/drive/file` weak `Sec-Fetch-*` auth** — the inheritance source for the `recordings/file/[id]` finding. v70-08-02 deliberately did NOT rewire it (out of named audit scope); same proper fix applies.
+- **`recordings/upload`** — verify `songId` exists; add `title`/`notes` length caps.
+- **Bounded-concurrency PDF parsing** — currently strictly sequential (within the 50-page cap from v70-08-02).
+- **`inferServiceType` short-circuit** — currently builds one big concatenated string; short-circuit on the first keyword hit.
+- **Touch-target sizing baseline** — 40px → 44px on non-coarse pointers; MobileRowCard hand-rolled buttons → shared `Button`.
+- **ImporterModal polish P3s** — iPad-portrait scroll on the input step, mutually-exclusive visual cue, processing-step cancel affordance.
+- **Test-coverage gaps** — `commit-document` route handler, ImporterModal doc-import handlers.
+- **A unified `extractApiError` helper** to unify ImporterModal's two error-parsing idioms.
+
+### PENDING-UAT (carry-forward)
+
+- `.paul/UAT-PENDING.md` accumulates human-verify checkpoints across v70-01 (AC-3/AC-4 + print pipeline), v70-03 (chart click-through + recording-bind UX), v70-07 (full doc-import flow on the May 15 Shir Shabbat canary), v70-08-03 (visual polish: bg-brand CTAs, formatted preview date, RecordingBindPopover loading row, amber missing-chart contrast).
+- Daniel verifies against the deployed build over the upcoming worship cycle. Failures route to in-phase follow-up plans per the v51-04 codified pattern.
+- HFG-held emulator test (`commit.emulator.test.ts` for the v70-08-04 atomic-batch refactor) — recommend an emulator run at milestone close; the batching change is a pure refactor verified by `next build` + types.
+
+### Patterns established
+
+- **3-route AI pipeline shape** — `extract-X` → `extract-Y` → `resolve` as a chain of independent never-throws server libs + thin route wrappers; each step has its own discriminated `{ ok: true | false }` result. Reusable for any future server-side AI structuring.
+- **One server-side write path** — `setlist-write.ts` (`createSetlistServerSide` + `updateSetlistServerSide`) is consumed by both the milestone work + the MCP write tools. Single source of truth for setlist persistence on the server.
+- **`getServerLibraryLean` + `__resetServerLibraryCache`** — a projected + module-TTL-cached read for hot paths, with a test-reset hook. Reusable.
+- **`AbortController` + `signal` across a chained `apiFetch` flow** — closing the UI cancels in-flight server work. Reusable for any multi-step async user flow.
+- **`<label htmlFor>` + `sr-only` `<input>` for keyboard-accessible file uploads** — proven in RecordingBindPopover, generalized in ImporterModal.
+- **`loaded` flag + Loader2 row for async list surfaces** — no more false "empty" flashes between mount and first snapshot.
+- **`import 'server-only'` guards + vitest alias stub** — heavy server-only deps (mammoth/heic-convert) cannot silently land in a client bundle, and tests still pass.
+- **`verifySessionCookieRequest`** — a real `__session`-cookie auth boundary for file-serving routes (not the forgeable `Sec-Fetch-*` heuristic).
+- **Best-practice audit via parallel dimension agents** — 5 scope-narrowed agents (security / a11y / performance / code-quality / UX-consistency) → synthesizer → routed punch list. Reusable for future end-of-milestone audits.
+- **`UAT-PENDING.md` accumulator** (codified earlier; 6th milestone use here) — human-verify checkpoints don't block APPLY; they accumulate for milestone-end verification.
 
 ---
 

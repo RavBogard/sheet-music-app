@@ -2,18 +2,28 @@
 
 ## Project Reference
 
-See: .paul/PROJECT.md (updated 2026-05-14 after v70-08 ✅ COMPLETE; v7.0 milestone COMPLETE — all 8 phases done; next: /paul:complete-milestone to close v7.0)
+See: .paul/PROJECT.md (updated 2026-05-14 after v7.0 ✅ MILESTONE COMPLETE; awaiting next-milestone discussion)
 
 **Core value:** Musicians can instantly access setlists, transpose charts, and control monitor mixes — live on any device, no paper or prep needed.
-**Current focus:** v7.0 — Document-Driven Setlist Creation ✅ MILESTONE COMPLETE 2026-05-14. All 8 phases (v70-01..v70-08) + v70-09 LOOP CLOSED. The doc-driven pipeline is feature-complete end-to-end AND the v7.0 surface has been audited + remediated (constraint 12 satisfied). Next: `/paul:complete-milestone` to close v7.0 + open the next milestone.
+**Current focus:** Awaiting next milestone. v7.0 — Document-Driven Setlist Creation ✅ COMPLETE 2026-05-14 (9 phases / 16 plans / bundled `feat(v70-07)` + `feat(v70-08)` commits at master HEAD `f3f86c41`). Next: `/paul:discuss-milestone` or `/paul:milestone` to define scope (v7.1 fold-forward candidates from the v70-08 AUDIT — ImageScoreViewer a11y, dead SetlistGrid table cleanup, 3-route chain collapse, touch-target sizing, Levenshtein dedup, `/api/drive/file` weak Sec-Fetch auth).
 
 ## Current Position
 
-Version: v7.0.0-dev (v6.0 closed 2026-05-13; v7.0 ALL phases COMPLETE 2026-05-14)
-Milestone: v7.0 — Document-Driven Setlist Creation (opened 2026-05-13) — ✅ COMPLETE 2026-05-14
-Phase: v70-08 — Best-practice audit + remediation (Wave 5) — ✅ COMPLETE 2026-05-14 (4 plans, all LOOP CLOSED, phase transition done) [LAST phase of v7.0]
-Plan: v70-08-04 LOOP COMPLETE 2026-05-14 (.paul/phases/v70-08-best-practice-audit/v70-08-04-SUMMARY.md) — doc-import performance. 3/3 tasks + 4/4 AC PASS. getServerLibraryLean() (.select() projection + 60s module-TTL cache); ImporterModal resolve-fetch timeout + shared AbortController (modal-close/start-over abort, AbortError toast suppressed); commit-document maxDuration=30 + atomic batch write; import 'server-only' on extract-document.ts + heic-convert upload route + vitest alias to a no-op stub.
-Status: v7.0 MILESTONE COMPLETE — close-eligible. v70-08 phase transition done: PROJECT.md evolved (Current State table + footer entry), ROADMAP.md marks v70-08 ✅ + milestone status ✅, bundled feat(v70-08) commit covers plans 02+03+04 (16 files modified across the v7.0 surface, 0 P0 audit findings, 9 P1s remediated). Constraint 12 (end-of-milestone audit BLOCKS milestone close) satisfied. PRIOR: v70-07 ✅ COMPLETE + transitioned — bundled feat(v70-07) commit `4668e2a8` (local, not pushed; will push with v70-08).
+Version: v7.0.0 ✅ TAGGED 2026-05-14 (v6.0 closed 2026-05-13)
+Milestone: Awaiting next milestone — v7.0 ✅ COMPLETE 2026-05-14
+Phase: None active — ready for next-milestone discussion
+Plan: None
+
+Progress:
+- v7.0: [██████████] 100% ✓ (9 of 9 phases complete; closed via /paul:complete-milestone 2026-05-14)
+
+Status: Milestone v7.0 complete + tagged. Master HEAD `f3f86c41` carries the bundled `feat(v70-08)` phase commit; the v7.0 series is 2 commits ahead of origin (`4668e2a8` v70-07 + `f3f86c41` v70-08) — push at any time. PENDING-UAT (`.paul/UAT-PENDING.md`) accumulates v7.0 human-verify checkpoints for the upcoming worship cycle (Daniel-loop discipline, 6th consecutive v51-04 use). Constraint 12 (end-of-milestone audit BLOCKS close) satisfied — 0 P0 / 9 P1 remediated in-phase. HFG counter 0/3 carried into v7.1.
+
+### Git State
+Last commit: `f3f86c41`
+Branch: master
+Feature branches merged: none (single-branch flow)
+Ahead of origin: 2 commits (`4668e2a8` v70-07 + `f3f86c41` v70-08) — push at milestone close per Daniel's "always push to master/production" preference.
 Last activity: 2026-05-14 — v70-07 phase transition complete. This session: planned + executed + closed all 3 v70-07 plans (01 = src/lib/setlist-write.ts server-side write module + import/execute refactor, interim-committed + pushed for the MCP workstream; 02 = ImporterModal "Upload Document" option + extract→structure→resolve client chain + interview-defaults.ts helpers + interview form + read-only preview; 03 = src/lib/setlist-import/commit.ts commitDocumentSetlist + POST /api/setlists/import/commit-document route + wired the preview "Create Setlist" button), then transitioned the phase (PROJECT.md evolved, ROADMAP updated, bundled feat(v70-07) commit). Earlier this session: completed + transitioned phases v70-04, v70-05, v70-09, v70-06.
 
 **PARALLEL MCP WORKSTREAM ACTIVE** (Daniel handoff 2026-05-14 — full detail in memory `project_mcp_parallel_workstream.md`): milestone work stays in lane — src/components/setlist/**, src/lib/setlist-import/**, src/app/api/setlists/import/**, the setlist write path (setlist-firebase.ts, createSetlistService, applyEdit fanout), server-setlists/server-library/scheduling-firebase (read/extend; flag signature changes). DO NOT TOUCH: src/app/api/mcp/**, src/lib/mcp/**, settings MCP block (src/app/(main)/settings/**), mcpTokens in firestore.rules, bridge/** + src/app/api/bridge/**, and SetlistGrid.tsx going forward (v70-09 already did its necessary additive top-bar wiring there). Shared files (firestore.rules, firestore.indexes.json, package.json/lockfile, src/types/models.ts) — coordinate + rebase EOD. v70-07 coordination: the server-callable setlist-write module is authored in v70-07 + consumed by MCP write tools — ping Daniel to agree the signature BEFORE designing it. Phase order: v70-06 → v70-07 → v70-08 (milestone close blocked on v70-08). Stay in roadmap sequence; don't pull anything forward.
@@ -87,16 +97,16 @@ Last session: 2026-05-14 (resumed post-reboot; shipped v70-01-02 + closed phase 
 v70-01-02 UAT FOLLOW-UP FIX (in-phase, 2026-05-14, commit `1fef342` pushed): Daniel UAT — PNG image charts not appearing in print packets. Diagnostic classification: SPEC issue. Root cause (confirmed via scripts/diag/diag-image-print.ts against production): the image chart "dodi li (sher).png" was Drive-synced (Drive-style fileId), and its bound track docs carry NO mimeType + NO fileName — so print-pipeline isImageTrack() had zero signal, returned false, image fell through to the PDF merge path and was silently dropped by PDFDocument.load. Fix: server-side library_index.{fileId}.mimeType backstop (batched db.getAll) before per-track routing — parallels v70-01-01 Task 4's client-side useLibraryStore backstop. cacheVersion 3→4. print-pipeline 27/27; next build ✓; suite 1650/52 (zero new regressions). PENDING-UAT: Daniel re-checks the printed packet against deployed `1fef342`.
 Also surfaced: Issue 2 (no UX to edit an existing setlist's name/date while editing) — NOT a regression; v60-14 fixed the *creation wizard* date reset, but editing an existing setlist's metadata was never built — it is phase v70-09 (setlist metadata editor), still 🔵 Not started.
 
-Stopped at: v70-08 ✅ COMPLETE + transitioned — v7.0 MILESTONE COMPLETE 2026-05-14. PROJECT.md + ROADMAP.md evolved; bundled feat(v70-08) commit created.
-Next action: `/paul:complete-milestone` to close v7.0 + open the next milestone (Daniel discusses next-milestone scope; v7.1 candidates from v70-08 fold-forward: ImageScoreViewer a11y, dead SetlistGrid table block cleanup, Levenshtein dedup, 3-route chain collapse, touch-target sizing). Also: PENDING-UAT (`.paul/UAT-PENDING.md`) — Daniel verifies v7.0 surface against the deployed build over the worship cycle.
-Resume file: .paul/phases/v70-08-best-practice-audit/v70-08-04-SUMMARY.md
+Stopped at: v7.0 ✅ MILESTONE COMPLETE 2026-05-14 — closed via /paul:complete-milestone. MILESTONES.md entry added, ROADMAP collapsed (archived to .paul/milestones/v7.0-ROADMAP.md), git tag `v7.0.0` created, package.json bumped 6.0.0 → 7.0.0.
+Next action: `/paul:discuss-milestone` (or `/paul:milestone`) to define scope for the next milestone. Daniel-loop UAT continues in parallel against the deployed build (worship cycle). Optional: `git push origin master && git push origin v7.0.0` to ship.
+Resume file: .paul/MILESTONES.md
 v70-07 remaining plans (after 01 closes): plan 02 = interview form UI + ImporterModal "Document" option + preview (/ui-ux-pro-max BLOCKING); plan 03 = commit wiring (POST /api/setlists/import/commit-document → createSetlistServerSide) + pipeline e2e.
 
 PENDING-UAT carry-forward (v51-04 pattern, 8th use this milestone): v70-01-01 AC-3/AC-4 + v70-01-02 print human-verify checkpoint — Daniel verifies against the deployed commit over the worship cycle (mixed PDF+image packet downloads correctly, image pages right-side-up + aspect-correct, PrintModal banner gone, personal packet embeds images). Failures route to an in-phase follow-up plan or emergent phase.
 
-Loop position (v70-08 phase — ✅ COMPLETE + transitioned 2026-05-14; v7.0 MILESTONE COMPLETE):
+Loop position (v7.0 milestone closed; awaiting next milestone):
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v70-08-04 LOOP COMPLETE 2026-05-14 — doc-import performance, 3/3 tasks + 4/4 AC PASS. Phase transition done: PROJECT.md evolved, ROADMAP marks v70-08 + v7.0 ✅, bundled feat(v70-08) commit covers plans 02+03+04. Constraint 12 satisfied. next: /paul:complete-milestone.]
+  ○        ○        ○     [Milestone v7.0 complete + tagged `v7.0.0` 2026-05-14. No active phase. next: /paul:discuss-milestone or /paul:milestone.]
 
 Loop position (v70-08-03 — COMPLETE):
 PLAN ──▶ APPLY ──▶ UNIFY
