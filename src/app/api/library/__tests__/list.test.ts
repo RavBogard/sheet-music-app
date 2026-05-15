@@ -150,13 +150,26 @@ describe('GET /api/library/list', () => {
         expect(json.nextCursor).toBeNull()
     })
 
-    it('sets Cache-Control header when all=true', async () => {
+    it('sets browser-only Cache-Control when all=true and forbids CDN caching', async () => {
+        // 2026-05-15 stress test caught CDN serving stale responses when
+        // s-maxage was set: MCP-imported charts never surfaced in /library
+        // because useLibrary's refetch URL was stable, so the CDN-cached
+        // response masked the change for up to 300s. The browser cache
+        // (max-age=120) is fine — it expires when react-query's library
+        // staleTime would normally refetch anyway, and library_signals
+        // invalidates that on every upload/delete.
         mockAuth('musician')
         libraryDocs = [makeLibDoc()]
         const req = makeReq('/api/library/list?all=true', { token: 'valid' })
         const res = await GET(req)
 
-        expect(res.headers.get('Cache-Control')).toContain('s-maxage=300')
+        const cc = res.headers.get('Cache-Control') || ''
+        expect(cc).toContain('max-age=120')
+        expect(cc).toContain('private')
+        // The whole point of the fix: no shared/CDN caching directives.
+        expect(cc).not.toContain('s-maxage')
+        expect(cc).not.toContain('public')
+        expect(cc).not.toContain('stale-while-revalidate')
     })
 
     it('does not set Cache-Control for non-all requests', async () => {

@@ -117,11 +117,17 @@ export const GET = createApiHandler(
 
         const response = NextResponse.json(body)
 
-        // Cache "all" responses at the CDN edge for 5 min, serve stale for 1hr while revalidating.
-        // The library is the same for all authenticated users, so CDN caching is safe.
-        // Browser cache (max-age) is shorter to pick up changes on manual refresh.
+        // Browser cache only — no CDN cache. The library_signals/latest
+        // listener in useLibrary fires invalidateQueries on every MCP/in-app
+        // upload+delete, but the refetch URL is stable (?all=true&collection=
+        // ...&v=2) so any CDN-cached response masked the change for up to
+        // s-maxage seconds. F5 doesn't override CDN cache — browsers can't.
+        // The stress test on 2026-05-15 caught this: MCP-imported charts
+        // never appeared in /library even after hard refresh. Library is
+        // ~180 files, so per-request cost without CDN caching is negligible.
+        // Keep the short browser cache so a click within 2 minutes is fast.
         if (all) {
-            response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=300, stale-while-revalidate=3600')
+            response.headers.set('Cache-Control', 'private, max-age=120')
         }
 
         return response
