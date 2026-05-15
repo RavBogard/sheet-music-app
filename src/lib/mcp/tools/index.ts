@@ -30,7 +30,7 @@ import {
     deleteChart,
     importChartFromDrive,
 } from "./library-upload"
-import { downloadChart } from "./library-download"
+import { downloadChart, generateGigPacket } from "./library-download"
 
 /**
  * Validate that an `eventDate` string is parseable as a date. Previously the
@@ -789,7 +789,7 @@ export function registerChartUploadTools(server: McpServer): void {
         "download_chart",
         {
             description:
-                "Download one chart's bytes from the library — returns base64-encoded content plus mimeType so Claude Desktop can save or print it. Charts are pulled from Firebase Storage first (fast), with Google Drive fallback for legacy entries. Hard cap at 20 MB per chart; oversized scans get a clear error suggesting re-upload as a compressed version. Use this when the user asks for a specific chart, wants to print one chart, or asks to see the actual notation. For a full setlist as a printable packet, use generate_gig_packet instead (coming soon).",
+                "Download one chart's bytes from the library — returns base64-encoded content plus mimeType so Claude Desktop can save or print it. Charts are pulled from Firebase Storage first (fast), with Google Drive fallback for legacy entries. Hard cap at 20 MB per chart; oversized scans get a clear error suggesting re-upload as a compressed version. Use this when the user asks for a specific chart, wants to print one chart, or asks to see the actual notation. For a full setlist as a printable packet, use generate_gig_packet instead.",
             inputSchema: {
                 fileId: z
                     .string()
@@ -801,5 +801,23 @@ export function registerChartUploadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await downloadChart(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "generate_gig_packet",
+        {
+            description:
+                "Assemble a setlist's bonded charts into one merged PDF the band can print — base64-encoded, ready to save or send. Iterates tracks in performance order; each bonded row contributes its pages to the packet (PDF copied page-by-page; JPEG/PNG embedded as full-page images; scraped text/plain charts rendered as monospaced pages). Charts that can't be embedded (HEIC, MusicXML/MuseScore, missing bytes, unsupported types) are listed on a 'Missing Charts' appendix page at the end AND returned in the response's `missingCharts` array so the caller knows what to follow up on. Hard 20 MB output cap; if exceeded, the tool errors with a hint to print sections separately or fetch individual charts via download_chart. Use this when the user wants 'the packet for Friday', 'print the whole setlist', or 'send the band their music for the week'. Without this tool the only path is the in-app gig-packet print flow.",
+            inputSchema: {
+                setlistId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Setlist id (from list_setlists or create_setlist). Every bonded track on the setlist contributes to the packet, in performance order.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await generateGigPacket(uidFrom(extra), args)),
     )
 }

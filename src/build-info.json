@@ -1,7 +1,7 @@
 {
-  "version": "5.4.0",
-  "commit": "0fcf62a",
-  "branch": "master",
-  "buildDate": "5/12/2026",
+  "version": "7.0.0",
+  "commit": "f650d94f0",
+  "branch": "feat/mcp-server",
+  "buildDate": "5/15/2026",
   "changelog": []
 }
