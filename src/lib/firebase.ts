@@ -214,28 +214,39 @@ if (typeof window !== "undefined") {
  * Call from any Firestore onSnapshot error handler.
  *
  * If the error is "Firestore shutting down" (caused by a multi-tab IDB
- * version change when a new deployment lands), reloads the page once to
- * recover.
+ * version change when a new deployment lands, or by SwCleanup clearing
+ * IDB while listeners are alive on a first visit), reloads the page once
+ * to recover.
+ *
+ * Returns `true` if the error WAS a shutdown error (caller should skip
+ * its own noisy `logger.error` to avoid console flood — recovery is
+ * already logging + reloading) or `false` if it was something else
+ * (caller should log + handle normally).
  *
  * One-shot per session — NOT debounced. T2.3 fix (2026-05-12): the
  * previous comment claimed "Debounced: subsequent calls within 5s are
  * no-ops" but the flag was never reset, so behavior was effectively
- * permanent. Renamed to `_shutdownRecoveryAttempted` to match
- * semantics. Locked-in design decision: a recurring shutdown error
- * that doesn't resolve after the first reload means something is
- * deeply broken; bombarding the user with reloads doesn't help. If
- * the first reload fails to resolve, surface to Sentry instead of
- * looping.
+ * permanent. Locked-in design decision: a recurring shutdown error that
+ * doesn't resolve after the first reload means something is deeply
+ * broken; bombarding the user with reloads doesn't help. If the first
+ * reload fails to resolve, surface to Sentry instead of looping.
+ *
+ * Console-flood fix (2026-05-15, cowork §7.2): the previous version
+ * returned void; callers always ran `logger.error("listener error:", err)`
+ * after, so a 5-listener cascade logged 5 ERROR lines in <1s before the
+ * reload landed. Returning a boolean lets each call site short-circuit
+ * its own log when recovery is in flight.
  */
 let _shutdownRecoveryAttempted = false
-export function recoverFromFirestoreShutdown(err: unknown): void {
-    if (typeof window === 'undefined') return
+export function recoverFromFirestoreShutdown(err: unknown): boolean {
+    if (typeof window === 'undefined') return false
     const msg = String((err as Error)?.message || err || '')
-    if (!msg.toLowerCase().includes('shutting down')) return
-    if (_shutdownRecoveryAttempted) return
+    if (!msg.toLowerCase().includes('shutting down')) return false
+    if (_shutdownRecoveryAttempted) return true  // already recovering — caller should stay quiet
     _shutdownRecoveryAttempted = true
     logger.warn('[FirestoreRecovery] Firestore shut down — reloading in 1.5s')
     setTimeout(() => window.location.reload(), 1500)
+    return true
 }
 
 export { app, db, auth, googleProvider };

@@ -89,8 +89,9 @@ export function subscribeToUserProfile(uid: string, callback: (profile: UserProf
             }
         }
     }, (err) => {
-        recoverFromFirestoreShutdown(err)
-        logger.error("[Users] Profile listener error:", err)
+        if (!recoverFromFirestoreShutdown(err)) {
+            logger.error("[Users] Profile listener error:", err)
+        }
     })
 }
 

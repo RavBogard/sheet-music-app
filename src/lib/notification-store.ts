@@ -64,8 +64,9 @@ export function subscribeToNotifications(
         }) as Notification)
         callback(notifs)
     }, (err) => {
-        recoverFromFirestoreShutdown(err)
-        logger.warn('[Notifications] Subscribe failed:', err)
+        if (!recoverFromFirestoreShutdown(err)) {
+            logger.warn('[Notifications] Subscribe failed:', err)
+        }
         callback([])
     })
 }

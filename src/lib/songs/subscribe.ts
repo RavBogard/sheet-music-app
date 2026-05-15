@@ -99,8 +99,9 @@ export function subscribeSongsLibrary(
             }
         },
         (err) => {
-            logger.warn('[subscribeSongsLibrary] snapshot error (listener stays alive)', err)
-            recoverFromFirestoreShutdown(err)
+            if (!recoverFromFirestoreShutdown(err)) {
+                logger.warn('[subscribeSongsLibrary] snapshot error (listener stays alive)', err)
+            }
         },
     )
 

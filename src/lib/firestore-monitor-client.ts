@@ -140,7 +140,7 @@ export class FirestoreMonitorClient {
                 // on every bridge state push (since bridge config lacks that field).
             },
             (err) => {
-                recoverFromFirestoreShutdown(err)
+                if (recoverFromFirestoreShutdown(err)) return  // recovery in flight; skip noisy log + skip incrementing the consecutive-errors disconnect counter
                 this._consecutiveErrors++
                 logger.error("[MonitorFS] State listener error (%d/%d):", this._consecutiveErrors, MAX_CONSECUTIVE_ERRORS, err.message)
 

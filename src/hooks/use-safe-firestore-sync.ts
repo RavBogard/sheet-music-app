@@ -111,8 +111,11 @@ export function useSafeFirestoreSync<T = any>(
                     if (!isMounted.current) return
                     if (timeoutId) clearTimeout(timeoutId)
 
-                    recoverFromFirestoreShutdown(err)
-                    logger.error("[useSafeFirestoreSync] onSnapshot error:", err)
+                    // If recovery is in flight, stay quiet — recovery logs once
+                    // and reloads, so per-listener error logs would just flood.
+                    if (!recoverFromFirestoreShutdown(err)) {
+                        logger.error("[useSafeFirestoreSync] onSnapshot error:", err)
+                    }
                     setState(prev => ({ ...prev, loading: false, error: err }))
                     if (options.onError) options.onError(err)
                 }

@@ -38,11 +38,14 @@ export const useAlertStore = create<AlertStore>((set) => ({
                 set({ alert: { visible: false, message: "", type: "info" }, loading: false })
             }
         }, (err) => {
-            recoverFromFirestoreShutdown(err)
-            // B02: surface the real error to telemetry — previously silently
-            // set loading: false with no diagnostic, making permission /
-            // rule failures invisible in prod.
-            logger.warn("[alert-store] globalAlert subscription failed:", err)
+            // If this is a shutdown cascade, the recovery handler will log + reload;
+            // staying quiet here prevents the console flood cowork flagged.
+            if (!recoverFromFirestoreShutdown(err)) {
+                // B02: surface the real error to telemetry — previously silently
+                // set loading: false with no diagnostic, making permission /
+                // rule failures invisible in prod.
+                logger.warn("[alert-store] globalAlert subscription failed:", err)
+            }
             set({ loading: false })
         })
     },

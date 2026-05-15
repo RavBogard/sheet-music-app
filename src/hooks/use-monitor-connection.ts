@@ -71,8 +71,9 @@ function ensureConnected(userId: string): void {
         const config = snap.data() as MonitorConfig
         useMonitorStore.getState().setConfig(config)
     }, (err) => {
-        recoverFromFirestoreShutdown(err)
-        logger.error("[MonitorConn] Config listener error:", err)
+        if (!recoverFromFirestoreShutdown(err)) {
+            logger.error("[MonitorConn] Config listener error:", err)
+        }
     })
 
     // Create and start the Firestore monitor client
