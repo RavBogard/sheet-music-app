@@ -14,9 +14,44 @@ import { getFirestore } from "firebase-admin/firestore"
 // library_index + songs writes — the parts most likely to drift. The two
 // external dependencies above don't have a local emulator, so we stand them
 // in. (Mocks must be declared with vi.mock BEFORE importing the SUT.)
-const mockUploadToStorage = vi.fn()
+// In-test Storage state: every `uploadToStorage` write records the (path, size)
+// so the atomic-guard's `getStorageObjectSize` read-verify reports the right
+// size, and `deleteStorageObjectAtPath` can drop the entry on rollback. Path
+// is reconstructed the same way library-upload's `getStoragePath` does — pdf
+// → `library/{fileId}.pdf`, text → `library/{fileId}` (no ext for non-
+// pdf/xml/audio), etc. Keep this in sync with firebase-storage.ts.
+const storageState = new Map<string, number>()
+function pathFor(fileId: string, mime: string): string {
+    const ext = mime.includes("pdf")
+        ? ".pdf"
+        : mime.includes("xml")
+            ? ".xml"
+            : mime.includes("audio")
+                ? ".mp3"
+                : ""
+    return `library/${fileId}${ext}`
+}
+const mockUploadToStorage = vi.fn(
+    async (fileId: string, buffer: Buffer, mime: string) => {
+        storageState.set(pathFor(fileId, mime), buffer.byteLength)
+        return `gs://test/${pathFor(fileId, mime)}`
+    },
+)
+const mockGetStorageObjectSize = vi.fn(async (path: string) =>
+    storageState.has(path) ? storageState.get(path)! : null,
+)
+const mockDeleteStorageObjectAtPath = vi.fn(async (path: string) => {
+    storageState.delete(path)
+})
 vi.mock("@/lib/firebase-storage", () => ({
-    uploadToStorage: (...args: unknown[]) => mockUploadToStorage(...args),
+    uploadToStorage: (...args: unknown[]) =>
+        mockUploadToStorage(
+            ...(args as [string, Buffer, string]),
+        ),
+    getStorageObjectSize: (...args: unknown[]) =>
+        mockGetStorageObjectSize(...(args as [string])),
+    deleteStorageObjectAtPath: (...args: unknown[]) =>
+        mockDeleteStorageObjectAtPath(...(args as [string])),
 }))
 
 const mockGenerateContent = vi.fn()
@@ -121,8 +156,12 @@ describe("MCP chart-upload tools (emulator)", () => {
     })
 
     beforeEach(async () => {
-        mockUploadToStorage.mockReset()
-        mockUploadToStorage.mockResolvedValue(undefined)
+        // Reset the in-memory Storage state (but keep the mock impl —
+        // tests rely on the upload→read-verify round-trip working).
+        storageState.clear()
+        mockUploadToStorage.mockClear()
+        mockGetStorageObjectSize.mockClear()
+        mockDeleteStorageObjectAtPath.mockClear()
         mockGenerateContent.mockReset()
         mockStorageFileDelete.mockReset()
         mockStorageFileDelete.mockResolvedValue(undefined)

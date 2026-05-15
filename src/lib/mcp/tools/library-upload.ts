@@ -385,6 +385,23 @@ export async function deleteChart(
     batch.delete(songRef)
     await batch.commit()
 
+    // Bump the library cache-invalidation signal so any open library views
+    // refetch — same channel processChartUpload writes to on success. Best-
+    // effort; never fail the delete on this.
+    try {
+        await db.collection("library_signals").doc("latest").set({
+            at: new Date().toISOString(),
+            fileId: args.fileId,
+            op: "delete",
+            by: uid,
+        })
+    } catch (sigErr) {
+        logger.warn(
+            `[delete_chart] library_signals write failed (non-fatal): ` +
+                (sigErr instanceof Error ? sigErr.message : sigErr),
+        )
+    }
+
     const storagePaths: string[] = []
     if (typeof indexData.storageUrl === "string" && indexData.storageUrl) {
         storagePaths.push(indexData.storageUrl)

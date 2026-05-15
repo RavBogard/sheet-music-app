@@ -5,7 +5,11 @@
 import 'server-only'
 import crypto from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { uploadToStorage } from "@/lib/firebase-storage"
+import {
+    uploadToStorage,
+    getStorageObjectSize,
+    deleteStorageObjectAtPath,
+} from "@/lib/firebase-storage"
 import { processMuseScoreFile } from "@/lib/musescore-converter"
 import { levenshteinDistance } from "@/lib/string-utils"
 import { logger } from "@/lib/logger"
@@ -97,6 +101,25 @@ function extForContentType(ct: string): string {
     if (ct === "image/png") return ".png"
     if (ct === "image/jpeg") return ".jpg"
     return ".xml"
+}
+
+/**
+ * Actual Storage path computed the SAME way firebase-storage.ts:getStoragePath
+ * does — extension only for pdf/xml/audio. The library_index `storageUrl`
+ * field uses extForContentType which adds .txt/.png/.jpg too, so the index
+ * value can mismatch the real Storage path for text/image uploads (kept for
+ * back-compat with existing readers). Use this for the atomic-guard's
+ * read-verify so we look in the same place uploadToStorage wrote to.
+ */
+function actualStoragePath(fileId: string, contentType: string): string {
+    const ext = contentType.includes("pdf")
+        ? ".pdf"
+        : contentType.includes("xml")
+            ? ".xml"
+            : contentType.includes("audio")
+                ? ".mp3"
+                : ""
+    return `library/${fileId}${ext}`
 }
 
 export async function processChartUpload(
@@ -350,6 +373,18 @@ export async function processChartUpload(
     }
 
     // ─── 4. Write to Storage + library_index + songs ───────────────────────
+    //
+    // Atomic-guard pattern (added 2026-05-15 after the 3-orphan incident):
+    // 1) write to Storage
+    // 2) READ-VERIFY: re-fetch the blob's metadata and confirm size matches
+    //    the buffer. If Storage silently dropped bytes, we abort BEFORE the
+    //    Firestore write — no orphan index entry.
+    // 3) write Firestore (library_index + songs)
+    // 4) if step 3 throws for any reason, compensating-delete the Storage
+    //    blob so we don't leave reverse orphans (bytes without an index).
+    // 5) bump library_signals/latest to broadcast cache invalidation to all
+    //    in-browser library views (MCP-driven uploads need this — they don't
+    //    fire the in-tab BroadcastChannel).
 
     stage("storage-upload:start", {
         fileId,
@@ -360,6 +395,36 @@ export async function processChartUpload(
     stage("storage-upload:done")
 
     const storageUrl = `library/${fileId}${extForContentType(contentType)}`
+
+    // Read-verify: confirm the blob exists with non-zero size at the path we
+    // just wrote to. Catches any silent-failure class where `file.save()`
+    // resolved but no bytes landed. Bucket-name resolution mirrors
+    // firebase-storage.ts:getBucket().
+    stage("storage-verify:start")
+    const realStoragePath = actualStoragePath(fileId, contentType)
+    const verifiedSize = await getStorageObjectSize(realStoragePath)
+    if (verifiedSize === null || verifiedSize <= 0) {
+        stage("storage-verify:missing", { realStoragePath })
+        return {
+            ok: false,
+            status: 500,
+            code: "server_error",
+            error: `Storage write reported success but the blob is missing at ${realStoragePath} — refusing to write index entry (would create an orphan).`,
+        }
+    }
+    if (verifiedSize !== buffer.byteLength) {
+        stage("storage-verify:size-mismatch", {
+            wrote: buffer.byteLength,
+            got: verifiedSize,
+        })
+        return {
+            ok: false,
+            status: 500,
+            code: "server_error",
+            error: `Storage size mismatch (wrote ${buffer.byteLength}, read back ${verifiedSize}) — refusing to write index entry.`,
+        }
+    }
+    stage("storage-verify:ok", { size: verifiedSize })
 
     const indexEntry: Record<string, unknown> = {
         name: title,
@@ -384,21 +449,65 @@ export async function processChartUpload(
     if (sourceFormat) indexEntry.sourceFormat = sourceFormat
 
     stage("firestore-write:start")
-    await db.collection("library_index").doc(fileId).set(indexEntry)
+    try {
+        await db.collection("library_index").doc(fileId).set(indexEntry)
 
-    await db
-        .collection("songs")
-        .doc(fileId)
-        .set(
-            {
-                title,
-                normalizedTitle: title.toLowerCase(),
-                status: "active",
-                updatedAt: Date.now(),
-            },
-            { merge: true },
+        await db
+            .collection("songs")
+            .doc(fileId)
+            .set(
+                {
+                    title,
+                    normalizedTitle: title.toLowerCase(),
+                    status: "active",
+                    updatedAt: Date.now(),
+                },
+                { merge: true },
+            )
+        stage("firestore-write:done")
+    } catch (err) {
+        // Compensating delete: take the Storage blob down so the failed
+        // upload doesn't leave a reverse orphan (bytes-without-index).
+        const message = err instanceof Error ? err.message : "Unknown error"
+        stage("firestore-write:failed", { message })
+        try {
+            await deleteStorageObjectAtPath(realStoragePath)
+            stage("firestore-write:storage-rolled-back")
+        } catch (rbErr) {
+            const rbMessage =
+                rbErr instanceof Error ? rbErr.message : "Unknown error"
+            stage("firestore-write:rollback-failed", { rbMessage })
+            logger.error(
+                `[Upload ${traceId}] Storage rollback failed for ${storageUrl}: ${rbMessage}`,
+            )
+        }
+        return {
+            ok: false,
+            status: 500,
+            code: "server_error",
+            error: `Firestore index write failed (${message}); Storage rolled back.`,
+        }
+    }
+
+    // Best-effort cache-invalidation signal — open-tab library views listen
+    // on this single doc and refetch the React Query cache when it changes.
+    // A failure here MUST NOT fail the upload (the chart is fully written).
+    try {
+        await db.collection("library_signals").doc("latest").set({
+            at: new Date().toISOString(),
+            fileId,
+            op: "upload",
+            by: input.uploaderUid,
+        })
+    } catch (sigErr) {
+        const message =
+            sigErr instanceof Error ? sigErr.message : "Unknown error"
+        stage("signal-write:failed", { message })
+        logger.warn(
+            `[Upload ${traceId}] library_signals write failed (non-fatal): ${message}`,
         )
-    stage("firestore-write:done")
+    }
+
     stage("complete")
 
     return {
@@ -410,3 +519,4 @@ export async function processChartUpload(
         collection,
     }
 }
+

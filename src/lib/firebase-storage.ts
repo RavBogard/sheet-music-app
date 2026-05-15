@@ -220,6 +220,38 @@ export async function uploadRecordingToStorage(
 }
 
 /**
+ * 2026-05-15 — read-verify the size of a Storage object at an exact path.
+ * Returns the byte count if present, null if missing or on any error.
+ * Used by processChartUpload's atomic-guard to confirm the Storage write
+ * actually persisted bytes before proceeding to the Firestore writes.
+ */
+export async function getStorageObjectSize(
+    path: string,
+): Promise<number | null> {
+    try {
+        const bucket = getBucket()
+        const file = bucket.file(path)
+        const [exists] = await file.exists()
+        if (!exists) return null
+        const [meta] = await file.getMetadata()
+        const size = Number(meta.size || 0)
+        return Number.isFinite(size) ? size : null
+    } catch {
+        return null
+    }
+}
+
+/**
+ * 2026-05-15 — compensating-delete for a Storage object at an exact path.
+ * Used by processChartUpload's atomic-guard when a downstream Firestore
+ * write fails — rolls back the Storage blob so no reverse orphan stays.
+ */
+export async function deleteStorageObjectAtPath(path: string): Promise<void> {
+    const bucket = getBucket()
+    await bucket.file(path).delete()
+}
+
+/**
  * v70-03: Download a file from Storage at an EXACT known path.
  * Unlike downloadFromStorage (which takes a fileId and guesses library/ paths),
  * recordings docs already carry their exact `storagePath` — so this does a

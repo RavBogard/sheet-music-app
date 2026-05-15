@@ -240,6 +240,16 @@ service cloud.firestore {
       }
     }
 
+    // LIBRARY SIGNALS — single doc bumped by every successful upload/delete
+    // through processChartUpload + delete_chart. Authenticated clients
+    // subscribe via onSnapshot to invalidate their React Query cache so
+    // MCP-driven uploads surface without a hard refresh. Writes are
+    // server-only (admin SDK).
+    match /library_signals/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
     // SETLIST HISTORY (audit trail) — append-only from authenticated users, admin reads
     match /setlists/{setlistId}/history/{entryId} {
       allow read: if isAdmin();
