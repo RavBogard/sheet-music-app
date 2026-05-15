@@ -39,6 +39,11 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': resolve(__dirname, './src'),
+            // v70-08-04 'server-only' is a Next.js bundler guard — runtime
+            // throws in browser bundles. Vitest isn't a Next.js runtime, so
+            // alias it to an empty stub for files (e.g. library-upload.ts)
+            // that import it for compile-time safety.
+            'server-only': resolve(__dirname, './src/test-stubs/server-only.ts'),
         },
     },
 })
