@@ -88,15 +88,22 @@ describe("MCP setlist write tools (emulator)", () => {
         return r.setlistId
     }
 
-    it("create_setlist makes an empty setlist owned by the creator", async () => {
+    it("create_setlist makes an empty setlist owned by the creator and echoes owner (G-16)", async () => {
         const result = (await createSetlist(ADMIN, {
             name: "Shabbat Morning",
             eventDate: "2026-06-07",
             rabbi: "Daniel",
-        })) as { setlistId: string; trackCount: number }
+        })) as {
+            setlistId: string
+            trackCount: number
+            ownerId: string
+            ownerName: string
+        }
 
         expect(result.setlistId).toBeTruthy()
         expect(result.trackCount).toBe(0)
+        expect(result.ownerId).toBe(ADMIN)
+        expect(result.ownerName).toBe("Rabbi Daniel")
 
         const doc = await db().collection("setlists").doc(result.setlistId).get()
         const data = doc.data()!
@@ -111,12 +118,17 @@ describe("MCP setlist write tools (emulator)", () => {
         const id = await newSetlist(ADMIN)
 
         // The creator (admin) edits.
-        expect(await updateSetlist(ADMIN, { id, name: "Renamed" })).toEqual({ ok: true })
+        expect(await updateSetlist(ADMIN, { id, name: "Renamed" })).toMatchObject({
+            ok: true,
+            setlist: { id, name: "Renamed" },
+        })
         expect((await db().collection("setlists").doc(id).get()).data()!.name).toBe("Renamed")
 
         // A band leader edits a setlist they did NOT create — role-based, not
         // owner-based access.
-        expect(await updateSetlist(LEADER, { id, name: "Leader Edit" })).toEqual({ ok: true })
+        expect(
+            await updateSetlist(LEADER, { id, name: "Leader Edit" }),
+        ).toMatchObject({ ok: true, setlist: { id, name: "Leader Edit" } })
         expect((await db().collection("setlists").doc(id).get()).data()!.name).toBe(
             "Leader Edit",
         )
@@ -133,6 +145,32 @@ describe("MCP setlist write tools (emulator)", () => {
         expect(await updateSetlist(ADMIN, { id: "nope", name: "x" })).toEqual({
             error: "Setlist not found",
         })
+    })
+
+    it("update_setlist echoes the post-update record (G-11)", async () => {
+        const id = await newSetlist()
+        const r = (await updateSetlist(ADMIN, {
+            id,
+            name: "Echo Test",
+            eventDate: "2026-07-04",
+            rabbi: "Rabbi Cantor",
+            serviceType: "shabbat-morning",
+            serviceNotes: "guest violinist",
+        })) as { ok: true; setlist: Record<string, unknown> }
+        expect(r.ok).toBe(true)
+        expect(r.setlist).toMatchObject({
+            id,
+            name: "Echo Test",
+            rabbi: "Rabbi Cantor",
+            serviceNotes: "guest violinist",
+        })
+        // eventDate is persisted as a Firestore Timestamp; the echo
+        // surfaces it as an ISO string representing that instant.
+        expect(typeof r.setlist.eventDate).toBe("string")
+        expect((r.setlist.eventDate as string).startsWith("2026-07-04")).toBe(true)
+        // serviceType is persisted as templateType on the doc; the echo
+        // surfaces it under the public name.
+        expect(r.setlist.serviceType).toBe("shabbat-morning")
     })
 
     it("a member account is denied every write tool", async () => {

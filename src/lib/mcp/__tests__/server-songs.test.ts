@@ -64,7 +64,12 @@ describe("getAllSongs / toSongRecord", () => {
     it("omits key/bpm/lead when neither defaults nor recent carry them", async () => {
         mockCollectionGet.mockResolvedValue({ docs: [docOf("s1", { title: "Plain" })] })
         const [s] = await getAllSongs()
-        expect(s).toEqual({ id: "s1", title: "Plain", fileName: "Plain" })
+        expect(s).toEqual({
+            id: "s1",
+            title: "Plain",
+            fileName: "Plain",
+            status: "active",
+        })
     })
 
     it("exposes the raw catalog title as fileName (the chart filename incl. extension)", async () => {
@@ -82,6 +87,14 @@ describe("getAllSongs / toSongRecord", () => {
         })
         const [s] = await getAllSongs()
         expect(s.status).toBe("archived")
+    })
+
+    it("defaults status to 'active' when the catalog row omits one (G-15)", async () => {
+        mockCollectionGet.mockResolvedValue({
+            docs: [docOf("s1", { title: "Plain" })],
+        })
+        const [s] = await getAllSongs()
+        expect(s.status).toBe("active")
     })
 
     it("returns [] on a Firestore error", async () => {
@@ -102,6 +115,7 @@ describe("getSongById", () => {
             title: "Lecha Dodi",
             fileName: "Lecha Dodi.pdf",
             key: "D",
+            status: "active",
         })
     })
 

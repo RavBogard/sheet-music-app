@@ -67,7 +67,10 @@ function toSongRecord(id: string, data: Record<string, unknown>): SongRecord {
     if (key !== undefined) rec.key = key
     if (bpm !== undefined) rec.bpm = bpm
     if (lead !== undefined) rec.lead = lead
-    if (typeof data.status === "string") rec.status = data.status
+    // G-15: default `status` to "active" when missing so every row in
+    // search_library / get_song has a consistent shape. Curated rows that
+    // don't carry an explicit status are active by convention.
+    rec.status = typeof data.status === "string" ? data.status : "active"
     return rec
 }
 

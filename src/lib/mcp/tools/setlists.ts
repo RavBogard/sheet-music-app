@@ -25,6 +25,8 @@ interface SetlistSummary {
     songCount?: number
 }
 
+type ToolError = { error: string }
+
 /** serializeSetlist has already turned Firestore Timestamps into ISO strings. */
 function isoOf(v: unknown): string | null {
     return typeof v === "string" ? v : null
@@ -33,7 +35,17 @@ function isoOf(v: unknown): string | null {
 export async function listSetlists(
     _uid: string,
     args: ListSetlistsArgs,
-): Promise<SetlistSummary[]> {
+): Promise<SetlistSummary[] | ToolError> {
+    // G-14: previously bad `from`/`to` silently produced NaN and skipped
+    // filtering, which made `list_setlists({from: "not-a-date"})` look like a
+    // full-list dump — agents had no way to notice they'd typoed an ISO date.
+    if (args.from !== undefined && Number.isNaN(Date.parse(args.from))) {
+        return { error: `from must be an ISO date string (got "${args.from}")` }
+    }
+    if (args.to !== undefined && Number.isNaN(Date.parse(args.to))) {
+        return { error: `to must be an ISO date string (got "${args.to}")` }
+    }
+
     const all = await getAllSetlists() // serialized, date desc, capped at 50
     const from = args.from ? Date.parse(args.from) : NaN
     const to = args.to ? Date.parse(args.to) : NaN

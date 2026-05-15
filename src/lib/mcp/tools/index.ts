@@ -113,7 +113,7 @@ export function registerReadTools(server: McpServer): void {
         "search_library",
         {
             description:
-                "Search the song library by title text, with optional musical key and BPM-range filters. Use when the user wants to find songs to add to a setlist. BPMs are integers. Returns metadata only — never chart files.",
+                "Search the song library by title text, with optional musical key and BPM-range filters. Use when the user wants to find songs to add to a setlist. BPMs are integers. Returns metadata only — never chart files. Pass an empty query (or omit it) to browse the first N library entries — useful for catalog discovery. Every result row carries `status` ('active' by default if the catalog row omits one).",
             inputSchema: {
                 query: z
                     .string()
@@ -158,7 +158,7 @@ export function registerWriteTools(server: McpServer): void {
         "create_setlist",
         {
             description:
-                "Create a new, empty setlist owned by the user. Use when the user wants to start a new service/gig. Returns the new setlist id — follow up with add_track_to_setlist to populate it. eventDate is an ISO date string. Requires an admin or band leader account.",
+                "Create a new, empty setlist owned by the user. Use when the user wants to start a new service/gig. Returns the new setlist id, trackCount, and the owner's ownerId + ownerName — follow up with add_track_to_setlist to populate it. eventDate is an ISO date string. Requires an admin or band leader account.",
             inputSchema: {
                 name: z.string().min(1).describe("Setlist name, e.g. 'Shabbat Morning — June 7'"),
                 eventDate: eventDateSchema.describe(
@@ -178,7 +178,7 @@ export function registerWriteTools(server: McpServer): void {
         "update_setlist",
         {
             description:
-                "Update a setlist's metadata (name, date, service type, rabbi, notes). Metadata only — does NOT touch tracks; use the track tools for that. Admins and band leaders may update it.",
+                "Update a setlist's metadata (name, date, service type, rabbi, notes). Metadata only — does NOT touch tracks; use the track tools for that. Admins and band leaders may update it. Returns the post-update setlist record (name, eventDate, rabbi, serviceType, serviceNotes) so callers can confirm the patch landed without a follow-up get_setlist.",
             inputSchema: {
                 id: z.string().describe("Setlist id"),
                 name: z.string().min(1).optional().describe("New setlist name"),
@@ -294,7 +294,7 @@ export function registerMonitorTools(server: McpServer): void {
         "list_monitor_buses",
         {
             description:
-                "List the personal-IEM monitor buses, their assignments, the hardware bridge status, and (for admins/sound engineers) the X32 matrix outputs. Always call this first to discover bus and channel indexes before adjusting faders.",
+                "List the personal-IEM monitor buses, their assignments, the hardware bridge status, and (for admins/sound engineers) the X32 matrix outputs. Always call this first to discover bus and channel indexes before adjusting faders. Response includes `bridge.clients` — the number of clients currently connected to the bridge daemon (iPads + this MCP session). `bridge.x32Connected` is an optimistic hint from the daemon; treat it as best-effort, not a guarantee the X32 hardware applied a write.",
             inputSchema: {},
         },
         async (_args, extra) =>

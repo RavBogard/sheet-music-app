@@ -58,7 +58,10 @@ export interface CreateSetlistArgs {
 export async function createSetlist(
     uid: string,
     args: CreateSetlistArgs,
-): Promise<{ setlistId: string; trackCount: number } | ToolError> {
+): Promise<
+    | { setlistId: string; trackCount: number; ownerId: string; ownerName: string }
+    | ToolError
+> {
     initAdmin()
     const db = getFirestore()
 
@@ -76,7 +79,15 @@ export async function createSetlist(
         rabbi: args.rabbi,
         tracks: [],
     })
-    return { setlistId: result.setlistId, trackCount: result.trackCount }
+    // G-16: echo owner so callers don't need a follow-up get_setlist to learn
+    // who the setlist is owned by (the create_setlist's caller IS the owner,
+    // but agent UIs benefit from seeing it in the response).
+    return {
+        setlistId: result.setlistId,
+        trackCount: result.trackCount,
+        ownerId: uid,
+        ownerName,
+    }
 }
 
 // ─── update_setlist ─────────────────────────────────────────────────────────
@@ -93,7 +104,20 @@ export interface UpdateSetlistArgs {
 export async function updateSetlist(
     uid: string,
     args: UpdateSetlistArgs,
-): Promise<{ ok: true } | ToolError> {
+): Promise<
+    | {
+          ok: true
+          setlist: {
+              id: string
+              name: string | null
+              eventDate: string | null
+              rabbi: string | null
+              serviceType: string | null
+              serviceNotes: string | null
+          }
+      }
+    | ToolError
+> {
     initAdmin()
     const db = getFirestore()
 
@@ -110,7 +134,41 @@ export async function updateSetlist(
     if (args.serviceNotes !== undefined) patch.serviceNotes = args.serviceNotes
 
     await updateSetlistServerSide(args.id, patch)
-    return { ok: true }
+
+    // G-11: echo the post-update state so callers don't need a follow-up
+    // get_setlist to confirm the patch landed. serviceType is persisted as
+    // `templateType` on the setlist doc — surface it under its public name.
+    // eventDate is persisted as a Firestore Timestamp; convert to ISO.
+    const updated = (
+        await db.collection("setlists").doc(args.id).get()
+    ).data() as Record<string, unknown> | undefined
+    const str = (v: unknown): string | null => {
+        if (typeof v === "string") return v
+        if (
+            v &&
+            typeof v === "object" &&
+            "toDate" in v &&
+            typeof (v as { toDate: unknown }).toDate === "function"
+        ) {
+            try {
+                return (v as { toDate(): Date }).toDate().toISOString()
+            } catch {
+                return null
+            }
+        }
+        return null
+    }
+    return {
+        ok: true,
+        setlist: {
+            id: args.id,
+            name: str(updated?.name),
+            eventDate: str(updated?.eventDate),
+            rabbi: str(updated?.rabbi),
+            serviceType: str(updated?.templateType ?? updated?.serviceType),
+            serviceNotes: str(updated?.serviceNotes),
+        },
+    }
 }
 
 // ─── add_track_to_setlist ───────────────────────────────────────────────────

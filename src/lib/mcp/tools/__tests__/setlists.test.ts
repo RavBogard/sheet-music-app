@@ -48,7 +48,7 @@ describe("listSetlists", () => {
     })
 
     it("returns id/name/dates/trackCount, including songCount only when present", async () => {
-        const r = await listSetlists("u", {})
+        const r = (await listSetlists("u", {})) as Array<Record<string, unknown>>
         expect(r).toHaveLength(3)
         expect(r[0]).toEqual({
             id: "a",
@@ -62,19 +62,34 @@ describe("listSetlists", () => {
     })
 
     it("filters by `from` date against the event date; undated setlists always pass", async () => {
-        const r = await listSetlists("u", { from: "2026-05-20" })
+        const r = (await listSetlists("u", { from: "2026-05-20" })) as Array<{
+            id: string
+        }>
         expect(r.map((s) => s.id).sort()).toEqual(["a", "c"])
     })
 
     it("filters by `to` date", async () => {
-        const r = await listSetlists("u", { to: "2026-05-20" })
+        const r = (await listSetlists("u", { to: "2026-05-20" })) as Array<{
+            id: string
+        }>
         expect(r.map((s) => s.id).sort()).toEqual(["b", "c"])
     })
 
     it("applies the limit", async () => {
-        const r = await listSetlists("u", { limit: 1 })
+        const r = (await listSetlists("u", { limit: 1 })) as Array<{
+            id: string
+        }>
         expect(r).toHaveLength(1)
         expect(r[0].id).toBe("a")
+    })
+
+    it("rejects an unparseable `from` / `to` with a validation error (G-14)", async () => {
+        expect(await listSetlists("u", { from: "not-a-date" })).toEqual({
+            error: expect.stringContaining("from must be an ISO date"),
+        })
+        expect(await listSetlists("u", { to: "garbage" })).toEqual({
+            error: expect.stringContaining("to must be an ISO date"),
+        })
     })
 })
 
