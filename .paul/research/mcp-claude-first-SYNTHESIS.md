@@ -208,19 +208,19 @@ As each MCP-CF phase ships and stabilizes, the corresponding UI surface can reti
 
 ---
 
-## Open questions for Daniel
+## Locked decisions (Daniel, 2026-05-15)
 
-Five decisions to make alongside this roadmap:
+The five open questions are resolved. These constraints feed directly into the CF-phase plans.
 
-1. **Soft-delete window length.** 24h, 48h, or 72h? Tradeoff: longer windows are safer but accumulate Firestore reads on filtered list queries. Recommend 48h.
+1. **Soft-delete window: 72h.** Covers a Friday-misclick → Monday-morning notice cadence. Accumulates more filtered-list Firestore reads than 48h, but at CRC's scale (a few dozen setlists, hundreds of charts) the cost is negligible. Applies to both setlists and charts. The purge job hard-deletes at the 72h boundary.
 
-2. **publish_setlist email integration.** Use the existing `/api/setlist/publish` notification path (Resend + push + SMS)? Or build a Claude-friendlier rendering pipeline? Recommend reuse — the UI's notification stack is battle-tested.
+2. **publish_setlist reuses `/api/setlist/publish`.** Wraps the existing route's body (same pattern Wave 3 used for `library/upload` and `charts/scrape`). Per-musician opt-out, Resend + push + SMS, isPublished/notified/emailed/usageRecorded tracking all carry over unchanged. The MCP tool surface adds dry-run default + recipient echo in the dry-run response.
 
-3. **`section` vs `header` resolution.** Pick `header` (matches templates + performance + importer + MCP) and add a server-side normalizer + one-time backfill? Or pick `section` and rewrite all the other callsites? Recommend `header` — fewer call sites move.
+3. **`header` wins; `section` retires.** Server-side normalizer aliases `'section'` → `'header'` on every track write (handles in-flight UI traffic during rollout). One-time backfill script rewrites existing Firestore rows where `type === 'section'` to `type === 'header'`. AddBar+TypeCell+BatchActionBar then refactor to emit `'header'` directly; the normalizer can stay as a defense-in-depth alias or retire after the UI refactor.
 
-4. **Should `clone_setlist` accept the override list (tweaks) or chain with `bulk_update_tracks`?** Atomic-with-tweaks is one tool call, but a longer signature. Recommend: accept tweaks for the common cases (replacePositions, removePositions, leadsByPosition) but recommend `bulk_update_tracks` for anything more complex.
+4. **`clone_setlist` signature: atomic with tweaks for common cases.** `clone_setlist(sourceId, {name, eventDate, overrides: {replacePositions, removePositions, leadsByPosition}})` — one tool call, atomic write. Anything more complex (key changes, type changes, custom titles, BPM edits) chains via `bulk_update_tracks` after.
 
-5. **Document-import: single-call vs three-call API?** Cowork's three-tool design lets Claude negotiate, but a single `import_setlist_from_document` is friendlier for the happy path. Recommend: ship both — the simple `import_setlist_from_document(fileBase64, mimeType, options)` for happy path, with `import_document_to_outline` + `create_setlist_from_outline` exposed for the careful case.
+5. **Document-import: ship both APIs.** Three-call layered pipeline (`import_document_to_outline` → `resolve_outline_to_library` → `create_setlist_from_outline`) per cowork's T8 design, plus a happy-path shortcut (`import_setlist_from_document(fileBase64, mimeType, options)`) that runs all three under the hood when no negotiation is needed. Both wrap the same server-side pipeline; the shortcut is a thin wrapper.
 
 ---
 
