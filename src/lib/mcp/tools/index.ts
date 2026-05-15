@@ -28,6 +28,7 @@ import {
     saveScrapedChart,
     deleteChart,
 } from "./library-upload"
+import { downloadChart } from "./library-download"
 
 /**
  * Validate that an `eventDate` string is parseable as a date. Previously the
@@ -642,5 +643,23 @@ export function registerChartUploadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await deleteChart(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "download_chart",
+        {
+            description:
+                "Download one chart's bytes from the library — returns base64-encoded content plus mimeType so Claude Desktop can save or print it. Charts are pulled from Firebase Storage first (fast), with Google Drive fallback for legacy entries. Hard cap at 20 MB per chart; oversized scans get a clear error suggesting re-upload as a compressed version. Use this when the user asks for a specific chart, wants to print one chart, or asks to see the actual notation. For a full setlist as a printable packet, use generate_gig_packet instead (coming soon).",
+            inputSchema: {
+                fileId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Chart fileId (upload-{uuid} id from upload_chart, or any library_index doc id; same id used as add_track_to_setlist's songId).",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await downloadChart(uidFrom(extra), args)),
     )
 }
