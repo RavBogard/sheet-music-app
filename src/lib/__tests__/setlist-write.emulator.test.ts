@@ -126,6 +126,33 @@ describe('setlist-write (real Firestore emulator)', () => {
         })
     })
 
+    it('§3.4: date-only eventDate string ("2026-05-22") stores as local noon, NOT UTC midnight', async () => {
+        // Cowork CF1 UAT regression. Previously `new Date("2026-05-22")` parsed
+        // as UTC midnight; in CDT (UTC-5) that renders as Thursday May 21.
+        // The toTimestamp helper now coerces date-only strings to local noon
+        // so the calendar day round-trips correctly across timezones.
+        const result = await createSetlistServerSide({
+            name: 'Friday Night',
+            ownerId: 'uid-tz',
+            ownerName: 'Date Tester',
+            eventDate: '2026-05-22',
+            tracks: [{ type: 'song', title: 'Single Track' }],
+        })
+
+        const s = (
+            await db.collection('setlists').doc(result.setlistId).get()
+        ).data()!
+        const stored: { toDate(): Date } = s.eventDate
+        const d = stored.toDate()
+        // The CALENDAR day must be May 22 in local time (toLocaleDateString
+        // uses local), regardless of timezone the test runs in.
+        expect(d.getFullYear()).toBe(2026)
+        expect(d.getMonth()).toBe(4) // May is month index 4
+        expect(d.getDate()).toBe(22)
+        // Time-of-day is noon — far from any DST boundary.
+        expect(d.getHours()).toBe(12)
+    })
+
     it('AC-2: updateSetlistServerSide patches metadata; leaves tracks / trackCount / ownerId untouched', async () => {
         const created = await createSetlistServerSide({
             name: 'Before',

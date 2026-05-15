@@ -56,10 +56,26 @@ export type SetlistMetadataPatch = Partial<{
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
+
 /** Date | ISO string → a Firestore Timestamp (firestoreTimestampSchema
  *  accepts Date / {seconds,nanoseconds} / string; a server-side Timestamp is
- *  the cleanest representation). */
+ *  the cleanest representation).
+ *
+ *  Date-only strings (`"2026-05-22"`) are coerced to LOCAL NOON on that
+ *  calendar day. Cowork CF1 UAT (2026-05-15, §3.4) flagged that
+ *  `new Date("2026-05-22")` parses as UTC midnight per ECMAScript spec —
+ *  in CDT (UTC-5) that renders as "Thursday May 21", one day off the
+ *  intended Friday May 22. Noon is the safest local anchor: a DST flip
+ *  is ±1h around 2am, never near noon, so the calendar day is stable
+ *  across the year. Datetimes with explicit time-of-day (`"2026-05-22T19:00"`)
+ *  pass through unchanged.
+ */
 function toTimestamp(value: Date | string): Timestamp {
+    if (typeof value === "string" && DATE_ONLY_RE.test(value)) {
+        const [y, m, d] = value.split("-").map(Number)
+        return Timestamp.fromDate(new Date(y, m - 1, d, 12, 0, 0, 0))
+    }
     return Timestamp.fromDate(value instanceof Date ? value : new Date(value))
 }
 
