@@ -224,12 +224,36 @@ Five decisions to make alongside this roadmap:
 
 ---
 
+## Re-run confirmation (appendix)
+
+The targeted re-run completed with a refreshed connector — all 22 tools visible, no missing schemas. Three stale-cache verdicts moved from "partial" to "yes":
+
+- **T1R clone fidelity:** widened type enum fully closes the prior fidelity loss. 19-row source cloned row-for-row with `reading`/`prayer` rows preserved as first-class types. Confirms the Wave 5 G-10 widening is healthy in production.
+- **T4R semantic inserts:** `V'ahavta` (reading) and `Niggun` (transition) round-trip correctly via the widened enum. No silent coercion to `song`.
+- **T7R library cleanup:** all 11 leftover charts (2 EVAL + 9 STRESS) deleted via `delete_chart`. `search_library({query:"EVAL"})` and `search_library({query:"STRESS"})` both return `[]`. Library at baseline.
+
+Plus two regression probes:
+
+- **G-3 admin gate (Wave 4) confirmed healthy in production.** Admin upload to `core` and `supplemental` collections both succeeded; the upload response echoes the correct `collection` field; `delete_chart` reverses cleanly. Round-trip works end-to-end.
+- **`get_matrix` confirmed reachable** with a live 6-matrix snapshot. X32 hardware is actually responsive (not offline as the prompt assumed) — bridge is serving live or recently-cached state. `matrixIndex: 99` is schema-rejected before reaching the server (tighter contract than expected). Worth a quick sound-team sanity check on bridge state.
+
+Three small new findings to fold into the roadmap:
+
+- **NEW: `get_song` doesn't echo `collection`.** Catalog placement is only legible via the original `upload_chart` response envelope; after-the-fact audit requires going back to that. Fix: add `collection` to the `get_song` response. Trivial; fold into MCP-CF5 alongside the chart-preview tool, OR ship as a tiny one-line patch immediately.
+- **NUANCE: `clone_setlist` urgency reframed.** The 22-call clone in T1R completed without semantic loss, so the ask is now **"ergonomics + atomicity"** rather than "fidelity". Still high-priority (cowork's #3, my #1), but the framing changes: the value is one-call clone-and-tweak with atomic-or-nothing semantics, NOT correctness recovery.
+- **CONFIRMATION: bridge is responsive.** Wave 4 G-1/G-2 PUNT decision (fire-and-forget caveats in tool descriptions, no MCP-side staleness guardrail) still stands. The bridge-side `x32Connected` flag is operational. Worth one cycle of "is the bridge actually serving fresh state or stale-cached?" — but doesn't unblock anything immediately.
+
+Cowork's closing verdict: **all five top-priority missing tools (`clone_setlist`, `update_track`, `bulk_update_tracks`, `publish_setlist`, soft-delete) still stand as written.** The headline roadmap doesn't move.
+
+---
+
 ## Status of artifacts
 
 - ✅ Codebase findings doc committed (`6fe3de2e`).
 - ✅ Cowork report received and analyzed.
-- ✅ Synthesis (this doc) — committing now.
-- ⏳ Re-run prompt ready for cowork (`mcp-claude-first-cowork-RERUN-PROMPT.md`). Will produce `mcp-claude-first-cowork-RERUN-REPORT.md`.
-- ⚠️ Cleanup: 2 EVAL charts + 9 STRESS TEST charts still orphaned in library; the re-run sweeps them via `delete_chart`.
+- ✅ Re-run prompt + report both complete; appendix folded in above.
+- ✅ Library swept to baseline (zero EVAL, zero STRESS).
+- ✅ G-3 admin gate confirmed healthy in production.
+- ✅ Wave 4 (`get_matrix`, `delete_chart`) + Wave 5 (widened type enum) confirmed reachable via refreshed connector.
 
-When the re-run report lands, this synthesis gets a small appendix tightening T1/T4/T7 verdicts and confirming Wave 4 G-3 is healthy in production. The headline roadmap doesn't change.
+The eval is complete. Next step is Daniel's call on which CF phase to start. CF1 (`update_track` + `bulk_update_tracks`) is the recommended first move — foundational for everything else, cowork witnessed the partial-failure cliff live, and it unblocks per-row edits which is the noisiest gap in the current MCP.
