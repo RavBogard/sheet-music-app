@@ -1,5 +1,11 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
+> **⚠️ 2026-05-15 AUTHORING-MODEL PIVOT — do NOT auto-pick the "next milestone" from the v70-08 AUDIT carry-forwards below.**
+>
+> The active primary workstream is now the MCP server (`feat/mcp-server` → master). Daniel authors via Claude + MCP, not via the in-app UI. The browser app is the band/consumer surface only. Carry-forward items from the v70-08 AUDIT that target the in-app upload UI / library admin are LOW priority unless they ALSO hit the band's iPad consumer flow.
+>
+> If a fresh session runs `/paul:discuss-milestone` or `/paul:progress`: the next milestone direction is "MCP-authoring completeness" not "v7.1 v70-08 carry-forwards". The remaining MCP gaps (in order): `generate_gig_packet` (CF2-C) → `publish_setlist` / `notify_band` → `list_library`. See `project_mcp_status.md` auto-memory for current state.
+
 ## Current Milestone
 
 **Awaiting next milestone.** Run `/paul:discuss-milestone` (or `/paul:milestone`) to define scope.

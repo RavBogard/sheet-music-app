@@ -1,5 +1,7 @@
 # PAUL Handoff — MCP Stress-Test Fixes + v71-01 Branched State
 
+> **⚠️ SUPERSEDED 2026-05-15** — this handoff is HISTORICAL. The MCP stress-test fix work it describes shipped through Wave 4/5/6 + CF1 + CF2-B + CF3 + import_chart_from_drive + atomic upload guard + library_signals (all live on master, latest `f650d94f0`). The 2026-05-15 authoring-model pivot makes MCP Daniel's primary author surface, NOT a parallel workstream. For current MCP state, read `project_mcp_status.md` in auto-memory and `.paul/research/mcp-stress-test-2026-05-15-mcp-first-PROMPT.md` (the live stress-test prompt). Do not resume from THIS handoff's TODO list.
+
 **Date:** 2026-05-14 (Thursday evening, CT)
 **Status:** Multiple workstreams in flight; context will be cleared before resume
 **Author of this handoff:** Claude Code, Opus 4.7 (1M context)

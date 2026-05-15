@@ -1,5 +1,16 @@
 # Project: sheet-music-app (CentralReform.live)
 
+> **⚠️ 2026-05-15 AUTHORING-MODEL PIVOT — read before acting**
+>
+> As of 2026-05-15, the MCP server (`/api/mcp`) is Daniel's PRIMARY author surface. He builds weekly setlists, edits charts, uploads new charts, and adjusts monitor mixes via Claude Desktop / claude.ai — NOT via the in-app library UI. The browser app is now the band/consumer surface (Perform mode on iPads, chart-bind picker, gig-packet print, setlist viewing).
+>
+> Any references below to "v7.0 ✅ COMPLETE" / "awaiting next milestone" / "MCP runs as a parallel workstream" reflect the pre-pivot framing. The MCP workstream is now the active primary workstream. See:
+> - `~/.claude/projects/.../memory/user_mcp_is_primary_author_workflow.md` (the pivot)
+> - `~/.claude/projects/.../memory/project_mcp_status.md` (27 tools live, latest f650d94f0, remaining gaps: generate_gig_packet → publish_setlist → list_library)
+> - `.paul/research/mcp-stress-test-2026-05-15-mcp-first-PROMPT.md` (the NEXT stress test — the older `.paul/research/mcp-stress-test-2026-05-15-followup-PROMPT.md` is SUPERSEDED)
+>
+> When ranking work, prioritize (a) Daniel's MCP authoring flow and (b) the band's iPad consumer flow. The in-app library admin UI is no longer load-bearing for Daniel's daily use.
+
 ## What This Is
 
 A web app for Central Reform Congregation's worship band that musicians load on tablets, iPads, and phones to manage setlists, view and live-transpose charts, and adjust monitor mixes on the fly. Used during live services, rehearsals, and community jam events where anyone can pull up the setlist and charts on their own device.

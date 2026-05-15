@@ -1,5 +1,14 @@
 # MCP CF1 Fix-Pass — Handoff (paused 2026-05-15)
 
+> **⚠️ SUPERSEDED 2026-05-15 end-of-day** — every item in the "Still TODO" list below has been resolved:
+> - upload_chart base64 hang → fixed via `import_chart_from_drive` (`a54ae7230`)
+> - §7.5 RSC 503 → deferred (no fresh repro; defer until it bites again)
+> - §7.6 Outbox 58-error → still open, not urgent (carry-forward, see project_mcp_status.md)
+> - CF2-C generate_gig_packet → STILL OPEN, top remaining priority
+> - CF3 bulk_add_tracks + position-in-patch → shipped `173956c86`
+> Plus: pdfjs workerSrc fix `3b76279f2` (Perform-mode chart rendering), atomic upload guard + library_signals `f650d94f0`. Do NOT resume from this doc — see `project_mcp_status.md` auto-memory + the new stress-test prompt.
+
+
 ## What's shipped this pass (all deployed to production)
 
 Most-recent commit on master: `398aef69`. Every entry below is a separate prod-deployed commit on master, also pushed to feat/mcp-server.

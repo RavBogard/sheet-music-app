@@ -1,5 +1,9 @@
 # Project State
 
+> **⚠️ 2026-05-15 AUTHORING-MODEL PIVOT — read before acting**
+>
+> The MCP server is Daniel's PRIMARY author surface as of 2026-05-15. Anything below framed as "v7.0 done, awaiting next milestone, MCP is parallel" reflects pre-pivot state. The MCP workstream is the active primary workstream. Source of truth for current MCP state: `~/.claude/projects/.../memory/project_mcp_status.md`. Pivot rationale: `user_mcp_is_primary_author_workflow.md`. Today's commits not yet captured below: `a54ae7230` import_chart_from_drive, `173956c86` CF3, `3b76279f2` pdfjs workerSrc fix, `f650d94f0` atomic upload guard + library_signals. Remaining MCP gaps: generate_gig_packet → publish_setlist → list_library.
+
 ## Project Reference
 
 See: .paul/PROJECT.md (updated 2026-05-14 after v7.0 ✅ MILESTONE COMPLETE; awaiting next-milestone discussion)

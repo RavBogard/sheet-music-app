@@ -1,5 +1,7 @@
 # MCP Stress-Test Follow-up Prompt — for Cowork-Claude
 
+> **⚠️ SUPERSEDED 2026-05-15 end-of-day** — this prompt only covers Waves 4-6 regression (G-3..G-17). Every check below has either shipped + been verified, OR was OBE by the 2026-05-15 fix-pass series (CF1, CF2-B, import_chart_from_drive, CF3, pdfjs workerSrc fix, atomic upload guard, library_signals). The current live stress-test is `.paul/research/mcp-stress-test-2026-05-15-mcp-first-PROMPT.md`, which targets the FULL weekly authoring flow under the MCP-first model. Do NOT run THIS prompt against production — the cleanup IDs in Phase 1 are already gone.
+
 **Generated:** 2026-05-15 post-Wave-6 ship
 **Production MCP:** https://www.centralreform.live/api/mcp
 **Waves shipped since last stress test (commits on master):**

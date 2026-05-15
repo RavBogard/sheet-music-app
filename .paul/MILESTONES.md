@@ -1,5 +1,7 @@
 # Milestones
 
+> **⚠️ 2026-05-15 AUTHORING-MODEL PIVOT** — milestones below are HISTORICAL. Since 2026-05-15 the project's active primary workstream is the MCP server (Daniel's primary author surface). Future milestones should be scoped around MCP authoring completeness + band/consumer surface polish, not in-app library UI work. See `project_mcp_status.md` and `user_mcp_is_primary_author_workflow.md` in auto-memory.
+
 Completed milestone log for this project.
 
 | Milestone | Completed | Duration | Stats |
