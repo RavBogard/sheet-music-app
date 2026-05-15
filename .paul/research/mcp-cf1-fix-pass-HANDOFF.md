@@ -20,13 +20,21 @@ Tool surface: **22 → 25** (CF1 +2, CF2-B +1).
 
 ## Still TODO (in priority order)
 
-1. **§7.5 RSC 503 prefetches** (in-progress, paused mid-investigation) — Vercel returns 503 on `/setlists?_rsc=...` and similar hover-prefetches. Need runtime logs from Vercel dashboard to confirm root cause; `vercel logs` CLI couldn't resolve the deployment. Check Vercel Functions dashboard for the master-branch deployment for 503s on `/proxy` (the middleware). Suspect: cold-start latency on Edge middleware + the verifyRoleCookie await. Mitigations to consider: shorter middleware path on `_rsc` requests; skip role check on RSC payloads (the actual page render will re-check).
+1. **upload_chart hang on ~90 KB base64 PDFs (NEW 2026-05-15, cowork follow-up)** — cowork reports `upload_chart` never returns when invoked from claude.ai with a ~90 KB encoded payload. No error, just a hang. 90 KB is well under any plausible body-size limit, so cowork's size-limit hypothesis is most likely wrong. Realistic suspects:
+   - **PDF chord extraction stalls** — `processChartUpload` runs `pdf-chord-extractor` for PDFs; if it loops on a tricky font/layout it can wedge. Add a hard timeout there.
+   - **Fuzzy dedup loop** — the Levenshtein-guard fuzzy-name match (G-5) iterates over library_index; if there are hundreds of entries this can be slow. Check the query shape.
+   - **Gemini call inside the upload path** — if any AI inference path is reached during upload, it can hang for tens of seconds. Should not be reached for plain PDF uploads but verify.
+   - **MCP SSE transport buffering** — less likely but worth a look. The MCP server's response streaming should flush per-tool-result.
+   - **Drive-ID/URL variant** — cowork's #3 suggestion is independently good UX: accept `driveFileId` OR `sourceUrl` and have the server pull the bytes itself (sidesteps base64 entirely AND avoids re-uploading a chart that already lives in Drive). Adds a new `import_chart_from_drive` MCP tool that wraps the existing Drive client. Repro target: `Bina in G.pdf`, Drive ID `1uj3isd0RJoAYoETx4QFwjQQgwjaO4DTS`.
+   Repro: capture a hanging call's full request body, then re-invoke `processChartUpload` directly in a Node script with that buffer to bisect which stage stalls.
 
-2. **§7.6 Outbox 58-error investigation** — pre-existing accumulation of failed write-queue entries. `src/lib/sync/cleanup.ts` has `discardFailedOutboxRows` + `retryFailedOutboxRows`. Check Outbox console logs to identify error classes; classify retryable vs. terminal; expose a one-click "clear failed outbox" admin action. Related: §7.3 sticky "Failed — retry" badge is honestly reporting outbox state, so fixing the outbox accumulation also clears the badge.
+2. **§7.5 RSC 503 prefetches** (in-progress, paused mid-investigation) — Vercel returns 503 on `/setlists?_rsc=...` and similar hover-prefetches. Need runtime logs from Vercel dashboard to confirm root cause; `vercel logs` CLI couldn't resolve the deployment. Check Vercel Functions dashboard for the master-branch deployment for 503s on `/proxy` (the middleware). Suspect: cold-start latency on Edge middleware + the verifyRoleCookie await. Mitigations to consider: shorter middleware path on `_rsc` requests; skip role check on RSC payloads (the actual page render will re-check).
 
-3. **CF2-C `generate_gig_packet` MCP tool** — ~1 day. Read setlist → fetch each bonded chart via `fetchFileById` (same path `download_chart` uses) → merge into single PDF via `pdf-lib`. Non-PDF inputs (images, text, MusicXML): embed images as full-page, render text as monospaced page, MusicXML/MuseScore probably skipped + listed in a "missing charts" appendix. Return base64. Hard cap on total bytes; very large setlists chunk into multi-part packets. Emulator tests for: setlist with all PDFs, mixed types, missing-chart appendix, bonded-but-unfetchable, too-large.
+3. **§7.6 Outbox 58-error investigation** — pre-existing accumulation of failed write-queue entries. `src/lib/sync/cleanup.ts` has `discardFailedOutboxRows` + `retryFailedOutboxRows`. Check Outbox console logs to identify error classes; classify retryable vs. terminal; expose a one-click "clear failed outbox" admin action. Related: §7.3 sticky "Failed — retry" badge is honestly reporting outbox state, so fixing the outbox accumulation also clears the badge.
 
-4. **CF3 `bulk_add_tracks` + `position` in `update_track` patch** — cowork's #1 recommended next gap (§6). Task 8 still cost 9 sequential `add_track_to_setlist` calls. Add `bulk_add_tracks(setlistId, tracks[])` and let `update_track` patch include `position` for in-place reordering. Closes the weekly-flow N+1 problem.
+4. **CF2-C `generate_gig_packet` MCP tool** — ~1 day. Read setlist → fetch each bonded chart via `fetchFileById` (same path `download_chart` uses) → merge into single PDF via `pdf-lib`. Non-PDF inputs (images, text, MusicXML): embed images as full-page, render text as monospaced page, MusicXML/MuseScore probably skipped + listed in a "missing charts" appendix. Return base64. Hard cap on total bytes; very large setlists chunk into multi-part packets. Emulator tests for: setlist with all PDFs, mixed types, missing-chart appendix, bonded-but-unfetchable, too-large.
+
+5. **CF3 `bulk_add_tracks` + `position` in `update_track` patch** — cowork's #1 recommended next gap (§6). Task 8 still cost 9 sequential `add_track_to_setlist` calls. Add `bulk_add_tracks(setlistId, tracks[])` and let `update_track` patch include `position` for in-place reordering. Closes the weekly-flow N+1 problem.
 
 ## Two notes for next session
 
@@ -43,13 +51,18 @@ Resume the MCP CF1 fix-pass. Context lives in
 that drove this fix-pass), and .paul/research/mcp-cf1-PLAN.md (original 
 CF1 plan).
 
-Sequence — pick up from §7.5:
-1. §7.5 RSC 503 investigation (in-progress, paused mid-investigation; 
+Sequence:
+1. **upload_chart hang** (NEW from cowork follow-up — 90KB base64 PDF 
+   never returns; add timeout to processChartUpload stages AND ship a 
+   `import_chart_from_drive` MCP tool that takes a Drive ID / URL 
+   instead of base64. Repro: Drive ID 1uj3isd0RJoAYoETx4QFwjQQgwjaO4DTS, 
+   filename Bina in G.pdf.)
+2. §7.5 RSC 503 investigation (in-progress, paused mid-investigation; 
    Vercel logs needed; suspect Edge middleware cold-start + 
    verifyRoleCookie)
-2. §7.6 Outbox 58-error investigation
-3. CF2-C generate_gig_packet (PDF-merge bonded charts in setlist order)
-4. CF3 bulk_add_tracks + position-in-patch (cowork's #1 next gap — 
+3. §7.6 Outbox 58-error investigation
+4. CF2-C generate_gig_packet (PDF-merge bonded charts in setlist order)
+5. CF3 bulk_add_tracks + position-in-patch (cowork's #1 next gap — 
    closes the weekly-flow N+1)
 
 Daniel-locked policy from prior session: "we're going to keep going until 
