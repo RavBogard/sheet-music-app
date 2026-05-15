@@ -31,6 +31,7 @@ import {
     importChartFromDrive,
 } from "./library-upload"
 import { downloadChart, generateGigPacket } from "./library-download"
+import { publishSetlist } from "./setlist-publish"
 
 /**
  * Validate that an `eventDate` string is parseable as a date. Previously the
@@ -493,6 +494,56 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await bulkUpdateSetlistTracks(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "publish_setlist",
+        {
+            description:
+                "Publish a setlist to the band — snapshots song-row state, marks the setlist as published, and fans out notifications across in-app, FCM push, email, and SMS (SMS only on first publish, opt-in users only). Equivalent to clicking the in-app Publish button. Use when the user says \"send the setlist to the band\", \"publish tonight's service\", \"notify everyone\". By default, recipients are every active admin / band_leader / musician account (excluding the publisher); pass `audience: 'all'` to include `member` accounts, or pass an explicit `recipients` array to override entirely. `note` adds a free-text message above the song list in the email; `subject` overrides the email subject. `dryRun: true` returns the would-publish recipient set + snapshot without writing or sending — preview the blast before pulling the trigger. Re-publishing a setlist that was already published refreshes the snapshot + re-fans-out in-app/push/email but skips SMS (cost control). Admins and band leaders only.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id"),
+                recipients: z
+                    .array(
+                        z.object({
+                            uid: z.string().optional(),
+                            name: z.string().optional(),
+                            email: z.string().optional(),
+                            instrument: z.string().optional(),
+                        }),
+                    )
+                    .optional()
+                    .describe(
+                        "Explicit recipient list. If omitted, auto-derives from active band roles. Each entry should have a `uid` (for in-app + push + SMS) and/or `email` (for email).",
+                    ),
+                audience: z
+                    .enum(["band", "all"])
+                    .optional()
+                    .describe(
+                        "Default-audience preset, only used when `recipients` is omitted. 'band' (default) = admin + band_leader + musician. 'all' = + member accounts (full congregation, use sparingly).",
+                    ),
+                note: z
+                    .string()
+                    .max(2000)
+                    .optional()
+                    .describe(
+                        "Free-text note to include in the email body above the song list (max 2000 chars).",
+                    ),
+                subject: z
+                    .string()
+                    .max(200)
+                    .optional()
+                    .describe("Override the email subject (max 200 chars)."),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "If true, returns the would-publish recipient list + snapshot without writing or sending. Useful to confirm the blast list before committing.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await publishSetlist(uidFrom(extra), args)),
     )
 }
 
