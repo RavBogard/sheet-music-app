@@ -1,7 +1,7 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { listSetlists, getSetlist } from "./setlists"
-import { searchLibrary, getSong } from "./library"
+import { searchLibrary, getSong, listLibrary } from "./library"
 import {
     createSetlist,
     updateSetlist,
@@ -163,6 +163,39 @@ export function registerReadTools(server: McpServer): void {
             if (!song) return jsonResult({ error: "Song not found" })
             return jsonResult(song)
         },
+    )
+
+    server.registerTool(
+        "list_library",
+        {
+            description:
+                "Browse the chart-file index alphabetically — every chart in the library, with its collection ('core' | 'supplemental' | 'uploads'), mimeType, file size, and upload metadata. Use this when the user wants to SEE the catalog (\"what's in core?\", \"show me every chart I've uploaded\"); use search_library for targeted lookup by title/key/BPM. Optional collection filter narrows to one section. Paged via offset+limit (default limit 50, max 200). Returns rows + a total count so the caller can detect whether more pages exist. Metadata only — to fetch chart bytes call download_chart, or to print a setlist's packet call generate_gig_packet.",
+            inputSchema: {
+                collection: z
+                    .enum(["core", "supplemental", "uploads"])
+                    .optional()
+                    .describe(
+                        "Library section to browse. Omit to list every chart across all collections.",
+                    ),
+                limit: z
+                    .number()
+                    .int()
+                    .positive()
+                    .max(200)
+                    .optional()
+                    .describe("Max rows (default 50, max 200)"),
+                offset: z
+                    .number()
+                    .int()
+                    .min(0)
+                    .optional()
+                    .describe(
+                        "Skip this many rows before returning results (for paging). Pass `offset + limit < total` to fetch the next page.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await listLibrary(uidFrom(extra), args)),
     )
 }
 
