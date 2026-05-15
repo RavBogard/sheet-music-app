@@ -27,6 +27,7 @@ import {
     scrapeChartFromUrl,
     saveScrapedChart,
     deleteChart,
+    importChartFromDrive,
 } from "./library-upload"
 import { downloadChart } from "./library-download"
 
@@ -584,6 +585,46 @@ export function registerChartUploadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await uploadChart(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "import_chart_from_drive",
+        {
+            description:
+                "Import a chart into the library directly from a Google Drive file id — no base64 round-trip. PREFER THIS over upload_chart when the user already has the file in Drive (linked in a message, viewing it in Drive, or referencing a Drive URL): the MCP request body stays tiny (just the id), which sidesteps the upload payload limits that have caused upload_chart to hang. The same dedup, conversion (MuseScore→MusicXML, HEIC→JPEG), and indexing logic runs as upload_chart. Drive's native doc types (Google Docs / Sheets / Slides) are rejected — export to PDF in Drive first. The Drive id is the segment after /file/d/ in a Drive URL (e.g. 1uj3isd0RJoAYoETx4QFwjQQgwjaO4DTS). Title defaults to the Drive file name minus extension; pass `title` to override.",
+            inputSchema: {
+                driveFileId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Google Drive file id — the segment after /file/d/ in a Drive URL. Service account must have at least viewer access to the file.",
+                    ),
+                title: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(
+                        "Display title for the chart. Defaults to the Drive file name with its extension stripped.",
+                    ),
+                collection: collectionSchema,
+                key: z
+                    .string()
+                    .optional()
+                    .describe("Optional musical key (e.g. 'G' or 'Am')"),
+                bpm: z
+                    .number()
+                    .int()
+                    .positive()
+                    .optional()
+                    .describe("Optional tempo in BPM"),
+                tags: z
+                    .array(z.string())
+                    .optional()
+                    .describe("Optional list of tags"),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await importChartFromDrive(uidFrom(extra), args)),
     )
 
     server.registerTool(

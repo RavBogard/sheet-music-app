@@ -105,6 +105,25 @@ export async function processChartUpload(
     initAdmin()
     const db = getFirestore()
 
+    // Per-call correlation id + stage timing — observability for the 2026-05-15
+    // cowork-reported `upload_chart` hang. Each stage logs entry and elapsed
+    // time so Vercel runtime logs reveal which stage stalls when a future
+    // upload doesn't return. No behavior change.
+    const traceId = crypto.randomUUID().slice(0, 8)
+    const t0 = Date.now()
+    const stage = (name: string, extra?: Record<string, unknown>) => {
+        logger.info(
+            `[Upload ${traceId}] ${name} (+${Date.now() - t0}ms)` +
+                (extra ? ` ${JSON.stringify(extra)}` : ""),
+        )
+    }
+    stage("start", {
+        bytes: input.buffer?.byteLength ?? 0,
+        mimeType: input.mimeType,
+        collection: input.collection ?? "uploads",
+        uploader: input.uploaderUid,
+    })
+
     // ─── 0. Size + type validation ─────────────────────────────────────────
 
     if (!input.buffer || input.buffer.byteLength === 0) {
@@ -181,9 +200,7 @@ export async function processChartUpload(
     let effectiveContentType: string = mimeType
 
     if (msExt) {
-        logger.info(
-            `[Upload] Converting ${fileName} from ${msExt} to MusicXML`,
-        )
+        stage("convert-musescore:start", { ext: msExt })
         try {
             const { musicXml, originalContent } = await processMuseScoreFile(
                 buffer,
@@ -197,6 +214,7 @@ export async function processChartUpload(
             originalStorageUrl = `library/originals/${fileId}.${msExt}`
             sourceFormat = msExt
             buffer = Buffer.from(musicXml, "utf-8")
+            stage("convert-musescore:done")
         } catch (err) {
             const message = err instanceof Error ? err.message : "Unknown error"
             return {
@@ -207,7 +225,7 @@ export async function processChartUpload(
             }
         }
     } else if (isHeic) {
-        logger.info(`[Upload] Converting ${fileName} from HEIC to JPEG`)
+        stage("convert-heic:start")
         try {
             const originalBuffer = buffer
             const heicArrayBuffer = originalBuffer.buffer.slice(
@@ -229,6 +247,7 @@ export async function processChartUpload(
             sourceFormat = heicExt
             buffer = Buffer.from(jpegBytes)
             effectiveContentType = "image/jpeg"
+            stage("convert-heic:done")
         } catch (err) {
             const message = err instanceof Error ? err.message : "Unknown error"
             return {
@@ -269,11 +288,13 @@ export async function processChartUpload(
     // query that. Backfill is optional — without it, new uploads still won't
     // fuzzy-match against pre-G-5 entries that lack `normalizedName`.
     const normalizedName = nameLower.replace(/[^a-z0-9]/g, "")
+    stage("dedup-exact:start")
     const exactMatch = await db
         .collection("library_index")
         .where("nameLower", "==", nameLower)
         .limit(5)
         .get()
+    stage("dedup-exact:done", { matches: exactMatch.size })
     const activeExactMatch = exactMatch.docs.find(
         (d) => d.data().status === "active",
     )
@@ -289,6 +310,7 @@ export async function processChartUpload(
 
     const prefix = normalizedName.slice(0, 6)
     if (prefix.length >= 3) {
+        stage("dedup-fuzzy:start", { prefix })
         const prefixEnd =
             prefix.slice(0, -1) +
             String.fromCharCode(prefix.charCodeAt(prefix.length - 1) + 1)
@@ -299,6 +321,7 @@ export async function processChartUpload(
             .select("name", "normalizedName", "status")
             .limit(20)
             .get()
+        stage("dedup-fuzzy:done", { candidates: similarSnap.size })
 
         for (const doc of similarSnap.docs) {
             if (doc.data().status !== "active") continue
@@ -328,10 +351,13 @@ export async function processChartUpload(
 
     // ─── 4. Write to Storage + library_index + songs ───────────────────────
 
-    logger.info(
-        `[Upload] Uploading ${fileName} (${(buffer.byteLength / 1024).toFixed(1)}KB) as ${fileId}`,
-    )
+    stage("storage-upload:start", {
+        fileId,
+        kb: Number((buffer.byteLength / 1024).toFixed(1)),
+        contentType,
+    })
     await uploadToStorage(fileId, buffer, contentType)
+    stage("storage-upload:done")
 
     const storageUrl = `library/${fileId}${extForContentType(contentType)}`
 
@@ -357,6 +383,7 @@ export async function processChartUpload(
     if (originalStorageUrl) indexEntry.originalStorageUrl = originalStorageUrl
     if (sourceFormat) indexEntry.sourceFormat = sourceFormat
 
+    stage("firestore-write:start")
     await db.collection("library_index").doc(fileId).set(indexEntry)
 
     await db
@@ -371,6 +398,8 @@ export async function processChartUpload(
             },
             { merge: true },
         )
+    stage("firestore-write:done")
+    stage("complete")
 
     return {
         ok: true,

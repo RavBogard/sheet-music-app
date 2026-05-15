@@ -5,6 +5,7 @@ import {
     type LibraryCollection,
 } from "@/lib/library-upload"
 import { scrapeChart } from "@/lib/chart-scrape"
+import { DriveClient } from "@/lib/google-drive"
 import { logger } from "@/lib/logger"
 
 /**
@@ -155,6 +156,137 @@ export async function uploadChart(
         originalFileName: fileName,
         mimeType: args.mimeType,
         title: args.title,
+        collection: args.collection,
+        key: args.key,
+        bpm: args.bpm,
+        tags: args.tags,
+        uploaderUid: uid,
+        uploaderEmail: roles.email,
+    })
+
+    if (!result.ok) return { error: result.error }
+    return {
+        ok: true,
+        fileId: result.fileId,
+        title: result.title,
+        collection: result.collection,
+    }
+}
+
+// ─── import_chart_from_drive ────────────────────────────────────────────────
+
+export interface ImportChartFromDriveArgs {
+    /** Google Drive file id (the segment after /file/d/ in a Drive URL). */
+    driveFileId: string
+    /** Optional display title override. Drive file name (sans extension) used otherwise. */
+    title?: string
+    collection?: LibraryCollection
+    key?: string
+    bpm?: number
+    tags?: string[]
+}
+
+/**
+ * Pull a chart's bytes from Google Drive server-side, then run them through
+ * the same `processChartUpload` pipeline as `upload_chart`. Closes the
+ * 2026-05-15 cowork-reported `upload_chart` hang on base64 payloads — the
+ * MCP request itself stays tiny (one Drive id, no base64), and the bytes
+ * never round-trip through claude.ai → MCP transport → JSON envelope.
+ *
+ * Auth, curated-catalog gate, and rate-limit semantics mirror `upload_chart`
+ * exactly. Google Docs / Sheets / Slides native types are rejected with a
+ * clear "export to PDF first" message — those need .export(), not .get(),
+ * and the conversion target is ambiguous (full doc? one slide? PDF? .docx?).
+ */
+export async function importChartFromDrive(
+    uid: string,
+    args: ImportChartFromDriveArgs,
+): Promise<
+    | { ok: true; fileId: string; title: string; collection: LibraryCollection }
+    | ToolError
+> {
+    if (!args.driveFileId?.trim()) {
+        return { error: "driveFileId is required" }
+    }
+
+    initAdmin()
+    const db = getFirestore()
+
+    const roles = await loadUploader(db, uid)
+    if (!isUploadAllowed(roles)) {
+        return {
+            error: "Upload permission required. Ask an admin to enable uploads for your account.",
+        }
+    }
+
+    const curatedDenial = curatedCatalogGate(roles, args.collection)
+    if (curatedDenial) return curatedDenial
+
+    const limited = await checkUserRateLimit(uid, "upload", {
+        bypass: isTrustedLeader(roles),
+    })
+    if (limited) return { error: limited.error }
+
+    const driveFileId = args.driveFileId.trim()
+    const drive = new DriveClient()
+
+    let metadata: { name?: string | null; mimeType?: string | null } | undefined
+    try {
+        metadata = (await drive.getFileMetadata(driveFileId)) as {
+            name?: string | null
+            mimeType?: string | null
+        }
+    } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error"
+        logger.warn(
+            `[import_chart_from_drive] metadata fetch failed for ${driveFileId}: ${message}`,
+        )
+        return {
+            error: `Could not read Drive file ${driveFileId} metadata: ${message}`,
+        }
+    }
+
+    const driveMime = (metadata?.mimeType || "").toLowerCase()
+    if (driveMime.startsWith("application/vnd.google-apps.")) {
+        return {
+            error:
+                `Drive file ${driveFileId} is a native Google ${driveMime.replace(
+                    "application/vnd.google-apps.",
+                    "",
+                )} document — export it to PDF in Drive first, then import the exported file.`,
+        }
+    }
+
+    let buffer: Buffer
+    try {
+        const bytes = await drive.getFile(driveFileId)
+        // DriveClient returns arraybuffer (responseType: 'arraybuffer'); Node
+        // sees it as ArrayBuffer or Buffer depending on transport. Normalize.
+        buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes as ArrayBuffer)
+    } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error"
+        logger.warn(
+            `[import_chart_from_drive] bytes fetch failed for ${driveFileId}: ${message}`,
+        )
+        return {
+            error: `Could not download Drive file ${driveFileId}: ${message}`,
+        }
+    }
+
+    if (buffer.byteLength === 0) {
+        return { error: `Drive file ${driveFileId} is empty` }
+    }
+
+    const driveName = (metadata?.name || `drive-${driveFileId}`).trim()
+    const title =
+        args.title?.trim() || driveName.replace(/\.[^/.]+$/, "")
+    const mimeType = driveMime || "application/pdf"
+
+    const result = await processChartUpload({
+        buffer,
+        originalFileName: driveName,
+        mimeType,
+        title,
         collection: args.collection,
         key: args.key,
         bpm: args.bpm,

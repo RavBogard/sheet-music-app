@@ -39,11 +39,25 @@ vi.mock("firebase-admin/storage", () => ({
     getStorage: () => ({ bucket: () => ({ file: mockStorageBucketFile }) }),
 }))
 
+// Google Drive stub — import_chart_from_drive calls
+// new DriveClient().getFileMetadata + .getFile. Real Drive requires service-
+// account credentials that the test environment doesn't have, so stand in
+// the network surface with a controllable mock.
+const mockDriveGetFileMetadata = vi.fn()
+const mockDriveGetFile = vi.fn()
+vi.mock("@/lib/google-drive", () => ({
+    DriveClient: class {
+        getFileMetadata = mockDriveGetFileMetadata
+        getFile = mockDriveGetFile
+    },
+}))
+
 import {
     uploadChart,
     saveScrapedChart,
     scrapeChartFromUrl,
     deleteChart,
+    importChartFromDrive,
 } from "../tools/library-upload"
 
 /**
@@ -113,6 +127,8 @@ describe("MCP chart-upload tools (emulator)", () => {
         mockStorageFileDelete.mockReset()
         mockStorageFileDelete.mockResolvedValue(undefined)
         mockStorageBucketFile.mockClear()
+        mockDriveGetFileMetadata.mockReset()
+        mockDriveGetFile.mockReset()
 
         for (const col of ["library_index", "songs", "tracks", "setlists"]) {
             const snap = await db().collection(col).get()
@@ -762,6 +778,184 @@ describe("MCP chart-upload tools (emulator)", () => {
             expect(r).toEqual({
                 error: expect.stringContaining("Upload permission required"),
             })
+        })
+    })
+
+    // ─── import_chart_from_drive ────────────────────────────────────────────
+
+    describe("import_chart_from_drive", () => {
+        it("happy path: admin imports a Drive PDF — writes index + songs, Storage called", async () => {
+            mockDriveGetFileMetadata.mockResolvedValue({
+                name: "Bina in G.pdf",
+                mimeType: "application/pdf",
+            })
+            mockDriveGetFile.mockResolvedValue(
+                Buffer.from("%PDF-1.4 Bina drive bytes"),
+            )
+
+            const result = (await importChartFromDrive(ADMIN, {
+                driveFileId: "1uj3isd0RJoAYoETx4QFwjQQgwjaO4DTS",
+            })) as {
+                ok: true
+                fileId: string
+                title: string
+                collection: string
+            }
+            expect(result.ok).toBe(true)
+            expect(result.fileId).toMatch(/^upload-/)
+            expect(result.title).toBe("Bina in G")
+            expect(result.collection).toBe("uploads")
+
+            expect(mockDriveGetFileMetadata).toHaveBeenCalledWith(
+                "1uj3isd0RJoAYoETx4QFwjQQgwjaO4DTS",
+            )
+            expect(mockDriveGetFile).toHaveBeenCalledWith(
+                "1uj3isd0RJoAYoETx4QFwjQQgwjaO4DTS",
+            )
+
+            const idx = (
+                await db().collection("library_index").doc(result.fileId).get()
+            ).data()!
+            expect(idx).toMatchObject({
+                name: "Bina in G",
+                nameLower: "bina in g",
+                mimeType: "application/pdf",
+                source: "upload",
+                collection: "uploads",
+                status: "active",
+                uploadedBy: ADMIN,
+            })
+
+            expect(mockUploadToStorage).toHaveBeenCalledTimes(1)
+            expect(mockUploadToStorage).toHaveBeenCalledWith(
+                expect.stringMatching(/^upload-/),
+                expect.any(Buffer),
+                "application/pdf",
+            )
+        })
+
+        it("caller title override wins over the Drive file name", async () => {
+            mockDriveGetFileMetadata.mockResolvedValue({
+                name: "scan-final-v2.pdf",
+                mimeType: "application/pdf",
+            })
+            mockDriveGetFile.mockResolvedValue(Buffer.from("%PDF-1.4 x"))
+
+            const result = (await importChartFromDrive(ADMIN, {
+                driveFileId: "abc123",
+                title: "Hinei Ma Tov",
+            })) as { ok: true; title: string }
+            expect(result.title).toBe("Hinei Ma Tov")
+        })
+
+        it("rejects empty driveFileId before touching Drive", async () => {
+            const r = await importChartFromDrive(ADMIN, { driveFileId: "  " })
+            expect(r).toEqual({ error: "driveFileId is required" })
+            expect(mockDriveGetFileMetadata).not.toHaveBeenCalled()
+            expect(mockDriveGetFile).not.toHaveBeenCalled()
+        })
+
+        it("permission gate: pending user without canUpload denied", async () => {
+            const r = await importChartFromDrive(PENDING_NO_FLAG, {
+                driveFileId: "any",
+            })
+            expect(r).toEqual({
+                error: expect.stringContaining("Upload permission required"),
+            })
+            expect(mockDriveGetFileMetadata).not.toHaveBeenCalled()
+        })
+
+        it("curated-catalog gate: musician blocked from 'core'", async () => {
+            const r = await importChartFromDrive(MUSICIAN, {
+                driveFileId: "abc",
+                collection: "core",
+            })
+            expect(r).toEqual({
+                error: expect.stringContaining("'core' catalog"),
+            })
+            // Gate fires before any Drive call — request body stays tiny.
+            expect(mockDriveGetFileMetadata).not.toHaveBeenCalled()
+        })
+
+        it("band_leader can import to curated 'core' (widened gate)", async () => {
+            mockDriveGetFileMetadata.mockResolvedValue({
+                name: "Adon Olam.pdf",
+                mimeType: "application/pdf",
+            })
+            mockDriveGetFile.mockResolvedValue(Buffer.from("%PDF-1.4 a"))
+
+            const r = (await importChartFromDrive(LEADER, {
+                driveFileId: "drv-1",
+                collection: "core",
+            })) as { ok: true; collection: string }
+            expect(r.ok).toBe(true)
+            expect(r.collection).toBe("core")
+        })
+
+        it("surfaces Drive metadata fetch error", async () => {
+            mockDriveGetFileMetadata.mockRejectedValue(
+                new Error("File not found"),
+            )
+            const r = await importChartFromDrive(ADMIN, {
+                driveFileId: "missing",
+            })
+            expect(r).toEqual({
+                error: expect.stringContaining("metadata"),
+            })
+            expect(mockDriveGetFile).not.toHaveBeenCalled()
+        })
+
+        it("rejects native Google Docs mime types with export hint", async () => {
+            mockDriveGetFileMetadata.mockResolvedValue({
+                name: "My Song",
+                mimeType: "application/vnd.google-apps.document",
+            })
+            const r = await importChartFromDrive(ADMIN, {
+                driveFileId: "gdoc-1",
+            })
+            expect(r).toEqual({
+                error: expect.stringContaining("export it to PDF"),
+            })
+            expect(mockDriveGetFile).not.toHaveBeenCalled()
+        })
+
+        it("rejects empty Drive payload", async () => {
+            mockDriveGetFileMetadata.mockResolvedValue({
+                name: "empty.pdf",
+                mimeType: "application/pdf",
+            })
+            mockDriveGetFile.mockResolvedValue(Buffer.alloc(0))
+            const r = await importChartFromDrive(ADMIN, {
+                driveFileId: "empty",
+            })
+            expect(r).toEqual({
+                error: expect.stringContaining("empty"),
+            })
+        })
+
+        it("respects same dedup pipeline as upload_chart (exact match)", async () => {
+            // Seed via upload_chart, then try to import a Drive file with the
+            // same title — should hit the exact-name dedup, not write twice.
+            await uploadChart(ADMIN, {
+                title: "Mi Chamocha",
+                fileBase64: b64("%PDF-1.4 first"),
+                mimeType: "application/pdf",
+            })
+            mockUploadToStorage.mockClear()
+
+            mockDriveGetFileMetadata.mockResolvedValue({
+                name: "Mi Chamocha.pdf",
+                mimeType: "application/pdf",
+            })
+            mockDriveGetFile.mockResolvedValue(Buffer.from("%PDF-1.4 second"))
+
+            const r = await importChartFromDrive(LEADER, {
+                driveFileId: "dup-1",
+            })
+            expect(r).toEqual({
+                error: expect.stringContaining("already exists"),
+            })
+            expect(mockUploadToStorage).not.toHaveBeenCalled()
         })
     })
 })
