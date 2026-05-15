@@ -76,24 +76,37 @@ describe('rate-limit', () => {
         expect(result?.headers.get('X-RateLimit-Remaining')).toBe('0')
     })
 
-    it('checkUserRateLimit bypasses limit entirely for opts.isAdmin', async () => {
+    it('checkUserRateLimit bypasses limit entirely when opts.bypass=true (admin)', async () => {
         const { checkUserRateLimit } = await import('./rate-limit')
-        // 10/min upload — sail past it as an "admin".
+        // 10/min upload — sail past it as a trusted leader.
         for (let i = 0; i < 50; i++) {
             const result = await checkUserRateLimit('admin-uid', 'upload', {
-                isAdmin: true,
+                bypass: true,
             })
             expect(result).toBeNull()
         }
     })
 
-    it('checkUserRateLimit still limits non-admin callers', async () => {
+    it('checkUserRateLimit bypass applies equally to band_leaders', async () => {
+        // Caller (e.g. library-upload.ts) computes bypass = admin || band_leader.
+        // The fn doesn't know who you are; it just sees `bypass: true`. This
+        // test documents the band_leader use case is covered by the same opt.
+        const { checkUserRateLimit } = await import('./rate-limit')
+        for (let i = 0; i < 50; i++) {
+            const result = await checkUserRateLimit('band-leader-uid', 'upload', {
+                bypass: true,
+            })
+            expect(result).toBeNull()
+        }
+    })
+
+    it('checkUserRateLimit still limits callers without bypass', async () => {
         const { checkUserRateLimit } = await import('./rate-limit')
         for (let i = 0; i < 10; i++) {
-            const ok = await checkUserRateLimit('non-admin-uid', 'upload')
+            const ok = await checkUserRateLimit('non-leader-uid', 'upload')
             expect(ok).toBeNull()
         }
-        const limited = await checkUserRateLimit('non-admin-uid', 'upload')
+        const limited = await checkUserRateLimit('non-leader-uid', 'upload')
         expect(limited).not.toBeNull()
         expect(limited?.error).toContain('Too many requests')
     })

@@ -559,57 +559,89 @@ describe("MCP chart-upload tools (emulator)", () => {
             expect(supp).toMatchObject({ ok: true, collection: "supplemental" })
         })
 
-        it("non-admin (band_leader, musician) blocked from core and supplemental", async () => {
-            for (const caller of [LEADER, MUSICIAN]) {
-                const core = await uploadChart(caller, {
-                    title: `Probe core ${caller}`,
-                    fileBase64: b64("%PDF-1.4 x"),
-                    mimeType: "application/pdf",
-                    collection: "core",
-                })
-                expect(core).toEqual({
-                    error: expect.stringContaining("requires an admin account"),
-                })
+        it("band_leader may also write to core and supplemental (G-3 widened)", async () => {
+            const core = await uploadChart(LEADER, {
+                title: "Leader Core Chart",
+                fileBase64: b64("%PDF-1.4 lc"),
+                mimeType: "application/pdf",
+                collection: "core",
+            })
+            expect(core).toMatchObject({ ok: true, collection: "core" })
 
-                const supp = await uploadChart(caller, {
-                    title: `Probe supp ${caller}`,
-                    fileBase64: b64("%PDF-1.4 y"),
-                    mimeType: "application/pdf",
-                    collection: "supplemental",
-                })
-                expect(supp).toEqual({
-                    error: expect.stringContaining("requires an admin account"),
-                })
-            }
+            const supp = await uploadChart(LEADER, {
+                title: "Leader Supplemental Chart",
+                fileBase64: b64("%PDF-1.4 ls"),
+                mimeType: "application/pdf",
+                collection: "supplemental",
+            })
+            expect(supp).toMatchObject({ ok: true, collection: "supplemental" })
+        })
+
+        it("musician (and below) still blocked from core and supplemental", async () => {
+            const core = await uploadChart(MUSICIAN, {
+                title: "Probe core musician",
+                fileBase64: b64("%PDF-1.4 x"),
+                mimeType: "application/pdf",
+                collection: "core",
+            })
+            expect(core).toEqual({
+                error: expect.stringContaining(
+                    "requires an admin or band leader",
+                ),
+            })
+
+            const supp = await uploadChart(MUSICIAN, {
+                title: "Probe supp musician",
+                fileBase64: b64("%PDF-1.4 y"),
+                mimeType: "application/pdf",
+                collection: "supplemental",
+            })
+            expect(supp).toEqual({
+                error: expect.stringContaining(
+                    "requires an admin or band leader",
+                ),
+            })
             // No storage writes attempted on rejected uploads.
             expect(mockUploadToStorage).not.toHaveBeenCalled()
         })
 
-        it("non-admin may still write to uploads (default)", async () => {
-            const r = await uploadChart(LEADER, {
-                title: "Leader Default Upload",
+        it("musicians (non-leaders) may still write to uploads (default)", async () => {
+            const r = await uploadChart(MUSICIAN, {
+                title: "Musician Default Upload",
                 fileBase64: b64("%PDF-1.4 d"),
                 mimeType: "application/pdf",
             })
             expect(r).toMatchObject({ ok: true, collection: "uploads" })
         })
 
-        it("save_scraped_chart enforces the same gate", async () => {
+        it("save_scraped_chart enforces the same widened gate", async () => {
+            // Musician blocked on curated.
             const denied = await saveScrapedChart(MUSICIAN, {
                 title: "Scraped Core Probe",
                 content: "G   D   Em\nlyrics",
                 collection: "core",
             })
             expect(denied).toEqual({
-                error: expect.stringContaining("requires an admin account"),
+                error: expect.stringContaining(
+                    "requires an admin or band leader",
+                ),
             })
 
-            const ok = await saveScrapedChart(ADMIN, {
-                title: "Scraped Core Admin",
-                content: "G   D   Em\nlyrics",
+            // band_leader now allowed on curated.
+            const leaderOk = await saveScrapedChart(LEADER, {
+                title: "Scraped Core Leader",
+                content: "G   D   Em\nleader-lyrics",
                 collection: "core",
             })
-            expect(ok).toMatchObject({ ok: true, collection: "core" })
+            expect(leaderOk).toMatchObject({ ok: true, collection: "core" })
+
+            // Admin still allowed.
+            const adminOk = await saveScrapedChart(ADMIN, {
+                title: "Scraped Core Admin",
+                content: "G   D   Em\nadmin-lyrics",
+                collection: "core",
+            })
+            expect(adminOk).toMatchObject({ ok: true, collection: "core" })
         })
     })
 

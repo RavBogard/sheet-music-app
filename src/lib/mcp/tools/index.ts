@@ -524,7 +524,7 @@ const collectionSchema = z
     .enum(["core", "supplemental", "uploads"])
     .optional()
     .describe(
-        "Which library section to file the chart under. 'uploads' is the user-uploaded section (default). 'core' is the main CRC catalog — ADMIN-ONLY. 'supplemental' is the Shireinu songbook — ADMIN-ONLY. Non-admin callers should leave this unset or pass 'uploads'.",
+        "Which library section to file the chart under. 'uploads' is the user-uploaded section (default). 'core' is the main CRC catalog — admins and band leaders may write to it. 'supplemental' is the Shireinu songbook — admins and band leaders may write to it. Musicians and canUpload-only callers should leave this unset or pass 'uploads'. NOTE: deleting from 'core' or 'supplemental' still requires admin (delete_chart).",
     )
 
 export function registerChartUploadTools(server: McpServer): void {

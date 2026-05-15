@@ -56,18 +56,27 @@ function isUploadAllowed(roles: UploaderRoles): boolean {
     return roles.canUpload
 }
 
+/** Trusted-leader role — bypasses rate limits AND gates curated-catalog writes. */
+function isTrustedLeader(roles: UploaderRoles): boolean {
+    return roles.role === "admin" || roles.role === "band_leader"
+}
+
 function curatedCatalogGate(
     roles: UploaderRoles,
     collection: LibraryCollection | undefined,
 ): ToolError | null {
+    // Curated catalogs ('core' = main CRC liturgy, 'supplemental' = Shireinu)
+    // are reserved for admin AND band_leader. Musicians + canUpload-only users
+    // still default to 'uploads'. Curated DELETE remains admin-only (handled
+    // in deleteChart) — destructive ops on curated stay stricter.
     if (
         (collection === "core" || collection === "supplemental") &&
-        roles.role !== "admin"
+        !isTrustedLeader(roles)
     ) {
         return {
             error:
-                `Writing to the '${collection}' catalog requires an admin account. ` +
-                `Pick collection: 'uploads' (default) or ask an admin to add this to the curated catalog.`,
+                `Writing to the '${collection}' catalog requires an admin or band leader account. ` +
+                `Pick collection: 'uploads' (default) or ask an admin/band leader to add this to the curated catalog.`,
         }
     }
     return null
@@ -110,7 +119,7 @@ export async function uploadChart(
     if (curatedDenial) return curatedDenial
 
     const limited = await checkUserRateLimit(uid, "upload", {
-        isAdmin: roles.role === "admin",
+        bypass: isTrustedLeader(roles),
     })
     if (limited) return { error: limited.error }
 
@@ -200,7 +209,7 @@ export async function deleteChart(
     }
 
     const limited = await checkUserRateLimit(uid, "upload", {
-        isAdmin: roles.role === "admin",
+        bypass: isTrustedLeader(roles),
     })
     if (limited) return { error: limited.error }
 
@@ -335,7 +344,7 @@ export async function scrapeChartFromUrl(
 
     // Scrape uses Gemini, so meter it under the 'ai' bucket to bound spend.
     const limited = await checkUserRateLimit(uid, "ai", {
-        isAdmin: roles.role === "admin",
+        bypass: isTrustedLeader(roles),
     })
     if (limited) return { error: limited.error }
 
@@ -384,7 +393,7 @@ export async function saveScrapedChart(
     if (curatedDenial) return curatedDenial
 
     const limited = await checkUserRateLimit(uid, "upload", {
-        isAdmin: roles.role === "admin",
+        bypass: isTrustedLeader(roles),
     })
     if (limited) return { error: limited.error }
 

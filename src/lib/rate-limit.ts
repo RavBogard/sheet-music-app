@@ -141,10 +141,12 @@ function getKey(req: NextRequest): string {
  * with every other claude.ai tenant. Keying on `u:{uid}` gives each MCP
  * user their own bucket.
  *
- * `opts.isAdmin: true` bypasses the limiter entirely. CRC has a tiny admin
- * count and admins already wield destructive powers — capping their MCP
- * throughput just gets in the way of legitimate batch admin work (bulk
- * uploads, bulk cleanups, cowork-driven stress tests). Non-admin callers
+ * `opts.bypass: true` bypasses the limiter entirely. Callers compute this
+ * from the caller's role — admins AND band_leaders are trusted MCP write
+ * users (CRC has a tiny count of each, both already wield destructive
+ * powers via the editor write tools, and capping their throughput just
+ * gets in the way of legitimate batch work: bulk uploads, bulk cleanups,
+ * cowork-driven stress tests, gig-packet generation). Non-leader callers
  * still get the per-tier limits.
  *
  * Returns `null` if OK, or `{ error, retryAfterSec }` if limited.
@@ -152,9 +154,9 @@ function getKey(req: NextRequest): string {
 export async function checkUserRateLimit(
     uid: string,
     tier: LimiterName = "api",
-    opts?: { isAdmin?: boolean },
+    opts?: { bypass?: boolean },
 ): Promise<{ error: string; retryAfterSec: number } | null> {
-    if (opts?.isAdmin) return null
+    if (opts?.bypass) return null
     const key = `${tier}:u:${uid}`
     try {
         const result = await limiters[tier].limit(key)
