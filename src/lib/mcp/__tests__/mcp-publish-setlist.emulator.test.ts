@@ -465,6 +465,50 @@ describe("MCP publish_setlist (emulator)", () => {
         expect(post.publishedAt).toBeTruthy()
     })
 
+    it("dryRun on an unhealthy setlist returns the preview without force (F-01 → F-05)", async () => {
+        // 2026-05-16 bugstomp F-05: pre-fix, dryRun on a setlist with any
+        // broken bond refused with the same error as a non-dryRun publish,
+        // meaning operators had to pass `force: true` just to see the
+        // chartHealth report — they had to opt into "ship anyway" to learn
+        // whether they were okay shipping anyway. The refuse-gate now
+        // fires only on a real publish; dryRun always returns the report.
+        const id = "set-pub-dry-broken"
+        await seedPublishableSetlist(id)
+
+        mockGetChartHealth.mockImplementation(async (fileId: string) =>
+            fileId === "upload-osehshalom"
+                ? { status: "ok", source: "firebase-storage" as const }
+                : {
+                      status: "missing" as const,
+                      reason: "library_index row points at a deleted Drive file",
+                  },
+        )
+
+        const r = await publishSetlist(ADMIN, {
+            setlistId: id,
+            dryRun: true,
+        })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+
+        // dryRun returned the report — operator can now see what's broken
+        // BEFORE deciding whether to force-publish.
+        expect(r.dryRun).toBe(true)
+        expect(r.chartHealth.bondedCount).toBe(2)
+        expect(r.chartHealth.okCount).toBe(1)
+        expect(r.chartHealth.unhealthy).toHaveLength(1)
+        expect(r.chartHealth.unhealthy[0]).toMatchObject({
+            fileId: "upload-michamocha",
+            status: "missing",
+        })
+
+        // Nothing was dispatched and the setlist was NOT mutated.
+        const post = (await db().collection("setlists").doc(id).get()).data()!
+        expect(post.publishedAt).toBeFalsy()
+        expect(mockSendPushToUsers).not.toHaveBeenCalled()
+        expect(mockEmailAllMembers).not.toHaveBeenCalled()
+    })
+
     it("dryRun returns the chartHealth report even when all charts ok", async () => {
         const id = "set-pub-dry-health"
         await seedPublishableSetlist(id)

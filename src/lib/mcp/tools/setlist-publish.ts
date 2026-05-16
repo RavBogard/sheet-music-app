@@ -314,7 +314,15 @@ export async function publishSetlist(
         okCount: healthRows.filter((r) => r.health.status === "ok").length,
         unhealthy,
     }
-    if (unhealthy.length > 0 && !args.force) {
+    // F-05 (2026-05-16 bugstomp): dryRun NEVER refuses on the chart-health
+    // gate. dryRun's purpose is to surface the report so the operator can
+    // see what's broken BEFORE deciding whether to force-publish. Pre-fix,
+    // the operator had to pass `force: true` just to see the preview —
+    // they had to opt into "I'm okay shipping anyway" to learn whether they
+    // were okay shipping anyway. The refuse-gate now fires only on a real
+    // publish; dryRun always returns the report below, with chartHealth
+    // populated.
+    if (unhealthy.length > 0 && !args.force && !args.dryRun) {
         const list = unhealthy
             .slice(0, 5)
             .map((u) => `  - "${u.title}" (${u.fileId}): ${u.status}`)
