@@ -50,7 +50,12 @@ export function ContentSearchResults({
         return (
             <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
                 <Search className="w-3.5 h-3.5" />
-                No content matches for &ldquo;{query}&rdquo;
+                {/* F-11 (2026-05-16 bugstomp): operators saw "No content matches"
+                    rendered above a title-search panel that had 10+ matches —
+                    misread as "search failed." This component searches chart-body
+                    text (lyrics/chord chart content), distinct from filename
+                    matching above; the label now spells that out. */}
+                No chart-body text matches &ldquo;{query}&rdquo;
             </div>
         )
     }

@@ -64,6 +64,13 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     const retryCountRef = useRef(0)
     const MAX_RETRIES = 3
 
+    // F-07 (2026-05-16 bugstomp): each broken-bond chart click was firing
+    // up to 4 logger.error rows — one for the blob: URL stage, one for the
+    // /api/drive/file/ stage, doubled on a retry. Sentry burn-rate scales
+    // with broken bonds. Dedup by url+message so a repeat fail on the same
+    // URL doesn't re-log. New URL or new message → logs once.
+    const lastLoggedErrorRef = useRef<string | null>(null)
+
     const fetchPdf = useCallback(async (fetchUrl: string, signal?: AbortSignal, isRetry = false) => {
         if (resolvedUrlRef.current === fetchUrl && !isRetry) return
 
@@ -82,6 +89,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                     setSource({ data: new Uint8Array(arrayBuffer) })
                     setError(null)
                     retryCountRef.current = 0
+                    lastLoggedErrorRef.current = null
                     setLoading(false)
                     return
                 }
@@ -120,11 +128,19 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
             setSource({ data: new Uint8Array(arrayBuffer) })
             setError(null)
             retryCountRef.current = 0
+            lastLoggedErrorRef.current = null
         } catch (e) {
             // Abort is an expected outcome on unmount / URL change — swallow quietly.
             if (e instanceof Error && e.name === 'AbortError') return
             const msg = e instanceof Error ? e.message : String(e)
-            logger.error('[PDFViewer] Fetch error:', msg, '| url:', fetchUrl.substring(0, 80))
+            // F-07 dedup: only log once per unique (url, msg) pair so a
+            // broken-bond chart click + Retry doesn't write 4 Sentry rows
+            // for the same failure.
+            const fingerprint = `${fetchUrl.substring(0, 120)}::${msg}`
+            if (lastLoggedErrorRef.current !== fingerprint) {
+                lastLoggedErrorRef.current = fingerprint
+                logger.error('[PDFViewer] Fetch error:', msg, '| url:', fetchUrl.substring(0, 80))
+            }
             setError(msg)
             setSource(null)
         } finally {
