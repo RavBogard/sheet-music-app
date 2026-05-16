@@ -95,8 +95,21 @@ export interface VerifySetlistChartsResult {
     okCount: number
     missingCount: number
     unreachableCount: number
-    /** Number of catalog rows marked `status: 'orphaned'` this call. */
+    /**
+     * Number of `library_index` rows actually flipped to `status: 'orphaned'`
+     * this call — i.e. rows that existed in the catalog and were re-confirmed
+     * missing. Excludes phantom bonds (fileIds that had no catalog row at all).
+     */
     orphanedMarked: number
+    /**
+     * F-04 (2026-05-16 bugstomp): tracks bonded to a fileId that has NO
+     * matching `library_index` row at all. Distinct from `orphanedMarked` —
+     * these never had a catalog row to flip. Operators triaging a library
+     * hygiene pass usually want to re-bond or remove these rows entirely
+     * rather than mark them orphaned (which would just create empty stub
+     * rows). Always reported, regardless of `markOrphaned`.
+     */
+    phantomBonds: number
     rows: SetlistTrackHealth[]
 }
 
@@ -167,19 +180,44 @@ export async function verifySetlistCharts(
 
     // Opportunistic orphan marking. Only fires on `missing` (definitive
     // not-found) — never on `unreachable` (transient blip). L-001.
+    //
+    // F-04 (2026-05-16 bugstomp): split missing fileIds into two classes
+    // BEFORE writing. Phantom bonds (no library_index row at all) used to
+    // get a blank `{status: "orphaned"}` doc created via batch.set + merge,
+    // AND inflate `orphanedMarked` to match the report's missingCount —
+    // operators believed they'd cleaned up rows that weren't there to
+    // begin with, and the catalog filled with stub docs. We now split:
+    // existing catalog rows → flipped + counted in `orphanedMarked`;
+    // phantoms → counted separately in `phantomBonds`, never written.
     let orphanedMarked = 0
-    if (args.markOrphaned) {
-        const missingFileIds = probes
-            .filter((p) => p.fileId && p.health.status === "missing")
-            .map((p) => p.fileId as string)
-        if (missingFileIds.length > 0) {
+    let phantomBonds = 0
+    const missingFileIds = probes
+        .filter((p) => p.fileId && p.health.status === "missing")
+        .map((p) => p.fileId as string)
+    if (missingFileIds.length > 0) {
+        const existingSnaps = await Promise.all(
+            missingFileIds.map((fid) =>
+                db.collection("library_index").doc(fid).get(),
+            ),
+        )
+        const existingFileIds: string[] = []
+        for (let i = 0; i < missingFileIds.length; i++) {
+            if (existingSnaps[i].exists) {
+                existingFileIds.push(missingFileIds[i])
+            } else {
+                phantomBonds++
+            }
+        }
+        if (args.markOrphaned && existingFileIds.length > 0) {
             const batch = db.batch()
-            for (const fid of missingFileIds) {
-                batch.set(
-                    db.collection("library_index").doc(fid),
-                    { status: "orphaned" },
-                    { merge: true },
-                )
+            for (const fid of existingFileIds) {
+                batch.update(db.collection("library_index").doc(fid), {
+                    status: "orphaned",
+                })
+                // songs/{fid} parallel write stays set+merge: some catalog
+                // entries don't have a sibling songs/{fid} row, and we want
+                // the orphaned status to land regardless so `search_library`
+                // exclusion sees it on either collection.
                 batch.set(
                     db.collection("songs").doc(fid),
                     { status: "orphaned" },
@@ -188,11 +226,11 @@ export async function verifySetlistCharts(
             }
             try {
                 await batch.commit()
-                orphanedMarked = missingFileIds.length
+                orphanedMarked = existingFileIds.length
             } catch (err) {
                 logger.warn("[mcp] verify_setlist_charts orphan-mark failed", {
                     setlistId: args.setlistId,
-                    count: missingFileIds.length,
+                    count: existingFileIds.length,
                     err: err instanceof Error ? err.message : String(err),
                 })
             }
@@ -207,6 +245,7 @@ export async function verifySetlistCharts(
         missingCount,
         unreachableCount,
         orphanedMarked,
+        phantomBonds,
     })
 
     return {
@@ -218,6 +257,7 @@ export async function verifySetlistCharts(
         missingCount,
         unreachableCount,
         orphanedMarked,
+        phantomBonds,
         rows: probes,
     }
 }

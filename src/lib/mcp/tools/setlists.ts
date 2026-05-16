@@ -24,6 +24,10 @@ interface SetlistSummary {
     eventDate: string | null
     trackCount: number
     songCount?: number
+    /** W-04: monotonically increasing per write. Pass back as
+     *  lastSeenVersion on subsequent writes for optimistic concurrency
+     *  (Plan 02 enforces; Plan 01 stamps only). */
+    version?: number
 }
 
 type ToolError = { error: string }
@@ -84,6 +88,7 @@ export async function listSetlists(
                 trackCount: typeof row.trackCount === "number" ? row.trackCount : 0,
             }
             if (typeof row.songCount === "number") summary.songCount = row.songCount
+            if (typeof row.version === "number") summary.version = row.version
             return summary
         })
 }
@@ -102,8 +107,18 @@ export async function getSetlist(_uid: string, args: GetSetlistArgs) {
     const setlist = serializeSetlist(doc.id, data)
     const tracks = await getTracksForSetlist(db, args.id, data)
 
+    // W-04: surface setlist + per-track `version` so the agent can pass
+    // back lastSeenVersion on subsequent writes. Plan 01 stamps only;
+    // Plan 02 enforces.
+    const setlistVersion =
+        typeof data.version === "number" ? data.version : undefined
+    const setlistLastModifiedAt =
+        typeof data.lastModifiedAt === "string" ? data.lastModifiedAt : undefined
+
     return {
         ...setlist,
+        version: setlistVersion,
+        lastModifiedAt: setlistLastModifiedAt,
         tracks: tracks.map((t) => {
             const row = t as Record<string, unknown>
             return {
@@ -120,6 +135,11 @@ export async function getSetlist(_uid: string, args: GetSetlistArgs) {
                 referenceLink:
                     typeof row.referenceLink === "string" ? row.referenceLink : null,
                 notes: typeof row.notes === "string" ? row.notes : null,
+                version: typeof row.version === "number" ? row.version : undefined,
+                lastModifiedAt:
+                    typeof row.lastModifiedAt === "string"
+                        ? row.lastModifiedAt
+                        : undefined,
             }
         }),
     }

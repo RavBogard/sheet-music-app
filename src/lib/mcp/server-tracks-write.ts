@@ -4,6 +4,22 @@ import { getTracksForSetlist } from "@/lib/server-tracks"
 import { logger } from "@/lib/logger"
 
 /**
+ * W-04 Plan 01: every write path stamps `version: increment(1)` +
+ * `lastModifiedAt` on the setlist + affected tracks. Plan 02 swaps to
+ * read-check-write transactions for stale-version rejection; Plan 01
+ * is purely additive — callers see new fields on reads, behavior is
+ * unchanged.
+ */
+const versionBumpFields = (): Record<string, unknown> => ({
+    version: FieldValue.increment(1),
+    lastModifiedAt: new Date().toISOString(),
+})
+const initialVersionFields = (): Record<string, unknown> => ({
+    version: 1,
+    lastModifiedAt: new Date().toISOString(),
+})
+
+/**
  * MCP-owned Admin-SDK write helpers for top-level `tracks/{id}` docs.
  *
  * Why these live in the MCP lane (not @/lib/setlist-write): that module
@@ -125,6 +141,7 @@ export async function addTrack(
         type: input.type,
         title: input.title,
         updatedAt: FieldValue.serverTimestamp(),
+        ...initialVersionFields(), // W-04 Plan 01: new track → version 1
     }
     if (input.key !== undefined) payload.key = input.key
     if (input.leadMusician !== undefined) payload.leadMusician = input.leadMusician
@@ -135,9 +152,21 @@ export async function addTrack(
     if (input.notes !== undefined) payload.notes = input.notes
     batch.set(db.collection("tracks").doc(trackId), payload)
 
+    // W-04 Plan 01: shifted siblings get their version bumped too — their
+    // `order` is mutating, which means callers reading them with an old
+    // version are stale. Plan 02 will gate writes on it; Plan 01 stamps.
+    for (const t of existing) {
+        if (t.order >= insertAt) {
+            // Already added to batch above with order update — extend with
+            // versionBumpFields by re-writing the same ref.
+            batch.update(db.collection("tracks").doc(t.id), versionBumpFields())
+        }
+    }
+
     const setlistPatch: Record<string, unknown> = {
         trackCount: existing.length + 1,
         updatedAt: FieldValue.serverTimestamp(),
+        ...versionBumpFields(), // W-04 Plan 01: setlist mutation → bump
     }
     // Bond the chart into the parent's denormalized fileIds set so the app
     // renders it on the row without waiting for the client-side reconciler.
@@ -185,10 +214,12 @@ export async function reorderTracks(
         batch.update(db.collection("tracks").doc(id), {
             order: i,
             updatedAt: FieldValue.serverTimestamp(),
+            ...versionBumpFields(),
         })
     })
     batch.update(db.collection("setlists").doc(setlistId), {
         updatedAt: FieldValue.serverTimestamp(),
+        ...versionBumpFields(),
     })
     await batch.commit()
     logger.info("[mcp] tracks reordered", { setlistId, count: orderedTrackIds.length })
@@ -362,6 +393,8 @@ export async function updateTrack(
     }
 
     const batch = db.batch()
+    // W-04 Plan 01: bump the patched track's version alongside the field updates.
+    Object.assign(update, versionBumpFields())
     batch.update(trackRef, update)
 
     // CF3: in-place reorder. Clamp the target into the valid range, then
@@ -380,8 +413,15 @@ export async function updateTrack(
             reordered.splice(target, 0, moved)
             reordered.forEach((t, i) => {
                 if (t.order !== i) {
+                    // Firestore batches MERGE partial updates by field when
+                    // multiple .update() calls hit the same ref — so the
+                    // moved row gets its order from this loop AND the
+                    // field-patches from `update` above without losing
+                    // either. Sibling rows whose order shifts get an
+                    // independent version bump too.
                     batch.update(db.collection("tracks").doc(t.id), {
                         order: i,
+                        ...versionBumpFields(),
                     })
                 }
             })
@@ -390,6 +430,7 @@ export async function updateTrack(
 
     const setlistPatch: Record<string, unknown> = {
         updatedAt: FieldValue.serverTimestamp(),
+        ...versionBumpFields(),
     }
 
     // Re-bond reconcile: replace the parent's `fileIds[]` with the canonical
@@ -721,6 +762,7 @@ export async function bulkUpdateTracks(
                 const ref = db.collection("tracks").doc(entry.trackId)
                 const update: Record<string, unknown> = {
                     updatedAt: FieldValue.serverTimestamp(),
+                    ...versionBumpFields(), // W-04 Plan 01
                 }
                 for (const k of UPDATABLE_FIELDS) {
                     if (entry.patch[k] !== undefined) update[k] = entry.patch[k]
@@ -748,6 +790,7 @@ export async function bulkUpdateTracks(
             })
             const setlistPatch: Record<string, unknown> = {
                 updatedAt: FieldValue.serverTimestamp(),
+                ...versionBumpFields(), // W-04 Plan 01
             }
             if (anyRebond) {
                 const patchedFileId = new Map<string, string | undefined>()
@@ -978,6 +1021,7 @@ export async function bulkAddTracks(
             type,
             title,
             updatedAt: FieldValue.serverTimestamp(),
+            ...initialVersionFields(), // W-04 Plan 01: new track → version 1
         }
         if (key !== undefined) payload.key = key
         if (leadMusician !== undefined) payload.leadMusician = leadMusician
@@ -1036,6 +1080,7 @@ export async function bulkAddTracks(
             if (t.order >= anchor) {
                 batch.update(db.collection("tracks").doc(t.id), {
                     order: t.order + insertCount,
+                    ...versionBumpFields(), // W-04 Plan 01: shifted siblings
                 })
             }
         }
@@ -1048,6 +1093,7 @@ export async function bulkAddTracks(
         const setlistPatch: Record<string, unknown> = {
             trackCount: existing.length + insertCount,
             updatedAt: FieldValue.serverTimestamp(),
+            ...versionBumpFields(), // W-04 Plan 01
         }
         if (newFileIds.size > 0) {
             setlistPatch.fileIds = FieldValue.arrayUnion(...newFileIds)
@@ -1122,18 +1168,22 @@ export async function removeTrack(
     const remaining = existing.filter((t) => t.id !== trackId)
     const batch = db.batch()
     batch.delete(db.collection("tracks").doc(trackId))
-    // Re-pack: assign contiguous order to whatever's left.
+    // Re-pack: assign contiguous order to whatever's left. Re-packed rows
+    // get a version bump (their order shifted; clients reading them with
+    // an old version are stale).
     remaining.forEach((t, i) => {
         if (t.order !== i) {
             batch.update(db.collection("tracks").doc(t.id), {
                 order: i,
                 updatedAt: FieldValue.serverTimestamp(),
+                ...versionBumpFields(),
             })
         }
     })
     const setlistPatch: Record<string, unknown> = {
         trackCount: remaining.length,
         updatedAt: FieldValue.serverTimestamp(),
+        ...versionBumpFields(),
     }
     // Drop the chart from the parent's fileIds set only when no other track
     // still references it (the array is a distinct set across all tracks).

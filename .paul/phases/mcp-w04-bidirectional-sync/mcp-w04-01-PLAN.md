@@ -5,15 +5,38 @@ type: feature
 wave: 1
 depends_on: []
 files_modified:
-  - src/lib/mcp/tools/server-tracks-write.ts
-  - src/lib/mcp/tools/server-setlists.ts
-  - src/lib/mcp/tools/server-tracks-read.ts
+  - src/lib/mcp/server-tracks-write.ts
+  - src/lib/mcp/tools/setlist-write.ts
+  - src/lib/mcp/tools/setlist-publish.ts
+  - src/lib/setlist-write.ts
+  - src/lib/mcp/tools/setlists.ts
   - src/lib/mcp/tools/index.ts
   - src/lib/mcp/tools/wait-for-setlist-change.ts
   - src/lib/mcp/error-envelopes.ts
   - src/lib/mcp/tools/sync.emulator.test.ts
 autonomous: false
 ---
+
+**SCOPE NOTE 2026-05-16:** W-04 was originally scoped as one phase plan but
+the optimistic-concurrency refactor of 7 write paths is larger than fits in
+one ship cleanly. This plan is now Plan **01 — Foundation** only:
+
+- Version fields stamped on every write (additive, no checks yet).
+- `bumpVersion` helper + error-envelopes module (consumed by 02 + 03).
+- `wait_for_setlist_change` long-poll MCP tool (read-only — no write-path
+  refactor).
+- Version surfaced on `get_setlist` + `list_setlists` envelopes.
+
+**Plan 02** — single-row write gating: `lastSeenVersion` rejection on
+`update_track`, `update_setlist`, `remove_track`, `reorder_setlist`,
+`delete_setlist`. E-002 envelope polish.
+
+**Plan 03** — bulk + publish: `bulk_update_tracks` atomic pre-flight,
+`publish_setlist` required version.
+
+The 3 plans together ship the full W-04 surface. Plan 01 alone is safe to
+ship today — existing callers see new `version` field on reads and are
+unaffected (writes always succeed; no rejections yet).
 
 <objective>
 ## Goal

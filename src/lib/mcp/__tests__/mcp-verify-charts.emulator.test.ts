@@ -292,4 +292,114 @@ describe("MCP chart-health tools (emulator)", () => {
         ).data()!
         expect(idx.status).toBe("active")
     })
+
+    it("phantom bonds: fileId with no library_index row counted separately, never written (F-04)", async () => {
+        // 2026-05-16 bugstomp F-04: a track bonded to a fileId that has
+        // NO library_index row at all (a "phantom bond" — usually from a
+        // typo or stale songId) used to (a) get a blank {status:"orphaned"}
+        // doc created via batch.set + merge, polluting the catalog with
+        // empty stub rows, AND (b) inflate orphanedMarked to match
+        // missingCount — so operators believed they'd cleaned up rows
+        // that weren't there. Both behaviors removed; phantomBonds now
+        // counts these distinctly and no write happens.
+        const id = "set-verify-phantom"
+        await db().collection("setlists").doc(id).set({
+            name: "Phantom Test",
+            ownerId: ADMIN,
+        })
+        // Real catalog row + matching missing health → orphanedMarked.
+        await seedTrack("treal", id, 0, {
+            title: "Real Orphan",
+            songId: "song-real-orphan",
+            fileId: "song-real-orphan",
+            type: "song",
+        })
+        await db().collection("library_index").doc("song-real-orphan").set({
+            name: "Real Orphan",
+            status: "active",
+        })
+        // Phantom bond: no library_index row for this fileId.
+        await seedTrack("tphantom", id, 1, {
+            title: "Phantom Bond",
+            songId: "phantom-songid-xyz",
+            fileId: "phantom-songid-xyz",
+            type: "song",
+        })
+
+        mockGetChartHealth.mockResolvedValue({
+            status: "missing",
+            reason: "library_index row points at a deleted Drive file",
+        })
+
+        const r = await verifySetlistCharts(ADMIN, {
+            setlistId: id,
+            markOrphaned: true,
+        })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+
+        expect(r.missingCount).toBe(2)
+        // Only the row with a real catalog entry was flipped — the phantom
+        // is counted separately.
+        expect(r.orphanedMarked).toBe(1)
+        expect(r.phantomBonds).toBe(1)
+
+        // Real catalog row was flipped.
+        const real = (
+            await db().collection("library_index").doc("song-real-orphan").get()
+        ).data()!
+        expect(real.status).toBe("orphaned")
+
+        // No stub library_index row was created for the phantom — the
+        // pollution path is closed.
+        const phantom = await db()
+            .collection("library_index")
+            .doc("phantom-songid-xyz")
+            .get()
+        expect(phantom.exists).toBe(false)
+
+        // No stub songs row either.
+        const phantomSong = await db()
+            .collection("songs")
+            .doc("phantom-songid-xyz")
+            .get()
+        expect(phantomSong.exists).toBe(false)
+    })
+
+    it("phantomBonds reports even without markOrphaned — visibility for hygiene triage (F-04)", async () => {
+        // phantomBonds is observability data, not a write — so it surfaces
+        // regardless of markOrphaned. Operators auditing a setlist need to
+        // see phantom bonds independent of whether they're ready to commit
+        // to writes.
+        const id = "set-verify-phantom-noop"
+        await db().collection("setlists").doc(id).set({
+            name: "Phantom Read",
+            ownerId: ADMIN,
+        })
+        await seedTrack("tp", id, 0, {
+            title: "Phantom Read",
+            songId: "another-phantom-id",
+            fileId: "another-phantom-id",
+            type: "song",
+        })
+
+        mockGetChartHealth.mockResolvedValue({
+            status: "missing",
+            reason: "Drive: file not found",
+        })
+
+        const r = await verifySetlistCharts(ADMIN, { setlistId: id })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+
+        expect(r.missingCount).toBe(1)
+        expect(r.orphanedMarked).toBe(0)
+        expect(r.phantomBonds).toBe(1)
+
+        const phantom = await db()
+            .collection("library_index")
+            .doc("another-phantom-id")
+            .get()
+        expect(phantom.exists).toBe(false)
+    })
 })

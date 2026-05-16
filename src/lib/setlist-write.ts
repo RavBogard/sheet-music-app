@@ -112,6 +112,12 @@ export async function createSetlistServerSide(
         hydrated: true,
         ownerId: input.ownerId,
         ownerName: input.ownerName,
+        // W-04 Plan 01: stamp initial version + lastModifiedAt so the
+        // optimistic-concurrency plumbing has values to compare against
+        // from doc-creation time.
+        version: 1,
+        lastModifiedAt: new Date().toISOString(),
+        lastModifiedBy: input.ownerId,
     }
     // Optional fields — written only when explicitly provided (NOT defaulted;
     // the CSV-import quirk of defaulting eventDate to serverTimestamp is not
@@ -130,6 +136,7 @@ export async function createSetlistServerSide(
     // tracks/{id} seed. Either the whole setlist commits or nothing does.
     const batch = db.batch()
     batch.set(db.collection('setlists').doc(setlistId), setlistPayload)
+    const nowIso = new Date().toISOString()
     input.tracks.forEach((t, i) => {
         const trackId = crypto.randomUUID()
         const trackPayload: Record<string, unknown> = {
@@ -138,6 +145,9 @@ export async function createSetlistServerSide(
             order: i,
             type: t.type ?? 'song',
             title: t.title,
+            // W-04 Plan 01: every track starts at version 1.
+            version: 1,
+            lastModifiedAt: nowIso,
         }
         if (t.key !== undefined) trackPayload.key = t.key
         if (t.leadMusician !== undefined) {
@@ -187,6 +197,10 @@ export async function updateSetlistServerSide(
         mapped.eventDate = toTimestamp(patch.eventDate)
     }
     mapped.updatedAt = FieldValue.serverTimestamp()
+    // W-04 Plan 01: bump version on metadata updates. Plan 02 will gate
+    // the call on optional lastSeenVersion.
+    mapped.version = FieldValue.increment(1)
+    mapped.lastModifiedAt = new Date().toISOString()
 
     await db.collection('setlists').doc(setlistId).update(mapped)
 }

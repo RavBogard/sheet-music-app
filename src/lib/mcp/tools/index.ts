@@ -38,6 +38,11 @@ import {
     requestChartUploadUrl,
     finalizeChartUpload,
 } from "./library-upload-session"
+import {
+    waitForSetlistChange,
+    WAIT_FOR_SETLIST_CHANGE_MAX_TIMEOUT_SEC,
+    WAIT_FOR_SETLIST_CHANGE_DEFAULT_TIMEOUT_SEC,
+} from "./wait-for-setlist-change"
 
 /**
  * Validate that an `eventDate` string is parseable as a date. Previously the
@@ -619,6 +624,41 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await getChartStatus(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "wait_for_setlist_change",
+        {
+            description:
+                "W-04 long-poll setlist change observer. Blocks server-side until either the setlist's `version` (or any of its tracks') advances past `sinceVersion`, or `timeoutSec` elapses. Use to passively watch for concurrent edits from the web app or another agent — chain successive calls if you need to wait longer than 60 seconds. Returns `{changed: true, currentVersion, changes: [...], setlist?}` on a real change, or `{changed: false, currentVersion, timedOut: true}` on timeout. The `version` to pass is the one returned by `get_setlist` or `list_setlists`. Cheap: no byte transfer, single subscribe + race against a setTimeout.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id"),
+                sinceVersion: z
+                    .number()
+                    .int()
+                    .min(0)
+                    .describe(
+                        "The version you last observed. Pass 0 if you've never read the setlist before — the call will return immediately with the current state.",
+                    ),
+                timeoutSec: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(WAIT_FOR_SETLIST_CHANGE_MAX_TIMEOUT_SEC)
+                    .optional()
+                    .describe(
+                        `How long to wait before returning {changed: false, timedOut: true} (default ${WAIT_FOR_SETLIST_CHANGE_DEFAULT_TIMEOUT_SEC}s, max ${WAIT_FOR_SETLIST_CHANGE_MAX_TIMEOUT_SEC}s)`,
+                    ),
+                includeFullState: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "If true, the response includes a `setlist` field with the full post-change setlist + tracks (saves a follow-up get_setlist call). Default false.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await waitForSetlistChange(uidFrom(extra), args)),
     )
 
     server.registerTool(
