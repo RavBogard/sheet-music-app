@@ -1121,6 +1121,132 @@ describe("MCP setlist write tools (emulator)", () => {
             }
         })
 
+        it("bulk_update_tracks atomic: bogus songId on one patch rejects the whole batch (F-01 parity)", async () => {
+            // 2026-05-16 bugstomp F-01 parity: pre-fix, bulk_update_tracks
+            // accepted any songId because its songLookup callback returned
+            // null on miss and the patch wrote anyway — same silent
+            // orphan-manufacture hole closed on update_track. Atomic mode
+            // now rejects all, marks the bad row invalid + rolls back
+            // every other row with the explicit rollback message.
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf" })
+            const id = await newSetlist()
+            const tA = await addRow(id, "Oseh Shalom", { songId: "song-oseh" })
+            const tB = await addRow(id, "Yih'yu", { songId: "song-oseh" })
+
+            const r = (await bulkUpdateSetlistTracks(ADMIN, {
+                setlistId: id,
+                mode: "atomic",
+                patches: [
+                    {
+                        trackId: tA,
+                        patch: { songId: "song-other" }, // VALID rebond
+                    },
+                    {
+                        trackId: tB,
+                        patch: { songId: "definitely-not-a-real-songid" },
+                    },
+                ],
+            })) as {
+                ok: true
+                mode: "atomic"
+                committed: boolean
+                results: Array<{ trackId: string; ok: boolean; error?: string }>
+            }
+            expect(r.committed).toBe(false)
+            expect(r.results[0].ok).toBe(false)
+            expect(r.results[0].error).toContain("Rolled back")
+            expect(r.results[1].ok).toBe(false)
+            expect(r.results[1].error).toBe(
+                "Song definitely-not-a-real-songid not found",
+            )
+
+            // No row mutated — both still bonded to song-oseh.
+            const aDoc = (await db().collection("tracks").doc(tA).get()).data()!
+            const bDoc = (await db().collection("tracks").doc(tB).get()).data()!
+            expect(aDoc.songId).toBe("song-oseh")
+            expect(aDoc.fileId).toBe("song-oseh")
+            expect(bDoc.songId).toBe("song-oseh")
+            expect(bDoc.fileId).toBe("song-oseh")
+        })
+
+        it("bulk_update_tracks best-effort: bogus songId fails just that row; valid rows commit (F-01 parity)", async () => {
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf" })
+            const id = await newSetlist()
+            const tA = await addRow(id, "Oseh Shalom", { songId: "song-oseh" })
+            const tB = await addRow(id, "Yih'yu", { songId: "song-oseh" })
+
+            const r = (await bulkUpdateSetlistTracks(ADMIN, {
+                setlistId: id,
+                mode: "best-effort",
+                patches: [
+                    {
+                        trackId: tA,
+                        patch: { songId: "song-other" }, // VALID rebond
+                    },
+                    {
+                        trackId: tB,
+                        patch: { songId: "definitely-not-a-real-songid" },
+                    },
+                ],
+            })) as {
+                ok: true
+                mode: "best-effort"
+                committed: boolean
+                results: Array<{ trackId: string; ok: boolean; error?: string }>
+            }
+            expect(r.committed).toBe(true)
+            expect(r.results[0].ok).toBe(true)
+            expect(r.results[1].ok).toBe(false)
+            expect(r.results[1].error).toBe(
+                "Song definitely-not-a-real-songid not found",
+            )
+
+            // tA rebonded to song-other; tB unchanged (still song-oseh).
+            const aDoc = (await db().collection("tracks").doc(tA).get()).data()!
+            const bDoc = (await db().collection("tracks").doc(tB).get()).data()!
+            expect(aDoc.songId).toBe("song-other")
+            expect(aDoc.fileId).toBe("song-other")
+            expect(bDoc.songId).toBe("song-oseh")
+            expect(bDoc.fileId).toBe("song-oseh")
+        })
+
+        it("bulk_update_tracks dryRun: bogus songId surfaces in plan without writing (F-01 parity)", async () => {
+            const id = await newSetlist()
+            const tA = await addRow(id, "Oseh Shalom", { songId: "song-oseh" })
+
+            const r = (await bulkUpdateSetlistTracks(ADMIN, {
+                setlistId: id,
+                dryRun: true,
+                patches: [
+                    {
+                        trackId: tA,
+                        patch: { songId: "definitely-not-a-real-songid" },
+                    },
+                ],
+            })) as {
+                ok: true
+                dryRun: boolean
+                committed: boolean
+                results: Array<{ trackId: string; ok: boolean; error?: string }>
+            }
+            expect(r.dryRun).toBe(true)
+            expect(r.committed).toBe(false)
+            expect(r.results[0].ok).toBe(false)
+            expect(r.results[0].error).toBe(
+                "Song definitely-not-a-real-songid not found",
+            )
+
+            // No write happened.
+            const doc = (await db().collection("tracks").doc(tA).get()).data()!
+            expect(doc.songId).toBe("song-oseh")
+        })
+
         it("bulk_update_tracks rejects >50 patches before writing", async () => {
             const id = await newSetlist()
             const trackId = await addRow(id, "Solo")

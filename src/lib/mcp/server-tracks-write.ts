@@ -596,6 +596,48 @@ export async function bulkUpdateTracks(
     const existing = await getTracksForSetlist(db, setlistId, {})
     const byId = new Map(existing.map((t) => [t.id, t]))
 
+    // F-01 parity (2026-05-16 bugstomp): pre-resolve every re-bond patch's
+    // songIds (NEW + OLD) BEFORE building plan entries, so a bogus NEW
+    // songId fails at the plan stage (atomic mode rejects all; best-effort
+    // marks the bad row invalid and continues). Pre-fix, songLookup
+    // returned null on miss and the bulk path silently wrote the patch
+    // anyway — same orphan-manufacture hole F-01 closed on `update_track`.
+    // The same cache also feeds the existing NOTE-1 title-refresh path
+    // (old-song lookups for "was the title customized?"), so we collect
+    // both up front and one fetch phase serves both purposes. songLookup
+    // is optional — without it we can't validate, so we skip the check
+    // (parity with the no-lookup semantics in applyRebondSideEffects).
+    const songCache = new Map<
+        string,
+        { title?: string; fileName?: string } | null
+    >()
+    if (songLookup) {
+        const idsToFetch = new Set<string>()
+        for (const { trackId, patch } of patches) {
+            if (patch.songId === undefined) continue
+            const row = byId.get(trackId) as Record<string, unknown> | undefined
+            if (!row) continue
+            if (patch.songId !== row.songId) {
+                idsToFetch.add(patch.songId)
+                const oldFid = row.fileId
+                if (typeof oldFid === "string" && oldFid) idsToFetch.add(oldFid)
+            }
+        }
+        await Promise.all(
+            [...idsToFetch].map(async (sid) => {
+                try {
+                    songCache.set(sid, await songLookup(sid))
+                } catch (err) {
+                    logger.warn("[mcp] bulk_update_tracks songLookup failed", {
+                        sid,
+                        err: err instanceof Error ? err.message : String(err),
+                    })
+                    songCache.set(sid, null)
+                }
+            }),
+        )
+    }
+
     type PlanEntry =
         | { kind: "preview"; result: BulkUpdateResult }
         | { kind: "invalid"; result: BulkUpdateResult }
@@ -635,6 +677,25 @@ export async function bulkUpdateTracks(
                     trackId,
                     ok: false,
                     error: "patch must include at least one field",
+                },
+            }
+        }
+        // F-01 parity: a re-bond patch (songId differs from current) whose
+        // new songId resolved to null in the pre-fetch is rejected — same
+        // contract as update_track. Only fires when songLookup was provided
+        // and the bond is actually changing.
+        if (
+            songLookup &&
+            patch.songId !== undefined &&
+            patch.songId !== row.songId &&
+            songCache.get(patch.songId) === null
+        ) {
+            return {
+                kind: "invalid",
+                result: {
+                    trackId,
+                    ok: false,
+                    error: `Song ${patch.songId} not found`,
                 },
             }
         }
@@ -690,39 +751,8 @@ export async function bulkUpdateTracks(
 
     const results: BulkUpdateResult[] = planEntries.map((p) => p.result)
 
-    // Pre-resolve song lookups for every re-bond patch (both new song AND
-    // old song — NOTE-1 needs old-song.title to decide if the row was
-    // customized). Async lookups belong outside the transaction so the
-    // critical section stays write-only.
-    const songCache = new Map<
-        string,
-        { title?: string; fileName?: string } | null
-    >()
-    if (songLookup) {
-        const idsToFetch = new Set<string>()
-        for (const { trackId, patch } of patches) {
-            const row = byId.get(trackId) as Record<string, unknown> | undefined
-            if (!row) continue
-            if (patch.songId !== undefined && patch.songId !== row.songId) {
-                idsToFetch.add(patch.songId)
-                const oldFid = row.fileId
-                if (typeof oldFid === "string" && oldFid) idsToFetch.add(oldFid)
-            }
-        }
-        await Promise.all(
-            [...idsToFetch].map(async (sid) => {
-                try {
-                    songCache.set(sid, await songLookup(sid))
-                } catch (err) {
-                    logger.warn("[mcp] bulk_update_tracks songLookup failed", {
-                        sid,
-                        err: err instanceof Error ? err.message : String(err),
-                    })
-                    songCache.set(sid, null)
-                }
-            }),
-        )
-    }
+    // songCache populated above in the F-01-parity pre-fetch — both NEW
+    // and OLD song lookups are already cached for the side-effects path.
 
     // Resolve the {fileName, title} side-effects of a single re-bond into the
     // update map. Reused by both atomic and best-effort paths so the contract
