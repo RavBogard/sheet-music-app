@@ -16,19 +16,39 @@ export interface SearchLibraryArgs {
     limit?: number
 }
 
+/**
+ * Tokenizer normalization (L-003 from the 2026-05-16 Bar Mitzvah session):
+ *  - lowercase
+ *  - fold diacritics (so "Shabb`at" matches "Shabbat")
+ *  - collapse runs of [_\s\-] to a single space
+ * Matches both the indexed title and the query so an underscore-spaced
+ * filename like "Shalom_rav" surfaces for query "Shalom Rav" / "shalom-rav".
+ * Kept as a separate normalization from `normalizedName` (which strips all
+ * non-alphanumerics for the dedup prefix-range query) — substring matching
+ * works better when we preserve token boundaries.
+ */
+function normalizeForSearch(s: string): string {
+    return s
+        .normalize("NFKD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[_\s\-]+/g, " ")
+        .trim()
+}
+
 export async function searchLibrary(
     _uid: string,
     args: SearchLibraryArgs,
 ): Promise<SongRecord[]> {
     const all = await getAllSongs()
-    const q = args.query.trim().toLowerCase()
+    const q = normalizeForSearch(args.query)
     const key = args.key?.trim().toLowerCase()
     const limit = args.limit && args.limit > 0 ? Math.min(args.limit, 50) : 20
 
     return all
         .filter((s) => {
             if (s.status === "archived") return false
-            if (q && !s.title.toLowerCase().includes(q)) return false
+            if (q && !normalizeForSearch(s.title).includes(q)) return false
             if (key && s.key?.toLowerCase() !== key) return false
             if (args.bpmMin !== undefined && (s.bpm === undefined || s.bpm < args.bpmMin)) {
                 return false

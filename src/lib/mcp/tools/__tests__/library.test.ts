@@ -16,6 +16,12 @@ const songs = [
     { id: "s3", title: "Mi Chamocha", key: "G", bpm: 96 },
     { id: "s4", title: "Old Lecha Setting", key: "D", bpm: 70, status: "archived" },
     { id: "s5", title: "Shalom Rav", key: "C" }, // no bpm
+    // L-003 normalization fixtures. Keys deliberately set to values not used
+    // by existing key-filter assertions (s1=G, s2=Am, s3=G, s5=C) so the new
+    // fixtures don't perturb other tests' result counts.
+    { id: "s6", title: "Shalom_rav", key: "F" },
+    { id: "s7", title: "shalom-rav (camp)", key: "F" },
+    { id: "s8", title: "Shabbát Shalom", key: "Em" },
 ]
 
 describe("searchLibrary", () => {
@@ -32,7 +38,7 @@ describe("searchLibrary", () => {
     it("excludes archived songs even with an empty query", async () => {
         const r = await searchLibrary("u", { query: "" })
         expect(r.find((s) => s.id === "s4")).toBeUndefined()
-        expect(r).toHaveLength(4)
+        expect(r).toHaveLength(7) // 8 total - 1 archived (s4)
     })
 
     it("filters by exact key, case-insensitive", async () => {
@@ -48,6 +54,24 @@ describe("searchLibrary", () => {
     it("applies the result limit", async () => {
         const r = await searchLibrary("u", { query: "", limit: 2 })
         expect(r).toHaveLength(2)
+    })
+
+    it("normalizes underscore/case/hyphen/diacritic variants (L-003)", async () => {
+        // 2026-05-16 punch-list L-003: query "Shalom Rav" used to return only
+        // exact-substring matches; underscore/hyphen variants in the catalog
+        // were unreachable from agent search. Both index and query now
+        // normalize: lowercase + diacritic-fold + collapse [_\s-]+ to space.
+        const r = await searchLibrary("u", { query: "Shalom Rav" })
+        const ids = r.map((s) => s.id).sort()
+        expect(ids).toEqual(["s5", "s6", "s7"])
+
+        // Hyphenated query also matches.
+        const r2 = await searchLibrary("u", { query: "shalom-rav" })
+        expect(r2.map((s) => s.id).sort()).toEqual(["s5", "s6", "s7"])
+
+        // Diacritic fold: query "Shabbat Shalom" matches `Shabb`at Sha-LOM`.
+        const r3 = await searchLibrary("u", { query: "Shabbat Shalom" })
+        expect(r3.map((s) => s.id)).toContain("s8")
     })
 })
 
