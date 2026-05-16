@@ -250,12 +250,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // BOND CORRECTIONS — W-02 learning signal. The MCP record_bond_correction
-    // tool writes one doc per rabbi-correction event during batch-review of
-    // flagged bonds. A Cloud Function trigger aggregates picks into
-    // titleContextHints after 3 consistent picks. All writes happen via the
-    // Admin SDK (MCP tool path); reads admin-only since the audit trail
-    // may include uid metadata.
+    // BOND CORRECTIONS — W-01/W-02 learning signal. The MCP
+    // record_bond_correction tool writes one doc per rabbi-correction event
+    // during batch-review of flagged bonds. The same MCP tool inline-
+    // aggregates picks into titleContextHints once correctedTo for a
+    // (stem, contextKey) pair hits 3 consistent picks (W-02 originally
+    // specified a Cloud Function for this; project has no Functions
+    // infrastructure so it runs inside the same Firestore transaction).
+    // All writes happen via the Admin SDK (MCP tool path); reads admin-only
+    // since the audit trail may include uid metadata.
     match /bond_corrections/{id} {
       allow read: if isAdmin();
       allow write: if false; // server-only via Admin SDK
@@ -263,10 +266,21 @@ service cloud.firestore {
 
     // TITLE CONTEXT HINTS — W-02 aggregated preference per (stem, contextKey).
     // Read by any signed-in caller via search_library ranking; written only
-    // by the aggregateContextHints Cloud Function.
+    // by record_bond_correction's inline aggregation (Admin SDK).
     match /titleContextHints/{hintId} {
       allow read: if isSignedIn();
-      allow write: if false; // server-only via Cloud Function
+      allow write: if false; // server-only via Admin SDK
+    }
+
+    // BOND FLAGS — W-01 Task 4 batch-review queue. flag_bond upserts one
+    // doc per (setlistId, trackId) pair; review_flagged_bonds lists every
+    // open flag for a setlist; record_bond_correction deletes the doc on
+    // resolution. Writes happen via Admin SDK (MCP tool path); reads
+    // allowed for band-leader/admin since the queue is band-internal and
+    // a future admin UI may want to surface stale flags.
+    match /bond_flags/{flagId} {
+      allow read: if isBandLeader();
+      allow write: if false; // server-only via Admin SDK
     }
 
     // PROPOSAL STAGES — W-01 propose-then-confirm staging docs. The MCP

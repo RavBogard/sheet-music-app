@@ -1,3 +1,5 @@
+import fs from "node:fs"
+import path from "node:path"
 import { createMcpHandler, withMcpAuth } from "mcp-handler"
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js"
 import { verifyBearer } from "@/lib/mcp/auth"
@@ -8,6 +10,7 @@ import {
     registerChartUploadTools,
 } from "@/lib/mcp/tools"
 import { remapValidationError } from "@/lib/mcp/zod-envelope-remap"
+import { logger } from "@/lib/logger"
 
 /**
  * MCP route — connects Claude (Desktop / web / Code) to centralreform.live.
@@ -24,6 +27,37 @@ import { remapValidationError } from "@/lib/mcp/zod-envelope-remap"
 
 export const maxDuration = 60
 
+/**
+ * W-01 Task 6: surface `.paul/AGENT-GUIDE.md` to MCP clients via the
+ * server's `instructions` field. Claude Desktop displays this on connect
+ * so the agent knows the propose → confirm → commit policy without
+ * waiting for the operator to spell it out. Read once at module load
+ * (handler factory is invoked at cold start; the guide doesn't change
+ * inside a single function instance).
+ *
+ * Lookup walks up from cwd to find `.paul/AGENT-GUIDE.md` because the
+ * file lives one directory above `src/` in the deployed bundle. Failure
+ * is non-fatal — the server still boots, just without the guide.
+ */
+function loadAgentGuide(): string | undefined {
+    try {
+        // Vercel runs from the project root; locally `next dev` does too.
+        // `.paul/` is checked into the repo and packaged.
+        const candidates = [
+            path.join(process.cwd(), ".paul", "AGENT-GUIDE.md"),
+            path.join(process.cwd(), "sheet-music-app", ".paul", "AGENT-GUIDE.md"),
+        ]
+        for (const p of candidates) {
+            if (fs.existsSync(p)) return fs.readFileSync(p, "utf8")
+        }
+    } catch (err) {
+        logger.warn("[mcp] failed to load AGENT-GUIDE.md for instructions", err)
+    }
+    return undefined
+}
+
+const agentGuide = loadAgentGuide()
+
 const baseHandler = createMcpHandler(
     (server) => {
         registerReadTools(server)
@@ -33,6 +67,7 @@ const baseHandler = createMcpHandler(
     },
     {
         serverInfo: { name: "centralreform-live", version: "1.0.0" },
+        ...(agentGuide ? { instructions: agentGuide } : {}),
     },
     {
         basePath: "/api",

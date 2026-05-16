@@ -15,6 +15,13 @@ const withSerwist = withSerwistInit({
 const nextConfig: NextConfig = {
   turbopack: {},
   serverExternalPackages: ['@google-cloud/vision', 'pdfjs-dist'],
+  // W-01 Task 6: bundle .paul/AGENT-GUIDE.md into the MCP route's
+  // serverless function so it can be read at runtime and injected into
+  // the MCP server's `instructions` field. Without this, Next.js's file
+  // tracer doesn't see the dynamic-path read and Vercel strips the file.
+  outputFileTracingIncludes: {
+    '/api/mcp': ['./.paul/AGENT-GUIDE.md'],
+  },
   images: {
     remotePatterns: [
       {

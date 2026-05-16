@@ -47,6 +47,12 @@ import {
     proposeSetlistChanges,
     commitStagedChanges,
 } from "./propose-changes"
+import { previewPublish } from "./preview-publish"
+import {
+    flagBond,
+    reviewFlaggedBonds,
+    recordBondCorrection,
+} from "./bond-corrections"
 
 /**
  * Validate that an `eventDate` string is parseable as a date. Previously the
@@ -812,6 +818,87 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await commitStagedChanges(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "preview_publish",
+        {
+            description:
+                "W-01 — PREVIEW a publish before pulling the trigger. Wraps publish_setlist({dryRun: true}) and reformats the response into the four signals the agent needs for chat-native confirm: chartHealth (bonded/ok/missing/unreachable counts + per-row details for anything not ok), audience (recipient count + role breakdown across admin/band_leader/musician/member), snapshotDiff vs. the last `publishedSnapshot` (added / removed / modified track rows), flaggedBonds (count of open bond_flags awaiting review via review_flagged_bonds), and `recommendation`: 'hard_block' if any chart status is 'missing' (the band would 404), 'review_first' if flaggedBonds > 0 (walk them first via review_flagged_bonds + record_bond_correction), 'publish' otherwise. Use this between the propose→commit cycle and the actual publish_setlist call. Read-only — no writes, no notifications, no rate-limited charge.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id"),
+                audience: z
+                    .enum(["band", "all"])
+                    .optional()
+                    .describe(
+                        "Audience preset forwarded to publish_setlist. 'band' (default) = admin + band_leader + musician. 'all' = + member accounts.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await previewPublish(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "flag_bond",
+        {
+            description:
+                "W-01 — Flag a setlist row for batch review (typically because the bonded song was committed at low confidence and the rabbi should double-check before publish). Upserts `bond_flags/{setlistId}_{trackId}` with the reason, flaggedAt, flaggedBy. Idempotent — re-flagging the same row updates the reason. Pair with `review_flagged_bonds` at end of authoring to walk the queue, then `record_bond_correction` per resolution.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id"),
+                trackId: z.string().min(1).describe("Track id to flag"),
+                reason: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Short rationale, e.g. 'generic title, only one search hit' or 'wrong arrangement, sounds like the other Hashkivenu'.",
+                    ),
+            },
+        },
+        async (args, extra) => jsonResult(await flagBond(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "review_flagged_bonds",
+        {
+            description:
+                "W-01 — Return every open bond_flag for a setlist, joined with the current track state and up to 5 alternative songIds ranked by W-02 signals (titleSpecificity, bondCorrectionHistory bias, contextHint boost when the setlist has a templateType). Use at end of authoring to walk the batch with the rabbi; for each correction the rabbi confirms, follow with record_bond_correction.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id"),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await reviewFlaggedBonds(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "record_bond_correction",
+        {
+            description:
+                "W-01 — Record a rabbi-confirmed bond correction as the system's training signal. In one Firestore transaction: writes `bond_corrections/{id}` (audit trail), bumps library_index.{fromSongId}.bondCorrectionHistory.correctedAwayFrom + library_index.{toSongId}.bondCorrectionHistory.correctedTo, deletes the matching `bond_flags/{setlistId}_{trackId}` doc, and — when correctedTo for the (toSongId stem, setlist contextKey) pair hits the 3-pick threshold — upserts `titleContextHints/{stem}_{contextKey}` so search_library biases future calls toward `toSongId`. contextKey is derived from the setlist's templateType (e.g. 'shabbat-morning'). Re-bonding the actual track is a separate call — use update_track / swap_chart to flip the row's songId. record_bond_correction is the LEARNING signal, not the row mutation.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id"),
+                trackId: z.string().min(1).describe("Track id corrected"),
+                fromSongId: z
+                    .string()
+                    .min(1)
+                    .describe("The songId the row WAS bonded to (the wrong one)."),
+                toSongId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "The songId the rabbi picked instead. Must differ from fromSongId.",
+                    ),
+                reason: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Optional rationale ('wrong arrangement', 'composer mismatch') — surfaces in the audit trail.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await recordBondCorrection(uidFrom(extra), args)),
     )
 
     server.registerTool(
