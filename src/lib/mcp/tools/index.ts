@@ -12,6 +12,7 @@ import {
     updateSetlistTrack,
     bulkUpdateSetlistTracks,
     bulkAddSetlistTracks,
+    swapChart,
 } from "./setlist-write"
 import {
     listMonitorBuses,
@@ -477,6 +478,32 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await updateSetlistTrack(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "swap_chart",
+        {
+            description:
+                "Atomically swap the chart bonded to one row — refreshes fileId + fileName + title + key from the new song's catalog record in a single call. Preserves leadMusician, notes, referenceLink, and position. Pass `syncMetadata: false` to leave title (NOTE-1 fallback) and key alone; default true means a clean swap. Use this instead of bare update_track({songId}) whenever the operator wants the row's display metadata to match the new chart.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id"),
+                trackId: z
+                    .string()
+                    .min(1)
+                    .describe("Track id (from get_setlist tracks[].id)"),
+                newSongId: z
+                    .string()
+                    .min(1)
+                    .describe("New library songId — the row will bond to this chart"),
+                syncMetadata: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "If true (default), title + key are force-synced from the new song. If false, title falls back to NOTE-1 (only auto-refreshes when the row was using the OLD song's title) and key stays untouched.",
+                    ),
+            },
+        },
+        async (args, extra) => jsonResult(await swapChart(uidFrom(extra), args)),
     )
 
     server.registerTool(

@@ -103,15 +103,32 @@ export interface ListLibraryArgs {
 }
 
 /**
- * Default browse hides rows that the in-app /library catalog also hides:
- * Drive folders, audio files (which live under the separate "audio" tab),
- * and macOS junk like `.DS_Store` that historically leaked into the
- * library_index via Drive sync. Pass `includeNonCharts: true` to see the
- * raw library_index (e.g. for an audit). Stress-test v3 NOTE-4.
+ * Default browse hides rows that the in-app /library catalog also hides.
+ * Negative-set definition (anything matching is NOT a chart):
+ *  - Drive folders / shortcuts / native Workspace types (Docs, Sheets,
+ *    Slides, Drawings, Forms, Sites) — none are bondable charts.
+ *  - Office spreadsheet / wordprocessing types (.xlsx, .docx).
+ *  - audio files (live under the separate "audio" tab).
+ *  - octet-stream (unknown binary; never a renderable chart).
+ *  - macOS junk like `.DS_Store` that leaked in via Drive sync.
+ *
+ * Pass `includeNonCharts: true` to see the raw library_index (e.g. for
+ * an audit). Applied to BOTH the default browse and collection-filtered
+ * queries — v3 NOTE-4 + v4 V4-NOTE-1.
  */
 function isNonChartArtifact(e: LibraryIndexEntry): boolean {
     const mime = (e.mimeType ?? "").toLowerCase()
     if (mime.startsWith("audio/")) return true
+    if (mime.startsWith("application/vnd.google-apps.")) return true
+    if (
+        mime ===
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        mime ===
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+        return true
+    }
+    if (mime === "application/octet-stream") return true
     if (mime.includes("folder")) return true
     if (e.name.startsWith(".")) return true
     return false

@@ -278,6 +278,76 @@ export async function updateSetlistTrack(
     return result.ok ? { ok: true, track: result.track } : { error: result.error }
 }
 
+// ─── swap_chart (S-004) ─────────────────────────────────────────────────────
+
+export interface SwapChartArgs {
+    setlistId: string
+    trackId: string
+    newSongId: string
+    /**
+     * If true (default), title and key are force-synced from the new song's
+     * catalog record — even if the existing row had a customized title.
+     * If false, title falls back to NOTE-1 semantics (refresh only when
+     * the row was using the old song's catalog title); key is untouched.
+     */
+    syncMetadata?: boolean
+}
+
+/**
+ * Atomic "swap the chart on this row" operation. The 2026-05-16 Bar
+ * Mitzvah session punch-list S-004: swapping a chart with bare
+ * `update_track({songId})` left the operator manually cleaning up title
+ * + key. swap_chart bundles the bond change with full metadata sync so
+ * one call gives the agent a clean swap.
+ *
+ * Preserves: leadMusician, notes, referenceLink, position. Refreshes:
+ * fileId, fileName, title, key (when syncMetadata = true, default).
+ */
+export async function swapChart(
+    uid: string,
+    args: SwapChartArgs,
+): Promise<{ ok: true; track: Record<string, unknown> } | ToolError> {
+    if (!args.setlistId?.trim()) return { error: "setlistId is required" }
+    if (!args.trackId?.trim()) return { error: "trackId is required" }
+    if (!args.newSongId?.trim()) return { error: "newSongId is required" }
+    const syncMetadata = args.syncMetadata !== false
+
+    initAdmin()
+    const db = getFirestore()
+
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    if (!loaded.ok) return { error: loaded.error }
+
+    // Look up the new song up front so we can build the full patch.
+    const newSong = await getSongById(args.newSongId)
+    if (!newSong) return { error: `Song ${args.newSongId} not found` }
+
+    // Build the patch. fileId/fileName come from updateTrack's songLookup
+    // path; we only need to surface title + key explicitly when
+    // syncMetadata is on, since updateTrack's NOTE-1 path won't override
+    // a customized title without an explicit patch.title.
+    const patch: UpdateTrackPatch = { songId: args.newSongId }
+    if (syncMetadata) {
+        patch.title = newSong.title
+        if (newSong.key !== undefined) patch.key = newSong.key
+    }
+
+    const result = await updateTrack(
+        db,
+        args.setlistId,
+        args.trackId,
+        patch,
+        async (songId) => {
+            const song = await getSongById(songId)
+            if (!song) return null
+            return { title: song.title, fileName: song.fileName }
+        },
+    )
+    return result.ok
+        ? { ok: true, track: result.track }
+        : { error: result.error }
+}
+
 // ─── bulk_update_tracks (CF1) ───────────────────────────────────────────────
 
 export interface BulkUpdateTracksArgs {

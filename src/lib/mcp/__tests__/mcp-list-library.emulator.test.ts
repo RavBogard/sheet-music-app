@@ -185,18 +185,22 @@ describe("MCP list_library (emulator)", () => {
         expect(r.limit).toBe(200)
     })
 
-    it("default browse hides folders, audio, and dotfiles (NOTE-4)", async () => {
-        // The in-app /library hides these; MCP browse now matches that.
-        // Stress-test v3 cowork's unfiltered list_library({}) returned 500
-        // rows including a Drive folder, an mp3, and .DS_Store mixed into
-        // the chart catalog — frustrating for prompt-driven enumeration.
+    it("default browse hides folders, audio, dotfiles, Workspace + Office types, octet-stream (NOTE-4 + V4-NOTE-1)", async () => {
+        // v3 NOTE-4 caught folders/audio/dotfiles; v4-NOTE-1 expanded the
+        // negative set to also cover Google Workspace (Docs, Sheets,
+        // Shortcuts), Office xlsx/docx, and application/octet-stream.
+        // 2026-05-16 cowork report saw 16 Workspace/Office rows leaking
+        // into list_library({collection: "core"}) — V4-NOTE-1 closes that
+        // by expanding the predicate AND applying it to collection queries.
         await seedIndex("chart1", {
             name: "Adon Olam",
             mimeType: "application/pdf",
+            collection: "core",
         })
         await seedIndex("folder1", {
             name: "1. Erev Rosh",
             mimeType: "application/vnd.google-apps.folder",
+            collection: "core",
         })
         await seedIndex("audio1", {
             name: "3 Songs Office Hours.mp3",
@@ -206,16 +210,56 @@ describe("MCP list_library (emulator)", () => {
             name: ".DS_Store",
             mimeType: null,
         })
+        await seedIndex("gdoc1", {
+            name: "Kol Nidre 2025 Service Flow",
+            mimeType: "application/vnd.google-apps.document",
+            collection: "core",
+        })
+        await seedIndex("gsheet1", {
+            name: "Setlist Spreadsheet",
+            mimeType: "application/vnd.google-apps.spreadsheet",
+            collection: "core",
+        })
+        await seedIndex("xlsx1", {
+            name: "Roster.xlsx",
+            mimeType:
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            collection: "core",
+        })
+        await seedIndex("docx1", {
+            name: "Notes.docx",
+            mimeType:
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            collection: "core",
+        })
+        await seedIndex("octet1", {
+            name: "Mystery Blob",
+            mimeType: "application/octet-stream",
+            collection: "core",
+        })
+        await seedIndex("shortcut1", {
+            name: "Lechu Goldman shortcut",
+            mimeType: "application/vnd.google-apps.shortcut",
+            collection: "core",
+        })
 
         const def = await listLibrary(ANY_UID, {})
         if (!("rows" in def)) throw new Error("expected rows result")
         expect(def.total).toBe(1)
         expect(def.rows.map((x) => x.name)).toEqual(["Adon Olam"])
 
+        // V4-NOTE-1 specific: the chart filter also applies to
+        // collection-filtered queries. Pre-fix, list_library({collection:"core"})
+        // surfaced 16 non-charts (Workspace docs, xlsx, octet-stream).
+        const core = await listLibrary(ANY_UID, { collection: "core" })
+        if (!("rows" in core)) throw new Error("expected rows result")
+        expect(core.total).toBe(1)
+        expect(core.rows.map((x) => x.name)).toEqual(["Adon Olam"])
+
         // Opt-in escape hatch surfaces every row for audit cases.
         const raw = await listLibrary(ANY_UID, { includeNonCharts: true })
         if (!("rows" in raw)) throw new Error("expected rows result")
-        expect(raw.total).toBe(4)
+        expect(raw.total).toBe(10)
     })
 
     it("surfaces mimeType / fileSize / uploadedAt / key / bpm fields", async () => {

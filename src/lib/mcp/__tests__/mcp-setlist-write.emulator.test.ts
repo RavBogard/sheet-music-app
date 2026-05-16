@@ -12,6 +12,7 @@ import {
     updateSetlistTrack,
     bulkUpdateSetlistTracks,
     bulkAddSetlistTracks,
+    swapChart,
 } from "../tools/setlist-write"
 import { getSetlist } from "../tools/setlists"
 
@@ -1417,6 +1418,112 @@ describe("MCP setlist write tools (emulator)", () => {
                 tracks: [{ title: "Hijacked", type: "song" }],
             })
             expect(r).toEqual({ error: NOT_EDITOR_ERROR })
+        })
+    })
+
+    describe("swap_chart (S-004)", () => {
+        it("swap_chart force-syncs title + key + fileId + fileName from the new song", async () => {
+            // 2026-05-16 Bar Mitzvah session S-004: swapping with bare
+            // update_track({songId}) left the operator manually cleaning
+            // up title and key. swap_chart bundles it.
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({
+                    title: "Hinei Ma Tov.pdf",
+                    defaults: { key: "C", lead: "Cantor" },
+                })
+            const id = await newSetlist()
+            // Customized title so we can prove syncMetadata: true overrides
+            // it (whereas plain update_track + NOTE-1 would preserve a
+            // customized title).
+            const r = (await addTrackToSetlist(ADMIN, {
+                setlistId: id,
+                songId: "song-oseh",
+                title: "My Custom Lead-In",
+                key: "Em",
+            })) as { trackId: string }
+
+            const swap = (await swapChart(ADMIN, {
+                setlistId: id,
+                trackId: r.trackId,
+                newSongId: "song-other",
+            })) as { ok: true; track: Record<string, unknown> }
+            expect(swap.ok).toBe(true)
+
+            const persisted = (
+                await db().collection("tracks").doc(r.trackId).get()
+            ).data()!
+            expect(persisted.fileId).toBe("song-other")
+            expect(persisted.fileName).toBe("Hinei Ma Tov.pdf")
+            expect(persisted.title).toBe("Hinei Ma Tov")
+            expect(persisted.key).toBe("C") // song-other defaults.key
+        })
+
+        it("syncMetadata: false leaves title (NOTE-1 fallback) and key untouched", async () => {
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({
+                    title: "Hinei Ma Tov.pdf",
+                    defaults: { key: "C" },
+                })
+            const id = await newSetlist()
+            const r = (await addTrackToSetlist(ADMIN, {
+                setlistId: id,
+                songId: "song-oseh",
+                title: "My Custom Lead-In",
+                key: "Em",
+            })) as { trackId: string }
+
+            await swapChart(ADMIN, {
+                setlistId: id,
+                trackId: r.trackId,
+                newSongId: "song-other",
+                syncMetadata: false,
+            })
+
+            const persisted = (
+                await db().collection("tracks").doc(r.trackId).get()
+            ).data()!
+            expect(persisted.fileId).toBe("song-other")
+            expect(persisted.fileName).toBe("Hinei Ma Tov.pdf") // always refreshes
+            // Title preserved (NOTE-1 path: doesn't match old song's title).
+            expect(persisted.title).toBe("My Custom Lead-In")
+            // Key untouched.
+            expect(persisted.key).toBe("Em")
+        })
+
+        it("swap_chart rejects an unknown newSongId", async () => {
+            const id = await newSetlist()
+            const r = (await addTrackToSetlist(ADMIN, {
+                setlistId: id,
+                songId: "song-oseh",
+            })) as { trackId: string }
+            const swap = await swapChart(ADMIN, {
+                setlistId: id,
+                trackId: r.trackId,
+                newSongId: "bogus-song",
+            })
+            expect(swap).toEqual({ error: "Song bogus-song not found" })
+        })
+
+        it("swap_chart role gate: musician denied", async () => {
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf" })
+            const id = await newSetlist()
+            const r = (await addTrackToSetlist(ADMIN, {
+                setlistId: id,
+                songId: "song-oseh",
+            })) as { trackId: string }
+            const swap = await swapChart(MEMBER, {
+                setlistId: id,
+                trackId: r.trackId,
+                newSongId: "song-other",
+            })
+            expect(swap).toEqual({ error: NOT_EDITOR_ERROR })
         })
     })
 })
