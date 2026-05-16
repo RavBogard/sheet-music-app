@@ -33,6 +33,10 @@ import {
 import { downloadChart, generateGigPacket } from "./library-download"
 import { publishSetlist } from "./setlist-publish"
 import { getChartStatus, verifySetlistCharts } from "./library-verify"
+import {
+    requestChartUploadUrl,
+    finalizeChartUpload,
+} from "./library-upload-session"
 
 /**
  * Validate that an `eventDate` string is parseable as a date. Previously the
@@ -891,6 +895,81 @@ export function registerChartUploadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await importChartFromDrive(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "request_chart_upload_url",
+        {
+            description:
+                "Step 1 of the chunked-upload flow for cowork agents (B-001). Returns a signed Firebase Storage PUT URL valid for 10 minutes plus an uploadSessionId. Use this when the chart file is too large for upload_chart's inline base64 surface (anything over ~50 KB hits the agent Read tool's 25K-token limit). After this call: PUT the file bytes to `uploadUrl` (e.g. `curl -X PUT --data-binary @file.pdf -H 'Content-Type: application/pdf' <uploadUrl>`), then call finalize_chart_upload({uploadSessionId}) to run the chart through the normal dedup/conversion/index pipeline. Curated-catalog + role auth + rate-limit semantics match upload_chart.",
+            inputSchema: {
+                title: z
+                    .string()
+                    .min(1)
+                    .describe("Display title for the chart"),
+                mimeType: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "MIME type the agent will PUT (must match the Content-Type header on the upload, e.g. 'application/pdf').",
+                    ),
+                fileName: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Optional original filename incl. extension. Derived from title + mimeType if omitted.",
+                    ),
+                collection: collectionSchema,
+                key: z
+                    .string()
+                    .optional()
+                    .describe("Optional musical key (e.g. 'G' or 'Am')"),
+                bpm: z
+                    .number()
+                    .int()
+                    .positive()
+                    .optional()
+                    .describe("Optional tempo in BPM"),
+                tags: z
+                    .array(z.string())
+                    .optional()
+                    .describe("Optional list of tags"),
+                sizeBytes: z
+                    .number()
+                    .int()
+                    .positive()
+                    .optional()
+                    .describe(
+                        "Expected size in bytes (advisory; helps the server reject oversize uploads early). Max 25 MB.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await requestChartUploadUrl(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "finalize_chart_upload",
+        {
+            description:
+                "Step 2 of the chunked-upload flow (B-001). After PUTting bytes to the uploadUrl returned by request_chart_upload_url, call this with the uploadSessionId to run the bytes through processChartUpload (mime validation, MuseScore→MusicXML / HEIC→JPEG conversion, dedup, Storage write, library_index + songs write, library_signals broadcast). Returns the new fileId — bond it onto a setlist row via add_track_to_setlist / bulk_add_tracks. Pass `force: true` to bypass dedup (matches upload_chart's H-3 override).",
+            inputSchema: {
+                uploadSessionId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Session id returned by request_chart_upload_url. Sessions are single-use and expire 10 minutes after creation.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Bypass duplicate detection (exact + fuzzy). Use when the chart is a legitimate variant that's tripping a 'similar name' error.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await finalizeChartUpload(uidFrom(extra), args)),
     )
 
     server.registerTool(
