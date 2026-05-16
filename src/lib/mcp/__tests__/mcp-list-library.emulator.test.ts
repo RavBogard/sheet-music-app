@@ -175,11 +175,47 @@ describe("MCP list_library (emulator)", () => {
         expect(tail.rows.map((x) => x.name)).toEqual(["Supp G"])
     })
 
-    it("caps limit at 200", async () => {
+    it("clamps limit at 200 even when the caller passes a larger value (CF2-D-2)", async () => {
         await seedIndex("a", { name: "Only chart", collection: "core" })
+        // listLibrary clamps silently — the MCP tool wrapper no longer
+        // hard-rejects via Zod (CF2-D-2), so a prompt-only caller that
+        // passes `limit: 999` gets a usable response instead of -32602.
         const r = await listLibrary(ANY_UID, { limit: 999 })
         if (!("rows" in r)) throw new Error("expected rows result")
         expect(r.limit).toBe(200)
+    })
+
+    it("default browse hides folders, audio, and dotfiles (NOTE-4)", async () => {
+        // The in-app /library hides these; MCP browse now matches that.
+        // Stress-test v3 cowork's unfiltered list_library({}) returned 500
+        // rows including a Drive folder, an mp3, and .DS_Store mixed into
+        // the chart catalog — frustrating for prompt-driven enumeration.
+        await seedIndex("chart1", {
+            name: "Adon Olam",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("folder1", {
+            name: "1. Erev Rosh",
+            mimeType: "application/vnd.google-apps.folder",
+        })
+        await seedIndex("audio1", {
+            name: "3 Songs Office Hours.mp3",
+            mimeType: "audio/mpeg",
+        })
+        await seedIndex("dotfile1", {
+            name: ".DS_Store",
+            mimeType: null,
+        })
+
+        const def = await listLibrary(ANY_UID, {})
+        if (!("rows" in def)) throw new Error("expected rows result")
+        expect(def.total).toBe(1)
+        expect(def.rows.map((x) => x.name)).toEqual(["Adon Olam"])
+
+        // Opt-in escape hatch surfaces every row for audit cases.
+        const raw = await listLibrary(ANY_UID, { includeNonCharts: true })
+        if (!("rows" in raw)) throw new Error("expected rows result")
+        expect(raw.total).toBe(4)
     })
 
     it("surfaces mimeType / fileSize / uploadedAt / key / bpm fields", async () => {

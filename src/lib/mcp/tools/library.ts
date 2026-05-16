@@ -76,6 +76,22 @@ export interface ListLibraryArgs {
     collection?: "core" | "supplemental" | "uploads"
     limit?: number
     offset?: number
+    includeNonCharts?: boolean
+}
+
+/**
+ * Default browse hides rows that the in-app /library catalog also hides:
+ * Drive folders, audio files (which live under the separate "audio" tab),
+ * and macOS junk like `.DS_Store` that historically leaked into the
+ * library_index via Drive sync. Pass `includeNonCharts: true` to see the
+ * raw library_index (e.g. for an audit). Stress-test v3 NOTE-4.
+ */
+function isNonChartArtifact(e: LibraryIndexEntry): boolean {
+    const mime = (e.mimeType ?? "").toLowerCase()
+    if (mime.startsWith("audio/")) return true
+    if (mime.includes("folder")) return true
+    if (e.name.startsWith(".")) return true
+    return false
 }
 
 export interface LibraryIndexEntry {
@@ -146,6 +162,10 @@ export async function listLibrary(
         const snap = await db.collection("library_index").get()
         const all = snap.docs.map((d) => toLibraryEntry(d.id, d.data()))
 
+        const chartLike = args.includeNonCharts
+            ? all
+            : all.filter((e) => !isNonChartArtifact(e))
+
         // "core" matches the UI semantics in SongChartsLibrary: the CRC
         // Charts tab is the negative-set complement of supplemental + uploads,
         // so any row with collection: null / unset / "core" surfaces there.
@@ -154,13 +174,13 @@ export async function listLibrary(
         // them from MCP under {collection: "core"} (CF2-D-1).
         const filtered = args.collection
             ? args.collection === "core"
-                ? all.filter(
+                ? chartLike.filter(
                       (e) =>
                           e.collection !== "supplemental" &&
                           e.collection !== "uploads",
                   )
-                : all.filter((e) => e.collection === args.collection)
-            : all
+                : chartLike.filter((e) => e.collection === args.collection)
+            : chartLike
 
         filtered.sort((a, b) =>
             a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),

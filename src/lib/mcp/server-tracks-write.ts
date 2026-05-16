@@ -245,7 +245,7 @@ const UPDATABLE_FIELDS = [
  */
 export type SongLookup = (
     songId: string,
-) => Promise<{ fileName?: string } | null>
+) => Promise<{ title?: string; fileName?: string } | null>
 
 export async function updateTrack(
     db: DB,
@@ -297,9 +297,47 @@ export async function updateTrack(
         newFileId = patch.songId
         if (songLookup) {
             try {
-                const song = await songLookup(patch.songId)
-                if (song?.fileName !== undefined) {
-                    update.fileName = song.fileName
+                const newSong = await songLookup(patch.songId)
+                if (newSong?.fileName !== undefined) {
+                    update.fileName = newSong.fileName
+                }
+                // Stress-test v3 NOTE-1: on a re-bond, if the row's `title`
+                // still equals the OLD song's catalog title (i.e. the user
+                // hadn't customized it), auto-update title to the new
+                // song's. Skips the auto-refresh when the patch explicitly
+                // sets title (caller wins) or when titles disagree (caller
+                // customized — preserve their intent). Perform mode shows
+                // the row's title under each chart, so a stale label after
+                // a re-bond was operator-confusing.
+                const explicitTitle =
+                    typeof patch.title === "string" && patch.title.trim().length > 0
+                const currentTitle =
+                    typeof existing.title === "string" ? existing.title.trim() : ""
+                if (
+                    !explicitTitle &&
+                    newSong?.title &&
+                    typeof oldFileId === "string" &&
+                    oldFileId.length > 0 &&
+                    currentTitle.length > 0
+                ) {
+                    try {
+                        const oldSong = await songLookup(oldFileId)
+                        if (oldSong?.title && currentTitle === oldSong.title.trim()) {
+                            update.title = newSong.title
+                        }
+                    } catch (lookupErr) {
+                        // Fail-soft — without the old song record we can't
+                        // tell if the title was customized, so keep it.
+                        logger.warn("[mcp] update_track old-song lookup failed", {
+                            setlistId,
+                            trackId,
+                            oldFileId,
+                            err:
+                                lookupErr instanceof Error
+                                    ? lookupErr.message
+                                    : String(lookupErr),
+                        })
+                    }
                 }
             } catch (err) {
                 // Fail-soft on lookup error — the patch still lands, fileName

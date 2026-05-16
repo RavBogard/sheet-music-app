@@ -184,7 +184,10 @@ export interface MissingChartEntry {
 export interface GenerateGigPacketResult {
     ok: true
     fileId: string
+    /** Source setlist name (e.g. "5/15 -- Shir Shabbat"). Kept for back-compat. */
     title: string
+    /** PDF document title — matches the embedded PDF /Title metadata. */
+    packetTitle: string
     contentBase64: string
     sizeBytes: number
     source: "merged"
@@ -228,8 +231,9 @@ export async function generateGigPacket(
         }
     }
 
+    const packetTitle = `${setlistTitle} — Gig Packet`
     const mergedPdf = await PDFDocument.create()
-    mergedPdf.setTitle(`${setlistTitle} — Gig Packet`)
+    mergedPdf.setTitle(packetTitle)
     mergedPdf.setSubject("CRC Music Books gig packet")
 
     const missingCharts: MissingChartEntry[] = []
@@ -348,6 +352,7 @@ export async function generateGigPacket(
         ok: true,
         fileId: synthesizedId,
         title: setlistTitle,
+        packetTitle,
         contentBase64: Buffer.from(finalBytes).toString("base64"),
         sizeBytes,
         source: "merged",

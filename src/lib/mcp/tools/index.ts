@@ -212,7 +212,7 @@ export function registerReadTools(server: McpServer): void {
         "list_library",
         {
             description:
-                "Browse the chart-file index alphabetically — every chart in the library, with its collection ('core' | 'supplemental' | 'uploads'), mimeType, file size, and upload metadata. Use this when the user wants to SEE the catalog (\"what's in core?\", \"show me every chart I've uploaded\"); use search_library for targeted lookup by title/key/BPM. Optional collection filter narrows to one section. Paged via offset+limit (default limit 50, max 200). Returns rows + a total count so the caller can detect whether more pages exist. Metadata only — to fetch chart bytes call download_chart, or to print a setlist's packet call generate_gig_packet.",
+                "Browse the chart-file index alphabetically — every chart in the library, with its collection ('core' | 'supplemental' | 'uploads'), mimeType, file size, and upload metadata. Use this when the user wants to SEE the catalog (\"what's in core?\", \"show me every chart I've uploaded\"); use search_library for targeted lookup by title/key/BPM. Optional collection filter narrows to one section. Paged via offset+limit (default limit 50; values above 200 are silently clamped to 200). Returns rows + a total count so the caller can detect whether more pages exist. Default browse hides folders, audio files, and dotfiles like .DS_Store (matches the in-app library). Pass includeNonCharts: true to see the raw library_index. Metadata only — to fetch chart bytes call download_chart, or to print a setlist's packet call generate_gig_packet.",
             inputSchema: {
                 collection: z
                     .enum(["core", "supplemental", "uploads"])
@@ -224,9 +224,10 @@ export function registerReadTools(server: McpServer): void {
                     .number()
                     .int()
                     .positive()
-                    .max(200)
                     .optional()
-                    .describe("Max rows (default 50, max 200)"),
+                    .describe(
+                        "Max rows (default 50). Values above 200 are silently clamped to 200.",
+                    ),
                 offset: z
                     .number()
                     .int()
@@ -234,6 +235,12 @@ export function registerReadTools(server: McpServer): void {
                     .optional()
                     .describe(
                         "Skip this many rows before returning results (for paging). Pass `offset + limit < total` to fetch the next page.",
+                    ),
+                includeNonCharts: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "If true, include non-chart artifacts (folders, audio files, .DS_Store) that the in-app library hides. Default false.",
                     ),
             },
         },

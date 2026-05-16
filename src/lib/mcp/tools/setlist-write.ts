@@ -266,12 +266,13 @@ export async function updateSetlistTrack(
         args.patch,
         // Re-bond paths look up the new song to refresh the row's fileName
         // (else the row's fileName drifts behind the chart at the new
-        // fileId). Same lookup the bulk_add path uses. Returning null on
-        // miss is fine — updateTrack treats fileName refresh as best-effort.
+        // fileId), and the row's title (NOTE-1) when it wasn't customized.
+        // Same lookup the bulk_add path uses. Returning null on miss is
+        // fine — updateTrack treats both refreshes as best-effort.
         async (songId) => {
             const song = await getSongById(songId)
             if (!song) return null
-            return { fileName: song.fileName }
+            return { title: song.title, fileName: song.fileName }
         },
     )
     return result.ok ? { ok: true, track: result.track } : { error: result.error }

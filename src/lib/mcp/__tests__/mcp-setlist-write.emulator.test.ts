@@ -658,6 +658,93 @@ describe("MCP setlist write tools (emulator)", () => {
             expect(rowAfter.fileName).toBe("Hinei Ma Tov.pdf")
         })
 
+        it("update_track re-bond auto-updates title when the row was using the old song's catalog title (NOTE-1)", async () => {
+            // Stress-test v3 NOTE-1: re-bond left the row's title pointing at
+            // the OLD song, so Perform mode showed a mismatched footer label
+            // ("Shiru L'Adonai" while rendering the new "Mi Chamocha" chart).
+            // Auto-refresh only when the user hadn't customized the title.
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf" })
+            const id = await newSetlist()
+            // Add via songId WITHOUT a title — addTrackToSetlist derives
+            // title from song-oseh's catalog title ("Oseh Shalom.pdf"), which
+            // is exactly the "uncustomized" state we want to test.
+            const r = (await addTrackToSetlist(ADMIN, {
+                setlistId: id,
+                songId: "song-oseh",
+            })) as { trackId: string }
+            const trackId = r.trackId
+            const seeded = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            // getSongById's cleanTitle strips the file extension, so the
+            // catalog-derived row title is the bare song name.
+            expect(seeded.title).toBe("Oseh Shalom")
+
+            await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId,
+                patch: { songId: "song-other" },
+            })
+
+            const after = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(after.title).toBe("Hinei Ma Tov")
+        })
+
+        it("update_track re-bond preserves a customized title", async () => {
+            // If the row's title doesn't match the old song's catalog title,
+            // the user customized it — auto-refresh would clobber intent.
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf" })
+            const id = await newSetlist()
+            const trackId = await addRow(id, "My Custom Lead-In", {
+                songId: "song-oseh",
+            })
+
+            await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId,
+                patch: { songId: "song-other" },
+            })
+
+            const after = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(after.title).toBe("My Custom Lead-In")
+        })
+
+        it("update_track re-bond honors an explicit title in the same patch", async () => {
+            // Caller wins: if the patch sets title, that overrides the
+            // auto-refresh even when the row was uncustomized.
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf" })
+            const id = await newSetlist()
+            const r = (await addTrackToSetlist(ADMIN, {
+                setlistId: id,
+                songId: "song-oseh",
+            })) as { trackId: string }
+            const trackId = r.trackId
+
+            await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId,
+                patch: { songId: "song-other", title: "Caller's Choice" },
+            })
+
+            const after = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(after.title).toBe("Caller's Choice")
+        })
+
         it("update_track re-bond preserves fileIds entries still bonded by other rows", async () => {
             // If row A and row B both bond song-oseh, then row A re-bonds to
             // song-other, song-oseh must STAY in setlist.fileIds because

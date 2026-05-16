@@ -197,6 +197,9 @@ describe("MCP generate_gig_packet (emulator)", () => {
         if (!("ok" in r) || !r.ok) return
 
         expect(r.title).toBe("Shabbat Morning")
+        // Stress-test v3 NOTE-2: response envelope now disambiguates the
+        // bare setlist name (title) from the PDF document title (packetTitle).
+        expect(r.packetTitle).toBe("Shabbat Morning — Gig Packet")
         expect(r.source).toBe("merged")
         expect(r.trackCount).toBe(2)
         expect(r.bondedCount).toBe(2)
