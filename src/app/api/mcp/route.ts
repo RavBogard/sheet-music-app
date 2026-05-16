@@ -9,7 +9,7 @@ import {
     registerMonitorTools,
     registerChartUploadTools,
 } from "@/lib/mcp/tools"
-import { remapValidationError } from "@/lib/mcp/zod-envelope-remap"
+import { wrapWithValidationRemap } from "@/lib/mcp/zod-envelope-remap"
 import { logger } from "@/lib/logger"
 
 /**
@@ -94,33 +94,20 @@ async function verifyToken(
 const authedHandler = withMcpAuth(baseHandler, verifyToken, { required: true })
 
 /**
- * F-02 (2026-05-16 bugstomp): Zod validation failures from inputSchema
- * surface as JSON-RPC `-32602` protocol errors BEFORE our tool handler
- * runs, so a try/catch inside the handler can't translate them. Fix at
- * the Response layer — intercept the JSON-RPC body on its way out and
- * rewrite `-32602` errors as a normal tool result with the standard
- * `{error: "..."}` envelope. Helper lives in
- * src/lib/mcp/zod-envelope-remap.ts so it's unit-testable (route.ts may
- * only export HTTP handlers per Next.js App Router rules).
+ * F-02 (2026-05-16 bugstomp) + F-02-regression (v6 2026-05-16): Zod
+ * validation failures from inputSchema surface as JSON-RPC `-32602`
+ * protocol errors BEFORE our tool handler runs, so a try/catch inside
+ * the handler can't translate them. Fix at the Response layer.
+ *
+ * `wrapWithValidationRemap` handles both `application/json` JSON-RPC
+ * bodies AND `text/event-stream` SSE-framed responses (which is what
+ * mcp-handler's WebStandardStreamableHTTPServerTransport actually
+ * returns for tool calls — the v5 fix only handled JSON and silently
+ * no-op'd for every real tool invocation). The wrapper + transforms
+ * live in src/lib/mcp/zod-envelope-remap.ts so they're unit-testable
+ * (route.ts may only export HTTP handlers per Next.js App Router
+ * rules).
  */
-async function fixZodErrors(req: Request): Promise<Response> {
-    const res = await authedHandler(req)
-    const contentType = res.headers.get("content-type") ?? ""
-    // Only JSON-RPC bodies can carry a -32602; HTML / SSE bodies pass.
-    if (!contentType.includes("application/json")) return res
-    const text = await res.clone().text()
-    let body: unknown
-    try {
-        body = JSON.parse(text)
-    } catch {
-        return res
-    }
-    const fixed = remapValidationError(body)
-    if (fixed === body) return res
-    return new Response(JSON.stringify(fixed), {
-        status: res.status,
-        headers: res.headers,
-    })
-}
+const fixZodErrors = wrapWithValidationRemap(authedHandler)
 
 export { fixZodErrors as GET, fixZodErrors as POST, fixZodErrors as DELETE }
