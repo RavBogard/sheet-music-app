@@ -726,7 +726,7 @@ export function registerMonitorTools(server: McpServer): void {
         "list_monitor_buses",
         {
             description:
-                "List the personal-IEM monitor buses, their assignments, the hardware bridge status, and (for admins/sound engineers) the X32 matrix outputs. Always call this first to discover bus and channel indexes before adjusting faders. Response includes `bridge.clients` — the number of clients currently connected to the bridge daemon (iPads + this MCP session). `bridge.x32Connected` is an optimistic hint from the daemon; treat it as best-effort, not a guarantee the X32 hardware applied a write.",
+                "List the personal-IEM monitor buses, their assignments, the hardware bridge status, and (for admins/sound engineers) the X32 matrix outputs. Always call this first to discover bus and channel indexes before adjusting faders. Response includes `bridge.clients` — the number of WebSocket-attached clients currently connected to the bridge daemon (iPads on /monitor). MCP API callers (this session) go through the HTTP path and are NOT counted in this number; 0 here doesn't mean the bridge is unused, just that no iPads are open. `bridge.x32Connected` is an optimistic hint from the daemon; treat it as best-effort, not a guarantee the X32 hardware applied a write.",
             inputSchema: {},
         },
         async (_args, extra) =>
