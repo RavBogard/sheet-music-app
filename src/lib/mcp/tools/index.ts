@@ -652,7 +652,7 @@ export function registerWriteTools(server: McpServer): void {
         "get_chart_status",
         {
             description:
-                "Probe a single chart's health (Storage + Drive fallback) without downloading bytes. Returns { status: 'ok' | 'missing' | 'unreachable' } plus source and mimeType when ok. Use to verify a bond is renderable before bonding it onto a setlist row, or to investigate why a published chart isn't loading for the band. Cheap — metadata-only, no byte transfer.",
+                "Probe a single chart's health (Storage + Drive fallback) without downloading bytes. Returns { ok: true, fileId, health } where `health` is one of: { status: 'ok', source: 'firebase-storage'|'google-drive', mimeType? }, { status: 'missing', reason }, or { status: 'unreachable', error }. Use to verify a bond is renderable before bonding it onto a setlist row, or to investigate why a published chart isn't loading for the band. Cheap — metadata-only, no byte transfer.",
             inputSchema: {
                 fileId: z
                     .string()
