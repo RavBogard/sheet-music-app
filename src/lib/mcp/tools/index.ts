@@ -170,11 +170,11 @@ export function registerReadTools(server: McpServer): void {
         "search_library",
         {
             description:
-                "Search the song library by title text, with optional musical key and BPM-range filters. Use when the user wants to find songs to add to a setlist. BPMs are integers. Returns metadata only — never chart files. Pass an empty query (or omit it) to browse the first N library entries — useful for catalog discovery. Every result row carries `status` ('active' by default if the catalog row omits one).",
+                "Search the song library by title text, with optional musical key and BPM-range filters. Title matching normalizes underscores, hyphens, spaces, and diacritics, so query \"Shalom Rav\" matches catalog entries like \"Shalom_rav\" and \"shalom-rav (camp)\". BPMs are integers. Returns metadata only — never chart files. Pass an empty query (or omit it) to browse the first N library entries — useful for catalog discovery. Rows with `status: 'orphaned'` are hidden by default; pass includeOrphaned: true to see them (e.g. while triaging library hygiene). Every result row carries `status` ('active' by default if the catalog row omits one).",
             inputSchema: {
                 query: z
                     .string()
-                    .describe("Title search text — substring match, case-insensitive"),
+                    .describe("Title search text — normalized substring match (underscore/hyphen/space/diacritic insensitive)"),
                 key: z
                     .string()
                     .optional()
@@ -188,6 +188,12 @@ export function registerReadTools(server: McpServer): void {
                     .max(50)
                     .optional()
                     .describe("Max results (default 20)"),
+                includeOrphaned: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Include rows whose underlying chart file was previously confirmed missing (status: 'orphaned'). Default false.",
+                    ),
             },
         },
         async (args, extra) => jsonResult(await searchLibrary(uidFrom(extra), args)),
@@ -588,9 +594,15 @@ export function registerWriteTools(server: McpServer): void {
         "verify_setlist_charts",
         {
             description:
-                "HEAD-check every bonded chart on a setlist in parallel and return per-row health (ok / missing / unreachable / unbonded). Use BEFORE publish_setlist to catch broken bonds — publish_setlist runs this same check internally and refuses by default if anything is broken. Use AFTER bulk_add_tracks to confirm every new bond is renderable. Returns `rows[]` with trackId, title, songId, fileId, and per-row health; plus aggregate counts (bondedCount, okCount, missingCount, unreachableCount). Read-only, cheap, no byte transfer.",
+                "HEAD-check every bonded chart on a setlist in parallel and return per-row health (ok / missing / unreachable / unbonded). Use BEFORE publish_setlist to catch broken bonds — publish_setlist runs this same check internally and refuses by default if anything is broken. Use AFTER bulk_add_tracks to confirm every new bond is renderable. Returns `rows[]` with trackId, title, songId, fileId, and per-row health; plus aggregate counts (bondedCount, okCount, missingCount, unreachableCount, orphanedMarked). Pass `markOrphaned: true` to also persist `status: 'orphaned'` on every catalog row whose underlying file was definitively missing — those rows then drop out of search_library by default. Read-only otherwise; cheap, no byte transfer.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
+                markOrphaned: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "If true, persist `status: 'orphaned'` on library_index + songs for every row whose health is `missing` (definitively not-found; never on transient `unreachable`). Default false — opt in when you're confident the missing rows are truly dead and want them swept from future search results.",
+                    ),
             },
         },
         async (args, extra) =>

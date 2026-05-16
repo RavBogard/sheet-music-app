@@ -172,4 +172,124 @@ describe("MCP chart-health tools (emulator)", () => {
         const r = await verifySetlistCharts(ADMIN, { setlistId: "" })
         expect(r).toEqual({ error: "setlistId is required" })
     })
+
+    it("markOrphaned: true persists status:'orphaned' on missing rows (L-001)", async () => {
+        const id = "set-verify-mark"
+        await db().collection("setlists").doc(id).set({
+            name: "Mark Test",
+            ownerId: ADMIN,
+        })
+        await seedTrack("ta", id, 0, {
+            title: "Healthy",
+            songId: "song-healthy",
+            fileId: "song-healthy",
+            type: "song",
+        })
+        await seedTrack("tb", id, 1, {
+            title: "Definitively Missing",
+            songId: "song-missing",
+            fileId: "song-missing",
+            type: "song",
+        })
+        await seedTrack("tc", id, 2, {
+            title: "Just Slow",
+            songId: "song-flaky",
+            fileId: "song-flaky",
+            type: "song",
+        })
+        // Seed catalog rows so we can verify the persisted status flip.
+        await db().collection("library_index").doc("song-healthy").set({
+            name: "Healthy",
+            status: "active",
+        })
+        await db().collection("library_index").doc("song-missing").set({
+            name: "Definitively Missing",
+            status: "active",
+        })
+        await db().collection("library_index").doc("song-flaky").set({
+            name: "Just Slow",
+            status: "active",
+        })
+        await db().collection("songs").doc("song-missing").set({
+            title: "Definitively Missing",
+            status: "active",
+        })
+
+        mockGetChartHealth.mockImplementation(async (fileId: string) => {
+            if (fileId === "song-healthy") {
+                return { status: "ok", source: "firebase-storage" }
+            }
+            if (fileId === "song-missing") {
+                return { status: "missing", reason: "Drive: file not found" }
+            }
+            return { status: "unreachable", error: "ETIMEDOUT" }
+        })
+
+        const r = await verifySetlistCharts(ADMIN, {
+            setlistId: id,
+            markOrphaned: true,
+        })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+
+        expect(r.missingCount).toBe(1)
+        expect(r.unreachableCount).toBe(1)
+        // Only the definitively-missing row got marked — `unreachable` rows
+        // (transient blips) are deliberately spared.
+        expect(r.orphanedMarked).toBe(1)
+
+        const idxMissing = (
+            await db().collection("library_index").doc("song-missing").get()
+        ).data()!
+        expect(idxMissing.status).toBe("orphaned")
+        const songMissing = (
+            await db().collection("songs").doc("song-missing").get()
+        ).data()!
+        expect(songMissing.status).toBe("orphaned")
+
+        // Healthy and flaky rows untouched.
+        const idxHealthy = (
+            await db().collection("library_index").doc("song-healthy").get()
+        ).data()!
+        expect(idxHealthy.status).toBe("active")
+        const idxFlaky = (
+            await db().collection("library_index").doc("song-flaky").get()
+        ).data()!
+        expect(idxFlaky.status).toBe("active")
+    })
+
+    it("markOrphaned defaults to false — missing rows surface in the report but stay 'active' in the catalog", async () => {
+        const id = "set-verify-no-mark"
+        await db().collection("setlists").doc(id).set({
+            name: "No Mark Test",
+            ownerId: ADMIN,
+        })
+        await seedTrack("tx", id, 0, {
+            title: "Missing But Spared",
+            songId: "song-spare",
+            fileId: "song-spare",
+            type: "song",
+        })
+        await db().collection("library_index").doc("song-spare").set({
+            name: "Missing But Spared",
+            status: "active",
+        })
+
+        mockGetChartHealth.mockResolvedValue({
+            status: "missing",
+            reason: "Drive: file not found",
+        })
+
+        const r = await verifySetlistCharts(ADMIN, { setlistId: id })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+
+        expect(r.missingCount).toBe(1)
+        expect(r.orphanedMarked).toBe(0)
+
+        const idx = (
+            await db().collection("library_index").doc("song-spare").get()
+        ).data()!
+        expect(idx.status).toBe("active")
+    })
 })

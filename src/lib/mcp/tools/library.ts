@@ -14,6 +14,8 @@ export interface SearchLibraryArgs {
     bpmMin?: number
     bpmMax?: number
     limit?: number
+    /** If true, include rows with `status: 'orphaned'`. Default false. L-001. */
+    includeOrphaned?: boolean
 }
 
 /**
@@ -48,6 +50,7 @@ export async function searchLibrary(
     return all
         .filter((s) => {
             if (s.status === "archived") return false
+            if (!args.includeOrphaned && s.status === "orphaned") return false
             if (q && !normalizeForSearch(s.title).includes(q)) return false
             if (key && s.key?.toLowerCase() !== key) return false
             if (args.bpmMin !== undefined && (s.bpm === undefined || s.bpm < args.bpmMin)) {

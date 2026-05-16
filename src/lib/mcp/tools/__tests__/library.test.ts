@@ -22,6 +22,8 @@ const songs = [
     { id: "s6", title: "Shalom_rav", key: "F" },
     { id: "s7", title: "shalom-rav (camp)", key: "F" },
     { id: "s8", title: "Shabbát Shalom", key: "Em" },
+    // L-001 orphan-filter fixture.
+    { id: "s9", title: "Ghost Chart", key: "B", status: "orphaned" },
 ]
 
 describe("searchLibrary", () => {
@@ -38,7 +40,26 @@ describe("searchLibrary", () => {
     it("excludes archived songs even with an empty query", async () => {
         const r = await searchLibrary("u", { query: "" })
         expect(r.find((s) => s.id === "s4")).toBeUndefined()
-        expect(r).toHaveLength(7) // 8 total - 1 archived (s4)
+        // 9 total - 1 archived (s4) - 1 orphaned (s9, hidden by default)
+        expect(r).toHaveLength(7)
+    })
+
+    it("excludes orphaned by default; includeOrphaned: true surfaces them (L-001)", async () => {
+        const dflt = await searchLibrary("u", { query: "ghost" })
+        expect(dflt).toEqual([])
+
+        const opt = await searchLibrary("u", {
+            query: "ghost",
+            includeOrphaned: true,
+        })
+        expect(opt.map((s) => s.id)).toEqual(["s9"])
+
+        // Archived still hidden even with includeOrphaned (different status).
+        const noArchived = await searchLibrary("u", {
+            query: "old lecha",
+            includeOrphaned: true,
+        })
+        expect(noArchived).toEqual([])
     })
 
     it("filters by exact key, case-insensitive", async () => {

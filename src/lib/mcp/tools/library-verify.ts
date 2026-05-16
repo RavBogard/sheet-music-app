@@ -67,6 +67,16 @@ export async function getChartStatus(
 
 export interface VerifySetlistChartsArgs {
     setlistId: string
+    /**
+     * If true, every probed row whose `health.status === 'missing'` is
+     * persisted as `library_index.{fileId}.status = 'orphaned'` (and the
+     * matching `songs/{id}.status`). Subsequent `search_library` calls
+     * exclude these by default. Use to triage stale catalog rows after
+     * a "publish refused" or Bar-Mitzvah-style discovery. Off by default
+     * — caller must opt in so a transient Drive/Storage blip doesn't
+     * permanently mark a healthy chart as orphaned. L-001.
+     */
+    markOrphaned?: boolean
 }
 
 export interface SetlistTrackHealth {
@@ -85,6 +95,8 @@ export interface VerifySetlistChartsResult {
     okCount: number
     missingCount: number
     unreachableCount: number
+    /** Number of catalog rows marked `status: 'orphaned'` this call. */
+    orphanedMarked: number
     rows: SetlistTrackHealth[]
 }
 
@@ -153,6 +165,40 @@ export async function verifySetlistCharts(
         (p) => p.health.status === "unreachable",
     ).length
 
+    // Opportunistic orphan marking. Only fires on `missing` (definitive
+    // not-found) — never on `unreachable` (transient blip). L-001.
+    let orphanedMarked = 0
+    if (args.markOrphaned) {
+        const missingFileIds = probes
+            .filter((p) => p.fileId && p.health.status === "missing")
+            .map((p) => p.fileId as string)
+        if (missingFileIds.length > 0) {
+            const batch = db.batch()
+            for (const fid of missingFileIds) {
+                batch.set(
+                    db.collection("library_index").doc(fid),
+                    { status: "orphaned" },
+                    { merge: true },
+                )
+                batch.set(
+                    db.collection("songs").doc(fid),
+                    { status: "orphaned" },
+                    { merge: true },
+                )
+            }
+            try {
+                await batch.commit()
+                orphanedMarked = missingFileIds.length
+            } catch (err) {
+                logger.warn("[mcp] verify_setlist_charts orphan-mark failed", {
+                    setlistId: args.setlistId,
+                    count: missingFileIds.length,
+                    err: err instanceof Error ? err.message : String(err),
+                })
+            }
+        }
+    }
+
     logger.info("[mcp] verify_setlist_charts", {
         setlistId: args.setlistId,
         trackCount: probes.length,
@@ -160,6 +206,7 @@ export async function verifySetlistCharts(
         okCount,
         missingCount,
         unreachableCount,
+        orphanedMarked,
     })
 
     return {
@@ -170,6 +217,7 @@ export async function verifySetlistCharts(
         okCount,
         missingCount,
         unreachableCount,
+        orphanedMarked,
         rows: probes,
     }
 }
