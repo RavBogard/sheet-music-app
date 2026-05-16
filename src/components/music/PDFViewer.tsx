@@ -96,7 +96,21 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
             }
 
             // 2. Fall back to network fetch if not in IDB
-            const res = await fetch(fetchUrl, { signal })
+            // F-08 (2026-05-16 bugstomp): silently retry on a transient 503
+            // (Vercel cold-start signature) before surfacing the error.
+            // Bugstomp caught /api/drive/file/<id> returning 503 on the
+            // first call and 404 on the second — every broken bond was
+            // costing 2× the round-trips and 2× the Sentry log volume.
+            // Cold-start usually clears in <1s, so a single ~750ms retry
+            // converts the 503-then-real-status sequence into one clean
+            // outcome. Genuine 503s that persist still surface via the
+            // normal error path (with F-07's dedup keeping it to one log).
+            let res = await fetch(fetchUrl, { signal })
+            if (res.status === 503 && !signal?.aborted) {
+                await new Promise((r) => setTimeout(r, 750))
+                if (signal?.aborted) return
+                res = await fetch(fetchUrl, { signal })
+            }
 
             if (!res.ok) {
                 // Try to read error body for diagnostics
