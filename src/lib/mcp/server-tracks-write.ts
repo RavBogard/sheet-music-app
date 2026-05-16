@@ -2,6 +2,13 @@ import crypto from "crypto"
 import { FieldValue } from "firebase-admin/firestore"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { logger } from "@/lib/logger"
+import {
+    readLastModifiedAt,
+    readVersion,
+    staleVersionEnvelope,
+    trackNotFoundEnvelope,
+    type WriteRejection,
+} from "@/lib/mcp/error-envelopes"
 
 /**
  * W-04 Plan 01: every write path stamps `version: increment(1)` +
@@ -191,38 +198,90 @@ export async function reorderTracks(
     db: DB,
     setlistId: string,
     orderedTrackIds: string[],
-): Promise<{ ok: true } | WriteError> {
-    const existing = await getTracksForSetlist(db, setlistId, {})
-    const existingIds = new Set(existing.map((t) => t.id))
+    /**
+     * W-04 Plan 02 optimistic-concurrency gate. Reorder gates on the
+     * SETLIST's version (not per-track) — see W-04 §Q decision: a reorder
+     * touches every row's `order` and so naturally races at the setlist
+     * scope, not per row.
+     */
+    lastSeenVersion?: number,
+): Promise<{ ok: true } | WriteError | WriteRejection> {
+    const setlistRef = db.collection("setlists").doc(setlistId)
 
-    if (orderedTrackIds.length !== existing.length) {
-        return { ok: false, error: "orderedTrackIds must contain every track in the setlist exactly once" }
-    }
-    const seen = new Set<string>()
-    for (const id of orderedTrackIds) {
-        if (!existingIds.has(id)) {
-            return { ok: false, error: `track ${id} is not in this setlist` }
+    type TxResult = { ok: true } | WriteError | WriteRejection
+    const result = await db.runTransaction<TxResult>(async (tx) => {
+        const setlistSnap = await tx.get(setlistRef)
+        if (!setlistSnap.exists) {
+            return { ok: false, error: "Setlist not found" }
         }
-        if (seen.has(id)) {
-            return { ok: false, error: `track ${id} appears more than once` }
+        const setlistData = setlistSnap.data() as Record<string, unknown>
+        if (lastSeenVersion !== undefined) {
+            const currentVersion = readVersion(setlistData)
+            if (currentVersion !== lastSeenVersion) {
+                return {
+                    ok: false,
+                    kind: "stale_version",
+                    envelope: staleVersionEnvelope({
+                        resource: "setlist",
+                        currentVersion,
+                        lastSeenVersion,
+                        lastModifiedBy: setlistData.lastModifiedBy as
+                            | string
+                            | undefined,
+                        lastModifiedAt: readLastModifiedAt(setlistData),
+                    }),
+                }
+            }
         }
-        seen.add(id)
-    }
 
-    const batch = db.batch()
-    orderedTrackIds.forEach((id, i) => {
-        batch.update(db.collection("tracks").doc(id), {
-            order: i,
+        const sibSnap = await tx.get(
+            db.collection("tracks").where("setlistId", "==", setlistId),
+        )
+        const existing = sibSnap.docs.map((d) => ({ id: d.id }))
+        const existingIds = new Set(existing.map((t) => t.id))
+        if (orderedTrackIds.length !== existing.length) {
+            return {
+                ok: false,
+                error:
+                    "orderedTrackIds must contain every track in the setlist exactly once",
+            }
+        }
+        const seen = new Set<string>()
+        for (const id of orderedTrackIds) {
+            if (!existingIds.has(id)) {
+                return {
+                    ok: false,
+                    error: `track ${id} is not in this setlist`,
+                }
+            }
+            if (seen.has(id)) {
+                return {
+                    ok: false,
+                    error: `track ${id} appears more than once`,
+                }
+            }
+            seen.add(id)
+        }
+
+        orderedTrackIds.forEach((id, i) => {
+            tx.update(db.collection("tracks").doc(id), {
+                order: i,
+                updatedAt: FieldValue.serverTimestamp(),
+                ...versionBumpFields(),
+            })
+        })
+        tx.update(setlistRef, {
             updatedAt: FieldValue.serverTimestamp(),
             ...versionBumpFields(),
         })
+        return { ok: true }
     })
-    batch.update(db.collection("setlists").doc(setlistId), {
-        updatedAt: FieldValue.serverTimestamp(),
-        ...versionBumpFields(),
+
+    if (!result.ok) return result
+    logger.info("[mcp] tracks reordered", {
+        setlistId,
+        count: orderedTrackIds.length,
     })
-    await batch.commit()
-    logger.info("[mcp] tracks reordered", { setlistId, count: orderedTrackIds.length })
     return { ok: true }
 }
 
@@ -284,22 +343,53 @@ export async function updateTrack(
     trackId: string,
     patch: UpdateTrackPatch,
     songLookup?: SongLookup,
-): Promise<{ ok: true; track: Record<string, unknown> } | WriteError> {
+    /**
+     * W-04 Plan 02 optimistic-concurrency gate. When provided, the write
+     * rejects with `staleVersionEnvelope` if the track's current version
+     * differs from `lastSeenVersion`. Omit to preserve last-writer-wins
+     * behavior (backward-compat for pre-W-04 callers).
+     */
+    lastSeenVersion?: number,
+): Promise<
+    { ok: true; track: Record<string, unknown> } | WriteError | WriteRejection
+> {
     const trackRef = db.collection("tracks").doc(trackId)
-    const snap = await trackRef.get()
-    if (!snap.exists) return { ok: false, error: "Track not found" }
-    const existing = snap.data() as Record<string, unknown>
-    if (existing.setlistId !== setlistId) {
+    const setlistRef = db.collection("setlists").doc(setlistId)
+
+    // Stage A (outside tx): peek at existing track to decide what async
+    // songLookup work needs to happen — songLookup is async and Firestore
+    // transactions don't allow awaiting non-tx promises mid-stream. The
+    // tx-time version check (Stage B) catches any race here.
+    const peek = await trackRef.get()
+    if (!peek.exists) {
+        const setlistSnap = await setlistRef.get()
+        const setlistData = setlistSnap.data() as
+            | Record<string, unknown>
+            | undefined
+        return {
+            ok: false,
+            kind: "track_not_found",
+            envelope: trackNotFoundEnvelope({
+                trackId,
+                setlistId,
+                setlistVersion: readVersion(setlistData),
+                setlistLastModifiedAt: readLastModifiedAt(setlistData),
+            }),
+        }
+    }
+    const peekData = peek.data() as Record<string, unknown>
+    if (peekData.setlistId !== setlistId) {
         return { ok: false, error: "Track does not belong to this setlist" }
     }
 
-    const update: Record<string, unknown> = {
-        updatedAt: FieldValue.serverTimestamp(),
-    }
+    // Build the patch up front. Field-only validation; no Firestore writes
+    // yet. We mutate `fieldUpdate` in place as we resolve songLookup-driven
+    // side-effects so the tx body can apply it verbatim.
+    const fieldUpdate: Record<string, unknown> = {}
     let changed = false
     for (const k of UPDATABLE_FIELDS) {
         if (patch[k] !== undefined) {
-            update[k] = patch[k]
+            fieldUpdate[k] = patch[k]
             changed = true
         }
     }
@@ -321,16 +411,18 @@ export async function updateTrack(
     // recompute the canonical `fileIds[]` from the post-patch track state
     // in the same batch as the field write so the aggregate can't drift.
     const oldFileId =
-        typeof existing.fileId === "string" ? (existing.fileId as string) : undefined
+        typeof peekData.fileId === "string"
+            ? (peekData.fileId as string)
+            : undefined
     let newFileId: string | undefined
-    if (patch.songId !== undefined && patch.songId !== existing.songId) {
-        update.fileId = patch.songId
+    if (patch.songId !== undefined && patch.songId !== peekData.songId) {
+        fieldUpdate.fileId = patch.songId
         newFileId = patch.songId
         if (songLookup) {
             try {
                 const newSong = await songLookup(patch.songId)
                 if (newSong?.fileName !== undefined) {
-                    update.fileName = newSong.fileName
+                    fieldUpdate.fileName = newSong.fileName
                 }
                 // Stress-test v3 NOTE-1: on a re-bond, if the row's `title`
                 // still equals the OLD song's catalog title (i.e. the user
@@ -343,7 +435,9 @@ export async function updateTrack(
                 const explicitTitle =
                     typeof patch.title === "string" && patch.title.trim().length > 0
                 const currentTitle =
-                    typeof existing.title === "string" ? existing.title.trim() : ""
+                    typeof peekData.title === "string"
+                        ? peekData.title.trim()
+                        : ""
                 if (
                     !explicitTitle &&
                     newSong?.title &&
@@ -354,7 +448,7 @@ export async function updateTrack(
                     try {
                         const oldSong = await songLookup(oldFileId)
                         if (oldSong?.title && currentTitle === oldSong.title.trim()) {
-                            update.title = newSong.title
+                            fieldUpdate.title = newSong.title
                         }
                     } catch (lookupErr) {
                         // Fail-soft — without the old song record we can't
@@ -382,81 +476,165 @@ export async function updateTrack(
             }
         }
     }
-
-    // Lazy-load all tracks if either path needs them: in-place reorder OR
-    // fileIds[] re-canonicalization on a re-bond. Single read covers both.
     const wantsFileIdsRebuild =
         newFileId !== undefined && newFileId !== oldFileId
-    let allTracks: Awaited<ReturnType<typeof getTracksForSetlist>> | null = null
-    if (wantsMove || wantsFileIdsRebuild) {
-        allTracks = await getTracksForSetlist(db, setlistId, {})
-    }
 
-    const batch = db.batch()
-    // W-04 Plan 01: bump the patched track's version alongside the field updates.
-    Object.assign(update, versionBumpFields())
-    batch.update(trackRef, update)
+    // Stage B (inside tx): re-read track for version gating + existence
+    // (atomic with the writes below). Also read sibling tracks via the
+    // tx's get(query) if we need them for in-place reorder or fileIds
+    // canonical rebuild — these reads happen BEFORE any writes per the
+    // Firestore transaction contract.
+    type TxResult =
+        | { ok: true; track: Record<string, unknown> }
+        | WriteError
+        | WriteRejection
+    const txResult = await db.runTransaction<TxResult>(async (tx) => {
+        const txTrackSnap = await tx.get(trackRef)
+        if (!txTrackSnap.exists) {
+            const txSetlistSnap = await tx.get(setlistRef)
+            return {
+                ok: false,
+                kind: "track_not_found",
+                envelope: trackNotFoundEnvelope({
+                    trackId,
+                    setlistId,
+                    setlistVersion: readVersion(txSetlistSnap.data()),
+                    setlistLastModifiedAt: readLastModifiedAt(
+                        txSetlistSnap.data(),
+                    ),
+                }),
+            }
+        }
+        const txData = txTrackSnap.data() as Record<string, unknown>
+        if (txData.setlistId !== setlistId) {
+            return {
+                ok: false,
+                error: "Track does not belong to this setlist",
+            }
+        }
 
-    // CF3: in-place reorder. Clamp the target into the valid range, then
-    // splice the row out + back in to compute new `order` values for every
-    // affected sibling. Single batch keeps the move atomic with the field
-    // patch above.
-    if (wantsMove && allTracks && allTracks.length > 0) {
-        const currentIdx = allTracks.findIndex((t) => t.id === trackId)
-        const target = Math.max(
-            0,
-            Math.min(patch.position as number, allTracks.length - 1),
-        )
-        if (currentIdx !== -1 && currentIdx !== target) {
-            const reordered = allTracks.slice()
-            const [moved] = reordered.splice(currentIdx, 1)
-            reordered.splice(target, 0, moved)
-            reordered.forEach((t, i) => {
-                if (t.order !== i) {
-                    // Firestore batches MERGE partial updates by field when
-                    // multiple .update() calls hit the same ref — so the
-                    // moved row gets its order from this loop AND the
-                    // field-patches from `update` above without losing
-                    // either. Sibling rows whose order shifts get an
-                    // independent version bump too.
-                    batch.update(db.collection("tracks").doc(t.id), {
-                        order: i,
-                        ...versionBumpFields(),
-                    })
+        if (lastSeenVersion !== undefined) {
+            const currentVersion = readVersion(txData)
+            if (currentVersion !== lastSeenVersion) {
+                const txSetlistSnap = await tx.get(setlistRef)
+                return {
+                    ok: false,
+                    kind: "stale_version",
+                    envelope: staleVersionEnvelope({
+                        resource: "track",
+                        currentVersion,
+                        lastSeenVersion,
+                        lastModifiedBy: txData.lastModifiedBy as
+                            | string
+                            | undefined,
+                        lastModifiedAt: readLastModifiedAt(
+                            txSetlistSnap.data(),
+                        ),
+                    }),
+                }
+            }
+        }
+
+        // Sibling reads (still in the read-phase of the tx). For the in-
+        // place reorder we need every track on the setlist; for the
+        // fileIds[] canonical rebuild we likewise need every sibling's
+        // current fileId. Use a tx.get on the query so all reads stay
+        // consistent with the version-checked track snapshot above.
+        let allTracks: Array<{
+            id: string
+            order: number
+            fileId?: string
+        }> | null = null
+        if (wantsMove || wantsFileIdsRebuild) {
+            const sibSnap = await tx.get(
+                db.collection("tracks").where("setlistId", "==", setlistId),
+            )
+            allTracks = sibSnap.docs.map((d) => {
+                const data = d.data() as Record<string, unknown>
+                return {
+                    id: d.id,
+                    order: typeof data.order === "number" ? data.order : 0,
+                    fileId:
+                        typeof data.fileId === "string"
+                            ? (data.fileId as string)
+                            : undefined,
                 }
             })
+            allTracks.sort((a, b) => a.order - b.order)
         }
-    }
 
-    const setlistPatch: Record<string, unknown> = {
-        updatedAt: FieldValue.serverTimestamp(),
-        ...versionBumpFields(),
-    }
-
-    // Re-bond reconcile: replace the parent's `fileIds[]` with the canonical
-    // set derived from the post-patch track state. Self-heals any prior
-    // drift; safer than arrayUnion(new) + arrayRemove(old, if no siblings),
-    // which can leave the aggregate stale if siblings reference the old
-    // chart elsewhere on the setlist.
-    if (wantsFileIdsRebuild && allTracks) {
-        const canonical = new Set<string>()
-        for (const t of allTracks) {
-            const tFileId =
-                t.id === trackId
-                    ? newFileId
-                    : ((t as Record<string, unknown>).fileId as string | undefined)
-            if (typeof tFileId === "string" && tFileId) canonical.add(tFileId)
+        // Writes (transaction's write-phase). Build the target row's
+        // update; merge any reorder-derived `order` BEFORE the single
+        // tx.update(trackRef, ...) call (Firestore rejects two writes to
+        // the same ref inside one transaction, so we must combine).
+        const update: Record<string, unknown> = {
+            ...fieldUpdate,
+            updatedAt: FieldValue.serverTimestamp(),
+            ...versionBumpFields(),
         }
-        setlistPatch.fileIds = [...canonical]
-    }
 
-    batch.update(db.collection("setlists").doc(setlistId), setlistPatch)
-    await batch.commit()
+        // CF3: in-place reorder. Clamp the target into the valid range,
+        // then splice the row out + back in to compute new `order` values
+        // for every affected sibling.
+        if (wantsMove && allTracks && allTracks.length > 0) {
+            const currentIdx = allTracks.findIndex((t) => t.id === trackId)
+            const target = Math.max(
+                0,
+                Math.min(patch.position as number, allTracks.length - 1),
+            )
+            if (currentIdx !== -1 && currentIdx !== target) {
+                const reordered = allTracks.slice()
+                const [moved] = reordered.splice(currentIdx, 1)
+                reordered.splice(target, 0, moved)
+                reordered.forEach((t, i) => {
+                    if (t.order === i) return
+                    if (t.id === trackId) {
+                        // Merge into the target row's combined update.
+                        update.order = i
+                    } else {
+                        tx.update(db.collection("tracks").doc(t.id), {
+                            order: i,
+                            ...versionBumpFields(),
+                        })
+                    }
+                })
+            }
+        }
+
+        tx.update(trackRef, update)
+
+        const setlistPatch: Record<string, unknown> = {
+            updatedAt: FieldValue.serverTimestamp(),
+            ...versionBumpFields(),
+        }
+
+        // Re-bond reconcile: replace the parent's `fileIds[]` with the
+        // canonical set derived from the post-patch track state. Self-
+        // heals any prior drift; safer than arrayUnion(new) + arrayRemove(
+        // old, if no siblings), which can leave the aggregate stale if
+        // siblings reference the old chart elsewhere on the setlist.
+        if (wantsFileIdsRebuild && allTracks) {
+            const canonical = new Set<string>()
+            for (const t of allTracks) {
+                const tFileId =
+                    t.id === trackId ? newFileId : t.fileId
+                if (typeof tFileId === "string" && tFileId) {
+                    canonical.add(tFileId)
+                }
+            }
+            setlistPatch.fileIds = [...canonical]
+        }
+
+        tx.update(setlistRef, setlistPatch)
+        return { ok: true, track: { id: trackId } }
+    })
+
+    if (!txResult.ok) return txResult
 
     logger.info("[mcp] track updated", {
         setlistId,
         trackId,
-        fields: Object.keys(update).filter((k) => k !== "updatedAt"),
+        fields: Object.keys(fieldUpdate),
         moved: wantsMove,
         rebonded: wantsFileIdsRebuild,
     })
@@ -878,7 +1056,17 @@ export async function bulkUpdateTracks(
                 )
                 results[i] = r.ok
                     ? { trackId: entry.trackId, ok: true, track: r.track }
-                    : { trackId: entry.trackId, ok: false, error: r.error }
+                    : {
+                          trackId: entry.trackId,
+                          ok: false,
+                          // bulk_update_tracks doesn't pass lastSeenVersion
+                          // today (Plan 03 owns that surface), so the only
+                          // structured envelope updateTrack may return here is
+                          // track_not_found. Flatten to a string for the
+                          // bulk-result envelope's `error` field.
+                          error:
+                              "kind" in r ? r.envelope.message : r.error,
+                      }
             } catch (err) {
                 results[i] = {
                     trackId: entry.trackId,
@@ -1188,44 +1376,115 @@ export async function removeTrack(
     db: DB,
     setlistId: string,
     trackId: string,
-): Promise<{ ok: true } | WriteError> {
-    const existing = await getTracksForSetlist(db, setlistId, {})
-    const target = existing.find((t) => t.id === trackId)
-    if (!target) {
-        return { ok: false, error: "Track not found in this setlist" }
-    }
+    /**
+     * W-04 Plan 02 optimistic-concurrency gate. Rejects with
+     * `staleVersionEnvelope` when the target row's version differs from
+     * `lastSeenVersion`. Omit to keep last-writer-wins behavior.
+     */
+    lastSeenVersion?: number,
+): Promise<{ ok: true } | WriteError | WriteRejection> {
+    const setlistRef = db.collection("setlists").doc(setlistId)
+    const trackRef = db.collection("tracks").doc(trackId)
 
-    const remaining = existing.filter((t) => t.id !== trackId)
-    const batch = db.batch()
-    batch.delete(db.collection("tracks").doc(trackId))
-    // Re-pack: assign contiguous order to whatever's left. Re-packed rows
-    // get a version bump (their order shifted; clients reading them with
-    // an old version are stale).
-    remaining.forEach((t, i) => {
-        if (t.order !== i) {
-            batch.update(db.collection("tracks").doc(t.id), {
-                order: i,
-                updatedAt: FieldValue.serverTimestamp(),
-                ...versionBumpFields(),
-            })
+    type TxResult = { ok: true } | WriteError | WriteRejection
+    const result = await db.runTransaction<TxResult>(async (tx) => {
+        // Read the target track first; if missing return the structured
+        // not-found envelope (carries current setlist version so the
+        // agent can re-fetch without guessing).
+        const trackSnap = await tx.get(trackRef)
+        if (!trackSnap.exists) {
+            const setlistSnap = await tx.get(setlistRef)
+            return {
+                ok: false,
+                kind: "track_not_found",
+                envelope: trackNotFoundEnvelope({
+                    trackId,
+                    setlistId,
+                    setlistVersion: readVersion(setlistSnap.data()),
+                    setlistLastModifiedAt: readLastModifiedAt(
+                        setlistSnap.data(),
+                    ),
+                }),
+            }
         }
+        const trackData = trackSnap.data() as Record<string, unknown>
+        if (trackData.setlistId !== setlistId) {
+            return {
+                ok: false,
+                error: "Track does not belong to this setlist",
+            }
+        }
+        if (lastSeenVersion !== undefined) {
+            const currentVersion = readVersion(trackData)
+            if (currentVersion !== lastSeenVersion) {
+                return {
+                    ok: false,
+                    kind: "stale_version",
+                    envelope: staleVersionEnvelope({
+                        resource: "track",
+                        currentVersion,
+                        lastSeenVersion,
+                        lastModifiedBy: trackData.lastModifiedBy as
+                            | string
+                            | undefined,
+                        lastModifiedAt: readLastModifiedAt(trackData),
+                    }),
+                }
+            }
+        }
+
+        // Read all siblings (still in the tx's read-phase) to compute the
+        // post-delete re-pack and to decide whether the removed chart's
+        // fileId should drop from the parent setlist's fileIds[] aggregate.
+        const sibSnap = await tx.get(
+            db.collection("tracks").where("setlistId", "==", setlistId),
+        )
+        const existing = sibSnap.docs.map((d) => {
+            const data = d.data() as Record<string, unknown>
+            return {
+                id: d.id,
+                order: typeof data.order === "number" ? data.order : 0,
+                fileId:
+                    typeof data.fileId === "string"
+                        ? (data.fileId as string)
+                        : undefined,
+            }
+        })
+        existing.sort((a, b) => a.order - b.order)
+        const remaining = existing.filter((t) => t.id !== trackId)
+
+        // Writes — delete the target + re-pack siblings + setlist patch.
+        tx.delete(trackRef)
+        remaining.forEach((t, i) => {
+            if (t.order !== i) {
+                tx.update(db.collection("tracks").doc(t.id), {
+                    order: i,
+                    updatedAt: FieldValue.serverTimestamp(),
+                    ...versionBumpFields(),
+                })
+            }
+        })
+        const setlistPatch: Record<string, unknown> = {
+            trackCount: remaining.length,
+            updatedAt: FieldValue.serverTimestamp(),
+            ...versionBumpFields(),
+        }
+        // Drop the chart from the parent's fileIds set only when no other
+        // track still references it (the array is a distinct set across
+        // all tracks).
+        const removedFileId = trackData.fileId
+        if (
+            typeof removedFileId === "string" &&
+            removedFileId &&
+            !remaining.some((t) => t.fileId === removedFileId)
+        ) {
+            setlistPatch.fileIds = FieldValue.arrayRemove(removedFileId)
+        }
+        tx.update(setlistRef, setlistPatch)
+        return { ok: true }
     })
-    const setlistPatch: Record<string, unknown> = {
-        trackCount: remaining.length,
-        updatedAt: FieldValue.serverTimestamp(),
-        ...versionBumpFields(),
-    }
-    // Drop the chart from the parent's fileIds set only when no other track
-    // still references it (the array is a distinct set across all tracks).
-    const removedFileId = (target as { fileId?: string }).fileId
-    if (
-        removedFileId &&
-        !remaining.some((t) => (t as { fileId?: string }).fileId === removedFileId)
-    ) {
-        setlistPatch.fileIds = FieldValue.arrayRemove(removedFileId)
-    }
-    batch.update(db.collection("setlists").doc(setlistId), setlistPatch)
-    await batch.commit()
+
+    if (!result.ok) return result
     logger.info("[mcp] track removed", { setlistId, trackId })
     return { ok: true }
 }

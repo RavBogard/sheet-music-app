@@ -58,6 +58,19 @@ export const eventDateSchema = z
     .optional()
 
 /**
+ * W-04 Plan 02 shared schema piece. Optional gate: omit to keep last-
+ * writer-wins behavior; supply to reject the write with a structured
+ * `stale_version` envelope when another writer has advanced the
+ * resource's version. The value is whatever `version` field came back on
+ * the previous `get_setlist` / `list_setlists` / `update_*` echo.
+ */
+export const lastSeenVersionSchema = z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+
+/**
  * Track-patch field surface — common between update_track and
  * bulk_update_tracks. `position` is NOT in this base; it's added back
  * exclusively in updateTrackPatchSchema. bulkTrackPatchSchema instead
@@ -291,7 +304,7 @@ export function registerWriteTools(server: McpServer): void {
         "update_setlist",
         {
             description:
-                "Update a setlist's metadata (name, date, service type, rabbi, notes). Metadata only — does NOT touch tracks; use the track tools for that. Admins and band leaders may update it. Returns the post-update setlist record (name, eventDate, rabbi, serviceType, serviceNotes) so callers can confirm the patch landed without a follow-up get_setlist.",
+                "Update a setlist's metadata (name, date, service type, rabbi, notes). Metadata only — does NOT touch tracks; use the track tools for that. Admins and band leaders may update it. Returns the post-update setlist record (name, eventDate, rabbi, serviceType, serviceNotes) so callers can confirm the patch landed without a follow-up get_setlist. Pass `lastSeenVersion` (the `version` from your last get_setlist / list_setlists) to reject with `{error: 'stale_version', currentVersion, ...}` when another writer has changed the setlist since you read it (W-04 optimistic concurrency).",
             inputSchema: {
                 id: z.string().describe("Setlist id"),
                 name: z.string().min(1).optional().describe("New setlist name"),
@@ -299,6 +312,9 @@ export function registerWriteTools(server: McpServer): void {
                 serviceType: z.string().optional().describe("New service/template type"),
                 rabbi: z.string().optional().describe("New rabbi leading the service"),
                 serviceNotes: z.string().optional().describe("Free-text service notes"),
+                lastSeenVersion: lastSeenVersionSchema.describe(
+                    "Optional optimistic-concurrency gate: pass the setlist's `version` from your last get_setlist / list_setlists. The write rejects with `{error: 'stale_version', currentVersion, lastSeenVersion, hint, ...}` if it doesn't match — call get_setlist and retry.",
+                ),
             },
         },
         async (args, extra) => jsonResult(await updateSetlist(uidFrom(extra), args)),
@@ -430,12 +446,15 @@ export function registerWriteTools(server: McpServer): void {
         "reorder_setlist",
         {
             description:
-                "Reorder a setlist's tracks. orderedTrackIds must list every current track id of the setlist exactly once, in the new performance order. Get the current ids from get_setlist first. Admins and band leaders may reorder.",
+                "Reorder a setlist's tracks. orderedTrackIds must list every current track id of the setlist exactly once, in the new performance order. Get the current ids from get_setlist first. Admins and band leaders may reorder. Reorder gates on the SETLIST-level `lastSeenVersion` (a reorder touches every row's order — racing at the setlist scope is the natural granularity).",
             inputSchema: {
                 setlistId: z.string().describe("Setlist id"),
                 orderedTrackIds: z
                     .array(z.string())
                     .describe("All track ids of the setlist, in the new order"),
+                lastSeenVersion: lastSeenVersionSchema.describe(
+                    "Optional setlist-level optimistic-concurrency gate. Pass the `version` from get_setlist; rejects with `{error: 'stale_version', ...}` when another writer has changed the setlist since you read it.",
+                ),
             },
         },
         async (args, extra) => jsonResult(await reorderSetlist(uidFrom(extra), args)),
@@ -445,10 +464,13 @@ export function registerWriteTools(server: McpServer): void {
         "remove_track",
         {
             description:
-                "Remove one track from a setlist by id. The remaining tracks are re-packed to stay contiguous. Admins and band leaders may remove tracks.",
+                "Remove one track from a setlist by id. The remaining tracks are re-packed to stay contiguous. Admins and band leaders may remove tracks. Pass `lastSeenVersion` (the track's `version` from your last get_setlist) to reject with `{error: 'stale_version', ...}` when another writer has changed that specific track since you read it. Track-not-found returns `{error: 'track_not_found', setlistVersion, ...}` so the agent can refresh by trackId resolution.",
             inputSchema: {
                 setlistId: z.string().describe("Setlist id"),
                 trackId: z.string().describe("Id of the track to remove"),
+                lastSeenVersion: lastSeenVersionSchema.describe(
+                    "Optional track-level optimistic-concurrency gate. Pass the track's `version` from get_setlist; rejects with `{error: 'stale_version', currentVersion, ...}` on mismatch.",
+                ),
             },
         },
         async (args, extra) => jsonResult(await removeSetlistTrack(uidFrom(extra), args)),
@@ -458,9 +480,12 @@ export function registerWriteTools(server: McpServer): void {
         "delete_setlist",
         {
             description:
-                "Delete a setlist and all of its tracks. Only the setlist's owner or an admin may delete it. Use with care — this is irreversible and cascades to every track on the setlist.",
+                "Delete a setlist and all of its tracks. Only the setlist's owner or an admin may delete it. Use with care — this is irreversible and cascades to every track on the setlist. Pass `lastSeenVersion` (from get_setlist) to reject with `{error: 'stale_version', ...}` when another writer has changed the setlist since you read it.",
             inputSchema: {
                 id: z.string().describe("Setlist id"),
+                lastSeenVersion: lastSeenVersionSchema.describe(
+                    "Optional setlist-level optimistic-concurrency gate. Pass the `version` from get_setlist; rejects with `{error: 'stale_version', ...}` on mismatch.",
+                ),
             },
         },
         async (args, extra) => jsonResult(await deleteSetlist(uidFrom(extra), args)),
@@ -470,7 +495,7 @@ export function registerWriteTools(server: McpServer): void {
         "update_track",
         {
             description:
-                "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink) and optionally move it to a new position. Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Pass `position` to move the row in place (closes the 'must call reorder_setlist with the full ordered id list to move one row' gap). Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). Returns the post-update row. Admins and band leaders only.",
+                "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink) and optionally move it to a new position. Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Pass `position` to move the row in place (closes the 'must call reorder_setlist with the full ordered id list to move one row' gap). Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). Returns the post-update row. Admins and band leaders only. Pass `lastSeenVersion` (the track's `version` from your last get_setlist) for W-04 optimistic concurrency: rejects with `{error: 'stale_version', currentVersion, ...}` if another writer changed THIS track first, or `{error: 'track_not_found', setlistVersion, ...}` if the row was deleted out from under you.",
             inputSchema: {
                 setlistId: z.string().describe("Setlist id"),
                 trackId: z
@@ -478,6 +503,9 @@ export function registerWriteTools(server: McpServer): void {
                     .describe("Track id (from get_setlist tracks[].id)"),
                 patch: updateTrackPatchSchema.describe(
                     "Fields to update + optional `position` for in-place reorder. At least one field (or `position`) must be set. Pass `songId` to re-bond the row to a different library song (fileId follows automatically).",
+                ),
+                lastSeenVersion: lastSeenVersionSchema.describe(
+                    "Optional track-level optimistic-concurrency gate. Pass the track's `version` from get_setlist; rejects with `{error: 'stale_version', currentVersion, lastSeenVersion, hint, ...}` on mismatch. Omit to keep last-writer-wins.",
                 ),
             },
         },

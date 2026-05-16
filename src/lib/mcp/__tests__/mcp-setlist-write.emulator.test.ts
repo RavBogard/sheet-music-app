@@ -428,10 +428,16 @@ describe("MCP setlist write tools (emulator)", () => {
         expect(tracks.map((t) => t.order)).toEqual([0, 1]) // re-packed, no gap
         expect((await db().collection("setlists").doc(id).get()).data()!.trackCount).toBe(2)
 
-        // Unknown track id and a non-editor caller are both rejected.
-        expect(
-            await removeSetlistTrack(ADMIN, { setlistId: id, trackId: "ghost" }),
-        ).toEqual({ error: "Track not found in this setlist" })
+        // Unknown track id returns the W-04 Plan 02 structured
+        // track_not_found envelope (carries setlistVersion so the agent
+        // can re-fetch). Non-editor caller still gets the plain string.
+        const ghostResult = (await removeSetlistTrack(ADMIN, {
+            setlistId: id,
+            trackId: "ghost",
+        })) as Record<string, unknown>
+        expect(ghostResult.error).toBe("track_not_found")
+        expect(typeof ghostResult.setlistVersion).toBe("number")
+        expect(ghostResult.hint).toMatch(/get_setlist/)
         expect(
             await removeSetlistTrack(MEMBER, { setlistId: id, trackId: tracks[0].id as string }),
         ).toEqual({ error: NOT_EDITOR_ERROR })
@@ -842,14 +848,17 @@ describe("MCP setlist write tools (emulator)", () => {
             })
         })
 
-        it("update_track rejects a bogus trackId", async () => {
+        it("update_track rejects a bogus trackId with the W-04 track_not_found envelope", async () => {
             const id = await newSetlist()
-            const r = await updateSetlistTrack(ADMIN, {
+            const r = (await updateSetlistTrack(ADMIN, {
                 setlistId: id,
                 trackId: "ghost-track",
                 patch: { key: "G" },
-            })
-            expect(r).toEqual({ error: "Track not found" })
+            })) as Record<string, unknown>
+            expect(r.error).toBe("track_not_found")
+            expect(r.message).toMatch(/ghost-track/)
+            expect(typeof r.setlistVersion).toBe("number")
+            expect(r.hint).toMatch(/get_setlist/)
         })
 
         it("update_track rejects a bogus songId before writing (F-01)", async () => {

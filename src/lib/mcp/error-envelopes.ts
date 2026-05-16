@@ -112,6 +112,38 @@ export function readVersion(data: Record<string, unknown> | undefined): number {
 }
 
 /**
+ * Pull `lastModifiedAt` (W-04 ISO sibling of Firestore's serverTimestamp
+ * `updatedAt`) off a doc snapshot. Returns the ISO string as written, or
+ * null if absent / mis-shaped. Used by envelope builders that surface
+ * "what's the current state" context to the agent.
+ */
+export function readLastModifiedAt(
+    data: Record<string, unknown> | undefined,
+): string | null {
+    if (!data) return null
+    const v = data.lastModifiedAt
+    return typeof v === "string" ? v : null
+}
+
+/**
+ * Plan 02 write-side rejection union. Server-side write helpers return one
+ * of these (or `{ ok: true, ... }`) so the MCP tool wrapper can distinguish
+ * a stale-version / track-not-found envelope (structured, machine-readable)
+ * from a generic `{ ok: false, error: string }` validation error.
+ */
+export type WriteRejection =
+    | {
+          ok: false
+          kind: "stale_version"
+          envelope: StaleVersionEnvelope
+      }
+    | {
+          ok: false
+          kind: "track_not_found"
+          envelope: TrackNotFoundEnvelope
+      }
+
+/**
  * F-02 from bugstomp 2026-05-16 (deferred to W-04): Zod validation failures
  * inside an MCP tool currently propagate as raw JSON-RPC `-32602` protocol
  * errors. Agent clients see the protocol code but lose the `{error: "..."}`

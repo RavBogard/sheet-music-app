@@ -20,6 +20,13 @@ import {
     type BulkAddTrackInput,
     type BulkAddResult,
 } from "@/lib/mcp/server-tracks-write"
+import {
+    readLastModifiedAt,
+    readVersion,
+    staleVersionEnvelope,
+    type StaleVersionEnvelope,
+    type TrackNotFoundEnvelope,
+} from "@/lib/mcp/error-envelopes"
 import { getSongById } from "@/lib/mcp/server-songs"
 
 /**
@@ -38,6 +45,17 @@ import { getSongById } from "@/lib/mcp/server-songs"
 
 /** A tool result carrying a user-facing error instead of throwing. */
 type ToolError = { error: string }
+
+/**
+ * W-04 Plan 02 wrapper-side error envelope. Surfaces the structured
+ * stale-version / track-not-found envelopes the server-side helpers return
+ * verbatim through `jsonResult`. Distinct from `ToolError` so the agent can
+ * see the structured `currentVersion` / `lastSeenVersion` / `setlistVersion`
+ * fields and recover without a free-text-parse.
+ */
+type ToolEnvelopeError =
+    | StaleVersionEnvelope
+    | TrackNotFoundEnvelope
 
 /** Best-effort display name for the setlist's `ownerName` denormalization. */
 async function ownerNameFor(
@@ -107,6 +125,8 @@ export interface UpdateSetlistArgs {
     serviceType?: string
     rabbi?: string
     serviceNotes?: string
+    /** W-04 Plan 02 optimistic-concurrency gate (setlist-level version). */
+    lastSeenVersion?: number
 }
 
 export async function updateSetlist(
@@ -125,6 +145,7 @@ export async function updateSetlist(
           }
       }
     | ToolError
+    | ToolEnvelopeError
 > {
     initAdmin()
     const db = getFirestore()
@@ -141,7 +162,17 @@ export async function updateSetlist(
     if (args.rabbi !== undefined) patch.rabbi = args.rabbi
     if (args.serviceNotes !== undefined) patch.serviceNotes = args.serviceNotes
 
-    await updateSetlistServerSide(args.id, patch)
+    const updateResult = await updateSetlistServerSide(
+        args.id,
+        patch,
+        args.lastSeenVersion,
+    )
+    if (!updateResult.ok) {
+        if (updateResult.error === "stale_version") {
+            return updateResult.envelope
+        }
+        return { error: "Setlist not found" }
+    }
 
     // G-11: echo the post-update state so callers don't need a follow-up
     // get_setlist to confirm the patch landed. serviceType is persisted as
@@ -247,12 +278,16 @@ export interface UpdateTrackArgs {
     setlistId: string
     trackId: string
     patch: UpdateTrackPatch
+    /** W-04 Plan 02 optimistic-concurrency gate (track-level version). */
+    lastSeenVersion?: number
 }
 
 export async function updateSetlistTrack(
     uid: string,
     args: UpdateTrackArgs,
-): Promise<{ ok: true; track: Record<string, unknown> } | ToolError> {
+): Promise<
+    { ok: true; track: Record<string, unknown> } | ToolError | ToolEnvelopeError
+> {
     initAdmin()
     const db = getFirestore()
 
@@ -286,8 +321,11 @@ export async function updateSetlistTrack(
             if (!song) return null
             return { title: song.title, fileName: song.fileName }
         },
+        args.lastSeenVersion,
     )
-    return result.ok ? { ok: true, track: result.track } : { error: result.error }
+    if (result.ok) return { ok: true, track: result.track }
+    if ("kind" in result) return result.envelope
+    return { error: result.error }
 }
 
 // ─── swap_chart (S-004) ─────────────────────────────────────────────────────
@@ -355,9 +393,13 @@ export async function swapChart(
             return { title: song.title, fileName: song.fileName }
         },
     )
-    return result.ok
-        ? { ok: true, track: result.track }
-        : { error: result.error }
+    if (result.ok) return { ok: true, track: result.track }
+    // swap_chart doesn't pass lastSeenVersion, so stale_version can't fire;
+    // track_not_found still can. Flatten the envelope's message into the
+    // ToolError shape — swap_chart's response shape predates Plan 02 and
+    // callers aren't passing a version.
+    if ("kind" in result) return { error: result.envelope.message }
+    return { error: result.error }
 }
 
 // ─── bulk_update_tracks (CF1) ───────────────────────────────────────────────
@@ -476,20 +518,29 @@ export async function bulkAddSetlistTracks(
 export interface ReorderSetlistArgs {
     setlistId: string
     orderedTrackIds: string[]
+    /** W-04 Plan 02 optimistic-concurrency gate (setlist-level version). */
+    lastSeenVersion?: number
 }
 
 export async function reorderSetlist(
     uid: string,
     args: ReorderSetlistArgs,
-): Promise<{ ok: true } | ToolError> {
+): Promise<{ ok: true } | ToolError | ToolEnvelopeError> {
     initAdmin()
     const db = getFirestore()
 
     const loaded = await loadEditableSetlist(db, args.setlistId, uid)
     if (!loaded.ok) return { error: loaded.error }
 
-    const result = await reorderTracks(db, args.setlistId, args.orderedTrackIds)
-    return result.ok ? { ok: true } : { error: result.error }
+    const result = await reorderTracks(
+        db,
+        args.setlistId,
+        args.orderedTrackIds,
+        args.lastSeenVersion,
+    )
+    if (result.ok) return { ok: true }
+    if ("kind" in result) return result.envelope
+    return { error: result.error }
 }
 
 // ─── remove_track ───────────────────────────────────────────────────────────
@@ -497,26 +548,37 @@ export async function reorderSetlist(
 export interface RemoveTrackArgs {
     setlistId: string
     trackId: string
+    /** W-04 Plan 02 optimistic-concurrency gate (track-level version). */
+    lastSeenVersion?: number
 }
 
 export async function removeSetlistTrack(
     uid: string,
     args: RemoveTrackArgs,
-): Promise<{ ok: true } | ToolError> {
+): Promise<{ ok: true } | ToolError | ToolEnvelopeError> {
     initAdmin()
     const db = getFirestore()
 
     const loaded = await loadEditableSetlist(db, args.setlistId, uid)
     if (!loaded.ok) return { error: loaded.error }
 
-    const result = await removeTrack(db, args.setlistId, args.trackId)
-    return result.ok ? { ok: true } : { error: result.error }
+    const result = await removeTrack(
+        db,
+        args.setlistId,
+        args.trackId,
+        args.lastSeenVersion,
+    )
+    if (result.ok) return { ok: true }
+    if ("kind" in result) return result.envelope
+    return { error: result.error }
 }
 
 // ─── delete_setlist ─────────────────────────────────────────────────────────
 
 export interface DeleteSetlistArgs {
     id: string
+    /** W-04 Plan 02 optimistic-concurrency gate (setlist-level version). */
+    lastSeenVersion?: number
 }
 
 /**
@@ -530,34 +592,62 @@ export interface DeleteSetlistArgs {
 export async function deleteSetlist(
     uid: string,
     args: DeleteSetlistArgs,
-): Promise<{ ok: true; tracksDeleted: number } | ToolError> {
+): Promise<
+    { ok: true; tracksDeleted: number } | ToolError | ToolEnvelopeError
+> {
     initAdmin()
     const db = getFirestore()
 
     const editor = await assertEditor(db, uid)
     if (!editor.ok) return { error: editor.error }
+    const role = await readUserRole(db, uid)
 
     const setlistRef = db.collection("setlists").doc(args.id)
-    const setlistSnap = await setlistRef.get()
-    if (!setlistSnap.exists) return { error: "Setlist not found" }
 
-    const role = await readUserRole(db, uid)
-    const ownerId = (setlistSnap.data() as Record<string, unknown>).ownerId
-    if (role !== "admin" && ownerId !== uid) {
-        return {
-            error: "Only the setlist owner or an admin may delete a setlist",
+    type TxResult =
+        | { ok: true; tracksDeleted: number }
+        | { ok: false; error: string }
+        | { ok: false; envelope: StaleVersionEnvelope }
+    const result = await db.runTransaction<TxResult>(async (tx) => {
+        const setlistSnap = await tx.get(setlistRef)
+        if (!setlistSnap.exists) {
+            return { ok: false, error: "Setlist not found" }
         }
-    }
+        const setlistData = setlistSnap.data() as Record<string, unknown>
+        const ownerId = setlistData.ownerId
+        if (role !== "admin" && ownerId !== uid) {
+            return {
+                ok: false,
+                error:
+                    "Only the setlist owner or an admin may delete a setlist",
+            }
+        }
+        if (args.lastSeenVersion !== undefined) {
+            const currentVersion = readVersion(setlistData)
+            if (currentVersion !== args.lastSeenVersion) {
+                return {
+                    ok: false,
+                    envelope: staleVersionEnvelope({
+                        resource: "setlist",
+                        currentVersion,
+                        lastSeenVersion: args.lastSeenVersion,
+                        lastModifiedBy: setlistData.lastModifiedBy as
+                            | string
+                            | undefined,
+                        lastModifiedAt: readLastModifiedAt(setlistData),
+                    }),
+                }
+            }
+        }
+        const tracksSnap = await tx.get(
+            db.collection("tracks").where("setlistId", "==", args.id),
+        )
+        tracksSnap.docs.forEach((d) => tx.delete(d.ref))
+        tx.delete(setlistRef)
+        return { ok: true, tracksDeleted: tracksSnap.size }
+    })
 
-    const tracksSnap = await db
-        .collection("tracks")
-        .where("setlistId", "==", args.id)
-        .get()
-
-    const batch = db.batch()
-    tracksSnap.docs.forEach((d) => batch.delete(d.ref))
-    batch.delete(setlistRef)
-    await batch.commit()
-
-    return { ok: true, tracksDeleted: tracksSnap.size }
+    if (result.ok) return { ok: true, tracksDeleted: result.tracksDeleted }
+    if ("envelope" in result) return result.envelope
+    return { error: result.error }
 }

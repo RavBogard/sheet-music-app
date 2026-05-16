@@ -13,6 +13,12 @@ import crypto from "crypto"
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
 
 import { getFirestore, initAdmin } from "@/lib/firebase-admin"
+import {
+    readLastModifiedAt,
+    readVersion,
+    staleVersionEnvelope,
+    type StaleVersionEnvelope,
+} from "@/lib/mcp/error-envelopes"
 import type { Setlist } from "@/types/models"
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -167,22 +173,33 @@ export async function createSetlistServerSide(
 
 // ─── Update ──────────────────────────────────────────────────────────
 
+export type UpdateSetlistResult =
+    | { ok: true }
+    | { ok: false; error: "setlist_not_found" }
+    | { ok: false; error: "stale_version"; envelope: StaleVersionEnvelope }
+
 /**
  * Patch a setlist's metadata server-side. Metadata-ONLY — does not touch
- * `tracks/{id}` docs, `trackCount`, `ownerId`, or `hydrated`. No
- * version-precondition: the sole-admin app's silent-LWW-on-conflict posture
- * (v6.0 decision) makes server-side preconditions unnecessary here.
+ * `tracks/{id}` docs, `trackCount`, `ownerId`, or `hydrated`.
+ *
+ * W-04 Plan 02: optional `lastSeenVersion` gate. When supplied, the patch
+ * runs inside a Firestore transaction so the version check + write are
+ * atomic. Omit to preserve last-writer-wins behavior (backward-compat for
+ * pre-W-04 callers — CSV import, doc import, the in-app editor's silent-
+ * LWW path from v6.0).
  */
 export async function updateSetlistServerSide(
     setlistId: string,
     patch: SetlistMetadataPatch,
-): Promise<void> {
+    lastSeenVersion?: number,
+): Promise<UpdateSetlistResult> {
     if (!initAdmin()) {
         throw new Error(
             "Firebase Admin not initialized — cannot update setlist.",
         )
     }
     const db = getFirestore()
+    const setlistRef = db.collection("setlists").doc(setlistId)
 
     const mapped: Record<string, unknown> = {}
     if (patch.name !== undefined) mapped.name = patch.name
@@ -197,10 +214,37 @@ export async function updateSetlistServerSide(
         mapped.eventDate = toTimestamp(patch.eventDate)
     }
     mapped.updatedAt = FieldValue.serverTimestamp()
-    // W-04 Plan 01: bump version on metadata updates. Plan 02 will gate
-    // the call on optional lastSeenVersion.
     mapped.version = FieldValue.increment(1)
     mapped.lastModifiedAt = new Date().toISOString()
 
-    await db.collection('setlists').doc(setlistId).update(mapped)
+    // Fast path for pre-W-04 callers: skip the tx round-trip when no
+    // version gate was requested. Behavior identical to pre-Plan-02.
+    if (lastSeenVersion === undefined) {
+        await setlistRef.update(mapped)
+        return { ok: true }
+    }
+
+    return db.runTransaction<UpdateSetlistResult>(async (tx) => {
+        const snap = await tx.get(setlistRef)
+        if (!snap.exists) {
+            return { ok: false, error: "setlist_not_found" }
+        }
+        const data = snap.data() as Record<string, unknown>
+        const currentVersion = readVersion(data)
+        if (currentVersion !== lastSeenVersion) {
+            return {
+                ok: false,
+                error: "stale_version",
+                envelope: staleVersionEnvelope({
+                    resource: "setlist",
+                    currentVersion,
+                    lastSeenVersion,
+                    lastModifiedBy: data.lastModifiedBy as string | undefined,
+                    lastModifiedAt: readLastModifiedAt(data),
+                }),
+            }
+        }
+        tx.update(setlistRef, mapped)
+        return { ok: true }
+    })
 }
