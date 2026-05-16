@@ -99,6 +99,37 @@ describe("MCP list_library (emulator)", () => {
         ])
     })
 
+    it("collection: 'core' includes rows with collection: null (CF2-D-1)", async () => {
+        // The 101 historical CRC charts have collection: null rather than
+        // "core" in library_index. The /library UI's CRC Charts tab treats
+        // "core" as everything that is NOT supplemental or uploads, so those
+        // rows show up there. MCP must match that semantic so authors can
+        // actually enumerate the core catalog.
+        await seedIndex("legacy1", { name: "Legacy chart A" }) // no collection field
+        await seedIndex("legacy2", { name: "Legacy chart B", collection: null })
+        await seedIndex("c1", { name: "Modern core chart", collection: "core" })
+        await seedIndex("s1", { name: "Supplemental song", collection: "supplemental" })
+        await seedIndex("u1", { name: "User upload", collection: "uploads" })
+
+        const r = await listLibrary(ANY_UID, { collection: "core" })
+        if (!("rows" in r)) throw new Error("expected rows result")
+        expect(r.total).toBe(3)
+        expect(r.rows.map((x) => x.name).sort()).toEqual([
+            "Legacy chart A",
+            "Legacy chart B",
+            "Modern core chart",
+        ])
+
+        // Strict-collection filters still strict for supplemental + uploads
+        const supp = await listLibrary(ANY_UID, { collection: "supplemental" })
+        if (!("rows" in supp)) throw new Error("expected rows result")
+        expect(supp.total).toBe(1)
+
+        const ups = await listLibrary(ANY_UID, { collection: "uploads" })
+        if (!("rows" in ups)) throw new Error("expected rows result")
+        expect(ups.total).toBe(1)
+    })
+
     it("paginates with offset + limit, total reflects the filtered population", async () => {
         // Seed 7 supplemental + 3 core entries
         for (let i = 0; i < 7; i++) {

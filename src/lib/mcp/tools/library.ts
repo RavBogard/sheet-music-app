@@ -146,8 +146,20 @@ export async function listLibrary(
         const snap = await db.collection("library_index").get()
         const all = snap.docs.map((d) => toLibraryEntry(d.id, d.data()))
 
+        // "core" matches the UI semantics in SongChartsLibrary: the CRC
+        // Charts tab is the negative-set complement of supplemental + uploads,
+        // so any row with collection: null / unset / "core" surfaces there.
+        // Historical library_index rows (the 101 CRC charts) carry
+        // collection: null rather than "core", so strict-equality would hide
+        // them from MCP under {collection: "core"} (CF2-D-1).
         const filtered = args.collection
-            ? all.filter((e) => e.collection === args.collection)
+            ? args.collection === "core"
+                ? all.filter(
+                      (e) =>
+                          e.collection !== "supplemental" &&
+                          e.collection !== "uploads",
+                  )
+                : all.filter((e) => e.collection === args.collection)
             : all
 
         filtered.sort((a, b) =>

@@ -218,7 +218,7 @@ export function registerReadTools(server: McpServer): void {
                     .enum(["core", "supplemental", "uploads"])
                     .optional()
                     .describe(
-                        "Library section to browse. Omit to list every chart across all collections.",
+                        "Library section to browse. 'core' matches the in-app CRC Charts tab (every row that is not 'supplemental' or 'uploads', including legacy rows with no collection field). Omit to list every chart across all collections.",
                     ),
                 limit: z
                     .number()
