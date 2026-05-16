@@ -43,6 +43,10 @@ import {
     WAIT_FOR_SETLIST_CHANGE_MAX_TIMEOUT_SEC,
     WAIT_FOR_SETLIST_CHANGE_DEFAULT_TIMEOUT_SEC,
 } from "./wait-for-setlist-change"
+import {
+    proposeSetlistChanges,
+    commitStagedChanges,
+} from "./propose-changes"
 
 /**
  * Validate that an `eventDate` string is parseable as a date. Previously the
@@ -705,6 +709,109 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await waitForSetlistChange(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "propose_setlist_changes",
+        {
+            description:
+                "W-01 — STAGE a batch of setlist edits for chat-native review BEFORE committing. Returns a stageId + per-proposal envelope with `confidence` ('high' | 'medium' | 'low', derived from W-02 titleSpecificity), `flags` (e.g. 'generic_title' for specificity < 0.5; 'orphan_risk'; 'no_library_record'), and a one-sentence `explanation` per proposal. NO writes against the setlist yet — that happens via `commit_staged_changes`. Use this when assembling a multi-row change (typical: 5-30 proposals for a weekly Shabbat setlist) so the rabbi can confirm the bonds before they land. Each proposal has `action: 'add' | 'update' | 'remove'`; `reorder` is NOT supported as a stage proposal — use the dedicated reorder_setlist tool for full permutations. Default TTL 600s (10 min), max 3600s. Stages are one-shot — commit deletes the doc.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id"),
+                proposals: z
+                    .array(
+                        z.object({
+                            action: z
+                                .enum(["add", "update", "remove"])
+                                .describe(
+                                    "Proposal action: add a new row, update an existing row's fields/bond, or remove a row.",
+                                ),
+                            trackId: z
+                                .string()
+                                .optional()
+                                .describe(
+                                    "Required for update/remove; from get_setlist tracks[].id.",
+                                ),
+                            position: z
+                                .number()
+                                .int()
+                                .min(0)
+                                .optional()
+                                .describe(
+                                    "For action='add': 0-based insert index; omit to append.",
+                                ),
+                            songId: z
+                                .string()
+                                .optional()
+                                .describe(
+                                    "Library song id — bond this row's chart. The library is keyed by Drive file id.",
+                                ),
+                            title: z.string().optional().describe("Row title."),
+                            key: z.string().optional().describe("Musical key."),
+                            leadMusician: z
+                                .string()
+                                .optional()
+                                .describe("Vocal Lead."),
+                            referenceLink: z
+                                .string()
+                                .optional()
+                                .describe("Reference URL."),
+                            notes: z
+                                .string()
+                                .optional()
+                                .describe("Free-text notes."),
+                            type: z
+                                .enum([
+                                    "song",
+                                    "header",
+                                    "reading",
+                                    "prayer",
+                                    "transition",
+                                    "note",
+                                ])
+                                .optional()
+                                .describe(
+                                    "Row type (default 'song' for add).",
+                                ),
+                        }),
+                    )
+                    .min(1)
+                    .max(50)
+                    .describe("1–50 proposals to stage."),
+                ttlSec: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(3600)
+                    .optional()
+                    .describe(
+                        "Time-to-live in seconds before the stage expires (default 600, max 3600). After expiry, commit_staged_changes returns `stage_expired`.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await proposeSetlistChanges(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "commit_staged_changes",
+        {
+            description:
+                "W-01 — COMMIT a previously-staged batch from `propose_setlist_changes` atomically. Reads the stage, version-gates the setlist (W-04 optimistic concurrency), applies every proposal in one Firestore transaction (adds + updates + removes; track-order re-packed contiguous on success), then deletes the stage doc. Returns `{ok, setlistVersion, addedTrackIds, updatedTrackIds, removedTrackIds}`. Returns `{error: 'stale_version', currentVersion, ...}` if the setlist drifted past `lastSeenVersion` (or past the version captured when the stage was created, if lastSeenVersion omitted) — re-fetch state and re-stage. Returns `{error: 'stage_expired', ...}` if the TTL fired. Returns `{error: 'Stage not found, ...'}` if the stage was already committed or never existed (one-shot semantic).",
+            inputSchema: {
+                stageId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Stage id from propose_setlist_changes response.",
+                    ),
+                lastSeenVersion: lastSeenVersionSchema.describe(
+                    "Optional W-04 setlist-level optimistic-concurrency gate. Pass the setlist `version` you saw last; commit rejects with `stale_version` on mismatch. Omit to fall back to the version captured when the stage was created.",
+                ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await commitStagedChanges(uidFrom(extra), args)),
     )
 
     server.registerTool(

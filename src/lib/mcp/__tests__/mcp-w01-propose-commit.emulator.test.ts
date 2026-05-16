@@ -1,0 +1,415 @@
+import {
+    afterAll,
+    beforeAll,
+    beforeEach,
+    describe,
+    expect,
+    it,
+} from "vitest"
+import {
+    deleteApp,
+    getApps,
+    initializeApp,
+    type App,
+} from "firebase-admin/app"
+import { getFirestore } from "firebase-admin/firestore"
+
+import {
+    commitStagedChanges,
+    proposeSetlistChanges,
+    type StageRecord,
+} from "../tools/propose-changes"
+import {
+    addTrackToSetlist,
+    createSetlist,
+} from "../tools/setlist-write"
+
+/**
+ * W-01 Tasks 1+2 — propose_setlist_changes + commit_staged_changes.
+ *
+ * Covers:
+ *   AC-1: stage doc created, setlist unchanged, envelope carries
+ *         per-proposal confidence + flags + summary.
+ *   AC-2: commit applies all proposals atomically; setlist version bumps;
+ *         stage doc deleted on success.
+ *   AC-3: commit rejects with stale_version envelope on lastSeenVersion
+ *         mismatch (and on the captured-at-stage-time version mismatch
+ *         when caller omits lastSeenVersion).
+ *   AC-4: stage_expired error returned past TTL; doc cleaned up.
+ *
+ * Plus:
+ *   - W-02 confidence derivation: low for generic_title libraries,
+ *     high for unambiguous, low for missing library_index row.
+ *   - Re-pack invariant inherits from W-05 — adds + removes in one
+ *     stage produce contiguous [0..n-1] orders post-commit.
+ *
+ * Runs only via `npm run test:emulator`.
+ */
+describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
+    let app: App
+    const ADMIN = "rabbi-daniel"
+
+    function db() {
+        return getFirestore(app)
+    }
+
+    async function readVersion(coll: string, id: string): Promise<number> {
+        const snap = await db().collection(coll).doc(id).get()
+        const v = (snap.data() as Record<string, unknown> | undefined)?.version
+        return typeof v === "number" ? v : 0
+    }
+
+    async function newSetlist(): Promise<string> {
+        const r = (await createSetlist(ADMIN, { name: "W-01 Test" })) as {
+            setlistId: string
+        }
+        return r.setlistId
+    }
+
+    async function addOne(
+        setlistId: string,
+        title = "Existing Row",
+    ): Promise<string> {
+        const t = (await addTrackToSetlist(ADMIN, {
+            setlistId,
+            title,
+            type: "song",
+        })) as { trackId: string }
+        return t.trackId
+    }
+
+    async function seedLibraryRow(
+        id: string,
+        fields: Record<string, unknown>,
+    ): Promise<void> {
+        await db()
+            .collection("library_index")
+            .doc(id)
+            .set({ id, ...fields })
+    }
+
+    beforeAll(async () => {
+        expect(process.env.FIRESTORE_EMULATOR_HOST).toBeTruthy()
+        app =
+            getApps()[0] ??
+            initializeApp({ projectId: "demo-mcp-w01-propose" })
+        await db()
+            .collection("users")
+            .doc(ADMIN)
+            .set({ displayName: "Rabbi Daniel", role: "admin" })
+    })
+
+    afterAll(async () => {
+        await deleteApp(app)
+    })
+
+    beforeEach(async () => {
+        for (const col of [
+            "setlists",
+            "tracks",
+            "proposal_stages",
+            "library_index",
+        ]) {
+            const snap = await db().collection(col).get()
+            await Promise.all(snap.docs.map((d) => d.ref.delete()))
+        }
+    })
+
+    // ─── propose_setlist_changes ────────────────────────────────────────────
+
+    it("AC-1: propose creates the stage doc and leaves the setlist + tracks untouched", async () => {
+        const setlistId = await newSetlist()
+        const existingTrackId = await addOne(setlistId, "Track A")
+        await seedLibraryRow("song-specific", { titleSpecificity: 0.9 })
+        const trackCountBefore = (
+            await db().collection("setlists").doc(setlistId).get()
+        ).data()!.trackCount
+
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                { action: "add", title: "New Row", songId: "song-specific" },
+                {
+                    action: "update",
+                    trackId: existingTrackId,
+                    title: "Renamed A",
+                },
+            ],
+        })) as StageRecord
+
+        expect(stage.id).toBeTruthy()
+        expect(stage.setlistId).toBe(setlistId)
+        expect(stage.proposals).toHaveLength(2)
+        expect(stage.summary.high).toBeGreaterThan(0)
+        expect(stage.proposals[0].confidence).toBe("high") // specificity 0.9
+        expect(stage.proposals[0].flags).toEqual([])
+        expect(stage.proposals[1].confidence).toBe("high") // no songId change
+
+        // Stage doc exists on Firestore.
+        const stageSnap = await db()
+            .collection("proposal_stages")
+            .doc(stage.id)
+            .get()
+        expect(stageSnap.exists).toBe(true)
+
+        // Setlist + tracks unchanged.
+        const trackCountAfter = (
+            await db().collection("setlists").doc(setlistId).get()
+        ).data()!.trackCount
+        expect(trackCountAfter).toBe(trackCountBefore)
+        const existingAfter = (
+            await db().collection("tracks").doc(existingTrackId).get()
+        ).data()!
+        expect(existingAfter.title).toBe("Track A")
+    })
+
+    it("propose surfaces 'generic_title' + 'low' confidence for sub-threshold specificity", async () => {
+        const setlistId = await newSetlist()
+        await seedLibraryRow("song-generic", { titleSpecificity: 0.2 })
+
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                { action: "add", title: "Generic", songId: "song-generic" },
+            ],
+        })) as StageRecord
+
+        expect(stage.proposals[0].confidence).toBe("low")
+        expect(stage.proposals[0].flags).toContain("generic_title")
+        expect(stage.summary.low).toBe(1)
+        expect(stage.summary.flagged).toBe(1)
+    })
+
+    it("propose surfaces 'no_library_record' for songIds with no library_index row", async () => {
+        const setlistId = await newSetlist()
+
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                {
+                    action: "add",
+                    title: "Phantom Bond",
+                    songId: "song-not-in-library",
+                },
+            ],
+        })) as StageRecord
+
+        expect(stage.proposals[0].confidence).toBe("low")
+        expect(stage.proposals[0].flags).toContain("no_library_record")
+    })
+
+    // ─── commit_staged_changes happy path ─────────────────────────────────
+
+    it("AC-2: commit applies all proposals atomically + deletes the stage doc", async () => {
+        const setlistId = await newSetlist()
+        const existingTrackId = await addOne(setlistId, "Original")
+        const setlistVersion = await readVersion("setlists", setlistId)
+
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                { action: "add", title: "New First", position: 0 },
+                {
+                    action: "update",
+                    trackId: existingTrackId,
+                    title: "Renamed Original",
+                },
+                { action: "add", title: "Appended" },
+            ],
+        })) as StageRecord
+
+        const result = (await commitStagedChanges(ADMIN, {
+            stageId: stage.id,
+            lastSeenVersion: setlistVersion,
+        })) as {
+            ok: true
+            setlistVersion: number
+            addedTrackIds: string[]
+            updatedTrackIds: string[]
+            removedTrackIds: string[]
+        }
+
+        expect(result.ok).toBe(true)
+        expect(result.addedTrackIds).toHaveLength(2)
+        expect(result.updatedTrackIds).toEqual([existingTrackId])
+        expect(result.setlistVersion).toBe(setlistVersion + 1)
+
+        // Stage was deleted (one-shot semantic).
+        const stageSnap = await db()
+            .collection("proposal_stages")
+            .doc(stage.id)
+            .get()
+        expect(stageSnap.exists).toBe(false)
+
+        // Existing track got the rename + version bump.
+        const renamed = (
+            await db().collection("tracks").doc(existingTrackId).get()
+        ).data() as Record<string, unknown>
+        expect(renamed.title).toBe("Renamed Original")
+        expect(renamed.version).toBe(2) // started at 1 from addTrack
+
+        // Track count + order are contiguous: 3 tracks at [0, 1, 2].
+        const tracksSnap = await db()
+            .collection("tracks")
+            .where("setlistId", "==", setlistId)
+            .get()
+        const orders = tracksSnap.docs
+            .map((d) => (d.data() as { order: number }).order)
+            .sort((a, b) => a - b)
+        expect(orders).toEqual([0, 1, 2])
+    })
+
+    // ─── stale_version on commit ───────────────────────────────────────────
+
+    it("AC-3: commit rejects with stale_version envelope when lastSeenVersion mismatches", async () => {
+        const setlistId = await newSetlist()
+        const existingTrackId = await addOne(setlistId)
+
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                { action: "update", trackId: existingTrackId, title: "Won't land" },
+            ],
+        })) as StageRecord
+
+        const setlistVersionAtStage = stage.setlistVersionAtStage
+        const result = (await commitStagedChanges(ADMIN, {
+            stageId: stage.id,
+            lastSeenVersion: setlistVersionAtStage - 1, // intentionally stale
+        })) as Record<string, unknown>
+
+        expect(result.error).toBe("stale_version")
+        expect(result.currentVersion).toBe(setlistVersionAtStage)
+        expect(result.lastSeenVersion).toBe(setlistVersionAtStage - 1)
+
+        // Setlist + track unchanged.
+        const unchanged = (
+            await db().collection("tracks").doc(existingTrackId).get()
+        ).data() as Record<string, unknown>
+        expect(unchanged.title).not.toBe("Won't land")
+
+        // Stage doc was NOT deleted — caller can re-attempt commit after
+        // re-fetching state.
+        const stageSnap = await db()
+            .collection("proposal_stages")
+            .doc(stage.id)
+            .get()
+        expect(stageSnap.exists).toBe(true)
+    })
+
+    it("AC-3 alt: commit rejects when caller omits lastSeenVersion but setlist drifted since stage", async () => {
+        const setlistId = await newSetlist()
+        const existingTrackId = await addOne(setlistId)
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                { action: "update", trackId: existingTrackId, title: "Late" },
+            ],
+        })) as StageRecord
+
+        // Background bump after stage was created — simulate a concurrent
+        // MCP write by advancing the version field directly (raw Firestore
+        // writes don't bump version; only the MCP write paths do).
+        await db()
+            .collection("setlists")
+            .doc(setlistId)
+            .update({
+                version: stage.setlistVersionAtStage + 1,
+                lastModifiedAt: new Date().toISOString(),
+            })
+
+        const result = (await commitStagedChanges(ADMIN, {
+            stageId: stage.id,
+            // lastSeenVersion intentionally omitted — fallback gate is
+            // stage.setlistVersionAtStage, which is now stale.
+        })) as Record<string, unknown>
+        expect(result.error).toBe("stale_version")
+    })
+
+    // ─── stage_expired ────────────────────────────────────────────────────
+
+    it("AC-4: commit returns stage_expired past TTL and best-effort-deletes the doc", async () => {
+        const setlistId = await newSetlist()
+        const existingTrackId = await addOne(setlistId)
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                { action: "update", trackId: existingTrackId, title: "Late" },
+            ],
+            ttlSec: 1,
+        })) as StageRecord
+
+        // Force the stage's TTL into the past by rewriting the doc.
+        await db()
+            .collection("proposal_stages")
+            .doc(stage.id)
+            .update({
+                ttlExpiresAt: new Date(Date.now() - 1000).toISOString(),
+            })
+
+        const result = (await commitStagedChanges(ADMIN, {
+            stageId: stage.id,
+        })) as Record<string, unknown>
+        expect(String(result.error)).toMatch(/stage_expired/)
+    })
+
+    // ─── unknown trackId in proposal ──────────────────────────────────────
+
+    it("commit aborts with a clear error when a proposal targets a trackId that no longer exists", async () => {
+        const setlistId = await newSetlist()
+        const existingTrackId = await addOne(setlistId)
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                {
+                    action: "update",
+                    trackId: existingTrackId,
+                    title: "Updated",
+                },
+            ],
+        })) as StageRecord
+
+        // Delete the target track out from under the stage.
+        await db().collection("tracks").doc(existingTrackId).delete()
+
+        const result = (await commitStagedChanges(ADMIN, {
+            stageId: stage.id,
+            lastSeenVersion: stage.setlistVersionAtStage,
+        })) as Record<string, unknown>
+        expect(String(result.error)).toMatch(/unknown trackId/)
+
+        // Stage NOT deleted — caller can re-stage.
+        const stageSnap = await db()
+            .collection("proposal_stages")
+            .doc(stage.id)
+            .get()
+        expect(stageSnap.exists).toBe(true)
+    })
+
+    // ─── role gate ────────────────────────────────────────────────────────
+
+    it("propose + commit reject non-editor callers (member tier)", async () => {
+        const MEMBER = "member-guest"
+        await db()
+            .collection("users")
+            .doc(MEMBER)
+            .set({ displayName: "Member", role: "musician" })
+        const setlistId = await newSetlist()
+
+        const propose = (await proposeSetlistChanges(MEMBER, {
+            setlistId,
+            proposals: [{ action: "add", title: "Nope" }],
+        })) as Record<string, unknown>
+        expect(propose.error).toMatch(/admin or band leader/i)
+
+        // Make a stage as admin so we can test the commit gate.
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [{ action: "add", title: "Admin staged" }],
+        })) as StageRecord
+        const commitDenied = (await commitStagedChanges(MEMBER, {
+            stageId: stage.id,
+        })) as Record<string, unknown>
+        expect(commitDenied.error).toMatch(/admin or band leader/i)
+    })
+})

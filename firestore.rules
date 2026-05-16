@@ -269,6 +269,18 @@ service cloud.firestore {
       allow write: if false; // server-only via Cloud Function
     }
 
+    // PROPOSAL STAGES — W-01 propose-then-confirm staging docs. The MCP
+    // propose_setlist_changes tool writes one doc per staged batch;
+    // commit_staged_changes reads + deletes it inside the commit
+    // transaction (one-shot). All writes happen via the Admin SDK (MCP
+    // tool path). Reads allowed for the band-leader/admin tier so a
+    // future admin debug UI can inspect open stages without an extra
+    // round-trip through the MCP server.
+    match /proposal_stages/{stageId} {
+      allow read: if isBandLeader();
+      allow write: if false; // server-only via Admin SDK
+    }
+
     // SETLIST HISTORY (audit trail) — append-only from authenticated users, admin reads
     match /setlists/{setlistId}/history/{entryId} {
       allow read: if isAdmin();

@@ -138,7 +138,7 @@ describe("W-04 Plan 03 — bulk + publish version gating (emulator)", () => {
                     lastSeenVersion: v2,
                 },
             ],
-        })) as {
+        })) as unknown as {
             ok: true
             committed: boolean
             results: Array<Record<string, unknown>>
@@ -246,7 +246,7 @@ describe("W-04 Plan 03 — bulk + publish version gating (emulator)", () => {
                     lastSeenVersion: v2,
                 },
             ],
-        })) as {
+        })) as unknown as {
             ok: true
             committed: boolean
             results: Array<Record<string, unknown>>
