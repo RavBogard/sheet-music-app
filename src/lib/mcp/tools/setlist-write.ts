@@ -306,10 +306,20 @@ export async function bulkUpdateSetlistTracks(
     const loaded = await loadEditableSetlist(db, args.setlistId, uid)
     if (!loaded.ok) return { error: loaded.error }
 
-    const result = await bulkUpdateTracks(db, args.setlistId, args.patches, {
-        mode: args.mode,
-        dryRun: args.dryRun,
-    })
+    const result = await bulkUpdateTracks(
+        db,
+        args.setlistId,
+        args.patches,
+        {
+            mode: args.mode,
+            dryRun: args.dryRun,
+        },
+        async (songId) => {
+            const song = await getSongById(songId)
+            if (!song) return null
+            return { title: song.title, fileName: song.fileName }
+        },
+    )
     if (!result.ok) return { error: result.error }
     return {
         ok: true,

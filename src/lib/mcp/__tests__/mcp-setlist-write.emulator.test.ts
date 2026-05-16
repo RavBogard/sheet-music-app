@@ -897,6 +897,70 @@ describe("MCP setlist write tools (emulator)", () => {
             }
         })
 
+        it("bulk_update_tracks atomic re-bond gets fileName + title + fileIds parity with update_track", async () => {
+            // Bulk parity follow-up: pre-fix, bulk_update_tracks (atomic) on
+            // a songId change only swapped the row's fileId. fileName drifted
+            // (F-2), title stayed stale (NOTE-1), and the setlist's fileIds[]
+            // aggregate didn't rebuild (H-1) — Perform mode prefetches from
+            // that aggregate, so bulk re-bonds would have recurred the v2
+            // "Image failed to load" bug.
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf" })
+            const id = await newSetlist()
+            // Row A: bonded via songId (uncustomized title) → re-bond.
+            const rA = (await addTrackToSetlist(ADMIN, {
+                setlistId: id,
+                songId: "song-oseh",
+            })) as { trackId: string }
+            // Row B: bonded to the same song so the aggregate fileIds[] has
+            // a sibling to preserve (regression coverage matches the
+            // update_track sibling-preservation test).
+            const rB = (await addTrackToSetlist(ADMIN, {
+                setlistId: id,
+                songId: "song-oseh",
+            })) as { trackId: string }
+
+            const before = (
+                await db().collection("setlists").doc(id).get()
+            ).data()!
+            expect(before.fileIds).toEqual(["song-oseh"])
+
+            await bulkUpdateSetlistTracks(ADMIN, {
+                setlistId: id,
+                patches: [
+                    { trackId: rA.trackId, patch: { songId: "song-other" } },
+                ],
+            })
+
+            const rowA = (
+                await db().collection("tracks").doc(rA.trackId).get()
+            ).data()!
+            expect(rowA.fileId).toBe("song-other")
+            // F-2 parity: fileName refreshes to the new song's catalog filename.
+            expect(rowA.fileName).toBe("Hinei Ma Tov.pdf")
+            // NOTE-1 parity: row title was using the old song's catalog title
+            // ("Oseh Shalom"), so auto-refresh kicks in.
+            expect(rowA.title).toBe("Hinei Ma Tov")
+
+            const after = (
+                await db().collection("setlists").doc(id).get()
+            ).data()!
+            // H-1 parity: setlist.fileIds[] rebuilds from post-patch state,
+            // with song-oseh preserved because Row B still uses it.
+            expect((after.fileIds as string[]).sort()).toEqual([
+                "song-oseh",
+                "song-other",
+            ])
+            // Sibling row should be untouched.
+            const rowB = (
+                await db().collection("tracks").doc(rB.trackId).get()
+            ).data()!
+            expect(rowB.fileId).toBe("song-oseh")
+            expect(rowB.title).toBe("Oseh Shalom")
+        })
+
         it("bulk_update_tracks atomic-rollback (cowork §3.1 regression): committed=false, would-have-written rows ok=false with explicit rollback error", async () => {
             const id = await newSetlist()
             const t1 = await addRow(id, "A")

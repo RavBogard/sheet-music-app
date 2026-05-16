@@ -529,6 +529,7 @@ export async function bulkUpdateTracks(
     setlistId: string,
     patches: BulkUpdatePatchEntry[],
     options: BulkUpdateOptions = {},
+    songLookup?: SongLookup,
 ): Promise<
     | {
           ok: true
@@ -648,6 +649,72 @@ export async function bulkUpdateTracks(
 
     const results: BulkUpdateResult[] = planEntries.map((p) => p.result)
 
+    // Pre-resolve song lookups for every re-bond patch (both new song AND
+    // old song — NOTE-1 needs old-song.title to decide if the row was
+    // customized). Async lookups belong outside the transaction so the
+    // critical section stays write-only.
+    const songCache = new Map<
+        string,
+        { title?: string; fileName?: string } | null
+    >()
+    if (songLookup) {
+        const idsToFetch = new Set<string>()
+        for (const { trackId, patch } of patches) {
+            const row = byId.get(trackId) as Record<string, unknown> | undefined
+            if (!row) continue
+            if (patch.songId !== undefined && patch.songId !== row.songId) {
+                idsToFetch.add(patch.songId)
+                const oldFid = row.fileId
+                if (typeof oldFid === "string" && oldFid) idsToFetch.add(oldFid)
+            }
+        }
+        await Promise.all(
+            [...idsToFetch].map(async (sid) => {
+                try {
+                    songCache.set(sid, await songLookup(sid))
+                } catch (err) {
+                    logger.warn("[mcp] bulk_update_tracks songLookup failed", {
+                        sid,
+                        err: err instanceof Error ? err.message : String(err),
+                    })
+                    songCache.set(sid, null)
+                }
+            }),
+        )
+    }
+
+    // Resolve the {fileName, title} side-effects of a single re-bond into the
+    // update map. Reused by both atomic and best-effort paths so the contract
+    // matches what update_track does (H-1/H-5/F-2 + NOTE-1).
+    function applyRebondSideEffects(
+        update: Record<string, unknown>,
+        existingRow: Record<string, unknown>,
+        patch: UpdateTrackPatch,
+    ): void {
+        if (patch.songId === undefined || patch.songId === existingRow.songId) {
+            return
+        }
+        update.fileId = patch.songId
+        if (!songLookup) return
+        const newSong = songCache.get(patch.songId)
+        if (newSong?.fileName !== undefined) update.fileName = newSong.fileName
+
+        const explicitTitle =
+            typeof patch.title === "string" && patch.title.trim().length > 0
+        const currentTitle =
+            typeof existingRow.title === "string" ? existingRow.title.trim() : ""
+        const oldFid =
+            typeof existingRow.fileId === "string"
+                ? (existingRow.fileId as string)
+                : ""
+        if (!explicitTitle && newSong?.title && oldFid && currentTitle) {
+            const oldSong = songCache.get(oldFid)
+            if (oldSong?.title && currentTitle === oldSong.title.trim()) {
+                update.title = newSong.title
+            }
+        }
+    }
+
     if (mode === "atomic") {
         await db.runTransaction(async (tx) => {
             for (const entry of patches) {
@@ -658,18 +725,54 @@ export async function bulkUpdateTracks(
                 for (const k of UPDATABLE_FIELDS) {
                     if (entry.patch[k] !== undefined) update[k] = entry.patch[k]
                 }
-                const existingRow = byId.get(entry.trackId)
-                if (
-                    entry.patch.songId !== undefined &&
-                    entry.patch.songId !== existingRow?.songId
-                ) {
-                    update.fileId = entry.patch.songId
+                const existingRow = byId.get(entry.trackId) as
+                    | Record<string, unknown>
+                    | undefined
+                if (existingRow) {
+                    applyRebondSideEffects(update, existingRow, entry.patch)
                 }
                 tx.update(ref, update)
             }
-            tx.update(db.collection("setlists").doc(setlistId), {
-                updatedAt: FieldValue.serverTimestamp(),
+            // Canonical fileIds[] rebuild from post-patch state — same
+            // contract as update_track's re-bond path. Self-heals any prior
+            // drift in one transaction-scoped write.
+            const anyRebond = patches.some((p) => {
+                const row = byId.get(p.trackId) as
+                    | Record<string, unknown>
+                    | undefined
+                return (
+                    p.patch.songId !== undefined &&
+                    row !== undefined &&
+                    p.patch.songId !== row.songId
+                )
             })
+            const setlistPatch: Record<string, unknown> = {
+                updatedAt: FieldValue.serverTimestamp(),
+            }
+            if (anyRebond) {
+                const patchedFileId = new Map<string, string | undefined>()
+                for (const p of patches) {
+                    const row = byId.get(p.trackId) as
+                        | Record<string, unknown>
+                        | undefined
+                    if (!row) continue
+                    if (p.patch.songId !== undefined && p.patch.songId !== row.songId) {
+                        patchedFileId.set(p.trackId, p.patch.songId)
+                    }
+                }
+                const canonical = new Set<string>()
+                for (const t of existing) {
+                    const tRec = t as Record<string, unknown>
+                    const tFileId = patchedFileId.has(tRec.id as string)
+                        ? patchedFileId.get(tRec.id as string)
+                        : (tRec.fileId as string | undefined)
+                    if (typeof tFileId === "string" && tFileId) {
+                        canonical.add(tFileId)
+                    }
+                }
+                setlistPatch.fileIds = [...canonical]
+            }
+            tx.update(db.collection("setlists").doc(setlistId), setlistPatch)
         })
         // Re-read the affected rows so callers get the actual post-commit
         // state (including the server-stamped updatedAt). normalizeTrackEcho
@@ -698,6 +801,7 @@ export async function bulkUpdateTracks(
                     setlistId,
                     entry.trackId,
                     entry.patch,
+                    songLookup,
                 )
                 results[i] = r.ok
                     ? { trackId: entry.trackId, ok: true, track: r.track }
