@@ -18,6 +18,29 @@ export interface SongRecord {
     bpm?: number
     lead?: string
     status?: string
+    // ─── W-02 trust-calibration fields (joined from library_index) ────────
+    /** Bare stem (no clarifier) — see bareStem() in title-specificity.ts. */
+    stem?: string
+    /** 0..1 confidence score — see src/lib/mcp/title-specificity.ts. */
+    titleSpecificity?: number
+    /** Count of non-orphaned library_index entries sharing this stem. */
+    siblingsInCatalog?: number
+    /** Free-text — populated via W-03 enrichment campaign. */
+    composer?: string
+    /** Free-text — populated via W-03 enrichment campaign. */
+    arranger?: string
+    /** Free-text — populated via W-03 enrichment campaign. */
+    notationSource?: string
+    /** Most-recent setlist this song was bonded to (denormalized). */
+    lastUsedInSetlist?: { setlistId: string; eventDate: string }
+    /** Learning-loop counters per [[feedback_learning_self_healing]]. */
+    bondCorrectionHistory?: {
+        correctedTo: number
+        correctedAwayFrom: number
+        lastCorrectionAt?: string
+    }
+    /** From chart-verify pipeline; not stored, set by callers that probe. */
+    fileHealthy?: boolean
 }
 
 // Catalog titles are stored verbatim with the source file extension

@@ -371,6 +371,67 @@ describe("MCP chart-upload tools (emulator)", () => {
         expect(ok).toMatchObject({ ok: true })
     })
 
+    it("W-02 specificity: library_index carries stem + titleSpecificity + bondCorrectionHistory", async () => {
+        // First upload of a generic liturgical title — unique in catalog, so
+        // siblings=1 yields the +0.2 unique bonus but the -0.3 generic-stem
+        // penalty drops it below STOP_AND_ASK_THRESHOLD (0.5). This is the
+        // canonical Bar Mitzvah Hashkivenu-confidence-failure scenario.
+        const first = (await uploadChart(ADMIN, {
+            title: "Hashkivenu",
+            fileBase64: b64("%PDF-1.4 first"),
+            mimeType: "application/pdf",
+            collection: "uploads",
+        })) as { ok: true; fileId: string }
+        expect(first.ok).toBe(true)
+
+        const firstIdx = (
+            await db().collection("library_index").doc(first.fileId).get()
+        ).data()!
+        expect(firstIdx.stem).toBe("hashkivenu")
+        expect(firstIdx.titleSpecificity).toBe(0.4) // generic -0.3 + unique +0.2 + base 0.5
+        expect(firstIdx.bondCorrectionHistory).toEqual({
+            correctedTo: 0,
+            correctedAwayFrom: 0,
+        })
+    })
+
+    it("W-02 sibling-recount cascade: adding a second sibling recomputes the existing row", async () => {
+        // Upload first "Hashkivenu" — siblings=1, specificity=0.4.
+        const a = (await uploadChart(ADMIN, {
+            title: "Hashkivenu",
+            fileBase64: b64("%PDF-1.4 a"),
+            mimeType: "application/pdf",
+            collection: "uploads",
+        })) as { ok: true; fileId: string }
+
+        // Upload a sibling arrangement — force: true because the bare-name
+        // exact-dedup would otherwise block the second "Hashkivenu *".
+        const b = (await uploadChart(ADMIN, {
+            title: "Hashkivenu (Sulzer)",
+            fileBase64: b64("%PDF-1.4 b"),
+            mimeType: "application/pdf",
+            collection: "uploads",
+            force: true,
+        })) as { ok: true; fileId: string }
+        expect(b.ok).toBe(true)
+
+        // New row scored against siblings=2 (it sees existing "Hashkivenu" + itself).
+        // 0.5 + parens +0.2 + generic -0.3 + shared -0.2 = 0.20.
+        const bIdx = (
+            await db().collection("library_index").doc(b.fileId).get()
+        ).data()!
+        expect(bIdx.stem).toBe("hashkivenu")
+        expect(bIdx.titleSpecificity).toBe(0.2)
+
+        // Existing row's specificity was recomputed in the same batch:
+        // siblings is now 2, so the +0.2 unique bonus flipped to -0.2 shared.
+        // 0.5 + generic -0.3 + shared -0.2 = 0.00 (clamp).
+        const aIdx = (
+            await db().collection("library_index").doc(a.fileId).get()
+        ).data()!
+        expect(aIdx.titleSpecificity).toBe(0)
+    })
+
     it("force: true bypasses exact + fuzzy dedup (H-3 override)", async () => {
         // Daniel call 2026-05-15: keep 0.85 threshold strict, but legitimate
         // variants (key/arrangement/composer suffix) need an explicit escape

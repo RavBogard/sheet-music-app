@@ -1,6 +1,7 @@
 import { getAllSongs, getSongById, type SongRecord } from "@/lib/mcp/server-songs"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
+import { bareStem } from "@/lib/mcp/title-specificity"
 
 /**
  * MCP read tools for the song library. Plain async functions wrapping the
@@ -16,6 +17,167 @@ export interface SearchLibraryArgs {
     limit?: number
     /** If true, include rows with `status: 'orphaned'`. Default false. L-001. */
     includeOrphaned?: boolean
+    /**
+     * Context key for hint lookup — typically a setlist's templateType
+     * (e.g. "friday-evening", "shabbat-morning"). When supplied, the
+     * tool consults titleContextHints and surfaces the rabbi-preferred
+     * entry for each (stem, contextKey) at result position 0 with a
+     * +0.5 ranking boost. W-02 learning-loop output.
+     */
+    contextKey?: string
+}
+
+/**
+ * Subset of library_index fields surfaced via the W-02 join in
+ * search_library / list_library. Single source of truth for the
+ * trust-calibration data; songs/{id} does NOT denormalize these.
+ */
+interface LibraryW02Fields {
+    stem?: string
+    titleSpecificity?: number
+    siblingsInCatalog?: number
+    composer?: string
+    arranger?: string
+    notationSource?: string
+    lastUsedInSetlist?: { setlistId: string; eventDate: string }
+    bondCorrectionHistory?: {
+        correctedTo: number
+        correctedAwayFrom: number
+        lastCorrectionAt?: string
+    }
+}
+
+/**
+ * Bulk-read library_index W-02 fields keyed by fileId. Used by
+ * searchLibrary to join with the songs catalog. Per-row siblingsInCatalog
+ * is computed post-fetch from the stem distribution rather than stored,
+ * so adding/removing siblings post-upload doesn't require write churn
+ * — the count stays accurate at read time as long as orphans are
+ * filtered the same way.
+ */
+async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
+    try {
+        initAdmin()
+        const db = getFirestore()
+        const snap = await db.collection("library_index").get()
+        const map = new Map<string, LibraryW02Fields>()
+        const stemCounts = new Map<string, number>()
+        // First pass — count siblings per stem (excluding orphans).
+        for (const d of snap.docs) {
+            const data = d.data()
+            if (data.status === "orphaned") continue
+            const stem = typeof data.stem === "string" ? data.stem : undefined
+            if (!stem) continue
+            stemCounts.set(stem, (stemCounts.get(stem) ?? 0) + 1)
+        }
+        // Second pass — attach W-02 fields + computed siblingsInCatalog.
+        for (const d of snap.docs) {
+            const data = d.data()
+            const stem = typeof data.stem === "string" ? data.stem : undefined
+            const siblingsInCatalog = stem
+                ? stemCounts.get(stem)
+                : undefined
+            const bch = data.bondCorrectionHistory as
+                | Record<string, unknown>
+                | undefined
+            map.set(d.id, {
+                stem,
+                titleSpecificity:
+                    typeof data.titleSpecificity === "number"
+                        ? data.titleSpecificity
+                        : undefined,
+                siblingsInCatalog,
+                composer: typeof data.composer === "string" ? data.composer : undefined,
+                arranger: typeof data.arranger === "string" ? data.arranger : undefined,
+                notationSource:
+                    typeof data.notationSource === "string"
+                        ? data.notationSource
+                        : undefined,
+                lastUsedInSetlist:
+                    data.lastUsedInSetlist &&
+                    typeof data.lastUsedInSetlist === "object"
+                        ? (data.lastUsedInSetlist as {
+                              setlistId: string
+                              eventDate: string
+                          })
+                        : undefined,
+                bondCorrectionHistory: bch
+                    ? {
+                          correctedTo:
+                              typeof bch.correctedTo === "number"
+                                  ? bch.correctedTo
+                                  : 0,
+                          correctedAwayFrom:
+                              typeof bch.correctedAwayFrom === "number"
+                                  ? bch.correctedAwayFrom
+                                  : 0,
+                          lastCorrectionAt:
+                              typeof bch.lastCorrectionAt === "string"
+                                  ? bch.lastCorrectionAt
+                                  : undefined,
+                      }
+                    : undefined,
+            })
+        }
+        return map
+    } catch (err) {
+        logger.warn("[mcp] library_index join read failed (W-02 fields will be undefined):", err)
+        return new Map()
+    }
+}
+
+/**
+ * Look up the rabbi-preferred fileId for a (normalized-stem, contextKey)
+ * pair. Returns undefined if no hint exists or the hint hasn't reached
+ * the 3-pick threshold yet. Reads from titleContextHints; written by the
+ * aggregateContextHints Cloud Function.
+ */
+async function loadContextHint(
+    stem: string,
+    contextKey: string,
+): Promise<string | undefined> {
+    try {
+        initAdmin()
+        const db = getFirestore()
+        const hintId = `${stem}_${contextKey}`
+        const doc = await db.collection("titleContextHints").doc(hintId).get()
+        if (!doc.exists) return undefined
+        const data = doc.data() ?? {}
+        const picks = typeof data.picks === "number" ? data.picks : 0
+        if (picks < 3) return undefined
+        return typeof data.preferredFileId === "string"
+            ? data.preferredFileId
+            : undefined
+    } catch (err) {
+        logger.warn("[mcp] context-hint lookup failed:", err)
+        return undefined
+    }
+}
+
+const RANK_BIAS_PER_CORRECTION = 0.05
+const RANK_BIAS_CLAMP = 0.25
+const CONTEXT_HINT_BOOST = 0.5
+
+function rankBias(record: SongRecord): number {
+    const bch = record.bondCorrectionHistory
+    if (!bch) return 0
+    const raw = (bch.correctedTo - bch.correctedAwayFrom) * RANK_BIAS_PER_CORRECTION
+    return Math.min(RANK_BIAS_CLAMP, Math.max(-RANK_BIAS_CLAMP, raw))
+}
+
+/**
+ * Compare two SongRecords for W-02 ranking. Higher rank wins position 0.
+ * Tie-break: lastUsedInSetlist.eventDate desc, then title asc.
+ */
+function compareRanked(
+    a: SongRecord & { _rank: number },
+    b: SongRecord & { _rank: number },
+): number {
+    if (a._rank !== b._rank) return b._rank - a._rank
+    const aDate = a.lastUsedInSetlist?.eventDate ?? ""
+    const bDate = b.lastUsedInSetlist?.eventDate ?? ""
+    if (aDate !== bDate) return bDate.localeCompare(aDate)
+    return a.title.localeCompare(b.title, undefined, { sensitivity: "base" })
 }
 
 /**
@@ -42,12 +204,13 @@ export async function searchLibrary(
     _uid: string,
     args: SearchLibraryArgs,
 ): Promise<SongRecord[]> {
-    const all = await getAllSongs()
+    const [all, w02Map] = await Promise.all([getAllSongs(), loadLibraryW02Map()])
     const q = normalizeForSearch(args.query)
     const key = args.key?.trim().toLowerCase()
     const limit = args.limit && args.limit > 0 ? Math.min(args.limit, 50) : 20
 
-    return all
+    // Filter pass — same predicate as before, then join W-02 fields.
+    const matches: SongRecord[] = all
         .filter((s) => {
             if (s.status === "archived") return false
             if (!args.includeOrphaned && s.status === "orphaned") return false
@@ -61,7 +224,34 @@ export async function searchLibrary(
             }
             return true
         })
-        .slice(0, limit)
+        .map((s) => {
+            const w02 = w02Map.get(s.id)
+            return w02 ? { ...s, ...w02 } : s
+        })
+
+    // Rank with bondCorrectionHistory bias + contextHint boost. Hint
+    // lookup happens once per query (only if contextKey supplied and at
+    // least one result has a stem) — keeps the read cost bounded.
+    let preferredFileId: string | undefined
+    if (args.contextKey) {
+        // Derive the candidate stem from the query itself; falls back to
+        // the first match's stem if the query doesn't normalize to a
+        // catalog stem cleanly.
+        const queryStem = bareStem(args.query)
+        const stemForHint = queryStem || matches[0]?.stem
+        if (stemForHint) {
+            preferredFileId = await loadContextHint(stemForHint, args.contextKey)
+        }
+    }
+
+    const ranked = matches.map((r) => ({
+        ...r,
+        _rank:
+            rankBias(r) + (preferredFileId === r.id ? CONTEXT_HINT_BOOST : 0),
+    }))
+    ranked.sort(compareRanked)
+    // Strip internal _rank before returning.
+    return ranked.slice(0, limit).map(({ _rank: _r, ...rest }) => rest)
 }
 
 export interface GetSongArgs {
@@ -146,6 +336,19 @@ export interface LibraryIndexEntry {
     bpm: number | null
     tags: string[]
     status: string
+    // ─── W-02 trust-calibration fields ────────────────────────────────────
+    stem?: string
+    titleSpecificity?: number
+    siblingsInCatalog?: number
+    composer?: string
+    arranger?: string
+    notationSource?: string
+    lastUsedInSetlist?: { setlistId: string; eventDate: string }
+    bondCorrectionHistory?: {
+        correctedTo: number
+        correctedAwayFrom: number
+        lastCorrectionAt?: string
+    }
 }
 
 export interface ListLibraryResult {
@@ -169,6 +372,7 @@ function toLibraryEntry(
             : typeof data.modifiedTime === "string"
               ? data.modifiedTime
               : null
+    const bch = data.bondCorrectionHistory as Record<string, unknown> | undefined
     return {
         fileId: id,
         name,
@@ -183,6 +387,52 @@ function toLibraryEntry(
             ? data.tags.filter((t): t is string => typeof t === "string")
             : [],
         status: typeof data.status === "string" ? data.status : "active",
+        // W-02 fields — read directly from library_index since this tool
+        // already has the row in hand. siblingsInCatalog is NOT denormalized
+        // on the doc; listLibrary computes it post-fetch from the stem
+        // distribution (see attachSiblingCounts).
+        stem: typeof data.stem === "string" ? data.stem : undefined,
+        titleSpecificity:
+            typeof data.titleSpecificity === "number"
+                ? data.titleSpecificity
+                : undefined,
+        composer: typeof data.composer === "string" ? data.composer : undefined,
+        arranger: typeof data.arranger === "string" ? data.arranger : undefined,
+        notationSource:
+            typeof data.notationSource === "string" ? data.notationSource : undefined,
+        lastUsedInSetlist:
+            data.lastUsedInSetlist && typeof data.lastUsedInSetlist === "object"
+                ? (data.lastUsedInSetlist as {
+                      setlistId: string
+                      eventDate: string
+                  })
+                : undefined,
+        bondCorrectionHistory: bch
+            ? {
+                  correctedTo: typeof bch.correctedTo === "number" ? bch.correctedTo : 0,
+                  correctedAwayFrom:
+                      typeof bch.correctedAwayFrom === "number" ? bch.correctedAwayFrom : 0,
+                  lastCorrectionAt:
+                      typeof bch.lastCorrectionAt === "string"
+                          ? bch.lastCorrectionAt
+                          : undefined,
+              }
+            : undefined,
+    }
+}
+
+/**
+ * Compute siblingsInCatalog per row from the full set (post stem
+ * derivation). Mutates entries in place. Counts non-orphaned only.
+ */
+function attachSiblingCounts(entries: LibraryIndexEntry[]): void {
+    const stemCounts = new Map<string, number>()
+    for (const e of entries) {
+        if (e.status === "orphaned" || !e.stem) continue
+        stemCounts.set(e.stem, (stemCounts.get(e.stem) ?? 0) + 1)
+    }
+    for (const e of entries) {
+        if (e.stem) e.siblingsInCatalog = stemCounts.get(e.stem) ?? 1
     }
 }
 
@@ -201,6 +451,7 @@ export async function listLibrary(
         const db = getFirestore()
         const snap = await db.collection("library_index").get()
         const all = snap.docs.map((d) => toLibraryEntry(d.id, d.data()))
+        attachSiblingCounts(all)
 
         const chartLike = args.includeNonCharts
             ? all

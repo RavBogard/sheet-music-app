@@ -14,6 +14,7 @@ import { processMuseScoreFile } from "@/lib/musescore-converter"
 import { levenshteinDistance } from "@/lib/string-utils"
 import { logger } from "@/lib/logger"
 import heicConvert from "heic-convert"
+import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
 
 /**
  * Shared library-upload pipeline. The single server-side codepath that:
@@ -443,10 +444,36 @@ export async function processChartUpload(
     }
     stage("storage-verify:ok", { size: verifiedSize })
 
+    // W-02 trust-calibration: compute stem + specificity at write time so
+    // the search-side ranking has a deterministic confidence signal. Query
+    // existing siblings sharing this stem (excluding orphans) to compute
+    // the count this row gets scored against — and to cascade-recount their
+    // specificity in the same batch when the new row changes their count.
+    const stem = bareStem(title)
+    const siblingSnap = stem
+        ? await db
+              .collection("library_index")
+              .where("stem", "==", stem)
+              .select("stem", "name", "status")
+              .get()
+        : null
+    const existingSiblings = siblingSnap
+        ? siblingSnap.docs.filter(
+              (d) =>
+                  d.id !== fileId && // exclude self if we're replacing an upload (rare)
+                  (d.data().status as string | undefined) !== "orphaned",
+          )
+        : []
+    const siblingsInCatalog = existingSiblings.length + 1
+    stage("specificity:computed", { stem, siblingsInCatalog })
+
     const indexEntry: Record<string, unknown> = {
         name: title,
         nameLower,
         normalizedName,
+        stem,
+        titleSpecificity: titleSpecificity(title, siblingsInCatalog),
+        bondCorrectionHistory: { correctedTo: 0, correctedAwayFrom: 0 },
         originalName: fileName,
         mimeType: contentType,
         fileSize: buffer.byteLength,
@@ -467,21 +494,32 @@ export async function processChartUpload(
 
     stage("firestore-write:start")
     try {
-        await db.collection("library_index").doc(fileId).set(indexEntry)
-
-        await db
-            .collection("songs")
-            .doc(fileId)
-            .set(
-                {
-                    title,
-                    normalizedTitle: title.toLowerCase(),
-                    status: "active",
-                    updatedAt: Date.now(),
-                },
-                { merge: true },
-            )
-        stage("firestore-write:done")
+        const batch = db.batch()
+        batch.set(db.collection("library_index").doc(fileId), indexEntry)
+        batch.set(
+            db.collection("songs").doc(fileId),
+            {
+                title,
+                normalizedTitle: title.toLowerCase(),
+                status: "active",
+                updatedAt: Date.now(),
+            },
+            { merge: true },
+        )
+        // W-02 sibling-recount cascade: each existing sibling now sees
+        // siblingsInCatalog = existingSiblings.length + 1, so their score
+        // may shift (e.g. unique-bonus +0.2 drops to shared-penalty -0.2
+        // when their count goes from 1 to 2). Bounded to entries already
+        // sharing the stem — no full-collection scan.
+        for (const sibling of existingSiblings) {
+            const sibName = (sibling.data().name as string | undefined) ?? ""
+            if (!sibName) continue
+            batch.update(sibling.ref, {
+                titleSpecificity: titleSpecificity(sibName, siblingsInCatalog),
+            })
+        }
+        await batch.commit()
+        stage("firestore-write:done", { siblingsRecomputed: existingSiblings.length })
     } catch (err) {
         // Compensating delete: take the Storage blob down so the failed
         // upload doesn't leave a reverse orphan (bytes-without-index).

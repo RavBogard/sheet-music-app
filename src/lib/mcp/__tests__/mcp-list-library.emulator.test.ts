@@ -307,4 +307,75 @@ describe("MCP list_library (emulator)", () => {
             expect("rows" in r).toBe(true)
         }
     })
+
+    describe("W-02 trust-calibration fields", () => {
+        it("surfaces stem + titleSpecificity + bondCorrectionHistory on each row", async () => {
+            await seedIndex("u1", {
+                name: "Hashkivenu (Klepper)",
+                collection: "core",
+                stem: "hashkivenu",
+                titleSpecificity: 0.6,
+                bondCorrectionHistory: {
+                    correctedTo: 4,
+                    correctedAwayFrom: 1,
+                    lastCorrectionAt: "2026-05-15T00:00:00Z",
+                },
+                composer: "Klepper",
+                lastUsedInSetlist: {
+                    setlistId: "set-123",
+                    eventDate: "2026-05-09",
+                },
+            })
+
+            const r = await listLibrary(ANY_UID, {})
+            if (!("rows" in r)) throw new Error("expected rows result")
+            const row = r.rows[0]
+            expect(row.stem).toBe("hashkivenu")
+            expect(row.titleSpecificity).toBe(0.6)
+            expect(row.composer).toBe("Klepper")
+            expect(row.bondCorrectionHistory).toEqual({
+                correctedTo: 4,
+                correctedAwayFrom: 1,
+                lastCorrectionAt: "2026-05-15T00:00:00Z",
+            })
+            expect(row.lastUsedInSetlist).toEqual({
+                setlistId: "set-123",
+                eventDate: "2026-05-09",
+            })
+        })
+
+        it("computes siblingsInCatalog per stem (orphans excluded from count, but still surfaced as rows)", async () => {
+            // listLibrary's orphan policy: still RETURN orphaned rows (operators
+            // need to see them for hygiene), but EXCLUDE them from the
+            // siblingsInCatalog count (since orphans don't have files).
+            // search_library is the one that hides orphans by default — L-001.
+            await seedIndex("u1", { name: "Hashkivenu (Klepper)", stem: "hashkivenu", status: "active" })
+            await seedIndex("u2", { name: "Hashkivenu (Sulzer)", stem: "hashkivenu", status: "active" })
+            await seedIndex("u3", { name: "Hashkivenu (Old)", stem: "hashkivenu", status: "orphaned" })
+            await seedIndex("u4", { name: "Hava Nagilah", stem: "hava nagilah", status: "active" })
+
+            const r = await listLibrary(ANY_UID, {})
+            if (!("rows" in r)) throw new Error("expected rows result")
+            const byId = Object.fromEntries(r.rows.map((row) => [row.fileId, row]))
+            expect(byId.u1.siblingsInCatalog).toBe(2) // u1 + u2 active
+            expect(byId.u2.siblingsInCatalog).toBe(2)
+            expect(byId.u4.siblingsInCatalog).toBe(1)
+            // u3 surfaced but with status orphaned — its siblings count is
+            // intentionally omitted (set neither active-2 nor stand-alone-1).
+            expect(byId.u3).toBeDefined()
+            expect(byId.u3.status).toBe("orphaned")
+        })
+
+        it("rows without W-02 fields surface as undefined (back-compat with old uploads)", async () => {
+            await seedIndex("legacy", { name: "Pre-W-02 Chart", collection: "core" })
+            const r = await listLibrary(ANY_UID, {})
+            if (!("rows" in r)) throw new Error("expected rows result")
+            const row = r.rows[0]
+            expect(row.stem).toBeUndefined()
+            expect(row.titleSpecificity).toBeUndefined()
+            expect(row.bondCorrectionHistory).toBeUndefined()
+            // Non-W-02 contract still holds — status defaulted to "active".
+            expect(row.status).toBe("active")
+        })
+    })
 })

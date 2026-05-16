@@ -250,6 +250,25 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // BOND CORRECTIONS — W-02 learning signal. The MCP record_bond_correction
+    // tool writes one doc per rabbi-correction event during batch-review of
+    // flagged bonds. A Cloud Function trigger aggregates picks into
+    // titleContextHints after 3 consistent picks. All writes happen via the
+    // Admin SDK (MCP tool path); reads admin-only since the audit trail
+    // may include uid metadata.
+    match /bond_corrections/{id} {
+      allow read: if isAdmin();
+      allow write: if false; // server-only via Admin SDK
+    }
+
+    // TITLE CONTEXT HINTS — W-02 aggregated preference per (stem, contextKey).
+    // Read by any signed-in caller via search_library ranking; written only
+    // by the aggregateContextHints Cloud Function.
+    match /titleContextHints/{hintId} {
+      allow read: if isSignedIn();
+      allow write: if false; // server-only via Cloud Function
+    }
+
     // SETLIST HISTORY (audit trail) — append-only from authenticated users, admin reads
     match /setlists/{setlistId}/history/{entryId} {
       allow read: if isAdmin();
