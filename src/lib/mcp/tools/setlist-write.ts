@@ -259,6 +259,18 @@ export async function updateSetlistTrack(
     const loaded = await loadEditableSetlist(db, args.setlistId, uid)
     if (!loaded.ok) return { error: loaded.error }
 
+    // F-01 (2026-05-16 bugstomp): pre-validate songId before writing. Without
+    // this, a patch with a bogus songId silently bonds a row to a non-existent
+    // chart — the row looks fine in the editor but every chart fetch in
+    // Perform mode 404s. add_track_to_setlist and swap_chart already do this
+    // lookup; bringing update_track to parity closes the orphan-manufacture
+    // hole the chart-health gates downstream were designed to defend against.
+    // bulk_update_tracks shares the same gap but is left for a separate pass.
+    if (typeof args.patch.songId === "string" && args.patch.songId.trim()) {
+        const newSong = await getSongById(args.patch.songId)
+        if (!newSong) return { error: `Song ${args.patch.songId} not found` }
+    }
+
     const result = await updateTrack(
         db,
         args.setlistId,

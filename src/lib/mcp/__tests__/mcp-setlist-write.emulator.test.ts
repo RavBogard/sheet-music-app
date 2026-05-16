@@ -852,6 +852,43 @@ describe("MCP setlist write tools (emulator)", () => {
             expect(r).toEqual({ error: "Track not found" })
         })
 
+        it("update_track rejects a bogus songId before writing (F-01)", async () => {
+            // 2026-05-16 bugstomp F-01: pre-fix, patching songId to an
+            // unknown id silently succeeded, leaving the row bonded to a
+            // chart that 404s on every Perform-mode fetch. The orphan
+            // looked fine in the editor (title/fileName preserved from the
+            // old bond) and only surfaced at publish-time if at all.
+            // add_track_to_setlist and swap_chart already pre-look-up;
+            // update_track now does the same.
+            const id = await newSetlist()
+            const trackId = await addRow(id, "Oseh Shalom", {
+                songId: "song-oseh",
+            })
+
+            const r = await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId,
+                patch: { songId: "definitely-not-a-real-songid" },
+            })
+            expect(r).toEqual({
+                error: "Song definitely-not-a-real-songid not found",
+            })
+
+            // No mutation: the row is still bonded to song-oseh.
+            const persisted = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(persisted.songId).toBe("song-oseh")
+            expect(persisted.fileId).toBe("song-oseh")
+
+            // No mutation: the parent setlist's fileIds[] still holds the
+            // original bond — F-01 protects the aggregate from drift too.
+            const setlist = (
+                await db().collection("setlists").doc(id).get()
+            ).data()!
+            expect(setlist.fileIds).toEqual(["song-oseh"])
+        })
+
         // ─── bulk_update_tracks ─────────────────────────────────────────────
 
         it("bulk_update_tracks atomic happy path — 3 valid patches all land in one transaction (committed: true)", async () => {
