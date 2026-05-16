@@ -43,8 +43,21 @@ export function ChartSuggestions({ trackName, currentFileId }: ChartSuggestionsP
                     if (name.includes(term)) score += 2
                 }
 
-                // Prefer PDFs and XMLs over Audio for chart suggestions
-                if (f.mimeType.includes('pdf') || f.mimeType.includes('xml') || f.name.endsWith('.pdf') || f.name.endsWith('.xml')) {
+                // Prefer PDFs and XMLs over Audio for chart suggestions —
+                // but only as a tie-break among rows that ALREADY have some
+                // name-relevance signal. F-14 (2026-05-16 bugstomp): the
+                // unconditional +1 PDF bonus made every PDF in the library
+                // (~300+) score 1 regardless of term match, blowing past
+                // the score>0 filter and surfacing the alphabetical-first
+                // 3 entries as "matches" for broken-bond rows whose track
+                // name happened to share no tokens with any chart title.
+                if (
+                    score > 0 &&
+                    (f.mimeType.includes('pdf') ||
+                        f.mimeType.includes('xml') ||
+                        f.name.endsWith('.pdf') ||
+                        f.name.endsWith('.xml'))
+                ) {
                     score += 1
                 }
 
