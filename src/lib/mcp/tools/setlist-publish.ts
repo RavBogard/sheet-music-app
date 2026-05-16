@@ -7,6 +7,12 @@ import { sendPushToUsers } from "@/lib/push-send"
 import { sendSMS } from "@/lib/sms"
 import { recordSongUsage } from "@/lib/song-usage"
 import { assertEditor, readUserRole } from "@/lib/mcp/server-tracks-write"
+import {
+    readLastModifiedAt,
+    readVersion,
+    staleVersionEnvelope,
+    type StaleVersionEnvelope,
+} from "@/lib/mcp/error-envelopes"
 import { getChartHealth } from "@/lib/file-fetcher"
 import { logger } from "@/lib/logger"
 
@@ -78,6 +84,17 @@ export interface PublishSetlistArgs {
      * lead-live those songs).
      */
     force?: boolean
+    /**
+     * W-04 Plan 03 optimistic-concurrency gate. When supplied, rejects
+     * with the stale_version envelope if the setlist's current version
+     * has advanced past `lastSeenVersion` — no snapshot is written, no
+     * notifications fan out. Optional (matches the cross-cutting "OPTIONAL
+     * on every tool" policy); W-04 §Q5 originally specified strict-required
+     * for publish, but staying consistent with the other 5 gated paths
+     * means pre-W-04 agents and HTTP callers keep working without forcing
+     * them to pass it.
+     */
+    lastSeenVersion?: number
 }
 
 export interface PublishSetlistResult {
@@ -235,7 +252,7 @@ async function resolveOverrideRecipients(
 export async function publishSetlist(
     callerUid: string,
     args: PublishSetlistArgs,
-): Promise<PublishSetlistResult | ToolError> {
+): Promise<PublishSetlistResult | ToolError | StaleVersionEnvelope> {
     if (!args.setlistId?.trim()) return { error: "setlistId is required" }
 
     initAdmin()
@@ -257,6 +274,24 @@ export async function publishSetlist(
     const setlistSnap = await setlistRef.get()
     if (!setlistSnap.exists) return { error: "Setlist not found" }
     const setlist = setlistSnap.data() as Record<string, unknown>
+
+    // W-04 Plan 03: optional setlist-level stale-version gate. Fires
+    // BEFORE the (expensive) chart-health pre-flight + recipient
+    // resolution so a known-stale publish bails cheaply. dryRun is NOT
+    // exempt — the version check is the agent's "is my view current?"
+    // signal, and a stale dryRun report is worse than an honest refusal.
+    if (args.lastSeenVersion !== undefined) {
+        const currentVersion = readVersion(setlist)
+        if (currentVersion !== args.lastSeenVersion) {
+            return staleVersionEnvelope({
+                resource: "setlist",
+                currentVersion,
+                lastSeenVersion: args.lastSeenVersion,
+                lastModifiedBy: setlist.lastModifiedBy as string | undefined,
+                lastModifiedAt: readLastModifiedAt(setlist),
+            })
+        }
+    }
 
     const tracks = (await getTracksForSetlist(db, args.setlistId, setlist)) as Array<{
         id?: string
@@ -386,11 +421,17 @@ export async function publishSetlist(
     }
 
     // ── Commit phase ────────────────────────────────────────────────────
+    // W-04: bump version + stamp lastModifiedAt so wait_for_setlist_change
+    // observers wake on a publish, and so a subsequent edit can pass the
+    // post-publish version as its `lastSeenVersion`.
     await setlistRef.update({
         ...(wasPublished ? {} : { publishedAt: FieldValue.serverTimestamp() }),
         publishedSnapshot: snapshot,
         lastNotifiedAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
+        version: FieldValue.increment(1),
+        lastModifiedAt: new Date().toISOString(),
+        lastModifiedBy: callerUid,
     })
 
     // Song-usage record — fire-and-forget; never fail publish on its account.

@@ -421,6 +421,11 @@ export async function bulkUpdateSetlistTracks(
           committed: boolean
           results: BulkUpdateResult[]
           dryRun: boolean
+          staleRows?: Array<{
+              trackId: string
+              currentVersion: number
+              lastSeenVersion: number
+          }>
       }
     | ToolError
 > {
@@ -451,6 +456,7 @@ export async function bulkUpdateSetlistTracks(
         committed: result.committed,
         results: result.results,
         dryRun: result.dryRun,
+        ...(result.staleRows ? { staleRows: result.staleRows } : {}),
     }
 }
 

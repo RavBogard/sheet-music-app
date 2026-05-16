@@ -113,6 +113,26 @@ export const updateTrackPatchSchema = z.object({
 })
 
 /**
+ * W-04 Plan 03 bulk-patch entry. Wraps the (`trackId`, `patch`) pair with
+ * an optional per-row `lastSeenVersion` so atomic mode can pre-flight
+ * every gated row's version inside the same Firestore transaction as the
+ * writes. Best-effort honors it too — stale rows get skipped and reported
+ * with `error: "stale_version"` while non-stale rows commit.
+ */
+export const bulkPatchEntrySchema = z.object({
+    trackId: z.string(),
+    patch: bulkTrackPatchSchema,
+    lastSeenVersion: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe(
+            "Optional per-row optimistic-concurrency gate. Atomic mode rejects the entire batch (staleRows[]) on any mismatch; best-effort skips just the stale row.",
+        ),
+})
+
+/**
  * Registers the MCP tools. Each tool resolves the authenticated uid from
  * `extra.authInfo` (set by withMcpAuth → verifyBearer in the route) and
  * delegates to the plain functions in ./setlists, ./library, ./setlist-write.
@@ -543,19 +563,14 @@ export function registerWriteTools(server: McpServer): void {
         "bulk_update_tracks",
         {
             description:
-                "Update many tracks on one setlist in a single call. mode='atomic' (default) wraps every patch in a Firestore transaction — all-or-nothing; mode='best-effort' applies each patch independently and returns per-row results (prefer atomic for >5 rows; best-effort is N round-trips). dryRun=true returns the plan without writing — useful for confirming a large change before committing. Max 50 patches per call (chunk longer lists). RESPONSE: the `committed` boolean is the load-bearing signal — true iff writes actually landed in Firestore. dryRun=true and atomic-mode-with-any-rejected-patch both return `committed: false` (per-row results explain which patch failed and which were rolled back). `updatedAt` in each row's `track` echo is returned as an ISO string. Admins and band leaders only.",
+                "Update many tracks on one setlist in a single call. mode='atomic' (default) wraps every patch in a Firestore transaction — all-or-nothing; mode='best-effort' applies each patch independently and returns per-row results (prefer atomic for >5 rows; best-effort is N round-trips). dryRun=true returns the plan without writing — useful for confirming a large change before committing. Max 50 patches per call (chunk longer lists). RESPONSE: the `committed` boolean is the load-bearing signal — true iff writes actually landed in Firestore. dryRun=true and atomic-mode-with-any-rejected-patch both return `committed: false` (per-row results explain which patch failed and which were rolled back). `updatedAt` in each row's `track` echo is returned as an ISO string. W-04 Plan 03: each patch entry accepts an optional `lastSeenVersion` (the track's version from your last get_setlist). Atomic mode rejects the whole batch with `staleRows[]` on any mismatch — the previously-valid rows are NOT applied; each row's `error` is `'stale_version'` (with `currentVersion` + `lastSeenVersion`) for the stale ones and a rollback message for the rest. Best-effort skips just the stale row (`error: 'stale_version'`) and commits the others. Admins and band leaders only.",
             inputSchema: {
                 setlistId: z.string().describe("Setlist id"),
                 patches: z
-                    .array(
-                        z.object({
-                            trackId: z.string(),
-                            patch: bulkTrackPatchSchema,
-                        }),
-                    )
+                    .array(bulkPatchEntrySchema)
                     .min(1)
                     .max(50)
-                    .describe("Per-track patches; max 50. `position` is not allowed here — use update_track for a single move or reorder_setlist for a multi-row reorder."),
+                    .describe("Per-track patches; max 50. Each entry may carry an optional `lastSeenVersion` (W-04 Plan 03 per-row stale-version gate). `position` is not allowed inside `patch` here — use update_track for a single move or reorder_setlist for a multi-row reorder."),
                 mode: z
                     .enum(["atomic", "best-effort"])
                     .optional()
@@ -624,6 +639,9 @@ export function registerWriteTools(server: McpServer): void {
                     .describe(
                         "Bypass the chart-health pre-flight check. Default: publish refuses if any bonded chart is missing or unreachable (the band would see 404s). Pass force: true to publish anyway — use when you've intentionally left rows with broken bonds (e.g. the band will lead-live those songs).",
                     ),
+                lastSeenVersion: lastSeenVersionSchema.describe(
+                    "Optional setlist-level optimistic-concurrency gate (W-04 Plan 03). Pass the setlist's `version` from your last get_setlist; rejects with `{error: 'stale_version', currentVersion, ...}` if another writer changed the setlist after you read it. The check runs before the chart-health pre-flight and recipient resolution, so a stale call is cheap. Omit to skip the gate — useful for HTTP callers or for a publish that intentionally races a concurrent edit.",
+                ),
             },
         },
         async (args, extra) =>

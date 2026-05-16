@@ -706,18 +706,36 @@ export const BULK_UPDATE_MAX_PATCHES = 50
 export interface BulkUpdatePatchEntry {
     trackId: string
     patch: UpdateTrackPatch
+    /**
+     * W-04 Plan 03 per-row optimistic-concurrency gate. When supplied,
+     * the atomic-mode pre-flight rejects the WHOLE batch (no writes)
+     * with `staleRows[]` if any patch's track has advanced past
+     * `lastSeenVersion`. Best-effort mode skips just the stale row.
+     */
+    lastSeenVersion?: number
 }
 
 export interface BulkUpdateResult {
     trackId: string
     ok: boolean
     error?: string
+    /** W-04 Plan 03: server's current version when `error === "stale_version"`. */
+    currentVersion?: number
+    /** W-04 Plan 03: caller's asserted version when `error === "stale_version"`. */
+    lastSeenVersion?: number
     track?: Record<string, unknown>
 }
 
 export interface BulkUpdateOptions {
     mode?: "atomic" | "best-effort"
     dryRun?: boolean
+}
+
+/** W-04 Plan 03 stale-row tuple for atomic-batch rejection envelopes. */
+export interface BulkStaleRow {
+    trackId: string
+    currentVersion: number
+    lastSeenVersion: number
 }
 
 /**
@@ -756,6 +774,14 @@ export async function bulkUpdateTracks(
           committed: boolean
           results: BulkUpdateResult[]
           dryRun: boolean
+          /**
+           * W-04 Plan 03 — populated only when an atomic batch was
+           * rejected due to per-row `lastSeenVersion` mismatch. Each
+           * entry mirrors a stale row in `results[]`; the field surfaces
+           * the batch-level rejection at the envelope top so callers
+           * don't have to filter per-row to discover the staleness.
+           */
+          staleRows?: BulkStaleRow[]
       }
     | WriteError
 > {
@@ -965,7 +991,41 @@ export async function bulkUpdateTracks(
     }
 
     if (mode === "atomic") {
-        await db.runTransaction(async (tx) => {
+        // W-04 Plan 03 atomic pre-flight: any patch carrying
+        // `lastSeenVersion` must match the track's CURRENT version inside
+        // the same transaction as the writes. Single mismatch aborts the
+        // whole batch with `staleRows[]` — none of the valid patches land.
+        type AtomicTxResult =
+            | { kind: "ok" }
+            | { kind: "stale_version"; staleRows: BulkStaleRow[] }
+        const txResult = await db.runTransaction<AtomicTxResult>(async (tx) => {
+            // Read phase — pull current version for every gated row first.
+            // (Firestore transactions require all reads before any writes.)
+            const gated = patches.filter(
+                (p): p is BulkUpdatePatchEntry & { lastSeenVersion: number } =>
+                    p.lastSeenVersion !== undefined,
+            )
+            const versionSnaps = await Promise.all(
+                gated.map((p) =>
+                    tx.get(db.collection("tracks").doc(p.trackId)),
+                ),
+            )
+            const staleRows: BulkStaleRow[] = []
+            gated.forEach((p, i) => {
+                const currentVersion = readVersion(versionSnaps[i].data())
+                if (currentVersion !== p.lastSeenVersion) {
+                    staleRows.push({
+                        trackId: p.trackId,
+                        currentVersion,
+                        lastSeenVersion: p.lastSeenVersion,
+                    })
+                }
+            })
+            if (staleRows.length > 0) {
+                return { kind: "stale_version", staleRows }
+            }
+
+            // Write phase — unchanged from pre-Plan-03 shape.
             for (const entry of patches) {
                 const ref = db.collection("tracks").doc(entry.trackId)
                 const update: Record<string, unknown> = {
@@ -1024,7 +1084,50 @@ export async function bulkUpdateTracks(
                 setlistPatch.fileIds = [...canonical]
             }
             tx.update(db.collection("setlists").doc(setlistId), setlistPatch)
+            return { kind: "ok" }
         })
+
+        // W-04 Plan 03: if the atomic pre-flight rejected, build the per-
+        // row results in the same shape as pre-validation rollback —
+        // stale rows carry their currentVersion + lastSeenVersion + the
+        // stale_version error; non-stale rows get the rollback message.
+        if (txResult.kind === "stale_version") {
+            const staleById = new Map(
+                txResult.staleRows.map((r) => [r.trackId, r]),
+            )
+            const rolledBack: BulkUpdateResult[] = patches.map((p) => {
+                const stale = staleById.get(p.trackId)
+                if (stale) {
+                    return {
+                        trackId: p.trackId,
+                        ok: false,
+                        error: "stale_version",
+                        currentVersion: stale.currentVersion,
+                        lastSeenVersion: stale.lastSeenVersion,
+                    }
+                }
+                return {
+                    trackId: p.trackId,
+                    ok: false,
+                    error:
+                        "Rolled back: another patch in the atomic batch had a stale lastSeenVersion",
+                }
+            })
+            logger.info("[mcp] bulk track update — stale_version rollback", {
+                setlistId,
+                staleCount: txResult.staleRows.length,
+                patchCount: patches.length,
+            })
+            return {
+                ok: true,
+                mode,
+                committed: false,
+                results: rolledBack,
+                dryRun: false,
+                staleRows: txResult.staleRows,
+            }
+        }
+
         // Re-read the affected rows so callers get the actual post-commit
         // state (including the server-stamped updatedAt). normalizeTrackEcho
         // turns the Firestore Timestamp into an ISO string for consistency
@@ -1047,23 +1150,35 @@ export async function bulkUpdateTracks(
             const entry = patches[i]
             if (!results[i].ok) continue
             try {
+                // W-04 Plan 03: forward per-patch lastSeenVersion to the
+                // per-row updateTrack call so best-effort skips just the
+                // stale row instead of refusing the whole batch.
                 const r = await updateTrack(
                     db,
                     setlistId,
                     entry.trackId,
                     entry.patch,
                     songLookup,
+                    entry.lastSeenVersion,
                 )
                 results[i] = r.ok
                     ? { trackId: entry.trackId, ok: true, track: r.track }
-                    : {
+                    : "kind" in r && r.kind === "stale_version"
+                      ? {
+                            trackId: entry.trackId,
+                            ok: false,
+                            error: "stale_version",
+                            currentVersion: r.envelope.currentVersion,
+                            lastSeenVersion: r.envelope.lastSeenVersion,
+                        }
+                      : {
                           trackId: entry.trackId,
                           ok: false,
-                          // bulk_update_tracks doesn't pass lastSeenVersion
-                          // today (Plan 03 owns that surface), so the only
-                          // structured envelope updateTrack may return here is
-                          // track_not_found. Flatten to a string for the
-                          // bulk-result envelope's `error` field.
+                          // Best-effort: track_not_found flattens to a
+                          // string error (envelope.message carries the
+                          // setlistVersion-bearing context if the agent
+                          // needs to inspect; this row surfaces the
+                          // machine-friendly error code).
                           error:
                               "kind" in r ? r.envelope.message : r.error,
                       }
