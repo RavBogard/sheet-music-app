@@ -779,6 +779,12 @@ export function registerChartUploadTools(server: McpServer): void {
                     .array(z.string())
                     .optional()
                     .describe("Optional list of tags"),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Bypass duplicate detection (exact + fuzzy). Use when uploading a legitimate variant (different key, arrangement, or composer suffix) that's tripping a 'similar name' error. Default false.",
+                    ),
             },
         },
         async (args, extra) =>
@@ -819,6 +825,12 @@ export function registerChartUploadTools(server: McpServer): void {
                     .array(z.string())
                     .optional()
                     .describe("Optional list of tags"),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Bypass duplicate detection (exact + fuzzy). Use when importing a legitimate variant (different key, arrangement, or composer suffix) that's tripping a 'similar name' error. Default false.",
+                    ),
             },
         },
         async (args, extra) =>
@@ -868,6 +880,12 @@ export function registerChartUploadTools(server: McpServer): void {
                     .optional()
                     .describe("Optional artist name, prepended to the saved file"),
                 collection: collectionSchema,
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Bypass duplicate detection (exact + fuzzy). Use when saving a legitimate variant that's tripping a 'similar name' error. Default false.",
+                    ),
             },
         },
         async (args, extra) =>

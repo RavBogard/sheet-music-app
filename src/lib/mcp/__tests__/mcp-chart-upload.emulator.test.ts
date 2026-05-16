@@ -371,6 +371,57 @@ describe("MCP chart-upload tools (emulator)", () => {
         expect(ok).toMatchObject({ ok: true })
     })
 
+    it("force: true bypasses exact + fuzzy dedup (H-3 override)", async () => {
+        // Daniel call 2026-05-15: keep 0.85 threshold strict, but legitimate
+        // variants (key/arrangement/composer suffix) need an explicit escape
+        // hatch. Caller passes force: true to commit anyway.
+        const first = (await uploadChart(ADMIN, {
+            title: "Adon Olam",
+            fileBase64: b64("%PDF-1.4 base"),
+            mimeType: "application/pdf",
+        })) as { ok: true; fileId: string }
+        expect(first.ok).toBe(true)
+
+        // Without force: fuzzy similarity > 0.85 → rejected.
+        const blocked = await uploadChart(ADMIN, {
+            title: "Adon Olamx",
+            fileBase64: b64("%PDF-1.4 typo"),
+            mimeType: "application/pdf",
+        })
+        expect(blocked).toEqual({
+            error: expect.stringContaining("similar name"),
+        })
+
+        // With force: same payload commits anyway.
+        const forced = (await uploadChart(ADMIN, {
+            title: "Adon Olamx",
+            fileBase64: b64("%PDF-1.4 forced"),
+            mimeType: "application/pdf",
+            force: true,
+        })) as { ok: true; fileId: string }
+        expect(forced.ok).toBe(true)
+        expect(forced.fileId).not.toBe(first.fileId)
+
+        // Exact-match dedup is also overridable — same title, force: true.
+        // Caller has decided the duplicate is intentional (e.g. re-upload
+        // because the existing one's broken). Error message names force.
+        const exactBlocked = await uploadChart(ADMIN, {
+            title: "Adon Olam",
+            fileBase64: b64("%PDF-1.4 dup"),
+            mimeType: "application/pdf",
+        })
+        expect(exactBlocked).toEqual({
+            error: expect.stringContaining("force: true"),
+        })
+        const exactForced = (await uploadChart(ADMIN, {
+            title: "Adon Olam",
+            fileBase64: b64("%PDF-1.4 dup-forced"),
+            mimeType: "application/pdf",
+            force: true,
+        })) as { ok: true; fileId: string }
+        expect(exactForced.ok).toBe(true)
+    })
+
     it("library_index entries carry normalizedName for prefix range queries (G-5)", async () => {
         const r = (await uploadChart(ADMIN, {
             title: "Lecha Dodi (Take 2)",

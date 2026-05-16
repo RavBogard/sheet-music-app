@@ -49,6 +49,13 @@ export interface ProcessChartUploadInput {
     tags?: string[]
     uploaderUid: string
     uploaderEmail?: string
+    /**
+     * Bypass exact + fuzzy duplicate detection. Used when the caller knows
+     * a near-name is a legitimate variant (different key, arrangement, or
+     * composer suffix). H-3 dedup tradeoff per Daniel's call 2026-05-15:
+     * keep the 0.85 threshold strict, but allow an explicit override.
+     */
+    force?: boolean
 }
 
 export interface ProcessChartUploadOk {
@@ -301,6 +308,12 @@ export async function processChartUpload(
                         : effectiveContentType
 
     // ─── 3. Duplicate prevention (exact + fuzzy) ───────────────────────────
+    //
+    // H-3 (2026-05-15 Daniel call): callers may bypass both layers with
+    // `force: true` when uploading a legitimate variant (different key,
+    // arrangement, composer suffix) that trips the 0.85 fuzzy threshold.
+    // The 0.85 threshold stays strict by default — force is the escape
+    // hatch, not the new normal.
 
     const nameLower = title.toLowerCase()
     // G-5: prefix-range query needs to run against an alphanumeric-only
@@ -311,28 +324,32 @@ export async function processChartUpload(
     // query that. Backfill is optional — without it, new uploads still won't
     // fuzzy-match against pre-G-5 entries that lack `normalizedName`.
     const normalizedName = nameLower.replace(/[^a-z0-9]/g, "")
-    stage("dedup-exact:start")
-    const exactMatch = await db
-        .collection("library_index")
-        .where("nameLower", "==", nameLower)
-        .limit(5)
-        .get()
-    stage("dedup-exact:done", { matches: exactMatch.size })
-    const activeExactMatch = exactMatch.docs.find(
-        (d) => d.data().status === "active",
-    )
-    if (activeExactMatch) {
-        const existingName = activeExactMatch.data().name
-        return {
-            ok: false,
-            status: 409,
-            code: "duplicate_exact",
-            error: `A chart with the same name ("${existingName}") already exists.`,
+    if (!input.force) {
+        stage("dedup-exact:start")
+        const exactMatch = await db
+            .collection("library_index")
+            .where("nameLower", "==", nameLower)
+            .limit(5)
+            .get()
+        stage("dedup-exact:done", { matches: exactMatch.size })
+        const activeExactMatch = exactMatch.docs.find(
+            (d) => d.data().status === "active",
+        )
+        if (activeExactMatch) {
+            const existingName = activeExactMatch.data().name
+            return {
+                ok: false,
+                status: 409,
+                code: "duplicate_exact",
+                error: `A chart with the same name ("${existingName}") already exists. Pass force: true to override if this is a legitimate variant.`,
+            }
         }
+    } else {
+        stage("dedup-skip", { reason: "force" })
     }
 
     const prefix = normalizedName.slice(0, 6)
-    if (prefix.length >= 3) {
+    if (!input.force && prefix.length >= 3) {
         stage("dedup-fuzzy:start", { prefix })
         const prefixEnd =
             prefix.slice(0, -1) +
@@ -366,7 +383,7 @@ export async function processChartUpload(
                     ok: false,
                     status: 409,
                     code: "duplicate_similar",
-                    error: `A chart with a similar name ("${existingName}") already exists in the library.`,
+                    error: `A chart with a similar name ("${existingName}") already exists in the library. Pass force: true to override if this is a legitimate variant.`,
                 }
             }
         }

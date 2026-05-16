@@ -97,6 +97,8 @@ export interface UploadChartArgs {
     key?: string
     bpm?: number
     tags?: string[]
+    /** Bypass dedup (exact + fuzzy). H-3 override for legitimate variants. */
+    force?: boolean
 }
 
 export async function uploadChart(
@@ -162,6 +164,7 @@ export async function uploadChart(
         tags: args.tags,
         uploaderUid: uid,
         uploaderEmail: roles.email,
+        force: args.force,
     })
 
     if (!result.ok) return { error: result.error }
@@ -184,6 +187,8 @@ export interface ImportChartFromDriveArgs {
     key?: string
     bpm?: number
     tags?: string[]
+    /** Bypass dedup (exact + fuzzy). H-3 override for legitimate variants. */
+    force?: boolean
 }
 
 /**
@@ -293,6 +298,7 @@ export async function importChartFromDrive(
         tags: args.tags,
         uploaderUid: uid,
         uploaderEmail: roles.email,
+        force: args.force,
     })
 
     if (!result.ok) return { error: result.error }
@@ -517,6 +523,8 @@ export interface SaveScrapedChartArgs {
      *  the in-app ScraperModal format. */
     artist?: string
     collection?: LibraryCollection
+    /** Bypass dedup (exact + fuzzy). H-3 override for legitimate variants. */
+    force?: boolean
 }
 
 export async function saveScrapedChart(
@@ -560,6 +568,7 @@ export async function saveScrapedChart(
         collection: args.collection,
         uploaderUid: uid,
         uploaderEmail: roles.email,
+        force: args.force,
     })
 
     if (!result.ok) return { error: result.error }
