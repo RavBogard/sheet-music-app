@@ -133,6 +133,19 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                 throw new Error(`Expected PDF but got ${contentType}: ${text.substring(0, 100)}`)
             }
 
+            // F-17 (2026-05-16 bugstomp): a row bonded to an audio file would
+            // fall through to react-pdf, which fails with an inscrutable
+            // "InvalidPDFException: Invalid PDF structure". The band would
+            // see that error verbatim on the iPad — useless. Surface a
+            // legible error specifically calling out the mismatch so the
+            // operator knows to re-bond the row (or change the row type
+            // off 'song'). Audio playback inline is a richer follow-up.
+            if (contentType.startsWith('audio/')) {
+                throw new Error(
+                    `This row is bonded to an audio file (${contentType}), not a chart. Re-bind to a PDF chart, or change the row type away from 'song'.`,
+                )
+            }
+
             const arrayBuffer = await res.arrayBuffer()
 
             if (arrayBuffer.byteLength < 100) {
