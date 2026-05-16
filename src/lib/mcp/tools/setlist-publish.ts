@@ -7,6 +7,7 @@ import { sendPushToUsers } from "@/lib/push-send"
 import { sendSMS } from "@/lib/sms"
 import { recordSongUsage } from "@/lib/song-usage"
 import { assertEditor, readUserRole } from "@/lib/mcp/server-tracks-write"
+import { getChartHealth } from "@/lib/file-fetcher"
 import { logger } from "@/lib/logger"
 
 /**
@@ -68,6 +69,15 @@ export interface PublishSetlistArgs {
     dryRun?: boolean
     /** Audience preset — only honored when `recipients` is not provided. */
     audience?: "band" | "all"
+    /**
+     * Bypass the pre-flight chart-health check. By default, publish refuses
+     * if any bonded chart is missing or unreachable (B-003 fix from the
+     * 2026-05-16 Bar Mitzvah session — the band was emailed 4 broken charts
+     * because nobody verified). `force: true` proceeds anyway — operator
+     * has decided the broken charts are acceptable (e.g. the band will
+     * lead-live those songs).
+     */
+    force?: boolean
 }
 
 export interface PublishSetlistResult {
@@ -91,6 +101,23 @@ export interface PublishSetlistResult {
         sms: { sent: number; failed: number; skippedRepublish: boolean }
     }
     snapshot: Array<{ title: string; key: string; fileId: string }>
+    /**
+     * Chart-health pre-flight report. Always populated. Each entry mirrors
+     * `verify_setlist_charts.rows[]` shape: { fileId, title, status }.
+     * `unhealthy[]` is the subset with status missing/unreachable — same set
+     * the publish refused on (or `force: true` bypassed).
+     */
+    chartHealth: {
+        bondedCount: number
+        okCount: number
+        unhealthy: Array<{
+            trackId: string
+            title: string
+            fileId: string
+            status: "missing" | "unreachable"
+            reason: string
+        }>
+    }
 }
 
 const PUBLISH_AUDIENCE_ROLES_BAND = [
@@ -232,10 +259,12 @@ export async function publishSetlist(
     const setlist = setlistSnap.data() as Record<string, unknown>
 
     const tracks = (await getTracksForSetlist(db, args.setlistId, setlist)) as Array<{
+        id?: string
         fileId?: string
         title?: string
         key?: string
         type?: string
+        mimeType?: string
     }>
     const songTracks = tracks.filter((t) => !t.type || t.type === "song")
     const hasSongs = songTracks.some((t) => !!t.fileId)
@@ -243,6 +272,61 @@ export async function publishSetlist(
         return {
             error:
                 "Setlist must have at least one song row with a bonded chart before publishing — add tracks via add_track_to_setlist / bulk_add_tracks first.",
+        }
+    }
+
+    // ── Pre-flight chart-health check (B-003 / A-001) ───────────────────
+    // HEAD-probe every bonded chart so the band never gets a 404 on a row
+    // they were emailed. Refuses to publish on broken charts unless the
+    // caller explicitly passes `force: true`. dryRun still runs the check
+    // so callers see the report in their plan response.
+    const bondedSongTracks = songTracks.filter(
+        (t): t is typeof t & { fileId: string } => !!t.fileId,
+    )
+    const healthRows = await Promise.all(
+        bondedSongTracks.map(async (t) => {
+            const health = await getChartHealth(t.fileId, t.mimeType)
+            return {
+                trackId: t.id ?? "",
+                title: t.title ?? "",
+                fileId: t.fileId,
+                health,
+            }
+        }),
+    )
+    const unhealthy = healthRows
+        .filter(
+            (r): r is typeof r & { health: { status: "missing" | "unreachable" } } =>
+                r.health.status === "missing" || r.health.status === "unreachable",
+        )
+        .map((r) => ({
+            trackId: r.trackId,
+            title: r.title,
+            fileId: r.fileId,
+            status: r.health.status,
+            reason:
+                r.health.status === "missing"
+                    ? r.health.reason
+                    : r.health.error,
+        }))
+    const chartHealth = {
+        bondedCount: bondedSongTracks.length,
+        okCount: healthRows.filter((r) => r.health.status === "ok").length,
+        unhealthy,
+    }
+    if (unhealthy.length > 0 && !args.force) {
+        const list = unhealthy
+            .slice(0, 5)
+            .map((u) => `  - "${u.title}" (${u.fileId}): ${u.status}`)
+            .join("\n")
+        const more =
+            unhealthy.length > 5
+                ? `\n  ...and ${unhealthy.length - 5} more`
+                : ""
+        return {
+            error:
+                `Publish refused: ${unhealthy.length} bonded chart(s) won't render for the band:\n${list}${more}\n` +
+                `Re-bond or remove these rows, or pass force: true to publish anyway (the band will see 404s on those charts).`,
         }
     }
 
@@ -281,6 +365,7 @@ export async function publishSetlist(
             sms: { sent: 0, failed: 0, skippedRepublish: wasPublished },
         },
         snapshot,
+        chartHealth,
     }
 
     if (args.dryRun) {

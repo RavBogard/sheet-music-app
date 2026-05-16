@@ -40,6 +40,19 @@ vi.mock("@/lib/rate-limit", () => ({
     checkUserRateLimit: vi.fn().mockResolvedValue(null),
 }))
 
+// B-003 pre-flight check: getChartHealth is HEAD-probed for every bonded
+// track before publish. In the emulator there's no Storage/Drive backing,
+// so default the mock to "ok" — individual tests override for the
+// missing/unreachable cases.
+const mockGetChartHealth = vi.fn().mockResolvedValue({
+    status: "ok",
+    source: "firebase-storage",
+})
+vi.mock("@/lib/file-fetcher", () => ({
+    getChartHealth: (...args: unknown[]) => mockGetChartHealth(...args),
+    fetchFileById: vi.fn(),
+}))
+
 import { publishSetlist } from "../tools/setlist-publish"
 
 /**
@@ -385,5 +398,94 @@ describe("MCP publish_setlist (emulator)", () => {
             dryRun: true,
         })
         expect("ok" in r && r.ok).toBe(true)
+    })
+
+    it("pre-flight refuses publish when any bonded chart is missing (B-003)", async () => {
+        // 2026-05-16 Bar Mitzvah session: 4 of 21 published charts 404'd in
+        // the band's email — the orphaned songIds passed every existence
+        // check until the user opened each chart. Pre-flight now HEAD-probes
+        // every bonded chart and refuses by default.
+        const id = "set-pub-broken"
+        await seedPublishableSetlist(id)
+
+        mockGetChartHealth.mockImplementation(async (fileId: string) =>
+            fileId === "upload-osehshalom"
+                ? { status: "ok", source: "firebase-storage" as const }
+                : {
+                      status: "missing" as const,
+                      reason: "library_index row points at a deleted Drive file",
+                  },
+        )
+
+        const r = await publishSetlist(ADMIN, { setlistId: id })
+        expect(r).toEqual({
+            error: expect.stringMatching(
+                /Publish refused.*won't render.*Mi Chamocha.*force: true/s,
+            ),
+        })
+
+        // Setlist was NOT mutated — no publishedAt write on refusal.
+        const post = (await db().collection("setlists").doc(id).get()).data()!
+        expect(post.publishedAt).toBeFalsy()
+        expect(mockSendPushToUsers).not.toHaveBeenCalled()
+        expect(mockEmailAllMembers).not.toHaveBeenCalled()
+    })
+
+    it("pre-flight bypasses with force: true and still publishes; chartHealth report carries the unhealthy list", async () => {
+        const id = "set-pub-force"
+        await seedPublishableSetlist(id)
+
+        mockGetChartHealth.mockImplementation(async (fileId: string) =>
+            fileId === "upload-osehshalom"
+                ? { status: "ok", source: "firebase-storage" as const }
+                : {
+                      status: "missing" as const,
+                      reason: "library_index row points at a deleted Drive file",
+                  },
+        )
+
+        const r = await publishSetlist(ADMIN, {
+            setlistId: id,
+            force: true,
+        })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+
+        expect(r.chartHealth.bondedCount).toBe(2)
+        expect(r.chartHealth.okCount).toBe(1)
+        expect(r.chartHealth.unhealthy).toHaveLength(1)
+        expect(r.chartHealth.unhealthy[0]).toMatchObject({
+            fileId: "upload-michamocha",
+            status: "missing",
+        })
+
+        // Setlist actually got published — the force flag means "yes, ship
+        // the broken charts, the band will deal".
+        const post = (await db().collection("setlists").doc(id).get()).data()!
+        expect(post.publishedAt).toBeTruthy()
+    })
+
+    it("dryRun returns the chartHealth report even when all charts ok", async () => {
+        const id = "set-pub-dry-health"
+        await seedPublishableSetlist(id)
+
+        // Restore the file-scope default (previous tests overrode it with
+        // an implementation that surfaces "missing" for non-osehshalom ids).
+        mockGetChartHealth.mockReset()
+        mockGetChartHealth.mockResolvedValue({
+            status: "ok",
+            source: "firebase-storage",
+        })
+
+        const r = await publishSetlist(ADMIN, {
+            setlistId: id,
+            dryRun: true,
+        })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+
+        expect(r.chartHealth.bondedCount).toBe(2)
+        expect(r.chartHealth.okCount).toBe(2)
+        expect(r.chartHealth.unhealthy).toEqual([])
     })
 })

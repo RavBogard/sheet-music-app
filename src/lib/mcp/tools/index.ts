@@ -32,6 +32,7 @@ import {
 } from "./library-upload"
 import { downloadChart, generateGigPacket } from "./library-download"
 import { publishSetlist } from "./setlist-publish"
+import { getChartStatus, verifySetlistCharts } from "./library-verify"
 
 /**
  * Validate that an `eventDate` string is parseable as a date. Previously the
@@ -545,12 +546,55 @@ export function registerWriteTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "If true, returns the would-publish recipient list + snapshot without writing or sending. Useful to confirm the blast list before committing.",
+                        "If true, returns the would-publish recipient list + snapshot + chart-health pre-flight report without writing or sending. Useful to confirm the blast list AND that every bonded chart will render before committing.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Bypass the chart-health pre-flight check. Default: publish refuses if any bonded chart is missing or unreachable (the band would see 404s). Pass force: true to publish anyway — use when you've intentionally left rows with broken bonds (e.g. the band will lead-live those songs).",
                     ),
             },
         },
         async (args, extra) =>
             jsonResult(await publishSetlist(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "get_chart_status",
+        {
+            description:
+                "Probe a single chart's health (Storage + Drive fallback) without downloading bytes. Returns { status: 'ok' | 'missing' | 'unreachable' } plus source and mimeType when ok. Use to verify a bond is renderable before bonding it onto a setlist row, or to investigate why a published chart isn't loading for the band. Cheap — metadata-only, no byte transfer.",
+            inputSchema: {
+                fileId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Chart fileId — same id returned by upload_chart / import_chart_from_drive, or the songId on a bonded setlist track.",
+                    ),
+                mimeType: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Optional mimeType hint to short-circuit Storage path probing. Inferred from library_index when omitted.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await getChartStatus(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "verify_setlist_charts",
+        {
+            description:
+                "HEAD-check every bonded chart on a setlist in parallel and return per-row health (ok / missing / unreachable / unbonded). Use BEFORE publish_setlist to catch broken bonds — publish_setlist runs this same check internally and refuses by default if anything is broken. Use AFTER bulk_add_tracks to confirm every new bond is renderable. Returns `rows[]` with trackId, title, songId, fileId, and per-row health; plus aggregate counts (bondedCount, okCount, missingCount, unreachableCount). Read-only, cheap, no byte transfer.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id"),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await verifySetlistCharts(uidFrom(extra), args)),
     )
 }
 

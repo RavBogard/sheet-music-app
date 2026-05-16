@@ -7,7 +7,7 @@
  * Used by: file proxy API, print pipeline, enrichment engine.
  */
 
-import { downloadFromStorage } from "@/lib/firebase-storage"
+import { downloadFromStorage, fileExistsInStorage } from "@/lib/firebase-storage"
 import { DriveClient } from "@/lib/google-drive"
 import { logger } from "@/lib/logger"
 
@@ -62,4 +62,70 @@ export async function fetchFileById(fileId: string, mimeType?: string): Promise<
     }
 
     return null
+}
+
+/**
+ * Metadata-only health probe for a library chart fileId. Unlike fetchFileById,
+ * this does NOT download bytes — just probes Storage existence and Drive
+ * metadata. Used by `verify_setlist_charts` and the publish pre-flight check
+ * to catch orphaned library_index rows BEFORE the band ever sees a 404.
+ *
+ * Resolution mirrors fetchFileById: Storage primary → Drive fallback. An
+ * `upload-` prefixed id that's missing from Storage is `status: 'missing'`
+ * (the prefix indicates a local-only upload, no Drive backing).
+ *
+ * Returns:
+ *  - { status: 'ok', source: 'firebase-storage' | 'google-drive', mimeType?: string }
+ *  - { status: 'missing', reason }    — file not in Storage and (if applicable) not in Drive
+ *  - { status: 'unreachable', error } — network/transient failure; caller may retry
+ */
+export type ChartHealth =
+    | { status: "ok"; source: "firebase-storage" | "google-drive"; mimeType?: string }
+    | { status: "missing"; reason: string }
+    | { status: "unreachable"; error: string }
+
+export async function getChartHealth(
+    fileId: string,
+    mimeType?: string,
+): Promise<ChartHealth> {
+    if (!fileId) return { status: "missing", reason: "empty fileId" }
+    const cleanId = fileId.replace(/\.(pdf|xml|musicxml|mp3)$/i, "")
+    try {
+        const storage = await fileExistsInStorage(cleanId, mimeType)
+        if (storage.success && storage.data) {
+            return { status: "ok", source: "firebase-storage", mimeType }
+        }
+        if (storage.success === false && storage.reason === "network") {
+            return { status: "unreachable", error: storage.message }
+        }
+        // Storage miss → only Drive can help for non-upload-prefixed ids.
+        if (cleanId.startsWith("upload-")) {
+            return {
+                status: "missing",
+                reason: "Not in Storage; upload- prefix has no Drive fallback",
+            }
+        }
+        try {
+            const drive = new DriveClient()
+            const meta = (await drive.getFileMetadata(cleanId)) as {
+                mimeType?: string | null
+            }
+            return {
+                status: "ok",
+                source: "google-drive",
+                mimeType: meta?.mimeType ?? mimeType,
+            }
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err)
+            if (/not found|404/i.test(msg)) {
+                return { status: "missing", reason: `Drive: ${msg}` }
+            }
+            return { status: "unreachable", error: msg }
+        }
+    } catch (err) {
+        return {
+            status: "unreachable",
+            error: err instanceof Error ? err.message : String(err),
+        }
+    }
 }
