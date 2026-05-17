@@ -1,32 +1,51 @@
 /**
- * F-02 (2026-05-16 bugstomp) — translate JSON-RPC `-32602` validation
- * errors into a normal tool result whose content carries the standard
- * `{error: "..."}` envelope.
+ * F-02 (2026-05-16 bugstomp + v6 regression) — rewrite inputSchema
+ * validation failures into the standard `{error: "..."}` content
+ * envelope so agents that do `JSON.parse(content[0].text).error` get
+ * a structured field instead of raw prose.
+ *
+ * What the SDK actually does (verified via production probe
+ * `scripts/probe-f02-shape.mjs` 2026-05-16, with two earlier
+ * misdiagnoses behind it):
+ *
+ * `@modelcontextprotocol/sdk/server/mcp.js` registers a CallToolRequest
+ * handler that calls `validateToolInput(tool, args, name)`. On a Zod
+ * failure, validateToolInput throws `McpError(InvalidParams, "Input
+ * validation error: Invalid arguments for tool <name>: <ZodError>")`.
+ * Two lines later the request handler catches the throw and calls
+ * `createToolError(error.message)`, returning a NORMAL CallToolResult
+ * shaped `{content: [{type: "text", text: "<the error.message>"}],
+ * isError: true}`. The `-32602` code never makes it onto the JSON-RPC
+ * envelope — only into the text content as prose ("MCP error -32602:
+ * Input validation error: ...").
+ *
+ * Two prior fix attempts were wrong-target because of this:
+ *
+ *   - v5 (`51f529f3f`) wrapped JSON-body responses looking for
+ *     `error.code === -32602`. The field never exists on the wire, so
+ *     the wrapper short-circuited on every real tool call. Unit tests
+ *     passed against a hand-rolled JSON-RPC shape that doesn't occur in
+ *     practice.
+ *   - v6-first-attempt (`d9d51d718`) extended the same hunt to
+ *     SSE-framed bodies. Same problem — no `error.code` field to find.
+ *     The SSE plumbing it added is correct and reused below.
+ *
+ * Real fix: scan each JSON-RPC message for `result.isError === true`
+ * AND `content[0].text` starting with the SDK's `"MCP error -32602:"`
+ * prefix. Rewrite the content text to JSON.stringify({error: <stripped
+ * prose>}), preserve `isError: true` so agents checking the structural
+ * flag still know the call failed.
  *
  * Why this lives outside route.ts: Next.js App Router only allows
  * route.ts to export HTTP handlers + route-segment config. The helper
- * needs to be exported for unit testing, so it ships in its own
- * module.
+ * needs to be exported for unit testing, so it ships in its own module.
  *
- * Why a Response-layer fix: mcp-handler / MCP SDK validates `inputSchema`
- * Zod shapes BEFORE the tool handler runs, so a try/catch inside the
- * handler can't translate the ZodError. The error is already serialized
- * to `{jsonrpc, error: {code: -32602, message: ...}}` by the time the
- * Response is built. Intercepting on the way out is the single-point
- * fix.
- *
- * F-02-regression (v6 2026-05-16): the v5 fix only handled JSON-body
- * responses. mcp-handler's WebStandardStreamableHTTPServerTransport
- * actually returns tool responses as `text/event-stream` with the
- * JSON-RPC body inside `data: {...}` SSE event lines. The JSON-only
- * wrapper short-circuited on every real tool call. The unit tests only
- * exercised the pure transform on a hand-rolled JSON-RPC object, so the
- * regression was structural and invisible from day one. The wrapper
- * now branches on Content-Type and handles both shapes.
- *
- * Other JSON-RPC errors (-32603 internal, -32601 method-not-found, etc.)
- * pass through unchanged — those represent transport/protocol failures
- * the agent should still see as such.
+ * Other JSON-RPC errors (-32603 internal, -32601 method-not-found,
+ * etc.) pass through unchanged — those represent transport/protocol
+ * failures the agent should still see as such. The legacy `-32602`
+ * error-layer remap (`remapJsonRpcErrorMessage` below) is kept as
+ * defense-in-depth in case a future SDK version surfaces InvalidParams
+ * at the JSON-RPC layer instead of swallowing it into isError.
  */
 
 type JsonRpcMessage = {
@@ -40,18 +59,40 @@ type JsonRpcMessage = {
     }
 }
 
-function remapValidationMessage(msg: unknown): unknown {
-    if (!msg || typeof msg !== "object") return msg
-    const m = msg as JsonRpcMessage
-    if (!m.error || typeof m.error !== "object") return msg
-    if (m.error.code !== -32602) return msg
+type CallToolResult = {
+    content?: Array<{ type?: unknown; text?: unknown }>
+    isError?: unknown
+}
+
+/**
+ * Exact prefix the MCP SDK emits when inputSchema validation fails.
+ * Comes from `@modelcontextprotocol/sdk/server/mcp.js` line ~178:
+ *   throw new McpError(ErrorCode.InvalidParams,
+ *     `Input validation error: Invalid arguments for tool ${toolName}: ${errorMessage}`)
+ * which becomes `"MCP error -32602: Input validation error: ..."` when
+ * the catch wrapper passes `error.message` to createToolError.
+ */
+const SDK_VALIDATION_PREFIX = "MCP error -32602: Input validation error:"
+/** Strip the redundant `"MCP error -32602: "` noise from the rewrite. */
+const SDK_MCPERROR_NOISE = "MCP error -32602: "
+
+/**
+ * Defense-in-depth: if a future SDK or transport surfaces InvalidParams
+ * at the JSON-RPC layer (`{error: {code: -32602, message}}`), translate
+ * it. Today the SDK always wraps via createToolError so this never
+ * fires in practice, but keeping it is cheap and the existing unit
+ * tests pin the contract.
+ */
+function remapJsonRpcErrorMessage(msg: JsonRpcMessage): unknown {
+    if (!msg.error || typeof msg.error !== "object") return msg
+    if (msg.error.code !== -32602) return msg
     const raw =
-        typeof m.error.message === "string"
-            ? m.error.message
+        typeof msg.error.message === "string"
+            ? msg.error.message
             : "Validation failed"
     return {
-        jsonrpc: m.jsonrpc,
-        id: m.id,
+        jsonrpc: msg.jsonrpc,
+        id: msg.id,
         result: {
             content: [
                 {
@@ -61,6 +102,50 @@ function remapValidationMessage(msg: unknown): unknown {
             ],
         },
     }
+}
+
+/**
+ * The path the SDK actually takes today: validation failure becomes
+ * `result.isError === true` with `content[0].text` starting with the
+ * SDK validation prefix. Rewrite the text into the `{error: ...}`
+ * envelope; keep `isError: true` so agents checking that flag still
+ * see the structural failure signal.
+ */
+function remapValidationResult(msg: JsonRpcMessage): unknown {
+    if (!msg.result || typeof msg.result !== "object") return msg
+    const result = msg.result as CallToolResult
+    if (result.isError !== true) return msg
+    const content = result.content
+    if (!Array.isArray(content) || content.length === 0) return msg
+    const first = content[0]
+    if (!first || typeof first !== "object") return msg
+    const text = first.text
+    if (typeof text !== "string") return msg
+    if (!text.startsWith(SDK_VALIDATION_PREFIX)) return msg
+    const stripped = text.slice(SDK_MCPERROR_NOISE.length)
+    return {
+        jsonrpc: msg.jsonrpc,
+        id: msg.id,
+        result: {
+            ...result,
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify({ error: stripped }, null, 2),
+                },
+                ...content.slice(1),
+            ],
+            isError: true,
+        },
+    }
+}
+
+function remapValidationMessage(msg: unknown): unknown {
+    if (!msg || typeof msg !== "object") return msg
+    const m = msg as JsonRpcMessage
+    const errorRemapped = remapJsonRpcErrorMessage(m)
+    if (errorRemapped !== m) return errorRemapped
+    return remapValidationResult(m)
 }
 
 /** JSON-RPC supports batches (request arrays); remap each member. */

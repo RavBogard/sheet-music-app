@@ -119,6 +119,132 @@ describe("remapValidationError", () => {
 })
 
 /**
+ * F-02-regression-pt2 (v6 2026-05-16): the SDK's catch wrapper turns
+ * `McpError(InvalidParams)` into a normal CallToolResult with
+ * `isError: true` and `content[0].text` literally prefixed
+ * `"MCP error -32602: Input validation error:"`. The `-32602` field
+ * never appears on the wire — only this prose string in the content.
+ * Production probe captured the exact shape; these tests pin it.
+ */
+describe("remapValidationError — isError: true content rewrite", () => {
+    // Real shape captured from production via scripts/probe-f02-shape.mjs
+    // 2026-05-16. The escaped \n inside text are literal newlines the
+    // SDK includes when JSON.stringify-ing the Zod issues array.
+    const productionShape = {
+        result: {
+            content: [
+                {
+                    type: "text",
+                    text:
+                        "MCP error -32602: Input validation error: Invalid arguments for tool create_setlist: [\n" +
+                        '  {\n    "origin": "string",\n    "code": "too_small",\n    "minimum": 1,\n' +
+                        '    "inclusive": true,\n    "path": [\n      "name"\n    ],\n' +
+                        '    "message": "Too small: expected string to have >=1 characters"\n  }\n]',
+                },
+            ],
+            isError: true,
+        },
+        jsonrpc: "2.0",
+        id: 1,
+    }
+
+    it("rewrites isError: true with SDK validation prose into {error} envelope", () => {
+        const out = remapValidationError(productionShape) as {
+            result: {
+                content: Array<{ type: string; text: string }>
+                isError: boolean
+            }
+            id: number
+        }
+        expect(out).not.toBe(productionShape)
+        expect(out.id).toBe(1)
+        // isError stays so agents checking it structurally still see the failure.
+        expect(out.result.isError).toBe(true)
+        // content[0].text now JSON-parses to {error: "..."} per the
+        // F-02 contract.
+        const parsed = JSON.parse(out.result.content[0].text)
+        expect(parsed.error).toContain("Input validation error")
+        expect(parsed.error).toContain("create_setlist")
+        // The redundant "MCP error -32602: " noise is stripped.
+        expect(parsed.error.startsWith("MCP error -32602:")).toBe(false)
+        expect(parsed.error.startsWith("Input validation error:")).toBe(true)
+    })
+
+    it("preserves additional content items beyond index 0", () => {
+        const msg = {
+            result: {
+                content: [
+                    {
+                        type: "text",
+                        text:
+                            "MCP error -32602: Input validation error: Invalid arguments for tool x: [...]",
+                    },
+                    { type: "text", text: "hint: pass a non-empty name" },
+                ],
+                isError: true,
+            },
+            jsonrpc: "2.0",
+            id: 7,
+        }
+        const out = remapValidationError(msg) as {
+            result: { content: Array<{ text: string }> }
+        }
+        expect(out.result.content).toHaveLength(2)
+        expect(out.result.content[1].text).toBe("hint: pass a non-empty name")
+    })
+
+    it("passes through isError: true with handler-emitted envelope (already correct shape)", () => {
+        // assertEditor / other handler-level errors already use jsonResult({error: ...})
+        // so content[0].text JSON-parses to {error: "..."}. Don't double-wrap.
+        const msg = {
+            result: {
+                content: [
+                    { type: "text", text: '{"error":"Setlist not found"}' },
+                ],
+                isError: true,
+            },
+            jsonrpc: "2.0",
+            id: 5,
+        }
+        expect(remapValidationError(msg)).toBe(msg)
+    })
+
+    it("passes through isError: true with a non-validation text body", () => {
+        // e.g. tool-handler errors that don't start with the SDK validation
+        // prefix — leave them alone.
+        const msg = {
+            result: {
+                content: [{ type: "text", text: "Something else broke" }],
+                isError: true,
+            },
+            jsonrpc: "2.0",
+            id: 5,
+        }
+        expect(remapValidationError(msg)).toBe(msg)
+    })
+
+    it("passes through successful results with isError: false / absent", () => {
+        const ok1 = {
+            result: { content: [{ type: "text", text: "fine" }], isError: false },
+            jsonrpc: "2.0",
+            id: 1,
+        }
+        const ok2 = {
+            result: { content: [{ type: "text", text: "fine" }] },
+            jsonrpc: "2.0",
+            id: 2,
+        }
+        expect(remapValidationError(ok1)).toBe(ok1)
+        expect(remapValidationError(ok2)).toBe(ok2)
+    })
+
+    it("ignores isError: true with no content array", () => {
+        const msg = { result: { isError: true }, jsonrpc: "2.0", id: 1 }
+        expect(remapValidationError(msg)).toBe(msg)
+    })
+})
+
+/**
  * F-02-regression (v6 2026-05-16): mcp-handler emits tool responses as
  * `text/event-stream`, not `application/json`. These tests pin the SSE
  * body transform — the absence of these tests is exactly why the v5
@@ -321,5 +447,47 @@ describe("wrapWithValidationRemap", () => {
         const wrapped = wrapWithValidationRemap(handler)
         const res = await wrapped(new Request("http://x/api/mcp", { method: "POST" }))
         expect(res).toBe(original)
+    })
+
+    /**
+     * Regression pin: this is the EXACT SSE body production returns for
+     * `create_setlist({name: ""})` (captured via
+     * scripts/probe-f02-shape.mjs 2026-05-16). The earlier two F-02
+     * attempts shipped without this test, so they could pass unit tests
+     * while silently no-op'ing in prod. If this test fails, the wrapper
+     * is wrong-target again.
+     */
+    it("rewrites the EXACT production SSE shape (isError: true + SDK prose)", async () => {
+        const productionSseBody =
+            'event: message\ndata: {"result":{"content":[{"type":"text",' +
+            '"text":"MCP error -32602: Input validation error: Invalid ' +
+            'arguments for tool create_setlist: [\\n  {\\n    \\"origin\\": ' +
+            '\\"string\\",\\n    \\"code\\": \\"too_small\\",\\n    ' +
+            '\\"minimum\\": 1,\\n    \\"inclusive\\": true,\\n    ' +
+            '\\"path\\": [\\n      \\"name\\"\\n    ],\\n    ' +
+            '\\"message\\": \\"Too small: expected string to have >=1 ' +
+            'characters\\"\\n  }\\n]"}],"isError":true},"jsonrpc":"2.0",' +
+            '"id":1}\n\n'
+        const handler = async () =>
+            new Response(productionSseBody, {
+                status: 200,
+                headers: { "content-type": "text/event-stream" },
+            })
+        const wrapped = wrapWithValidationRemap(handler)
+        const res = await wrapped(new Request("http://x/api/mcp", { method: "POST" }))
+        const text = await res.text()
+        // Extract the data: line and parse what we re-emitted.
+        const dataLine = text.split("\n").find((l) => l.startsWith("data: "))!
+        const parsed = JSON.parse(dataLine.slice("data: ".length))
+        // isError flag survives (structural failure signal still works).
+        expect(parsed.result.isError).toBe(true)
+        // content[0].text now JSON-parses cleanly to {error: "..."}.
+        const envelope = JSON.parse(parsed.result.content[0].text)
+        expect(envelope.error).toContain("Input validation error")
+        expect(envelope.error).toContain("create_setlist")
+        // The "MCP error -32602: " noise is stripped.
+        expect(envelope.error.startsWith("Input validation error:")).toBe(true)
+        // Trailing SSE delimiter preserved.
+        expect(text.endsWith("\n\n")).toBe(true)
     })
 })
