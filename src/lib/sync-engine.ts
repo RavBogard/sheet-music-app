@@ -240,14 +240,28 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
             for (const file of chunk) {
                 const docRef = db.collection('library_index').doc(file.id)
 
+                // Cycle-2 DATA-001: strip leading/trailing whitespace at write
+                // time so " Ana B_Koach.pdf" stops indexing as a separate row
+                // from "Ana B_Koach.pdf"; persist `fileSize` (Drive returns
+                // `size` as a decimal string for binary files; folders +
+                // Workspace types omit it, hence the parseInt + isFinite
+                // guard so we never write NaN).
+                const cleanName = typeof file.name === 'string' ? file.name.trim() : file.name
+                const sizeNum =
+                    typeof file.size === 'string' && file.size.length > 0
+                        ? Number.parseInt(file.size, 10)
+                        : NaN
+                const fileSize = Number.isFinite(sizeNum) ? sizeNum : null
+
                 batch.set(docRef, {
                     id: file.id,
-                    name: file.name,
-                    nameLower: file.name.toLowerCase(),
+                    name: cleanName,
+                    nameLower: cleanName.toLowerCase(),
                     mimeType: file.mimeType,
                     modifiedTime: file.modifiedTime || null,
                     webViewLink: file.webViewLink || null,
                     parents: file.parents || [],
+                    fileSize,
                     // Store shortcut target so file-fetcher can resolve without an extra Drive API call
                     ...(file.shortcutDetails?.targetId
                         ? { shortcutTargetId: file.shortcutDetails.targetId }

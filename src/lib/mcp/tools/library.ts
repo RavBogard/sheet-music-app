@@ -1,5 +1,6 @@
 import { getAllSongs, getSongById, type SongRecord } from "@/lib/mcp/server-songs"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+import { getStorage } from "firebase-admin/storage"
 import { logger } from "@/lib/logger"
 import { bareStem } from "@/lib/mcp/title-specificity"
 
@@ -810,5 +811,305 @@ export async function dedupeLibraryIndex(
     } catch (err) {
         logger.warn("[mcp] dedupe_library_index failed:", err)
         return { error: "Failed to run library_index dedupe" }
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * backfill_library_index — one-shot index-row hygiene (cycle-2 DATA-001)
+ *
+ * Cycle-2 cleanup found ~80% of `library_index` rows with `fileSize:null`
+ * and a long tail of rows whose `name` carried leading/trailing whitespace
+ * (which had already manifested as duplicate F-019 rows). Going forward,
+ * the Drive sync now strips names + persists Drive `size` at write time
+ * (sync-engine.ts), but the existing population needs a one-shot cleanup.
+ *
+ * Per-row decision rules:
+ *  - **name:** if `name.trim() !== name`, propose write of the trimmed
+ *    name + `nameLower = trimmed.toLowerCase()`. Empty after trim → leave
+ *    untouched (no row should ever have a wholly-whitespace name; if
+ *    one does, that's a deeper bug — surface in the report).
+ *  - **fileSize:** if currently null/missing, try to hydrate. Probe
+ *    Firebase Storage at the canonical `library/{fileId}` path and the
+ *    `.pdf` / `.xml` / `.heic` / `.jpg` / `.png` extension variants
+ *    (mirrors the existing download path's permissiveness). Use the
+ *    first Storage object whose `getMetadata()` resolves with a numeric
+ *    size. If no Storage object exists, leave `fileSize` null (the row
+ *    is Drive-only and the Drive `size` field landed via the sync-engine
+ *    write fix going forward — no need to fetch from Drive here, since
+ *    the next sync tick will hydrate it).
+ *
+ * Defaults dryRun:true per [[feedback_dryrun_is_observability]] — the
+ * caller MUST pass `force: true` to actually write. dryRun returns the
+ * full report (which rows would change, before/after values) without
+ * needing force.
+ *
+ * Admin-only at the registration layer (auth gate in index.ts).
+ * ───────────────────────────────────────────────────────────────────────── */
+
+export interface BackfillLibraryIndexArgs {
+    /** When true (default), do not write — return the plan only. F-05. */
+    dryRun?: boolean
+    /** Required for writes. Refuses to write without `force: true`. */
+    force?: boolean
+}
+
+export interface BackfillRowDelta {
+    fileId: string
+    /** Reason this row was selected — one row can have multiple deltas. */
+    changes: Array<
+        | { field: "name"; from: string; to: string }
+        | { field: "nameLower"; from: string | null; to: string }
+        | { field: "fileSize"; from: null; to: number; source: "storage" }
+    >
+}
+
+export interface BackfillLibraryIndexResult {
+    scanned: number
+    rowsChanged: number
+    namesNormalized: number
+    fileSizesHydrated: number
+    /** Rows that needed fileSize but no Storage object was found. */
+    fileSizesUnresolved: number
+    /** Per-row diff plan. Up to 500 rows (truncated in the report if larger). */
+    deltas: BackfillRowDelta[]
+    deltasTruncated: boolean
+    dryRun: boolean
+    /** When dryRun=false and force omitted, returns `refused: true` and no writes. */
+    refused?: boolean
+}
+
+const STORAGE_PROBE_EXTENSIONS = ["", ".pdf", ".xml", ".heic", ".jpg", ".jpeg", ".png"]
+const BACKFILL_STORAGE_PROBE_CONCURRENCY = 6
+const BACKFILL_DELTA_REPORT_CAP = 500
+
+async function probeStorageFileSize(
+    bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>,
+    fileId: string,
+): Promise<number | null> {
+    for (const ext of STORAGE_PROBE_EXTENSIONS) {
+        const path = `library/${fileId}${ext}`
+        try {
+            const [meta] = await bucket.file(path).getMetadata()
+            const sz = typeof meta.size === "string" ? Number.parseInt(meta.size, 10)
+                : typeof meta.size === "number" ? meta.size
+                : NaN
+            if (Number.isFinite(sz) && sz > 0) return sz
+        } catch {
+            // 404 / not-found is expected for most extension probes; continue.
+        }
+    }
+    return null
+}
+
+export async function backfillLibraryIndex(
+    uid: string,
+    args: BackfillLibraryIndexArgs = {},
+): Promise<BackfillLibraryIndexResult | { error: string }> {
+    // Default to dryRun. Caller must explicitly opt OUT of dryRun (via
+    // dryRun:false) AND opt IN to writes (via force:true). Same posture
+    // as dedupe_library_index.
+    const dryRun = args.dryRun !== false
+    const force = args.force === true
+
+    try {
+        initAdmin()
+        const db = getFirestore()
+
+        // Admin gate. Dry-run + real-run both require admin — this tool
+        // exposes the entire library_index shape and is exclusively a
+        // maintenance affordance, not a read-anywhere browse path.
+        const userSnap = await db.collection("users").doc(uid).get()
+        const role = userSnap.exists
+            ? (userSnap.data()?.role as string | undefined)
+            : undefined
+        if (role !== "admin") {
+            return { error: "backfill_library_index is admin-only" }
+        }
+
+        if (!dryRun && !force) {
+            // Refuse to write without force. Run the plan + return it with
+            // refused:true so the caller sees what would change before they
+            // re-run with force.
+            const planOnly = await backfillLibraryIndex(uid, { dryRun: true })
+            if ("error" in planOnly) return planOnly
+            return { ...planOnly, refused: true, dryRun: false }
+        }
+        const bucketName =
+            process.env.FIREBASE_STORAGE_BUCKET ||
+            `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`
+        const bucket = getStorage().bucket(bucketName)
+
+        const snap = await db.collection("library_index").get()
+
+        interface Candidate {
+            fileId: string
+            rawName: string | null
+            cleanName: string | null
+            currentNameLower: string | null
+            currentFileSize: number | null
+            currentStatus: string
+        }
+
+        const candidates: Candidate[] = snap.docs.map((d) => {
+            const data = d.data()
+            const rawName =
+                typeof data.name === "string"
+                    ? data.name
+                    : typeof data.title === "string"
+                      ? data.title
+                      : null
+            const cleanName = rawName ? rawName.trim() : null
+            return {
+                fileId: d.id,
+                rawName,
+                cleanName: cleanName && cleanName.length > 0 ? cleanName : rawName,
+                currentNameLower:
+                    typeof data.nameLower === "string" ? data.nameLower : null,
+                currentFileSize:
+                    typeof data.fileSize === "number" ? data.fileSize : null,
+                currentStatus:
+                    typeof data.status === "string" ? data.status : "active",
+            }
+        })
+
+        // Compute name deltas in-memory; queue fileSize probes for rows
+        // whose `fileSize` is null. Skip orphaned rows for fileSize
+        // hydration — they have no Storage object by definition.
+        const fileSizeQueue: Candidate[] = []
+        const deltas: BackfillRowDelta[] = []
+        let namesNormalized = 0
+
+        for (const c of candidates) {
+            const changes: BackfillRowDelta["changes"] = []
+            if (
+                c.rawName !== null &&
+                c.cleanName !== null &&
+                c.rawName !== c.cleanName &&
+                c.cleanName.length > 0
+            ) {
+                changes.push({ field: "name", from: c.rawName, to: c.cleanName })
+                const desiredLower = c.cleanName.toLowerCase()
+                if (c.currentNameLower !== desiredLower) {
+                    changes.push({
+                        field: "nameLower",
+                        from: c.currentNameLower,
+                        to: desiredLower,
+                    })
+                }
+                namesNormalized++
+            }
+            if (
+                c.currentFileSize === null &&
+                c.currentStatus !== "orphaned" &&
+                c.currentStatus !== "duplicate"
+            ) {
+                fileSizeQueue.push(c)
+            }
+            if (changes.length > 0) {
+                deltas.push({ fileId: c.fileId, changes })
+            }
+        }
+
+        // Probe Storage for fileSize candidates. Bounded concurrency so
+        // a 250-row run doesn't fan out to 250 GCS requests at once.
+        let fileSizesHydrated = 0
+        let fileSizesUnresolved = 0
+        const sizeMap = new Map<string, number>()
+        for (let i = 0; i < fileSizeQueue.length; i += BACKFILL_STORAGE_PROBE_CONCURRENCY) {
+            const batch = fileSizeQueue.slice(i, i + BACKFILL_STORAGE_PROBE_CONCURRENCY)
+            const results = await Promise.all(
+                batch.map(async (c) => ({
+                    fileId: c.fileId,
+                    size: await probeStorageFileSize(bucket, c.fileId),
+                })),
+            )
+            for (const { fileId, size } of results) {
+                if (size !== null) {
+                    sizeMap.set(fileId, size)
+                    fileSizesHydrated++
+                } else {
+                    fileSizesUnresolved++
+                }
+            }
+        }
+
+        // Fold fileSize deltas into the report. Find-or-create the row
+        // entry so a row with both name + size deltas reports one block.
+        for (const c of fileSizeQueue) {
+            const sz = sizeMap.get(c.fileId)
+            if (sz === undefined) continue
+            let row = deltas.find((d) => d.fileId === c.fileId)
+            if (!row) {
+                row = { fileId: c.fileId, changes: [] }
+                deltas.push(row)
+            }
+            row.changes.push({
+                field: "fileSize",
+                from: null,
+                to: sz,
+                source: "storage",
+            })
+        }
+
+        const rowsChanged = deltas.length
+
+        if (dryRun) {
+            const reportDeltas = deltas.slice(0, BACKFILL_DELTA_REPORT_CAP)
+            return {
+                scanned: candidates.length,
+                rowsChanged,
+                namesNormalized,
+                fileSizesHydrated,
+                fileSizesUnresolved,
+                deltas: reportDeltas,
+                deltasTruncated: deltas.length > BACKFILL_DELTA_REPORT_CAP,
+                dryRun: true,
+            }
+        }
+
+        // Apply writes — batched, idempotent. Firestore caps at 500
+        // writes per batch; one row may produce one write (we collapse
+        // name + nameLower + fileSize into one update per fileId).
+        const BATCH_MAX = 400
+        const ops: Array<{
+            ref: FirebaseFirestore.DocumentReference
+            data: Record<string, unknown>
+        }> = []
+        for (const row of deltas) {
+            const data: Record<string, unknown> = {}
+            for (const change of row.changes) {
+                if (change.field === "name") data.name = change.to
+                else if (change.field === "nameLower") data.nameLower = change.to
+                else if (change.field === "fileSize") data.fileSize = change.to
+            }
+            if (Object.keys(data).length > 0) {
+                ops.push({
+                    ref: db.collection("library_index").doc(row.fileId),
+                    data,
+                })
+            }
+        }
+        for (let i = 0; i < ops.length; i += BATCH_MAX) {
+            const batch = db.batch()
+            for (const { ref, data } of ops.slice(i, i + BATCH_MAX)) {
+                batch.update(ref, data)
+            }
+            await batch.commit()
+        }
+
+        const reportDeltas = deltas.slice(0, BACKFILL_DELTA_REPORT_CAP)
+        return {
+            scanned: candidates.length,
+            rowsChanged,
+            namesNormalized,
+            fileSizesHydrated,
+            fileSizesUnresolved,
+            deltas: reportDeltas,
+            deltasTruncated: deltas.length > BACKFILL_DELTA_REPORT_CAP,
+            dryRun: false,
+        }
+    } catch (err) {
+        logger.warn("[mcp] backfill_library_index failed:", err)
+        return { error: "Failed to run library_index backfill" }
     }
 }

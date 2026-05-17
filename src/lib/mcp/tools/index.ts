@@ -6,6 +6,7 @@ import {
     getSong,
     listLibrary,
     dedupeLibraryIndex,
+    backfillLibraryIndex,
 } from "./library"
 import {
     createSetlist,
@@ -1025,6 +1026,30 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await dedupeLibraryIndex(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "backfill_library_index",
+        {
+            description:
+                "Admin-only one-shot library_index hygiene backfill (cycle-2 DATA-001). Walks every row; for each, (a) strips leading/trailing whitespace from `name` (and rebuilds `nameLower`) so future Drive re-scans don't fork into duplicate rows the way ' Ana B_Koach.pdf' once did, and (b) hydrates `fileSize` from the Firebase Storage object (probes `library/{fileId}` + `.pdf` / `.xml` / image extensions) for rows whose `fileSize` is null. Rows with `status: \"orphaned\"` or `status: \"duplicate\"` skip the size hydration (no Storage object to probe). Defaults `dryRun: true` per the F-05 dry-run-is-observability rule — the caller MUST pass `force: true` to actually write. Returns `{scanned, rowsChanged, namesNormalized, fileSizesHydrated, fileSizesUnresolved, deltas, deltasTruncated, dryRun, refused?}`. `deltas` is capped at 500 rows (set `deltasTruncated:true` past that — the totals stay accurate). Real run without `force:true` returns the plan with `refused:true` and no writes.",
+            inputSchema: {
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true (default), returns the diff plan only — every row that would change, with before/after values — without writing. F-05 standing rule.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes — even after `dryRun: false` is set.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await backfillLibraryIndex(uidFrom(extra), args)),
     )
 }
 

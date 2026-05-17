@@ -77,6 +77,8 @@ interface DriveFileResult {
     webViewLink?: string
     parents?: string[]
     shortcutDetails?: { targetId: string; targetMimeType?: string }
+    /** Drive returns size as a decimal string for binary files; folders/Workspace docs omit it. */
+    size?: string
 }
 
 export class DriveClient {
@@ -145,7 +147,10 @@ export class DriveClient {
             do {
                 const res = await withRetry(() => this.drive.files.list({
                     pageSize: 100,
-                    fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, webContentLink, parents, shortcutDetails)',
+                    // `size` added 2026-05-17 (cycle-2 DATA-001) so library_index
+                    // can persist fileSize at sync time instead of leaving it
+                    // null on 80% of Drive-synced rows.
+                    fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, webContentLink, parents, shortcutDetails, size)',
                     q,
                     pageToken: nextPageToken,
                     supportsAllDrives: true,
