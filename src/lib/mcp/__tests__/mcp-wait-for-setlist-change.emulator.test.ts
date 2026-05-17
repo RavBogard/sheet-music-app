@@ -202,6 +202,83 @@ describe("wait_for_setlist_change (emulator)", () => {
         expect(setlist.tracks.map((t) => t.id).sort()).toEqual(["t1", "t2"])
     })
 
+    // ─── F-005: race + stale-currentVersion regressions ──────────────────
+
+    it("F-005 (a): catches a change that lands during the subscription window", async () => {
+        // Cowork repro shape: caller fires the wait + a concurrent write
+        // virtually simultaneously. With the F-005 (a) post-subscription
+        // re-check, even if the write lands AFTER the initial snapshot but
+        // BEFORE onSnapshot's first callback, the explicit re-snapshot
+        // catches it and resolves changed:true within ms (not after the
+        // full timeoutSec).
+        await seedSetlist(5)
+
+        const start = Date.now()
+        const waitPromise = waitForSetlistChange("u", {
+            setlistId: SETLIST_ID,
+            sinceVersion: 5,
+            timeoutSec: 10,
+        })
+        // Tiny delay so the wait starts before our bump — small enough
+        // to fall inside or just past the subscription window. The
+        // post-sub re-check is the load-bearing assertion target.
+        await new Promise((r) => setTimeout(r, 10))
+        await bumpSetlistVersion(6)
+
+        const result = await waitPromise
+        const elapsedMs = Date.now() - start
+        if ("error" in result) throw new Error(result.error)
+        expect(result.changed).toBe(true)
+        expect(result.currentVersion).toBe(6)
+        // Should resolve fast — well under the 10s timeout. Pre-fix this
+        // could time out in serverless contexts.
+        expect(elapsedMs).toBeLessThan(3000)
+    })
+
+    it("F-005 (b): timeout response reports TRUE currentVersion even if a write landed after the listener missed it", async () => {
+        // Simulates the cowork failure shape: the listener path doesn't
+        // fire (we approximate by bumping AFTER the timer has fired but
+        // before the explicit fresh read in resolveOnce). The fix's
+        // explicit setlistRef.get() inside resolveOnce should observe the
+        // post-write state and promote the timeout to changed:true.
+        await seedSetlist(3)
+
+        const waitPromise = waitForSetlistChange("u", {
+            setlistId: SETLIST_ID,
+            sinceVersion: 3,
+            timeoutSec: 2,
+        })
+        // Bump halfway through the timeout — the listener SHOULD catch
+        // this in the happy path, so the F-005 (a) post-sub re-check
+        // may have already caught it before our wait. Either way, the
+        // resulting currentVersion must be the fresh value (4), never
+        // stale 3.
+        await new Promise((r) => setTimeout(r, 1000))
+        await bumpSetlistVersion(4)
+
+        const result = await waitPromise
+        if ("error" in result) throw new Error(result.error)
+        // Whether resolved via listener, post-sub check, or the timeout's
+        // explicit fresh read, currentVersion MUST reflect the bump.
+        expect(result.currentVersion).toBe(4)
+    })
+
+    it("F-005 (b): genuine no-change timeout still reports TRUE currentVersion (== sinceVersion)", async () => {
+        await seedSetlist(7)
+
+        const result = await waitForSetlistChange("u", {
+            setlistId: SETLIST_ID,
+            sinceVersion: 7,
+            timeoutSec: 1,
+        })
+        if ("error" in result) throw new Error(result.error)
+        expect(result.timedOut).toBe(true)
+        expect(result.changed).toBe(false)
+        // True version is still 7 — no write happened. Fresh-read fix
+        // mustn't perturb the no-change case.
+        expect(result.currentVersion).toBe(7)
+    })
+
     it("rejects invalid args", async () => {
         const noId = await waitForSetlistChange("u", {
             setlistId: "",

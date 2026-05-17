@@ -201,20 +201,46 @@ export async function waitForSetlistChange(
         const resolveOnce = async (timedOut: boolean) => {
             if (resolved) return
             resolved = true
-            const snap = await snapshotState(
+            let snap = await snapshotState(
                 db,
                 args.setlistId,
                 args.sinceVersion,
             )
-            cleanup()
+            // F-005 fix (b) — true currentVersion on timeout. Pre-fix the
+            // timeout path returned snap.currentVersion which cowork
+            // observed stale (currentVersion=N reported when the actual
+            // setlist had advanced to N+1). Do an explicit fresh
+            // setlistRef.get() on the timeout branch to guarantee the
+            // reported version reflects committed state. If the fresh read
+            // shows the version has advanced, promote the timeout to a
+            // changed:true result with the full change list re-snapshotted.
             if (timedOut && snap.changes.length === 0) {
-                resolve({
-                    changed: false,
-                    currentVersion: snap.currentVersion,
-                    timedOut: true,
-                })
-                return
+                const freshSetlist = await db
+                    .collection("setlists")
+                    .doc(args.setlistId)
+                    .get()
+                const freshVersion = freshSetlist.exists
+                    ? readVersion(
+                          freshSetlist.data() as Record<string, unknown>,
+                      )
+                    : 0
+                if (freshVersion > args.sinceVersion) {
+                    snap = await snapshotState(
+                        db,
+                        args.setlistId,
+                        args.sinceVersion,
+                    )
+                } else {
+                    cleanup()
+                    resolve({
+                        changed: false,
+                        currentVersion: freshVersion,
+                        timedOut: true,
+                    })
+                    return
+                }
             }
+            cleanup()
             const result: WaitForSetlistChangeResult = {
                 changed: snap.changes.length > 0,
                 currentVersion: snap.currentVersion,
@@ -275,8 +301,30 @@ export async function waitForSetlistChange(
             return
         }
 
-        timer = setTimeout(() => {
-            resolveOnce(true)
-        }, timeoutSec * 1000)
+        // F-005 fix (a) — close the subscription race. There is a window
+        // between the initial snapshotState (line ~141) and the listeners
+        // going live. A write that lands inside that window can be missed
+        // by both: the initial snapshot saw the pre-write state, and the
+        // onSnapshot's first callback may not always fire reliably in
+        // server-side Admin SDK use (cowork 2026-05-17 repro: parallel
+        // wait + write timed out 15s later with stale state, even though
+        // the write landed in ~50ms). Synchronously re-check state HERE
+        // after the listeners are registered. If a change has landed,
+        // resolve immediately; otherwise arm the timeout.
+        void (async () => {
+            const postSubCheck = await snapshotState(
+                db,
+                args.setlistId,
+                args.sinceVersion,
+            )
+            if (resolved) return
+            if (postSubCheck.changes.length > 0) {
+                resolveOnce(false)
+                return
+            }
+            timer = setTimeout(() => {
+                resolveOnce(true)
+            }, timeoutSec * 1000)
+        })()
     })
 }
