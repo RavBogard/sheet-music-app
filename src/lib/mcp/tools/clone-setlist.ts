@@ -7,6 +7,10 @@ import {
 } from "@/lib/mcp/server-tracks-write"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import {
+    richError,
+    type RichErrorEnvelope,
+} from "@/lib/mcp/error-envelopes"
 
 /**
  * GAP-002 (cycle-2) — clone an existing setlist into a brand new one.
@@ -25,8 +29,6 @@ import { logger } from "@/lib/logger"
  * Role gate: admin OR band_leader (same as create_setlist). Trusted-leader
  * rate-limit bypass applies per [[feedback_admin_rate_limit_bypass]].
  */
-
-type ToolError = { error: string }
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -105,9 +107,14 @@ const COPYABLE_TRACK_FIELDS = [
 export async function cloneSetlist(
     uid: string,
     args: CloneSetlistArgs,
-): Promise<CloneSetlistResult | ToolError> {
+): Promise<CloneSetlistResult | RichErrorEnvelope> {
     if (!args.sourceSetlistId?.trim()) {
-        return { error: "sourceSetlistId is required" }
+        return richError(
+            "invalid_argument",
+            "sourceSetlistId is required.",
+            { sourceSetlistId: args.sourceSetlistId ?? null },
+            "Pass a non-empty sourceSetlistId from list_setlists.",
+        )
     }
 
     initAdmin()
@@ -115,7 +122,7 @@ export async function cloneSetlist(
 
     // Role gate — admin OR band_leader. Mirrors create_setlist.
     const editor = await assertEditor(db, uid)
-    if (!editor.ok) return { error: editor.error }
+    if (!editor.ok) return editor
 
     // Trusted-leader rate-limit bypass per
     // [[feedback_admin_rate_limit_bypass]]. assertEditor already proved the
@@ -123,12 +130,18 @@ export async function cloneSetlist(
     const role = await readUserRole(db, uid)
     const bypass = role === "admin" || role === "band_leader"
     const limited = await checkUserRateLimit(uid, "api", { bypass })
-    if (limited) return { error: limited.error }
+    if (limited)
+        return richError("rate_limited", limited.error, undefined, undefined)
 
     const sourceRef = db.collection("setlists").doc(args.sourceSetlistId)
     const sourceSnap = await sourceRef.get()
     if (!sourceSnap.exists) {
-        return { error: `Source setlist ${args.sourceSetlistId} not found` }
+        return richError(
+            "setlist_not_found",
+            `Source setlist '${args.sourceSetlistId}' was not found.`,
+            { sourceSetlistId: args.sourceSetlistId },
+            "Verify the id via list_setlists.",
+        )
     }
     const sourceData = sourceSnap.data() as Record<string, unknown>
 
@@ -177,12 +190,20 @@ export async function cloneSetlist(
     // would land on the wrong Friday.
     if (args.newEventDate !== undefined && args.newEventDate !== null) {
         if (!args.newEventDate.trim()) {
-            return { error: "newEventDate must be a non-empty ISO date" }
+            return richError(
+                "invalid_argument",
+                "newEventDate must be a non-empty ISO date.",
+                { newEventDate: args.newEventDate },
+                "Pass a YYYY-MM-DD or full ISO date string, or omit to skip the override.",
+            )
         }
         if (Number.isNaN(Date.parse(args.newEventDate))) {
-            return {
-                error: `newEventDate must be an ISO date string (got "${args.newEventDate}")`,
-            }
+            return richError(
+                "invalid_argument",
+                `newEventDate must be an ISO date string (got "${args.newEventDate}").`,
+                { newEventDate: args.newEventDate },
+                "Pass a YYYY-MM-DD or full ISO date string.",
+            )
         }
         setlistPayload.eventDate = toTimestamp(args.newEventDate)
     }

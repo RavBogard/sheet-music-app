@@ -265,24 +265,33 @@ describe("MCP clone_setlist (emulator)", () => {
         const sourceId = await buildSource()
         const result = (await cloneSetlist(MEMBER, {
             sourceSetlistId: sourceId,
-        })) as { error: string }
-        expect("error" in result).toBe(true)
-        expect(result.error).toMatch(/admin or band leader/i)
+        })) as { ok: false; error: string; message: string }
+        expect(result).toMatchObject({
+            ok: false,
+            error: "forbidden_role",
+            message: expect.stringMatching(/admin or band leader/i),
+        })
     })
 
     it("missing source setlist surfaces a typed error", async () => {
         const result = (await cloneSetlist(ADMIN, {
             sourceSetlistId: "definitely-not-a-real-setlist",
-        })) as { error: string }
-        expect("error" in result).toBe(true)
-        expect(result.error).toMatch(/not found/i)
+        })) as { ok: false; error: string; message: string }
+        expect(result).toMatchObject({
+            ok: false,
+            error: "setlist_not_found",
+            message: expect.stringMatching(/not found/i),
+        })
     })
 
     it("rejects an empty sourceSetlistId", async () => {
         const result = (await cloneSetlist(ADMIN, {
             sourceSetlistId: "  ",
-        })) as { error: string }
-        expect("error" in result).toBe(true)
-        expect(result.error).toMatch(/sourceSetlistId is required/i)
+        })) as { ok: false; error: string; message: string }
+        expect(result).toMatchObject({
+            ok: false,
+            error: "invalid_argument",
+            message: expect.stringMatching(/sourceSetlistId is required/i),
+        })
     })
 })
