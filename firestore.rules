@@ -463,6 +463,27 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // AI CORRECTION SIGNALS (Cycle-3 c3) — observation infrastructure.
+    // One immutable doc per /manage/library-review action
+    // (accept/reject/edit/retry/dismiss). Server-only — writes happen
+    // exclusively via the review-queue handlers (Admin SDK) and reads via
+    // the aggregator + admin MCP tool (Admin SDK). The docs carry uid
+    // attribution and the raw aiSuggestion payload, so client access is
+    // closed end-to-end.
+    match /aiCorrectionSignals/{signalId} {
+      allow read, write: if false;
+    }
+
+    // AI CORRECTION STATS (Cycle-3 c3) — singleton aggregate.
+    // `aiCorrectionStats/latest` is rebuilt by /api/cron/aggregate-corrections
+    // every 6h and read by the admin MCP tool `get_correction_stats`. Both
+    // sides use the Admin SDK, but admins MAY read directly via Firebase
+    // Console for diagnostics. Writes are server-only.
+    match /aiCorrectionStats/{statsId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Deny-all fallback — any collection not explicitly matched above is locked.
     // Prevents new collections from being accidentally accessible.
     match /{document=**} {

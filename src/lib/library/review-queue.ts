@@ -49,6 +49,10 @@ import {
     DEFAULT_CONFIDENCE_THRESHOLD,
     type EnrichmentOutput,
 } from "@/lib/library/ai-enrichment"
+import {
+    emitCorrectionSignal,
+    type CorrectionSignalInput,
+} from "@/lib/library/correction-signals"
 import { logger } from "@/lib/logger"
 
 const ALLOWED_COLLECTIONS = ["core", "supplemental", "uploads"] as const
@@ -367,20 +371,25 @@ export async function acceptEnrichment(
         enrichmentReviewedAt: new Date().toISOString(),
         enrichmentReviewedBy: actorUid,
     }
+    const fieldsAccepted: string[] = []
     if (isFieldEmpty(data.key) && sug.suggested_key) {
         update.key = sug.suggested_key
+        fieldsAccepted.push("key")
     }
     if (isFieldEmpty(data.bpm) && sug.suggested_bpm !== null) {
         update.bpm = sug.suggested_bpm
+        fieldsAccepted.push("bpm")
     }
     if (isFieldEmpty(data.leadMusician) && sug.suggested_lead) {
         update.leadMusician = sug.suggested_lead
+        fieldsAccepted.push("leadMusician")
     }
     if (
         (!Array.isArray(data.tags) || data.tags.length === 0) &&
         sug.suggested_tags.length > 0
     ) {
         update.tags = sug.suggested_tags
+        fieldsAccepted.push("tags")
     }
     // suggested_title overrides only the auto-derived display name — and
     // only when the human hasn't already curated it (no `humanRenamedAt`
@@ -393,9 +402,22 @@ export async function acceptEnrichment(
     ) {
         update.name = sug.suggested_title
         update.nameLower = sug.suggested_title.toLowerCase()
+        fieldsAccepted.push("title")
     }
 
     await ref.update(update)
+    await safeEmit(db, {
+        rowId,
+        uid: actorUid,
+        action: "accept",
+        beforeState: extractBeforeState(data, sug),
+        afterState: {
+            enrichmentStatus: "enriched",
+            finalFields: pickBusinessFields(update),
+        },
+        fieldsChanged: [],
+        fieldsAccepted,
+    })
     return { ok: true, rowId, status: "enriched" }
 }
 
@@ -413,6 +435,8 @@ export async function rejectEnrichment(
             message: `library_index row "${rowId}" not found.`,
         }
     }
+    const data = snap.data() ?? {}
+    const sug = (data.aiSuggestion ?? null) as EnrichmentOutput | null
     await ref.update({
         enrichmentStatus: "human_rejected",
         enrichmentReviewedAt: new Date().toISOString(),
@@ -427,6 +451,15 @@ export async function rejectEnrichment(
         .catch(() => {
             /* idempotent */
         })
+    await safeEmit(db, {
+        rowId,
+        uid: actorUid,
+        action: "reject",
+        beforeState: extractBeforeState(data, sug),
+        afterState: { enrichmentStatus: "human_rejected" },
+        fieldsChanged: [],
+        fieldsAccepted: [],
+    })
     return { ok: true, rowId, status: "human_rejected" }
 }
 
@@ -446,6 +479,9 @@ export async function editEnrichment(
         }
     }
 
+    const data = snap.data() ?? {}
+    const sug = (data.aiSuggestion ?? null) as EnrichmentOutput | null
+    const fieldsChanged: string[] = []
     const update: Record<string, unknown> = {
         enrichmentStatus: "human_curated",
         enrichmentReviewedAt: new Date().toISOString(),
@@ -463,6 +499,7 @@ export async function editEnrichment(
         update.name = t
         update.nameLower = t.toLowerCase()
         update.humanRenamedAt = new Date().toISOString()
+        fieldsChanged.push("title")
     }
     if (edits.collection !== undefined) {
         if (!ALLOWED_COLLECTIONS.includes(edits.collection)) {
@@ -473,9 +510,11 @@ export async function editEnrichment(
             }
         }
         update.collection = edits.collection
+        fieldsChanged.push("collection")
     }
     if (edits.key !== undefined) {
         update.key = edits.key
+        fieldsChanged.push("key")
     }
     if (edits.bpm !== undefined) {
         if (edits.bpm === null) {
@@ -489,9 +528,11 @@ export async function editEnrichment(
                 message: "bpm must be a positive number or null.",
             }
         }
+        fieldsChanged.push("bpm")
     }
     if (edits.leadMusician !== undefined) {
         update.leadMusician = edits.leadMusician
+        fieldsChanged.push("leadMusician")
     }
     if (edits.tags !== undefined) {
         if (!Array.isArray(edits.tags) || edits.tags.some((t) => typeof t !== "string")) {
@@ -502,6 +543,7 @@ export async function editEnrichment(
             }
         }
         update.tags = edits.tags
+        fieldsChanged.push("tags")
     }
 
     await ref.update(update)
@@ -512,6 +554,18 @@ export async function editEnrichment(
         .catch(() => {
             /* idempotent */
         })
+    await safeEmit(db, {
+        rowId,
+        uid: actorUid,
+        action: "edit",
+        beforeState: extractBeforeState(data, sug),
+        afterState: {
+            enrichmentStatus: "human_curated",
+            finalFields: pickBusinessFields(update),
+        },
+        fieldsChanged,
+        fieldsAccepted: [],
+    })
     return { ok: true, rowId, status: "human_curated" }
 }
 
@@ -545,6 +599,11 @@ export async function retryFailed(
         delete next.lastError
         await queueRef.set(next)
         // Reset the library_index status so the next drain knows to act.
+        const rowSnap = await db
+            .collection("library_index")
+            .doc(rowId)
+            .get()
+            .catch(() => null)
         await db
             .collection("library_index")
             .doc(rowId)
@@ -559,6 +618,18 @@ export async function retryFailed(
                     `[review-queue] retryFailed library_index update failed for ${rowId}: ${err instanceof Error ? err.message : String(err)}`,
                 )
             })
+        const rowData = rowSnap?.data() ?? {}
+        const rowSug =
+            (rowData.aiSuggestion ?? null) as EnrichmentOutput | null
+        await safeEmit(db, {
+            rowId,
+            uid: actorUid,
+            action: "retry",
+            beforeState: extractBeforeState(rowData, rowSug),
+            afterState: { enrichmentStatus: "pending" },
+            fieldsChanged: [],
+            fieldsAccepted: [],
+        })
         return { ok: true, rowId, status: "pending" }
     }
 
@@ -572,7 +643,22 @@ export async function retryFailed(
             message: `chartImportQueue/${rowId} not found — nothing to retry.`,
         }
     }
+    const importData = importSnap.data() ?? {}
     await importRef.delete()
+    await safeEmit(db, {
+        rowId,
+        uid: actorUid,
+        action: "retry",
+        beforeState: {
+            enrichmentStatus: `import_${String(importData.status ?? "unknown")}`,
+            confidence: null,
+            aiSuggestion: null,
+            reviewTriggers: [],
+        },
+        afterState: { enrichmentStatus: "deleted_for_retry" },
+        fieldsChanged: [],
+        fieldsAccepted: [],
+    })
     return { ok: true, rowId, status: "deleted_for_retry" }
 }
 
@@ -593,6 +679,9 @@ export async function dismissFailed(
                 message: `library_index row "${rowId}" not found.`,
             }
         }
+        const rowData = rowSnap.data() ?? {}
+        const rowSug =
+            (rowData.aiSuggestion ?? null) as EnrichmentOutput | null
         await rowRef.update({
             enrichmentStatus: "human_rejected",
             enrichmentReviewedAt: now,
@@ -605,6 +694,15 @@ export async function dismissFailed(
             .catch(() => {
                 /* idempotent */
             })
+        await safeEmit(db, {
+            rowId,
+            uid: actorUid,
+            action: "dismiss",
+            beforeState: extractBeforeState(rowData, rowSug),
+            afterState: { enrichmentStatus: "human_rejected" },
+            fieldsChanged: [],
+            fieldsAccepted: [],
+        })
         return { ok: true, rowId, status: "human_rejected" }
     }
 
@@ -618,10 +716,25 @@ export async function dismissFailed(
             message: `chartImportQueue/${rowId} not found.`,
         }
     }
+    const importData = importSnap.data() ?? {}
     await importRef.update({
         dismissed: true,
         dismissedAt: now,
         dismissedBy: actorUid,
+    })
+    await safeEmit(db, {
+        rowId,
+        uid: actorUid,
+        action: "dismiss",
+        beforeState: {
+            enrichmentStatus: `import_${String(importData.status ?? "unknown")}`,
+            confidence: null,
+            aiSuggestion: null,
+            reviewTriggers: [],
+        },
+        afterState: { enrichmentStatus: "dismissed" },
+        fieldsChanged: [],
+        fieldsAccepted: [],
     })
     return { ok: true, rowId, status: "dismissed" }
 }
@@ -630,4 +743,72 @@ export async function dismissFailed(
 
 function isFieldEmpty(value: unknown): boolean {
     return value === undefined || value === null || value === ""
+}
+
+/**
+ * Defense-in-depth wrapper around {@link emitCorrectionSignal}. `emit` is
+ * already fail-open at the persistence layer (catches Firestore throws
+ * internally), but the c3 contract is stricter: the user's review action
+ * MUST succeed even if a regression makes `emit` itself throw before its
+ * own try/catch hits. So we wrap every call site here.
+ */
+async function safeEmit(
+    db: Firestore,
+    payload: CorrectionSignalInput,
+): Promise<void> {
+    try {
+        await emitCorrectionSignal(db, payload)
+    } catch (err) {
+        logger.warn(
+            `[review-queue] correction-signal emit defense-wrapper caught for ${payload.action} on ${payload.rowId}: ${err instanceof Error ? err.message : String(err)}`,
+        )
+    }
+}
+
+/**
+ * Snapshot the row state the human saw before acting, for correction-signal
+ * capture. `confidence` is pulled off `aiSuggestion.confidence` when present
+ * (mirrors what /manage/library-review renders); `reviewTriggers` is what
+ * a3 stamped on the row (`aiReviewTriggers`). Both bits drive c3's
+ * aggregator counters.
+ */
+function extractBeforeState(
+    rowData: Record<string, unknown>,
+    sug: EnrichmentOutput | null,
+): CorrectionSignalInput["beforeState"] {
+    return {
+        enrichmentStatus: String(rowData.enrichmentStatus ?? "unknown"),
+        confidence:
+            sug && typeof sug.confidence === "number" ? sug.confidence : null,
+        aiSuggestion: sug,
+        reviewTriggers: Array.isArray(rowData.aiReviewTriggers)
+            ? (rowData.aiReviewTriggers as string[])
+            : [],
+    }
+}
+
+const BUSINESS_FIELDS = [
+    "name",
+    "nameLower",
+    "collection",
+    "key",
+    "bpm",
+    "leadMusician",
+    "tags",
+] as const
+
+/**
+ * Pick just the human-meaningful fields from an action's update payload —
+ * strips internal stamps (`enrichmentStatus`, `enrichmentReviewedAt`,
+ * `enrichmentReviewedBy`, `humanRenamedAt`) so the correction-signal's
+ * `afterState.finalFields` shows only what changed semantically.
+ */
+function pickBusinessFields(
+    update: Record<string, unknown>,
+): Record<string, unknown> {
+    const out: Record<string, unknown> = {}
+    for (const f of BUSINESS_FIELDS) {
+        if (f in update) out[f] = update[f]
+    }
+    return out
 }

@@ -17,6 +17,10 @@
             "schedule": "*/30 * * * *"
         },
         {
+            "path": "/api/cron/aggregate-corrections",
+            "schedule": "0 */6 * * *"
+        },
+        {
             "path": "/api/cron/scheduling-reminder",
             "schedule": "0 10 * * *"
         },

@@ -10,6 +10,7 @@ import {
 } from "./library"
 import { reconcileLibrary } from "./reconcile-library"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
+import { getCorrectionStats } from "./correction-stats"
 import {
     listReviewQueue,
     getEnrichmentSuggestion,
@@ -1422,6 +1423,30 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await dismissFailureTool(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "get_correction_stats",
+        {
+            description:
+                "Admin-only — read the latest aggregated `/manage/library-review` correction signals (cycle-3 c3). Returns deterministic 6-axis counters captured at every accept/reject/edit/retry/dismiss action: `totalSignals`, `actionDistribution` (count per action), `confidenceDistributionByAction` (count + mean + p50 + p90 per action — answers 'do high-confidence rows get accepted more?'), `collectionMismatchAcceptanceRate` (when AI flagged collection_disagrees_with_folder, what fraction did the human accept?), `editFieldFrequency` (which fields get edited most — title vs key vs bpm vs tags vs leadMusician), `rejectionTriggerAttribution` (which review trigger fired on rejected rows — low_confidence vs collection_disagrees_with_folder vs is_chart_false vs duplicate_candidates vs review_required). Default (no args) returns the latest cron-aggregated snapshot from `aiCorrectionStats/latest` (refreshed every 6h); if the cron hasn't populated it yet, computes inline + sets `snapshotMissing: true` so callers always see a concrete shape. Pass ISO-8601 `since` / `until` for a windowed on-demand aggregation. Read-only, no writes. Observation infrastructure only — a future c4-class auto-tuner reads this same shape to deterministically propose threshold adjustments (out of c3 scope). Returns `{ok: true, onDemand: boolean, snapshotMissing?, totalSignals, actionDistribution, confidenceDistributionByAction, collectionMismatchAcceptanceRate, editFieldFrequency, rejectionTriggerAttribution, computedAt, since, until, truncated}`.",
+            inputSchema: {
+                since: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "ISO-8601 UTC lower bound (inclusive), e.g. '2026-05-01T00:00:00Z'. Omit to read the latest cron snapshot.",
+                    ),
+                until: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "ISO-8601 UTC upper bound (exclusive), e.g. '2026-06-01T00:00:00Z'. Omit to scan up to 'now'.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await getCorrectionStats(uidFrom(extra), args)),
     )
 }
 
