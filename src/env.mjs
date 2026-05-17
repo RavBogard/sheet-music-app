@@ -40,6 +40,11 @@ export const env = createEnv({
         // Daniel configures it. Distinct from GOOGLE_DRIVE_ROOT_FOLDER_ID
         // (which the legacy /api/cron/sync hourly mirror uses).
         DAVID_DRIVE_DROP_FOLDER_ID: z.string().optional(),
+        // Cycle-3 NEW-3 (a3) — Anthropic Claude Sonnet for AI library enrichment.
+        // Optional: when unset the enrichment subscriber is dormant and every
+        // library_index row stays at enrichmentStatus:'pending'. No prod
+        // requirement until Daniel sets the key in Vercel env.
+        ANTHROPIC_API_KEY: z.string().optional(),
     },
     client: {
         NEXT_PUBLIC_FIREBASE_API_KEY: z.string().min(1, "Firebase API key is required"),
@@ -80,6 +85,7 @@ export const env = createEnv({
         BACKUP_BUCKET: process.env.BACKUP_BUCKET,
         GOOGLE_DRIVE_ROOT_FOLDER_ID: process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID,
         DAVID_DRIVE_DROP_FOLDER_ID: process.env.DAVID_DRIVE_DROP_FOLDER_ID,
+        ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
     },
     skipValidation: !!process.env.SKIP_ENV_VALIDATION,
     emptyStringAsUndefined: true,

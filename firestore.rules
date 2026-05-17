@@ -434,6 +434,35 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // AI ENRICHMENT CONFIG (Cycle-3 NEW-3 — A3)
+    // Daniel flips `autoApplyEnabled` and (optionally) tunes `threshold`
+    // via Firebase Console; A4's review UI also reads this doc to render
+    // the calibration banner. Reads are admin-only (band leaders + above
+    // SHOULD NOT be able to discover the AI ramp state); writes are
+    // admin-only via Console or future admin MCP tool (out of A3 scope).
+    match /aiConfig/{configId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // AI ENRICHMENT CACHE (Cycle-3 NEW-3 — A3)
+    // Server-only — keyed by SHA-256 of canonical chart bytes so re-enrichment
+    // of identical bytes (re-uploads, reconciliation replays) returns the
+    // same Sonnet output without burning tokens. Admin SDK writes via the
+    // ai-enrichment subscriber; no client reads.
+    match /aiEnrichmentCache/{contentHash} {
+      allow read, write: if false;
+    }
+
+    // AI ENRICHMENT RETRY QUEUE (Cycle-3 NEW-3 — A3)
+    // Server-only — drained by /api/cron/ai-enrich-retry every 30 min.
+    // Exponential backoff (5min, 30min, 2h, 6h) before a row exhausts
+    // attempts and lands on enrichmentStatus:'failed'. A4 reads via
+    // Admin SDK to render the review queue.
+    match /aiEnrichmentRetryQueue/{rowId} {
+      allow read, write: if false;
+    }
+
     // Deny-all fallback — any collection not explicitly matched above is locked.
     // Prevents new collections from being accidentally accessible.
     match /{document=**} {

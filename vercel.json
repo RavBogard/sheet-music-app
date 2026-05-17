@@ -13,6 +13,10 @@
             "schedule": "0 2 * * *"
         },
         {
+            "path": "/api/cron/ai-enrich-retry",
+            "schedule": "*/30 * * * *"
+        },
+        {
             "path": "/api/cron/scheduling-reminder",
             "schedule": "0 10 * * *"
         },

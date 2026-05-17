@@ -15,6 +15,10 @@ import { levenshteinDistance } from "@/lib/string-utils"
 import { logger } from "@/lib/logger"
 import heicConvert from "heic-convert"
 import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
+import {
+    emitLibraryRowCreated,
+    type LibraryRowCreatedEvent,
+} from "@/lib/library/library-events"
 
 /**
  * Shared library-upload pipeline. The single server-side codepath that:
@@ -494,6 +498,14 @@ export async function processChartUpload(
         stem,
         titleSpecificity: titleSpecificity(title, siblingsInCatalog),
         bondCorrectionHistory: { correctedTo: 0, correctedAwayFrom: 0 },
+        // Cycle-3 NEW-3 (A3) — AI enrichment lifecycle field. Defaults to
+        // 'pending' on every new row; the post-import AI subscriber
+        // transitions it to 'enriched' / 'review_pending' / 'failed' /
+        // 'human_curated' / 'human_rejected'. Default-deny posture: if
+        // enrichment never runs (e.g. ANTHROPIC_API_KEY unset, retry queue
+        // exhausted), the row stays 'pending' and never silently auto-
+        // applies anything. See src/lib/library/ai-enrichment.ts.
+        enrichmentStatus: "pending",
         originalName: fileName,
         mimeType: contentType,
         fileSize: buffer.byteLength,
@@ -592,6 +604,47 @@ export async function processChartUpload(
         stage("signal-write:failed", { message })
         logger.warn(
             `[Upload ${traceId}] library_signals write failed (non-fatal): ${message}`,
+        )
+    }
+
+    // Cycle-3 NEW-3 (A3) — fire library.row.created AFTER atomicity. The
+    // event bus is in-process and fire-and-forget; subscriber failures
+    // never propagate back into this function (atomic-guard contract).
+    // Subscribers MUST NOT mutate Storage/Firestore in a way that breaks
+    // the import — fail-open is the architectural rule (ADDENDUM-1 §3
+    // rule #2).
+    try {
+        const contentHash = crypto
+            .createHash("sha256")
+            .update(buffer)
+            .digest("hex")
+        const event: LibraryRowCreatedEvent = {
+            rowId: fileId,
+            fileId,
+            source: input.source ?? "upload",
+            ...(input.driveMetadata ? { driveMetadata: input.driveMetadata } : {}),
+            nameLower,
+            title,
+            mimeType: contentType,
+            sizeBytes: buffer.byteLength,
+            collection,
+            ...(input.driveMetadata?.parents && input.driveMetadata.parents.length > 0
+                ? { subfolder: input.driveMetadata.parents[0] }
+                : {}),
+            storagePath: realStoragePath,
+            contentHash,
+            uploaderUid: input.uploaderUid,
+        }
+        emitLibraryRowCreated(event)
+        stage("library-row-created:emitted", { hash: contentHash.slice(0, 8) })
+    } catch (emitErr) {
+        // Defense in depth — emit itself is wrapped, but if constructing
+        // the payload throws (e.g. crypto unavailable in some exotic
+        // runtime), swallow it. The row write already succeeded.
+        const message =
+            emitErr instanceof Error ? emitErr.message : "Unknown error"
+        logger.warn(
+            `[Upload ${traceId}] library.row.created emit failed (non-fatal): ${message}`,
         )
     }
 
