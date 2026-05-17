@@ -152,100 +152,92 @@ export async function clearFirestoreIndexedDB(): Promise<void> {
     }
 }
 
-// Auto-recovery: detect Firestore assertion failures at runtime and clear corrupted IDB
+// Detect Firestore IDB assertion failures at runtime and prompt the user
+// to recover via a sticky toast. NEVER auto-reload — the previous
+// auto-reload + load-event-clears-flag combination produced infinite
+// reload loops on persistent corruption ("site refreshes within a few
+// seconds" bug, root-cause-fixed 2026-05-17).
+//
+// The sessionStorage flag is now genuinely one-shot per tab: it survives
+// reloads (until tab close) and is no longer cleared by a `load` handler.
+// One toast per tab. If the user dismisses without acting, that's their
+// call — we don't escalate.
 if (typeof window !== "undefined") {
     const RECOVERY_FLAG = "firestore-idb-recovery-attempted"
 
-    // Clear the recovery flag on clean load so future assertion failures can still trigger recovery.
-    window.addEventListener("load", () => {
-        sessionStorage.removeItem(RECOVERY_FLAG)
-    })
-
-    window.addEventListener("unhandledrejection", async (event) => {
+    window.addEventListener("unhandledrejection", (event) => {
         const msg = String(event.reason?.message || event.reason || "")
-        if (
-            (msg.includes("INTERNAL ASSERTION FAILED") || msg.includes("Unexpected state")) &&
-            !sessionStorage.getItem(RECOVERY_FLAG)
-        ) {
-            logger.warn("[FirestoreRecovery] Detected Firestore assertion failure, clearing IndexedDB and reloading")
-            sessionStorage.setItem(RECOVERY_FLAG, "1")
-            await clearFirestoreIndexedDB()
-            window.location.reload()
-        }
+        const isAssertionFailure =
+            msg.includes("INTERNAL ASSERTION FAILED") || msg.includes("Unexpected state")
+        if (!isAssertionFailure) return
+        if (sessionStorage.getItem(RECOVERY_FLAG)) return  // already prompted this tab
+
+        sessionStorage.setItem(RECOVERY_FLAG, "1")
+        logger.warn("[FirestoreRecovery] Firestore IDB assertion failure — prompting user")
+        // Dynamic import keeps sonner out of the module-top dep graph (firebase.ts
+        // is imported very early; sonner is a UI lib).
+        void import("sonner").then(({ toast }) => {
+            toast.error("Sync error", {
+                description: "Local cache is corrupted. Reload to clear it and reconnect.",
+                duration: Infinity,
+                action: {
+                    label: "Reload",
+                    onClick: () => {
+                        void clearFirestoreIndexedDB().finally(() => window.location.reload())
+                    },
+                },
+            })
+        })
     })
 
-    // When a new deployment lands, the service worker updates and fires controllerchange.
-    // That triggers an IndexedDB onversionchange event which terminates all Firestore
-    // listeners with "Firestore shutting down". Reloading after the new SW takes control
-    // prevents the cascade — the fresh page opens Firestore against the already-bumped
-    // IDB version with no version conflict.
-    //
-    // T2.4 (2026-05-12): the previous handler reloaded after a fixed 3-second
-    // setTimeout. That was uncoordinated — fast on idle, but if the user was
-    // mid-edit with rows still in the outbox, the reload could happen before
-    // the engine drained, requiring the cross-restart 'sending' reset path
-    // on the next session to recover those writes. Coordinating with the
-    // engine via whenEngineIdle() is friendlier: wait for outbox==0 idle
-    // OR a 10-second hard timeout (so a stuck engine still gets a reload).
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            logger.info('[FirestoreRecovery] Service worker updated — waiting for sync drain before reload')
-            void (async () => {
-                try {
-                    // Dynamic import avoids a top-level cycle with @/lib/sync/init,
-                    // which itself imports auth/db from this file.
-                    const { whenEngineIdle } = await import('./sync/init')
-                    const outcome = await whenEngineIdle(10_000)
-                    if (outcome === 'timeout') {
-                        logger.warn('[FirestoreRecovery] Sync drain timed out at 10s — reloading anyway')
-                    } else {
-                        logger.info('[FirestoreRecovery] Sync drained — reloading')
-                    }
-                } catch (err) {
-                    logger.warn('[FirestoreRecovery] whenEngineIdle failed — reloading anyway', err)
-                }
-                window.location.reload()
-            })()
-        })
-    }
+    // The `controllerchange` auto-reload handler that used to live here was
+    // removed (2026-05-17). With the serwist PWA retired (see
+    // next.config.ts + public/sw.js tombstone), `controllerchange` only
+    // ever fires now for the Firebase Messaging SW updating itself —
+    // harmless, no reload needed. The old handler waited for engine drain
+    // and then reloaded, which raced the other recovery paths and
+    // contributed to the refresh-loop bug.
 }
 
 /**
  * Call from any Firestore onSnapshot error handler.
  *
- * If the error is "Firestore shutting down" (caused by a multi-tab IDB
- * version change when a new deployment lands, or by SwCleanup clearing
- * IDB while listeners are alive on a first visit), reloads the page once
- * to recover.
+ * If the error is "Firestore shutting down" (caused historically by a
+ * multi-tab IDB version change when a new deployment landed, or by
+ * SwCleanup clearing IDB while listeners were alive), prompt the user
+ * via a sticky toast to reload — DO NOT auto-reload.
  *
- * Returns `true` if the error WAS a shutdown error (caller should skip
- * its own noisy `logger.error` to avoid console flood — recovery is
- * already logging + reloading) or `false` if it was something else
- * (caller should log + handle normally).
+ * Root-cause fix (2026-05-17): the previous version called
+ * `setTimeout(reload, 1500)` and guarded with a module-level `let`
+ * flag. That flag reset on every page reload (a fresh JS context gets
+ * a fresh `let`), so if the underlying shutdown cause persisted, the
+ * 1.5-second delayed reload re-fired immediately after each reload,
+ * producing an infinite refresh loop. Symptom: "site loads then
+ * refreshes within a few seconds." Fix: never auto-reload. Promote to
+ * a `sessionStorage` flag (genuinely sticky per tab) and surface a
+ * sonner toast with a user-driven "Reload" action.
  *
- * One-shot per session — NOT debounced. T2.3 fix (2026-05-12): the
- * previous comment claimed "Debounced: subsequent calls within 5s are
- * no-ops" but the flag was never reset, so behavior was effectively
- * permanent. Locked-in design decision: a recurring shutdown error that
- * doesn't resolve after the first reload means something is deeply
- * broken; bombarding the user with reloads doesn't help. If the first
- * reload fails to resolve, surface to Sentry instead of looping.
- *
- * Console-flood fix (2026-05-15, cowork §7.2): the previous version
- * returned void; callers always ran `logger.error("listener error:", err)`
- * after, so a 5-listener cascade logged 5 ERROR lines in <1s before the
- * reload landed. Returning a boolean lets each call site short-circuit
- * its own log when recovery is in flight.
+ * Returns `true` if the error WAS a shutdown error (caller should
+ * skip its own noisy `logger.error` to avoid console flood — recovery
+ * is already logging) or `false` if it was something else (caller
+ * should log + handle normally).
  */
-let _shutdownRecoveryAttempted = false
+const SHUTDOWN_RECOVERY_FLAG = 'firestore-shutdown-prompted'
 export function recoverFromFirestoreShutdown(err: unknown): boolean {
     if (typeof window === 'undefined') return false
     const msg = String((err as Error)?.message || err || '')
     if (!msg.toLowerCase().includes('shutting down')) return false
-    if (_shutdownRecoveryAttempted) return true  // already recovering — caller should stay quiet
-    _shutdownRecoveryAttempted = true
-    logger.warn('[FirestoreRecovery] Firestore shut down — reloading in 1.5s')
-    setTimeout(() => window.location.reload(), 1500)
+    if (sessionStorage.getItem(SHUTDOWN_RECOVERY_FLAG)) return true  // already prompted
+
+    sessionStorage.setItem(SHUTDOWN_RECOVERY_FLAG, '1')
+    logger.warn('[FirestoreRecovery] Firestore shut down — prompting user')
+    void import('sonner').then(({ toast }) => {
+        toast.error('Sync paused', {
+            description: 'Firestore disconnected. Reload to resume.',
+            duration: Infinity,
+            action: { label: 'Reload', onClick: () => window.location.reload() },
+        })
+    })
     return true
 }
 

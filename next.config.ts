@@ -1,16 +1,17 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
-import withSerwistInit from "@serwist/next";
 
 const withBundleAnalyzer = require("@next/bundle-analyzer")({
   enabled: process.env.ANALYZE === "true",
 });
 
-const withSerwist = withSerwistInit({
-  swSrc: "src/app/sw.ts",
-  swDest: "public/sw.js",
-  disable: process.env.NODE_ENV === "development",
-});
+// Serwist / PWA service worker removed 2026-05-17 (root-cause fix for
+// "site loads then refreshes within a few seconds"). The SW interacted
+// badly with Firestore's IDB lifecycle, and the recovery handlers in
+// firebase.ts that tried to clean up after it formed self-reinforcing
+// reload loops. A tombstone `public/sw.js` is shipped for one release so
+// browsers with the legacy SW registered will auto-update to a self-
+// unregistering worker; after ~30 days the tombstone can be deleted too.
 
 const nextConfig: NextConfig = {
   turbopack: {},
@@ -69,7 +70,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-const combinedConfig = withBundleAnalyzer(withSerwist(nextConfig));
+const combinedConfig = withBundleAnalyzer(nextConfig);
 
 export default process.env.NEXT_PUBLIC_SENTRY_DSN
   ? withSentryConfig(combinedConfig, {

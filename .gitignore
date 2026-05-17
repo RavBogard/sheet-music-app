@@ -55,9 +55,8 @@ bridge/bridge-config.json
 public/pdf.worker.min.mjs
 public/pdf.worker.min.*.mjs
 
-# next-pwa generated service worker (regenerated at build time)
-public/sw.js
-public/sw.js.map
+# public/sw.js is now a hand-written tombstone (2026-05-17) — committed,
+# not gitignored. See next.config.ts for context.
 public/workbox-*.js
 public/workbox-*.js.map
 certs/
