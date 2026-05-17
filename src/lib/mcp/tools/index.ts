@@ -224,7 +224,7 @@ export function registerReadTools(server: McpServer): void {
         "search_library",
         {
             description:
-                "Search the song library by title text, with optional musical key and BPM-range filters. Title matching normalizes underscores, hyphens, spaces, and diacritics, so query \"Shalom Rav\" matches catalog entries like \"Shalom_rav\" and \"shalom-rav (camp)\". BPMs are integers. Returns metadata only — never chart files. Pass an empty query (or omit it) to browse the first N library entries — useful for catalog discovery. Rows with `status: 'orphaned'` are hidden by default; pass includeOrphaned: true to see them (e.g. while triaging library hygiene). Every result row carries `status` ('active' by default if the catalog row omits one).",
+                "Search the song library by title text, with optional musical key and BPM-range filters. Title matching normalizes underscores, hyphens, spaces, and diacritics, so query \"Shalom Rav\" matches catalog entries like \"Shalom_rav\" and \"shalom-rav (camp)\". BPMs are integers. Returns metadata only — never chart files. Pass an empty query (or omit it) to browse the first N library entries — useful for catalog discovery. Rows with `status: 'orphaned'` are hidden by default; pass includeOrphaned: true to see them (e.g. while triaging library hygiene). Non-chart artifacts (audio, spreadsheets, folders, dotfiles like .DS_Store) are hidden by default — same posture as list_library — pass includeNonCharts: true to see them (e.g. library-hygiene audits). Every result row carries `status` ('active' by default if the catalog row omits one).",
             inputSchema: {
                 query: z
                     .string()
@@ -247,6 +247,12 @@ export function registerReadTools(server: McpServer): void {
                     .optional()
                     .describe(
                         "Include rows whose underlying chart file was previously confirmed missing (status: 'orphaned'). Default false.",
+                    ),
+                includeNonCharts: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "If true, include non-chart artifacts (audio files, spreadsheets, Drive folders, dotfiles like .DS_Store) that the in-app library and list_library hide. Default false.",
                     ),
             },
         },

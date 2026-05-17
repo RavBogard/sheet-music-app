@@ -77,6 +77,52 @@ describe("searchLibrary", () => {
         expect(r).toHaveLength(2)
     })
 
+    // Cycle-1 F-007 + F-024: cowork ran "Oseh Shalom" and got `Oseh Shalom (Dub Remix).mp3`
+    // back; an empty query led with `.DS_Store`; "Kab" surfaced `Kabbalat Shabbat.xlsx`.
+    // Hide all of those by default — match list_library's stance — but stay
+    // opt-in surfaceable via `includeNonCharts: true` for library-hygiene audits.
+    it("hides non-chart artifacts by default (audio/spreadsheet/dotfile); includeNonCharts surfaces them (F-007/F-024)", async () => {
+        mockGetAllSongs.mockResolvedValue([
+            { id: "ds", title: ".DS_Store", fileName: ".DS_Store", status: "active" },
+            {
+                id: "mp3",
+                title: "Oseh Shalom (Dub Remix).mp3",
+                fileName: "Oseh Shalom (Dub Remix).mp3",
+                status: "active",
+            },
+            {
+                id: "xlsx",
+                title: "Kabbalat Shabbat.xlsx",
+                fileName: "Kabbalat Shabbat.xlsx",
+                status: "active",
+            },
+            {
+                id: "ok",
+                title: "Oseh Shalom",
+                fileName: "Oseh Shalom.pdf",
+                status: "active",
+            },
+        ])
+
+        const dflt = await searchLibrary("u", { query: "" })
+        expect(dflt.map((s) => s.id).sort()).toEqual(["ok"])
+
+        const surfaced = await searchLibrary("u", {
+            query: "",
+            includeNonCharts: true,
+        })
+        expect(surfaced.map((s) => s.id).sort()).toEqual([
+            "ds",
+            "mp3",
+            "ok",
+            "xlsx",
+        ])
+
+        // Targeted query still finds the real chart, never the .mp3.
+        const oseh = await searchLibrary("u", { query: "Oseh Shalom" })
+        expect(oseh.map((s) => s.id)).toEqual(["ok"])
+    })
+
     it("normalizes underscore/case/hyphen/diacritic variants (L-003)", async () => {
         // 2026-05-16 punch-list L-003: query "Shalom Rav" used to return only
         // exact-substring matches; underscore/hyphen variants in the catalog

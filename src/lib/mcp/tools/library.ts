@@ -4,6 +4,61 @@ import { logger } from "@/lib/logger"
 import { bareStem } from "@/lib/mcp/title-specificity"
 
 /**
+ * Shared "is this row a chart-bytes artifact?" predicate. Used by both
+ * list_library (to hide non-charts from the default browse) and
+ * search_library (cycle-1 F-007/F-024 — agent searches were returning
+ * `.mp3`, `.xlsx`, and `.DS_Store` rows alongside real charts).
+ *
+ * Accepts a loose shape so callers can pass either a LibraryIndexEntry
+ * (mimeType + name both present) or a partial-join SongRecord (name only,
+ * via fileName) and the predicate degrades gracefully.
+ */
+function isNonChartArtifactShape(rec: {
+    mimeType?: string | null
+    name?: string | null
+}): boolean {
+    const mime = (rec.mimeType ?? "").toLowerCase()
+    if (mime) {
+        if (mime.startsWith("audio/")) return true
+        if (mime.startsWith("application/vnd.google-apps.")) return true
+        if (
+            mime ===
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+            mime ===
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ) {
+            return true
+        }
+        if (mime === "application/octet-stream") return true
+        if (mime.includes("folder")) return true
+    }
+    const name = rec.name ?? ""
+    if (name.startsWith(".")) return true
+    // Filename-extension backstop for the search_library path where
+    // mimeType isn't always joined (and for songs/* rows whose Drive sync
+    // dropped the mime). Covers the cowork-observed cases (.mp3, .xlsx)
+    // plus close cousins.
+    const ext = name.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1]
+    if (ext) {
+        if (
+            ext === "mp3" ||
+            ext === "m4a" ||
+            ext === "wav" ||
+            ext === "aac" ||
+            ext === "flac" ||
+            ext === "ogg" ||
+            ext === "xlsx" ||
+            ext === "xls" ||
+            ext === "docx" ||
+            ext === "doc"
+        ) {
+            return true
+        }
+    }
+    return false
+}
+
+/**
  * MCP read tools for the song library. Plain async functions wrapping the
  * Admin-SDK songs reader. `uid` is threaded for a consistent contract with the
  * write tools to come; library reads are not user-scoped today.
@@ -17,6 +72,13 @@ export interface SearchLibraryArgs {
     limit?: number
     /** If true, include rows with `status: 'orphaned'`. Default false. L-001. */
     includeOrphaned?: boolean
+    /**
+     * If true, include non-chart artifacts (audio, spreadsheets, folders,
+     * dotfiles) that list_library also hides by default. Cycle-1 F-007 /
+     * F-024 — cowork agents were seeing `.mp3`, `.xlsx`, and `.DS_Store`
+     * rows in search results. Default false.
+     */
+    includeNonCharts?: boolean
     /**
      * Context key for hint lookup — typically a setlist's templateType
      * (e.g. "friday-evening", "shabbat-morning"). When supplied, the
@@ -45,6 +107,14 @@ interface LibraryW02Fields {
         correctedAwayFrom: number
         lastCorrectionAt?: string
     }
+    /** Cycle-1 F-007/F-024: surfaced so search_library can filter out
+     *  non-chart artifacts (audio, spreadsheets, folders) via the same
+     *  predicate list_library already uses. */
+    mimeType?: string
+    /** Cycle-1 F-007: surfaced so the dotfile / extension backstop in
+     *  isNonChartArtifactShape can match against the library_index name
+     *  when the songs/{id} title was cleaned (extension stripped). */
+    name?: string
 }
 
 /**
@@ -117,6 +187,9 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
                                   : undefined,
                       }
                     : undefined,
+                mimeType:
+                    typeof data.mimeType === "string" ? data.mimeType : undefined,
+                name: typeof data.name === "string" ? data.name : undefined,
             })
         }
         return map
@@ -213,6 +286,11 @@ export async function searchLibrary(
     const matches: SongRecord[] = all
         .filter((s) => {
             if (s.status === "archived") return false
+            // Cycle-1 F-019: `duplicate` is the status applied by the
+            // dedupe_library_index pass to losing rows of a dupe group.
+            // Always hidden from search — operators audit dupes via the
+            // dedupe report or list_library, not search.
+            if (s.status === "duplicate") return false
             if (!args.includeOrphaned && s.status === "orphaned") return false
             if (q && !normalizeForSearch(s.title).includes(q)) return false
             if (key && s.key?.toLowerCase() !== key) return false
@@ -227,6 +305,25 @@ export async function searchLibrary(
         .map((s) => {
             const w02 = w02Map.get(s.id)
             return w02 ? { ...s, ...w02 } : s
+        })
+        // Cycle-1 F-007/F-024: hide non-chart artifacts by default.
+        // mimeType comes from the W-02 join when library_index has it;
+        // the filename-extension / dotfile backstop in isNonChartArtifactShape
+        // catches songs/* rows that lack a joined library_index entry.
+        .filter((s) => {
+            if (args.includeNonCharts) return true
+            const merged = s as SongRecord & {
+                mimeType?: string
+                name?: string
+            }
+            const shape = {
+                mimeType: merged.mimeType,
+                // Prefer the library_index `name` (raw filename) when joined;
+                // fall back to `fileName` (toSongRecord copies data.title here
+                // verbatim, extension included); finally fall back to `title`.
+                name: merged.name ?? s.fileName ?? s.title,
+            }
+            return !isNonChartArtifactShape(shape)
         })
 
     // Rank with bondCorrectionHistory bias + contextHint boost. Hint
@@ -250,8 +347,27 @@ export async function searchLibrary(
             rankBias(r) + (preferredFileId === r.id ? CONTEXT_HINT_BOOST : 0),
     }))
     ranked.sort(compareRanked)
-    // Strip internal _rank before returning.
-    return ranked.slice(0, limit).map(({ _rank: _r, ...rest }) => rest)
+    // Strip internal _rank AND the join-only classification fields
+    // (`mimeType` / `name` come from the W-02 join purely so the
+    // F-007/F-024 filter step above can run isNonChartArtifactShape;
+    // they are NOT part of the SongRecord wire contract).
+    return ranked.slice(0, limit).map((r) => {
+        const merged = r as SongRecord & {
+            _rank: number
+            mimeType?: string
+            name?: string
+        }
+        const {
+            _rank: _r,
+            mimeType: _m,
+            name: _n,
+            ...rest
+        } = merged
+        void _r
+        void _m
+        void _n
+        return rest as SongRecord
+    })
 }
 
 export interface GetSongArgs {
@@ -307,21 +423,7 @@ export interface ListLibraryArgs {
  * queries — v3 NOTE-4 + v4 V4-NOTE-1.
  */
 function isNonChartArtifact(e: LibraryIndexEntry): boolean {
-    const mime = (e.mimeType ?? "").toLowerCase()
-    if (mime.startsWith("audio/")) return true
-    if (mime.startsWith("application/vnd.google-apps.")) return true
-    if (
-        mime ===
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-        mime ===
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    ) {
-        return true
-    }
-    if (mime === "application/octet-stream") return true
-    if (mime.includes("folder")) return true
-    if (e.name.startsWith(".")) return true
-    return false
+    return isNonChartArtifactShape({ mimeType: e.mimeType, name: e.name })
 }
 
 export interface LibraryIndexEntry {
