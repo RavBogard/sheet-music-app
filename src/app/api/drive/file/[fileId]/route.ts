@@ -38,37 +38,46 @@ export const GET = createApiHandler(async (ctx) => {
     const limited = await checkRateLimit(ctx.req, 'api')
     if (limited) return limited
 
-    // Auth: Accept Bearer token (API calls) OR requests that carry
-    // browser-set Sec-Fetch-* metadata (chart embeds, prefetches, audio
-    // elements — can't attach Bearer headers). Defense-in-depth only —
-    // see hasBrowserFetchMetadata JSDoc. Direct curl/script access
-    // without either is blocked.
-    if (!ctx.auth && !hasBrowserFetchMetadata(ctx.req)) {
-        const fid = ctx.params?.fileId
-        const fwd = ctx.req.headers.get('x-forwarded-for') || ''
-        const ip = fwd.split(',')[0]?.trim() || ctx.req.headers.get('x-real-ip') || 'unknown'
-        logger.warn(`[FileProxy] Untrusted request blocked for ${fid}`, {
-            secFetchSite: ctx.req.headers.get('sec-fetch-site'),
-            secFetchDest: ctx.req.headers.get('sec-fetch-dest'),
-            referer: ctx.req.headers.get('referer'),
-            userAgent: ctx.req.headers.get('user-agent'),
-            ip,
-        })
-        return NextResponse.json(
-            { error: "Authentication required" },
-            { status: 401, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(ctx.req) } }
-        )
-    }
-
     const fileId = ctx.params?.fileId
+    const isTrusted = !!ctx.auth || hasBrowserFetchMetadata(ctx.req)
 
     try {
+        // Cycle-1 F-021: existence check fires BEFORE the auth gate so a
+        // bogus fileId returns 404 instead of the misleading "Authentication
+        // required" 401 — agents kept treating the 401 as a credentials
+        // problem when it was really a wrong-id problem. Chart-access
+        // policy ([[feedback_chart_access_policy]]): chart bytes are
+        // intentionally public for real fileIds, so revealing existence
+        // to unauthed probes is acceptable. The auth gate still fires
+        // below for existing files when the request carries neither a
+        // Bearer token nor browser fetch metadata.
         const result = await fetchFileById(fileId)
 
         if (!result) {
             return NextResponse.json(
                 { error: 'File not found', fileId, debug: { receivedId: fileId, stringified: String(ctx.params?.fileId) } },
                 { status: 404, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(ctx.req), 'Cache-Control': 'no-store' } }
+            )
+        }
+
+        // Auth: Accept Bearer token (API calls) OR requests that carry
+        // browser-set Sec-Fetch-* metadata (chart embeds, prefetches, audio
+        // elements — can't attach Bearer headers). Defense-in-depth only —
+        // see hasBrowserFetchMetadata JSDoc. Direct curl/script access
+        // without either is blocked.
+        if (!isTrusted) {
+            const fwd = ctx.req.headers.get('x-forwarded-for') || ''
+            const ip = fwd.split(',')[0]?.trim() || ctx.req.headers.get('x-real-ip') || 'unknown'
+            logger.warn(`[FileProxy] Untrusted request blocked for ${fileId}`, {
+                secFetchSite: ctx.req.headers.get('sec-fetch-site'),
+                secFetchDest: ctx.req.headers.get('sec-fetch-dest'),
+                referer: ctx.req.headers.get('referer'),
+                userAgent: ctx.req.headers.get('user-agent'),
+                ip,
+            })
+            return NextResponse.json(
+                { error: "Authentication required" },
+                { status: 401, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(ctx.req) } }
             )
         }
 
