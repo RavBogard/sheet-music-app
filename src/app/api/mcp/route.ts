@@ -9,6 +9,7 @@ import {
     registerMonitorTools,
     registerChartUploadTools,
     registerTestTokenTools,
+    registerRosterTools,
 } from "@/lib/mcp/tools"
 import { wrapWithValidationRemap } from "@/lib/mcp/zod-envelope-remap"
 import { logger } from "@/lib/logger"
@@ -66,6 +67,7 @@ const baseHandler = createMcpHandler(
         registerMonitorTools(server)
         registerChartUploadTools(server)
         registerTestTokenTools(server)
+        registerRosterTools(server)
     },
     {
         serverInfo: { name: "centralreform-live", version: "1.0.0" },
