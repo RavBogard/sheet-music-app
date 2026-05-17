@@ -370,6 +370,40 @@ describe("MCP test tokens (emulator)", () => {
         }
     })
 
+    it("cleanup invoked FROM a test band_leader bearer cleans itself + all siblings (msg-004 case 6 regression)", async () => {
+        // Repro for the 2026-05-17 prod stress test bug: when cleanup is
+        // invoked by a test bearer who is themselves in the sweep, the
+        // mid-sweep deletion of the caller's `users/{uid}` doc used to
+        // make every subsequent revoke refuse with `forbidden`. Fix is
+        // a one-shot trusted-leader gate at cleanup entry + an unchecked
+        // internal revoke + revoking the caller LAST.
+        const driver = await provisionTestAccount(ADMIN_UID, {
+            role: "band_leader",
+            label: "driver",
+        })
+        if ("error" in driver) throw new Error("driver mint failed")
+
+        // Mint 3 sibling test users via the driver bearer (mirrors what
+        // the prod flow does — the driver provisions test users, then
+        // calls cleanup itself).
+        for (const role of ["musician", "member", "band_leader"] as const) {
+            const m = await provisionTestAccount(driver.uid, { role })
+            if ("error" in m) throw new Error("sibling mint failed")
+        }
+
+        // Invoke cleanup AS the driver. Before the fix this returned
+        // {removed: 1, failures: ['<each>: forbidden' x3]}. After the
+        // fix it must remove all 4 with zero failures.
+        const result = await cleanupAllTestDataCore(driver.uid)
+        if ("error" in result) throw new Error("cleanup failed entirely")
+        expect(result.failures).toEqual([])
+        expect(result.removed).toBe(4) // 3 siblings + the driver itself
+
+        const remaining = await db().collection("mcpTestUsers").get()
+        expect(remaining.size).toBe(0)
+        await expect(getAuth().getUser(driver.uid)).rejects.toThrow()
+    })
+
     it("cleanup also sweeps orphan Auth test-* users without an index doc", async () => {
         // Mint normally
         const minted = await provisionTestAccount(ADMIN_UID, {

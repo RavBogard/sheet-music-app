@@ -433,6 +433,28 @@ export async function revokeTestAccountCore(
             { callerRole: callerRole ?? null },
         )
     }
+    return revokeTestAccountUnchecked(callerUid, uid)
+}
+
+/**
+ * Internal revoke that skips the trusted-leader gate. Public callers MUST
+ * go through `revokeTestAccountCore`; the only legitimate skip-the-gate
+ * caller is `cleanupAllTestDataCore` after it has already verified the
+ * caller's role once up front.
+ *
+ * Why this exists (prod stress test 2026-05-17, msg-004 case 6): when
+ * `cleanupAllTestDataCore` is invoked from a TEST bearer (one of its own
+ * sweep targets), the loop will eventually revoke the caller's `users/{uid}`
+ * doc mid-sweep. The next iteration would then re-run `loadCallerRole`,
+ * read `undefined`, and refuse every remaining revoke with "forbidden",
+ * leaving orphans. Caching the gate at cleanup-entry and skipping the
+ * re-check inside the loop closes that race.
+ */
+async function revokeTestAccountUnchecked(
+    callerUid: string,
+    uid: string,
+): Promise<RevokeTestAccountResult | ReturnType<typeof envelope>> {
+    initAdmin()
     if (!uid || !uid.startsWith(TEST_UID_PREFIX)) {
         return envelope(
             "not_a_test_uid",
@@ -576,12 +598,23 @@ export async function cleanupAllTestDataCore(
         pageToken = result.pageToken
     }
 
-    const allUids = [...indexUids, ...orphanAuthUids]
+    // Order the sweep so the CALLER (if they're a test user) is revoked
+    // LAST. Belt-and-braces — `revokeTestAccountUnchecked` skips the
+    // role check, but ordering keeps the invariant correct even if a
+    // future refactor reintroduces the per-iteration check. Without
+    // this, deleting the caller's `users/{uid}` doc mid-sweep used to
+    // cause every subsequent revoke to refuse with `forbidden`
+    // (prod stress test 2026-05-17, msg-004 case 6).
+    const allUidsRaw = [...indexUids, ...orphanAuthUids]
+    const allUids = [
+        ...allUidsRaw.filter((u) => u !== callerUid),
+        ...allUidsRaw.filter((u) => u === callerUid),
+    ]
     const aggregate: Record<string, number> = {}
     const failures: string[] = []
     let removed = 0
     for (const uid of allUids) {
-        const r = await revokeTestAccountCore(callerUid, uid)
+        const r = await revokeTestAccountUnchecked(callerUid, uid)
         if ("error" in r) {
             failures.push(`${uid}: ${r.error}`)
             continue
