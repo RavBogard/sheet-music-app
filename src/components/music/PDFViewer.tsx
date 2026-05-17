@@ -37,6 +37,28 @@ if (typeof window !== "undefined") {
     pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.${pdfjs.version}.mjs`
 }
 
+/**
+ * Module-scope dedup state for fetch-error logging. See F-07 + the v6
+ * retry-remount-dedup fix below. Lives outside the component so a Retry
+ * click (which can re-mount PDFViewer) doesn't reset the dedup map and
+ * re-log the same (url, msg) failure. Bounded by # of unique broken-bond
+ * URLs the user clicks per session; negligible memory at worship-app
+ * scale.
+ */
+const loggedFetchErrorKeys = new Set<string>()
+
+function fetchErrorKey(fetchUrl: string, msg: string): string {
+    return `${fetchUrl.substring(0, 120)}::${msg}`
+}
+
+/** Drop every dedup entry for this URL so a later failure re-logs once. */
+function clearFetchErrorKeysFor(fetchUrl: string): void {
+    const prefix = `${fetchUrl.substring(0, 120)}::`
+    for (const key of loggedFetchErrorKeys) {
+        if (key.startsWith(prefix)) loggedFetchErrorKeys.delete(key)
+    }
+}
+
 interface PDFViewerProps {
     url: string
     trackName?: string
@@ -67,9 +89,14 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     // F-07 (2026-05-16 bugstomp): each broken-bond chart click was firing
     // up to 4 logger.error rows — one for the blob: URL stage, one for the
     // /api/drive/file/ stage, doubled on a retry. Sentry burn-rate scales
-    // with broken bonds. Dedup by url+message so a repeat fail on the same
-    // URL doesn't re-log. New URL or new message → logs once.
-    const lastLoggedErrorRef = useRef<string | null>(null)
+    // with broken bonds. Dedup by (url, msg) fingerprint so a repeat fail
+    // on the same URL doesn't re-log. New URL or new message → logs once.
+    //
+    // v6 retry-remount fix: hoisted to module scope (`loggedFetchErrorKeys`
+    // below). The original component-scoped useRef reset on every Retry
+    // click because Retry re-mounted PDFViewer, letting the same failure
+    // re-log. Module scope survives remount; cleared per-URL on successful
+    // load so a later failure on the same URL re-logs.
 
     const fetchPdf = useCallback(async (fetchUrl: string, signal?: AbortSignal, isRetry = false) => {
         if (resolvedUrlRef.current === fetchUrl && !isRetry) return
@@ -89,7 +116,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                     setSource({ data: new Uint8Array(arrayBuffer) })
                     setError(null)
                     retryCountRef.current = 0
-                    lastLoggedErrorRef.current = null
+                    clearFetchErrorKeysFor(fetchUrl)
                     setLoading(false)
                     return
                 }
@@ -155,17 +182,18 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
             setSource({ data: new Uint8Array(arrayBuffer) })
             setError(null)
             retryCountRef.current = 0
-            lastLoggedErrorRef.current = null
+            clearFetchErrorKeysFor(fetchUrl)
         } catch (e) {
             // Abort is an expected outcome on unmount / URL change — swallow quietly.
             if (e instanceof Error && e.name === 'AbortError') return
             const msg = e instanceof Error ? e.message : String(e)
             // F-07 dedup: only log once per unique (url, msg) pair so a
             // broken-bond chart click + Retry doesn't write 4 Sentry rows
-            // for the same failure.
-            const fingerprint = `${fetchUrl.substring(0, 120)}::${msg}`
-            if (lastLoggedErrorRef.current !== fingerprint) {
-                lastLoggedErrorRef.current = fingerprint
+            // for the same failure. Dedup state is module-scoped above so
+            // it survives PDFViewer remount on Retry (v6 retry-remount fix).
+            const key = fetchErrorKey(fetchUrl, msg)
+            if (!loggedFetchErrorKeys.has(key)) {
+                loggedFetchErrorKeys.add(key)
                 logger.error('[PDFViewer] Fetch error:', msg, '| url:', fetchUrl.substring(0, 80))
             }
             setError(msg)
