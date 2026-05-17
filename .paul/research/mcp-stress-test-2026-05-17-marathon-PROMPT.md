@@ -403,7 +403,24 @@ authoring / band consumer / monitor / other).
 - Confirm `search_library({query: "BUGSTOMP"})` returns `[]`
 - Confirm `list_setlists({limit: 50})` shows no residue
 - Restore any test fixtures touched
-- Write the final report (see "Report shape" below)
+- Write the final report at the **deterministic autonomous-run path**:
+  - Report → `C:\Users\dsbog\CentralReform.live\sheet-music-app-mcp\outputs\autonomous-run\cycle-{N}\cowork-report.md`
+    (where `{N}` is the cycle number — `1` if you're cycle 1, otherwise
+    you'll have been told your cycle number in your launch handoff)
+  - **The directory already exists**; do NOT create it elsewhere.
+- As the VERY LAST step (after the report is verified on disk), write
+  a sentinel flag at
+  `C:\Users\dsbog\CentralReform.live\sheet-music-app-mcp\outputs\autonomous-run\cycle-{N}\COWORK-DONE.flag`
+  containing a single line with the current ISO timestamp.
+  **This flag triggers the autonomous processor to start fixing your
+  findings — your report MUST be complete + on disk before you write
+  the flag.**
+- If any of your findings is severe enough to interrupt Daniel's
+  sleep (CRIT-grade: prod data corruption, iPad surface dark, auth
+  boundary leak, anything that breaks tomorrow's service), ALSO
+  write a `CRIT-WAKE-DANIEL.flag` file in the same dir alongside the
+  normal flag. The processor will page Daniel via PushNotification
+  on detecting it.
 
 ---
 
