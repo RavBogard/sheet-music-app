@@ -84,18 +84,60 @@ Each completed cycle appends a block here. Schema:
 - Notes: <free-form for next cycle>
 ```
 
-(No entries yet — first cycle still pending.)
+### Cycle 1 — 2026-05-17T03:37Z → 2026-05-17T04:48Z
 
-## Regression-detection baseline
+- Cowork report: outputs/autonomous-run/cycle-1/cowork-report.md (34 KB)
+- Master SHA at start: d9de5d189
+- Master SHA at end:   d9de5d189 (no FF-merge — see "Shipped" below)
+- feat/mcp-server SHA at start: 83b321113 (autonomous-run scaffolding)
+- feat/mcp-server SHA at end:   194679531
+- Cowork wall clock: ~46 min (faster than 6h budget — cowork batched parallel probes)
+- Cowork verdict: **SHIPPABLE — land HIGHs first.** No CRIT.
+- Findings:
+  - CRIT: 0
+  - HIGH: 5 (F-001, F-002, F-005, F-012, F-023)
+  - MED:  12 (F-003, F-004, F-006, F-007, F-013, F-014, F-015, F-017, F-019, F-021, F-022, F-024)
+  - LOW:  2  (F-016, F-018)
+  - NOTE: 5  (F-008, F-009, F-010, F-011, F-020)
+  - Total: 24
+- Shipped commits:
+  - **194679531** — fix(mcp/monitor): defensive array guards + structured envelope (cycle-1 F-001/F-002/F-003). Pushed to feat/mcp-server ONLY; master NOT FF-merged. Smoke probe pending — needs the rotated MCP bearer Daniel will supply in the morning.
+- Deferred findings (16):
+  - F-005 HIGH — wait_for_setlist_change race + stale currentVersion (two plausible fixes, needs Daniel pick)
+  - F-012 HIGH — generate_gig_packet base64 wire overflow (needs Storage-URL architecture decision)
+  - F-022 HIGH (recategorized from MED) — legal/marketing pages behind auth (A2P SMS compliance concern; surface immediately)
+  - F-023 HIGH — browser onSnapshot missing on parent setlist doc (the F5-mystery Daniel reported; browser code, harder smoke surface)
+  - F-004 MED — verify_setlist_charts false-positive on Drive-404 + Storage-OK
+  - F-006 MED — chartHealth shape drift between preview_publish and publish_setlist dryRun
+  - F-007 MED — search_library returns audio/.xlsx/.DS_Store (also F-024)
+  - F-013 MED — connector intermittent (Vercel cold-start hypothesis)
+  - F-014 MED — commit_staged_changes repack bumps version on every track
+  - F-015 MED — error envelope inconsistency across tools (full unification scope)
+  - F-017 MED — publishedSnapshot drift banner missing
+  - F-019 MED — library duplicate rows (data hygiene)
+  - F-021 MED — /api/drive/file/{missing} returns 401 instead of 404
+  - F-024 MED — Kabbalat Shabbat.xlsx indexed as chart
+  - F-016 LOW — adversarial input stored verbatim (render-safe per cowork verification)
+  - F-018 LOW — monitor write tools return ok:true for invalid indices
+  - F-008/009/010/011/020 NOTE — informational
+- Auto-reverted commits: (none)
+- Smoke-probe results: **deferred** — production smoke needs rotated MCP bearer (none in .env.local; daniel rotated 2026-05-16). Unit + emulator + next build gates passed on the shipped fix.
+- Termination check: **terminate-manual-handoff** (not in the original enum — this is "loop ended cleanly with one fix shipped + Daniel triage queue queued in the morning"). Reasons: (a) volume of judgment-needed findings exceeds safe overnight scope, (b) cycle-2 cowork can't be auto-spawned because cowork relied on Claude Desktop + MCP, and the spawn path via `claude -p` was never validated for cowork, and (c) smoke probe gate failed at the bearer-availability check.
+- Notes for next session: When Daniel resumes, his queue is (in priority order): (1) read this state file + cycle-1 cowork-report.md, (2) supply a fresh MCP bearer, (3) smoke-probe F-001/F-002 fix via curl `/api/mcp` with `list_monitor_buses` + `get_matrix` tool calls — expect them to return structured envelopes, not raw TypeError, (4) if smoke passes, FF-merge feat/mcp-server → master and push, (5) triage the 16 deferred findings (recommend F-022 first for compliance, then F-023 since it's the F5-mystery resolution, then the rest).
+
+## Regression-detection baseline (updated end-of-cycle-1)
+
+```
+Last cycle's findings (by ID): F-001 F-002 F-003 F-004 F-005 F-006 F-007 F-008 F-009 F-010 F-011 F-012 F-013 F-014 F-015 F-016 F-017 F-018 F-019 F-020 F-021 F-022 F-023 F-024
+Last cycle's total finding count: 24
+Cycle-1 shipped IDs: F-001 F-002 F-003 (closed at 194679531 on feat/mcp-server, master deferred)
+```
+
+## Regression-detection baseline (template — see cycle-1 block above for the active baseline)
 
 The processor uses this to decide whether cycle N+1 introduced new
 issues vs. closed old ones. Compared field-by-field across cycle
 reports.
-
-```
-Last cycle's findings (by ID): <empty until cycle 1>
-Last cycle's total finding count: 0
-```
 
 ## Safety locks
 
