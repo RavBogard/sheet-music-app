@@ -85,7 +85,18 @@ export async function createSetlist(
     uid: string,
     args: CreateSetlistArgs,
 ): Promise<
-    | { setlistId: string; trackCount: number; ownerId: string; ownerName: string }
+    | {
+          setlistId: string
+          trackCount: number
+          ownerId: string
+          ownerName: string
+          /**
+           * W-04: surface the doc's initial version so callers can chain a
+           * `lastSeenVersion` follow-up without a separate get_setlist round
+           * trip. version-echo-missing NOTE (v6 bugstomp).
+           */
+          version: number
+      }
     | ToolError
 > {
     initAdmin()
@@ -108,11 +119,14 @@ export async function createSetlist(
     // G-16: echo owner so callers don't need a follow-up get_setlist to learn
     // who the setlist is owned by (the create_setlist's caller IS the owner,
     // but agent UIs benefit from seeing it in the response).
+    // version: createSetlistServerSide always stamps `version: 1` (W-04
+    // Plan 01); no extra Firestore read needed.
     return {
         setlistId: result.setlistId,
         trackCount: result.trackCount,
         ownerId: uid,
         ownerName,
+        version: 1,
     }
 }
 
@@ -480,6 +494,13 @@ export async function bulkAddSetlistTracks(
           committed: boolean
           results: BulkAddResult[]
           dryRun: boolean
+          /**
+           * Post-write setlist version (unchanged on dryRun, bumped on
+           * commit). Lets callers chain a `lastSeenVersion` follow-up
+           * without a separate get_setlist. version-echo-missing NOTE
+           * (v6 bugstomp).
+           */
+          version: number
       }
     | ToolError
 > {
@@ -510,12 +531,22 @@ export async function bulkAddSetlistTracks(
         },
     )
     if (!result.ok) return { error: result.error }
+    // version-echo: read post-write setlist version so callers can chain
+    // lastSeenVersion. dryRun: unchanged; committed: bumped by bulkAddTracks.
+    const setlistSnap = await db
+        .collection("setlists")
+        .doc(args.setlistId)
+        .get()
+    const version = readVersion(
+        setlistSnap.data() as Record<string, unknown> | undefined,
+    )
     return {
         ok: true,
         mode: result.mode,
         committed: result.committed,
         results: result.results,
         dryRun: result.dryRun,
+        version,
     }
 }
 

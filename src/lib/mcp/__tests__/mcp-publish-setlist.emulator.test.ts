@@ -227,6 +227,11 @@ describe("MCP publish_setlist (emulator)", () => {
         expect(post.publishedAt).toBeTruthy()
         expect(post.publishedSnapshot).toHaveLength(2)
         expect(post.lastNotifiedAt).toBeTruthy()
+        // version-echo NOTE (v6 bugstomp): a real publish bumps the setlist
+        // version (Plan 03) and surfaces the post-bump value so callers can
+        // chain lastSeenVersion without a separate get_setlist round trip.
+        expect(r.version).toBe(post.version)
+        expect(typeof r.version).toBe("number")
 
         // In-app: 4 notifications written under users/{uid}/notifications/
         for (const uid of uids) {
@@ -319,6 +324,15 @@ describe("MCP publish_setlist (emulator)", () => {
         const post = (await db().collection("setlists").doc(id).get()).data()!
         expect(post.publishedAt).toBeFalsy()
         expect(post.publishedSnapshot).toBeUndefined()
+        // version-echo NOTE (v6 bugstomp): dryRun surfaces the current
+        // setlist version unchanged (no bump on dry-run). This seed
+        // intentionally omits `version` to represent a pre-W-04 doc; the
+        // echoed `version: 0` is what `readVersion` returns for missing
+        // and matches the in-doc state (also missing).
+        expect(typeof r.version).toBe("number")
+        const expectedVersion =
+            typeof post.version === "number" ? post.version : 0
+        expect(r.version).toBe(expectedVersion)
     })
 
     it("audience='all' includes members in the default recipient set", async () => {

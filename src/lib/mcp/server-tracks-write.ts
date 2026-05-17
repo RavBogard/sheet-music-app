@@ -516,7 +516,14 @@ export async function updateTrack(
         if (lastSeenVersion !== undefined) {
             const currentVersion = readVersion(txData)
             if (currentVersion !== lastSeenVersion) {
+                // W04-track-stale-envelope NOTE (v6 bugstomp): source BOTH
+                // `lastModifiedBy` AND `lastModifiedAt` from the parent
+                // setlist, matching the setlist-scoped envelope shape.
+                // Sourcing `lastModifiedBy` from `txData` (the track) ran
+                // empty for any track pre-W-04 (no per-row stamping) and
+                // produced asymmetric envelopes vs. setlist-scoped writes.
                 const txSetlistSnap = await tx.get(setlistRef)
+                const setlistData = txSetlistSnap.data()
                 return {
                     ok: false,
                     kind: "stale_version",
@@ -524,12 +531,10 @@ export async function updateTrack(
                         resource: "track",
                         currentVersion,
                         lastSeenVersion,
-                        lastModifiedBy: txData.lastModifiedBy as
+                        lastModifiedBy: setlistData?.lastModifiedBy as
                             | string
                             | undefined,
-                        lastModifiedAt: readLastModifiedAt(
-                            txSetlistSnap.data(),
-                        ),
+                        lastModifiedAt: readLastModifiedAt(setlistData),
                     }),
                 }
             }
@@ -1532,6 +1537,12 @@ export async function removeTrack(
         if (lastSeenVersion !== undefined) {
             const currentVersion = readVersion(trackData)
             if (currentVersion !== lastSeenVersion) {
+                // W04-track-stale-envelope NOTE (v6 bugstomp): hydrate the
+                // envelope's `setlist.lastModifiedBy/At` from the PARENT
+                // setlist, not the track itself. See updateTrack's stale-
+                // version branch for the same rationale.
+                const setlistSnap = await tx.get(setlistRef)
+                const setlistData = setlistSnap.data()
                 return {
                     ok: false,
                     kind: "stale_version",
@@ -1539,10 +1550,10 @@ export async function removeTrack(
                         resource: "track",
                         currentVersion,
                         lastSeenVersion,
-                        lastModifiedBy: trackData.lastModifiedBy as
+                        lastModifiedBy: setlistData?.lastModifiedBy as
                             | string
                             | undefined,
-                        lastModifiedAt: readLastModifiedAt(trackData),
+                        lastModifiedAt: readLastModifiedAt(setlistData),
                     }),
                 }
             }

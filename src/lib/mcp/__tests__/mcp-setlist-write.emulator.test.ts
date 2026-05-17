@@ -92,7 +92,7 @@ describe("MCP setlist write tools (emulator)", () => {
         return r.setlistId
     }
 
-    it("create_setlist makes an empty setlist owned by the creator and echoes owner (G-16)", async () => {
+    it("create_setlist makes an empty setlist owned by the creator and echoes owner (G-16) + version (v6 version-echo)", async () => {
         const result = (await createSetlist(ADMIN, {
             name: "Shabbat Morning",
             eventDate: "2026-06-07",
@@ -102,12 +102,17 @@ describe("MCP setlist write tools (emulator)", () => {
             trackCount: number
             ownerId: string
             ownerName: string
+            version: number
         }
 
         expect(result.setlistId).toBeTruthy()
         expect(result.trackCount).toBe(0)
         expect(result.ownerId).toBe(ADMIN)
         expect(result.ownerName).toBe("Rabbi Daniel")
+        // version-echo NOTE (v6 bugstomp): createSetlistServerSide always
+        // stamps `version: 1`, surfaced so callers can chain lastSeenVersion
+        // without a follow-up get_setlist.
+        expect(result.version).toBe(1)
 
         const doc = await db().collection("setlists").doc(result.setlistId).get()
         const data = doc.data()!
@@ -1389,8 +1394,10 @@ describe("MCP setlist write tools (emulator)", () => {
     })
 
     describe("bulk_add_tracks (CF3)", () => {
-        it("appends rows in array order; one call closes the weekly N+1", async () => {
+        it("appends rows in array order; one call closes the weekly N+1; echoes post-write version (v6 version-echo)", async () => {
             const id = await newSetlist(ADMIN)
+            // Setlist starts at version 1 (newSetlist → createSetlist), so
+            // a committed bulk_add_tracks should report version 2.
             const r = (await bulkAddSetlistTracks(ADMIN, {
                 setlistId: id,
                 tracks: [
@@ -1402,11 +1409,13 @@ describe("MCP setlist write tools (emulator)", () => {
                 ok: true
                 committed: boolean
                 results: Array<{ ok: boolean; trackId?: string; order?: number }>
+                version: number
             }
             expect(r.committed).toBe(true)
             expect(r.results).toHaveLength(3)
             expect(r.results.every((x) => x.ok)).toBe(true)
             expect(r.results.map((x) => x.order)).toEqual([0, 1, 2])
+            expect(r.version).toBe(2)
 
             const rows = await tracksOf(id)
             expect(rows.map((t) => t.title)).toEqual([
@@ -1415,6 +1424,24 @@ describe("MCP setlist write tools (emulator)", () => {
                 "Adon Olam",
             ])
             expect(rows.map((t) => t.order)).toEqual([0, 1, 2])
+        })
+
+        it("dryRun: true returns current version without bumping (v6 version-echo)", async () => {
+            const id = await newSetlist(ADMIN)
+            const r = (await bulkAddSetlistTracks(ADMIN, {
+                setlistId: id,
+                tracks: [{ title: "A", type: "song" }],
+                dryRun: true,
+            })) as {
+                ok: true
+                dryRun: boolean
+                committed: boolean
+                version: number
+            }
+            expect(r.dryRun).toBe(true)
+            expect(r.committed).toBe(false)
+            // version unchanged from the newly-created setlist's initial 1.
+            expect(r.version).toBe(1)
         })
 
         it("inserts at a given anchor — shifts existing rows down", async () => {

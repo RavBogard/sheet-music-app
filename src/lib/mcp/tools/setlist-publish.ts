@@ -119,6 +119,13 @@ export interface PublishSetlistResult {
     }
     snapshot: Array<{ title: string; key: string; fileId: string }>
     /**
+     * Post-write setlist version (unchanged on dryRun, bumped on real
+     * commit by Plan 03). Lets callers chain a `lastSeenVersion` follow-up
+     * without a separate get_setlist. version-echo-missing NOTE (v6
+     * bugstomp).
+     */
+    version: number
+    /**
      * Chart-health pre-flight report. Always populated. Each entry mirrors
      * `verify_setlist_charts.rows[]` shape: { fileId, title, status }.
      * `unhealthy[]` is the subset with status missing/unreachable — same set
@@ -388,6 +395,11 @@ export async function publishSetlist(
         (typeof setlist.name === "string" && setlist.name) || args.setlistId
     const wasPublished = !!setlist.publishedAt
 
+    // version-echo: the version we have in `setlist` (read at line 281)
+    // is correct for dryRun (unchanged) and the pre-commit baseline for
+    // a real publish. Real publish overrides this below with the
+    // post-bump value so callers chain `lastSeenVersion` correctly.
+    const preCommitVersion = readVersion(setlist)
     const result: PublishSetlistResult = {
         ok: true,
         setlistId: args.setlistId,
@@ -408,6 +420,7 @@ export async function publishSetlist(
             sms: { sent: 0, failed: 0, skippedRepublish: wasPublished },
         },
         snapshot,
+        version: preCommitVersion,
         chartHealth,
     }
 
@@ -433,6 +446,9 @@ export async function publishSetlist(
         lastModifiedAt: new Date().toISOString(),
         lastModifiedBy: callerUid,
     })
+    // version-echo: surface the post-bump value so callers can chain a
+    // `lastSeenVersion` follow-up without re-reading the setlist.
+    result.version = preCommitVersion + 1
 
     // Song-usage record — fire-and-forget; never fail publish on its account.
     const eventDateRaw = setlist.eventDate ?? setlist.date

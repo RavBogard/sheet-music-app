@@ -110,6 +110,16 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
         expect(result.currentVersion).toBe(versionBeforeStaleAttempt)
         expect(result.lastSeenVersion).toBe(versionBeforeStaleAttempt - 1)
         expect(result.hint).toMatch(/get_setlist/)
+        // W04-track-stale-envelope NOTE (v6 bugstomp): track-scoped stale
+        // envelope hydrates BOTH lastModifiedBy + lastModifiedAt from the
+        // parent setlist (not the track), matching setlist-scoped writes.
+        const envSetlist = result.setlist as
+            | { lastModifiedBy?: unknown; lastModifiedAt?: unknown }
+            | undefined
+        expect(envSetlist).toBeDefined()
+        expect(typeof envSetlist!.lastModifiedBy).toBe("string")
+        expect(envSetlist!.lastModifiedBy).toBe(ADMIN)
+        expect(typeof envSetlist!.lastModifiedAt).toBe("string")
 
         // Doc must NOT have mutated — version is unchanged and title intact.
         const afterSnap = await db().collection("tracks").doc(trackId).get()
@@ -223,6 +233,15 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
 
         expect(result.error).toBe("stale_version")
         expect(result.currentVersion).toBe(current)
+        // W04-track-stale-envelope NOTE (v6 bugstomp): remove_track gets the
+        // same lastModifiedBy + lastModifiedAt hydration from parent setlist
+        // as update_track.
+        const envSetlist = result.setlist as
+            | { lastModifiedBy?: unknown; lastModifiedAt?: unknown }
+            | undefined
+        expect(envSetlist).toBeDefined()
+        expect(envSetlist!.lastModifiedBy).toBe(ADMIN)
+        expect(typeof envSetlist!.lastModifiedAt).toBe("string")
 
         // Track must still exist.
         const stillThere = await db().collection("tracks").doc(trackId).get()
