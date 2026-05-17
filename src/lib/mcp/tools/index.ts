@@ -11,6 +11,7 @@ import {
 import { reconcileLibrary } from "./reconcile-library"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
 import { getCorrectionStats } from "./correction-stats"
+import { testDeleteStorageObject } from "./test-delete-storage-object"
 import {
     listReviewQueue,
     getEnrichmentSuggestion,
@@ -1423,6 +1424,24 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await dismissFailureTool(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "__test_delete_storage_object",
+        {
+            description:
+                "Cycle-N cowork instrumentation only. Admin-only synthetic Storage-only delete used to construct the 'Drive 200 + Storage 404 → health: needs_storage_sync' scenario cycle-4 §7.B.1 needs to test substantively. Refuses unless ALL conditions hold: (1) fileId matches `upload-<uuid>` (no Drive ids, no other synthetic id prefixes); (2) library_index/{fileId} exists; (3) library_index/{fileId}.isTest === true (SEC-004 stamp on test-fixture-owned rows). On success: deletes ONLY the Storage object at the resolved canonical path; library_index row + any Drive ref are UNTOUCHED (the row keeps claiming the fileId so subsequent verify_setlist_charts / get_chart_status reads observe the asymmetric state). Do NOT call from prod workflows. Rich envelope on every refusal: forbidden_role / invalid_argument / row_not_found / not_test_row / storage_delete_failed. No dryRun — operator intent is explicit; F-05 contract does not apply to destructive instrumentation.",
+            inputSchema: {
+                fileId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Storage fileId to delete. Must match the upload-<uuid> pattern (the tool refuses Drive ids by design).",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await testDeleteStorageObject(uidFrom(extra), args)),
     )
 
     server.registerTool(
