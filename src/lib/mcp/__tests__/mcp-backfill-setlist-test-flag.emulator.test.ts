@@ -67,8 +67,14 @@ describe("MCP backfill_setlist_test_flag — SEC-004 (emulator)", () => {
     it("refuses non-admin callers", async () => {
         await seedSetlist("s1", { name: "x", ownerId: ADMIN })
         const r = await backfillSetlistTestFlag(MUSICIAN, {})
-        expect("error" in r).toBe(true)
-        if ("error" in r) expect(r.error).toMatch(/admin-only/i)
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "forbidden_role", code: 403 },
+            requiredRoles: ["admin"],
+        })
+        if ("error" in r && typeof r.error === "object" && r.error) {
+            expect(r.error.message).toMatch(/admin-only/i)
+        }
     })
 
     it("dryRun default — classifies without writing", async () => {
@@ -91,7 +97,7 @@ describe("MCP backfill_setlist_test_flag — SEC-004 (emulator)", () => {
         })
 
         const r = await backfillSetlistTestFlag(ADMIN, {})
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.dryRun).toBe(true)
         expect(r.scanned).toBe(4)
@@ -104,18 +110,19 @@ describe("MCP backfill_setlist_test_flag — SEC-004 (emulator)", () => {
         expect(reread.data()?.isTest).toBeUndefined()
     })
 
-    it("refuses real run without force — returns plan with refused:true", async () => {
+    it("refuses real run without force — returns rich force_required envelope with no writes", async () => {
         await seedSetlist("test-name", {
             name: "[TEST] integration",
             ownerId: ADMIN,
         })
 
         const r = await backfillSetlistTestFlag(ADMIN, { dryRun: false })
-        if ("error" in r) throw new Error(r.error)
-
-        expect(r.refused).toBe(true)
-        expect(r.dryRun).toBe(false)
-        expect(r.rowsChanged).toBe(1)
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+        })
+        const plan = (r as { dryRunPlan?: { rowsChanged?: number } }).dryRunPlan
+        expect(plan?.rowsChanged).toBe(1)
         const reread = await db().collection("setlists").doc("test-name").get()
         expect(reread.data()?.isTest).toBeUndefined()
     })
@@ -135,10 +142,10 @@ describe("MCP backfill_setlist_test_flag — SEC-004 (emulator)", () => {
             dryRun: false,
             force: true,
         })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(JSON.stringify(r.error))
+        if (!("ok" in r) || r.ok !== true) throw new Error("expected ok=true")
 
         expect(r.dryRun).toBe(false)
-        expect(r.refused).toBeUndefined()
         expect(r.rowsChanged).toBe(3)
         expect(r.flaggedTest).toBe(2)
         expect(r.flaggedReal).toBe(1)
@@ -155,7 +162,7 @@ describe("MCP backfill_setlist_test_flag — SEC-004 (emulator)", () => {
             dryRun: false,
             force: true,
         })
-        if ("error" in r2) throw new Error(r2.error)
+        if ("error" in r2) throw new Error(typeof r2.error === "string" ? r2.error : JSON.stringify(r2.error))
         expect(r2.rowsChanged).toBe(0)
     })
 })

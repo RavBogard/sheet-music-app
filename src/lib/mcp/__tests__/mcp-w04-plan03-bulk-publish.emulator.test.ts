@@ -27,10 +27,10 @@ import { publishSetlist } from "../tools/setlist-publish"
  *
  * Atomic-mode pre-flight: when any patch carries `lastSeenVersion` that
  * doesn't match the track's current version, the WHOLE batch rejects with
- * `staleRows[]` (and per-row `results` carry `error: "stale_version"` for
+ * `staleRows[]` (and per-row `results` carry `error: { machine_code: "stale_version" }` for
  * the stale rows + a rollback message for the rest). Zero writes land.
  *
- * Best-effort mode: stale rows skip with `error: "stale_version"` while
+ * Best-effort mode: stale rows skip with `error: { machine_code: "stale_version" }` while
  * valid rows commit normally.
  *
  * publish_setlist gate fires BEFORE the chart-health pre-flight + recipient
@@ -70,7 +70,7 @@ describe("W-04 Plan 03 — bulk + publish version gating (emulator)", () => {
         id: string,
     ): Promise<number> {
         const snap = await db().collection(coll).doc(id).get()
-        const v = (snap.data() as Record<string, unknown> | undefined)?.version
+        const v = (snap.data() as unknown as Record<string, unknown> | undefined)?.version
         return typeof v === "number" ? v : 0
     }
 
@@ -160,12 +160,12 @@ describe("W-04 Plan 03 — bulk + publish version gating (emulator)", () => {
         const byId = new Map(
             result.results.map((r) => [r.trackId as string, r]),
         )
-        expect(byId.get(trackIds[1])!.error).toBe("stale_version")
+        expect((byId.get(trackIds[1])!.error as { machine_code: string }).machine_code).toBe("stale_version")
         expect(byId.get(trackIds[0])!.error).toMatch(/Rolled back/)
         expect(byId.get(trackIds[2])!.error).toMatch(/Rolled back/)
 
         // No row actually committed — titles unchanged, versions unchanged.
-        const after0 = (await db().collection("tracks").doc(trackIds[0]).get()).data() as Record<string, unknown>
+        const after0 = (await db().collection("tracks").doc(trackIds[0]).get()).data() as unknown as Record<string, unknown>
         expect(after0.title).toBe("A")
         expect(after0.version).toBe(v0)
     })
@@ -258,18 +258,18 @@ describe("W-04 Plan 03 — bulk + publish version gating (emulator)", () => {
         )
         expect(byId.get(trackIds[0])!.ok).toBe(true)
         expect(byId.get(trackIds[1])!.ok).toBe(false)
-        expect(byId.get(trackIds[1])!.error).toBe("stale_version")
+        expect((byId.get(trackIds[1])!.error as { machine_code: string }).machine_code).toBe("stale_version")
         expect(byId.get(trackIds[2])!.ok).toBe(true)
 
         // Stale row's title is unchanged; valid rows committed.
         const stillB = (
             await db().collection("tracks").doc(trackIds[1]).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(stillB.title).toBe("B")
         expect(stillB.version).toBe(v1)
         const newA = (
             await db().collection("tracks").doc(trackIds[0]).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(newA.title).toBe("New A")
     })
 
@@ -292,16 +292,16 @@ describe("W-04 Plan 03 — bulk + publish version gating (emulator)", () => {
             dryRun: false,
             force: true, // bypass chart-health (no real bytes in emulator)
             lastSeenVersion: setlistVersion - 1, // intentionally stale
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
 
-        expect(result.error).toBe("stale_version")
+        expect((result.error as { machine_code: string }).machine_code).toBe("stale_version")
         expect(result.currentVersion).toBe(setlistVersion)
         expect(result.lastSeenVersion).toBe(setlistVersion - 1)
 
         // No publish-state mutation occurred.
         const after = (
             await db().collection("setlists").doc(r.setlistId).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(after.publishedAt).toBeUndefined()
         expect(after.version).toBe(setlistVersion)
     })
@@ -346,8 +346,8 @@ describe("W-04 Plan 03 — bulk + publish version gating (emulator)", () => {
             recipients: [],
             dryRun: true,
             lastSeenVersion: setlistVersion - 1,
-        })) as Record<string, unknown>
-        expect(result.error).toBe("stale_version")
+        })) as unknown as Record<string, unknown>
+        expect((result.error as { machine_code: string }).machine_code).toBe("stale_version")
     })
 
     it("publish_setlist omitted lastSeenVersion → pre-W-04 behavior (no gate)", async () => {

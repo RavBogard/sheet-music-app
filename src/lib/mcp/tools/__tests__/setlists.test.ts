@@ -49,7 +49,7 @@ describe("listSetlists", () => {
     })
 
     it("returns id/name/dates/trackCount, including songCount only when present", async () => {
-        const r = (await listSetlists("u", {})) as Array<Record<string, unknown>>
+        const r = (await listSetlists("u", {})) as unknown as Array<Record<string, unknown>>
         expect(r).toHaveLength(3)
         expect(r[0]).toEqual({
             id: "a",
@@ -120,13 +120,13 @@ describe("listSetlists", () => {
         // (machine code in `error`, human-readable prose in `message`).
         expect(await listSetlists("u", { from: "not-a-date" })).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             field: "from",
             message: expect.stringContaining("from must be an ISO date"),
         })
         expect(await listSetlists("u", { to: "garbage" })).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             field: "to",
             message: expect.stringContaining("to must be an ISO date"),
         })

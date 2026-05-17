@@ -158,7 +158,7 @@ describe("MCP download_chart (emulator)", () => {
         const r = await downloadChart(ADMIN, { fileId: "ghost-chart" })
         expect(r).toMatchObject({
             ok: false,
-            error: "chart_not_found",
+            error: { machine_code: "chart_not_found" },
             fileId: "ghost-chart",
         })
         expect(mockFetchFileById).not.toHaveBeenCalled()
@@ -175,7 +175,7 @@ describe("MCP download_chart (emulator)", () => {
         const r = await downloadChart(ADMIN, { fileId })
         expect(r).toMatchObject({
             ok: false,
-            error: "chart_bytes_missing",
+            error: { machine_code: "chart_bytes_missing" },
             fileId,
             message: expect.stringContaining("not found in Storage or Drive"),
         })
@@ -198,8 +198,7 @@ describe("MCP download_chart (emulator)", () => {
         const r = await downloadChart(ADMIN, { fileId })
         expect(r).toMatchObject({
             ok: false,
-            error: "chart_too_large",
-            message: expect.stringContaining("exceeds the"),
+            error: { machine_code: "chart_too_large", message: expect.stringContaining("exceeds the") },
         })
     })
 
@@ -207,7 +206,7 @@ describe("MCP download_chart (emulator)", () => {
         const r = await downloadChart(ADMIN, { fileId: "   " })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             field: "fileId",
         })
         expect(mockFetchFileById).not.toHaveBeenCalled()

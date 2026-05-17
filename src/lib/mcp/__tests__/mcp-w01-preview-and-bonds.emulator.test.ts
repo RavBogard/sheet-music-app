@@ -187,10 +187,7 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
         await addBondedTrack(setlistId, "Oseh Shalom", "song-oseh")
         __charts["song-oseh"] = "ok"
 
-        const r = (await previewPublish(ADMIN, { setlistId })) as Record<
-            string,
-            unknown
-        >
+        const r = (await previewPublish(ADMIN, { setlistId })) as unknown as Record<string, unknown>
 
         expect(r.ok).toBe(true)
         expect((r.chartHealth as { bondedCount: number }).bondedCount).toBe(1)
@@ -215,10 +212,7 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
         await addBondedTrack(setlistId, "Hashkivenu", "song-broken")
         __charts["song-broken"] = "missing"
 
-        const r = (await previewPublish(ADMIN, { setlistId })) as Record<
-            string,
-            unknown
-        >
+        const r = (await previewPublish(ADMIN, { setlistId })) as unknown as Record<string, unknown>
 
         expect((r.chartHealth as { missingCount: number }).missingCount).toBe(1)
         // F-006: preview_publish exposes the same `unhealthy[]` field name as
@@ -246,10 +240,7 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
         __charts["song-stored"] = "ok"
         __charts["song-drive-only"] = "needs_storage_sync"
 
-        const r = (await previewPublish(ADMIN, { setlistId })) as Record<
-            string,
-            unknown
-        >
+        const r = (await previewPublish(ADMIN, { setlistId })) as unknown as Record<string, unknown>
 
         const ch = r.chartHealth as {
             bondedCount: number
@@ -279,10 +270,7 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
             reason: "generic title, only result",
         })
 
-        const r = (await previewPublish(ADMIN, { setlistId })) as Record<
-            string,
-            unknown
-        >
+        const r = (await previewPublish(ADMIN, { setlistId })) as unknown as Record<string, unknown>
 
         expect(r.flaggedBonds).toBe(1)
         expect(r.recommendation).toBe("review_first")
@@ -412,7 +400,7 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
             .doc(result.correctionId)
             .get()
         expect(auditSnap.exists).toBe(true)
-        const audit = auditSnap.data() as Record<string, unknown>
+        const audit = auditSnap.data() as unknown as Record<string, unknown>
         expect(audit.fromSongId).toBe("song-a")
         expect(audit.toSongId).toBe("song-b")
         expect(audit.contextKey).toBe("shabbat-morning")
@@ -481,7 +469,7 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
             .doc("hashkivenu_shabbat-morning")
             .get()
         expect(hintSnap.exists).toBe(true)
-        const hint = hintSnap.data() as Record<string, unknown>
+        const hint = hintSnap.data() as unknown as Record<string, unknown>
         expect(hint.preferredFileId).toBe("song-b")
         expect(hint.picks).toBe(3)
     })
@@ -494,11 +482,10 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
             trackId,
             fromSongId: "song-a",
             toSongId: "song-a",
-        })) as { ok: false; error: string; message: string }
+        })) as unknown as { ok: false; error: { machine_code: string; message: string } }
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
-            message: expect.stringMatching(/must differ/),
+            error: { machine_code: "invalid_argument", message: expect.stringMatching(/must differ/) },
         })
     })
 
@@ -511,11 +498,10 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
             setlistId: setlistB,
             trackId,
             reason: "wrong setlist",
-        })) as { ok: false; error: string; message: string }
+        })) as unknown as { ok: false; error: { machine_code: string; message: string } }
         expect(r).toMatchObject({
             ok: false,
-            error: "track_setlist_mismatch",
-            message: expect.stringMatching(/does not belong to setlist/),
+            error: { machine_code: "track_setlist_mismatch", message: expect.stringMatching(/does not belong to setlist/) },
         })
     })
 

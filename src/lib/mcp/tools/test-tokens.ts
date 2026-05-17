@@ -11,6 +11,7 @@ import {
 } from "@/lib/firebase-admin"
 import { generateRawToken, hashToken } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
+import { liftLegacyErrorEnvelope } from "@/lib/mcp/errors"
 
 /**
  * MCP test-identity provisioning.
@@ -86,7 +87,12 @@ function envelope(
 
 function jsonResult(data: unknown) {
     return {
-        content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+        content: [
+            {
+                type: "text" as const,
+                text: JSON.stringify(liftLegacyErrorEnvelope(data), null, 2),
+            },
+        ],
     }
 }
 
@@ -427,10 +433,16 @@ export async function revokeTestAccountCore(
     initAdmin()
     const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
     if (!isTrustedLeader) {
+        // Cycle-3 SEC-001: the refusal context used to carry `callerRole`
+        // alongside (historically) the caller's real Firebase uid. The
+        // uid is gone (the caller already knows their own bearer); we keep
+        // `callerRole` since it's intentionally surfaced for the operator
+        // to know whether to elevate or pick a different tool.
         return envelope(
-            "forbidden",
+            "forbidden_role",
             "revoke_test_account requires admin or band_leader role.",
-            { callerRole: callerRole ?? null },
+            { callerRole: callerRole ?? null, requiredRoles: ["admin", "band_leader"] },
+            "Ask an admin / band_leader to revoke the test account for you.",
         )
     }
     return revokeTestAccountUnchecked(callerUid, uid)
@@ -456,10 +468,14 @@ async function revokeTestAccountUnchecked(
 ): Promise<RevokeTestAccountResult | ReturnType<typeof envelope>> {
     initAdmin()
     if (!uid || !uid.startsWith(TEST_UID_PREFIX)) {
+        // Cycle-3 SEC-001: do NOT echo the supplied uid back. The caller
+        // already knows the uid they passed; surfacing it in the refusal
+        // body is a minor information disclosure (Firestore-rules pivot
+        // identifier). Redact to a structural hint instead.
         return envelope(
             "not_a_test_uid",
             `uid must start with '${TEST_UID_PREFIX}'. Refusing to operate on a non-test identity.`,
-            { uid },
+            { requiredPrefix: TEST_UID_PREFIX },
             "Use list_test_accounts to find the right uid.",
         )
     }

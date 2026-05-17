@@ -3,7 +3,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getStorage } from "firebase-admin/storage"
 import { logger } from "@/lib/logger"
 import { bareStem } from "@/lib/mcp/title-specificity"
-import { richError } from "@/lib/mcp/error-envelopes"
+import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import {
     EMPTY_ENRICHMENT_PROJECTION,
     loadEnrichmentProjection,
@@ -629,7 +629,7 @@ function attachSiblingCounts(entries: LibraryIndexEntry[]): void {
 export async function listLibrary(
     _uid: string,
     args: ListLibraryArgs,
-): Promise<ListLibraryResult | { error: string }> {
+): Promise<ListLibraryResult | RichErrorEnvelope> {
     const limit =
         args.limit && args.limit > 0
             ? Math.min(args.limit, LIST_LIBRARY_MAX_LIMIT)
@@ -943,7 +943,7 @@ function clusterBySimilarity(
 export async function dedupeLibraryIndex(
     _uid: string,
     args: DedupeLibraryIndexArgs = {},
-): Promise<DedupeLibraryIndexResult | { error: string }> {
+): Promise<DedupeLibraryIndexResult | RichErrorEnvelope> {
     const dryRun = args.dryRun === true
     const force = args.force === true
     // forceScore opt-in: any number triggers similarity grouping; omit to
@@ -1250,8 +1250,6 @@ export interface BackfillLibraryIndexResult {
     deltas: BackfillRowDelta[]
     deltasTruncated: boolean
     dryRun: boolean
-    /** When dryRun=false and force omitted, returns `refused: true` and no writes. */
-    refused?: boolean
     /** Cycle-3 DATA-002 — uniform hygiene scan coverage. */
     coverage: HygieneCoverage
 }
@@ -1282,7 +1280,7 @@ async function probeStorageFileSize(
 export async function backfillLibraryIndex(
     uid: string,
     args: BackfillLibraryIndexArgs = {},
-): Promise<BackfillLibraryIndexResult | { error: string }> {
+): Promise<BackfillLibraryIndexResult | RichErrorEnvelope> {
     // Default to dryRun. Caller must explicitly opt OUT of dryRun (via
     // dryRun:false) AND opt IN to writes (via force:true). Same posture
     // as dedupe_library_index.
@@ -1301,16 +1299,31 @@ export async function backfillLibraryIndex(
             ? (userSnap.data()?.role as string | undefined)
             : undefined
         if (role !== "admin") {
-            return { error: "backfill_library_index is admin-only" }
+            return richError(
+                "forbidden_role",
+                "backfill_library_index is admin-only.",
+                {
+                    callerRole: role ?? null,
+                    requiredRoles: ["admin"],
+                },
+                "Ask an admin to elevate your account, or call a tool your role is allowed to use.",
+            )
         }
 
         if (!dryRun && !force) {
-            // Refuse to write without force. Run the plan + return it with
-            // refused:true so the caller sees what would change before they
-            // re-run with force.
+            // Cycle-3 REG-003: real-run without force returns the rich
+            // `force_required` envelope carrying the dry-run plan in
+            // extras. F-05 standing rule preserved.
             const planOnly = await backfillLibraryIndex(uid, { dryRun: true })
-            if ("error" in planOnly) return planOnly
-            return { ...planOnly, refused: true, dryRun: false }
+            if ("ok" in planOnly && planOnly.ok === false) return planOnly
+            return richError(
+                "force_required",
+                "Pass force:true to commit backfill_library_index writes.",
+                {
+                    dryRunPlan: planOnly as BackfillLibraryIndexResult,
+                },
+                "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
+            )
         }
         const bucketName =
             process.env.FIREBASE_STORAGE_BUCKET ||
@@ -1523,6 +1536,11 @@ export async function backfillLibraryIndex(
         }
     } catch (err) {
         logger.warn("[mcp] backfill_library_index failed:", err)
-        return { error: "Failed to run library_index backfill" }
+        return richError(
+            "server_error",
+            "Failed to run library_index backfill.",
+            { tool: "backfill_library_index" },
+            "Retry; if the failure persists check Firestore + Storage IAM and the [mcp] logs.",
+        )
     }
 }

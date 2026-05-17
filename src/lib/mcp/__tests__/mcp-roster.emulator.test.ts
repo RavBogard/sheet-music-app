@@ -242,7 +242,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
         const r = await listMusicians(MUSICIAN)
         expect(r).toMatchObject({
             ok: false,
-            error: "forbidden_role",
+            error: { machine_code: "forbidden_role" },
             callerRole: "musician",
         })
         expect("requiredRoles" in r && r.requiredRoles).toContain(
@@ -292,18 +292,17 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
 
     it("get_musician_profile: refuses non-trusted-leader caller", async () => {
         const r = await getMusicianProfile(MUSICIAN, { uid: BAND_LEADER })
-        expect(r).toMatchObject({ ok: false, error: "forbidden_role" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "forbidden_role" } })
     })
 
     it("get_musician_profile: rejects empty uid with invalid_argument", async () => {
-        // @ts-expect-error — bad shape on purpose
         const r = await getMusicianProfile(ADMIN, { uid: "" })
-        expect(r).toMatchObject({ ok: false, error: "invalid_argument" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "invalid_argument" } })
     })
 
     it("get_musician_profile: returns not_found for ghost uid", async () => {
         const r = await getMusicianProfile(ADMIN, { uid: NONUSER })
-        expect(r).toMatchObject({ ok: false, error: "not_found" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "not_found" } })
     })
 
     it("get_musician_profile: happy path returns the row", async () => {
@@ -319,12 +318,12 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
         const r = await listMusiciansOnDate(MUSICIAN, {
             eventDate: EVENT_DATE_ISO,
         })
-        expect(r).toMatchObject({ ok: false, error: "forbidden_role" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "forbidden_role" } })
     })
 
     it("list_musicians_on_date: rejects unparseable date with invalid_argument", async () => {
         const r = await listMusiciansOnDate(ADMIN, { eventDate: "not-a-date" })
-        expect(r).toMatchObject({ ok: false, error: "invalid_argument" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "invalid_argument" } })
     })
 
     it("list_musicians_on_date: groups assignments by status, narrowed by templateType", async () => {
@@ -370,7 +369,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
 
     it("list_pending_assignments: refuses non-trusted-leader caller", async () => {
         const r = await listPendingAssignments(MUSICIAN)
-        expect(r).toMatchObject({ ok: false, error: "forbidden_role" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "forbidden_role" } })
     })
 
     it("list_pending_assignments: returns only pending rows; uid filter narrows further", async () => {
@@ -408,12 +407,12 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
 
     it("suggest_musicians: refuses non-trusted-leader caller", async () => {
         const r = await suggestMusicians(MUSICIAN, { setlistId: SETLIST_ID })
-        expect(r).toMatchObject({ ok: false, error: "forbidden_role" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "forbidden_role" } })
     })
 
     it("suggest_musicians: not_found for missing setlist", async () => {
         const r = await suggestMusicians(ADMIN, { setlistId: "no-such-id" })
-        expect(r).toMatchObject({ ok: false, error: "not_found" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "not_found" } })
     })
 
     it("suggest_musicians: filters out already-assigned musicians and sorts core first", async () => {
@@ -442,7 +441,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
 
     it("suggest_band: refuses non-trusted-leader caller", async () => {
         const r = await suggestBand(MUSICIAN, { setlistId: SETLIST_ID })
-        expect(r).toMatchObject({ ok: false, error: "forbidden_role" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "forbidden_role" } })
     })
 
     it("suggest_band: returns ranked candidates with coverageGap including missing required slots", async () => {
@@ -465,16 +464,15 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             setlistId: SETLIST_ID,
             uid: OTHER_MUSICIAN,
         })
-        expect(r).toMatchObject({ ok: false, error: "forbidden_role" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "forbidden_role" } })
     })
 
     it("assign_musician: rejects empty setlistId / uid with invalid_argument", async () => {
-        // @ts-expect-error — bad shape on purpose
         const r = await assignMusician(ADMIN, {
             setlistId: "",
             uid: MUSICIAN,
         })
-        expect(r).toMatchObject({ ok: false, error: "invalid_argument" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "invalid_argument" } })
     })
 
     it("assign_musician: not_found on missing setlist", async () => {
@@ -482,7 +480,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             setlistId: "ghost-setlist",
             uid: MUSICIAN,
         })
-        expect(r).toMatchObject({ ok: false, error: "not_found" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "not_found" } })
     })
 
     it("assign_musician: dryRun (default) returns plan without writing or notifying", async () => {
@@ -518,19 +516,20 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
         expect(r.projectedStatus).toBe("confirmed")
     })
 
-    it("assign_musician: real-run without force → refused, no write, no notification", async () => {
+    it("assign_musician: real-run without force → rich force_required envelope, no write, no notification", async () => {
         await seedSetlist(SETLIST_ID, { eventDate: EVENT_DATE_ISO })
         const r = await assignMusician(ADMIN, {
             setlistId: SETLIST_ID,
             uid: MUSICIAN,
             dryRun: false,
         })
-        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
         expect(r).toMatchObject({
-            ok: true,
-            dryRun: false,
-            refused: true,
-            committed: false,
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+            setlistId: SETLIST_ID,
+            dryRunPlan: {
+                committed: false,
+            },
         })
 
         const assignmentsSnap = await db()
@@ -550,7 +549,6 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
         })
         if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
         expect(r.committed).toBe(true)
-        expect(r.refused).toBeUndefined()
 
         const assignmentsSnap = await db()
             .collection("scheduling_assignments")
@@ -606,7 +604,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             setlistId: SETLIST_ID,
             uid: MUSICIAN,
         })
-        expect(r).toMatchObject({ ok: false, error: "rate_limited" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "rate_limited" } })
     })
 
     // ─── unassign_musician ──────────────────────────────────────────────────
@@ -616,7 +614,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             setlistId: SETLIST_ID,
             uid: OTHER_MUSICIAN,
         })
-        expect(r).toMatchObject({ ok: false, error: "forbidden_role" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "forbidden_role" } })
     })
 
     it("unassign_musician: not_found on missing setlist", async () => {
@@ -624,7 +622,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             setlistId: "ghost",
             uid: MUSICIAN,
         })
-        expect(r).toMatchObject({ ok: false, error: "not_found" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "not_found" } })
     })
 
     it("unassign_musician: dryRun shows previousStatus + assignmentId without writing", async () => {
@@ -662,9 +660,11 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             uid: MUSICIAN,
             dryRun: false,
         })
-        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
-        expect(r.refused).toBe(true)
-        expect(r.committed).toBe(false)
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+            dryRunPlan: { committed: false },
+        })
     })
 
     it("unassign_musician: force:true cancels and fires cancellation cascade", async () => {
@@ -714,7 +714,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             // @ts-expect-error — bad shape on purpose
             status: "pending",
         })
-        expect(r).toMatchObject({ ok: false, error: "invalid_argument" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "invalid_argument" } })
     })
 
     it("respond_to_assignment: not_found on missing assignment", async () => {
@@ -722,7 +722,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             assignmentId: "ghost-assignment",
             status: "confirmed",
         })
-        expect(r).toMatchObject({ ok: false, error: "not_found" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "not_found" } })
     })
 
     it("respond_to_assignment: forbidden_assignment when responding to someone else's invitation", async () => {
@@ -736,7 +736,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             assignmentId: "a1",
             status: "confirmed",
         })
-        expect(r).toMatchObject({ ok: false, error: "forbidden_assignment" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "forbidden_assignment" } })
     })
 
     it("respond_to_assignment: musician accepts own pending → status flips to confirmed", async () => {
@@ -794,7 +794,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "validation_error",
+            error: { machine_code: "validation_error" },
             currentStatus: "confirmed",
         })
     })

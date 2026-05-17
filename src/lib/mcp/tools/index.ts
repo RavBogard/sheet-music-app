@@ -86,7 +86,7 @@ import {
     unassignMusician,
     respondToAssignment,
 } from "./roster"
-import { richError } from "@/lib/mcp/error-envelopes"
+import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 
 /**
@@ -202,26 +202,35 @@ function uidFrom(extra: AuthExtra): string {
 }
 
 /**
- * F-015 (cycle-1) — uniform rich-error normalizer applied to every MCP
- * tool response. The canonical error shape is
- *   { ok: false, error: <machine_code>, message: <human>, ...context, hint }
- * Tools that already return this shape (anything built via richError /
- * staleVersionEnvelope / trackNotFoundEnvelope) pass through unchanged.
- * Legacy returns of the form `{ error: "prose" }` get lifted: `ok: false`
- * is added, the prose becomes `message`, and the original `error` string
- * is preserved as the machine code field. This guarantees the wire
- * envelope is consistent without forcing a mechanical sweep of every
- * `return { error: ... }` call site, while leaving room for individual
- * tools to convert to real machine codes incrementally.
+ * Cycle-3 REG-002 — uniform rich-error normalizer applied to every MCP
+ * tool response. Canonical wire shape:
+ *
+ *   { ok: false,
+ *     error: { code, machine_code, message, debug? },
+ *     ...extras (hint, dryRunPlan, fileId, issues[], ...) }
+ *
+ * Three input shapes get handled:
+ *
+ *  1. Rich envelope already (richError / staleVersionEnvelope /
+ *     trackNotFoundEnvelope / forbiddenRoleEnvelope / zodFormatter) —
+ *     passthrough.
+ *
+ *  2. Legacy flat envelope `{ok:false, error:<string-slug>, message?,
+ *     ...extras, hint?}` — lift to rich shape via
+ *     `liftLegacyErrorEnvelope`. Catches the pre-cycle-3 b1 shape any
+ *     emit path that bypasses `richError()` still produces.
+ *
+ *  3. Even older `{error:"prose"}` with no ok field — lift the same way
+ *     (prose becomes both `machine_code` and `message`; downstream
+ *     callers see a structurally valid rich envelope but with a prose
+ *     machine_code that fails the snake_case regex test on PR review).
+ *
+ * This is defense-in-depth — every emit-error path SHOULD go through
+ * `richError()` directly. The normalizer guarantees the wire shape is
+ * uniform even when a future contributor skips the helper.
  */
 function normalizeErrorEnvelope(data: unknown): unknown {
-    if (!data || typeof data !== "object") return data
-    const obj = data as Record<string, unknown>
-    if ("ok" in obj) return obj // canonical (success or rich error) — passthrough
-    if (typeof obj.error !== "string") return obj // not an error shape
-    const message =
-        typeof obj.message === "string" && obj.message ? obj.message : obj.error
-    return { ok: false, ...obj, message }
+    return liftLegacyErrorEnvelope(data)
 }
 
 function jsonResult(data: unknown) {
@@ -1089,7 +1098,7 @@ export function registerWriteTools(server: McpServer): void {
         "backfill_setlist_test_flag",
         {
             description:
-                "Admin-only one-shot setlist hygiene pass (cycle-2 SEC-004). Walks every `setlists/*` doc and classifies each as `isTest: true` when owner uid starts with `test-` (provisioned by `create_test_account`) OR the name matches `^\\[(TEST|CYCLE\\d+-|CF\\d+-)`. Going forward, `create_setlist` stamps `isTest` at write time — this tool exists exclusively to backfill legacy rows that pre-date the SEC-004 commit so the `/perform` public listing's `isTest === false` filter is sound across the whole collection. Defaults `dryRun:true`; pass `force:true` for real writes. A real run without `force:true` returns the plan with `refused:true` and no writes. Returns `{scanned, rowsChanged, flaggedTest, flaggedReal, deltas, deltasTruncated, dryRun, refused?}`; `deltas` is capped at 500 entries with `deltasTruncated:true` past that.",
+                "Admin-only one-shot setlist hygiene pass (cycle-2 SEC-004). Walks every `setlists/*` doc and classifies each as `isTest: true` when owner uid starts with `test-` (provisioned by `create_test_account`) OR the name matches `^\\[(TEST|CYCLE\\d+-|CF\\d+-)`. Going forward, `create_setlist` stamps `isTest` at write time — this tool exists exclusively to backfill legacy rows that pre-date the SEC-004 commit so the `/perform` public listing's `isTest === false` filter is sound across the whole collection. Defaults `dryRun:true`; pass `force:true` for real writes. A real run without `force:true` returns the rich `force_required` envelope (REG-003: `{ok:false, error:{machine_code:'force_required'}, dryRunPlan:<the plan>}`) and no writes. On success returns `{scanned, rowsChanged, flaggedTest, flaggedReal, deltas, deltasTruncated, dryRun}`; `deltas` is capped at 500 entries with `deltasTruncated:true` past that.",
             inputSchema: {
                 dryRun: z
                     .boolean()
@@ -1101,7 +1110,7 @@ export function registerWriteTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes.",
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the rich `force_required` envelope (REG-003) and no writes.",
                     ),
             },
         },
@@ -1113,7 +1122,7 @@ export function registerWriteTools(server: McpServer): void {
         "backfill_library_index",
         {
             description:
-                "Admin-only one-shot library_index hygiene backfill (cycle-2 DATA-001). Walks every row; for each, (a) strips leading/trailing whitespace from `name` (and rebuilds `nameLower`) so future Drive re-scans don't fork into duplicate rows the way ' Ana B_Koach.pdf' once did, and (b) hydrates `fileSize` from the Firebase Storage object (probes `library/{fileId}` + `.pdf` / `.xml` / image extensions) for rows whose `fileSize` is null. Rows with `status: \"orphaned\"` or `status: \"duplicate\"` skip the size hydration (no Storage object to probe). Defaults `dryRun: true` per the F-05 dry-run-is-observability rule — the caller MUST pass `force: true` to actually write. Returns `{scanned, rowsChanged, namesNormalized, fileSizesHydrated, fileSizesUnresolved, deltas, deltasTruncated, dryRun, refused?, coverage:{total,eligible,scanned,filteredOut}}` — the cycle-3 DATA-002 coverage field is identical in shape across list_library / dedupe_library / reconcile_library so operators can correlate totals across the four tools. `deltas` is capped at 500 rows (set `deltasTruncated:true` past that — the totals stay accurate). Real run without `force:true` returns the plan with `refused:true` and no writes.",
+                "Admin-only one-shot library_index hygiene backfill (cycle-2 DATA-001). Walks every row; for each, (a) strips leading/trailing whitespace from `name` (and rebuilds `nameLower`) so future Drive re-scans don't fork into duplicate rows the way ' Ana B_Koach.pdf' once did, and (b) hydrates `fileSize` from the Firebase Storage object (probes `library/{fileId}` + `.pdf` / `.xml` / image extensions) for rows whose `fileSize` is null. Rows with `status: \"orphaned\"` or `status: \"duplicate\"` skip the size hydration (no Storage object to probe). Defaults `dryRun: true` per the F-05 dry-run-is-observability rule — the caller MUST pass `force: true` to actually write. Returns `{scanned, rowsChanged, namesNormalized, fileSizesHydrated, fileSizesUnresolved, deltas, deltasTruncated, dryRun, coverage:{total,eligible,scanned,filteredOut}}` on success — the cycle-3 DATA-002 coverage field is identical in shape across list_library / dedupe_library / reconcile_library so operators can correlate totals across the four tools. `deltas` is capped at 500 rows (set `deltasTruncated:true` past that — the totals stay accurate). Real run without `force:true` returns the rich `force_required` envelope (REG-003: `{ok:false, error:{machine_code:'force_required'}, dryRunPlan:<the plan>}`) and no writes.",
             inputSchema: {
                 dryRun: z
                     .boolean()
@@ -1125,7 +1134,7 @@ export function registerWriteTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes — even after `dryRun: false` is set.",
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the rich `force_required` envelope (REG-003) and no writes — even after `dryRun: false` is set.",
                     ),
             },
         },
@@ -1137,7 +1146,7 @@ export function registerWriteTools(server: McpServer): void {
         "reconcile_library",
         {
             description:
-                "Admin-only one-shot bootstrap reconciliation for `library_index` rows under the storage-canonical direction (cycle-3 ADDENDUM-1 NEW-2). Walks every active row; for any whose Storage object 404s, probes Drive: Drive 200 + chart-shape → mirror the bytes into Storage at the EXISTING fileId (preserving every setlist/song bond) and flip `status: 'active'`; Drive 200 + non-chart mime (folder / audio / .DS_Store / Office doc) → route to `skippedNonChart` bucket and leave untouched (cycle-3 BUG-001 — prevents force-writes of 0-byte garbage at the existing fileId); Drive 404 → mark `status: 'orphaned'`; Drive 5xx / timeout → leave the row untouched and surface in the `transient` bucket so the operator can re-run later. Drains the ~250 dead-looking rows from the pre-NEW-1 era. Idempotent: rows already `status: 'orphaned'` or `status: 'duplicate'` are skipped, so a second run after a successful force-run leaves nothing to do. Defaults `dryRun: true` per the F-05 dry-run-is-observability rule — caller MUST pass `force: true` to actually write. dryRun returns the full plan (bucket counts + per-row preview, capped at 500 rows per bucket) without writes. Real run without `force: true` returns the plan with `refused: true` and no writes. Mirror operation preserves processChartUpload's atomic-guard contract (read-verify + compensating-delete + library_signals broadcast). Returns `{scanned, alreadyHealthy, driveMirror:{count,rows,truncated}, orphan:{count,rows,truncated}, transient:{count,rows,truncated}, skippedNonChart:{count,rows,truncated}, coverage, dryRun, committed, refused?}`.",
+                "Admin-only one-shot bootstrap reconciliation for `library_index` rows under the storage-canonical direction (cycle-3 ADDENDUM-1 NEW-2). Walks every active row; for any whose Storage object 404s, probes Drive: Drive 200 + chart-shape → mirror the bytes into Storage at the EXISTING fileId (preserving every setlist/song bond) and flip `status: 'active'`; Drive 200 + non-chart mime (folder / audio / .DS_Store / Office doc) → route to `skippedNonChart` bucket and leave untouched (cycle-3 BUG-001 — prevents force-writes of 0-byte garbage at the existing fileId); Drive 404 → mark `status: 'orphaned'`; Drive 5xx / timeout → leave the row untouched and surface in the `transient` bucket so the operator can re-run later. Drains the ~250 dead-looking rows from the pre-NEW-1 era. Idempotent: rows already `status: 'orphaned'` or `status: 'duplicate'` are skipped, so a second run after a successful force-run leaves nothing to do. Defaults `dryRun: true` per the F-05 dry-run-is-observability rule — caller MUST pass `force: true` to actually write. dryRun returns the full plan (bucket counts + per-row preview, capped at 500 rows per bucket) without writes. Real run without `force: true` returns the rich `force_required` envelope (REG-003: `{ok:false, error:{machine_code:'force_required'}, dryRunPlan:<the plan>}`) and no writes. Mirror operation preserves processChartUpload's atomic-guard contract (read-verify + compensating-delete + library_signals broadcast). Returns `{scanned, alreadyHealthy, driveMirror:{count,rows,truncated}, orphan:{count,rows,truncated}, transient:{count,rows,truncated}, skippedNonChart:{count,rows,truncated}, coverage, dryRun, committed}` on success.",
             inputSchema: {
                 dryRun: z
                     .boolean()
@@ -1149,7 +1158,7 @@ export function registerWriteTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes — even after `dryRun: false` is set.",
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the rich `force_required` envelope (REG-003) and no writes — even after `dryRun: false` is set.",
                     ),
             },
         },
@@ -1208,7 +1217,7 @@ export function registerWriteTools(server: McpServer): void {
         "set_ai_auto_apply",
         {
             description:
-                "Admin-only — flip `aiConfig.autoApplyEnabled` (cycle-3 c2). Controls whether the a3 AI enrichment subscriber auto-applies Sonnet's suggestions onto new library_index rows (true → auto-fill empty key/bpm/tags/leadMusician when confidence ≥ threshold; false → every row lands in /manage/library-review for human triage regardless of confidence). Pair `dryRun: false, force: true` for the actual write — F-05 standing rule: dryRun-default + force-required for real writes. dryRun returns the would-be `{previous, new, changed}` without writing. A real run without `force: true` returns the same shape plus `refused: true` and still no writes. Idempotent: flipping to the current value returns `changed: false` without surprise side-effects. Returns `{ok: true, previous: boolean, new: boolean, changed: boolean, dryRun, refused?}`.",
+                "Admin-only — flip `aiConfig.autoApplyEnabled` (cycle-3 c2). Controls whether the a3 AI enrichment subscriber auto-applies Sonnet's suggestions onto new library_index rows (true → auto-fill empty key/bpm/tags/leadMusician when confidence ≥ threshold; false → every row lands in /manage/library-review for human triage regardless of confidence). Pair `dryRun: false, force: true` for the actual write — F-05 standing rule: dryRun-default + force-required for real writes. dryRun returns the would-be `{previous, new, changed}` without writing. A real run without `force: true` returns the rich `force_required` envelope (REG-003) and still no writes. Idempotent: flipping to the current value returns `changed: false` without surprise side-effects. Returns `{ok: true, previous: boolean, new: boolean, changed: boolean, dryRun}`.",
             inputSchema: {
                 enabled: z
                     .boolean()
@@ -1225,7 +1234,7 @@ export function registerWriteTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes. Pair with clear user intent (e.g. \"flip auto-apply on\") — the dryRun → real-run flow is the safety contract.",
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the rich `force_required` envelope (REG-003) and no writes. Pair with clear user intent (e.g. \"flip auto-apply on\") — the dryRun → real-run flow is the safety contract.",
                     ),
             },
         },
@@ -1237,7 +1246,7 @@ export function registerWriteTools(server: McpServer): void {
         "set_ai_threshold",
         {
             description:
-                "Admin-only — set `aiConfig.threshold` (cycle-3 c2). Confidence floor in `[0, 1]` used by the a3 AI enrichment subscriber: any row whose Sonnet self-assessed `confidence` is below this threshold lands in /manage/library-review regardless of autoApplyEnabled. Default 0.7 (Daniel-ratified per ADDENDUM-1 §3 NEW-3). Use lower values (e.g. 0.5) to let more borderline AI calls auto-apply during calibration; higher values (e.g. 0.85) to be more conservative once the queue stabilises. Zod-validated: out-of-range values return `validation_error` with hint. Same dryRun/force contract as set_ai_auto_apply: dryRun-default, force-required for writes. Idempotent. Returns `{ok: true, previous: number, new: number, changed: boolean, dryRun, refused?}`.",
+                "Admin-only — set `aiConfig.threshold` (cycle-3 c2). Confidence floor in `[0, 1]` used by the a3 AI enrichment subscriber: any row whose Sonnet self-assessed `confidence` is below this threshold lands in /manage/library-review regardless of autoApplyEnabled. Default 0.7 (Daniel-ratified per ADDENDUM-1 §3 NEW-3). Use lower values (e.g. 0.5) to let more borderline AI calls auto-apply during calibration; higher values (e.g. 0.85) to be more conservative once the queue stabilises. Zod-validated: out-of-range values return `validation_error` with hint. Same dryRun/force contract as set_ai_auto_apply: dryRun-default, force-required for writes. Idempotent. Returns `{ok: true, previous: number, new: number, changed: boolean, dryRun}`.",
             inputSchema: {
                 value: z
                     .number()
@@ -1256,7 +1265,7 @@ export function registerWriteTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes.",
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the rich `force_required` envelope (REG-003) and no writes.",
                     ),
             },
         },
@@ -1324,7 +1333,7 @@ export function registerWriteTools(server: McpServer): void {
         "accept_enrichment",
         {
             description:
-                "Admin-only — apply the AI suggestion to a `library_index` row (cycle-3 a5). Calls a4's shared `acceptEnrichment` helper: gap-fill only (never overwrites human-set key/bpm/leadMusician/tags), NEVER overwrites `collection` (David's-subfolder authority — operator must use `edit_enrichment` to override), and only renames the row's `name` when the suggestion differs AND `humanRenamedAt` isn't already set. Sets `enrichmentStatus: 'enriched'` + stamps `enrichmentReviewedAt`/`enrichmentReviewedBy`. F-05 contract: `dryRun: true` (default) returns the would-be `plannedStatus` + `plannedPatch` (the fields that would actually flip) without writing. Real-run without `force: true` returns the same plan + `refused: true` and no writes. Pair `dryRun: false, force: true` for the actual flip. Idempotent: re-running on an already-enriched row succeeds (gap-fill applies nothing new). Returns `{ok: true, rowId, status, plannedStatus, plannedPatch?, dryRun, refused?}`. Refusals carry rich `row_not_found` / `invalid_state` envelopes.",
+                "Admin-only — apply the AI suggestion to a `library_index` row (cycle-3 a5). Calls a4's shared `acceptEnrichment` helper: gap-fill only (never overwrites human-set key/bpm/leadMusician/tags), NEVER overwrites `collection` (David's-subfolder authority — operator must use `edit_enrichment` to override), and only renames the row's `name` when the suggestion differs AND `humanRenamedAt` isn't already set. Sets `enrichmentStatus: 'enriched'` + stamps `enrichmentReviewedAt`/`enrichmentReviewedBy`. F-05 contract: `dryRun: true` (default) returns the would-be `plannedStatus` + `plannedPatch` (the fields that would actually flip) without writing. Real-run without `force: true` returns the rich `force_required` envelope (REG-003) and no writes. Pair `dryRun: false, force: true` for the actual flip. Idempotent: re-running on an already-enriched row succeeds (gap-fill applies nothing new). Returns `{ok: true, rowId, status, plannedStatus, plannedPatch?, dryRun}`. Refusals carry rich `row_not_found` / `invalid_state` envelopes.",
             inputSchema: {
                 rowId: z
                     .string()
@@ -1342,7 +1351,7 @@ export function registerWriteTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes.",
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the rich `force_required` envelope (REG-003) and no writes.",
                     ),
             },
         },
@@ -1354,7 +1363,7 @@ export function registerWriteTools(server: McpServer): void {
         "reject_enrichment",
         {
             description:
-                "Admin-only — discard the AI suggestion for one `library_index` row (cycle-3 a5). Calls a4's shared `rejectEnrichment` helper: leaves all field values untouched, flips `enrichmentStatus` to `'human_rejected'`, stamps reviewedAt/reviewedBy, and tidies the `aiEnrichmentRetryQueue/{rowId}` doc so the next cron drain doesn't re-fire enrichment for this row. F-05 contract: `dryRun: true` (default) returns the plan without writing; real-run without `force: true` returns the same plan + `refused: true`. Pair `dryRun: false, force: true` for the actual write. Idempotent: re-running on an already-`human_rejected` row is a no-op modulo the timestamp re-stamp. Returns `{ok: true, rowId, status: 'human_rejected', plannedStatus, dryRun, refused?}`.",
+                "Admin-only — discard the AI suggestion for one `library_index` row (cycle-3 a5). Calls a4's shared `rejectEnrichment` helper: leaves all field values untouched, flips `enrichmentStatus` to `'human_rejected'`, stamps reviewedAt/reviewedBy, and tidies the `aiEnrichmentRetryQueue/{rowId}` doc so the next cron drain doesn't re-fire enrichment for this row. F-05 contract: `dryRun: true` (default) returns the plan without writing; real-run without `force: true` returns the rich `force_required` envelope (REG-003). Pair `dryRun: false, force: true` for the actual write. Idempotent: re-running on an already-`human_rejected` row is a no-op modulo the timestamp re-stamp. Returns `{ok: true, rowId, status: 'human_rejected', plannedStatus, dryRun}`.",
             inputSchema: {
                 rowId: z
                     .string()
@@ -1374,7 +1383,7 @@ export function registerWriteTools(server: McpServer): void {
         "edit_enrichment",
         {
             description:
-                "Admin-only — operator override on a `library_index` review row (cycle-3 a5). Calls a4's shared `editEnrichment` helper: applies the supplied `edits` payload directly to the doc (including `collection` — the operator override path IS allowed even though the AI's acceptEnrichment is NOT), sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and sets `humanRenamedAt` whenever `title` is changed (so future enrichment runs won't re-rename). Editable fields: title (non-empty), collection (core|supplemental|uploads), key (string), bpm (positive number or null to clear), leadMusician (string), tags (string[]). At least one field required. F-05 contract: `dryRun: true` (default) validates the edits payload + checks the row exists, returns `plannedPatch` without writing; real-run without `force: true` refuses. Validation failures surface as `invalid_field` rich envelopes. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun, refused?}`.",
+                "Admin-only — operator override on a `library_index` review row (cycle-3 a5). Calls a4's shared `editEnrichment` helper: applies the supplied `edits` payload directly to the doc (including `collection` — the operator override path IS allowed even though the AI's acceptEnrichment is NOT), sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and sets `humanRenamedAt` whenever `title` is changed (so future enrichment runs won't re-rename). Editable fields: title (non-empty), collection (core|supplemental|uploads), key (string), bpm (positive number or null to clear), leadMusician (string), tags (string[]). At least one field required. F-05 contract: `dryRun: true` (default) validates the edits payload + checks the row exists, returns `plannedPatch` without writing; real-run without `force: true` refuses. Validation failures surface as `invalid_field` rich envelopes. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
             inputSchema: {
                 rowId: z
                     .string()
@@ -1431,7 +1440,7 @@ export function registerWriteTools(server: McpServer): void {
         "retry_enrichment",
         {
             description:
-                "Admin-only — re-enqueue a `failed` enrichment or `chartImportQueue` row (cycle-3 a5). Calls a4's shared `retryFailed` helper. `kind: 'enrichment'` (default) rewinds the `aiEnrichmentRetryQueue/{rowId}` doc to `attempts: 0, nextRetryAt: now`, clears `lastError`/`exhaustedAt`, and flips the library_index status back to `'pending'` so the next 30-min `/api/cron/ai-enrich-retry` tick re-runs enrichment. `kind: 'import'` deletes the `chartImportQueue/{driveFileId}` doc so the next 5-min `/api/cron/drive-sync` tick re-imports the file fresh from David's Drop folder. F-05 contract: `dryRun: true` (default) checks the queue doc exists + returns `plannedStatus` without writing. Real-run without `force: true` refuses with `refused: true`. `queue_doc_missing` rich envelope when the row already drained. Returns `{ok: true, rowId, status, plannedStatus, plannedPatch:{kind}, dryRun, refused?}`.",
+                "Admin-only — re-enqueue a `failed` enrichment or `chartImportQueue` row (cycle-3 a5). Calls a4's shared `retryFailed` helper. `kind: 'enrichment'` (default) rewinds the `aiEnrichmentRetryQueue/{rowId}` doc to `attempts: 0, nextRetryAt: now`, clears `lastError`/`exhaustedAt`, and flips the library_index status back to `'pending'` so the next 30-min `/api/cron/ai-enrich-retry` tick re-runs enrichment. `kind: 'import'` deletes the `chartImportQueue/{driveFileId}` doc so the next 5-min `/api/cron/drive-sync` tick re-imports the file fresh from David's Drop folder. F-05 contract: `dryRun: true` (default) checks the queue doc exists + returns `plannedStatus` without writing. Real-run without `force: true` refuses with the rich `force_required` envelope (REG-003). `queue_doc_missing` rich envelope when the row already drained. Returns `{ok: true, rowId, status, plannedStatus, plannedPatch:{kind}, dryRun}`.",
             inputSchema: {
                 rowId: z
                     .string()
@@ -1457,7 +1466,7 @@ export function registerWriteTools(server: McpServer): void {
         "dismiss_failure",
         {
             description:
-                "Admin-only — mark a `failed` enrichment or `chartImportQueue` row as handled without re-trying (cycle-3 a5). Calls a4's shared `dismissFailed` helper. `kind: 'enrichment'` flips library_index `enrichmentStatus` to `'human_rejected'`, stamps reviewedAt/reviewedBy, and deletes the `aiEnrichmentRetryQueue/{rowId}` doc so cron stops re-firing. `kind: 'import'` sets `dismissed: true` on the `chartImportQueue/{driveFileId}` doc — this is the dismissed-until-next-failure semantic; the next failure overwrite from the poller resets the flag so the row re-surfaces if the underlying problem recurs. F-05 contract: `dryRun: true` (default) checks the row/queue doc exists + returns `plannedStatus` without writing. Real-run without `force: true` refuses. Returns `{ok: true, rowId, status, plannedStatus, plannedPatch:{kind}, dryRun, refused?}`.",
+                "Admin-only — mark a `failed` enrichment or `chartImportQueue` row as handled without re-trying (cycle-3 a5). Calls a4's shared `dismissFailed` helper. `kind: 'enrichment'` flips library_index `enrichmentStatus` to `'human_rejected'`, stamps reviewedAt/reviewedBy, and deletes the `aiEnrichmentRetryQueue/{rowId}` doc so cron stops re-firing. `kind: 'import'` sets `dismissed: true` on the `chartImportQueue/{driveFileId}` doc — this is the dismissed-until-next-failure semantic; the next failure overwrite from the poller resets the flag so the row re-surfaces if the underlying problem recurs. F-05 contract: `dryRun: true` (default) checks the row/queue doc exists + returns `plannedStatus` without writing. Real-run without `force: true` refuses. Returns `{ok: true, rowId, status, plannedStatus, plannedPatch:{kind}, dryRun}`.",
             inputSchema: {
                 rowId: z
                     .string()
@@ -2147,7 +2156,7 @@ export function registerRosterTools(server: McpServer): void {
         "assign_musician",
         {
             description:
-                "Admin/band_leader only — assign one musician to a setlist. dryRun-default + force-gated per the F-05 dry-run-is-observability rule: a real run requires `dryRun: false, force: true`. dryRun returns the plan with the projected status ('confirmed' for core musicians who auto-confirm; 'pending' otherwise), the resolved musician profile (denormalized name/email/instrument/tier), and `alreadyAssigned: true` when an active assignment already exists (the real run becomes a no-op in that case — idempotent). Force-run commits the assignment AND triggers the notification cascade (email + SMS + push + in-app), honoring the musician's notification preferences. The musician's instrument defaults to their `musicianProfile.instrument` unless overridden via the `instrument` argument (e.g., booking a multi-instrumentalist on their secondary). Trusted-leader (admin/band_leader) bypasses the per-uid rate limiter — non-trusted callers hit the standard 'api' tier limit. Returns `{ok: true, setlistId, setlistName, musician, projectedStatus, alreadyAssigned, dryRun, refused?, committed}`.",
+                "Admin/band_leader only — assign one musician to a setlist. dryRun-default + force-gated per the F-05 dry-run-is-observability rule: a real run requires `dryRun: false, force: true`. dryRun returns the plan with the projected status ('confirmed' for core musicians who auto-confirm; 'pending' otherwise), the resolved musician profile (denormalized name/email/instrument/tier), and `alreadyAssigned: true` when an active assignment already exists (the real run becomes a no-op in that case — idempotent). Force-run commits the assignment AND triggers the notification cascade (email + SMS + push + in-app), honoring the musician's notification preferences. The musician's instrument defaults to their `musicianProfile.instrument` unless overridden via the `instrument` argument (e.g., booking a multi-instrumentalist on their secondary). Trusted-leader (admin/band_leader) bypasses the per-uid rate limiter — non-trusted callers hit the standard 'api' tier limit. Returns `{ok: true, setlistId, setlistName, musician, projectedStatus, alreadyAssigned, dryRun, committed}`.",
             inputSchema: {
                 setlistId: z
                     .string()
@@ -2175,7 +2184,7 @@ export function registerRosterTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes. The notification cascade fires on commit — make sure intent is clear before forcing.",
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the rich `force_required` envelope (REG-003) and no writes. The notification cascade fires on commit — make sure intent is clear before forcing.",
                     ),
             },
         },
@@ -2187,7 +2196,7 @@ export function registerRosterTools(server: McpServer): void {
         "unassign_musician",
         {
             description:
-                "Admin/band_leader only — cancel a musician's active assignment on a setlist (flips status `pending|confirmed → cancelled`). Resolves the assignmentId from `(setlistId, uid)` so the agent never has to fetch it first. dryRun-default + force-gated per F-05: a real run requires `dryRun: false, force: true`. dryRun returns the plan with the previous status (null when no active assignment exists — the real run is a safe no-op). Force-run commits the cancellation, removes the musician from `setlists/{id}.musicians[]` + `assignedUids[]` in the same transaction, and fires the cancellation notification cascade (email + SMS + in-app). Cancelling an assignment already in a terminal state (declined or cancelled) returns the rich `validation_error` envelope. Trusted-leader rate-limit bypass applies. Returns `{ok: true, setlistId, uid, assignmentId, previousStatus, dryRun, refused?, committed}`.",
+                "Admin/band_leader only — cancel a musician's active assignment on a setlist (flips status `pending|confirmed → cancelled`). Resolves the assignmentId from `(setlistId, uid)` so the agent never has to fetch it first. dryRun-default + force-gated per F-05: a real run requires `dryRun: false, force: true`. dryRun returns the plan with the previous status (null when no active assignment exists — the real run is a safe no-op). Force-run commits the cancellation, removes the musician from `setlists/{id}.musicians[]` + `assignedUids[]` in the same transaction, and fires the cancellation notification cascade (email + SMS + in-app). Cancelling an assignment already in a terminal state (declined or cancelled) returns the rich `validation_error` envelope. Trusted-leader rate-limit bypass applies. Returns `{ok: true, setlistId, uid, assignmentId, previousStatus, dryRun, committed}`.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id."),
                 uid: z

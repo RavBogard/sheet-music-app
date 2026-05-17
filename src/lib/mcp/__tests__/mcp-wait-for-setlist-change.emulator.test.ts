@@ -94,7 +94,7 @@ describe("wait_for_setlist_change (emulator)", () => {
             timeoutSec: 30, // would normally block but version is ahead
         })
 
-        if ("error" in result) throw new Error(result.error)
+        if ("error" in result) throw new Error(typeof result.error === "string" ? result.error : JSON.stringify(result.error))
         expect(result.changed).toBe(true)
         expect(result.currentVersion).toBe(7)
         expect(result.changes).toBeDefined()
@@ -114,7 +114,7 @@ describe("wait_for_setlist_change (emulator)", () => {
         })
         const elapsedMs = Date.now() - start
 
-        if ("error" in result) throw new Error(result.error)
+        if ("error" in result) throw new Error(typeof result.error === "string" ? result.error : JSON.stringify(result.error))
         expect(result.changed).toBe(false)
         expect(result.timedOut).toBe(true)
         expect(result.currentVersion).toBe(3)
@@ -137,7 +137,7 @@ describe("wait_for_setlist_change (emulator)", () => {
         await bumpSetlistVersion(6)
 
         const result = await waitPromise
-        if ("error" in result) throw new Error(result.error)
+        if ("error" in result) throw new Error(typeof result.error === "string" ? result.error : JSON.stringify(result.error))
         expect(result.changed).toBe(true)
         expect(result.currentVersion).toBe(6)
         const change = result.changes?.find((c) => c.entity === "setlist")
@@ -173,7 +173,7 @@ describe("wait_for_setlist_change (emulator)", () => {
         await batch.commit()
 
         const result = await waitPromise
-        if ("error" in result) throw new Error(result.error)
+        if ("error" in result) throw new Error(typeof result.error === "string" ? result.error : JSON.stringify(result.error))
         expect(result.changed).toBe(true)
         expect(result.currentVersion).toBe(6)
         const setlistChange = result.changes?.find((c) => c.entity === "setlist")
@@ -194,7 +194,7 @@ describe("wait_for_setlist_change (emulator)", () => {
             includeFullState: true,
         })
 
-        if ("error" in result) throw new Error(result.error)
+        if ("error" in result) throw new Error(typeof result.error === "string" ? result.error : JSON.stringify(result.error))
         expect(result.changed).toBe(true)
         expect(result.setlist).toBeDefined()
         const setlist = result.setlist as { tracks: Array<{ id: string; order: number }> }
@@ -227,7 +227,7 @@ describe("wait_for_setlist_change (emulator)", () => {
 
         const result = await waitPromise
         const elapsedMs = Date.now() - start
-        if ("error" in result) throw new Error(result.error)
+        if ("error" in result) throw new Error(typeof result.error === "string" ? result.error : JSON.stringify(result.error))
         expect(result.changed).toBe(true)
         expect(result.currentVersion).toBe(6)
         // Should resolve fast — well under the 10s timeout. Pre-fix this
@@ -257,7 +257,7 @@ describe("wait_for_setlist_change (emulator)", () => {
         await bumpSetlistVersion(4)
 
         const result = await waitPromise
-        if ("error" in result) throw new Error(result.error)
+        if ("error" in result) throw new Error(typeof result.error === "string" ? result.error : JSON.stringify(result.error))
         // Whether resolved via listener, post-sub check, or the timeout's
         // explicit fresh read, currentVersion MUST reflect the bump.
         expect(result.currentVersion).toBe(4)
@@ -271,7 +271,7 @@ describe("wait_for_setlist_change (emulator)", () => {
             sinceVersion: 7,
             timeoutSec: 1,
         })
-        if ("error" in result) throw new Error(result.error)
+        if ("error" in result) throw new Error(typeof result.error === "string" ? result.error : JSON.stringify(result.error))
         expect(result.timedOut).toBe(true)
         expect(result.changed).toBe(false)
         // True version is still 7 — no write happened. Fresh-read fix
@@ -286,7 +286,7 @@ describe("wait_for_setlist_change (emulator)", () => {
         })
         expect(noId).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             field: "setlistId",
             message: expect.stringContaining("setlistId"),
         })
@@ -297,7 +297,7 @@ describe("wait_for_setlist_change (emulator)", () => {
         })
         expect(negVersion).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             field: "sinceVersion",
             message: expect.stringContaining("sinceVersion"),
         })
@@ -314,7 +314,7 @@ describe("wait_for_setlist_change (emulator)", () => {
             sinceVersion: 1,
             timeoutSec: 9999, // would be clamped to 60
         })
-        if ("error" in result) throw new Error(result.error)
+        if ("error" in result) throw new Error(typeof result.error === "string" ? result.error : JSON.stringify(result.error))
         expect(result.changed).toBe(true)
         // Sanity check that the constant is exposed.
         expect(WAIT_FOR_SETLIST_CHANGE_MAX_TIMEOUT_SEC).toBe(60)

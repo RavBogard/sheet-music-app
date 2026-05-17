@@ -21,8 +21,11 @@ describe("httpError", () => {
         const body = (await res.json()) as Record<string, unknown>
         expect(body).toEqual({
             ok: false,
-            error: "file_not_found",
-            message: "No chart found for the given fileId.",
+            error: {
+                code: 404,
+                machine_code: "file_not_found",
+                message: "No chart found for the given fileId.",
+            },
             fileId: "abc",
             hint: "Verify via list_library.",
         })
@@ -34,8 +37,8 @@ describe("httpError", () => {
             "unauthenticated",
             "Bearer token required.",
         )
-        const body = (await res.json()) as Record<string, unknown>
-        expect(MACHINE_CODE_RE.test(body.error as string)).toBe(true)
+        const body = (await res.json()) as { error: { machine_code: string } }
+        expect(MACHINE_CODE_RE.test(body.error.machine_code)).toBe(true)
     })
 
     it("omits the hint field when not supplied", async () => {

@@ -480,7 +480,7 @@ describe("Correction-signal capture + aggregation (emulator)", () => {
         const r = await getCorrectionStats(MUSICIAN)
         expect(r).toMatchObject({
             ok: false,
-            error: "forbidden_role",
+            error: { machine_code: "forbidden_role" },
             callerRole: "musician",
             requiredRoles: ["admin"],
         })
@@ -491,7 +491,7 @@ describe("Correction-signal capture + aggregation (emulator)", () => {
         const r = await getCorrectionStats(BAND_LEADER)
         expect(r).toMatchObject({
             ok: false,
-            error: "forbidden_role",
+            error: { machine_code: "forbidden_role" },
             callerRole: "band_leader",
         })
     })
@@ -550,7 +550,7 @@ describe("Correction-signal capture + aggregation (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             since: "yesterday",
         })
     })
@@ -562,7 +562,7 @@ describe("Correction-signal capture + aggregation (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
         })
     })
 })

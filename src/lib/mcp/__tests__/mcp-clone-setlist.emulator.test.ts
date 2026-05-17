@@ -42,7 +42,7 @@ describe("MCP clone_setlist (emulator)", () => {
             .where("setlistId", "==", setlistId)
             .get()
         return snap.docs
-            .map((d) => ({ id: d.id, data: d.data() as Record<string, unknown> }))
+            .map((d) => ({ id: d.id, data: d.data() as unknown as Record<string, unknown> }))
             .sort(
                 (a, b) =>
                     (a.data.order as number) - (b.data.order as number),
@@ -153,7 +153,7 @@ describe("MCP clone_setlist (emulator)", () => {
         // Clone parent doc is independent.
         const cloneSetlistDoc = (
             await db().collection("setlists").doc(result.setlistId).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(cloneSetlistDoc.version).toBe(1)
         expect(cloneSetlistDoc.ownerId).toBe(ADMIN)
         expect(cloneSetlistDoc.name).toBe("Copy of Shabbat Morning — Source")
@@ -212,7 +212,7 @@ describe("MCP clone_setlist (emulator)", () => {
         // Parent fileIds[] denormalization reflects the bonded chart.
         const cloneSetlistDoc = (
             await db().collection("setlists").doc(result.setlistId).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(cloneSetlistDoc.fileIds).toEqual(["song-oseh"])
     })
 
@@ -236,7 +236,7 @@ describe("MCP clone_setlist (emulator)", () => {
         })) as { ok: true; setlistId: string }
         const doc = (
             await db().collection("setlists").doc(result.setlistId).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(doc.eventDate).toBeInstanceOf(Timestamp)
     })
 
@@ -248,7 +248,7 @@ describe("MCP clone_setlist (emulator)", () => {
         })) as { ok: true; setlistId: string }
         const doc = (
             await db().collection("setlists").doc(result.setlistId).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(doc.serviceNotes).toBeUndefined()
     })
 
@@ -263,35 +263,37 @@ describe("MCP clone_setlist (emulator)", () => {
 
     it("musician role is rejected", async () => {
         const sourceId = await buildSource()
-        const result = (await cloneSetlist(MEMBER, {
-            sourceSetlistId: sourceId,
-        })) as { ok: false; error: string; message: string }
+        const result = await cloneSetlist(MEMBER, { sourceSetlistId: sourceId })
         expect(result).toMatchObject({
             ok: false,
-            error: "forbidden_role",
-            message: expect.stringMatching(/admin or band leader/i),
+            error: {
+                machine_code: "forbidden_role",
+                message: expect.stringMatching(/admin or band leader/i),
+            },
         })
     })
 
     it("missing source setlist surfaces a typed error", async () => {
-        const result = (await cloneSetlist(ADMIN, {
+        const result = await cloneSetlist(ADMIN, {
             sourceSetlistId: "definitely-not-a-real-setlist",
-        })) as { ok: false; error: string; message: string }
+        })
         expect(result).toMatchObject({
             ok: false,
-            error: "setlist_not_found",
-            message: expect.stringMatching(/not found/i),
+            error: {
+                machine_code: "setlist_not_found",
+                message: expect.stringMatching(/not found/i),
+            },
         })
     })
 
     it("rejects an empty sourceSetlistId", async () => {
-        const result = (await cloneSetlist(ADMIN, {
-            sourceSetlistId: "  ",
-        })) as { ok: false; error: string; message: string }
+        const result = await cloneSetlist(ADMIN, { sourceSetlistId: "  " })
         expect(result).toMatchObject({
             ok: false,
-            error: "invalid_argument",
-            message: expect.stringMatching(/sourceSetlistId is required/i),
+            error: {
+                machine_code: "invalid_argument",
+                message: expect.stringMatching(/sourceSetlistId is required/i),
+            },
         })
     })
 })

@@ -51,7 +51,10 @@ export interface LoadedSetlist {
 }
 export interface WriteError {
     ok: false
+    /** Snake_case machine code; lifted to the rich envelope at the wire boundary. */
     error: string
+    /** Human-readable message. Optional — prose mirroring the machine code is fine. */
+    message?: string
 }
 
 /** Look up a user's role string — undefined when the user doc is missing. */
@@ -233,7 +236,11 @@ export async function reorderTracks(
     const result = await db.runTransaction<TxResult>(async (tx) => {
         const setlistSnap = await tx.get(setlistRef)
         if (!setlistSnap.exists) {
-            return { ok: false, error: "Setlist not found" }
+            return {
+                ok: false,
+                error: "setlist_not_found",
+                message: "Setlist not found",
+            }
         }
         const setlistData = setlistSnap.data() as Record<string, unknown>
         if (lastSeenVersion !== undefined) {
@@ -400,7 +407,11 @@ export async function updateTrack(
     }
     const peekData = peek.data() as Record<string, unknown>
     if (peekData.setlistId !== setlistId) {
-        return { ok: false, error: "Track does not belong to this setlist" }
+        return {
+            ok: false,
+            error: "track_not_in_setlist",
+            message: "Track does not belong to this setlist",
+        }
     }
 
     // Build the patch up front. Field-only validation; no Firestore writes
@@ -812,12 +823,17 @@ export async function bulkUpdateTracks(
     | WriteError
 > {
     if (patches.length === 0) {
-        return { ok: false, error: "patches must include at least one entry" }
+        return {
+            ok: false,
+            error: "empty_patch",
+            message: "patches must include at least one entry",
+        }
     }
     if (patches.length > BULK_UPDATE_MAX_PATCHES) {
         return {
             ok: false,
-            error: `patches exceeds max (${BULK_UPDATE_MAX_PATCHES}); chunk into multiple calls`,
+            error: "too_many_patches",
+            message: `patches exceeds max (${BULK_UPDATE_MAX_PATCHES}); chunk into multiple calls`,
         }
     }
     const mode = options.mode ?? "atomic"
@@ -1206,7 +1222,9 @@ export async function bulkUpdateTracks(
                           // needs to inspect; this row surfaces the
                           // machine-friendly error code).
                           error:
-                              "kind" in r ? r.envelope.message : r.error,
+                              "kind" in r
+                                  ? r.envelope.error.message
+                                  : r.error,
                       }
             } catch (err) {
                 results[i] = {
@@ -1301,12 +1319,17 @@ export async function bulkAddTracks(
     | WriteError
 > {
     if (rows.length === 0) {
-        return { ok: false, error: "tracks must include at least one entry" }
+        return {
+            ok: false,
+            error: "empty_tracks",
+            message: "tracks must include at least one entry",
+        }
     }
     if (rows.length > BULK_ADD_MAX_TRACKS) {
         return {
             ok: false,
-            error: `tracks exceeds max (${BULK_ADD_MAX_TRACKS}); chunk into multiple calls`,
+            error: "too_many_tracks",
+            message: `tracks exceeds max (${BULK_ADD_MAX_TRACKS}); chunk into multiple calls`,
         }
     }
     const mode = options.mode ?? "atomic"

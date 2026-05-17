@@ -75,8 +75,14 @@ describe("MCP backfill_library_index — DATA-001 (emulator)", () => {
     it("refuses non-admin callers", async () => {
         await seedIndex("u1", { name: " whitespace " })
         const r = await backfillLibraryIndex(MUSICIAN, {})
-        expect("error" in r).toBe(true)
-        if ("error" in r) expect(r.error).toMatch(/admin-only/i)
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "forbidden_role", code: 403 },
+            requiredRoles: ["admin"],
+        })
+        if ("error" in r && typeof r.error === "object" && r.error) {
+            expect(r.error.message).toMatch(/admin-only/i)
+        }
     })
 
     it("dryRun default — surfaces name deltas without writing", async () => {
@@ -90,7 +96,7 @@ describe("MCP backfill_library_index — DATA-001 (emulator)", () => {
         })
 
         const r = await backfillLibraryIndex(ADMIN, {})
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.dryRun).toBe(true)
         expect(r.scanned).toBe(2)
@@ -107,15 +113,16 @@ describe("MCP backfill_library_index — DATA-001 (emulator)", () => {
         expect(u1.data()?.name).toBe(" Ana B_Koach.pdf")
     })
 
-    it("refuses real run without force — returns plan with refused:true", async () => {
+    it("refuses real run without force — returns rich force_required envelope with no writes", async () => {
         await seedIndex("u1", { name: " trim me " })
 
         const r = await backfillLibraryIndex(ADMIN, { dryRun: false })
-        if ("error" in r) throw new Error(r.error)
-
-        expect(r.refused).toBe(true)
-        expect(r.dryRun).toBe(false)
-        expect(r.namesNormalized).toBe(1)
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+        })
+        const plan = (r as { dryRunPlan?: { namesNormalized?: number } }).dryRunPlan
+        expect(plan?.namesNormalized).toBe(1)
         const u1 = await db().collection("library_index").doc("u1").get()
         expect(u1.data()?.name).toBe(" trim me ")
     })
@@ -131,10 +138,9 @@ describe("MCP backfill_library_index — DATA-001 (emulator)", () => {
             dryRun: false,
             force: true,
         })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.dryRun).toBe(false)
-        expect(r.refused).toBeUndefined()
         expect(r.namesNormalized).toBe(1)
         expect(r.rowsChanged).toBe(1)
 
@@ -147,7 +153,7 @@ describe("MCP backfill_library_index — DATA-001 (emulator)", () => {
             dryRun: false,
             force: true,
         })
-        if ("error" in r2) throw new Error(r2.error)
+        if ("error" in r2) throw new Error(typeof r2.error === "string" ? r2.error : JSON.stringify(r2.error))
         expect(r2.rowsChanged).toBe(0)
         expect(r2.namesNormalized).toBe(0)
     })
@@ -179,7 +185,7 @@ describe("MCP backfill_library_index — DATA-001 (emulator)", () => {
         })
 
         const r = await backfillLibraryIndex(ADMIN, {})
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.scanned).toBe(4)
         // Only the `active` row enters the probe queue; `orphan` and

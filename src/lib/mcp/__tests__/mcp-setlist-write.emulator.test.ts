@@ -38,7 +38,7 @@ describe("MCP setlist write tools (emulator)", () => {
     // envelope. Tests assert the canonical machine code + required roles.
     const FORBIDDEN_ROLE_ENVELOPE = {
         ok: false as const,
-        error: "forbidden_role",
+        error: { machine_code: "forbidden_role" },
         requiredRoles: ["admin", "band_leader"],
         message: expect.stringContaining("admin or band leader"),
     }
@@ -54,7 +54,7 @@ describe("MCP setlist write tools (emulator)", () => {
             .where("setlistId", "==", setlistId)
             .get()
         return snap.docs
-            .map((d) => d.data() as Record<string, unknown>)
+            .map((d) => d.data() as unknown as Record<string, unknown>)
             .sort((a, b) => (a.order as number) - (b.order as number))
     }
 
@@ -158,7 +158,7 @@ describe("MCP setlist write tools (emulator)", () => {
         // Missing setlist (caller IS an editor — the existence check still runs).
         expect(await updateSetlist(ADMIN, { id: "nope", name: "x" })).toMatchObject({
             ok: false,
-            error: "setlist_not_found",
+            error: { machine_code: "setlist_not_found" },
             setlistId: "nope",
         })
     })
@@ -311,8 +311,7 @@ describe("MCP setlist write tools (emulator)", () => {
 
         expect(await addTrackToSetlist(ADMIN, { setlistId: id })).toMatchObject({
             ok: false,
-            error: "title_required",
-            message: expect.stringContaining("title is required"),
+            error: { machine_code: "title_required", message: expect.stringContaining("title is required") },
         })
         expect(await addTrackToSetlist(MEMBER, { setlistId: id, title: "x" })).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
     })
@@ -440,8 +439,8 @@ describe("MCP setlist write tools (emulator)", () => {
         const ghostResult = (await removeSetlistTrack(ADMIN, {
             setlistId: id,
             trackId: "ghost",
-        })) as Record<string, unknown>
-        expect(ghostResult.error).toBe("track_not_found")
+        })) as unknown as Record<string, unknown>
+        expect((ghostResult.error as { machine_code: string }).machine_code).toBe("track_not_found")
         expect(typeof ghostResult.setlistVersion).toBe("number")
         expect(ghostResult.hint).toMatch(/get_setlist/)
         expect(
@@ -497,8 +496,7 @@ describe("MCP setlist write tools (emulator)", () => {
             const id = await newSetlist(ADMIN)
             expect(await deleteSetlist(LEADER, { id })).toMatchObject({
                 ok: false,
-                error: "forbidden_owner",
-                message: expect.stringContaining("Only the setlist owner or an admin"),
+                error: { machine_code: "forbidden_owner", message: expect.stringContaining("Only the setlist owner or an admin") },
             })
             expect((await db().collection("setlists").doc(id).get()).exists).toBe(true)
         })
@@ -512,7 +510,7 @@ describe("MCP setlist write tools (emulator)", () => {
         it("nonexistent setlist id returns a clean error", async () => {
             expect(await deleteSetlist(ADMIN, { id: "nope" })).toMatchObject({
                 ok: false,
-                error: "setlist_not_found",
+                error: { machine_code: "setlist_not_found" },
                 setlistId: "nope",
             })
         })
@@ -838,8 +836,7 @@ describe("MCP setlist write tools (emulator)", () => {
             // wrapper bubbles up via `richError("update_track_failed", ...)`.
             expect(r).toMatchObject({
                 ok: false,
-                error: "update_track_failed",
-                message: expect.stringContaining("does not belong to this setlist"),
+                error: { machine_code: "update_track_failed", message: expect.stringContaining("does not belong to this setlist") },
             })
 
             // No mutation on the actual row.
@@ -861,8 +858,7 @@ describe("MCP setlist write tools (emulator)", () => {
             // Inner helper's prose wraps via richError("update_track_failed", ...).
             expect(r).toMatchObject({
                 ok: false,
-                error: "update_track_failed",
-                message: expect.stringContaining("at least one field"),
+                error: { machine_code: "update_track_failed", message: expect.stringContaining("at least one field") },
             })
         })
 
@@ -872,8 +868,8 @@ describe("MCP setlist write tools (emulator)", () => {
                 setlistId: id,
                 trackId: "ghost-track",
                 patch: { key: "G" },
-            })) as Record<string, unknown>
-            expect(r.error).toBe("track_not_found")
+            })) as unknown as Record<string, unknown>
+            expect((r.error as { machine_code: string }).machine_code).toBe("track_not_found")
             expect(r.message).toMatch(/ghost-track/)
             expect(typeof r.setlistVersion).toBe("number")
             expect(r.hint).toMatch(/get_setlist/)
@@ -899,7 +895,7 @@ describe("MCP setlist write tools (emulator)", () => {
             })
             expect(r).toMatchObject({
                 ok: false,
-                error: "song_not_found",
+                error: { machine_code: "song_not_found" },
                 songId: "definitely-not-a-real-songid",
             })
 
@@ -1291,8 +1287,7 @@ describe("MCP setlist write tools (emulator)", () => {
             // Cycle-2: wrapper now wraps inner errors via richError().
             expect(r).toMatchObject({
                 ok: false,
-                error: "bulk_update_failed",
-                message: expect.stringContaining("exceeds max"),
+                error: { machine_code: "bulk_update_failed", message: expect.stringContaining("exceeds max") },
             })
             // The single row was not mutated.
             const doc = (
@@ -1593,8 +1588,7 @@ describe("MCP setlist write tools (emulator)", () => {
             })
             expect(empty).toMatchObject({
                 ok: false,
-                error: "bulk_add_failed",
-                message: expect.stringContaining("at least one"),
+                error: { machine_code: "bulk_add_failed", message: expect.stringContaining("at least one") },
             })
 
             const big = Array.from({ length: 51 }, (_, i) => ({
@@ -1607,8 +1601,7 @@ describe("MCP setlist write tools (emulator)", () => {
             })
             expect(tooMany).toMatchObject({
                 ok: false,
-                error: "bulk_add_failed",
-                message: expect.stringContaining("exceeds max"),
+                error: { machine_code: "bulk_add_failed", message: expect.stringContaining("exceeds max") },
             })
         })
 
@@ -1728,7 +1721,7 @@ describe("MCP setlist write tools (emulator)", () => {
             })
             expect(swap).toMatchObject({
                 ok: false,
-                error: "song_not_found",
+                error: { machine_code: "song_not_found" },
                 songId: "bogus-song",
             })
         })

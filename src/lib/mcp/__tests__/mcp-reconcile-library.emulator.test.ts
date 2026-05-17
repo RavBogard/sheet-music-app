@@ -205,8 +205,17 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         await seedIndex("any-row", { name: "Adon Olam.pdf" })
 
         const r = await reconcileLibrary(MUSICIAN, { dryRun: true })
-        if (!("error" in r)) throw new Error("expected admin refusal")
-        expect(r.error).toMatch(/admin-only/i)
+        expect(r).toMatchObject({
+            ok: false,
+            error: {
+                machine_code: "forbidden_role",
+                code: 403,
+            },
+            requiredRoles: ["admin"],
+        })
+        if ("error" in r && typeof r.error === "object" && r.error) {
+            expect(r.error.message).toMatch(/admin-only/i)
+        }
     })
 
     it("dryRun is the default; returns plan with zero writes", async () => {
@@ -236,7 +245,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         })
 
         const r = await reconcileLibrary(ADMIN) // default dryRun:true
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.dryRun).toBe(true)
         expect(r.committed).toBe(0)
@@ -264,7 +273,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         expect(storageState.uploaded.size).toBe(0)
     })
 
-    it("real run without force returns refused:true with no writes", async () => {
+    it("real run without force returns rich force_required envelope with no writes", async () => {
         await seedUser(ADMIN, "admin")
         driveState.metadata.set("drive-200-1", {
             name: "Mi Chamocha.pdf",
@@ -278,12 +287,16 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         })
 
         const r = await reconcileLibrary(ADMIN, { dryRun: false })
-        if ("error" in r) throw new Error(r.error)
-
-        expect(r.refused).toBe(true)
-        expect(r.dryRun).toBe(false)
-        expect(r.committed).toBe(0)
-        expect(r.driveMirror.count).toBe(1)
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+            dryRunPlan: {
+                driveMirror: { count: 1 },
+            },
+        })
+        // Plan content under dryRunPlan; helper migrated from refused:true.
+        const plan = (r as { dryRunPlan?: { driveMirror?: { count?: number } } }).dryRunPlan
+        expect(plan?.driveMirror?.count).toBe(1)
 
         const doc = await db()
             .collection("library_index")
@@ -313,7 +326,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         })
 
         const r = await reconcileLibrary(ADMIN, { dryRun: false, force: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.committed).toBe(1)
         expect(r.driveMirror.count).toBe(1)
@@ -324,7 +337,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
             .collection("library_index")
             .doc("oseh-shalom-id")
             .get()
-        const data = doc.data() as Record<string, unknown>
+        const data = doc.data() as unknown as Record<string, unknown>
         expect(data.status).toBe("active")
         expect(data.source).toBe("drive-sync")
         expect(data.fileSize).toBe(bytes.byteLength)
@@ -365,7 +378,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         await seedSong("vanished-id", { title: "Vanished Chart", status: "active" })
 
         const r = await reconcileLibrary(ADMIN, { dryRun: false, force: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.committed).toBe(1)
         expect(r.orphan.count).toBe(1)
@@ -392,7 +405,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         })
 
         const r = await reconcileLibrary(ADMIN, { dryRun: false, force: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.transient.count).toBe(1)
         expect(r.transient.rows[0].fileId).toBe("blip-id")
@@ -432,7 +445,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
             dryRun: false,
             force: true,
         })
-        if ("error" in first) throw new Error(first.error)
+        if ("error" in first) throw new Error(typeof first.error === "string" ? first.error : JSON.stringify(first.error))
         expect(first.committed).toBe(2)
 
         // After force: recoverable is in Storage (so probe returns ok),
@@ -441,7 +454,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
             dryRun: false,
             force: true,
         })
-        if ("error" in second) throw new Error(second.error)
+        if ("error" in second) throw new Error(typeof second.error === "string" ? second.error : JSON.stringify(second.error))
 
         expect(second.scanned).toBe(1) // only recoverable; dead was filtered
         expect(second.alreadyHealthy).toBe(1)
@@ -462,7 +475,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         })
 
         const r = await reconcileLibrary(ADMIN, { dryRun: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.orphan.count).toBe(1)
         expect(r.orphan.rows[0].fileId).toBe("upload-0594bbd4-fake")
@@ -483,7 +496,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         })
 
         const r = await reconcileLibrary(ADMIN, { dryRun: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.scanned).toBe(0)
         expect(r.alreadyHealthy).toBe(0)
@@ -536,7 +549,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         })
 
         const r = await reconcileLibrary(ADMIN, { dryRun: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.driveMirror.count).toBe(1)
         expect(r.driveMirror.rows[0].fileId).toBe("real-chart-1")
@@ -577,7 +590,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         driveState.bytes.set("active-1", Buffer.from("pdf-bytes"))
 
         const r = await reconcileLibrary(ADMIN, { dryRun: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.coverage.total).toBe(3)
         expect(r.coverage.eligible).toBe(1) // active-1 only

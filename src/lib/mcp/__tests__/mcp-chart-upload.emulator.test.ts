@@ -292,7 +292,7 @@ describe("MCP chart-upload tools (emulator)", () => {
                 fileBase64: "",
                 mimeType: "application/pdf",
             }),
-        ).toMatchObject({ ok: false, error: "empty_file" })
+        ).toMatchObject({ ok: false, error: { machine_code: "empty_file" } })
 
         expect(
             await uploadChart(ADMIN, {
@@ -605,7 +605,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             }),
         ).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             field: "title",
         })
         expect(
@@ -615,7 +615,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             }),
         ).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             field: "content",
         })
     })
@@ -713,7 +713,7 @@ describe("MCP chart-upload tools (emulator)", () => {
     it("scrape_chart_from_url requires url OR rawText", async () => {
         expect(await scrapeChartFromUrl(ADMIN, {})).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             fields: ["url", "rawText"],
         })
     })
@@ -878,7 +878,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             const r = await deleteChart(ADMIN, { fileId: "upload-does-not-exist" })
             expect(r).toMatchObject({
                 ok: false,
-                error: "chart_not_found",
+                error: { machine_code: "chart_not_found" },
                 fileId: "upload-does-not-exist",
             })
         })
@@ -1039,7 +1039,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             const r = await importChartFromDrive(ADMIN, { driveFileId: "  " })
             expect(r).toMatchObject({
                 ok: false,
-                error: "invalid_argument",
+                error: { machine_code: "invalid_argument" },
                 field: "driveFileId",
             })
             expect(mockDriveGetFileMetadata).not.toHaveBeenCalled()

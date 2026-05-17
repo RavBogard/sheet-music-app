@@ -5,6 +5,7 @@ import { runDriveSyncProd } from "@/lib/drive-sync/poller"
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
+import { httpError } from "@/lib/http/error-envelope"
 
 function safeCompare(a: string, b: string): boolean {
     if (a.length !== b.length) return false
@@ -45,9 +46,15 @@ export async function GET(req: NextRequest) {
             !authHeader ||
             !safeCompare(authHeader, `Bearer ${cronSecret}`)
         ) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 },
+            // Cycle-3 REG-002: rich envelope on the wire. Vercel cron's
+            // bearer auth is distinct from MCP bearers — any non-Vercel
+            // caller gets refused here regardless of MCP role.
+            return httpError(
+                401,
+                "unauthenticated",
+                "Cron route requires Vercel CRON_SECRET bearer auth.",
+                {},
+                "This endpoint is invoked by Vercel cron; manual probes will always 401.",
             )
         }
 
@@ -65,9 +72,12 @@ export async function GET(req: NextRequest) {
         }
 
         if (!initAdmin()) {
-            return NextResponse.json(
-                { error: "Server not ready" },
-                { status: 500 },
+            return httpError(
+                503,
+                "server_not_ready",
+                "Firebase Admin SDK not initialized.",
+                {},
+                "Server is missing FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY.",
             )
         }
         const db = getFirestore()
@@ -87,9 +97,12 @@ export async function GET(req: NextRequest) {
     } catch (err) {
         logger.error("[drive-sync] cron failed:", err)
         captureException(err, { source: "cron", location: "drive-sync" })
-        return NextResponse.json(
-            { error: "Drive sync failed" },
-            { status: 500 },
+        return httpError(
+            500,
+            "server_error",
+            "Drive sync cron failed.",
+            { debug: err instanceof Error ? err.message : String(err) },
+            "Check `[drive-sync]` logs in Vercel for the underlying error.",
         )
     }
 }

@@ -381,8 +381,7 @@ describe("MCP generate_gig_packet (emulator)", () => {
         const r = await generateGigPacket(ADMIN, { setlistId: "ghost-setlist" })
         expect(r).toMatchObject({
             ok: false,
-            error: "setlist_not_found",
-            message: "Setlist not found",
+            error: { machine_code: "setlist_not_found", message: "Setlist not found" },
         })
         expect(mockFetchFileById).not.toHaveBeenCalled()
         expect(mockFileSave).not.toHaveBeenCalled()
@@ -394,8 +393,7 @@ describe("MCP generate_gig_packet (emulator)", () => {
         const r = await generateGigPacket(ADMIN, { setlistId: "   " })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
-            message: expect.stringContaining("setlistId"),
+            error: { machine_code: "invalid_argument", message: expect.stringContaining("setlistId") },
         })
         expect(mockFetchFileById).not.toHaveBeenCalled()
         expect(mockFileSave).not.toHaveBeenCalled()
@@ -411,8 +409,7 @@ describe("MCP generate_gig_packet (emulator)", () => {
         const r = await generateGigPacket(ADMIN, { setlistId })
         expect(r).toMatchObject({
             ok: false,
-            error: "no_bonded_charts",
-            message: expect.stringContaining("No bonded charts"),
+            error: { machine_code: "no_bonded_charts", message: expect.stringContaining("No bonded charts") },
         })
         expect(mockFetchFileById).not.toHaveBeenCalled()
         expect(mockFileSave).not.toHaveBeenCalled()
@@ -468,12 +465,19 @@ describe("MCP generate_gig_packet (emulator)", () => {
         const r = await generateGigPacket(ADMIN, { setlistId })
         expect(r).toMatchObject({
             ok: false,
-            error: "packet_too_large",
+            error: { machine_code: "packet_too_large" },
             maxBytes: 100,
             message: expect.stringContaining("exceeds the 100-byte response cap"),
         })
-        if ("ok" in r && !r.ok && r.error === "packet_too_large") {
-            expect(r.sizeBytes).toBeGreaterThan(100)
+        if (
+            "ok" in r &&
+            !r.ok &&
+            typeof r.error === "object" &&
+            r.error !== null &&
+            (r.error as { machine_code?: string }).machine_code ===
+                "packet_too_large"
+        ) {
+            expect((r as { sizeBytes: number }).sizeBytes).toBeGreaterThan(100)
         }
         // Cap fires BEFORE Storage write — we don't burn a Storage object on
         // an output we already know is too big.
@@ -500,8 +504,7 @@ describe("MCP generate_gig_packet (emulator)", () => {
         const r = await generateGigPacket(ADMIN, { setlistId })
         expect(r).toMatchObject({
             ok: false,
-            error: "storage_upload_failed",
-            message: expect.stringContaining("bucket-down"),
+            error: { machine_code: "storage_upload_failed", message: expect.stringContaining("bucket-down") },
             storagePath: expect.stringMatching(
                 /^gig-packets\/set-storage-fail\//,
             ),
@@ -529,8 +532,7 @@ describe("MCP generate_gig_packet (emulator)", () => {
         const r = await generateGigPacket(ADMIN, { setlistId })
         expect(r).toMatchObject({
             ok: false,
-            error: "storage_signing_failed",
-            message: expect.stringContaining("no-iam"),
+            error: { machine_code: "storage_signing_failed", message: expect.stringContaining("no-iam") },
             storagePath: expect.stringMatching(/^gig-packets\/set-sign-fail\//),
         })
         // The blob did land in Storage — surface its path so an admin can recover.

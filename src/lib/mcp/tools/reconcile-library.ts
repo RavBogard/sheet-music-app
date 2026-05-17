@@ -9,6 +9,7 @@ import { getChartHealth } from "@/lib/file-fetcher"
 import { DriveClient } from "@/lib/google-drive"
 import { logger } from "@/lib/logger"
 import { isNonChartArtifactShape } from "./library"
+import { richError, type RichErrorEnvelope } from "@/lib/mcp/errors"
 
 /**
  * Cycle-3 NEW-2 (ADDENDUM-1 §3) — one-shot bootstrap reconciliation MCP
@@ -168,9 +169,11 @@ export interface ReconcileLibraryResult {
     refused?: boolean
 }
 
-export interface ReconcileLibraryError {
-    error: string
-}
+/**
+ * Cycle-3 REG-002: the reconcile_library error path is the canonical
+ * rich envelope `{ok:false, error:{code, machine_code, message}, ...}`.
+ */
+export type ReconcileLibraryError = RichErrorEnvelope
 
 interface Candidate {
     fileId: string
@@ -182,8 +185,13 @@ interface Candidate {
 async function loadAdminCandidates(
     uid: string,
 ): Promise<
-    | { ok: true; candidates: Candidate[]; total: number; filteredByStatus: Record<string, number> }
-    | { ok: false; error: string }
+    | {
+          ok: true
+          candidates: Candidate[]
+          total: number
+          filteredByStatus: Record<string, number>
+      }
+    | { ok: false; envelope: RichErrorEnvelope }
 > {
     initAdmin()
     const db = getFirestore()
@@ -193,7 +201,18 @@ async function loadAdminCandidates(
         ? (userSnap.data()?.role as string | undefined)
         : undefined
     if (role !== "admin") {
-        return { ok: false, error: "reconcile_library is admin-only" }
+        return {
+            ok: false,
+            envelope: richError(
+                "forbidden_role",
+                "reconcile_library is admin-only.",
+                {
+                    callerRole: role ?? null,
+                    requiredRoles: ["admin"],
+                },
+                "Ask an admin to elevate your account, or call a tool your role is allowed to use.",
+            ),
+        }
     }
 
     const snap = await db.collection("library_index").get()
@@ -583,7 +602,7 @@ export async function reconcileLibrary(
 
     try {
         const loaded = await loadAdminCandidates(uid)
-        if (!loaded.ok) return { error: loaded.error }
+        if (!loaded.ok) return loaded.envelope
         const candidates = loaded.candidates
         const coverage: HygieneCoverage = {
             total: loaded.total,
@@ -597,10 +616,10 @@ export async function reconcileLibrary(
         }
 
         if (candidates.length === 0) {
-            // Empty library — return a fully-zero report. Still respect
-            // the force-required-for-writes contract.
-            return {
-                ok: true,
+            // Empty library — nothing to plan. dryRun returns the
+            // zero-bucket report; a real-run with !force shifts to the
+            // rich force_required envelope per REG-003.
+            const zeroPlan = {
                 scanned: 0,
                 alreadyHealthy: 0,
                 driveMirror: { count: 0, rows: [], truncated: false },
@@ -608,9 +627,20 @@ export async function reconcileLibrary(
                 transient: { count: 0, rows: [], truncated: false },
                 skippedNonChart: { count: 0, rows: [], truncated: false },
                 coverage,
+            }
+            if (!dryRun && !force) {
+                return richError(
+                    "force_required",
+                    "Pass force:true to commit reconcile_library writes.",
+                    { dryRunPlan: zeroPlan },
+                    "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
+                )
+            }
+            return {
+                ok: true,
+                ...zeroPlan,
                 dryRun,
                 committed: 0,
-                refused: !dryRun && !force ? true : undefined,
             }
         }
 
@@ -662,22 +692,29 @@ export async function reconcileLibrary(
         }
 
         if (!force) {
-            // Real-run without force — return the plan with refused:true,
-            // no writes. F-05 standing rule: dryRun is observability, but
-            // a real-run path still needs explicit `force: true`.
-            return {
-                ok: true,
-                scanned: candidates.length,
-                alreadyHealthy: healthy.length,
-                driveMirror: bucketReport(mirrorRows),
-                orphan: bucketReport(orphanRows),
-                transient: bucketReport(transientRows),
-                skippedNonChart: bucketReport(skippedNonChartRows),
-                coverage,
-                dryRun: false,
-                committed: 0,
-                refused: true,
-            }
+            // Cycle-3 REG-003: real-run without force returns the rich
+            // `force_required` envelope carrying the dry-run plan in
+            // extras. F-05 standing rule preserved: dryRun is observability,
+            // a real-run path needs explicit `force: true` to commit.
+            // Plan keeps the cycle-3 reconcile-data lane's additive bucket
+            // (`skippedNonChart`) + `coverage` so the dryRunPlan is a true
+            // mirror of the dryRun-mode success body.
+            return richError(
+                "force_required",
+                "Pass force:true to commit reconcile_library writes.",
+                {
+                    dryRunPlan: {
+                        scanned: candidates.length,
+                        alreadyHealthy: healthy.length,
+                        driveMirror: bucketReport(mirrorRows),
+                        orphan: bucketReport(orphanRows),
+                        transient: bucketReport(transientRows),
+                        skippedNonChart: bucketReport(skippedNonChartRows),
+                        coverage,
+                    },
+                },
+                "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
+            )
         }
 
         // Force-run. Mirror first (per-row atomic-guard; rows that fail
@@ -734,6 +771,11 @@ export async function reconcileLibrary(
         logger.warn(
             `[mcp] reconcile_library failed: ${err instanceof Error ? err.message : String(err)}`,
         )
-        return { error: "Failed to run library reconciliation" }
+        return richError(
+            "server_error",
+            "Failed to run library reconciliation.",
+            { tool: "reconcile_library" },
+            "Retry; if the failure persists check Drive / Storage IAM and the [mcp] logs.",
+        )
     }
 }

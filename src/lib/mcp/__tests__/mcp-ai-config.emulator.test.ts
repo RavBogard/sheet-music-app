@@ -75,7 +75,7 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
         const r = await getAiConfig(MUSICIAN)
         expect(r).toMatchObject({
             ok: false,
-            error: "forbidden_role",
+            error: { machine_code: "forbidden_role" },
             callerRole: "musician",
             requiredRoles: ["admin"],
         })
@@ -86,14 +86,14 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
         const r = await setAiAutoApply(BAND_LEADER, { enabled: true })
         expect(r).toMatchObject({
             ok: false,
-            error: "forbidden_role",
+            error: { machine_code: "forbidden_role" },
             callerRole: "band_leader",
         })
     })
 
     it("set_ai_threshold: refuses non-admin", async () => {
         const r = await setAiThreshold(MUSICIAN, { value: 0.5 })
-        expect(r).toMatchObject({ ok: false, error: "forbidden_role" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "forbidden_role" } })
     })
 
     // ─── get_ai_config ─────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
         })
     })
 
@@ -203,18 +203,19 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
         expect(reread.data()?.enabled).toBe(false)
     })
 
-    it("set_ai_auto_apply: real-run without force → refused, no write", async () => {
+    it("set_ai_auto_apply: real-run without force → rich force_required, no write", async () => {
         const r = await setAiAutoApply(ADMIN, {
             enabled: true,
             dryRun: false,
         })
-        expect(r).toEqual({
-            ok: true,
-            previous: false,
-            new: true,
-            changed: true,
-            dryRun: false,
-            refused: true,
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+            dryRunPlan: {
+                previous: false,
+                new: true,
+                changed: true,
+            },
         })
 
         const reread = await db()
@@ -238,7 +239,7 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
             changed: true,
             dryRun: false,
         })
-        if ("refused" in first && first.refused) {
+        if (first.ok !== true) {
             throw new Error("force:true should not be refused")
         }
 
@@ -287,7 +288,7 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
         const r = await setAiThreshold(ADMIN, { value: 1.5 })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             value: 1.5,
         })
     })
@@ -296,7 +297,7 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
         const r = await setAiThreshold(ADMIN, { value: -0.1 })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
         })
     })
 
@@ -307,7 +308,7 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
         })
     })
 
@@ -329,16 +330,17 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
         expect(reread.data()?.threshold).toBe(0.7)
     })
 
-    it("set_ai_threshold: real-run without force → refused", async () => {
+    it("set_ai_threshold: real-run without force → rich force_required envelope", async () => {
         const r = await setAiThreshold(ADMIN, {
             value: 0.5,
             dryRun: false,
         })
         expect(r).toMatchObject({
-            ok: true,
-            new: 0.5,
-            dryRun: false,
-            refused: true,
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+            dryRunPlan: {
+                new: 0.5,
+            },
         })
     })
 

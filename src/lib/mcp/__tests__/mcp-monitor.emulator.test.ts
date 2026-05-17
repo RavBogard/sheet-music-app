@@ -43,7 +43,7 @@ describe("MCP monitor-control tools (emulator)", () => {
             .doc("commands")
             .collection("pending")
             .get()
-        return snap.docs.map((d) => d.data() as Record<string, unknown>)
+        return snap.docs.map((d) => d.data() as unknown as Record<string, unknown>)
     }
 
     beforeAll(async () => {
@@ -162,8 +162,7 @@ describe("MCP monitor-control tools (emulator)", () => {
         const r = await listMonitorBuses(NO_ACCESS)
         expect(r).toMatchObject({
             ok: false,
-            error: "monitor_access_denied",
-            message: expect.stringContaining("don't have monitor access"),
+            error: { machine_code: "monitor_access_denied", message: expect.stringContaining("don't have monitor access") },
         })
     })
 
@@ -211,8 +210,7 @@ describe("MCP monitor-control tools (emulator)", () => {
         const r = await listMonitorBuses(ADMIN)
         expect(r).toMatchObject({
             ok: false,
-            error: "monitor_unconfigured",
-            message: expect.stringContaining("not configured"),
+            error: { machine_code: "monitor_unconfigured", message: expect.stringContaining("not configured") },
         })
     })
 
@@ -238,7 +236,7 @@ describe("MCP monitor-control tools (emulator)", () => {
         const denied = await getMix(GUITAR, { busIndex: 2 })
         expect(denied).toMatchObject({
             ok: false,
-            error: "monitor_bus_forbidden",
+            error: { machine_code: "monitor_bus_forbidden" },
             busIndex: 2,
         })
 
@@ -257,8 +255,7 @@ describe("MCP monitor-control tools (emulator)", () => {
         const r = await getMix(ADMIN, {})
         expect(r).toMatchObject({
             ok: false,
-            error: "monitor_no_bus_assigned",
-            message: expect.stringContaining("don't own any bus"),
+            error: { machine_code: "monitor_no_bus_assigned", message: expect.stringContaining("don't own any bus") },
         })
     })
 
@@ -294,7 +291,7 @@ describe("MCP monitor-control tools (emulator)", () => {
             await setSendLevel(GUITAR, { busIndex: 2, channelIndex: 2, level: 0.5 }),
         ).toMatchObject({
             ok: false,
-            error: "monitor_bus_forbidden",
+            error: { machine_code: "monitor_bus_forbidden" },
             busIndex: 2,
         })
         expect(await pendingCommands()).toHaveLength(0)
@@ -339,7 +336,7 @@ describe("MCP monitor-control tools (emulator)", () => {
     it("set_bus_fader is denied on a foreign bus for a musician", async () => {
         expect(await setBusFader(GUITAR, { busIndex: 2, level: 0.5 })).toMatchObject({
             ok: false,
-            error: "monitor_bus_forbidden",
+            error: { machine_code: "monitor_bus_forbidden" },
             busIndex: 2,
         })
         expect(await pendingCommands()).toHaveLength(0)
@@ -358,7 +355,7 @@ describe("MCP monitor-control tools (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_bus_index",
+            error: { machine_code: "invalid_bus_index" },
             busIndex: 99,
             validBusIndices: [1, 2],
         })
@@ -373,7 +370,7 @@ describe("MCP monitor-control tools (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_channel_index",
+            error: { machine_code: "invalid_channel_index" },
             channelIndex: 99,
             validChannelIndices: [1, 2, 3, 4],
         })
@@ -384,7 +381,7 @@ describe("MCP monitor-control tools (emulator)", () => {
         const r = await setMatrixFader(ADMIN, { matrixIndex: 99, level: 0.5 })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_matrix_index",
+            error: { machine_code: "invalid_matrix_index" },
             matrixIndex: 99,
             validMatrixIndices: [1, 2],
         })
@@ -413,8 +410,7 @@ describe("MCP monitor-control tools (emulator)", () => {
         const denied = await getMatrix(GUITAR, {})
         expect(denied).toMatchObject({
             ok: false,
-            error: "monitor_privilege_required",
-            message: expect.stringContaining("admin or sound engineer"),
+            error: { machine_code: "monitor_privilege_required", message: expect.stringContaining("admin or sound engineer") },
         })
     })
 
@@ -428,7 +424,7 @@ describe("MCP monitor-control tools (emulator)", () => {
         const missing = await getMatrix(ADMIN, { matrixIndex: 6 })
         expect(missing).toMatchObject({
             ok: false,
-            error: "invalid_matrix_index",
+            error: { machine_code: "invalid_matrix_index" },
             matrixIndex: 6,
         })
     })
@@ -442,13 +438,13 @@ describe("MCP monitor-control tools (emulator)", () => {
             await setMatrixFader(GUITAR, { matrixIndex: 1, level: 0.5 }),
         ).toMatchObject({
             ok: false,
-            error: "monitor_privilege_required",
+            error: { machine_code: "monitor_privilege_required" },
         })
         expect(
             await setMatrixMute(GUITAR, { matrixIndex: 1, muted: true }),
         ).toMatchObject({
             ok: false,
-            error: "monitor_privilege_required",
+            error: { machine_code: "monitor_privilege_required" },
         })
         expect(await pendingCommands()).toHaveLength(0)
 

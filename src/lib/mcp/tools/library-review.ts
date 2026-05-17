@@ -44,7 +44,7 @@ import { logger } from "@/lib/logger"
  * Write contract: F-05 standing rule — dryRun-default + force-gated. dryRun
  * runs the same upstream validation the helper would (row exists, suggestion
  * exists, edits well-formed) and returns the would-be `plannedStatus` without
- * writing. Real-run without `force: true` returns the same plan + `refused:
+ * writing. Real-run without `force: true` returns the rich force_required envelope (REG-003):
  * true` and still no writes. Pair `dryRun: false, force: true` for the
  * actual write — mirrors `reconcile_library` / `set_ai_auto_apply` /
  * `set_ai_threshold` / `backfill_setlist_test_flag` / `backfill_library_index`.
@@ -369,8 +369,6 @@ export interface WriteSuccessEnvelope {
     /** Final library_index.enrichmentStatus (or chartImportQueue posture) after the action. */
     status: string
     dryRun: boolean
-    /** Set true when a real-run was attempted without `force: true`. No write occurred. */
-    refused?: true
     /** Human-readable preview of what the write would do. Always populated. */
     plannedStatus: string
     /** Optional context (e.g. fields the helper would gap-fill for `accept`). */
@@ -439,15 +437,19 @@ async function runWrite<TStatus extends string>(
     }
 
     if (!force) {
-        return {
-            ok: true,
-            rowId: String(args.rowId ?? ""),
-            status: planned.plannedStatus,
-            plannedStatus: planned.plannedStatus,
-            plannedPatch: planned.plannedPatch,
-            dryRun: false,
-            refused: true,
-        }
+        // Cycle-3 REG-003: real-run without force → rich force_required.
+        return richError(
+            "force_required",
+            "Pass force:true to commit library-review writes.",
+            {
+                rowId: String(args.rowId ?? ""),
+                dryRunPlan: {
+                    plannedStatus: planned.plannedStatus,
+                    plannedPatch: planned.plannedPatch,
+                },
+            },
+            "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
+        )
     }
 
     const committed = await commit()

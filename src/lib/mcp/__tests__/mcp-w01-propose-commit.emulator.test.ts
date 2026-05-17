@@ -55,7 +55,7 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
 
     async function readVersion(coll: string, id: string): Promise<number> {
         const snap = await db().collection(coll).doc(id).get()
-        const v = (snap.data() as Record<string, unknown> | undefined)?.version
+        const v = (snap.data() as unknown as Record<string, unknown> | undefined)?.version
         return typeof v === "number" ? v : 0
     }
 
@@ -258,7 +258,7 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         // Existing track got the rename + version bump.
         const renamed = (
             await db().collection("tracks").doc(existingTrackId).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(renamed.title).toBe("Renamed Original")
         expect(renamed.version).toBe(2) // started at 1 from addTrack
 
@@ -302,7 +302,7 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
 
         const newTrack = (
             await db().collection("tracks").doc(result.addedTrackIds[0]).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
 
         // Pre-MCP-008: fileName was undefined here (the add-proposal handler
         // didn't run the song catalog lookup that add_track_to_setlist did).
@@ -344,7 +344,7 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
 
         const newTrack = (
             await db().collection("tracks").doc(result.addedTrackIds[0]).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(newTrack.title).toBe("Hashkivenu (slow)") // override
         expect(newTrack.key).toBe("Em") // override
         expect(newTrack.leadMusician).toBe("Cantor") // catalog default
@@ -383,13 +383,13 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         const result = (await commitStagedChanges(ADMIN, {
             stageId: stage.id,
             lastSeenVersion: setlistVersion,
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
         expect(result.ok).toBe(true)
 
         // Target row bumped — that one was edited.
         const target = (
             await db().collection("tracks").doc(targetId).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(target.title).toBe("Renamed Target")
         expect(target.version).toBe(versionsBefore.target + 1)
 
@@ -398,10 +398,10 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         // every commit, breaking parallel-agent optimistic concurrency.
         const u1 = (
             await db().collection("tracks").doc(untouched1).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         const u2 = (
             await db().collection("tracks").doc(untouched2).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(u1.version).toBe(versionsBefore.u1)
         expect(u2.version).toBe(versionsBefore.u2)
         expect(u1.lastModifiedAt).toBe(lastModBefore.u1)
@@ -425,17 +425,17 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         const result = (await commitStagedChanges(ADMIN, {
             stageId: stage.id,
             lastSeenVersion: setlistVersion,
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
         expect(result.ok).toBe(true)
 
         // The two pre-existing rows didn't shift indices (the new one
         // appended at the end), so neither should bump.
         const e1 = (
             await db().collection("tracks").doc(existing1).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         const e2 = (
             await db().collection("tracks").doc(existing2).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(e1.version).toBe(versionsBefore.e1)
         expect(e2.version).toBe(versionsBefore.e2)
     })
@@ -457,7 +457,7 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         const result = (await commitStagedChanges(ADMIN, {
             stageId: stage.id,
             lastSeenVersion: setlistVersion,
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
         expect(result.ok).toBe(true)
 
         // Both pre-existing rows now sit at order 1 + 2 instead of 0 + 1 —
@@ -465,10 +465,10 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         // moves (vs. spurious bumps on untouched rows).
         const e1 = (
             await db().collection("tracks").doc(existing1).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         const e2 = (
             await db().collection("tracks").doc(existing2).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(e1.version).toBe(versionsBefore.e1 + 1)
         expect(e2.version).toBe(versionsBefore.e2 + 1)
         expect(e1.order).toBe(1)
@@ -492,16 +492,16 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         const result = (await commitStagedChanges(ADMIN, {
             stageId: stage.id,
             lastSeenVersion: setlistVersionAtStage - 1, // intentionally stale
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
 
-        expect(result.error).toBe("stale_version")
+        expect((result.error as { machine_code: string }).machine_code).toBe("stale_version")
         expect(result.currentVersion).toBe(setlistVersionAtStage)
         expect(result.lastSeenVersion).toBe(setlistVersionAtStage - 1)
 
         // Setlist + track unchanged.
         const unchanged = (
             await db().collection("tracks").doc(existingTrackId).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(unchanged.title).not.toBe("Won't land")
 
         // Stage doc was NOT deleted — caller can re-attempt commit after
@@ -538,8 +538,8 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
             stageId: stage.id,
             // lastSeenVersion intentionally omitted — fallback gate is
             // stage.setlistVersionAtStage, which is now stale.
-        })) as Record<string, unknown>
-        expect(result.error).toBe("stale_version")
+        })) as unknown as Record<string, unknown>
+        expect((result.error as { machine_code: string }).machine_code).toBe("stale_version")
     })
 
     // ─── stage_expired ────────────────────────────────────────────────────
@@ -565,7 +565,7 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
 
         const result = (await commitStagedChanges(ADMIN, {
             stageId: stage.id,
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
         expect(String(result.error)).toMatch(/stage_expired/)
     })
 
@@ -591,11 +591,10 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         const result = (await commitStagedChanges(ADMIN, {
             stageId: stage.id,
             lastSeenVersion: stage.setlistVersionAtStage,
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
         expect(result).toMatchObject({
             ok: false,
-            error: "unknown_track_id",
-            message: expect.stringMatching(/unknown trackId/),
+            error: { machine_code: "unknown_track_id", message: expect.stringMatching(/unknown trackId/) },
         })
 
         // Stage NOT deleted — caller can re-stage.
@@ -619,11 +618,10 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         const propose = (await proposeSetlistChanges(MEMBER, {
             setlistId,
             proposals: [{ action: "add", title: "Nope" }],
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
         expect(propose).toMatchObject({
             ok: false,
-            error: "forbidden_role",
-            message: expect.stringMatching(/admin or band leader/i),
+            error: { machine_code: "forbidden_role", message: expect.stringMatching(/admin or band leader/i) },
         })
 
         // Make a stage as admin so we can test the commit gate.
@@ -633,11 +631,10 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         })) as StageRecord
         const commitDenied = (await commitStagedChanges(MEMBER, {
             stageId: stage.id,
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
         expect(commitDenied).toMatchObject({
             ok: false,
-            error: "forbidden_role",
-            message: expect.stringMatching(/admin or band leader/i),
+            error: { machine_code: "forbidden_role", message: expect.stringMatching(/admin or band leader/i) },
         })
     })
 })

@@ -21,6 +21,7 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { isTestSetlist } from "@/types/models"
+import { richError, type RichErrorEnvelope } from "@/lib/mcp/errors"
 
 export interface BackfillSetlistTestFlagArgs {
     dryRun?: boolean
@@ -44,7 +45,6 @@ export interface BackfillSetlistTestFlagResult {
     deltas: BackfillSetlistTestFlagDelta[]
     deltasTruncated: boolean
     dryRun: boolean
-    refused?: boolean
 }
 
 const BACKFILL_DELTA_REPORT_CAP = 500
@@ -52,7 +52,7 @@ const BACKFILL_DELTA_REPORT_CAP = 500
 export async function backfillSetlistTestFlag(
     uid: string,
     args: BackfillSetlistTestFlagArgs = {},
-): Promise<BackfillSetlistTestFlagResult | { error: string }> {
+): Promise<BackfillSetlistTestFlagResult | RichErrorEnvelope> {
     const dryRun = args.dryRun !== false
     const force = args.force === true
 
@@ -65,13 +65,31 @@ export async function backfillSetlistTestFlag(
             ? (userSnap.data()?.role as string | undefined)
             : undefined
         if (role !== "admin") {
-            return { error: "backfill_setlist_test_flag is admin-only" }
+            return richError(
+                "forbidden_role",
+                "backfill_setlist_test_flag is admin-only.",
+                {
+                    callerRole: role ?? null,
+                    requiredRoles: ["admin"],
+                },
+                "Ask an admin to elevate your account, or call a tool your role is allowed to use.",
+            )
         }
 
         if (!dryRun && !force) {
+            // Cycle-3 REG-003: real-run without force returns the rich
+            // `force_required` envelope carrying the dry-run plan in
+            // extras. F-05 standing rule preserved.
             const planOnly = await backfillSetlistTestFlag(uid, { dryRun: true })
-            if ("error" in planOnly) return planOnly
-            return { ...planOnly, refused: true, dryRun: false }
+            if ("ok" in planOnly && planOnly.ok === false) return planOnly
+            return richError(
+                "force_required",
+                "Pass force:true to commit backfill_setlist_test_flag writes.",
+                {
+                    dryRunPlan: planOnly as BackfillSetlistTestFlagResult,
+                },
+                "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
+            )
         }
 
         const snap = await db.collection("setlists").get()
@@ -138,6 +156,11 @@ export async function backfillSetlistTestFlag(
         }
     } catch (err) {
         logger.warn("[mcp] backfill_setlist_test_flag failed:", err)
-        return { error: "Failed to run setlist isTest backfill" }
+        return richError(
+            "server_error",
+            "Failed to run setlist isTest backfill.",
+            { tool: "backfill_setlist_test_flag" },
+            "Retry; if the failure persists check Firestore IAM and the [mcp] logs.",
+        )
     }
 }

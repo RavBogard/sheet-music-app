@@ -65,10 +65,11 @@ function extractRichErrorCodes(src: string): string[] {
 }
 
 function extractLiteralErrorFields(src: string): string[] {
-    // Match `error: "code"` inside an envelope literal (e.g. inside a
-    // hand-built rich-shape envelope). This is intentionally narrow —
-    // it captures the common case where someone builds an envelope
-    // literal instead of using richError().
+    // Match a bare `error: "code"` field — pre-cycle-3 callers that
+    // hand-built a flat envelope literal instead of going through
+    // richError(). Post-cycle-3 the canonical wire shape is
+    // `error: { machine_code: "code", ... }` (rich-object), so a
+    // literal flat field is an escape hatch worth catching.
     const out: string[] = []
     const re = /(?:^|[,{])\s*error:\s*"([a-zA-Z0-9_]+)"\s*,/g
     const matches = src.matchAll(re)
@@ -120,8 +121,10 @@ describe("MCP error codes are snake_case (MCP-003)", () => {
 describe("MCP error envelope helpers emit snake_case codes", () => {
     it("richError builder passes its code through unchanged", () => {
         const env = richError("setlist_not_found", "msg")
-        expect(env.error).toBe("setlist_not_found")
-        expect(MACHINE_CODE_RE.test(env.error)).toBe(true)
+        expect(env.error.machine_code).toBe("setlist_not_found")
+        expect(MACHINE_CODE_RE.test(env.error.machine_code)).toBe(true)
+        expect(typeof env.error.code).toBe("number")
+        expect(env.error.message).toBe("msg")
     })
 
     it("forbiddenRoleEnvelope emits `forbidden_role`", () => {
@@ -129,8 +132,9 @@ describe("MCP error envelope helpers emit snake_case codes", () => {
             callerRole: "musician",
             requiredRoles: ["admin"],
         })
-        expect(env.error).toBe("forbidden_role")
-        expect(MACHINE_CODE_RE.test(env.error)).toBe(true)
+        expect(env.error.machine_code).toBe("forbidden_role")
+        expect(MACHINE_CODE_RE.test(env.error.machine_code)).toBe(true)
+        expect(env.error.code).toBe(403)
     })
 
     it("zodFormatter emits `validation_error`", () => {
@@ -138,23 +142,24 @@ describe("MCP error envelope helpers emit snake_case codes", () => {
             { issues: [{ path: ["name"], message: "required" }] },
             "create_setlist",
         )
-        expect(env.error).toBe("validation_error")
-        expect(MACHINE_CODE_RE.test(env.error)).toBe(true)
+        expect(env.error.machine_code).toBe("validation_error")
+        expect(MACHINE_CODE_RE.test(env.error.machine_code)).toBe(true)
+        expect(env.error.code).toBe(400)
     })
 
     it("zodFormatterFromSdkProse emits `validation_error` for parseable prose", () => {
         const env = zodFormatterFromSdkProse(
             'Input validation error: Invalid arguments for tool create_setlist: [{"path":["name"],"message":"required"}]',
         )
-        expect(env.error).toBe("validation_error")
+        expect(env.error.machine_code).toBe("validation_error")
         expect(env.toolName).toBe("create_setlist")
         expect(env.issues).toHaveLength(1)
     })
 
     it("zodFormatterFromSdkProse falls back to validation_error for unparseable prose", () => {
         const env = zodFormatterFromSdkProse("Some other validation message")
-        expect(env.error).toBe("validation_error")
-        expect(MACHINE_CODE_RE.test(env.error)).toBe(true)
+        expect(env.error.machine_code).toBe("validation_error")
+        expect(MACHINE_CODE_RE.test(env.error.machine_code)).toBe(true)
         expect(env.toolName).toBeNull()
     })
 })

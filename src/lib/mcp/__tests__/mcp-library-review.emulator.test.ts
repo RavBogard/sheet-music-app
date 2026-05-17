@@ -26,7 +26,7 @@ import type { EnrichmentOutput } from "@/lib/library/ai-enrichment"
  * Test posture mirrors mcp-ai-config / mcp-reconcile-library:
  *  - emulator-backed (Firestore-only; no MCP wire)
  *  - admin gate refusal returns the rich `forbidden_role` envelope
- *  - dryRun-default; real-run without `force: true` refuses with `refused:true`
+ *  - dryRun-default; real-run without `force: true` refuses with rich force_required envelope (REG-003)
  *  - force: true commits and is idempotent on a second run
  *  - integration with a4's shared `src/lib/library/review-queue.ts` helper
  *    (no duplication of action semantics)
@@ -161,7 +161,7 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
         const r = await listReviewQueue(MUSICIAN, {})
         expect(r).toMatchObject({
             ok: false,
-            error: "forbidden_role",
+            error: { machine_code: "forbidden_role" },
             callerRole: "musician",
             requiredRoles: ["admin"],
         })
@@ -172,7 +172,7 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
         const r = await listReviewQueue(BAND_LEADER, {})
         expect(r).toMatchObject({
             ok: false,
-            error: "forbidden_role",
+            error: { machine_code: "forbidden_role" },
             callerRole: "band_leader",
         })
     })
@@ -180,12 +180,12 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
     it("accept_enrichment: refuses non-admin", async () => {
         await seedReviewRow("row-1")
         const r = await acceptEnrichment(MUSICIAN, { rowId: "row-1" })
-        expect(r).toMatchObject({ ok: false, error: "forbidden_role" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "forbidden_role" } })
     })
 
     it("retry_enrichment: refuses non-admin", async () => {
         const r = await retryEnrichment(MUSICIAN, { rowId: "row-x" })
-        expect(r).toMatchObject({ ok: false, error: "forbidden_role" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "forbidden_role" } })
     })
 
     // ─── list_review_queue ────────────────────────────────────────────────
@@ -264,7 +264,7 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
             // @ts-expect-error — bad input on purpose
             kind: "nope",
         })
-        expect(r).toMatchObject({ ok: false, error: "invalid_argument" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "invalid_argument" } })
     })
 
     // ─── get_enrichment_suggestion ────────────────────────────────────────
@@ -295,7 +295,7 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "row_not_found",
+            error: { machine_code: "row_not_found" },
             rowId: "ghost",
         })
     })
@@ -304,7 +304,7 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
         const r = await getEnrichmentSuggestion(ADMIN, { rowId: "" })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
         })
     })
 
@@ -327,17 +327,19 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
         expect(after.data()?.key).toBeUndefined()
     })
 
-    it("accept_enrichment: real-run without force → refused, no write", async () => {
+    it("accept_enrichment: real-run without force → rich force_required envelope, no write", async () => {
         await seedReviewRow("row-A")
         const r = await acceptEnrichment(ADMIN, {
             rowId: "row-A",
             dryRun: false,
         })
         expect(r).toMatchObject({
-            ok: true,
-            dryRun: false,
-            refused: true,
-            plannedStatus: "enriched",
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+            rowId: "row-A",
+            dryRunPlan: {
+                plannedStatus: "enriched",
+            },
         })
         const after = await db().collection("library_index").doc("row-A").get()
         expect(after.data()?.enrichmentStatus).toBe("review_pending")
@@ -395,7 +397,7 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
         const r = await acceptEnrichment(ADMIN, { rowId: "row-A" })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_state",
+            error: { machine_code: "invalid_state" },
             rowId: "row-A",
         })
     })
@@ -404,7 +406,7 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
         const r = await acceptEnrichment(ADMIN, { rowId: "ghost" })
         expect(r).toMatchObject({
             ok: false,
-            error: "row_not_found",
+            error: { machine_code: "row_not_found" },
             rowId: "ghost",
         })
     })
@@ -457,7 +459,7 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
             rowId: "row-A",
             edits: {},
         })
-        expect(r).toMatchObject({ ok: false, error: "invalid_argument" })
+        expect(r).toMatchObject({ ok: false, error: { machine_code: "invalid_argument" } })
     })
 
     it("edit_enrichment: invalid_field for unknown key", async () => {
@@ -469,7 +471,7 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_field",
+            error: { machine_code: "invalid_field" },
             field: "nonsense",
         })
     })
@@ -485,7 +487,7 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_field",
+            error: { machine_code: "invalid_field" },
             field: "collection",
         })
     })
@@ -498,7 +500,7 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_field",
+            error: { machine_code: "invalid_field" },
             field: "bpm",
         })
     })
@@ -592,7 +594,7 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "queue_doc_missing",
+            error: { machine_code: "queue_doc_missing" },
             rowId: "ghost",
         })
     })
@@ -679,11 +681,11 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
         })
     })
 
-    it("dismiss_failure: kind='import' refused without force returns refused:true + no write", async () => {
+    it("dismiss_failure: kind='import' refused without force returns rich force_required + no write", async () => {
         await seedImportFailure("drive-C")
         const r = await dismissFailure(ADMIN, {
             rowId: "drive-C",
@@ -691,10 +693,12 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
             dryRun: false,
         })
         expect(r).toMatchObject({
-            ok: true,
-            dryRun: false,
-            refused: true,
-            plannedStatus: "dismissed",
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+            rowId: "drive-C",
+            dryRunPlan: {
+                plannedStatus: "dismissed",
+            },
         })
         const after = await db()
             .collection("chartImportQueue")

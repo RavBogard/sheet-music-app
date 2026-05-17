@@ -66,7 +66,7 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
 
     async function readVersion(coll: string, id: string): Promise<number> {
         const snap = await db().collection(coll).doc(id).get()
-        const v = (snap.data() as Record<string, unknown> | undefined)?.version
+        const v = (snap.data() as unknown as Record<string, unknown> | undefined)?.version
         return typeof v === "number" ? v : 0
     }
 
@@ -104,9 +104,9 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
             trackId,
             patch: { title: "Renamed by ghost" },
             lastSeenVersion: versionBeforeStaleAttempt - 1, // intentionally stale
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
 
-        expect(result.error).toBe("stale_version")
+        expect((result.error as { machine_code: string }).machine_code).toBe("stale_version")
         expect(result.currentVersion).toBe(versionBeforeStaleAttempt)
         expect(result.lastSeenVersion).toBe(versionBeforeStaleAttempt - 1)
         expect(result.hint).toMatch(/get_setlist/)
@@ -123,7 +123,7 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
 
         // Doc must NOT have mutated — version is unchanged and title intact.
         const afterSnap = await db().collection("tracks").doc(trackId).get()
-        const after = afterSnap.data() as Record<string, unknown>
+        const after = afterSnap.data() as unknown as Record<string, unknown>
         expect(after.version).toBe(versionBeforeStaleAttempt)
         expect(after.title).toBe("Track A")
     })
@@ -144,7 +144,7 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
         expect(await readVersion("tracks", trackId)).toBe(current + 1)
         const after = (
             await db().collection("tracks").doc(trackId).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(after.title).toBe("Renamed safely")
     })
 
@@ -171,9 +171,9 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
             setlistId,
             trackId: "track-that-never-existed",
             patch: { title: "x" },
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
 
-        expect(result.error).toBe("track_not_found")
+        expect((result.error as { machine_code: string }).machine_code).toBe("track_not_found")
         expect(result.message).toMatch(/track-that-never-existed/)
         expect(typeof result.setlistVersion).toBe("number")
         // Setlist exists but was just created → version is at least 1.
@@ -191,15 +191,15 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
             id: setlistId,
             name: "Stale rename",
             lastSeenVersion: current - 1,
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
 
-        expect(result.error).toBe("stale_version")
+        expect((result.error as { machine_code: string }).machine_code).toBe("stale_version")
         expect(result.currentVersion).toBe(current)
         expect(result.lastSeenVersion).toBe(current - 1)
 
         const after = (
             await db().collection("setlists").doc(setlistId).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(after.version).toBe(current) // unchanged
         expect(after.name).toBe("Plan 02 Test") // unchanged
     })
@@ -229,9 +229,9 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
             setlistId,
             trackId,
             lastSeenVersion: current - 1,
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
 
-        expect(result.error).toBe("stale_version")
+        expect((result.error as { machine_code: string }).machine_code).toBe("stale_version")
         expect(result.currentVersion).toBe(current)
         // W04-track-stale-envelope NOTE (v6 bugstomp): remove_track gets the
         // same lastModifiedBy + lastModifiedAt hydration from parent setlist
@@ -269,9 +269,9 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
         const result = (await removeSetlistTrack(ADMIN, {
             setlistId,
             trackId: "phantom-track",
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
 
-        expect(result.error).toBe("track_not_found")
+        expect((result.error as { machine_code: string }).machine_code).toBe("track_not_found")
         expect(typeof result.setlistVersion).toBe("number")
         expect(result.hint).toMatch(/get_setlist/)
     })
@@ -288,15 +288,15 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
             setlistId,
             orderedTrackIds: [t2, t1],
             lastSeenVersion: current - 1,
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
 
-        expect(result.error).toBe("stale_version")
+        expect((result.error as { machine_code: string }).machine_code).toBe("stale_version")
         expect(result.currentVersion).toBe(current)
 
         // Order must be unchanged: t1 still at order 0.
         const t1After = (
             await db().collection("tracks").doc(t1).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(t1After.order).toBe(0)
     })
 
@@ -315,10 +315,10 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
 
         const t1After = (
             await db().collection("tracks").doc(t1).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         const t2After = (
             await db().collection("tracks").doc(t2).get()
-        ).data() as Record<string, unknown>
+        ).data() as unknown as Record<string, unknown>
         expect(t1After.order).toBe(1)
         expect(t2After.order).toBe(0)
         expect(await readVersion("setlists", setlistId)).toBe(
@@ -336,9 +336,9 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
         const result = (await deleteSetlist(ADMIN, {
             id: setlistId,
             lastSeenVersion: current - 1,
-        })) as Record<string, unknown>
+        })) as unknown as Record<string, unknown>
 
-        expect(result.error).toBe("stale_version")
+        expect((result.error as { machine_code: string }).machine_code).toBe("stale_version")
         expect(result.currentVersion).toBe(current)
 
         // Both setlist and track must still exist.

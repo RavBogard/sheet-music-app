@@ -112,7 +112,7 @@ describe("MCP chart-health tools (emulator)", () => {
         const r = await getChartStatus(ADMIN, { fileId: "  " })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             field: "fileId",
         })
     })
@@ -265,7 +265,7 @@ describe("MCP chart-health tools (emulator)", () => {
         const r = await verifySetlistCharts(ADMIN, { setlistId: "ghost" })
         expect(r).toMatchObject({
             ok: false,
-            error: "setlist_not_found",
+            error: { machine_code: "setlist_not_found" },
             setlistId: "ghost",
         })
     })
@@ -274,7 +274,7 @@ describe("MCP chart-health tools (emulator)", () => {
         const r = await verifySetlistCharts(ADMIN, { setlistId: "" })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             field: "setlistId",
         })
     })

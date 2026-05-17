@@ -871,10 +871,8 @@ export interface AssignMusicianResult {
     projectedStatus: "confirmed" | "pending"
     /** True when the musician was already actively assigned (no-op idempotent path). */
     alreadyAssigned: boolean
-    /** True for the previewed plan (dryRun OR refused real-run). */
+    /** True for the previewed plan (dryRun only — real-run refusals return rich force_required). */
     dryRun: boolean
-    /** Set true when force was omitted on a real-run call. No write occurred. */
-    refused?: true
     /** True when force:true completed an actual Firestore write + notifications. */
     committed: boolean
 }
@@ -997,12 +995,16 @@ export async function assignMusician(
         return { ...baseResult, dryRun: true, committed: false }
     }
     if (!force) {
-        return {
-            ...baseResult,
-            dryRun: false,
-            refused: true,
-            committed: false,
-        }
+        // Cycle-3 REG-003: real-run without force → rich force_required.
+        return richError(
+            "force_required",
+            "Pass force:true to commit the musician assignment.",
+            {
+                setlistId: args.setlistId,
+                dryRunPlan: { ...baseResult, dryRun: false, committed: false },
+            },
+            "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
+        )
     }
 
     if (alreadyAssigned) {
@@ -1084,7 +1086,6 @@ export interface UnassignMusicianResult {
     /** Status the assignment was in before this call (null when no active assignment). */
     previousStatus: "pending" | "confirmed" | null
     dryRun: boolean
-    refused?: true
     committed: boolean
 }
 
@@ -1158,12 +1159,17 @@ export async function unassignMusician(
         return { ...baseResult, dryRun: true, committed: false }
     }
     if (!force) {
-        return {
-            ...baseResult,
-            dryRun: false,
-            refused: true,
-            committed: false,
-        }
+        // Cycle-3 REG-003: real-run without force → rich force_required.
+        return richError(
+            "force_required",
+            "Pass force:true to commit the musician unassignment.",
+            {
+                setlistId: args.setlistId,
+                uid: args.uid,
+                dryRunPlan: { ...baseResult, dryRun: false, committed: false },
+            },
+            "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
+        )
     }
     if (!existing) {
         // No-op: nothing to cancel.

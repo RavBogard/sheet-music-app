@@ -170,12 +170,13 @@ export async function POST(req: NextRequest) {
         uid = bodyTargetUid
     } else if (!bearerUid.startsWith(TEST_UID_PREFIX)) {
         // ── Self-mint branch (legacy) ───────────────────────────────────
-        // SEC-001 piggyback — refusal body no longer echoes the bearerUid.
+        // SEC-001 piggyback — refusal body no longer echoes the bearerUid;
+        // structural `requiredPrefix` hint replaces the leaked identifier.
         return envelopeResponse(
             richError(
                 "not_a_test_uid",
                 "Session-cookie minting is restricted to test-* uids. Pass an admin bearer with a `uid` body param to mint for a target.",
-                {},
+                { requiredPrefix: TEST_UID_PREFIX },
                 "This endpoint exists only to bootstrap autonomous browser audits. Real users must sign in via /login.",
             ),
             403,

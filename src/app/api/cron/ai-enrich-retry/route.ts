@@ -9,6 +9,7 @@ import {
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
+import { httpError } from "@/lib/http/error-envelope"
 
 /**
  * Cycle-3 NEW-3 (A3) — AI enrichment retry drain.
@@ -45,13 +46,23 @@ export async function GET(req: NextRequest) {
             !authHeader ||
             !safeCompare(authHeader, `Bearer ${cronSecret}`)
         ) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+            // Cycle-3 REG-002: rich envelope on the wire.
+            return httpError(
+                401,
+                "unauthenticated",
+                "Cron route requires Vercel CRON_SECRET bearer auth.",
+                {},
+                "This endpoint is invoked by Vercel cron; manual probes will always 401.",
+            )
         }
 
         if (!initAdmin()) {
-            return NextResponse.json(
-                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
-                { status: 500 },
+            return httpError(
+                503,
+                "server_not_ready",
+                "Firebase Admin SDK not initialized.",
+                {},
+                "Server is missing FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY.",
             )
         }
 
@@ -71,14 +82,17 @@ export async function GET(req: NextRequest) {
             source: "cron",
             location: "ai-enrich-retry",
         })
-        return NextResponse.json(
+        return httpError(
+            500,
+            "server_error",
+            "AI enrichment retry drain failed.",
             {
-                error:
+                debug:
                     error instanceof Error
                         ? error.message
-                        : "AI enrichment retry drain failed",
+                        : String(error),
             },
-            { status: 500 },
+            "Check `[Cron]` logs in Vercel for the underlying error.",
         )
     }
 }

@@ -14,7 +14,7 @@ import {
  * Wire envelope shape (cycle-2 REG-001 — `validation_error`):
  *   {
  *     ok: false,
- *     error: "validation_error",
+ *     error: { machine_code: "validation_error" },
  *     message: "Invalid arguments — <tool>: <summary>",
  *     toolName: <string|null>,
  *     issues: [{path, message, code?}, ...],
@@ -32,7 +32,7 @@ describe("remapValidationError", () => {
                     'Input validation error: Invalid arguments for tool create_setlist: [{"path":["name"],"message":"Too small","code":"too_small"}]',
             },
         }
-        const out = remapValidationError(body) as Record<string, unknown>
+        const out = remapValidationError(body) as unknown as Record<string, unknown>
         expect(out).not.toBe(body)
         expect(out.jsonrpc).toBe("2.0")
         expect(out.id).toBe(42)
@@ -48,9 +48,9 @@ describe("remapValidationError", () => {
             unknown
         >
         expect(parsed.ok).toBe(false)
-        expect(parsed.error).toBe("validation_error")
+        expect((parsed.error as { machine_code: string }).machine_code).toBe("validation_error")
         expect(parsed.toolName).toBe("create_setlist")
-        expect(parsed.message).toContain("name: Too small")
+        expect((parsed.error as { message: string }).message).toContain("name: Too small")
         expect(parsed.hint).toContain("Re-call")
         const issues = parsed.issues as Array<Record<string, unknown>>
         expect(issues).toHaveLength(1)
@@ -114,8 +114,8 @@ describe("remapValidationError", () => {
         expect(rewritten.error).toBeUndefined()
         const text = (rewritten.result as { content: Array<{ text: string }> })
             .content[0].text
-        const env = JSON.parse(text) as Record<string, unknown>
-        expect(env.error).toBe("validation_error")
+        const env = JSON.parse(text) as unknown as Record<string, unknown>
+        expect((env.error as { machine_code: string }).machine_code).toBe("validation_error")
         expect(env.toolName).toBe("create_setlist")
         expect(out[2]).toBe(internal)
     })
@@ -137,11 +137,11 @@ describe("remapValidationError", () => {
             id: 1,
             error: { code: -32602 }, // no message
         }
-        const out = remapValidationError(body) as Record<string, unknown>
+        const out = remapValidationError(body) as unknown as Record<string, unknown>
         const text = (out.result as { content: Array<{ text: string }> })
             .content[0].text
-        const env = JSON.parse(text) as Record<string, unknown>
-        expect(env.error).toBe("validation_error")
+        const env = JSON.parse(text) as unknown as Record<string, unknown>
+        expect((env.error as { machine_code: string }).machine_code).toBe("validation_error")
         // Falls back to the default "Validation failed" prose carried as a
         // single synthetic issue when the SDK gave us nothing to parse.
         expect(env.toolName).toBeNull()
@@ -204,10 +204,10 @@ describe("remapValidationError — isError: true content rewrite", () => {
             unknown
         >
         expect(env.ok).toBe(false)
-        expect(env.error).toBe("validation_error")
+        expect((env.error as { machine_code: string }).machine_code).toBe("validation_error")
         expect(env.toolName).toBe("create_setlist")
-        expect(env.message).toContain("create_setlist")
-        expect(env.message).toContain("name")
+        expect((env.error as { message: string }).message).toContain("create_setlist")
+        expect((env.error as { message: string }).message).toContain("name")
         const issues = env.issues as Array<Record<string, unknown>>
         expect(issues).toHaveLength(1)
         expect(issues[0].path).toBe("name")
@@ -322,10 +322,7 @@ describe("remapValidationSseBody", () => {
         expect(out.startsWith("event: message\n")).toBe(true)
         // Extract the data: line and parse what we re-emitted.
         const dataLine = out.split("\n").find((l) => l.startsWith("data: "))!
-        const parsed = JSON.parse(dataLine.slice("data: ".length)) as Record<
-            string,
-            unknown
-        >
+        const parsed = JSON.parse(dataLine.slice("data: ".length)) as unknown as Record<string, unknown>
         expect(parsed.error).toBeUndefined()
         expect(parsed.id).toBe(42)
         const result = parsed.result as { content: Array<{ text: string }> }
@@ -333,7 +330,7 @@ describe("remapValidationSseBody", () => {
             string,
             unknown
         >
-        expect(env.error).toBe("validation_error")
+        expect((env.error as { machine_code: string }).machine_code).toBe("validation_error")
         expect(env.toolName).toBe("create_setlist")
         // Preserve the trailing blank line that delimits SSE events.
         expect(out.endsWith("\n\n")).toBe(true)
@@ -365,10 +362,7 @@ describe("remapValidationSseBody", () => {
         expect(out).not.toBe(withId)
         expect(out).toContain("id: evt-7")
         const dataLine = out.split("\n").find((l) => l.startsWith("data: "))!
-        const parsed = JSON.parse(dataLine.slice("data: ".length)) as Record<
-            string,
-            unknown
-        >
+        const parsed = JSON.parse(dataLine.slice("data: ".length)) as unknown as Record<string, unknown>
         const result = parsed.result as { content: Array<{ text: string }> }
         const env = JSON.parse(result.content[0].text) as Record<
             string,
@@ -402,17 +396,14 @@ describe("remapValidationSseBody", () => {
         const dataLine = secondEvent.split("\n").find((l) =>
             l.startsWith("data: "),
         )!
-        const parsed = JSON.parse(dataLine.slice("data: ".length)) as Record<
-            string,
-            unknown
-        >
+        const parsed = JSON.parse(dataLine.slice("data: ".length)) as unknown as Record<string, unknown>
         expect(parsed.error).toBeUndefined()
         const result = parsed.result as { content: Array<{ text: string }> }
         const env = JSON.parse(result.content[0].text) as Record<
             string,
             unknown
         >
-        expect(env.error).toBe("validation_error")
+        expect((env.error as { machine_code: string }).machine_code).toBe("validation_error")
         expect(env.toolName).toBe("y")
     })
 
@@ -457,17 +448,14 @@ describe("wrapWithValidationRemap", () => {
         expect(res.headers.get("content-type")).toBe("text/event-stream")
         const text = await res.text()
         const dataLine = text.split("\n").find((l) => l.startsWith("data: "))!
-        const parsed = JSON.parse(dataLine.slice("data: ".length)) as Record<
-            string,
-            unknown
-        >
+        const parsed = JSON.parse(dataLine.slice("data: ".length)) as unknown as Record<string, unknown>
         expect(parsed.error).toBeUndefined()
         const result = parsed.result as { content: Array<{ text: string }> }
         const env = JSON.parse(result.content[0].text) as Record<
             string,
             unknown
         >
-        expect(env.error).toBe("validation_error")
+        expect((env.error as { machine_code: string }).machine_code).toBe("validation_error")
         expect(env.toolName).toBe("create_setlist")
     })
 
@@ -494,7 +482,7 @@ describe("wrapWithValidationRemap", () => {
             string,
             unknown
         >
-        expect(env.error).toBe("validation_error")
+        expect((env.error as { machine_code: string }).machine_code).toBe("validation_error")
         expect(env.toolName).toBe("x")
     })
 
@@ -586,10 +574,7 @@ describe("wrapWithValidationRemap", () => {
         const text = await res.text()
         // Extract the data: line and parse what we re-emitted.
         const dataLine = text.split("\n").find((l) => l.startsWith("data: "))!
-        const parsed = JSON.parse(dataLine.slice("data: ".length)) as Record<
-            string,
-            unknown
-        >
+        const parsed = JSON.parse(dataLine.slice("data: ".length)) as unknown as Record<string, unknown>
         // isError flag survives (structural failure signal still works).
         const result = parsed.result as {
             content: Array<{ text: string }>
@@ -602,9 +587,9 @@ describe("wrapWithValidationRemap", () => {
             unknown
         >
         expect(env.ok).toBe(false)
-        expect(env.error).toBe("validation_error")
+        expect((env.error as { machine_code: string }).machine_code).toBe("validation_error")
         expect(env.toolName).toBe("create_setlist")
-        expect(env.message).toContain("name")
+        expect((env.error as { message: string }).message).toContain("name")
         const issues = env.issues as Array<Record<string, unknown>>
         expect(issues).toHaveLength(1)
         expect(issues[0].path).toBe("name")

@@ -77,7 +77,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         })
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.dryRun).toBe(true)
         expect(r.scanned).toBe(2)
@@ -113,7 +113,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         })
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.groupsFound).toBe(1)
         expect(r.duplicatesMarked).toBe(1)
@@ -150,7 +150,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         })
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.groupsFound).toBe(1)
         expect(r.groups[0].normalizedName).toBe("oseh shalom camp")
@@ -173,7 +173,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         await seedSong("ana-leading-space", " Ana B_Koach.pdf")
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
         expect(r.songsMirrored).toBe(1)
 
         const loserSong = await db()
@@ -200,7 +200,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         await seedSong("ana-clean", "Ana B_Koach.pdf") // only canonical mirror
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
         expect(r.songsMirrored).toBe(0)
 
         const phantom = await db()
@@ -221,11 +221,11 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         })
 
         const first = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
-        if ("error" in first) throw new Error(first.error)
+        if ("error" in first) throw new Error(typeof first.error === "string" ? first.error : JSON.stringify(first.error))
         expect(first.duplicatesMarked).toBe(1)
 
         const second = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
-        if ("error" in second) throw new Error(second.error)
+        if ("error" in second) throw new Error(typeof second.error === "string" ? second.error : JSON.stringify(second.error))
         expect(second.scanned).toBe(1) // already-duplicate row excluded
         expect(second.groupsFound).toBe(0)
         expect(second.duplicatesMarked).toBe(0)
@@ -238,7 +238,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         await seedIndex("c", { name: "Hashkivenu.pdf" })
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
         expect(r.scanned).toBe(3)
         expect(r.groupsFound).toBe(0)
         expect(r.duplicatesMarked).toBe(0)
@@ -253,7 +253,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         })
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
         expect(r.scanned).toBe(1) // archived row excluded
         expect(r.groupsFound).toBe(0)
     })
@@ -274,7 +274,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         })
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
         expect(r.groupsFound).toBe(1)
         expect(r.groups[0].normalizedName).toBe("shabbat shalompdf")
         expect(r.groups[0].kept.fileId).toBe("a") // earliest
@@ -295,7 +295,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         })
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: false })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
         expect(r.refused).toBe(true)
         expect(r.dryRun).toBe(false)
         expect(r.groupsFound).toBe(1) // plan still surfaces
@@ -323,7 +323,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         })
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: true })
-        if ("error" in r) throw new Error(r.error)
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
         expect(r.coverage.total).toBe(3)
         expect(r.coverage.eligible).toBe(1) // only 'active1' survives the status filter
         expect(r.coverage.scanned).toBe(1)
@@ -363,7 +363,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         // Exact-normalize-only — names differ ("hashkivenu" vs "hashkiveinu"),
         // so no group.
         const without = await dedupeLibraryIndex(ADMIN, { dryRun: true })
-        if ("error" in without) throw new Error(without.error)
+        if ("error" in without) throw new Error(typeof without.error === "string" ? without.error : JSON.stringify(without.error))
         expect(without.groupsFound).toBe(0)
         expect(without.threshold).toBe(0.85)
 
@@ -372,7 +372,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
             dryRun: true,
             forceScore: 0.8,
         })
-        if ("error" in withFuzzy) throw new Error(withFuzzy.error)
+        if ("error" in withFuzzy) throw new Error(typeof withFuzzy.error === "string" ? withFuzzy.error : JSON.stringify(withFuzzy.error))
         expect(withFuzzy.groupsFound).toBe(1)
         expect(withFuzzy.threshold).toBe(0.8)
         expect(withFuzzy.duplicatesMarked).toBe(1)

@@ -202,9 +202,13 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         })
         expect("ok" in r && r.ok === false).toBe(true)
         if ("ok" in r && r.ok === false) {
-            expect(r.error).toBe("forbidden_role")
-            expect(r.callerRole).toBe("musician")
-            expect(r.requiredRoles).toEqual(["admin"])
+            expect((r.error as { machine_code: string }).machine_code).toBe(
+                "forbidden_role",
+            )
+            expect((r as { callerRole?: string }).callerRole).toBe("musician")
+            expect((r as { requiredRoles?: string[] }).requiredRoles).toEqual([
+                "admin",
+            ])
         }
     })
 
@@ -217,8 +221,10 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         })
         expect("ok" in r && r.ok === false).toBe(true)
         if ("ok" in r && r.ok === false) {
-            expect(r.error).toBe("row_not_found")
-            expect(r.fileId).toBe("upload-nonexistent")
+            expect((r.error as { machine_code: string }).machine_code).toBe(
+                "row_not_found",
+            )
+            expect((r as { fileId?: string }).fileId).toBe("upload-nonexistent")
         }
     })
 
@@ -236,7 +242,7 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         })
         expect("ok" in r && r.ok === false).toBe(true)
         if ("ok" in r && r.ok === false) {
-            expect(r.error).toBe("no_source_available")
+            expect((r.error as { machine_code: string }).machine_code).toBe("no_source_available")
         }
     })
 
@@ -457,7 +463,7 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         })
         expect("ok" in r && r.ok === false).toBe(true)
         if ("ok" in r && r.ok === false) {
-            expect(r.error).toBe("storage_size_mismatch")
+            expect((r.error as { machine_code: string }).machine_code).toBe("storage_size_mismatch")
         }
         // Compensating-delete fired.
         expect(storageState.deletedPaths).toContain("library/upload-3.pdf")
@@ -485,7 +491,7 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         })
         expect("ok" in r && r.ok === false).toBe(true)
         if ("ok" in r && r.ok === false) {
-            expect(r.error).toBe("invalid_source_url")
+            expect((r.error as { machine_code: string }).machine_code).toBe("invalid_source_url")
         }
     })
 
@@ -509,7 +515,7 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         })
         expect("ok" in r && r.ok === false).toBe(true)
         if ("ok" in r && r.ok === false) {
-            expect(r.error).toBe("invalid_source_mime")
+            expect((r.error as { machine_code: string }).machine_code).toBe("invalid_source_mime")
         }
     })
 
@@ -533,7 +539,7 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         })
         expect("ok" in r && r.ok === false).toBe(true)
         if ("ok" in r && r.ok === false) {
-            expect(r.error).toBe("source_fetch_empty")
+            expect((r.error as { machine_code: string }).machine_code).toBe("source_fetch_empty")
         }
     })
 })

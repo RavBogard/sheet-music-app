@@ -123,7 +123,7 @@ describe("list_monitor_buses — F-001 defensive guards", () => {
         // (machine code `internal_error`, prose in `message`).
         expect(result).toMatchObject({
             ok: false,
-            error: "internal_error",
+            error: { machine_code: "internal_error" },
             message: expect.stringMatching(
                 /list_monitor_buses internal error: Firestore offline/,
             ),
@@ -175,7 +175,7 @@ describe("get_matrix — F-002 defensive guards", () => {
         // (machine code `internal_error`, prose in `message`).
         expect(result).toMatchObject({
             ok: false,
-            error: "internal_error",
+            error: { machine_code: "internal_error" },
             message: expect.stringMatching(
                 /get_matrix internal error: Bridge daemon unreachable/,
             ),

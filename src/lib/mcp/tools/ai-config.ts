@@ -42,7 +42,7 @@ const DEFAULT_CONFIDENCE_THRESHOLD = 0.7
  * Write contract: dryRun-default + force-gated per the F-05 standing rule
  * ([[feedback_dryrun_is_observability]]). dryRun returns the would-be state
  * with no writes. A real-run without `force: true` returns the same plan
- * with `refused: true` and still no writes. Pair `dryRun: false, force: true`
+ * with rich `force_required` envelope and still no writes. Pair `dryRun: false, force: true`
  * for the actual flip — mirrors `reconcile_library`, `backfill_setlist_test_flag`,
  * and `backfill_library_index`.
  *
@@ -93,8 +93,6 @@ export interface SetAiAutoApplyResult {
     /** False when the requested value already matched the stored value. */
     changed: boolean
     dryRun: boolean
-    /** Set true when a real-run was attempted without `force: true`. No write occurred. */
-    refused?: true
 }
 
 export interface SetAiThresholdResult {
@@ -103,7 +101,6 @@ export interface SetAiThresholdResult {
     new: number
     changed: boolean
     dryRun: boolean
-    refused?: true
 }
 
 /**
@@ -215,14 +212,19 @@ export async function setAiAutoApply(
         }
 
         if (!force) {
-            return {
-                ok: true,
-                previous,
-                new: next,
-                changed,
-                dryRun: false,
-                refused: true,
-            }
+            // Cycle-3 REG-003: real-run without force → rich force_required.
+            return richError(
+                "force_required",
+                "Pass force:true to commit aiConfig.enabled.",
+                {
+                    dryRunPlan: {
+                        previous,
+                        new: next,
+                        changed,
+                    },
+                },
+                "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
+            )
         }
 
         await db
@@ -299,14 +301,19 @@ export async function setAiThreshold(
         }
 
         if (!force) {
-            return {
-                ok: true,
-                previous,
-                new: next,
-                changed,
-                dryRun: false,
-                refused: true,
-            }
+            // Cycle-3 REG-003: real-run without force → rich force_required.
+            return richError(
+                "force_required",
+                "Pass force:true to commit aiConfig.threshold.",
+                {
+                    dryRunPlan: {
+                        previous,
+                        new: next,
+                        changed,
+                    },
+                },
+                "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
+            )
         }
 
         await db

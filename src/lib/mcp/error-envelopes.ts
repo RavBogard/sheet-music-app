@@ -13,61 +13,44 @@
  *    edit; carries the current setlist version + timestamp so the agent
  *    can re-fetch without guessing.
  *
- * Both envelopes follow the same shape pattern: `error` (machine code),
- * `message` (human-readable), `hint` (next-step recovery), plus context
- * fields specific to the rejection class.
+ * Both envelopes follow the same shape pattern: machine code in
+ * `error.machine_code`, human prose in `error.message`, recovery hint
+ * + context fields at the top level. The factory + body type live in
+ * `./errors`; this module wires the type-narrowed envelopes on top.
  *
- * Used by:
- *  - Plan 01 (this): types exported; helpers used by Plan 02 + Plan 03.
- *  - Plan 02: update_track / update_setlist / remove_track /
- *    reorder_setlist / delete_setlist call `staleVersionEnvelope` when
- *    `lastSeenVersion` doesn't match.
- *  - Plan 03: bulk_update_tracks pre-flight; publish_setlist required
- *    version check.
+ * Cycle-3 REG-002 migration: prior to the cowork-driven 2026-05-18 sweep,
+ * `richError()` here emitted the flat shape `{ok:false, error:<slug>,
+ * message, ...}`. The factory has moved to `./errors` and now emits the
+ * rich-object shape `{ok:false, error:{code, machine_code, message,
+ * debug?}, ...extras}`; every call-site here pre-existed and continues
+ * compiling via the preserved signature.
  */
+
+export {
+    MACHINE_CODE_RE,
+    ERROR_CODE_MAP,
+    codeFor,
+    richError,
+    isRichError,
+    stripDebugInProduction,
+    liftLegacyErrorEnvelope,
+} from "./errors"
+export type { RichErrorBody, RichErrorEnvelope } from "./errors"
+
+import {
+    richError,
+    type RichErrorEnvelope,
+    type RichErrorBody,
+} from "./errors"
 
 /**
- * F-015 (cycle-1) canonical rich-error envelope. Every MCP tool error
- * surfaces this shape on the wire so agents have a uniform recovery
- * contract regardless of which tool failed.
- *
- *   { ok: false, error: <machine_code>, message: <human>, ...context, hint }
- *
- * `StaleVersionEnvelope` + `TrackNotFoundEnvelope` (below) are the
- * pre-existing instances of this shape. Generic prose errors that don't
- * have a dedicated envelope go through the `richError()` factory at the
- * call site, OR through the `jsonResult` wrapper's `normalizeErrorEnvelope`
- * adapter which lifts legacy `{ error: "prose" }` returns to the rich
- * shape on the wire automatically. New tools should call `richError`
- * directly so the machine code is meaningful, not the prose fallback.
+ * Stale-version envelope. Rich-shape: `error.machine_code` is
+ * `'stale_version'`; recovery context (currentVersion, lastSeenVersion,
+ * setlist provenance, optional stale-row breakdown for bulk paths) lives
+ * at the top level so an agent can pull what it needs without re-keying.
  */
-export interface RichErrorEnvelope {
-    ok: false
-    error: string
-    message: string
-    hint?: string
-    [key: string]: unknown
-}
-
-export function richError(
-    code: string,
-    message: string,
-    context: Record<string, unknown> = {},
-    hint?: string,
-): RichErrorEnvelope {
-    return {
-        ok: false,
-        error: code,
-        message,
-        ...context,
-        ...(hint ? { hint } : {}),
-    }
-}
-
-export interface StaleVersionEnvelope {
-    ok: false
-    error: "stale_version"
-    message: string
+export interface StaleVersionEnvelope extends RichErrorEnvelope {
+    error: RichErrorBody & { machine_code: "stale_version" }
     /** Server-side current version of the resource. */
     currentVersion: number
     /** What the caller asserted as their last-seen version. */
@@ -86,10 +69,8 @@ export interface StaleVersionEnvelope {
     hint: "Call get_setlist to refresh state and retry."
 }
 
-export interface TrackNotFoundEnvelope {
-    ok: false
-    error: "track_not_found"
-    message: string
+export interface TrackNotFoundEnvelope extends RichErrorEnvelope {
+    error: RichErrorBody & { machine_code: "track_not_found" }
     /** Current setlist version so the agent can refresh by trackId resolution. */
     setlistVersion: number
     /** When the setlist was last touched — surfaces who/when changed it. */
@@ -97,33 +78,33 @@ export interface TrackNotFoundEnvelope {
     hint: "Track may have been deleted or replaced — call get_setlist."
 }
 
-export function staleVersionEnvelope(
-    args: {
-        resource: "setlist" | "track"
-        currentVersion: number
-        lastSeenVersion: number
-        lastModifiedBy?: string
-        lastModifiedAt?: string | null
-        staleRows?: StaleVersionEnvelope["staleRows"]
-    },
-): StaleVersionEnvelope {
+export function staleVersionEnvelope(args: {
+    resource: "setlist" | "track"
+    currentVersion: number
+    lastSeenVersion: number
+    lastModifiedBy?: string
+    lastModifiedAt?: string | null
+    staleRows?: StaleVersionEnvelope["staleRows"]
+}): StaleVersionEnvelope {
     const which = args.resource === "track" ? "Track" : "Setlist"
-    return {
-        ok: false,
-        error: "stale_version",
-        message: `${which} was modified by another writer (current version ${args.currentVersion}, you saw ${args.lastSeenVersion}).`,
-        currentVersion: args.currentVersion,
-        lastSeenVersion: args.lastSeenVersion,
-        setlist:
-            args.lastModifiedBy || args.lastModifiedAt
-                ? {
-                      lastModifiedBy: args.lastModifiedBy,
-                      lastModifiedAt: args.lastModifiedAt ?? undefined,
-                  }
-                : undefined,
-        staleRows: args.staleRows,
-        hint: "Call get_setlist to refresh state and retry.",
-    }
+    const setlist =
+        args.lastModifiedBy || args.lastModifiedAt
+            ? {
+                  lastModifiedBy: args.lastModifiedBy,
+                  lastModifiedAt: args.lastModifiedAt ?? undefined,
+              }
+            : undefined
+    return richError(
+        "stale_version",
+        `${which} was modified by another writer (current version ${args.currentVersion}, you saw ${args.lastSeenVersion}).`,
+        {
+            currentVersion: args.currentVersion,
+            lastSeenVersion: args.lastSeenVersion,
+            ...(setlist ? { setlist } : {}),
+            ...(args.staleRows ? { staleRows: args.staleRows } : {}),
+        },
+        "Call get_setlist to refresh state and retry.",
+    ) as StaleVersionEnvelope
 }
 
 export function trackNotFoundEnvelope(args: {
@@ -132,14 +113,15 @@ export function trackNotFoundEnvelope(args: {
     setlistVersion: number
     setlistLastModifiedAt: string | null
 }): TrackNotFoundEnvelope {
-    return {
-        ok: false,
-        error: "track_not_found",
-        message: `Track ${args.trackId} not found in setlist ${args.setlistId}. It may have been deleted or replaced.`,
-        setlistVersion: args.setlistVersion,
-        setlistLastModifiedAt: args.setlistLastModifiedAt,
-        hint: "Track may have been deleted or replaced — call get_setlist.",
-    }
+    return richError(
+        "track_not_found",
+        `Track ${args.trackId} not found in setlist ${args.setlistId}. It may have been deleted or replaced.`,
+        {
+            setlistVersion: args.setlistVersion,
+            setlistLastModifiedAt: args.setlistLastModifiedAt,
+        },
+        "Track may have been deleted or replaced — call get_setlist.",
+    ) as TrackNotFoundEnvelope
 }
 
 /**
@@ -186,14 +168,6 @@ export type WriteRejection =
       }
 
 /**
- * Cycle-2 REG-001 / MCP-003 — every MCP tool error code on the wire must
- * match this regex. Asserted by mcp-tools-validation.test.ts on the
- * known canonical error catalog so a free-form prose string can't slip
- * back into the `error:` field. Human-readable text belongs in `message`.
- */
-export const MACHINE_CODE_RE = /^[a-z][a-z0-9_]*$/
-
-/**
  * REG-001 (cycle-2) — uniform validation_error envelope used when an
  * MCP tool's inputSchema fails Zod validation. Issues mirror Zod's
  * `issues[]` shape (path, message, optional code) so an agent can surface
@@ -207,7 +181,7 @@ export const MACHINE_CODE_RE = /^[a-z][a-z0-9_]*$/
  * envelope on the wire so every tool sees a uniform validation shape.
  */
 export interface ValidationErrorEnvelope extends RichErrorEnvelope {
-    error: "validation_error"
+    error: RichErrorBody & { machine_code: "validation_error" }
     /** Per-field Zod issues. Empty array when the SDK prose carried no parseable JSON. */
     issues: Array<{
         path: string
@@ -250,14 +224,12 @@ export function zodFormatter(
                   .join("; ")
             : "validation failed"
     const toolLabel = toolName ? `${toolName}: ` : ""
-    return {
-        ok: false,
-        error: "validation_error",
-        message: `Invalid arguments — ${toolLabel}${summary}`,
-        toolName,
-        issues,
-        hint: "Re-call the tool with corrected arguments (see issues[]).",
-    }
+    return richError(
+        "validation_error",
+        `Invalid arguments — ${toolLabel}${summary}`,
+        { toolName, issues },
+        "Re-call the tool with corrected arguments (see issues[]).",
+    ) as ValidationErrorEnvelope
 }
 
 /**
@@ -351,7 +323,7 @@ export function zodErrorToEnvelope(
  * envelopes `create_test_account` / `revoke_test_account` already emit.
  */
 export interface ForbiddenRoleEnvelope extends RichErrorEnvelope {
-    error: "forbidden_role"
+    error: RichErrorBody & { machine_code: "forbidden_role" }
     callerRole: string | null
     requiredRoles: string[]
     hint: string
@@ -375,15 +347,16 @@ export function forbiddenRoleEnvelope(args: {
     const hint =
         args.hint ??
         `Ask an admin to elevate your account, or call a tool your role is allowed to use.`
-    return {
-        ok: false,
-        error: "forbidden_role",
+    return richError(
+        "forbidden_role",
         message,
-        callerRole: role,
-        requiredRoles: required,
-        ...(args.context ?? {}),
+        {
+            callerRole: role,
+            requiredRoles: required,
+            ...(args.context ?? {}),
+        },
         hint,
-    }
+    ) as ForbiddenRoleEnvelope
 }
 
 /**

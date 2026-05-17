@@ -273,7 +273,7 @@ describe("MCP publish_setlist (emulator)", () => {
             .collection("history")
             .get()
         expect(history.size).toBeGreaterThanOrEqual(1)
-        const audit = history.docs[0].data() as Record<string, unknown>
+        const audit = history.docs[0].data() as unknown as Record<string, unknown>
         expect(audit.action).toBe("published")
         expect((audit.details as { source?: string }).source).toBe("mcp")
     })
@@ -380,8 +380,7 @@ describe("MCP publish_setlist (emulator)", () => {
         const r = await publishSetlist(ADMIN, { setlistId: id })
         expect(r).toMatchObject({
             ok: false,
-            error: "no_bonded_songs",
-            message: expect.stringContaining("at least one song row"),
+            error: { machine_code: "no_bonded_songs", message: expect.stringContaining("at least one song row") },
         })
     })
 
@@ -389,7 +388,7 @@ describe("MCP publish_setlist (emulator)", () => {
         const r = await publishSetlist(ADMIN, { setlistId: "ghost" })
         expect(r).toMatchObject({
             ok: false,
-            error: "setlist_not_found",
+            error: { machine_code: "setlist_not_found" },
             setlistId: "ghost",
         })
     })
@@ -398,7 +397,7 @@ describe("MCP publish_setlist (emulator)", () => {
         const r = await publishSetlist(ADMIN, { setlistId: "   " })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             field: "setlistId",
         })
     })
@@ -410,7 +409,7 @@ describe("MCP publish_setlist (emulator)", () => {
         const r = await publishSetlist(NONLEADER, { setlistId: id })
         expect(r).toMatchObject({
             ok: false,
-            error: "forbidden_role",
+            error: { machine_code: "forbidden_role" },
             requiredRoles: expect.arrayContaining(["admin", "band_leader"]),
             message: expect.stringContaining("admin or band leader"),
         })
@@ -447,8 +446,7 @@ describe("MCP publish_setlist (emulator)", () => {
         const r = await publishSetlist(ADMIN, { setlistId: id })
         expect(r).toMatchObject({
             ok: false,
-            error: "publish_refused_unhealthy_charts",
-            message: expect.stringMatching(/Publish refused.*won't render.*Mi Chamocha/s),
+            error: { machine_code: "publish_refused_unhealthy_charts", message: expect.stringMatching(/Publish refused.*won't render.*Mi Chamocha/s) },
             hint: expect.stringContaining("force: true"),
         })
 
