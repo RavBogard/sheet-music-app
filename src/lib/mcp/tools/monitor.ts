@@ -19,6 +19,18 @@ import type { BusAssignment } from "@/types/monitor"
 
 type ToolError = { error: string }
 
+/**
+ * Defensive coercion for Firestore-state arrays that the type system lies
+ * about. Production has seen `state.buses` come back as a non-array object
+ * (cycle-1 F-001/F-002, 2026-05-17) — likely a stale write or a manual
+ * edit in the Firebase console. `Array.isArray(x) ? x : []` is the only
+ * safe default; the alternative `x ?? []` evaluates a `{}` object as truthy
+ * and proceeds to `.map`, which crashes the handler.
+ */
+function safeArray<T>(x: unknown): T[] {
+    return Array.isArray(x) ? (x as T[]) : []
+}
+
 function readBusAssignment(
     assignments: Record<string, BusAssignment | BusAssignment[] | null> | undefined,
     busIndex: number,
@@ -50,42 +62,51 @@ export async function listMonitorBuses(uid: string): Promise<
       }
     | ToolError
 > {
-    initAdmin()
-    const db = getFirestore()
+    try {
+        initAdmin()
+        const db = getFirestore()
 
-    const access = await assertMonitorAccess(db, uid)
-    if (!access.ok) return { error: access.error }
+        const access = await assertMonitorAccess(db, uid)
+        if (!access.ok) return { error: access.error }
 
-    const state = await loadMixerState(db)
-    const stateBuses = state?.buses ?? []
-    const buses = stateBuses.map((b) => ({
-        index: b.index,
-        name: b.name,
-        assignedTo: readBusAssignment(access.config.busAssignments, b.index),
-    }))
+        const state = await loadMixerState(db)
+        const stateBuses = safeArray<{ index: number; name: string }>(
+            state?.buses,
+        )
+        const buses = stateBuses.map((b) => ({
+            index: b.index,
+            name: b.name,
+            assignedTo: readBusAssignment(access.config.busAssignments, b.index),
+        }))
 
-    // Matrices are FOH-only — only surface to admin/SE so a musician's tool
-    // catalog isn't cluttered with controls they can't act on.
-    const privileged = isPrivilegedMonitor(access.user)
-    const matrices = privileged
-        ? (state?.matrices ?? []).map((m) => ({ index: m.index, name: m.name }))
-        : null
+        // Matrices are FOH-only — only surface to admin/SE so a musician's tool
+        // catalog isn't cluttered with controls they can't act on.
+        const privileged = isPrivilegedMonitor(access.user)
+        const matrices = privileged
+            ? safeArray<{ index: number; name: string }>(
+                  state?.matrices,
+              ).map((m) => ({ index: m.index, name: m.name }))
+            : null
 
-    const bridge = access.config.bridge
-        ? {
-              status: access.config.bridge.status,
-              x32Connected: access.config.bridge.x32Connected,
-              lastSeenIso: serializeLastSeen(access.config.bridge.lastSeen),
-              clients: access.config.bridge.clients ?? 0,
-          }
-        : null
+        const bridge = access.config.bridge
+            ? {
+                  status: access.config.bridge.status,
+                  x32Connected: access.config.bridge.x32Connected,
+                  lastSeenIso: serializeLastSeen(access.config.bridge.lastSeen),
+                  clients: access.config.bridge.clients ?? 0,
+              }
+            : null
 
-    return {
-        buses,
-        matrices,
-        myAssignedBuses: access.ownedBuses,
-        isPrivileged: privileged,
-        bridge,
+        return {
+            buses,
+            matrices,
+            myAssignedBuses: access.ownedBuses,
+            isPrivileged: privileged,
+            bridge,
+        }
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return { error: `list_monitor_buses internal error: ${msg}` }
     }
 }
 
@@ -172,33 +193,43 @@ export async function getMatrix(
       }
     | ToolError
 > {
-    initAdmin()
-    const db = getFirestore()
+    try {
+        initAdmin()
+        const db = getFirestore()
 
-    const access = await assertMonitorAccess(db, uid)
-    if (!access.ok) return { error: access.error }
-    // Matrix outputs are FOH territory — admin/SE only, same as the write tools.
-    if (!isPrivilegedMonitor(access.user)) {
-        return {
-            error: "Matrix read requires an admin or sound engineer account",
+        const access = await assertMonitorAccess(db, uid)
+        if (!access.ok) return { error: access.error }
+        // Matrix outputs are FOH territory — admin/SE only, same as the write tools.
+        if (!isPrivilegedMonitor(access.user)) {
+            return {
+                error: "Matrix read requires an admin or sound engineer account",
+            }
         }
-    }
 
-    const state = await loadMixerState(db)
-    if (!state) return { error: "Mixer state not available — is the bridge online?" }
+        const state = await loadMixerState(db)
+        if (!state) return { error: "Mixer state not available — is the bridge online?" }
 
-    const all = (state.matrices ?? []).map((m) => ({
-        index: m.index,
-        name: m.name,
-        fader: m.fader,
-        on: m.on,
-    }))
-    if (args.matrixIndex !== undefined) {
-        const one = all.find((m) => m.index === args.matrixIndex)
-        if (!one) return { error: `Matrix ${args.matrixIndex} not found` }
-        return { matrices: [one] }
+        const all = safeArray<{
+            index: number
+            name: string
+            fader: number
+            on: boolean
+        }>(state.matrices).map((m) => ({
+            index: m.index,
+            name: m.name,
+            fader: m.fader,
+            on: m.on,
+        }))
+        if (args.matrixIndex !== undefined) {
+            const one = all.find((m) => m.index === args.matrixIndex)
+            if (!one) return { error: `Matrix ${args.matrixIndex} not found` }
+            return { matrices: [one] }
+        }
+        return { matrices: all }
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return { error: `get_matrix internal error: ${msg}` }
     }
-    return { matrices: all }
 }
 
 // ─── shared write-side preflight ────────────────────────────────────────────
