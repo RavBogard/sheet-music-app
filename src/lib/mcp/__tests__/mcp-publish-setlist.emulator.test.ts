@@ -467,6 +467,11 @@ describe("MCP publish_setlist (emulator)", () => {
 
         expect(r.chartHealth.bondedCount).toBe(2)
         expect(r.chartHealth.okCount).toBe(1)
+        // F-006: chartHealth carries aggregate counts so the caller doesn't
+        // have to filter `unhealthy[]` themselves; same shape preview_publish
+        // returns.
+        expect(r.chartHealth.missingCount).toBe(1)
+        expect(r.chartHealth.unreachableCount).toBe(0)
         expect(r.chartHealth.unhealthy).toHaveLength(1)
         expect(r.chartHealth.unhealthy[0]).toMatchObject({
             fileId: "upload-michamocha",
@@ -544,6 +549,9 @@ describe("MCP publish_setlist (emulator)", () => {
 
         expect(r.chartHealth.bondedCount).toBe(2)
         expect(r.chartHealth.okCount).toBe(2)
+        // F-006: clean-state aggregates are both zero.
+        expect(r.chartHealth.missingCount).toBe(0)
+        expect(r.chartHealth.unreachableCount).toBe(0)
         expect(r.chartHealth.unhealthy).toEqual([])
     })
 })

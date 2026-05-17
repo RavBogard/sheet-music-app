@@ -129,11 +129,15 @@ export interface PublishSetlistResult {
      * Chart-health pre-flight report. Always populated. Each entry mirrors
      * `verify_setlist_charts.rows[]` shape: { fileId, title, status }.
      * `unhealthy[]` is the subset with status missing/unreachable — same set
-     * the publish refused on (or `force: true` bypassed).
+     * the publish refused on (or `force: true` bypassed). Aggregate counts
+     * (`missingCount`, `unreachableCount`) save the caller from filtering
+     * `unhealthy[]` themselves; same shape preview_publish returns (F-006).
      */
     chartHealth: {
         bondedCount: number
         okCount: number
+        missingCount: number
+        unreachableCount: number
         unhealthy: Array<{
             trackId: string
             title: string
@@ -354,6 +358,9 @@ export async function publishSetlist(
     const chartHealth = {
         bondedCount: bondedSongTracks.length,
         okCount: healthRows.filter((r) => r.health.status === "ok").length,
+        missingCount: unhealthy.filter((u) => u.status === "missing").length,
+        unreachableCount: unhealthy.filter((u) => u.status === "unreachable")
+            .length,
         unhealthy,
     }
     // F-05 (2026-05-16 bugstomp): dryRun NEVER refuses on the chart-health

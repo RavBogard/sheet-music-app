@@ -653,7 +653,7 @@ export function registerWriteTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "If true, returns the would-publish recipient list + snapshot + chart-health pre-flight report without writing or sending. Useful to confirm the blast list AND that every bonded chart will render before committing.",
+                        "If true, returns the would-publish recipient list + snapshot + chart-health pre-flight report without writing or sending. Useful to confirm the blast list AND that every bonded chart will render before committing. chartHealth carries `{bondedCount, okCount, missingCount, unreachableCount, unhealthy[]}` — same shape preview_publish returns (F-006 unified).",
                     ),
                 force: z
                     .boolean()
@@ -836,7 +836,7 @@ export function registerWriteTools(server: McpServer): void {
         "preview_publish",
         {
             description:
-                "W-01 — PREVIEW a publish before pulling the trigger. Wraps publish_setlist({dryRun: true}) and reformats the response into the four signals the agent needs for chat-native confirm: chartHealth (bonded/ok/missing/unreachable counts + per-row details for anything not ok), audience (recipient count + role breakdown across admin/band_leader/musician/member), snapshotDiff vs. the last `publishedSnapshot` (added / removed / modified track rows), flaggedBonds (count of open bond_flags awaiting review via review_flagged_bonds), and `recommendation`: 'hard_block' if any chart status is 'missing' (the band would 404), 'review_first' if flaggedBonds > 0 (walk them first via review_flagged_bonds + record_bond_correction), 'publish' otherwise. Use this between the propose→commit cycle and the actual publish_setlist call. Read-only — no writes, no notifications, no rate-limited charge.",
+                "W-01 — PREVIEW a publish before pulling the trigger. Wraps publish_setlist({dryRun: true}) and reformats the response into the four signals the agent needs for chat-native confirm: chartHealth (`{bondedCount, okCount, missingCount, unreachableCount, unhealthy[]}` — same shape publish_setlist returns post-F-006), audience (recipient count + role breakdown across admin/band_leader/musician/member), snapshotDiff vs. the last `publishedSnapshot` (added / removed / modified track rows), flaggedBonds (count of open bond_flags awaiting review via review_flagged_bonds), and `recommendation`: 'hard_block' if any chart status is 'missing' (the band would 404), 'review_first' if flaggedBonds > 0 (walk them first via review_flagged_bonds + record_bond_correction), 'publish' otherwise. Use this between the propose→commit cycle and the actual publish_setlist call. Read-only — no writes, no notifications, no rate-limited charge.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 audience: z

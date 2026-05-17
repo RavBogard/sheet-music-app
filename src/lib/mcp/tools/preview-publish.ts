@@ -51,7 +51,11 @@ export interface PreviewPublishResult {
         okCount: number
         missingCount: number
         unreachableCount: number
-        details: Array<{
+        /**
+         * Per-row report for charts that aren't ok. Same shape + field name as
+         * `publish_setlist({dryRun:true}).chartHealth.unhealthy` (F-006 unify).
+         */
+        unhealthy: Array<{
             trackId: string
             title: string
             fileId: string
@@ -136,12 +140,10 @@ export async function previewPublish(
     // the setlist's flags cheaply.
     const flaggedBonds = await countFlaggedBonds(db, args.setlistId)
 
-    // ── Recommendation gate.
-    const missingCount = published.chartHealth.unhealthy.filter(
-        (u) => u.status === "missing",
-    ).length
+    // ── Recommendation gate. publish_setlist's chartHealth carries the
+    // aggregate counts directly post-F-006, so we just pass them through.
     const recommendation: PreviewPublishResult["recommendation"] =
-        missingCount > 0
+        published.chartHealth.missingCount > 0
             ? "hard_block"
             : flaggedBonds > 0
               ? "review_first"
@@ -155,9 +157,9 @@ export async function previewPublish(
         chartHealth: {
             bondedCount: published.chartHealth.bondedCount,
             okCount: published.chartHealth.okCount,
-            missingCount,
-            unreachableCount: published.chartHealth.unhealthy.length - missingCount,
-            details: published.chartHealth.unhealthy,
+            missingCount: published.chartHealth.missingCount,
+            unreachableCount: published.chartHealth.unreachableCount,
+            unhealthy: published.chartHealth.unhealthy,
         },
         audience: {
             count: published.recipientCount,

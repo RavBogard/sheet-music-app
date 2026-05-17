@@ -206,6 +206,17 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
         >
 
         expect((r.chartHealth as { missingCount: number }).missingCount).toBe(1)
+        // F-006: preview_publish exposes the same `unhealthy[]` field name as
+        // publish_setlist (renamed from the original `details[]`).
+        expect(
+            (
+                r.chartHealth as {
+                    unhealthy: Array<{ status: string; fileId: string }>
+                }
+            ).unhealthy,
+        ).toEqual([
+            expect.objectContaining({ status: "missing", fileId: "song-broken" }),
+        ])
         expect(r.recommendation).toBe("hard_block")
     })
 
