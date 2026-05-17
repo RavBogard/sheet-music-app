@@ -1,9 +1,7 @@
 {
   "version": "7.0.0",
-  "commit": "0cf194841",
-  "branch": "feat/c2-ai-config-mcp",
+  "commit": "6a126f189",
+  "branch": "feat/a3-gemini-swap",
   "buildDate": "5/17/2026",
-  "changelog": [
-    "7.0.0 - fix: SEC-001 + SEC-002 — rich error envelope on /api/drive/file/[fileId]"
-  ]
+  "changelog": []
 }

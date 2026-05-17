@@ -1,8 +1,8 @@
 /**
  * Cycle-3 NEW-3 (A3) — AI enrichment subscriber.
  *
- * Post-import, fail-open, advisory-only Claude Sonnet pass that runs on
- * every `library.row.created` event (regardless of ingest path: HTTP
+ * Post-import, fail-open, advisory-only Gemini 3.1 Pro pass that runs
+ * on every `library.row.created` event (regardless of ingest path: HTTP
  * upload, MCP upload_chart, MCP import_chart_from_drive, Drive cron,
  * MCP reconcile_library).
  *
@@ -31,12 +31,23 @@
  *
  * `autoApplyEnabled` (default false) forces every row to review_pending
  * for the calibration period (ADDENDUM-1 §6). Daniel flips the toggle
- * via Firebase Console when he's seen enough of the AI's calls in
- * `/manage/library-review` (NEW-4 — A4 lane).
+ * via Firebase Console (or the c2 admin MCP tools) when he's seen
+ * enough of the AI's calls in `/manage/library-review` (NEW-4 — A4 lane).
+ *
+ * Cycle-3 a3-gemini-swap (2026-05-18): provider swapped from Anthropic
+ * Sonnet 4.7 → Gemini 3.1 Pro Preview. The persisted `EnrichmentOutput`
+ * shape, application rules, cache key, retry queue schema, and review
+ * triggers are all unchanged — only the call layer (SDK + content-block
+ * translation + structured-output mechanism) is provider-specific.
  */
 
 import "server-only"
-import { Anthropic } from "@anthropic-ai/sdk"
+import {
+    GoogleGenAI,
+    ThinkingLevel,
+    Type,
+    type Schema,
+} from "@google/genai"
 import type { Firestore } from "firebase-admin/firestore"
 import { z } from "zod"
 
@@ -51,13 +62,13 @@ import {
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 /**
- * Sonnet 4.7 has the strongest multi-modal grounding for chart content
- * (PDF documents, scanned images, handwritten lead sheets). The model id
- * is centralized here so prompt tuning + caching can swap it in one
- * place. If 4.7 becomes unavailable in the env, the call surfaces as a
- * provider error → retry queue.
+ * Gemini 3.1 Pro Preview (released 2026-02-19) — strongest available
+ * Gemini Pro model with ~2x reasoning over Gemini 3 Pro, 1M-token
+ * context window, and native multi-modal grounding on PDF documents,
+ * images, and text. Centralized here so prompt tuning + provider
+ * upgrades swap in one place. Daniel-ratified 2026-05-18T17:05Z.
  */
-export const AI_ENRICHMENT_MODEL = "claude-sonnet-4-7"
+export const AI_ENRICHMENT_MODEL = "gemini-3.1-pro-preview"
 
 /**
  * Hard cap on output tokens. The structured-output payload is tiny
@@ -80,9 +91,10 @@ const ALLOWED_COLLECTIONS = ["core", "supplemental", "uploads"] as const
 // ─── Output schema ─────────────────────────────────────────────────────────
 
 /**
- * Mirrors ADDENDUM-1 §3 "Structured output". Zod validates every Sonnet
- * tool_use payload — a malformed response counts as enrichment-failed
- * and enters the retry queue.
+ * Mirrors ADDENDUM-1 §3 "Structured output". Zod validates every
+ * provider response — a malformed payload counts as enrichment-failed
+ * and enters the retry queue. The persisted shape (library_index.
+ * aiSuggestion blob) is locked: a4-library-review-ui reads it directly.
  */
 export const EnrichmentOutputSchema = z.object({
     is_chart: z.boolean(),
@@ -101,73 +113,87 @@ export const EnrichmentOutputSchema = z.object({
 
 export type EnrichmentOutput = z.infer<typeof EnrichmentOutputSchema>
 
-/** Hand-built JSON Schema for Anthropic's tool input — z@4 has no built-in emitter. */
-const TOOL_INPUT_SCHEMA = {
-    type: "object" as const,
+/**
+ * Gemini `responseSchema` mirror of EnrichmentOutputSchema. Gemini's
+ * structured-output config takes a Schema object with `Type.*` field
+ * types; nullable fields use `nullable: true` rather than the
+ * `type: ["string", "null"]` union form Anthropic's JSON Schema
+ * accepted. Enums are expressed via `enum: string[]` on a STRING
+ * type. Hand-authored rather than emitted from Zod because z@4 has
+ * no built-in JSON-schema emitter and the Gemini shape diverges
+ * slightly (nullable vs union, no `additionalProperties`).
+ */
+const GEMINI_RESPONSE_SCHEMA: Schema = {
+    type: Type.OBJECT,
     properties: {
         is_chart: {
-            type: "boolean",
+            type: Type.BOOLEAN,
             description:
                 "True if the file is a usable performance chart (chord sheet, lead sheet, MusicXML, sheet music PDF). False for non-musical content (e.g. accidental upload of receipt, photo of the room, blank scan).",
         },
         confidence: {
-            type: "number",
+            type: Type.NUMBER,
             minimum: 0,
             maximum: 1,
             description:
-                "Self-assessed confidence in this enrichment. Below 0.7 forces human review.",
+                "Self-assessed confidence in this enrichment, range 0..1. Below 0.7 forces human review.",
         },
         suggested_title: {
-            type: ["string", "null"],
+            type: Type.STRING,
+            nullable: true,
             description:
                 'Proposed display title following library conventions (e.g. "Shalom Rav (Frankel)"). null if no improvement over the current name.',
         },
         suggested_collection: {
-            type: ["string", "null"],
-            enum: [...ALLOWED_COLLECTIONS, null],
+            type: Type.STRING,
+            nullable: true,
+            enum: [...ALLOWED_COLLECTIONS],
             description:
-                'Proposed library collection (core / supplemental / uploads). NOTE: David\'s subfolder choice is source of truth — we surface disagreement, never overwrite.',
+                "Proposed library collection (core / supplemental / uploads). NOTE: David's subfolder choice is source of truth — we surface disagreement, never overwrite. null when undecidable.",
         },
         collection_disagrees_with_folder: {
-            type: "boolean",
+            type: Type.BOOLEAN,
             description:
                 "True if the chart content/style strongly suggests a different collection than the one currently set (e.g. file is in `uploads/` but is a clear Frankel chart that belongs in supplemental).",
         },
         suggested_key: {
-            type: ["string", "null"],
+            type: Type.STRING,
+            nullable: true,
             description:
                 "Detected key, if visible on the chart (e.g. 'G', 'Em', 'Bb'). null if not determinable.",
         },
         suggested_bpm: {
-            type: ["number", "null"],
+            type: Type.NUMBER,
+            nullable: true,
             description:
                 "Detected tempo in BPM, if visible. null if not determinable.",
         },
         suggested_lead: {
-            type: ["string", "null"],
+            type: Type.STRING,
+            nullable: true,
             description:
                 'Vocal-lead annotation if hand-written on the chart (e.g. "Rabbi Daniel"). null otherwise. NEVER fabricate.',
         },
         suggested_tags: {
-            type: "array",
-            items: { type: "string" },
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
             description:
                 "Short, kebab-case tags (e.g. 'friday-evening', 'high-holy-days', 'frankel'). Empty array if uncertain.",
         },
         duplicate_candidates: {
-            type: "array",
-            items: { type: "string" },
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
             description:
                 "library_index doc ids that look like duplicates of this row (from the neighbor context). Empty array if none.",
         },
         concerns: {
-            type: "array",
-            items: { type: "string" },
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
             description:
                 "Free-form notes for the human reviewer. Empty array if clean.",
         },
         review_required: {
-            type: "boolean",
+            type: Type.BOOLEAN,
             description:
                 "Set true if anything about this row would benefit from human eyes regardless of confidence (e.g. handwriting illegible, multiple songs on one page, ambiguous arrangement).",
         },
@@ -186,12 +212,23 @@ const TOOL_INPUT_SCHEMA = {
         "concerns",
         "review_required",
     ],
-    additionalProperties: false,
-} as const
+    propertyOrdering: [
+        "is_chart",
+        "confidence",
+        "suggested_title",
+        "suggested_collection",
+        "collection_disagrees_with_folder",
+        "suggested_key",
+        "suggested_bpm",
+        "suggested_lead",
+        "suggested_tags",
+        "duplicate_candidates",
+        "concerns",
+        "review_required",
+    ],
+}
 
-const TOOL_NAME = "submit_chart_enrichment"
-
-// ─── Library naming conventions (cached system-prompt block) ──────────────
+// ─── Library naming conventions (system-prompt block) ──────────────────────
 
 const LIBRARY_CONVENTIONS = `Library naming conventions (CRC music library):
 
@@ -212,10 +249,14 @@ const LIBRARY_CONVENTIONS = `Library naming conventions (CRC music library):
 
 If you're not sure of a field, return null / [] — do NOT guess.`
 
+const SYSTEM_INSTRUCTION = `You are an enrichment assistant for the Central Reform Congregation music library. You inspect a chart file plus its current library_index metadata and emit a structured enrichment report. You NEVER refuse — you always emit the JSON object. If you're uncertain, return low confidence, populate \`concerns\`, and set \`review_required: true\`. Do NOT fabricate fields you can't determine from the input.
+
+${LIBRARY_CONVENTIONS}`
+
 // ─── Config + dependency injection ────────────────────────────────────────
 
 export interface AiEnrichmentConfig {
-    /** Master switch — false when ANTHROPIC_API_KEY is missing. */
+    /** Master switch — false when GEMINI_API_KEY is missing. */
     enabled: boolean
     /** aiConfig/autoApplyEnabled. Default false (calibration phase). */
     autoApplyEnabled: boolean
@@ -226,8 +267,8 @@ export interface AiEnrichmentConfig {
 export interface AiEnrichmentDeps {
     db: Firestore
     /**
-     * Returns a Sonnet structured-output. Tests inject a deterministic
-     * mock; prod uses {@link callSonnetForEnrichment}.
+     * Returns the structured enrichment output. Tests inject a
+     * deterministic mock; prod uses {@link callGeminiForEnrichment}.
      */
     callModel: (args: {
         event: LibraryRowCreatedEvent
@@ -265,7 +306,7 @@ export async function enrichLibraryRow(
     }
 
     if (!config.enabled) {
-        // ANTHROPIC_API_KEY unset — leave row at 'pending'. The cron drain
+        // GEMINI_API_KEY unset — leave row at 'pending'. The cron drain
         // re-checks on each tick; once the key is set, queued rows pick
         // up. No row movement here means the failed status stays clean.
         return
@@ -292,7 +333,7 @@ export async function enrichLibraryRow(
             const validated = EnrichmentOutputSchema.safeParse(output)
             if (!validated.success) {
                 throw new Error(
-                    `Sonnet output failed schema validation: ${validated.error.issues
+                    `Gemini output failed schema validation: ${validated.error.issues
                         .slice(0, 3)
                         .map((i) => `${i.path.join(".")}: ${i.message}`)
                         .join("; ")}`,
@@ -374,7 +415,7 @@ export function buildDefaultDeps(): AiEnrichmentDeps {
     initAdmin()
     return {
         db: getFirestore(),
-        callModel: callSonnetForEnrichment,
+        callModel: callGeminiForEnrichment,
         fetchBytes: defaultFetchBytes,
         loadConfig: defaultLoadConfig,
     }
@@ -411,7 +452,7 @@ export function __resetRegisteredForTesting(): void {
 // ─── Default implementations ──────────────────────────────────────────────
 
 async function defaultLoadConfig(db: Firestore): Promise<AiEnrichmentConfig> {
-    const apiKey = process.env.ANTHROPIC_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY
     const enabled = !!apiKey && apiKey.length > 0
 
     const snap = await db.collection("aiConfig").doc("autoApplyEnabled").get()
@@ -434,80 +475,65 @@ async function defaultFetchBytes(storagePath: string): Promise<Buffer | null> {
     return r.data.buffer
 }
 
-// ─── Anthropic call ───────────────────────────────────────────────────────
+// ─── Gemini call ──────────────────────────────────────────────────────────
 
-let anthropicClient: Anthropic | null = null
-function getAnthropicClient(): Anthropic {
-    if (anthropicClient) return anthropicClient
-    anthropicClient = new Anthropic({
-        apiKey: process.env.ANTHROPIC_API_KEY,
-    })
-    return anthropicClient
+let geminiClient: GoogleGenAI | null = null
+function getGeminiClient(): GoogleGenAI {
+    if (geminiClient) return geminiClient
+    geminiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+    return geminiClient
 }
 
 /** Test-only — reset the client so a fresh apiKey is picked up. */
-export function __resetAnthropicClientForTesting(): void {
-    anthropicClient = null
+export function __resetGeminiClientForTesting(): void {
+    geminiClient = null
 }
 
-export async function callSonnetForEnrichment(args: {
+export async function callGeminiForEnrichment(args: {
     event: LibraryRowCreatedEvent
     fileBytes: Buffer | null
     neighborTitles: string[]
 }): Promise<EnrichmentOutput> {
     const { event, fileBytes, neighborTitles } = args
-    const client = getAnthropicClient()
+    const ai = getGeminiClient()
 
-    const userContent = buildUserContent(event, fileBytes, neighborTitles)
+    const userParts = buildUserContent(event, fileBytes, neighborTitles)
 
-    const response = await client.messages.create({
+    const response = await ai.models.generateContent({
         model: AI_ENRICHMENT_MODEL,
-        max_tokens: MAX_OUTPUT_TOKENS,
-        // Stable preamble — wins prompt caching on repeat calls.
-        system: [
-            {
-                type: "text",
-                text: `You are an enrichment assistant for the Central Reform Congregation music library. You inspect a chart file plus its current library_index metadata and emit a structured enrichment report via the ${TOOL_NAME} tool. You NEVER refuse — you always emit the tool call. If you're uncertain, return low confidence, populate \`concerns\`, and set \`review_required: true\`. Do NOT fabricate fields you can't determine from the input.\n\n${LIBRARY_CONVENTIONS}`,
-                cache_control: { type: "ephemeral" },
-            },
-        ],
-        tools: [
-            {
-                name: TOOL_NAME,
-                description:
-                    "Submit the structured enrichment report for this library row. ALWAYS call this exactly once.",
-                // The Anthropic SDK's InputSchema type is `{ type: 'object', ... }`;
-                // our hand-built constant is structurally identical, but the
-                // SDK's stricter typing on indexed-access doesn't admit our
-                // const-asserted literal map. Cast through unknown is fine —
-                // the runtime payload is the JSON we want.
-                input_schema:
-                    TOOL_INPUT_SCHEMA as unknown as Anthropic.Tool["input_schema"],
-            },
-        ],
-        tool_choice: { type: "tool", name: TOOL_NAME },
-        messages: [
-            {
-                role: "user",
-                content: userContent,
-            },
-        ],
+        contents: [{ role: "user", parts: userParts }],
+        config: {
+            systemInstruction: SYSTEM_INSTRUCTION,
+            responseMimeType: "application/json",
+            responseSchema: GEMINI_RESPONSE_SCHEMA,
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
+            // Lower thinking budget on a tight structured-output task —
+            // cheaper + faster without hurting accuracy. Gemini 3 default
+            // is HIGH; LOW is sufficient for this enrichment shape and
+            // matches the existing Anthropic call's lack of extended
+            // reasoning.
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+        },
     })
 
-    // The tool_choice above forces a tool_use block.
-    const toolUseBlock = response.content.find((b) => b.type === "tool_use")
-    if (!toolUseBlock || toolUseBlock.type !== "tool_use") {
+    const text = response.text
+    if (!text || text.trim().length === 0) {
         throw new Error(
-            `Sonnet returned no tool_use block (stop_reason=${response.stop_reason}); falling back to retry queue.`,
+            `Gemini returned no text payload (finishReason=${response.candidates?.[0]?.finishReason ?? "unknown"}); falling back to retry queue.`,
         )
     }
-    if (toolUseBlock.name !== TOOL_NAME) {
+
+    let parsed: unknown
+    try {
+        parsed = JSON.parse(text)
+    } catch (err) {
         throw new Error(
-            `Sonnet returned unexpected tool '${toolUseBlock.name}' (expected '${TOOL_NAME}').`,
+            `Gemini returned non-JSON payload: ${err instanceof Error ? err.message : String(err)}`,
         )
     }
-    // Schema validation happens in the caller.
-    return toolUseBlock.input as unknown as EnrichmentOutput
+    // Schema validation happens in the caller (enrichLibraryRow) —
+    // defense in depth regardless of provider's structured-output gate.
+    return parsed as EnrichmentOutput
 }
 
 type SupportedImageMediaType =
@@ -516,20 +542,9 @@ type SupportedImageMediaType =
     | "image/gif"
     | "image/webp"
 
-type UserContentBlock =
-    | { type: "text"; text: string }
-    | {
-          type: "image"
-          source: {
-              type: "base64"
-              media_type: SupportedImageMediaType
-              data: string
-          }
-      }
-    | {
-          type: "document"
-          source: { type: "base64"; media_type: "application/pdf"; data: string }
-      }
+type GeminiPart =
+    | { text: string }
+    | { inlineData: { mimeType: string; data: string } }
 
 function asSupportedImageMediaType(
     mime: string,
@@ -549,20 +564,18 @@ function buildUserContent(
     event: LibraryRowCreatedEvent,
     fileBytes: Buffer | null,
     neighborTitles: string[],
-): UserContentBlock[] {
-    const blocks: UserContentBlock[] = []
+): GeminiPart[] {
+    const parts: GeminiPart[] = []
 
     // File representation (per ADDENDUM-1 §3 "Input to AI").
     if (fileBytes) {
         if (event.mimeType === "application/pdf") {
-            // Sonnet supports PDF document blocks natively. Sends the
-            // whole PDF (multi-page) up to the per-request size limit
-            // — Sonnet handles page-by-page interpretation.
-            blocks.push({
-                type: "document",
-                source: {
-                    type: "base64",
-                    media_type: "application/pdf",
+            // Gemini supports PDF inputs natively via inlineData. Sends
+            // the whole PDF (multi-page) up to the per-request size
+            // limit — Gemini handles page-by-page interpretation.
+            parts.push({
+                inlineData: {
+                    mimeType: "application/pdf",
                     data: fileBytes.toString("base64"),
                 },
             })
@@ -572,15 +585,13 @@ function buildUserContent(
         ) {
             // HEIC/HEIF inputs have already been converted to JPEG by
             // processChartUpload before we get here, so the mimeType
-            // we see is image/jpeg in that case. Other image mimes the
-            // Anthropic API doesn't accept fall through to metadata-only.
+            // we see is image/jpeg in that case. Other image mimes that
+            // Gemini doesn't accept fall through to metadata-only.
             const mt = asSupportedImageMediaType(event.mimeType)
             if (mt) {
-                blocks.push({
-                    type: "image",
-                    source: {
-                        type: "base64",
-                        media_type: mt,
+                parts.push({
+                    inlineData: {
+                        mimeType: mt,
                         data: fileBytes.toString("base64"),
                     },
                 })
@@ -592,20 +603,17 @@ function buildUserContent(
             // MusicXML / text: send as text, truncated to keep token
             // cost predictable. 12K chars ≈ 3K tokens.
             const text = fileBytes.toString("utf-8").slice(0, 12_000)
-            blocks.push({
-                type: "text",
+            parts.push({
                 text: `File content (mime: ${event.mimeType}):\n\n${text}`,
             })
         } else {
             // Unsupported mime → metadata-only fallback (per addendum §3).
-            blocks.push({
-                type: "text",
+            parts.push({
                 text: `File mime: ${event.mimeType} — content not inspected (unsupported binary). Enrich from metadata only.`,
             })
         }
     } else {
-        blocks.push({
-            type: "text",
+        parts.push({
             text: `File bytes unavailable from Storage at ${event.storagePath}. Enrich from metadata only.`,
         })
     }
@@ -630,12 +638,11 @@ function buildUserContent(
                   .join("\n")}`
             : `(No neighbor titles available — this may be the first chart in its collection.)`
 
-    blocks.push({
-        type: "text",
-        text: `${metadata}\n\n${neighbors}\n\nEmit your enrichment via ${TOOL_NAME}. Remember: David's Drive subfolder choice is source of truth for collection — if you think the collection is wrong, set \`collection_disagrees_with_folder: true\` and surface in \`concerns\` rather than overriding via \`suggested_collection\`.`,
+    parts.push({
+        text: `${metadata}\n\n${neighbors}\n\nEmit your enrichment as a single JSON object matching the response schema. Remember: David's Drive subfolder choice is source of truth for collection — if you think the collection is wrong, set \`collection_disagrees_with_folder: true\` and surface in \`concerns\` rather than overriding via \`suggested_collection\`.`,
     })
 
-    return blocks
+    return parts
 }
 
 // ─── Firestore helpers ─────────────────────────────────────────────────────
@@ -700,7 +707,7 @@ async function fetchNeighborTitles(
 // ─── Apply rules (auto-apply gate + review triggers) ───────────────────────
 
 /**
- * Translates a Sonnet output into a library_index update. The crux of
+ * Translates a Gemini output into a library_index update. The crux of
  * NEW-3: when to auto-apply, when to flag for review, how to honor
  * David's-subfolder-is-truth + don't-overwrite-humans.
  */

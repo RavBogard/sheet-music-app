@@ -3,8 +3,8 @@
  *
  * Uses the Firestore emulator for real reads/writes against
  * `library_index`, `aiConfig`, `aiEnrichmentCache`, and
- * `aiEnrichmentRetryQueue`. Anthropic SDK is mocked via
- * dependency injection (we never call the real Sonnet endpoint
+ * `aiEnrichmentRetryQueue`. Gemini SDK is mocked via
+ * dependency injection (we never call the real Gemini endpoint
  * from tests).
  *
  * Properties asserted (msg-001 first-actions §11):
@@ -188,7 +188,7 @@ describe("AI enrichment subscriber — NEW-3 (emulator)", () => {
         const event = makeEvent()
         await seedRow(db(), event.rowId)
         const callModel = vi.fn(async () => {
-            throw new Error("sonnet 503")
+            throw new Error("gemini 503")
         })
         const deps = buildTestDeps(db(), { callModel })
 
@@ -202,7 +202,7 @@ describe("AI enrichment subscriber — NEW-3 (emulator)", () => {
                 .get()
         ).data()
         expect(queueDoc?.attempts).toBe(1)
-        expect(queueDoc?.lastError).toMatch(/sonnet 503/)
+        expect(queueDoc?.lastError).toMatch(/gemini 503/)
         expect(queueDoc?.nextRetryAt).toBeTruthy()
 
         const row = (
@@ -307,7 +307,7 @@ describe("AI enrichment subscriber — NEW-3 (emulator)", () => {
         expect(row?.aiSuggestion).toBeDefined() // suggestion saved for A4 review
     })
 
-    it("disabled (ANTHROPIC_API_KEY unset) leaves row at 'pending' silently", async () => {
+    it("disabled (GEMINI_API_KEY unset) leaves row at 'pending' silently", async () => {
         const event = makeEvent()
         await seedRow(db(), event.rowId)
         const callModel = vi.fn()
@@ -469,7 +469,7 @@ describe("AI enrichment subscriber — NEW-3 (emulator)", () => {
         ).resolves.toBeUndefined()
     })
 
-    it("schema-invalid Sonnet payload routes to retry queue", async () => {
+    it("schema-invalid Gemini payload routes to retry queue", async () => {
         const event = makeEvent()
         await seedRow(db(), event.rowId)
         const callModel = vi.fn(

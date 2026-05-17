@@ -502,7 +502,7 @@ export async function processChartUpload(
         // 'pending' on every new row; the post-import AI subscriber
         // transitions it to 'enriched' / 'review_pending' / 'failed' /
         // 'human_curated' / 'human_rejected'. Default-deny posture: if
-        // enrichment never runs (e.g. ANTHROPIC_API_KEY unset, retry queue
+        // enrichment never runs (e.g. GEMINI_API_KEY unset, retry queue
         // exhausted), the row stays 'pending' and never silently auto-
         // applies anything. See src/lib/library/ai-enrichment.ts.
         enrichmentStatus: "pending",

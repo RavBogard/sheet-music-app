@@ -14,16 +14,18 @@ import { env } from "@/env.mjs"
  * Cycle-3 NEW-3 (A3) — AI enrichment retry drain.
  *
  * Runs every 30 minutes (Vercel cron config in vercel.json). Replays
- * library_index rows whose Sonnet call failed previously — exponential
+ * library_index rows whose Gemini call failed previously — exponential
  * backoff schedule (5min, 30min, 2h, 6h) before a row gives up and
  * lands on `enrichmentStatus: 'failed'`.
  *
  * Auth: same CRON_SECRET / Bearer dance as the other crons.
  *
  * Distinct from `/api/cron/enrich` (the legacy Gemini enrichment that
- * back-fills `metadata.enrichedAt`). The two systems coexist and don't
- * share state; eventually we may consolidate, but cycle-3 ships them
- * in parallel.
+ * back-fills `metadata.enrichedAt` via a separate code path). The two
+ * systems coexist and don't share state; eventually we may consolidate,
+ * but cycle-3 ships them in parallel. (a3-gemini-swap 2026-05-18: both
+ * paths now hit Gemini, but via independent modules — see
+ * src/lib/library/ai-enrichment.ts vs src/lib/enrichment-engine.ts.)
  */
 
 function safeCompare(a: string, b: string): boolean {
