@@ -423,6 +423,17 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // MCP TEST USERS — server-only (Admin SDK)
+    // Admin/band_leader discovery index for headless test identities provisioned
+    // via the MCP `create_test_account` tool (or POST /api/mcp/oauth/mint-test-token).
+    // One doc per test user — id == test uid (`test-<role>-<8-hex>`). Carries
+    // role, soundEngineer, ttlExpiresAt, provisionedBy, mcpTokenId. The actual
+    // bearer hash lives in `mcpTokens` with kind: 'test'. Created/listed/
+    // deleted exclusively via the MCP tool path (Admin SDK). No client access.
+    match /mcpTestUsers/{testUid} {
+      allow read, write: if false;
+    }
+
     // Deny-all fallback — any collection not explicitly matched above is locked.
     // Prevents new collections from being accidentally accessible.
     match /{document=**} {

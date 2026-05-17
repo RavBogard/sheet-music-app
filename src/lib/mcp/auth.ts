@@ -1,5 +1,5 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { FieldValue } from "firebase-admin/firestore"
+import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { hashToken } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
 
@@ -42,6 +42,17 @@ export async function verifyBearer(req: Request): Promise<{ uid: string } | Resp
     const doc = snap.docs[0]
     const data = doc.data()
     if (data.revokedAt) return unauthorized()
+
+    // Test-token TTL enforcement. Real (non-test) mcpTokens have no
+    // `ttlExpiresAt` field, so this is a no-op for the normal Daniel/David
+    // bearer path. Test tokens minted by `provisionTestAccount` stamp
+    // `ttlExpiresAt` to `now + ttlSec`; once it's in the past we reject the
+    // bearer the same way a soft-revoke does. The backing Auth user + owned
+    // data are NOT deleted on TTL — `revoke_test_account` /
+    // `cleanup_all_test_data` are the explicit cascade-delete paths.
+    if (data.ttlExpiresAt instanceof Timestamp && data.ttlExpiresAt.toMillis() <= Date.now()) {
+        return unauthorized()
+    }
 
     // Best-effort — a failed lastUsedAt update must not fail the request.
     doc.ref

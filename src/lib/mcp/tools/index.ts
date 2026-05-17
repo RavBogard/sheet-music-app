@@ -53,6 +53,7 @@ import {
     reviewFlaggedBonds,
     recordBondCorrection,
 } from "./bond-corrections"
+export { registerTestTokenTools } from "./test-tokens"
 
 /**
  * Validate that an `eventDate` string is parseable as a date. Previously the
