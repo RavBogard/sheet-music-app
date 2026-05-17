@@ -14,18 +14,25 @@ import { logger } from "@/lib/logger"
  * POST /api/auth/test-session
  *
  * Trades a verified MCP bearer (Authorization: Bearer crl_live_…) for a
- * Firebase session cookie scoped to the SAME uid the bearer resolves to —
- * but only if that uid is in the `test-` namespace. This is the one
- * server-side path that lets the autonomous browser-audit agent acquire a
- * `__session` cookie for a headless test user without hand-driving the
- * Firebase Web SDK sign-in flow.
+ * Firebase session cookie scoped to a `test-*` uid. Two minting paths:
+ *
+ *  1. **Self-mint** (legacy, default): no body, OR body lacks `uid`. The
+ *     bearer's own resolved uid IS the mint target. Refused unless that
+ *     uid starts with `test-`.
+ *  2. **Admin-bearer mint-on-behalf** (UX-001, Daniel-ratified
+ *     2026-05-18T18:45Z): body `{uid: "test-..."}`, caller's `users/{uid}.role`
+ *     === `'admin'`. Mints a session cookie for the body target uid
+ *     PROVIDED the target uid (a) starts with `test-` AND (b) exists in
+ *     `mcpTestUsers/{targetUid}`. Lets the supervisor + Playwright
+ *     drive-from-one-admin-bearer pattern bootstrap multi-role test
+ *     contexts without juggling per-role bearers.
  *
  * Hard rules:
- *  - uid MUST start with `test-` (per `provisionTestAccount`'s prefix
- *    convention). Anything else → 403 `not_a_test_uid`.
  *  - Bearer MUST resolve through `verifyBearer` (same hashed-token store
  *    used by every other MCP route). Revoked / expired / unknown → 401
  *    `invalid_bearer`.
+ *  - Mint target uid MUST start with `test-` regardless of branch.
+ *  - Admin branch refuses if target uid isn't registered in `mcpTestUsers`.
  *
  * Why we re-enable the user: test accounts are minted with
  * `disabled: true` so the UI can't sign them in. Identity Toolkit's
@@ -79,17 +86,102 @@ export async function POST(req: NextRequest) {
         )
     }
 
-    const { uid } = verified
-    if (!uid.startsWith(TEST_UID_PREFIX)) {
+    const { uid: bearerUid } = verified
+
+    // UX-001 — optional `uid` body param routes to the admin-bearer
+    // mint-on-behalf branch. Empty body / non-JSON / missing field falls
+    // through to self-mint with the bearer's own uid.
+    let bodyTargetUid: string | undefined
+    try {
+        const body = (await req.json()) as { uid?: unknown }
+        if (
+            body &&
+            typeof body === "object" &&
+            typeof body.uid === "string" &&
+            body.uid.trim()
+        ) {
+            bodyTargetUid = body.uid.trim()
+        }
+    } catch {
+        // Empty body, non-JSON body, or already-consumed stream — all
+        // fall through to self-mint, which is the pre-UX-001 behavior.
+    }
+
+    let uid: string
+    if (bodyTargetUid && bodyTargetUid !== bearerUid) {
+        // ── Admin-bearer mint-on-behalf branch (UX-001) ─────────────────
+        // Read caller's role off users/{bearerUid}. The bearer doc itself
+        // doesn't carry role; the auth gate is the user doc.
+        const db = getFirestore()
+        let callerRole: string | null = null
+        try {
+            const callerSnap = await db.collection("users").doc(bearerUid).get()
+            const r = callerSnap.exists ? callerSnap.data()?.role : undefined
+            if (typeof r === "string") callerRole = r
+        } catch (err) {
+            logger.warn("[test-session] caller-role read failed", {
+                bearerUid,
+                err,
+            })
+        }
+        if (callerRole !== "admin") {
+            // SEC-001 piggyback — do NOT echo bearerUid or targetUid in
+            // the refusal body; envelope agent's sweep wants every
+            // refusal scrubbed of identity.
+            return envelopeResponse(
+                richError(
+                    "forbidden_role",
+                    "Only admin bearers may mint sessions for a target uid.",
+                    {
+                        callerRole,
+                        requiredRoles: ["admin"],
+                    },
+                    "Drop the `uid` body param to self-mint with the bearer's own uid, or call with an admin bearer.",
+                ),
+                403,
+            )
+        }
+        if (!bodyTargetUid.startsWith(TEST_UID_PREFIX)) {
+            return envelopeResponse(
+                richError(
+                    "invalid_argument",
+                    "Admin-bearer minting requires the target uid to be in the test-* namespace.",
+                    { field: "uid" },
+                    "This endpoint exists only to bootstrap autonomous browser audits; real-user sessions must use /login.",
+                ),
+                400,
+            )
+        }
+        const testUserSnap = await db
+            .collection("mcpTestUsers")
+            .doc(bodyTargetUid)
+            .get()
+        if (!testUserSnap.exists) {
+            return envelopeResponse(
+                richError(
+                    "invalid_argument",
+                    "Target uid is not registered in mcpTestUsers — mint a test account first.",
+                    { field: "uid" },
+                    "Call create_test_account first; the returned uid will be registered in mcpTestUsers.",
+                ),
+                400,
+            )
+        }
+        uid = bodyTargetUid
+    } else if (!bearerUid.startsWith(TEST_UID_PREFIX)) {
+        // ── Self-mint branch (legacy) ───────────────────────────────────
+        // SEC-001 piggyback — refusal body no longer echoes the bearerUid.
         return envelopeResponse(
             richError(
                 "not_a_test_uid",
-                `Session-cookie minting is restricted to test-* uids; got '${uid}'.`,
-                { uid },
+                "Session-cookie minting is restricted to test-* uids. Pass an admin bearer with a `uid` body param to mint for a target.",
+                {},
                 "This endpoint exists only to bootstrap autonomous browser audits. Real users must sign in via /login.",
             ),
             403,
         )
+    } else {
+        uid = bearerUid
     }
 
     const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY
