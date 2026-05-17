@@ -65,6 +65,15 @@ export async function fetchFileById(fileId: string, mimeType?: string): Promise<
 }
 
 /**
+ * Drive shortcut mime — un-embedable in `generate_gig_packet`'s merged PDF
+ * (and equivalently broken for any byte consumer that needs a real chart
+ * file). Detected separately from the storage/drive probe so the health
+ * surface tells the operator the source-of-truth is a shortcut, not bytes.
+ * Cycle-3 BUG-002.
+ */
+const DRIVE_SHORTCUT_MIME = "application/vnd.google-apps.shortcut"
+
+/**
  * Metadata-only health probe for a library chart fileId. Unlike fetchFileById,
  * this does NOT download bytes — just probes Storage existence and Drive
  * metadata. Used by `verify_setlist_charts` and the publish pre-flight check
@@ -82,12 +91,34 @@ export async function fetchFileById(fileId: string, mimeType?: string): Promise<
  *        transient state so the /api/cron/drive-sync importer (NEW-1) can
  *        resolve it on the next tick. Storage-canonical direction (cycle-3
  *        ADDENDUM-1) makes Drive-only a non-steady state.
+ *  - { status: 'shortcut_unresolved', reason, mimeType: SHORTCUT }
+ *      — Cycle-3 BUG-002. Source-of-truth (library_index hint OR Drive
+ *        metadata) reports the canonical mime as Google Drive shortcut.
+ *        `generate_gig_packet` correctly drops these from the merged PDF;
+ *        pre-flight health used to return ok and surprised the operator
+ *        at publish time. Operator fix: re-bond the track to the shortcut's
+ *        target chart (option a in BUG-002 was target-resolution; we ship
+ *        option b — surface + refuse — because it's non-invasive).
  *  - { status: 'missing', reason }    — file not in Storage and (if applicable) not in Drive
  *  - { status: 'unreachable', error } — network/transient failure; caller may retry
  */
 export type ChartHealth =
     | { status: "ok"; source: "firebase-storage"; mimeType?: string }
     | { status: "needs_storage_sync"; reason: "drive_only"; mimeType?: string }
+    | {
+          status: "shortcut_unresolved"
+          reason: string
+          mimeType: typeof DRIVE_SHORTCUT_MIME
+          /**
+           * BUG-002 forward-compat: `error` mirrors `reason` so legacy
+           * callers that previously narrowed `unreachable | shortcut_unresolved`
+           * down to "must have .error" (because shortcut_unresolved didn't
+           * exist) keep compiling without per-caller patches. The intent is
+           * `reason`; once every caller has an explicit shortcut branch this
+           * field can drop.
+           */
+          error: string
+      }
     | { status: "missing"; reason: string }
     | { status: "unreachable"; error: string }
 
@@ -96,6 +127,20 @@ export async function getChartHealth(
     mimeType?: string,
 ): Promise<ChartHealth> {
     if (!fileId) return { status: "missing", reason: "empty fileId" }
+    // Cycle-3 BUG-002: if the caller already knows the canonical mime is a
+    // Drive shortcut (library_index row's mimeType field carries this for
+    // bonded-but-broken rows), skip the storage/drive probe — Storage may
+    // have a stale shortcut blob and would otherwise return ok.
+    if (mimeType === DRIVE_SHORTCUT_MIME) {
+        const reason =
+            "library_index mimeType is application/vnd.google-apps.shortcut — re-bond to the shortcut target's fileId."
+        return {
+            status: "shortcut_unresolved",
+            reason,
+            mimeType: DRIVE_SHORTCUT_MIME,
+            error: reason,
+        }
+    }
     const cleanId = fileId.replace(/\.(pdf|xml|musicxml|mp3)$/i, "")
     try {
         const storage = await fileExistsInStorage(cleanId, mimeType)
@@ -116,6 +161,21 @@ export async function getChartHealth(
             const drive = new DriveClient()
             const meta = (await drive.getFileMetadata(cleanId)) as {
                 mimeType?: string | null
+            }
+            // Cycle-3 BUG-002: Drive metadata reports a shortcut mime. We
+            // do NOT follow `shortcutDetails.targetId` here (option a) —
+            // simpler to surface the issue so the operator re-bonds at
+            // the source. The `mimeType` hint may have been stale or absent
+            // when the row was last written; this catches it on probe.
+            if (meta?.mimeType === DRIVE_SHORTCUT_MIME) {
+                const reason =
+                    "Drive metadata mimeType is application/vnd.google-apps.shortcut — re-bond to the shortcut target's fileId."
+                return {
+                    status: "shortcut_unresolved",
+                    reason,
+                    mimeType: DRIVE_SHORTCUT_MIME,
+                    error: reason,
+                }
             }
             // Cycle-3 NEW-5 (storage-canonical direction): Drive has bytes
             // but Storage doesn't. Bytes still SERVE via the fetchFileById

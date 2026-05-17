@@ -100,3 +100,58 @@ describe("getChartHealth — NEW-5 needs_storage_sync", () => {
         expect(r.status).toBe("unreachable")
     })
 })
+
+describe("getChartHealth — BUG-002 shortcut_unresolved", () => {
+    const SHORTCUT_MIME = "application/vnd.google-apps.shortcut"
+
+    beforeEach(() => {
+        mockFileExistsInStorage.mockReset()
+        mockDownloadFromStorage.mockReset()
+        mockGetFileMetadata.mockReset()
+    })
+
+    it("shortcut mimeType hint returns shortcut_unresolved WITHOUT probing Storage/Drive", async () => {
+        const r = await getChartHealth("drive-id-shortcut", SHORTCUT_MIME)
+        expect(r.status).toBe("shortcut_unresolved")
+        if (r.status === "shortcut_unresolved") {
+            expect(r.mimeType).toBe(SHORTCUT_MIME)
+            expect(r.reason).toContain("library_index mimeType")
+            // BUG-002 forward-compat: error mirrors reason for legacy
+            // narrowing callers (reconcile-library.ts probeRow).
+            expect(r.error).toBe(r.reason)
+        }
+        // The hint-based short-circuit MUST avoid the Storage/Drive probes.
+        // Otherwise a Storage row that happens to hold stale shortcut bytes
+        // would return ok and re-create the BUG-002 surprise.
+        expect(mockFileExistsInStorage).not.toHaveBeenCalled()
+        expect(mockGetFileMetadata).not.toHaveBeenCalled()
+    })
+
+    it("Drive metadata shortcut mime returns shortcut_unresolved (hint absent)", async () => {
+        mockFileExistsInStorage.mockResolvedValueOnce({
+            success: true,
+            data: false,
+        })
+        mockGetFileMetadata.mockResolvedValueOnce({
+            mimeType: SHORTCUT_MIME,
+        })
+        const r = await getChartHealth("drive-id-shortcut-2", undefined)
+        expect(r.status).toBe("shortcut_unresolved")
+        if (r.status === "shortcut_unresolved") {
+            expect(r.mimeType).toBe(SHORTCUT_MIME)
+            expect(r.reason).toContain("Drive metadata mimeType")
+        }
+    })
+
+    it("Drive metadata with normal PDF mime still returns needs_storage_sync", async () => {
+        mockFileExistsInStorage.mockResolvedValueOnce({
+            success: true,
+            data: false,
+        })
+        mockGetFileMetadata.mockResolvedValueOnce({
+            mimeType: "application/pdf",
+        })
+        const r = await getChartHealth("drive-id-pdf", undefined)
+        expect(r.status).toBe("needs_storage_sync")
+    })
+})

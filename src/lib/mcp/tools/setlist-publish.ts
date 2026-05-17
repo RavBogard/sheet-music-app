@@ -148,11 +148,19 @@ export interface PublishSetlistResult {
         missingCount: number
         unreachableCount: number
         needsSyncCount: number
+        /**
+         * Cycle-3 BUG-002. Bonded tracks whose source-of-truth mime is
+         * `application/vnd.google-apps.shortcut` — `generate_gig_packet`
+         * drops these from the merged PDF, so they count as un-renderable
+         * and join `unhealthy[]`. Pre-fix the per-row probe returned `ok`
+         * and the band saw a broken chart at publish time.
+         */
+        shortcutUnresolvedCount: number
         unhealthy: Array<{
             trackId: string
             title: string
             fileId: string
-            status: "missing" | "unreachable"
+            status: "missing" | "unreachable" | "shortcut_unresolved"
             reason: string
         }>
     }
@@ -371,8 +379,16 @@ export async function publishSetlist(
     )
     const unhealthy = healthRows
         .filter(
-            (r): r is typeof r & { health: { status: "missing" | "unreachable" } } =>
-                r.health.status === "missing" || r.health.status === "unreachable",
+            (
+                r,
+            ): r is typeof r & {
+                health: {
+                    status: "missing" | "unreachable" | "shortcut_unresolved"
+                }
+            } =>
+                r.health.status === "missing" ||
+                r.health.status === "unreachable" ||
+                r.health.status === "shortcut_unresolved",
         )
         .map((r) => ({
             trackId: r.trackId,
@@ -382,7 +398,9 @@ export async function publishSetlist(
             reason:
                 r.health.status === "missing"
                     ? r.health.reason
-                    : r.health.error,
+                    : r.health.status === "shortcut_unresolved"
+                      ? r.health.reason
+                      : r.health.error,
         }))
     const chartHealth = {
         bondedCount: bondedSongTracks.length,
@@ -392,6 +410,9 @@ export async function publishSetlist(
             .length,
         needsSyncCount: healthRows.filter(
             (r) => r.health.status === "needs_storage_sync",
+        ).length,
+        shortcutUnresolvedCount: unhealthy.filter(
+            (u) => u.status === "shortcut_unresolved",
         ).length,
         unhealthy,
     }

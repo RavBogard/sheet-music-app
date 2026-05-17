@@ -61,6 +61,13 @@ export interface PreviewPublishResult {
          */
         needsSyncCount: number
         /**
+         * Cycle-3 BUG-002. Parity with publish_setlist's chartHealth field.
+         * Bonded tracks whose source-of-truth mime is the Drive shortcut
+         * sentinel; `generate_gig_packet` drops these and they count as
+         * un-renderable. Pre-fix the per-row probe returned ok.
+         */
+        shortcutUnresolvedCount: number
+        /**
          * Per-row report for charts that aren't ok. Same shape + field name as
          * `publish_setlist({dryRun:true}).chartHealth.unhealthy` (F-006 unify).
          */
@@ -68,7 +75,7 @@ export interface PreviewPublishResult {
             trackId: string
             title: string
             fileId: string
-            status: "missing" | "unreachable"
+            status: "missing" | "unreachable" | "shortcut_unresolved"
             reason: string
         }>
     }
@@ -156,8 +163,11 @@ export async function previewPublish(
 
     // ── Recommendation gate. publish_setlist's chartHealth carries the
     // aggregate counts directly post-F-006, so we just pass them through.
+    // BUG-002: shortcut_unresolved is also a hard_block — gig packet drops
+    // those rows so publishing means the band sees a broken chart.
     const recommendation: PreviewPublishResult["recommendation"] =
-        published.chartHealth.missingCount > 0
+        published.chartHealth.missingCount > 0 ||
+        published.chartHealth.shortcutUnresolvedCount > 0
             ? "hard_block"
             : flaggedBonds > 0
               ? "review_first"
@@ -174,6 +184,8 @@ export async function previewPublish(
             missingCount: published.chartHealth.missingCount,
             unreachableCount: published.chartHealth.unreachableCount,
             needsSyncCount: published.chartHealth.needsSyncCount,
+            shortcutUnresolvedCount:
+                published.chartHealth.shortcutUnresolvedCount,
             unhealthy: published.chartHealth.unhealthy,
         },
         audience: {

@@ -143,6 +143,17 @@ export interface VerifySetlistChartsResult {
      */
     needsSyncCount: number
     /**
+     * Cycle-3 BUG-002. Rows whose source-of-truth mime is
+     * `application/vnd.google-apps.shortcut` — un-embedable in
+     * `generate_gig_packet`'s merged PDF. Pre-fix the per-row probe
+     * returned `ok` (Storage had stale shortcut bytes) and pre-publish
+     * health was green; the band still saw a broken chart because gig
+     * packet correctly dropped the shortcut. Now surfaced explicitly so
+     * the operator can re-bond to the shortcut target's fileId before
+     * publishing.
+     */
+    shortcutUnresolvedCount: number
+    /**
      * Number of `library_index` rows actually flipped to `status: 'orphaned'`
      * this call — i.e. rows that existed in the catalog and were re-confirmed
      * missing. Excludes phantom bonds (fileIds that had no catalog row at all).
@@ -244,6 +255,9 @@ export async function verifySetlistCharts(
     const needsSyncCount = probes.filter(
         (p) => p.health.status === "needs_storage_sync",
     ).length
+    const shortcutUnresolvedCount = probes.filter(
+        (p) => p.health.status === "shortcut_unresolved",
+    ).length
 
     // Opportunistic orphan marking. Only fires on `missing` (definitive
     // not-found) — never on `unreachable` (transient blip). L-001.
@@ -312,6 +326,7 @@ export async function verifySetlistCharts(
         missingCount,
         unreachableCount,
         needsSyncCount,
+        shortcutUnresolvedCount,
         orphanedMarked,
         phantomBonds,
     })
@@ -325,6 +340,7 @@ export async function verifySetlistCharts(
         missingCount,
         unreachableCount,
         needsSyncCount,
+        shortcutUnresolvedCount,
         orphanedMarked,
         phantomBonds,
         rows: probes,

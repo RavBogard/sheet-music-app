@@ -213,6 +213,54 @@ describe("MCP chart-health tools (emulator)", () => {
         expect(byTrack.get("ts2")?.health.status).toBe("needs_storage_sync")
     })
 
+    it("shortcut_unresolved surfaces per-row and rolls up to shortcutUnresolvedCount (BUG-002)", async () => {
+        // Cycle-3 BUG-002. Pre-fix: a Drive-shortcut-mime row returned
+        // health:ok (Storage had stale shortcut bytes) and pre-publish
+        // health was green; the band still saw a broken chart because
+        // generate_gig_packet drops shortcuts from the merged PDF. Now
+        // surfaced explicitly so the operator re-bonds before publishing.
+        const id = "set-verify-shortcut"
+        await db().collection("setlists").doc(id).set({
+            name: "Shortcut Test",
+            ownerId: ADMIN,
+        })
+        await seedTrack("ts1", id, 0, {
+            title: "Healthy chart",
+            songId: "song-real",
+            fileId: "song-real",
+            type: "song",
+        })
+        await seedTrack("ts2", id, 1, {
+            title: "Shortcut-bonded chart",
+            songId: "song-shortcut",
+            fileId: "song-shortcut",
+            type: "song",
+        })
+
+        mockGetChartHealth.mockImplementation(async (fileId: string) =>
+            fileId === "song-real"
+                ? { status: "ok", source: "firebase-storage" }
+                : {
+                      status: "shortcut_unresolved",
+                      reason: "Drive metadata mimeType is application/vnd.google-apps.shortcut — re-bond to the shortcut target's fileId.",
+                      mimeType: "application/vnd.google-apps.shortcut",
+                      error: "Drive metadata mimeType is application/vnd.google-apps.shortcut — re-bond to the shortcut target's fileId.",
+                  },
+        )
+
+        const r = await verifySetlistCharts(ADMIN, { setlistId: id })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+
+        expect(r.okCount).toBe(1)
+        expect(r.shortcutUnresolvedCount).toBe(1)
+        expect(r.missingCount).toBe(0)
+        expect(r.unreachableCount).toBe(0)
+        expect(r.needsSyncCount).toBe(0)
+        const byTrack = new Map(r.rows.map((row) => [row.trackId, row]))
+        expect(byTrack.get("ts2")?.health.status).toBe("shortcut_unresolved")
+    })
+
     it("verify_setlist_charts returns setlist_not_found for ghost id", async () => {
         const r = await verifySetlistCharts(ADMIN, { setlistId: "ghost" })
         expect(r).toMatchObject({
