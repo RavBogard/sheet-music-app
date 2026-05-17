@@ -1,0 +1,3682 @@
+{
+  "mode": "APPLY",
+  "generatedAt": "2026-05-17T01:45:14.480Z",
+  "summary": {
+    "setlists": 43,
+    "tracks": 576,
+    "total": 619
+  },
+  "touches": [
+    {
+      "collection": "setlists",
+      "id": "0RC4b6CpvnPbz09ue07q",
+      "name": "Shabbat Morning — March 28"
+    },
+    {
+      "collection": "setlists",
+      "id": "29EqdMESd6QjhfokL2Bu",
+      "name": "Shabbat Morning — March 21"
+    },
+    {
+      "collection": "setlists",
+      "id": "3ydVKM1WSADW0vn9vWaN",
+      "name": "Shir Shabbat List"
+    },
+    {
+      "collection": "setlists",
+      "id": "4GVt6rK5RCVHr5BGPAUv",
+      "name": "Shabbat Morning"
+    },
+    {
+      "collection": "setlists",
+      "id": "5zLP8DidKQ2lLMKci2xI",
+      "name": "Religious School Morning Service"
+    },
+    {
+      "collection": "setlists",
+      "id": "6b412089-e201-4579-9cc6-dbe4cc42ce3f",
+      "name": "CF1 Eval — Friday Evening (May 22)"
+    },
+    {
+      "collection": "setlists",
+      "id": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Shabbat Morning — April 4"
+    },
+    {
+      "collection": "setlists",
+      "id": "BozK3CzZIaSZvWK0hnRs",
+      "name": "Bnei Mitzvah Morning (Template)"
+    },
+    {
+      "collection": "setlists",
+      "id": "FB2yEICglR8jQmG3pcnp",
+      "name": "Passover — April 3"
+    },
+    {
+      "collection": "setlists",
+      "id": "H06Xwyn74GiHHMKiEPZu",
+      "name": "Shabbat "
+    },
+    {
+      "collection": "setlists",
+      "id": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Shir Shabbat —  — May 13"
+    },
+    {
+      "collection": "setlists",
+      "id": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Shabbat Morning — Parashat Tazria-Metzora — April 18"
+    },
+    {
+      "collection": "setlists",
+      "id": "KBDlDwRI0rfDdv8cxJG9",
+      "name": "Shabbat Morning — February 28"
+    },
+    {
+      "collection": "setlists",
+      "id": "KFx9qYacON5y7R9RtMrV",
+      "name": "New Setlist"
+    },
+    {
+      "collection": "setlists",
+      "id": "LMkJRNf3HWa8l9Mqmr0Q",
+      "name": "Shabbat Morning — Parashat Vayakhel-Pekudei — March 14"
+    },
+    {
+      "collection": "setlists",
+      "id": "NWPBba50fltX6pNcyOVK",
+      "name": "5/15 -- Shir Shabbat"
+    },
+    {
+      "collection": "setlists",
+      "id": "QQSsAK2XY4dc8k5sFXIa",
+      "name": "Confirmation Shabbat"
+    },
+    {
+      "collection": "setlists",
+      "id": "QUbPV0MELXnvfwoNkrtG",
+      "name": "Shabbat morning"
+    },
+    {
+      "collection": "setlists",
+      "id": "QvykJoecFHvjTlxYblZz",
+      "name": "Friday Night — Parashat Vayakhel-Pekudei — March 8"
+    },
+    {
+      "collection": "setlists",
+      "id": "RL1C7QW75134LNA3rvQD",
+      "name": "Shabbat Morning — Parashat Behar-Bechukotai — March 28"
+    },
+    {
+      "collection": "setlists",
+      "id": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Shabbat Morning — Parashat Emor — May 2"
+    },
+    {
+      "collection": "setlists",
+      "id": "W8Ahf3VvLhLgyaU7Z6lX",
+      "name": "Shir Shabbat - Feb 20, 2026"
+    },
+    {
+      "collection": "setlists",
+      "id": "XLRlBdThE5rUIkglEIDA",
+      "name": "5786 / 2025 Kol Nidre Alternative Service Music Flow"
+    },
+    {
+      "collection": "setlists",
+      "id": "b12a5221-111a-4ffa-b408-350cdbd28190",
+      "name": "Eitan Shabbat Morning 2/21"
+    },
+    {
+      "collection": "setlists",
+      "id": "bmodfEvSr75S3A2Q1UZM",
+      "name": "Friday Night — Parashat Vayakhel-Pekudei — March 8"
+    },
+    {
+      "collection": "setlists",
+      "id": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Bar Mitzvah — Chase — May 16 (4pm Havdallah)"
+    },
+    {
+      "collection": "setlists",
+      "id": "dHQyiWGoGww0aCeKk9Pj",
+      "name": "Shabbat Morning — Parashat Behar-Bechukotai — March 28"
+    },
+    {
+      "collection": "setlists",
+      "id": "dJuzNP3CMgtIFkssWiQ3",
+      "name": "Shabbat morning"
+    },
+    {
+      "collection": "setlists",
+      "id": "eMFwUx7XBBAN0KUPmdhs",
+      "name": "Bnei Mitzvah Morning (Template)"
+    },
+    {
+      "collection": "setlists",
+      "id": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Shabbat Morning — April 11"
+    },
+    {
+      "collection": "setlists",
+      "id": "jRBOCUjcMHEBP4IqgGUP",
+      "name": "Shabbat Morning January 31"
+    },
+    {
+      "collection": "setlists",
+      "id": "lMg22c7kmla21ZlWWuEK",
+      "name": "Friday Night — Parashat Vayakhel-Pekudei — March 8"
+    },
+    {
+      "collection": "setlists",
+      "id": "s2nWyd63mWjQj3LAJ8zg",
+      "name": "Shir Shabbat — March 27"
+    },
+    {
+      "collection": "setlists",
+      "id": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Seui"
+    },
+    {
+      "collection": "setlists",
+      "id": "uBkulVkN8K7idSapCJjq",
+      "name": "Shabbat Morning — Parashat Achrei Mot-Kedoshim — April 25"
+    },
+    {
+      "collection": "setlists",
+      "id": "uVwbdrMFv5Uz6x4aFNwe",
+      "name": "Shabbat morning"
+    },
+    {
+      "collection": "setlists",
+      "id": "vJqQL6jbpTwVVbv1Oahy",
+      "name": "Mother's Day"
+    },
+    {
+      "collection": "setlists",
+      "id": "xpFyGClkCD3je2WnQO10",
+      "name": "Bnei Mitzvah Morning (Template)"
+    },
+    {
+      "collection": "setlists",
+      "id": "yEGFPu8UnBHkMK0ZRREp",
+      "name": "Shabbat"
+    },
+    {
+      "collection": "setlists",
+      "id": "yFO1nWEMH2wGSthc766c",
+      "name": "Shir Shabbat 2/20"
+    },
+    {
+      "collection": "setlists",
+      "id": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "B'nei Mitzvah Saturday — March 14"
+    },
+    {
+      "collection": "setlists",
+      "id": "zKxsDLoVXFis7ADbqWsW",
+      "name": "testing"
+    },
+    {
+      "collection": "setlists",
+      "id": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Bnei Mitzvah Morning"
+    },
+    {
+      "collection": "tracks",
+      "id": "003783bb-6739-4f67-86ef-8e23543847cd",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Awakening"
+    },
+    {
+      "collection": "tracks",
+      "id": "0078ef46-0356-43ae-8c04-134515be7ff6",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Hashkivenu"
+    },
+    {
+      "collection": "tracks",
+      "id": "00c5d3c2-78b1-4fce-a2db-fa9e67e19905",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Chatzi Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "00ce9fa7-a432-4e8a-8769-7a570fdaca06",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Adonai sfatai (trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "0112d954-415c-46cc-a8bf-2f30e02f38c3",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Ma tovu_Hinei ma tov - trad"
+    },
+    {
+      "collection": "tracks",
+      "id": "0146d085-0e6f-4814-bad2-4ef54c980e63",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Ma tovu_Hinei ma tov - trad"
+    },
+    {
+      "collection": "tracks",
+      "id": "016d0dc8-6cb1-43a3-be55-2f28ac30a7c1",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "B'nei Mitzvah Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "01fbbf22-dfde-49fb-a1f1-590a827801b5",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Pre Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "02642406-7008-4018-a1a1-1ec396fcfe51",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Modeh ani - Klepper"
+    },
+    {
+      "collection": "tracks",
+      "id": "02954a75-9e7f-495f-ad96-8d718bccb86b",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Aleinu "
+    },
+    {
+      "collection": "tracks",
+      "id": "0384510d-7ad7-45df-89c8-1737ec691de2",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Eitz chayim"
+    },
+    {
+      "collection": "tracks",
+      "id": "038d8a99-cd9d-4c30-8ce9-1924ed6db6b4",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Psalm 148 Hallelujah"
+    },
+    {
+      "collection": "tracks",
+      "id": "04794b22-ec0b-4129-b502-86e91c9cde64",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Mi shebeirach"
+    },
+    {
+      "collection": "tracks",
+      "id": "05587f8d-2ecd-4dad-a0c0-498438684cec",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Veshamru"
+    },
+    {
+      "collection": "tracks",
+      "id": "065c5bdf-f462-453d-8afc-1aac7e7b4a97",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Warmup 2 (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "0966ce22-6c7c-4ed1-9e68-4c26c8efee98",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "V'Shamru (Old Skool)"
+    },
+    {
+      "collection": "tracks",
+      "id": "09817061-0980-412f-b3a1-4a8acace4097",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Birchot HaShachar"
+    },
+    {
+      "collection": "tracks",
+      "id": "09d4d4a5-b215-435b-b8fa-6d82ee8714b2",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Ein Kamocha (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "09fa6d55-4064-4957-aa54-59aee0faf12d",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Torah Service — Parashat Achrei Mot-Kedoshim"
+    },
+    {
+      "collection": "tracks",
+      "id": "0a3575aa-b2fb-43e8-a5b9-adb5d0b486b5",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Adon Olam"
+    },
+    {
+      "collection": "tracks",
+      "id": "0a8bd1d0-26ab-402d-8f0e-e2b70532bcb3",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Shiru L'Adonai"
+    },
+    {
+      "collection": "tracks",
+      "id": "0b2c6455-470d-4808-b0cd-eb7830fbed09",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Erev Shel L'cha Dodi"
+    },
+    {
+      "collection": "tracks",
+      "id": "0b7b5047-0546-4ae4-b4c6-21e464871010",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Closing Blessing"
+    },
+    {
+      "collection": "tracks",
+      "id": "0b88ed23-6218-4b9c-b19d-3101aead4cc4",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Ma tovu_Hinei ma tov - trad"
+    },
+    {
+      "collection": "tracks",
+      "id": "0bd482b8-3992-4ef8-8fad-8a4c3115b84a",
+      "parentSetlistId": "6b412089-e201-4579-9cc6-dbe4cc42ce3f",
+      "name": "Shalom Alechem Shir Shabbat"
+    },
+    {
+      "collection": "tracks",
+      "id": "0bea143c-6c57-410d-9f3d-8720a8a12cbe",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Mi Chamocha Ana B'Koach.pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "0d36fde1-eead-4203-beae-f1299c7bac97",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Bar'chu Walkdown"
+    },
+    {
+      "collection": "tracks",
+      "id": "0d62541b-daa9-421d-a801-1b910f193bec",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Hineih mah tov"
+    },
+    {
+      "collection": "tracks",
+      "id": "0e429d5a-ff3f-46d1-ab7c-1b47e2c4202a",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Tu Bishvat"
+    },
+    {
+      "collection": "tracks",
+      "id": "0eaeed46-77a1-454b-b900-4a6f93b78e5a",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Hoda'ah"
+    },
+    {
+      "collection": "tracks",
+      "id": "102687d4-d800-4b93-8ecb-3f3b19b7e71d",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Eitz chayim   Weisenberg"
+    },
+    {
+      "collection": "tracks",
+      "id": "1032bf83-348c-4d09-88d3-f8a3efc8a060",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Announcements"
+    },
+    {
+      "collection": "tracks",
+      "id": "10f184b2-0eed-4b8c-a8a7-e2e8798353d5",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Mi shebeirach"
+    },
+    {
+      "collection": "tracks",
+      "id": "112f401f-5fa9-48ab-99c5-a2d4467cdae0",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Dvar torah"
+    },
+    {
+      "collection": "tracks",
+      "id": "11de7be8-2ff2-4166-99dd-a9193df85e3d",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Modeh ani - Klepper"
+    },
+    {
+      "collection": "tracks",
+      "id": "1260a396-ab50-4a51-b430-f9db4a02714c",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Modeh Ani"
+    },
+    {
+      "collection": "tracks",
+      "id": "12957238-3f7a-472e-933c-843ac20273d0",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Oseh shalom - Nava tehila"
+    },
+    {
+      "collection": "tracks",
+      "id": "12ebb2c5-a9f6-41bc-b202-723a7495752c",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Sim_shalom"
+    },
+    {
+      "collection": "tracks",
+      "id": "13e8696b-de7d-48aa-8aae-5f66793c65b2",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "V'ahavta"
+    },
+    {
+      "collection": "tracks",
+      "id": "13efe4a8-78ab-40e5-8697-dfc71139c45e",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "V_shamru_(trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "142bc1c2-b460-4b2d-82f2-c451d3890214",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Mi chamocha (6-8)"
+    },
+    {
+      "collection": "tracks",
+      "id": "15601288-9ae9-43fd-8bd4-8d867422f14b",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Tu Bishvat"
+    },
+    {
+      "collection": "tracks",
+      "id": "15ce4d12-1392-44d4-92bf-88acddf44037",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Eitz chayim   Weisenberg"
+    },
+    {
+      "collection": "tracks",
+      "id": "163db3de-2156-4788-9579-301c7d4e1564",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Shema (major)"
+    },
+    {
+      "collection": "tracks",
+      "id": "16c74391-c52c-4cb5-b801-7226a8f65006",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Silent Prayer"
+    },
+    {
+      "collection": "tracks",
+      "id": "16f8e505-a381-4bba-8568-686f500e5682",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Em Bar'chu Yotzier Walkdown"
+    },
+    {
+      "collection": "tracks",
+      "id": "172afe9a-adda-438e-9bcc-e010d369397e",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "V_shamru_(trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "176afc8c-a4e3-493b-b788-81d0255eed9f",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "Afternoon Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "179eb863-f150-452f-86ba-47b54c5d04b5",
+      "parentSetlistId": "6b412089-e201-4579-9cc6-dbe4cc42ce3f",
+      "name": "Mizmor l_David D"
+    },
+    {
+      "collection": "tracks",
+      "id": "17d47d41-b852-4a85-9cfc-6cb72ef825aa",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Shema (major)"
+    },
+    {
+      "collection": "tracks",
+      "id": "17f48e6c-aa40-4c73-a8e0-aba33bbc0ca7",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Parent Blessing"
+    },
+    {
+      "collection": "tracks",
+      "id": "1889384a-c0f6-49f5-9388-ce88419cf60f",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Oseh shalom (camp)"
+    },
+    {
+      "collection": "tracks",
+      "id": "1a4926e0-94fb-4b3a-a491-3d707dffe476",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Beginning"
+    },
+    {
+      "collection": "tracks",
+      "id": "1a4f4f90-e9c0-4b73-8d35-2bb32406bb0c",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Hoda'ah"
+    },
+    {
+      "collection": "tracks",
+      "id": "1a57b0a2-8c57-4677-ae58-1d938c3c1414",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "Ashrei (Klepper-Freelander)"
+    },
+    {
+      "collection": "tracks",
+      "id": "1cadd4bd-c744-459d-b9ce-dfc1699f630b",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Veshamru"
+    },
+    {
+      "collection": "tracks",
+      "id": "1d330f51-0cb5-40d2-b7e5-73da769f8347",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Leslie Cohen’s Hallelujah (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "1ecfc657-9690-4c4c-85d9-0269d9c42639",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Adonai sfatai (trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "1ef5a48e-e1e3-4e2b-bb6d-f84ca5241cb8",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Eitz chayim"
+    },
+    {
+      "collection": "tracks",
+      "id": "1ff4d93f-2aa1-4b78-a467-59d50cd2f4b1",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Psukei d_zimrah"
+    },
+    {
+      "collection": "tracks",
+      "id": "2004279c-adb6-4ad6-943a-b3df59b186d0",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Avot v'Imahot"
+    },
+    {
+      "collection": "tracks",
+      "id": "210ae75c-dbc4-4895-9e64-e6c8be0ae400",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Hoda'ah"
+    },
+    {
+      "collection": "tracks",
+      "id": "21323e5c-c92a-4bf7-9250-143283bbbc87",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Kedusha Em"
+    },
+    {
+      "collection": "tracks",
+      "id": "2194eddd-9be3-41fa-b9ac-2c05bf09db9f",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Birchot HaShachar"
+    },
+    {
+      "collection": "tracks",
+      "id": "221534d2-1169-4b2d-a979-fc3318b3154b",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Gevurot"
+    },
+    {
+      "collection": "tracks",
+      "id": "228f30eb-e9ec-4048-96ce-b3224c7f583b",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Lechu Goldman.pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "22f39a12-da31-4a8d-82b9-bf19b2d40402",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Shalom Alechem Shir Shabbat"
+    },
+    {
+      "collection": "tracks",
+      "id": "23251418-e951-401b-9fdd-2cae4efa2acf",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Mah Tovu/Hineh Mah Tov"
+    },
+    {
+      "collection": "tracks",
+      "id": "236fedeb-466e-45fd-b553-e30e424c632a",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Ein Kamocha (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "23da43a5-fa82-46c3-b0ea-3689047d1e89",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Lechu Nranana (Goldman)"
+    },
+    {
+      "collection": "tracks",
+      "id": "25081337-e9da-4c79-8eeb-d30e567282c8",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Tu Bishvat"
+    },
+    {
+      "collection": "tracks",
+      "id": "252de937-c007-48a6-86b1-f50194505332",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Avot v'Imahot"
+    },
+    {
+      "collection": "tracks",
+      "id": "25484672-5370-40f5-9463-f1e2d7cc8a9c",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Mi Chamocha"
+    },
+    {
+      "collection": "tracks",
+      "id": "2561c159-f2af-42ef-be0f-c178dae9fa19",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "25870557-0543-46a2-b82f-2ae73f48e04e",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Ma tovu_Hinei ma tov - trad"
+    },
+    {
+      "collection": "tracks",
+      "id": "25afd225-920d-45ab-942c-d9ec7f0da8ed",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Elohai neshama - Pourmorady"
+    },
+    {
+      "collection": "tracks",
+      "id": "25b887f2-5099-4804-8d56-c3f2521f34e2",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Baruch She'amar"
+    },
+    {
+      "collection": "tracks",
+      "id": "26daa012-ab08-4eaa-8756-4a35e5f52fd0",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Lecha dodi (New one from Nava)"
+    },
+    {
+      "collection": "tracks",
+      "id": "272a10a7-0f8f-4c53-968c-f90bccb8a5b2",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Modeh ani - Keira"
+    },
+    {
+      "collection": "tracks",
+      "id": "2799aa28-8f1c-45a1-a396-3c207ff549e7",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Mi shebeirach"
+    },
+    {
+      "collection": "tracks",
+      "id": "28464998-9d10-47b4-a8db-4d69d2eeb1a0",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Mi chamocha (Moshav)"
+    },
+    {
+      "collection": "tracks",
+      "id": "298606a2-ce8a-4b30-a524-a27db95c9c1f",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "2aee196e-5373-4332-9049-1aa8e5bf8d66",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Pre Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "2bcfbbfe-725e-4c4e-974b-1941ffe1d4ff",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Tu Bishvat"
+    },
+    {
+      "collection": "tracks",
+      "id": "2bd409f7-ea70-4488-96ef-ef035ac296c2",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Matir Asurim (Eitan's)"
+    },
+    {
+      "collection": "tracks",
+      "id": "2c633c3c-5910-4468-8449-3e481a8bc753",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "2c9e92af-61d4-47f9-a5cf-216aef88a068",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Oseh shalom - Nava tehila"
+    },
+    {
+      "collection": "tracks",
+      "id": "2d002410-ae73-4f23-a83d-f51a9b320962",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Psukei d_zimrah"
+    },
+    {
+      "collection": "tracks",
+      "id": "2d90a086-80ea-449c-9cb7-56315e6c3b3b",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Closing"
+    },
+    {
+      "collection": "tracks",
+      "id": "2df420e2-e128-4bb9-a29e-0e85fc05d257",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Hakafah"
+    },
+    {
+      "collection": "tracks",
+      "id": "2e1f8ad2-32b6-499d-9761-13411fb0968e",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Closing"
+    },
+    {
+      "collection": "tracks",
+      "id": "2e83a1fc-6064-4f95-bb5c-fdf269b15a9c",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Amidah"
+    },
+    {
+      "collection": "tracks",
+      "id": "2ea1bf2c-3338-407f-97c8-b836ba67bc53",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Warmup 2 (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "2eed844f-663d-49a9-80b8-822a96ddad2f",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Birchot HaShachar"
+    },
+    {
+      "collection": "tracks",
+      "id": "2fc6b5a0-f7a0-42f5-a19f-a70260f439fe",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Modeh ani - Klepper"
+    },
+    {
+      "collection": "tracks",
+      "id": "30ed8bdf-c980-4fa4-bff5-789a9f7f4bcf",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Adon Olam"
+    },
+    {
+      "collection": "tracks",
+      "id": "32b5ea43-0876-443f-81a8-505872fb4f4f",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Hinei Mah Tov"
+    },
+    {
+      "collection": "tracks",
+      "id": "32cfe149-efae-4326-b4c3-59731e171a4b",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Ve Imru Amen Choir"
+    },
+    {
+      "collection": "tracks",
+      "id": "3420abdd-e170-4dc8-a9e5-798f7c9e663b",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "V'ahavta"
+    },
+    {
+      "collection": "tracks",
+      "id": "3488a45d-0a60-423c-a7ba-cd328a1c780d",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Birchot Havdalah (Friedman) / Hamavdil"
+    },
+    {
+      "collection": "tracks",
+      "id": "34c6bf24-d1ff-4205-95cd-327a23ee644e",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Elohai neshama - Pourmorady"
+    },
+    {
+      "collection": "tracks",
+      "id": "3525bd89-5227-4795-b647-02a0d738707a",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Mi shebeirach"
+    },
+    {
+      "collection": "tracks",
+      "id": "364f351b-0c38-4b54-9fc1-8108e575a6ba",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Bar'chu "
+    },
+    {
+      "collection": "tracks",
+      "id": "369ec7f0-0ffa-4d21-9ffc-39a9432d8cba",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Aleinu Shur"
+    },
+    {
+      "collection": "tracks",
+      "id": "36f24857-7fb8-47cf-8849-0089b37f6bf2",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Beginning"
+    },
+    {
+      "collection": "tracks",
+      "id": "371f4e6b-7cbb-49ee-909d-42b9c48c8556",
+      "parentSetlistId": "OaqXciKwYesUuYcYuU7X",
+      "name": "Avot"
+    },
+    {
+      "collection": "tracks",
+      "id": "3739c7a9-6242-4d3c-b724-6b6d0cd377fd",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Modeh ani - Klepper"
+    },
+    {
+      "collection": "tracks",
+      "id": "37d6761e-84c4-4335-b82a-1427133c54f8",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Mourner's Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "385ee468-4a7c-4bbf-bb40-d528eb131a30",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Adon Olam"
+    },
+    {
+      "collection": "tracks",
+      "id": "38681414-f6b7-450b-8ee2-16389e2e3f64",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Kedusha Em"
+    },
+    {
+      "collection": "tracks",
+      "id": "38920c2c-792c-4d98-aa06-035a7dfd1d8c",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Oseh shalom - Nava tehila"
+    },
+    {
+      "collection": "tracks",
+      "id": "38b63a01-0a55-4c98-ae4b-7e2d96a58efa",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Veshamru"
+    },
+    {
+      "collection": "tracks",
+      "id": "39b62868-2757-4f1d-91ee-110ccfd35fb6",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "V_shamru_(trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "39d7715d-5999-49a3-9b90-bd0854044392",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Gevurot"
+    },
+    {
+      "collection": "tracks",
+      "id": "3a0f7e43-001f-43df-935e-c88f20c8e640",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Ma'ariv Aravim (evening chant)"
+    },
+    {
+      "collection": "tracks",
+      "id": "3a1078e8-1e46-4bfa-99af-615e08170ca1",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Hakafah"
+    },
+    {
+      "collection": "tracks",
+      "id": "3a48617a-34a3-484f-b456-5f97eda5b8ca",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Leslie Cohen’s Hallelujah (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "3aad570c-e74f-418b-a9ad-6da585770f02",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "B'nei Mitzvah Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "3b460c76-fb55-4db6-a600-6de049839074",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Chatzi Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "3b772d63-3152-421a-891d-c277be72c3a4",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Hakafah"
+    },
+    {
+      "collection": "tracks",
+      "id": "3ba2de33-3a60-4e97-a066-366de51b4ba3",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Pre Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "3bfbe5ba-1eea-4ca9-acb3-66b56565a8e8",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Drash"
+    },
+    {
+      "collection": "tracks",
+      "id": "3c5c6576-9738-44d5-89b6-9a5b36d90a7b",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "Havdalah"
+    },
+    {
+      "collection": "tracks",
+      "id": "3cebe18a-0dfe-4c04-aad8-64816267110b",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Adon Olam"
+    },
+    {
+      "collection": "tracks",
+      "id": "3cf7405a-afd6-494d-9d8c-79265d970769",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Yotzeir or - Klepper"
+    },
+    {
+      "collection": "tracks",
+      "id": "3dc008cd-42b9-4df8-b117-d06850d011f6",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Veshamru"
+    },
+    {
+      "collection": "tracks",
+      "id": "3dd13990-2a07-4f2e-afe8-9ec4529b2ce7",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Closing Blessing"
+    },
+    {
+      "collection": "tracks",
+      "id": "3e721f3b-a234-4259-9263-e2ae8170d61c",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Sim Shalom"
+    },
+    {
+      "collection": "tracks",
+      "id": "3e8bf0c4-457f-40b7-b496-acbfeab2bd29",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Closing"
+    },
+    {
+      "collection": "tracks",
+      "id": "3e9c5338-f79b-4ed4-9a24-87fd3f42dcde",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Birchot HaShachar"
+    },
+    {
+      "collection": "tracks",
+      "id": "3ecadbd6-2d49-48ff-9e7d-373a272a2f96",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Fiddley Tune"
+    },
+    {
+      "collection": "tracks",
+      "id": "3efbdc94-46b1-4afe-82fd-bb406283390d",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Kedusha Em"
+    },
+    {
+      "collection": "tracks",
+      "id": "3f031b68-4789-4092-bb20-2cdb1219a507",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Adon Olam"
+    },
+    {
+      "collection": "tracks",
+      "id": "3f249b80-bdb2-43f2-855e-328584c2fd49",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "3f5b0065-5c7a-42da-9447-895fc2b67e70",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Avot v'Imahot"
+    },
+    {
+      "collection": "tracks",
+      "id": "3f7ba074-22cd-4264-befd-519b4dddfa41",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Mizmor L'David "
+    },
+    {
+      "collection": "tracks",
+      "id": "4060c31a-45c2-4aa7-a604-d8afa57142fc",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Ma tovu / Hinei ma tov "
+    },
+    {
+      "collection": "tracks",
+      "id": "40f7a071-d82c-449c-9684-04665044b637",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Od Yavo Shalom Aleinu"
+    },
+    {
+      "collection": "tracks",
+      "id": "421fb5ba-e16e-45c5-8a90-bf9b38b260b3",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Adonai sfatai (trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "422f08b3-1c13-4d71-9d83-9df854f3b15e",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Adonai sfatai (ah na na)"
+    },
+    {
+      "collection": "tracks",
+      "id": "422f28fb-64a5-4060-b7ce-6dfc9694541e",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Avodah"
+    },
+    {
+      "collection": "tracks",
+      "id": "4323e1f8-e9a1-41b1-8396-495d4f097186",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Beginning"
+    },
+    {
+      "collection": "tracks",
+      "id": "43733a68-799b-49ac-81a7-51241a5a9fe5",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "shema and Blessings"
+    },
+    {
+      "collection": "tracks",
+      "id": "4435f2ac-40f2-4883-a28b-44bcec023569",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Psukei d'zimrah"
+    },
+    {
+      "collection": "tracks",
+      "id": "45054da5-a97a-4d75-a000-fbc418e31409",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Avot v'Imahot"
+    },
+    {
+      "collection": "tracks",
+      "id": "4527ea61-c5fc-4fb6-a749-28ed7df8df02",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Ahava raba / V'haeirneinu"
+    },
+    {
+      "collection": "tracks",
+      "id": "45974e6b-8b61-4561-85b3-365361c092ef",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Modeh ani - Halpert"
+    },
+    {
+      "collection": "tracks",
+      "id": "45e4884d-d54e-43b4-95b2-a4234f62d106",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Mizmor Shiru Ladonai.pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "46329ef4-3962-4827-b972-778af3fb16d2",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "Haftarah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "46a6c684-66a9-4ff4-a6a8-e5b43fea28d3",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Oseh Shalom"
+    },
+    {
+      "collection": "tracks",
+      "id": "4705d500-6e98-4317-a49e-47c32b6b0f55",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Chatzi Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "478a2a5b-114d-403e-87c3-6b90f3429b3c",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Haftarah Blessing (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "47db59ca-0fa1-41ea-81c2-1e904789365b",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "Eiliyahu Hanavi (Traditional) - Eiliyahu (Friedman)"
+    },
+    {
+      "collection": "tracks",
+      "id": "4801e7da-65f6-40c4-8f34-0b6246246a7b",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "V_shamru_(trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "48977727-25d7-45fc-b410-5fe08328b63b",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "V_shamru_(trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "48d59b3d-f101-4977-8ad1-39c9e2b5d892",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Kiddush"
+    },
+    {
+      "collection": "tracks",
+      "id": "49b557d3-fe7e-4a14-a2d2-adf3a263e313",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Veshamru"
+    },
+    {
+      "collection": "tracks",
+      "id": "49e0d200-737f-4fb6-8929-bf9274e7db3f",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Torah Service — Parashat Behar-Bechukotai"
+    },
+    {
+      "collection": "tracks",
+      "id": "4a4b7099-21f4-44c6-b878-3137e677ee4c",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Kedusha (Em)"
+    },
+    {
+      "collection": "tracks",
+      "id": "4ad9c0b6-418b-4364-bc93-934db69391e6",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Shema and Blessings"
+    },
+    {
+      "collection": "tracks",
+      "id": "4afc6404-9fca-4754-885f-77a0216649a9",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Yotzeir or - Klepper"
+    },
+    {
+      "collection": "tracks",
+      "id": "4b5cb38e-a67e-4405-abc2-fac6f56affaa",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Shma and Blessings"
+    },
+    {
+      "collection": "tracks",
+      "id": "4bc3be5e-04f1-4915-953a-7e71769592b5",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "T'filah"
+    },
+    {
+      "collection": "tracks",
+      "id": "4c838fe4-e312-4e3d-a21a-db7f5f1b72c1",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "V'ahavta"
+    },
+    {
+      "collection": "tracks",
+      "id": "4ca77177-7429-44f2-be76-40cb07b13b40",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Shema (major)"
+    },
+    {
+      "collection": "tracks",
+      "id": "4e0321fe-9415-4073-a21d-ce04502c0b06",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Adon Olam"
+    },
+    {
+      "collection": "tracks",
+      "id": "4e55dbb7-9f96-42df-835d-6a1e04805965",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Sim_shalom"
+    },
+    {
+      "collection": "tracks",
+      "id": "4ebe4a6f-92b8-49fd-b52c-e9f1d63dc9f9",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Modeh ani - Klepper"
+    },
+    {
+      "collection": "tracks",
+      "id": "4eef24f7-c085-408e-a1ef-6df1a658ed63",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Hakafah"
+    },
+    {
+      "collection": "tracks",
+      "id": "4ef05b30-168a-4cb0-922f-5f59796e97e2",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Kabbalat Shabbah"
+    },
+    {
+      "collection": "tracks",
+      "id": "4fb24fd7-f2c7-4b9b-be0d-0ccd0c84b52b",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Aleinu Shur"
+    },
+    {
+      "collection": "tracks",
+      "id": "4ff2646f-9cd3-440d-aa7e-a770810c5698",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Oseh shalom - Nava tehila"
+    },
+    {
+      "collection": "tracks",
+      "id": "502eeb11-effd-4e4d-b956-249737bd837c",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "504b4e36-bd40-4c7f-8b81-246d24991da2",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Sim_shalom"
+    },
+    {
+      "collection": "tracks",
+      "id": "50bffc79-4e90-4a22-ba1d-80c74a735cad",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Tu Bishvat"
+    },
+    {
+      "collection": "tracks",
+      "id": "50f069ad-26ed-4327-bbaf-b3b3c00d1ddb",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "K'dushah"
+    },
+    {
+      "collection": "tracks",
+      "id": "50f853d8-4ad8-4f76-bd4d-7492d96c91dc",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Pre Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "51e197fd-d071-40ab-99be-899fc38b7c25",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "T'filah"
+    },
+    {
+      "collection": "tracks",
+      "id": "52178d5e-656b-409c-9d44-eed9d0e1b0c6",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Announcements"
+    },
+    {
+      "collection": "tracks",
+      "id": "5290a0d7-f3f5-4796-a772-1acc02741a8e",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "C-Saw Niggun Score"
+    },
+    {
+      "collection": "tracks",
+      "id": "52d9bf18-ab40-460a-97ea-45174a54d0d2",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Adonai sfatai (trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "53295573-1eae-4182-9316-59dff51f2142",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Hakafot"
+    },
+    {
+      "collection": "tracks",
+      "id": "545b739d-6620-4b22-8de9-8a677b97c348",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Eitz chayim"
+    },
+    {
+      "collection": "tracks",
+      "id": "54b907ef-324d-4060-9344-f0daa83098ad",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Oseh shalom - Nava tehila"
+    },
+    {
+      "collection": "tracks",
+      "id": "559204d1-7bf9-4e76-b798-41bcb705ee68",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Aleinu Shur"
+    },
+    {
+      "collection": "tracks",
+      "id": "55d739b0-d19e-4332-9ff9-7f8530f1efb7",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "V'Ahavta (Isaacson)"
+    },
+    {
+      "collection": "tracks",
+      "id": "5661497c-0337-414c-bb50-04e47f573a90",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Pre Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "56d0a660-c301-4176-9dce-0f95c13ab2d1",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Adon Olam"
+    },
+    {
+      "collection": "tracks",
+      "id": "56eb9199-8368-484d-a132-5efe28a78201",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Adonai sfatai (trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "57277e9c-a696-45ce-a222-0ab2805000aa",
+      "parentSetlistId": "pvL81pSCXJiRhGsbeEvi",
+      "name": "Niggun - Bonia Shur"
+    },
+    {
+      "collection": "tracks",
+      "id": "57510359-b86c-4d36-aa71-55f5b898d1a2",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Drash"
+    },
+    {
+      "collection": "tracks",
+      "id": "578dbff8-c20e-437d-a0e7-f2856139ae7f",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Healing Prayer 1: Ana El Na"
+    },
+    {
+      "collection": "tracks",
+      "id": "57cf689e-612f-4871-8890-dadb1b6f5756",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Birchot HaShachar"
+    },
+    {
+      "collection": "tracks",
+      "id": "589cc755-ac43-4f7c-ae41-2db2d4e01609",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Shalom Alechem Shir Shabbat.pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "58e92f19-3c40-4db8-8719-30226490df2e",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Chatzi Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "596f3669-87cb-4e19-aff0-a684194a5aee",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "B'nei Mitzvah Ceremony"
+    },
+    {
+      "collection": "tracks",
+      "id": "5a5977ab-0fdb-4e7d-a39b-3082adc849dd",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Ma tovu_Hinei ma tov - trad"
+    },
+    {
+      "collection": "tracks",
+      "id": "5a85f8c0-8be8-41b1-991b-7987f0c4ee06",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Shema (major)"
+    },
+    {
+      "collection": "tracks",
+      "id": "5aeb18c3-0886-46e6-ac0d-4caca82a580c",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Mi shebeirach"
+    },
+    {
+      "collection": "tracks",
+      "id": "5b080ba8-f4e7-4acb-a571-f26e4ac34285",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Aleinu"
+    },
+    {
+      "collection": "tracks",
+      "id": "5b8d7777-52d4-45e8-9853-9a2cee17a01f",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Modeh ani - Keira"
+    },
+    {
+      "collection": "tracks",
+      "id": "5be7be20-ddd7-4c16-b440-f6e8b8ccb7e6",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Closing"
+    },
+    {
+      "collection": "tracks",
+      "id": "5ccc98c2-25fa-4751-8a7e-9acff3dab8af",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Adon Olam"
+    },
+    {
+      "collection": "tracks",
+      "id": "5ce468cb-1ee2-40bc-a67c-a0363dd7bccd",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Mi shebeirach"
+    },
+    {
+      "collection": "tracks",
+      "id": "5ed104f2-7cd4-453e-80e4-754efea5a1d3",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Birchot HaShachar"
+    },
+    {
+      "collection": "tracks",
+      "id": "5f13a7ef-a241-43be-925c-f930ccc20687",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Avodah"
+    },
+    {
+      "collection": "tracks",
+      "id": "5f21d409-f576-40ca-99d2-d2af7bb095bd",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Mizmor l_David D.pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "5f82ab1f-ff12-4b22-972e-179212c972bf",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Kedusha"
+    },
+    {
+      "collection": "tracks",
+      "id": "6053e8a8-016d-4fd6-b358-24ac90c79e75",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Sermon"
+    },
+    {
+      "collection": "tracks",
+      "id": "610aed99-2940-4ad3-b533-2e03af2f5e75",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Eitz chayim"
+    },
+    {
+      "collection": "tracks",
+      "id": "616d63f6-d744-49b1-9995-c074ba0e843c",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Barchu (Friedman)"
+    },
+    {
+      "collection": "tracks",
+      "id": "62bc6a26-f438-4725-84b4-c9deefa82901",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Eitz chayim"
+    },
+    {
+      "collection": "tracks",
+      "id": "63b3eeef-2dfa-493e-b3a2-468e26f2fabb",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Beginning"
+    },
+    {
+      "collection": "tracks",
+      "id": "643298c8-9674-4b12-9753-e40883f24871",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "T'filah"
+    },
+    {
+      "collection": "tracks",
+      "id": "645abf84-0a46-47b7-a1be-d344015a2942",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Silent Prayer"
+    },
+    {
+      "collection": "tracks",
+      "id": "64a980a7-1a9d-445c-8c00-e30aee7fe560",
+      "parentSetlistId": "6b412089-e201-4579-9cc6-dbe4cc42ce3f",
+      "name": "Lechu Goldman"
+    },
+    {
+      "collection": "tracks",
+      "id": "64ba832c-8c33-4c9e-9944-79a9d6dc2f57",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Yedid Nefesh"
+    },
+    {
+      "collection": "tracks",
+      "id": "657d58bb-c5aa-494d-8257-08b28a4a0ce8",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Rtsei"
+    },
+    {
+      "collection": "tracks",
+      "id": "6654ea25-8f72-4bf5-a3fa-90c818dcdd90",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Silent Prayer"
+    },
+    {
+      "collection": "tracks",
+      "id": "667c46a8-8a1f-452b-9903-1a6e19590446",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Closing"
+    },
+    {
+      "collection": "tracks",
+      "id": "67c27ad6-9be2-4a84-a318-a1c3df52a4cf",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Hoda'ah"
+    },
+    {
+      "collection": "tracks",
+      "id": "68cd0d23-0668-45ed-880f-526d4cabcf5c",
+      "parentSetlistId": "kQNvssixRlHQRB6gtWqt",
+      "name": "Modeh ani - Klepper"
+    },
+    {
+      "collection": "tracks",
+      "id": "6982b8ec-f515-4760-b5d2-9e3908201173",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Eitz chayim   Weisenberg"
+    },
+    {
+      "collection": "tracks",
+      "id": "6a102585-77fc-4ca0-9fa3-747f10481994",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Avodah"
+    },
+    {
+      "collection": "tracks",
+      "id": "6a8a2c37-9d4f-4af8-a5e1-5a37468ccc6a",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Mi chamocha E (Moshav)"
+    },
+    {
+      "collection": "tracks",
+      "id": "6b72ae06-04f8-46bc-b4c6-ea89bc4bbbca",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "T'filah"
+    },
+    {
+      "collection": "tracks",
+      "id": "6b7448c4-6a76-4b40-89ee-4ec3a20b463d",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Elohai neshama - Pourmorady"
+    },
+    {
+      "collection": "tracks",
+      "id": "6ba8941c-db9d-4c69-939f-bd6ea1a3c029",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Mi chamocha (6-8)"
+    },
+    {
+      "collection": "tracks",
+      "id": "6bae00e3-45b7-4750-ab30-0646e91addef",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Bar'chu Walkdown"
+    },
+    {
+      "collection": "tracks",
+      "id": "6cd18158-3ae7-48d8-b454-a922aaf320c4",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Torah Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "6d004cf1-977c-40cb-8ec8-e6d101b27e28",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "6d450374-d49c-4521-9946-5bc8adf1f09b",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Fiddley Tune"
+    },
+    {
+      "collection": "tracks",
+      "id": "6da45e30-b539-48ce-ba03-13e25f3056a0",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Sim_shalom"
+    },
+    {
+      "collection": "tracks",
+      "id": "6e674a7a-3d70-4605-b665-b2384f12de0e",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Mi shebeirach"
+    },
+    {
+      "collection": "tracks",
+      "id": "6f99d8a4-0374-4fa2-ad2c-e8537ec0b62b",
+      "parentSetlistId": "QQSsAK2XY4dc8k5sFXIa",
+      "name": "Shalom alechem (Goldfarb).pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "706705eb-92e0-4047-a426-5e69f97cb418",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Dodi Li"
+    },
+    {
+      "collection": "tracks",
+      "id": "70b8a48e-27ff-4193-a392-478f769263f4",
+      "parentSetlistId": "QQSsAK2XY4dc8k5sFXIa",
+      "name": "Mi chamocha (Moshav).pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "70fbfc40-619b-40db-92ab-33bf71dd4260",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Torah Service — Parashat Tazria-Metzora"
+    },
+    {
+      "collection": "tracks",
+      "id": "713d7c03-a17b-436a-8a5c-9ba0ac2f06bf",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Torah Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "719fa4ca-8f9b-485d-bbbb-b22f40d7bffd",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Hinei Mah Tov (Folk) - Hinei Mah Tov (Dropkin) - Hinei Mah Tov (Jacobson-Drozi)"
+    },
+    {
+      "collection": "tracks",
+      "id": "71efed42-d4b5-49c4-8c69-7dbb1fde8604",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Concluding prayers"
+    },
+    {
+      "collection": "tracks",
+      "id": "72a75adb-97a3-4a43-90e0-b74905096d06",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Bar'chu Walkdown"
+    },
+    {
+      "collection": "tracks",
+      "id": "72e376d4-9185-477e-aa64-1239f83bbfe8",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Ahava raba (echo)"
+    },
+    {
+      "collection": "tracks",
+      "id": "73a0623d-9008-4a6c-ab45-7ae8bc00437c",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Bar'chu Walkdown"
+    },
+    {
+      "collection": "tracks",
+      "id": "741d4f5e-c069-46aa-a773-40db57b815d3",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Ahava raba"
+    },
+    {
+      "collection": "tracks",
+      "id": "74a042f7-884d-49b2-b97c-16910a9101a2",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Warmup 2 (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "74a37cb5-f76c-49d8-a1f6-b39ccc08c232",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Barchu"
+    },
+    {
+      "collection": "tracks",
+      "id": "74e5b8a3-ba24-4ba4-90b8-1f1b91ab4402",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Leslie Cohen’s Hallelujah (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "75021685-33d5-4632-ad59-6bed58c39e69",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Silent Prayer"
+    },
+    {
+      "collection": "tracks",
+      "id": "7521fad5-0995-41ea-8c8c-86aeb4b3e335",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Aleinu Shur"
+    },
+    {
+      "collection": "tracks",
+      "id": "754f7757-702c-41fa-a2f7-5c3fc363ba99",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Ma'ariv Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "75887ce7-89c7-457b-a256-1601370b5771",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Oseh Shalom (Nava Tehila)"
+    },
+    {
+      "collection": "tracks",
+      "id": "75aef576-136a-4a5b-838d-0f5fb65b38f2",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Leslie Cohen’s Hallelujah (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "75ba8877-9eec-49f4-81d1-099032a6c4c4",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Shalom alechem (Goldfarb)"
+    },
+    {
+      "collection": "tracks",
+      "id": "7651af1f-ba0e-4dc7-b29c-27bfefb6fdd4",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Mi chamocha E (Moshav)"
+    },
+    {
+      "collection": "tracks",
+      "id": "76b803a2-31f5-4bd7-8129-7d989f2018a9",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Havdallah"
+    },
+    {
+      "collection": "tracks",
+      "id": "775ed5dc-66a0-4b5b-a6e0-5df1f8352a9e",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Mi chamocha (6-8)"
+    },
+    {
+      "collection": "tracks",
+      "id": "7855b698-b656-4288-a596-9df11f42e702",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Adon Olam"
+    },
+    {
+      "collection": "tracks",
+      "id": "786ed6b0-8c59-4ff3-80d4-bde346c6e305",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Ma'ariv Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "78f54829-e737-454e-a9b7-dffeb41cbf43",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Oseh shalom (camp)"
+    },
+    {
+      "collection": "tracks",
+      "id": "7968760a-f740-40fa-ac0e-5ed892915726",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Bar'chu Walkdown"
+    },
+    {
+      "collection": "tracks",
+      "id": "79c1d3fd-4a38-40c0-a3dd-2ce4c04d8512",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Hallelujah Jam"
+    },
+    {
+      "collection": "tracks",
+      "id": "79ed6871-e76e-4949-a1b7-3f99708543fa",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Birchot HaShachar"
+    },
+    {
+      "collection": "tracks",
+      "id": "7a2dfc18-24ab-45be-ae62-c66e00926fcb",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Aleinu"
+    },
+    {
+      "collection": "tracks",
+      "id": "7a449196-33b2-4a95-97db-8fe6236ea92a",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Kedusha Em"
+    },
+    {
+      "collection": "tracks",
+      "id": "7a8269de-64ed-4be9-b040-ec3c2facd3e6",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Musaf"
+    },
+    {
+      "collection": "tracks",
+      "id": "7aae5773-397c-4da7-bd47-d6d827ef65fd",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Musaf"
+    },
+    {
+      "collection": "tracks",
+      "id": "7ab03c35-9b35-4474-80f5-16620e6fc081",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Yeish L'Vavot (Silver)"
+    },
+    {
+      "collection": "tracks",
+      "id": "7ab8ba6b-ff0f-4a4d-8167-ea775f21115f",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Yotzeir or - Klepper"
+    },
+    {
+      "collection": "tracks",
+      "id": "7b55a085-368f-41a1-bf5f-0f84f50a70e1",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Chatzi Kaddish - yo"
+    },
+    {
+      "collection": "tracks",
+      "id": "7ba88a0f-fa40-4afa-bd29-a0d8820f8b6b",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Beginning"
+    },
+    {
+      "collection": "tracks",
+      "id": "7bd2ed5d-edcc-496e-8b9e-94185c9ddc4d",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Pre Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "7be11c16-0054-4f2a-bc98-f928f931e96d",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Kedusha"
+    },
+    {
+      "collection": "tracks",
+      "id": "7c11a062-9b23-4f98-b57c-03f77f7c3929",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "Aleinu Shur"
+    },
+    {
+      "collection": "tracks",
+      "id": "7d21434a-bea8-4109-8c03-55107663838e",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Kiddush"
+    },
+    {
+      "collection": "tracks",
+      "id": "7d5fc971-472e-4e36-a76e-36053d23ca7f",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": " Bar'chu Walkdown"
+    },
+    {
+      "collection": "tracks",
+      "id": "7e6c0955-1b67-4acf-b554-9825b4e6d11b",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "Welcome"
+    },
+    {
+      "collection": "tracks",
+      "id": "7f6de91a-e2c4-493a-810e-786d2ea64003",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Warmup 2 (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "807e1130-8635-42ec-a166-fcb4ffedfcfd",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Pre Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "8136dc99-d758-490e-a8c9-e597027c5f38",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Fiddley Tune"
+    },
+    {
+      "collection": "tracks",
+      "id": "81cf553f-9a2c-489a-9e8c-5f2769c3fb97",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Chatzi Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "82bffeb0-fa25-4492-a215-af0a4216b3ae",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Elohai neshama - Pourmorady"
+    },
+    {
+      "collection": "tracks",
+      "id": "82c3f2ef-60c3-4f94-8038-f6006730a074",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Mi chamocha (Moshav)"
+    },
+    {
+      "collection": "tracks",
+      "id": "8301c97d-e984-413f-9d3c-1e5a13c9f32f",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Mi Chamocha Ana B'Koach.pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "831c4839-24fe-4e36-b64b-8bb141b6dfc6",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Shiru L_Adonai Shir Shabbat.pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "834b81c4-3f8a-4bb0-ac18-bef817ebe917",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Ahava raba (echo)"
+    },
+    {
+      "collection": "tracks",
+      "id": "8354d607-54ff-42a4-a941-d840c26ca1ad",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "T'filah"
+    },
+    {
+      "collection": "tracks",
+      "id": "83d442b0-7fa7-423b-afb2-a2b09e0177a5",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Modeh Ani (Klepper-Freelander)"
+    },
+    {
+      "collection": "tracks",
+      "id": "83e8b000-9fac-4667-aa2e-248ced9a387f",
+      "parentSetlistId": "6b412089-e201-4579-9cc6-dbe4cc42ce3f",
+      "name": "Shiru L_Adonai Shir Shabbat"
+    },
+    {
+      "collection": "tracks",
+      "id": "856c246f-fe2c-47c6-90b5-27dbb7a923d0",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Kabbalat Shabbat"
+    },
+    {
+      "collection": "tracks",
+      "id": "85cdba31-03ac-42a3-bb21-216f6a9c7201",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "D'var Torah"
+    },
+    {
+      "collection": "tracks",
+      "id": "8654dc52-709a-4b53-bd23-a2c2fb5f40a1",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Lecha Dodi Lincoln's Nigun"
+    },
+    {
+      "collection": "tracks",
+      "id": "8659f24b-5f13-4ee3-b801-4f03bcc9b07d",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Eitz chayim"
+    },
+    {
+      "collection": "tracks",
+      "id": "866d85a0-9cac-40ce-9ad0-6a7cc427a5df",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Birchot Hashachar"
+    },
+    {
+      "collection": "tracks",
+      "id": "86ba1d3b-8878-4d06-aef7-00f866550327",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Bar'chu Walkdown"
+    },
+    {
+      "collection": "tracks",
+      "id": "86bed565-d118-4f99-a449-853c15b7a344",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Hakafah"
+    },
+    {
+      "collection": "tracks",
+      "id": "873ca53c-daee-4456-8550-c1b403e06896",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Dvar torah"
+    },
+    {
+      "collection": "tracks",
+      "id": "8775733d-4c5f-4f35-9b36-0aa9f603206b",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Leslie Cohen’s Hallelujah (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "8856daac-32d2-4469-984a-cf2cec267f90",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Shema (major)"
+    },
+    {
+      "collection": "tracks",
+      "id": "89921d05-9239-4fe5-bddc-79edd85e48bf",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Birchot HaShachar"
+    },
+    {
+      "collection": "tracks",
+      "id": "89cf0a20-06ff-4806-b3b6-99cd1fb23c76",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Matir Asurim B minor"
+    },
+    {
+      "collection": "tracks",
+      "id": "8a81fd71-f3f5-4944-9975-98a8750e4c25",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Hallelujah Chorus"
+    },
+    {
+      "collection": "tracks",
+      "id": "8acbd545-0c66-41fe-91ea-b692fd7e95e6",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Hashkivenu"
+    },
+    {
+      "collection": "tracks",
+      "id": "8ad1f167-a68d-4470-8c27-9d94a7feabb3",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Oseh Shalom"
+    },
+    {
+      "collection": "tracks",
+      "id": "8b28c6f6-75ff-4286-ac25-cad2a39ae7cb",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Drash"
+    },
+    {
+      "collection": "tracks",
+      "id": "8b834baf-e46e-49e8-b846-5e35dca9db32",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Torah Service — Parashat Vayakhel-Pekudei"
+    },
+    {
+      "collection": "tracks",
+      "id": "8c3e130c-09dd-4335-b959-ac45d5298ce5",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Mourner's Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "8c6913eb-846b-4554-b60c-c51e942b97c5",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Eitz Chayim"
+    },
+    {
+      "collection": "tracks",
+      "id": "8c8444fa-fece-4e39-8519-ae45b7939c21",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Announcements"
+    },
+    {
+      "collection": "tracks",
+      "id": "8dd2431c-2376-417d-8166-e0cc1548b2fa",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Avot v'Imahot"
+    },
+    {
+      "collection": "tracks",
+      "id": "8e2fbc6d-2c8d-4bdb-abc2-5bcc0edd8cfc",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Healing Prayer 2: Mi shebeirach"
+    },
+    {
+      "collection": "tracks",
+      "id": "8fb9c8e7-74b8-4e03-9976-0521b1c8fdcb",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Announcements"
+    },
+    {
+      "collection": "tracks",
+      "id": "904079f7-5f2b-456f-9e5b-503886c4accd",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Birchot HaShachar"
+    },
+    {
+      "collection": "tracks",
+      "id": "9040bff0-4481-4231-9b5d-8d4548be30ec",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Psukei d'zimrah"
+    },
+    {
+      "collection": "tracks",
+      "id": "91b55811-fe13-4c61-b0b4-c637d6775976",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Mi chamocha E (Moshav)"
+    },
+    {
+      "collection": "tracks",
+      "id": "91c667c8-6ece-4e6b-a99c-29dccb11b553",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Ma'ariv Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "920b7480-1de8-402c-901f-7b02c53ad54b",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "D'var Torah"
+    },
+    {
+      "collection": "tracks",
+      "id": "929cc174-f5ba-476c-8636-6fdfbf7b3c16",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Oseh shalom - Nava tehila"
+    },
+    {
+      "collection": "tracks",
+      "id": "92cbec9a-d05f-4266-9ccd-360cf08003d8",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Psukei d_zimrah"
+    },
+    {
+      "collection": "tracks",
+      "id": "93548cfa-dae8-4f61-8a07-ab8f73ae90b7",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Eitz chayim - Weisenberg"
+    },
+    {
+      "collection": "tracks",
+      "id": "9362ade8-bdcd-43f6-901f-292d54ee932e",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "C-Saw Niggun Score"
+    },
+    {
+      "collection": "tracks",
+      "id": "936410ca-6b59-4298-a651-d08332310429",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Mizmor l'David"
+    },
+    {
+      "collection": "tracks",
+      "id": "944300c2-21f5-4217-9055-a1a852b40cff",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Silent Prayer"
+    },
+    {
+      "collection": "tracks",
+      "id": "946e663b-7ae2-40da-8063-cc9bac3f154c",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Mourner's Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "9479f6ca-ff5e-4e2d-b2be-57fe286835b0",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Psukei d_zimrah"
+    },
+    {
+      "collection": "tracks",
+      "id": "9548cb68-85d7-45eb-8cd3-7fee11fe53e5",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Torah Service — Parashat Emor"
+    },
+    {
+      "collection": "tracks",
+      "id": "954caad8-07ea-4c9a-ba5d-e3f282f51e8a",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Sermon"
+    },
+    {
+      "collection": "tracks",
+      "id": "95db9917-28e0-422c-9bec-c757aa85f660",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Hoda'ah"
+    },
+    {
+      "collection": "tracks",
+      "id": "95ff7481-40d2-4315-8159-561da4df64eb",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Hinei Mah Tov (Folk) - Hinei Mah Tov (Dropkin) - Hinei Mah Tov (Jacobson-Drozi)"
+    },
+    {
+      "collection": "tracks",
+      "id": "96fbad08-a52f-4efc-bcf3-2f9cda05c529",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Tu Bishvat"
+    },
+    {
+      "collection": "tracks",
+      "id": "96fde01f-aff4-4b33-81c1-591b4095026c",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Drash"
+    },
+    {
+      "collection": "tracks",
+      "id": "9902e245-46f9-4e45-a792-47dc2e3b6de9",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "G'vurot"
+    },
+    {
+      "collection": "tracks",
+      "id": "991bd227-59c0-4070-98df-740a2d5c15b6",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Leslie Cohen’s Hallelujah (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "99d86e80-8381-4e35-96cf-fb13fc70d997",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Hakafah"
+    },
+    {
+      "collection": "tracks",
+      "id": "9a9ed1ea-178b-4a2e-a1c0-d163fa548af2",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Avodah"
+    },
+    {
+      "collection": "tracks",
+      "id": "9afe050e-db2c-416d-952a-bf0800fa729c",
+      "parentSetlistId": "QQSsAK2XY4dc8k5sFXIa",
+      "name": "Shalom Rav (Klepper-Freelander).pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "9bcd476c-b6ec-4512-80fa-f81dda9cc4f5",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Aleinu Shur"
+    },
+    {
+      "collection": "tracks",
+      "id": "9c514095-981d-44de-8412-535dd6c420a5",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Kedusha Em"
+    },
+    {
+      "collection": "tracks",
+      "id": "9c9c488f-1a16-477f-961b-c3d6c8a6c38d",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Adonai sfatai (trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "9cabf3db-fd54-4e12-acdb-fd708eef98d2",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Haftarah Blessings (Cantillation)"
+    },
+    {
+      "collection": "tracks",
+      "id": "9d852543-34d4-406e-98b6-d01b81036377",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Shokhein Ad"
+    },
+    {
+      "collection": "tracks",
+      "id": "9d9bda8c-54bf-467b-95b4-fb60075ea799",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Mourner's Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "9e394706-59fa-4ef9-8ac1-d515cf430127",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Chanted Shema"
+    },
+    {
+      "collection": "tracks",
+      "id": "9f8f576a-0626-4845-98f7-e92088c70380",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Keddusha"
+    },
+    {
+      "collection": "tracks",
+      "id": "a06c3bf5-9bc9-497d-a91e-67545168a383",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Barchu (walkdown)"
+    },
+    {
+      "collection": "tracks",
+      "id": "a06fae0b-7c1f-4a1e-87c6-030d94743237",
+      "parentSetlistId": "6b412089-e201-4579-9cc6-dbe4cc42ce3f",
+      "name": "Mi Chamocha Ana B'Koach"
+    },
+    {
+      "collection": "tracks",
+      "id": "a0c6eda1-0182-4ede-aa38-40e04da6cf22",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Silent Prayer"
+    },
+    {
+      "collection": "tracks",
+      "id": "a0ec9a3a-6753-4c44-80a8-c65a2094bec4",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Torah service"
+    },
+    {
+      "collection": "tracks",
+      "id": "a2130c73-090b-43dd-8c0a-36ebd6a7d59e",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Shema "
+    },
+    {
+      "collection": "tracks",
+      "id": "a2cacad2-5c15-4aa0-b0be-fc741c18670b",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "V_shamru_(trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "a2de5088-4b03-4c6b-bf35-5ed0d3daf322",
+      "parentSetlistId": "QQSsAK2XY4dc8k5sFXIa",
+      "name": "Hinei Mah Tov (Folk) - Hinei Mah Tov (Dropkin) - Hinei Mah Tov (Jacobson-Drozi).pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "a37dd1b0-5ca4-451c-9ca5-4d51c9fbb972",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Psukei d_zimrah"
+    },
+    {
+      "collection": "tracks",
+      "id": "a3d0a350-f062-4255-a45d-d71fa0040371",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "dodi li (sher)"
+    },
+    {
+      "collection": "tracks",
+      "id": "a4369b34-dbc5-48ee-80ed-42696f885910",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Chatzi Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "a460a8ea-29b5-4a68-b47f-6b55f057a86b",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Ahava raba"
+    },
+    {
+      "collection": "tracks",
+      "id": "a464cfdb-e8fe-4d3b-987d-dc4bb30ed531",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Mi chamocha (6-8)"
+    },
+    {
+      "collection": "tracks",
+      "id": "a48d714b-f2ec-4934-968c-3484e095a411",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Gevurot"
+    },
+    {
+      "collection": "tracks",
+      "id": "a51b172c-75bf-45e4-b399-2846df753c91",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Oseh shalom (camp)"
+    },
+    {
+      "collection": "tracks",
+      "id": "a53870c5-c4f9-4e0d-ba28-e61771ecd305",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Tu Bishvat"
+    },
+    {
+      "collection": "tracks",
+      "id": "a5b81c99-5984-4ecb-9b79-28ce7bde5d81",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Eitz chayim   Weisenberg"
+    },
+    {
+      "collection": "tracks",
+      "id": "a6050c0d-f594-4c5a-a077-06e442586e97",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "a61a443e-846c-40f5-b104-4dec4203964d",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Barchu (Friedman)"
+    },
+    {
+      "collection": "tracks",
+      "id": "a6f18684-529d-4bb3-8a63-fcced0af4e88",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Psukei d_zimrah"
+    },
+    {
+      "collection": "tracks",
+      "id": "a8a8ecad-355b-42be-9984-e7e5e19b2c80",
+      "parentSetlistId": "6b412089-e201-4579-9cc6-dbe4cc42ce3f",
+      "name": "Adonai sfatai (trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "aa3a8e6b-d14f-4087-98aa-68886260869b",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Adon Olam"
+    },
+    {
+      "collection": "tracks",
+      "id": "aa9938a0-363b-4392-8ac7-971bec04986d",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Adonai sfatai (trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "abd4d215-7755-413e-8ada-7d662145867d",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Silent Prayer"
+    },
+    {
+      "collection": "tracks",
+      "id": "ac4a7dbc-e5e4-44db-9db9-fb2401bb02ab",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Fiddley Tune"
+    },
+    {
+      "collection": "tracks",
+      "id": "ac5c49b1-8ed0-42bf-aa1a-88cd0c65c4bb",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Shema Em"
+    },
+    {
+      "collection": "tracks",
+      "id": "aca9e791-eb9c-4f96-8734-fe8980b6f3fb",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Shema (major).pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "ad08d922-488e-44aa-aeb8-d08e52553e6b",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Ahava raba"
+    },
+    {
+      "collection": "tracks",
+      "id": "ad38d65a-fafd-4d6d-8cc7-b7c612c767e6",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "V'shamru (Eitan's)"
+    },
+    {
+      "collection": "tracks",
+      "id": "ad56e973-a95e-4936-b547-7b05540691fe",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "Mourner's Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "b0574ec8-7027-452e-bc06-7952bbbadb8a",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Announcements"
+    },
+    {
+      "collection": "tracks",
+      "id": "b152b103-58a2-48cb-a837-65d5a6c1c4e8",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Tu Bishvat"
+    },
+    {
+      "collection": "tracks",
+      "id": "b180d17d-143d-4293-9f7b-905592ec9355",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Mi chamocha (6-8)"
+    },
+    {
+      "collection": "tracks",
+      "id": "b208ac20-349e-4429-ada9-7713d6a03dee",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Mizmor l_David D.pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "b208b366-0057-4c68-a603-cc1e70d443ca",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Warmup 3 (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "b2166d9b-bb48-4cc0-8b80-6c4b7377d712",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Sim_shalom"
+    },
+    {
+      "collection": "tracks",
+      "id": "b27b7546-ad44-49a0-a7c1-094ed2f78951",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Sim Shalom (Silver)"
+    },
+    {
+      "collection": "tracks",
+      "id": "b2888f4a-d535-4dc5-b07b-d55f32ffdba0",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "Niggun - Bonia Shur"
+    },
+    {
+      "collection": "tracks",
+      "id": "b3e09133-123f-444c-8099-4249189b4f36",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Beginning"
+    },
+    {
+      "collection": "tracks",
+      "id": "b4059d1e-8dc2-4187-86ba-06938371727b",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Drash"
+    },
+    {
+      "collection": "tracks",
+      "id": "b420ddad-256d-47d2-954d-fd371598b46d",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Ana B'Koach (as of 3 27 26)"
+    },
+    {
+      "collection": "tracks",
+      "id": "b45dfff7-07eb-4e00-8f58-7ef8a33e3ca6",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Gevurot"
+    },
+    {
+      "collection": "tracks",
+      "id": "b4d68837-142c-4352-84ff-d054a6774079",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Adonai sfatai (trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "b5e0c9fd-28b3-44d2-a2f9-cc01cfbe6ece",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Barchu"
+    },
+    {
+      "collection": "tracks",
+      "id": "b5f3a308-c4e9-4922-9ff0-8be46c50e83a",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Ma tovu_Hinei ma tov - trad"
+    },
+    {
+      "collection": "tracks",
+      "id": "b618f2da-790d-4820-9fc9-2aa1583ebf28",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Parent Blessing"
+    },
+    {
+      "collection": "tracks",
+      "id": "b6fd18b8-881c-42ee-a818-91985a61d4e8",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "Shavu-A Tov (Klepper)"
+    },
+    {
+      "collection": "tracks",
+      "id": "b7d4a6f1-2c90-43cd-bacf-648052c0cdb4",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "B'nei Mitzvah Ceremony"
+    },
+    {
+      "collection": "tracks",
+      "id": "b9d8b087-64e3-45f1-9284-947ab3a99a29",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Kedusha Em"
+    },
+    {
+      "collection": "tracks",
+      "id": "ba6a6174-0b40-46f7-92e8-0c43ce3101fa",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Kedusha Em"
+    },
+    {
+      "collection": "tracks",
+      "id": "bb46112b-eea9-478b-960c-57687d9bd23b",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Beginning"
+    },
+    {
+      "collection": "tracks",
+      "id": "bb9ab013-366e-4dc9-b4a9-10ce3854f29f",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Shema (minor vamp)"
+    },
+    {
+      "collection": "tracks",
+      "id": "bc063cc5-aaa5-44f7-bcee-de8ea5368ee2",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Haftarah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "bc5748fc-718a-415f-b9bb-a7f487bbde0d",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Fiddley Tune"
+    },
+    {
+      "collection": "tracks",
+      "id": "bcc80b1d-40f5-4b43-92e3-3eb144d52f97",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Hinei Mah Tov (Folk) - Hinei Mah Tov (Dropkin) - Hinei Mah Tov (Jacobson-Drozi)"
+    },
+    {
+      "collection": "tracks",
+      "id": "bcce34e4-8cb7-460c-adba-04d1ba599d94",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Closing Blessing"
+    },
+    {
+      "collection": "tracks",
+      "id": "bce4bf25-2bfa-4d73-9b4c-bf15bc19c9e5",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "bd09fb0f-7ca2-4c6c-a516-c41d4dfda936",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Pre service"
+    },
+    {
+      "collection": "tracks",
+      "id": "bd31435b-ce95-42b5-a744-ddf5911805b6",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Torah Service — Parashat Emor"
+    },
+    {
+      "collection": "tracks",
+      "id": "bd8625ed-7905-404b-81c3-015cc4c24739",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Mi chamocha E (Moshav)"
+    },
+    {
+      "collection": "tracks",
+      "id": "bdba2f5d-f48c-4014-9af8-6a22388385d8",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Psukei d_zimrah"
+    },
+    {
+      "collection": "tracks",
+      "id": "be4f0357-db89-43ba-b01e-491533a67d04",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "L'Cha Dodi Dmin .pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "be556b38-7f2c-4885-9bbd-dd9fc0b553e5",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Mizmor Shiru Ladonai"
+    },
+    {
+      "collection": "tracks",
+      "id": "be90fe4d-f201-4f29-800d-af5acc902375",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Ve Imru Amen Choir"
+    },
+    {
+      "collection": "tracks",
+      "id": "bf14af8a-922a-4086-9df0-de1069abe731",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Oseh shalom (camp)"
+    },
+    {
+      "collection": "tracks",
+      "id": "c0372caf-1f7e-417a-90a7-f2d4672a9b42",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Outro (after closing blessing)"
+    },
+    {
+      "collection": "tracks",
+      "id": "c05025c2-12e2-4fda-add2-00ea7ea2959b",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Warmup 2 (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "c0eac272-6aa8-4577-9431-180a238306b3",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Fiddley Tune"
+    },
+    {
+      "collection": "tracks",
+      "id": "c1452d4b-d8e8-4f00-ab69-8f9cf7ccd086",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Hakafah"
+    },
+    {
+      "collection": "tracks",
+      "id": "c160b20c-dd6c-432b-ad86-3d396663fb83",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Veshamru"
+    },
+    {
+      "collection": "tracks",
+      "id": "c18bf734-8e08-44ae-b3f0-aca8414d675d",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Psukei d'Zimrah"
+    },
+    {
+      "collection": "tracks",
+      "id": "c22c4522-07a4-4814-ae9c-a56c63b465e7",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Mi chamocha (6-8)"
+    },
+    {
+      "collection": "tracks",
+      "id": "c23641f6-04c1-4462-886c-78d5eb8f29f9",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Shema"
+    },
+    {
+      "collection": "tracks",
+      "id": "c25dfd67-de4b-4b24-a492-b5c3f5c18006",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Mizmor leDavid"
+    },
+    {
+      "collection": "tracks",
+      "id": "c38d1bcb-b415-4946-aff1-05a80e42235c",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Kedusha Em"
+    },
+    {
+      "collection": "tracks",
+      "id": "c39c7b75-4f2a-4c90-8826-d83ee26d4d44",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Barchu (Friedman)"
+    },
+    {
+      "collection": "tracks",
+      "id": "c3e7f7e6-d4af-4582-8127-25256264b855",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "Parent Blessing"
+    },
+    {
+      "collection": "tracks",
+      "id": "c42153fc-bffa-444a-9983-83a33bdf496d",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Closing Blessing"
+    },
+    {
+      "collection": "tracks",
+      "id": "c46557e0-6d10-4720-b81f-36d9d596a1b5",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Silent Prayer"
+    },
+    {
+      "collection": "tracks",
+      "id": "c476dd10-9636-49dc-9146-b4faa49c7cff",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Eitz chayim   Weisenberg"
+    },
+    {
+      "collection": "tracks",
+      "id": "c488fb60-641d-4a52-9fbe-b08d914af3b7",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Leslie Cohen’s Hallelujah (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "c589f50c-ef0f-4ae4-b30a-fda73bb8678b",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Silent Prayer"
+    },
+    {
+      "collection": "tracks",
+      "id": "c5d5043a-36b1-41ce-b351-49ad860ec6ad",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Gevurot"
+    },
+    {
+      "collection": "tracks",
+      "id": "c6128dcf-5c69-41d7-837f-04176a85995f",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Avot v'Imahot"
+    },
+    {
+      "collection": "tracks",
+      "id": "c62c903b-88ca-4eb9-9a14-55987cabebc4",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Haftarah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "c69bfff3-6660-49d2-8451-5b1c0e695578",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Birchot HaShachar"
+    },
+    {
+      "collection": "tracks",
+      "id": "c6ac0e40-8e87-4bec-87fa-2692ebb0b59a",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "D'var Torah"
+    },
+    {
+      "collection": "tracks",
+      "id": "c811c212-547f-48fc-8d43-07f7d33cc285",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Mi shebeirach"
+    },
+    {
+      "collection": "tracks",
+      "id": "c84129f8-4ffe-47e3-90b9-587d5223fe20",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Dvar torah"
+    },
+    {
+      "collection": "tracks",
+      "id": "c9d7030c-f84e-47dc-a329-ef53e9b23858",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Fiddley Tune"
+    },
+    {
+      "collection": "tracks",
+      "id": "ca9ef435-5b2b-4981-9b3d-b1582a229218",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Modeh ani - Klepper"
+    },
+    {
+      "collection": "tracks",
+      "id": "cae16117-0862-4cce-a44b-b3b37d86c38d",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Closing Blessing"
+    },
+    {
+      "collection": "tracks",
+      "id": "cce57544-f727-48a1-8ca0-5bbc18cd4a04",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Ma tovu_Hinei ma tov - trad"
+    },
+    {
+      "collection": "tracks",
+      "id": "cde9c415-6e48-4a90-b491-f560a0cc9ecc",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Psukei d_zimrah"
+    },
+    {
+      "collection": "tracks",
+      "id": "ce711967-8922-4bdd-b2e3-3929aa6d9ad2",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Avot v'Imahot"
+    },
+    {
+      "collection": "tracks",
+      "id": "ce8131b9-456f-415d-8666-dfd2a6740910",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "cec6cba2-2ca7-4b38-8afb-0e189dcffa12",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Gevurot"
+    },
+    {
+      "collection": "tracks",
+      "id": "cf6ba40f-9911-4544-a697-f80aaaf1acfa",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Adonai sfatai (trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "cf76abfe-dec7-40fe-a089-c0584737224c",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Announcements"
+    },
+    {
+      "collection": "tracks",
+      "id": "d00006c5-ff0f-4b87-a7d2-0668394fb7e5",
+      "parentSetlistId": "6b412089-e201-4579-9cc6-dbe4cc42ce3f",
+      "name": "dodi li (sher)"
+    },
+    {
+      "collection": "tracks",
+      "id": "d002315b-2ddd-4955-a65b-961f070cd9f9",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "V'ahavta"
+    },
+    {
+      "collection": "tracks",
+      "id": "d0f34168-4321-48bf-8939-9dea9c996b6d",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Mi chamocha (6-8)"
+    },
+    {
+      "collection": "tracks",
+      "id": "d153372b-d62a-4f25-bbca-57cb155a24f0",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Eitz chayim   Weisenberg"
+    },
+    {
+      "collection": "tracks",
+      "id": "d1711c52-9d59-4d05-b73f-59afeef6e0a0",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "d251ae44-159f-463a-904c-955b16158da7",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Avodah"
+    },
+    {
+      "collection": "tracks",
+      "id": "d2958188-3e2c-4ee4-a1d2-497447f6d066",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Shema (major)"
+    },
+    {
+      "collection": "tracks",
+      "id": "d2ef2f30-f936-4363-b76f-7af9c95a3598",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Pre Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "d3bf7b01-47eb-43b1-8422-ca7b19ff04f3",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Tefillah"
+    },
+    {
+      "collection": "tracks",
+      "id": "d3d1fdb4-b083-41f1-b643-15906e4ad796",
+      "parentSetlistId": "6b412089-e201-4579-9cc6-dbe4cc42ce3f",
+      "name": "Shema (major)"
+    },
+    {
+      "collection": "tracks",
+      "id": "d4b83618-275a-44f1-9a57-de6b64eb52bb",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "P'sukei D'zimra"
+    },
+    {
+      "collection": "tracks",
+      "id": "d5004cb9-1566-4583-b893-5beb4b39a072",
+      "parentSetlistId": "QQSsAK2XY4dc8k5sFXIa",
+      "name": "Barchu (Friedman).pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "d544774f-a5fd-46ec-b251-be086242037d",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Ahava raba (echo)"
+    },
+    {
+      "collection": "tracks",
+      "id": "d5ebe2fc-3f65-4826-9d97-4efac374c3e7",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Mizmor Shiru Ladonai"
+    },
+    {
+      "collection": "tracks",
+      "id": "d69eebd1-80c6-403e-af9b-f0a997d157d4",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Closing Blessing"
+    },
+    {
+      "collection": "tracks",
+      "id": "d7c1f825-853f-4827-a659-090211c0e954",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Drash"
+    },
+    {
+      "collection": "tracks",
+      "id": "d7ccad57-a084-4048-bd03-a24744f2f8b1",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Shema (major)"
+    },
+    {
+      "collection": "tracks",
+      "id": "d7f47d73-0e24-44cf-948f-7174ea245db2",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "T'filah"
+    },
+    {
+      "collection": "tracks",
+      "id": "d83f5a26-a108-489b-90eb-024af2fb952d",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Beginning"
+    },
+    {
+      "collection": "tracks",
+      "id": "d9cf8f35-0fd2-46f9-82a7-2329277acb84",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "T'filah"
+    },
+    {
+      "collection": "tracks",
+      "id": "da3fd278-ce6c-42a9-9454-16824b1ad753",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Adonai sfatai (trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "da500d61-a876-4422-a437-be9cf2f60d53",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "B'nei Mitzvah Ceremony"
+    },
+    {
+      "collection": "tracks",
+      "id": "da810ef7-df23-4902-961b-427be30ca88e",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Avodah"
+    },
+    {
+      "collection": "tracks",
+      "id": "dacb5c2f-b64f-4320-a524-eed6427ebf76",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Adonai sfatai (trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "dacee60d-6bcc-43be-a6e7-266b2080b882",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Drash"
+    },
+    {
+      "collection": "tracks",
+      "id": "db90dd35-0d5b-45f5-9a50-0a93a307a418",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Eitz chayim"
+    },
+    {
+      "collection": "tracks",
+      "id": "dc1904b9-9c31-423a-b6bb-fa71634d5daf",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Mourner's Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "dc7c3409-94eb-4ffe-b75d-436b5b0f4dc7",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Torah Service — Parashat Emor"
+    },
+    {
+      "collection": "tracks",
+      "id": "dd25760f-fe18-440c-b10f-79edcc8c1c32",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Shalom Alechem Shir Shabbat.pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "dd4f21ab-fffe-4533-87ef-40b1c66f2709",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Shalom Alechem (avishai)"
+    },
+    {
+      "collection": "tracks",
+      "id": "de23b121-9477-4f7d-b043-2d37518b089d",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Yotzeir or - Klepper"
+    },
+    {
+      "collection": "tracks",
+      "id": "e0c64056-9674-4f52-8e35-4f45db0e9b25",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Ve Imru Amen Choir"
+    },
+    {
+      "collection": "tracks",
+      "id": "e2a9f2f2-9a3a-4e50-b3ae-de861355a4a7",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "Birchot Havdalah (Friedman) - Hamavdil Bein Kodesh-Shavu-A Tov"
+    },
+    {
+      "collection": "tracks",
+      "id": "e3056ed8-1e36-431f-b74e-9ed082966de5",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Ve Imru Amen Choir"
+    },
+    {
+      "collection": "tracks",
+      "id": "e358e64c-39f6-406d-8342-c31295fa1fe2",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Closing"
+    },
+    {
+      "collection": "tracks",
+      "id": "e3d60eb5-f4fc-4fd9-aacb-012499986ebb",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Barchu (walkdown)"
+    },
+    {
+      "collection": "tracks",
+      "id": "e4ab04b6-03a7-42d9-aae6-3f1453161614",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "B'nei Mitzvah Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "e52bc187-f0a9-4bbd-b5ab-ba76a2c10768",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Ahava raba"
+    },
+    {
+      "collection": "tracks",
+      "id": "e5de0c71-5386-4834-bf79-b94557224569",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Reader's Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "e65e9ee4-1a4d-447c-bf72-798573f04017",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "V'ahavta"
+    },
+    {
+      "collection": "tracks",
+      "id": "e67de292-d912-47c2-8298-00d1d7ecd43f",
+      "parentSetlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "name": "Torah Service — Parashat Emor"
+    },
+    {
+      "collection": "tracks",
+      "id": "e6830fbc-d0ca-46f6-8a37-44f3379ea84d",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Oseh shalom - Nava tehila"
+    },
+    {
+      "collection": "tracks",
+      "id": "e6dea6b5-9188-4bcc-8f28-bfcdb0ced38b",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Adonai S'fatai"
+    },
+    {
+      "collection": "tracks",
+      "id": "e81a655d-0074-44f1-a1fe-aef1d7727be4",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Gevurot"
+    },
+    {
+      "collection": "tracks",
+      "id": "e83bf802-5124-47d3-a074-a1fe80472401",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Leslie Cohen’s Hallelujah (unmatched)"
+    },
+    {
+      "collection": "tracks",
+      "id": "e8c20640-b319-4290-8e86-83be8fe1fca5",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Shalom Rav (klepper)"
+    },
+    {
+      "collection": "tracks",
+      "id": "e8dff237-56cb-42ab-8ccd-7ddcf097ede5",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Shema (major)"
+    },
+    {
+      "collection": "tracks",
+      "id": "e90acff7-b4ea-4258-88cc-d84a2a1bc47a",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Aleinu"
+    },
+    {
+      "collection": "tracks",
+      "id": "e9179406-7229-4ca6-b434-e08e8f3454a2",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Shema (major)"
+    },
+    {
+      "collection": "tracks",
+      "id": "e95b991a-9b15-4a1b-ac28-41b9b6eee1a8",
+      "parentSetlistId": "6b412089-e201-4579-9cc6-dbe4cc42ce3f",
+      "name": "L'Cha Dodi Dmin"
+    },
+    {
+      "collection": "tracks",
+      "id": "e963589b-fc0b-4ca6-8491-2abe93386233",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Hinei Mah Tov (Folk) - Hinei Mah Tov (Dropkin) - Hinei Mah Tov (Jacobson-Drozi)"
+    },
+    {
+      "collection": "tracks",
+      "id": "e9f98996-05c3-4473-bf81-789c8dfc6a7f",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Fiddley Tune"
+    },
+    {
+      "collection": "tracks",
+      "id": "ea71dcd6-2093-4fa3-91e7-d76e3595b9fe",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Shiru L_Adonai Shir Shabbat.pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "eb462827-7349-43ed-878a-eb31dbc67a85",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Gevurot"
+    },
+    {
+      "collection": "tracks",
+      "id": "eb57a8bd-6f25-40e8-81cb-707a8f086390",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Torah Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "eb7edb8a-dcf9-4fca-8c85-71b4b9151b1e",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Oseh shalom - Nava tehila"
+    },
+    {
+      "collection": "tracks",
+      "id": "ec915e4f-c98c-46fb-bb1c-4117ae99568e",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Fiddley Tune"
+    },
+    {
+      "collection": "tracks",
+      "id": "ec98aa2a-c4f8-440e-9c17-a6e5099fee44",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "L'Cha Dodi (nava)"
+    },
+    {
+      "collection": "tracks",
+      "id": "ed28c607-58e5-4af0-9f9b-c244fa3569ff",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Hashkivenu (Randy)"
+    },
+    {
+      "collection": "tracks",
+      "id": "ed76cf28-e023-449d-bc4f-3ed0072acdc2",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Lecha Dodi Erev Shel Shoshanim"
+    },
+    {
+      "collection": "tracks",
+      "id": "edc578b3-5cb1-4a00-8f05-8028c20d7935",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Shalom Alechem Shir Shabbat"
+    },
+    {
+      "collection": "tracks",
+      "id": "ee38c2ac-8036-4f46-9fde-a373357679bc",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Avot v'Imahot"
+    },
+    {
+      "collection": "tracks",
+      "id": "ee4e6f3e-fa0f-4024-a3f3-c39258811841",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Shema (major).pdf"
+    },
+    {
+      "collection": "tracks",
+      "id": "eefcc56f-160d-49cc-add6-22c343e7da8d",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Hakafah"
+    },
+    {
+      "collection": "tracks",
+      "id": "ef1999d1-9793-400a-aaa2-1c8ea054356b",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Shiru L Adonai Shir Shabbat"
+    },
+    {
+      "collection": "tracks",
+      "id": "ef7850fb-1485-4f7c-b788-4a4b2c6ed6b2",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Barchu (Friedman)"
+    },
+    {
+      "collection": "tracks",
+      "id": "ef96bffb-b249-4e73-98af-bce49d2fbefc",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Eitz chayim   Weisenberg"
+    },
+    {
+      "collection": "tracks",
+      "id": "efc4b1f9-64e6-41ac-8450-62e909c9f247",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Elohai neshama - Pourmorady"
+    },
+    {
+      "collection": "tracks",
+      "id": "f079d5e9-c3de-430c-8d8b-01d606168d8a",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Closing"
+    },
+    {
+      "collection": "tracks",
+      "id": "f21053df-e674-4a39-950c-e285ec0854a1",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Kiddush?"
+    },
+    {
+      "collection": "tracks",
+      "id": "f2916c06-91f5-46bc-adce-3b9320e61788",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Aleinu Shur"
+    },
+    {
+      "collection": "tracks",
+      "id": "f31c59b0-05fc-4ba8-863e-a18b89bfe0c4",
+      "parentSetlistId": "CTAi6kgkTUpGYMO1Ffx7",
+      "name": "Mi shebeirach"
+    },
+    {
+      "collection": "tracks",
+      "id": "f38341bc-ebd3-4a0d-81cb-9de3a7f70d3d",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Silent Prayer"
+    },
+    {
+      "collection": "tracks",
+      "id": "f3a41ac5-aff1-442d-b884-da8f6f0adfe2",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "M'kimi (Eitan's)"
+    },
+    {
+      "collection": "tracks",
+      "id": "f43b963b-e0a1-40ca-911e-8e24dde15945",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "INTRO"
+    },
+    {
+      "collection": "tracks",
+      "id": "f491a961-92cf-4268-99b6-96e1a90d1af8",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "P'sukei D'zimra"
+    },
+    {
+      "collection": "tracks",
+      "id": "f502091d-ef15-42ab-824d-556ab80da1f3",
+      "parentSetlistId": "WoguRLMMTOv24o1G2ew3",
+      "name": "Torah Reading"
+    },
+    {
+      "collection": "tracks",
+      "id": "f696bf2c-f5c9-484a-91d3-4c9bb291e0e4",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Torah Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "f698b591-b731-457e-a6fb-235af61c1edc",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Mi chamocha (6-8)"
+    },
+    {
+      "collection": "tracks",
+      "id": "f7cadb61-04fc-4be1-b74e-335ad333562c",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Ahava raba (echo)"
+    },
+    {
+      "collection": "tracks",
+      "id": "f8255482-8358-48ea-bfa7-aba6a85b4c50",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Ahava raba"
+    },
+    {
+      "collection": "tracks",
+      "id": "f8c02a19-fe5a-4e23-881b-d37dfc3fbcbe",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Mi chamocha (6-8)"
+    },
+    {
+      "collection": "tracks",
+      "id": "f9053b2c-ef2c-4939-b17f-da667378b184",
+      "parentSetlistId": "ZR8PcmFuDvM8gdYErMFm",
+      "name": "Aleinu Shur"
+    },
+    {
+      "collection": "tracks",
+      "id": "f98612dc-a725-430b-a752-4cd3df9802b2",
+      "parentSetlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "name": "Hashkivenu"
+    },
+    {
+      "collection": "tracks",
+      "id": "f9acaaa0-9836-4eb5-974c-13e723543287",
+      "parentSetlistId": "5ZOswikr7CKqm7Zp7zje",
+      "name": "Dvar torah"
+    },
+    {
+      "collection": "tracks",
+      "id": "faccdfed-35b0-4266-a8ec-8551b8c91a6b",
+      "parentSetlistId": "IvowaTdXwZI7qu9U9QXc",
+      "name": "Avodah"
+    },
+    {
+      "collection": "tracks",
+      "id": "fae048e4-e95d-4232-a6df-c0202b587414",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Hakafah"
+    },
+    {
+      "collection": "tracks",
+      "id": "fae1f7f7-b680-49c5-8130-916b1eb0bced",
+      "parentSetlistId": "Ikl0sS4XcZil0Z04viAu",
+      "name": "Ma'ariv Service"
+    },
+    {
+      "collection": "tracks",
+      "id": "fbe40f29-bb87-45ed-bb11-041e0f5156dc",
+      "parentSetlistId": "fgxquthWA9IQ4UF2fZWw",
+      "name": "Closing Blessing"
+    },
+    {
+      "collection": "tracks",
+      "id": "fc6a16ef-4c88-4a79-a452-42cbb803c398",
+      "parentSetlistId": "htxUSjxtg4Py6pKLQgj5",
+      "name": "Closing"
+    },
+    {
+      "collection": "tracks",
+      "id": "fcea6706-c56a-432e-9ddf-57756b17fb1b",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Shema and it's blessings"
+    },
+    {
+      "collection": "tracks",
+      "id": "fcefa890-e49f-4672-8dd3-5bc7295a0b84",
+      "parentSetlistId": "zyJGXUdIG80fLHaifJ7o",
+      "name": "Eitz chayim - Weisenberg"
+    },
+    {
+      "collection": "tracks",
+      "id": "fd5cc254-e9bc-45c6-b54c-b32b1a85c0d5",
+      "parentSetlistId": "P64x0MxFzJ3BWfrb2GYs",
+      "name": "Avot V'imahot"
+    },
+    {
+      "collection": "tracks",
+      "id": "fd99fb92-7e20-4291-ae45-18da70a40cde",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Ahava raba (echo)"
+    },
+    {
+      "collection": "tracks",
+      "id": "fda9cdda-2523-4680-b9e3-6921cdbfb6e4",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Adonai sfatai (trad)"
+    },
+    {
+      "collection": "tracks",
+      "id": "fe0c001c-f1b0-4e26-847d-4bf43bf50eff",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Eitz chayim   Weisenberg"
+    },
+    {
+      "collection": "tracks",
+      "id": "fe6af062-2d54-435a-b0a3-9cfbf0f17cab",
+      "parentSetlistId": "xr1cd7h4Yutje9ej3iem",
+      "name": "Sim_shalom"
+    },
+    {
+      "collection": "tracks",
+      "id": "ff7aaab7-54c8-4fa0-b955-1d88fa72948d",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "erev shel lcha dodi"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1774470355993-1PYUlbQY0hweTHW2Qrc7Xn3_9vlHaUtee-0",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Bminor simpletune"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1774470548091-upload-0594bbd4-d661-42b9-b11d-feeb3ff4cda6-0",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Em Bar'chu Yotzier Walkdown"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1774470619940-upload-f74b8139-97c1-4fb0-8a0b-44576b26559a-0",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Mi chamocha (6 8)"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1774470645305-prayer",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "V'Ahavta"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1774470814622-prayer",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Mourner’s Kaddish"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1774470896404-prayer",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Aleinu"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1774471375053-1sNPYY73-mI4XBfASJBoHaTwxQH3IHr50-0",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Eitz chayim   Weisenberg"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1774646481967-prayer",
+      "parentSetlistId": "FB2yEICglR8jQmG3pcnp",
+      "name": "Lecha Dodi (fast in Dm)"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1774706800332-1jiX9o2PFj6fGb-qDC5Uw5EtOTOnydzWh-0",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Kedusha Em"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1775310102666-13xN_EFxJ0igz9oYROL_DGx-hj6cvbGOy-0",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Elohai neshama   Pourmorady"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1775310119975-prayer",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Birchot HaShachar"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1775310169093-1sRzRHytARhFFrlAqJUtDDH25YhuZZ792-0",
+      "parentSetlistId": "9bmwUMJzgIQgNRIe81jv",
+      "name": "Yotzeir or   Klepper"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776659344572-3371ff94-1774-4c2b-a25b-f1537a419e13-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Ani V'Atah (Gavrielov)"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776659389873-2c594bea-32c0-4794-b625-060848ad576c-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Eileh Chamdah Libi (Abbie Strauss And Joe Buchanan)"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776659409401-6ca6e82c-e3be-4e6b-b6c1-63f60b3ac5cc-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Eili Eili (Zahavi)   Eit Dodim (Oriental Folk)   Elijah Rock (Spiritual)"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776659434328-9c45f962-5894-44cd-852e-6b84e871067e-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Gesher Tzar M'Od (Chait)"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776659486786-dc4fb084-3b23-4481-8353-efc8bbafdb3d-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Ivdu Et Hashem (Sher)   Ivdu Et Hashem (Folk)"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776659572263-f34bf3e8-f306-4945-b212-e2dab83b7b8d-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Od Yishama (Carlebach)"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776659582081-218fc2a9-cbe4-4ff1-a056-68f7f55bbac2-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Mizmor Shiru Ladonai"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776659592334-d630644f-befe-4991-862f-8cb0d9bcb68f-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Or Zaru A (Klepper)"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776659647672-31248276-14b6-4bc0-914a-0c129d023586-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Tzadik Katamar (Maslo)   Tzadik Katamar (Lewandowski)"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776707189856-upload-bb71e9e2-e3ce-4cad-b884-28f1d74f8970-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Mizmor L'David"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776707292330-1PYUlbQY0hweTHW2Qrc7Xn3_9vlHaUtee-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Bminor simpletune"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776707347440-19E8aTettqSQO1ZVtVhXCPfUJw1dw0f3G-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Shiru L Adonai Shir Shabbat"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776707388346-upload-e0d24d07-ccbe-4576-9263-0577c596dad6-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Erev Shel Shoshanim   Yamin U’smol"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776707426769-19FuqP-rbkufIUdAVCGMbXLuvDJKnicZM-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Mi shebeirach"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776707468950-1u2g0w4OLjbL5JfjACyL_3kDzUZpaGjng-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Oseh shalom   Nava tehila"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1776708411796-upload-13ef3209-407e-4f36-a504-e16947665dd6-0",
+      "parentSetlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "name": "Stuart's Hora Medley"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1777128501715-19E8aTettqSQO1ZVtVhXCPfUJw1dw0f3G-0",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Shiru L Adonai Shir Shabbat"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1777128570119-upload-f74b8139-97c1-4fb0-8a0b-44576b26559a-0",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Mi chamocha E (Moshav)"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1777149029885-d22779d6-bd3f-436c-8d5a-cc6daa3d92e6-0",
+      "parentSetlistId": "uBkulVkN8K7idSapCJjq",
+      "name": "Shalom Rav (Klepper Freelander)"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1778442315897-upload-9ffab05d-518c-45af-9cae-a5f140011093-0",
+      "parentSetlistId": "vJqQL6jbpTwVVbv1Oahy",
+      "name": "Dancing In The Dark"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1778442318582-upload-4698f776-b470-40e6-ad6d-4d99788d64de-0",
+      "parentSetlistId": "vJqQL6jbpTwVVbv1Oahy",
+      "name": "You're In My Heart"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1778867811280-upload-7fb95fac-c0cf-4cb1-91a3-6e5828c212b8-0",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Bina in G"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1778874878997-upload-7131ee81-97e9-4064-8d7c-cb07b9370063-0",
+      "parentSetlistId": "NWPBba50fltX6pNcyOVK",
+      "name": "Twilight (D Goldenberg)"
+    },
+    {
+      "collection": "tracks",
+      "id": "track-1778935524766-upload-ece4da1e-9488-4f7d-86a5-a1e6f7cc7709-0",
+      "parentSetlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "name": "Niggun   Full Score"
+    }
+  ]
+}
