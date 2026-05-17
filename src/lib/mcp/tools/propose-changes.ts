@@ -399,17 +399,25 @@ export async function commitStagedChanges(
                     updatedAt: FieldValue.serverTimestamp(),
                 })
             } else {
+                // F-014 (cycle-1 cowork): only write to existing rows that
+                // ACTUALLY changed. Pre-fix the commit looped over every row
+                // and bumped version + lastModifiedAt + (sometimes) order on
+                // every track in the setlist, even ones not touched by any
+                // proposal. That broke optimistic-concurrency for parallel
+                // agents holding `lastSeenVersion` on untouched rows — every
+                // unrelated commit invalidated their handle.
+                const hasFieldEdits =
+                    !!row.patch && Object.keys(row.patch).length > 0
+                const before = byId.get(row.id)
+                const orderChanged = !before || before.order !== i
+                if (!hasFieldEdits && !orderChanged) return
                 const patch: Record<string, unknown> = {
                     ...(row.patch ?? {}),
                     updatedAt: FieldValue.serverTimestamp(),
                     version: FieldValue.increment(1),
                     lastModifiedAt: nowIso,
                 }
-                // Re-pack: only write `order` when it actually changes.
-                const before = byId.get(row.id)
-                if (!before || before.order !== i) {
-                    patch.order = i
-                }
+                if (orderChanged) patch.order = i
                 tx.update(tracksColl.doc(row.id), patch)
             }
         })

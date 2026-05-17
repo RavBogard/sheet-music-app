@@ -259,6 +259,130 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         expect(orders).toEqual([0, 1, 2])
     })
 
+    // ─── F-014: no spurious version bumps on untouched rows ──────────────
+
+    it("F-014: edit-only commits leave untouched tracks at the same version + lastModifiedAt", async () => {
+        const setlistId = await newSetlist()
+        const targetId = await addOne(setlistId, "Target")
+        const untouched1 = await addOne(setlistId, "Untouched A")
+        const untouched2 = await addOne(setlistId, "Untouched B")
+
+        const versionsBefore = {
+            target: await readVersion("tracks", targetId),
+            u1: await readVersion("tracks", untouched1),
+            u2: await readVersion("tracks", untouched2),
+        }
+        const lastModBefore = {
+            u1: (
+                await db().collection("tracks").doc(untouched1).get()
+            ).data()?.lastModifiedAt,
+            u2: (
+                await db().collection("tracks").doc(untouched2).get()
+            ).data()?.lastModifiedAt,
+        }
+
+        const setlistVersion = await readVersion("setlists", setlistId)
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                { action: "update", trackId: targetId, title: "Renamed Target" },
+            ],
+        })) as StageRecord
+        const result = (await commitStagedChanges(ADMIN, {
+            stageId: stage.id,
+            lastSeenVersion: setlistVersion,
+        })) as Record<string, unknown>
+        expect(result.ok).toBe(true)
+
+        // Target row bumped — that one was edited.
+        const target = (
+            await db().collection("tracks").doc(targetId).get()
+        ).data() as Record<string, unknown>
+        expect(target.title).toBe("Renamed Target")
+        expect(target.version).toBe(versionsBefore.target + 1)
+
+        // Untouched rows MUST stay at their pre-commit version +
+        // lastModifiedAt. Pre-fix the entire setlist's tracks bumped on
+        // every commit, breaking parallel-agent optimistic concurrency.
+        const u1 = (
+            await db().collection("tracks").doc(untouched1).get()
+        ).data() as Record<string, unknown>
+        const u2 = (
+            await db().collection("tracks").doc(untouched2).get()
+        ).data() as Record<string, unknown>
+        expect(u1.version).toBe(versionsBefore.u1)
+        expect(u2.version).toBe(versionsBefore.u2)
+        expect(u1.lastModifiedAt).toBe(lastModBefore.u1)
+        expect(u2.lastModifiedAt).toBe(lastModBefore.u2)
+    })
+
+    it("F-014: appending a track leaves prior rows untouched (no order shift, no version bump)", async () => {
+        const setlistId = await newSetlist()
+        const existing1 = await addOne(setlistId, "First")
+        const existing2 = await addOne(setlistId, "Second")
+        const versionsBefore = {
+            e1: await readVersion("tracks", existing1),
+            e2: await readVersion("tracks", existing2),
+        }
+
+        const setlistVersion = await readVersion("setlists", setlistId)
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [{ action: "add", title: "Appended" }],
+        })) as StageRecord
+        const result = (await commitStagedChanges(ADMIN, {
+            stageId: stage.id,
+            lastSeenVersion: setlistVersion,
+        })) as Record<string, unknown>
+        expect(result.ok).toBe(true)
+
+        // The two pre-existing rows didn't shift indices (the new one
+        // appended at the end), so neither should bump.
+        const e1 = (
+            await db().collection("tracks").doc(existing1).get()
+        ).data() as Record<string, unknown>
+        const e2 = (
+            await db().collection("tracks").doc(existing2).get()
+        ).data() as Record<string, unknown>
+        expect(e1.version).toBe(versionsBefore.e1)
+        expect(e2.version).toBe(versionsBefore.e2)
+    })
+
+    it("F-014: inserting at position 0 DOES bump downstream rows (order changed)", async () => {
+        const setlistId = await newSetlist()
+        const existing1 = await addOne(setlistId, "Will-shift A")
+        const existing2 = await addOne(setlistId, "Will-shift B")
+        const versionsBefore = {
+            e1: await readVersion("tracks", existing1),
+            e2: await readVersion("tracks", existing2),
+        }
+
+        const setlistVersion = await readVersion("setlists", setlistId)
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [{ action: "add", title: "New First", position: 0 }],
+        })) as StageRecord
+        const result = (await commitStagedChanges(ADMIN, {
+            stageId: stage.id,
+            lastSeenVersion: setlistVersion,
+        })) as Record<string, unknown>
+        expect(result.ok).toBe(true)
+
+        // Both pre-existing rows now sit at order 1 + 2 instead of 0 + 1 —
+        // a real change. F-014 says order CAN bump version when it actually
+        // moves (vs. spurious bumps on untouched rows).
+        const e1 = (
+            await db().collection("tracks").doc(existing1).get()
+        ).data() as Record<string, unknown>
+        const e2 = (
+            await db().collection("tracks").doc(existing2).get()
+        ).data() as Record<string, unknown>
+        expect(e1.version).toBe(versionsBefore.e1 + 1)
+        expect(e2.version).toBe(versionsBefore.e2 + 1)
+        expect(e1.order).toBe(1)
+        expect(e2.order).toBe(2)
+    })
+
     // ─── stale_version on commit ───────────────────────────────────────────
 
     it("AC-3: commit rejects with stale_version envelope when lastSeenVersion mismatches", async () => {
