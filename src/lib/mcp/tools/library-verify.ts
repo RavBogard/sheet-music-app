@@ -4,6 +4,11 @@ import { getChartHealth, type ChartHealth } from "@/lib/file-fetcher"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
+import {
+    EMPTY_ENRICHMENT_PROJECTION,
+    loadEnrichmentProjection,
+    type EnrichmentProjection,
+} from "@/lib/library/enrichment-projection"
 
 /**
  * Chart-health verification tools — close the orphan/unrenderable-chart
@@ -35,6 +40,13 @@ export interface GetChartStatusResult {
     ok: true
     fileId: string
     health: ChartHealth
+    /**
+     * Cycle-3 AI-001 — enrichment projection of the matching
+     * `library_index/{fileId}` row + retry-queue presence. Always populated;
+     * defaults to {@link EMPTY_ENRICHMENT_PROJECTION} when no `library_index`
+     * row exists (phantom bond, pre-NEW-3 upload, raw catalog-only row).
+     */
+    enrichment: EnrichmentProjection
 }
 
 async function readLeaderRole(
@@ -73,8 +85,22 @@ export async function getChartStatus(
             "Retry after the cooldown window.",
         )
 
-    const health = await getChartHealth(args.fileId.trim(), args.mimeType)
-    return { ok: true, fileId: args.fileId, health }
+    const fileIdTrimmed = args.fileId.trim()
+    // Cycle-3 AI-001: probe chart health + project enrichment state in
+    // parallel — both are read-only Firestore/Storage reads. Enrichment is
+    // fail-soft: a Firestore blip degrades to the empty projection so the
+    // health probe still returns.
+    const [health, enrichment] = await Promise.all([
+        getChartHealth(fileIdTrimmed, args.mimeType),
+        loadEnrichmentProjection(db, fileIdTrimmed).catch((err) => {
+            logger.warn(
+                `[mcp] get_chart_status enrichment projection failed for ${fileIdTrimmed}:`,
+                err,
+            )
+            return EMPTY_ENRICHMENT_PROJECTION
+        }),
+    ])
+    return { ok: true, fileId: args.fileId, health, enrichment }
 }
 
 export interface VerifySetlistChartsArgs {

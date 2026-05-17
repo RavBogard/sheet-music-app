@@ -104,6 +104,8 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
             ok: true,
             autoApplyEnabled: false,
             threshold: 0.7,
+            // AI-002: GEMINI_API_KEY is unset in the emulator test env.
+            subscriberActive: false,
         })
     })
 
@@ -114,6 +116,7 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
             ok: true,
             autoApplyEnabled: true,
             threshold: 0.55,
+            subscriberActive: false,
         })
     })
 
@@ -125,6 +128,48 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
             autoApplyEnabled: false,
             threshold: 0.7,
         })
+    })
+
+    // ─── AI-002: subscriberActive observability ───────────────────────────
+    //
+    // The boolean disambiguates "dormant by config" (GEMINI_API_KEY unset
+    // — the queue sits at status:'pending') from "broken in code"
+    // (subscriberActive: true but rows never flip). Re-evaluated per call
+    // so a Vercel env update flips it without a process restart.
+
+    it("get_ai_config: subscriberActive reads false when GEMINI_API_KEY is unset", async () => {
+        const prior = process.env.GEMINI_API_KEY
+        delete process.env.GEMINI_API_KEY
+        try {
+            const r = await getAiConfig(ADMIN)
+            expect(r).toMatchObject({ ok: true, subscriberActive: false })
+        } finally {
+            if (prior !== undefined) process.env.GEMINI_API_KEY = prior
+        }
+    })
+
+    it("get_ai_config: subscriberActive reads true when GEMINI_API_KEY is set non-empty", async () => {
+        const prior = process.env.GEMINI_API_KEY
+        process.env.GEMINI_API_KEY = "test-key-not-a-real-credential"
+        try {
+            const r = await getAiConfig(ADMIN)
+            expect(r).toMatchObject({ ok: true, subscriberActive: true })
+        } finally {
+            if (prior === undefined) delete process.env.GEMINI_API_KEY
+            else process.env.GEMINI_API_KEY = prior
+        }
+    })
+
+    it("get_ai_config: subscriberActive reads false when GEMINI_API_KEY is set empty", async () => {
+        const prior = process.env.GEMINI_API_KEY
+        process.env.GEMINI_API_KEY = ""
+        try {
+            const r = await getAiConfig(ADMIN)
+            expect(r).toMatchObject({ ok: true, subscriberActive: false })
+        } finally {
+            if (prior === undefined) delete process.env.GEMINI_API_KEY
+            else process.env.GEMINI_API_KEY = prior
+        }
     })
 
     // ─── set_ai_auto_apply ─────────────────────────────────────────────────
@@ -364,6 +409,7 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
             ok: true,
             autoApplyEnabled: true,
             threshold: 0.6,
+            subscriberActive: false,
         })
     })
 })

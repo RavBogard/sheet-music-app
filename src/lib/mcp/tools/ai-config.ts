@@ -60,6 +60,18 @@ export interface AiConfigState {
 
 export interface GetAiConfigResult extends AiConfigState {
     ok: true
+    /**
+     * Cycle-3 AI-002 — true when the AI enrichment subscriber is configured
+     * to call the model (i.e. `GEMINI_API_KEY` is present in the environment;
+     * post-a3-gemini-swap rename). Cleanly distinguishes "dormant by config"
+     * (subscriberActive: false, the queue piles up at status:'pending') from
+     * "broken in code" (subscriberActive: true but no rows ever flip to
+     * 'enriched'/'review_pending'). Mirrors the activation check in
+     * `defaultLoadConfig` (src/lib/library/ai-enrichment.ts) — single source
+     * of truth re-evaluated per call so a Vercel env update flips this
+     * without a process restart.
+     */
+    subscriberActive: boolean
 }
 
 export interface SetAiAutoApplyArgs {
@@ -135,6 +147,19 @@ async function readAiConfig(
     }
 }
 
+/**
+ * Cycle-3 AI-002 — derive subscriber-active state from the Vercel env. Kept
+ * inline as a literal rather than imported from `ai-enrichment.ts` so this
+ * tool stays importable from contexts that don't have `@google/genai`
+ * loaded (mirrors the {@link DEFAULT_CONFIDENCE_THRESHOLD} duplication). Re-
+ * evaluated per call so a Vercel env update flips the flag without a process
+ * restart.
+ */
+function isSubscriberActive(): boolean {
+    const apiKey = process.env.GEMINI_API_KEY
+    return typeof apiKey === "string" && apiKey.length > 0
+}
+
 export async function getAiConfig(
     uid: string,
 ): Promise<GetAiConfigResult | RichErrorEnvelope> {
@@ -143,7 +168,7 @@ export async function getAiConfig(
     try {
         const db = getFirestore()
         const state = await readAiConfig(db)
-        return { ok: true, ...state }
+        return { ok: true, ...state, subscriberActive: isSubscriberActive() }
     } catch (err) {
         return richError(
             "ai_config_read_failed",

@@ -1,5 +1,7 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
+import type { EnrichmentStatus } from "@/lib/library/enrichment-projection"
+import type { EnrichmentOutput } from "@/lib/library/ai-enrichment"
 
 /**
  * Admin-SDK read helpers for the `songs/{id}` catalog — the MCP read tools'
@@ -41,7 +43,21 @@ export interface SongRecord {
     }
     /** From chart-verify pipeline; not stored, set by callers that probe. */
     fileHealthy?: boolean
+    // ─── AI-001 enrichment projection (joined from library_index +
+    //     aiEnrichmentRetryQueue by callers in src/lib/mcp/tools/library.ts).
+    //     `null` ⇒ row never reached the AI subscriber (pre-NEW-3 upload, or
+    //     no matching library_index doc). Loaders are in
+    //     src/lib/library/enrichment-projection.ts.
+    /** library_index/{id}.enrichmentStatus, narrowed to known values. */
+    enrichmentStatus?: EnrichmentStatus | null
+    /** Denormalized from aiSuggestion.confidence (0..1). */
+    enrichmentConfidence?: number | null
+    /** Full EnrichmentOutput blob — ~200 tokens, inline per a5's hydration norm. */
+    aiSuggestion?: EnrichmentOutput | null
+    /** `aiEnrichmentRetryQueue/{id}` doc exists (replay in flight). */
+    retryQueued?: boolean
 }
+
 
 // Catalog titles are stored verbatim with the source file extension
 // (e.g. "Od Yavo Shalom Aleinu.pdf") — strip it for display.

@@ -149,7 +149,17 @@ describe("getSong", () => {
         mockGetSongById.mockResolvedValue({ id: "s1", title: "Lecha Dodi" })
         const r = await getSong("u", { id: "s1" })
         expect(mockGetSongById).toHaveBeenCalledWith("s1")
-        expect(r).toEqual({ id: "s1", title: "Lecha Dodi" })
+        // Cycle-3 AI-001: getSong now spreads the enrichment projection on
+        // top of the song record. Without a Firestore emulator on this unit
+        // test path, loadEnrichmentProjection's caller-side catch degrades
+        // to the empty projection so the wire shape stays consistent.
+        expect(r).toMatchObject({ id: "s1", title: "Lecha Dodi" })
+        expect(r).toMatchObject({
+            enrichmentStatus: null,
+            enrichmentConfidence: null,
+            aiSuggestion: null,
+            retryQueued: false,
+        })
     })
 
     it("returns null for a missing song", async () => {

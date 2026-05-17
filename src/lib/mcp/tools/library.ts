@@ -4,6 +4,13 @@ import { getStorage } from "firebase-admin/storage"
 import { logger } from "@/lib/logger"
 import { bareStem } from "@/lib/mcp/title-specificity"
 import { richError } from "@/lib/mcp/error-envelopes"
+import {
+    EMPTY_ENRICHMENT_PROJECTION,
+    loadEnrichmentProjection,
+    loadRetryQueueIds,
+    projectionFromLibraryIndexData,
+    type EnrichmentProjection,
+} from "@/lib/library/enrichment-projection"
 
 /**
  * Shared "is this row a chart-bytes artifact?" predicate. Used by both
@@ -117,6 +124,11 @@ interface LibraryW02Fields {
      *  isNonChartArtifactShape can match against the library_index name
      *  when the songs/{id} title was cleaned (extension stripped). */
     name?: string
+    /** Cycle-3 AI-001: enrichment projection joined alongside W-02 so the
+     *  single library_index scan in loadLibraryW02Map serves both feature
+     *  groups. Always populated (defaults to EMPTY_ENRICHMENT_PROJECTION
+     *  when the row pre-dates NEW-3 enrichment). */
+    enrichment?: EnrichmentProjection
 }
 
 /**
@@ -131,7 +143,22 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
     try {
         initAdmin()
         const db = getFirestore()
-        const snap = await db.collection("library_index").get()
+        // Cycle-3 AI-001: parallel fetch of library_index + the in-flight
+        // AI retry queue so the enrichment projection rides on the same
+        // join pass W-02 already pays for. Both reads fail-soft inside the
+        // outer try/catch — a retry-queue read failure degrades to
+        // `retryQueued: false` (the projection rolls forward); a
+        // library_index failure aborts the whole map (existing behavior).
+        const [snap, retryIds] = await Promise.all([
+            db.collection("library_index").get(),
+            loadRetryQueueIds(db).catch((err) => {
+                logger.warn(
+                    "[mcp] aiEnrichmentRetryQueue ids fetch failed (retryQueued will read false):",
+                    err,
+                )
+                return new Set<string>()
+            }),
+        ])
         const map = new Map<string, LibraryW02Fields>()
         const stemCounts = new Map<string, number>()
         // First pass — count siblings per stem (excluding orphans).
@@ -142,7 +169,8 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
             if (!stem) continue
             stemCounts.set(stem, (stemCounts.get(stem) ?? 0) + 1)
         }
-        // Second pass — attach W-02 fields + computed siblingsInCatalog.
+        // Second pass — attach W-02 fields + computed siblingsInCatalog
+        // + AI-001 enrichment projection.
         for (const d of snap.docs) {
             const data = d.data()
             const stem = typeof data.stem === "string" ? data.stem : undefined
@@ -192,6 +220,10 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
                 mimeType:
                     typeof data.mimeType === "string" ? data.mimeType : undefined,
                 name: typeof data.name === "string" ? data.name : undefined,
+                enrichment: projectionFromLibraryIndexData(
+                    data,
+                    retryIds.has(d.id),
+                ),
             })
         }
         return map
@@ -306,7 +338,22 @@ export async function searchLibrary(
         })
         .map((s) => {
             const w02 = w02Map.get(s.id)
-            return w02 ? { ...s, ...w02 } : s
+            if (!w02) {
+                // Row has no library_index — surface empty enrichment so the
+                // wire shape is consistent (callers can rely on the four
+                // AI-001 fields always being present).
+                return { ...s, ...EMPTY_ENRICHMENT_PROJECTION }
+            }
+            // Promote enrichment projection onto the row's top-level so it
+            // rides alongside the W-02 fields. The W-02 sub-object also
+            // carries `mimeType` / `name` for the non-chart-artifact filter
+            // below — those get stripped in the final mapper.
+            const { enrichment, ...rest } = w02
+            return {
+                ...s,
+                ...rest,
+                ...(enrichment ?? EMPTY_ENRICHMENT_PROJECTION),
+            }
         })
         // Cycle-1 F-007/F-024: hide non-chart artifacts by default.
         // mimeType comes from the W-02 join when library_index has it;
@@ -380,7 +427,23 @@ export async function getSong(
     _uid: string,
     args: GetSongArgs,
 ): Promise<SongRecord | null> {
-    return getSongById(args.id)
+    const song = await getSongById(args.id)
+    if (!song) return null
+    // Cycle-3 AI-001: project enrichment fields off the matching library_index
+    // row so single-song reads carry the same AI state the bulk read tools
+    // surface. Fail-soft — a library_index miss returns an empty projection
+    // (pre-NEW-3 uploads / catalog-only rows) without bubbling the failure.
+    let projection: EnrichmentProjection = EMPTY_ENRICHMENT_PROJECTION
+    try {
+        initAdmin()
+        projection = await loadEnrichmentProjection(getFirestore(), args.id)
+    } catch (err) {
+        logger.warn(
+            `[mcp] get_song enrichment projection load failed for ${args.id}:`,
+            err,
+        )
+    }
+    return { ...song, ...projection }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -460,6 +523,13 @@ export interface LibraryIndexEntry {
         correctedAwayFrom: number
         lastCorrectionAt?: string
     }
+    // ─── AI-001 enrichment projection (cycle-3) ───────────────────────────
+    // Always populated — pre-NEW-3 rows surface the empty projection so the
+    // wire shape is consistent.
+    enrichmentStatus: EnrichmentProjection["enrichmentStatus"]
+    enrichmentConfidence: EnrichmentProjection["enrichmentConfidence"]
+    aiSuggestion: EnrichmentProjection["aiSuggestion"]
+    retryQueued: EnrichmentProjection["retryQueued"]
 }
 
 export interface ListLibraryResult {
@@ -472,6 +542,7 @@ export interface ListLibraryResult {
 function toLibraryEntry(
     id: string,
     data: Record<string, unknown>,
+    retryQueued: boolean,
 ): LibraryIndexEntry {
     const name =
         (typeof data.name === "string" && data.name) ||
@@ -484,6 +555,7 @@ function toLibraryEntry(
               ? data.modifiedTime
               : null
     const bch = data.bondCorrectionHistory as Record<string, unknown> | undefined
+    const enrichment = projectionFromLibraryIndexData(data, retryQueued)
     return {
         fileId: id,
         name,
@@ -529,6 +601,8 @@ function toLibraryEntry(
                           : undefined,
               }
             : undefined,
+        // ─── AI-001 enrichment projection ────────────────────────────────
+        ...enrichment,
     }
 }
 
@@ -560,8 +634,24 @@ export async function listLibrary(
     try {
         initAdmin()
         const db = getFirestore()
-        const snap = await db.collection("library_index").get()
-        const all = snap.docs.map((d) => toLibraryEntry(d.id, d.data()))
+        // Cycle-3 AI-001: parallel pull of library_index + the in-flight AI
+        // retry queue so the projection rides on a single round-trip
+        // alongside the existing scan. retry-queue read fails-soft: a fetch
+        // miss collapses to `retryQueued: false` on every row but keeps the
+        // catalog browse working.
+        const [snap, retryIds] = await Promise.all([
+            db.collection("library_index").get(),
+            loadRetryQueueIds(db).catch((err) => {
+                logger.warn(
+                    "[mcp] list_library retryQueue ids fetch failed (retryQueued will read false):",
+                    err,
+                )
+                return new Set<string>()
+            }),
+        ])
+        const all = snap.docs.map((d) =>
+            toLibraryEntry(d.id, d.data(), retryIds.has(d.id)),
+        )
         attachSiblingCounts(all)
 
         const chartLike = args.includeNonCharts
