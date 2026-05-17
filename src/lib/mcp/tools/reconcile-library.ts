@@ -8,6 +8,7 @@ import {
 import { getChartHealth } from "@/lib/file-fetcher"
 import { DriveClient } from "@/lib/google-drive"
 import { logger } from "@/lib/logger"
+import { isNonChartArtifactShape } from "./library"
 
 /**
  * Cycle-3 NEW-2 (ADDENDUM-1 §3) — one-shot bootstrap reconciliation MCP
@@ -79,6 +80,48 @@ interface TransientRow {
     error: string
 }
 
+interface SkippedNonChartRow {
+    fileId: string
+    name: string
+    /** Drive mimeType that caused the skip — folder / audio / hidden / etc. */
+    mimeType: string
+    /** Which side of the predicate fired. */
+    reason: "drive_folder" | "audio" | "hidden_dotfile" | "office_doc" | "other_non_chart"
+}
+
+/**
+ * Cycle-3 DATA-002 — uniform `coverage` field shared across every hygiene
+ * tool (list_library / dedupe_library / backfill_library_index /
+ * reconcile_library). Lets Daniel reason about scan-total mismatches
+ * (cowork captured 186 / 286 / 533 / 568 across the four tools at the
+ * same point in time) without spelunking into source. Same shape across
+ * tools so a single supervisor parser can render them.
+ */
+export interface HygieneCoverage {
+    /** Total library_index docs at scan time (the universe). */
+    total: number
+    /**
+     * Rows the tool actually considers (post-filter). For tools that
+     * scan the whole collection this equals `total`; for tools that
+     * skip orphaned/duplicate/archived rows it's smaller.
+     */
+    eligible: number
+    /** Rows actually visited (= eligible in steady state; smaller if the tool
+     *  caps scans). Surfaced separately so a future bounded sweep can
+     *  report partial coverage without lying about `eligible`. */
+    scanned: number
+    filteredOut: {
+        /** Counts of `status` values that were filtered out. */
+        byStatus: Record<string, number>
+        /** Counts of `collection` values filtered out. Empty when no
+         *  collection filter was active. */
+        byCollection: Record<string, number>
+        /** Counts for filters that aren't status or collection (non-chart
+         *  mime, empty name, etc.). Empty when no other filter applied. */
+        byOther: Record<string, number>
+    }
+}
+
 export interface ReconcileLibraryResult {
     ok: true
     scanned: number
@@ -103,6 +146,21 @@ export interface ReconcileLibraryResult {
         rows: TransientRow[]
         truncated: boolean
     }
+    /**
+     * Cycle-3 BUG-001 — Drive 200 but the bytes aren't a chart (folder,
+     * audio sidecar, .DS_Store, Office doc). Filtered OUT of driveMirror
+     * at planning time so a force-run never writes 0-byte garbage at the
+     * existing fileId. These rows stay untouched until an operator
+     * decides whether to remove them (delete_chart) or leave as catalog
+     * cruft. NOT marked orphaned — Drive still has the object.
+     */
+    skippedNonChart: {
+        count: number
+        rows: SkippedNonChartRow[]
+        truncated: boolean
+    }
+    /** Cycle-3 DATA-002 — uniform scan-coverage report. */
+    coverage: HygieneCoverage
     dryRun: boolean
     /** Number of writes actually committed this call. 0 if dryRun or refused. */
     committed: number
@@ -124,7 +182,7 @@ interface Candidate {
 async function loadAdminCandidates(
     uid: string,
 ): Promise<
-    | { ok: true; candidates: Candidate[] }
+    | { ok: true; candidates: Candidate[]; total: number; filteredByStatus: Record<string, number> }
     | { ok: false; error: string }
 > {
     initAdmin()
@@ -140,6 +198,7 @@ async function loadAdminCandidates(
 
     const snap = await db.collection("library_index").get()
     const candidates: Candidate[] = []
+    const filteredByStatus: Record<string, number> = {}
     for (const d of snap.docs) {
         const data = d.data()
         // Skip rows already definitively orphaned — re-running reconcile
@@ -148,7 +207,10 @@ async function loadAdminCandidates(
         // (manual re-upload). This is what makes the tool idempotent.
         // `duplicate` rows are also out of scope — handled by dedupe_library.
         const status = typeof data.status === "string" ? data.status : "active"
-        if (status === "orphaned" || status === "duplicate") continue
+        if (status === "orphaned" || status === "duplicate") {
+            filteredByStatus[status] = (filteredByStatus[status] ?? 0) + 1
+            continue
+        }
         const name =
             (typeof data.name === "string" && data.name) ||
             (typeof data.title === "string" && data.title) ||
@@ -162,16 +224,49 @@ async function loadAdminCandidates(
             currentMimeType: mimeType,
         })
     }
-    return { ok: true, candidates }
+    return {
+        ok: true,
+        candidates,
+        total: snap.docs.length,
+        filteredByStatus,
+    }
 }
 
 interface ProbeResult {
     candidate: Candidate
-    bucket: "healthy" | "mirror" | "orphan" | "transient"
-    /** Set only when bucket === 'mirror' — drive metadata for the mirror plan. */
+    bucket: "healthy" | "mirror" | "orphan" | "transient" | "skipped_non_chart"
+    /** Set when bucket === 'mirror' or 'skipped_non_chart' — drive metadata. */
     driveMimeType?: string
     /** Set only when bucket === 'transient'. */
     error?: string
+    /** Set only when bucket === 'skipped_non_chart'. */
+    skipReason?: SkippedNonChartRow["reason"]
+}
+
+/**
+ * Cycle-3 BUG-001 — classify why a Drive-200 row is being skipped from
+ * driveMirror. Uses the same negative-set predicate list_library applies
+ * for `includeNonCharts:false`. Returns null when the row is a real chart
+ * (should land in driveMirror).
+ */
+function classifyNonChart(
+    name: string,
+    driveMimeType: string,
+): SkippedNonChartRow["reason"] | null {
+    if (!isNonChartArtifactShape({ mimeType: driveMimeType, name })) return null
+    const mime = driveMimeType.toLowerCase()
+    if (mime.startsWith("application/vnd.google-apps.")) return "drive_folder"
+    if (mime.startsWith("audio/")) return "audio"
+    if (name.startsWith(".")) return "hidden_dotfile"
+    if (
+        mime ===
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        mime ===
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+        return "office_doc"
+    }
+    return "other_non_chart"
 }
 
 async function probeRow(c: Candidate): Promise<ProbeResult> {
@@ -181,11 +276,26 @@ async function probeRow(c: Candidate): Promise<ProbeResult> {
             return { candidate: c, bucket: "healthy" }
         }
         if (health.status === "needs_storage_sync") {
+            // BUG-001 (cycle-3): folder / audio / .DS_Store / Office-doc rows
+            // exist as library_index entries from legacy Drive scans but
+            // their bytes are not embeddable charts. Filter BEFORE the
+            // mirror bucket so dryRun output is honest about what a
+            // force-run would actually write.
+            const driveMimeType =
+                health.mimeType ?? c.currentMimeType ?? "application/pdf"
+            const skipReason = classifyNonChart(c.name, driveMimeType)
+            if (skipReason) {
+                return {
+                    candidate: c,
+                    bucket: "skipped_non_chart",
+                    driveMimeType,
+                    skipReason,
+                }
+            }
             return {
                 candidate: c,
                 bucket: "mirror",
-                driveMimeType:
-                    health.mimeType ?? c.currentMimeType ?? "application/pdf",
+                driveMimeType,
             }
         }
         if (health.status === "missing") {
@@ -475,6 +585,16 @@ export async function reconcileLibrary(
         const loaded = await loadAdminCandidates(uid)
         if (!loaded.ok) return { error: loaded.error }
         const candidates = loaded.candidates
+        const coverage: HygieneCoverage = {
+            total: loaded.total,
+            eligible: candidates.length,
+            scanned: candidates.length,
+            filteredOut: {
+                byStatus: loaded.filteredByStatus,
+                byCollection: {},
+                byOther: {},
+            },
+        }
 
         if (candidates.length === 0) {
             // Empty library — return a fully-zero report. Still respect
@@ -486,6 +606,8 @@ export async function reconcileLibrary(
                 driveMirror: { count: 0, rows: [], truncated: false },
                 orphan: { count: 0, rows: [], truncated: false },
                 transient: { count: 0, rows: [], truncated: false },
+                skippedNonChart: { count: 0, rows: [], truncated: false },
+                coverage,
                 dryRun,
                 committed: 0,
                 refused: !dryRun && !force ? true : undefined,
@@ -498,6 +620,9 @@ export async function reconcileLibrary(
         const mirrorPlan = probes.filter((p) => p.bucket === "mirror")
         const orphanPlan = probes.filter((p) => p.bucket === "orphan")
         const transientPlan = probes.filter((p) => p.bucket === "transient")
+        const skippedNonChartPlan = probes.filter(
+            (p) => p.bucket === "skipped_non_chart",
+        )
 
         const mirrorRows: MirrorRow[] = mirrorPlan.map((p) => ({
             fileId: p.candidate.fileId,
@@ -512,6 +637,14 @@ export async function reconcileLibrary(
             name: p.candidate.name,
             error: p.error ?? "unknown",
         }))
+        const skippedNonChartRows: SkippedNonChartRow[] = skippedNonChartPlan.map(
+            (p) => ({
+                fileId: p.candidate.fileId,
+                name: p.candidate.name,
+                mimeType: p.driveMimeType ?? "application/octet-stream",
+                reason: p.skipReason ?? "other_non_chart",
+            }),
+        )
 
         if (dryRun) {
             return {
@@ -521,6 +654,8 @@ export async function reconcileLibrary(
                 driveMirror: bucketReport(mirrorRows),
                 orphan: bucketReport(orphanRows),
                 transient: bucketReport(transientRows),
+                skippedNonChart: bucketReport(skippedNonChartRows),
+                coverage,
                 dryRun: true,
                 committed: 0,
             }
@@ -537,6 +672,8 @@ export async function reconcileLibrary(
                 driveMirror: bucketReport(mirrorRows),
                 orphan: bucketReport(orphanRows),
                 transient: bucketReport(transientRows),
+                skippedNonChart: bucketReport(skippedNonChartRows),
+                coverage,
                 dryRun: false,
                 committed: 0,
                 refused: true,
@@ -588,6 +725,8 @@ export async function reconcileLibrary(
                 orphanRows.map((r) => ({ fileId: r.fileId, name: r.name })),
             ),
             transient: bucketReport(finalTransientRows),
+            skippedNonChart: bucketReport(skippedNonChartRows),
+            coverage,
             dryRun: false,
             committed,
         }

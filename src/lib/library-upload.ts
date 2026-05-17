@@ -315,9 +315,18 @@ export async function processChartUpload(
     }
 
     // ─── 2. Title + content-type derivation ────────────────────────────────
+    //
+    // Cycle-3 REG-001: trim the FINAL title regardless of which branch
+    // sourced it. The previous form only trimmed `input.title`; when
+    // `input.title` was empty/undefined, the fileName-fallback could keep
+    // leading/trailing whitespace (e.g. " Ana B_Koach.pdf" → " Ana B_Koach"),
+    // which then forked `nameLower` + `normalizedName` into a separate
+    // dedupe bucket from the whitespace-clean variant. The cycle-2
+    // `backfill_library_index` tool repaired existing rows; this fix
+    // closes the write-time hole so future imports don't re-introduce.
 
     const title =
-        input.title?.trim() || fileName.replace(/\.[^/.]+$/, "")
+        (input.title?.trim() || fileName.replace(/\.[^/.]+$/, "")).trim()
 
     const contentType = msExt
         ? "application/xml"

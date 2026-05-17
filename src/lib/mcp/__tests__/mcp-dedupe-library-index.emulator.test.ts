@@ -112,7 +112,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
             mimeType: "application/pdf",
         })
 
-        const r = await dedupeLibraryIndex(ADMIN)
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in r) throw new Error(r.error)
 
         expect(r.groupsFound).toBe(1)
@@ -149,7 +149,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
             uploadedAt: "2026-05-01T18:00:00Z",
         })
 
-        const r = await dedupeLibraryIndex(ADMIN)
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in r) throw new Error(r.error)
 
         expect(r.groupsFound).toBe(1)
@@ -172,7 +172,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         await seedSong("ana-clean", "Ana B_Koach.pdf")
         await seedSong("ana-leading-space", " Ana B_Koach.pdf")
 
-        const r = await dedupeLibraryIndex(ADMIN)
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in r) throw new Error(r.error)
         expect(r.songsMirrored).toBe(1)
 
@@ -199,7 +199,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         })
         await seedSong("ana-clean", "Ana B_Koach.pdf") // only canonical mirror
 
-        const r = await dedupeLibraryIndex(ADMIN)
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in r) throw new Error(r.error)
         expect(r.songsMirrored).toBe(0)
 
@@ -220,11 +220,11 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
             uploadedAt: "2024-06-15T12:00:00Z",
         })
 
-        const first = await dedupeLibraryIndex(ADMIN)
+        const first = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in first) throw new Error(first.error)
         expect(first.duplicatesMarked).toBe(1)
 
-        const second = await dedupeLibraryIndex(ADMIN)
+        const second = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in second) throw new Error(second.error)
         expect(second.scanned).toBe(1) // already-duplicate row excluded
         expect(second.groupsFound).toBe(0)
@@ -237,7 +237,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         await seedIndex("b", { name: "Mi Chamocha.pdf" })
         await seedIndex("c", { name: "Hashkivenu.pdf" })
 
-        const r = await dedupeLibraryIndex(ADMIN)
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in r) throw new Error(r.error)
         expect(r.scanned).toBe(3)
         expect(r.groupsFound).toBe(0)
@@ -252,7 +252,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
             status: "archived",
         })
 
-        const r = await dedupeLibraryIndex(ADMIN)
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in r) throw new Error(r.error)
         expect(r.scanned).toBe(1) // archived row excluded
         expect(r.groupsFound).toBe(0)
@@ -273,7 +273,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
             uploadedAt: "2024-03-01T00:00:00Z",
         })
 
-        const r = await dedupeLibraryIndex(ADMIN)
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in r) throw new Error(r.error)
         expect(r.groupsFound).toBe(1)
         expect(r.groups[0].normalizedName).toBe("shabbat shalompdf")
@@ -281,6 +281,104 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         expect(r.groups[0].duplicates.map((d) => d.fileId).sort()).toEqual([
             "b",
             "c",
+        ])
+    })
+
+    it("MCP-001 — real-run without force returns refused:true and writes nothing", async () => {
+        await seedIndex("ana-clean", {
+            name: "Ana B_Koach.pdf",
+            uploadedAt: "2024-01-01T00:00:00Z",
+        })
+        await seedIndex("ana-leading-space", {
+            name: " Ana B_Koach.pdf",
+            uploadedAt: "2024-06-15T12:00:00Z",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false })
+        if ("error" in r) throw new Error(r.error)
+        expect(r.refused).toBe(true)
+        expect(r.dryRun).toBe(false)
+        expect(r.groupsFound).toBe(1) // plan still surfaces
+        expect(r.duplicatesMarked).toBe(1)
+        expect(r.songsMirrored).toBe(0)
+
+        // No writes happened — the loser is still unmarked.
+        const loser = await db()
+            .collection("library_index")
+            .doc("ana-leading-space")
+            .get()
+        expect(loser.data()?.status).toBeUndefined()
+        expect(loser.data()?.dedupedAt).toBeUndefined()
+    })
+
+    it("MCP-001 — coverage field shape matches the standing hygiene contract", async () => {
+        await seedIndex("active1", { name: "Adon Olam.pdf" })
+        await seedIndex("dup1", {
+            name: "Already-Duplicate.pdf",
+            status: "duplicate",
+        })
+        await seedIndex("arch1", {
+            name: "Archived.pdf",
+            status: "archived",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: true })
+        if ("error" in r) throw new Error(r.error)
+        expect(r.coverage.total).toBe(3)
+        expect(r.coverage.eligible).toBe(1) // only 'active1' survives the status filter
+        expect(r.coverage.scanned).toBe(1)
+        expect(r.coverage.filteredOut.byStatus.duplicate).toBe(1)
+        expect(r.coverage.filteredOut.byStatus.archived).toBe(1)
+        expect(r.threshold).toBe(0.85) // standing-rule default surfaced
+    })
+
+    it("MCP-001 — forceScore enables fuzzy similarity grouping beyond exact-normalize", async () => {
+        // Two near-identical names that DON'T collapse under exact-normalize
+        // (the trailing "(camp)" suffix differs) but should collapse under
+        // forceScore <= 0.85 similarity.
+        await seedIndex("oseh-a", {
+            name: "Oseh Shalom",
+            uploadedAt: "2024-01-01T00:00:00Z",
+        })
+        await seedIndex("oseh-b", {
+            name: "Oseh Shalom!",
+            uploadedAt: "2024-06-01T00:00:00Z",
+        })
+
+        // Without forceScore — exact-normalize only. Both names normalize
+        // to "oseh shalom" after non-alphanum strip, so they group anyway.
+        // Use a clearer non-exact pair instead.
+        await db().collection("library_index").doc("oseh-a").delete()
+        await db().collection("library_index").doc("oseh-b").delete()
+
+        await seedIndex("hash-a", {
+            name: "Hashkivenu",
+            uploadedAt: "2024-01-01T00:00:00Z",
+        })
+        await seedIndex("hash-b", {
+            name: "Hashkiveinu",
+            uploadedAt: "2024-06-01T00:00:00Z",
+        })
+
+        // Exact-normalize-only — names differ ("hashkivenu" vs "hashkiveinu"),
+        // so no group.
+        const without = await dedupeLibraryIndex(ADMIN, { dryRun: true })
+        if ("error" in without) throw new Error(without.error)
+        expect(without.groupsFound).toBe(0)
+        expect(without.threshold).toBe(0.85)
+
+        // With forceScore: 0.8 — similarity ~0.91 exceeds threshold → group.
+        const withFuzzy = await dedupeLibraryIndex(ADMIN, {
+            dryRun: true,
+            forceScore: 0.8,
+        })
+        if ("error" in withFuzzy) throw new Error(withFuzzy.error)
+        expect(withFuzzy.groupsFound).toBe(1)
+        expect(withFuzzy.threshold).toBe(0.8)
+        expect(withFuzzy.duplicatesMarked).toBe(1)
+        expect(withFuzzy.groups[0].kept.fileId).toBe("hash-a") // earliest
+        expect(withFuzzy.groups[0].duplicates.map((d) => d.fileId)).toEqual([
+            "hash-b",
         ])
     })
 
@@ -306,7 +404,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
             "ana-leading-space",
         ])
 
-        await dedupeLibraryIndex(ADMIN)
+        await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
 
         // Post-dedupe — only the canonical surfaces.
         const after = await searchLibrary(ADMIN, { query: "Ana" })

@@ -9,6 +9,7 @@ import {
     backfillLibraryIndex,
 } from "./library"
 import { reconcileLibrary } from "./reconcile-library"
+import { salvageChartBytes } from "./salvage-chart-bytes"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
 import { getCorrectionStats } from "./correction-stats"
 import { testDeleteStorageObject } from "./test-delete-storage-object"
@@ -360,7 +361,7 @@ export function registerReadTools(server: McpServer): void {
         "list_library",
         {
             description:
-                "Browse the chart-file index alphabetically — every chart in the library, with its collection ('core' | 'supplemental' | 'uploads'), mimeType, file size, and upload metadata. Use this when the user wants to SEE the catalog (\"what's in core?\", \"show me every chart I've uploaded\"); use search_library for targeted lookup by title/key/BPM. Optional collection filter narrows to one section. Paged via offset+limit (default limit 50; values above 200 are silently clamped to 200). Returns rows + a total count so the caller can detect whether more pages exist. Default browse hides folders, audio files, dotfiles like .DS_Store, AND rows the dedupe pass has marked status:'duplicate' / Drive-side status:'orphaned' — same hidden-set as search_library and the in-app /library catalog, so counts surfaced here match what Daniel sees in the browser. Pass includeNonCharts: true for raw artifacts (folders/audio/junk); pass includeNonChartHealthy: true to also include duplicate/orphaned rows (audit/reconciliation only). Metadata only — to fetch chart bytes call download_chart, or to print a setlist's packet call generate_gig_packet.",
+                "Browse the chart-file index alphabetically — every chart in the library, with its collection ('core' | 'supplemental' | 'uploads'), mimeType, file size, and upload metadata. Use this when the user wants to SEE the catalog (\"what's in core?\", \"show me every chart I've uploaded\"); use search_library for targeted lookup by title/key/BPM. Optional collection filter narrows to one section. Paged via offset+limit (default limit 50; values above 200 are silently clamped to 200). Returns rows + a total count so the caller can detect whether more pages exist. Default browse hides folders, audio files, dotfiles like .DS_Store, AND rows the dedupe pass has marked status:'duplicate' / Drive-side status:'orphaned' — same hidden-set as search_library and the in-app /library catalog, so counts surfaced here match what Daniel sees in the browser. Pass includeNonCharts: true for raw artifacts (folders/audio/junk); pass includeNonChartHealthy: true to also include duplicate/orphaned rows (audit/reconciliation only). Metadata only — to fetch chart bytes call download_chart, or to print a setlist's packet call generate_gig_packet. Cycle-3 DATA-002: response carries a uniform `coverage:{total, eligible, scanned, filteredOut:{byStatus, byCollection, byOther}}` field that matches the same shape returned by dedupe_library / backfill_library_index / reconcile_library — letting operators correlate scan totals across the four hygiene tools without spelunking into source.",
             inputSchema: {
                 collection: z
                     .enum(["core", "supplemental", "uploads"])
@@ -1056,13 +1057,27 @@ export function registerWriteTools(server: McpServer): void {
         "dedupe_library",
         {
             description:
-                "One-shot idempotent library_index hygiene sweep — finds active rows whose normalized names collide (e.g. `\" Ana B_Koach.pdf\"` leading-space dupes; or two uploads of the same chart name) and marks all-but-one `status: \"duplicate\"`. Canonical row is the one with the earliest `uploadedAt` (fileId asc as tiebreak); losers also get the status mirrored into `songs/{id}` when that doc exists. searchLibrary + list_library hide `status: \"duplicate\"` from their default surface, so the practical effect is collapsing dupes to one visible row without deleting any bytes. Already-`duplicate` and `archived` rows are skipped → safe to re-run. Returns `{scanned, groupsFound, duplicatesMarked, songsMirrored, groups[], dryRun}`. PASS `dryRun: true` (F-05) to get the full plan without writing anything — agents should always preview before committing.",
+                "One-shot idempotent library_index hygiene sweep — finds active rows whose normalized names collide (e.g. `\" Ana B_Koach.pdf\"` leading-space dupes; or two uploads of the same chart name) and marks all-but-one `status: \"duplicate\"`. Canonical row is the one with the earliest `uploadedAt` (fileId asc as tiebreak); losers also get the status mirrored into `songs/{id}` when that doc exists. searchLibrary + list_library hide `status: \"duplicate\"` from their default surface, so the practical effect is collapsing dupes to one visible row without deleting any bytes. Already-`duplicate` and `archived` rows are skipped → safe to re-run. CYCLE-3 MCP-001 (Daniel-ratified 2026-05-18T18:45Z): F-05 contract aligned with reconcile/backfill — dryRun-default; a real run without `force: true` returns the plan with `refused: true` and no writes. Optional `forceScore` (0..1) enables an ADDITIONAL fuzzy-similarity grouping pass on top of the default exact-normalize: Levenshtein-similarity > threshold clusters rows that survived exact-grouping. PER-CALL TUNING ONLY — the standing 0.85 strict threshold elsewhere in the codebase is unchanged. Omitting `forceScore` preserves the historical exact-normalize-only behavior. Returns `{scanned, groupsFound, duplicatesMarked, songsMirrored, groups[], dryRun, refused?, threshold, coverage:{total,eligible,scanned,filteredOut}}`.",
             inputSchema: {
                 dryRun: z
                     .boolean()
                     .optional()
                     .describe(
-                        "When true, returns the dedupe plan (every group + losers) without writing. F-05 standing rule: dryRun does NOT require force. Default false — real run.",
+                        "When true, returns the dedupe plan (every group + losers) without writing. F-05 standing rule: dryRun does NOT require force. Default false — but a real run still requires `force: true`.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Cycle-3 MCP-001 — required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes. Matches the F-05 standing rule on every other hygiene tool.",
+                    ),
+                forceScore: z
+                    .number()
+                    .min(0)
+                    .max(1)
+                    .optional()
+                    .describe(
+                        "Cycle-3 MCP-001 — optional per-call similarity threshold. When provided, a fuzzy-similarity pass groups rows whose dedupe-normalized name similarity exceeds this value AFTER the default exact-normalize grouping has run. 0.85 is the standing-rule strict default ([[feedback_dedup_force_override]]); 0.84 is the cycle-4 §7.B.4 boundary probe. PER-CALL TUNING ONLY — does NOT change the persisted dedup threshold anywhere else (upload_chart's force-override semantics are unaffected). Omit to preserve exact-normalize-only behavior.",
                     ),
             },
         },
@@ -1098,7 +1113,7 @@ export function registerWriteTools(server: McpServer): void {
         "backfill_library_index",
         {
             description:
-                "Admin-only one-shot library_index hygiene backfill (cycle-2 DATA-001). Walks every row; for each, (a) strips leading/trailing whitespace from `name` (and rebuilds `nameLower`) so future Drive re-scans don't fork into duplicate rows the way ' Ana B_Koach.pdf' once did, and (b) hydrates `fileSize` from the Firebase Storage object (probes `library/{fileId}` + `.pdf` / `.xml` / image extensions) for rows whose `fileSize` is null. Rows with `status: \"orphaned\"` or `status: \"duplicate\"` skip the size hydration (no Storage object to probe). Defaults `dryRun: true` per the F-05 dry-run-is-observability rule — the caller MUST pass `force: true` to actually write. Returns `{scanned, rowsChanged, namesNormalized, fileSizesHydrated, fileSizesUnresolved, deltas, deltasTruncated, dryRun, refused?}`. `deltas` is capped at 500 rows (set `deltasTruncated:true` past that — the totals stay accurate). Real run without `force:true` returns the plan with `refused:true` and no writes.",
+                "Admin-only one-shot library_index hygiene backfill (cycle-2 DATA-001). Walks every row; for each, (a) strips leading/trailing whitespace from `name` (and rebuilds `nameLower`) so future Drive re-scans don't fork into duplicate rows the way ' Ana B_Koach.pdf' once did, and (b) hydrates `fileSize` from the Firebase Storage object (probes `library/{fileId}` + `.pdf` / `.xml` / image extensions) for rows whose `fileSize` is null. Rows with `status: \"orphaned\"` or `status: \"duplicate\"` skip the size hydration (no Storage object to probe). Defaults `dryRun: true` per the F-05 dry-run-is-observability rule — the caller MUST pass `force: true` to actually write. Returns `{scanned, rowsChanged, namesNormalized, fileSizesHydrated, fileSizesUnresolved, deltas, deltasTruncated, dryRun, refused?, coverage:{total,eligible,scanned,filteredOut}}` — the cycle-3 DATA-002 coverage field is identical in shape across list_library / dedupe_library / reconcile_library so operators can correlate totals across the four tools. `deltas` is capped at 500 rows (set `deltasTruncated:true` past that — the totals stay accurate). Real run without `force:true` returns the plan with `refused:true` and no writes.",
             inputSchema: {
                 dryRun: z
                     .boolean()
@@ -1122,7 +1137,7 @@ export function registerWriteTools(server: McpServer): void {
         "reconcile_library",
         {
             description:
-                "Admin-only one-shot bootstrap reconciliation for `library_index` rows under the storage-canonical direction (cycle-3 ADDENDUM-1 NEW-2). Walks every active row; for any whose Storage object 404s, probes Drive: Drive 200 → mirror the bytes into Storage at the EXISTING fileId (preserving every setlist/song bond) and flip `status: 'active'`; Drive 404 → mark `status: 'orphaned'`; Drive 5xx / timeout → leave the row untouched and surface in the `transient` bucket so the operator can re-run later. Drains the ~250 dead-looking rows from the pre-NEW-1 era. Idempotent: rows already `status: 'orphaned'` or `status: 'duplicate'` are skipped, so a second run after a successful force-run leaves nothing to do. Defaults `dryRun: true` per the F-05 dry-run-is-observability rule — caller MUST pass `force: true` to actually write. dryRun returns the full plan (bucket counts + per-row preview, capped at 500 rows per bucket) without writes. Real run without `force: true` returns the plan with `refused: true` and no writes. Mirror operation preserves processChartUpload's atomic-guard contract (read-verify + compensating-delete + library_signals broadcast). Returns `{scanned, alreadyHealthy, driveMirror:{count,rows,truncated}, orphan:{count,rows,truncated}, transient:{count,rows,truncated}, dryRun, committed, refused?}`.",
+                "Admin-only one-shot bootstrap reconciliation for `library_index` rows under the storage-canonical direction (cycle-3 ADDENDUM-1 NEW-2). Walks every active row; for any whose Storage object 404s, probes Drive: Drive 200 + chart-shape → mirror the bytes into Storage at the EXISTING fileId (preserving every setlist/song bond) and flip `status: 'active'`; Drive 200 + non-chart mime (folder / audio / .DS_Store / Office doc) → route to `skippedNonChart` bucket and leave untouched (cycle-3 BUG-001 — prevents force-writes of 0-byte garbage at the existing fileId); Drive 404 → mark `status: 'orphaned'`; Drive 5xx / timeout → leave the row untouched and surface in the `transient` bucket so the operator can re-run later. Drains the ~250 dead-looking rows from the pre-NEW-1 era. Idempotent: rows already `status: 'orphaned'` or `status: 'duplicate'` are skipped, so a second run after a successful force-run leaves nothing to do. Defaults `dryRun: true` per the F-05 dry-run-is-observability rule — caller MUST pass `force: true` to actually write. dryRun returns the full plan (bucket counts + per-row preview, capped at 500 rows per bucket) without writes. Real run without `force: true` returns the plan with `refused: true` and no writes. Mirror operation preserves processChartUpload's atomic-guard contract (read-verify + compensating-delete + library_signals broadcast). Returns `{scanned, alreadyHealthy, driveMirror:{count,rows,truncated}, orphan:{count,rows,truncated}, transient:{count,rows,truncated}, skippedNonChart:{count,rows,truncated}, coverage, dryRun, committed, refused?}`.",
             inputSchema: {
                 dryRun: z
                     .boolean()
@@ -1140,6 +1155,43 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await reconcileLibrary(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "salvage_chart_bytes",
+        {
+            description:
+                "Admin-only HEAL tool — re-upload chart bytes onto an EXISTING orphaned `library_index/{fileId}` row, preserving every setlist/song bond pointing at that fileId (cycle-3 DATA-001). Use this BEFORE `reconcile_library({force:true})` would mark a row orphaned, when the song is load-bearing (the 24-orphan triage surfaced names like Ana B'Koach, Mizmor L'David, Tu Bishvat, Yedid Nefesh, May the Memory). Source-bytes resolution: (1) if `sourceUrl` is provided, fetch it (https only, 25MB cap); (2) else if the row carries `driveFileId`, re-fetch from Drive via the service account; (3) else refuse with `no_source_available`. HEAL contract (NOT a fresh-mint upload): bytes land at the SAME fileId, mimeType + fileSize + source:'salvage' + salvagedAt + status:'active' are merge-updated, every curation field (key, bpm, tags, leadMusician, composer, bondCorrectionHistory, stem, titleSpecificity) is preserved. Atomic-guard: read-verify + compensating-delete on Firestore failure + library_signals broadcast — same contract as reconcile_library and processChartUpload. Defaults `dryRun: true` per the F-05 dry-run-is-observability rule; the dryRun plan resolves bytes (and may fail at this stage if the source is broken) but writes nothing. Real run without `force: true` returns the plan with `refused: true`. Refusal envelopes (rich): `forbidden_role` (admin-only), `row_not_found`, `no_source_available`, `invalid_source_url`, `invalid_source_mime`, `source_fetch_failed`, `source_fetch_empty`, `source_too_large`, `storage_upload_failed`, `storage_verify_missing`, `storage_size_mismatch`, `firestore_write_failed`. Returns `{ok:true, fileId, rowName, source:'sourceUrl'|'drive', mimeType, sizeBytes, storagePath, dryRun, refused?}`.",
+            inputSchema: {
+                fileId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "The orphaned library_index row's fileId (typically `upload-<uuid>`). Discover via reconcile_library({dryRun:true}).orphan.rows[].",
+                    ),
+                sourceUrl: z
+                    .string()
+                    .url()
+                    .optional()
+                    .describe(
+                        "Optional https:// URL to fetch fresh bytes from. Omit to fall back to the row's `driveFileId` (Drive re-fetch via the service account). When provided, the mime is taken from the response Content-Type header and must be one of: pdf, xml, musicxml, png, jpeg, text. 25MB cap.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true (default), resolves source bytes + returns the plan without writing to Storage / Firestore. F-05 standing rule: dryRun does NOT require force.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes — even after `dryRun: false` is set.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await salvageChartBytes(uidFrom(extra), args)),
     )
 
     server.registerTool(

@@ -11,18 +11,21 @@ import {
     projectionFromLibraryIndexData,
     type EnrichmentProjection,
 } from "@/lib/library/enrichment-projection"
+import type { HygieneCoverage } from "./reconcile-library"
 
 /**
- * Shared "is this row a chart-bytes artifact?" predicate. Used by both
- * list_library (to hide non-charts from the default browse) and
- * search_library (cycle-1 F-007/F-024 — agent searches were returning
- * `.mp3`, `.xlsx`, and `.DS_Store` rows alongside real charts).
+ * Shared "is this row a chart-bytes artifact?" predicate. Used by:
+ *  - list_library (to hide non-charts from the default browse)
+ *  - search_library (cycle-1 F-007/F-024 — agent searches were returning
+ *    `.mp3`, `.xlsx`, and `.DS_Store` rows alongside real charts)
+ *  - reconcile_library (cycle-3 BUG-001 — Drive-folder rows were landing
+ *    in driveMirror.rows[] and would force-write 0-byte garbage)
  *
  * Accepts a loose shape so callers can pass either a LibraryIndexEntry
  * (mimeType + name both present) or a partial-join SongRecord (name only,
  * via fileName) and the predicate degrades gracefully.
  */
-function isNonChartArtifactShape(rec: {
+export function isNonChartArtifactShape(rec: {
     mimeType?: string | null
     name?: string | null
 }): boolean {
@@ -537,6 +540,8 @@ export interface ListLibraryResult {
     total: number
     offset: number
     limit: number
+    /** Cycle-3 DATA-002 — uniform hygiene scan coverage. */
+    coverage: HygieneCoverage
 }
 
 function toLibraryEntry(
@@ -654,9 +659,25 @@ export async function listLibrary(
         )
         attachSiblingCounts(all)
 
+        // Cycle-3 DATA-002 — capture each filter pass's filteredOut so the
+        // surfaced `total` field matches a real catalog count Daniel can
+        // correlate against the other hygiene tools.
+        const filteredOut: HygieneCoverage["filteredOut"] = {
+            byStatus: {},
+            byCollection: {},
+            byOther: {},
+        }
+
         const chartLike = args.includeNonCharts
             ? all
-            : all.filter((e) => !isNonChartArtifact(e))
+            : all.filter((e) => {
+                  if (isNonChartArtifact(e)) {
+                      filteredOut.byOther.non_chart =
+                          (filteredOut.byOther.non_chart ?? 0) + 1
+                      return false
+                  }
+                  return true
+              })
 
         // Cycle-2 DATA-004: align list_library's default with the in-app
         // /library catalog, which hides rows that the dedupe pass has marked
@@ -665,9 +686,14 @@ export async function listLibrary(
         // Opt-in via `includeNonChartHealthy: true` for audit/reconciliation.
         const chartHealthy = args.includeNonChartHealthy
             ? chartLike
-            : chartLike.filter(
-                  (e) => e.status !== "duplicate" && e.status !== "orphaned",
-              )
+            : chartLike.filter((e) => {
+                  if (e.status === "duplicate" || e.status === "orphaned") {
+                      filteredOut.byStatus[e.status] =
+                          (filteredOut.byStatus[e.status] ?? 0) + 1
+                      return false
+                  }
+                  return true
+              })
 
         // "core" matches the UI semantics in SongChartsLibrary: the CRC
         // Charts tab is the negative-set complement of supplemental + uploads,
@@ -677,12 +703,26 @@ export async function listLibrary(
         // them from MCP under {collection: "core"} (CF2-D-1).
         const filtered = args.collection
             ? args.collection === "core"
-                ? chartHealthy.filter(
-                      (e) =>
-                          e.collection !== "supplemental" &&
-                          e.collection !== "uploads",
-                  )
-                : chartHealthy.filter((e) => e.collection === args.collection)
+                ? chartHealthy.filter((e) => {
+                      if (
+                          e.collection === "supplemental" ||
+                          e.collection === "uploads"
+                      ) {
+                          filteredOut.byCollection[e.collection] =
+                              (filteredOut.byCollection[e.collection] ?? 0) + 1
+                          return false
+                      }
+                      return true
+                  })
+                : chartHealthy.filter((e) => {
+                      if (e.collection !== args.collection) {
+                          const key = e.collection ?? "(none)"
+                          filteredOut.byCollection[key] =
+                              (filteredOut.byCollection[key] ?? 0) + 1
+                          return false
+                      }
+                      return true
+                  })
             : chartHealthy
 
         filtered.sort((a, b) =>
@@ -694,6 +734,12 @@ export async function listLibrary(
             total: filtered.length,
             offset,
             limit,
+            coverage: {
+                total: all.length,
+                eligible: chartLike.length,
+                scanned: filtered.length,
+                filteredOut,
+            },
         }
     } catch (err) {
         logger.warn("[mcp] list_library failed:", err)
@@ -740,6 +786,29 @@ export async function listLibrary(
 export interface DedupeLibraryIndexArgs {
     /** When true, do not write — return the plan only. F-05 standing rule. */
     dryRun?: boolean
+    /**
+     * Cycle-3 MCP-001 (Daniel-ratified 2026-05-18T18:45Z, decisions.md
+     * item 5) — required for real writes. dryRun + force omitted on a
+     * real-run path returns the plan with `refused: true` and no writes.
+     * Matches the F-05 standing rule already enforced on every other
+     * hygiene tool (reconcile_library / backfill_library_index /
+     * backfill_setlist_test_flag).
+     */
+    force?: boolean
+    /**
+     * Cycle-3 MCP-001 — optional per-call similarity threshold. When
+     * provided (any value in [0,1]), an additional fuzzy-similarity
+     * grouping pass runs on top of the default exact-normalized-name
+     * grouping. Rows whose normalized-name Levenshtein similarity
+     * exceeds the threshold get clustered into the same dedupe group.
+     * 0.85 is the standing rule's strict default ([[feedback_dedup_force_override]]);
+     * lower values (e.g. 0.84) find more clusters and are intended for
+     * cycle-4 §7.B.4 boundary probes only. PER-CALL TUNING ONLY — the
+     * persisted dedup threshold elsewhere in the codebase is unchanged.
+     * Omitting forceScore preserves the historical exact-normalize-only
+     * behavior so existing callers see no surprise grouping.
+     */
+    forceScore?: number
 }
 
 export interface DedupeGroup {
@@ -763,6 +832,12 @@ export interface DedupeLibraryIndexResult {
     /** Per-group plan (for audit / dryRun). */
     groups: DedupeGroup[]
     dryRun: boolean
+    /** Cycle-3 MCP-001 — true when force omitted on a real-run; no writes happened. */
+    refused?: boolean
+    /** Cycle-3 MCP-001 — the threshold actually applied for this call (default 0.85). */
+    threshold: number
+    /** Cycle-3 DATA-002 — uniform hygiene scan coverage. */
+    coverage: HygieneCoverage
 }
 
 function dedupeNormalize(s: string): string {
@@ -775,11 +850,112 @@ function dedupeNormalize(s: string): string {
         .trim()
 }
 
+/**
+ * Cycle-3 MCP-001 — Levenshtein-distance similarity score in [0, 1] over
+ * dedupe-normalized names. Reused from processChartUpload's H-3 dedup
+ * (line 397-405). Higher = more similar. 1.0 = identical post-normalize.
+ */
+function nameSimilarity(a: string, b: string): number {
+    if (a === b) return 1
+    const max = Math.max(a.length, b.length)
+    if (max === 0) return 1
+    // Simple Levenshtein (Wagner-Fischer). Bounded by max here so the dedup
+    // loop stays O(N²·max) — acceptable for catalog-sized N (<1000).
+    const m = a.length
+    const n = b.length
+    const dp: number[] = new Array(n + 1)
+    for (let j = 0; j <= n; j++) dp[j] = j
+    for (let i = 1; i <= m; i++) {
+        let prev = dp[0]
+        dp[0] = i
+        for (let j = 1; j <= n; j++) {
+            const tmp = dp[j]
+            dp[j] = Math.min(
+                dp[j] + 1,
+                dp[j - 1] + 1,
+                prev + (a[i - 1] === b[j - 1] ? 0 : 1),
+            )
+            prev = tmp
+        }
+    }
+    return 1 - dp[n] / max
+}
+
+/**
+ * Cycle-3 MCP-001 — single-link clustering of remaining (post-exact-grouping)
+ * candidates by `nameSimilarity > threshold`. Returns a Map keyed by the
+ * canonical key of the cluster (= lowest fileId in the cluster), valued by
+ * the candidates in that cluster. Only clusters with >=2 candidates land
+ * in the result. Runs in O(N²) over candidates — fine at catalog size.
+ */
+interface SimilarityCandidate {
+    fileId: string
+    name: string
+    normalizedKey: string
+    uploadedAt: string | null
+}
+function clusterBySimilarity(
+    candidates: SimilarityCandidate[],
+    threshold: number,
+): Map<string, SimilarityCandidate[]> {
+    // Disjoint-set / union-find over candidate indices.
+    const parent = candidates.map((_, i) => i)
+    const find = (x: number): number => {
+        while (parent[x] !== x) {
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        }
+        return x
+    }
+    const union = (a: number, b: number) => {
+        const ra = find(a)
+        const rb = find(b)
+        if (ra !== rb) parent[ra] = rb
+    }
+    for (let i = 0; i < candidates.length; i++) {
+        for (let j = i + 1; j < candidates.length; j++) {
+            if (
+                nameSimilarity(
+                    candidates[i].normalizedKey,
+                    candidates[j].normalizedKey,
+                ) > threshold
+            ) {
+                union(i, j)
+            }
+        }
+    }
+    const buckets = new Map<number, SimilarityCandidate[]>()
+    for (let i = 0; i < candidates.length; i++) {
+        const r = find(i)
+        const bucket = buckets.get(r) ?? []
+        bucket.push(candidates[i])
+        buckets.set(r, bucket)
+    }
+    const out = new Map<string, SimilarityCandidate[]>()
+    for (const bucket of buckets.values()) {
+        if (bucket.length < 2) continue
+        bucket.sort((a, b) => a.fileId.localeCompare(b.fileId))
+        out.set(bucket[0].fileId, bucket)
+    }
+    return out
+}
+
 export async function dedupeLibraryIndex(
     _uid: string,
     args: DedupeLibraryIndexArgs = {},
 ): Promise<DedupeLibraryIndexResult | { error: string }> {
     const dryRun = args.dryRun === true
+    const force = args.force === true
+    // forceScore opt-in: any number triggers similarity grouping; omit to
+    // preserve historical exact-normalize-only behavior. Standing-rule
+    // strict default per [[feedback_dedup_force_override]] when caller
+    // opts in without specifying a value (e.g. `forceScore: 0.85`).
+    const similarityThreshold: number | null =
+        typeof args.forceScore === "number" &&
+        args.forceScore >= 0 &&
+        args.forceScore <= 1
+            ? args.forceScore
+            : null
     try {
         initAdmin()
         const db = getFirestore()
@@ -793,15 +969,24 @@ export async function dedupeLibraryIndex(
             uploadedAt: string | null
         }
         const candidates: Candidate[] = []
+        const filteredByStatus: Record<string, number> = {}
+        const filteredByOther: Record<string, number> = {}
         for (const d of snap.docs) {
             const data = d.data()
             const status = typeof data.status === "string" ? data.status : "active"
-            if (status === "duplicate" || status === "archived") continue
+            if (status === "duplicate" || status === "archived") {
+                filteredByStatus[status] = (filteredByStatus[status] ?? 0) + 1
+                continue
+            }
             const rawName =
                 (typeof data.name === "string" && data.name) ||
                 (typeof data.title === "string" && data.title) ||
                 ""
-            if (!rawName) continue
+            if (!rawName) {
+                filteredByOther.empty_name =
+                    (filteredByOther.empty_name ?? 0) + 1
+                continue
+            }
             const uploadedAt =
                 typeof data.uploadedAt === "string"
                     ? data.uploadedAt
@@ -817,7 +1002,11 @@ export async function dedupeLibraryIndex(
             const key = dedupeNormalize(c.name)
             // Refuse to group rows whose name normalizes to empty (e.g.
             // emoji-only or punctuation-only names). Too risky to collapse.
-            if (!key) continue
+            if (!key) {
+                filteredByOther.empty_normalized_key =
+                    (filteredByOther.empty_normalized_key ?? 0) + 1
+                continue
+            }
             const bucket = groups.get(key) ?? []
             bucket.push(c)
             groups.set(key, bucket)
@@ -826,6 +1015,7 @@ export async function dedupeLibraryIndex(
         // Pick canonical + collect losers per group.
         const dupeGroups: DedupeGroup[] = []
         const losers: Candidate[] = []
+        const exactGroupedIds = new Set<string>()
         for (const [key, bucket] of groups) {
             if (bucket.length < 2) continue
             // Deterministic canonical: earliest uploadedAt wins; rows with
@@ -851,7 +1041,90 @@ export async function dedupeLibraryIndex(
                     uploadedAt: r.uploadedAt,
                 })),
             })
+            for (const c of bucket) exactGroupedIds.add(c.fileId)
             losers.push(...rest)
+        }
+
+        // Cycle-3 MCP-001 — optional second pass: cluster the remaining
+        // ungrouped candidates by name-similarity above `forceScore`.
+        // Reuses the canonical-pick + loser collection rules. Rows already
+        // grouped by exact-normalize stay in their exact group (a row
+        // can only belong to one cluster).
+        if (similarityThreshold !== null) {
+            const remaining: SimilarityCandidate[] = []
+            for (const c of candidates) {
+                if (exactGroupedIds.has(c.fileId)) continue
+                const key = dedupeNormalize(c.name)
+                if (!key) continue
+                remaining.push({
+                    fileId: c.fileId,
+                    name: c.name,
+                    normalizedKey: key,
+                    uploadedAt: c.uploadedAt,
+                })
+            }
+            const fuzzyClusters = clusterBySimilarity(
+                remaining,
+                similarityThreshold,
+            )
+            for (const cluster of fuzzyClusters.values()) {
+                if (cluster.length < 2) continue
+                cluster.sort((a, b) => {
+                    const aAt = a.uploadedAt ?? "￿"
+                    const bAt = b.uploadedAt ?? "￿"
+                    if (aAt !== bAt) return aAt.localeCompare(bAt)
+                    return a.fileId.localeCompare(b.fileId)
+                })
+                const [keep, ...rest] = cluster
+                dupeGroups.push({
+                    normalizedName: keep.normalizedKey,
+                    kept: {
+                        fileId: keep.fileId,
+                        name: keep.name,
+                        uploadedAt: keep.uploadedAt,
+                    },
+                    duplicates: rest.map((r) => ({
+                        fileId: r.fileId,
+                        name: r.name,
+                        uploadedAt: r.uploadedAt,
+                    })),
+                })
+                losers.push(
+                    ...rest.map((r) => ({
+                        fileId: r.fileId,
+                        name: r.name,
+                        uploadedAt: r.uploadedAt,
+                    })),
+                )
+            }
+        }
+
+        // F-05 refusal: real run without `force: true` returns the plan
+        // with refused:true and no writes. Mirrors reconcile_library /
+        // backfill_library_index / backfill_setlist_test_flag.
+        const coverage: HygieneCoverage = {
+            total: snap.docs.length,
+            eligible: candidates.length,
+            scanned: candidates.length,
+            filteredOut: {
+                byStatus: filteredByStatus,
+                byCollection: {},
+                byOther: filteredByOther,
+            },
+        }
+        const threshold = similarityThreshold ?? 0.85
+        if (!dryRun && !force) {
+            return {
+                scanned: candidates.length,
+                groupsFound: dupeGroups.length,
+                duplicatesMarked: losers.length,
+                songsMirrored: 0,
+                groups: dupeGroups,
+                dryRun: false,
+                refused: true,
+                threshold,
+                coverage,
+            }
         }
 
         let songsMirrored = 0
@@ -903,6 +1176,8 @@ export async function dedupeLibraryIndex(
             songsMirrored,
             groups: dupeGroups,
             dryRun,
+            threshold,
+            coverage,
         }
     } catch (err) {
         logger.warn("[mcp] dedupe_library_index failed:", err)
@@ -977,6 +1252,8 @@ export interface BackfillLibraryIndexResult {
     dryRun: boolean
     /** When dryRun=false and force omitted, returns `refused: true` and no writes. */
     refused?: boolean
+    /** Cycle-3 DATA-002 — uniform hygiene scan coverage. */
+    coverage: HygieneCoverage
 }
 
 const STORAGE_PROBE_EXTENSIONS = ["", ".pdf", ".xml", ".heic", ".jpg", ".jpeg", ".png"]
@@ -1073,6 +1350,28 @@ export async function backfillLibraryIndex(
             }
         })
 
+        // Cycle-3 DATA-002 — coverage filteredOut tracks rows skipped from
+        // fileSize hydration (orphaned + duplicate) AND rows skipped from
+        // name normalization (empty rawName). The scan visits every row;
+        // backfill only skips on specific deltas, not on whole-row inclusion,
+        // so eligible === total here.
+        const filteredByStatus: Record<string, number> = {}
+        const filteredByOther: Record<string, number> = {}
+        for (const c of candidates) {
+            if (
+                c.currentFileSize === null &&
+                (c.currentStatus === "orphaned" ||
+                    c.currentStatus === "duplicate")
+            ) {
+                filteredByStatus[c.currentStatus] =
+                    (filteredByStatus[c.currentStatus] ?? 0) + 1
+            }
+            if (c.rawName === null) {
+                filteredByOther.missing_name =
+                    (filteredByOther.missing_name ?? 0) + 1
+            }
+        }
+
         // Compute name deltas in-memory; queue fileSize probes for rows
         // whose `fileSize` is null. Skip orphaned rows for fileSize
         // hydration — they have no Storage object by definition.
@@ -1154,6 +1453,17 @@ export async function backfillLibraryIndex(
 
         const rowsChanged = deltas.length
 
+        const coverage: HygieneCoverage = {
+            total: candidates.length,
+            eligible: candidates.length,
+            scanned: candidates.length,
+            filteredOut: {
+                byStatus: filteredByStatus,
+                byCollection: {},
+                byOther: filteredByOther,
+            },
+        }
+
         if (dryRun) {
             const reportDeltas = deltas.slice(0, BACKFILL_DELTA_REPORT_CAP)
             return {
@@ -1165,6 +1475,7 @@ export async function backfillLibraryIndex(
                 deltas: reportDeltas,
                 deltasTruncated: deltas.length > BACKFILL_DELTA_REPORT_CAP,
                 dryRun: true,
+                coverage,
             }
         }
 
@@ -1208,6 +1519,7 @@ export async function backfillLibraryIndex(
             deltas: reportDeltas,
             deltasTruncated: deltas.length > BACKFILL_DELTA_REPORT_CAP,
             dryRun: false,
+            coverage,
         }
     } catch (err) {
         logger.warn("[mcp] backfill_library_index failed:", err)

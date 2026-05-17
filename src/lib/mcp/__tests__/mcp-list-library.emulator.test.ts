@@ -66,6 +66,13 @@ describe("MCP list_library (emulator)", () => {
             total: 0,
             offset: 0,
             limit: LIST_LIBRARY_DEFAULT_LIMIT,
+            // Cycle-3 DATA-002 — uniform coverage field across hygiene tools.
+            coverage: {
+                total: 0,
+                eligible: 0,
+                scanned: 0,
+                filteredOut: { byStatus: {}, byCollection: {}, byOther: {} },
+            },
         })
     })
 

@@ -491,4 +491,98 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         expect(r.orphan.count).toBe(0)
         expect(r.transient.count).toBe(0)
     })
+
+    it("BUG-001: Drive-folder rows route to skippedNonChart, NOT driveMirror", async () => {
+        await seedUser(ADMIN, "admin")
+        // Three Drive-200 rows in library_index — only one is a real chart.
+        // The folder row + audio row + .DS_Store should land in
+        // skippedNonChart and never be eligible for a force-run mirror.
+        driveState.metadata.set("real-chart-1", {
+            name: "Mi Chamocha.pdf",
+            mimeType: "application/pdf",
+        })
+        driveState.bytes.set("real-chart-1", Buffer.from("pdf-bytes"))
+        await seedIndex("real-chart-1", {
+            name: "Mi Chamocha.pdf",
+            mimeType: "application/pdf",
+            status: "active",
+        })
+        driveState.metadata.set("folder-1", {
+            name: "Choral Arrangements",
+            mimeType: "application/vnd.google-apps.folder",
+        })
+        await seedIndex("folder-1", {
+            name: "Choral Arrangements",
+            mimeType: "application/vnd.google-apps.folder",
+            status: "active",
+        })
+        driveState.metadata.set("audio-1", {
+            name: "Niggun Sample.mp3",
+            mimeType: "audio/mpeg",
+        })
+        await seedIndex("audio-1", {
+            name: "Niggun Sample.mp3",
+            mimeType: "audio/mpeg",
+            status: "active",
+        })
+        driveState.metadata.set("dotfile-1", {
+            name: ".DS_Store",
+            mimeType: "application/octet-stream",
+        })
+        await seedIndex("dotfile-1", {
+            name: ".DS_Store",
+            mimeType: "application/octet-stream",
+            status: "active",
+        })
+
+        const r = await reconcileLibrary(ADMIN, { dryRun: true })
+        if ("error" in r) throw new Error(r.error)
+
+        expect(r.driveMirror.count).toBe(1)
+        expect(r.driveMirror.rows[0].fileId).toBe("real-chart-1")
+        expect(r.skippedNonChart.count).toBe(3)
+        const skippedIds = r.skippedNonChart.rows
+            .map((s) => s.fileId)
+            .sort()
+        expect(skippedIds).toEqual(["audio-1", "dotfile-1", "folder-1"])
+        const reasons = new Map(
+            r.skippedNonChart.rows.map((s) => [s.fileId, s.reason]),
+        )
+        expect(reasons.get("folder-1")).toBe("drive_folder")
+        expect(reasons.get("audio-1")).toBe("audio")
+        expect(reasons.get("dotfile-1")).toBe("hidden_dotfile")
+    })
+
+    it("DATA-002: coverage field surfaces uniform shape across the hygiene tools", async () => {
+        await seedUser(ADMIN, "admin")
+        await seedIndex("active-1", {
+            name: "Adon Olam.pdf",
+            mimeType: "application/pdf",
+            status: "active",
+        })
+        await seedIndex("orphaned-1", {
+            name: "Already Orphaned.pdf",
+            mimeType: "application/pdf",
+            status: "orphaned",
+        })
+        await seedIndex("duplicate-1", {
+            name: "Dupe Loser.pdf",
+            mimeType: "application/pdf",
+            status: "duplicate",
+        })
+        driveState.metadata.set("active-1", {
+            name: "Adon Olam.pdf",
+            mimeType: "application/pdf",
+        })
+        driveState.bytes.set("active-1", Buffer.from("pdf-bytes"))
+
+        const r = await reconcileLibrary(ADMIN, { dryRun: true })
+        if ("error" in r) throw new Error(r.error)
+
+        expect(r.coverage.total).toBe(3)
+        expect(r.coverage.eligible).toBe(1) // active-1 only
+        expect(r.coverage.scanned).toBe(1)
+        expect(r.coverage.filteredOut.byStatus.orphaned).toBe(1)
+        expect(r.coverage.filteredOut.byStatus.duplicate).toBe(1)
+    })
 })
