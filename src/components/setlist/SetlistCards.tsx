@@ -93,7 +93,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
             </div>
 
             <div className="flex-1 min-w-0">
-                <h5 className="text-xl font-bold text-foreground group-hover:text-brand transition-colors truncate tracking-tight">{setlist.name}</h5>
+                <h5 title={setlist.name} className="text-xl font-bold text-foreground group-hover:text-brand transition-colors line-clamp-2 tracking-tight">{setlist.name}</h5>
                 <div className="flex items-center gap-3 mt-1 flex-wrap">
                     <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
                         <Calendar className="h-3.5 w-3.5" />
@@ -238,7 +238,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
             </div>
 
             <div className="flex-1 min-w-0">
-                <h5 className="text-lg font-semibold text-foreground group-hover:text-brand transition-colors truncate tracking-tight">{setlist.name}</h5>
+                <h5 title={setlist.name} className="text-lg font-semibold text-foreground group-hover:text-brand transition-colors line-clamp-2 tracking-tight">{setlist.name}</h5>
                 <div className="flex items-center gap-3 mt-1 flex-wrap">
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" />

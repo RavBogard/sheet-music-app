@@ -1,5 +1,5 @@
 "use client"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
 import buildInfo from "@/build-info.json"
 import { ChevronLeft, Plus, LogIn, Calendar, Sparkles, FolderUp, Wand2, FileText, Menu, Bell, Music, Settings, Cloud, HelpCircle, Activity, Library, Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -7,6 +7,8 @@ import { ErrorState } from "@/components/ui/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
 import dynamic from "next/dynamic"
 
+import { getContextualGreeting } from "@/lib/greeting"
+import { DEFAULT_SHORT_NAME } from "@/lib/constants"
 import { TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 import { UpcomingSetlistCard, SetlistCard, PlaceholderCard } from "./SetlistCards"
 import { DeleteSetlistDialog, DuplicateSetlistDialog, TransferSetlistDialog } from "./SetlistDialogs"
@@ -56,6 +58,15 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
         upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading
     } = useSetlistDashboard(props)
 
+    const greetingText = useMemo(() => {
+        const firstName = user?.displayName?.split(' ')[0] || null
+        return getContextualGreeting(
+            firstName,
+            undefined,
+            congregation.shortName || DEFAULT_SHORT_NAME,
+        ).text
+    }, [user?.displayName, congregation.shortName])
+
     return (
         <div className="flex min-h-[100dvh] bg-background text-foreground relative overflow-hidden">
             {/* Main Content Area */}
@@ -66,7 +77,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                         {user && (
                             <section className="mb-8 mt-2">
                                 <h2 className="text-4xl font-bold tracking-tighter text-foreground mb-2">
-                                    Welcome Back{user.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}.
+                                    {greetingText}
                                 </h2>
                                 <p className="text-lg text-muted-foreground">
                                     Your stage is ready. {upcoming.length} upcoming setlists scheduled.
