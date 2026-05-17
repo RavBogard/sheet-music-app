@@ -6,19 +6,30 @@ import {
 } from "../zod-envelope-remap"
 
 /**
- * F-02 (2026-05-16 bugstomp): pin the contract for the JSON-RPC -32602
- * → {error: "..."} envelope remap. The function is a pure transform on
- * the parsed response body — no HTTP, no Zod, no MCP SDK required.
+ * F-02 (2026-05-16 bugstomp) + REG-001 (cycle-2): pin the contract for
+ * the JSON-RPC -32602 → rich-envelope remap. The function is a pure
+ * transform on the parsed response body — no HTTP, no Zod, no MCP SDK
+ * required.
+ *
+ * Wire envelope shape (cycle-2 REG-001 — `validation_error`):
+ *   {
+ *     ok: false,
+ *     error: "validation_error",
+ *     message: "Invalid arguments — <tool>: <summary>",
+ *     toolName: <string|null>,
+ *     issues: [{path, message, code?}, ...],
+ *     hint: "Re-call the tool with corrected arguments (see issues[])."
+ *   }
  */
 describe("remapValidationError", () => {
-    it("rewrites -32602 single-response error as a result with the {error} envelope", () => {
+    it("rewrites -32602 single-response error into the rich validation_error envelope", () => {
         const body = {
             jsonrpc: "2.0",
             id: 42,
             error: {
                 code: -32602,
                 message:
-                    'Input validation error: Invalid arguments for tool create_setlist: [{"path":["name"],"message":"Too small"}]',
+                    'Input validation error: Invalid arguments for tool create_setlist: [{"path":["name"],"message":"Too small","code":"too_small"}]',
             },
         }
         const out = remapValidationError(body) as Record<string, unknown>
@@ -26,10 +37,26 @@ describe("remapValidationError", () => {
         expect(out.jsonrpc).toBe("2.0")
         expect(out.id).toBe(42)
         expect(out.error).toBeUndefined()
-        const result = out.result as { content: Array<{ type: string; text: string }> }
+        const result = out.result as {
+            content: Array<{ type: string; text: string }>
+            isError: boolean
+        }
+        expect(result.isError).toBe(true)
         expect(result.content[0].type).toBe("text")
-        const parsed = JSON.parse(result.content[0].text)
-        expect(parsed.error).toBe(body.error.message)
+        const parsed = JSON.parse(result.content[0].text) as Record<
+            string,
+            unknown
+        >
+        expect(parsed.ok).toBe(false)
+        expect(parsed.error).toBe("validation_error")
+        expect(parsed.toolName).toBe("create_setlist")
+        expect(parsed.message).toContain("name: Too small")
+        expect(parsed.hint).toContain("Re-call")
+        const issues = parsed.issues as Array<Record<string, unknown>>
+        expect(issues).toHaveLength(1)
+        expect(issues[0].path).toBe("name")
+        expect(issues[0].message).toBe("Too small")
+        expect(issues[0].code).toBe("too_small")
     })
 
     it("passes through a successful response unchanged (identity)", () => {
@@ -67,7 +94,11 @@ describe("remapValidationError", () => {
         const bad = {
             jsonrpc: "2.0",
             id: 2,
-            error: { code: -32602, message: "validation failed" },
+            error: {
+                code: -32602,
+                message:
+                    'Input validation error: Invalid arguments for tool create_setlist: [{"path":["name"],"message":"Required"}]',
+            },
         }
         const internal = {
             jsonrpc: "2.0",
@@ -83,7 +114,9 @@ describe("remapValidationError", () => {
         expect(rewritten.error).toBeUndefined()
         const text = (rewritten.result as { content: Array<{ text: string }> })
             .content[0].text
-        expect(JSON.parse(text).error).toBe(bad.error.message)
+        const env = JSON.parse(text) as Record<string, unknown>
+        expect(env.error).toBe("validation_error")
+        expect(env.toolName).toBe("create_setlist")
         expect(out[2]).toBe(internal)
     })
 
@@ -98,7 +131,7 @@ describe("remapValidationError", () => {
         expect(out).toBe(batch)
     })
 
-    it("handles a missing error.message with a default string", () => {
+    it("handles a missing error.message with a fallback envelope", () => {
         const body = {
             jsonrpc: "2.0",
             id: 1,
@@ -107,7 +140,12 @@ describe("remapValidationError", () => {
         const out = remapValidationError(body) as Record<string, unknown>
         const text = (out.result as { content: Array<{ text: string }> })
             .content[0].text
-        expect(JSON.parse(text).error).toBe("Validation failed")
+        const env = JSON.parse(text) as Record<string, unknown>
+        expect(env.error).toBe("validation_error")
+        // Falls back to the default "Validation failed" prose carried as a
+        // single synthetic issue when the SDK gave us nothing to parse.
+        expect(env.toolName).toBeNull()
+        expect((env.issues as unknown[]).length).toBeGreaterThan(0)
     })
 
     it("ignores malformed bodies (string, null, undefined)", () => {
@@ -119,12 +157,13 @@ describe("remapValidationError", () => {
 })
 
 /**
- * F-02-regression-pt2 (v6 2026-05-16): the SDK's catch wrapper turns
- * `McpError(InvalidParams)` into a normal CallToolResult with
- * `isError: true` and `content[0].text` literally prefixed
- * `"MCP error -32602: Input validation error:"`. The `-32602` field
- * never appears on the wire — only this prose string in the content.
- * Production probe captured the exact shape; these tests pin it.
+ * F-02-regression-pt2 (v6 2026-05-16) + REG-001 (cycle-2): the SDK's
+ * catch wrapper turns `McpError(InvalidParams)` into a normal
+ * CallToolResult with `isError: true` and `content[0].text` literally
+ * prefixed `"MCP error -32602: Input validation error:"`. The `-32602`
+ * field never appears on the wire — only this prose string in the
+ * content. Production probe captured the exact shape; these tests pin it
+ * AND the rich envelope cycle-2 upgrade.
  */
 describe("remapValidationError — isError: true content rewrite", () => {
     // Real shape captured from production via scripts/probe-f02-shape.mjs
@@ -148,7 +187,7 @@ describe("remapValidationError — isError: true content rewrite", () => {
         id: 1,
     }
 
-    it("rewrites isError: true with SDK validation prose into {error} envelope", () => {
+    it("rewrites isError:true SDK prose into the rich validation_error envelope", () => {
         const out = remapValidationError(productionShape) as {
             result: {
                 content: Array<{ type: string; text: string }>
@@ -160,14 +199,20 @@ describe("remapValidationError — isError: true content rewrite", () => {
         expect(out.id).toBe(1)
         // isError stays so agents checking it structurally still see the failure.
         expect(out.result.isError).toBe(true)
-        // content[0].text now JSON-parses to {error: "..."} per the
-        // F-02 contract.
-        const parsed = JSON.parse(out.result.content[0].text)
-        expect(parsed.error).toContain("Input validation error")
-        expect(parsed.error).toContain("create_setlist")
-        // The redundant "MCP error -32602: " noise is stripped.
-        expect(parsed.error.startsWith("MCP error -32602:")).toBe(false)
-        expect(parsed.error.startsWith("Input validation error:")).toBe(true)
+        const env = JSON.parse(out.result.content[0].text) as Record<
+            string,
+            unknown
+        >
+        expect(env.ok).toBe(false)
+        expect(env.error).toBe("validation_error")
+        expect(env.toolName).toBe("create_setlist")
+        expect(env.message).toContain("create_setlist")
+        expect(env.message).toContain("name")
+        const issues = env.issues as Array<Record<string, unknown>>
+        expect(issues).toHaveLength(1)
+        expect(issues[0].path).toBe("name")
+        expect(issues[0].code).toBe("too_small")
+        expect(env.hint).toContain("Re-call")
     })
 
     it("preserves additional content items beyond index 0", () => {
@@ -177,7 +222,7 @@ describe("remapValidationError — isError: true content rewrite", () => {
                     {
                         type: "text",
                         text:
-                            "MCP error -32602: Input validation error: Invalid arguments for tool x: [...]",
+                            'MCP error -32602: Input validation error: Invalid arguments for tool x: [{"path":["y"],"message":"bad"}]',
                     },
                     { type: "text", text: "hint: pass a non-empty name" },
                 ],
@@ -266,22 +311,30 @@ describe("remapValidationSseBody", () => {
         error: {
             code: -32602,
             message:
-                'Input validation error: Invalid arguments for tool create_setlist: [{"path":["name"]}]',
+                'Input validation error: Invalid arguments for tool create_setlist: [{"path":["name"],"message":"Required"}]',
         },
     })}\n\n`
 
-    it("rewrites a -32602 SSE event into the {error} envelope", () => {
+    it("rewrites a -32602 SSE event into the rich envelope", () => {
         const out = remapValidationSseBody(sseError)
         expect(out).not.toBe(sseError)
         // Body still starts with the SSE event line.
         expect(out.startsWith("event: message\n")).toBe(true)
         // Extract the data: line and parse what we re-emitted.
         const dataLine = out.split("\n").find((l) => l.startsWith("data: "))!
-        const parsed = JSON.parse(dataLine.slice("data: ".length))
+        const parsed = JSON.parse(dataLine.slice("data: ".length)) as Record<
+            string,
+            unknown
+        >
         expect(parsed.error).toBeUndefined()
         expect(parsed.id).toBe(42)
-        const text = parsed.result.content[0].text
-        expect(JSON.parse(text).error).toContain("Input validation error")
+        const result = parsed.result as { content: Array<{ text: string }> }
+        const env = JSON.parse(result.content[0].text) as Record<
+            string,
+            unknown
+        >
+        expect(env.error).toBe("validation_error")
+        expect(env.toolName).toBe("create_setlist")
         // Preserve the trailing blank line that delimits SSE events.
         expect(out.endsWith("\n\n")).toBe(true)
     })
@@ -302,14 +355,26 @@ describe("remapValidationSseBody", () => {
         const withId = `event: message\nid: evt-7\ndata: ${JSON.stringify({
             jsonrpc: "2.0",
             id: 99,
-            error: { code: -32602, message: "bad" },
+            error: {
+                code: -32602,
+                message:
+                    'Input validation error: Invalid arguments for tool x: [{"path":["y"],"message":"bad"}]',
+            },
         })}\n\n`
         const out = remapValidationSseBody(withId)
         expect(out).not.toBe(withId)
         expect(out).toContain("id: evt-7")
         const dataLine = out.split("\n").find((l) => l.startsWith("data: "))!
-        const parsed = JSON.parse(dataLine.slice("data: ".length))
-        expect(parsed.result.content[0].text).toContain("bad")
+        const parsed = JSON.parse(dataLine.slice("data: ".length)) as Record<
+            string,
+            unknown
+        >
+        const result = parsed.result as { content: Array<{ text: string }> }
+        const env = JSON.parse(result.content[0].text) as Record<
+            string,
+            unknown
+        >
+        expect(env.toolName).toBe("x")
     })
 
     it("rewrites the bad event in a multi-event body, leaves others", () => {
@@ -321,7 +386,11 @@ describe("remapValidationSseBody", () => {
         const bad = `event: message\ndata: ${JSON.stringify({
             jsonrpc: "2.0",
             id: 2,
-            error: { code: -32602, message: "bad" },
+            error: {
+                code: -32602,
+                message:
+                    'Input validation error: Invalid arguments for tool y: [{"path":["z"],"message":"bad"}]',
+            },
         })}`
         const body = `${ok}\n\n${bad}\n\n`
         const out = remapValidationSseBody(body)
@@ -333,9 +402,18 @@ describe("remapValidationSseBody", () => {
         const dataLine = secondEvent.split("\n").find((l) =>
             l.startsWith("data: "),
         )!
-        const parsed = JSON.parse(dataLine.slice("data: ".length))
+        const parsed = JSON.parse(dataLine.slice("data: ".length)) as Record<
+            string,
+            unknown
+        >
         expect(parsed.error).toBeUndefined()
-        expect(JSON.parse(parsed.result.content[0].text).error).toBe("bad")
+        const result = parsed.result as { content: Array<{ text: string }> }
+        const env = JSON.parse(result.content[0].text) as Record<
+            string,
+            unknown
+        >
+        expect(env.error).toBe("validation_error")
+        expect(env.toolName).toBe("y")
     })
 
     it("skips events with no data: line (priming events, comments)", () => {
@@ -362,7 +440,11 @@ describe("wrapWithValidationRemap", () => {
                 `event: message\ndata: ${JSON.stringify({
                     jsonrpc: "2.0",
                     id: 1,
-                    error: { code: -32602, message: "bad input" },
+                    error: {
+                        code: -32602,
+                        message:
+                            'Input validation error: Invalid arguments for tool create_setlist: [{"path":["name"],"message":"bad input"}]',
+                    },
                 })}\n\n`,
                 {
                     status: 200,
@@ -375,9 +457,18 @@ describe("wrapWithValidationRemap", () => {
         expect(res.headers.get("content-type")).toBe("text/event-stream")
         const text = await res.text()
         const dataLine = text.split("\n").find((l) => l.startsWith("data: "))!
-        const parsed = JSON.parse(dataLine.slice("data: ".length))
+        const parsed = JSON.parse(dataLine.slice("data: ".length)) as Record<
+            string,
+            unknown
+        >
         expect(parsed.error).toBeUndefined()
-        expect(JSON.parse(parsed.result.content[0].text).error).toBe("bad input")
+        const result = parsed.result as { content: Array<{ text: string }> }
+        const env = JSON.parse(result.content[0].text) as Record<
+            string,
+            unknown
+        >
+        expect(env.error).toBe("validation_error")
+        expect(env.toolName).toBe("create_setlist")
     })
 
     it("rewrites a -32602 inside a JSON-body response", async () => {
@@ -386,14 +477,25 @@ describe("wrapWithValidationRemap", () => {
                 JSON.stringify({
                     jsonrpc: "2.0",
                     id: 5,
-                    error: { code: -32602, message: "json bad" },
+                    error: {
+                        code: -32602,
+                        message:
+                            'Input validation error: Invalid arguments for tool x: [{"path":["y"],"message":"json bad"}]',
+                    },
                 }),
                 { status: 200, headers: { "content-type": "application/json" } },
             )
         const wrapped = wrapWithValidationRemap(handler)
         const res = await wrapped(new Request("http://x/api/mcp", { method: "POST" }))
-        const body = (await res.json()) as { result: { content: [{ text: string }] } }
-        expect(JSON.parse(body.result.content[0].text).error).toBe("json bad")
+        const body = (await res.json()) as {
+            result: { content: [{ text: string }] }
+        }
+        const env = JSON.parse(body.result.content[0].text) as Record<
+            string,
+            unknown
+        >
+        expect(env.error).toBe("validation_error")
+        expect(env.toolName).toBe("x")
     })
 
     it("passes through non--32602 responses with identity (no rebuild)", async () => {
@@ -429,7 +531,11 @@ describe("wrapWithValidationRemap", () => {
                 `event: message\ndata: ${JSON.stringify({
                     jsonrpc: "2.0",
                     id: 1,
-                    error: { code: -32602, message: "x" },
+                    error: {
+                        code: -32602,
+                        message:
+                            'Input validation error: Invalid arguments for tool x: [{"path":["y"],"message":"x"}]',
+                    },
                 })}\n\n`,
                 { status: 200, headers: { "content-type": "text/event-stream" } },
             )
@@ -455,9 +561,11 @@ describe("wrapWithValidationRemap", () => {
      * scripts/probe-f02-shape.mjs 2026-05-16). The earlier two F-02
      * attempts shipped without this test, so they could pass unit tests
      * while silently no-op'ing in prod. If this test fails, the wrapper
-     * is wrong-target again.
+     * is wrong-target again. Cycle-2 REG-001 upgraded the wire envelope
+     * to the canonical rich shape (`validation_error` machine code +
+     * issues[]); assertions track that shape.
      */
-    it("rewrites the EXACT production SSE shape (isError: true + SDK prose)", async () => {
+    it("rewrites the EXACT production SSE shape into the rich envelope", async () => {
         const productionSseBody =
             'event: message\ndata: {"result":{"content":[{"type":"text",' +
             '"text":"MCP error -32602: Input validation error: Invalid ' +
@@ -478,15 +586,30 @@ describe("wrapWithValidationRemap", () => {
         const text = await res.text()
         // Extract the data: line and parse what we re-emitted.
         const dataLine = text.split("\n").find((l) => l.startsWith("data: "))!
-        const parsed = JSON.parse(dataLine.slice("data: ".length))
+        const parsed = JSON.parse(dataLine.slice("data: ".length)) as Record<
+            string,
+            unknown
+        >
         // isError flag survives (structural failure signal still works).
-        expect(parsed.result.isError).toBe(true)
-        // content[0].text now JSON-parses cleanly to {error: "..."}.
-        const envelope = JSON.parse(parsed.result.content[0].text)
-        expect(envelope.error).toContain("Input validation error")
-        expect(envelope.error).toContain("create_setlist")
-        // The "MCP error -32602: " noise is stripped.
-        expect(envelope.error.startsWith("Input validation error:")).toBe(true)
+        const result = parsed.result as {
+            content: Array<{ text: string }>
+            isError: boolean
+        }
+        expect(result.isError).toBe(true)
+        // content[0].text now JSON-parses to the rich envelope.
+        const env = JSON.parse(result.content[0].text) as Record<
+            string,
+            unknown
+        >
+        expect(env.ok).toBe(false)
+        expect(env.error).toBe("validation_error")
+        expect(env.toolName).toBe("create_setlist")
+        expect(env.message).toContain("name")
+        const issues = env.issues as Array<Record<string, unknown>>
+        expect(issues).toHaveLength(1)
+        expect(issues[0].path).toBe("name")
+        expect(issues[0].code).toBe("too_small")
+        expect(env.hint).toContain("Re-call")
         // Trailing SSE delimiter preserved.
         expect(text.endsWith("\n\n")).toBe(true)
     })

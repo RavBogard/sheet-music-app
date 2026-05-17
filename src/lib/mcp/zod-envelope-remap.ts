@@ -1,8 +1,11 @@
+import { zodFormatterFromSdkProse } from "./error-envelopes"
+
 /**
  * F-02 (2026-05-16 bugstomp + v6 regression) — rewrite inputSchema
- * validation failures into the standard `{error: "..."}` content
- * envelope so agents that do `JSON.parse(content[0].text).error` get
- * a structured field instead of raw prose.
+ * validation failures into the canonical rich-error envelope so agents
+ * that do `JSON.parse(content[0].text)` see the same
+ * `{ok:false, error:'validation_error', message, issues, hint}` shape
+ * every other tool path emits.
  *
  * What the SDK actually does (verified via production probe
  * `scripts/probe-f02-shape.mjs` 2026-05-16, with two earlier
@@ -83,6 +86,23 @@ const SDK_MCPERROR_NOISE = "MCP error -32602: "
  * fires in practice, but keeping it is cheap and the existing unit
  * tests pin the contract.
  */
+/**
+ * Strip the SDK validation-error prefix from a raw prose string. The
+ * SDK's McpError messages look like `"Input validation error: Invalid
+ * arguments for tool <name>: <issues JSON>"` so the prefix-strip leaves
+ * `zodFormatterFromSdkProse` the substring it can structurally parse.
+ * When the prose doesn't carry the prefix (defense-in-depth path), we
+ * pass it through unchanged — `zodFormatterFromSdkProse` falls back to
+ * a single-issue envelope carrying the raw text.
+ */
+function stripSdkValidationPrefix(raw: string): string {
+    return raw.startsWith("Input validation error:")
+        ? raw
+        : raw.startsWith(SDK_MCPERROR_NOISE)
+          ? raw.slice(SDK_MCPERROR_NOISE.length)
+          : raw
+}
+
 function remapJsonRpcErrorMessage(msg: JsonRpcMessage): unknown {
     if (!msg.error || typeof msg.error !== "object") return msg
     if (msg.error.code !== -32602) return msg
@@ -90,6 +110,7 @@ function remapJsonRpcErrorMessage(msg: JsonRpcMessage): unknown {
         typeof msg.error.message === "string"
             ? msg.error.message
             : "Validation failed"
+    const envelope = zodFormatterFromSdkProse(stripSdkValidationPrefix(raw))
     return {
         jsonrpc: msg.jsonrpc,
         id: msg.id,
@@ -97,9 +118,10 @@ function remapJsonRpcErrorMessage(msg: JsonRpcMessage): unknown {
             content: [
                 {
                     type: "text",
-                    text: JSON.stringify({ error: raw }, null, 2),
+                    text: JSON.stringify(envelope, null, 2),
                 },
             ],
+            isError: true,
         },
     }
 }
@@ -123,6 +145,7 @@ function remapValidationResult(msg: JsonRpcMessage): unknown {
     if (typeof text !== "string") return msg
     if (!text.startsWith(SDK_VALIDATION_PREFIX)) return msg
     const stripped = text.slice(SDK_MCPERROR_NOISE.length)
+    const envelope = zodFormatterFromSdkProse(stripped)
     return {
         jsonrpc: msg.jsonrpc,
         id: msg.id,
@@ -131,7 +154,7 @@ function remapValidationResult(msg: JsonRpcMessage): unknown {
             content: [
                 {
                     type: "text",
-                    text: JSON.stringify({ error: stripped }, null, 2),
+                    text: JSON.stringify(envelope, null, 2),
                 },
                 ...content.slice(1),
             ],

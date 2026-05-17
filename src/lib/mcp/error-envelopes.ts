@@ -186,34 +186,146 @@ export type WriteRejection =
       }
 
 /**
- * F-02 from bugstomp 2026-05-16 (deferred to W-04): Zod validation failures
- * inside an MCP tool currently propagate as raw JSON-RPC `-32602` protocol
- * errors. Agent clients see the protocol code but lose the `{error: "..."}`
- * envelope shape every other tool path uses. This helper translates a
- * thrown ZodError into the standard envelope so tool wrappers can call it
- * uniformly via try/catch in the handler.
+ * Cycle-2 REG-001 / MCP-003 — every MCP tool error code on the wire must
+ * match this regex. Asserted by mcp-tools-validation.test.ts on the
+ * known canonical error catalog so a free-form prose string can't slip
+ * back into the `error:` field. Human-readable text belongs in `message`.
+ */
+export const MACHINE_CODE_RE = /^[a-z][a-z0-9_]*$/
+
+/**
+ * REG-001 (cycle-2) — uniform validation_error envelope used when an
+ * MCP tool's inputSchema fails Zod validation. Issues mirror Zod's
+ * `issues[]` shape (path, message, optional code) so an agent can surface
+ * per-field guidance without parsing prose.
  *
- * Usage: wrap a tool body in `try { ... } catch (e) { return jsonResult(
- *   zodErrorToEnvelope(e) ?? { error: "Unexpected: " + String(e) }) }`.
+ * Wire path: the SDK swallows the ZodError into a CallToolResult and
+ * prefixes the content text with "MCP error -32602: Input validation
+ * error: Invalid arguments for tool <name>: <JSON-stringified issues>".
+ * `zod-envelope-remap.remapValidationResult` parses that prose, extracts
+ * the issues array via `zodFormatterFromSdkProse`, and emits this rich
+ * envelope on the wire so every tool sees a uniform validation shape.
+ */
+export interface ValidationErrorEnvelope extends RichErrorEnvelope {
+    error: "validation_error"
+    /** Per-field Zod issues. Empty array when the SDK prose carried no parseable JSON. */
+    issues: Array<{
+        path: string
+        message: string
+        code?: string
+    }>
+    /** Tool name the validation failed against; null when the prose was unrecognized. */
+    toolName: string | null
+    hint: "Re-call the tool with corrected arguments (see issues[])."
+}
+
+/**
+ * Build a `validation_error` rich envelope from a ZodError-like object
+ * (anything with a non-empty `issues` array). Duck-typed so the module
+ * stays zero-dep on zod.
+ */
+export function zodFormatter(
+    err: unknown,
+    toolName: string | null = null,
+): ValidationErrorEnvelope {
+    const issues: ValidationErrorEnvelope["issues"] = []
+    if (err && typeof err === "object") {
+        const maybe = err as { issues?: unknown }
+        if (Array.isArray(maybe.issues)) {
+            for (const raw of maybe.issues as Array<Record<string, unknown>>) {
+                const path = Array.isArray(raw.path)
+                    ? (raw.path as unknown[]).map(String).join(".")
+                    : ""
+                const message =
+                    typeof raw.message === "string" ? raw.message : "invalid"
+                const code = typeof raw.code === "string" ? raw.code : undefined
+                issues.push(code ? { path, message, code } : { path, message })
+            }
+        }
+    }
+    const summary =
+        issues.length > 0
+            ? issues
+                  .map((i) => `${i.path || "(root)"}: ${i.message}`)
+                  .join("; ")
+            : "validation failed"
+    const toolLabel = toolName ? `${toolName}: ` : ""
+    return {
+        ok: false,
+        error: "validation_error",
+        message: `Invalid arguments — ${toolLabel}${summary}`,
+        toolName,
+        issues,
+        hint: "Re-call the tool with corrected arguments (see issues[]).",
+    }
+}
+
+/**
+ * Parse the SDK's validation-failure prose into a rich envelope. The MCP
+ * SDK emits content text of the form:
  *
- * Returns null when the error isn't shaped like a ZodError, so callers
- * can fall through to their normal error path.
+ *   "Input validation error: Invalid arguments for tool <name>: <JSON>"
+ *
+ * (after the `MCP error -32602: ` prefix has been stripped by the
+ * remap caller). The JSON tail is `JSON.stringify(zodError.issues)`,
+ * so we extract the tool name + issues and feed them through
+ * `zodFormatter`. When the prose doesn't parse cleanly we fall back to
+ * a one-issue envelope carrying the raw text so the agent still sees
+ * something structured.
+ */
+export function zodFormatterFromSdkProse(
+    prose: string,
+): ValidationErrorEnvelope {
+    const PREFIX = "Input validation error: Invalid arguments for tool "
+    if (!prose.startsWith(PREFIX)) {
+        return zodFormatter(
+            { issues: [{ path: [], message: prose, code: "custom" }] },
+            null,
+        )
+    }
+    const rest = prose.slice(PREFIX.length)
+    const colonIdx = rest.indexOf(": ")
+    if (colonIdx === -1) {
+        return zodFormatter(
+            { issues: [{ path: [], message: prose, code: "custom" }] },
+            null,
+        )
+    }
+    const toolName = rest.slice(0, colonIdx)
+    const jsonTail = rest.slice(colonIdx + 2)
+    let issues: unknown = []
+    try {
+        issues = JSON.parse(jsonTail)
+    } catch {
+        return zodFormatter(
+            { issues: [{ path: [], message: jsonTail, code: "custom" }] },
+            toolName || null,
+        )
+    }
+    return zodFormatter({ issues }, toolName || null)
+}
+
+/**
+ * Legacy 1-key envelope kept ONLY for back-compat with callers that
+ * already parse the older `{error: "Validation error — ..."}` shape.
+ * New code MUST call `zodFormatter` and emit the rich envelope. The
+ * wire-level remap (`zod-envelope-remap.remapValidationResult`) lifts
+ * the SDK prose directly into the rich envelope, so this function
+ * isn't on any hot path today.
+ *
+ * @deprecated Cycle-2 REG-001 — use `zodFormatter` for the rich envelope.
  */
 export function zodErrorToEnvelope(
     err: unknown,
 ): { error: string; details?: Array<{ path: string; message: string }> } | null {
     if (!err || typeof err !== "object") return null
-    // ZodError has a constructor.name and a flat `issues` array. We don't
-    // import zod here to keep this module dependency-free — duck-type instead.
-    const maybe = err as {
-        name?: unknown
-        issues?: unknown
-    }
+    const maybe = err as { name?: unknown; issues?: unknown }
     const isZod =
         maybe.name === "ZodError" ||
         (Array.isArray(maybe.issues) &&
             maybe.issues.length > 0 &&
-            typeof (maybe.issues as Array<Record<string, unknown>>)[0]?.path !== "undefined")
+            typeof (maybe.issues as Array<Record<string, unknown>>)[0]?.path !==
+                "undefined")
     if (!isZod) return null
     const issues = Array.isArray(maybe.issues)
         ? (maybe.issues as Array<{ path?: unknown; message?: unknown }>)
@@ -227,6 +339,51 @@ export function zodErrorToEnvelope(
             ? details.map((d) => `${d.path || "(root)"}: ${d.message}`).join("; ")
             : "validation failed"
     return { error: `Validation error — ${summary}`, details }
+}
+
+/**
+ * REG-001b (cycle-2) — uniform role-refusal envelope. The MCP wire
+ * surface used to mix bare-prose throws (`return {error: "Only admins
+ * may ..."}`) with the rich shape; this factory standardizes the
+ * machine code to `forbidden_role` and exposes the caller's actual role
+ * + the set of accepted roles so the agent (or its operator) can either
+ * elevate the caller or pick a different tool. Mirror of the rich
+ * envelopes `create_test_account` / `revoke_test_account` already emit.
+ */
+export interface ForbiddenRoleEnvelope extends RichErrorEnvelope {
+    error: "forbidden_role"
+    callerRole: string | null
+    requiredRoles: string[]
+    hint: string
+}
+
+export function forbiddenRoleEnvelope(args: {
+    callerRole: string | null | undefined
+    requiredRoles: readonly string[]
+    message?: string
+    hint?: string
+    /** Optional extra context (e.g. setlistId, collection). Spread alongside. */
+    context?: Record<string, unknown>
+}): ForbiddenRoleEnvelope {
+    const required = [...args.requiredRoles]
+    const role = args.callerRole ?? null
+    const message =
+        args.message ??
+        `This action requires one of: ${required.join(", ")}. Your account role is ${
+            role ?? "unknown"
+        }.`
+    const hint =
+        args.hint ??
+        `Ask an admin to elevate your account, or call a tool your role is allowed to use.`
+    return {
+        ok: false,
+        error: "forbidden_role",
+        message,
+        callerRole: role,
+        requiredRoles: required,
+        ...(args.context ?? {}),
+        hint,
+    }
 }
 
 /**
