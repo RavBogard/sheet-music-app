@@ -230,9 +230,12 @@ describe("MCP monitor-control tools (emulator)", () => {
 
     it("get_mix on a foreign bus is denied unless privileged", async () => {
         // GUITAR (musician, owns bus 1) trying to read BASS's bus 2
+        // F-015: rich envelope shape — ok:false + machine code + hint.
         const denied = await getMix(GUITAR, { busIndex: 2 })
-        expect(denied).toEqual({
-            error: expect.stringContaining("access to bus 2"),
+        expect(denied).toMatchObject({
+            ok: false,
+            error: "monitor_bus_forbidden",
+            busIndex: 2,
         })
 
         // ADMIN can read anyone's bus
@@ -246,9 +249,12 @@ describe("MCP monitor-control tools (emulator)", () => {
 
     it("get_mix with no busIndex and no owned bus errors helpfully", async () => {
         // ADMIN is privileged but owns no bus → can't default.
+        // F-015: rich envelope shape.
         const r = await getMix(ADMIN, {})
-        expect(r).toEqual({
-            error: expect.stringContaining("don't own any bus"),
+        expect(r).toMatchObject({
+            ok: false,
+            error: "monitor_no_bus_assigned",
+            message: expect.stringContaining("don't own any bus"),
         })
     })
 
@@ -278,9 +284,15 @@ describe("MCP monitor-control tools (emulator)", () => {
     })
 
     it("set_send_level on a foreign bus is denied for a musician but allowed for SE/admin", async () => {
-        // Musician → foreign bus → denied, nothing enqueued
-        expect(await setSendLevel(GUITAR, { busIndex: 2, channelIndex: 2, level: 0.5 }))
-            .toEqual({ error: expect.stringContaining("access to bus 2") })
+        // Musician → foreign bus → denied, nothing enqueued.
+        // F-015: rich envelope shape — ok:false + machine code.
+        expect(
+            await setSendLevel(GUITAR, { busIndex: 2, channelIndex: 2, level: 0.5 }),
+        ).toMatchObject({
+            ok: false,
+            error: "monitor_bus_forbidden",
+            busIndex: 2,
+        })
         expect(await pendingCommands()).toHaveLength(0)
 
         // SE → any bus → enqueued
@@ -321,8 +333,56 @@ describe("MCP monitor-control tools (emulator)", () => {
     })
 
     it("set_bus_fader is denied on a foreign bus for a musician", async () => {
-        expect(await setBusFader(GUITAR, { busIndex: 2, level: 0.5 })).toEqual({
-            error: expect.stringContaining("access to bus 2"),
+        expect(await setBusFader(GUITAR, { busIndex: 2, level: 0.5 })).toMatchObject({
+            ok: false,
+            error: "monitor_bus_forbidden",
+            busIndex: 2,
+        })
+        expect(await pendingCommands()).toHaveLength(0)
+    })
+
+    // ─── F-018: invalid index validation against live mixer state ─────────
+
+    it("F-018: set_send_level refuses invalid_bus_index (not active on live mixer)", async () => {
+        // ADMIN has privilege to control any bus, but bus 99 isn't seeded
+        // in mixer state — pre-fix this returned ok:true and silently dropped
+        // the command at the bridge.
+        const r = await setSendLevel(ADMIN, {
+            busIndex: 99,
+            channelIndex: 1,
+            level: 0.5,
+        })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "invalid_bus_index",
+            busIndex: 99,
+            validBusIndices: [1, 2],
+        })
+        expect(await pendingCommands()).toHaveLength(0)
+    })
+
+    it("F-018: set_send_level refuses invalid_channel_index", async () => {
+        const r = await setSendLevel(ADMIN, {
+            busIndex: 1,
+            channelIndex: 99,
+            level: 0.5,
+        })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "invalid_channel_index",
+            channelIndex: 99,
+            validChannelIndices: [1, 2, 3, 4],
+        })
+        expect(await pendingCommands()).toHaveLength(0)
+    })
+
+    it("F-018: set_matrix_fader refuses invalid_matrix_index", async () => {
+        const r = await setMatrixFader(ADMIN, { matrixIndex: 99, level: 0.5 })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "invalid_matrix_index",
+            matrixIndex: 99,
+            validMatrixIndices: [1, 2],
         })
         expect(await pendingCommands()).toHaveLength(0)
     })
@@ -369,15 +429,18 @@ describe("MCP monitor-control tools (emulator)", () => {
 
     it("matrix tools require admin or sound engineer", async () => {
         // Musician with a bus is NOT enough — matrix is FOH territory.
+        // F-015: rich envelope shape.
         expect(
             await setMatrixFader(GUITAR, { matrixIndex: 1, level: 0.5 }),
-        ).toEqual({
-            error: expect.stringContaining("admin or sound engineer"),
+        ).toMatchObject({
+            ok: false,
+            error: "monitor_privilege_required",
         })
         expect(
             await setMatrixMute(GUITAR, { matrixIndex: 1, muted: true }),
-        ).toEqual({
-            error: expect.stringContaining("admin or sound engineer"),
+        ).toMatchObject({
+            ok: false,
+            error: "monitor_privilege_required",
         })
         expect(await pendingCommands()).toHaveLength(0)
 

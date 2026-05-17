@@ -26,7 +26,46 @@
  *    version check.
  */
 
+/**
+ * F-015 (cycle-1) canonical rich-error envelope. Every MCP tool error
+ * surfaces this shape on the wire so agents have a uniform recovery
+ * contract regardless of which tool failed.
+ *
+ *   { ok: false, error: <machine_code>, message: <human>, ...context, hint }
+ *
+ * `StaleVersionEnvelope` + `TrackNotFoundEnvelope` (below) are the
+ * pre-existing instances of this shape. Generic prose errors that don't
+ * have a dedicated envelope go through the `richError()` factory at the
+ * call site, OR through the `jsonResult` wrapper's `normalizeErrorEnvelope`
+ * adapter which lifts legacy `{ error: "prose" }` returns to the rich
+ * shape on the wire automatically. New tools should call `richError`
+ * directly so the machine code is meaningful, not the prose fallback.
+ */
+export interface RichErrorEnvelope {
+    ok: false
+    error: string
+    message: string
+    hint?: string
+    [key: string]: unknown
+}
+
+export function richError(
+    code: string,
+    message: string,
+    context: Record<string, unknown> = {},
+    hint?: string,
+): RichErrorEnvelope {
+    return {
+        ok: false,
+        error: code,
+        message,
+        ...context,
+        ...(hint ? { hint } : {}),
+    }
+}
+
 export interface StaleVersionEnvelope {
+    ok: false
     error: "stale_version"
     message: string
     /** Server-side current version of the resource. */
@@ -48,6 +87,7 @@ export interface StaleVersionEnvelope {
 }
 
 export interface TrackNotFoundEnvelope {
+    ok: false
     error: "track_not_found"
     message: string
     /** Current setlist version so the agent can refresh by trackId resolution. */
@@ -69,6 +109,7 @@ export function staleVersionEnvelope(
 ): StaleVersionEnvelope {
     const which = args.resource === "track" ? "Track" : "Setlist"
     return {
+        ok: false,
         error: "stale_version",
         message: `${which} was modified by another writer (current version ${args.currentVersion}, you saw ${args.lastSeenVersion}).`,
         currentVersion: args.currentVersion,
@@ -92,6 +133,7 @@ export function trackNotFoundEnvelope(args: {
     setlistLastModifiedAt: string | null
 }): TrackNotFoundEnvelope {
     return {
+        ok: false,
         error: "track_not_found",
         message: `Track ${args.trackId} not found in setlist ${args.setlistId}. It may have been deleted or replaced.`,
         setlistVersion: args.setlistVersion,

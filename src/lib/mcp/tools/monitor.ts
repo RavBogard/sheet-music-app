@@ -1,4 +1,5 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import {
     assertMonitorAccess,
     canControlBus,
@@ -132,29 +133,60 @@ export async function getMix(
               on: boolean
           }>
       }
-    | ToolError
+    | RichErrorEnvelope
 > {
     initAdmin()
     const db = getFirestore()
 
     const access = await assertMonitorAccess(db, uid)
-    if (!access.ok) return { error: access.error }
+    if (!access.ok)
+        return richError(
+            "monitor_access_denied",
+            access.error,
+            undefined,
+            "Ask Rabbi Daniel for bus assignment.",
+        )
 
     const busIndex =
         args.busIndex !== undefined ? args.busIndex : access.ownedBuses[0]
     if (busIndex === undefined) {
-        return { error: "No bus specified and you don't own any bus" }
+        return richError(
+            "monitor_no_bus_assigned",
+            "No bus specified and you don't own any bus.",
+            { yourAssignedBuses: access.ownedBuses },
+            "Pass a busIndex or ask Rabbi Daniel to assign one to you.",
+        )
     }
 
     if (!canControlBus(access.user, access.ownedBuses, busIndex)) {
-        return { error: `You don't have access to bus ${busIndex}` }
+        return richError(
+            "monitor_bus_forbidden",
+            `You don't have access to bus ${busIndex}.`,
+            { busIndex, yourAssignedBuses: access.ownedBuses },
+            "Use one of your assigned buses or ask Rabbi Daniel for access.",
+        )
     }
 
     const state = await loadMixerState(db)
-    if (!state) return { error: "Mixer state not available — is the bridge online?" }
+    if (!state)
+        return richError(
+            "monitor_state_unavailable",
+            "Mixer state not available — is the bridge online?",
+            undefined,
+            "Check the bridge status via list_monitor_buses then retry.",
+        )
 
     const bus = state.buses.find((b) => b.index === busIndex)
-    if (!bus) return { error: `Bus ${busIndex} not found in the live mixer state` }
+    if (!bus)
+        return richError(
+            "invalid_bus_index",
+            `Bus ${busIndex} is not active on the live mixer.`,
+            {
+                busIndex,
+                validBusIndices: state.buses.map((b) => b.index),
+            },
+            "Call list_monitor_buses to see active buses.",
+        )
 
     const channelNameByIndex = new Map<number, string>()
     for (const ch of state.channels) channelNameByIndex.set(ch.index, ch.name)
@@ -238,14 +270,60 @@ async function preflightBusWrite(
     db: FirebaseFirestore.Firestore,
     uid: string,
     busIndex: number,
-): Promise<{ ok: true } | ToolError> {
+    channelIndex?: number,
+): Promise<{ ok: true } | RichErrorEnvelope> {
     const access = await assertMonitorAccess(db, uid)
-    if (!access.ok) return { error: access.error }
+    if (!access.ok)
+        return richError("monitor_access_denied", access.error, undefined, "Ask Rabbi Daniel for bus assignment.")
     if (!canControlBus(access.user, access.ownedBuses, busIndex)) {
-        return {
-            error: `You don't have access to bus ${busIndex} — your assigned buses: ${
-                access.ownedBuses.length ? access.ownedBuses.join(", ") : "(none)"
-            }`,
+        return richError(
+            "monitor_bus_forbidden",
+            `You don't have access to bus ${busIndex}.`,
+            {
+                busIndex,
+                yourAssignedBuses: access.ownedBuses,
+            },
+            access.ownedBuses.length
+                ? `Use one of your assigned buses (${access.ownedBuses.join(", ")}) or ask an admin to widen access.`
+                : "Ask Rabbi Daniel to assign you a bus.",
+        )
+    }
+    // F-018 (cycle-1): validate the indices against the live mixer state
+    // before enqueueing. Pre-fix these tools returned `ok:true` even for
+    // bus/channel 99 (the bridge silently dropped the command); agents
+    // had no signal the write was nonsense. Cheap — one Firestore read of
+    // the monitor-live doc that's already in hot cache from the read tools.
+    const state = await loadMixerState(db)
+    if (!state) {
+        return richError(
+            "monitor_state_unavailable",
+            "Mixer state not available — is the bridge online?",
+            undefined,
+            "Check the bridge status via list_monitor_buses then retry.",
+        )
+    }
+    const busIndices = safeArray<{ index: number }>(state.buses).map(
+        (b) => b.index,
+    )
+    if (!busIndices.includes(busIndex)) {
+        return richError(
+            "invalid_bus_index",
+            `Bus ${busIndex} is not active on the live mixer.`,
+            { busIndex, validBusIndices: busIndices },
+            "Call list_monitor_buses to see active buses.",
+        )
+    }
+    if (channelIndex !== undefined) {
+        const channelIndices = safeArray<{ index: number }>(state.channels).map(
+            (c) => c.index,
+        )
+        if (!channelIndices.includes(channelIndex)) {
+            return richError(
+                "invalid_channel_index",
+                `Channel ${channelIndex} is not active on the live mixer.`,
+                { channelIndex, validChannelIndices: channelIndices },
+                "Call get_mix to see the bus's active channels.",
+            )
         }
     }
     return { ok: true }
@@ -254,12 +332,41 @@ async function preflightBusWrite(
 async function preflightPrivilegedWrite(
     db: FirebaseFirestore.Firestore,
     uid: string,
-): Promise<{ ok: true } | ToolError> {
+    matrixIndex?: number,
+): Promise<{ ok: true } | RichErrorEnvelope> {
     const access = await assertMonitorAccess(db, uid)
-    if (!access.ok) return { error: access.error }
+    if (!access.ok)
+        return richError("monitor_access_denied", access.error, undefined, "Ask Rabbi Daniel for monitor access.")
     if (!isPrivilegedMonitor(access.user)) {
-        return {
-            error: "Matrix and bus-master tools require an admin or sound engineer account",
+        return richError(
+            "monitor_privilege_required",
+            "Matrix and bus-master tools require an admin or sound engineer account.",
+            undefined,
+            "Ask an admin to elevate your account.",
+        )
+    }
+    if (matrixIndex !== undefined) {
+        // F-018: validate matrixIndex against live state, same rationale as
+        // preflightBusWrite. Matrix outputs are 1-based on X32 (1–6).
+        const state = await loadMixerState(db)
+        if (!state) {
+            return richError(
+                "monitor_state_unavailable",
+                "Mixer state not available — is the bridge online?",
+                undefined,
+                "Check the bridge status then retry.",
+            )
+        }
+        const matrixIndices = safeArray<{ index: number }>(state.matrices).map(
+            (m) => m.index,
+        )
+        if (!matrixIndices.includes(matrixIndex)) {
+            return richError(
+                "invalid_matrix_index",
+                `Matrix ${matrixIndex} is not active on the live mixer.`,
+                { matrixIndex, validMatrixIndices: matrixIndices },
+                "Call list_monitor_buses (matrices field) to see active matrix outputs.",
+            )
         }
     }
     return { ok: true }
@@ -276,11 +383,11 @@ export interface SetSendLevelArgs {
 export async function setSendLevel(
     uid: string,
     args: SetSendLevelArgs,
-): Promise<{ ok: true; commandId: string } | ToolError> {
+): Promise<{ ok: true; commandId: string } | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const pre = await preflightBusWrite(db, uid, args.busIndex)
-    if (!("ok" in pre)) return pre
+    const pre = await preflightBusWrite(db, uid, args.busIndex, args.channelIndex)
+    if (pre.ok !== true) return pre
 
     const r = await enqueueCommand(db, uid, {
         type: "set_send_level",
@@ -307,11 +414,11 @@ export interface SetSendMuteArgs {
 export async function setSendMute(
     uid: string,
     args: SetSendMuteArgs,
-): Promise<{ ok: true; commandId: string } | ToolError> {
+): Promise<{ ok: true; commandId: string } | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const pre = await preflightBusWrite(db, uid, args.busIndex)
-    if (!("ok" in pre)) return pre
+    const pre = await preflightBusWrite(db, uid, args.busIndex, args.channelIndex)
+    if (pre.ok !== true) return pre
 
     const r = await enqueueCommand(db, uid, {
         type: "set_send_on",
@@ -332,11 +439,11 @@ export interface SetBusFaderArgs {
 export async function setBusFader(
     uid: string,
     args: SetBusFaderArgs,
-): Promise<{ ok: true; commandId: string } | ToolError> {
+): Promise<{ ok: true; commandId: string } | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
     const pre = await preflightBusWrite(db, uid, args.busIndex)
-    if (!("ok" in pre)) return pre
+    if (pre.ok !== true) return pre
 
     const r = await enqueueCommand(db, uid, {
         type: "set_bus_master",
@@ -356,11 +463,11 @@ export interface SetMatrixFaderArgs {
 export async function setMatrixFader(
     uid: string,
     args: SetMatrixFaderArgs,
-): Promise<{ ok: true; commandId: string } | ToolError> {
+): Promise<{ ok: true; commandId: string } | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const pre = await preflightPrivilegedWrite(db, uid)
-    if (!("ok" in pre)) return pre
+    const pre = await preflightPrivilegedWrite(db, uid, args.matrixIndex)
+    if (pre.ok !== true) return pre
 
     const r = await enqueueCommand(db, uid, {
         type: "set_matrix_fader",
@@ -380,11 +487,11 @@ export interface SetMatrixMuteArgs {
 export async function setMatrixMute(
     uid: string,
     args: SetMatrixMuteArgs,
-): Promise<{ ok: true; commandId: string } | ToolError> {
+): Promise<{ ok: true; commandId: string } | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const pre = await preflightPrivilegedWrite(db, uid)
-    if (!("ok" in pre)) return pre
+    const pre = await preflightPrivilegedWrite(db, uid, args.matrixIndex)
+    if (pre.ok !== true) return pre
 
     const r = await enqueueCommand(db, uid, {
         type: "set_matrix_on",

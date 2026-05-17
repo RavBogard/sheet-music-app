@@ -58,6 +58,7 @@ import {
     reviewFlaggedBonds,
     recordBondCorrection,
 } from "./bond-corrections"
+import { richError } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 
 /**
@@ -168,9 +169,37 @@ function uidFrom(extra: AuthExtra): string {
     return uid
 }
 
+/**
+ * F-015 (cycle-1) — uniform rich-error normalizer applied to every MCP
+ * tool response. The canonical error shape is
+ *   { ok: false, error: <machine_code>, message: <human>, ...context, hint }
+ * Tools that already return this shape (anything built via richError /
+ * staleVersionEnvelope / trackNotFoundEnvelope) pass through unchanged.
+ * Legacy returns of the form `{ error: "prose" }` get lifted: `ok: false`
+ * is added, the prose becomes `message`, and the original `error` string
+ * is preserved as the machine code field. This guarantees the wire
+ * envelope is consistent without forcing a mechanical sweep of every
+ * `return { error: ... }` call site, while leaving room for individual
+ * tools to convert to real machine codes incrementally.
+ */
+function normalizeErrorEnvelope(data: unknown): unknown {
+    if (!data || typeof data !== "object") return data
+    const obj = data as Record<string, unknown>
+    if ("ok" in obj) return obj // canonical (success or rich error) — passthrough
+    if (typeof obj.error !== "string") return obj // not an error shape
+    const message =
+        typeof obj.message === "string" && obj.message ? obj.message : obj.error
+    return { ok: false, ...obj, message }
+}
+
 function jsonResult(data: unknown) {
     return {
-        content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+        content: [
+            {
+                type: "text" as const,
+                text: JSON.stringify(normalizeErrorEnvelope(data), null, 2),
+            },
+        ],
     }
 }
 
@@ -220,7 +249,15 @@ export function registerReadTools(server: McpServer): void {
         },
         async (args, extra) => {
             const setlist = await getSetlist(uidFrom(extra), args)
-            if (!setlist) return jsonResult({ error: "Setlist not found" })
+            if (!setlist)
+                return jsonResult(
+                    richError(
+                        "setlist_not_found",
+                        `Setlist '${args.id}' was not found.`,
+                        { setlistId: args.id },
+                        "Verify the id via list_setlists.",
+                    ),
+                )
             return jsonResult(setlist)
         },
     )
