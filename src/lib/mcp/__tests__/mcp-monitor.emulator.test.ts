@@ -160,8 +160,10 @@ describe("MCP monitor-control tools (emulator)", () => {
 
     it("denies users with no admin role, no SE flag, and no assigned bus", async () => {
         const r = await listMonitorBuses(NO_ACCESS)
-        expect(r).toEqual({
-            error: expect.stringContaining("don't have monitor access"),
+        expect(r).toMatchObject({
+            ok: false,
+            error: "monitor_access_denied",
+            message: expect.stringContaining("don't have monitor access"),
         })
     })
 
@@ -207,8 +209,10 @@ describe("MCP monitor-control tools (emulator)", () => {
     it("errors clearly when monitor system is not configured", async () => {
         await db().collection("config").doc("monitor").delete()
         const r = await listMonitorBuses(ADMIN)
-        expect(r).toEqual({
-            error: expect.stringContaining("not configured"),
+        expect(r).toMatchObject({
+            ok: false,
+            error: "monitor_unconfigured",
+            message: expect.stringContaining("not configured"),
         })
     })
 
@@ -407,8 +411,10 @@ describe("MCP monitor-control tools (emulator)", () => {
         expect(seAll.matrices).toHaveLength(2)
 
         const denied = await getMatrix(GUITAR, {})
-        expect(denied).toEqual({
-            error: expect.stringContaining("admin or sound engineer"),
+        expect(denied).toMatchObject({
+            ok: false,
+            error: "monitor_privilege_required",
+            message: expect.stringContaining("admin or sound engineer"),
         })
     })
 
@@ -420,8 +426,10 @@ describe("MCP monitor-control tools (emulator)", () => {
         expect(one.matrices[0].index).toBe(1)
 
         const missing = await getMatrix(ADMIN, { matrixIndex: 6 })
-        expect(missing).toEqual({
-            error: expect.stringContaining("Matrix 6 not found"),
+        expect(missing).toMatchObject({
+            ok: false,
+            error: "invalid_matrix_index",
+            matrixIndex: 6,
         })
     })
 

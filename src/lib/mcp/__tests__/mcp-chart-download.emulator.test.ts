@@ -154,13 +154,17 @@ describe("MCP download_chart (emulator)", () => {
         }
     })
 
-    it("returns 'Chart not found' when library_index has no entry for fileId", async () => {
+    it("returns chart_not_found when library_index has no entry for fileId", async () => {
         const r = await downloadChart(ADMIN, { fileId: "ghost-chart" })
-        expect(r).toEqual({ error: "Chart not found" })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "chart_not_found",
+            fileId: "ghost-chart",
+        })
         expect(mockFetchFileById).not.toHaveBeenCalled()
     })
 
-    it("returns a clear error when bytes are missing from Storage AND Drive", async () => {
+    it("returns chart_bytes_missing when bytes are missing from Storage AND Drive", async () => {
         const fileId = "upload-orphan"
         await seedIndex(fileId, {
             name: "Orphan Chart",
@@ -169,10 +173,11 @@ describe("MCP download_chart (emulator)", () => {
         mockFetchFileById.mockResolvedValueOnce(null)
 
         const r = await downloadChart(ADMIN, { fileId })
-        expect(r).toEqual({
-            error: expect.stringContaining(
-                "Chart file not found in Storage or Drive",
-            ),
+        expect(r).toMatchObject({
+            ok: false,
+            error: "chart_bytes_missing",
+            fileId,
+            message: expect.stringContaining("not found in Storage or Drive"),
         })
     })
 
@@ -191,14 +196,20 @@ describe("MCP download_chart (emulator)", () => {
         })
 
         const r = await downloadChart(ADMIN, { fileId })
-        expect(r).toEqual({
-            error: expect.stringContaining("exceeds the"),
+        expect(r).toMatchObject({
+            ok: false,
+            error: "chart_too_large",
+            message: expect.stringContaining("exceeds the"),
         })
     })
 
     it("rejects an empty fileId", async () => {
         const r = await downloadChart(ADMIN, { fileId: "   " })
-        expect(r).toEqual({ error: "fileId is required" })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "invalid_argument",
+            field: "fileId",
+        })
         expect(mockFetchFileById).not.toHaveBeenCalled()
     })
 

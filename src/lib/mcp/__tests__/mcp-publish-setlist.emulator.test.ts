@@ -378,19 +378,29 @@ describe("MCP publish_setlist (emulator)", () => {
         })
 
         const r = await publishSetlist(ADMIN, { setlistId: id })
-        expect(r).toEqual({
-            error: expect.stringContaining("at least one song row"),
+        expect(r).toMatchObject({
+            ok: false,
+            error: "no_bonded_songs",
+            message: expect.stringContaining("at least one song row"),
         })
     })
 
-    it("returns 'Setlist not found' for a missing setlist", async () => {
+    it("returns setlist_not_found for a missing setlist", async () => {
         const r = await publishSetlist(ADMIN, { setlistId: "ghost" })
-        expect(r).toEqual({ error: "Setlist not found" })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "setlist_not_found",
+            setlistId: "ghost",
+        })
     })
 
     it("rejects an empty setlistId", async () => {
         const r = await publishSetlist(ADMIN, { setlistId: "   " })
-        expect(r).toEqual({ error: "setlistId is required" })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "invalid_argument",
+            field: "setlistId",
+        })
     })
 
     it("non-leader caller is denied at the editor gate", async () => {
@@ -398,8 +408,11 @@ describe("MCP publish_setlist (emulator)", () => {
         await seedPublishableSetlist(id)
 
         const r = await publishSetlist(NONLEADER, { setlistId: id })
-        expect(r).toEqual({
-            error: expect.stringContaining("admin or band leader"),
+        expect(r).toMatchObject({
+            ok: false,
+            error: "forbidden_role",
+            requiredRoles: expect.arrayContaining(["admin", "band_leader"]),
+            message: expect.stringContaining("admin or band leader"),
         })
     })
 
@@ -432,10 +445,11 @@ describe("MCP publish_setlist (emulator)", () => {
         )
 
         const r = await publishSetlist(ADMIN, { setlistId: id })
-        expect(r).toEqual({
-            error: expect.stringMatching(
-                /Publish refused.*won't render.*Mi Chamocha.*force: true/s,
-            ),
+        expect(r).toMatchObject({
+            ok: false,
+            error: "publish_refused_unhealthy_charts",
+            message: expect.stringMatching(/Publish refused.*won't render.*Mi Chamocha/s),
+            hint: expect.stringContaining("force: true"),
         })
 
         // Setlist was NOT mutated — no publishedAt write on refusal.

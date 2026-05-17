@@ -592,7 +592,11 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
             stageId: stage.id,
             lastSeenVersion: stage.setlistVersionAtStage,
         })) as Record<string, unknown>
-        expect(String(result.error)).toMatch(/unknown trackId/)
+        expect(result).toMatchObject({
+            ok: false,
+            error: "unknown_track_id",
+            message: expect.stringMatching(/unknown trackId/),
+        })
 
         // Stage NOT deleted — caller can re-stage.
         const stageSnap = await db()
@@ -616,7 +620,11 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
             setlistId,
             proposals: [{ action: "add", title: "Nope" }],
         })) as Record<string, unknown>
-        expect(propose.error).toMatch(/admin or band leader/i)
+        expect(propose).toMatchObject({
+            ok: false,
+            error: "forbidden_role",
+            message: expect.stringMatching(/admin or band leader/i),
+        })
 
         // Make a stage as admin so we can test the commit gate.
         const stage = (await proposeSetlistChanges(ADMIN, {
@@ -626,6 +634,10 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         const commitDenied = (await commitStagedChanges(MEMBER, {
             stageId: stage.id,
         })) as Record<string, unknown>
-        expect(commitDenied.error).toMatch(/admin or band leader/i)
+        expect(commitDenied).toMatchObject({
+            ok: false,
+            error: "forbidden_role",
+            message: expect.stringMatching(/admin or band leader/i),
+        })
     })
 })

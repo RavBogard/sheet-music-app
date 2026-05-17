@@ -284,14 +284,22 @@ describe("wait_for_setlist_change (emulator)", () => {
             setlistId: "",
             sinceVersion: 0,
         })
-        expect(noId).toEqual({ error: "setlistId is required" })
+        expect(noId).toMatchObject({
+            ok: false,
+            error: "invalid_argument",
+            field: "setlistId",
+            message: expect.stringContaining("setlistId"),
+        })
 
         const negVersion = await waitForSetlistChange("u", {
             setlistId: SETLIST_ID,
             sinceVersion: -1,
         })
-        expect(negVersion).toEqual({
-            error: "sinceVersion must be a non-negative integer",
+        expect(negVersion).toMatchObject({
+            ok: false,
+            error: "invalid_argument",
+            field: "sinceVersion",
+            message: expect.stringContaining("sinceVersion"),
         })
     })
 

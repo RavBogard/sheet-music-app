@@ -445,8 +445,12 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
             trackId,
             fromSongId: "song-a",
             toSongId: "song-a",
-        })) as { error: string }
-        expect(r.error).toMatch(/must differ/)
+        })) as { ok: false; error: string; message: string }
+        expect(r).toMatchObject({
+            ok: false,
+            error: "invalid_argument",
+            message: expect.stringMatching(/must differ/),
+        })
     })
 
     it("flag_bond refuses when the track belongs to a different setlist", async () => {
@@ -458,8 +462,12 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
             setlistId: setlistB,
             trackId,
             reason: "wrong setlist",
-        })) as { error: string }
-        expect(r.error).toMatch(/does not belong to setlist/)
+        })) as { ok: false; error: string; message: string }
+        expect(r).toMatchObject({
+            ok: false,
+            error: "track_setlist_mismatch",
+            message: expect.stringMatching(/does not belong to setlist/),
+        })
     })
 
     it("band_leader can flag + record corrections (parity with admin)", async () => {

@@ -110,7 +110,11 @@ describe("MCP chart-health tools (emulator)", () => {
 
     it("get_chart_status rejects empty fileId", async () => {
         const r = await getChartStatus(ADMIN, { fileId: "  " })
-        expect(r).toEqual({ error: "fileId is required" })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "invalid_argument",
+            field: "fileId",
+        })
     })
 
     it("verify_setlist_charts returns per-row health + aggregate counts", async () => {
@@ -209,14 +213,22 @@ describe("MCP chart-health tools (emulator)", () => {
         expect(byTrack.get("ts2")?.health.status).toBe("needs_storage_sync")
     })
 
-    it("verify_setlist_charts returns Setlist not found for ghost id", async () => {
+    it("verify_setlist_charts returns setlist_not_found for ghost id", async () => {
         const r = await verifySetlistCharts(ADMIN, { setlistId: "ghost" })
-        expect(r).toEqual({ error: "Setlist not found" })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "setlist_not_found",
+            setlistId: "ghost",
+        })
     })
 
     it("verify_setlist_charts rejects empty setlistId", async () => {
         const r = await verifySetlistCharts(ADMIN, { setlistId: "" })
-        expect(r).toEqual({ error: "setlistId is required" })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "invalid_argument",
+            field: "setlistId",
+        })
     })
 
     it("markOrphaned: true persists status:'orphaned' on missing rows (L-001)", async () => {

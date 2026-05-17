@@ -34,7 +34,14 @@ describe("MCP setlist write tools (emulator)", () => {
     const ADMIN = "rabbi-daniel" // role: admin — creates setlists in most tests
     const LEADER = "randy" // role: band_leader — may edit ANY setlist
     const MEMBER = "guest-musician" // role: musician — read-only, write tools denied
-    const NOT_EDITOR_ERROR = "Write tools require an admin or band leader account"
+    // Cycle-2 REG-001b: role-refusal is now the rich `forbidden_role`
+    // envelope. Tests assert the canonical machine code + required roles.
+    const FORBIDDEN_ROLE_ENVELOPE = {
+        ok: false as const,
+        error: "forbidden_role",
+        requiredRoles: ["admin", "band_leader"],
+        message: expect.stringContaining("admin or band leader"),
+    }
 
     function db() {
         return getFirestore(app)
@@ -143,16 +150,16 @@ describe("MCP setlist write tools (emulator)", () => {
         )
 
         // A member is rejected without mutating anything.
-        expect(await updateSetlist(MEMBER, { id, name: "Hijacked" })).toEqual({
-            error: NOT_EDITOR_ERROR,
-        })
+        expect(await updateSetlist(MEMBER, { id, name: "Hijacked" })).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
         expect((await db().collection("setlists").doc(id).get()).data()!.name).toBe(
             "Leader Edit",
         )
 
         // Missing setlist (caller IS an editor — the existence check still runs).
-        expect(await updateSetlist(ADMIN, { id: "nope", name: "x" })).toEqual({
-            error: "Setlist not found",
+        expect(await updateSetlist(ADMIN, { id: "nope", name: "x" })).toMatchObject({
+            ok: false,
+            error: "setlist_not_found",
+            setlistId: "nope",
         })
     })
 
@@ -188,21 +195,15 @@ describe("MCP setlist write tools (emulator)", () => {
             trackId: string
         }
 
-        expect(await createSetlist(MEMBER, { name: "Nope" })).toEqual({
-            error: NOT_EDITOR_ERROR,
-        })
-        expect(await updateSetlist(MEMBER, { id, name: "Nope" })).toEqual({
-            error: NOT_EDITOR_ERROR,
-        })
-        expect(await addTrackToSetlist(MEMBER, { setlistId: id, title: "Nope" })).toEqual({
-            error: NOT_EDITOR_ERROR,
-        })
+        expect(await createSetlist(MEMBER, { name: "Nope" })).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
+        expect(await updateSetlist(MEMBER, { id, name: "Nope" })).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
+        expect(await addTrackToSetlist(MEMBER, { setlistId: id, title: "Nope" })).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
         expect(
             await reorderSetlist(MEMBER, { setlistId: id, orderedTrackIds: [t.trackId] }),
-        ).toEqual({ error: NOT_EDITOR_ERROR })
+        ).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
         expect(
             await removeSetlistTrack(MEMBER, { setlistId: id, trackId: t.trackId }),
-        ).toEqual({ error: NOT_EDITOR_ERROR })
+        ).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
 
         // Nothing was mutated.
         expect(await tracksOf(id)).toHaveLength(1)
@@ -308,12 +309,12 @@ describe("MCP setlist write tools (emulator)", () => {
         await addTrackToSetlist(ADMIN, { setlistId: id, title: "— Opening —", type: "header" })
         expect((await tracksOf(id))[0].type).toBe("header")
 
-        expect(await addTrackToSetlist(ADMIN, { setlistId: id })).toEqual({
-            error: "title is required (or pass a songId to derive it)",
+        expect(await addTrackToSetlist(ADMIN, { setlistId: id })).toMatchObject({
+            ok: false,
+            error: "title_required",
+            message: expect.stringContaining("title is required"),
         })
-        expect(await addTrackToSetlist(MEMBER, { setlistId: id, title: "x" })).toEqual({
-            error: NOT_EDITOR_ERROR,
-        })
+        expect(await addTrackToSetlist(MEMBER, { setlistId: id, title: "x" })).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
     })
 
     it("add_track_to_setlist accepts reading / prayer / transition / note (G-10)", async () => {
@@ -389,7 +390,7 @@ describe("MCP setlist write tools (emulator)", () => {
                 setlistId: id,
                 orderedTrackIds: [t1.trackId, t2.trackId, t3.trackId],
             }),
-        ).toEqual({ error: NOT_EDITOR_ERROR })
+        ).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
     })
 
     it("add_track + getSetlist round-trips referenceLink (F-4)", async () => {
@@ -445,7 +446,7 @@ describe("MCP setlist write tools (emulator)", () => {
         expect(ghostResult.hint).toMatch(/get_setlist/)
         expect(
             await removeSetlistTrack(MEMBER, { setlistId: id, trackId: tracks[0].id as string }),
-        ).toEqual({ error: NOT_EDITOR_ERROR })
+        ).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
     })
 
     describe("delete_setlist (F-10)", () => {
@@ -494,23 +495,25 @@ describe("MCP setlist write tools (emulator)", () => {
             // any setlist. Delete is destructive + irreversible, so it requires
             // ownership (or an admin override).
             const id = await newSetlist(ADMIN)
-            expect(await deleteSetlist(LEADER, { id })).toEqual({
-                error: "Only the setlist owner or an admin may delete a setlist",
+            expect(await deleteSetlist(LEADER, { id })).toMatchObject({
+                ok: false,
+                error: "forbidden_owner",
+                message: expect.stringContaining("Only the setlist owner or an admin"),
             })
             expect((await db().collection("setlists").doc(id).get()).exists).toBe(true)
         })
 
         it("member is rejected at the role gate", async () => {
             const id = await newSetlist(ADMIN)
-            expect(await deleteSetlist(MEMBER, { id })).toEqual({
-                error: NOT_EDITOR_ERROR,
-            })
+            expect(await deleteSetlist(MEMBER, { id })).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
             expect((await db().collection("setlists").doc(id).get()).exists).toBe(true)
         })
 
         it("nonexistent setlist id returns a clean error", async () => {
-            expect(await deleteSetlist(ADMIN, { id: "nope" })).toEqual({
-                error: "Setlist not found",
+            expect(await deleteSetlist(ADMIN, { id: "nope" })).toMatchObject({
+                ok: false,
+                error: "setlist_not_found",
+                setlistId: "nope",
             })
         })
 
@@ -796,7 +799,7 @@ describe("MCP setlist write tools (emulator)", () => {
                     trackId,
                     patch: { key: "G" },
                 }),
-            ).toEqual({ error: NOT_EDITOR_ERROR })
+            ).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
 
             expect(
                 await updateSetlistTrack(LEADER, {
@@ -830,7 +833,14 @@ describe("MCP setlist write tools (emulator)", () => {
                 trackId: trackA,
                 patch: { key: "C" },
             })
-            expect(r).toEqual({ error: "Track does not belong to this setlist" })
+            // Cycle-2 REG-001b: the inner helper still returns the prose error
+            // string `'Track does not belong to this setlist'`, which the
+            // wrapper bubbles up via `richError("update_track_failed", ...)`.
+            expect(r).toMatchObject({
+                ok: false,
+                error: "update_track_failed",
+                message: expect.stringContaining("does not belong to this setlist"),
+            })
 
             // No mutation on the actual row.
             const persisted = (
@@ -848,8 +858,11 @@ describe("MCP setlist write tools (emulator)", () => {
                 trackId,
                 patch: {},
             })
-            expect(r).toEqual({
-                error: "patch must include at least one field to update",
+            // Inner helper's prose wraps via richError("update_track_failed", ...).
+            expect(r).toMatchObject({
+                ok: false,
+                error: "update_track_failed",
+                message: expect.stringContaining("at least one field"),
             })
         })
 
@@ -884,8 +897,10 @@ describe("MCP setlist write tools (emulator)", () => {
                 trackId,
                 patch: { songId: "definitely-not-a-real-songid" },
             })
-            expect(r).toEqual({
-                error: "Song definitely-not-a-real-songid not found",
+            expect(r).toMatchObject({
+                ok: false,
+                error: "song_not_found",
+                songId: "definitely-not-a-real-songid",
             })
 
             // No mutation: the row is still bonded to song-oseh.
@@ -1273,8 +1288,11 @@ describe("MCP setlist write tools (emulator)", () => {
                 setlistId: id,
                 patches,
             })
+            // Cycle-2: wrapper now wraps inner errors via richError().
             expect(r).toMatchObject({
-                error: expect.stringContaining("exceeds max"),
+                ok: false,
+                error: "bulk_update_failed",
+                message: expect.stringContaining("exceeds max"),
             })
             // The single row was not mutated.
             const doc = (
@@ -1574,7 +1592,9 @@ describe("MCP setlist write tools (emulator)", () => {
                 tracks: [],
             })
             expect(empty).toMatchObject({
-                error: expect.stringContaining("at least one"),
+                ok: false,
+                error: "bulk_add_failed",
+                message: expect.stringContaining("at least one"),
             })
 
             const big = Array.from({ length: 51 }, (_, i) => ({
@@ -1586,7 +1606,9 @@ describe("MCP setlist write tools (emulator)", () => {
                 tracks: big,
             })
             expect(tooMany).toMatchObject({
-                error: expect.stringContaining("exceeds max"),
+                ok: false,
+                error: "bulk_add_failed",
+                message: expect.stringContaining("exceeds max"),
             })
         })
 
@@ -1616,7 +1638,7 @@ describe("MCP setlist write tools (emulator)", () => {
                 setlistId: id,
                 tracks: [{ title: "Hijacked", type: "song" }],
             })
-            expect(r).toEqual({ error: NOT_EDITOR_ERROR })
+            expect(r).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
         })
     })
 
@@ -1704,7 +1726,11 @@ describe("MCP setlist write tools (emulator)", () => {
                 trackId: r.trackId,
                 newSongId: "bogus-song",
             })
-            expect(swap).toEqual({ error: "Song bogus-song not found" })
+            expect(swap).toMatchObject({
+                ok: false,
+                error: "song_not_found",
+                songId: "bogus-song",
+            })
         })
 
         it("swap_chart role gate: musician denied", async () => {
@@ -1722,7 +1748,7 @@ describe("MCP setlist write tools (emulator)", () => {
                 trackId: r.trackId,
                 newSongId: "song-other",
             })
-            expect(swap).toEqual({ error: NOT_EDITOR_ERROR })
+            expect(swap).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
         })
     })
 })

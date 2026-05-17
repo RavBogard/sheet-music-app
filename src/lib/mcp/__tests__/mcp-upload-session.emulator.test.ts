@@ -137,8 +137,9 @@ describe("MCP chunked-upload session tools (emulator)", () => {
             title: "Sneaky",
             mimeType: "application/pdf",
         })
-        expect(r).toEqual({
-            error: expect.stringContaining("Upload permission"),
+        expect(r).toMatchObject({
+            ok: false,
+            message: expect.stringContaining("Upload permission"),
         })
     })
 
@@ -148,8 +149,9 @@ describe("MCP chunked-upload session tools (emulator)", () => {
             mimeType: "application/pdf",
             collection: "core",
         })
-        expect(r).toEqual({
-            error: expect.stringContaining("admin or band leader"),
+        expect(r).toMatchObject({
+            ok: false,
+            message: expect.stringContaining("admin or band leader"),
         })
     })
 
@@ -159,7 +161,10 @@ describe("MCP chunked-upload session tools (emulator)", () => {
             mimeType: "application/pdf",
             sizeBytes: 30 * 1024 * 1024,
         })
-        expect(r).toEqual({ error: expect.stringContaining("exceeds") })
+        expect(r).toMatchObject({
+            ok: false,
+            message: expect.stringContaining("exceeds"),
+        })
     })
 
     it("finalize_chart_upload reads staged bytes and pipes them into processChartUpload", async () => {
@@ -233,8 +238,9 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         const r = await finalizeChartUpload(ADMIN, {
             uploadSessionId: init.uploadSessionId,
         })
-        expect(r).toEqual({
-            error: expect.stringContaining("No bytes found"),
+        expect(r).toMatchObject({
+            ok: false,
+            message: expect.stringContaining("No bytes found"),
         })
         expect(mockProcessChartUpload).not.toHaveBeenCalled()
     })
@@ -250,8 +256,9 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         const r = await finalizeChartUpload(MUSICIAN, {
             uploadSessionId: init.uploadSessionId,
         })
-        expect(r).toEqual({
-            error: expect.stringContaining("does not belong to caller"),
+        expect(r).toMatchObject({
+            ok: false,
+            message: expect.stringContaining("does not belong to caller"),
         })
     })
 
@@ -288,8 +295,9 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         const r = await finalizeChartUpload(ADMIN, {
             uploadSessionId: "usess-nonexistent",
         })
-        expect(r).toEqual({
-            error: expect.stringContaining("not found"),
+        expect(r).toMatchObject({
+            ok: false,
+            message: expect.stringContaining("not found"),
         })
     })
 })

@@ -388,12 +388,14 @@ describe("MCP generate_gig_packet (emulator)", () => {
         expect(mockFileSave).not.toHaveBeenCalled()
     })
 
-    it("rejects an empty setlistId with the setlistId_required envelope", async () => {
+    it("rejects an empty setlistId with the invalid_argument envelope (MCP-003)", async () => {
+        // Cycle-2 MCP-003: renamed camelCase `setlistId_required` → snake-case
+        // `invalid_argument` so all error codes match /^[a-z][a-z0-9_]*$/.
         const r = await generateGigPacket(ADMIN, { setlistId: "   " })
         expect(r).toMatchObject({
             ok: false,
-            error: "setlistId_required",
-            message: "setlistId is required",
+            error: "invalid_argument",
+            message: expect.stringContaining("setlistId"),
         })
         expect(mockFetchFileById).not.toHaveBeenCalled()
         expect(mockFileSave).not.toHaveBeenCalled()
