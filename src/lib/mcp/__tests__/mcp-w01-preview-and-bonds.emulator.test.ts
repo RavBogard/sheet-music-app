@@ -46,7 +46,10 @@ import {
 // `__charts` registry below. Mock must be defined here so it applies to
 // all dynamic imports — publish_setlist imports getChartHealth at the
 // module top, so the mock has to register before publish_setlist loads.
-const __charts: Record<string, "ok" | "missing" | "unreachable"> = {}
+const __charts: Record<
+    string,
+    "ok" | "missing" | "unreachable" | "needs_storage_sync"
+> = {}
 vi.mock("@/lib/file-fetcher", async () => {
     return {
         getChartHealth: async (fileId: string) => {
@@ -56,6 +59,13 @@ vi.mock("@/lib/file-fetcher", async () => {
             }
             if (status === "unreachable") {
                 return { status: "unreachable", error: "Timeout" }
+            }
+            if (status === "needs_storage_sync") {
+                return {
+                    status: "needs_storage_sync",
+                    reason: "drive_only",
+                    mimeType: "application/pdf",
+                }
             }
             return { status: "ok", source: "firebase-storage" }
         },
@@ -186,6 +196,11 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
         expect((r.chartHealth as { bondedCount: number }).bondedCount).toBe(1)
         expect((r.chartHealth as { okCount: number }).okCount).toBe(1)
         expect((r.chartHealth as { missingCount: number }).missingCount).toBe(0)
+        // b5 followup: needsSyncCount mirrors publish_setlist.chartHealth +
+        // verify_setlist_charts' NEW-5 field; zero on clean state.
+        expect(
+            (r.chartHealth as { needsSyncCount: number }).needsSyncCount,
+        ).toBe(0)
         expect((r.audience as { count: number }).count).toBeGreaterThanOrEqual(1)
         expect(
             (r.audience as { breakdown: { band_leader: number } }).breakdown
@@ -218,6 +233,40 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
             expect.objectContaining({ status: "missing", fileId: "song-broken" }),
         ])
         expect(r.recommendation).toBe("hard_block")
+    })
+
+    it("b5 followup: preview_publish surfaces needsSyncCount; recommendation stays 'publish' (chart still serves)", async () => {
+        // Cycle-3 b5 micro followup. A Drive-only chart serves via the
+        // file-fetcher's Drive fallback, so the preview's recommendation
+        // gate does NOT escalate — needsSyncCount is observability, not a
+        // refusal signal. Mirrors verify_setlist_charts' NEW-5 contract.
+        const setlistId = await newSetlist({ templateType: "shabbat-morning" })
+        await addBondedTrack(setlistId, "Storage-only Song", "song-stored")
+        await addBondedTrack(setlistId, "Drive-only Song", "song-drive-only")
+        __charts["song-stored"] = "ok"
+        __charts["song-drive-only"] = "needs_storage_sync"
+
+        const r = (await previewPublish(ADMIN, { setlistId })) as Record<
+            string,
+            unknown
+        >
+
+        const ch = r.chartHealth as {
+            bondedCount: number
+            okCount: number
+            missingCount: number
+            unreachableCount: number
+            needsSyncCount: number
+            unhealthy: Array<unknown>
+        }
+        expect(ch.bondedCount).toBe(2)
+        expect(ch.okCount).toBe(1)
+        expect(ch.needsSyncCount).toBe(1)
+        expect(ch.missingCount).toBe(0)
+        expect(ch.unreachableCount).toBe(0)
+        // needs_storage_sync is NOT unhealthy.
+        expect(ch.unhealthy).toEqual([])
+        expect(r.recommendation).toBe("publish")
     })
 
     it("AC-5: preview_publish returns 'review_first' when flagged bonds exist", async () => {

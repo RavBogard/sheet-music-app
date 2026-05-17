@@ -486,6 +486,8 @@ describe("MCP publish_setlist (emulator)", () => {
         // returns.
         expect(r.chartHealth.missingCount).toBe(1)
         expect(r.chartHealth.unreachableCount).toBe(0)
+        // b5 followup: needsSyncCount mirrors verify_setlist_charts' NEW-5 field.
+        expect(r.chartHealth.needsSyncCount).toBe(0)
         expect(r.chartHealth.unhealthy).toHaveLength(1)
         expect(r.chartHealth.unhealthy[0]).toMatchObject({
             fileId: "upload-michamocha",
@@ -566,6 +568,44 @@ describe("MCP publish_setlist (emulator)", () => {
         // F-006: clean-state aggregates are both zero.
         expect(r.chartHealth.missingCount).toBe(0)
         expect(r.chartHealth.unreachableCount).toBe(0)
+        // b5 followup: clean-state needsSyncCount is zero too.
+        expect(r.chartHealth.needsSyncCount).toBe(0)
         expect(r.chartHealth.unhealthy).toEqual([])
+    })
+
+    it("needs_storage_sync surfaces in chartHealth.needsSyncCount; publish does NOT refuse (b5 followup)", async () => {
+        // Cycle-3 b5 mirror of verify_setlist_charts' NEW-5 field. A chart
+        // in Drive but not yet in Storage SERVES via file-fetcher Drive
+        // fallback, so publish proceeds without `force`. The count flows
+        // through so callers can flag mid-resolving rows alongside the
+        // publish report.
+        const id = "set-pub-needs-sync"
+        await seedPublishableSetlist(id)
+
+        mockGetChartHealth.mockImplementation(async (fileId: string) =>
+            fileId === "upload-osehshalom"
+                ? { status: "ok", source: "firebase-storage" as const }
+                : {
+                      status: "needs_storage_sync" as const,
+                      reason: "drive_only",
+                      mimeType: "application/pdf",
+                  },
+        )
+
+        const r = await publishSetlist(ADMIN, { setlistId: id })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+
+        expect(r.chartHealth.bondedCount).toBe(2)
+        expect(r.chartHealth.okCount).toBe(1)
+        expect(r.chartHealth.missingCount).toBe(0)
+        expect(r.chartHealth.unreachableCount).toBe(0)
+        expect(r.chartHealth.needsSyncCount).toBe(1)
+        // needs_storage_sync is NOT unhealthy — chart still renders.
+        expect(r.chartHealth.unhealthy).toEqual([])
+
+        // Publish actually went through — no refuse, no force needed.
+        const post = (await db().collection("setlists").doc(id).get()).data()!
+        expect(post.publishedAt).toBeTruthy()
     })
 })

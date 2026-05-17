@@ -134,12 +134,20 @@ export interface PublishSetlistResult {
      * the publish refused on (or `force: true` bypassed). Aggregate counts
      * (`missingCount`, `unreachableCount`) save the caller from filtering
      * `unhealthy[]` themselves; same shape preview_publish returns (F-006).
+     *
+     * Cycle-3 b5 followup: `needsSyncCount` matches a1's NEW-5 field on
+     * `VerifySetlistChartsResult` — rows where Drive has the bytes but
+     * Storage doesn't yet. Chart still SERVES via the file-fetcher's
+     * Drive fallback, so publish does NOT refuse on it; the count is
+     * surfaced so callers know which rows `/api/cron/drive-sync` is
+     * mid-resolving.
      */
     chartHealth: {
         bondedCount: number
         okCount: number
         missingCount: number
         unreachableCount: number
+        needsSyncCount: number
         unhealthy: Array<{
             trackId: string
             title: string
@@ -382,6 +390,9 @@ export async function publishSetlist(
         missingCount: unhealthy.filter((u) => u.status === "missing").length,
         unreachableCount: unhealthy.filter((u) => u.status === "unreachable")
             .length,
+        needsSyncCount: healthRows.filter(
+            (r) => r.health.status === "needs_storage_sync",
+        ).length,
         unhealthy,
     }
     // F-05 (2026-05-16 bugstomp): dryRun NEVER refuses on the chart-health

@@ -53,6 +53,14 @@ export interface PreviewPublishResult {
         missingCount: number
         unreachableCount: number
         /**
+         * Cycle-3 b5 followup: parity with publish_setlist's chartHealth +
+         * verify_setlist_charts' NEW-5 field. Rows where Drive has the bytes
+         * but Storage doesn't yet — chart serves, but the row is mid-resolve.
+         * Surfaced here so a preview can flag pending Drive→Storage syncs
+         * without escalating the recommendation gate.
+         */
+        needsSyncCount: number
+        /**
          * Per-row report for charts that aren't ok. Same shape + field name as
          * `publish_setlist({dryRun:true}).chartHealth.unhealthy` (F-006 unify).
          */
@@ -165,6 +173,7 @@ export async function previewPublish(
             okCount: published.chartHealth.okCount,
             missingCount: published.chartHealth.missingCount,
             unreachableCount: published.chartHealth.unreachableCount,
+            needsSyncCount: published.chartHealth.needsSyncCount,
             unhealthy: published.chartHealth.unhealthy,
         },
         audience: {
