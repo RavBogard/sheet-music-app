@@ -184,7 +184,7 @@ function chooseFileName(file: DriveFile): string {
  * `set` / `update`. (We keep explicit `null` — it's a valid Firestore
  * value and we use it for "cleared" state.)
  */
-function stripUndefined<T extends Record<string, unknown>>(payload: T): T {
+function stripUndefined<T extends object>(payload: T): T {
     const out: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(payload)) {
         if (v !== undefined) out[k] = v
