@@ -3,10 +3,14 @@ import { FieldValue } from "firebase-admin/firestore"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { logger } from "@/lib/logger"
 import {
+    forbiddenRoleEnvelope,
     readLastModifiedAt,
     readVersion,
+    richError,
     staleVersionEnvelope,
     trackNotFoundEnvelope,
+    type ForbiddenRoleEnvelope,
+    type RichErrorEnvelope,
     type WriteRejection,
 } from "@/lib/mcp/error-envelopes"
 
@@ -60,37 +64,54 @@ export async function readUserRole(
 }
 
 /**
- * Assert `uid` may use the MCP write tools. Per Daniel's instruction
- * (2026-05-14) write access is role-based, not owner-based: any `admin` or
- * `band_leader` account may create and edit ANY setlist; everyone else is
- * read-only. Role is read from `users/{uid}.role` — the same source
- * getServerUser() falls back to (MCP requests carry no session cookie).
+ * Cycle-2 REG-001b — write-tool role guard. Per Daniel's instruction
+ * (2026-05-14) write access is role-based, not owner-based: any `admin`
+ * or `band_leader` account may create and edit ANY setlist; everyone
+ * else is read-only. Returns a `ForbiddenRoleEnvelope` directly on
+ * refusal so the tool wrapper can pass the rich shape straight through
+ * `jsonResult` — no more `{error: <prose>}` lift at every call site.
  */
 export async function assertEditor(
     db: DB,
     uid: string,
-): Promise<{ ok: true } | WriteError> {
+): Promise<{ ok: true } | ForbiddenRoleEnvelope> {
     const role = await readUserRole(db, uid)
     if (role === "admin" || role === "band_leader") return { ok: true }
-    return {
-        ok: false,
-        error: "Write tools require an admin or band leader account",
-    }
+    return forbiddenRoleEnvelope({
+        callerRole: role ?? null,
+        requiredRoles: ["admin", "band_leader"],
+        message:
+            "MCP write tools require an admin or band leader account.",
+        hint: "Ask an admin to elevate your account to admin or band_leader, or use the read-only tools.",
+    })
 }
 
 /**
  * Assert `uid` may edit, then load the setlist. Admins and band leaders may
- * edit ANY setlist — there is no owner check (see assertEditor).
+ * edit ANY setlist — there is no owner check (see assertEditor). Returns
+ * the rich `forbidden_role` envelope on role refusal and the rich
+ * `setlist_not_found` envelope when the id doesn't resolve. Caller does:
+ *
+ *   const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+ *   if (!loaded.ok) return loaded
+ *
+ * `loaded` is then the typed rich envelope ready for `jsonResult`.
  */
 export async function loadEditableSetlist(
     db: DB,
     setlistId: string,
     uid: string,
-): Promise<LoadedSetlist | WriteError> {
+): Promise<LoadedSetlist | RichErrorEnvelope> {
     const editor = await assertEditor(db, uid)
     if (!editor.ok) return editor
     const snap = await db.collection("setlists").doc(setlistId).get()
-    if (!snap.exists) return { ok: false, error: "Setlist not found" }
+    if (!snap.exists)
+        return richError(
+            "setlist_not_found",
+            `Setlist '${setlistId}' was not found.`,
+            { setlistId },
+            "Verify the id via list_setlists.",
+        )
     return { ok: true, data: snap.data() as Record<string, unknown> }
 }
 

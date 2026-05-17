@@ -8,6 +8,11 @@ import {
     processChartUpload,
     type LibraryCollection,
 } from "@/lib/library-upload"
+import {
+    forbiddenRoleEnvelope,
+    richError,
+    type RichErrorEnvelope,
+} from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
 
 /**
@@ -50,7 +55,7 @@ import { logger } from "@/lib/logger"
  * semantics as upload_chart / import_chart_from_drive.
  */
 
-type ToolError = { error: string }
+// Cycle-2 REG-001b: every error returns the canonical rich envelope.
 
 interface UploaderRoles {
     role: string | undefined
@@ -85,18 +90,40 @@ function isTrustedLeader(roles: UploaderRoles): boolean {
 function curatedCatalogGate(
     roles: UploaderRoles,
     collection: LibraryCollection | undefined,
-): ToolError | null {
+): RichErrorEnvelope | null {
     if (
         (collection === "core" || collection === "supplemental") &&
         !isTrustedLeader(roles)
     ) {
-        return {
-            error:
-                `Writing to the '${collection}' catalog requires an admin or band leader account. ` +
-                `Pick collection: 'uploads' (default) or ask an admin/band leader to add this to the curated catalog.`,
-        }
+        return forbiddenRoleEnvelope({
+            callerRole: roles.role ?? null,
+            requiredRoles: ["admin", "band_leader"],
+            message: `Writing to the '${collection}' catalog requires an admin or band leader account.`,
+            hint: "Pick collection: 'uploads' (default) or ask an admin/band leader to add this to the curated catalog.",
+            context: { collection },
+        })
     }
     return null
+}
+
+function uploadForbidden(roles: UploaderRoles): RichErrorEnvelope {
+    return forbiddenRoleEnvelope({
+        callerRole: roles.role ?? null,
+        requiredRoles: ["admin", "band_leader", "musician"],
+        message:
+            "Upload permission required. Ask an admin to enable uploads for your account.",
+        hint: "Ask an admin to add you as admin / band_leader / musician, or set canUpload on your user doc.",
+        context: { canUpload: roles.canUpload },
+    })
+}
+
+function rateLimitEnvelope(reason: string): RichErrorEnvelope {
+    return richError(
+        "rate_limited",
+        reason,
+        undefined,
+        "Retry after the cooldown window, or ask an admin to bypass via trusted-leader role.",
+    )
 }
 
 const UPLOAD_SESSION_TTL_MS = 10 * 60 * 1000
@@ -139,28 +166,30 @@ export interface RequestChartUploadUrlResult {
 export async function requestChartUploadUrl(
     uid: string,
     args: RequestChartUploadUrlArgs,
-): Promise<RequestChartUploadUrlResult | ToolError> {
-    if (!args.title?.trim()) return { error: "title is required" }
-    if (!args.mimeType?.trim()) return { error: "mimeType is required" }
+): Promise<RequestChartUploadUrlResult | RichErrorEnvelope> {
+    if (!args.title?.trim())
+        return richError("invalid_argument", "title is required.", { field: "title" })
+    if (!args.mimeType?.trim())
+        return richError("invalid_argument", "mimeType is required.", {
+            field: "mimeType",
+        })
     if (
         typeof args.sizeBytes === "number" &&
         args.sizeBytes > MAX_SESSION_SIZE_BYTES
     ) {
-        return {
-            error: `sizeBytes ${args.sizeBytes} exceeds the per-session cap of ${MAX_SESSION_SIZE_BYTES}`,
-        }
+        return richError(
+            "size_exceeds_cap",
+            `sizeBytes ${args.sizeBytes} exceeds the per-session cap of ${MAX_SESSION_SIZE_BYTES}.`,
+            { sizeBytes: args.sizeBytes, maxBytes: MAX_SESSION_SIZE_BYTES },
+            "Split the file or compress it before uploading.",
+        )
     }
 
     initAdmin()
     const db = getFirestore()
 
     const roles = await loadUploader(db, uid)
-    if (!isUploadAllowed(roles)) {
-        return {
-            error:
-                "Upload permission required. Ask an admin to enable uploads for your account.",
-        }
-    }
+    if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const curatedDenial = curatedCatalogGate(roles, args.collection)
     if (curatedDenial) return curatedDenial
@@ -168,7 +197,7 @@ export async function requestChartUploadUrl(
     const limited = await checkUserRateLimit(uid, "upload", {
         bypass: isTrustedLeader(roles),
     })
-    if (limited) return { error: limited.error }
+    if (limited) return rateLimitEnvelope(limited.error)
 
     const uploadSessionId = `usess-${crypto.randomUUID()}`
     const expiresAtMs = Date.now() + UPLOAD_SESSION_TTL_MS
@@ -189,9 +218,12 @@ export async function requestChartUploadUrl(
             uid,
             err: err instanceof Error ? err.message : String(err),
         })
-        return {
-            error: `Could not mint signed upload URL: ${err instanceof Error ? err.message : err}`,
-        }
+        return richError(
+            "storage_signing_failed",
+            `Could not mint signed upload URL: ${err instanceof Error ? err.message : err}`,
+            undefined,
+            "Retry; if the failure persists the Storage bucket may be misconfigured — surface to an admin.",
+        )
     }
 
     await db
@@ -240,9 +272,13 @@ export interface FinalizeChartUploadResult {
 export async function finalizeChartUpload(
     uid: string,
     args: FinalizeChartUploadArgs,
-): Promise<FinalizeChartUploadResult | ToolError> {
+): Promise<FinalizeChartUploadResult | RichErrorEnvelope> {
     if (!args.uploadSessionId?.trim()) {
-        return { error: "uploadSessionId is required" }
+        return richError(
+            "invalid_argument",
+            "uploadSessionId is required.",
+            { field: "uploadSessionId" },
+        )
     }
 
     initAdmin()
@@ -253,53 +289,62 @@ export async function finalizeChartUpload(
         .doc(args.uploadSessionId)
     const sessionSnap = await sessionRef.get()
     if (!sessionSnap.exists) {
-        return {
-            error: `Upload session ${args.uploadSessionId} not found — request a new one via request_chart_upload_url.`,
-        }
+        return richError(
+            "upload_session_not_found",
+            `Upload session '${args.uploadSessionId}' was not found.`,
+            { uploadSessionId: args.uploadSessionId },
+            "Request a new session via request_chart_upload_url.",
+        )
     }
     const session = sessionSnap.data() as Record<string, unknown>
 
     if (session.ownerUid !== uid) {
-        return { error: "Upload session does not belong to caller" }
+        return richError(
+            "upload_session_owner_mismatch",
+            "Upload session does not belong to caller.",
+            { uploadSessionId: args.uploadSessionId },
+            "Request a new session under your own bearer token.",
+        )
     }
     if (session.status === "finalized") {
-        return {
-            error:
-                "Session already finalized — request a new uploadSessionId for a new upload.",
-        }
+        return richError(
+            "upload_session_already_finalized",
+            "Session already finalized — request a new uploadSessionId for a new upload.",
+            { uploadSessionId: args.uploadSessionId },
+            "Request a fresh session via request_chart_upload_url.",
+        )
     }
 
     const expires = session.expiresAt as { toMillis?: () => number } | undefined
     if (expires?.toMillis && expires.toMillis() < Date.now()) {
-        return {
-            error:
-                "Upload session expired. Request a new uploadSessionId and re-upload the bytes.",
-        }
+        return richError(
+            "upload_session_expired",
+            "Upload session expired.",
+            { uploadSessionId: args.uploadSessionId },
+            "Request a new uploadSessionId and re-upload the bytes.",
+        )
     }
 
     const roles = await loadUploader(db, uid)
     // Auth was checked on init; re-check here so a role change between
     // init and finalize doesn't sneak through.
-    if (!isUploadAllowed(roles)) {
-        return {
-            error:
-                "Upload permission required. Ask an admin to enable uploads for your account.",
-        }
-    }
+    if (!isUploadAllowed(roles)) return uploadForbidden(roles)
     const limited = await checkUserRateLimit(uid, "upload", {
         bypass: isTrustedLeader(roles),
     })
-    if (limited) return { error: limited.error }
+    if (limited) return rateLimitEnvelope(limited.error)
 
     const bucket = getBucket()
     const stagedFile = bucket.file(session.stagedPath as string)
 
     const [exists] = await stagedFile.exists()
     if (!exists) {
-        return {
-            error:
-                "No bytes found at the staged path. Did you PUT the file to the uploadUrl before calling finalize?",
-        }
+        return richError(
+            "staged_bytes_missing",
+            "No bytes found at the staged path. Did you PUT the file to the uploadUrl before calling finalize?",
+            { uploadSessionId: args.uploadSessionId },
+            "PUT the bytes to the uploadUrl from request_chart_upload_url first.",
+        )
     }
 
     let buffer: Buffer
@@ -307,20 +352,35 @@ export async function finalizeChartUpload(
         const [bytes] = await stagedFile.download()
         buffer = Buffer.from(bytes)
     } catch (err) {
-        return {
-            error: `Could not read staged bytes: ${err instanceof Error ? err.message : err}`,
-        }
+        return richError(
+            "staged_bytes_unreadable",
+            `Could not read staged bytes: ${err instanceof Error ? err.message : err}`,
+            { uploadSessionId: args.uploadSessionId },
+            "Retry; if the failure persists request a fresh session.",
+        )
     }
 
     if (buffer.byteLength === 0) {
         await stagedFile.delete().catch(() => undefined)
-        return { error: "Staged upload is empty" }
+        return richError(
+            "empty_file",
+            "Staged upload is empty.",
+            { uploadSessionId: args.uploadSessionId },
+            "PUT the file bytes to the uploadUrl, then retry finalize_chart_upload.",
+        )
     }
     if (buffer.byteLength > MAX_SESSION_SIZE_BYTES) {
         await stagedFile.delete().catch(() => undefined)
-        return {
-            error: `Staged upload is ${buffer.byteLength} bytes; cap is ${MAX_SESSION_SIZE_BYTES}.`,
-        }
+        return richError(
+            "size_exceeds_cap",
+            `Staged upload is ${buffer.byteLength} bytes; cap is ${MAX_SESSION_SIZE_BYTES}.`,
+            {
+                uploadSessionId: args.uploadSessionId,
+                sizeBytes: buffer.byteLength,
+                maxBytes: MAX_SESSION_SIZE_BYTES,
+            },
+            "Split the file or compress it.",
+        )
     }
 
     const title = String(session.title)
@@ -359,7 +419,12 @@ export async function finalizeChartUpload(
             failedAt: FieldValue.serverTimestamp(),
             failureReason: result.error,
         })
-        return { error: result.error }
+        return richError(
+            "upload_failed",
+            result.error,
+            { tool: "finalize_chart_upload", uploadSessionId: args.uploadSessionId },
+            "Inspect the message; if dedup-related, retry with force: true.",
+        )
     }
 
     await sessionRef.update({

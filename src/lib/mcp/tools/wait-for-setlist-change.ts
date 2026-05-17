@@ -1,6 +1,10 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
-import { readVersion } from "@/lib/mcp/error-envelopes"
+import {
+    readVersion,
+    richError,
+    type RichErrorEnvelope,
+} from "@/lib/mcp/error-envelopes"
 
 /**
  * W-04 Track B-cheap — long-poll setlist change observer.
@@ -46,7 +50,8 @@ export interface WaitForSetlistChangeResult {
     timedOut?: boolean
 }
 
-export type WaitForSetlistChangeError = { error: string }
+// Cycle-2 REG-001b: errors return the canonical rich envelope.
+export type WaitForSetlistChangeError = RichErrorEnvelope
 
 export const WAIT_FOR_SETLIST_CHANGE_MAX_TIMEOUT_SEC = 60
 export const WAIT_FOR_SETLIST_CHANGE_DEFAULT_TIMEOUT_SEC = 30
@@ -123,10 +128,18 @@ export async function waitForSetlistChange(
     args: WaitForSetlistChangeArgs,
 ): Promise<WaitForSetlistChangeResult | WaitForSetlistChangeError> {
     if (!args.setlistId) {
-        return { error: "setlistId is required" }
+        return richError(
+            "invalid_argument",
+            "setlistId must be a non-empty string.",
+            { field: "setlistId" },
+        )
     }
     if (typeof args.sinceVersion !== "number" || args.sinceVersion < 0) {
-        return { error: "sinceVersion must be a non-negative integer" }
+        return richError(
+            "invalid_argument",
+            "sinceVersion must be a non-negative integer.",
+            { field: "sinceVersion", value: args.sinceVersion },
+        )
     }
 
     const timeoutSec = Math.min(

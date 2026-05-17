@@ -18,7 +18,9 @@ import type { BusAssignment } from "@/types/monitor"
  * bridge propagation requires zero new wiring.
  */
 
-type ToolError = { error: string }
+// Cycle-2 REG-001b: every monitor tool returns the canonical rich envelope
+// (validation, access, state, index errors) so the wire envelope is uniform
+// across read + write surfaces. The legacy {error: string} shape is gone.
 
 /**
  * Defensive coercion for Firestore-state arrays that the type system lies
@@ -61,14 +63,14 @@ export async function listMonitorBuses(uid: string): Promise<
               clients: number
           } | null
       }
-    | ToolError
+    | RichErrorEnvelope
 > {
     try {
         initAdmin()
         const db = getFirestore()
 
         const access = await assertMonitorAccess(db, uid)
-        if (!access.ok) return { error: access.error }
+        if (!access.ok) return access
 
         const state = await loadMixerState(db)
         const stateBuses = safeArray<{ index: number; name: string }>(
@@ -107,7 +109,12 @@ export async function listMonitorBuses(uid: string): Promise<
         }
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err)
-        return { error: `list_monitor_buses internal error: ${msg}` }
+        return richError(
+            "internal_error",
+            `list_monitor_buses internal error: ${msg}`,
+            { tool: "list_monitor_buses" },
+            "Retry; if the error persists, check the bridge connection.",
+        )
     }
 }
 
@@ -139,13 +146,7 @@ export async function getMix(
     const db = getFirestore()
 
     const access = await assertMonitorAccess(db, uid)
-    if (!access.ok)
-        return richError(
-            "monitor_access_denied",
-            access.error,
-            undefined,
-            "Ask an admin to assign you a bus.",
-        )
+    if (!access.ok) return access
 
     const busIndex =
         args.busIndex !== undefined ? args.busIndex : access.ownedBuses[0]
@@ -223,23 +224,35 @@ export async function getMatrix(
               on: boolean
           }>
       }
-    | ToolError
+    | RichErrorEnvelope
 > {
     try {
         initAdmin()
         const db = getFirestore()
 
         const access = await assertMonitorAccess(db, uid)
-        if (!access.ok) return { error: access.error }
+        if (!access.ok) return access
         // Matrix outputs are FOH territory — admin/SE only, same as the write tools.
         if (!isPrivilegedMonitor(access.user)) {
-            return {
-                error: "Matrix read requires an admin or sound engineer account",
-            }
+            return richError(
+                "monitor_privilege_required",
+                "Matrix read requires an admin or sound engineer account.",
+                {
+                    callerRole: access.user.role ?? null,
+                    soundEngineer: access.user.soundEngineer,
+                },
+                "Ask an admin to elevate your account.",
+            )
         }
 
         const state = await loadMixerState(db)
-        if (!state) return { error: "Mixer state not available — is the bridge online?" }
+        if (!state)
+            return richError(
+                "monitor_state_unavailable",
+                "Mixer state not available — is the bridge online?",
+                undefined,
+                "Check the bridge status via list_monitor_buses then retry.",
+            )
 
         const all = safeArray<{
             index: number
@@ -254,13 +267,27 @@ export async function getMatrix(
         }))
         if (args.matrixIndex !== undefined) {
             const one = all.find((m) => m.index === args.matrixIndex)
-            if (!one) return { error: `Matrix ${args.matrixIndex} not found` }
+            if (!one)
+                return richError(
+                    "invalid_matrix_index",
+                    `Matrix ${args.matrixIndex} is not active on the live mixer.`,
+                    {
+                        matrixIndex: args.matrixIndex,
+                        validMatrixIndices: all.map((m) => m.index),
+                    },
+                    "Call get_matrix without matrixIndex to see active matrices.",
+                )
             return { matrices: [one] }
         }
         return { matrices: all }
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err)
-        return { error: `get_matrix internal error: ${msg}` }
+        return richError(
+            "internal_error",
+            `get_matrix internal error: ${msg}`,
+            { tool: "get_matrix" },
+            "Retry; if the error persists, check the bridge connection.",
+        )
     }
 }
 
@@ -273,8 +300,7 @@ async function preflightBusWrite(
     channelIndex?: number,
 ): Promise<{ ok: true } | RichErrorEnvelope> {
     const access = await assertMonitorAccess(db, uid)
-    if (!access.ok)
-        return richError("monitor_access_denied", access.error, undefined, "Ask an admin to assign you a bus.")
+    if (!access.ok) return access
     if (!canControlBus(access.user, access.ownedBuses, busIndex)) {
         return richError(
             "monitor_bus_forbidden",
@@ -335,8 +361,7 @@ async function preflightPrivilegedWrite(
     matrixIndex?: number,
 ): Promise<{ ok: true } | RichErrorEnvelope> {
     const access = await assertMonitorAccess(db, uid)
-    if (!access.ok)
-        return richError("monitor_access_denied", access.error, undefined, "Ask an admin for monitor access.")
+    if (!access.ok) return access
     if (!isPrivilegedMonitor(access.user)) {
         return richError(
             "monitor_privilege_required",

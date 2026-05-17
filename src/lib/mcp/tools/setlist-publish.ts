@@ -10,7 +10,9 @@ import { assertEditor, readUserRole } from "@/lib/mcp/server-tracks-write"
 import {
     readLastModifiedAt,
     readVersion,
+    richError,
     staleVersionEnvelope,
+    type RichErrorEnvelope,
     type StaleVersionEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { getChartHealth } from "@/lib/file-fetcher"
@@ -49,7 +51,7 @@ import { logger } from "@/lib/logger"
  * admin out of it would block the band's Friday packet.
  */
 
-type ToolError = { error: string }
+// Cycle-2 REG-001b: errors return the canonical rich envelope.
 
 interface RecipientPayload {
     uid?: string
@@ -263,14 +265,19 @@ async function resolveOverrideRecipients(
 export async function publishSetlist(
     callerUid: string,
     args: PublishSetlistArgs,
-): Promise<PublishSetlistResult | ToolError | StaleVersionEnvelope> {
-    if (!args.setlistId?.trim()) return { error: "setlistId is required" }
+): Promise<PublishSetlistResult | RichErrorEnvelope | StaleVersionEnvelope> {
+    if (!args.setlistId?.trim())
+        return richError(
+            "invalid_argument",
+            "setlistId must be a non-empty string.",
+            { field: "setlistId" },
+        )
 
     initAdmin()
     const db = getFirestore()
 
     const editor = await assertEditor(db, callerUid)
-    if (!editor.ok) return { error: editor.error }
+    if (!editor.ok) return editor
 
     // assertEditor already gates on admin OR band_leader; this re-read is just
     // for the rate-limit bypass + audit. The setlist-ownership branch is moot
@@ -279,11 +286,23 @@ export async function publishSetlist(
     const role = await readUserRole(db, callerUid)
     const bypass = role === "admin" || role === "band_leader"
     const limited = await checkUserRateLimit(callerUid, "api", { bypass })
-    if (limited) return { error: limited.error }
+    if (limited)
+        return richError(
+            "rate_limited",
+            limited.error,
+            undefined,
+            "Retry after the cooldown window, or ask an admin to bypass via trusted-leader role.",
+        )
 
     const setlistRef = db.collection("setlists").doc(args.setlistId)
     const setlistSnap = await setlistRef.get()
-    if (!setlistSnap.exists) return { error: "Setlist not found" }
+    if (!setlistSnap.exists)
+        return richError(
+            "setlist_not_found",
+            `Setlist '${args.setlistId}' was not found.`,
+            { setlistId: args.setlistId },
+            "Verify the id via list_setlists.",
+        )
     const setlist = setlistSnap.data() as Record<string, unknown>
 
     // W-04 Plan 03: optional setlist-level stale-version gate. Fires
@@ -315,10 +334,12 @@ export async function publishSetlist(
     const songTracks = tracks.filter((t) => !t.type || t.type === "song")
     const hasSongs = songTracks.some((t) => !!t.fileId)
     if (!hasSongs) {
-        return {
-            error:
-                "Setlist must have at least one song row with a bonded chart before publishing — add tracks via add_track_to_setlist / bulk_add_tracks first.",
-        }
+        return richError(
+            "no_bonded_songs",
+            "Setlist must have at least one song row with a bonded chart before publishing.",
+            { setlistId: args.setlistId, trackCount: tracks.length },
+            "Add tracks via add_track_to_setlist / bulk_add_tracks first.",
+        )
     }
 
     // ── Pre-flight chart-health check (B-003 / A-001) ───────────────────
@@ -380,17 +401,84 @@ export async function publishSetlist(
             unhealthy.length > 5
                 ? `\n  ...and ${unhealthy.length - 5} more`
                 : ""
-        return {
-            error:
-                `Publish refused: ${unhealthy.length} bonded chart(s) won't render for the band:\n${list}${more}\n` +
-                `Re-bond or remove these rows, or pass force: true to publish anyway (the band will see 404s on those charts).`,
-        }
+        return richError(
+            "publish_refused_unhealthy_charts",
+            `Publish refused: ${unhealthy.length} bonded chart(s) won't render for the band:\n${list}${more}`,
+            {
+                setlistId: args.setlistId,
+                unhealthyCount: unhealthy.length,
+                chartHealth,
+            },
+            "Re-bond or remove these rows, or pass force: true to publish anyway (the band will see 404s on those charts).",
+        )
     }
 
-    const recipients =
-        args.recipients && args.recipients.length > 0
-            ? await resolveOverrideRecipients(db, callerUid, args.recipients)
-            : await resolveDefaultRecipients(db, callerUid, args.audience ?? "band")
+    // REG-003 (cycle-2): distinguish `recipients` UNDEFINED (auto-derive
+    // from the audience preset) from `recipients: []` (literal empty —
+    // operator-explicit "send to nobody"). Pre-cycle-2 we coerced both
+    // through `args.recipients && length > 0`, which made the literal-
+    // empty case silently fall back to the band default. Per Daniel's
+    // 2026-05-17T22:55Z ratification: literal-empty → recipientCount:0,
+    // no send (treated as success below); all-invalid-uid (every uid
+    // resolves to no user doc AND no email override) → rich-envelope
+    // refusal so the operator notices the typo instead of silently
+    // sending to nobody.
+    let recipients: ResolvedRecipient[]
+    if (args.recipients === undefined) {
+        recipients = await resolveDefaultRecipients(
+            db,
+            callerUid,
+            args.audience ?? "band",
+        )
+    } else if (args.recipients.length === 0) {
+        // Operator-explicit "no recipients" — honor it; don't auto-derive.
+        recipients = []
+    } else {
+        // Explicit recipients[] — resolve, then guard against the
+        // all-invalid case. An entry counts as VALID if it has a real
+        // email OR its uid resolves to a known user doc.
+        const validInputs = args.recipients.filter((r) => {
+            if (r.uid === callerUid) return false // publisher filtered anyway
+            if (typeof r.email === "string" && r.email.trim()) return true
+            return typeof r.uid === "string" && r.uid.trim().length > 0
+        })
+        if (validInputs.length === 0 && args.recipients.length > 0) {
+            return richError(
+                "no_valid_recipients",
+                "Every supplied recipient was either the publisher or had neither a uid nor an email — nothing to send.",
+                {
+                    setlistId: args.setlistId,
+                    suppliedCount: args.recipients.length,
+                },
+                "Pass uid (a user account) or email per entry, or omit `recipients` to auto-derive from the band audience.",
+            )
+        }
+        recipients = await resolveOverrideRecipients(
+            db,
+            callerUid,
+            args.recipients,
+        )
+        // Post-resolve validity guard: an entry is dispatchable if it has
+        // either a Firestore-resolved user doc (uid-bearing entry that hit
+        // userDataByUid) OR an explicit email. If none of the resolved
+        // recipients qualify, refuse rather than silently send-to-noone.
+        const dispatchable = recipients.filter((r) => {
+            if (typeof r.email === "string" && r.email.trim()) return true
+            return typeof r.uid === "string" && r.uid.trim().length > 0
+        })
+        if (dispatchable.length === 0) {
+            return richError(
+                "no_valid_recipients",
+                "None of the supplied recipients resolved to a deliverable target (no email, and no uid that exists as a user doc).",
+                {
+                    setlistId: args.setlistId,
+                    suppliedCount: args.recipients.length,
+                    resolvedCount: recipients.length,
+                },
+                "Verify the uids via list_users (or omit `recipients` to auto-derive from the band audience).",
+            )
+        }
+    }
 
     const snapshot = songTracks.map((t) => ({
         title: t.title ?? "",

@@ -2,6 +2,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { getChartHealth, type ChartHealth } from "@/lib/file-fetcher"
 import { getTracksForSetlist } from "@/lib/server-tracks"
+import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
 
 /**
@@ -23,7 +24,7 @@ import { logger } from "@/lib/logger"
  * bypass. Mirrors the read-side of the other library tools.
  */
 
-type ToolError = { error: string }
+// Cycle-2 REG-001b: every error returns the canonical rich envelope.
 
 export interface GetChartStatusArgs {
     fileId: string
@@ -50,8 +51,13 @@ async function readLeaderRole(
 export async function getChartStatus(
     uid: string,
     args: GetChartStatusArgs,
-): Promise<GetChartStatusResult | ToolError> {
-    if (!args.fileId?.trim()) return { error: "fileId is required" }
+): Promise<GetChartStatusResult | RichErrorEnvelope> {
+    if (!args.fileId?.trim())
+        return richError(
+            "invalid_argument",
+            "fileId must be a non-empty string.",
+            { field: "fileId" },
+        )
 
     initAdmin()
     const db = getFirestore()
@@ -59,7 +65,13 @@ export async function getChartStatus(
     const role = await readLeaderRole(db, uid)
     const bypass = role === "admin" || role === "band_leader"
     const limited = await checkUserRateLimit(uid, "api", { bypass })
-    if (limited) return { error: limited.error }
+    if (limited)
+        return richError(
+            "rate_limited",
+            limited.error,
+            undefined,
+            "Retry after the cooldown window.",
+        )
 
     const health = await getChartHealth(args.fileId.trim(), args.mimeType)
     return { ok: true, fileId: args.fileId, health }
@@ -125,8 +137,13 @@ export interface VerifySetlistChartsResult {
 export async function verifySetlistCharts(
     uid: string,
     args: VerifySetlistChartsArgs,
-): Promise<VerifySetlistChartsResult | ToolError> {
-    if (!args.setlistId?.trim()) return { error: "setlistId is required" }
+): Promise<VerifySetlistChartsResult | RichErrorEnvelope> {
+    if (!args.setlistId?.trim())
+        return richError(
+            "invalid_argument",
+            "setlistId must be a non-empty string.",
+            { field: "setlistId" },
+        )
 
     initAdmin()
     const db = getFirestore()
@@ -134,10 +151,22 @@ export async function verifySetlistCharts(
     const role = await readLeaderRole(db, uid)
     const bypass = role === "admin" || role === "band_leader"
     const limited = await checkUserRateLimit(uid, "api", { bypass })
-    if (limited) return { error: limited.error }
+    if (limited)
+        return richError(
+            "rate_limited",
+            limited.error,
+            undefined,
+            "Retry after the cooldown window.",
+        )
 
     const setlistDoc = await db.collection("setlists").doc(args.setlistId).get()
-    if (!setlistDoc.exists) return { error: "Setlist not found" }
+    if (!setlistDoc.exists)
+        return richError(
+            "setlist_not_found",
+            `Setlist '${args.setlistId}' was not found.`,
+            { setlistId: args.setlistId },
+            "Verify the id via list_setlists.",
+        )
     const setlistData = setlistDoc.data() as Record<string, unknown>
 
     const tracks = await getTracksForSetlist(db, args.setlistId, setlistData)

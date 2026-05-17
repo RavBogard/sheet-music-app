@@ -23,7 +23,9 @@ import {
 import {
     readLastModifiedAt,
     readVersion,
+    richError,
     staleVersionEnvelope,
+    type RichErrorEnvelope,
     type StaleVersionEnvelope,
     type TrackNotFoundEnvelope,
 } from "@/lib/mcp/error-envelopes"
@@ -41,17 +43,20 @@ import { getSongById, resolveTrackBondDefaults } from "@/lib/mcp/server-songs"
  * and every tool asserts the account is an `admin` or `band_leader`. Those
  * roles may create and edit ANY setlist (matches the app's editing model);
  * everyone else is read-only. See assertEditor in server-tracks-write.
+ *
+ * Cycle-2 REG-001b/MCP-003: every error path returns the canonical rich
+ * envelope (`{ok:false, error:<snake_machine_code>, message, ..., hint}`)
+ * via either the helper's pre-built envelope (forbidden_role,
+ * setlist_not_found, stale_version, track_not_found) or `richError()` at
+ * the call site. No bare-prose `{error: "..."}` returns survive this file.
  */
-
-/** A tool result carrying a user-facing error instead of throwing. */
-type ToolError = { error: string }
 
 /**
  * W-04 Plan 02 wrapper-side error envelope. Surfaces the structured
  * stale-version / track-not-found envelopes the server-side helpers return
- * verbatim through `jsonResult`. Distinct from `ToolError` so the agent can
- * see the structured `currentVersion` / `lastSeenVersion` / `setlistVersion`
- * fields and recover without a free-text-parse.
+ * verbatim through `jsonResult`. The agent sees the structured
+ * `currentVersion` / `lastSeenVersion` / `setlistVersion` fields and can
+ * recover without a free-text-parse.
  */
 type ToolEnvelopeError =
     | StaleVersionEnvelope
@@ -97,13 +102,13 @@ export async function createSetlist(
            */
           version: number
       }
-    | ToolError
+    | RichErrorEnvelope
 > {
     initAdmin()
     const db = getFirestore()
 
     const editor = await assertEditor(db, uid)
-    if (!editor.ok) return { error: editor.error }
+    if (!editor.ok) return editor
 
     const ownerName = await ownerNameFor(db, uid)
 
@@ -158,14 +163,14 @@ export async function updateSetlist(
               serviceNotes: string | null
           }
       }
-    | ToolError
+    | RichErrorEnvelope
     | ToolEnvelopeError
 > {
     initAdmin()
     const db = getFirestore()
 
     const loaded = await loadEditableSetlist(db, args.id, uid)
-    if (!loaded.ok) return { error: loaded.error }
+    if (!loaded.ok) return loaded
 
     const patch: SetlistMetadataPatch = {}
     if (args.name !== undefined) patch.name = args.name
@@ -185,7 +190,12 @@ export async function updateSetlist(
         if (updateResult.error === "stale_version") {
             return updateResult.envelope
         }
-        return { error: "Setlist not found" }
+        return richError(
+            "setlist_not_found",
+            `Setlist '${args.id}' was deleted by another writer between load and commit.`,
+            { setlistId: args.id },
+            "Verify the id via list_setlists.",
+        )
     }
 
     // G-11: echo the post-update state so callers don't need a follow-up
@@ -244,12 +254,12 @@ export interface AddTrackArgs {
 export async function addTrackToSetlist(
     uid: string,
     args: AddTrackArgs,
-): Promise<{ trackId: string; order: number } | ToolError> {
+): Promise<{ trackId: string; order: number } | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
 
     const loaded = await loadEditableSetlist(db, args.setlistId, uid)
-    if (!loaded.ok) return { error: loaded.error }
+    if (!loaded.ok) return loaded
 
     const type = args.type ?? "song"
 
@@ -263,10 +273,20 @@ export async function addTrackToSetlist(
         leadMusician: args.leadMusician,
     })
     if (resolved.songMissing) {
-        return { error: `Song ${args.songId} not found` }
+        return richError(
+            "song_not_found",
+            `Library song '${args.songId}' was not found.`,
+            { songId: args.songId },
+            "Verify the songId via search_library / list_library.",
+        )
     }
     if (!resolved.title || !resolved.title.trim()) {
-        return { error: "title is required (or pass a songId to derive it)" }
+        return richError(
+            "title_required",
+            "A non-empty title is required (or pass a songId to derive it).",
+            { type },
+            "Pass `title` for non-song rows, or `songId` to bind a library chart.",
+        )
     }
 
     return addTrack(db, {
@@ -300,13 +320,13 @@ export async function updateSetlistTrack(
     uid: string,
     args: UpdateTrackArgs,
 ): Promise<
-    { ok: true; track: Record<string, unknown> } | ToolError | ToolEnvelopeError
+    { ok: true; track: Record<string, unknown> } | RichErrorEnvelope | ToolEnvelopeError
 > {
     initAdmin()
     const db = getFirestore()
 
     const loaded = await loadEditableSetlist(db, args.setlistId, uid)
-    if (!loaded.ok) return { error: loaded.error }
+    if (!loaded.ok) return loaded
 
     // F-01 (2026-05-16 bugstomp): pre-validate songId before writing. Without
     // this, a patch with a bogus songId silently bonds a row to a non-existent
@@ -317,7 +337,13 @@ export async function updateSetlistTrack(
     // bulk_update_tracks shares the same gap but is left for a separate pass.
     if (typeof args.patch.songId === "string" && args.patch.songId.trim()) {
         const newSong = await getSongById(args.patch.songId)
-        if (!newSong) return { error: `Song ${args.patch.songId} not found` }
+        if (!newSong)
+            return richError(
+                "song_not_found",
+                `Library song '${args.patch.songId}' was not found.`,
+                { songId: args.patch.songId },
+                "Verify the songId via search_library / list_library before re-bonding.",
+            )
     }
 
     const result = await updateTrack(
@@ -339,7 +365,12 @@ export async function updateSetlistTrack(
     )
     if (result.ok) return { ok: true, track: result.track }
     if ("kind" in result) return result.envelope
-    return { error: result.error }
+    return richError(
+        "update_track_failed",
+        result.error,
+        { setlistId: args.setlistId, trackId: args.trackId },
+        "Re-fetch state via get_setlist and retry.",
+    )
 }
 
 // ─── swap_chart (S-004) ─────────────────────────────────────────────────────
@@ -370,21 +401,49 @@ export interface SwapChartArgs {
 export async function swapChart(
     uid: string,
     args: SwapChartArgs,
-): Promise<{ ok: true; track: Record<string, unknown> } | ToolError> {
-    if (!args.setlistId?.trim()) return { error: "setlistId is required" }
-    if (!args.trackId?.trim()) return { error: "trackId is required" }
-    if (!args.newSongId?.trim()) return { error: "newSongId is required" }
+): Promise<
+    | { ok: true; track: Record<string, unknown> }
+    | RichErrorEnvelope
+    | ToolEnvelopeError
+> {
+    // MCP-002: Zod inputSchema now enforces .min(1) on these fields, but the
+    // defensive guard remains so non-MCP callers (server-side imports, tests)
+    // get a rich envelope instead of a raw Firestore SDK throw.
+    if (!args.setlistId?.trim())
+        return richError(
+            "invalid_argument",
+            "setlistId must be a non-empty string.",
+            { field: "setlistId" },
+        )
+    if (!args.trackId?.trim())
+        return richError(
+            "invalid_argument",
+            "trackId must be a non-empty string.",
+            { field: "trackId" },
+        )
+    if (!args.newSongId?.trim())
+        return richError(
+            "invalid_argument",
+            "newSongId must be a non-empty string.",
+            { field: "newSongId" },
+        )
     const syncMetadata = args.syncMetadata !== false
 
     initAdmin()
     const db = getFirestore()
 
     const loaded = await loadEditableSetlist(db, args.setlistId, uid)
-    if (!loaded.ok) return { error: loaded.error }
+    if (!loaded.ok) return loaded
 
     // Look up the new song up front so we can build the full patch.
     const newSong = await getSongById(args.newSongId)
-    if (!newSong) return { error: `Song ${args.newSongId} not found` }
+    if (!newSong)
+        return richError(
+            "song_not_found",
+            `Library song '${args.newSongId}' was not found.`,
+            { songId: args.newSongId },
+            "Verify the songId via search_library / list_library.",
+        )
 
     // Build the patch. fileId/fileName come from updateTrack's songLookup
     // path; we only need to surface title + key explicitly when
@@ -409,11 +468,19 @@ export async function swapChart(
     )
     if (result.ok) return { ok: true, track: result.track }
     // swap_chart doesn't pass lastSeenVersion, so stale_version can't fire;
-    // track_not_found still can. Flatten the envelope's message into the
-    // ToolError shape — swap_chart's response shape predates Plan 02 and
-    // callers aren't passing a version.
-    if ("kind" in result) return { error: result.envelope.message }
-    return { error: result.error }
+    // track_not_found still can. Cycle-2 REG-001b: pass the rich envelope
+    // straight through — the wrapper type now includes ToolEnvelopeError.
+    if ("kind" in result) return result.envelope
+    return richError(
+        "swap_chart_failed",
+        result.error,
+        {
+            setlistId: args.setlistId,
+            trackId: args.trackId,
+            newSongId: args.newSongId,
+        },
+        "Re-fetch state via get_setlist and retry.",
+    )
 }
 
 // ─── bulk_update_tracks (CF1) ───────────────────────────────────────────────
@@ -441,13 +508,13 @@ export async function bulkUpdateSetlistTracks(
               lastSeenVersion: number
           }>
       }
-    | ToolError
+    | RichErrorEnvelope
 > {
     initAdmin()
     const db = getFirestore()
 
     const loaded = await loadEditableSetlist(db, args.setlistId, uid)
-    if (!loaded.ok) return { error: loaded.error }
+    if (!loaded.ok) return loaded
 
     const result = await bulkUpdateTracks(
         db,
@@ -463,7 +530,13 @@ export async function bulkUpdateSetlistTracks(
             return { title: song.title, fileName: song.fileName }
         },
     )
-    if (!result.ok) return { error: result.error }
+    if (!result.ok)
+        return richError(
+            "bulk_update_failed",
+            result.error,
+            { setlistId: args.setlistId, patchCount: args.patches.length },
+            "Re-fetch state via get_setlist and retry, or split into smaller batches.",
+        )
     return {
         ok: true,
         mode: result.mode,
@@ -502,13 +575,13 @@ export async function bulkAddSetlistTracks(
            */
           version: number
       }
-    | ToolError
+    | RichErrorEnvelope
 > {
     initAdmin()
     const db = getFirestore()
 
     const loaded = await loadEditableSetlist(db, args.setlistId, uid)
-    if (!loaded.ok) return { error: loaded.error }
+    if (!loaded.ok) return loaded
 
     const result = await bulkAddTracks(
         db,
@@ -530,7 +603,13 @@ export async function bulkAddSetlistTracks(
             }
         },
     )
-    if (!result.ok) return { error: result.error }
+    if (!result.ok)
+        return richError(
+            "bulk_add_failed",
+            result.error,
+            { setlistId: args.setlistId, trackCount: args.tracks.length },
+            "Re-fetch state via get_setlist and retry, or split into smaller batches.",
+        )
     // version-echo: read post-write setlist version so callers can chain
     // lastSeenVersion. dryRun: unchanged; committed: bumped by bulkAddTracks.
     const setlistSnap = await db
@@ -562,12 +641,12 @@ export interface ReorderSetlistArgs {
 export async function reorderSetlist(
     uid: string,
     args: ReorderSetlistArgs,
-): Promise<{ ok: true } | ToolError | ToolEnvelopeError> {
+): Promise<{ ok: true } | RichErrorEnvelope | ToolEnvelopeError> {
     initAdmin()
     const db = getFirestore()
 
     const loaded = await loadEditableSetlist(db, args.setlistId, uid)
-    if (!loaded.ok) return { error: loaded.error }
+    if (!loaded.ok) return loaded
 
     const result = await reorderTracks(
         db,
@@ -577,7 +656,12 @@ export async function reorderSetlist(
     )
     if (result.ok) return { ok: true }
     if ("kind" in result) return result.envelope
-    return { error: result.error }
+    return richError(
+        "reorder_failed",
+        result.error,
+        { setlistId: args.setlistId },
+        "Re-fetch state via get_setlist (orderedTrackIds must list every current track id exactly once).",
+    )
 }
 
 // ─── remove_track ───────────────────────────────────────────────────────────
@@ -592,12 +676,12 @@ export interface RemoveTrackArgs {
 export async function removeSetlistTrack(
     uid: string,
     args: RemoveTrackArgs,
-): Promise<{ ok: true } | ToolError | ToolEnvelopeError> {
+): Promise<{ ok: true } | RichErrorEnvelope | ToolEnvelopeError> {
     initAdmin()
     const db = getFirestore()
 
     const loaded = await loadEditableSetlist(db, args.setlistId, uid)
-    if (!loaded.ok) return { error: loaded.error }
+    if (!loaded.ok) return loaded
 
     const result = await removeTrack(
         db,
@@ -607,7 +691,12 @@ export async function removeSetlistTrack(
     )
     if (result.ok) return { ok: true }
     if ("kind" in result) return result.envelope
-    return { error: result.error }
+    return richError(
+        "remove_track_failed",
+        result.error,
+        { setlistId: args.setlistId, trackId: args.trackId },
+        "Re-fetch state via get_setlist and retry.",
+    )
 }
 
 // ─── delete_setlist ─────────────────────────────────────────────────────────
@@ -630,33 +719,50 @@ export async function deleteSetlist(
     uid: string,
     args: DeleteSetlistArgs,
 ): Promise<
-    { ok: true; tracksDeleted: number } | ToolError | ToolEnvelopeError
+    { ok: true; tracksDeleted: number } | RichErrorEnvelope | ToolEnvelopeError
 > {
     initAdmin()
     const db = getFirestore()
 
     const editor = await assertEditor(db, uid)
-    if (!editor.ok) return { error: editor.error }
+    if (!editor.ok) return editor
     const role = await readUserRole(db, uid)
 
     const setlistRef = db.collection("setlists").doc(args.id)
 
     type TxResult =
         | { ok: true; tracksDeleted: number }
-        | { ok: false; error: string }
+        | { ok: false; envelope: RichErrorEnvelope }
         | { ok: false; envelope: StaleVersionEnvelope }
     const result = await db.runTransaction<TxResult>(async (tx) => {
         const setlistSnap = await tx.get(setlistRef)
         if (!setlistSnap.exists) {
-            return { ok: false, error: "Setlist not found" }
+            return {
+                ok: false,
+                envelope: richError(
+                    "setlist_not_found",
+                    `Setlist '${args.id}' was not found.`,
+                    { setlistId: args.id },
+                    "Verify the id via list_setlists.",
+                ),
+            }
         }
         const setlistData = setlistSnap.data() as Record<string, unknown>
         const ownerId = setlistData.ownerId
         if (role !== "admin" && ownerId !== uid) {
             return {
                 ok: false,
-                error:
-                    "Only the setlist owner or an admin may delete a setlist",
+                envelope: richError(
+                    "forbidden_owner",
+                    "Only the setlist owner or an admin may delete a setlist. band_leader can edit but not delete others' setlists by design.",
+                    {
+                        callerRole: role ?? null,
+                        setlistId: args.id,
+                        ownerId:
+                            typeof ownerId === "string" ? ownerId : null,
+                    },
+                    "Ask the setlist owner (or an admin) to delete it.",
+                ),
             }
         }
         if (args.lastSeenVersion !== undefined) {
@@ -685,6 +791,5 @@ export async function deleteSetlist(
     })
 
     if (result.ok) return { ok: true, tracksDeleted: result.tracksDeleted }
-    if ("envelope" in result) return result.envelope
-    return { error: result.error }
+    return result.envelope
 }

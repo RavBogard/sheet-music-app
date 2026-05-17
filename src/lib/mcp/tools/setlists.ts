@@ -2,6 +2,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getAllSetlists, MAX_SETLIST_FETCH } from "@/lib/server-setlists"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { serializeSetlist } from "@/lib/server-auth"
+import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 
 /**
  * MCP read tools for setlists. Plain async functions wrapping the existing
@@ -30,7 +31,7 @@ interface SetlistSummary {
     version?: number
 }
 
-type ToolError = { error: string }
+// Cycle-2 REG-001b: every error returns the canonical rich envelope.
 
 /** serializeSetlist has already turned Firestore Timestamps into ISO strings. */
 function isoOf(v: unknown): string | null {
@@ -40,15 +41,23 @@ function isoOf(v: unknown): string | null {
 export async function listSetlists(
     _uid: string,
     args: ListSetlistsArgs,
-): Promise<SetlistSummary[] | ToolError> {
+): Promise<SetlistSummary[] | RichErrorEnvelope> {
     // G-14: previously bad `from`/`to` silently produced NaN and skipped
     // filtering, which made `list_setlists({from: "not-a-date"})` look like a
     // full-list dump — agents had no way to notice they'd typoed an ISO date.
     if (args.from !== undefined && Number.isNaN(Date.parse(args.from))) {
-        return { error: `from must be an ISO date string (got "${args.from}")` }
+        return richError(
+            "invalid_argument",
+            `from must be an ISO date string (got "${args.from}").`,
+            { field: "from", value: args.from },
+        )
     }
     if (args.to !== undefined && Number.isNaN(Date.parse(args.to))) {
-        return { error: `to must be an ISO date string (got "${args.to}")` }
+        return richError(
+            "invalid_argument",
+            `to must be an ISO date string (got "${args.to}").`,
+            { field: "to", value: args.to },
+        )
     }
 
     const limit =

@@ -3,6 +3,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getStorage } from "firebase-admin/storage"
 import { logger } from "@/lib/logger"
 import { bareStem } from "@/lib/mcp/title-specificity"
+import { richError } from "@/lib/mcp/error-envelopes"
 
 /**
  * Shared "is this row a chart-bytes artifact?" predicate. Used by both
@@ -606,7 +607,12 @@ export async function listLibrary(
         }
     } catch (err) {
         logger.warn("[mcp] list_library failed:", err)
-        return { error: "Failed to read library index" }
+        return richError(
+            "internal_error",
+            "Failed to read library index.",
+            { tool: "list_library" },
+            "Retry; if the failure persists check the Firestore project / IAM.",
+        )
     }
 }
 
@@ -810,7 +816,12 @@ export async function dedupeLibraryIndex(
         }
     } catch (err) {
         logger.warn("[mcp] dedupe_library_index failed:", err)
-        return { error: "Failed to run library_index dedupe" }
+        return richError(
+            "internal_error",
+            "Failed to run library_index dedupe.",
+            { tool: "dedupe_library" },
+            "Retry; if the failure persists check the Firestore project / IAM.",
+        )
     }
 }
 

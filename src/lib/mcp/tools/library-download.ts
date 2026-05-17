@@ -5,6 +5,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { fetchFileById } from "@/lib/file-fetcher"
 import { getTracksForSetlist } from "@/lib/server-tracks"
+import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
 
 /**
@@ -25,7 +26,9 @@ import { logger } from "@/lib/logger"
  * 429'd. See [[feedback_admin_rate_limit_bypass]].
  */
 
-type ToolError = { error: string }
+// Cycle-2 REG-001b: download_chart returns the canonical rich envelope.
+// generate_gig_packet uses its own rich shape (GigPacketErrorEnvelope) for
+// the extra `sizeBytes` / `storagePath` context fields below.
 
 /** Hard cap on raw bytes returned. ~20 MB ≈ ~27 MB base64 — well above any
  *  realistic single chart, but bounded so a runaway scan doesn't blow the
@@ -62,8 +65,13 @@ async function readLeaderRole(
 export async function downloadChart(
     uid: string,
     args: DownloadChartArgs,
-): Promise<DownloadChartResult | ToolError> {
-    if (!args.fileId?.trim()) return { error: "fileId is required" }
+): Promise<DownloadChartResult | RichErrorEnvelope> {
+    if (!args.fileId?.trim())
+        return richError(
+            "invalid_argument",
+            "fileId must be a non-empty string.",
+            { field: "fileId" },
+        )
 
     initAdmin()
     const db = getFirestore()
@@ -72,11 +80,18 @@ export async function downloadChart(
     const bypass = role === "admin" || role === "band_leader"
 
     const limited = await checkUserRateLimit(uid, "api", { bypass })
-    if (limited) return { error: limited.error }
+    if (limited)
+        return richError("rate_limited", limited.error, undefined, "Retry after the cooldown window.")
 
     const indexRef = db.collection("library_index").doc(args.fileId)
     const indexSnap = await indexRef.get()
-    if (!indexSnap.exists) return { error: "Chart not found" }
+    if (!indexSnap.exists)
+        return richError(
+            "chart_not_found",
+            `Chart '${args.fileId}' was not found in library_index.`,
+            { fileId: args.fileId },
+            "Verify the fileId via list_library / search_library.",
+        )
     const indexData = indexSnap.data() as Record<string, unknown>
 
     const title =
@@ -96,22 +111,33 @@ export async function downloadChart(
             fileId: args.fileId,
             err: err instanceof Error ? err.message : err,
         })
-        return { error: "Failed to fetch chart bytes" }
+        return richError(
+            "fetch_failed",
+            "Failed to fetch chart bytes.",
+            { fileId: args.fileId },
+            "Retry; if the failure persists the underlying Storage / Drive blob may be unavailable.",
+        )
     }
     if (!fetched) {
-        return {
-            error:
-                "Chart file not found in Storage or Drive — the library entry exists but the underlying bytes are missing",
-        }
+        return richError(
+            "chart_bytes_missing",
+            "Chart file not found in Storage or Drive — the library entry exists but the underlying bytes are missing.",
+            { fileId: args.fileId },
+            "Re-upload the chart via upload_chart / import_chart_from_drive.",
+        )
     }
 
     if (fetched.buffer.byteLength > DOWNLOAD_CHART_MAX_BYTES) {
-        return {
-            error:
-                `Chart is ${fetched.buffer.byteLength} bytes — exceeds the ` +
-                `${DOWNLOAD_CHART_MAX_BYTES}-byte download cap. Ask an admin to ` +
-                `re-upload a compressed version, or fetch the original from the library URL directly.`,
-        }
+        return richError(
+            "chart_too_large",
+            `Chart is ${fetched.buffer.byteLength} bytes — exceeds the ${DOWNLOAD_CHART_MAX_BYTES}-byte download cap.`,
+            {
+                fileId: args.fileId,
+                sizeBytes: fetched.buffer.byteLength,
+                maxBytes: DOWNLOAD_CHART_MAX_BYTES,
+            },
+            "Ask an admin to re-upload a compressed version, or fetch the original from the library URL directly.",
+        )
     }
 
     logger.info("[mcp] chart downloaded", {
@@ -222,7 +248,7 @@ export interface MissingChartEntry {
 export interface GigPacketErrorEnvelope {
     ok: false
     error:
-        | "setlistId_required"
+        | "invalid_argument"
         | "setlist_not_found"
         | "no_bonded_charts"
         | "packet_too_large"
@@ -268,8 +294,8 @@ export async function generateGigPacket(
     if (!args.setlistId?.trim()) {
         return {
             ok: false,
-            error: "setlistId_required",
-            message: "setlistId is required",
+            error: "invalid_argument",
+            message: "setlistId must be a non-empty string.",
         }
     }
 

@@ -2,6 +2,7 @@ import crypto from "crypto"
 import { FieldValue } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
+import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
 import { searchLibrary } from "./library"
 import type { SongRecord } from "@/lib/mcp/server-songs"
@@ -40,7 +41,8 @@ import type { SongRecord } from "@/lib/mcp/server-songs"
  * by setlistId without depending on docId-prefix queries.
  */
 
-type ToolError = { error: string }
+// Cycle-2 REG-001b: every error returns the canonical rich envelope; no
+// legacy {error: string} returns survive this file.
 
 const ALTERNATIVES_PER_FLAG = 5
 const CONTEXT_HINT_THRESHOLD = 3
@@ -66,35 +68,54 @@ export interface FlagBondResult {
 export async function flagBond(
     uid: string,
     args: FlagBondArgs,
-): Promise<FlagBondResult | ToolError> {
-    if (!args.setlistId?.trim()) return { error: "setlistId is required" }
-    if (!args.trackId?.trim()) return { error: "trackId is required" }
+): Promise<FlagBondResult | RichErrorEnvelope> {
+    if (!args.setlistId?.trim())
+        return richError("invalid_argument", "setlistId must be a non-empty string.", {
+            field: "setlistId",
+        })
+    if (!args.trackId?.trim())
+        return richError("invalid_argument", "trackId must be a non-empty string.", {
+            field: "trackId",
+        })
     if (!args.reason?.trim()) {
-        return {
-            error:
-                "reason is required — a short rationale (e.g. 'generic title, only one search hit') keeps the batch-review pass useful for the rabbi",
-        }
+        return richError(
+            "invalid_argument",
+            "reason is required — a short rationale (e.g. 'generic title, only one search hit') keeps the batch-review pass useful for the rabbi.",
+            { field: "reason" },
+        )
     }
 
     initAdmin()
     const db = getFirestore()
 
     const editor = await assertEditor(db, uid)
-    if (!editor.ok) return { error: editor.error }
+    if (!editor.ok) return editor
 
     // Confirm the track still exists on the named setlist — guards against
     // flagging a trackId that drifted away from the setlist between read and
     // flag. Cheap (single doc read).
     const trackSnap = await db.collection("tracks").doc(args.trackId).get()
     if (!trackSnap.exists) {
-        return { error: `Track ${args.trackId} not found` }
+        return richError(
+            "track_not_found",
+            `Track '${args.trackId}' was not found.`,
+            { trackId: args.trackId, setlistId: args.setlistId },
+            "Call get_setlist to refresh state.",
+        )
     }
     const trackSetlistId = (trackSnap.data() as { setlistId?: string })
         .setlistId
     if (trackSetlistId !== args.setlistId) {
-        return {
-            error: `Track ${args.trackId} does not belong to setlist ${args.setlistId} (got ${trackSetlistId ?? "unknown"})`,
-        }
+        return richError(
+            "track_setlist_mismatch",
+            `Track '${args.trackId}' does not belong to setlist '${args.setlistId}'.`,
+            {
+                trackId: args.trackId,
+                setlistId: args.setlistId,
+                actualSetlistId: trackSetlistId ?? null,
+            },
+            "Call get_setlist on the correct setlist to refresh the track id.",
+        )
     }
 
     const flagId = `${args.setlistId}_${args.trackId}`
@@ -166,20 +187,29 @@ export interface ReviewFlaggedBondsResult {
 export async function reviewFlaggedBonds(
     uid: string,
     args: ReviewFlaggedBondsArgs,
-): Promise<ReviewFlaggedBondsResult | ToolError> {
-    if (!args.setlistId?.trim()) return { error: "setlistId is required" }
+): Promise<ReviewFlaggedBondsResult | RichErrorEnvelope> {
+    if (!args.setlistId?.trim())
+        return richError("invalid_argument", "setlistId must be a non-empty string.", {
+            field: "setlistId",
+        })
 
     initAdmin()
     const db = getFirestore()
 
     const editor = await assertEditor(db, uid)
-    if (!editor.ok) return { error: editor.error }
+    if (!editor.ok) return editor
 
     const setlistSnap = await db
         .collection("setlists")
         .doc(args.setlistId)
         .get()
-    if (!setlistSnap.exists) return { error: "Setlist not found" }
+    if (!setlistSnap.exists)
+        return richError(
+            "setlist_not_found",
+            `Setlist '${args.setlistId}' was not found.`,
+            { setlistId: args.setlistId },
+            "Verify the id via list_setlists.",
+        )
     const contextKey = readContextKey(setlistSnap.data() as Record<string, unknown>)
 
     const flagsSnap = await db
@@ -312,27 +342,46 @@ export interface RecordBondCorrectionResult {
 export async function recordBondCorrection(
     uid: string,
     args: RecordBondCorrectionArgs,
-): Promise<RecordBondCorrectionResult | ToolError> {
-    if (!args.setlistId?.trim()) return { error: "setlistId is required" }
-    if (!args.trackId?.trim()) return { error: "trackId is required" }
-    if (!args.fromSongId?.trim()) return { error: "fromSongId is required" }
-    if (!args.toSongId?.trim()) return { error: "toSongId is required" }
+): Promise<RecordBondCorrectionResult | RichErrorEnvelope> {
+    if (!args.setlistId?.trim())
+        return richError("invalid_argument", "setlistId must be a non-empty string.", {
+            field: "setlistId",
+        })
+    if (!args.trackId?.trim())
+        return richError("invalid_argument", "trackId must be a non-empty string.", {
+            field: "trackId",
+        })
+    if (!args.fromSongId?.trim())
+        return richError("invalid_argument", "fromSongId must be a non-empty string.", {
+            field: "fromSongId",
+        })
+    if (!args.toSongId?.trim())
+        return richError("invalid_argument", "toSongId must be a non-empty string.", {
+            field: "toSongId",
+        })
     if (args.fromSongId === args.toSongId) {
-        return {
-            error:
-                "fromSongId and toSongId must differ — recording a correction back to the same songId is a no-op",
-        }
+        return richError(
+            "invalid_argument",
+            "fromSongId and toSongId must differ — recording a correction back to the same songId is a no-op.",
+            { fromSongId: args.fromSongId, toSongId: args.toSongId },
+        )
     }
 
     initAdmin()
     const db = getFirestore()
 
     const editor = await assertEditor(db, uid)
-    if (!editor.ok) return { error: editor.error }
+    if (!editor.ok) return editor
 
     const setlistRef = db.collection("setlists").doc(args.setlistId)
     const setlistSnap = await setlistRef.get()
-    if (!setlistSnap.exists) return { error: "Setlist not found" }
+    if (!setlistSnap.exists)
+        return richError(
+            "setlist_not_found",
+            `Setlist '${args.setlistId}' was not found.`,
+            { setlistId: args.setlistId },
+            "Verify the id via list_setlists.",
+        )
     const setlistData = setlistSnap.data() as Record<string, unknown>
     const contextKey = readContextKey(setlistData)
 

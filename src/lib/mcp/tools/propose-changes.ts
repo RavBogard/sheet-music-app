@@ -8,7 +8,9 @@ import {
 import {
     readLastModifiedAt,
     readVersion,
+    richError,
     staleVersionEnvelope,
+    type RichErrorEnvelope,
     type StaleVersionEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { STOP_AND_ASK_THRESHOLD } from "@/lib/mcp/title-specificity"
@@ -46,7 +48,7 @@ import { logger } from "@/lib/logger"
  *    add+remove+reorder math inside one transaction is its own slice.
  */
 
-type ToolError = { error: string }
+// Cycle-2 REG-001b: every error returns the canonical rich envelope.
 
 const DEFAULT_TTL_SEC = 600 // 10 minutes — matches W-01 plan
 const MAX_TTL_SEC = 3600 // 1 hour cap — stages aren't long-lived state
@@ -136,15 +138,25 @@ export interface CommitArgs {
 export async function proposeSetlistChanges(
     uid: string,
     args: ProposeArgs,
-): Promise<StageRecord | ToolError> {
-    if (!args.setlistId?.trim()) return { error: "setlistId is required" }
+): Promise<StageRecord | RichErrorEnvelope> {
+    if (!args.setlistId?.trim())
+        return richError("invalid_argument", "setlistId must be a non-empty string.", {
+            field: "setlistId",
+        })
     if (!Array.isArray(args.proposals) || args.proposals.length === 0) {
-        return { error: "proposals must include at least one entry" }
+        return richError(
+            "invalid_argument",
+            "proposals must include at least one entry.",
+            { field: "proposals" },
+        )
     }
     if (args.proposals.length > MAX_PROPOSALS_PER_STAGE) {
-        return {
-            error: `proposals exceeds max (${MAX_PROPOSALS_PER_STAGE}); split into multiple stages`,
-        }
+        return richError(
+            "too_many_proposals",
+            `proposals exceeds max (${MAX_PROPOSALS_PER_STAGE}); split into multiple stages.`,
+            { count: args.proposals.length, max: MAX_PROPOSALS_PER_STAGE },
+            "Chunk the batch into stages of <=50 proposals each.",
+        )
     }
     const ttlSec = clampTtl(args.ttlSec ?? DEFAULT_TTL_SEC)
 
@@ -152,7 +164,7 @@ export async function proposeSetlistChanges(
     const db = getFirestore()
 
     const loaded = await loadEditableSetlist(db, args.setlistId, uid)
-    if (!loaded.ok) return { error: loaded.error }
+    if (!loaded.ok) return loaded
     const setlistData = loaded.data
     const setlistVersionAtStage = readVersion(setlistData)
 
@@ -161,7 +173,13 @@ export async function proposeSetlistChanges(
     // proposal.
     for (let i = 0; i < args.proposals.length; i++) {
         const err = validateProposalShape(args.proposals[i], i)
-        if (err) return { error: err }
+        if (err)
+            return richError(
+                "invalid_proposal",
+                err,
+                { proposalIndex: i },
+                "Fix the proposal entry and re-stage.",
+            )
     }
 
     // Look up each unique songId once to derive per-proposal confidence
@@ -234,19 +252,27 @@ export interface CommitResult {
 export async function commitStagedChanges(
     uid: string,
     args: CommitArgs,
-): Promise<CommitResult | ToolError | StaleVersionEnvelope> {
-    if (!args.stageId?.trim()) return { error: "stageId is required" }
+): Promise<CommitResult | RichErrorEnvelope | StaleVersionEnvelope> {
+    if (!args.stageId?.trim())
+        return richError("invalid_argument", "stageId must be a non-empty string.", {
+            field: "stageId",
+        })
 
     initAdmin()
     const db = getFirestore()
 
     const editor = await assertEditor(db, uid)
-    if (!editor.ok) return { error: editor.error }
+    if (!editor.ok) return editor
 
     const stageRef = db.collection("proposal_stages").doc(args.stageId)
     const stageSnap = await stageRef.get()
     if (!stageSnap.exists) {
-        return { error: "Stage not found (already committed, expired, or never created)" }
+        return richError(
+            "stage_not_found",
+            `Stage '${args.stageId}' was not found (already committed, expired, or never created — stages are one-shot).`,
+            { stageId: args.stageId },
+            "Re-stage via propose_setlist_changes.",
+        )
     }
     const stage = stageSnap.data() as StageRecord
     const expiresMs = Date.parse(stage.ttlExpiresAt)
@@ -254,9 +280,12 @@ export async function commitStagedChanges(
         // Best-effort cleanup of the expired doc; ignore failure (a Cloud
         // Function sweep covers it long-term anyway).
         stageRef.delete().catch(() => {})
-        return {
-            error: `stage_expired (expired at ${stage.ttlExpiresAt})`,
-        }
+        return richError(
+            "stage_expired",
+            `Stage '${args.stageId}' expired at ${stage.ttlExpiresAt}.`,
+            { stageId: args.stageId, ttlExpiresAt: stage.ttlExpiresAt },
+            "Re-stage via propose_setlist_changes.",
+        )
     }
 
     const setlistRef = db.collection("setlists").doc(stage.setlistId)
@@ -292,12 +321,20 @@ export async function commitStagedChanges(
               removedTrackIds: string[]
           }
         | { kind: "stale_version"; envelope: StaleVersionEnvelope }
-        | { kind: "error"; error: string }
+        | { kind: "error"; envelope: RichErrorEnvelope }
 
     const txResult = await db.runTransaction<TxResult>(async (tx) => {
         const setlistSnap = await tx.get(setlistRef)
         if (!setlistSnap.exists) {
-            return { kind: "error", error: "Setlist not found" }
+            return {
+                kind: "error",
+                envelope: richError(
+                    "setlist_not_found",
+                    `Setlist '${stage.setlistId}' was not found (deleted between stage and commit).`,
+                    { setlistId: stage.setlistId },
+                    "Verify the id via list_setlists.",
+                ),
+            }
         }
         const setlistData = setlistSnap.data() as Record<string, unknown>
 
@@ -356,7 +393,15 @@ export async function commitStagedChanges(
                 if (!p.trackId || !byId.has(p.trackId)) {
                     return {
                         kind: "error",
-                        error: `Proposal targets unknown trackId '${p.trackId}' (setlist may have drifted since stage was created — re-stage with current trackIds)`,
+                        envelope: richError(
+                            "unknown_track_id",
+                            `Proposal targets unknown trackId '${p.trackId ?? ""}' — setlist drifted since stage was created.`,
+                            {
+                                trackId: p.trackId ?? null,
+                                setlistId: stage.setlistId,
+                            },
+                            "Re-stage via propose_setlist_changes with current trackIds.",
+                        ),
                     }
                 }
             }
@@ -492,7 +537,7 @@ export async function commitStagedChanges(
     })
 
     if (txResult.kind === "stale_version") return txResult.envelope
-    if (txResult.kind === "error") return { error: txResult.error }
+    if (txResult.kind === "error") return txResult.envelope
 
     logger.info("[mcp] commit_staged_changes committed", {
         stageId: args.stageId,

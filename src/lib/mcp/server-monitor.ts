@@ -3,6 +3,10 @@ import type {
     MixerSnapshot,
     MonitorConfig,
 } from "@/types/monitor"
+import {
+    richError,
+    type RichErrorEnvelope,
+} from "@/lib/mcp/error-envelopes"
 
 /**
  * Admin-SDK helpers shared by the MCP monitor tools.
@@ -71,26 +75,34 @@ export type AccessOk = {
     ownedBuses: number[]
     config: MonitorConfig
 }
-export type AccessError = { ok: false; error: string }
 
-/** Any-access gate (admin OR soundEngineer OR has-bus). */
+/** Any-access gate (admin OR soundEngineer OR has-bus). REG-001b (cycle-2):
+ * refusals return the canonical rich envelope so each MCP monitor tool can
+ * pass the result straight through `jsonResult` without a prose-lift. */
 export async function assertMonitorAccess(
     db: DB,
     uid: string,
-): Promise<AccessOk | AccessError> {
+): Promise<AccessOk | RichErrorEnvelope> {
     const [user, config] = await Promise.all([
         loadMonitorUser(db, uid),
         loadMonitorConfig(db),
     ])
     if (!config) {
-        return { ok: false, error: "Monitor system is not configured" }
+        return richError(
+            "monitor_unconfigured",
+            "Monitor system is not configured for this deployment.",
+            undefined,
+            "Ask an admin to provision config/monitor before retrying.",
+        )
     }
     const ownedBuses = getOwnedBuses(config, uid)
     if (!isPrivilegedMonitor(user) && ownedBuses.length === 0) {
-        return {
-            ok: false,
-            error: "You don't have monitor access — ask an admin to assign you a bus",
-        }
+        return richError(
+            "monitor_access_denied",
+            "You don't have monitor access — ask an admin to assign you a bus.",
+            { callerRole: user.role ?? null, soundEngineer: user.soundEngineer },
+            "Ask Rabbi Daniel or an admin to assign you a personal IEM bus.",
+        )
     }
     return { ok: true, user, ownedBuses, config }
 }

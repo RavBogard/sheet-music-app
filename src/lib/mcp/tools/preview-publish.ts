@@ -1,5 +1,6 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { publishSetlist, type PublishSetlistResult } from "./setlist-publish"
+import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 
 /**
  * W-01 Task 3 — preview_publish wrapper.
@@ -33,7 +34,7 @@ import { publishSetlist, type PublishSetlistResult } from "./setlist-publish"
  * proceed.
  */
 
-type ToolError = { error: string }
+// Cycle-2 REG-001b: errors return the canonical rich envelope.
 
 export interface PreviewPublishArgs {
     setlistId: string
@@ -90,8 +91,13 @@ export interface PreviewPublishResult {
 export async function previewPublish(
     callerUid: string,
     args: PreviewPublishArgs,
-): Promise<PreviewPublishResult | ToolError> {
-    if (!args.setlistId?.trim()) return { error: "setlistId is required" }
+): Promise<PreviewPublishResult | RichErrorEnvelope> {
+    if (!args.setlistId?.trim())
+        return richError(
+            "invalid_argument",
+            "setlistId must be a non-empty string.",
+            { field: "setlistId" },
+        )
 
     initAdmin()
     const db = getFirestore()
@@ -107,9 +113,9 @@ export async function previewPublish(
         dryRun: true,
     })
     if (!("ok" in dry) || dry.ok !== true) {
-        // Either ToolError or StaleVersionEnvelope — both have `error`. We
-        // didn't pass lastSeenVersion, so stale_version can't fire here.
-        return { error: (dry as ToolError).error }
+        // dry is already a RichErrorEnvelope (or StaleVersionEnvelope which
+        // we don't trigger here since we don't pass lastSeenVersion).
+        return dry as RichErrorEnvelope
     }
     const published = dry as PublishSetlistResult
 

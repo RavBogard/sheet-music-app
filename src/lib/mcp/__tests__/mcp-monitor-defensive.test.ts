@@ -113,14 +113,18 @@ describe("list_monitor_buses — F-001 defensive guards", () => {
         })
     })
 
-    it("F-003: unexpected throw inside handler returns structured envelope", async () => {
+    it("F-003: unexpected throw inside handler returns the rich envelope", async () => {
         vi.mocked(loadMixerState).mockRejectedValue(
             new Error("Firestore offline"),
         )
 
         const result = await listMonitorBuses("admin-uid")
+        // Cycle-2 REG-001b: handler errors now use the rich envelope shape
+        // (machine code `internal_error`, prose in `message`).
         expect(result).toMatchObject({
-            error: expect.stringMatching(
+            ok: false,
+            error: "internal_error",
+            message: expect.stringMatching(
                 /list_monitor_buses internal error: Firestore offline/,
             ),
         })
@@ -161,14 +165,18 @@ describe("get_matrix — F-002 defensive guards", () => {
         })
     })
 
-    it("F-003: unexpected throw inside handler returns structured envelope", async () => {
+    it("F-003: unexpected throw inside handler returns the rich envelope", async () => {
         vi.mocked(loadMixerState).mockRejectedValue(
             new Error("Bridge daemon unreachable"),
         )
 
         const result = await getMatrix("admin-uid", {})
+        // Cycle-2 REG-001b: handler errors now use the rich envelope shape
+        // (machine code `internal_error`, prose in `message`).
         expect(result).toMatchObject({
-            error: expect.stringMatching(
+            ok: false,
+            error: "internal_error",
+            message: expect.stringMatching(
                 /get_matrix internal error: Bridge daemon unreachable/,
             ),
         })

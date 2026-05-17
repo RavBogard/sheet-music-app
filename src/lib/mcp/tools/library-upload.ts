@@ -6,6 +6,11 @@ import {
 } from "@/lib/library-upload"
 import { scrapeChart } from "@/lib/chart-scrape"
 import { DriveClient } from "@/lib/google-drive"
+import {
+    forbiddenRoleEnvelope,
+    richError,
+    type RichErrorEnvelope,
+} from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
 
 /**
@@ -25,9 +30,9 @@ import { logger } from "@/lib/logger"
  *
  * Per-user rate limits on the writes (`upload` tier, 10/min/user) — request-
  * based limits would conflate all CRC users on Claude's egress IPs.
+ *
+ * Cycle-2 REG-001b/MCP-003: every error returns the canonical rich envelope.
  */
-
-type ToolError = { error: string }
 
 interface UploaderRoles {
     role: string | undefined
@@ -62,10 +67,30 @@ function isTrustedLeader(roles: UploaderRoles): boolean {
     return roles.role === "admin" || roles.role === "band_leader"
 }
 
+function uploadForbidden(roles: UploaderRoles): RichErrorEnvelope {
+    return forbiddenRoleEnvelope({
+        callerRole: roles.role ?? null,
+        requiredRoles: ["admin", "band_leader", "musician"],
+        message:
+            "Upload permission required. Ask an admin to enable uploads for your account.",
+        hint: "Ask an admin to add you as admin / band_leader / musician, or set canUpload on your user doc.",
+        context: { canUpload: roles.canUpload },
+    })
+}
+
+function rateLimitEnvelope(reason: string): RichErrorEnvelope {
+    return richError(
+        "rate_limited",
+        reason,
+        undefined,
+        "Retry after the cooldown window, or ask an admin to bypass via trusted-leader role.",
+    )
+}
+
 function curatedCatalogGate(
     roles: UploaderRoles,
     collection: LibraryCollection | undefined,
-): ToolError | null {
+): RichErrorEnvelope | null {
     // Curated catalogs ('core' = main CRC liturgy, 'supplemental' = Shireinu)
     // are reserved for admin AND band_leader. Musicians + canUpload-only users
     // still default to 'uploads'. Curated DELETE remains admin-only (handled
@@ -74,11 +99,13 @@ function curatedCatalogGate(
         (collection === "core" || collection === "supplemental") &&
         !isTrustedLeader(roles)
     ) {
-        return {
-            error:
-                `Writing to the '${collection}' catalog requires an admin or band leader account. ` +
-                `Pick collection: 'uploads' (default) or ask an admin/band leader to add this to the curated catalog.`,
-        }
+        return forbiddenRoleEnvelope({
+            callerRole: roles.role ?? null,
+            requiredRoles: ["admin", "band_leader"],
+            message: `Writing to the '${collection}' catalog requires an admin or band leader account.`,
+            hint: "Pick collection: 'uploads' (default) or ask an admin/band leader to add this to the curated catalog.",
+            context: { collection },
+        })
     }
     return null
 }
@@ -106,17 +133,13 @@ export async function uploadChart(
     args: UploadChartArgs,
 ): Promise<
     | { ok: true; fileId: string; title: string; collection: LibraryCollection }
-    | ToolError
+    | RichErrorEnvelope
 > {
     initAdmin()
     const db = getFirestore()
 
     const roles = await loadUploader(db, uid)
-    if (!isUploadAllowed(roles)) {
-        return {
-            error: "Upload permission required. Ask an admin to enable uploads for your account.",
-        }
-    }
+    if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const curatedDenial = curatedCatalogGate(roles, args.collection)
     if (curatedDenial) return curatedDenial
@@ -124,30 +147,38 @@ export async function uploadChart(
     const limited = await checkUserRateLimit(uid, "upload", {
         bypass: isTrustedLeader(roles),
     })
-    if (limited) return { error: limited.error }
+    if (limited) return rateLimitEnvelope(limited.error)
 
     // G-8: Buffer.from(s, "base64") never throws — it just silently produces
     // a short/empty buffer for non-base64 input — so we need to format-check
     // before decoding. Standard RFC 4648 alphabet only (no url-safe `-_`,
     // which Buffer accepts but most MCP callers won't be sending).
     const stripped = args.fileBase64.replace(/\s/g, "")
-    if (stripped.length === 0) {
-        return { error: "Decoded file is empty" }
-    }
-    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(stripped)) {
-        return {
-            error: "fileBase64 must be standard base64 (RFC 4648). Got non-base64 characters.",
-        }
-    }
-    if (stripped.length % 4 !== 0) {
-        return {
-            error: "fileBase64 length must be a multiple of 4 (padded with '=').",
-        }
-    }
+    if (stripped.length === 0)
+        return richError(
+            "empty_file",
+            "Decoded file is empty.",
+            { field: "fileBase64" },
+        )
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(stripped))
+        return richError(
+            "invalid_base64",
+            "fileBase64 must be standard base64 (RFC 4648). Got non-base64 characters.",
+            { field: "fileBase64" },
+        )
+    if (stripped.length % 4 !== 0)
+        return richError(
+            "invalid_base64",
+            "fileBase64 length must be a multiple of 4 (padded with '=').",
+            { field: "fileBase64" },
+        )
     const buffer = Buffer.from(stripped, "base64")
-    if (buffer.byteLength === 0) {
-        return { error: "Decoded file is empty" }
-    }
+    if (buffer.byteLength === 0)
+        return richError(
+            "empty_file",
+            "Decoded file is empty.",
+            { field: "fileBase64" },
+        )
 
     const fileName =
         args.fileName?.trim() ||
@@ -167,7 +198,13 @@ export async function uploadChart(
         force: args.force,
     })
 
-    if (!result.ok) return { error: result.error }
+    if (!result.ok)
+        return richError(
+            "upload_failed",
+            result.error,
+            { tool: "upload_chart" },
+            "Inspect the message; if dedup-related, retry with force: true.",
+        )
     return {
         ok: true,
         fileId: result.fileId,
@@ -208,21 +245,20 @@ export async function importChartFromDrive(
     args: ImportChartFromDriveArgs,
 ): Promise<
     | { ok: true; fileId: string; title: string; collection: LibraryCollection }
-    | ToolError
+    | RichErrorEnvelope
 > {
-    if (!args.driveFileId?.trim()) {
-        return { error: "driveFileId is required" }
-    }
+    if (!args.driveFileId?.trim())
+        return richError(
+            "invalid_argument",
+            "driveFileId must be a non-empty string.",
+            { field: "driveFileId" },
+        )
 
     initAdmin()
     const db = getFirestore()
 
     const roles = await loadUploader(db, uid)
-    if (!isUploadAllowed(roles)) {
-        return {
-            error: "Upload permission required. Ask an admin to enable uploads for your account.",
-        }
-    }
+    if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const curatedDenial = curatedCatalogGate(roles, args.collection)
     if (curatedDenial) return curatedDenial
@@ -230,7 +266,7 @@ export async function importChartFromDrive(
     const limited = await checkUserRateLimit(uid, "upload", {
         bypass: isTrustedLeader(roles),
     })
-    if (limited) return { error: limited.error }
+    if (limited) return rateLimitEnvelope(limited.error)
 
     const driveFileId = args.driveFileId.trim()
     const drive = new DriveClient()
@@ -246,20 +282,25 @@ export async function importChartFromDrive(
         logger.warn(
             `[import_chart_from_drive] metadata fetch failed for ${driveFileId}: ${message}`,
         )
-        return {
-            error: `Could not read Drive file ${driveFileId} metadata: ${message}`,
-        }
+        return richError(
+            "drive_metadata_failed",
+            `Could not read Drive file ${driveFileId} metadata: ${message}`,
+            { driveFileId },
+            "Verify the file id and that the service account has at least viewer access.",
+        )
     }
 
     const driveMime = (metadata?.mimeType || "").toLowerCase()
     if (driveMime.startsWith("application/vnd.google-apps.")) {
-        return {
-            error:
-                `Drive file ${driveFileId} is a native Google ${driveMime.replace(
-                    "application/vnd.google-apps.",
-                    "",
-                )} document — export it to PDF in Drive first, then import the exported file.`,
-        }
+        return richError(
+            "unsupported_drive_native_type",
+            `Drive file ${driveFileId} is a native Google ${driveMime.replace(
+                "application/vnd.google-apps.",
+                "",
+            )} document — export it to PDF in Drive first, then import the exported file.`,
+            { driveFileId, mimeType: driveMime },
+            "In Drive: File → Download → PDF; then import_chart_from_drive on the exported file.",
+        )
     }
 
     let buffer: Buffer
@@ -273,14 +314,20 @@ export async function importChartFromDrive(
         logger.warn(
             `[import_chart_from_drive] bytes fetch failed for ${driveFileId}: ${message}`,
         )
-        return {
-            error: `Could not download Drive file ${driveFileId}: ${message}`,
-        }
+        return richError(
+            "drive_download_failed",
+            `Could not download Drive file ${driveFileId}: ${message}`,
+            { driveFileId },
+            "Verify the file id and that the service account has at least viewer access.",
+        )
     }
 
-    if (buffer.byteLength === 0) {
-        return { error: `Drive file ${driveFileId} is empty` }
-    }
+    if (buffer.byteLength === 0)
+        return richError(
+            "empty_file",
+            `Drive file ${driveFileId} is empty.`,
+            { driveFileId },
+        )
 
     const driveName = (metadata?.name || `drive-${driveFileId}`).trim()
     const title =
@@ -301,7 +348,13 @@ export async function importChartFromDrive(
         force: args.force,
     })
 
-    if (!result.ok) return { error: result.error }
+    if (!result.ok)
+        return richError(
+            "upload_failed",
+            result.error,
+            { tool: "import_chart_from_drive", driveFileId },
+            "Inspect the message; if dedup-related, retry with force: true.",
+        )
     return {
         ok: true,
         fileId: result.fileId,
@@ -333,33 +386,51 @@ export interface DeleteChartArgs {
 export async function deleteChart(
     uid: string,
     args: DeleteChartArgs,
-): Promise<{ ok: true; deletedTracks: number } | ToolError> {
-    if (!args.fileId?.trim()) return { error: "fileId is required" }
+): Promise<{ ok: true; deletedTracks: number } | RichErrorEnvelope> {
+    if (!args.fileId?.trim())
+        return richError(
+            "invalid_argument",
+            "fileId must be a non-empty string.",
+            { field: "fileId" },
+        )
 
     initAdmin()
     const db = getFirestore()
 
     const roles = await loadUploader(db, uid)
-    if (!isUploadAllowed(roles)) {
-        return {
-            error: "Upload permission required. Ask an admin to enable uploads for your account.",
-        }
-    }
+    if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const limited = await checkUserRateLimit(uid, "upload", {
         bypass: isTrustedLeader(roles),
     })
-    if (limited) return { error: limited.error }
+    if (limited) return rateLimitEnvelope(limited.error)
 
     const indexRef = db.collection("library_index").doc(args.fileId)
     const indexSnap = await indexRef.get()
-    if (!indexSnap.exists) return { error: "Chart not found" }
+    if (!indexSnap.exists)
+        return richError(
+            "chart_not_found",
+            `Chart '${args.fileId}' was not found in library_index.`,
+            { fileId: args.fileId },
+            "Verify the fileId via list_library / search_library.",
+        )
     const indexData = indexSnap.data() as Record<string, unknown>
 
     if (roles.role !== "admin" && indexData.uploadedBy !== uid) {
-        return {
-            error: "Only the chart's uploader or an admin may delete a chart",
-        }
+        return forbiddenRoleEnvelope({
+            callerRole: roles.role ?? null,
+            requiredRoles: ["admin"],
+            message:
+                "Only the chart's uploader or an admin may delete a chart.",
+            hint: "Ask the uploader or an admin to delete the chart.",
+            context: {
+                fileId: args.fileId,
+                uploadedBy:
+                    typeof indexData.uploadedBy === "string"
+                        ? indexData.uploadedBy
+                        : null,
+            },
+        })
     }
 
     const collection = indexData.collection as string | undefined
@@ -367,9 +438,13 @@ export async function deleteChart(
         (collection === "core" || collection === "supplemental") &&
         roles.role !== "admin"
     ) {
-        return {
-            error: `Deleting from the '${collection}' catalog requires an admin account`,
-        }
+        return forbiddenRoleEnvelope({
+            callerRole: roles.role ?? null,
+            requiredRoles: ["admin"],
+            message: `Deleting from the '${collection}' catalog requires an admin account.`,
+            hint: "Ask an admin to delete this curated-catalog chart.",
+            context: { fileId: args.fileId, collection },
+        })
     }
 
     const tracksSnap = await db
@@ -378,11 +453,12 @@ export async function deleteChart(
         .limit(50)
         .get()
     if (!tracksSnap.empty) {
-        return {
-            error:
-                `Cannot delete: this chart is bonded to ${tracksSnap.size} setlist ` +
-                `track(s). Remove the tracks first via remove_track, then retry.`,
-        }
+        return richError(
+            "chart_in_use",
+            `Cannot delete: this chart is bonded to ${tracksSnap.size} setlist track(s).`,
+            { fileId: args.fileId, boundTracks: tracksSnap.size },
+            "Remove the tracks first via remove_track, then retry delete_chart.",
+        )
     }
 
     const songRef = db.collection("songs").doc(args.fileId)
@@ -482,29 +558,34 @@ export async function scrapeChartFromUrl(
     args: ScrapeChartFromUrlArgs,
 ): Promise<
     | { ok: true; title: string; artist: string; content: string }
-    | ToolError
+    | RichErrorEnvelope
 > {
-    if (!args.url && !args.rawText) {
-        return { error: "Either url or rawText is required" }
-    }
+    if (!args.url && !args.rawText)
+        return richError(
+            "invalid_argument",
+            "Either url or rawText is required.",
+            { fields: ["url", "rawText"] },
+        )
 
     initAdmin()
     const db = getFirestore()
     const roles = await loadUploader(db, uid)
-    if (!isUploadAllowed(roles)) {
-        return {
-            error: "Upload permission required. Ask an admin to enable uploads for your account.",
-        }
-    }
+    if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     // Scrape uses Gemini, so meter it under the 'ai' bucket to bound spend.
     const limited = await checkUserRateLimit(uid, "ai", {
         bypass: isTrustedLeader(roles),
     })
-    if (limited) return { error: limited.error }
+    if (limited) return rateLimitEnvelope(limited.error)
 
     const result = await scrapeChart(args)
-    if (!result.ok) return { error: result.error }
+    if (!result.ok)
+        return richError(
+            "scrape_failed",
+            result.error,
+            { tool: "scrape_chart_from_url" },
+            "Try again, paste the chart text via rawText, or use upload_chart with a downloaded copy.",
+        )
     return {
         ok: true,
         title: result.title,
@@ -532,19 +613,21 @@ export async function saveScrapedChart(
     args: SaveScrapedChartArgs,
 ): Promise<
     | { ok: true; fileId: string; title: string; collection: LibraryCollection }
-    | ToolError
+    | RichErrorEnvelope
 > {
-    if (!args.title?.trim()) return { error: "title is required" }
-    if (!args.content?.trim()) return { error: "content is required" }
+    if (!args.title?.trim())
+        return richError("invalid_argument", "title is required.", {
+            field: "title",
+        })
+    if (!args.content?.trim())
+        return richError("invalid_argument", "content is required.", {
+            field: "content",
+        })
 
     initAdmin()
     const db = getFirestore()
     const roles = await loadUploader(db, uid)
-    if (!isUploadAllowed(roles)) {
-        return {
-            error: "Upload permission required. Ask an admin to enable uploads for your account.",
-        }
-    }
+    if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const curatedDenial = curatedCatalogGate(roles, args.collection)
     if (curatedDenial) return curatedDenial
@@ -552,7 +635,7 @@ export async function saveScrapedChart(
     const limited = await checkUserRateLimit(uid, "upload", {
         bypass: isTrustedLeader(roles),
     })
-    if (limited) return { error: limited.error }
+    if (limited) return rateLimitEnvelope(limited.error)
 
     // Match the ScraperModal payload shape: title + artist + blank line + content.
     const textContent = `${args.title}\n${args.artist ?? ""}\n\n${args.content}`
@@ -571,7 +654,13 @@ export async function saveScrapedChart(
         force: args.force,
     })
 
-    if (!result.ok) return { error: result.error }
+    if (!result.ok)
+        return richError(
+            "upload_failed",
+            result.error,
+            { tool: "save_scraped_chart" },
+            "Inspect the message; if dedup-related, retry with force: true.",
+        )
     return {
         ok: true,
         fileId: result.fileId,

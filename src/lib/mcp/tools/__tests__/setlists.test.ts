@@ -115,12 +115,20 @@ describe("listSetlists", () => {
         expect(mockGetAllSetlists).toHaveBeenLastCalledWith({ limit: 20 })
     })
 
-    it("rejects an unparseable `from` / `to` with a validation error (G-14)", async () => {
-        expect(await listSetlists("u", { from: "not-a-date" })).toEqual({
-            error: expect.stringContaining("from must be an ISO date"),
+    it("rejects an unparseable `from` / `to` with the rich validation envelope (G-14 / MCP-003)", async () => {
+        // Cycle-2 REG-001b: errors return the canonical rich envelope
+        // (machine code in `error`, human-readable prose in `message`).
+        expect(await listSetlists("u", { from: "not-a-date" })).toMatchObject({
+            ok: false,
+            error: "invalid_argument",
+            field: "from",
+            message: expect.stringContaining("from must be an ISO date"),
         })
-        expect(await listSetlists("u", { to: "garbage" })).toEqual({
-            error: expect.stringContaining("to must be an ISO date"),
+        expect(await listSetlists("u", { to: "garbage" })).toMatchObject({
+            ok: false,
+            error: "invalid_argument",
+            field: "to",
+            message: expect.stringContaining("to must be an ISO date"),
         })
     })
 })

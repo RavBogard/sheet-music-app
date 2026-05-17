@@ -139,9 +139,13 @@ export const updateTrackPatchSchema = z.object({
  * every gated row's version inside the same Firestore transaction as the
  * writes. Best-effort honors it too — stale rows get skipped and reported
  * with `error: "stale_version"` while non-stale rows commit.
+ *
+ * MCP-002 (cycle-2): `trackId.min(1)` rejects empty-string inputs at the
+ * SDK validation surface so the agent gets a `validation_error` rich
+ * envelope instead of a raw Firestore docPath throw.
  */
 export const bulkPatchEntrySchema = z.object({
-    trackId: z.string(),
+    trackId: z.string().min(1),
     patch: bulkTrackPatchSchema,
     lastSeenVersion: z
         .number()
@@ -248,7 +252,7 @@ export function registerReadTools(server: McpServer): void {
             description:
                 "Get one setlist by id, including its tracks in performance order. Use after list_setlists to see what songs are on a specific service.",
             inputSchema: {
-                id: z.string().describe("Setlist id"),
+                id: z.string().min(1).describe("Setlist id"),
             },
         },
         async (args, extra) => {
@@ -311,12 +315,20 @@ export function registerReadTools(server: McpServer): void {
             description:
                 "Get one song's metadata by id — title, key, BPM, vocal lead. Returns metadata only, never chart PDF bytes.",
             inputSchema: {
-                id: z.string().describe("Song id"),
+                id: z.string().min(1).describe("Song id"),
             },
         },
         async (args, extra) => {
             const song = await getSong(uidFrom(extra), args)
-            if (!song) return jsonResult({ error: "Song not found" })
+            if (!song)
+                return jsonResult(
+                    richError(
+                        "song_not_found",
+                        `Library song '${args.id}' was not found.`,
+                        { songId: args.id },
+                        "Verify the songId via search_library / list_library.",
+                    ),
+                )
             return jsonResult(song)
         },
     )
@@ -428,7 +440,7 @@ export function registerWriteTools(server: McpServer): void {
             description:
                 "Update a setlist's metadata (name, date, service type, rabbi, notes). Metadata only — does NOT touch tracks; use the track tools for that. Admins and band leaders may update it — band_leader can update setlists owned by others (collaborate), but only the owner or admin may delete (see delete_setlist). Returns the post-update setlist record (name, eventDate, rabbi, serviceType, serviceNotes) so callers can confirm the patch landed without a follow-up get_setlist. Pass `lastSeenVersion` (the `version` from your last get_setlist / list_setlists) to reject with `{error: 'stale_version', currentVersion, ...}` when another writer has changed the setlist since you read it (W-04 optimistic concurrency).",
             inputSchema: {
-                id: z.string().describe("Setlist id"),
+                id: z.string().min(1).describe("Setlist id"),
                 name: z.string().min(1).optional().describe("New setlist name"),
                 eventDate: eventDateSchema.describe("New ISO event date"),
                 serviceType: z.string().optional().describe("New service/template type"),
@@ -448,9 +460,10 @@ export function registerWriteTools(server: McpServer): void {
             description:
                 "Add one row to a setlist. Row types: 'song' (pass songId to pull title/key/vocal-lead from the library AND bond the song's chart so it renders on the row, or pass an explicit title for a free-text row), 'header' (section break with a title), 'reading' (Torah / scripture / D'var / responsive reading — title required), 'prayer' (silent or responsive prayer — title required), 'transition' (instrumental/transition moment), or 'note' (free-text annotation). position is a 0-based insert index; omit it to append at the end. Admins and band leaders may add tracks — band_leader may add to setlists owned by others (collaborate), but only the owner or admin may delete the setlist itself (see delete_setlist).",
             inputSchema: {
-                setlistId: z.string().describe("Setlist id"),
+                setlistId: z.string().min(1).describe("Setlist id"),
                 songId: z
                     .string()
+                    .min(1)
                     .optional()
                     .describe("Library song id — title/key/lead default from this song"),
                 title: z
@@ -493,12 +506,13 @@ export function registerWriteTools(server: McpServer): void {
             description:
                 "Add many tracks to one setlist in a single call — closes the weekly-flow N+1 ('9 sequential add_track_to_setlist calls'). The `tracks[]` array's order IS the performance order of the new rows. All rows are spliced in starting at `position` (or appended). For per-row positioning of arbitrary rearrangements, use reorder_setlist instead. mode='atomic' (default) wraps everything in one batch — all-or-nothing; mode='best-effort' inserts each row independently and accumulates per-row results. dryRun=true returns the plan without writing. RESPONSE: `committed: boolean` is the load-bearing signal — true iff writes actually landed. Per-row results include `index` (matches the input array), `ok`, `trackId`, `order`, and `error` (when ok=false). Max 50 rows per call. Admins and band leaders only.",
             inputSchema: {
-                setlistId: z.string().describe("Setlist id"),
+                setlistId: z.string().min(1).describe("Setlist id"),
                 tracks: z
                     .array(
                         z.object({
                             songId: z
                                 .string()
+                                .min(1)
                                 .optional()
                                 .describe(
                                     "Library song id — title/key/lead default from this song",
@@ -570,9 +584,9 @@ export function registerWriteTools(server: McpServer): void {
             description:
                 "Reorder a setlist's tracks. orderedTrackIds must list every current track id of the setlist exactly once, in the new performance order. Get the current ids from get_setlist first. Admins and band leaders may reorder. Reorder gates on the SETLIST-level `lastSeenVersion` (a reorder touches every row's order — racing at the setlist scope is the natural granularity).",
             inputSchema: {
-                setlistId: z.string().describe("Setlist id"),
+                setlistId: z.string().min(1).describe("Setlist id"),
                 orderedTrackIds: z
-                    .array(z.string())
+                    .array(z.string().min(1))
                     .describe("All track ids of the setlist, in the new order"),
                 lastSeenVersion: lastSeenVersionSchema.describe(
                     "Optional setlist-level optimistic-concurrency gate. Pass the `version` from get_setlist; rejects with `{error: 'stale_version', ...}` when another writer has changed the setlist since you read it.",
@@ -588,8 +602,8 @@ export function registerWriteTools(server: McpServer): void {
             description:
                 "Remove one track from a setlist by id. The remaining tracks are re-packed to stay contiguous. Admins and band leaders may remove tracks. Pass `lastSeenVersion` (the track's `version` from your last get_setlist) to reject with `{error: 'stale_version', ...}` when another writer has changed that specific track since you read it. Track-not-found returns `{error: 'track_not_found', setlistVersion, ...}` so the agent can refresh by trackId resolution.",
             inputSchema: {
-                setlistId: z.string().describe("Setlist id"),
-                trackId: z.string().describe("Id of the track to remove"),
+                setlistId: z.string().min(1).describe("Setlist id"),
+                trackId: z.string().min(1).describe("Id of the track to remove"),
                 lastSeenVersion: lastSeenVersionSchema.describe(
                     "Optional track-level optimistic-concurrency gate. Pass the track's `version` from get_setlist; rejects with `{error: 'stale_version', currentVersion, ...}` on mismatch.",
                 ),
@@ -604,7 +618,7 @@ export function registerWriteTools(server: McpServer): void {
             description:
                 "Delete a setlist and all of its tracks. Only the setlist's owner or an admin may delete it — band_leader can update/add tracks on others' setlists (see update_setlist, add_track_to_setlist) but cannot delete them. This asymmetry is intentional: delete is destructive and irreversible, so it's narrower than the collaboration-friendly editing surface. Use with care — cascades to every track on the setlist. Pass `lastSeenVersion` (from get_setlist) to reject with `{error: 'stale_version', ...}` when another writer has changed the setlist since you read it.",
             inputSchema: {
-                id: z.string().describe("Setlist id"),
+                id: z.string().min(1).describe("Setlist id"),
                 lastSeenVersion: lastSeenVersionSchema.describe(
                     "Optional setlist-level optimistic-concurrency gate. Pass the `version` from get_setlist; rejects with `{error: 'stale_version', ...}` on mismatch.",
                 ),
@@ -619,9 +633,10 @@ export function registerWriteTools(server: McpServer): void {
             description:
                 "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink) and optionally move it to a new position. Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Pass `position` to move the row in place (closes the 'must call reorder_setlist with the full ordered id list to move one row' gap). Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). Returns the post-update row. Admins and band leaders only. Pass `lastSeenVersion` (the track's `version` from your last get_setlist) for W-04 optimistic concurrency: rejects with `{error: 'stale_version', currentVersion, ...}` if another writer changed THIS track first, or `{error: 'track_not_found', setlistVersion, ...}` if the row was deleted out from under you.",
             inputSchema: {
-                setlistId: z.string().describe("Setlist id"),
+                setlistId: z.string().min(1).describe("Setlist id"),
                 trackId: z
                     .string()
+                    .min(1)
                     .describe("Track id (from get_setlist tracks[].id)"),
                 patch: updateTrackPatchSchema.describe(
                     "Fields to update + optional `position` for in-place reorder. At least one field (or `position`) must be set. Pass `songId` to re-bond the row to a different library song (fileId follows automatically).",
@@ -667,7 +682,7 @@ export function registerWriteTools(server: McpServer): void {
             description:
                 "Update many tracks on one setlist in a single call. mode='atomic' (default) wraps every patch in a Firestore transaction — all-or-nothing; mode='best-effort' applies each patch independently and returns per-row results (prefer atomic for >5 rows; best-effort is N round-trips). dryRun=true returns the plan without writing — useful for confirming a large change before committing. Max 50 patches per call (chunk longer lists). RESPONSE: the `committed` boolean is the load-bearing signal — true iff writes actually landed in Firestore. dryRun=true and atomic-mode-with-any-rejected-patch both return `committed: false` (per-row results explain which patch failed and which were rolled back). `updatedAt` in each row's `track` echo is returned as an ISO string. W-04 Plan 03: each patch entry accepts an optional `lastSeenVersion` (the track's version from your last get_setlist). Atomic mode rejects the whole batch with `staleRows[]` on any mismatch — the previously-valid rows are NOT applied; each row's `error` is `'stale_version'` (with `currentVersion` + `lastSeenVersion`) for the stale ones and a rollback message for the rest. Best-effort skips just the stale row (`error: 'stale_version'`) and commits the others. Admins and band leaders only.",
             inputSchema: {
-                setlistId: z.string().describe("Setlist id"),
+                setlistId: z.string().min(1).describe("Setlist id"),
                 patches: z
                     .array(bulkPatchEntrySchema)
                     .min(1)
@@ -826,6 +841,7 @@ export function registerWriteTools(server: McpServer): void {
                                 ),
                             trackId: z
                                 .string()
+                                .min(1)
                                 .optional()
                                 .describe(
                                     "Required for update/remove; from get_setlist tracks[].id.",
@@ -840,6 +856,7 @@ export function registerWriteTools(server: McpServer): void {
                                 ),
                             songId: z
                                 .string()
+                                .min(1)
                                 .optional()
                                 .describe(
                                     "Library song id — bond this row's chart. The library is keyed by Drive file id.",
