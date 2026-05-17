@@ -154,6 +154,7 @@ describe("MCP chart-health tools (emulator)", () => {
         expect(r.okCount).toBe(1)
         expect(r.missingCount).toBe(1)
         expect(r.unreachableCount).toBe(0)
+        expect(r.needsSyncCount).toBe(0)
 
         const byTrack = new Map(r.rows.map((row) => [row.trackId, row]))
         expect(byTrack.get("t1")?.health.status).toBe("ok")
@@ -161,6 +162,51 @@ describe("MCP chart-health tools (emulator)", () => {
         // Header row is unbonded — surfaced as a distinct status so the
         // agent can tell "no chart bound" from "chart missing".
         expect(byTrack.get("t3")?.health.status).toBe("unbonded")
+    })
+
+    it("needs_storage_sync surfaces per-row and rolls up to needsSyncCount (NEW-5)", async () => {
+        // Cycle-3 NEW-5 (storage-canonical direction). When a chart is in
+        // Drive but not yet in Storage, the file-fetcher's read fallback
+        // still serves bytes — but verify_setlist_charts flags the
+        // transient state so /api/cron/drive-sync (NEW-1) can resolve.
+        const id = "set-verify-needs-sync"
+        await db().collection("setlists").doc(id).set({
+            name: "Storage-Sync Test",
+            ownerId: ADMIN,
+        })
+        await seedTrack("ts1", id, 0, {
+            title: "Storage-only",
+            songId: "song-stored",
+            fileId: "song-stored",
+            type: "song",
+        })
+        await seedTrack("ts2", id, 1, {
+            title: "Drive-only (transient)",
+            songId: "song-drive-only",
+            fileId: "song-drive-only",
+            type: "song",
+        })
+
+        mockGetChartHealth.mockImplementation(async (fileId: string) =>
+            fileId === "song-stored"
+                ? { status: "ok", source: "firebase-storage" }
+                : {
+                      status: "needs_storage_sync",
+                      reason: "drive_only",
+                      mimeType: "application/pdf",
+                  },
+        )
+
+        const r = await verifySetlistCharts(ADMIN, { setlistId: id })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+
+        expect(r.okCount).toBe(1)
+        expect(r.needsSyncCount).toBe(1)
+        expect(r.missingCount).toBe(0)
+        expect(r.unreachableCount).toBe(0)
+        const byTrack = new Map(r.rows.map((row) => [row.trackId, row]))
+        expect(byTrack.get("ts2")?.health.status).toBe("needs_storage_sync")
     })
 
     it("verify_setlist_charts returns Setlist not found for ghost id", async () => {

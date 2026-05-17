@@ -75,12 +75,19 @@ export async function fetchFileById(fileId: string, mimeType?: string): Promise<
  * (the prefix indicates a local-only upload, no Drive backing).
  *
  * Returns:
- *  - { status: 'ok', source: 'firebase-storage' | 'google-drive', mimeType?: string }
+ *  - { status: 'ok', source: 'firebase-storage', mimeType?: string }
+ *  - { status: 'needs_storage_sync', reason: 'drive_only', mimeType?: string }
+ *      — Drive has bytes but Storage doesn't yet. Bytes still SERVE because
+ *        `fetchFileById` does the Drive fallback; the surface just flags the
+ *        transient state so the /api/cron/drive-sync importer (NEW-1) can
+ *        resolve it on the next tick. Storage-canonical direction (cycle-3
+ *        ADDENDUM-1) makes Drive-only a non-steady state.
  *  - { status: 'missing', reason }    — file not in Storage and (if applicable) not in Drive
  *  - { status: 'unreachable', error } — network/transient failure; caller may retry
  */
 export type ChartHealth =
-    | { status: "ok"; source: "firebase-storage" | "google-drive"; mimeType?: string }
+    | { status: "ok"; source: "firebase-storage"; mimeType?: string }
+    | { status: "needs_storage_sync"; reason: "drive_only"; mimeType?: string }
     | { status: "missing"; reason: string }
     | { status: "unreachable"; error: string }
 
@@ -110,9 +117,15 @@ export async function getChartHealth(
             const meta = (await drive.getFileMetadata(cleanId)) as {
                 mimeType?: string | null
             }
+            // Cycle-3 NEW-5 (storage-canonical direction): Drive has bytes
+            // but Storage doesn't. Bytes still SERVE via the fetchFileById
+            // Drive fallback — the surface just flags the transient state
+            // for the /api/cron/drive-sync importer to resolve. Operators
+            // can also reconcile a backlog via the `reconcile_library` MCP
+            // tool (NEW-2, A2's ship).
             return {
-                status: "ok",
-                source: "google-drive",
+                status: "needs_storage_sync",
+                reason: "drive_only",
                 mimeType: meta?.mimeType ?? mimeType,
             }
         } catch (err) {

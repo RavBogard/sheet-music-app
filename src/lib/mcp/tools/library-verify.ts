@@ -96,6 +96,15 @@ export interface VerifySetlistChartsResult {
     missingCount: number
     unreachableCount: number
     /**
+     * Cycle-3 NEW-5 (storage-canonical direction). Rows where Drive has
+     * the bytes but Storage doesn't yet — chart still SERVES because the
+     * file-fetcher does Drive fallback. The transient state surfaces here
+     * so callers know which charts the `/api/cron/drive-sync` importer
+     * (NEW-1) is mid-resolving. Distinct from `okCount` (serving from
+     * Storage) and `missingCount` (definitively gone).
+     */
+    needsSyncCount: number
+    /**
      * Number of `library_index` rows actually flipped to `status: 'orphaned'`
      * this call — i.e. rows that existed in the catalog and were re-confirmed
      * missing. Excludes phantom bonds (fileIds that had no catalog row at all).
@@ -177,6 +186,9 @@ export async function verifySetlistCharts(
     const unreachableCount = probes.filter(
         (p) => p.health.status === "unreachable",
     ).length
+    const needsSyncCount = probes.filter(
+        (p) => p.health.status === "needs_storage_sync",
+    ).length
 
     // Opportunistic orphan marking. Only fires on `missing` (definitive
     // not-found) — never on `unreachable` (transient blip). L-001.
@@ -244,6 +256,7 @@ export async function verifySetlistCharts(
         okCount,
         missingCount,
         unreachableCount,
+        needsSyncCount,
         orphanedMarked,
         phantomBonds,
     })
@@ -256,6 +269,7 @@ export async function verifySetlistCharts(
         okCount,
         missingCount,
         unreachableCount,
+        needsSyncCount,
         orphanedMarked,
         phantomBonds,
         rows: probes,

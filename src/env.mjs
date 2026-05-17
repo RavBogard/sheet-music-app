@@ -33,6 +33,13 @@ export const env = createEnv({
         SESSION_ROLE_SECRET: prodRequired("SESSION_ROLE_SECRET"),
         BACKUP_BUCKET: z.string().optional(),
         GOOGLE_DRIVE_ROOT_FOLDER_ID: z.string().optional(),
+        // Cycle-3 NEW-1 (drive-sync importer). Parent folder David Lazaroff
+        // drops chart files into; the /api/cron/drive-sync cron watches this
+        // folder + its direct subfolders every 5 min. Optional — when unset,
+        // the cron is a graceful no-op so the route ships dormant until
+        // Daniel configures it. Distinct from GOOGLE_DRIVE_ROOT_FOLDER_ID
+        // (which the legacy /api/cron/sync hourly mirror uses).
+        DAVID_DRIVE_DROP_FOLDER_ID: z.string().optional(),
     },
     client: {
         NEXT_PUBLIC_FIREBASE_API_KEY: z.string().min(1, "Firebase API key is required"),
@@ -72,6 +79,7 @@ export const env = createEnv({
         RESEND_WEBHOOK_SECRET: process.env.RESEND_WEBHOOK_SECRET,
         BACKUP_BUCKET: process.env.BACKUP_BUCKET,
         GOOGLE_DRIVE_ROOT_FOLDER_ID: process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID,
+        DAVID_DRIVE_DROP_FOLDER_ID: process.env.DAVID_DRIVE_DROP_FOLDER_ID,
     },
     skipValidation: !!process.env.SKIP_ENV_VALIDATION,
     emptyStringAsUndefined: true,

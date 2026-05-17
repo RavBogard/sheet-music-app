@@ -57,6 +57,26 @@ export interface ProcessChartUploadInput {
      * keep the 0.85 threshold strict, but allow an explicit override.
      */
     force?: boolean
+    /**
+     * Ingest path tag stamped into `library_index.source`. Defaults to
+     * `'upload'` for direct HTTP/MCP uploads. `'drive-sync'` is set by the
+     * `/api/cron/drive-sync` importer (cycle-3 NEW-1) so a future tick can
+     * tell cron-imported rows from human-driven uploads without re-reading
+     * Drive.
+     */
+    source?: "upload" | "drive-sync"
+    /**
+     * Drive provenance for cron-imported rows. When present, the library
+     * row gains `driveFileId`, `driveModifiedTime`, `driveMd5`,
+     * `driveParents` fields — the next cron tick uses them to detect
+     * rename / replace / move events without re-importing on every poll.
+     */
+    driveMetadata?: {
+        driveFileId: string
+        modifiedTime?: string
+        md5Checksum?: string
+        parents?: string[]
+    }
 }
 
 export interface ProcessChartUploadOk {
@@ -477,7 +497,7 @@ export async function processChartUpload(
         originalName: fileName,
         mimeType: contentType,
         fileSize: buffer.byteLength,
-        source: "upload",
+        source: input.source ?? "upload",
         uploadedBy: input.uploaderUid,
         uploadedByEmail: input.uploaderEmail || "unknown",
         uploadedAt: new Date().toISOString(),
@@ -491,6 +511,18 @@ export async function processChartUpload(
     if (input.tags && input.tags.length > 0) indexEntry.tags = input.tags
     if (originalStorageUrl) indexEntry.originalStorageUrl = originalStorageUrl
     if (sourceFormat) indexEntry.sourceFormat = sourceFormat
+    if (input.driveMetadata) {
+        indexEntry.driveFileId = input.driveMetadata.driveFileId
+        if (input.driveMetadata.modifiedTime) {
+            indexEntry.driveModifiedTime = input.driveMetadata.modifiedTime
+        }
+        if (input.driveMetadata.md5Checksum) {
+            indexEntry.driveMd5 = input.driveMetadata.md5Checksum
+        }
+        if (input.driveMetadata.parents && input.driveMetadata.parents.length > 0) {
+            indexEntry.driveParents = input.driveMetadata.parents
+        }
+    }
 
     stage("firestore-write:start")
     try {

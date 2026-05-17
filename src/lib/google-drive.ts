@@ -225,6 +225,63 @@ export class DriveClient {
         }
     }
 
+    /**
+     * Cycle-3 NEW-1 (drive-sync importer). Run a Drive `files.list` with a
+     * caller-supplied query and field set. Used by `/api/cron/drive-sync`
+     * to fetch files modified since `lastPollAt` across David's drop folder
+     * + subfolders. Kept generic — query construction is the caller's job.
+     */
+    async listFilesByQuery(params: {
+        q: string
+        fields?: string
+        pageSize?: number
+        pageToken?: string
+        orderBy?: string
+    }): Promise<{
+        files: Array<{
+            id?: string
+            name?: string
+            mimeType?: string
+            modifiedTime?: string
+            parents?: string[]
+            md5Checksum?: string
+            size?: string | number
+        }>
+        nextPageToken: string | null
+    }> {
+        try {
+            const res = (await withRetry(() =>
+                this.drive.files.list({
+                    pageSize: params.pageSize ?? 100,
+                    fields:
+                        params.fields ??
+                        "nextPageToken, files(id, name, mimeType, modifiedTime, parents, md5Checksum, size)",
+                    q: params.q,
+                    pageToken: params.pageToken,
+                    supportsAllDrives: true,
+                    includeItemsFromAllDrives: true,
+                    orderBy: params.orderBy ?? "modifiedTime",
+                }),
+            )) as { data: { files?: unknown[]; nextPageToken?: string } }
+
+            return {
+                files: (res.data.files ?? []) as Array<{
+                    id?: string
+                    name?: string
+                    mimeType?: string
+                    modifiedTime?: string
+                    parents?: string[]
+                    md5Checksum?: string
+                    size?: string | number
+                }>,
+                nextPageToken: res.data.nextPageToken ?? null,
+            }
+        } catch (error: unknown) {
+            logger.error("[Drive] listFilesByQuery error:", error)
+            throw error
+        }
+    }
+
     async getFile(fileId: string) {
         try {
             // Shortcuts can't be downloaded directly — resolve to target ID first.
