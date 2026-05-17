@@ -19,8 +19,19 @@ function decodeJwtPayload(token: string) {
     }
 }
 
-// Exact-match public routes
-const publicExactRoutes = ['/login', '/', '/auth-error']
+// Exact-match public routes.
+// Legal/marketing pages (privacy/terms/sms-consent/changelog) MUST stay
+// public — A2P SMS carrier review needs to fetch /sms-consent without a
+// session to audit the opt-in disclosure.
+const publicExactRoutes = [
+    '/login',
+    '/',
+    '/auth-error',
+    '/privacy',
+    '/terms',
+    '/sms-consent',
+    '/changelog',
+]
 
 // Prefix-match public routes — these serve public/unauthenticated content
 // /perform/*     — musicians view shared setlists (may not be signed in)

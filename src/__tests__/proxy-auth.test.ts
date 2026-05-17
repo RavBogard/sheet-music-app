@@ -26,8 +26,23 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
     it('allows public routes without authentication', async () => {
         const req = makeReq('/perform/setlist/123')
         const res = await proxy(req)
-        
+
         // A "NextResponse.next()" has no headers by default and a 200 status in edge mock
+        expect(res.headers.get('location')).toBeNull()
+    })
+
+    // F-022 — legal/marketing pages must be reachable without a session.
+    // A2P SMS compliance specifically requires /sms-consent to be public so
+    // carriers can audit the opt-in disclosure.
+    it.each([
+        '/privacy',
+        '/terms',
+        '/sms-consent',
+        '/changelog',
+    ])('allows legal/marketing page %s without authentication', async (path) => {
+        const req = makeReq(path)
+        const res = await proxy(req)
+
         expect(res.headers.get('location')).toBeNull()
     })
 
