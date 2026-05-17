@@ -1,7 +1,12 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { listSetlists, getSetlist } from "./setlists"
-import { searchLibrary, getSong, listLibrary } from "./library"
+import {
+    searchLibrary,
+    getSong,
+    listLibrary,
+    dedupeLibraryIndex,
+} from "./library"
 import {
     createSetlist,
     updateSetlist,
@@ -925,6 +930,24 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await verifySetlistCharts(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "dedupe_library",
+        {
+            description:
+                "One-shot idempotent library_index hygiene sweep — finds active rows whose normalized names collide (e.g. `\" Ana B_Koach.pdf\"` leading-space dupes; or two uploads of the same chart name) and marks all-but-one `status: \"duplicate\"`. Canonical row is the one with the earliest `uploadedAt` (fileId asc as tiebreak); losers also get the status mirrored into `songs/{id}` when that doc exists. searchLibrary + list_library hide `status: \"duplicate\"` from their default surface, so the practical effect is collapsing dupes to one visible row without deleting any bytes. Already-`duplicate` and `archived` rows are skipped → safe to re-run. Returns `{scanned, groupsFound, duplicatesMarked, songsMirrored, groups[], dryRun}`. PASS `dryRun: true` (F-05) to get the full plan without writing anything — agents should always preview before committing.",
+            inputSchema: {
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true, returns the dedupe plan (every group + losers) without writing. F-05 standing rule: dryRun does NOT require force. Default false — real run.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await dedupeLibraryIndex(uidFrom(extra), args)),
     )
 }
 
