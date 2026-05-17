@@ -308,6 +308,108 @@ describe("MCP list_library (emulator)", () => {
         }
     })
 
+    describe("DATA-004 default hides duplicate/orphaned (count alignment with /library)", () => {
+        it("hides status:'duplicate' and status:'orphaned' by default; opt-in surfaces both", async () => {
+            // Pre-fix repro: /library "CRC Charts (162)" vs MCP
+            // list_library({collection: "core"}) returning 185. The 23 leak
+            // was rows the dedupe pass had marked status:'duplicate' plus a
+            // handful of Drive-side status:'orphaned' rows that /library
+            // hides but MCP surfaced.
+            await seedIndex("active1", {
+                name: "Adon Olam",
+                collection: "core",
+                mimeType: "application/pdf",
+                status: "active",
+            })
+            await seedIndex("dup1", {
+                name: "Adon Olam (duplicate)",
+                collection: "core",
+                mimeType: "application/pdf",
+                status: "duplicate",
+            })
+            await seedIndex("orph1", {
+                name: "Lost Chart",
+                collection: "core",
+                mimeType: "application/pdf",
+                status: "orphaned",
+            })
+
+            const def = await listLibrary(ANY_UID, {})
+            if (!("rows" in def)) throw new Error("expected rows result")
+            expect(def.total).toBe(1)
+            expect(def.rows.map((x) => x.name)).toEqual(["Adon Olam"])
+
+            const core = await listLibrary(ANY_UID, { collection: "core" })
+            if (!("rows" in core)) throw new Error("expected rows result")
+            expect(core.total).toBe(1)
+
+            const audit = await listLibrary(ANY_UID, {
+                includeNonChartHealthy: true,
+            })
+            if (!("rows" in audit)) throw new Error("expected rows result")
+            expect(audit.total).toBe(3)
+            expect(audit.rows.map((x) => x.status).sort()).toEqual([
+                "active",
+                "duplicate",
+                "orphaned",
+            ])
+        })
+
+        it("includeNonCharts and includeNonChartHealthy are orthogonal — both required to fully surface raw library_index", async () => {
+            await seedIndex("chart-active", {
+                name: "Active Chart",
+                mimeType: "application/pdf",
+                status: "active",
+                collection: "core",
+            })
+            await seedIndex("chart-dup", {
+                name: "Dup Chart",
+                mimeType: "application/pdf",
+                status: "duplicate",
+                collection: "core",
+            })
+            await seedIndex("folder", {
+                name: "1. Folder",
+                mimeType: "application/vnd.google-apps.folder",
+                status: "active",
+                collection: "core",
+            })
+
+            // Default: chart-active only.
+            const def = await listLibrary(ANY_UID, {})
+            if (!("rows" in def)) throw new Error("expected rows result")
+            expect(def.rows.map((x) => x.fileId)).toEqual(["chart-active"])
+
+            // Health-only opt-in still hides folder (non-chart artifact).
+            const health = await listLibrary(ANY_UID, {
+                includeNonChartHealthy: true,
+            })
+            if (!("rows" in health)) throw new Error("expected rows result")
+            expect(health.rows.map((x) => x.fileId).sort()).toEqual([
+                "chart-active",
+                "chart-dup",
+            ])
+
+            // Charts-only opt-in still hides duplicate (unhealthy).
+            const charts = await listLibrary(ANY_UID, {
+                includeNonCharts: true,
+            })
+            if (!("rows" in charts)) throw new Error("expected rows result")
+            expect(charts.rows.map((x) => x.fileId).sort()).toEqual([
+                "chart-active",
+                "folder",
+            ])
+
+            // Both opt-ins → raw library_index.
+            const raw = await listLibrary(ANY_UID, {
+                includeNonCharts: true,
+                includeNonChartHealthy: true,
+            })
+            if (!("rows" in raw)) throw new Error("expected rows result")
+            expect(raw.total).toBe(3)
+        })
+    })
+
     describe("W-02 trust-calibration fields", () => {
         it("surfaces stem + titleSpecificity + bondCorrectionHistory on each row", async () => {
             await seedIndex("u1", {
@@ -344,26 +446,33 @@ describe("MCP list_library (emulator)", () => {
             })
         })
 
-        it("computes siblingsInCatalog per stem (orphans excluded from count, but still surfaced as rows)", async () => {
-            // listLibrary's orphan policy: still RETURN orphaned rows (operators
-            // need to see them for hygiene), but EXCLUDE them from the
-            // siblingsInCatalog count (since orphans don't have files).
-            // search_library is the one that hides orphans by default — L-001.
+        it("computes siblingsInCatalog per stem (orphans excluded from count; cycle-2 DATA-004 hides orphans by default)", async () => {
+            // Cycle-2 DATA-004: list_library's default hidden-set is aligned
+            // with /library + search_library — orphaned rows do NOT surface
+            // unless the caller opts in via includeNonChartHealthy: true. The
+            // siblingsInCatalog computation still excludes orphans from the
+            // count (orphans don't have files), and when an audit caller
+            // includes them, the orphan row carries no siblingsInCatalog.
             await seedIndex("u1", { name: "Hashkivenu (Klepper)", stem: "hashkivenu", status: "active" })
             await seedIndex("u2", { name: "Hashkivenu (Sulzer)", stem: "hashkivenu", status: "active" })
             await seedIndex("u3", { name: "Hashkivenu (Old)", stem: "hashkivenu", status: "orphaned" })
             await seedIndex("u4", { name: "Hava Nagilah", stem: "hava nagilah", status: "active" })
 
+            // Default: orphan hidden, two active siblings counted.
             const r = await listLibrary(ANY_UID, {})
             if (!("rows" in r)) throw new Error("expected rows result")
             const byId = Object.fromEntries(r.rows.map((row) => [row.fileId, row]))
+            expect(byId.u3).toBeUndefined() // DATA-004: orphan hidden by default
             expect(byId.u1.siblingsInCatalog).toBe(2) // u1 + u2 active
             expect(byId.u2.siblingsInCatalog).toBe(2)
             expect(byId.u4.siblingsInCatalog).toBe(1)
-            // u3 surfaced but with status orphaned — its siblings count is
-            // intentionally omitted (set neither active-2 nor stand-alone-1).
-            expect(byId.u3).toBeDefined()
-            expect(byId.u3.status).toBe("orphaned")
+
+            // Audit opt-in: orphan surfaces, but still no siblingsInCatalog.
+            const audit = await listLibrary(ANY_UID, { includeNonChartHealthy: true })
+            if (!("rows" in audit)) throw new Error("expected rows result")
+            const byIdAudit = Object.fromEntries(audit.rows.map((row) => [row.fileId, row]))
+            expect(byIdAudit.u3).toBeDefined()
+            expect(byIdAudit.u3.status).toBe("orphaned")
         })
 
         it("rows without W-02 fields surface as undefined (back-compat with old uploads)", async () => {

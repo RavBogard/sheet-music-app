@@ -406,6 +406,13 @@ export interface ListLibraryArgs {
     limit?: number
     offset?: number
     includeNonCharts?: boolean
+    /**
+     * If true, include rows with `status` ∈ {`duplicate`, `orphaned`} that the
+     * default browse and the in-app /library catalog hide. Defaults to false.
+     * Cycle-2 DATA-004: aligns list_library's default to the UI's hidden-set so
+     * caller-side counts match (e.g. `/library` "CRC Charts (162)" vs MCP 185).
+     */
+    includeNonChartHealthy?: boolean
 }
 
 /**
@@ -559,6 +566,17 @@ export async function listLibrary(
             ? all
             : all.filter((e) => !isNonChartArtifact(e))
 
+        // Cycle-2 DATA-004: align list_library's default with the in-app
+        // /library catalog, which hides rows that the dedupe pass has marked
+        // `status: "duplicate"` and Drive-side `status: "orphaned"` rows. Same
+        // hidden-set as search_library so the surfaced count matches the UI's.
+        // Opt-in via `includeNonChartHealthy: true` for audit/reconciliation.
+        const chartHealthy = args.includeNonChartHealthy
+            ? chartLike
+            : chartLike.filter(
+                  (e) => e.status !== "duplicate" && e.status !== "orphaned",
+              )
+
         // "core" matches the UI semantics in SongChartsLibrary: the CRC
         // Charts tab is the negative-set complement of supplemental + uploads,
         // so any row with collection: null / unset / "core" surfaces there.
@@ -567,13 +585,13 @@ export async function listLibrary(
         // them from MCP under {collection: "core"} (CF2-D-1).
         const filtered = args.collection
             ? args.collection === "core"
-                ? chartLike.filter(
+                ? chartHealthy.filter(
                       (e) =>
                           e.collection !== "supplemental" &&
                           e.collection !== "uploads",
                   )
-                : chartLike.filter((e) => e.collection === args.collection)
-            : chartLike
+                : chartHealthy.filter((e) => e.collection === args.collection)
+            : chartHealthy
 
         filtered.sort((a, b) =>
             a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
