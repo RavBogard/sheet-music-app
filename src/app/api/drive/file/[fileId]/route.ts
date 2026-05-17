@@ -4,6 +4,7 @@ import { createApiHandler } from "@/lib/api-wrapper"
 import { fetchFileById } from "@/lib/file-fetcher"
 import { logger } from "@/lib/logger"
 import { hasBrowserFetchMetadata } from "@/lib/drive-file-auth"
+import { httpError, redactInProduction } from "@/lib/http/error-envelope"
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -40,6 +41,7 @@ export const GET = createApiHandler(async (ctx) => {
 
     const fileId = ctx.params?.fileId
     const isTrusted = !!ctx.auth || hasBrowserFetchMetadata(ctx.req)
+    const origin = getAllowedOrigin(ctx.req)
 
     try {
         // Cycle-1 F-021: existence check fires BEFORE the auth gate so a
@@ -54,9 +56,30 @@ export const GET = createApiHandler(async (ctx) => {
         const result = await fetchFileById(fileId)
 
         if (!result) {
-            return NextResponse.json(
-                { error: 'File not found', fileId, debug: { receivedId: fileId, stringified: String(ctx.params?.fileId) } },
-                { status: 404, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(ctx.req), 'Cache-Control': 'no-store' } }
+            // Cycle-2 SEC-001 + SEC-002: rich envelope on the wire; the
+            // `debug` field used to leak the raw receivedId + stringified
+            // params unconditionally. Production now strips it via
+            // `redactInProduction`; dev / test keep it for triage.
+            const context = redactInProduction(
+                {
+                    fileId,
+                    debug: {
+                        receivedId: fileId,
+                        stringified: String(ctx.params?.fileId),
+                    },
+                },
+                ["debug"] as const,
+            )
+            return httpError(
+                404,
+                "file_not_found",
+                "No chart found for the given fileId.",
+                context,
+                "Verify the fileId via the MCP list_library / get_chart_status tools, or open the chart in-app to confirm it still exists.",
+                {
+                    "Access-Control-Allow-Origin": origin,
+                    "Cache-Control": "no-store",
+                },
             )
         }
 
@@ -75,16 +98,20 @@ export const GET = createApiHandler(async (ctx) => {
                 userAgent: ctx.req.headers.get('user-agent'),
                 ip,
             })
-            return NextResponse.json(
-                { error: "Authentication required" },
-                { status: 401, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(ctx.req) } }
+            return httpError(
+                401,
+                "unauthenticated",
+                "Bearer token (or in-app browser fetch metadata) required for chart bytes.",
+                { fileId },
+                "Send `Authorization: Bearer <token>`, or call from the in-app fetch surface where Sec-Fetch-Site / Sec-Fetch-Dest headers identify the request.",
+                { "Access-Control-Allow-Origin": origin },
             )
         }
 
         return new NextResponse(new Uint8Array(result.buffer), {
             status: 200,
             headers: {
-                'Access-Control-Allow-Origin': getAllowedOrigin(ctx.req),
+                'Access-Control-Allow-Origin': origin,
                 'Cache-Control': 'public, max-age=86400, s-maxage=604800',
                 'Content-Type': result.contentType,
                 'X-Served-From': result.source,
@@ -92,9 +119,16 @@ export const GET = createApiHandler(async (ctx) => {
         })
     } catch (error) {
         logger.error(`[FileProxy] Unexpected error for ${fileId}:`, error)
-        return NextResponse.json(
-            { error: 'File unavailable', fileId },
-            { status: 502, headers: { 'Access-Control-Allow-Origin': getAllowedOrigin(ctx.req), 'Cache-Control': 'no-store' } }
+        return httpError(
+            502,
+            "upstream_unavailable",
+            "Chart bytes are temporarily unavailable.",
+            { fileId },
+            "Retry shortly; if the failure persists the underlying Storage / Drive blob may need re-upload.",
+            {
+                "Access-Control-Allow-Origin": origin,
+                "Cache-Control": "no-store",
+            },
         )
     }
 }, { requireAuth: false })

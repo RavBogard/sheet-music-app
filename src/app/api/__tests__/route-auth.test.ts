@@ -157,13 +157,24 @@ describe('GET /api/drive/file/[fileId]', () => {
         vi.clearAllMocks()
     })
 
-    it('rejects requests without auth or browser context', async () => {
+    it('returns 404 on bogus fileId BEFORE the auth gate (cycle-1 F-021)', async () => {
+        // Pre-F-021, this returned 401 ("Authentication required") which
+        // misled agents — they re-tried with credentials when the real
+        // problem was a wrong id. F-021 reorders the existence check
+        // ahead of the auth gate so unauth + bogus id = 404 not 401.
+        // SEC-002 (cycle-2) also pins the rich envelope shape on the
+        // 404 body.
         const res = await GET(
             makeReq('/api/drive/file/test-id'),
             { params: Promise.resolve({ fileId: 'test-id' }) }
         )
 
-        expect(res.status).toBe(401)
+        expect(res.status).toBe(404)
+        const body = (await res.json()) as Record<string, unknown>
+        expect(body.ok).toBe(false)
+        expect(body.error).toBe('file_not_found')
+        expect(typeof body.message).toBe('string')
+        expect(typeof body.hint).toBe('string')
     })
 
     it('allows same-origin browser requests', async () => {
