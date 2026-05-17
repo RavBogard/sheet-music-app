@@ -617,7 +617,7 @@ export function registerWriteTools(server: McpServer): void {
                     )
                     .optional()
                     .describe(
-                        "Explicit recipient list. If omitted, auto-derives from active band roles. Each entry should have a `uid` (for in-app + push + SMS) and/or `email` (for email).",
+                        "Explicit recipient list. If omitted, auto-derives from active band roles. Each entry should have a `uid` (for in-app + push + SMS) and/or `email` (for email). Note: the publisher's own uid is filtered out of the final fanout EVEN when listed explicitly — you don't get a publish notification for the publish you just sent. If you call `publish_setlist({recipients: [{uid: self}]})` you'll see `recipientCount: 0` and `delivery.inApp.sent: 0`; that's intentional, not a bug.",
                     ),
                 audience: z
                     .enum(["band", "all"])
