@@ -1,0 +1,315 @@
+import {
+    afterAll,
+    beforeAll,
+    beforeEach,
+    describe,
+    expect,
+    it,
+} from "vitest"
+import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
+import { getFirestore } from "firebase-admin/firestore"
+
+import { dedupeLibraryIndex } from "../tools/library"
+import { searchLibrary } from "../tools/library"
+
+/**
+ * Cycle-1 F-019 + F-008 — one-shot library_index dedupe.
+ *
+ * F-019: stress-test surfaced ` Ana B_Koach.pdf` (note leading space) and
+ * `Ana B_Koach.pdf` as separate rows in library_index, same display name.
+ * F-008: two `Oseh shalom (camp)` rows with different fileIds.
+ *
+ * The dedupe pass groups by normalized name, picks the earliest
+ * uploadedAt as canonical (fileId asc tiebreak), and marks losers
+ * `status: "duplicate"` in BOTH library_index and (if present) songs.
+ * Idempotent: a second run returns groupsFound: 0.
+ */
+describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
+    let app: App
+    const ADMIN = "rabbi-daniel"
+
+    function db() {
+        return getFirestore(app)
+    }
+
+    async function seedIndex(id: string, data: Record<string, unknown>) {
+        await db().collection("library_index").doc(id).set(data)
+    }
+    async function seedSong(
+        id: string,
+        title: string,
+        extra: Record<string, unknown> = {},
+    ) {
+        await db()
+            .collection("songs")
+            .doc(id)
+            .set({ title, status: "active", ...extra })
+    }
+
+    beforeAll(async () => {
+        expect(process.env.FIRESTORE_EMULATOR_HOST).toBeTruthy()
+        app =
+            getApps()[0] ??
+            initializeApp({ projectId: "demo-mcp-dedupe-library" })
+    })
+
+    afterAll(async () => {
+        await deleteApp(app)
+    })
+
+    beforeEach(async () => {
+        for (const col of ["songs", "library_index"]) {
+            const snap = await db().collection(col).get()
+            await Promise.all(snap.docs.map((d) => d.ref.delete()))
+        }
+    })
+
+    it("dryRun returns plan without writing", async () => {
+        await seedIndex("ana-clean", {
+            name: "Ana B_Koach.pdf",
+            uploadedAt: "2024-01-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("ana-leading-space", {
+            name: " Ana B_Koach.pdf",
+            uploadedAt: "2024-06-15T12:00:00Z",
+            mimeType: "application/pdf",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: true })
+        if ("error" in r) throw new Error(r.error)
+
+        expect(r.dryRun).toBe(true)
+        expect(r.scanned).toBe(2)
+        expect(r.groupsFound).toBe(1)
+        expect(r.duplicatesMarked).toBe(1)
+        expect(r.songsMirrored).toBe(0)
+
+        // Verify NO writes happened.
+        const cleanDoc = await db()
+            .collection("library_index")
+            .doc("ana-clean")
+            .get()
+        const spaceDoc = await db()
+            .collection("library_index")
+            .doc("ana-leading-space")
+            .get()
+        expect(cleanDoc.data()?.status).toBeUndefined()
+        expect(spaceDoc.data()?.status).toBeUndefined()
+        expect(cleanDoc.data()?.dedupedAt).toBeUndefined()
+        expect(spaceDoc.data()?.dedupedAt).toBeUndefined()
+    })
+
+    it("F-019 — leading-space dupes collapse; earliest uploadedAt wins canonical", async () => {
+        await seedIndex("ana-clean", {
+            name: "Ana B_Koach.pdf",
+            uploadedAt: "2024-01-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("ana-leading-space", {
+            name: " Ana B_Koach.pdf",
+            uploadedAt: "2024-06-15T12:00:00Z",
+            mimeType: "application/pdf",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN)
+        if ("error" in r) throw new Error(r.error)
+
+        expect(r.groupsFound).toBe(1)
+        expect(r.duplicatesMarked).toBe(1)
+        expect(r.groups[0].kept.fileId).toBe("ana-clean") // earliest uploadedAt
+        expect(r.groups[0].duplicates.map((d) => d.fileId)).toEqual([
+            "ana-leading-space",
+        ])
+
+        // Loser is now status:'duplicate' in library_index.
+        const loser = await db()
+            .collection("library_index")
+            .doc("ana-leading-space")
+            .get()
+        expect(loser.data()?.status).toBe("duplicate")
+        expect(loser.data()?.dedupedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+
+        // Canonical row untouched.
+        const keep = await db()
+            .collection("library_index")
+            .doc("ana-clean")
+            .get()
+        expect(keep.data()?.status).toBeUndefined()
+        expect(keep.data()?.dedupedAt).toBeUndefined()
+    })
+
+    it("F-008 — same name different fileId, oldest uploadedAt wins", async () => {
+        await seedIndex("oseh-camp-v1", {
+            name: "Oseh shalom (camp)",
+            uploadedAt: "2024-03-15T08:00:00Z",
+        })
+        await seedIndex("oseh-camp-v2", {
+            name: "Oseh shalom (camp)",
+            uploadedAt: "2026-05-01T18:00:00Z",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN)
+        if ("error" in r) throw new Error(r.error)
+
+        expect(r.groupsFound).toBe(1)
+        expect(r.groups[0].normalizedName).toBe("oseh shalom camp")
+        expect(r.groups[0].kept.fileId).toBe("oseh-camp-v1")
+        expect(r.groups[0].duplicates.map((d) => d.fileId)).toEqual([
+            "oseh-camp-v2",
+        ])
+    })
+
+    it("mirrors status:'duplicate' onto songs/{id} when the mirror exists", async () => {
+        await seedIndex("ana-clean", {
+            name: "Ana B_Koach.pdf",
+            uploadedAt: "2024-01-01T00:00:00Z",
+        })
+        await seedIndex("ana-leading-space", {
+            name: " Ana B_Koach.pdf",
+            uploadedAt: "2024-06-15T12:00:00Z",
+        })
+        await seedSong("ana-clean", "Ana B_Koach.pdf")
+        await seedSong("ana-leading-space", " Ana B_Koach.pdf")
+
+        const r = await dedupeLibraryIndex(ADMIN)
+        if ("error" in r) throw new Error(r.error)
+        expect(r.songsMirrored).toBe(1)
+
+        const loserSong = await db()
+            .collection("songs")
+            .doc("ana-leading-space")
+            .get()
+        expect(loserSong.data()?.status).toBe("duplicate")
+
+        const keepSong = await db().collection("songs").doc("ana-clean").get()
+        expect(keepSong.data()?.status).toBe("active")
+    })
+
+    it("does NOT create phantom songs/{id} rows when the mirror is absent", async () => {
+        // library_index has the dupes but songs/{id} only has the canonical.
+        // Dedupe must not create a phantom songs/ana-leading-space row.
+        await seedIndex("ana-clean", {
+            name: "Ana B_Koach.pdf",
+            uploadedAt: "2024-01-01T00:00:00Z",
+        })
+        await seedIndex("ana-leading-space", {
+            name: " Ana B_Koach.pdf",
+            uploadedAt: "2024-06-15T12:00:00Z",
+        })
+        await seedSong("ana-clean", "Ana B_Koach.pdf") // only canonical mirror
+
+        const r = await dedupeLibraryIndex(ADMIN)
+        if ("error" in r) throw new Error(r.error)
+        expect(r.songsMirrored).toBe(0)
+
+        const phantom = await db()
+            .collection("songs")
+            .doc("ana-leading-space")
+            .get()
+        expect(phantom.exists).toBe(false)
+    })
+
+    it("is idempotent — second run is a no-op", async () => {
+        await seedIndex("ana-clean", {
+            name: "Ana B_Koach.pdf",
+            uploadedAt: "2024-01-01T00:00:00Z",
+        })
+        await seedIndex("ana-leading-space", {
+            name: " Ana B_Koach.pdf",
+            uploadedAt: "2024-06-15T12:00:00Z",
+        })
+
+        const first = await dedupeLibraryIndex(ADMIN)
+        if ("error" in first) throw new Error(first.error)
+        expect(first.duplicatesMarked).toBe(1)
+
+        const second = await dedupeLibraryIndex(ADMIN)
+        if ("error" in second) throw new Error(second.error)
+        expect(second.scanned).toBe(1) // already-duplicate row excluded
+        expect(second.groupsFound).toBe(0)
+        expect(second.duplicatesMarked).toBe(0)
+        expect(second.groups).toEqual([])
+    })
+
+    it("ignores singleton (non-duplicate) rows", async () => {
+        await seedIndex("a", { name: "Adon Olam.pdf" })
+        await seedIndex("b", { name: "Mi Chamocha.pdf" })
+        await seedIndex("c", { name: "Hashkivenu.pdf" })
+
+        const r = await dedupeLibraryIndex(ADMIN)
+        if ("error" in r) throw new Error(r.error)
+        expect(r.scanned).toBe(3)
+        expect(r.groupsFound).toBe(0)
+        expect(r.duplicatesMarked).toBe(0)
+    })
+
+    it("excludes archived rows from grouping", async () => {
+        // archived sister row should not count toward the dupe group.
+        await seedIndex("active1", { name: "Ana B_Koach.pdf" })
+        await seedIndex("archived1", {
+            name: "Ana B_Koach.pdf",
+            status: "archived",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN)
+        if ("error" in r) throw new Error(r.error)
+        expect(r.scanned).toBe(1) // archived row excluded
+        expect(r.groupsFound).toBe(0)
+    })
+
+    it("normalizes diacritics, punctuation, separators, and case", async () => {
+        // All three should collapse into one group of three.
+        await seedIndex("a", {
+            name: "Shabbát Shalóm.pdf",
+            uploadedAt: "2024-01-01T00:00:00Z",
+        })
+        await seedIndex("b", {
+            name: "SHABBAT_SHALOM.pdf",
+            uploadedAt: "2024-02-01T00:00:00Z",
+        })
+        await seedIndex("c", {
+            name: "shabbat-shalom.pdf",
+            uploadedAt: "2024-03-01T00:00:00Z",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN)
+        if ("error" in r) throw new Error(r.error)
+        expect(r.groupsFound).toBe(1)
+        expect(r.groups[0].normalizedName).toBe("shabbat shalompdf")
+        expect(r.groups[0].kept.fileId).toBe("a") // earliest
+        expect(r.groups[0].duplicates.map((d) => d.fileId).sort()).toEqual([
+            "b",
+            "c",
+        ])
+    })
+
+    it("post-dedupe, searchLibrary no longer surfaces the loser", async () => {
+        // End-to-end: dedupe runs, then search behaves correctly.
+        await seedIndex("ana-clean", {
+            name: "Ana B_Koach.pdf",
+            uploadedAt: "2024-01-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("ana-leading-space", {
+            name: " Ana B_Koach.pdf",
+            uploadedAt: "2024-06-15T12:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedSong("ana-clean", "Ana B_Koach")
+        await seedSong("ana-leading-space", "Ana B_Koach")
+
+        // Pre-dedupe — both surface in search.
+        const before = await searchLibrary(ADMIN, { query: "Ana" })
+        expect(before.map((r) => r.id).sort()).toEqual([
+            "ana-clean",
+            "ana-leading-space",
+        ])
+
+        await dedupeLibraryIndex(ADMIN)
+
+        // Post-dedupe — only the canonical surfaces.
+        const after = await searchLibrary(ADMIN, { query: "Ana" })
+        expect(after.map((r) => r.id)).toEqual(["ana-clean"])
+    })
+})

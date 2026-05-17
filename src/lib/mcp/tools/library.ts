@@ -590,3 +590,207 @@ export async function listLibrary(
         return { error: "Failed to read library index" }
     }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * dedupe_library_index — one-shot library_index hygiene (cycle-1 F-019, F-008)
+ *
+ * Stress-test cycle 1 surfaced two duplicate-row patterns in `library_index`:
+ *  - F-019: leading-space typo on a Drive scan (`" Ana B_Koach.pdf"` and
+ *    `"Ana B_Koach.pdf"` indexed as separate rows, different fileIds).
+ *  - F-008: same display name with different fileIds (two
+ *    `"Oseh shalom (camp)"` rows from a re-scan).
+ *
+ * Strategy: group rows by a normalized name key (NFKD + lowercase +
+ * separator-collapse + non-alphanumeric strip). For each group with
+ * >=2 rows, keep the canonical row (earliest `uploadedAt`, fileId asc
+ * as tiebreak) and mark every loser `status: "duplicate"` in BOTH
+ * `library_index/{id}` and (if present) `songs/{id}`. The search/list
+ * surfaces filter `status === "duplicate"` out of default results;
+ * operators audit via the dedupe report.
+ *
+ * Properties:
+ *  - **One-shot:** function call performs one pass and returns. Not a
+ *    background daemon. Not a re-sweep loop.
+ *  - **Idempotent:** rows already at `status: "duplicate"` are skipped
+ *    at grouping time, so a second pass returns `groupsFound: 0`.
+ *  - **dryRun:** when true, returns the plan without any writes. F-05.
+ *  - **Resilient to half-mirrors:** `songs/{id}` is written only if the
+ *    doc already exists (no phantom-row creation).
+ *
+ * NOT registered as an MCP tool in this lane — `src/lib/mcp/tools/index.ts`
+ * is do-not-touch for the cycle-1 search-hygiene bundle. Exported here for
+ * a one-shot invocation (admin script, follow-up wiring commit, or test).
+ * ───────────────────────────────────────────────────────────────────────── */
+
+export interface DedupeLibraryIndexArgs {
+    /** When true, do not write — return the plan only. F-05 standing rule. */
+    dryRun?: boolean
+}
+
+export interface DedupeGroup {
+    /** Normalized name key shared by every row in the group. */
+    normalizedName: string
+    /** Canonical surviving row. */
+    kept: { fileId: string; name: string; uploadedAt: string | null }
+    /** Losers that would be / were marked `status: "duplicate"`. */
+    duplicates: Array<{ fileId: string; name: string; uploadedAt: string | null }>
+}
+
+export interface DedupeLibraryIndexResult {
+    /** Active rows considered for grouping (excludes already-duplicate / archived). */
+    scanned: number
+    /** Number of dupe groups (groups with >=2 rows). */
+    groupsFound: number
+    /** Total loser rows marked. */
+    duplicatesMarked: number
+    /** Of the marked losers, how many had a matching `songs/{id}` mirror updated. */
+    songsMirrored: number
+    /** Per-group plan (for audit / dryRun). */
+    groups: DedupeGroup[]
+    dryRun: boolean
+}
+
+function dedupeNormalize(s: string): string {
+    return s
+        .normalize("NFKD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[_\s\-]+/g, " ")
+        .replace(/[^a-z0-9 ]/g, "")
+        .trim()
+}
+
+export async function dedupeLibraryIndex(
+    _uid: string,
+    args: DedupeLibraryIndexArgs = {},
+): Promise<DedupeLibraryIndexResult | { error: string }> {
+    const dryRun = args.dryRun === true
+    try {
+        initAdmin()
+        const db = getFirestore()
+        const snap = await db.collection("library_index").get()
+
+        // Collect dedupable candidates. Skip rows already marked
+        // `duplicate` (idempotence) or `archived` (out of scope).
+        interface Candidate {
+            fileId: string
+            name: string
+            uploadedAt: string | null
+        }
+        const candidates: Candidate[] = []
+        for (const d of snap.docs) {
+            const data = d.data()
+            const status = typeof data.status === "string" ? data.status : "active"
+            if (status === "duplicate" || status === "archived") continue
+            const rawName =
+                (typeof data.name === "string" && data.name) ||
+                (typeof data.title === "string" && data.title) ||
+                ""
+            if (!rawName) continue
+            const uploadedAt =
+                typeof data.uploadedAt === "string"
+                    ? data.uploadedAt
+                    : typeof data.modifiedTime === "string"
+                      ? data.modifiedTime
+                      : null
+            candidates.push({ fileId: d.id, name: rawName, uploadedAt })
+        }
+
+        // Group by normalized key.
+        const groups = new Map<string, Candidate[]>()
+        for (const c of candidates) {
+            const key = dedupeNormalize(c.name)
+            // Refuse to group rows whose name normalizes to empty (e.g.
+            // emoji-only or punctuation-only names). Too risky to collapse.
+            if (!key) continue
+            const bucket = groups.get(key) ?? []
+            bucket.push(c)
+            groups.set(key, bucket)
+        }
+
+        // Pick canonical + collect losers per group.
+        const dupeGroups: DedupeGroup[] = []
+        const losers: Candidate[] = []
+        for (const [key, bucket] of groups) {
+            if (bucket.length < 2) continue
+            // Deterministic canonical: earliest uploadedAt wins; rows with
+            // null uploadedAt sort to the end (so a metadata-stripped scan
+            // artifact never beats a real timestamp). Tiebreak: fileId asc.
+            bucket.sort((a, b) => {
+                const aAt = a.uploadedAt ?? "￿"
+                const bAt = b.uploadedAt ?? "￿"
+                if (aAt !== bAt) return aAt.localeCompare(bAt)
+                return a.fileId.localeCompare(b.fileId)
+            })
+            const [keep, ...rest] = bucket
+            dupeGroups.push({
+                normalizedName: key,
+                kept: {
+                    fileId: keep.fileId,
+                    name: keep.name,
+                    uploadedAt: keep.uploadedAt,
+                },
+                duplicates: rest.map((r) => ({
+                    fileId: r.fileId,
+                    name: r.name,
+                    uploadedAt: r.uploadedAt,
+                })),
+            })
+            losers.push(...rest)
+        }
+
+        let songsMirrored = 0
+        if (!dryRun && losers.length > 0) {
+            // Find which losers have a `songs/{id}` mirror so we don't
+            // create phantom rows. .update() throws on missing docs;
+            // .set({}, {merge:true}) creates them — avoid both.
+            const songsSnaps = await Promise.all(
+                losers.map((l) => db.collection("songs").doc(l.fileId).get()),
+            )
+            const songsToTag = new Set(
+                songsSnaps.filter((s) => s.exists).map((s) => s.id),
+            )
+            songsMirrored = songsToTag.size
+
+            const nowIso = new Date().toISOString()
+            // Firestore caps batches at 500 writes. Stay under with headroom.
+            const BATCH_MAX = 400
+            interface Op {
+                ref: FirebaseFirestore.DocumentReference
+                data: Record<string, unknown>
+            }
+            const ops: Op[] = []
+            for (const loser of losers) {
+                ops.push({
+                    ref: db.collection("library_index").doc(loser.fileId),
+                    data: { status: "duplicate", dedupedAt: nowIso },
+                })
+                if (songsToTag.has(loser.fileId)) {
+                    ops.push({
+                        ref: db.collection("songs").doc(loser.fileId),
+                        data: { status: "duplicate" },
+                    })
+                }
+            }
+            for (let i = 0; i < ops.length; i += BATCH_MAX) {
+                const batch = db.batch()
+                for (const { ref, data } of ops.slice(i, i + BATCH_MAX)) {
+                    batch.update(ref, data)
+                }
+                await batch.commit()
+            }
+        }
+
+        return {
+            scanned: candidates.length,
+            groupsFound: dupeGroups.length,
+            duplicatesMarked: losers.length,
+            songsMirrored,
+            groups: dupeGroups,
+            dryRun,
+        }
+    } catch (err) {
+        logger.warn("[mcp] dedupe_library_index failed:", err)
+        return { error: "Failed to run library_index dedupe" }
+    }
+}
