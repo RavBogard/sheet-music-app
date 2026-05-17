@@ -1,7 +1,9 @@
 {
   "version": "7.0.0",
-  "commit": "8312377c5",
-  "branch": "fix/b4-mcp-parity",
+  "commit": "0cf194841",
+  "branch": "feat/c2-ai-config-mcp",
   "buildDate": "5/17/2026",
-  "changelog": []
+  "changelog": [
+    "7.0.0 - fix: SEC-001 + SEC-002 — rich error envelope on /api/drive/file/[fileId]"
+  ]
 }

@@ -9,6 +9,7 @@ import {
     backfillLibraryIndex,
 } from "./library"
 import { reconcileLibrary } from "./reconcile-library"
+import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
 import { backfillSetlistTestFlag } from "./setlist-hygiene"
 import {
     createSetlist,
@@ -1117,6 +1118,76 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await reconcileLibrary(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "get_ai_config",
+        {
+            description:
+                "Admin-only — read the current AI enrichment config (cycle-3 c2). Returns `{ok: true, autoApplyEnabled: boolean, threshold: number}` where `autoApplyEnabled` is the gate that lets the a3 subscriber auto-apply Sonnet suggestions onto fresh library_index rows (false during the calibration phase forces every row into /manage/library-review) and `threshold` is the confidence floor below which any row enters review_pending regardless of the gate. Both values live on the single Firestore doc `aiConfig/autoApplyEnabled` — this tool is the read counterpart of set_ai_auto_apply + set_ai_threshold. Defaults surface when the doc is missing or fields are out of range: autoApplyEnabled false, threshold 0.7 (Daniel-ratified per ADDENDUM-1). Read-only — no writes.",
+            inputSchema: {},
+        },
+        async (_args, extra) => jsonResult(await getAiConfig(uidFrom(extra))),
+    )
+
+    server.registerTool(
+        "set_ai_auto_apply",
+        {
+            description:
+                "Admin-only — flip `aiConfig.autoApplyEnabled` (cycle-3 c2). Controls whether the a3 AI enrichment subscriber auto-applies Sonnet's suggestions onto new library_index rows (true → auto-fill empty key/bpm/tags/leadMusician when confidence ≥ threshold; false → every row lands in /manage/library-review for human triage regardless of confidence). Pair `dryRun: false, force: true` for the actual write — F-05 standing rule: dryRun-default + force-required for real writes. dryRun returns the would-be `{previous, new, changed}` without writing. A real run without `force: true` returns the same shape plus `refused: true` and still no writes. Idempotent: flipping to the current value returns `changed: false` without surprise side-effects. Returns `{ok: true, previous: boolean, new: boolean, changed: boolean, dryRun, refused?}`.",
+            inputSchema: {
+                enabled: z
+                    .boolean()
+                    .describe(
+                        "Desired state for the auto-apply gate. `true` enables auto-apply on high-confidence rows; `false` forces every fresh row into /manage/library-review.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true (default), returns the plan without writing. F-05 standing rule: dryRun does NOT require force.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes. Pair with clear user intent (e.g. \"flip auto-apply on\") — the dryRun → real-run flow is the safety contract.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await setAiAutoApply(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "set_ai_threshold",
+        {
+            description:
+                "Admin-only — set `aiConfig.threshold` (cycle-3 c2). Confidence floor in `[0, 1]` used by the a3 AI enrichment subscriber: any row whose Sonnet self-assessed `confidence` is below this threshold lands in /manage/library-review regardless of autoApplyEnabled. Default 0.7 (Daniel-ratified per ADDENDUM-1 §3 NEW-3). Use lower values (e.g. 0.5) to let more borderline AI calls auto-apply during calibration; higher values (e.g. 0.85) to be more conservative once the queue stabilises. Zod-validated: out-of-range values return `validation_error` with hint. Same dryRun/force contract as set_ai_auto_apply: dryRun-default, force-required for writes. Idempotent. Returns `{ok: true, previous: number, new: number, changed: boolean, dryRun, refused?}`.",
+            inputSchema: {
+                value: z
+                    .number()
+                    .min(0)
+                    .max(1)
+                    .describe(
+                        "New confidence threshold in [0, 1]. 0.7 is the Daniel-ratified default; 0.5 is loose; 0.85 is conservative.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true (default), returns the plan without writing. F-05 standing rule: dryRun does NOT require force.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await setAiThreshold(uidFrom(extra), args)),
     )
 }
 
