@@ -118,7 +118,15 @@ export async function getChartHealth(
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err)
             if (/not found|404/i.test(msg)) {
-                return { status: "missing", reason: `Drive: ${msg}` }
+                // Cycle-1 F-004: mention BOTH stores in the reason so the
+                // caller (and the agent reading the response) can tell that
+                // Storage was probed first and also missed. Cowork-era
+                // "Drive: File not found" was misleading enough that agents
+                // assumed only Drive was checked.
+                return {
+                    status: "missing",
+                    reason: `Not in Storage; Drive 404: ${msg}`,
+                }
             }
             return { status: "unreachable", error: msg }
         }
