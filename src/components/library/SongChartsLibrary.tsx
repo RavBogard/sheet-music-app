@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useLayoutEffect } from "react"
 import { ChevronLeft, Search, Music, CheckSquare } from "lucide-react"
+import { bareStem } from "@/lib/mcp/title-specificity"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
@@ -44,6 +45,40 @@ function isChartFile(f: DriveFile) {
     return (f.mimeType.includes('pdf') || f.mimeType.includes('xml') || f.mimeType.includes('text/plain') ||
         /\.(pdf|musicxml|xml|mxl|chordpro|txt)$/i.test(f.name)) &&
         !f.mimeType.startsWith('audio/')
+}
+
+const CHART_EXTENSION_PATTERN = /\.(pdf|musicxml|xml|mxl|chordpro|txt)$/i
+
+function chartStemKey(name: string): string {
+    return bareStem(name.replace(CHART_EXTENSION_PATTERN, '').replace(/_/g, ' '))
+}
+
+/**
+ * Cycle-2 UI-003: collapse duplicate library rows that map to the same
+ * musical work (same `bareStem`) down to one display row. Pre-fix, the
+ * /library tabs showed the chart-file row AND a separately-cataloged
+ * "song" entry for the same piece (a Klepper "Hashkivenu" .pdf next to
+ * a "Hashkivenu (Klepper)" stem-cataloged song row), plus PDF/MusicXML
+ * pairs for the same chart. First-encountered row wins (input order is
+ * already alphabetical via list_library's sort, so this collapses
+ * sibling-pairs deterministically). Empty stems (rare — emoji-only or
+ * pure-punctuation names) bypass dedup so they don't all collapse into
+ * a single bucket.
+ */
+function dedupeChartsByStem(items: DriveFile[]): DriveFile[] {
+    const seen = new Set<string>()
+    const out: DriveFile[] = []
+    for (const item of items) {
+        const stem = chartStemKey(item.name)
+        if (stem.length === 0) {
+            out.push(item)
+            continue
+        }
+        if (seen.has(stem)) continue
+        seen.add(stem)
+        out.push(item)
+    }
+    return out
 }
 
 interface SongChartsLibraryProps {
@@ -155,17 +190,17 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
 
     // Apply library filters (key, topic, recency) to chart files
     const allFilteredCore = useMemo(
-        () => applyLibraryFilters(rawFiles.filter(f => f.collection !== 'supplemental' && f.collection !== 'uploads'), libraryFilters, usageMap),
+        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection !== 'supplemental' && f.collection !== 'uploads'), libraryFilters, usageMap)),
         [rawFiles, libraryFilters, usageMap]
     )
-    
+
     const allFilteredSupplemental = useMemo(
-        () => applyLibraryFilters(rawFiles.filter(f => f.collection === 'supplemental'), libraryFilters, usageMap),
+        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection === 'supplemental'), libraryFilters, usageMap)),
         [rawFiles, libraryFilters, usageMap]
     )
 
     const allFilteredUploads = useMemo(
-        () => applyLibraryFilters(rawFiles.filter(f => f.collection === 'uploads'), libraryFilters, usageMap),
+        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection === 'uploads'), libraryFilters, usageMap)),
         [rawFiles, libraryFilters, usageMap]
     )
 
