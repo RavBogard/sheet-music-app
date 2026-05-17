@@ -250,7 +250,7 @@ function main(): void {
   const processorStarted = join(cycleDir, 'processor-started.flag');
   const processorDone = join(cycleDir, 'processor-done.flag');
   const crit = detectCritWake(cycleDir);
-  const critExtras = crit
+  const critExtras: Record<string, string> = crit
     ? { crit_wake: '1', crit_path: crit.path.replace(/\\/g, '/') }
     : {};
 

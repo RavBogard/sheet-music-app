@@ -12,10 +12,11 @@ history block).
 
 ## Run identity
 
-- **Run ID:** TBD-WILL-BE-SET-AT-CYCLE-1-START
-- **Started:** TBD-ISO
-- **Initial master SHA:** TBD
+- **Run ID:** auto-run-2026-05-17T0411Z
+- **Started:** 2026-05-17T04:11:32Z
+- **Initial master SHA:** d9de5d189eefcef4bdc2804e5d7f8e4d820353bf
 - **Current cycle:** 1 (in flight — cowork already running as of 2026-05-16 evening)
+- **Orchestrator:** in-session orchestrator (this Claude Code session), self-pacing via ScheduleWakeup. Daniel asleep starting 2026-05-17T04:11Z.
 
 ## Cycle 1 — IN FLIGHT (redirect-mid-flight resolved 2026-05-16 ~23:05 CDT)
 
