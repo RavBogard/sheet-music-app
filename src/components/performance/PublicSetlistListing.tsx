@@ -24,13 +24,22 @@ export function PublicSetlistListing() {
         return () => unsub()
     }, [])
 
-    // Sort by event date descending (most recent first)
+    // Sort by event date descending (most recent first). Cycle-2 SEC-004:
+    // drop setlists marked `isTest:true` — stress-test runs and the
+    // create_test_account-owned probes shouldn't appear on the public
+    // /perform landing surface. The flag is set at create_setlist write
+    // time AND backfilled across legacy rows by the admin
+    // `backfill_setlist_test_flag` MCP tool; legacy docs that haven't yet
+    // been backfilled fall through here (isTest === undefined) and remain
+    // visible until the next backfill pass.
     const sortedSetlists = useMemo(() => {
-        return [...setlists].sort((a, b) => {
-            const da = toDate(a.eventDate)
-            const db = toDate(b.eventDate)
-            return (db?.getTime() || 0) - (da?.getTime() || 0)
-        })
+        return setlists
+            .filter((s) => s.isTest !== true)
+            .sort((a, b) => {
+                const da = toDate(a.eventDate)
+                const db = toDate(b.eventDate)
+                return (db?.getTime() || 0) - (da?.getTime() || 0)
+            })
     }, [setlists])
 
     if (loading) {

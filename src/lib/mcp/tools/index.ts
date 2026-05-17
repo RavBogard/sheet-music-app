@@ -8,6 +8,7 @@ import {
     dedupeLibraryIndex,
     backfillLibraryIndex,
 } from "./library"
+import { backfillSetlistTestFlag } from "./setlist-hygiene"
 import {
     createSetlist,
     updateSetlist,
@@ -1026,6 +1027,30 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await dedupeLibraryIndex(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "backfill_setlist_test_flag",
+        {
+            description:
+                "Admin-only one-shot setlist hygiene pass (cycle-2 SEC-004). Walks every `setlists/*` doc and classifies each as `isTest: true` when owner uid starts with `test-` (provisioned by `create_test_account`) OR the name matches `^\\[(TEST|CYCLE\\d+-|CF\\d+-)`. Going forward, `create_setlist` stamps `isTest` at write time — this tool exists exclusively to backfill legacy rows that pre-date the SEC-004 commit so the `/perform` public listing's `isTest === false` filter is sound across the whole collection. Defaults `dryRun:true`; pass `force:true` for real writes. A real run without `force:true` returns the plan with `refused:true` and no writes. Returns `{scanned, rowsChanged, flaggedTest, flaggedReal, deltas, deltasTruncated, dryRun, refused?}`; `deltas` is capped at 500 entries with `deltasTruncated:true` past that.",
+            inputSchema: {
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true (default), returns the diff plan only — every setlist whose `isTest` would change, with before/after values — without writing. F-05 standing rule.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await backfillSetlistTestFlag(uidFrom(extra), args)),
     )
 
     server.registerTool(

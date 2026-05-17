@@ -93,6 +93,35 @@ export interface Setlist {
      *  Read-side consumers (perf-view) treat top-level as authoritative for
      *  hydrated setlists. Mirrors `LocalSetlist.hydrated`. */
     hydrated?: boolean
+    /** Cycle-2 SEC-004: derived at write time. `true` for setlists owned by
+     *  a `test-*` uid (provisioned by `create_test_account`) OR whose name
+     *  begins with `[TEST`, `[CYCLE\d+-`, or `[CF\d+-`. /perform's public
+     *  listing filters by `isTest === false`. Always written (never
+     *  undefined) on new setlists; legacy rows are backfilled by the
+     *  admin-only `backfill_setlist_test_flag` MCP tool. */
+    isTest?: boolean
+}
+
+/**
+ * Cycle-2 SEC-004 — shared classifier for "is this setlist a test artifact?"
+ * Used at create_setlist write time AND by the admin backfill tool that
+ * walks legacy rows. Single source of truth so the write-time + backfill
+ * passes never disagree.
+ *
+ * Truthy when EITHER:
+ *  - owner uid begins with `test-` (provisioned by `create_test_account`)
+ *  - setlist name matches `^\[(TEST|CYCLE\d+-|CF\d+-)` — the prefix
+ *    convention every cycle's stress-run uses
+ */
+export const TEST_SETLIST_NAME_PATTERN = /^\[(TEST|CYCLE\d+-|CF\d+-)/i
+
+export function isTestSetlist(args: {
+    name: string | null | undefined
+    ownerId: string | null | undefined
+}): boolean {
+    if (args.ownerId && args.ownerId.startsWith("test-")) return true
+    if (args.name && TEST_SETLIST_NAME_PATTERN.test(args.name)) return true
+    return false
 }
 
 /** v70-02: a reference audio recording. NEW top-level recordings/{id}

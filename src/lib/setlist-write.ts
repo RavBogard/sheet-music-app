@@ -19,7 +19,7 @@ import {
     staleVersionEnvelope,
     type StaleVersionEnvelope,
 } from "@/lib/mcp/error-envelopes"
-import type { Setlist } from "@/types/models"
+import { isTestSetlist, type Setlist } from "@/types/models"
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -124,6 +124,12 @@ export async function createSetlistServerSide(
         version: 1,
         lastModifiedAt: new Date().toISOString(),
         lastModifiedBy: input.ownerId,
+        // Cycle-2 SEC-004: classify test setlists at write time so
+        // /perform's public listing can filter them out without a name-
+        // prefix heuristic in the read path. Always written (never
+        // undefined) so the filter `where isTest == false` is sound for
+        // every doc going forward.
+        isTest: isTestSetlist({ name: input.name, ownerId: input.ownerId }),
     }
     // Optional fields — written only when explicitly provided (NOT defaulted;
     // the CSV-import quirk of defaulting eventDate to serverTimestamp is not
