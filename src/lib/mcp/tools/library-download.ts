@@ -1,4 +1,6 @@
+import crypto from "crypto"
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
+import { getStorage } from "firebase-admin/storage"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { fetchFileById } from "@/lib/file-fetcher"
@@ -152,12 +154,44 @@ export async function downloadChart(
  * intentionally public per [[feedback_chart_access_policy]]. Rate-limit on
  * the `api` tier with trusted-leader bypass (admin / band_leader).
  *
- * 20 MB output cap to stay under the MCP response budget. If the merged
- * document exceeds it, the tool errors with a hint to print sections
- * separately or use download_chart for individual files.
+ * Response shape (cycle-1 F-012 fix): the merged PDF is written to Firebase
+ * Storage at `gig-packets/{setlistId}/{ts}-{nonce}.pdf` and a short-lived
+ * (10-minute) v4 signed read URL is returned. The previous inline base64
+ * shape blew past the ~25KB MCP wire/token budget (228KB base64 for a real
+ * Friday packet) — the calling agent literally couldn't see the bytes.
+ * Mirrors `request_chart_upload_url`'s pattern in the inverse direction.
+ *
+ * 20 MB output cap on the merged PDF to bound Storage object size + the
+ * agent's eventual download. If the merged document exceeds the cap the
+ * tool errors with a hint to print sections separately or use download_chart
+ * for individual files.
+ *
+ * The Storage blob has no automatic cleanup — bucket lifecycle policy is the
+ * long-tail GC, same posture as `upload-sessions/` staged blobs. Each
+ * generation produces a fresh nonce'd path, so re-runs don't clobber.
  * ───────────────────────────────────────────────────────────────────────── */
 
 export const GIG_PACKET_MAX_BYTES = 20 * 1024 * 1024
+
+/** Signed-URL TTL for the gig-packet download. 10 minutes matches the
+ *  request_chart_upload_url upload-URL TTL — enough time for an agent to
+ *  pipeline a follow-up read, short enough that a leaked URL expires fast. */
+export const GIG_PACKET_SIGNED_URL_TTL_MS = 10 * 60 * 1000
+
+const GIG_PACKET_STORAGE_PREFIX = "gig-packets"
+
+function gigPacketBucket() {
+    const bucketName =
+        process.env.FIREBASE_STORAGE_BUCKET ||
+        process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+        `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`
+    return getStorage().bucket(bucketName)
+}
+
+function gigPacketStoragePath(setlistId: string): string {
+    const nonce = crypto.randomUUID().slice(0, 8)
+    return `${GIG_PACKET_STORAGE_PREFIX}/${setlistId}/${Date.now()}-${nonce}.pdf`
+}
 
 /** Test-only override of the output cap. Constructing a real >20 MB merged
  *  PDF in an emulator test is prohibitively slow (PDF deflate compresses
@@ -181,16 +215,46 @@ export interface MissingChartEntry {
     reason: string
 }
 
+/** Rich error envelope per the F-015 standardization (`.coord/shared/decisions.md`
+ *  2026-05-17T19:15Z). Machine code in `error`, prose in `message`, optional
+ *  context fields, optional `hint` for actionable next-step text. Matches the
+ *  `update_setlist` stale-version envelope shape. */
+export interface GigPacketErrorEnvelope {
+    ok: false
+    error:
+        | "setlistId_required"
+        | "setlist_not_found"
+        | "no_bonded_charts"
+        | "packet_too_large"
+        | "storage_upload_failed"
+        | "storage_signing_failed"
+        | "rate_limited"
+    message: string
+    hint?: string
+    // Context fields (kind-specific):
+    sizeBytes?: number
+    maxBytes?: number
+    storagePath?: string
+}
+
 export interface GenerateGigPacketResult {
     ok: true
-    fileId: string
-    /** Source setlist name (e.g. "5/15 -- Shir Shabbat"). Kept for back-compat. */
-    title: string
+    /** Short-lived (10-minute) v4 signed read URL to the merged PDF in
+     *  Firebase Storage. Agent should download promptly — re-call this tool
+     *  to mint a fresh URL after expiry. */
+    downloadUrl: string
+    /** ISO timestamp at which `downloadUrl` stops working. */
+    expiresAt: string
+    /** Storage object path. Stable across re-calls only if the same nonce
+     *  is reused — each generate_gig_packet call writes a fresh blob, so
+     *  the path differs per call. Exposed for diagnostics / manual access. */
+    storagePath: string
+    sizeBytes: number
+    pageCount: number
+    /** Source setlist name (e.g. "5/15 -- Shir Shabbat"). */
+    setlistTitle: string
     /** PDF document title — matches the embedded PDF /Title metadata. */
     packetTitle: string
-    contentBase64: string
-    sizeBytes: number
-    source: "merged"
     trackCount: number
     bondedCount: number
     appendedCount: number
@@ -200,8 +264,14 @@ export interface GenerateGigPacketResult {
 export async function generateGigPacket(
     uid: string,
     args: GenerateGigPacketArgs,
-): Promise<GenerateGigPacketResult | ToolError> {
-    if (!args.setlistId?.trim()) return { error: "setlistId is required" }
+): Promise<GenerateGigPacketResult | GigPacketErrorEnvelope> {
+    if (!args.setlistId?.trim()) {
+        return {
+            ok: false,
+            error: "setlistId_required",
+            message: "setlistId is required",
+        }
+    }
 
     initAdmin()
     const db = getFirestore()
@@ -210,10 +280,23 @@ export async function generateGigPacket(
     const bypass = role === "admin" || role === "band_leader"
 
     const limited = await checkUserRateLimit(uid, "api", { bypass })
-    if (limited) return { error: limited.error }
+    if (limited) {
+        return {
+            ok: false,
+            error: "rate_limited",
+            message: limited.error,
+        }
+    }
 
     const setlistDoc = await db.collection("setlists").doc(args.setlistId).get()
-    if (!setlistDoc.exists) return { error: "Setlist not found" }
+    if (!setlistDoc.exists) {
+        return {
+            ok: false,
+            error: "setlist_not_found",
+            message: "Setlist not found",
+            hint: "Confirm the setlistId with list_setlists; pass the `id` field exactly.",
+        }
+    }
     const setlistData = setlistDoc.data() as Record<string, unknown>
     const setlistTitle =
         (typeof setlistData.name === "string" && setlistData.name) || args.setlistId
@@ -226,8 +309,11 @@ export async function generateGigPacket(
 
     if (bondedTracks.length === 0) {
         return {
-            error:
-                "No bonded charts on this setlist — every track is either a non-song row (header/reading/etc) or has no chart bound. Bond charts to the song rows first, then retry.",
+            ok: false,
+            error: "no_bonded_charts",
+            message:
+                "No bonded charts on this setlist — every track is either a non-song row (header/reading/etc) or has no chart bound.",
+            hint: "Bond charts to the song rows first (add_track_to_setlist with a fileId, or swap_chart on existing rows), then retry generate_gig_packet.",
         }
     }
 
@@ -327,35 +413,102 @@ export async function generateGigPacket(
         await renderMissingChartsAppendix(mergedPdf, missingCharts)
     }
 
+    const pageCount = mergedPdf.getPageCount()
     const finalBytes = await mergedPdf.save()
     const sizeBytes = finalBytes.byteLength
 
     const effectiveCap = _gigPacketMaxBytesOverride ?? GIG_PACKET_MAX_BYTES
     if (sizeBytes > effectiveCap) {
         return {
-            error:
-                `Generated packet is ${sizeBytes} bytes — exceeds the ${effectiveCap}-byte response cap. ` +
-                `Print sections of the setlist separately, or fetch individual charts with download_chart and assemble client-side.`,
+            ok: false,
+            error: "packet_too_large",
+            message: `Generated packet is ${sizeBytes} bytes — exceeds the ${effectiveCap}-byte response cap.`,
+            sizeBytes,
+            maxBytes: effectiveCap,
+            hint: "Print sections of the setlist separately, or fetch individual charts with download_chart and assemble client-side.",
         }
     }
 
-    const synthesizedId = `gig-packet-${args.setlistId}-${Date.now()}`
+    // Write to Firebase Storage + mint a 10-min v4 signed read URL. Mirrors
+    // request_chart_upload_url (inverse direction) — see decisions.md
+    // 2026-05-17T19:15Z F-012.
+    const bucket = gigPacketBucket()
+    const path = gigPacketStoragePath(args.setlistId)
+    const file = bucket.file(path)
+    const buffer = Buffer.from(finalBytes)
+    const expiresAtMs = Date.now() + GIG_PACKET_SIGNED_URL_TTL_MS
+
+    try {
+        await file.save(buffer, {
+            contentType: "application/pdf",
+            metadata: {
+                contentType: "application/pdf",
+                metadata: {
+                    setlistId: args.setlistId,
+                    setlistTitle,
+                    generatedBy: uid,
+                    generatedAt: new Date().toISOString(),
+                    packetTitle,
+                },
+            },
+        })
+    } catch (err) {
+        logger.warn("[mcp] generate_gig_packet storage write failed", {
+            setlistId: args.setlistId,
+            path,
+            err: err instanceof Error ? err.message : String(err),
+        })
+        return {
+            ok: false,
+            error: "storage_upload_failed",
+            message: `Could not write gig packet to Storage: ${err instanceof Error ? err.message : err}`,
+            storagePath: path,
+            hint: "Retry generate_gig_packet. If the failure persists the Storage bucket may be misconfigured — surface the storagePath to an admin.",
+        }
+    }
+
+    let downloadUrl: string
+    try {
+        const [url] = await file.getSignedUrl({
+            action: "read",
+            version: "v4",
+            expires: expiresAtMs,
+        })
+        downloadUrl = url
+    } catch (err) {
+        logger.warn("[mcp] generate_gig_packet signing failed", {
+            setlistId: args.setlistId,
+            path,
+            err: err instanceof Error ? err.message : String(err),
+        })
+        return {
+            ok: false,
+            error: "storage_signing_failed",
+            message: `Could not mint signed download URL: ${err instanceof Error ? err.message : err}`,
+            storagePath: path,
+            hint: "The packet bytes exist at storagePath; an admin can fetch them via the Firebase console or retry the tool.",
+        }
+    }
+
     logger.info("[mcp] gig packet generated", {
         setlistId: args.setlistId,
         size: sizeBytes,
+        pages: pageCount,
         bonded: bondedTracks.length,
         appended: appendedCount,
         missing: missingCharts.length,
+        path,
     })
 
     return {
         ok: true,
-        fileId: synthesizedId,
-        title: setlistTitle,
-        packetTitle,
-        contentBase64: Buffer.from(finalBytes).toString("base64"),
+        downloadUrl,
+        expiresAt: new Date(expiresAtMs).toISOString(),
+        storagePath: path,
         sizeBytes,
-        source: "merged",
+        pageCount,
+        setlistTitle,
+        packetTitle,
         trackCount: tracks.length,
         bondedCount: bondedTracks.length,
         appendedCount,

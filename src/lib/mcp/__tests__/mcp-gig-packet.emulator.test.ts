@@ -36,13 +36,28 @@ vi.mock("@/lib/rate-limit", () => ({
     checkUserRateLimit: vi.fn().mockResolvedValue(null),
 }))
 
+// Firebase Storage signed-URL ceremony needs real service-account credentials
+// that the emulator doesn't simulate. Mock the bucket file API so tests can
+// assert on save(...) + getSignedUrl(...) calls and capture the buffer that
+// would have been uploaded. Same shape as mcp-upload-session.emulator.test.ts.
+const mockFileSave = vi.fn().mockResolvedValue(undefined)
+const mockGetSignedUrl = vi.fn()
+const mockBucketFile = vi.fn(() => ({
+    save: mockFileSave,
+    getSignedUrl: mockGetSignedUrl,
+}))
+vi.mock("firebase-admin/storage", () => ({
+    getStorage: () => ({ bucket: () => ({ file: mockBucketFile }) }),
+}))
+
 import {
     generateGigPacket,
     _setGigPacketMaxBytesForTest,
+    GIG_PACKET_SIGNED_URL_TTL_MS,
 } from "../tools/library-download"
 
 /**
- * MCP generate_gig_packet (CF2-C) against the Firebase emulator.
+ * MCP generate_gig_packet (CF2-C + cycle-1 F-012) against the Firebase emulator.
  *
  * Covers the per-track routing contract:
  *  - PDF rows → pages copied into the merged document
@@ -57,6 +72,11 @@ import {
  *  - Output cap enforced (with a lowered test cap so we don't have to build a
  *    real ~20 MB merged PDF in the test process)
  *  - Any authenticated uid may generate — no role gate per chart-access policy
+ *
+ * Cycle-1 F-012 fix: the merged PDF is written to Firebase Storage at
+ * `gig-packets/{setlistId}/{ts}-{nonce}.pdf` and a 10-minute v4 signed read
+ * URL is returned. No inline base64 in the response. All errors use the rich
+ * envelope shape (`{ok: false, error, message, ...context, hint?}`).
  */
 describe("MCP generate_gig_packet (emulator)", () => {
     let app: App
@@ -148,6 +168,11 @@ describe("MCP generate_gig_packet (emulator)", () => {
 
     beforeEach(async () => {
         mockFetchFileById.mockReset()
+        mockFileSave.mockReset().mockResolvedValue(undefined)
+        mockGetSignedUrl
+            .mockReset()
+            .mockResolvedValue(["https://signed.example/gig-packet-download"])
+        mockBucketFile.mockClear()
         for (const col of ["setlists", "tracks", "library_index"]) {
             const snap = await db().collection(col).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
@@ -158,7 +183,7 @@ describe("MCP generate_gig_packet (emulator)", () => {
         _setGigPacketMaxBytesForTest(null)
     })
 
-    it("happy path: all-PDF setlist merges in performance order and returns base64 bytes", async () => {
+    it("happy path: all-PDF setlist merges in performance order and returns a signed download URL", async () => {
         const setlistId = "set-pdf-only"
         await seedSetlist(setlistId, "Shabbat Morning")
         await seedTrack("t1", setlistId, 0, {
@@ -196,11 +221,8 @@ describe("MCP generate_gig_packet (emulator)", () => {
         expect("ok" in r && r.ok).toBe(true)
         if (!("ok" in r) || !r.ok) return
 
-        expect(r.title).toBe("Shabbat Morning")
-        // Stress-test v3 NOTE-2: response envelope now disambiguates the
-        // bare setlist name (title) from the PDF document title (packetTitle).
+        expect(r.setlistTitle).toBe("Shabbat Morning")
         expect(r.packetTitle).toBe("Shabbat Morning — Gig Packet")
-        expect(r.source).toBe("merged")
         expect(r.trackCount).toBe(2)
         expect(r.bondedCount).toBe(2)
         // Surface missingCharts first so a routing failure produces a debuggable
@@ -209,14 +231,52 @@ describe("MCP generate_gig_packet (emulator)", () => {
         expect(r.missingCharts).toEqual([])
         expect(r.appendedCount).toBe(2)
         expect(r.sizeBytes).toBeGreaterThan(0)
-        expect(r.fileId).toMatch(/^gig-packet-set-pdf-only-/)
+        // 2 (Oseh) + 1 (Hinei) = 3 pages, no appendix because nothing missing.
+        expect(r.pageCount).toBe(3)
 
-        // Round-trip the merged PDF and confirm it has the expected page count
-        // (2 from Oseh + 1 from Hinei = 3 pages, no appendix because nothing missing).
-        const merged = await PDFDocument.load(
-            Buffer.from(r.contentBase64, "base64"),
+        // Storage path follows the gig-packets/{setlistId}/{ts}-{nonce}.pdf
+        // convention from decisions.md F-012.
+        expect(r.storagePath).toMatch(
+            /^gig-packets\/set-pdf-only\/\d+-[0-9a-f]+\.pdf$/,
         )
-        expect(merged.getPageCount()).toBe(3)
+
+        // Signed URL returned, expiresAt within the 10-minute TTL window.
+        expect(r.downloadUrl).toBe("https://signed.example/gig-packet-download")
+        const expiresAtMs = Date.parse(r.expiresAt)
+        expect(expiresAtMs).toBeGreaterThan(Date.now())
+        expect(expiresAtMs).toBeLessThanOrEqual(
+            Date.now() + GIG_PACKET_SIGNED_URL_TTL_MS + 2_000,
+        )
+
+        // file.save received a real Buffer (not a Uint8Array) with the merged
+        // PDF bytes + application/pdf content type.
+        expect(mockFileSave).toHaveBeenCalledTimes(1)
+        const saveCall = mockFileSave.mock.calls[0] as [
+            Buffer,
+            { contentType: string; metadata?: { metadata?: Record<string, unknown> } },
+        ]
+        expect(Buffer.isBuffer(saveCall[0])).toBe(true)
+        expect(saveCall[0].byteLength).toBe(r.sizeBytes)
+        expect(saveCall[1].contentType).toBe("application/pdf")
+        expect(saveCall[1].metadata?.metadata?.setlistId).toBe(setlistId)
+        expect(saveCall[1].metadata?.metadata?.generatedBy).toBe(ADMIN)
+
+        // Signed URL options: v4, read, expires within TTL window.
+        expect(mockGetSignedUrl).toHaveBeenCalledTimes(1)
+        const signOpts = mockGetSignedUrl.mock.calls[0][0] as {
+            action: string
+            version: string
+            expires: number
+        }
+        expect(signOpts.action).toBe("read")
+        expect(signOpts.version).toBe("v4")
+        expect(signOpts.expires).toBeGreaterThan(Date.now())
+        expect(signOpts.expires).toBeLessThanOrEqual(
+            Date.now() + GIG_PACKET_SIGNED_URL_TTL_MS + 2_000,
+        )
+
+        // bucket.file() called with the same path we surfaced in the response.
+        expect(mockBucketFile).toHaveBeenCalledWith(r.storagePath)
     })
 
     it("mixed routing: PDF + PNG + text/plain embed; MusicXML + HEIC + unsupported route to appendix", async () => {
@@ -312,25 +372,34 @@ describe("MCP generate_gig_packet (emulator)", () => {
         ).toMatch(/Unsupported content type/i)
 
         // Merged PDF has: 2 pages (pdf) + 1 (png) + 1+ text pages + 1 appendix page.
-        const merged = await PDFDocument.load(
-            Buffer.from(r.contentBase64, "base64"),
-        )
-        expect(merged.getPageCount()).toBeGreaterThanOrEqual(5)
+        expect(r.pageCount).toBeGreaterThanOrEqual(5)
+        expect(mockFileSave).toHaveBeenCalledTimes(1)
+        expect(mockGetSignedUrl).toHaveBeenCalledTimes(1)
     })
 
-    it("returns 'Setlist not found' when the setlist doc does not exist", async () => {
+    it("returns the setlist_not_found envelope when the setlist doc does not exist", async () => {
         const r = await generateGigPacket(ADMIN, { setlistId: "ghost-setlist" })
-        expect(r).toEqual({ error: "Setlist not found" })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "setlist_not_found",
+            message: "Setlist not found",
+        })
         expect(mockFetchFileById).not.toHaveBeenCalled()
+        expect(mockFileSave).not.toHaveBeenCalled()
     })
 
-    it("rejects an empty setlistId", async () => {
+    it("rejects an empty setlistId with the setlistId_required envelope", async () => {
         const r = await generateGigPacket(ADMIN, { setlistId: "   " })
-        expect(r).toEqual({ error: "setlistId is required" })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "setlistId_required",
+            message: "setlistId is required",
+        })
         expect(mockFetchFileById).not.toHaveBeenCalled()
+        expect(mockFileSave).not.toHaveBeenCalled()
     })
 
-    it("refuses when no track on the setlist has a bonded fileId", async () => {
+    it("refuses with no_bonded_charts when no track on the setlist has a bonded fileId", async () => {
         const setlistId = "set-no-bonded"
         await seedSetlist(setlistId, "Sketch")
         // Tracks exist but are headers / readings — none have fileId
@@ -338,13 +407,16 @@ describe("MCP generate_gig_packet (emulator)", () => {
         await seedTrack("r1", setlistId, 1, { type: "reading", title: "Sh'ma" })
 
         const r = await generateGigPacket(ADMIN, { setlistId })
-        expect(r).toEqual({
-            error: expect.stringContaining("No bonded charts on this setlist"),
+        expect(r).toMatchObject({
+            ok: false,
+            error: "no_bonded_charts",
+            message: expect.stringContaining("No bonded charts"),
         })
         expect(mockFetchFileById).not.toHaveBeenCalled()
+        expect(mockFileSave).not.toHaveBeenCalled()
     })
 
-    it("lists missing-bytes rows in the appendix and still returns ok:true", async () => {
+    it("lists missing-bytes rows in the appendix and still ships the packet via Storage", async () => {
         const setlistId = "set-orphan"
         await seedSetlist(setlistId, "With Orphan")
         await seedTrack("t1", setlistId, 0, {
@@ -368,13 +440,11 @@ describe("MCP generate_gig_packet (emulator)", () => {
             reason: expect.stringContaining("Storage or Drive"),
         })
         // Packet still contains an appendix page so Daniel can see the gap.
-        const merged = await PDFDocument.load(
-            Buffer.from(r.contentBase64, "base64"),
-        )
-        expect(merged.getPageCount()).toBeGreaterThanOrEqual(1)
+        expect(r.pageCount).toBeGreaterThanOrEqual(1)
+        expect(mockFileSave).toHaveBeenCalledTimes(1)
     })
 
-    it("enforces the output byte cap and returns a clear error", async () => {
+    it("enforces the output byte cap with the packet_too_large envelope and skips Storage write", async () => {
         const setlistId = "set-oversize"
         await seedSetlist(setlistId, "Oversize")
         await seedTrack("t1", setlistId, 0, {
@@ -394,9 +464,75 @@ describe("MCP generate_gig_packet (emulator)", () => {
 
         _setGigPacketMaxBytesForTest(100) // 100 bytes is below any valid PDF
         const r = await generateGigPacket(ADMIN, { setlistId })
-        expect(r).toEqual({
-            error: expect.stringContaining("exceeds the 100-byte response cap"),
+        expect(r).toMatchObject({
+            ok: false,
+            error: "packet_too_large",
+            maxBytes: 100,
+            message: expect.stringContaining("exceeds the 100-byte response cap"),
         })
+        if ("ok" in r && !r.ok && r.error === "packet_too_large") {
+            expect(r.sizeBytes).toBeGreaterThan(100)
+        }
+        // Cap fires BEFORE Storage write — we don't burn a Storage object on
+        // an output we already know is too big.
+        expect(mockFileSave).not.toHaveBeenCalled()
+        expect(mockGetSignedUrl).not.toHaveBeenCalled()
+    })
+
+    it("surfaces storage_upload_failed when bucket.file().save() rejects", async () => {
+        const setlistId = "set-storage-fail"
+        await seedSetlist(setlistId, "Storage Fail")
+        await seedTrack("t1", setlistId, 0, {
+            type: "song",
+            title: "Solo PDF",
+            fileId: "upload-pdf",
+        })
+        const bytes = await makePdfBytes("Solo", 1)
+        mockFetchFileById.mockResolvedValueOnce({
+            buffer: bytes,
+            contentType: "application/pdf",
+            source: "firebase-storage" as const,
+        })
+        mockFileSave.mockRejectedValueOnce(new Error("bucket-down"))
+
+        const r = await generateGigPacket(ADMIN, { setlistId })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "storage_upload_failed",
+            message: expect.stringContaining("bucket-down"),
+            storagePath: expect.stringMatching(
+                /^gig-packets\/set-storage-fail\//,
+            ),
+            hint: expect.stringContaining("Retry"),
+        })
+        expect(mockGetSignedUrl).not.toHaveBeenCalled()
+    })
+
+    it("surfaces storage_signing_failed when getSignedUrl() rejects after a successful save", async () => {
+        const setlistId = "set-sign-fail"
+        await seedSetlist(setlistId, "Sign Fail")
+        await seedTrack("t1", setlistId, 0, {
+            type: "song",
+            title: "Solo PDF",
+            fileId: "upload-pdf",
+        })
+        const bytes = await makePdfBytes("Solo", 1)
+        mockFetchFileById.mockResolvedValueOnce({
+            buffer: bytes,
+            contentType: "application/pdf",
+            source: "firebase-storage" as const,
+        })
+        mockGetSignedUrl.mockRejectedValueOnce(new Error("no-iam"))
+
+        const r = await generateGigPacket(ADMIN, { setlistId })
+        expect(r).toMatchObject({
+            ok: false,
+            error: "storage_signing_failed",
+            message: expect.stringContaining("no-iam"),
+            storagePath: expect.stringMatching(/^gig-packets\/set-sign-fail\//),
+        })
+        // The blob did land in Storage — surface its path so an admin can recover.
+        expect(mockFileSave).toHaveBeenCalledTimes(1)
     })
 
     it("any authenticated uid may generate — no role gate (chart-access policy)", async () => {
