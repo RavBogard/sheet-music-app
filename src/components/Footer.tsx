@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import buildInfo from "@/build-info.json"
+import { V2BetaOptInLink } from "@/components/v2/v2-beta-toggle"
 
 export function Footer() {
     return (
@@ -17,6 +18,7 @@ export function Footer() {
                         Changelog
                     </Link>
                 </div>
+                <V2BetaOptInLink className="mt-1" />
             </div>
         </footer>
     )

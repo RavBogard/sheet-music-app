@@ -464,3 +464,102 @@
     opacity: 0;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   v2 Pro Performance Aesthetic — scoped under [data-theme="v2"]
+   Foundation tokens only. v1 routes are unaffected.
+   See src/components/v2/README.md for usage.
+   ───────────────────────────────────────────────────────────────── */
+
+[data-theme="v2"] {
+  /* Geist sans takes over sans-family inside v2 (font-sans Tailwind utility
+     reads var(--font-sans), so component code stays portable). */
+  --font-sans: var(--font-geist-sans), var(--font-sans-fallback, system-ui), sans-serif;
+
+  /* Amber accent — maps to Tailwind v4 amber-500 / amber-50 in OKLCH.
+     Use the built-in `bg-amber-500`, `text-amber-400` utilities for ramp
+     access; these semantic tokens carry the "v2 accent" meaning. */
+  --v2-accent: oklch(0.769 0.188 70.08);
+  --v2-accent-strong: oklch(0.70 0.20 60);
+  --v2-accent-foreground: oklch(0.22 0.06 60);
+  --v2-accent-soft: oklch(0.769 0.188 70.08 / 0.15);
+  --v2-accent-ring: oklch(0.769 0.188 70.08 / 0.45);
+
+  /* Logic-Pro track-list density tokens. Per feedback_no_cover_art,
+     v2 lists are max-density text rows — never cover art. */
+  --v2-row-h: 32px;
+  --v2-row-px: 12px;
+  --v2-row-text: 13px;
+  --v2-row-gap: 12px;
+
+  /* Glass v2 — deeper, more saturated than v1's `glass` utility.
+     "Concert-stage pro" read: heavier shadow + saturate(140%) + lower bg. */
+  --v2-glass-bg: oklch(0.18 0.04 270 / 0.45);
+  --v2-glass-border: oklch(1 0 0 / 0.08);
+  --v2-glass-shadow: 0 12px 40px rgba(15, 15, 35, 0.45);
+  --v2-glass-saturate: 140%;
+
+  /* Surface — slightly deeper than v1 background for "stage" feel. */
+  --v2-surface: oklch(0.11 0.025 265);
+
+  /* Hairline borders for dense lists / panels. */
+  --v2-hairline: color-mix(in oklch, var(--border) 60%, transparent);
+}
+
+/* Light-mode adjustments under v2 (v2 stays dark-first per memory, but the
+   tokens degrade gracefully when system theme is light). */
+:root:not(.dark) [data-theme="v2"] {
+  --v2-glass-bg: oklch(1 0 0 / 0.72);
+  --v2-glass-border: oklch(0.82 0.015 275 / 0.6);
+  --v2-glass-shadow: 0 12px 40px rgba(15, 15, 35, 0.08);
+  --v2-surface: oklch(0.96 0.01 275);
+}
+
+@utility glass-v2 {
+  background: var(--v2-glass-bg);
+  backdrop-filter: blur(24px) saturate(var(--v2-glass-saturate));
+  -webkit-backdrop-filter: blur(24px) saturate(var(--v2-glass-saturate));
+  border: 1px solid var(--v2-glass-border);
+  box-shadow: var(--v2-glass-shadow);
+  border-radius: var(--radius);
+}
+
+@utility dense-row {
+  display: flex;
+  align-items: center;
+  min-height: var(--v2-row-h);
+  padding-inline: var(--v2-row-px);
+  font-size: var(--v2-row-text);
+  line-height: 1.15;
+  border-bottom: 1px solid var(--v2-hairline);
+  gap: var(--v2-row-gap);
+}
+
+@utility dense-row-interactive {
+  cursor: pointer;
+  transition: background-color 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@utility dense-list {
+  display: flex;
+  flex-direction: column;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "cv11" 1;
+}
+
+@utility text-v2-accent {
+  color: var(--v2-accent);
+}
+
+@utility bg-v2-accent {
+  background-color: var(--v2-accent);
+  color: var(--v2-accent-foreground);
+}
+
+@utility ring-v2-accent {
+  --tw-ring-color: var(--v2-accent-ring);
+}
+
+@utility v2-surface {
+  background-color: var(--v2-surface);
+}
