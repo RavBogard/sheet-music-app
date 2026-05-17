@@ -19,6 +19,7 @@ import {
     bulkAddSetlistTracks,
     swapChart,
 } from "./setlist-write"
+import { cloneSetlist } from "./clone-setlist"
 import {
     listMonitorBuses,
     getMix,
@@ -380,10 +381,43 @@ export function registerWriteTools(server: McpServer): void {
     )
 
     server.registerTool(
+        "clone_setlist",
+        {
+            description:
+                "GAP-002 — Clone an existing setlist into a brand-new one owned by the caller. Daniel's weekly authoring flow is 90% 'clone last week + tweak a few songs', so this short-circuits the get_setlist → create_setlist → bulk_add_tracks round trip. Reads the source's metadata (name → 'Copy of <source>' unless newName given; templateType, rabbi, serviceNotes travel with the clone) and every track (type, title, key, bpm, leadMusician, referenceLink, notes, songId, fileId, fileName — chart bonds copied verbatim, contiguous `order` from 0). Returns `{setlistId, sourceSetlistId, trackCount, ownerId, ownerName, version: 1}`. eventDate does NOT auto-copy — pass `newEventDate` for the new service day (omit to leave undated; pass null to be explicit). `copyServiceNotes` defaults to true. Admins and band leaders may clone (same gate as create_setlist) — band_leader may clone setlists owned by others. Trusted-leader rate-limit bypass applies.",
+            inputSchema: {
+                sourceSetlistId: z
+                    .string()
+                    .min(1)
+                    .describe("Source setlist id to clone."),
+                newName: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(
+                        "Name for the new setlist. Default: 'Copy of <source name>'.",
+                    ),
+                newEventDate: eventDateSchema
+                    .nullable()
+                    .describe(
+                        "ISO date for the new event. Omit (default) to leave the clone without an eventDate — most weekly clones need a fresh date anyway. Pass null to be explicit about no-date.",
+                    ),
+                copyServiceNotes: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "If true (default), copy the source's serviceNotes onto the clone. Pass false to start with a clean notes field.",
+                    ),
+            },
+        },
+        async (args, extra) => jsonResult(await cloneSetlist(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
         "update_setlist",
         {
             description:
-                "Update a setlist's metadata (name, date, service type, rabbi, notes). Metadata only — does NOT touch tracks; use the track tools for that. Admins and band leaders may update it. Returns the post-update setlist record (name, eventDate, rabbi, serviceType, serviceNotes) so callers can confirm the patch landed without a follow-up get_setlist. Pass `lastSeenVersion` (the `version` from your last get_setlist / list_setlists) to reject with `{error: 'stale_version', currentVersion, ...}` when another writer has changed the setlist since you read it (W-04 optimistic concurrency).",
+                "Update a setlist's metadata (name, date, service type, rabbi, notes). Metadata only — does NOT touch tracks; use the track tools for that. Admins and band leaders may update it — band_leader can update setlists owned by others (collaborate), but only the owner or admin may delete (see delete_setlist). Returns the post-update setlist record (name, eventDate, rabbi, serviceType, serviceNotes) so callers can confirm the patch landed without a follow-up get_setlist. Pass `lastSeenVersion` (the `version` from your last get_setlist / list_setlists) to reject with `{error: 'stale_version', currentVersion, ...}` when another writer has changed the setlist since you read it (W-04 optimistic concurrency).",
             inputSchema: {
                 id: z.string().describe("Setlist id"),
                 name: z.string().min(1).optional().describe("New setlist name"),
@@ -403,7 +437,7 @@ export function registerWriteTools(server: McpServer): void {
         "add_track_to_setlist",
         {
             description:
-                "Add one row to a setlist. Row types: 'song' (pass songId to pull title/key/vocal-lead from the library AND bond the song's chart so it renders on the row, or pass an explicit title for a free-text row), 'header' (section break with a title), 'reading' (Torah / scripture / D'var / responsive reading — title required), 'prayer' (silent or responsive prayer — title required), 'transition' (instrumental/transition moment), or 'note' (free-text annotation). position is a 0-based insert index; omit it to append at the end. Admins and band leaders may add tracks.",
+                "Add one row to a setlist. Row types: 'song' (pass songId to pull title/key/vocal-lead from the library AND bond the song's chart so it renders on the row, or pass an explicit title for a free-text row), 'header' (section break with a title), 'reading' (Torah / scripture / D'var / responsive reading — title required), 'prayer' (silent or responsive prayer — title required), 'transition' (instrumental/transition moment), or 'note' (free-text annotation). position is a 0-based insert index; omit it to append at the end. Admins and band leaders may add tracks — band_leader may add to setlists owned by others (collaborate), but only the owner or admin may delete the setlist itself (see delete_setlist).",
             inputSchema: {
                 setlistId: z.string().describe("Setlist id"),
                 songId: z
@@ -559,7 +593,7 @@ export function registerWriteTools(server: McpServer): void {
         "delete_setlist",
         {
             description:
-                "Delete a setlist and all of its tracks. Only the setlist's owner or an admin may delete it. Use with care — this is irreversible and cascades to every track on the setlist. Pass `lastSeenVersion` (from get_setlist) to reject with `{error: 'stale_version', ...}` when another writer has changed the setlist since you read it.",
+                "Delete a setlist and all of its tracks. Only the setlist's owner or an admin may delete it — band_leader can update/add tracks on others' setlists (see update_setlist, add_track_to_setlist) but cannot delete them. This asymmetry is intentional: delete is destructive and irreversible, so it's narrower than the collaboration-friendly editing surface. Use with care — cascades to every track on the setlist. Pass `lastSeenVersion` (from get_setlist) to reject with `{error: 'stale_version', ...}` when another writer has changed the setlist since you read it.",
             inputSchema: {
                 id: z.string().describe("Setlist id"),
                 lastSeenVersion: lastSeenVersionSchema.describe(
@@ -770,7 +804,7 @@ export function registerWriteTools(server: McpServer): void {
         "propose_setlist_changes",
         {
             description:
-                "W-01 — STAGE a batch of setlist edits for chat-native review BEFORE committing. Returns a stageId + per-proposal envelope with `confidence` ('high' | 'medium' | 'low', derived from W-02 titleSpecificity), `flags` (e.g. 'generic_title' for specificity < 0.5; 'orphan_risk'; 'no_library_record'), and a one-sentence `explanation` per proposal. NO writes against the setlist yet — that happens via `commit_staged_changes`. Use this when assembling a multi-row change (typical: 5-30 proposals for a weekly Shabbat setlist) so the rabbi can confirm the bonds before they land. Each proposal has `action: 'add' | 'update' | 'remove'`; `reorder` is NOT supported as a stage proposal — use the dedicated reorder_setlist tool for full permutations. Default TTL 600s (10 min), max 3600s. Stages are one-shot — commit deletes the doc.",
+                "W-01 — STAGE a batch of setlist edits for chat-native review BEFORE committing. Returns `{stageId, ...}` (pass the same uuid as `stageId` to `commit_staged_changes`) plus a per-proposal envelope with `confidence` ('high' | 'medium' | 'low', derived from W-02 titleSpecificity), `flags` (e.g. 'generic_title' for specificity < 0.5; 'orphan_risk'; 'no_library_record'), and a one-sentence `explanation` per proposal. The response also carries a duplicate `id` field with the same uuid — that's the W-01 wire-shape name; prefer `stageId`. NO writes against the setlist yet — that happens via `commit_staged_changes`. Use this when assembling a multi-row change (typical: 5-30 proposals for a weekly Shabbat setlist) so the rabbi can confirm the bonds before they land. Each proposal has `action: 'add' | 'update' | 'remove'`; `reorder` is NOT supported as a stage proposal — use the dedicated reorder_setlist tool for full permutations. Default TTL 600s (10 min), max 3600s. Stages are one-shot — commit deletes the doc.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 proposals: z

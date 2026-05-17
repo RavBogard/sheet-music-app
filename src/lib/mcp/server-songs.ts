@@ -123,3 +123,65 @@ export async function getSongById(id: string): Promise<SongRecord | null> {
         return null
     }
 }
+
+/**
+ * Caller-supplied overrides for a new song-bonded track row. Any field left
+ * undefined falls back to the song catalog default in
+ * `resolveTrackBondDefaults`. `add_track_to_setlist` and the
+ * `commit_staged_changes` add-proposal handler share this shape so a bonded
+ * row always carries `fileName` from the catalog (pre-fix, the propose/commit
+ * path left `fileName: undefined`, forcing Perform mode's chart-binder picker
+ * to re-resolve every load — MCP-008 parity gap).
+ */
+export interface TrackBondOverrides {
+    songId?: string
+    title?: string
+    key?: string
+    leadMusician?: string
+}
+
+export interface ResolvedTrackBond {
+    /** Final title — caller override wins; otherwise catalog title. */
+    title: string | undefined
+    /** Final key — caller override wins; otherwise catalog default key. */
+    key: string | undefined
+    /** Final vocal lead — caller override wins; otherwise catalog default lead. */
+    leadMusician: string | undefined
+    /** Cached chart filename from the catalog (never overridable). */
+    fileName: string | undefined
+    /** True when a non-empty songId was supplied but didn't resolve to a song doc. */
+    songMissing: boolean
+}
+
+/**
+ * Resolve a song-bond into final track-row field values. Caller overrides
+ * win when supplied; otherwise defaults come from the songs/{id} catalog.
+ * `fileName` is always taken from the catalog (never user-overridable).
+ *
+ * Both `add_track_to_setlist` and the `commit_staged_changes` add-proposal
+ * handler call this; they differ only in how they react to `songMissing`
+ * (the single-row write tool rejects with an error; the multi-proposal
+ * commit lets it slide because the propose-stage already surfaced a
+ * `no_library_record` flag).
+ */
+export async function resolveTrackBondDefaults(
+    overrides: TrackBondOverrides,
+): Promise<ResolvedTrackBond> {
+    let title = overrides.title
+    let key = overrides.key
+    let leadMusician = overrides.leadMusician
+    let fileName: string | undefined
+    let songMissing = false
+    if (overrides.songId && overrides.songId.trim()) {
+        const song = await getSongById(overrides.songId)
+        if (!song) {
+            songMissing = true
+        } else {
+            title = title ?? song.title
+            key = key ?? song.key
+            leadMusician = leadMusician ?? song.lead
+            fileName = song.fileName
+        }
+    }
+    return { title, key, leadMusician, fileName, songMissing }
+}

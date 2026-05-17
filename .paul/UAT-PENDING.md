@@ -118,3 +118,23 @@ Check:
 - [ ] The setlist's **name, event date, service type, and rabbi** match what was entered in the interview form.
 - [ ] Error path: if the commit fails (e.g. offline), a toast surfaces the error and the modal stays on the preview step (no half-created setlist, button re-enables).
 - [ ] iPad: the "Create Setlist" / "Back" buttons are comfortably tappable; the loading state is clear.
+
+---
+
+## ⏳ DATA-003 — Bar'chu Walkdown chart row whereabouts probe (cycle-2 b4 bundle)
+
+**Deployed commit:** (this branch, b4 bundle pending push)
+
+What needs verifying: cycle-1 followup carry-over. Probe whether
+`upload-0594bbd4-...` (Bar'chu Walkdown) chart row exists in `library_index`
+and, if so, whether it still carries `mimeType: 'application/octet-stream'`
+(residual damage from an earlier MIME-detection bug).
+
+This probe runs against live Firestore — the worktree can't reach prod from
+the b4 session, so the check is deferred to UAT.
+
+Check (via claude.ai / Claude Desktop MCP):
+- [ ] Call `search_library({query: "Bar'chu Walkdown"})`. Note: does it appear in results?
+- [ ] If not found, call `list_library({collection: "uploads", includeNonCharts: true})` and page through — does the `upload-0594bbd4-…` fileId surface?
+- [ ] If found with `mimeType: "application/octet-stream"`: residual damage. Open a follow-up to backfill the correct mime via a one-shot script or `dedupe_library_index`-style sweep.
+- [ ] If absent or healthy: mark DATA-003 resolved.

@@ -144,7 +144,7 @@ export async function getMix(
             "monitor_access_denied",
             access.error,
             undefined,
-            "Ask Rabbi Daniel for bus assignment.",
+            "Ask an admin to assign you a bus.",
         )
 
     const busIndex =
@@ -154,7 +154,7 @@ export async function getMix(
             "monitor_no_bus_assigned",
             "No bus specified and you don't own any bus.",
             { yourAssignedBuses: access.ownedBuses },
-            "Pass a busIndex or ask Rabbi Daniel to assign one to you.",
+            "Pass a busIndex or ask an admin to assign one to you.",
         )
     }
 
@@ -163,7 +163,7 @@ export async function getMix(
             "monitor_bus_forbidden",
             `You don't have access to bus ${busIndex}.`,
             { busIndex, yourAssignedBuses: access.ownedBuses },
-            "Use one of your assigned buses or ask Rabbi Daniel for access.",
+            "Use one of your assigned buses or ask an admin for access.",
         )
     }
 
@@ -274,7 +274,7 @@ async function preflightBusWrite(
 ): Promise<{ ok: true } | RichErrorEnvelope> {
     const access = await assertMonitorAccess(db, uid)
     if (!access.ok)
-        return richError("monitor_access_denied", access.error, undefined, "Ask Rabbi Daniel for bus assignment.")
+        return richError("monitor_access_denied", access.error, undefined, "Ask an admin to assign you a bus.")
     if (!canControlBus(access.user, access.ownedBuses, busIndex)) {
         return richError(
             "monitor_bus_forbidden",
@@ -285,7 +285,7 @@ async function preflightBusWrite(
             },
             access.ownedBuses.length
                 ? `Use one of your assigned buses (${access.ownedBuses.join(", ")}) or ask an admin to widen access.`
-                : "Ask Rabbi Daniel to assign you a bus.",
+                : "Ask an admin to assign you a bus.",
         )
     }
     // F-018 (cycle-1): validate the indices against the live mixer state
@@ -336,7 +336,7 @@ async function preflightPrivilegedWrite(
 ): Promise<{ ok: true } | RichErrorEnvelope> {
     const access = await assertMonitorAccess(db, uid)
     if (!access.ok)
-        return richError("monitor_access_denied", access.error, undefined, "Ask Rabbi Daniel for monitor access.")
+        return richError("monitor_access_denied", access.error, undefined, "Ask an admin for monitor access.")
     if (!isPrivilegedMonitor(access.user)) {
         return richError(
             "monitor_privilege_required",

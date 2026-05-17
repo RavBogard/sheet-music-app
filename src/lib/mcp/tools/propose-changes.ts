@@ -12,6 +12,10 @@ import {
     type StaleVersionEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { STOP_AND_ASK_THRESHOLD } from "@/lib/mcp/title-specificity"
+import {
+    resolveTrackBondDefaults,
+    type ResolvedTrackBond,
+} from "@/lib/mcp/server-songs"
 import { logger } from "@/lib/logger"
 
 /**
@@ -97,6 +101,13 @@ export interface ProposalSummary {
 }
 
 export interface StageRecord {
+    /**
+     * MCP-004 (cycle-2): canonical name matches `commit_staged_changes`'s
+     * `stageId` input parameter. Always equals `id` (kept for back-compat
+     * with the W-01 wire shape; `id` is deprecated in the tool description).
+     */
+    stageId: string
+    /** @deprecated Use `stageId`. Retained for back-compat with W-01 callers. */
     id: string
     setlistId: string
     /** Setlist's version at stage creation — drift detection for commit. */
@@ -184,6 +195,9 @@ export async function proposeSetlistChanges(
     const now = new Date()
     const expires = new Date(now.getTime() + ttlSec * 1000)
     const stage: StageRecord = {
+        // MCP-004: both fields carry the same uuid. `stageId` is canonical;
+        // `id` is the deprecated W-01 wire-shape name.
+        stageId,
         id: stageId,
         setlistId: args.setlistId,
         setlistVersionAtStage,
@@ -247,6 +261,27 @@ export async function commitStagedChanges(
 
     const setlistRef = db.collection("setlists").doc(stage.setlistId)
     const tracksColl = db.collection("tracks")
+
+    // MCP-008 (cycle-2): pre-resolve song-catalog defaults for every "add"
+    // proposal BEFORE the transaction. Pre-fix the add-proposal handler
+    // emitted new tracks with `fileName: undefined` and no song defaults
+    // for title/key/leadMusician — `add_track_to_setlist` (the single-row
+    // sibling) already did this resolution, so propose→commit-staged was
+    // the asymmetric path. The pre-resolution runs outside the tx because
+    // Firestore disallows reads-after-writes inside a transaction; the
+    // songs/{id} catalog is the same hot-cache path the bulk-add code
+    // already uses, so this is a couple of in-flight reads at most.
+    const resolvedAdds: Array<ResolvedTrackBond | null> = await Promise.all(
+        stage.proposals.map(async (p) => {
+            if (p.action !== "add") return null
+            return await resolveTrackBondDefaults({
+                songId: p.songId,
+                title: p.title,
+                key: p.key,
+                leadMusician: p.leadMusician,
+            })
+        }),
+    )
 
     type TxResult =
         | {
@@ -348,7 +383,8 @@ export async function commitStagedChanges(
             id: t.id,
             fileId: t.fileId,
         }))
-        for (const p of stage.proposals) {
+        for (let i = 0; i < stage.proposals.length; i++) {
+            const p = stage.proposals[i]
             if (p.action === "remove") {
                 working = working.filter((r) => r.id !== p.trackId)
                 removedTrackIds.add(p.trackId!)
@@ -367,7 +403,12 @@ export async function commitStagedChanges(
             }
             // action === "add"
             const newTrackId = crypto.randomUUID()
-            const payload = buildNewTrackPayload(stage.setlistId, p, newTrackId)
+            const payload = buildNewTrackPayload(
+                stage.setlistId,
+                p,
+                newTrackId,
+                resolvedAdds[i],
+            )
             const insertAt =
                 p.position === undefined ||
                 p.position < 0 ||
@@ -581,22 +622,35 @@ function buildNewTrackPayload(
     setlistId: string,
     p: ProposalInput,
     trackId: string,
+    resolved: ResolvedTrackBond | null,
 ): Record<string, unknown> {
+    // MCP-008 (cycle-2): when a songId is supplied, defaults flow from the
+    // songs/{id} catalog via the shared `resolveTrackBondDefaults` helper.
+    // `resolved` is null for non-add proposals (commit only invokes this for
+    // adds), and `songMissing: true` falls through to the proposal's raw
+    // fields — the propose-stage already surfaced a `no_library_record`
+    // flag, so we don't re-block at commit time.
+    const title = resolved?.title ?? p.title ?? ""
+    const key = resolved?.key ?? p.key
+    const leadMusician = resolved?.leadMusician ?? p.leadMusician
+    const fileName = resolved?.fileName
+
     const payload: Record<string, unknown> = {
         id: trackId,
         setlistId,
         type: p.type ?? "song",
-        title: p.title ?? "",
+        title,
         version: 1,
         lastModifiedAt: new Date().toISOString(),
     }
-    if (p.key !== undefined) payload.key = p.key
-    if (p.leadMusician !== undefined) payload.leadMusician = p.leadMusician
+    if (key !== undefined) payload.key = key
+    if (leadMusician !== undefined) payload.leadMusician = leadMusician
     if (p.notes !== undefined) payload.notes = p.notes
     if (p.referenceLink !== undefined) payload.referenceLink = p.referenceLink
     if (p.songId !== undefined) {
         payload.songId = p.songId
         payload.fileId = p.songId
     }
+    if (fileName !== undefined) payload.fileName = fileName
     return payload
 }

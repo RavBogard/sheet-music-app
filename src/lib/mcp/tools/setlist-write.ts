@@ -27,7 +27,7 @@ import {
     type StaleVersionEnvelope,
     type TrackNotFoundEnvelope,
 } from "@/lib/mcp/error-envelopes"
-import { getSongById } from "@/lib/mcp/server-songs"
+import { getSongById, resolveTrackBondDefaults } from "@/lib/mcp/server-songs"
 
 /**
  * MCP write tools (Phase 4b). Plain async functions wrapping the shared
@@ -253,34 +253,34 @@ export async function addTrackToSetlist(
 
     const type = args.type ?? "song"
 
-    let title = args.title
-    let key = args.key
-    let leadMusician = args.leadMusician
-    let fileName: string | undefined
-    if (args.songId) {
-        const song = await getSongById(args.songId)
-        if (!song) return { error: `Song ${args.songId} not found` }
-        title = title ?? song.title
-        key = key ?? song.key
-        leadMusician = leadMusician ?? song.lead
-        fileName = song.fileName
+    // MCP-008 (cycle-2): shared chart-resolve helper. Pre-extraction this
+    // path duplicated the songId → {title, key, leadMusician, fileName}
+    // resolution that commit_staged_changes's add-proposal handler omitted.
+    const resolved = await resolveTrackBondDefaults({
+        songId: args.songId,
+        title: args.title,
+        key: args.key,
+        leadMusician: args.leadMusician,
+    })
+    if (resolved.songMissing) {
+        return { error: `Song ${args.songId} not found` }
     }
-    if (!title || !title.trim()) {
+    if (!resolved.title || !resolved.title.trim()) {
         return { error: "title is required (or pass a songId to derive it)" }
     }
 
     return addTrack(db, {
         setlistId: args.setlistId,
         type,
-        title,
-        key,
-        leadMusician,
+        title: resolved.title,
+        key: resolved.key,
+        leadMusician: resolved.leadMusician,
         referenceLink: args.referenceLink,
         songId: args.songId,
         // The library catalog is keyed by Drive file id, so a song's id IS its
         // chart file id — bond it as the track's fileId so the chart renders.
         fileId: args.songId,
-        fileName,
+        fileName: resolved.fileName,
         notes: args.notes,
         position: args.position,
     })

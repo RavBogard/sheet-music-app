@@ -180,6 +180,20 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         expect(stage.summary.flagged).toBe(1)
     })
 
+    it("MCP-004 (cycle-2): propose response carries `stageId` aliasing `id`", async () => {
+        const setlistId = await newSetlist()
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [{ action: "add", title: "Row" }],
+        })) as StageRecord
+        // Both fields hold the same uuid; `stageId` is the canonical name
+        // matching commit_staged_changes's input parameter. `id` retained
+        // for back-compat with W-01 callers.
+        expect(stage.stageId).toBeTruthy()
+        expect(stage.id).toBeTruthy()
+        expect(stage.stageId).toBe(stage.id)
+    })
+
     it("propose surfaces 'no_library_record' for songIds with no library_index row", async () => {
         const setlistId = await newSetlist()
 
@@ -257,6 +271,84 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
             .map((d) => (d.data() as { order: number }).order)
             .sort((a, b) => a - b)
         expect(orders).toEqual([0, 1, 2])
+    })
+
+    // ─── MCP-008 (cycle-2): add-proposal commit populates fileName ────────
+
+    it("MCP-008: committed add proposal with songId carries fileName + key + leadMusician from the songs catalog", async () => {
+        const setlistId = await newSetlist()
+        // Seed a song catalog row — getSongById reads from `songs/{id}`.
+        await db()
+            .collection("songs")
+            .doc("song-bonded")
+            .set({
+                title: "Lecha Dodi.pdf",
+                defaults: { key: "Am", lead: "Cantor" },
+            })
+
+        const setlistVersion = await readVersion("setlists", setlistId)
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                { action: "add", songId: "song-bonded" }, // no overrides
+            ],
+        })) as StageRecord
+        const result = (await commitStagedChanges(ADMIN, {
+            stageId: stage.id,
+            lastSeenVersion: setlistVersion,
+        })) as { ok: true; addedTrackIds: string[] }
+        expect(result.ok).toBe(true)
+        expect(result.addedTrackIds).toHaveLength(1)
+
+        const newTrack = (
+            await db().collection("tracks").doc(result.addedTrackIds[0]).get()
+        ).data() as Record<string, unknown>
+
+        // Pre-MCP-008: fileName was undefined here (the add-proposal handler
+        // didn't run the song catalog lookup that add_track_to_setlist did).
+        // Post-fix: shared resolveTrackBondDefaults helper supplies it.
+        expect(newTrack.fileName).toBe("Lecha Dodi.pdf")
+        expect(newTrack.title).toBe("Lecha Dodi") // cleanTitle strips the .pdf
+        expect(newTrack.key).toBe("Am")
+        expect(newTrack.leadMusician).toBe("Cantor")
+        expect(newTrack.songId).toBe("song-bonded")
+        expect(newTrack.fileId).toBe("song-bonded")
+    })
+
+    it("MCP-008: caller-supplied title/key overrides win over song catalog defaults", async () => {
+        const setlistId = await newSetlist()
+        await db()
+            .collection("songs")
+            .doc("song-override")
+            .set({
+                title: "Hashkivenu.pdf",
+                defaults: { key: "Dm", lead: "Cantor" },
+            })
+
+        const setlistVersion = await readVersion("setlists", setlistId)
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                {
+                    action: "add",
+                    songId: "song-override",
+                    title: "Hashkivenu (slow)",
+                    key: "Em",
+                },
+            ],
+        })) as StageRecord
+        const result = (await commitStagedChanges(ADMIN, {
+            stageId: stage.id,
+            lastSeenVersion: setlistVersion,
+        })) as { ok: true; addedTrackIds: string[] }
+
+        const newTrack = (
+            await db().collection("tracks").doc(result.addedTrackIds[0]).get()
+        ).data() as Record<string, unknown>
+        expect(newTrack.title).toBe("Hashkivenu (slow)") // override
+        expect(newTrack.key).toBe("Em") // override
+        expect(newTrack.leadMusician).toBe("Cantor") // catalog default
+        expect(newTrack.fileName).toBe("Hashkivenu.pdf") // always from catalog
     })
 
     // ─── F-014: no spurious version bumps on untouched rows ──────────────
