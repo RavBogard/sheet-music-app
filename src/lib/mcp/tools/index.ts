@@ -8,6 +8,7 @@ import {
     dedupeLibraryIndex,
     backfillLibraryIndex,
 } from "./library"
+import { reconcileLibrary } from "./reconcile-library"
 import { backfillSetlistTestFlag } from "./setlist-hygiene"
 import {
     createSetlist,
@@ -1075,6 +1076,30 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await backfillLibraryIndex(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "reconcile_library",
+        {
+            description:
+                "Admin-only one-shot bootstrap reconciliation for `library_index` rows under the storage-canonical direction (cycle-3 ADDENDUM-1 NEW-2). Walks every active row; for any whose Storage object 404s, probes Drive: Drive 200 → mirror the bytes into Storage at the EXISTING fileId (preserving every setlist/song bond) and flip `status: 'active'`; Drive 404 → mark `status: 'orphaned'`; Drive 5xx / timeout → leave the row untouched and surface in the `transient` bucket so the operator can re-run later. Drains the ~250 dead-looking rows from the pre-NEW-1 era. Idempotent: rows already `status: 'orphaned'` or `status: 'duplicate'` are skipped, so a second run after a successful force-run leaves nothing to do. Defaults `dryRun: true` per the F-05 dry-run-is-observability rule — caller MUST pass `force: true` to actually write. dryRun returns the full plan (bucket counts + per-row preview, capped at 500 rows per bucket) without writes. Real run without `force: true` returns the plan with `refused: true` and no writes. Mirror operation preserves processChartUpload's atomic-guard contract (read-verify + compensating-delete + library_signals broadcast). Returns `{scanned, alreadyHealthy, driveMirror:{count,rows,truncated}, orphan:{count,rows,truncated}, transient:{count,rows,truncated}, dryRun, committed, refused?}`.",
+            inputSchema: {
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true (default), returns the bucket counts + per-row plan without writing. F-05 standing rule: dryRun does NOT require force.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes — even after `dryRun: false` is set.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await reconcileLibrary(uidFrom(extra), args)),
     )
 }
 
