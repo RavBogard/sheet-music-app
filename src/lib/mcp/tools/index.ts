@@ -10,6 +10,15 @@ import {
 } from "./library"
 import { reconcileLibrary } from "./reconcile-library"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
+import {
+    listReviewQueue,
+    getEnrichmentSuggestion,
+    acceptEnrichment as acceptEnrichmentTool,
+    rejectEnrichment as rejectEnrichmentTool,
+    editEnrichment as editEnrichmentTool,
+    retryEnrichment as retryEnrichmentTool,
+    dismissFailure as dismissFailureTool,
+} from "./library-review"
 import { backfillSetlistTestFlag } from "./setlist-hygiene"
 import {
     createSetlist,
@@ -1188,6 +1197,220 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await setAiThreshold(uidFrom(extra), args)),
+    )
+
+    // ─── Library review queue (cycle-3 a5) ───────────────────────────────
+    // Admin-only MCP-tool counterpart to a4's `/manage/library-review` UI.
+    // Wraps a4's `src/lib/library/review-queue.ts` helper so Daniel can
+    // triage AI enrichment + Drive import failures from Claude Desktop.
+
+    server.registerTool(
+        "list_review_queue",
+        {
+            description:
+                "Admin-only — list the three review queues backing a4's `/manage/library-review` UI (cycle-3 a5). Returns `aiReview` (library_index rows at `enrichmentStatus: 'review_pending'` — Sonnet/Gemini flagged for human triage), `aiFailed` (rows that hit the retry ceiling — joined with `aiEnrichmentRetryQueue/{rowId}` for `lastError`/`attempts`/`exhaustedAt` forensics), and `importFailures` (a1's `chartImportQueue/{driveFileId}` rows from the every-5-min Drive sync cron, excluding dismissed). Per-row shape mirrors the HTTP `/api/admin/library-review/queue` payload — `current` (existing human-set fields), `suggestion` (the AI's structured-output snapshot), `triggers` (which review flags fired), and `duplicateCandidates` (sibling rows hydrated via batched getAll). `config` carries the calibration banner state (autoApplyEnabled + threshold + anthropicConfigured) so the operator sees the same context the UI shows. Filter with `kind: 'enrichment' | 'import' | 'all'` (default 'all') and `status: 'review_pending' | 'failed'` (omit for both). `limit` defaults 50, max 200. Read-only.",
+            inputSchema: {
+                kind: z
+                    .enum(["enrichment", "import", "all"])
+                    .optional()
+                    .describe(
+                        "'enrichment' returns aiReview + aiFailed only. 'import' returns importFailures only. 'all' (default) returns every bucket.",
+                    ),
+                status: z
+                    .enum(["review_pending", "failed"])
+                    .optional()
+                    .describe(
+                        "Optional library_index status filter — 'review_pending' returns only the AI review queue, 'failed' returns only the AI failed queue + Drive import failures.",
+                    ),
+                limit: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(200)
+                    .optional()
+                    .describe(
+                        "Per-bucket row cap. Default 50, max 200. `truncated: true` in the response when any bucket exceeded the cap.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await listReviewQueue(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "get_enrichment_suggestion",
+        {
+            description:
+                "Admin-only — fetch the full AI suggestion + duplicate-candidates context for one `library_index` row (cycle-3 a5). Returns `suggestion` (the Sonnet/Gemini structured-output snapshot: is_chart, confidence, suggested_title/key/bpm/lead/tags, collection_disagrees_with_folder, duplicate_candidates), `triggers` (which review-pending checks fired), `current` (existing human-set fields so the caller can diff before acting), and `duplicateCandidates` hydrated with title + collection. Use before `accept_enrichment` / `edit_enrichment` to confirm what's actually in the doc — the `list_review_queue` row carries the same fields but capped to 50/page. Read-only; no writes.",
+            inputSchema: {
+                rowId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "library_index document id (visible in every `list_review_queue` row).",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await getEnrichmentSuggestion(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "accept_enrichment",
+        {
+            description:
+                "Admin-only — apply the AI suggestion to a `library_index` row (cycle-3 a5). Calls a4's shared `acceptEnrichment` helper: gap-fill only (never overwrites human-set key/bpm/leadMusician/tags), NEVER overwrites `collection` (David's-subfolder authority — operator must use `edit_enrichment` to override), and only renames the row's `name` when the suggestion differs AND `humanRenamedAt` isn't already set. Sets `enrichmentStatus: 'enriched'` + stamps `enrichmentReviewedAt`/`enrichmentReviewedBy`. F-05 contract: `dryRun: true` (default) returns the would-be `plannedStatus` + `plannedPatch` (the fields that would actually flip) without writing. Real-run without `force: true` returns the same plan + `refused: true` and no writes. Pair `dryRun: false, force: true` for the actual flip. Idempotent: re-running on an already-enriched row succeeds (gap-fill applies nothing new). Returns `{ok: true, rowId, status, plannedStatus, plannedPatch?, dryRun, refused?}`. Refusals carry rich `row_not_found` / `invalid_state` envelopes.",
+            inputSchema: {
+                rowId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "library_index document id from `list_review_queue` or `get_enrichment_suggestion`.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true (default), returns the plan without writing. F-05 standing rule: dryRun does NOT require force.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await acceptEnrichmentTool(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "reject_enrichment",
+        {
+            description:
+                "Admin-only — discard the AI suggestion for one `library_index` row (cycle-3 a5). Calls a4's shared `rejectEnrichment` helper: leaves all field values untouched, flips `enrichmentStatus` to `'human_rejected'`, stamps reviewedAt/reviewedBy, and tidies the `aiEnrichmentRetryQueue/{rowId}` doc so the next cron drain doesn't re-fire enrichment for this row. F-05 contract: `dryRun: true` (default) returns the plan without writing; real-run without `force: true` returns the same plan + `refused: true`. Pair `dryRun: false, force: true` for the actual write. Idempotent: re-running on an already-`human_rejected` row is a no-op modulo the timestamp re-stamp. Returns `{ok: true, rowId, status: 'human_rejected', plannedStatus, dryRun, refused?}`.",
+            inputSchema: {
+                rowId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "library_index document id from `list_review_queue`.",
+                    ),
+                dryRun: z.boolean().optional(),
+                force: z.boolean().optional(),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await rejectEnrichmentTool(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "edit_enrichment",
+        {
+            description:
+                "Admin-only — operator override on a `library_index` review row (cycle-3 a5). Calls a4's shared `editEnrichment` helper: applies the supplied `edits` payload directly to the doc (including `collection` — the operator override path IS allowed even though the AI's acceptEnrichment is NOT), sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and sets `humanRenamedAt` whenever `title` is changed (so future enrichment runs won't re-rename). Editable fields: title (non-empty), collection (core|supplemental|uploads), key (string), bpm (positive number or null to clear), leadMusician (string), tags (string[]). At least one field required. F-05 contract: `dryRun: true` (default) validates the edits payload + checks the row exists, returns `plannedPatch` without writing; real-run without `force: true` refuses. Validation failures surface as `invalid_field` rich envelopes. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun, refused?}`.",
+            inputSchema: {
+                rowId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "library_index document id from `list_review_queue`.",
+                    ),
+                edits: z
+                    .object({
+                        title: z
+                            .string()
+                            .min(1)
+                            .optional()
+                            .describe("Display title; non-empty when supplied."),
+                        collection: z
+                            .enum(["core", "supplemental", "uploads"])
+                            .optional()
+                            .describe(
+                                "Library collection. Operator override is permitted here (David's-subfolder authority does NOT bind operator edits, only AI).",
+                            ),
+                        key: z
+                            .string()
+                            .optional()
+                            .describe("Musical key (e.g. 'Em', 'G')."),
+                        bpm: z
+                            .number()
+                            .positive()
+                            .nullable()
+                            .optional()
+                            .describe(
+                                "Beats per minute, or null to clear an incorrect value.",
+                            ),
+                        leadMusician: z
+                            .string()
+                            .optional()
+                            .describe("Vocal Lead for this chart."),
+                        tags: z
+                            .array(z.string())
+                            .optional()
+                            .describe("Tag list (replaces existing tags)."),
+                    })
+                    .describe(
+                        "At least one field required. The helper rejects empty / unknown fields with a rich invalid_field envelope.",
+                    ),
+                dryRun: z.boolean().optional(),
+                force: z.boolean().optional(),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await editEnrichmentTool(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "retry_enrichment",
+        {
+            description:
+                "Admin-only — re-enqueue a `failed` enrichment or `chartImportQueue` row (cycle-3 a5). Calls a4's shared `retryFailed` helper. `kind: 'enrichment'` (default) rewinds the `aiEnrichmentRetryQueue/{rowId}` doc to `attempts: 0, nextRetryAt: now`, clears `lastError`/`exhaustedAt`, and flips the library_index status back to `'pending'` so the next 30-min `/api/cron/ai-enrich-retry` tick re-runs enrichment. `kind: 'import'` deletes the `chartImportQueue/{driveFileId}` doc so the next 5-min `/api/cron/drive-sync` tick re-imports the file fresh from David's Drop folder. F-05 contract: `dryRun: true` (default) checks the queue doc exists + returns `plannedStatus` without writing. Real-run without `force: true` refuses with `refused: true`. `queue_doc_missing` rich envelope when the row already drained. Returns `{ok: true, rowId, status, plannedStatus, plannedPatch:{kind}, dryRun, refused?}`.",
+            inputSchema: {
+                rowId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "For kind='enrichment', the library_index id (matches aiEnrichmentRetryQueue doc). For kind='import', the driveFileId (chartImportQueue id).",
+                    ),
+                kind: z
+                    .enum(["enrichment", "import"])
+                    .optional()
+                    .describe(
+                        "Which queue to re-enqueue. 'enrichment' (default) rewinds the AI retry doc. 'import' deletes the chartImportQueue doc so the Drive cron re-imports.",
+                    ),
+                dryRun: z.boolean().optional(),
+                force: z.boolean().optional(),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await retryEnrichmentTool(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "dismiss_failure",
+        {
+            description:
+                "Admin-only — mark a `failed` enrichment or `chartImportQueue` row as handled without re-trying (cycle-3 a5). Calls a4's shared `dismissFailed` helper. `kind: 'enrichment'` flips library_index `enrichmentStatus` to `'human_rejected'`, stamps reviewedAt/reviewedBy, and deletes the `aiEnrichmentRetryQueue/{rowId}` doc so cron stops re-firing. `kind: 'import'` sets `dismissed: true` on the `chartImportQueue/{driveFileId}` doc — this is the dismissed-until-next-failure semantic; the next failure overwrite from the poller resets the flag so the row re-surfaces if the underlying problem recurs. F-05 contract: `dryRun: true` (default) checks the row/queue doc exists + returns `plannedStatus` without writing. Real-run without `force: true` refuses. Returns `{ok: true, rowId, status, plannedStatus, plannedPatch:{kind}, dryRun, refused?}`.",
+            inputSchema: {
+                rowId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "For kind='enrichment', the library_index id. For kind='import', the driveFileId.",
+                    ),
+                kind: z
+                    .enum(["enrichment", "import"])
+                    .describe(
+                        "Which queue the row lives on. 'enrichment' touches library_index + aiEnrichmentRetryQueue. 'import' touches chartImportQueue only.",
+                    ),
+                dryRun: z.boolean().optional(),
+                force: z.boolean().optional(),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await dismissFailureTool(uidFrom(extra), args)),
     )
 }
 
