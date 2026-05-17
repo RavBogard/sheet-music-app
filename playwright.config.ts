@@ -26,10 +26,15 @@ export default defineConfig({
         },
     ],
 
-    webServer: {
-        command: process.env.CI ? 'npx next start' : 'npm run dev',
-        url: 'http://localhost:3000',
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-    },
+    // Set PLAYWRIGHT_USE_REMOTE=1 to skip the local dev server entirely
+    // and point PLAYWRIGHT_BASE_URL at a deployed origin (e.g. prod).
+    // Used by the F-023 UAT which runs against www.centralreform.live.
+    webServer: process.env.PLAYWRIGHT_USE_REMOTE
+        ? undefined
+        : {
+              command: process.env.CI ? 'npx next start' : 'npm run dev',
+              url: 'http://localhost:3000',
+              reuseExistingServer: !process.env.CI,
+              timeout: 120_000,
+          },
 })
