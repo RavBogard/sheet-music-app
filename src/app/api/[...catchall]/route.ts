@@ -32,11 +32,16 @@ export const dynamic = "force-dynamic"
 function envelope(req: NextRequest): NextResponse {
     const pathname = req.nextUrl.pathname
     const method = req.method
+    // C4-023: `route_not_found` isn't in `ERROR_CODE_MAP` (errors.ts is
+    // foundation READ-ONLY), so `codeFor()` defaults to 500. Pass
+    // `errorCode: 404` so the envelope's `error.code` matches the HTTP
+    // status line — otherwise an MCP caller / Claude Desktop sees a
+    // contradictory `{error:{code:500}}` payload on a `HTTP 404` response.
     const res = NextResponse.json(
         richError(
             "route_not_found",
             `No handler at ${method} ${pathname}.`,
-            { path: pathname, method },
+            { errorCode: 404, path: pathname, method },
             "Check the path against your MCP/HTTP route table. /api/* paths must hit a registered handler — see /api/health, /api/version, /api/auth/test-session, /api/admin/library-review/{queue,accept,reject,edit,retry,dismiss}, /api/drive/file/[fileId], /api/cron/{drive-sync,ai-enrich-retry,aggregate-corrections,sync}, /api/mcp/oauth/*. Brand-new API routes need a route.ts under src/app/api/<path>/.",
         ),
         { status: 404 },
