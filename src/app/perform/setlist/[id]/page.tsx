@@ -1,205 +1,79 @@
-"use client"
-
 /**
- * Setlist Performance View (v2)
+ * /perform/setlist/[id] — Server Component
  *
- * Dense, scannable setlist -- the core performance experience.
- * Shows the full service flow at a glance: song titles in their transposed
- * key, tempo, lead, and liturgical items. Wake lock keeps the screen on.
+ * UNAUTH-009 (cycle-4 supplement, CRITICAL):
+ * The gig-band-member journey on slow-3G was 44s to first chart — 7.4× over
+ * the <6s target — because the page was a pure client component that loaded
+ * Firebase + Dexie + react-pdf + the 1.05MB PDF worker chunk before showing
+ * the band member a tappable track row.
  *
- * Architecture: useSetlistPerformance hook + SetlistView component
- * PDFOverlay renders on top when a song is tapped -- setlist stays mounted.
+ * Fix: convert to an async server component that fetches setlist + tracks
+ * via Admin SDK at request time, then hands the SSR'd frame to
+ * `SetlistPerformClient` as initial state. The user sees the full track
+ * list (song titles, transposed keys, vocal leads, section headers) on
+ * FCP. Hydration still happens but no longer blocks visual content;
+ * realtime updates resume transparently once Firestore subscribes. Pairs
+ * with the layout's deferred PDF worker preload + the page's lazy
+ * PDFOverlay import to move the react-pdf chunk out of the initial graph.
+ *
+ * If Admin SDK is unavailable (dev without service-account creds, or a
+ * transient Admin failure), we fall through with `initialSetlist: null`
+ * — the client takes over with its normal Firestore subscription path.
+ * No regression from pre-fix behavior on that branch.
+ *
+ * Setlist contents on /perform/setlist/<id> are public by design — see
+ * [[feedback_setlist_public_policy]]. Anyone with the URL can fetch the
+ * track list. No auth gate at this layer.
  */
 
-import { useState } from "react"
-import dynamic from "next/dynamic"
-import Link from "next/link"
-import { useParams } from "next/navigation"
-import { Loader2, ArrowLeft, Music, Users, Pencil, Printer } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
-import { useAuth } from "@/lib/auth-context"
-import { SetlistView } from "@/components/performance/SetlistView"
-import { PDFOverlay } from "@/components/performance/PDFOverlay"
-import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
-const PrintModal = dynamic(() => import("@/components/setlist/PrintModal").then(m => m.PrintModal), { ssr: false })
+import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+import { serializeSetlist } from "@/lib/server-auth"
+import { getTracksForSetlist } from "@/lib/server-tracks"
+import { logger } from "@/lib/logger"
+import type { Setlist, SetlistTrack } from "@/types/models"
+import { SetlistPerformClient } from "./SetlistPerformClient"
 
-export default function SetlistPerformPage() {
-    const params = useParams()
-    const setlistId = params?.id as string
-
-    const {
-        tracks,
-        name,
-        serviceNotes,
-        loading,
-        error,
-        currentTrackIndex,
-        defaultTransposition,
-        isLeader,
-        isPublicView,
-        setCurrentPosition,
-        musicians,
-        rabbi,
-    } = useSetlistPerformance(setlistId)
-
-    const [activeSongIndex, setActiveSongIndex] = useState<number | null>(null)
-    const [showPrintModal, setShowPrintModal] = useState(false)
-    const { isMusician, isBandLeader, isAdmin } = useAuth()
-    const canPrint = isMusician || isBandLeader || isAdmin
-
-    // Song fileIds for the offline indicator's IDB ground-truth count.
-    const songFileIds = tracks
-        .filter(t => (!t.type || t.type === "song") && t.fileId)
-        .map(t => t.fileId as string)
-
-    // Song count for header
-    const songCount = tracks.filter((t) => !t.type || t.type === "song").length
-    const totalCount = tracks.filter((t) => t.type !== "header").length
-
-    // Back link: authenticated users go to /setlists, public users go to /perform (public listing)
-    const backHref = isPublicView ? "/perform" : "/setlists"
-
-    // Error messages based on error type
-    const errorMessage = (() => {
-        if (!error) return null
-        const code = (error as { code?: string })?.code
-        if (code === "permission-denied") {
-            return "This setlist hasn't been published yet, or you don't have access."
+async function fetchInitialFrame(setlistId: string): Promise<{
+    setlist: Setlist | null
+    tracks: SetlistTrack[]
+}> {
+    try {
+        const adminAvailable = initAdmin()
+        if (!adminAvailable) {
+            return { setlist: null, tracks: [] }
         }
-        if (code === "not-found") {
-            return "Setlist not found -- it may have been deleted."
+        const db = getFirestore()
+        const snap = await db.collection("setlists").doc(setlistId).get()
+        if (!snap.exists) {
+            // Not-found surfaces through the client's existing error path
+            // once the Firestore subscription returns the same not-found
+            // state — same UX as the legacy client-only behavior.
+            return { setlist: null, tracks: [] }
         }
-        return "Couldn't load setlist -- check your connection and try again."
-    })()
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh] md:pt-20">
-                <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground font-medium">Loading setlist...</p>
-                </div>
-            </div>
-        )
+        const data = snap.data() as Record<string, unknown>
+        const serialized = serializeSetlist(snap.id, data) as unknown as Setlist
+        const tracksRaw = await getTracksForSetlist(db, setlistId, serialized as unknown as Record<string, unknown>)
+        const tracks = tracksRaw as unknown as SetlistTrack[]
+        return { setlist: serialized, tracks }
+    } catch (err) {
+        logger.warn(`[/perform/setlist/${setlistId}] SSR fetch failed; falling back to client-only:`, err)
+        return { setlist: null, tracks: [] }
     }
+}
 
-    if (errorMessage) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] md:pt-20 gap-4">
-                <p className="text-muted-foreground">{errorMessage}</p>
-                <Button asChild variant="outline">
-                    <Link href={backHref}>Back to {isPublicView ? "Home" : "Setlists"}</Link>
-                </Button>
-            </div>
-        )
-    }
+export default async function SetlistPerformPage({
+    params,
+}: {
+    params: Promise<{ id: string }>
+}) {
+    const { id } = await params
+    const { setlist, tracks } = await fetchInitialFrame(id)
 
     return (
-        <div className="flex flex-col min-h-[calc(100dvh-5rem)] md:pt-20 bg-background text-foreground overflow-hidden">
-            {/* Header — compact for maximum setlist visibility */}
-            <div className="flex items-center gap-2 px-4 py-2 glass border-b-0 z-20 relative">
-                <Link
-                    href={backHref}
-                    aria-label={isPublicView ? "Back to home" : "Back to setlists"}
-                    className="h-11 w-11 flex items-center justify-center rounded-xl hover:bg-muted transition-colors shrink-0"
-                >
-                    <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-                </Link>
-                <div className="flex-1 min-w-0">
-                    <h1 className="text-base font-bold truncate">{name}</h1>
-                    <p className="text-[11px] text-muted-foreground">
-                        {songCount} song{songCount !== 1 ? "s" : ""}
-                        {totalCount > songCount ? ` \u00B7 ${totalCount} items` : ""}
-                    </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                    {canPrint && (
-                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label="Open gig packet" className="h-11 min-w-11 gap-1.5 text-muted-foreground">
-                            <Printer className="h-4 w-4" />
-                            <span className="text-xs hidden sm:inline">Gig Packet</span>
-                        </Button>
-                    )}
-                    {isLeader && (
-                        <Button asChild size="sm" variant="ghost" className="h-11 min-w-11 gap-1.5 text-muted-foreground">
-                            <Link href={`/setlists/${setlistId}`} aria-label="Edit setlist">
-                                <Pencil className="h-4 w-4" />
-                                <span className="text-xs hidden sm:inline">Edit</span>
-                            </Link>
-                        </Button>
-                    )}
-                </div>
-            </div>
-
-            {/* Offline indicator — IDB ground truth for N/M charts ready */}
-            <PerformanceOfflineIndicator setlistFileIds={songFileIds} />
-
-
-            {/* Who's playing */}
-            {musicians.length > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2 border-b border-border/50 overflow-x-auto scrollbar-hide">
-                    <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                    {musicians.map((m, i) => (
-                        <span
-                            key={m.uid || i}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs text-muted-foreground whitespace-nowrap shrink-0"
-                        >
-                            <span className="font-medium text-foreground">{(m.name || '').split(' ')[0] || 'Unknown'}</span>
-                            {m.instrument && (
-                                <span className="text-muted-foreground/70">{m.instrument}</span>
-                            )}
-                        </span>
-                    ))}
-                </div>
-            )}
-
-            {/* Setlist content */}
-            <SetlistView
-                tracks={tracks}
-                currentTrackIndex={currentTrackIndex}
-                defaultTransposition={defaultTransposition}
-                isPublicView={isPublicView}
-                isLeader={isLeader}
-                onSongTap={(index) => setActiveSongIndex(index)}
-                onLeaderSetPosition={setCurrentPosition}
-                serviceNotes={serviceNotes}
-            />
-
-            {/* PDF overlay: renders on top of setlist when a song is tapped */}
-            {activeSongIndex !== null && tracks[activeSongIndex] && (
-                <PDFOverlay
-                    track={tracks[activeSongIndex]}
-                    tracks={tracks}
-                    currentIndex={activeSongIndex}
-                    onClose={() => setActiveSongIndex(null)}
-                    onNavigate={(index) => setActiveSongIndex(index)}
-                    isPublicView={isPublicView}
-                />
-            )}
-
-            {/* Empty state */}
-            {tracks.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                    <Music className="h-12 w-12 mb-3 opacity-30" />
-                    <p className="text-lg font-medium">No tracks yet</p>
-                    {!isPublicView && (
-                        <Button asChild variant="outline" className="mt-4">
-                            <Link href={`/setlists/${setlistId}`}>Add tracks</Link>
-                        </Button>
-                    )}
-                </div>
-            )}
-
-            {showPrintModal && (
-                <PrintModal
-                    setlistName={name}
-                    tracks={tracks}
-                    setlistId={setlistId}
-                    assignedMusicians={musicians}
-                    rabbi={rabbi}
-                    onClose={() => setShowPrintModal(false)}
-                />
-            )}
-        </div>
+        <SetlistPerformClient
+            setlistId={id}
+            initialSetlist={setlist}
+            initialTracks={tracks}
+        />
     )
 }

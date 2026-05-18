@@ -41,6 +41,17 @@ interface UseSetlistPerformanceOpts {
     /** Test-seam: lets unit tests assert listener wiring without booting
      *  Firestore. Defaults to the production startSnapshotListener. */
     startSnapshotListener?: (opts: SnapshotListenerOpts) => () => void
+    /** UNAUTH-009 (cycle-4 supplement): SSR-primed initial state. When the
+     *  parent server component fetches setlist + tracks via Admin SDK and
+     *  passes them in, the hook returns them immediately (no loading flicker)
+     *  while the realtime subscriptions warm up in the background. Once the
+     *  subscriptions deliver a value, the hook switches over to live data
+     *  transparently — same data path as a fresh client mount, just with a
+     *  non-empty starting frame. */
+    initial?: {
+        setlist: Setlist | null
+        tracks: SetlistTrack[]
+    } | null
 }
 
 /**
@@ -126,24 +137,45 @@ export function useSetlistPerformance(
 
     // v60-08-01: helper is single-branch (Dexie wins, else []). setlistData
     // param is retained for ABI stability; no longer in the dep list.
-    const tracks: SetlistTrack[] = useMemo(
+    //
+    // UNAUTH-009 (cycle-4 supplement): when SSR primed `opts.initial.tracks`
+    // and Dexie's live-query is still in flight (`dexieTracks === undefined`),
+    // surface the SSR rows so the band member sees the setlist on FCP rather
+    // than a spinner. Once Dexie resolves (even to []), we trust its result.
+    const initial = opts.initial ?? null
+    const liveTracks: SetlistTrack[] = useMemo(
         () => getTracksForSetlistClient(dexieTracks, setlistData ?? undefined),
         [dexieTracks],
     )
+    const tracks: SetlistTrack[] =
+        dexieTracks === undefined && initial?.tracks?.length
+            ? initial.tracks
+            : liveTracks
 
-    const name: string = setlistData?.name || "Untitled"
-    const serviceNotes: string | null = setlistData?.serviceNotes || null
-    const musicians: SetlistMusician[] = setlistData?.musicians || []
-    const rabbi: string | undefined = setlistData?.rabbi
+    const name: string =
+        setlistData?.name || initial?.setlist?.name || "Untitled"
+    const serviceNotes: string | null =
+        setlistData?.serviceNotes ?? initial?.setlist?.serviceNotes ?? null
+    const musicians: SetlistMusician[] =
+        setlistData?.musicians || initial?.setlist?.musicians || []
+    const rabbi: string | undefined =
+        setlistData?.rabbi ?? initial?.setlist?.rabbi
 
     const currentTrackIndex = -1
 
     // Loading: setlist still loading OR (hydrated setlist where Dexie is in
     // flight). For unhydrated setlists, loading=false once setlist resolves
     // because the embedded fallback is immediately available.
+    //
+    // UNAUTH-009: if SSR primed initial setlist + at least one track, we
+    // already have a renderable frame — skip the loading spinner entirely.
+    // Subscriptions still warm up in the background and replace state once
+    // delivered.
+    const hasSsrFrame = !!initial?.setlist && (initial?.tracks?.length ?? 0) >= 0
     const loading =
-        setlistLoading ||
-        (setlistData?.hydrated === true && dexieTracks === undefined)
+        !hasSsrFrame &&
+        (setlistLoading ||
+            (setlistData?.hydrated === true && dexieTracks === undefined))
 
     // Musician profile for default transposition
     const [musicianProfile, setMusicianProfile] = useState<MusicianProfile | null>(null)

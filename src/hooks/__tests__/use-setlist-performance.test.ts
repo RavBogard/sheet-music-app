@@ -351,6 +351,98 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
     )
   })
 
+  // UNAUTH-009 (cycle-4 supplement) — SSR-primed initial frame
+  describe('opts.initial (UNAUTH-009 SSR seeding)', () => {
+    it('returns initial setlist + tracks immediately when subscriptions are still loading', () => {
+      mockUseSafeFirestoreSync.mockReturnValue({
+        data: null,
+        loading: true,
+        error: null,
+      })
+
+      const initialSetlist = {
+        id: SETLIST_ID,
+        name: 'SSR-Served Setlist',
+        serviceNotes: 'Wear blue',
+        musicians: [{ uid: 'u1', name: 'SSR Musician', email: 'm@x' }],
+        rabbi: 'Daniel',
+        date: 0,
+        trackCount: 2,
+      } as unknown as Parameters<typeof useSetlistPerformance>[1] extends infer T
+        ? T extends { initial?: infer I }
+          ? I extends { setlist: infer S | null }
+            ? S
+            : never
+          : never
+        : never
+      const initialTracks = [
+        { id: 'ssr-t1', title: 'SSR Track One', key: 'C' },
+        { id: 'ssr-t2', title: 'SSR Track Two', key: 'G' },
+      ]
+
+      const { result } = renderHook(() =>
+        useSetlistPerformance(SETLIST_ID, {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          initial: { setlist: initialSetlist as any, tracks: initialTracks as any },
+        }),
+      )
+
+      // Critical assertion: loading=false even though useSafeFirestoreSync
+      // says loading:true. SSR frame is enough to render.
+      expect(result.current.loading).toBe(false)
+      expect(result.current.name).toBe('SSR-Served Setlist')
+      expect(result.current.serviceNotes).toBe('Wear blue')
+      expect(result.current.rabbi).toBe('Daniel')
+      expect(result.current.musicians).toHaveLength(1)
+      expect(result.current.tracks).toHaveLength(2)
+      expect(result.current.tracks.map((t) => t.title)).toEqual([
+        'SSR Track One',
+        'SSR Track Two',
+      ])
+    })
+
+    it('switches to live Dexie data once subscriptions resolve', async () => {
+      mockUseSafeFirestoreSync.mockReturnValue({
+        data: {
+          id: SETLIST_ID,
+          name: 'Live Setlist Name',
+          hydrated: true,
+          tracks: [],
+          musicians: [],
+        },
+        loading: false,
+        error: null,
+      })
+
+      // Seed Dexie BEFORE renderHook so useLiveQuery's first resolution
+      // contains live rows, not the SSR ones.
+      await getDb().tracks.bulkPut([
+        makeLocalTrack({ id: 'live-1', order: 0, title: 'Live Track', key: 'A' }),
+      ])
+
+      const { result } = renderHook(() =>
+        useSetlistPerformance(SETLIST_ID, {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          initial: {
+            setlist: { id: SETLIST_ID, name: 'SSR Name' } as any,
+            tracks: [{ id: 'ssr-only', title: 'SSR Only', key: 'C' } as any],
+          },
+        }),
+      )
+
+      // First frame: SSR (dexieTracks === undefined)
+      // After Dexie resolves: live data wins (length 1, title 'Live Track')
+      await waitFor(() => {
+        expect(result.current.tracks).toHaveLength(1)
+        expect(result.current.tracks[0]?.title).toBe('Live Track')
+      })
+
+      // Live setlist data also wins over SSR snapshot name once
+      // useSafeFirestoreSync returns.
+      expect(result.current.name).toBe('Live Setlist Name')
+    })
+  })
+
   it('does not crash when snapshot listener factory throws on mount', async () => {
     mockUseSafeFirestoreSync.mockReturnValue({
       data: { id: SETLIST_ID, hydrated: true, tracks: [], musicians: [] },
