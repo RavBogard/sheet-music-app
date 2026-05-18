@@ -124,8 +124,22 @@ export function DesktopHeader(props: AppNavigationProps) {
             </div>
 
             {/* Right Actions */}
+            {/*
+              * C4-015: gate on `isAuthed` (= !!user || !!props.serverIsAuthed)
+              * instead of the client-only `user`. On first paint for a
+              * session-cookie-authed visitor, `useAuth()` reports
+              * `user === null, loading: true` until Firebase JS SDK
+              * initializes — so the prior `{user ? ...}` flashed the
+              * "Sign In" button to authed users before settling. With the
+              * server-derived flag from `(main)/layout.tsx`'s
+              * `serverIsAuthed={!!user}` (UNAUTH-004 plumbing), we render
+              * the UserMenu shell immediately and let the Web SDK
+              * populate avatar/email/role once it resolves. The Avatar
+              * size (h-8 w-8) + `<UserCircle>` fallback keep CLS=0
+              * across SSR→hydration.
+              */}
             <div className="flex items-center gap-3 lg:gap-4 shrink-0">
-                {user ? (
+                {isAuthed ? (
                     <>
                         {!isOnline && (
                             <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-xs font-medium border border-red-500/20">
