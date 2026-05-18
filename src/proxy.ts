@@ -74,6 +74,29 @@ const publicExactRoutes = [
 //                  unauthenticated to find the MCP authorization server
 const publicPrefixes = ['/perform', '/qr', '/.well-known']
 
+// Vestigial paths — these used to be the catch-all defaults the proxy
+// matcher couldn't avoid, and Next.js answered them with either a 307→/login
+// (unauth) or a 404 (authed). Cycle-3 b3 ratified that the right answer
+// for both is a clean 404 (decisions.md 2026-05-18T00:20Z): nothing in
+// src/** links to them, and bouncing unauth probes to /login is misleading.
+//
+// We short-circuit them here BEFORE the auth-redirect so unauth visits
+// don't get sent to /login. Note `/v2` itself has a shipped beta landing
+// (src/app/(v2)/v2/page.tsx) — kept on the auth-gated track so unauth
+// visitors still redirect to /login; only `/v2/<child>` paths are
+// vestigial-until-built. When a future v2-migration phase ships
+// e.g. `/v2/library`, the new page handler exists and the explicit
+// allow-list above (or here) needs to remove that child.
+const vestigialExactRoutes = ['/account', '/manage/users']
+
+function isVestigialPath(pathname: string): boolean {
+    if (vestigialExactRoutes.includes(pathname)) return true
+    // `/v2/<child>` — matches `/v2/library` etc. but NOT the bare `/v2`
+    // landing page that's already shipped.
+    if (pathname.startsWith('/v2/')) return true
+    return false
+}
+
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
     const session = request.cookies.get('__session')?.value
@@ -122,6 +145,21 @@ export async function proxy(request: NextRequest) {
     // CSP still attached so any API route that renders HTML (none today)
     // inherits the policy.
     if (isApiRoute) {
+        return nextWithHeaders()
+    }
+
+    // Vestigial paths → clean 404 BEFORE any auth-redirect fires. See the
+    // `vestigialExactRoutes` / `vestigialPrefixes` lists above and the
+    // cycle-3 b3 ratification at .coord/shared/decisions.md
+    // (2026-05-18T00:20Z). Returning a passthrough lets Next's app-router
+    // resolve the path — since no page exists, Next renders not-found.tsx
+    // with HTTP 404. Without this short-circuit, the unauth-redirect
+    // below would 307→/login (which then renders 200), making the
+    // request look like a real login-shell page instead of a missing
+    // route. `nextWithHeaders()` preserves the per-request CSP nonce so
+    // the rendered not-found.tsx inherits the same security boundary as
+    // any normal route.
+    if (isVestigialPath(pathname)) {
         return nextWithHeaders()
     }
 

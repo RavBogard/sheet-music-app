@@ -1,3 +1,10 @@
+// C5D-007: legal pages are explicitly indexable; root noindex applies
+// to the authed app, this override exempts public legal disclosure.
+export const metadata = {
+    title: "Terms & Conditions",
+    robots: { index: true, follow: true },
+}
+
 export default function TermsPage() {
     return (
         <div className="min-h-screen bg-background text-foreground">

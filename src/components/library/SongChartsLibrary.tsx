@@ -126,7 +126,15 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
 
     const storeHydrated = useRef(false)
     useLayoutEffect(() => {
-        if (!storeHydrated.current && initialLibrary.length > 0) {
+        if (!storeHydrated.current) {
+            // C5C-003: always hydrate from `initialLibrary` on first paint,
+            // even when the server confirmed the library is empty. Without
+            // this, the `displayedFiles` derived state stays empty AND
+            // `initialized` stays false, so the empty-state gate never
+            // promotes from skeleton to "No charts in the library yet"
+            // unless React Query later fetches (which only happens with an
+            // authed user). Passing `[]` is meaningful — it's the server's
+            // verdict that the library is empty.
             hydrate(initialLibrary)
             storeHydrated.current = true
         }
@@ -394,7 +402,21 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
 
             {/* File List */}
             <ScrollArea className="flex-1 p-4">
-                {!initialized && loading ? (
+                {/*
+                  C5C-003: render the skeleton while the store hasn't yet been
+                  hydrated, regardless of whether a React Query fetch is
+                  in-flight. The previous gate (`!initialized && loading`) was
+                  false during SSR (no React Query fetch yet, no auth user yet)
+                  AND when the page first paints client-side before the
+                  `useLayoutEffect` below hydrates the zustand store from
+                  `initialLibrary`. That hit the empty-state branch and SSR'd
+                  "No charts in the library yet" for authed users with a
+                  fully-stocked library. Showing the skeleton matches what
+                  /library/loading.tsx already paints during navigation, so
+                  there's no visual regression — and the SSR HTML now matches
+                  the post-hydration UI shape.
+                */}
+                {!initialized && !error ? (
                     <LibrarySkeleton />
                 ) : !initialized && error ? (
                     <div className="max-w-md mx-auto mt-20">

@@ -114,6 +114,63 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
         expect(resAdmin.headers.get('x-middleware-rewrite')).toBe('http://localhost/unauthorized')
     })
 
+    // C5B-004 + C5D-010 — vestigial paths (`/v2/*`, `/account`,
+    // `/manage/users`) must short-circuit to a clean 404 BEFORE the
+    // unauth-redirect fires. Without this, an unauth probe to `/account`
+    // 307s to `/login` and curl-follow lands on a 200 login-shell —
+    // making a missing route look like a real page. Restores the cycle-3
+    // b3 ratification (decisions.md 2026-05-18T00:20Z).
+    it.each([
+        '/account',
+        '/manage/users',
+        '/v2/library',
+        '/v2/setlists',
+        '/v2/random-junk',
+    ])('does NOT redirect unauth vestigial path %s to /login', async (path) => {
+        const req = makeReq(path)
+        const res = await proxy(req)
+        // Falls through to Next routing → 404 at not-found.tsx. We
+        // assert by absence of a redirect; the 404 status comes from
+        // the page resolver in the actual app, not the proxy.
+        expect(res.headers.get('location')).toBeNull()
+    })
+
+    it.each([
+        '/account',
+        '/manage/users',
+        '/v2/library',
+    ])('does NOT redirect authed vestigial path %s either', async (path) => {
+        const token = createSessionToken({ role: 'member', uid: 'u1' })
+        const req = makeReq(path, { __session: token })
+        const res = await proxy(req)
+        // Authed users used to hit a Next 404 (working-as-intended per
+        // b3); this stays the same. No leader-route rewrite to
+        // /unauthorized for /manage/users (which lives under `/manage/`
+        // prefix and would otherwise route through `isLeaderRoute`).
+        expect(res.headers.get('location')).toBeNull()
+        expect(res.headers.get('x-middleware-rewrite')).toBeNull()
+    })
+
+    // Bare `/v2` is the shipped beta landing — NOT vestigial — and stays
+    // on the standard auth-gated track (unauth → /login). This guards
+    // against the matcher accidentally treating the real page as
+    // vestigial. If the v2 landing is ever made public, this expectation
+    // changes here AND `/v2` needs adding to `publicExactRoutes`.
+    it('does redirect unauth /v2 (real beta landing) to /login', async () => {
+        const req = makeReq('/v2')
+        const res = await proxy(req)
+        expect(res.headers.get('location')).toBe('http://localhost/login')
+    })
+
+    // Negative: a real `/manage` child (e.g. `/manage/templates`) is
+    // NOT vestigial — the leader-route gate should still apply.
+    it('preserves leader-route gating for non-vestigial /manage/* children', async () => {
+        const token = createSessionToken({ role: 'member', uid: 'u1' })
+        const req = makeReq('/manage/templates', { __session: token })
+        const res = await proxy(req)
+        expect(res.headers.get('x-middleware-rewrite')).toBe('http://localhost/unauthorized')
+    })
+
     // v4.3 P10-01 — the bounce-count cookie must use path:'/' so the
     // counter accumulates across different target paths. Without it,
     // the >3-bounce → /auth-error escape hatch never fires.

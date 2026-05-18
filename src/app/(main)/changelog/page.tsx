@@ -1,5 +1,8 @@
+// C5D-007: changelog is public and indexable. Root noindex applies to
+// the authed app; legal/marketing pages override.
 export const metadata = {
     title: "Changelog | CentralReform.live",
+    robots: { index: true, follow: true },
 }
 
 const versions = [

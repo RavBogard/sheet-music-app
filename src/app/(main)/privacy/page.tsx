@@ -1,3 +1,12 @@
+// C5D-007: legal pages are explicitly indexable. Root layout sets a
+// global noindex so authed surfaces stay out of search results; this
+// per-page override flips it back for the public legal disclosure
+// (matching robots.txt allow + sitemap listing).
+export const metadata = {
+    title: "Privacy Policy",
+    robots: { index: true, follow: true },
+}
+
 export default function PrivacyPolicyPage() {
     return (
         <div className="min-h-screen bg-background text-foreground">

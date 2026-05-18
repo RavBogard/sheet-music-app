@@ -1,5 +1,12 @@
 import Link from "next/link"
 
+// C5D-007: SMS-consent must be carrier-discoverable (A2P review) and is
+// explicitly indexable. Root noindex applies to authed surfaces.
+export const metadata = {
+    title: "SMS Messaging Consent & Opt-In",
+    robots: { index: true, follow: true },
+}
+
 export default function SmsConsentPage() {
     return (
         <div className="min-h-screen bg-background text-foreground">

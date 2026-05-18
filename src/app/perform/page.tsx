@@ -3,6 +3,15 @@ import { Suspense } from "react"
 import { PublicSetlistListing } from "@/components/performance/PublicSetlistListing"
 import { PublicSetlistSkeleton } from "@/components/performance/PublicSetlistSkeleton"
 
+// C5D-007: /perform is the public gig-discovery landing surface and is
+// explicitly indexable. Root layout's noindex applies to the authed
+// app; this override exempts the public landing so it can be reached
+// via search (and matches the sitemap entry + robots.txt allow).
+export const metadata = {
+    title: "Upcoming Services & Setlists",
+    robots: { index: true, follow: true },
+}
+
 /**
  * /perform — Public setlist landing page.
  *
