@@ -1,0 +1,28 @@
+version: 2
+
+# C5D-006: Dependabot opens PRs to bump SHA pins in `.github/workflows/*`
+# when upstream releases new versions, so we can lock the actual commit
+# we run while still getting upstream security fixes.
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      types:
+        patterns:
+          - '@types/*'
+      radix:
+        patterns:
+          - '@radix-ui/*'
