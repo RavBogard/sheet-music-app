@@ -6,6 +6,7 @@ import { ClientProviders } from "@/components/client-providers"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { Toaster } from "sonner"
 import { LiveRegion } from "@/components/ui/live-region"
+import { WebVitalsReporter } from "@/components/web-vitals-reporter"
 
 const poppins = Poppins({
   weight: ["300", "400", "500", "600", "700"],
@@ -101,6 +102,7 @@ export default function RootLayout({
             </ClientProviders>
             <Toaster richColors position="top-center" theme="system" />
             <LiveRegion />
+            <WebVitalsReporter />
           </ErrorBoundary>
         </ThemeProvider>
       </body>

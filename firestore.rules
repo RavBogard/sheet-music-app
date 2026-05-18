@@ -484,6 +484,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // WEB VITALS OBSERVATIONS (Cycle-3.5 P2-017) — Core Web Vitals
+    // field-data sink. Every visitor's browser POSTs LCP/CLS/INP/FCP/TTFB
+    // to /api/web-vitals on each page-load (via navigator.sendBeacon);
+    // the route validates the payload and writes here via the Admin SDK.
+    // Reads are admin-only — analytics surface for Daniel + cycle-4 cowork
+    // CWV probes; writes are server-only (the Admin SDK bypasses these
+    // rules so the public POST endpoint can persist without client auth).
+    match /webVitalsObservations/{observationId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Deny-all fallback — any collection not explicitly matched above is locked.
     // Prevents new collections from being accidentally accessible.
     match /{document=**} {
