@@ -833,12 +833,12 @@ describe("MCP setlist write tools (emulator)", () => {
                 trackId: trackA,
                 patch: { key: "C" },
             })
-            // Cycle-2 REG-001b: the inner helper still returns the prose error
-            // string `'Track does not belong to this setlist'`, which the
-            // wrapper bubbles up via `richError("update_track_failed", ...)`.
+            // The inner helper now returns the snake_case code
+            // `'track_not_in_setlist'`, which the wrapper bubbles up as the
+            // `message` via `richError("update_track_failed", result.error, ...)`.
             expect(r).toMatchObject({
                 ok: false,
-                error: { machine_code: "update_track_failed", message: expect.stringContaining("does not belong to this setlist") },
+                error: { machine_code: "update_track_failed", message: "track_not_in_setlist" },
             })
 
             // No mutation on the actual row.
@@ -872,7 +872,7 @@ describe("MCP setlist write tools (emulator)", () => {
                 patch: { key: "G" },
             })) as unknown as Record<string, unknown>
             expect((r.error as { machine_code: string }).machine_code).toBe("track_not_found")
-            expect(r.message).toMatch(/ghost-track/)
+            expect((r.error as { message: string }).message).toMatch(/ghost-track/)
             expect(typeof r.setlistVersion).toBe("number")
             expect(r.hint).toMatch(/get_setlist/)
         })
@@ -1286,10 +1286,12 @@ describe("MCP setlist write tools (emulator)", () => {
                 setlistId: id,
                 patches,
             })
-            // Cycle-2: wrapper now wraps inner errors via richError().
+            // Cycle-2: wrapper now wraps inner errors via richError(); the
+            // inner helper emits the snake_case code `too_many_patches` which
+            // bubbles up as the wrapper's `message`.
             expect(r).toMatchObject({
                 ok: false,
-                error: { machine_code: "bulk_update_failed", message: expect.stringContaining("exceeds max") },
+                error: { machine_code: "bulk_update_failed", message: "too_many_patches" },
             })
             // The single row was not mutated.
             const doc = (
@@ -1590,7 +1592,7 @@ describe("MCP setlist write tools (emulator)", () => {
             })
             expect(empty).toMatchObject({
                 ok: false,
-                error: { machine_code: "bulk_add_failed", message: expect.stringContaining("at least one") },
+                error: { machine_code: "bulk_add_failed", message: "empty_tracks" },
             })
 
             const big = Array.from({ length: 51 }, (_, i) => ({
@@ -1603,7 +1605,7 @@ describe("MCP setlist write tools (emulator)", () => {
             })
             expect(tooMany).toMatchObject({
                 ok: false,
-                error: { machine_code: "bulk_add_failed", message: expect.stringContaining("exceeds max") },
+                error: { machine_code: "bulk_add_failed", message: "too_many_tracks" },
             })
         })
 

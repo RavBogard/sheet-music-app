@@ -174,7 +174,7 @@ describe("W-04 Plan 02 — lastSeenVersion gating (emulator)", () => {
         })) as unknown as Record<string, unknown>
 
         expect((result.error as { machine_code: string }).machine_code).toBe("track_not_found")
-        expect(result.message).toMatch(/track-that-never-existed/)
+        expect((result.error as { message: string }).message).toMatch(/track-that-never-existed/)
         expect(typeof result.setlistVersion).toBe("number")
         // Setlist exists but was just created → version is at least 1.
         expect(result.setlistVersion as number).toBeGreaterThanOrEqual(1)

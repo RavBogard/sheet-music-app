@@ -156,11 +156,14 @@ describe("W-04 Plan 03 — bulk + publish version gating (emulator)", () => {
         expect(result.staleRows![0].currentVersion).toBe(v1)
 
         // Each row in `results` carries the appropriate error code: stale_version
-        // for the gated row, rollback for the others.
+        // for the gated row, rollback for the others. Per-row `error` is a flat
+        // string (different code path from the top-level rich envelope — see
+        // server-tracks-write.ts atomic-rollback path which emits `error:
+        // "stale_version"` and `error: "Rolled back: ..."`).
         const byId = new Map(
             result.results.map((r) => [r.trackId as string, r]),
         )
-        expect((byId.get(trackIds[1])!.error as { machine_code: string }).machine_code).toBe("stale_version")
+        expect(byId.get(trackIds[1])!.error).toBe("stale_version")
         expect(byId.get(trackIds[0])!.error).toMatch(/Rolled back/)
         expect(byId.get(trackIds[2])!.error).toMatch(/Rolled back/)
 
@@ -258,7 +261,9 @@ describe("W-04 Plan 03 — bulk + publish version gating (emulator)", () => {
         )
         expect(byId.get(trackIds[0])!.ok).toBe(true)
         expect(byId.get(trackIds[1])!.ok).toBe(false)
-        expect((byId.get(trackIds[1])!.error as { machine_code: string }).machine_code).toBe("stale_version")
+        // Per-row error is a flat string in the best-effort path too (see comment
+        // above; server-tracks-write.ts emits `error: "stale_version"` per row).
+        expect(byId.get(trackIds[1])!.error).toBe("stale_version")
         expect(byId.get(trackIds[2])!.ok).toBe(true)
 
         // Stale row's title is unchanged; valid rows committed.

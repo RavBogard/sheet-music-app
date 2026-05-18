@@ -143,7 +143,9 @@ describe("MCP backfill_setlist_test_flag — SEC-004 (emulator)", () => {
             force: true,
         })
         if ("error" in r) throw new Error(JSON.stringify(r.error))
-        if (!("ok" in r) || r.ok !== true) throw new Error("expected ok=true")
+        // Success shape is `BackfillSetlistTestFlagResult` — no `ok` field.
+        // The cycle-3 envelope sweep incorrectly added an `ok !== true`
+        // guard here; the success type never had `ok`.
 
         expect(r.dryRun).toBe(false)
         expect(r.rowsChanged).toBe(3)

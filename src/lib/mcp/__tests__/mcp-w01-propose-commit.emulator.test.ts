@@ -566,7 +566,7 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         const result = (await commitStagedChanges(ADMIN, {
             stageId: stage.id,
         })) as unknown as Record<string, unknown>
-        expect(String(result.error)).toMatch(/stage_expired/)
+        expect((result.error as { machine_code: string }).machine_code).toBe("stage_expired")
     })
 
     // ─── unknown trackId in proposal ──────────────────────────────────────
