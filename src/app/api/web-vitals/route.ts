@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { FieldValue } from "firebase-admin/firestore"
+import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { httpError } from "@/lib/http/error-envelope"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
@@ -86,11 +86,21 @@ export async function POST(req: NextRequest) {
             null
 
         const db = getFirestore()
+        // ttlAt drives Firestore's per-collection TTL policy (90 days from
+        // write time). The field-override on `webVitalsObservations.ttlAt`
+        // in `firestore.indexes.json` marks it `ttl:true`; Firestore deletes
+        // documents within ~72h after `ttlAt` passes. Keeps the field-data
+        // sink unbounded-growth-proof without a sweep cron. C5D-013.
+        const WEB_VITALS_TTL_DAYS = 90
+        const ttlAt = Timestamp.fromMillis(
+            Date.now() + WEB_VITALS_TTL_DAYS * 24 * 60 * 60 * 1000,
+        )
         await db.collection("webVitalsObservations").add({
             ...parsed.data,
             userAgent,
             ip,
             timestamp: FieldValue.serverTimestamp(),
+            ttlAt,
         })
 
         return new NextResponse(null, { status: 204 })

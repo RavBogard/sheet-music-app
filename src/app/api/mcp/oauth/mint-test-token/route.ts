@@ -24,6 +24,12 @@ const mintSchema = z.object({
     soundEngineer: z.boolean().optional(),
     label: z.string().max(80).optional(),
     ttlSec: z.number().int().positive().max(24 * 60 * 60).optional(),
+    uidPrefix: z
+        .string()
+        .min(1)
+        .max(32)
+        .regex(/^[a-z0-9](?:[a-z0-9]|-(?!-)){0,30}[a-z0-9]$|^[a-z0-9]$/)
+        .optional(),
 })
 
 export const POST = createApiHandler(

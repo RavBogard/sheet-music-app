@@ -11,11 +11,23 @@ export function Footer() {
                 <p>
                     A project of <a href="https://danielbogard.com" target="_blank" rel="noopener noreferrer" className="text-foreground/70 hover:text-foreground transition-colors underline decoration-border underline-offset-4">Rabbi Daniel Bogard</a>
                 </p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                     <span title={`Commit: ${buildInfo.commit}`}>v{buildInfo.version}</span>
                     <span aria-hidden="true">•</span>
                     <Link href="/changelog" className="hover:text-foreground transition-colors">
                         Changelog
+                    </Link>
+                    <span aria-hidden="true">•</span>
+                    <Link href="/privacy" className="hover:text-foreground transition-colors">
+                        Privacy
+                    </Link>
+                    <span aria-hidden="true">•</span>
+                    <Link href="/terms" className="hover:text-foreground transition-colors">
+                        Terms
+                    </Link>
+                    <span aria-hidden="true">•</span>
+                    <Link href="/accessibility" className="hover:text-foreground transition-colors">
+                        Accessibility
                     </Link>
                 </div>
                 <V2BetaOptInLink className="mt-1" />

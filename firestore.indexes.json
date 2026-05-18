@@ -127,6 +127,12 @@
           "queryScope": "COLLECTION_GROUP"
         }
       ]
+    },
+    {
+      "collectionGroup": "webVitalsObservations",
+      "fieldPath": "ttlAt",
+      "ttl": true,
+      "indexes": []
     }
   ]
 }

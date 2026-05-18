@@ -50,6 +50,15 @@ const TEST_EMAIL_DOMAIN = "test.centralreform.live"
 const DEFAULT_TTL_SEC = 4 * 60 * 60 // 4 hours
 const MAX_TTL_SEC = 24 * 60 * 60 // 24 hours
 
+/**
+ * Per-instance uid namespace. Parallel cowork instances pass a `uidPrefix`
+ * so their test users + cleanup don't collide. The full uid shape becomes
+ * `test-<uidPrefix>-<role>-<8-hex>` when set; otherwise `test-<role>-<8-hex>`.
+ * Validation: lowercase alphanum + hyphen, 1-32 chars, no leading/trailing
+ * hyphen, no consecutive hyphens.
+ */
+const UID_PREFIX_RE = /^[a-z0-9](?:[a-z0-9]|-(?!-)){0,30}[a-z0-9]$|^[a-z0-9]$/
+
 /** Roles a test user may be provisioned as. `admin` is intentionally absent. */
 const TEST_ROLE = z.enum(["band_leader", "musician", "member"])
 type TestRole = z.infer<typeof TEST_ROLE>
@@ -120,6 +129,7 @@ export interface CreateTestAccountArgs {
     soundEngineer?: boolean
     label?: string
     ttlSec?: number
+    uidPrefix?: string
 }
 
 export interface CreateTestAccountResult {
@@ -176,8 +186,18 @@ export async function provisionTestAccount(
         )
     }
 
+    if (args.uidPrefix !== undefined && !UID_PREFIX_RE.test(args.uidPrefix)) {
+        return envelope(
+            "invalid_uid_prefix",
+            "uidPrefix must be lowercase alphanumeric with single hyphens, 1-32 chars, no leading/trailing or consecutive hyphens.",
+            { requestedUidPrefix: args.uidPrefix },
+            "Pick a short instance label like 'cycle5b' or 'cowork-a'.",
+        )
+    }
+
     const suffix = randomBytes(4).toString("hex")
-    const uid = `${TEST_UID_PREFIX}${args.role}-${suffix}`
+    const prefixSegment = args.uidPrefix ? `${args.uidPrefix}-` : ""
+    const uid = `${TEST_UID_PREFIX}${prefixSegment}${args.role}-${suffix}`
     const labelPart = args.label ? ` ${args.label}` : ""
     const displayName = `${TEST_DISPLAY_PREFIX} ${args.role}${labelPart}`
     const email = `${uid}@${TEST_EMAIL_DOMAIN}`
@@ -572,6 +592,17 @@ async function revokeTestAccountUnchecked(
 
 // ─── Cleanup all ─────────────────────────────────────────────────────────────
 
+export interface CleanupAllArgs {
+    /**
+     * Optional uid-prefix filter. When set, only sweeps test users whose
+     * uid starts with `test-<prefix>-`. Parallel cowork instances pass
+     * their own per-instance prefix to avoid cross-contamination — without
+     * it the call cascade-deletes every sibling instance's data. Validated
+     * with the same shape rule as `create_test_account.uidPrefix`.
+     */
+    prefix?: string
+}
+
 export interface CleanupAllResult {
     removed: number
     failures: string[]
@@ -580,6 +611,7 @@ export interface CleanupAllResult {
 
 export async function cleanupAllTestDataCore(
     callerUid: string,
+    args: CleanupAllArgs = {},
 ): Promise<CleanupAllResult | ReturnType<typeof envelope>> {
     initAdmin()
     const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
@@ -591,12 +623,29 @@ export async function cleanupAllTestDataCore(
         )
     }
 
+    if (args.prefix !== undefined && !UID_PREFIX_RE.test(args.prefix)) {
+        return envelope(
+            "invalid_uid_prefix",
+            "prefix must be lowercase alphanumeric with single hyphens, 1-32 chars, no leading/trailing or consecutive hyphens.",
+            { requestedPrefix: args.prefix },
+            "Pass the same instance label used at create_test_account time, or omit to sweep every test user.",
+        )
+    }
+    // `test-<prefix>-` — full match prefix including the leading `test-`.
+    // Falsy means "sweep every test-namespaced uid". Used as a string
+    // predicate; never echoed back so trailing hyphen is just join-glue.
+    const fullPrefix = args.prefix ? `${TEST_UID_PREFIX}${args.prefix}-` : null
+    const matchesPrefix = (uid: string): boolean =>
+        fullPrefix === null ? uid.startsWith(TEST_UID_PREFIX) : uid.startsWith(fullPrefix)
+
     const db = getFirestore()
     // Walk the index AND any orphaned Auth users (defense-in-depth: if a
     // revoke partially failed and left an Auth user without an index doc,
     // we still sweep it).
     const indexSnap = await db.collection(MCP_TEST_USERS).get()
-    const indexUids = new Set(indexSnap.docs.map((d) => d.id))
+    const indexUids = new Set(
+        indexSnap.docs.map((d) => d.id).filter(matchesPrefix),
+    )
 
     // Walk Auth pages for test-* uids. listUsers is paginated; we'll cap
     // at a reasonable depth to avoid pathological loops.
@@ -606,7 +655,7 @@ export async function cleanupAllTestDataCore(
     for (let i = 0; i < 20; i++) {
         const result = await auth.listUsers(1000, pageToken)
         for (const u of result.users) {
-            if (u.uid.startsWith(TEST_UID_PREFIX) && !indexUids.has(u.uid)) {
+            if (matchesPrefix(u.uid) && !indexUids.has(u.uid)) {
                 orphanAuthUids.push(u.uid)
             }
         }
@@ -621,6 +670,12 @@ export async function cleanupAllTestDataCore(
     // this, deleting the caller's `users/{uid}` doc mid-sweep used to
     // cause every subsequent revoke to refuse with `forbidden`
     // (prod stress test 2026-05-17, msg-004 case 6).
+    //
+    // Note: an admin caller whose own uid does NOT start with `test-`
+    // will not be in `allUidsRaw` at all — the prefix filter excluded
+    // them — so they cannot be self-deleted even by name collision.
+    // The "caller-last" ordering is only load-bearing when the caller
+    // IS a test bearer matching the sweep prefix.
     const allUidsRaw = [...indexUids, ...orphanAuthUids]
     const allUids = [
         ...allUidsRaw.filter((u) => u !== callerUid),
@@ -683,6 +738,15 @@ export const createTestAccountSchema = {
         .describe(
             `Time-to-live in seconds (default ${DEFAULT_TTL_SEC}, max ${MAX_TTL_SEC} = 24h). Enforced by verifyBearer — calls reject after expiry. The Auth user + owned data persist until revoke_test_account / cleanup_all_test_data.`,
         ),
+    uidPrefix: z
+        .string()
+        .min(1)
+        .max(32)
+        .regex(UID_PREFIX_RE)
+        .optional()
+        .describe(
+            "Optional per-instance uid namespace. When set the minted uid is `test-<uidPrefix>-<role>-<8-hex>` instead of `test-<role>-<8-hex>`. Pair with cleanup_all_test_data({prefix}) so parallel cowork instances don't cascade-delete each other. Lowercase alphanumeric + single hyphens, 1-32 chars.",
+        ),
 }
 
 export function registerTestTokenTools(server: McpServer): void {
@@ -742,11 +806,21 @@ export function registerTestTokenTools(server: McpServer): void {
         "cleanup_all_test_data",
         {
             description:
-                "Nuclear option — revoke every test-namespaced user in the project and cascade-delete their owned data. Walks the mcpTestUsers index AND Firebase Auth (for orphaned test-* users without an index doc, defense-in-depth). Returns per-collection aggregate counts + per-uid failures. Admin + band_leader only.",
-            inputSchema: {},
+                "Nuclear option — revoke every test-namespaced user in the project and cascade-delete their owned data. Walks the mcpTestUsers index AND Firebase Auth (for orphaned test-* users without an index doc, defense-in-depth). Returns per-collection aggregate counts + per-uid failures. Admin + band_leader only. Pass `prefix` to scope the sweep to one instance namespace — only uids starting with `test-<prefix>-` are touched, so parallel cowork instances don't cross-contaminate.",
+            inputSchema: {
+                prefix: z
+                    .string()
+                    .min(1)
+                    .max(32)
+                    .regex(UID_PREFIX_RE)
+                    .optional()
+                    .describe(
+                        "Limit the sweep to uids starting with `test-<prefix>-`. Pass the same value used as `uidPrefix` at create_test_account time. Omit to sweep every test user in the project.",
+                    ),
+            },
         },
-        async (_args, extra) => {
-            const result = await cleanupAllTestDataCore(uidFrom(extra))
+        async (args, extra) => {
+            const result = await cleanupAllTestDataCore(uidFrom(extra), args)
             return jsonResult(result)
         },
     )

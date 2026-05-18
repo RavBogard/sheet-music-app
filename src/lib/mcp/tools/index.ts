@@ -13,6 +13,7 @@ import { salvageChartBytes } from "./salvage-chart-bytes"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
 import { getCorrectionStats } from "./correction-stats"
 import { testDeleteStorageObject } from "./test-delete-storage-object"
+import { dumpCollectionSize } from "./dump-collection-size"
 import {
     listReviewQueue,
     getEnrichmentSuggestion,
@@ -2250,5 +2251,47 @@ export function registerRosterTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await respondToAssignment(uidFrom(extra), args)),
+    )
+}
+
+/**
+ * Cycle-5 C5D-013 — admin-only Firestore sizing probe. Returns a doc-count
+ * + UTF-8-encoded byte estimate + oldest/newest `timestamp` for any
+ * top-level collection. Pairs with the `webVitalsObservations` 90-day TTL
+ * (firestore.indexes.json fieldOverride on `ttlAt`).
+ */
+export function registerObservabilityTools(server: McpServer): void {
+    server.registerTool(
+        "dump_collection_size",
+        {
+            description:
+                "Admin-only Firestore sizing probe — returns `{docCount, estimatedBytes, oldestTimestamp, newestTimestamp, truncated}` for any top-level collection. Pass `since` (ISO datetime) to filter on the `timestamp` field for trend probes. `maxDocs` caps the scan (default 50000, hard max 200000); `truncated:true` means the collection has more docs than the cap. The byte estimate is an UPPER bound on wire encoding (JSON.stringify per doc + path overhead), LOWER bound on real Firestore storage — useful for trend-spotting, not authoritative billing.",
+            inputSchema: {
+                collection: z
+                    .string()
+                    .min(1)
+                    .max(120)
+                    .describe(
+                        "Top-level collection name. Subcollection paths (`a/b/c`) are not supported.",
+                    ),
+                since: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "ISO 8601 datetime cutoff. When set, only docs with a `timestamp` field >= this value are scanned. Collections without a `timestamp` field return docCount:0.",
+                    ),
+                maxDocs: z
+                    .number()
+                    .int()
+                    .positive()
+                    .max(200_000)
+                    .optional()
+                    .describe(
+                        "Safety cap on docs scanned. Defaults to 50000; max 200000.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await dumpCollectionSize(uidFrom(extra), args)),
     )
 }

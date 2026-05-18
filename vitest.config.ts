@@ -20,6 +20,11 @@ export default defineConfig({
             'src/**/*.test.tsx',
             'bridge/src/**/*.test.ts',
             'scripts/**/*.test.ts',
+            // Cycle-5 C5B-META-001: cowork harness lives outside src/.
+            // `.mjs` because the harness ships as Node ESM (Playwright-driven).
+            // Tests here mock the Playwright `page` so no real browser is
+            // launched in the default suite.
+            'cycle-4/harness/**/*.test.mjs',
         ],
         // v54-02-01: emulator tests opt-in only via vitest.emulator.config.ts
         // (`npm run test:emulator`). They require Java + a running Firebase

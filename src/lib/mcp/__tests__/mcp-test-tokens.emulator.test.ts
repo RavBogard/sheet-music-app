@@ -423,4 +423,148 @@ describe("MCP test tokens (emulator)", () => {
 
         await expect(getAuth().getUser("test-musician-orphan1")).rejects.toThrow()
     })
+
+    it("create_test_account with uidPrefix emits `test-<prefix>-<role>-<hex>`", async () => {
+        const result = await provisionTestAccount(ADMIN_UID, {
+            role: "musician",
+            uidPrefix: "cycle5b",
+        })
+        if ("error" in result) throw new Error("mint failed: " + result.error)
+
+        expect(result.uid).toMatch(/^test-cycle5b-musician-[0-9a-f]{8}$/)
+    })
+
+    it("create_test_account rejects malformed uidPrefix", async () => {
+        for (const bad of ["UPPER", "has space", "has_underscore", "-leading", "trailing-", "double--hyphen", ""]) {
+            const result = await provisionTestAccount(ADMIN_UID, {
+                role: "musician",
+                uidPrefix: bad,
+            })
+            // Empty string fails at Zod level too, but provisionTestAccount
+            // does its own regex check so both surfaces refuse symmetrically.
+            expect("error" in result).toBe(true)
+            if ("error" in result) {
+                expect(result.error).toBe("invalid_uid_prefix")
+            }
+        }
+    })
+
+    it("cleanup_all_test_data with prefix only sweeps matching uids (sibling instance survives)", async () => {
+        const a = await provisionTestAccount(ADMIN_UID, {
+            role: "musician",
+            uidPrefix: "insta",
+        })
+        const b = await provisionTestAccount(ADMIN_UID, {
+            role: "member",
+            uidPrefix: "insta",
+        })
+        const sibling = await provisionTestAccount(ADMIN_UID, {
+            role: "musician",
+            uidPrefix: "instb",
+        })
+        const unprefixed = await provisionTestAccount(ADMIN_UID, {
+            role: "member",
+        })
+        if ("error" in a) throw new Error(`mint a failed: ${a.error} — ${a.message}`)
+        if ("error" in b) throw new Error(`mint b failed: ${b.error} — ${b.message}`)
+        if ("error" in sibling) throw new Error(`mint sibling failed: ${sibling.error} — ${sibling.message}`)
+        if ("error" in unprefixed) throw new Error(`mint unprefixed failed: ${unprefixed.error} — ${unprefixed.message}`)
+
+        // Also seed an orphan Auth user under insta — must be swept.
+        await getAuth().createUser({
+            uid: "test-insta-musician-orphan2",
+            disabled: true,
+        })
+        // And an orphan under instb — must NOT be swept.
+        await getAuth().createUser({
+            uid: "test-instb-member-orphan3",
+            disabled: true,
+        })
+
+        const result = await cleanupAllTestDataCore(ADMIN_UID, { prefix: "insta" })
+        if ("error" in result) throw new Error("cleanup failed: " + result.error)
+        expect(result.failures).toEqual([])
+        // Two prefixed mints + one prefixed orphan = 3 sweeps.
+        expect(result.removed).toBe(3)
+
+        // insta-namespaced uids — gone from both Firestore index AND Auth
+        for (const dead of [a.uid, b.uid, "test-insta-musician-orphan2"]) {
+            expect((await db().collection("mcpTestUsers").doc(dead).get()).exists).toBe(false)
+            await expect(getAuth().getUser(dead)).rejects.toThrow()
+        }
+
+        // instb uid + orphan + unprefixed uid + admin caller — all survive
+        for (const survivor of [sibling.uid, "test-instb-member-orphan3", unprefixed.uid] as const) {
+            const indexExists = (await db().collection("mcpTestUsers").doc(survivor).get()).exists
+            const authExists = await getAuth().getUser(survivor).then(() => true, () => false)
+            // Either the index OR Auth survives — the orphan only had Auth,
+            // the others had both. Both checks together prove non-deletion.
+            expect(authExists).toBe(true)
+            // For the two real mints (sibling + unprefixed) the index also
+            // survives; the orphan was Auth-only by construction.
+            if (survivor !== "test-instb-member-orphan3") {
+                expect(indexExists).toBe(true)
+            }
+        }
+
+        // Critical: caller's own admin user is untouched. The prefix filter
+        // excludes any uid that doesn't start with `test-insta-` — and an
+        // admin uid doesn't start with `test-` at all — so the caller-last
+        // ordering never even gets to consider them. Per
+        // [[feedback_self_inclusion_test_fixtures]].
+        const adminSnap = await db().collection("users").doc(ADMIN_UID).get()
+        expect(adminSnap.exists).toBe(true)
+        expect(adminSnap.data()?.role).toBe("admin")
+    })
+
+    it("cleanup_all_test_data rejects malformed prefix", async () => {
+        const result = await cleanupAllTestDataCore(ADMIN_UID, { prefix: "Bad Prefix" })
+        expect("error" in result).toBe(true)
+        if ("error" in result) {
+            expect(result.error).toBe("invalid_uid_prefix")
+        }
+    })
+
+    it("cleanup with prefix invoked from a test band_leader bearer cleans own namespace + spares sibling namespace", async () => {
+        // Two parallel instance namespaces; the driver lives in insta and
+        // calls cleanup({prefix:'insta'}). Sibling instance instb must
+        // survive entirely.
+        const driverA = await provisionTestAccount(ADMIN_UID, {
+            role: "band_leader",
+            uidPrefix: "insta",
+            label: "driver",
+        })
+        if ("error" in driverA) {
+            throw new Error(`driverA mint failed: ${driverA.error} — ${driverA.message}`)
+        }
+        // Driver mints two siblings in its own namespace.
+        for (const role of ["musician", "member"] as const) {
+            const m = await provisionTestAccount(driverA.uid, {
+                role,
+                uidPrefix: "insta",
+            })
+            if ("error" in m) {
+                throw new Error(`sibling mint failed (${role}): ${m.error} — ${m.message}`)
+            }
+        }
+        // And one user in a foreign namespace, minted by the admin.
+        const siblingB = await provisionTestAccount(ADMIN_UID, {
+            role: "musician",
+            uidPrefix: "instb",
+        })
+        if ("error" in siblingB) {
+            throw new Error(`siblingB mint failed: ${siblingB.error} — ${siblingB.message}`)
+        }
+
+        const result = await cleanupAllTestDataCore(driverA.uid, { prefix: "insta" })
+        if ("error" in result) throw new Error("cleanup failed: " + result.error)
+        expect(result.failures).toEqual([])
+        // 1 driver + 2 siblings = 3.
+        expect(result.removed).toBe(3)
+
+        // instb sibling survived in both Firestore and Auth.
+        const survivorIdx = await db().collection("mcpTestUsers").doc(siblingB.uid).get()
+        expect(survivorIdx.exists).toBe(true)
+        await expect(getAuth().getUser(siblingB.uid)).resolves.toBeTruthy()
+    })
 })
