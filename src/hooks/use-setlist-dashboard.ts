@@ -24,6 +24,12 @@ export interface UseSetlistDashboardProps {
     /** @deprecated Use initialSetlists instead */
     initialPublicSetlists?: Setlist[]
     initialSetlists?: Setlist[]
+    /**
+     * Cycle-3.5 P2-004 — cursor for the next page of older setlists.
+     * `null` when there are no more pages; `string` (ISO date) otherwise.
+     * The dashboard renders a "Load more" CTA when this is non-null.
+     */
+    initialNextCursor?: string | null
     serverIsBandLeader?: boolean
     serverIsMember?: boolean
     serverIsAdmin?: boolean
@@ -35,6 +41,7 @@ export function useSetlistDashboard({
     initialPersonalSetlists = [],
     initialPublicSetlists = [],
     initialSetlists,
+    initialNextCursor = null,
     serverIsBandLeader = false,
     serverIsMember = false,
     serverIsAdmin = false,
@@ -58,6 +65,39 @@ export function useSetlistDashboard({
     const [setlists, setSetlists] = useState<Setlist[]>(mergedInitial)
     const [loading, setLoading] = useState(mergedInitial.length === 0)
     const [error, setError] = useState<string | null>(null)
+
+    // Cycle-3.5 P2-004 — pages beyond the live 50-window subscription
+    // are loaded on-demand via `/api/setlists/page` and merged into the
+    // displayed list. They are NOT realtime — the client subscription
+    // covers the first 50; explicit `loadMore` extends the catalog.
+    const [extraSetlists, setExtraSetlists] = useState<Setlist[]>([])
+    const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor)
+    const [loadingMore, setLoadingMore] = useState(false)
+    const loadMore = async () => {
+        if (!nextCursor || loadingMore) return
+        setLoadingMore(true)
+        try {
+            const res = await fetch(
+                `/api/setlists/page?cursor=${encodeURIComponent(nextCursor)}&pageSize=50`,
+            )
+            if (!res.ok) throw new Error(`status ${res.status}`)
+            const data = (await res.json()) as {
+                items: Setlist[]
+                nextCursor: string | null
+            }
+            setExtraSetlists((prev) => {
+                const seen = new Set(prev.map((s) => s.id))
+                const fresh = data.items.filter((s) => !seen.has(s.id))
+                return [...prev, ...fresh]
+            })
+            setNextCursor(data.nextCursor)
+        } catch (err) {
+            logger.warn("Load-more setlists failed:", err)
+            toast.error("Could not load older setlists. Please retry.")
+        } finally {
+            setLoadingMore(false)
+        }
+    }
     const [activeTab, setActiveTab] = useState<'personal' | 'public'>('public')
     const [view, setView] = useState<'list' | 'calendar' | 'matrix'>('list')
     const [searchQuery, setSearchQuery] = useState("")
@@ -336,7 +376,15 @@ export function useSetlistDashboard({
     }
 
     // Derived data (v4.0: single list, no tab switching)
-    const allSetlists = setlists
+    // Cycle-3.5 P2-004: union of the subscription window + on-demand
+    // pages loaded via `loadMore`. Subscription wins on id collisions
+    // so realtime updates to the live 50-window override stale paged data.
+    const allSetlists = useMemo(() => {
+        if (extraSetlists.length === 0) return setlists
+        const subIds = new Set(setlists.map((s) => s.id))
+        const trailing = extraSetlists.filter((s) => !subIds.has(s.id))
+        return [...setlists, ...trailing]
+    }, [setlists, extraSetlists])
 
     const availableRabbis = useMemo(() => {
         const rabbis = new Set<string>()
@@ -421,6 +469,8 @@ export function useSetlistDashboard({
         handleSaveAsTemplateClick, handleSaveAsDefaultClick, handleTransfer, transferring, handleCreateFromCalendar,
         handleCreateFromTemplate, handleDownload,
         availableRabbis, displayedSetlists,
-        upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading
+        upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading,
+        // P2-004 cursor pagination
+        nextCursor, loadMore, loadingMore,
     }
 }

@@ -55,7 +55,8 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
         handleSaveAsTemplateClick, handleSaveAsDefaultClick, handleTransfer, transferring, handleCreateFromCalendar,
         handleCreateFromTemplate, handleDownload,
         availableRabbis, displayedSetlists,
-        upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading
+        upcoming, pastOrNoDate, placeholders, hasUpcoming, isDownloading,
+        nextCursor, loadMore, loadingMore,
     } = useSetlistDashboard(props)
 
     const greetingText = useMemo(() => {
@@ -194,6 +195,18 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                             isAdmin={isAdmin}
                                                         />
                                                     ))}
+                                                </div>
+                                            )}
+                                            {nextCursor && (
+                                                <div className="mt-6 flex justify-center">
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={loadMore}
+                                                        disabled={loadingMore}
+                                                        aria-label="Load older setlists"
+                                                    >
+                                                        {loadingMore ? "Loading…" : "Load older setlists"}
+                                                    </Button>
                                                 </div>
                                             )}
                                         </section>

@@ -1,16 +1,17 @@
 import { SetlistDashboard } from "@/components/setlist/SetlistDashboard"
 import { getServerUser } from "@/lib/server-auth"
-import { getAllSetlists } from "@/lib/server-setlists"
+import { getSetlistsPage } from "@/lib/server-setlists"
 
 export default async function SetlistsPage() {
-    const [user, allSetlists] = await Promise.all([
+    const [user, page] = await Promise.all([
         getServerUser(),
-        getAllSetlists(),
+        getSetlistsPage({ pageSize: 50 }),
     ])
 
     return (
         <SetlistDashboard
-            initialSetlists={allSetlists as any}
+            initialSetlists={page.items as any}
+            initialNextCursor={page.nextCursor}
             serverIsBandLeader={user?.isBandLeader || false}
             serverIsMember={user?.isMember || false}
             serverIsAdmin={user?.isAdmin || false}

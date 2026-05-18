@@ -90,6 +90,76 @@ export async function getAllSetlists(opts: { limit?: number } = {}) {
     }
 }
 
+/**
+ * Cycle-3.5 P2-004 — cursor-paginated `setlists` fetch.
+ *
+ * The legacy `getAllSetlists` (above) returns up to 50/200 setlists in
+ * one shot and is consumed by SSR + the MCP `list_setlists` tool. As
+ * David's archive grows past the 50-cap (CF1 UAT 2026-05-15 found 41
+ * already), a paged fetch lets the /setlists dashboard ship page-1
+ * over the wire and load older pages on demand without changing
+ * `getAllSetlists`'s shape.
+ *
+ * Cursor encoding: the ISO-string `date` of the last item on the
+ * previous page. `startAfter(Date)` accepts a JS Date directly against
+ * an `orderBy('date', 'desc')` query. When the last item lacks `date`
+ * (legacy seed data — uncommon but possible), we close the page
+ * (`nextCursor: null`) rather than risk an undefined cursor.
+ *
+ * Page size defaults to 50; callers can request smaller pages on
+ * follow-up fetches but the upper cap stays `MAX_SETLIST_FETCH`.
+ */
+
+export interface SetlistsPage {
+    items: ReturnType<typeof serializeSetlist>[]
+    nextCursor: string | null
+}
+
+export async function getSetlistsPage(opts: {
+    cursor?: string | null
+    pageSize?: number
+} = {}): Promise<SetlistsPage> {
+    try {
+        initAdmin()
+        const db = getFirestore()
+
+        const pageSize =
+            opts.pageSize && opts.pageSize > 0
+                ? Math.min(opts.pageSize, MAX_SETLIST_FETCH)
+                : 50
+
+        let q = db
+            .collection("setlists")
+            .orderBy("date", "desc")
+            .limit(pageSize + 1) // +1 sentinel so we know if a next page exists
+
+        if (opts.cursor) {
+            const cursorDate = new Date(opts.cursor)
+            if (!Number.isNaN(cursorDate.getTime())) {
+                q = q.startAfter(cursorDate)
+            }
+        }
+
+        const snap = await q.get()
+        const docs = snap.docs.slice(0, pageSize)
+        const items = docs.map((d) => serializeSetlist(d.id, d.data()))
+
+        const hasMore = snap.docs.length > pageSize
+        const lastItem = items[items.length - 1] as
+            | { date?: string }
+            | undefined
+        const nextCursor =
+            hasMore && typeof lastItem?.date === "string"
+                ? lastItem.date
+                : null
+
+        return { items, nextCursor }
+    } catch (error) {
+        logger.warn("Server paged setlist fetch failed:", error)
+        return { items: [], nextCursor: null }
+    }
+}
+
 // Backward-compat aliases (deprecated — use new names)
 export const getUpcomingPublicSetlists = getUpcomingSetlists
 export const getRecentPublicSetlists = getRecentSetlists
