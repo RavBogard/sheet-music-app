@@ -16,9 +16,26 @@ state files are gitignored / local-only.
 |---|---|
 | `resume.md` | `/bongo:resume <boss\|auditor\|N> [--repo <path>]` — cold-boot or warm-resume a parallel-agent role. Resolves coord-root via walk-up-from-cwd or explicit `--repo` override. |
 | `pause.md` | `/bongo:pause [<role>] [--repo <path>]` — write a pickup pointer for the current role; auto-detects role from in-session persona. |
-| `templates/**` | Project-agnostic generic snapshots of the `.coord/` directory structure. Consumed by Phase 3 `/bongo:init` to scaffold a fresh project. |
+| `init.md` | `/bongo:init [--repo <path>]` — scaffold a fresh `.coord/` directory into a target git repo from `templates/**`. Refuses if `.coord/` already exists, target is not a git repo, or templates are missing. |
+| `templates/**` | Project-agnostic generic snapshots of the `.coord/` directory structure. Consumed by `/bongo:init` to scaffold a fresh project. |
 
 ## How to use
+
+### Scaffold `.coord/` into a fresh project
+
+```
+/bongo:init                       # auto-detect target via `git rev-parse --show-toplevel`
+/bongo:init --repo ~/proj         # explicit target repo root
+```
+
+Prompts for `PROJECT_NAME`, `COORD_ROOT` (default `.`), `REPO_NAME`,
+`MAX_CODERS` (default `5`), and whether to gitignore the running ops
+state (default yes per Daniel's Option-2 ratification — surface doc
+tracked, ops state local-only). Reads from
+`~/.claude/commands/bongo/templates/`, substitutes Mustache
+placeholders, writes to `<target>/<COORD_ROOT>/.coord/`. Refuses if
+the target is not a git repo, already has `.coord/`, or templates
+are missing — no partial writes.
 
 ### Wake up as a role
 
@@ -93,8 +110,8 @@ result.
 - **Phase 2** (this lane) — cross-project portability: `<process>`
   resolves coord-root dynamically; templates extracted from
   canonical CRC role specs for Phase 3 consumption.
-- **Phase 3** (planned) — `/bongo:init`: scaffold a `.coord/`
-  directory in any new project from `templates/**`.
+- **Phase 3** (shipped 2026-05-19) — `/bongo:init`: scaffold a
+  `.coord/` directory in any new project from `templates/**`.
 - **Phase 4** (planned) — cross-machine distribution: GitHub repo
   + install script (or Claude Code plugin if that format fits).
 
