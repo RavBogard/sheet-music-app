@@ -51,8 +51,15 @@ export function DesktopHeader(props: AppNavigationProps) {
     // A bit hacky to check profile?.role but we can use server roles as fallback
     const isMusician = profile?.role === 'musician' || profile?.role === 'band_leader' || profile?.role === 'admin' || isBandLeader || !!props.serverIsAdmin
 
+    // UNAUTH-004: on unauth state the Setlists link points at /perform
+    // (public gig-discovery surface) instead of /setlists (authed-only,
+    // bounces unauth visitors to /login). Server flag prevents FOUC on
+    // public routes inside the (main) group (e.g. /changelog).
+    const isAuthed = !!user || !!props.serverIsAuthed
+    const setlistsHref = isAuthed ? "/setlists" : "/perform"
+
     const navLinks = [
-        { label: "Setlists", href: "/setlists", show: true },
+        { label: "Setlists", href: setlistsHref, show: true },
         { label: "Schedule", href: "/schedule", show: isMusician },
         { label: "Library", href: "/library", show: isMember },
         { label: "Monitor", href: "/monitor", show: hasMonitorAccess && congregation.features.monitor },

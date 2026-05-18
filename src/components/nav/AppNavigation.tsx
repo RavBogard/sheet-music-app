@@ -10,6 +10,10 @@ export interface AppNavigationProps {
     serverIsSoundEngineer?: boolean
     serverIsMember?: boolean
     serverIsBandLeader?: boolean
+    // UNAUTH-004: server-derived auth boolean so first paint on unauth
+    // public routes (e.g. /changelog under (main)) routes Setlists →
+    // /perform without an authed-link FOUC.
+    serverIsAuthed?: boolean
 }
 
 export function AppNavigation(props: AppNavigationProps) {

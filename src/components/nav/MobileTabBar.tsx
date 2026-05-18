@@ -95,8 +95,22 @@ export function MobileTabBar(props: AppNavigationProps) {
         }
     }, [searchOpen])
 
+    // UNAUTH-004: on unauth state the Setlists button routes to the
+    // public gig-discovery surface instead of /setlists (which would
+    // bounce the visitor to /login). Server flag prevents FOUC on
+    // public (main) routes; falls back to client `user` after hydration.
+    const isAuthed = !!user || !!props.serverIsAuthed
+
     // --- Setlist navigation ---
     const handleSetlistTap = useCallback(async () => {
+        // UNAUTH-004: unauth visitors skip the authed-only Firestore
+        // lookup + the /setlists fallback (both bounce to /login). They
+        // land on the public /perform discovery surface instead.
+        if (!isAuthed) {
+            router.push("/perform")
+            return
+        }
+
         // Priority 1: session-opened setlist
         try {
             const sessionId = sessionStorage.getItem(SESSION_SETLIST_KEY)
@@ -128,7 +142,7 @@ export function MobileTabBar(props: AppNavigationProps) {
 
         // Priority 3: fallback
         router.push("/setlists")
-    }, [router])
+    }, [router, isAuthed])
 
     if (isPdfView) return null
 

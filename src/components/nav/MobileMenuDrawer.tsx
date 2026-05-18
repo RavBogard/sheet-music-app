@@ -37,6 +37,11 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
 
     const isMusician = profile?.role === 'musician' || profile?.role === 'band_leader' || profile?.role === 'admin'
 
+    // UNAUTH-004: route Setlists → /perform on unauth (matches DesktopHeader
+    // behavior). The drawer is hidden until the user taps the hamburger,
+    // by which point client-side auth has resolved — no FOUC budget needed.
+    const setlistsHref = user ? "/setlists" : "/perform"
+
     // Kept local (not @/lib/roles ROLE_LABELS) because this surface wants
     // ALL-CAPS stencil styling baked in — can be swapped to a `uppercase`
     // CSS util plus the shared label if that styling changes.
@@ -52,7 +57,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
     // Primary nav items — things in the tab bar get listed here too for completeness
     const primaryItems: MenuItem[] = [
         { label: "Dashboard", href: "/", icon: Home, show: true },
-        { label: "Setlists", href: "/setlists", icon: ListMusic, show: true },
+        { label: "Setlists", href: setlistsHref, icon: ListMusic, show: true },
         { label: "Schedule", href: "/schedule", icon: CalendarDays, show: isMusician },
         { label: "Library", href: "/library", icon: Library, show: isMember },
 { label: "Monitor", href: "/monitor", icon: Radio, show: hasMonitorAccess && congregation.features.monitor },

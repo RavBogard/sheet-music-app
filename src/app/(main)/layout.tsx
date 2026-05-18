@@ -18,6 +18,7 @@ export default async function MainLayout({
                 serverIsSoundEngineer={user?.isSoundEngineer || false}
                 serverIsMember={user?.isMember || false}
                 serverIsBandLeader={user?.isBandLeader || false}
+                serverIsAuthed={!!user}
             />
             {/*
                 Padding Handling:
