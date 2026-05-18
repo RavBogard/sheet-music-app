@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { db } from "@/lib/firebase"
+import { db, auth } from "@/lib/firebase"
 import { doc, onSnapshot } from "firebase/firestore"
+import { onAuthStateChanged } from "firebase/auth"
 import { logger } from "@/lib/logger"
 import type { RabbiProfile } from "@/types/models"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
@@ -65,23 +66,47 @@ export const useCongregationStore = create<CongregationStore>()(
                 if (get().isInitialized) return () => { }
                 if (typeof window === 'undefined') return () => { }
 
-                const ref = doc(db, "config", "congregation")
-                const unsub = onSnapshot(
-                    ref,
-                    (snap) => {
-                        if (snap.exists()) {
-                            const updated = { ...DEFAULT_CONFIG, ...snap.data() as Partial<CongregationConfig> }
-                            set({ config: updated, isInitialized: true })
+                // UNAUTH-002: firestore.rules require auth to read
+                // `config/congregation`. Attaching the doc listener while
+                // unauthenticated emits a permission-denied error on every
+                // page load (console spam on /perform, /login, etc.).
+                // Gate the listener on `auth.currentUser`; unauth surfaces
+                // continue to use the persisted DEFAULT_CONFIG fallback.
+                let firestoreUnsub: (() => void) | null = null
+
+                const attachListener = () => {
+                    if (firestoreUnsub) return
+                    const ref = doc(db, "config", "congregation")
+                    firestoreUnsub = onSnapshot(
+                        ref,
+                        (snap) => {
+                            if (snap.exists()) {
+                                const updated = { ...DEFAULT_CONFIG, ...snap.data() as Partial<CongregationConfig> }
+                                set({ config: updated, isInitialized: true })
+                            }
+                        },
+                        (err) => {
+                            logger.error("[Congregation] Failed to sync config:", err)
                         }
-                    },
-                    (err) => {
-                        logger.error("[Congregation] Failed to sync config:", err)
+                    )
+                }
+
+                const detachListener = () => {
+                    if (firestoreUnsub) {
+                        firestoreUnsub()
+                        firestoreUnsub = null
                     }
-                )
+                }
+
+                const authUnsub = onAuthStateChanged(auth, (user) => {
+                    if (user) attachListener()
+                    else detachListener()
+                })
 
                 set({ isInitialized: true })
                 return () => {
-                    unsub()
+                    authUnsub()
+                    detachListener()
                     set({ isInitialized: false })
                 }
             }
