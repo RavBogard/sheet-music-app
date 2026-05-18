@@ -53,6 +53,7 @@ import {
     emitCorrectionSignal,
     type CorrectionSignalInput,
 } from "@/lib/library/correction-signals"
+import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
 import { logger } from "@/lib/logger"
 
 const ALLOWED_COLLECTIONS = ["core", "supplemental", "uploads"] as const
@@ -395,14 +396,19 @@ export async function acceptEnrichment(
     // only when the human hasn't already curated it (no `humanRenamedAt`
     // and the suggestion is non-null + different). Library convention
     // titles ("Shalom Rav (Frankel)") are exactly the gap-fill A4 wants.
-    if (
-        sug.suggested_title &&
-        sug.suggested_title !== data.name &&
-        !data.humanRenamedAt
-    ) {
-        update.name = sug.suggested_title
-        update.nameLower = sug.suggested_title.toLowerCase()
-        fieldsAccepted.push("title")
+    //
+    // C4-007: route the AI suggestion through `normalizeChartTitle`
+    // before persisting. The Gemini schema doesn't guarantee whitespace
+    // hygiene; without this, an enriched-and-accepted row could end up
+    // with a leading space (forking the dedupe bucket from the rest of
+    // the library).
+    if (sug.suggested_title) {
+        const cleanTitle = normalizeChartTitle(sug.suggested_title)
+        if (cleanTitle && cleanTitle !== data.name && !data.humanRenamedAt) {
+            update.name = cleanTitle
+            update.nameLower = cleanTitle.toLowerCase()
+            fieldsAccepted.push("title")
+        }
     }
 
     await ref.update(update)
@@ -488,7 +494,10 @@ export async function editEnrichment(
         enrichmentReviewedBy: actorUid,
     }
     if (edits.title !== undefined) {
-        const t = edits.title.trim()
+        // C4-007: route operator edits through `normalizeChartTitle` so
+        // a stray leading space or NBSP run cannot fork the dedupe bucket
+        // even when an admin is authoring via the review UI.
+        const t = normalizeChartTitle(edits.title)
         if (!t) {
             return {
                 ok: false,

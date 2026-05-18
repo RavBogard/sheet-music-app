@@ -4,6 +4,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { uploadToStorage } from "@/lib/firebase-storage"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { createSetlistServerSide } from "@/lib/setlist-write"
+import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
 import { logger } from "@/lib/logger"
 import crypto from "crypto"
 import { z } from "zod"
@@ -96,7 +97,13 @@ export const POST = createApiHandler(
                                 const newLibraryId = `upload-${crypto.randomUUID()}`
 
                                 // Clean up title collisions
-                                const finalTitle = item.performer ? `${item.title} (${item.performer})` : item.title || "Unknown Title"
+                                // C4-007: route raw composed title through the canonical
+                                // `normalizeChartTitle` helper so this legacy setlist-
+                                // importer write stays in lockstep with processChartUpload's
+                                // dedupe contract (no leading/trailing/NBSP-runs leaking
+                                // into `library_index.name`).
+                                const composedTitle = item.performer ? `${item.title} (${item.performer})` : item.title || "Unknown Title"
+                                const finalTitle = normalizeChartTitle(composedTitle) || "Unknown Title"
 
                                 // Upload to our unified firebase storage
                                 await uploadToStorage(newLibraryId, buffer, 'application/pdf')
