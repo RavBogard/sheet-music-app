@@ -49,8 +49,28 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
     it('redirects unauthenticated users to /login for secure routes', async () => {
         const req = makeReq('/setlists')
         const res = await proxy(req)
-        
+
         expect(res.headers.get('location')).toBe('http://localhost/login')
+    })
+
+    // UNAUTH-001 — unauthenticated visitors to `/` land on /perform
+    // (public gig-discovery surface) instead of the personalized
+    // dashboard. Authed users keep landing on `/` as the dashboard.
+    it('redirects unauthenticated visitors from / to /perform', async () => {
+        const req = makeReq('/')
+        const res = await proxy(req)
+
+        expect(res.headers.get('location')).toBe('http://localhost/perform')
+        // No-cache headers so a stale CDN copy can't re-trap the user
+        expect(res.headers.get('cache-control')).toBe('no-store, must-revalidate, max-age=0')
+    })
+
+    it('does NOT redirect authenticated users from / — / remains the dashboard for signed-in users', async () => {
+        const token = createSessionToken({ role: 'member', uid: 'u1' })
+        const req = makeReq('/', { __session: token })
+        const res = await proxy(req)
+
+        expect(res.headers.get('location')).toBeNull()
     })
 
     it('does NOT block "pending" users without a verified companion cookie (relaxed gate)', async () => {

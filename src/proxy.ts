@@ -99,6 +99,14 @@ export async function proxy(request: NextRequest) {
         return response
     }
 
+    // UNAUTH-001: unauthenticated visits to `/` land on the public gig
+    // discovery view (`/perform`) instead of the personalized dashboard.
+    // The dashboard is authored for signed-in members; for a band member
+    // tapping a setlist link, `/perform` is the discoverable surface.
+    if (!session && pathname === '/') {
+        return createNoCacheRedirect(new URL('/perform', request.url))
+    }
+
     if (!session && !isPublicRoute) {
         // User is not logged in but trying to access a secure page -> send to login
         return detectRedirectLoop('/login')
