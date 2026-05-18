@@ -4,6 +4,7 @@ import {
     processChartUpload,
     type LibraryCollection,
 } from "@/lib/library-upload"
+import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
 import { scrapeChart } from "@/lib/chart-scrape"
 import { DriveClient } from "@/lib/google-drive"
 import {
@@ -226,6 +227,46 @@ export interface ImportChartFromDriveArgs {
     tags?: string[]
     /** Bypass dedup (exact + fuzzy). H-3 override for legitimate variants. */
     force?: boolean
+    /**
+     * Cycle-5 C5C-008 — F-05 dryRun. When true, run all gates + Drive
+     * metadata fetch + dedup probe but DO NOT download bytes or write to
+     * Storage/Firestore. Returns the predicted shape so callers (supervisor
+     * agents, Claude Desktop preview) can inspect a planned import before
+     * committing. Pairs with the dryRun support on bulk_update_tracks /
+     * publish_setlist / reconcile_library. Per
+     * [[feedback_dryrun_is_observability]], dryRun is observability and
+     * does NOT require force.
+     */
+    dryRun?: boolean
+}
+
+export interface ImportChartFromDriveDryRunResult {
+    ok: true
+    wouldCommit: false
+    dryRun: true
+    driveFileId: string
+    driveName: string
+    /** Title after the same `normalizeChartTitle` pass processChartUpload
+     *  would apply (trim + collapse whitespace + NBSP). */
+    predictedTitle: string
+    /** Effective mimeType the index row would carry. */
+    predictedMimeType: string
+    predictedCollection: LibraryCollection
+    /**
+     * library-relative Storage path SHAPE. The actual `upload-<uuid>`
+     * suffix is computed at commit time, so we surface the prefix +
+     * predicted extension only.
+     */
+    targetStoragePath: string
+    /** Highest similarity score (0..1) against an active library row, or
+     *  null when no candidate matched the prefix index. */
+    dedupScore: number | null
+    /** Best-matching active library row, or null when no candidate hit. */
+    dedupMatchedRow:
+        | { fileId: string; name: string; matchKind: "exact" | "similar" }
+        | null
+    /** Whether the AI enrichment subscriber would run on the committed row. */
+    aiEnrichmentPlan: { wouldRun: boolean; reason: string }
 }
 
 /**
@@ -240,11 +281,202 @@ export interface ImportChartFromDriveArgs {
  * clear "export to PDF first" message — those need .export(), not .get(),
  * and the conversion target is ambiguous (full doc? one slide? PDF? .docx?).
  */
+/**
+ * Cycle-5 C5C-009 — Map a raw Drive API error onto a canonical rich-error
+ * envelope distinguishing 404 (file not found), 403 (permission denied),
+ * and other failures. Used by both the metadata probe and the byte fetch.
+ *
+ * Drive errors thrown by `googleapis` typically carry a numeric `.code` or
+ * `.status`; some shapes only surface the failure mode in `.message`. Match
+ * both so we don't regress on transport variants.
+ */
+function mapDriveError(
+    err: unknown,
+    driveFileId: string,
+    op: "metadata" | "download",
+): RichErrorEnvelope {
+    const e = err as { code?: number; status?: number; message?: string }
+    const statusCandidate =
+        typeof e?.code === "number"
+            ? e.code
+            : typeof e?.status === "number"
+              ? e.status
+              : null
+    const message = e?.message ?? String(err)
+
+    const looksLike404 = statusCandidate === 404 || /not found|404/i.test(message)
+    const looksLike403 =
+        statusCandidate === 403 ||
+        /permission|forbidden|403|insufficientPermissions/i.test(message)
+
+    if (looksLike404) {
+        return richError(
+            "drive_file_not_found",
+            `Drive file ${driveFileId} not found.`,
+            { driveFileId, errorCode: 404 },
+            "Verify the Drive id and that the file hasn't been deleted, moved out of a shared folder, or never existed.",
+        )
+    }
+    if (looksLike403) {
+        return richError(
+            "drive_permission_denied",
+            `Drive denied access to file ${driveFileId} for the service account.`,
+            { driveFileId, errorCode: 403 },
+            "Share the file or its containing folder with the service account (viewer access).",
+        )
+    }
+    if (op === "metadata") {
+        return richError(
+            "drive_metadata_failed",
+            `Could not read Drive file ${driveFileId} metadata: ${message}`,
+            { driveFileId, errorCode: 502 },
+            "Verify the file id and that the service account has at least viewer access.",
+        )
+    }
+    return richError(
+        "drive_download_failed",
+        `Could not download Drive file ${driveFileId}: ${message}`,
+        { driveFileId, errorCode: 502 },
+        "Verify the file id and that the service account has at least viewer access.",
+    )
+}
+
+/**
+ * Levenshtein distance for the dryRun fuzzy-dedup probe. Mirrors the
+ * implementation in `library-upload.ts` (the actual write-path source of
+ * truth). Kept inline here to avoid widening the public surface of that
+ * module; if a third caller needs it, factor out together.
+ */
+function levenshtein(a: string, b: string): number {
+    if (a === b) return 0
+    if (a.length === 0) return b.length
+    if (b.length === 0) return a.length
+    const m = a.length
+    const n = b.length
+    const dp = new Array<number>(n + 1)
+    for (let j = 0; j <= n; j++) dp[j] = j
+    for (let i = 1; i <= m; i++) {
+        let prev = i - 1
+        dp[0] = i
+        for (let j = 1; j <= n; j++) {
+            const tmp = dp[j]
+            dp[j] =
+                a[i - 1] === b[j - 1]
+                    ? prev
+                    : Math.min(prev, dp[j - 1], dp[j]) + 1
+            prev = tmp
+        }
+    }
+    return dp[n]
+}
+
+interface DedupProbeResult {
+    score: number | null
+    matchedRow:
+        | { fileId: string; name: string; matchKind: "exact" | "similar" }
+        | null
+}
+
+async function probeDedup(
+    db: FirebaseFirestore.Firestore,
+    title: string,
+): Promise<DedupProbeResult> {
+    const nameLower = title.toLowerCase()
+    const normalizedName = nameLower.replace(/[^a-z0-9]/g, "")
+
+    const exactSnap = await db
+        .collection("library_index")
+        .where("nameLower", "==", nameLower)
+        .limit(5)
+        .get()
+    const exactHit = exactSnap.docs.find(
+        (d) => (d.data() as Record<string, unknown>).status === "active",
+    )
+    if (exactHit) {
+        const data = exactHit.data() as Record<string, unknown>
+        return {
+            score: 1,
+            matchedRow: {
+                fileId: exactHit.id,
+                name: typeof data.name === "string" ? data.name : exactHit.id,
+                matchKind: "exact",
+            },
+        }
+    }
+
+    const prefix = normalizedName.slice(0, 6)
+    if (prefix.length < 3) return { score: null, matchedRow: null }
+
+    const prefixEnd =
+        prefix.slice(0, -1) +
+        String.fromCharCode(prefix.charCodeAt(prefix.length - 1) + 1)
+    const similarSnap = await db
+        .collection("library_index")
+        .where("normalizedName", ">=", prefix)
+        .where("normalizedName", "<", prefixEnd)
+        .select("name", "normalizedName", "status")
+        .limit(20)
+        .get()
+
+    let bestScore = 0
+    let bestRow: DedupProbeResult["matchedRow"] = null
+    for (const doc of similarSnap.docs) {
+        const data = doc.data() as Record<string, unknown>
+        if (data.status !== "active") continue
+        const existingName = typeof data.name === "string" ? data.name : doc.id
+        const normalizedExisting =
+            (typeof data.normalizedName === "string"
+                ? data.normalizedName
+                : existingName.toLowerCase().replace(/[^a-z0-9]/g, "")) ?? ""
+        const distance = levenshtein(normalizedName, normalizedExisting)
+        const maxLength = Math.max(
+            normalizedName.length,
+            normalizedExisting.length,
+        )
+        if (maxLength === 0) continue
+        const similarity = 1 - distance / maxLength
+        if (similarity > bestScore) {
+            bestScore = similarity
+            bestRow = {
+                fileId: doc.id,
+                name: existingName,
+                matchKind: similarity > 0.85 ? "similar" : "exact",
+            }
+        }
+    }
+    if (!bestRow) return { score: null, matchedRow: null }
+    // Demote a `<= 0.85` best match to "no actionable hit" but still
+    // surface the score so callers can see the dedup probe's verdict.
+    if (bestScore <= 0.85) {
+        return { score: bestScore, matchedRow: null }
+    }
+    return {
+        score: bestScore,
+        matchedRow: bestRow ? { ...bestRow, matchKind: "similar" } : null,
+    }
+}
+
+function predictedExtensionFor(mimeType: string, fallbackName: string): string {
+    const mt = mimeType.toLowerCase()
+    if (mt.includes("pdf")) return ".pdf"
+    if (mt === "image/png") return ".png"
+    if (mt === "image/jpeg") return ".jpg"
+    if (mt === "image/heic") return ".heic"
+    if (mt === "image/heif") return ".heif"
+    if (mt.includes("musescore")) return ".mscz"
+    if (mt.includes("musicxml")) return ".musicxml"
+    if (mt.includes("xml")) return ".xml"
+    if (mt.startsWith("text/")) return ".txt"
+    const fileExt = fallbackName.match(/\.([a-z0-9]+)$/i)?.[1]
+    return fileExt ? `.${fileExt.toLowerCase()}` : ""
+}
+
 export async function importChartFromDrive(
     uid: string,
     args: ImportChartFromDriveArgs,
 ): Promise<
     | { ok: true; fileId: string; title: string; collection: LibraryCollection }
+    | ImportChartFromDriveDryRunResult
     | RichErrorEnvelope
 > {
     if (!args.driveFileId?.trim())
@@ -278,19 +510,24 @@ export async function importChartFromDrive(
             mimeType?: string | null
         }
     } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error"
         logger.warn(
-            `[import_chart_from_drive] metadata fetch failed for ${driveFileId}: ${message}`,
+            `[import_chart_from_drive] metadata fetch failed for ${driveFileId}: ${err instanceof Error ? err.message : "Unknown error"}`,
         )
-        return richError(
-            "drive_metadata_failed",
-            `Could not read Drive file ${driveFileId} metadata: ${message}`,
-            { driveFileId },
-            "Verify the file id and that the service account has at least viewer access.",
-        )
+        return mapDriveError(err, driveFileId, "metadata")
     }
 
     const driveMime = (metadata?.mimeType || "").toLowerCase()
+    // Cycle-5 C5C-015 — folder vs Docs branch. The pre-fix error told users
+    // to "export to PDF" even when they passed a folder id, which is
+    // nonsensical (folders aren't documents). Distinguish folders explicitly.
+    if (driveMime === "application/vnd.google-apps.folder") {
+        return richError(
+            "drive_invalid_target",
+            `Drive id ${driveFileId} points to a folder, not a chart file.`,
+            { driveFileId, mimeType: driveMime, errorCode: 400 },
+            "Open the folder in Drive, pick a chart PDF (or other supported file) inside, and pass that file's id (the segment after /file/d/ in the URL).",
+        )
+    }
     if (driveMime.startsWith("application/vnd.google-apps.")) {
         return richError(
             "unsupported_drive_native_type",
@@ -298,9 +535,43 @@ export async function importChartFromDrive(
                 "application/vnd.google-apps.",
                 "",
             )} document — export it to PDF in Drive first, then import the exported file.`,
-            { driveFileId, mimeType: driveMime },
+            { driveFileId, mimeType: driveMime, errorCode: 400 },
             "In Drive: File → Download → PDF; then import_chart_from_drive on the exported file.",
         )
+    }
+
+    const driveName = (metadata?.name || `drive-${driveFileId}`).trim()
+    const title = normalizeChartTitle(
+        args.title?.trim() || driveName.replace(/\.[^/.]+$/, ""),
+    )
+    const mimeType = driveMime || "application/pdf"
+    const predictedCollection: LibraryCollection = args.collection ?? "uploads"
+
+    // ─── C5C-008 dryRun branch: probe, don't write ──────────────────────────
+    if (args.dryRun === true) {
+        const dedup = await probeDedup(db, title)
+        const ext = predictedExtensionFor(mimeType, driveName)
+        const targetStoragePath = `library/upload-<new-uuid>${ext}`
+        const wouldRunAi = !!process.env.GEMINI_API_KEY
+        return {
+            ok: true,
+            wouldCommit: false,
+            dryRun: true,
+            driveFileId,
+            driveName,
+            predictedTitle: title,
+            predictedMimeType: mimeType,
+            predictedCollection,
+            targetStoragePath,
+            dedupScore: dedup.score,
+            dedupMatchedRow: dedup.matchedRow,
+            aiEnrichmentPlan: {
+                wouldRun: wouldRunAi,
+                reason: wouldRunAi
+                    ? "GEMINI_API_KEY is configured; the post-import subscriber will run."
+                    : "GEMINI_API_KEY is not set; the post-import subscriber will skip enrichment (status stays 'pending').",
+            },
+        }
     }
 
     let buffer: Buffer
@@ -310,29 +581,18 @@ export async function importChartFromDrive(
         // sees it as ArrayBuffer or Buffer depending on transport. Normalize.
         buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes as ArrayBuffer)
     } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error"
         logger.warn(
-            `[import_chart_from_drive] bytes fetch failed for ${driveFileId}: ${message}`,
+            `[import_chart_from_drive] bytes fetch failed for ${driveFileId}: ${err instanceof Error ? err.message : "Unknown error"}`,
         )
-        return richError(
-            "drive_download_failed",
-            `Could not download Drive file ${driveFileId}: ${message}`,
-            { driveFileId },
-            "Verify the file id and that the service account has at least viewer access.",
-        )
+        return mapDriveError(err, driveFileId, "download")
     }
 
     if (buffer.byteLength === 0)
         return richError(
             "empty_file",
             `Drive file ${driveFileId} is empty.`,
-            { driveFileId },
+            { driveFileId, errorCode: 400 },
         )
-
-    const driveName = (metadata?.name || `drive-${driveFileId}`).trim()
-    const title =
-        args.title?.trim() || driveName.replace(/\.[^/.]+$/, "")
-    const mimeType = driveMime || "application/pdf"
 
     const result = await processChartUpload({
         buffer,
@@ -348,13 +608,35 @@ export async function importChartFromDrive(
         force: args.force,
     })
 
-    if (!result.ok)
+    if (!result.ok) {
+        // Cycle-5 C5C-009 — surface dedup-class failures as 409
+        // `duplicate_detected_in_library` so callers can distinguish a
+        // legitimate-variant escape-hatch case (resolve with force:true)
+        // from a real upload failure.
+        if (result.code === "duplicate_exact" || result.code === "duplicate_similar") {
+            return richError(
+                "duplicate_detected_in_library",
+                result.error,
+                {
+                    tool: "import_chart_from_drive",
+                    driveFileId,
+                    matchKind: result.code === "duplicate_exact" ? "exact" : "similar",
+                    errorCode: 409,
+                },
+                "If this is a legitimate variant (different key, arrangement, composer suffix), retry with force: true. Otherwise rename the file in Drive before re-importing.",
+            )
+        }
         return richError(
             "upload_failed",
             result.error,
-            { tool: "import_chart_from_drive", driveFileId },
+            {
+                tool: "import_chart_from_drive",
+                driveFileId,
+                errorCode: result.status ?? 500,
+            },
             "Inspect the message; if dedup-related, retry with force: true.",
         )
+    }
     return {
         ok: true,
         fileId: result.fileId,

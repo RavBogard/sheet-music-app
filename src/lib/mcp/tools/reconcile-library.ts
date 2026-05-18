@@ -359,34 +359,50 @@ async function probeAll(candidates: Candidate[]): Promise<ProbeResult[]> {
  * Drive download failures are surfaced as transient (not orphan) so the
  * operator can re-run after the blip clears.
  */
+type MirrorOutcome =
+    | { ok: true; sizeBytes: number }
+    | { ok: false; kind: "orphaned"; error: string }
+    | { ok: false; kind: "transient"; error: string }
+
 async function mirrorRow(
     db: FirebaseFirestore.Firestore,
     drive: DriveClient,
     c: Candidate,
     driveMimeType: string,
     actorUid: string,
-): Promise<
-    | { ok: true; sizeBytes: number }
-    | { ok: false; transient: boolean; error: string }
-> {
-    // Drive 200 was already confirmed by the probe step; treat a download
-    // failure here as transient (the metadata probe succeeded ms ago).
+): Promise<MirrorOutcome> {
+    // Drive 200 was confirmed at the METADATA probe step; the actual bytes
+    // can still 404 (deleted file, shortcut to a deleted target). C5C-007:
+    // distinguish a 404 byte fetch (orphan — escalate to the orphan bucket
+    // so the row's `status:'active'` finally flips to `'orphaned'`) from
+    // other failures (transient — leave the row untouched for re-run).
+    // Real-prod row Hashkiveinu (Brodsky-Zweiback) had this exact shape:
+    // metadata exists, bytes 404, so reconcile kept demoting it to transient
+    // forever instead of orphaning it.
     let buffer: Buffer
     try {
         const bytes = await drive.getFile(c.fileId)
         buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes as ArrayBuffer)
     } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        if (/not found|404/i.test(msg)) {
+            return {
+                ok: false,
+                kind: "orphaned",
+                error: `Drive byte fetch 404'd at commit time: ${msg}`,
+            }
+        }
         return {
             ok: false,
-            transient: true,
-            error: `Drive download failed: ${err instanceof Error ? err.message : String(err)}`,
+            kind: "transient",
+            error: `Drive download failed: ${msg}`,
         }
     }
     if (buffer.byteLength === 0) {
         // Empty Drive payload — surface as transient rather than orphan;
         // an operator-driven re-fetch is the right call, not a permanent
         // status flip.
-        return { ok: false, transient: true, error: "Drive payload empty" }
+        return { ok: false, kind: "transient", error: "Drive payload empty" }
     }
 
     // Storage upload + read-verify, atomic-guard pattern. The Storage path
@@ -406,7 +422,7 @@ async function mirrorRow(
     } catch (err) {
         return {
             ok: false,
-            transient: true,
+            kind: "transient",
             error: `Storage upload failed: ${err instanceof Error ? err.message : String(err)}`,
         }
     }
@@ -422,7 +438,7 @@ async function mirrorRow(
         }
         return {
             ok: false,
-            transient: true,
+            kind: "transient",
             error: `Storage read-verify failed at ${storagePath} (object missing)`,
         }
     }
@@ -434,7 +450,7 @@ async function mirrorRow(
         }
         return {
             ok: false,
-            transient: true,
+            kind: "transient",
             error: `Storage size mismatch (wrote ${buffer.byteLength}, read ${verifiedSize})`,
         }
     }
@@ -475,7 +491,7 @@ async function mirrorRow(
         }
         return {
             ok: false,
-            transient: true,
+            kind: "transient",
             error: `Firestore merge-update failed: ${err instanceof Error ? err.message : String(err)}`,
         }
     }
@@ -495,10 +511,22 @@ async function commitMirrorBatch(
     committed: number
     /** Rows that flipped from mirror → transient at commit time. */
     demoted: TransientRow[]
+    /**
+     * Cycle-5 C5C-007 — rows that flipped from mirror → orphan at commit
+     * time (Drive metadata 200 at probe, but byte fetch 404'd). Surface
+     * separately so the caller can fold them into the orphan commit batch
+     * rather than leaving them stuck as transient indefinitely.
+     */
+    orphanedDuringMirror: { probe: ProbeResult; row: OrphanRow; error: string }[]
     /** Per-row sizeBytes for the report. */
     sizes: Map<string, number>
 }> {
     const demoted: TransientRow[] = []
+    const orphanedDuringMirror: {
+        probe: ProbeResult
+        row: OrphanRow
+        error: string
+    }[] = []
     const sizes = new Map<string, number>()
     let committed = 0
     for (let i = 0; i < plan.length; i += MIRROR_CONCURRENCY) {
@@ -514,6 +542,15 @@ async function commitMirrorBatch(
             if (r.ok) {
                 committed++
                 sizes.set(p.candidate.fileId, r.sizeBytes)
+            } else if (r.kind === "orphaned") {
+                orphanedDuringMirror.push({
+                    probe: p,
+                    row: {
+                        fileId: p.candidate.fileId,
+                        name: p.candidate.name,
+                    },
+                    error: r.error,
+                })
             } else {
                 demoted.push({
                     fileId: p.candidate.fileId,
@@ -523,7 +560,7 @@ async function commitMirrorBatch(
             }
         }
     }
-    return { committed, demoted, sizes }
+    return { committed, demoted, orphanedDuringMirror, sizes }
 }
 
 async function commitOrphanBatch(
@@ -726,10 +763,14 @@ export async function reconcileLibrary(
 
         const mirrorOutcome = await commitMirrorBatch(db, drive, mirrorPlan, uid)
         // Fold per-row sizeBytes into the mirror report; rows that demoted
-        // drop out of mirrorRows and into transientRows.
-        const demotedIds = new Set(mirrorOutcome.demoted.map((d) => d.fileId))
+        // drop out of mirrorRows and either land in transientRows or — per
+        // C5C-007 — escalate into orphanRows when the byte fetch 404'd.
+        const droppedFromMirror = new Set([
+            ...mirrorOutcome.demoted.map((d) => d.fileId),
+            ...mirrorOutcome.orphanedDuringMirror.map((o) => o.row.fileId),
+        ])
         const finalMirrorRows: MirrorRow[] = mirrorRows
-            .filter((r) => !demotedIds.has(r.fileId))
+            .filter((r) => !droppedFromMirror.has(r.fileId))
             .map((r) => ({
                 ...r,
                 sizeBytes: mirrorOutcome.sizes.get(r.fileId),
@@ -738,8 +779,16 @@ export async function reconcileLibrary(
             ...transientRows,
             ...mirrorOutcome.demoted,
         ]
+        const escalatedOrphanProbes = mirrorOutcome.orphanedDuringMirror.map(
+            (o) => o.probe,
+        )
+        const finalOrphanRows: OrphanRow[] = [
+            ...orphanRows,
+            ...mirrorOutcome.orphanedDuringMirror.map((o) => o.row),
+        ]
+        const fullOrphanPlan = [...orphanPlan, ...escalatedOrphanProbes]
 
-        const orphansCommitted = await commitOrphanBatch(db, orphanPlan)
+        const orphansCommitted = await commitOrphanBatch(db, fullOrphanPlan)
         const committed = mirrorOutcome.committed + orphansCommitted
 
         await broadcastReconcileSignal(db, uid, committed)
@@ -750,6 +799,7 @@ export async function reconcileLibrary(
             alreadyHealthy: healthy.length,
             mirrored: mirrorOutcome.committed,
             orphaned: orphansCommitted,
+            orphanedDuringMirror: mirrorOutcome.orphanedDuringMirror.length,
             transient: finalTransientRows.length,
         })
 
@@ -758,9 +808,7 @@ export async function reconcileLibrary(
             scanned: candidates.length,
             alreadyHealthy: healthy.length,
             driveMirror: bucketReport(finalMirrorRows),
-            orphan: bucketReport(
-                orphanRows.map((r) => ({ fileId: r.fileId, name: r.name })),
-            ),
+            orphan: bucketReport(finalOrphanRows),
             transient: bucketReport(finalTransientRows),
             skippedNonChart: bucketReport(skippedNonChartRows),
             coverage,

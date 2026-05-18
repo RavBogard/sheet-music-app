@@ -544,6 +544,64 @@ describe("MCP generate_gig_packet (emulator)", () => {
         expect(mockFileSave).toHaveBeenCalledTimes(1)
     })
 
+    it("C5C-006: Drive-shortcut-bonded row (resolved by fetchFileById to PDF) is merged, not appendix'd", async () => {
+        // Regression seal for the "Lechu Goldman.pdf silently missing from
+        // every Friday gig packet" bug. The library_index row stores
+        // mimeType: application/vnd.google-apps.shortcut for shortcut-bonded
+        // rows. Before C5C-006, fetchFileById's Drive fallback echoed back
+        // that shortcut hint as the contentType even though DriveClient.getFile
+        // had resolved the shortcut and returned the TARGET PDF bytes; gig-
+        // packet then routed those real PDFs into the "Unsupported content
+        // type" appendix branch.
+        //
+        // Post-fix fetchFileById returns the resolved target's mime
+        // (application/pdf for Lechu Goldman.pdf), so this test simulates a
+        // shortcut-bonded row by seeding the library_index mimeType as
+        // shortcut + having the mock return PDF bytes with the resolved mime.
+        // The merged PDF must include the chart's pages.
+        const setlistId = "set-shir-shabbat"
+        const fileId = "drive-shortcut-lechu-goldman"
+        await seedSetlist(setlistId, "Friday Shir Shabbat")
+        await db().collection("library_index").doc(fileId).set({
+            name: "Lechu Goldman",
+            mimeType: "application/vnd.google-apps.shortcut",
+            // status doesn't matter for the read path; the bug surfaced even
+            // on status:active rows.
+            status: "active",
+        })
+        await seedTrack("t-lechu", setlistId, 0, {
+            type: "song",
+            title: "Lechu Goldman",
+            fileId,
+            mimeType: "application/vnd.google-apps.shortcut",
+        })
+
+        const targetPdf = await makePdfBytes("Lechu Goldman", 2)
+        mockFetchFileById.mockImplementation(async (fid: string) => {
+            if (fid === fileId) {
+                return {
+                    buffer: targetPdf,
+                    // Post-C5C-006: fetchFileById's Drive fallback reports
+                    // the resolved target's mime, not the shortcut hint.
+                    contentType: "application/pdf",
+                    source: "google-drive-fallback" as const,
+                }
+            }
+            return null
+        })
+
+        const r = await generateGigPacket(ADMIN, { setlistId })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+
+        expect(r.bondedCount).toBe(1)
+        expect(r.appendedCount).toBe(1)
+        expect(r.missingCharts).toEqual([])
+        // Two pages of the real Lechu Goldman target, no appendix.
+        expect(r.pageCount).toBe(2)
+        expect(mockFileSave).toHaveBeenCalledTimes(1)
+    })
+
     it("any authenticated uid may generate — no role gate (chart-access policy)", async () => {
         const setlistId = "set-public"
         await seedSetlist(setlistId, "Public")

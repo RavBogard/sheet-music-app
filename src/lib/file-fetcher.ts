@@ -48,12 +48,27 @@ export async function fetchFileById(fileId: string, mimeType?: string): Promise<
     if (!cleanId.startsWith('upload-')) {
         try {
             const drive = new DriveClient()
-            const data = await drive.getFile(cleanId)
-            const buffer = Buffer.from(data as ArrayBuffer)
-            logger.info(`[FileFetcher] Served ${fileId} from Drive fallback (Storage miss)`)
+            // Cycle-5 C5C-006: `getFileWithMime` transparently resolves Drive
+            // shortcuts to their target's bytes AND reports the TARGET's
+            // mimeType. Previously the Drive fallback echoed back the caller-
+            // supplied `mimeType` hint, so shortcut-bonded library_index rows
+            // (mimeType: application/vnd.google-apps.shortcut) returned the
+            // target PDF bytes but with contentType=shortcut — gig-packet then
+            // routed real PDFs into the "Unsupported content type" appendix.
+            // Trust Drive's resolved mime; fall back to the caller hint only
+            // when Drive returns nothing.
+            const { data, mimeType: resolvedMime } = await drive.getFileWithMime(cleanId)
+            const buffer = Buffer.from(data)
+            const finalMime =
+                resolvedMime && resolvedMime !== 'application/vnd.google-apps.shortcut'
+                    ? resolvedMime
+                    : (mimeType && mimeType !== 'application/vnd.google-apps.shortcut'
+                        ? mimeType
+                        : 'application/pdf')
+            logger.info(`[FileFetcher] Served ${fileId} from Drive fallback (Storage miss; resolved mime: ${finalMime})`)
             return {
                 buffer,
-                contentType: mimeType || 'application/pdf',
+                contentType: finalMime,
                 source: 'google-drive-fallback',
             }
         } catch (driveErr) {

@@ -117,6 +117,12 @@ const driveState = {
     bytes: new Map<string, Buffer>(),
     /** When set, getFile throws for this driveFileId. */
     getFileThrows: new Set<string>(),
+    /**
+     * C5C-007: when set, getFile throws a 404-shaped error message so
+     * mirror→orphan escalation can be exercised. Production callsite at
+     * `mirrorRow` matches `/not found|404/i` against the thrown message.
+     */
+    getFile404Throws: new Set<string>(),
 }
 
 vi.mock("@/lib/google-drive", () => ({
@@ -132,6 +138,9 @@ vi.mock("@/lib/google-drive", () => ({
             return m
         }),
         getFile: vi.fn(async (fileId: string) => {
+            if (driveState.getFile404Throws.has(fileId)) {
+                throw new Error(`Drive file not found: ${fileId} (404)`)
+            }
             if (driveState.getFileThrows.has(fileId)) {
                 throw new Error("Drive get bytes failed")
             }
@@ -194,6 +203,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         driveState.metadata.clear()
         driveState.bytes.clear()
         driveState.getFileThrows.clear()
+        driveState.getFile404Throws.clear()
     })
 
     afterEach(() => {
@@ -597,5 +607,95 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         expect(r.coverage.scanned).toBe(1)
         expect(r.coverage.filteredOut.byStatus.orphaned).toBe(1)
         expect(r.coverage.filteredOut.byStatus.duplicate).toBe(1)
+    })
+
+    it("C5C-007: non-404 byte-fetch failure stays transient (baseline)", async () => {
+        // Baseline contract: a generic non-404 byte-fetch failure is still
+        // transient — we don't want to permanently orphan a row over a
+        // network blip. The 404-shaped escalation is tested in the next case.
+        await seedUser(ADMIN, "admin")
+        driveState.metadata.set("transient-bytes-id", {
+            name: "Transient Bytes.pdf",
+            mimeType: "application/pdf",
+        })
+        driveState.getFileThrows.add("transient-bytes-id")
+        await seedIndex("transient-bytes-id", {
+            name: "Transient Bytes.pdf",
+            mimeType: "application/pdf",
+            status: "active",
+        })
+
+        const r = await reconcileLibrary(ADMIN, { dryRun: false, force: true })
+        if ("error" in r)
+            throw new Error(
+                typeof r.error === "string" ? r.error : JSON.stringify(r.error),
+            )
+
+        expect(r.transient.count).toBe(1)
+        expect(r.orphan.count).toBe(0)
+        expect(r.committed).toBe(0)
+
+        const idx = await db()
+            .collection("library_index")
+            .doc("transient-bytes-id")
+            .get()
+        expect(idx.data()?.status).toBe("active")
+    })
+
+    it("C5C-007: Drive metadata 200 + 404-shaped byte fetch → mirror escalates to orphan; status flips to 'orphaned'", async () => {
+        // Real-prod row Hashkiveinu (Brodsky-Zweiback) had this shape:
+        // metadata exists in Drive so the probe step returns
+        // `needs_storage_sync` (bucket=mirror), but the byte fetch 404s
+        // (likely a Drive shortcut to a deleted target). Pre-C5C-007 the
+        // row demoted to `transient` forever instead of flipping to
+        // `status:'orphaned'`. Post-fix, a 404-shaped byte-fetch error at
+        // commit time escalates the row into the orphan bucket so the
+        // permanent flip lands.
+        await seedUser(ADMIN, "admin")
+        driveState.metadata.set("hashkiveinu-bz-id", {
+            name: "Hashkiveinu (Brodsky-Zweiback).pdf",
+            mimeType: "application/pdf",
+        })
+        // The 404-throwing seam — mock factory raises an Error whose
+        // message matches `/not found|404/i`, the production matcher.
+        driveState.getFile404Throws.add("hashkiveinu-bz-id")
+        await seedIndex("hashkiveinu-bz-id", {
+            name: "Hashkiveinu (Brodsky-Zweiback).pdf",
+            mimeType: "application/pdf",
+            status: "active",
+        })
+        await seedSong("hashkiveinu-bz-id", {
+            title: "Hashkiveinu (Brodsky-Zweiback)",
+            status: "active",
+        })
+
+        const r = await reconcileLibrary(ADMIN, { dryRun: false, force: true })
+        if ("error" in r)
+            throw new Error(
+                typeof r.error === "string" ? r.error : JSON.stringify(r.error),
+            )
+
+        // dryRun planning would have placed this row in driveMirror (Drive
+        // metadata 200); commit escalates to orphan when the byte fetch
+        // returns 404. The post-commit report reflects reality.
+        expect(r.committed).toBe(1)
+        expect(r.driveMirror.count).toBe(0)
+        expect(r.orphan.count).toBe(1)
+        expect(r.orphan.rows[0].fileId).toBe("hashkiveinu-bz-id")
+        expect(r.transient.count).toBe(0)
+
+        // Permanent flip on both collections.
+        const idx = await db()
+            .collection("library_index")
+            .doc("hashkiveinu-bz-id")
+            .get()
+        expect(idx.data()?.status).toBe("orphaned")
+        expect(idx.data()?.orphanedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+
+        const sng = await db()
+            .collection("songs")
+            .doc("hashkiveinu-bz-id")
+            .get()
+        expect(sng.data()?.status).toBe("orphaned")
     })
 })

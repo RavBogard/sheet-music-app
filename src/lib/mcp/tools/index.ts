@@ -1821,6 +1821,12 @@ export function registerChartUploadTools(server: McpServer): void {
                     .describe(
                         "Bypass duplicate detection (exact + fuzzy). Use when importing a legitimate variant (different key, arrangement, or composer suffix) that's tripping a 'similar name' error. Default false.",
                     ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Cycle-5 C5C-008 F-05 dry-run. When true, runs all auth/curated/rate-limit gates plus Drive metadata + dedup probe but does NOT download bytes or write to Storage/Firestore. Returns { ok:true, wouldCommit:false, predictedTitle, predictedMimeType, predictedCollection, targetStoragePath (with `<new-uuid>` placeholder), dedupScore, dedupMatchedRow, aiEnrichmentPlan }. Per [[feedback_dryrun_is_observability]], dryRun is observability and does NOT require force.",
+                    ),
             },
         },
         async (args, extra) =>

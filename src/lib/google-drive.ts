@@ -321,6 +321,74 @@ export class DriveClient {
         }
     }
 
+    /**
+     * Cycle-5 C5C-006 — download a Drive file AND report the resolved target
+     * mime alongside the bytes. Sibling to `getFile`; same Drive round-trips
+     * (metadata + alt=media) but the caller learns what they actually got.
+     *
+     * Closes the "Lechu Goldman.pdf silently missing from every Friday gig
+     * packet" bug: `library_index` stores `mimeType:
+     * application/vnd.google-apps.shortcut` for shortcut-bonded rows, so
+     * `fetchFileById`'s Drive fallback was reporting `contentType: shortcut`
+     * even though `getFile` had transparently resolved the target's PDF
+     * bytes. Gig-packet then routed the (real) PDF into the "Unsupported
+     * content type" appendix branch instead of merging it.
+     *
+     * For non-shortcut files this returns the file's own `mimeType`. For
+     * shortcuts it returns the TARGET's `mimeType` (from
+     * `shortcutDetails.targetMimeType`, which Drive populates whenever
+     * `shortcutDetails` is requested).
+     */
+    async getFileWithMime(fileId: string): Promise<{
+        data: ArrayBuffer
+        mimeType: string | null
+        resolvedFileId: string
+    }> {
+        try {
+            const meta = await withRetry(() => this.drive.files.get({
+                fileId,
+                // Explicit sub-field projection so shortcut callers always
+                // get targetMimeType + targetId (Drive returns the full
+                // shortcutDetails object when the parent field is asked for,
+                // but be explicit so future field-pruning doesn't regress).
+                fields: 'mimeType, shortcutDetails(targetId, targetMimeType)',
+                supportsAllDrives: true,
+            }))
+            const metaData = meta.data as {
+                mimeType?: string
+                shortcutDetails?: { targetId?: string; targetMimeType?: string }
+            }
+
+            let downloadId = fileId
+            let resolvedMime: string | null = metaData.mimeType ?? null
+            if (metaData.mimeType === 'application/vnd.google-apps.shortcut') {
+                const targetId = metaData.shortcutDetails?.targetId
+                if (!targetId) throw new Error(`Drive shortcut ${fileId} has no targetId`)
+                logger.info(`[Drive] Resolving shortcut ${fileId} → ${targetId}`)
+                downloadId = targetId
+                resolvedMime = metaData.shortcutDetails?.targetMimeType ?? null
+            }
+
+            const res = await withRetry(() => this.drive.files.get({
+                fileId: downloadId,
+                alt: 'media',
+                supportsAllDrives: true,
+                acknowledgeAbuse: true,
+            }, {
+                responseType: 'arraybuffer',
+            } as { responseType: 'arraybuffer' }))
+
+            return {
+                data: res.data as ArrayBuffer,
+                mimeType: resolvedMime,
+                resolvedFileId: downloadId,
+            }
+        } catch (error: unknown) {
+            logger.error(`[Drive] Error getting file ${fileId} with mime:`, error instanceof Error ? error.message : "Unknown error")
+            throw error
+        }
+    }
+
     async getFileMetadata(fileId: string) {
         try {
             const res = await withRetry(() => this.drive.files.get({

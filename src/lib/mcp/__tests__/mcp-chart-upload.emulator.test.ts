@@ -1091,7 +1091,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             expect(r.collection).toBe("core")
         })
 
-        it("surfaces Drive metadata fetch error", async () => {
+        it("C5C-009: Drive 404 metadata maps to drive_file_not_found (error.code 404)", async () => {
             mockDriveGetFileMetadata.mockRejectedValue(
                 new Error("File not found"),
             )
@@ -1099,10 +1099,42 @@ describe("MCP chart-upload tools (emulator)", () => {
                 driveFileId: "missing",
             })
             expect(r).toMatchObject({
-            ok: false,
-            error: { message: expect.stringContaining("metadata") },
-        })
+                ok: false,
+                error: { machine_code: "drive_file_not_found", code: 404 },
+                driveFileId: "missing",
+            })
             expect(mockDriveGetFile).not.toHaveBeenCalled()
+        })
+
+        it("C5C-009: Drive 403 metadata maps to drive_permission_denied (error.code 403)", async () => {
+            const forbidden = Object.assign(
+                new Error("The user does not have sufficient permissions"),
+                { code: 403 },
+            )
+            mockDriveGetFileMetadata.mockRejectedValue(forbidden)
+            const r = await importChartFromDrive(ADMIN, {
+                driveFileId: "forbidden-1",
+            })
+            expect(r).toMatchObject({
+                ok: false,
+                error: { machine_code: "drive_permission_denied", code: 403 },
+                driveFileId: "forbidden-1",
+            })
+            expect(mockDriveGetFile).not.toHaveBeenCalled()
+        })
+
+        it("C5C-009: non-404 non-403 metadata error keeps drive_metadata_failed shape", async () => {
+            mockDriveGetFileMetadata.mockRejectedValue(
+                new Error("Drive 500 transient"),
+            )
+            const r = await importChartFromDrive(ADMIN, {
+                driveFileId: "transient-1",
+            })
+            expect(r).toMatchObject({
+                ok: false,
+                error: { machine_code: "drive_metadata_failed" },
+                driveFileId: "transient-1",
+            })
         })
 
         it("rejects native Google Docs mime types with export hint", async () => {
@@ -1135,9 +1167,9 @@ describe("MCP chart-upload tools (emulator)", () => {
         })
         })
 
-        it("respects same dedup pipeline as upload_chart (exact match)", async () => {
+        it("C5C-009: exact-match dedup maps to duplicate_detected_in_library (error.code 409)", async () => {
             // Seed via upload_chart, then try to import a Drive file with the
-            // same title — should hit the exact-name dedup, not write twice.
+            // same title — exact dedup hits 409 with the canonical machine code.
             await uploadChart(ADMIN, {
                 title: "Mi Chamocha",
                 fileBase64: b64("%PDF-1.4 first"),
@@ -1155,10 +1187,150 @@ describe("MCP chart-upload tools (emulator)", () => {
                 driveFileId: "dup-1",
             })
             expect(r).toMatchObject({
-            ok: false,
-            error: { message: expect.stringContaining("already exists") },
-        })
+                ok: false,
+                error: {
+                    machine_code: "duplicate_detected_in_library",
+                    code: 409,
+                    message: expect.stringContaining("already exists"),
+                },
+                matchKind: "exact",
+            })
             expect(mockUploadToStorage).not.toHaveBeenCalled()
+        })
+
+        it("C5C-015: folder mime gets a folder-specific message (NOT 'export to PDF')", async () => {
+            mockDriveGetFileMetadata.mockResolvedValue({
+                name: "Choral Arrangements",
+                mimeType: "application/vnd.google-apps.folder",
+            })
+            const r = await importChartFromDrive(ADMIN, {
+                driveFileId: "folder-1",
+            })
+            expect(r).toMatchObject({
+                ok: false,
+                error: {
+                    machine_code: "drive_invalid_target",
+                    code: 400,
+                    message: expect.stringContaining("folder"),
+                },
+                mimeType: "application/vnd.google-apps.folder",
+            })
+            // Message must NOT carry the export-to-PDF guidance.
+            const errBody = r as unknown as { error: { message: string }; hint: string }
+            expect(errBody.error.message).not.toMatch(/export it to PDF/i)
+            expect(errBody.hint).toMatch(/pick a chart .* inside/i)
+            expect(mockDriveGetFile).not.toHaveBeenCalled()
+        })
+
+        it("C5C-015: Docs/Sheets/Slides keep the export-to-PDF guidance", async () => {
+            mockDriveGetFileMetadata.mockResolvedValue({
+                name: "My Song",
+                mimeType: "application/vnd.google-apps.document",
+            })
+            const r = await importChartFromDrive(ADMIN, {
+                driveFileId: "gdoc-2",
+            })
+            expect(r).toMatchObject({
+                ok: false,
+                error: {
+                    machine_code: "unsupported_drive_native_type",
+                    code: 400,
+                    message: expect.stringContaining("export it to PDF"),
+                },
+            })
+            expect(mockDriveGetFile).not.toHaveBeenCalled()
+        })
+
+        it("C5C-008: dryRun returns predicted shape + dedup probe without writing", async () => {
+            mockDriveGetFileMetadata.mockResolvedValue({
+                name: "Brand New Chart.pdf",
+                mimeType: "application/pdf",
+            })
+
+            const r = (await importChartFromDrive(ADMIN, {
+                driveFileId: "preview-1",
+                dryRun: true,
+            })) as {
+                ok: true
+                wouldCommit: false
+                dryRun: true
+                driveFileId: string
+                driveName: string
+                predictedTitle: string
+                predictedMimeType: string
+                predictedCollection: string
+                targetStoragePath: string
+                dedupScore: number | null
+                dedupMatchedRow: { fileId: string; name: string; matchKind: string } | null
+                aiEnrichmentPlan: { wouldRun: boolean; reason: string }
+            }
+            expect(r.ok).toBe(true)
+            expect(r.wouldCommit).toBe(false)
+            expect(r.dryRun).toBe(true)
+            expect(r.driveFileId).toBe("preview-1")
+            expect(r.driveName).toBe("Brand New Chart.pdf")
+            expect(r.predictedTitle).toBe("Brand New Chart")
+            expect(r.predictedMimeType).toBe("application/pdf")
+            expect(r.predictedCollection).toBe("uploads")
+            expect(r.targetStoragePath).toMatch(
+                /^library\/upload-<new-uuid>\.pdf$/,
+            )
+            // No existing library row → no dedup match.
+            expect(r.dedupScore).toBeNull()
+            expect(r.dedupMatchedRow).toBeNull()
+            expect(r.aiEnrichmentPlan).toMatchObject({
+                wouldRun: expect.any(Boolean),
+                reason: expect.any(String),
+            })
+
+            // Critically: no byte fetch, no Storage write, no library_index doc.
+            expect(mockDriveGetFile).not.toHaveBeenCalled()
+            expect(mockUploadToStorage).not.toHaveBeenCalled()
+            const idx = await db().collection("library_index").get()
+            expect(idx.empty).toBe(true)
+        })
+
+        it("C5C-008: dryRun surfaces an exact-match dedup score 1.0 + matched row", async () => {
+            await uploadChart(ADMIN, {
+                title: "Adon Olam",
+                fileBase64: b64("%PDF-1.4 a"),
+                mimeType: "application/pdf",
+            })
+
+            mockDriveGetFileMetadata.mockResolvedValue({
+                name: "Adon Olam.pdf",
+                mimeType: "application/pdf",
+            })
+
+            const r = (await importChartFromDrive(ADMIN, {
+                driveFileId: "preview-dup",
+                dryRun: true,
+            })) as {
+                ok: true
+                dedupScore: number | null
+                dedupMatchedRow: { fileId: string; name: string; matchKind: string } | null
+            }
+            expect(r.ok).toBe(true)
+            expect(r.dedupScore).toBe(1)
+            expect(r.dedupMatchedRow).toMatchObject({
+                name: "Adon Olam",
+                matchKind: "exact",
+            })
+        })
+
+        it("C5C-008: dryRun does NOT require force; gates still run (curated denial)", async () => {
+            mockDriveGetFileMetadata.mockReset()
+            const r = await importChartFromDrive(MUSICIAN, {
+                driveFileId: "any",
+                collection: "core",
+                dryRun: true,
+            })
+            expect(r).toMatchObject({
+                ok: false,
+                error: { message: expect.stringContaining("'core' catalog") },
+            })
+            // Drive never called — auth gate fires first.
+            expect(mockDriveGetFileMetadata).not.toHaveBeenCalled()
         })
     })
 })
