@@ -322,6 +322,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                         value={searchQuery}
                         onChange={(e) => handleSearchChange(e.target.value)}
                         placeholder={tab === "audio" ? "Search audio files..." : "Search by name, key, topic..."}
+                        aria-label={tab === "audio" ? "Search audio files" : "Search song charts by name, key, or topic"}
                         className="pl-12 h-14 text-xl rounded-full bg-brand/5 border-brand/10 focus:border-brand focus:ring-brand/20"
                     />
                 </div>

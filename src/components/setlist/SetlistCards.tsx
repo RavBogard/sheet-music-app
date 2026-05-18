@@ -115,29 +115,36 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                 <Button
                     variant="outline"
                     onClick={(e) => { e.stopPropagation(); onEdit(e); }}
-                    className="hidden sm:flex border-brand/20 text-foreground hover:bg-brand hover:text-brand-foreground hover:border-brand rounded-full px-4 h-10"
+                    className="hidden sm:flex border-brand/20 text-foreground hover:bg-brand hover:text-brand-foreground hover:border-brand rounded-full px-4 h-11"
+                    aria-label={`Edit setlist — ${setlist.name}`}
                 >
                     <Pencil className="h-4 w-4 mr-2" />
                     Edit
                 </Button>
-                
-                <div
+
+                <button
+                    type="button"
                     onClick={(e) => {
                         e.stopPropagation()
                         onDownload(setlist)
                     }}
-                    className="w-10 h-10 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+                    className="w-11 h-11 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors cursor-pointer bg-transparent border-0"
+                    aria-label={`Download setlist for offline — ${setlist.name}`}
                     title="Download for Offline"
                 >
                     <Download className={`h-5 w-5 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
-                </div>
+                </button>
 
                 <div className="md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <div className="w-10 h-10 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors cursor-pointer text-muted-foreground hover:text-foreground">
+                            <button
+                                type="button"
+                                aria-label={`Setlist menu — ${setlist.name}`}
+                                className="w-11 h-11 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors cursor-pointer text-muted-foreground hover:text-foreground bg-transparent border-0"
+                            >
                                 <MoreVertical className="h-5 w-5" />
-                            </div>
+                            </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56 glass-card border-brand/20">
                             {canDuplicate && (
@@ -257,17 +264,22 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                     variant="ghost"
                     size="icon"
                     onClick={(e) => { e.stopPropagation(); onEdit(e); }}
-                    className="h-10 w-10 hover:bg-white/10 rounded-full text-muted-foreground hover:text-foreground"
+                    aria-label={`Edit setlist — ${setlist.name}`}
+                    className="h-11 w-11 hover:bg-white/10 rounded-full text-muted-foreground hover:text-foreground"
                 >
                     <Pencil className="h-4 w-4" />
                 </Button>
-                
+
                 {(canDuplicate || canDelete) && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <div className="h-10 w-10 hover:bg-white/10 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer">
+                            <button
+                                type="button"
+                                aria-label={`Setlist menu — ${setlist.name}`}
+                                className="h-11 w-11 hover:bg-white/10 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer bg-transparent border-0"
+                            >
                                 <MoreVertical className="h-5 w-5" />
-                            </div>
+                            </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56 glass-card border-brand/20">
                             {canDuplicate && (

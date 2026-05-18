@@ -74,11 +74,18 @@ export default function PerformLayout({
 }: {
     children: React.ReactNode
 }) {
+    // P2-011 (WCAG 1.3.1): /perform routes live outside the (main) route group
+    // and thus don't inherit (main)/layout.tsx's <main id="main-content"> wrapper.
+    // Without a real <main> landmark the global "Skip to main content" link
+    // (in AppNavigation — though AppNavigation is also outside this tree) has
+    // nothing to target, and axe flags landmark-main on every /perform surface.
+    // Using <main> instead of <div> here gives the landmark + keeps the id stable
+    // for any callers wiring skip-link/anchor links to #main-content.
     return (
-        <div id="main-content" className="min-h-screen">
+        <main id="main-content" className="min-h-screen">
             <PdfWorkerPreload />
             <PerformanceOfflineIndicator />
             {children}
-        </div>
+        </main>
     )
 }

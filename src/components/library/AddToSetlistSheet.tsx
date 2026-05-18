@@ -93,6 +93,7 @@ export function AddToSetlistSheet({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search setlists..."
+              aria-label="Search setlists"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="pl-9 bg-muted/50 border-border/50 focus-visible:ring-primary/30"
@@ -116,6 +117,7 @@ export function AddToSetlistSheet({
             <Input
               autoFocus
               placeholder="New Setlist Name (e.g. Friday Night)"
+              aria-label="New setlist name"
               value={newSetName}
               onChange={(e) => setNewSetName(e.target.value)}
               onKeyDown={(e) => {

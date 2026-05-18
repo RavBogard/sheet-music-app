@@ -39,17 +39,93 @@ const buttonVariants = cva(
   }
 )
 
+const ICON_SIZES = new Set(["icon", "icon-xs", "icon-sm", "icon-lg"])
+
+/**
+ * Icon-only buttons (size variants from ICON_SIZES) render a single SVG glyph
+ * with no surrounding text. Screen readers announce them as bare "button" unless
+ * the call-site provides an accessible name. Per WCAG 4.1.2 we require ONE of:
+ *   - aria-label / aria-labelledby on the Button
+ *   - title attribute (announced as fallback name)
+ *   - sr-only text child
+ *   - <title> element inside the SVG child
+ *
+ * Enforced as a dev-mode console.warn so missing labels surface during local
+ * work / Storybook / Playwright without breaking prod. Caught the cycle-3.5
+ * cluster of 84 unnamed icon-buttons on /setlists; keeps future callsites
+ * from re-introducing the regression.
+ */
+function hasAccessibleName(
+  props: React.ComponentProps<"button">,
+  children: React.ReactNode,
+): boolean {
+  if (props["aria-label"]) return true
+  if (props["aria-labelledby"]) return true
+  if (props.title) return true
+
+  let labeled = false
+  React.Children.forEach(children, (child) => {
+    if (labeled) return
+    if (typeof child === "string" && child.trim().length > 0) {
+      labeled = true
+      return
+    }
+    if (!React.isValidElement(child)) return
+    const el = child as React.ReactElement<{
+      className?: string
+      children?: React.ReactNode
+      "aria-label"?: string
+    }>
+    const cls = el.props?.className
+    if (typeof cls === "string" && cls.includes("sr-only")) {
+      labeled = true
+      return
+    }
+    if (el.props?.["aria-label"]) {
+      labeled = true
+      return
+    }
+    // Walk into SVG children one level for <title> elements (lucide icons
+    // expose name via aria-label or a <title> child when given a title prop).
+    if (el.props?.children) {
+      React.Children.forEach(el.props.children, (grand) => {
+        if (labeled) return
+        if (!React.isValidElement(grand)) return
+        if ((grand.type as { displayName?: string } | string) === "title") {
+          labeled = true
+        }
+      })
+    }
+  })
+  return labeled
+}
+
 function Button({
   className,
   variant = "default",
   size = "default",
   asChild = false,
+  children,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
   }) {
   const Comp = asChild ? Slot : "button"
+
+  if (
+    process.env.NODE_ENV !== "production" &&
+    !asChild &&
+    typeof size === "string" &&
+    ICON_SIZES.has(size) &&
+    !hasAccessibleName(props as React.ComponentProps<"button">, children)
+  ) {
+    console.warn(
+      "[Button] icon-only Button is missing an accessible name. Add `aria-label`, `title`, " +
+        "an `sr-only` text child, or a `<title>` element inside the SVG. " +
+        "(WCAG 4.1.2 — see .coord/inbox/cycle35-a11y-sweep.md P2-001)",
+    )
+  }
 
   return (
     <Comp
@@ -58,7 +134,9 @@ function Button({
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {children}
+    </Comp>
   )
 }
 

@@ -31,7 +31,7 @@ export function AudioFilePicker({ currentFileId, onSelect, trigger }: AudioFileP
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 {trigger || (
-                    <Button variant="ghost" size="icon" className={currentFileId ? "text-blue-400" : "text-muted-foreground"}>
+                    <Button variant="ghost" size="icon" aria-label={currentFileId ? "Change backing track" : "Link backing track"} className={currentFileId ? "text-blue-400" : "text-muted-foreground"}>
                         <Music className="h-4 w-4" />
                     </Button>
                 )}

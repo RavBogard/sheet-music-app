@@ -174,6 +174,7 @@ export function MobileTabBar(props: AppNavigationProps) {
                         <Input
                             ref={inputRef}
                             placeholder="Search songs..."
+                            aria-label="Search songs"
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             className="mb-2"

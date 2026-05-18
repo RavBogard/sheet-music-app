@@ -341,7 +341,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 sm:px-6 sm:py-5 border-b border-border shrink-0 bg-muted/30">
                     <h2 className="text-xl font-bold">Gig Packet</h2>
-                    <Button size="icon" variant="ghost" onClick={onClose}>
+                    <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close gig packet dialog">
                         <X className="h-5 w-5" />
                     </Button>
                 </div>
@@ -451,13 +451,13 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                 <label className="text-sm font-medium text-foreground">Header Details:</label>
                                 <div className="grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-lg border border-border/50">
                                     <div className="col-span-2">
-                                        <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Setlist title" className="bg-background h-9" />
+                                        <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Setlist title" aria-label="Setlist title" className="bg-background h-9" />
                                     </div>
                                     <div>
-                                        <Input value={date} onChange={e => setDate(e.target.value)} placeholder="Date" className="bg-background h-9" />
+                                        <Input value={date} onChange={e => setDate(e.target.value)} placeholder="Date" aria-label="Date" className="bg-background h-9" />
                                     </div>
                                     <div>
-                                        <Input value={eventName} onChange={e => setEventName(e.target.value)} placeholder="Event (optional)" className="bg-background h-9" />
+                                        <Input value={eventName} onChange={e => setEventName(e.target.value)} placeholder="Event (optional)" aria-label="Event (optional)" className="bg-background h-9" />
                                     </div>
                                 </div>
                             </div>

@@ -61,6 +61,7 @@ export function NamePrompt({
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g., Shabbat Morning, Friday Night..."
+                        aria-label="Setlist name"
                         className="text-xl h-12 bg-background/50 border-border"
                         autoFocus
                         onKeyDown={(e) => e.key === 'Enter' && handleConfirm()}

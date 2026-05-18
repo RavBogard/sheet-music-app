@@ -335,6 +335,7 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
                         <Input
                             ref={filterInputRef}
                             placeholder="Filter…  ( / )"
+                            aria-label="Filter review queue"
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
                             className="h-8 w-44 text-xs"
@@ -1074,6 +1075,7 @@ function EditForm({
                         onChange={(e) => setTags(e.target.value)}
                         className="h-7 text-xs"
                         placeholder="comma-separated"
+                        aria-label="Tags (comma-separated)"
                     />
                 </Field>
             </div>

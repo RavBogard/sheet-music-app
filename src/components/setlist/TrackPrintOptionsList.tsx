@@ -127,10 +127,11 @@ export function TrackPrintOptionsList({
                             </label>
 
                             {/* Transpose stepper */}
-                            <div className="flex items-center gap-0.5 bg-muted rounded-md shrink-0">
+                            <div role="group" aria-label={`Transpose ${track.title}`} className="flex items-center gap-0.5 bg-muted rounded-md shrink-0">
                                 <Button
                                     variant="ghost"
                                     size="icon-xs"
+                                    aria-label="Transpose down one semitone"
                                     className="h-7 w-7 text-muted-foreground hover:text-foreground"
                                     onClick={() => onUpdateTrack(
                                         track.id,
@@ -148,6 +149,7 @@ export function TrackPrintOptionsList({
                                 <Button
                                     variant="ghost"
                                     size="icon-xs"
+                                    aria-label="Transpose up one semitone"
                                     className="h-7 w-7 text-muted-foreground hover:text-foreground"
                                     onClick={() => onUpdateTrack(
                                         track.id,

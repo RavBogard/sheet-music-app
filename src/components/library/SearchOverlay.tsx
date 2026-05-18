@@ -88,16 +88,17 @@ export function SearchOverlay({
             {/* Header */}
             <div className="flex flex-col gap-3 px-4 py-3 border-b border-border">
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
+                    <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close search overlay" className="shrink-0">
                         <X className="h-5 w-5" />
                     </Button>
                     <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         <Input
                             ref={inputRef}
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder={replacingTrackId ? "Search for replacement song..." : "Search songs to add..."}
+                            aria-label={replacingTrackId ? "Search for replacement song" : "Search songs to add"}
                             className="pl-9 h-10"
                             autoComplete="off"
                             autoCorrect="off"

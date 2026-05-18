@@ -40,18 +40,21 @@ export function SetlistToolbar({
                         variant="ghost"
                         size="icon"
                         onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) onSearchChange("") }}
-                        className={`h-9 w-9 ${searchOpen ? "text-brand" : "text-muted-foreground"}`}
-                        title="Search"
+                        className={`h-11 w-11 ${searchOpen ? "text-brand" : "text-muted-foreground"}`}
+                        aria-label={searchOpen ? "Close search" : "Search setlists"}
+                        title={searchOpen ? "Close search" : "Search"}
                     >
                         {searchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
                     </Button>
 
-                    <div className="flex bg-card p-1 rounded-xl w-fit">
+                    <div role="group" aria-label="Setlist view" className="flex bg-card p-1 rounded-xl w-fit">
                         <Button
                             variant={view === 'list' ? 'secondary' : 'ghost'}
                             size="icon"
                             onClick={() => onViewChange('list')}
-                            className={`h-9 w-9 transition-all ${view === 'list' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
+                            className={`h-11 w-11 transition-all ${view === 'list' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
+                            aria-label="List view"
+                            aria-pressed={view === 'list'}
                             title="List View"
                         >
                             <List className="h-4 w-4" />
@@ -60,7 +63,9 @@ export function SetlistToolbar({
                             variant={view === 'calendar' ? 'secondary' : 'ghost'}
                             size="icon"
                             onClick={() => onViewChange('calendar')}
-                            className={`h-9 w-9 transition-all ${view === 'calendar' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
+                            className={`h-11 w-11 transition-all ${view === 'calendar' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
+                            aria-label="Calendar view"
+                            aria-pressed={view === 'calendar'}
                             title="Calendar View"
                         >
                             <Calendar className="h-4 w-4" />
@@ -69,10 +74,12 @@ export function SetlistToolbar({
                             variant={view === 'matrix' ? 'secondary' : 'ghost'}
                             size="icon"
                             onClick={() => onViewChange('matrix')}
-                            className={`h-9 w-9 transition-all ${view === 'matrix' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
+                            className={`h-11 w-11 transition-all ${view === 'matrix' ? 'bg-brand/15 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-brand/5'}`}
+                            aria-label="Matrix view"
+                            aria-pressed={view === 'matrix'}
                             title="Matrix View"
                         >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                             </svg>
                         </Button>
@@ -87,6 +94,7 @@ export function SetlistToolbar({
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
                         placeholder="Search setlists..."
+                        aria-label="Search setlists"
                         className="h-9 text-sm"
                         autoFocus
                     />

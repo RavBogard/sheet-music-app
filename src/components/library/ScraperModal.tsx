@@ -330,15 +330,17 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                             value={chatInput}
                                             onChange={(e) => setChatInput(e.target.value)}
                                             placeholder="Describe a song or type a title..."
+                                            aria-label="Describe a song or type a title"
                                             className="bg-muted/50 border-border pr-10"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') handleChatSubmit()
                                             }}
                                             disabled={searching}
                                         />
-                                        <Button 
-                                            size="icon" 
-                                            variant="ghost" 
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            aria-label="Send chat message"
                                             className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-brand hover:bg-brand/10 hover:text-brand"
                                             onClick={handleChatSubmit}
                                             disabled={searching || !chatInput.trim()}
@@ -358,6 +360,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                             value={url}
                                             onChange={(e) => setUrl(e.target.value)}
                                             placeholder="https://tabs.ultimate-guitar.com/..."
+                                            aria-label="Chart URL"
                                             className="pl-9"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') handleScrape()

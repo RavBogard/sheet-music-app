@@ -100,6 +100,7 @@ export function EditDetails({
                                 }
                             }}
                             placeholder="Setlist name"
+                            aria-label="Setlist name"
                             className="text-base h-11 bg-background/50 border-border"
                             autoFocus
                         />
