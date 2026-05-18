@@ -66,6 +66,7 @@ const publicExactRoutes = [
     '/terms',
     '/sms-consent',
     '/changelog',
+    '/accessibility',
 ]
 
 // Prefix-match public routes — these serve public/unauthenticated content

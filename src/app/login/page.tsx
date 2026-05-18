@@ -87,6 +87,7 @@ export default async function LoginPage() {
                     <a href="/terms" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Terms</a>
                     <a href="/sms-consent" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">SMS Consent</a>
                     <a href="/changelog" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Changelog</a>
+                    <a href="/accessibility" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Accessibility</a>
                 </nav>
             </main>
         </div>

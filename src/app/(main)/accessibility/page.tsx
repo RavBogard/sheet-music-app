@@ -1,3 +1,8 @@
+export const metadata = {
+    title: 'Accessibility Statement | CRC Music',
+    robots: { index: true, follow: true },
+}
+
 export default function AccessibilityPage() {
     return (
         <div className="min-h-screen bg-background text-foreground">

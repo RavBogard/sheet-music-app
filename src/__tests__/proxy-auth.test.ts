@@ -39,6 +39,7 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
         '/terms',
         '/sms-consent',
         '/changelog',
+        '/accessibility',
     ])('allows legal/marketing page %s without authentication', async (path) => {
         const req = makeReq(path)
         const res = await proxy(req)
