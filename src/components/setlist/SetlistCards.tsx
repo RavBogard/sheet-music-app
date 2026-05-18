@@ -71,20 +71,31 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
     }, [setlist.fileIds])
 
     return (
-        <div
-            role="button"
-            tabIndex={0}
-            onClick={onPerform}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onPerform(e as any) }}
-            className={`glass-card hover:border-brand/50 hover:shadow-[0_0_20px_rgba(67,56,202,0.15)] rounded-xl p-4 flex items-center gap-4 group transition-all cursor-pointer relative overflow-hidden active:scale-[0.98] ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+        // C4-003: outer is non-interactive <article>; cover-<button> sibling
+        // captures whole-card taps; action buttons are SIBLINGS (not
+        // descendants) of the cover button, so axe sees no nested-interactive
+        // violation. Content cells set pointer-events-none so taps pass
+        // through to the cover button beneath them; action region keeps the
+        // default pointer-events-auto so its buttons handle their own taps.
+        <article
+            className={`glass-card hover:border-brand/50 hover:shadow-[0_0_20px_rgba(67,56,202,0.15)] rounded-xl p-4 flex items-center gap-4 group transition-all relative overflow-hidden ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
+            <button
+                type="button"
+                onClick={onPerform}
+                aria-label={`Open setlist — ${setlist.name}`}
+                className="absolute inset-0 z-0 rounded-xl bg-transparent border-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
+            >
+                <span className="sr-only">Open setlist {setlist.name}</span>
+            </button>
+
             {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20">
+                <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20 pointer-events-none">
                     <Loader2 className="h-6 w-6 animate-spin text-brand" />
                 </div>
             )}
-            
-            <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border border-white/5 shadow-lg bg-gradient-to-br from-brand/20 to-transparent flex items-center justify-center relative">
+
+            <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border border-white/5 shadow-lg bg-gradient-to-br from-brand/20 to-transparent flex items-center justify-center relative z-10 pointer-events-none">
                 <Calendar className="h-8 w-8 text-brand/50 absolute z-0" />
                 <div className="absolute inset-0 bg-noise opacity-20 mix-blend-overlay"></div>
                 <div className="z-10 font-bold text-brand-foreground/80 text-xl tracking-tighter">
@@ -92,7 +103,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                 </div>
             </div>
 
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
                 <h5 title={setlist.name} className="text-xl font-bold text-foreground group-hover:text-brand transition-colors line-clamp-2 tracking-tight">{setlist.name}</h5>
                 <div className="flex items-center gap-3 mt-1 flex-wrap">
                     <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
@@ -111,7 +122,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                 </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 relative z-10">
                 <Button
                     variant="outline"
                     onClick={(e) => { e.stopPropagation(); onEdit(e); }}
@@ -198,7 +209,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                     </DropdownMenu>
                 </div>
             </div>
-        </div>
+        </article>
     )
 }
 
@@ -223,20 +234,27 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
     const isLoading = navigatingTo === setlist.id
 
     return (
-        <div
-            role="button"
-            tabIndex={0}
-            onClick={onPerform}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onPerform(e as any) }}
-            className={`glass-card hover:border-brand/50 hover:shadow-[0_0_20px_rgba(67,56,202,0.15)] rounded-xl p-4 flex items-center gap-4 group transition-all cursor-pointer relative overflow-hidden active:scale-[0.98] ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+        // C4-003: see UpcomingSetlistCard above for the rationale; mirror the
+        // cover-button-as-sibling pattern here.
+        <article
+            className={`glass-card hover:border-brand/50 hover:shadow-[0_0_20px_rgba(67,56,202,0.15)] rounded-xl p-4 flex items-center gap-4 group transition-all relative overflow-hidden ${isLoading ? 'ring-2 ring-brand opacity-80' : ''} ${navigatingTo && !isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
+            <button
+                type="button"
+                onClick={onPerform}
+                aria-label={`Open setlist — ${setlist.name}`}
+                className="absolute inset-0 z-0 rounded-xl bg-transparent border-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
+            >
+                <span className="sr-only">Open setlist {setlist.name}</span>
+            </button>
+
             {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20 rounded-xl">
+                <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-20 rounded-xl pointer-events-none">
                     <Loader2 className="h-5 w-5 animate-spin text-brand" />
                 </div>
             )}
-            
-            <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-white/5 shadow-md bg-gradient-to-br from-surface-container to-background flex items-center justify-center relative grayscale group-hover:grayscale-0 transition-all">
+
+            <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-white/5 shadow-md bg-gradient-to-br from-surface-container to-background flex items-center justify-center relative z-10 pointer-events-none grayscale group-hover:grayscale-0 transition-all">
                 <Calendar className="h-6 w-6 text-muted-foreground absolute z-0" />
                 <div className="absolute inset-0 bg-noise opacity-10 mix-blend-overlay"></div>
                 <div className="z-10 font-bold text-muted-foreground/80 text-sm tracking-tighter">
@@ -244,7 +262,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                 </div>
             </div>
 
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
                 <h5 title={setlist.name} className="text-lg font-semibold text-foreground group-hover:text-brand transition-colors line-clamp-2 tracking-tight">{setlist.name}</h5>
                 <div className="flex items-center gap-3 mt-1 flex-wrap">
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -259,7 +277,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
             </div>
 
             {/* Action Menu */}
-            <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+            <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity relative z-10">
                 <Button
                     variant="ghost"
                     size="icon"
@@ -327,7 +345,7 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                     </DropdownMenu>
                 )}
             </div>
-        </div>
+        </article>
     )
 }
 
