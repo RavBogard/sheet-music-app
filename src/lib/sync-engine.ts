@@ -321,7 +321,24 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                     continue
                 }
 
-                await uploadToStorage(file.id, buffer, file.mimeType || 'application/pdf')
+                // Cycle-6 C6C-008 / C5C-006 follow-up: for shortcut-bonded
+                // rows, `drive.getFile` transparently resolves the shortcut
+                // and returns the TARGET's bytes — but `file.mimeType` here
+                // is the SHORTCUT's own mime, not the target's. Writing the
+                // target bytes with the shortcut mime broke `fetchFileById`'s
+                // Storage path (gig-packet then routed real PDFs to the
+                // "Unsupported content type" appendix). Use Drive's
+                // `shortcutDetails.targetMimeType` (populated by listAllFiles)
+                // so Storage carries the right contentType going forward.
+                const storageMimeRaw =
+                    file.mimeType === 'application/vnd.google-apps.shortcut'
+                        ? file.shortcutDetails?.targetMimeType
+                        : file.mimeType
+                const storageMime =
+                    storageMimeRaw && storageMimeRaw !== 'application/vnd.google-apps.shortcut'
+                        ? storageMimeRaw
+                        : 'application/pdf'
+                await uploadToStorage(file.id, buffer, storageMime)
 
                 // Mark as copied in Firestore
                 await db.collection('library_index').doc(file.id).update({

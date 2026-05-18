@@ -25,11 +25,25 @@ export interface FetchedFile {
  * @returns FetchedFile or null if not in Storage
  */
 export async function fetchFileById(fileId: string, mimeType?: string): Promise<FetchedFile | null> {
-    // If the frontend passed a raw storageUrl with an extension, strip it so the candidate logic works correctly 
+    // If the frontend passed a raw storageUrl with an extension, strip it so the candidate logic works correctly
     const cleanId = fileId.replace(/\.(pdf|xml|musicxml|mp3)$/i, '')
-    
+
     const storageResult = await downloadFromStorage(cleanId, mimeType)
-    if (storageResult.success) {
+    // Cycle-6 C6C-008 / C5C-006 follow-up: pre-cycle-6 sync-engine wrote the
+    // shortcut-resolved TARGET bytes to Storage tagged with the SHORTCUT mime
+    // (`file.mimeType` from listAllFiles, which is the shortcut's own mime,
+    // not the target's). The bytes are correct but the contentType is
+    // meaningless — gig-packet then routed real PDFs to the "Unsupported
+    // content type" appendix. Storage was effectively a hit-with-wrong-mime
+    // state for shortcut-bonded rows. Treat that as a miss and fall through
+    // to the Drive `getFileWithMime` path which returns the TARGET's mime.
+    // The same-commit sync-engine fix prevents new rows from acquiring this
+    // state; this branch heals legacy rows on read.
+    const storageHitWithShortcutMime =
+        storageResult.success &&
+        storageResult.data.contentType === DRIVE_SHORTCUT_MIME
+
+    if (storageResult.success && !storageHitWithShortcutMime) {
         return {
             buffer: storageResult.data.buffer,
             contentType: storageResult.data.contentType,
@@ -37,7 +51,9 @@ export async function fetchFileById(fileId: string, mimeType?: string): Promise<
         }
     }
 
-    if (storageResult.reason === 'network') {
+    if (storageHitWithShortcutMime) {
+        logger.warn(`[FileFetcher] Storage hit for ${fileId} reported shortcut contentType — falling through to Drive for resolved mime`)
+    } else if (storageResult.success === false && storageResult.reason === 'network') {
         logger.warn(`[FileFetcher] Storage error for ${fileId}: ${storageResult.message}`)
     } else {
         logger.warn(`[FileFetcher] File not in Storage: ${fileId} — attempting Drive fallback`)

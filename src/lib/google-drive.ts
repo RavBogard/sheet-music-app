@@ -364,9 +364,22 @@ export class DriveClient {
             if (metaData.mimeType === 'application/vnd.google-apps.shortcut') {
                 const targetId = metaData.shortcutDetails?.targetId
                 if (!targetId) throw new Error(`Drive shortcut ${fileId} has no targetId`)
+                const targetMime = metaData.shortcutDetails?.targetMimeType ?? null
+                // Cycle-6 C6C-008 defensive: Drive supports shortcut chains. We
+                // follow exactly one hop. If the target is itself a shortcut
+                // (targetMimeType reports shortcut), refuse rather than recurse
+                // — callers (gig-packet, file proxy) surface this as a clear
+                // missingCharts entry instead of silently dropping bytes or
+                // crashing on a 403 from alt=media against a shortcut.
+                if (targetMime === 'application/vnd.google-apps.shortcut') {
+                    throw new Error(
+                        `Drive shortcut chain exceeded max-depth-1 (${fileId} → ${targetId} → shortcut). ` +
+                        `Re-bond the library row directly to the underlying chart fileId.`
+                    )
+                }
                 logger.info(`[Drive] Resolving shortcut ${fileId} → ${targetId}`)
                 downloadId = targetId
-                resolvedMime = metaData.shortcutDetails?.targetMimeType ?? null
+                resolvedMime = targetMime
             }
 
             const res = await withRetry(() => this.drive.files.get({
