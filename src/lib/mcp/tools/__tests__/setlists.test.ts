@@ -117,18 +117,25 @@ describe("listSetlists", () => {
 
     it("rejects an unparseable `from` / `to` with the rich validation envelope (G-14 / MCP-003)", async () => {
         // Cycle-2 REG-001b: errors return the canonical rich envelope
-        // (machine code in `error`, human-readable prose in `message`).
+        // (machine code + human-readable prose both live inside `error`).
+        // Cycle-3 REG-002 (cycle3-envelope @ 2b8762f97) moved `message`
+        // from the top level into `error.message`; this fixture was missed
+        // and is repaired here by C4-009 fixes-fixture-migration-tail.
         expect(await listSetlists("u", { from: "not-a-date" })).toMatchObject({
             ok: false,
-            error: { machine_code: "invalid_argument" },
+            error: {
+                machine_code: "invalid_argument",
+                message: expect.stringContaining("from must be an ISO date"),
+            },
             field: "from",
-            message: expect.stringContaining("from must be an ISO date"),
         })
         expect(await listSetlists("u", { to: "garbage" })).toMatchObject({
             ok: false,
-            error: { machine_code: "invalid_argument" },
+            error: {
+                machine_code: "invalid_argument",
+                message: expect.stringContaining("to must be an ISO date"),
+            },
             field: "to",
-            message: expect.stringContaining("to must be an ISO date"),
         })
     })
 })

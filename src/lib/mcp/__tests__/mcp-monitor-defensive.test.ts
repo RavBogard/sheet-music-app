@@ -119,14 +119,18 @@ describe("list_monitor_buses — F-001 defensive guards", () => {
         )
 
         const result = await listMonitorBuses("admin-uid")
-        // Cycle-2 REG-001b: handler errors now use the rich envelope shape
-        // (machine code `internal_error`, prose in `message`).
+        // Cycle-2 REG-001b: handler errors now use the rich envelope shape.
+        // Cycle-3 REG-002 (cycle3-envelope @ 2b8762f97) moved `message`
+        // from the top level into `error.message`; this fixture was missed
+        // and is repaired here by C4-009 fixes-fixture-migration-tail.
         expect(result).toMatchObject({
             ok: false,
-            error: { machine_code: "internal_error" },
-            message: expect.stringMatching(
-                /list_monitor_buses internal error: Firestore offline/,
-            ),
+            error: {
+                machine_code: "internal_error",
+                message: expect.stringMatching(
+                    /list_monitor_buses internal error: Firestore offline/,
+                ),
+            },
         })
     })
 })
@@ -171,14 +175,18 @@ describe("get_matrix — F-002 defensive guards", () => {
         )
 
         const result = await getMatrix("admin-uid", {})
-        // Cycle-2 REG-001b: handler errors now use the rich envelope shape
-        // (machine code `internal_error`, prose in `message`).
+        // Cycle-2 REG-001b: handler errors now use the rich envelope shape.
+        // Cycle-3 REG-002 (cycle3-envelope @ 2b8762f97) moved `message`
+        // from the top level into `error.message`; this fixture was missed
+        // and is repaired here by C4-009 fixes-fixture-migration-tail.
         expect(result).toMatchObject({
             ok: false,
-            error: { machine_code: "internal_error" },
-            message: expect.stringMatching(
-                /get_matrix internal error: Bridge daemon unreachable/,
-            ),
+            error: {
+                machine_code: "internal_error",
+                message: expect.stringMatching(
+                    /get_matrix internal error: Bridge daemon unreachable/,
+                ),
+            },
         })
     })
 })

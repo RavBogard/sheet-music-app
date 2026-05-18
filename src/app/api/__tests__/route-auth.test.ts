@@ -172,8 +172,13 @@ describe('GET /api/drive/file/[fileId]', () => {
         expect(res.status).toBe(404)
         const body = (await res.json()) as Record<string, unknown>
         expect(body.ok).toBe(false)
-        expect(body.error).toBe('file_not_found')
-        expect(typeof body.message).toBe('string')
+        // Cycle-3 REG-002 rich-object envelope: error is a body object,
+        // not a flat slug. Pre-cycle-3 callers asserted `body.error ===
+        // 'file_not_found'` + `body.message`; post-cycle-3 the slug lives
+        // at `body.error.machine_code` and the prose at `body.error.message`.
+        const errObj = body.error as { machine_code: string; message: string }
+        expect(errObj.machine_code).toBe('file_not_found')
+        expect(typeof errObj.message).toBe('string')
         expect(typeof body.hint).toBe('string')
     })
 
