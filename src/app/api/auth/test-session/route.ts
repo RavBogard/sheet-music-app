@@ -50,6 +50,16 @@ export const dynamic = "force-dynamic"
 const COOKIE_NAME = "__session"
 const SESSION_MAX_AGE = 60 * 60 * 24 * 14 // 14 days (Firebase max)
 const TEST_UID_PREFIX = "test-"
+// Firebase custom tokens are JWTs signed with the service account key;
+// `auth.createCustomToken` mints them with a fixed 1h expiration. META-003
+// returns a fresh one in the POST success body so cowork harnesses can call
+// `signInWithCustomToken(auth, customToken)` client-side to populate Web SDK
+// auth state (idToken + currentUser listener fires). The internally-minted
+// custom token used for the Identity Toolkit exchange is deliberately NOT
+// reused — Option A keeps the response-returned token isolated from the
+// exchange lifecycle, so callers get a clean unexchanged token with the
+// full TTL window ahead of it.
+const CUSTOM_TOKEN_TTL_SEC = 60 * 60
 
 function envelopeResponse(envelope: RichErrorEnvelope, status: number): NextResponse {
     const res = NextResponse.json(envelope, { status })
@@ -290,13 +300,39 @@ export async function POST(req: NextRequest) {
         logger.warn("[test-session] users/{uid} role read failed", { uid, err })
     }
 
+    // META-003 — fresh customToken purely for the response body. The token
+    // minted above for the Identity Toolkit exchange is not reused; this
+    // call hands the caller an unexchanged token they can pass directly to
+    // `signInWithCustomToken(auth, customToken)` client-side. NEVER log
+    // this value, NEVER include it in any refusal/error envelope — it's a
+    // short-lived secret on the same hygiene tier as the bearer.
+    let responseCustomToken: string
+    try {
+        responseCustomToken = await auth.createCustomToken(uid)
+    } catch (err) {
+        logger.error("[test-session] response customToken mint failed", {
+            uid,
+            err,
+        })
+        return envelopeResponse(
+            richError(
+                "custom_token_mint_failed",
+                "Failed to mint custom token for response body.",
+                { uid },
+            ),
+            500,
+        )
+    }
+
     const sessionMintedAt = new Date().toISOString()
     const response = NextResponse.json({
         ok: true,
         uid,
         role,
+        customToken: responseCustomToken,
         sessionMintedAt,
         expiresInSec: SESSION_MAX_AGE,
+        customTokenExpiresInSec: CUSTOM_TOKEN_TTL_SEC,
     })
     response.headers.set("Cache-Control", "no-store")
     response.cookies.set(COOKIE_NAME, sessionCookie, {

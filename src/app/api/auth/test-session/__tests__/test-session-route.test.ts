@@ -15,6 +15,10 @@ import { describe, expect, it, vi, beforeEach } from "vitest"
  *  - happy path: admin bearer + valid mcpTestUsers target → mint succeeds.
  *  - legacy self-mint preserved: no body → bearer's own uid path still works
  *    (and SEC-001 piggyback: bearerUid no longer echoes in not_a_test_uid).
+ *  - META-003: success body returns a `customToken` (JWT shape) +
+ *    `customTokenExpiresInSec: 3600` so cowork harnesses can call
+ *    `signInWithCustomToken(auth, customToken)` client-side. Refusal
+ *    bodies NEVER include the customToken.
  *
  * What's NOT covered here (gap acknowledged):
  *  - Real Identity Toolkit exchange (out-of-process; mocked).
@@ -27,7 +31,10 @@ const mockInitAdmin = vi.fn(() => true)
 const mockGetUserDoc = vi.fn()
 const mockGetTestUserDoc = vi.fn()
 const mockUpdateUser = vi.fn(async () => ({}))
-const mockCreateCustomToken = vi.fn(async () => "fake-custom-token")
+// JWT-shaped fake so META-003 success-body shape assertions can validate
+// the route returns a three-segment dot-separated string verbatim.
+const FAKE_CUSTOM_TOKEN = "eyJhbGciOiJSUzI1NiJ9.eyJ1aWQiOiJ0ZXN0In0.signature"
+const mockCreateCustomToken = vi.fn(async () => FAKE_CUSTOM_TOKEN)
 const mockCreateSessionCookie = vi.fn(async () => "fake-session-cookie")
 const mockSignRoleCookie = vi.fn(async () => "fake-role-cookie")
 const mockFetch = vi.fn()
@@ -82,6 +89,21 @@ process.env.NEXT_PUBLIC_FIREBASE_API_KEY = "fake-api-key"
 
 import { POST } from "../route"
 
+// Cycle-3 envelope foundation (`2b8762f97`) shifted `richError` from the
+// flat `{ok:false, error:<slug>, ...}` shape to the rich object shape
+// `{ok:false, error:{code, machine_code, message}, ...extras}`. Tests
+// in this file pre-dated that migration and were asserting against the
+// flat shape — collateral repair here so the post-migration shape is
+// what's asserted.
+function machineCode(body: Record<string, unknown>): string | undefined {
+    const err = body.error
+    if (err && typeof err === "object") {
+        const mc = (err as Record<string, unknown>).machine_code
+        return typeof mc === "string" ? mc : undefined
+    }
+    return undefined
+}
+
 function jsonRequest(body?: Record<string, unknown>): Request {
     return new Request("https://example.com/api/auth/test-session", {
         method: "POST",
@@ -97,7 +119,7 @@ describe("/api/auth/test-session — UX-001 admin-bearer branch", () => {
         mockGetUserDoc.mockReset()
         mockGetTestUserDoc.mockReset()
         mockUpdateUser.mockReset().mockResolvedValue({})
-        mockCreateCustomToken.mockReset().mockResolvedValue("fake-custom-token")
+        mockCreateCustomToken.mockReset().mockResolvedValue(FAKE_CUSTOM_TOKEN)
         mockCreateSessionCookie
             .mockReset()
             .mockResolvedValue("fake-session-cookie")
@@ -120,7 +142,7 @@ describe("/api/auth/test-session — UX-001 admin-bearer branch", () => {
         const res = await POST(jsonRequest({ uid: "test-band_leader-xyz" }) as never)
         expect(res.status).toBe(403)
         const body = (await res.json()) as Record<string, unknown>
-        expect(body.error).toBe("forbidden_role")
+        expect(machineCode(body)).toBe("forbidden_role")
         expect(body.callerRole).toBe("musician")
         // SEC-001 piggyback: refusal does NOT echo target uid or bearer uid.
         expect(JSON.stringify(body)).not.toContain("test-band_leader-xyz")
@@ -137,7 +159,7 @@ describe("/api/auth/test-session — UX-001 admin-bearer branch", () => {
         const res = await POST(jsonRequest({ uid: "real-user-uid" }) as never)
         expect(res.status).toBe(400)
         const body = (await res.json()) as Record<string, unknown>
-        expect(body.error).toBe("invalid_argument")
+        expect(machineCode(body)).toBe("invalid_argument")
         expect(body.field).toBe("uid")
     })
 
@@ -156,8 +178,10 @@ describe("/api/auth/test-session — UX-001 admin-bearer branch", () => {
         )
         expect(res.status).toBe(400)
         const body = (await res.json()) as Record<string, unknown>
-        expect(body.error).toBe("invalid_argument")
-        expect(body.message).toMatch(/mcpTestUsers/)
+        expect(machineCode(body)).toBe("invalid_argument")
+        // Rich-envelope message lives at body.error.message
+        const errBody = body.error as Record<string, unknown>
+        expect(errBody.message).toMatch(/mcpTestUsers/)
     })
 
     it("admin bearer + valid mcpTestUsers target → mints session cookie", async () => {
@@ -187,10 +211,19 @@ describe("/api/auth/test-session — UX-001 admin-bearer branch", () => {
         expect(body.uid).toBe("test-band_leader-abc")
         expect(body.role).toBe("band_leader")
         // Identity Toolkit exchange was called with the TARGET uid's
-        // custom token (not the bearer's admin uid).
+        // custom token (not the bearer's admin uid). META-003 mints a
+        // SECOND customToken at the end of the success path for the
+        // response body — also scoped to the target uid.
         expect(mockCreateCustomToken).toHaveBeenCalledWith(
             "test-band_leader-abc",
         )
+        expect(mockCreateCustomToken).toHaveBeenCalledTimes(2)
+        // META-003 — customToken in response body has JWT shape
+        // (three dot-separated segments) and a 1h expiration window.
+        expect(typeof body.customToken).toBe("string")
+        expect(body.customToken).toBe(FAKE_CUSTOM_TOKEN)
+        expect((body.customToken as string).split(".")).toHaveLength(3)
+        expect(body.customTokenExpiresInSec).toBe(3600)
     })
 
     it("self-mint (no body) — bearer's own test-* uid still works", async () => {
@@ -205,6 +238,11 @@ describe("/api/auth/test-session — UX-001 admin-bearer branch", () => {
         const res = await POST(jsonRequest() as never)
         expect(res.status).toBe(200)
         expect(mockCreateCustomToken).toHaveBeenCalledWith("test-musician-self")
+        const body = (await res.json()) as Record<string, unknown>
+        // META-003 — self-mint path also returns customToken + TTL.
+        expect(typeof body.customToken).toBe("string")
+        expect((body.customToken as string).split(".")).toHaveLength(3)
+        expect(body.customTokenExpiresInSec).toBe(3600)
     })
 
     it("self-mint (no body) — non-test bearer rejected, SEC-001 scrubs uid", async () => {
@@ -213,8 +251,69 @@ describe("/api/auth/test-session — UX-001 admin-bearer branch", () => {
         const res = await POST(jsonRequest() as never)
         expect(res.status).toBe(403)
         const body = (await res.json()) as Record<string, unknown>
-        expect(body.error).toBe("not_a_test_uid")
+        expect(machineCode(body)).toBe("not_a_test_uid")
         // SEC-001 piggyback: refusal does NOT echo bearerUid.
         expect(JSON.stringify(body)).not.toContain("admin-daniel")
+        // META-003 — refusal MUST NOT include the customToken.
+        expect(body.customToken).toBeUndefined()
+        expect(body.customTokenExpiresInSec).toBeUndefined()
+    })
+
+    it("META-003 — all refusal paths omit customToken from body", async () => {
+        // Drive each refusal branch in turn and assert the customToken
+        // field is absent on every one. createCustomToken should never
+        // be reached on any refusal.
+
+        // 1) forbidden_role
+        mockVerifyBearer.mockResolvedValueOnce({ uid: "test-musician-abc" })
+        mockGetUserDoc.mockResolvedValueOnce({
+            exists: true,
+            data: () => ({ role: "musician" }),
+        })
+        let res = await POST(
+            jsonRequest({ uid: "test-band_leader-xyz" }) as never,
+        )
+        let body = (await res.json()) as Record<string, unknown>
+        expect(res.status).toBe(403)
+        expect(machineCode(body)).toBe("forbidden_role")
+        expect(body.customToken).toBeUndefined()
+
+        // 2) invalid_argument (non-test target)
+        mockVerifyBearer.mockResolvedValueOnce({ uid: "admin-daniel" })
+        mockGetUserDoc.mockResolvedValueOnce({
+            exists: true,
+            data: () => ({ role: "admin" }),
+        })
+        res = await POST(jsonRequest({ uid: "real-user-uid" }) as never)
+        body = (await res.json()) as Record<string, unknown>
+        expect(res.status).toBe(400)
+        expect(machineCode(body)).toBe("invalid_argument")
+        expect(body.customToken).toBeUndefined()
+
+        // 3) invalid_argument (target not in mcpTestUsers)
+        mockVerifyBearer.mockResolvedValueOnce({ uid: "admin-daniel" })
+        mockGetUserDoc.mockResolvedValueOnce({
+            exists: true,
+            data: () => ({ role: "admin" }),
+        })
+        mockGetTestUserDoc.mockResolvedValueOnce({ exists: false })
+        res = await POST(
+            jsonRequest({ uid: "test-musician-deadbeef" }) as never,
+        )
+        body = (await res.json()) as Record<string, unknown>
+        expect(res.status).toBe(400)
+        expect(machineCode(body)).toBe("invalid_argument")
+        expect(body.customToken).toBeUndefined()
+
+        // 4) not_a_test_uid (self-mint with non-test bearer)
+        mockVerifyBearer.mockResolvedValueOnce({ uid: "real-user" })
+        res = await POST(jsonRequest() as never)
+        body = (await res.json()) as Record<string, unknown>
+        expect(res.status).toBe(403)
+        expect(machineCode(body)).toBe("not_a_test_uid")
+        expect(body.customToken).toBeUndefined()
+
+        // createCustomToken is never called on any refusal path.
+        expect(mockCreateCustomToken).not.toHaveBeenCalled()
     })
 })
