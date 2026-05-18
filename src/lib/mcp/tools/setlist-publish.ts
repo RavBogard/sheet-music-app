@@ -178,6 +178,24 @@ const PUBLISH_AUDIENCE_ROLES_ALL = [
     "member",
 ] as const
 
+/**
+ * Cycle-5 C5C-005 — exclude test traffic from default-audience derivation.
+ * Filters anyone whose uid starts with `test-` (every `create_test_account`-
+ * minted user) OR whose displayName starts with `[TEST]` (autonomous-run
+ * convention for test-account placeholders). Callers who legitimately
+ * want test recipients on a publish must pass them via explicit
+ * `recipients: [...]` — the auto-derive path stays clean for real
+ * services. Doesn't filter the publisher's own uid (a separate `doc.id ===
+ * callerUid` skip handles that).
+ */
+function isTestUserRow(uid: string, data: Record<string, unknown>): boolean {
+    if (typeof uid === "string" && uid.startsWith("test-")) return true
+    const displayName =
+        typeof data.displayName === "string" ? data.displayName : null
+    if (displayName && /^\[TEST\]/i.test(displayName)) return true
+    return false
+}
+
 async function resolveDefaultRecipients(
     db: FirebaseFirestore.Firestore,
     callerUid: string,
@@ -195,6 +213,11 @@ async function resolveDefaultRecipients(
     for (const doc of snap.docs) {
         if (doc.id === callerUid) continue
         const data = doc.data() as Record<string, unknown>
+        // Cycle-5 C5C-005 — test-* uids + [TEST] displayName prefixes are
+        // filtered from the default-audience derivation so a publish without
+        // explicit `recipients` never fans out to autonomous-run test
+        // accounts. Explicit `recipients: [...]` still allows test targets.
+        if (isTestUserRow(doc.id, data)) continue
         const email = typeof data.email === "string" ? data.email : null
         const name =
             (typeof data.displayName === "string" && data.displayName) ||

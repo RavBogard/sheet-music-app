@@ -35,9 +35,10 @@ const DEFAULT_CONFIDENCE_THRESHOLD = 0.7
  *     defaults to {@link DEFAULT_CONFIDENCE_THRESHOLD} (0.7) when missing
  *     or out of range.
  *
- * Auth: admin-only. ANTHROPIC_API_KEY is environment-level activation; this
- * surface intentionally does NOT expose it as a tunable (rotating a secret
- * key through an MCP tool would be the wrong surface — that's Vercel env).
+ * Auth: admin-only. GEMINI_API_KEY (post-a3-gemini-swap) is environment-level
+ * activation; this surface intentionally does NOT expose it as a tunable
+ * (rotating a secret key through an MCP tool would be the wrong surface —
+ * that's Vercel env).
  *
  * Write contract: dryRun-default + force-gated per the F-05 standing rule
  * ([[feedback_dryrun_is_observability]]). dryRun returns the would-be state
@@ -72,6 +73,14 @@ export interface GetAiConfigResult extends AiConfigState {
      * without a process restart.
      */
     subscriberActive: boolean
+    /**
+     * Cycle-5 C5A-B4-aien — which AI provider is wired in. `'gemini'` when
+     * `GEMINI_API_KEY` is present; `null` when no provider key is set. The
+     * union keeps `'anthropic'` as a forward-compat slot in case a future
+     * env adds back the Anthropic client; today only `'gemini' | null` is
+     * emitted in practice.
+     */
+    provider: "gemini" | "anthropic" | null
 }
 
 export interface SetAiAutoApplyArgs {
@@ -157,6 +166,22 @@ function isSubscriberActive(): boolean {
     return typeof apiKey === "string" && apiKey.length > 0
 }
 
+/**
+ * Cycle-5 C5A-B4-aien — single source of truth for "which AI provider, if
+ * any, is wired in." Today only `GEMINI_API_KEY` is honored (post-Gemini
+ * swap); the `'anthropic'` slot stays in the union for forward compat with
+ * a future Anthropic re-introduction.
+ */
+function detectAiProvider(): "gemini" | "anthropic" | null {
+    if (
+        typeof process.env.GEMINI_API_KEY === "string" &&
+        process.env.GEMINI_API_KEY.length > 0
+    ) {
+        return "gemini"
+    }
+    return null
+}
+
 export async function getAiConfig(
     uid: string,
 ): Promise<GetAiConfigResult | RichErrorEnvelope> {
@@ -165,7 +190,12 @@ export async function getAiConfig(
     try {
         const db = getFirestore()
         const state = await readAiConfig(db)
-        return { ok: true, ...state, subscriberActive: isSubscriberActive() }
+        return {
+            ok: true,
+            ...state,
+            subscriberActive: isSubscriberActive(),
+            provider: detectAiProvider(),
+        }
     } catch (err) {
         return richError(
             "ai_config_read_failed",

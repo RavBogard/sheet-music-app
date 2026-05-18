@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
+import { httpError } from "@/lib/http/error-envelope"
 
 /**
  * Library List API — Optimized with pagination + ETag caching
@@ -28,9 +29,13 @@ export const GET = createApiHandler(
         const limitParam = Math.min(parseInt(url.searchParams.get("limit") || "200"), 500)
 
         if (!initAdmin()) {
-            return NextResponse.json(
-                { error: "Server not ready", code: "FIREBASE_NOT_INITIALIZED" },
-                { status: 500 },
+            // Cycle-5 C5C-002 — rich envelope (was flat
+            // `{error, code: 'FIREBASE_NOT_INITIALIZED'}`).
+            return httpError(
+                500,
+                "server_not_ready",
+                "Server not ready",
+                { errorCode: 500, reason: "FIREBASE_NOT_INITIALIZED" },
             )
         }
         const db = getFirestore()

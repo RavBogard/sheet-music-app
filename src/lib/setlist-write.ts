@@ -44,6 +44,16 @@ export interface CreateSetlistInput {
     serviceType?: Setlist['templateType']
     rabbi?: string
     tracks: ServerSetlistTrackInput[]
+    /**
+     * Cycle-5 C5A-003 — optional explicit `isTest:true` override. When set,
+     * the doc lands with `isTest:true` regardless of `isTestSetlist()`'s
+     * heuristic (which only fires on `test-` ownerId or `[TEST/CYCLE/CF]`
+     * name prefixes). Pass from MCP `create_setlist({isTest:true})` when
+     * test traffic owns a real-looking name like "test-rehearsal" so the
+     * doc still drops out of the /perform public listing. `false` / omitted
+     * falls back to the heuristic — the default path stays unchanged.
+     */
+    isTest?: boolean
 }
 
 export interface CreateSetlistResult {
@@ -129,7 +139,15 @@ export async function createSetlistServerSide(
         // prefix heuristic in the read path. Always written (never
         // undefined) so the filter `where isTest == false` is sound for
         // every doc going forward.
-        isTest: isTestSetlist({ name: input.name, ownerId: input.ownerId }),
+        //
+        // Cycle-5 C5A-003: callers may pass an explicit `isTest:true` to
+        // override the heuristic when test traffic owns a real-looking name
+        // (`test-rehearsal`, etc). The explicit value wins; `false` /
+        // omitted falls back to the heuristic.
+        isTest:
+            input.isTest === true
+                ? true
+                : isTestSetlist({ name: input.name, ownerId: input.ownerId }),
     }
     // Optional fields — written only when explicitly provided (NOT defaulted;
     // the CSV-import quirk of defaulting eventDate to serverTimestamp is not

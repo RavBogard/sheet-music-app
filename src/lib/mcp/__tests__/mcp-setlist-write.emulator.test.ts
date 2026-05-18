@@ -129,7 +129,36 @@ describe("MCP setlist write tools (emulator)", () => {
         expect(data.ownerName).toBe("Rabbi Daniel")
         expect(data.name).toBe("Shabbat Morning")
         expect(data.trackCount).toBe(0)
+        // Cycle-2 SEC-004 — `isTest` is always stamped at write time. A
+        // real owner with a non-test name resolves to false via the
+        // standard heuristic.
+        expect(data.isTest).toBe(false)
         expect(await tracksOf(result.setlistId)).toHaveLength(0)
+    })
+
+    it("create_setlist({isTest:true}) overrides the heuristic for real-looking test traffic (C5A-003)", async () => {
+        // Cycle-5 C5A-003 — autonomous-run setlists can carry real-looking
+        // names like "test-rehearsal" and a real owner uid. The explicit
+        // `isTest:true` arg flags the doc regardless of the heuristic so
+        // /perform's public-listing filter (`isTest === false`) still drops it.
+        const result = (await createSetlist(ADMIN, {
+            name: "Friday Night Test Rehearsal",
+            eventDate: "2026-06-12",
+            isTest: true,
+        })) as { setlistId: string }
+        const data = (await db().collection("setlists").doc(result.setlistId).get()).data()!
+        expect(data.isTest).toBe(true)
+
+        // Sanity: without the override, the same shape would resolve to false
+        // (admin owner uid + real-looking name don't match the heuristic).
+        const baseline = (await createSetlist(ADMIN, {
+            name: "Friday Night Real Service",
+            eventDate: "2026-06-13",
+        })) as { setlistId: string }
+        const baselineData = (
+            await db().collection("setlists").doc(baseline.setlistId).get()
+        ).data()!
+        expect(baselineData.isTest).toBe(false)
     })
 
     it("update_setlist: any editor may edit any setlist; members may not", async () => {
@@ -209,6 +238,38 @@ describe("MCP setlist write tools (emulator)", () => {
 
         // Nothing was mutated.
         expect(await tracksOf(id)).toHaveLength(1)
+    })
+
+    it("add_track_to_setlist returns the full track echo + top-level {trackId, order} (C5C-016)", async () => {
+        // Cycle-5 C5C-016 — add_track_to_setlist's response now mirrors
+        // update_track's `{ok:true, track:{...}}` shape AND keeps the
+        // top-level `trackId`/`order` for back-compat. Verifies the
+        // re-read carries the resolved title/key/leadMusician (sourced
+        // from the songId binding) so callers skip a get_setlist round trip.
+        const id = await newSetlist()
+        const result = (await addTrackToSetlist(ADMIN, {
+            setlistId: id,
+            songId: "song-oseh",
+        })) as {
+            ok: true
+            trackId: string
+            order: number
+            track: Record<string, unknown>
+        }
+        expect(result.ok).toBe(true)
+        expect(result.trackId).toBeTruthy()
+        expect(result.order).toBe(0)
+        expect(result.track).toBeTruthy()
+        expect(result.track.id).toBe(result.trackId)
+        expect(result.track.setlistId).toBe(id)
+        expect(result.track.title).toBe("Oseh Shalom")
+        expect(result.track.key).toBe("G")
+        expect(result.track.leadMusician).toBe("Cantor")
+        expect(result.track.fileId).toBe("song-oseh")
+        expect(result.track.fileName).toBe("Oseh Shalom.pdf")
+        expect(result.track.type).toBe("song")
+        // W-04 Plan 01 stamps initial version on the new track.
+        expect(result.track.version).toBe(1)
     })
 
     it("add_track_to_setlist appends, keeping order contiguous + trackCount in sync", async () => {

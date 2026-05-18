@@ -84,6 +84,13 @@ export interface CreateSetlistArgs {
     eventDate?: string
     serviceType?: string
     rabbi?: string
+    /**
+     * Cycle-5 C5A-003 — explicit test-setlist flag. Defaults `false`. No
+     * heuristic on the `test-` ownerId/name prefix is applied at the MCP
+     * layer; the underlying `createSetlistServerSide` still runs its own
+     * `isTestSetlist({name, ownerId})` fallback when this is omitted.
+     */
+    isTest?: boolean
 }
 
 export async function createSetlist(
@@ -120,6 +127,7 @@ export async function createSetlist(
         serviceType: args.serviceType as SetlistMetadataPatch["serviceType"],
         rabbi: args.rabbi,
         tracks: [],
+        isTest: args.isTest === true ? true : undefined,
     })
     // G-16: echo owner so callers don't need a follow-up get_setlist to learn
     // who the setlist is owned by (the create_setlist's caller IS the owner,
@@ -251,10 +259,25 @@ export interface AddTrackArgs {
     position?: number
 }
 
+/**
+ * Cycle-5 C5C-016 — add_track_to_setlist returns the full track row (same
+ * shape as update_track) instead of the legacy sparse `{trackId, order}`
+ * pair, so callers don't need a follow-up get_setlist to confirm what
+ * was actually written (title/key/leadMusician resolved from the song
+ * binding, version stamp, fileName, etc.). The `trackId` and `order`
+ * fields are kept at the top level for back-compat.
+ */
+export interface AddTrackToSetlistOk {
+    ok: true
+    trackId: string
+    order: number
+    track: Record<string, unknown>
+}
+
 export async function addTrackToSetlist(
     uid: string,
     args: AddTrackArgs,
-): Promise<{ trackId: string; order: number } | RichErrorEnvelope> {
+): Promise<AddTrackToSetlistOk | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
 
@@ -289,7 +312,7 @@ export async function addTrackToSetlist(
         )
     }
 
-    return addTrack(db, {
+    const { trackId, order } = await addTrack(db, {
         setlistId: args.setlistId,
         type,
         title: resolved.title,
@@ -304,6 +327,20 @@ export async function addTrackToSetlist(
         notes: args.notes,
         position: args.position,
     })
+
+    // Re-read the just-written track so the response shape mirrors
+    // update_track's `{ok: true, track: {...}}` — cheap single-doc read
+    // (server-side, no extra round trip from the caller).
+    const trackSnap = await db.collection("tracks").doc(trackId).get()
+    const trackData = (trackSnap.data() as Record<string, unknown>) ?? {
+        id: trackId,
+        setlistId: args.setlistId,
+        order,
+        type,
+        title: resolved.title,
+    }
+
+    return { ok: true, trackId, order, track: { id: trackId, ...trackData } }
 }
 
 // ─── update_track (CF1) ─────────────────────────────────────────────────────

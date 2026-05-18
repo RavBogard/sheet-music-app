@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { SESSION_ROLE_COOKIE, verifyRoleCookie } from '@/lib/session-role'
+import { httpError } from '@/lib/http/error-envelope'
 
 // Base64Url decode for Edge Runtime without Buffer
 function decodeJwtPayload(token: string) {
@@ -103,6 +104,28 @@ export async function proxy(request: NextRequest) {
     const decodedSession = session ? decodeJwtPayload(session) : null
     const roleCookie = request.cookies.get(SESSION_ROLE_COOKIE)?.value
     const ua = request.headers.get('user-agent') || ''
+
+    // Cycle-5 C5B-017 — `/login` is a Next.js page (GET-only). A POST
+    // hits Next's default 405 with an empty body and no `Allow` header,
+    // which is hostile to programmatic callers probing for a sign-in
+    // endpoint. Intercept any non-GET (`POST/PUT/PATCH/DELETE`) to
+    // `/login` here and return a rich JSON envelope pointing at the
+    // actual programmatic-signin route (`/api/auth/test-session`).
+    // `HEAD` falls through so health probes keep working unchanged.
+    // Fires BEFORE the nonce/CSP machinery — the 405 body is JSON, not
+    // HTML, so it never renders inline scripts that would need a CSP
+    // nonce; sibling lane C5D-003's `Content-Security-Policy` header is
+    // intentionally omitted on this short-circuit.
+    if (pathname === '/login' && request.method !== 'GET' && request.method !== 'HEAD') {
+        return httpError(
+            405,
+            'method_not_allowed',
+            'Use POST /api/auth/test-session for programmatic sign-in.',
+            { errorCode: 405, path: '/login', method: request.method },
+            'GET /login renders the interactive sign-in page; non-GET methods are not supported.',
+            { Allow: 'GET, HEAD' },
+        )
+    }
 
     // C5D-003: generate per-request nonce + CSP up front. The nonce is
     // forwarded as an `x-nonce` REQUEST header so RSC layouts can read it

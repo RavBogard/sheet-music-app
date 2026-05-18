@@ -106,6 +106,9 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
             threshold: 0.7,
             // AI-002: GEMINI_API_KEY is unset in the emulator test env.
             subscriberActive: false,
+            // Cycle-5 C5A-B4-aien: `provider` discriminant. Null when no
+            // provider key is set in env.
+            provider: null,
         })
     })
 
@@ -117,6 +120,7 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
             autoApplyEnabled: true,
             threshold: 0.55,
             subscriberActive: false,
+            provider: null,
         })
     })
 
@@ -412,6 +416,7 @@ describe("MCP aiConfig tools — cycle-3 c2 (emulator)", () => {
             autoApplyEnabled: true,
             threshold: 0.6,
             subscriberActive: false,
+            provider: null,
         })
     })
 })

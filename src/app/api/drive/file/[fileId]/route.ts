@@ -5,6 +5,7 @@ import { fetchFileById } from "@/lib/file-fetcher"
 import { logger } from "@/lib/logger"
 import { hasBrowserFetchMetadata } from "@/lib/drive-file-auth"
 import { httpError, redactInProduction } from "@/lib/http/error-envelope"
+import { selectUnauthHint } from "@/lib/http/caller-context"
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -75,7 +76,13 @@ export const GET = createApiHandler(async (ctx) => {
                 "file_not_found",
                 "No chart found for the given fileId.",
                 context,
-                "Verify the fileId via the MCP list_library / get_chart_status tools, or open the chart in-app to confirm it still exists.",
+                // Cycle-5 C5B-006 — bearer / in-app callers see the MCP-savvy
+                // hint; bare HTTP probes get a generic "chart not found".
+                selectUnauthHint(
+                    ctx.req,
+                    "Verify the fileId via the MCP list_library / get_chart_status tools, or open the chart in-app to confirm it still exists.",
+                    "The requested chart could not be found.",
+                ),
                 {
                     "Access-Control-Allow-Origin": origin,
                     "Cache-Control": "no-store",
@@ -103,7 +110,13 @@ export const GET = createApiHandler(async (ctx) => {
                 "unauthenticated",
                 "Bearer token (or in-app browser fetch metadata) required for chart bytes.",
                 { fileId },
-                "Send `Authorization: Bearer <token>`, or call from the in-app fetch surface where Sec-Fetch-Site / Sec-Fetch-Dest headers identify the request.",
+                // Cycle-5 C5B-006 — bearer-savvy hint only for bearer / in-app
+                // callers; a bare HTTP probe sees a generic prompt without
+                // the Bearer-header how-to.
+                selectUnauthHint(
+                    ctx.req,
+                    "Send `Authorization: Bearer <token>`, or call from the in-app fetch surface where Sec-Fetch-Site / Sec-Fetch-Dest headers identify the request.",
+                ),
                 { "Access-Control-Allow-Origin": origin },
             )
         }

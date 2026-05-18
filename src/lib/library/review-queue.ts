@@ -128,7 +128,14 @@ export interface ReviewQueueResult {
     config: {
         autoApplyEnabled: boolean
         threshold: number
-        anthropicConfigured: boolean
+        /**
+         * Cycle-5 C5A-B4-aien — single canonical name across MCP + UI for
+         * "is the active AI provider's API key wired in" (post-Gemini-swap
+         * the active provider is Google `@google/genai` reading
+         * `GEMINI_API_KEY`). Replaces the stale `anthropicConfigured` name
+         * the field shipped with pre-swap.
+         */
+        aiProviderConfigured: boolean
     }
 }
 
@@ -315,9 +322,9 @@ export async function readReviewQueue(
                 configData.threshold <= 1
                     ? configData.threshold
                     : DEFAULT_CONFIDENCE_THRESHOLD,
-            anthropicConfigured:
-                !!process.env.ANTHROPIC_API_KEY &&
-                process.env.ANTHROPIC_API_KEY.length > 0,
+            aiProviderConfigured:
+                !!process.env.GEMINI_API_KEY &&
+                process.env.GEMINI_API_KEY.length > 0,
         },
     }
 }

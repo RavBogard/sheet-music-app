@@ -67,7 +67,17 @@ export async function getRecentSetlists() {
  */
 export const MAX_SETLIST_FETCH = 200
 
-export async function getAllSetlists(opts: { limit?: number } = {}) {
+/**
+ * Optional Firestore ordering field. `date` (write timestamp, default —
+ * preserves SSR + list_setlists historical behavior) vs. `eventDate` (the
+ * actual service day, what David's "next service to plan" lookups want).
+ * Cycle-5 C5C-010 — list_setlists exposes a `sort` arg that flows here.
+ */
+export type AllSetlistsOrderBy = "date" | "eventDate"
+
+export async function getAllSetlists(
+    opts: { limit?: number; orderBy?: AllSetlistsOrderBy } = {},
+) {
     try {
         initAdmin()
         const db = getFirestore()
@@ -76,10 +86,11 @@ export async function getAllSetlists(opts: { limit?: number } = {}) {
             opts.limit && opts.limit > 0
                 ? Math.min(opts.limit, MAX_SETLIST_FETCH)
                 : 50
+        const orderBy: AllSetlistsOrderBy = opts.orderBy ?? "date"
 
         const snap = await db
             .collection("setlists")
-            .orderBy("date", "desc")
+            .orderBy(orderBy, "desc")
             .limit(limit)
             .get()
 

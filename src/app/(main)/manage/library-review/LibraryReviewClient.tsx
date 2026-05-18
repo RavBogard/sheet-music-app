@@ -468,13 +468,13 @@ function CalibrationBanner({
 }: {
     config: ReviewQueueResult["config"]
 }) {
-    if (!config.anthropicConfigured) {
+    if (!config.aiProviderConfigured) {
         return (
             <div className="rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-2 text-xs">
                 <strong>AI enrichment is dormant.</strong>{" "}
-                ANTHROPIC_API_KEY is not set in this environment, so new rows
+                GEMINI_API_KEY is not set in this environment, so new rows
                 will sit at <code>pending</code> until configured. Set it in
-                the Vercel dashboard to activate the Sonnet subscriber.
+                the Vercel dashboard to activate the Gemini subscriber.
             </div>
         )
     }

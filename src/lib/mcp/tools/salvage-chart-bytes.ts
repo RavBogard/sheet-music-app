@@ -138,12 +138,18 @@ async function fetchFromSourceUrl(
     try {
         parsed = new URL(sourceUrl)
     } catch {
+        // Cycle-5 C5D-011 — client-precondition failures land at 422
+        // (Unprocessable Entity), reserving 500 for genuine server faults
+        // (storage_upload_failed / firestore_write_failed). Pass
+        // `errorCode: 422` so the envelope's `error.code` matches the
+        // semantic; the machine_code isn't in ERROR_CODE_MAP so the
+        // helper would otherwise default to 500.
         return {
             ok: false,
             envelope: richError(
                 "invalid_source_url",
                 `sourceUrl is not a valid URL: ${sourceUrl}`,
-                { sourceUrl },
+                { sourceUrl, errorCode: 422 },
                 "Pass a fully-qualified https:// URL or omit sourceUrl to fall back to Drive.",
             ),
         }
@@ -154,7 +160,7 @@ async function fetchFromSourceUrl(
             envelope: richError(
                 "invalid_source_url",
                 `sourceUrl must use https:// (got ${parsed.protocol}).`,
-                { sourceUrl, protocol: parsed.protocol },
+                { sourceUrl, protocol: parsed.protocol, errorCode: 422 },
                 "Re-fetch from an https:// origin or omit sourceUrl to use Drive.",
             ),
         }
@@ -193,7 +199,7 @@ async function fetchFromSourceUrl(
             envelope: richError(
                 "invalid_source_mime",
                 `sourceUrl served an unsupported mime '${mimeType}'.`,
-                { sourceUrl, mimeType },
+                { sourceUrl, mimeType, errorCode: 422 },
                 `Allowed: ${ALLOWED_MIME_PREFIXES.join(", ")}.`,
             ),
         }
@@ -217,7 +223,12 @@ async function fetchFromSourceUrl(
             envelope: richError(
                 "source_too_large",
                 `sourceUrl payload (${buffer.byteLength} bytes) exceeds the ${MAX_FETCH_BYTES} byte limit.`,
-                { sourceUrl, sizeBytes: buffer.byteLength, maxBytes: MAX_FETCH_BYTES },
+                {
+                    sourceUrl,
+                    sizeBytes: buffer.byteLength,
+                    maxBytes: MAX_FETCH_BYTES,
+                    errorCode: 422,
+                },
                 "Trim the source file or upload via processChartUpload (fresh fileId) instead.",
             ),
         }
@@ -267,7 +278,12 @@ async function fetchFromDrive(
             envelope: richError(
                 "source_too_large",
                 `Drive payload (${buffer.byteLength} bytes) exceeds the ${MAX_FETCH_BYTES} byte limit.`,
-                { driveFileId, sizeBytes: buffer.byteLength, maxBytes: MAX_FETCH_BYTES },
+                {
+                    driveFileId,
+                    sizeBytes: buffer.byteLength,
+                    maxBytes: MAX_FETCH_BYTES,
+                    errorCode: 422,
+                },
                 "Trim the source file or upload via processChartUpload (fresh fileId) instead.",
             ),
         }
@@ -281,7 +297,7 @@ async function fetchFromDrive(
             envelope: richError(
                 "invalid_source_mime",
                 `Drive payload has unsupported mime '${mimeType}'.`,
-                { driveFileId, mimeType },
+                { driveFileId, mimeType, errorCode: 422 },
                 `Allowed: ${ALLOWED_MIME_PREFIXES.join(", ")}.`,
             ),
         }
@@ -360,7 +376,7 @@ export async function salvageChartBytes(
             return richError(
                 "no_source_available",
                 `library_index/${fileId} has no driveFileId and no sourceUrl was provided. Cannot resolve bytes.`,
-                { fileId, hasDriveFileId: false },
+                { fileId, hasDriveFileId: false, errorCode: 422 },
                 "Pass an explicit sourceUrl (https URL serving the chart bytes).",
             )
         }

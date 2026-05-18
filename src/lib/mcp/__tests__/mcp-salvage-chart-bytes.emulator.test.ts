@@ -242,7 +242,11 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         })
         expect("ok" in r && r.ok === false).toBe(true)
         if ("ok" in r && r.ok === false) {
-            expect((r.error as { machine_code: string }).machine_code).toBe("no_source_available")
+            // Cycle-5 C5D-011 — client-precondition refusals land at 422
+            // (Unprocessable Entity), reserving 500 for genuine server faults.
+            const errObj = r.error as { machine_code: string; code: number }
+            expect(errObj.machine_code).toBe("no_source_available")
+            expect(errObj.code).toBe(422)
         }
     })
 
@@ -491,7 +495,10 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         })
         expect("ok" in r && r.ok === false).toBe(true)
         if ("ok" in r && r.ok === false) {
-            expect((r.error as { machine_code: string }).machine_code).toBe("invalid_source_url")
+            // Cycle-5 C5D-011 — client-precondition refusal at 422.
+            const errObj = r.error as { machine_code: string; code: number }
+            expect(errObj.machine_code).toBe("invalid_source_url")
+            expect(errObj.code).toBe(422)
         }
     })
 
@@ -515,7 +522,10 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         })
         expect("ok" in r && r.ok === false).toBe(true)
         if ("ok" in r && r.ok === false) {
-            expect((r.error as { machine_code: string }).machine_code).toBe("invalid_source_mime")
+            // Cycle-5 C5D-011 — client-precondition refusal at 422.
+            const errObj = r.error as { machine_code: string; code: number }
+            expect(errObj.machine_code).toBe("invalid_source_mime")
+            expect(errObj.code).toBe(422)
         }
     })
 

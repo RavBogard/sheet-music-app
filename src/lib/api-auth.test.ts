@@ -34,8 +34,14 @@ describe('requireAuth', () => {
         } catch (err: unknown) {
             const res = err as Response
             expect(res.status).toBe(401)
-            const body = await res.json()
-            expect(body.error).toContain('Authentication required')
+            // Cycle-5 C5C-001 — rich envelope: error is a body object
+            // with machine_code + message, not a flat string.
+            const body = (await res.json()) as Record<string, unknown>
+            expect(body.ok).toBe(false)
+            const errObj = body.error as { machine_code: string; message: string; code: number }
+            expect(errObj.machine_code).toBe('missing_bearer')
+            expect(errObj.code).toBe(401)
+            expect(errObj.message).toContain('Authentication required')
         }
     })
 
@@ -47,8 +53,12 @@ describe('requireAuth', () => {
         } catch (err: unknown) {
             const res = err as Response
             expect(res.status).toBe(403)
-            const body = await res.json()
-            expect(body.error).toContain('Invalid or expired token')
+            const body = (await res.json()) as Record<string, unknown>
+            expect(body.ok).toBe(false)
+            const errObj = body.error as { machine_code: string; message: string; code: number }
+            expect(errObj.machine_code).toBe('invalid_bearer')
+            expect(errObj.code).toBe(403)
+            expect(errObj.message).toContain('Invalid or expired token')
         }
     })
 
@@ -107,8 +117,12 @@ describe('requireAuth', () => {
         } catch (err: unknown) {
             const res = err as Response
             expect(res.status).toBe(403)
-            const body = await res.json()
-            expect(body.error).toContain('Requires admin role')
+            const body = (await res.json()) as Record<string, unknown>
+            expect(body.ok).toBe(false)
+            const errObj = body.error as { machine_code: string; message: string }
+            expect(errObj.machine_code).toBe('forbidden_role')
+            expect(errObj.message).toContain('Requires admin role')
+            expect((body as { requiredRole?: string }).requiredRole).toBe('admin')
         }
     })
 

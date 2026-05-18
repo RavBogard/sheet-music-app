@@ -19,6 +19,7 @@ import {
     requestIdStorage,
     validateInboundRequestId,
 } from "@/lib/request-id"
+import { httpError } from "@/lib/http/error-envelope"
 
 export type AuthRole = 'admin' | 'band_leader' | 'musician' | 'member'
 
@@ -54,25 +55,41 @@ export async function requireAuth(
 
     if (!rawToken) {
         if (optional) return null;
-        throw NextResponse.json(
-            { error: "Authentication required" },
-            { status: 401 }
+        // Cycle-5 C5C-001/002 — rich envelope on the 401 so any
+        // createApiHandler-wrapped route (incl. /api/drive/metadata +
+        // /api/library/list) ships the canonical `{ok:false, error:{
+        // code, machine_code, message, ...}, hint?}` shape on auth
+        // failures. Replaces the pre-cycle-5 flat `{error:"..."}`.
+        throw httpError(
+            401,
+            "missing_bearer",
+            "Authentication required",
+            { errorCode: 401 },
+            "Send `Authorization: Bearer <token>`.",
         )
     }
 
     if (!initAdmin()) {
-        throw NextResponse.json(
-            { error: "Firebase Admin not available" },
-            { status: 500 }
+        throw httpError(
+            500,
+            "server_not_ready",
+            "Firebase Admin not available",
+            { errorCode: 500 },
         )
     }
     const decoded = await verifyIdToken(rawToken)
 
     if (!decoded) {
         if (optional) return null;
-        throw NextResponse.json(
-            { error: "Invalid or expired token" },
-            { status: 403 }
+        // Status preserved at 403 for back-compat with existing callers;
+        // `error.code` set explicitly so it matches the HTTP status (the
+        // ERROR_CODE_MAP would default `invalid_bearer` to 401).
+        throw httpError(
+            403,
+            "invalid_bearer",
+            "Invalid or expired token",
+            { errorCode: 403 },
+            "The bearer token failed verification — re-issue and retry.",
         )
     }
 
@@ -86,9 +103,15 @@ export async function requireAuth(
     if (requiredRole) {
         const hasRole = checkRoleHierarchy(userRole, isAdmin, requiredRole)
         if (!hasRole) {
-            throw NextResponse.json(
-                { error: `Requires ${requiredRole} role` },
-                { status: 403 }
+            throw httpError(
+                403,
+                "forbidden_role",
+                `Requires ${requiredRole} role`,
+                {
+                    errorCode: 403,
+                    callerRole: userRole ?? null,
+                    requiredRole,
+                },
             )
         }
     }
@@ -142,7 +165,12 @@ export async function withAuth(
     } catch (error) {
         if (error instanceof NextResponse) return error
         logger.error("Auth middleware error:", error)
-        return NextResponse.json({ error: "Authentication failed" }, { status: 500 })
+        return httpError(
+            500,
+            "server_error",
+            "Authentication failed",
+            { errorCode: 500 },
+        )
     }
 }
 

@@ -9,6 +9,7 @@ import {
     signRoleCookie,
 } from "@/lib/session-role"
 import { logger } from "@/lib/logger"
+import { selectUnauthHint } from "@/lib/http/caller-context"
 
 /**
  * POST /api/auth/test-session
@@ -85,12 +86,20 @@ export async function POST(req: NextRequest) {
 
     const verified = await verifyBearer(req)
     if (verified instanceof Response) {
+        // Cycle-5 C5B-006 — strip MCP refs from the unauth hint when the
+        // probe is a bare HTTP request (no bearer, no in-app Sec-Fetch-*
+        // metadata). Daniel-ratified default: in-app + bearer-carrying
+        // callers keep the MCP-savvy hint; bare HTTP unauth gets a
+        // generic prompt.
         return envelopeResponse(
             richError(
                 "invalid_bearer",
                 "Bearer token missing, malformed, revoked, or expired.",
                 {},
-                "Mint a fresh test bearer via /api/mcp/oauth/mint-test-token or the MCP create_test_account tool.",
+                selectUnauthHint(
+                    req,
+                    "Mint a fresh test bearer via /api/mcp/oauth/mint-test-token or the MCP create_test_account tool.",
+                ),
             ),
             401,
         )

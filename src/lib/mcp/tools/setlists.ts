@@ -11,11 +11,22 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
  * to come; setlist reads are public, so it is currently unused.
  */
 
+/**
+ * Cycle-5 C5C-010 — `sort` discriminant on `list_setlists`. Backward-compat
+ * default is `recent_write` (orderBy `date desc`), which is what every
+ * pre-cycle-5 caller assumed. David's "next service to plan" workflow wants
+ * `recent_event` (orderBy `eventDate desc`) so the most-recent service surfaces
+ * first regardless of when the doc was written. The two names map 1:1 to
+ * Firestore orderBy fields to keep the implementation transparent.
+ */
+export type ListSetlistsSort = "recent_write" | "recent_event"
+
 export interface ListSetlistsArgs {
     from?: string
     to?: string
     limit?: number
     offset?: number
+    sort?: ListSetlistsSort
 }
 
 interface SetlistSummary {
@@ -29,6 +40,14 @@ interface SetlistSummary {
      *  lastSeenVersion on subsequent writes for optimistic concurrency
      *  (Plan 02 enforces; Plan 01 stamps only). */
     version?: number
+    /**
+     * Cycle-5 C5C-011 — ISO timestamp of the first publish, or `null` for
+     * never-published setlists. Sourced from the `publishedAt` field that
+     * `publish_setlist` first-writes via `FieldValue.serverTimestamp()` and
+     * leaves untouched on subsequent re-publishes. Cheap to expose since
+     * `serializeSetlist` already carries it on the row.
+     */
+    publishedAt: string | null
 }
 
 // Cycle-2 REG-001b: every error returns the canonical rich envelope.
@@ -72,7 +91,8 @@ export async function listSetlists(
     // Cowork §7.7 regression: David has 41 setlists; default 20 limit
     // missed 21 of them. Paging closes that gap.
     const fetchSize = Math.min(offset + limit, MAX_SETLIST_FETCH)
-    const all = await getAllSetlists({ limit: fetchSize })
+    const orderBy = args.sort === "recent_event" ? "eventDate" : "date"
+    const all = await getAllSetlists({ limit: fetchSize, orderBy })
     const from = args.from ? Date.parse(args.from) : NaN
     const to = args.to ? Date.parse(args.to) : NaN
 
@@ -95,6 +115,7 @@ export async function listSetlists(
                 date: isoOf(row.date),
                 eventDate: isoOf(row.eventDate),
                 trackCount: typeof row.trackCount === "number" ? row.trackCount : 0,
+                publishedAt: isoOf(row.publishedAt),
             }
             if (typeof row.songCount === "number") summary.songCount = row.songCount
             if (typeof row.version === "number") summary.version = row.version

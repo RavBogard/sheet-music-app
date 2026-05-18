@@ -87,6 +87,7 @@ import {
     unassignMusician,
     respondToAssignment,
 } from "./roster"
+import { listServicePersonnel } from "./service-personnel"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 
@@ -250,7 +251,7 @@ export function registerReadTools(server: McpServer): void {
         "list_setlists",
         {
             description:
-                "List the user's setlists, newest first. Use when the user asks about their upcoming or recent services/gigs. Dates are ISO strings; trackCount counts every row including section headers. Optional from/to filter by service date. For larger archives, paging via `offset` is supported up to the 200-record fetch cap — past that, slice with `from`/`to` instead.",
+                "List the user's setlists, newest first. Use when the user asks about their upcoming or recent services/gigs. Dates are ISO strings; trackCount counts every row including section headers. Each row carries `publishedAt: string | null` (ISO timestamp of first publish, null for never-published). Optional from/to filter by service date. `sort:'recent_write'` (default — backward-compat, orders by the doc's write timestamp) vs. `sort:'recent_event'` (orders by service `eventDate` desc — David's 'next service to plan' lookup). For larger archives, paging via `offset` is supported up to the 200-record fetch cap — past that, slice with `from`/`to` instead.",
             inputSchema: {
                 from: z
                     .string()
@@ -274,6 +275,12 @@ export function registerReadTools(server: McpServer): void {
                     .optional()
                     .describe(
                         "Skip this many records before returning results (for paging). offset + limit must not exceed 200; for windows beyond that, use `from`/`to` filtering.",
+                    ),
+                sort: z
+                    .enum(["recent_write", "recent_event"])
+                    .optional()
+                    .describe(
+                        "Sort order. 'recent_write' (default) orders by the doc's write timestamp — back-compat. 'recent_event' orders by service `eventDate` descending — use to find the most recent service to plan.",
                     ),
             },
         },
@@ -419,7 +426,7 @@ export function registerWriteTools(server: McpServer): void {
         "create_setlist",
         {
             description:
-                "Create a new, empty setlist owned by the user. Use when the user wants to start a new service/gig. Returns the new setlist id, trackCount, and the owner's ownerId + ownerName — follow up with add_track_to_setlist to populate it. eventDate is an ISO date string. Requires an admin or band leader account.",
+                "Create a new, empty setlist owned by the user. Use when the user wants to start a new service/gig. Returns the new setlist id, trackCount, and the owner's ownerId + ownerName — follow up with add_track_to_setlist to populate it. eventDate is an ISO date string. Requires an admin or band leader account. Pass `isTest:true` to flag the setlist as test traffic (drops out of /perform public listing) regardless of name/owner heuristics — useful for autonomous cycles whose setlists carry real-looking names like 'test-rehearsal'.",
             inputSchema: {
                 name: z.string().min(1).describe("Setlist name, e.g. 'Shabbat Morning — June 7'"),
                 eventDate: eventDateSchema.describe(
@@ -430,6 +437,12 @@ export function registerWriteTools(server: McpServer): void {
                     .optional()
                     .describe("Service/template type, e.g. 'shabbat-morning'"),
                 rabbi: z.string().optional().describe("Rabbi leading the service"),
+                isTest: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true, stamp the setlist doc with `isTest:true` so /perform filters it out. Default false; no heuristic on `test-` prefixes is applied at the MCP layer (the underlying writer still falls back to the standard name/owner heuristic when this is omitted).",
+                    ),
             },
         },
         async (args, extra) => jsonResult(await createSetlist(uidFrom(extra), args)),
@@ -1208,7 +1221,7 @@ export function registerWriteTools(server: McpServer): void {
         "get_ai_config",
         {
             description:
-                "Admin-only — read the current AI enrichment config (cycle-3 c2). Returns `{ok: true, autoApplyEnabled: boolean, threshold: number}` where `autoApplyEnabled` is the gate that lets the a3 subscriber auto-apply Sonnet suggestions onto fresh library_index rows (false during the calibration phase forces every row into /manage/library-review) and `threshold` is the confidence floor below which any row enters review_pending regardless of the gate. Both values live on the single Firestore doc `aiConfig/autoApplyEnabled` — this tool is the read counterpart of set_ai_auto_apply + set_ai_threshold. Defaults surface when the doc is missing or fields are out of range: autoApplyEnabled false, threshold 0.7 (Daniel-ratified per ADDENDUM-1). Read-only — no writes.",
+                "Admin-only — read the current AI enrichment config (cycle-3 c2). Returns `{ok: true, autoApplyEnabled: boolean, threshold: number, subscriberActive: boolean, provider: 'gemini'|'anthropic'|null}` where `autoApplyEnabled` is the gate that lets the a3 subscriber auto-apply provider suggestions onto fresh library_index rows (false during the calibration phase forces every row into /manage/library-review) and `threshold` is the confidence floor below which any row enters review_pending regardless of the gate. `subscriberActive` is true when the active provider's API key is present in the environment (today: `GEMINI_API_KEY`). `provider` is the active provider discriminant — `'gemini'` post-a3-gemini-swap, `null` when no key is set; the union keeps `'anthropic'` as a forward-compat slot. Both Firestore-backed values live on the single doc `aiConfig/autoApplyEnabled` — this tool is the read counterpart of set_ai_auto_apply + set_ai_threshold. Defaults surface when the doc is missing or fields are out of range: autoApplyEnabled false, threshold 0.7 (Daniel-ratified per ADDENDUM-1). Read-only — no writes.",
             inputSchema: {},
         },
         async (_args, extra) => jsonResult(await getAiConfig(uidFrom(extra))),
@@ -1283,7 +1296,7 @@ export function registerWriteTools(server: McpServer): void {
         "list_review_queue",
         {
             description:
-                "Admin-only — list the three review queues backing a4's `/manage/library-review` UI (cycle-3 a5). Returns `aiReview` (library_index rows at `enrichmentStatus: 'review_pending'` — Sonnet/Gemini flagged for human triage), `aiFailed` (rows that hit the retry ceiling — joined with `aiEnrichmentRetryQueue/{rowId}` for `lastError`/`attempts`/`exhaustedAt` forensics), and `importFailures` (a1's `chartImportQueue/{driveFileId}` rows from the every-5-min Drive sync cron, excluding dismissed). Per-row shape mirrors the HTTP `/api/admin/library-review/queue` payload — `current` (existing human-set fields), `suggestion` (the AI's structured-output snapshot), `triggers` (which review flags fired), and `duplicateCandidates` (sibling rows hydrated via batched getAll). `config` carries the calibration banner state (autoApplyEnabled + threshold + anthropicConfigured) so the operator sees the same context the UI shows. Filter with `kind: 'enrichment' | 'import' | 'all'` (default 'all') and `status: 'review_pending' | 'failed'` (omit for both). `limit` defaults 50, max 200. Read-only.",
+                "Admin-only — list the three review queues backing a4's `/manage/library-review` UI (cycle-3 a5). Returns `aiReview` (library_index rows at `enrichmentStatus: 'review_pending'` — Sonnet/Gemini flagged for human triage), `aiFailed` (rows that hit the retry ceiling — joined with `aiEnrichmentRetryQueue/{rowId}` for `lastError`/`attempts`/`exhaustedAt` forensics), and `importFailures` (a1's `chartImportQueue/{driveFileId}` rows from the every-5-min Drive sync cron, excluding dismissed). Per-row shape mirrors the HTTP `/api/admin/library-review/queue` payload — `current` (existing human-set fields), `suggestion` (the AI's structured-output snapshot), `triggers` (which review flags fired), and `duplicateCandidates` (sibling rows hydrated via batched getAll). `config` carries the calibration banner state (autoApplyEnabled + threshold + aiProviderConfigured — true when the active provider's API key is in the env; post-a3-gemini-swap this reads `GEMINI_API_KEY`) so the operator sees the same context the UI shows. Filter with `kind: 'enrichment' | 'import' | 'all'` (default 'all') and `status: 'review_pending' | 'failed'` (omit for both). `limit` defaults 50, max 200. Read-only.",
             inputSchema: {
                 kind: z
                     .enum(["enrichment", "import", "all"])
@@ -2091,6 +2104,32 @@ export function registerRosterTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await listMusiciansOnDate(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "list_service_personnel",
+        {
+            description:
+                "Admin/band_leader only — unified 'who's playing & leading this week' pivot (cycle-5 C5C-014). Joins `list_musicians_on_date`'s scheduled-band-roster lookup with `get_setlist`'s per-track `leadMusician` vocal-lead read so authors don't need two round trips to answer the weekly-flow question. Accepts EITHER `setlistId` (one specific service) OR `eventDate` (every setlist on the given UTC day). Returns `scheduling_assignments` grouped by status (pending/confirmed/declined/cancelled — same shape as list_musicians_on_date) AND `vocal_leads`: distinct non-null `track.leadMusician` strings across every bonded track on the matched setlists, sorted alphabetically. Returns `{ok: true, setlistId, eventDate, matchedSetlists, scheduling_assignments, vocal_leads, total}`.",
+            inputSchema: {
+                setlistId: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(
+                        "Direct setlist lookup. One of `setlistId` or `eventDate` is required.",
+                    ),
+                eventDate: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(
+                        "UTC-day window across every setlist on the date. Accepts YYYY-MM-DD or a full ISO timestamp. One of `setlistId` or `eventDate` is required.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await listServicePersonnel(uidFrom(extra), args)),
     )
 
     server.registerTool(
