@@ -241,28 +241,6 @@ export interface MissingChartEntry {
     reason: string
 }
 
-/** Rich error envelope per the F-015 standardization (`.coord/shared/decisions.md`
- *  2026-05-17T19:15Z). Machine code in `error`, prose in `message`, optional
- *  context fields, optional `hint` for actionable next-step text. Matches the
- *  `update_setlist` stale-version envelope shape. */
-export interface GigPacketErrorEnvelope {
-    ok: false
-    error:
-        | "invalid_argument"
-        | "setlist_not_found"
-        | "no_bonded_charts"
-        | "packet_too_large"
-        | "storage_upload_failed"
-        | "storage_signing_failed"
-        | "rate_limited"
-    message: string
-    hint?: string
-    // Context fields (kind-specific):
-    sizeBytes?: number
-    maxBytes?: number
-    storagePath?: string
-}
-
 export interface GenerateGigPacketResult {
     ok: true
     /** Short-lived (10-minute) v4 signed read URL to the merged PDF in
@@ -290,13 +268,13 @@ export interface GenerateGigPacketResult {
 export async function generateGigPacket(
     uid: string,
     args: GenerateGigPacketArgs,
-): Promise<GenerateGigPacketResult | GigPacketErrorEnvelope> {
+): Promise<GenerateGigPacketResult | RichErrorEnvelope> {
     if (!args.setlistId?.trim()) {
-        return {
-            ok: false,
-            error: "invalid_argument",
-            message: "setlistId must be a non-empty string.",
-        }
+        return richError(
+            "invalid_argument",
+            "setlistId must be a non-empty string.",
+            { field: "setlistId" },
+        )
     }
 
     initAdmin()
@@ -307,21 +285,22 @@ export async function generateGigPacket(
 
     const limited = await checkUserRateLimit(uid, "api", { bypass })
     if (limited) {
-        return {
-            ok: false,
-            error: "rate_limited",
-            message: limited.error,
-        }
+        return richError(
+            "rate_limited",
+            limited.error,
+            undefined,
+            "Retry after the cooldown window.",
+        )
     }
 
     const setlistDoc = await db.collection("setlists").doc(args.setlistId).get()
     if (!setlistDoc.exists) {
-        return {
-            ok: false,
-            error: "setlist_not_found",
-            message: "Setlist not found",
-            hint: "Confirm the setlistId with list_setlists; pass the `id` field exactly.",
-        }
+        return richError(
+            "setlist_not_found",
+            "Setlist not found",
+            { setlistId: args.setlistId },
+            "Confirm the setlistId with list_setlists; pass the `id` field exactly.",
+        )
     }
     const setlistData = setlistDoc.data() as Record<string, unknown>
     const setlistTitle =
@@ -334,13 +313,12 @@ export async function generateGigPacket(
     })
 
     if (bondedTracks.length === 0) {
-        return {
-            ok: false,
-            error: "no_bonded_charts",
-            message:
-                "No bonded charts on this setlist — every track is either a non-song row (header/reading/etc) or has no chart bound.",
-            hint: "Bond charts to the song rows first (add_track_to_setlist with a fileId, or swap_chart on existing rows), then retry generate_gig_packet.",
-        }
+        return richError(
+            "no_bonded_charts",
+            "No bonded charts on this setlist — every track is either a non-song row (header/reading/etc) or has no chart bound.",
+            { setlistId: args.setlistId, errorCode: 400 },
+            "Bond charts to the song rows first (add_track_to_setlist with a fileId, or swap_chart on existing rows), then retry generate_gig_packet.",
+        )
     }
 
     const packetTitle = `${setlistTitle} — Gig Packet`
@@ -445,14 +423,12 @@ export async function generateGigPacket(
 
     const effectiveCap = _gigPacketMaxBytesOverride ?? GIG_PACKET_MAX_BYTES
     if (sizeBytes > effectiveCap) {
-        return {
-            ok: false,
-            error: "packet_too_large",
-            message: `Generated packet is ${sizeBytes} bytes — exceeds the ${effectiveCap}-byte response cap.`,
-            sizeBytes,
-            maxBytes: effectiveCap,
-            hint: "Print sections of the setlist separately, or fetch individual charts with download_chart and assemble client-side.",
-        }
+        return richError(
+            "packet_too_large",
+            `Generated packet is ${sizeBytes} bytes — exceeds the ${effectiveCap}-byte response cap.`,
+            { sizeBytes, maxBytes: effectiveCap },
+            "Print sections of the setlist separately, or fetch individual charts with download_chart and assemble client-side.",
+        )
     }
 
     // Write to Firebase Storage + mint a 10-min v4 signed read URL. Mirrors
@@ -484,13 +460,12 @@ export async function generateGigPacket(
             path,
             err: err instanceof Error ? err.message : String(err),
         })
-        return {
-            ok: false,
-            error: "storage_upload_failed",
-            message: `Could not write gig packet to Storage: ${err instanceof Error ? err.message : err}`,
-            storagePath: path,
-            hint: "Retry generate_gig_packet. If the failure persists the Storage bucket may be misconfigured — surface the storagePath to an admin.",
-        }
+        return richError(
+            "storage_upload_failed",
+            `Could not write gig packet to Storage: ${err instanceof Error ? err.message : err}`,
+            { storagePath: path, errorCode: 502 },
+            "Retry generate_gig_packet. If the failure persists the Storage bucket may be misconfigured — surface the storagePath to an admin.",
+        )
     }
 
     let downloadUrl: string
@@ -507,13 +482,12 @@ export async function generateGigPacket(
             path,
             err: err instanceof Error ? err.message : String(err),
         })
-        return {
-            ok: false,
-            error: "storage_signing_failed",
-            message: `Could not mint signed download URL: ${err instanceof Error ? err.message : err}`,
-            storagePath: path,
-            hint: "The packet bytes exist at storagePath; an admin can fetch them via the Firebase console or retry the tool.",
-        }
+        return richError(
+            "storage_signing_failed",
+            `Could not mint signed download URL: ${err instanceof Error ? err.message : err}`,
+            { storagePath: path, errorCode: 502 },
+            "The packet bytes exist at storagePath; an admin can fetch them via the Firebase console or retry the tool.",
+        )
     }
 
     logger.info("[mcp] gig packet generated", {

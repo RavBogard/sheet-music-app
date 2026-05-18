@@ -465,9 +465,11 @@ describe("MCP generate_gig_packet (emulator)", () => {
         const r = await generateGigPacket(ADMIN, { setlistId })
         expect(r).toMatchObject({
             ok: false,
-            error: { machine_code: "packet_too_large" },
+            error: {
+                machine_code: "packet_too_large",
+                message: expect.stringContaining("exceeds the 100-byte response cap"),
+            },
             maxBytes: 100,
-            message: expect.stringContaining("exceeds the 100-byte response cap"),
         })
         if (
             "ok" in r &&
@@ -477,7 +479,10 @@ describe("MCP generate_gig_packet (emulator)", () => {
             (r.error as { machine_code?: string }).machine_code ===
                 "packet_too_large"
         ) {
-            expect((r as { sizeBytes: number }).sizeBytes).toBeGreaterThan(100)
+            // sizeBytes spreads as an extras key on the rich envelope; cast
+            // through unknown since RichErrorEnvelope doesn't structurally
+            // carry the extras.
+            expect((r as unknown as { sizeBytes: number }).sizeBytes).toBeGreaterThan(100)
         }
         // Cap fires BEFORE Storage write — we don't burn a Storage object on
         // an output we already know is too big.
