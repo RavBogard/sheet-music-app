@@ -7,7 +7,14 @@ import { Button } from "@/components/ui/button"
 import { useLibraryStore } from "@/lib/library-store"
 import { useLibrary } from "@/hooks/use-library"
 import { DriveFile } from "@/types/models"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+// C5D-014: Radix Tabs removed from SearchOverlay — same structural failure
+// as C4-004 on /library: `<Tabs><TabsList><TabsTrigger/>` auto-emits
+// `aria-controls="radix-...-content-{val}"` pointing at TabsContent panels
+// that don't exist (results render outside the Tabs subtree). Axe-core
+// flagged it as `aria-valid-attr-value`. Replaced with a plain
+// segmented-control: `role="group"` container + `aria-pressed` toggle
+// buttons. No ARIA tab semantics claimed → no panel obligation. Mirrors
+// the `SongChartsLibrary.tsx` C4-004 fix at `e2214bc92`.
 import Fuse from "fuse.js"
 
 /** Only show chart files (PDF, MusicXML, ChordPro) — exclude audio files */
@@ -106,13 +113,31 @@ export function SearchOverlay({
                     </div>
                 </div>
                 
-                {/* Collection Toggle */}
-                <Tabs value={collection} onValueChange={(val) => setCollection(val as "core" | "supplemental")} className="w-full max-w-sm mx-auto">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="core">CRC Charts</TabsTrigger>
-                        <TabsTrigger value="supplemental">Shireinu</TabsTrigger>
-                    </TabsList>
-                </Tabs>
+                {/* Collection Toggle — plain segmented control; see C5D-014 note on imports. */}
+                <div
+                    role="group"
+                    aria-label="Library collection"
+                    className="w-full max-w-sm mx-auto grid grid-cols-2 gap-1 p-1 rounded-md bg-muted/50"
+                >
+                    {([
+                        { value: "core" as const, label: "CRC Charts" },
+                        { value: "supplemental" as const, label: "Shireinu" },
+                    ]).map(({ value, label }) => {
+                        const active = collection === value
+                        return (
+                            <button
+                                key={value}
+                                type="button"
+                                aria-pressed={active}
+                                data-state={active ? "active" : "inactive"}
+                                onClick={() => setCollection(value)}
+                                className="inline-flex items-center justify-center rounded-sm px-3 py-1.5 text-sm font-medium cursor-pointer transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                            >
+                                {label}
+                            </button>
+                        )
+                    })}
+                </div>
             </div>
 
             {/* Results */}

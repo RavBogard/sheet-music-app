@@ -97,9 +97,13 @@ export function SetlistRow({
                     {track.title}
                 </span>
                 {displayKey && (
+                    // C5B-015: switched from `bg-brand/15 text-brand` (sub-AA in
+                    // both light + dark per axe-core) to solid `bg-brand` with
+                    // `text-brand-foreground` inverse. Light: bg L 0.50 vs fg
+                    // L 0.985 → ~6.5:1 AA. Dark: bg L 0.55 vs fg L 0.97 → ~5.5:1 AA.
                     <span
                         data-testid="key-badge"
-                        className="font-mono text-sm font-bold px-2 py-0.5 bg-brand/15 text-brand rounded-lg shrink-0 text-center"
+                        className="font-mono text-sm font-bold px-2 py-0.5 bg-brand text-brand-foreground rounded-lg shrink-0 text-center"
                     >
                         {displayKey}
                     </span>

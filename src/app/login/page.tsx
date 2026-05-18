@@ -32,7 +32,10 @@ export default async function LoginPage() {
                 <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] rounded-full bg-brand/[0.03] blur-3xl" />
             </div>
 
-            <div className="w-full max-w-sm space-y-8 text-center relative z-10">
+            {/* C5B-001: `<main id="main-content">` is the target of the root
+                skip-link in `app/layout.tsx`. Without it, unauth visitors on
+                /login who tab to the skip-link land nowhere (axe-confirmed). */}
+            <main id="main-content" className="w-full max-w-sm space-y-8 text-center relative z-10">
                 <div className="flex flex-col items-center gap-4">
                     <div className="relative">
                         <div className="absolute inset-0 rounded-full bg-brand/15 blur-xl scale-150" aria-hidden="true" />
@@ -54,6 +57,17 @@ export default async function LoginPage() {
                 <div className="glass-card rounded-2xl p-6 space-y-5">
                     <LoginClient />
 
+                    {/* C5B-008: JS is required to complete sign-in (Firebase
+                        Auth Web SDK runs client-side). The button itself now
+                        SSRs as an enabled affordance so the surface looks
+                        correct pre-hydrate; this banner tells no-JS users
+                        why clicking won't help and what to do. */}
+                    <noscript>
+                        <p className="text-xs text-destructive">
+                            Sign-in requires JavaScript. Please enable it in your browser settings to continue.
+                        </p>
+                    </noscript>
+
                     <p className="text-xs text-muted-foreground">
                         Only authorized accounts can access the full library.
                     </p>
@@ -62,7 +76,19 @@ export default async function LoginPage() {
                 <p className="text-xs text-muted-foreground">
                     {fullName} &middot; {location}
                 </p>
-            </div>
+
+                {/* C5B-009: pre-signin disclosure links (GDPR/CCPA). Distinct
+                    from Lane 6's global Footer.tsx — that surface is for
+                    authed pages; /login is unauth and never renders the
+                    global Footer. SMS-Consent is required because the app
+                    sends SMS notifications on publish_setlist. */}
+                <nav aria-label="Legal" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <a href="/privacy" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Privacy</a>
+                    <a href="/terms" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Terms</a>
+                    <a href="/sms-consent" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">SMS Consent</a>
+                    <a href="/changelog" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Changelog</a>
+                </nav>
+            </main>
         </div>
     )
 }

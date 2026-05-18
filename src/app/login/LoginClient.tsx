@@ -66,6 +66,15 @@ export default function LoginClient() {
     // auth-context resolve (`loading === true` on first render) — the SSR
     // skeleton renders the steady "Sign in with Google" affordance, and the
     // hydrated render must match it for CLS = 0.
+    //
+    // C5B-008: only disable on the in-flight click — NOT on `loading` from
+    // `useAuth` (true on first render before the auth-context resolves).
+    // Disabling during initial load presented unauth visitors (including
+    // pre-hydration) with an unclickable button, which axe-core flagged
+    // and which a no-JS user can't recover from. The button now SSRs and
+    // hydrates as an enabled affordance; if a user clicks the millisecond
+    // before useAuth resolves, `signIn` is a stable function reference on
+    // the auth context and will fire normally.
     const inFlight = signInState === "loading"
 
     return (
@@ -74,7 +83,7 @@ export default function LoginClient() {
                 size="lg"
                 className="w-full bg-foreground text-background hover:opacity-90 transition-opacity h-12 text-base font-medium rounded-xl"
                 onClick={handleGoogleSignIn}
-                disabled={inFlight || loading}
+                disabled={inFlight}
             >
                 {inFlight ? (
                     <Loader2 className="h-5 w-5 mr-3 animate-spin" />

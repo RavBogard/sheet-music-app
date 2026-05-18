@@ -159,9 +159,13 @@
   --primary: oklch(0.97 0.005 260);
   --primary-foreground: oklch(0.13 0.025 265);
 
-  /* Vivid indigo secondary (#4338CA) */
+  /* Vivid indigo secondary (#4338CA).
+     C5D-015: dark `--secondary-foreground` bumped from L 0.82 → 0.90 for
+     comfortable WCAG AA margin against alpha-composited `--secondary` over
+     the dark background (effective L ≈ 0.258 after 0.4-alpha composite over
+     bg L 0.13). Light mode (~9:1 already) unchanged. */
   --secondary: oklch(0.45 0.18 275 / 0.4);
-  --secondary-foreground: oklch(0.82 0.01 265);
+  --secondary-foreground: oklch(0.90 0.01 265);
 
   --muted: oklch(0.22 0.03 270 / 0.5);
   --muted-foreground: oklch(0.72 0.015 265);
