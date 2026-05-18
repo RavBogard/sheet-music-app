@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { Music, Calendar, Loader2 } from "lucide-react"
+import { Music, Calendar } from "lucide-react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
+import { PublicSetlistSkeleton } from "./PublicSetlistSkeleton"
 
 /**
  * Public setlist listing -- renders all public setlists for unauthenticated visitors.
@@ -43,13 +44,11 @@ export function PublicSetlistListing() {
     }, [setlists])
 
     if (loading) {
-        return (
-            <div className="flex flex-col gap-4 px-4 pt-8 max-w-2xl mx-auto w-full">
-                <div className="flex items-center justify-center py-16">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-            </div>
-        )
+        // Cycle-3.5 P2-005: mirror the SSR skeleton from PerformPage so the
+        // pre-subscription client state stays byte-equivalent with the
+        // SSR'd skeleton. Eliminates the spinner-flash → cards swap on
+        // first paint AND any CLS between SSR and hydration.
+        return <PublicSetlistSkeleton />
     }
 
     return (
