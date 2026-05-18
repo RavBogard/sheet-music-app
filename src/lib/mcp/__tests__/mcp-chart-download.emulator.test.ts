@@ -175,9 +175,8 @@ describe("MCP download_chart (emulator)", () => {
         const r = await downloadChart(ADMIN, { fileId })
         expect(r).toMatchObject({
             ok: false,
-            error: { machine_code: "chart_bytes_missing" },
+            error: { machine_code: "chart_bytes_missing", message: expect.stringContaining("not found in Storage or Drive") },
             fileId,
-            message: expect.stringContaining("not found in Storage or Drive"),
         })
     })
 

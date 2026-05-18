@@ -259,7 +259,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             }),
         ).toMatchObject({
             ok: false,
-            message: expect.stringContaining("Upload permission required"),
+            error: { message: expect.stringContaining("Upload permission required") },
         })
 
         const ok = await uploadChart(PENDING_WITH_FLAG, {
@@ -303,7 +303,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             }),
         ).toMatchObject({
             ok: false,
-            message: expect.stringContaining("Unsupported mimeType"),
+            error: { message: expect.stringContaining("Unsupported mimeType") },
         })
 
         expect(mockUploadToStorage).not.toHaveBeenCalled()
@@ -324,7 +324,7 @@ describe("MCP chart-upload tools (emulator)", () => {
         })
         expect(second).toMatchObject({
             ok: false,
-            message: expect.stringContaining("already exists"),
+            error: { message: expect.stringContaining("already exists") },
         })
 
         // Only the first upload reached Storage.
@@ -345,7 +345,7 @@ describe("MCP chart-upload tools (emulator)", () => {
         })
         expect(sim).toMatchObject({
             ok: false,
-            message: expect.stringContaining("similar name"),
+            error: { message: expect.stringContaining("similar name") },
         })
     })
 
@@ -364,7 +364,7 @@ describe("MCP chart-upload tools (emulator)", () => {
         })
         expect(sim).toMatchObject({
             ok: false,
-            message: expect.stringContaining("similar name"),
+            error: { message: expect.stringContaining("similar name") },
         })
 
         // A clearly different title under the same prefix passes.
@@ -456,7 +456,7 @@ describe("MCP chart-upload tools (emulator)", () => {
         })
         expect(blocked).toMatchObject({
             ok: false,
-            message: expect.stringContaining("similar name"),
+            error: { message: expect.stringContaining("similar name") },
         })
 
         // With force: same payload commits anyway.
@@ -479,7 +479,7 @@ describe("MCP chart-upload tools (emulator)", () => {
         })
         expect(exactBlocked).toMatchObject({
             ok: false,
-            message: expect.stringContaining("force: true"),
+            error: { message: expect.stringContaining("force: true") },
         })
         const exactForced = (await uploadChart(ADMIN, {
             title: "Adon Olam",
@@ -512,7 +512,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             }),
         ).toMatchObject({
             ok: false,
-            message: expect.stringContaining("application/octet-stream"),
+            error: { message: expect.stringContaining("application/octet-stream") },
         })
 
         expect(
@@ -524,7 +524,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             }),
         ).toMatchObject({
             ok: false,
-            message: expect.stringContaining("Unsupported mimeType"),
+            error: { message: expect.stringContaining("Unsupported mimeType") },
         })
 
         expect(mockUploadToStorage).not.toHaveBeenCalled()
@@ -539,7 +539,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             }),
         ).toMatchObject({
             ok: false,
-            message: expect.stringContaining("RFC 4648"),
+            error: { message: expect.stringContaining("RFC 4648") },
         })
 
         // Non-padded length (not a multiple of 4).
@@ -551,7 +551,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             }),
         ).toMatchObject({
             ok: false,
-            message: expect.stringContaining("multiple of 4"),
+            error: { message: expect.stringContaining("multiple of 4") },
         })
 
         // Whitespace inside is tolerated (newlines/spaces stripped before check).
@@ -661,7 +661,7 @@ describe("MCP chart-upload tools (emulator)", () => {
         })
         expect(r1).toMatchObject({
             ok: false,
-            message: expect.stringContaining("No chord chart detected"),
+            error: { message: expect.stringContaining("No chord chart detected") },
         })
 
         mockGenerateContent.mockResolvedValueOnce({
@@ -679,7 +679,7 @@ describe("MCP chart-upload tools (emulator)", () => {
         })
         expect(r2).toMatchObject({
             ok: false,
-            message: expect.stringContaining("No chord chart detected"),
+            error: { message: expect.stringContaining("No chord chart detected") },
         })
 
         // Genuine content still goes through.
@@ -706,7 +706,7 @@ describe("MCP chart-upload tools (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("Failed to scrape chart"),
+            error: { message: expect.stringContaining("Failed to scrape chart") },
         })
     })
 
@@ -724,7 +724,7 @@ describe("MCP chart-upload tools (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("Upload permission required"),
+            error: { message: expect.stringContaining("Upload permission required") },
         })
         // Gemini should NOT have been called.
         expect(mockGenerateContent).not.toHaveBeenCalled()
@@ -778,9 +778,11 @@ describe("MCP chart-upload tools (emulator)", () => {
             })
             expect(core).toMatchObject({
             ok: false,
-            message: expect.stringContaining(
-                    "requires an admin or band leader",
-                ),
+            error: {
+                message: expect.stringContaining(
+                "requires an admin or band leader",
+                )
+            },
         })
 
             const supp = await uploadChart(MUSICIAN, {
@@ -791,9 +793,11 @@ describe("MCP chart-upload tools (emulator)", () => {
             })
             expect(supp).toMatchObject({
             ok: false,
-            message: expect.stringContaining(
-                    "requires an admin or band leader",
-                ),
+            error: {
+                message: expect.stringContaining(
+                "requires an admin or band leader",
+                )
+            },
         })
             // No storage writes attempted on rejected uploads.
             expect(mockUploadToStorage).not.toHaveBeenCalled()
@@ -817,9 +821,11 @@ describe("MCP chart-upload tools (emulator)", () => {
             })
             expect(denied).toMatchObject({
             ok: false,
-            message: expect.stringContaining(
-                    "requires an admin or band leader",
-                ),
+            error: {
+                message: expect.stringContaining(
+                "requires an admin or band leader",
+                )
+            },
         })
 
             // band_leader now allowed on curated.
@@ -895,7 +901,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             const denied = await deleteChart(otherMusician, { fileId })
             expect(denied).toMatchObject({
             ok: false,
-            message: expect.stringContaining("uploader or an admin"),
+            error: { message: expect.stringContaining("uploader or an admin") },
         })
 
             // Admin can delete it.
@@ -916,7 +922,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             const refused = await deleteChart(ADMIN, { fileId })
             expect(refused).toMatchObject({
             ok: false,
-            message: expect.stringContaining("bonded to 1 setlist"),
+            error: { message: expect.stringContaining("bonded to 1 setlist") },
         })
 
             // Chart still exists.
@@ -951,7 +957,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             const denied = await deleteChart(LEADER, { fileId })
             expect(denied).toMatchObject({
             ok: false,
-            message: expect.stringContaining("requires an admin account"),
+            error: { message: expect.stringContaining("requires an admin account") },
         })
 
             const ok = await deleteChart(ADMIN, { fileId })
@@ -963,7 +969,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             const r = await deleteChart(PENDING_NO_FLAG, { fileId })
             expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("Upload permission required"),
+            error: { message: expect.stringContaining("Upload permission required") },
         })
         })
     })
@@ -1052,7 +1058,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             })
             expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("Upload permission required"),
+            error: { message: expect.stringContaining("Upload permission required") },
         })
             expect(mockDriveGetFileMetadata).not.toHaveBeenCalled()
         })
@@ -1064,7 +1070,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             })
             expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("'core' catalog"),
+            error: { message: expect.stringContaining("'core' catalog") },
         })
             // Gate fires before any Drive call — request body stays tiny.
             expect(mockDriveGetFileMetadata).not.toHaveBeenCalled()
@@ -1094,7 +1100,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             })
             expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("metadata"),
+            error: { message: expect.stringContaining("metadata") },
         })
             expect(mockDriveGetFile).not.toHaveBeenCalled()
         })
@@ -1109,7 +1115,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             })
             expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("export it to PDF"),
+            error: { message: expect.stringContaining("export it to PDF") },
         })
             expect(mockDriveGetFile).not.toHaveBeenCalled()
         })
@@ -1125,7 +1131,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             })
             expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("empty"),
+            error: { message: expect.stringContaining("empty") },
         })
         })
 
@@ -1150,7 +1156,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             })
             expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("already exists"),
+            error: { message: expect.stringContaining("already exists") },
         })
             expect(mockUploadToStorage).not.toHaveBeenCalled()
         })

@@ -38,9 +38,11 @@ describe("MCP setlist write tools (emulator)", () => {
     // envelope. Tests assert the canonical machine code + required roles.
     const FORBIDDEN_ROLE_ENVELOPE = {
         ok: false as const,
-        error: { machine_code: "forbidden_role" },
+        error: {
+            machine_code: "forbidden_role",
+            message: expect.stringContaining("admin or band leader"),
+        },
         requiredRoles: ["admin", "band_leader"],
-        message: expect.stringContaining("admin or band leader"),
     }
 
     function db() {

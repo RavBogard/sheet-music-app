@@ -139,7 +139,7 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("Upload permission"),
+            error: { message: expect.stringContaining("Upload permission") },
         })
     })
 
@@ -151,7 +151,7 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("admin or band leader"),
+            error: { message: expect.stringContaining("admin or band leader") },
         })
     })
 
@@ -163,7 +163,7 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("exceeds"),
+            error: { message: expect.stringContaining("exceeds") },
         })
     })
 
@@ -240,7 +240,7 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("No bytes found"),
+            error: { message: expect.stringContaining("No bytes found") },
         })
         expect(mockProcessChartUpload).not.toHaveBeenCalled()
     })
@@ -258,7 +258,7 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("does not belong to caller"),
+            error: { message: expect.stringContaining("does not belong to caller") },
         })
     })
 
@@ -297,7 +297,7 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            message: expect.stringContaining("not found"),
+            error: { message: expect.stringContaining("not found") },
         })
     })
 })

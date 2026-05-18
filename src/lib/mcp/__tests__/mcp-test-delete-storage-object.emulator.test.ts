@@ -167,7 +167,7 @@ describe("MCP __test_delete_storage_object (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "forbidden_role",
+            error: { machine_code: "forbidden_role" },
             callerRole: "band_leader",
         })
         // Storage object MUST still exist after a refused call.
@@ -182,7 +182,7 @@ describe("MCP __test_delete_storage_object (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "forbidden_role",
+            error: { machine_code: "forbidden_role" },
             callerRole: "musician",
         })
         expect(storageState.has(pathFor(TEST_UUID, "application/pdf"))).toBe(true)
@@ -194,7 +194,7 @@ describe("MCP __test_delete_storage_object (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             field: "fileId",
         })
     })
@@ -205,7 +205,7 @@ describe("MCP __test_delete_storage_object (emulator)", () => {
         })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             field: "fileId",
         })
     })
@@ -214,7 +214,7 @@ describe("MCP __test_delete_storage_object (emulator)", () => {
         const r = await testDeleteStorageObject(ADMIN, { fileId: "   " })
         expect(r).toMatchObject({
             ok: false,
-            error: "invalid_argument",
+            error: { machine_code: "invalid_argument" },
             field: "fileId",
         })
     })
@@ -223,7 +223,7 @@ describe("MCP __test_delete_storage_object (emulator)", () => {
         const r = await testDeleteStorageObject(ADMIN, { fileId: TEST_UUID })
         expect(r).toMatchObject({
             ok: false,
-            error: "row_not_found",
+            error: { machine_code: "row_not_found" },
             fileId: TEST_UUID,
         })
     })
@@ -239,7 +239,7 @@ describe("MCP __test_delete_storage_object (emulator)", () => {
         const r = await testDeleteStorageObject(ADMIN, { fileId: TEST_UUID })
         expect(r).toMatchObject({
             ok: false,
-            error: "not_test_row",
+            error: { machine_code: "not_test_row" },
             fileId: TEST_UUID,
         })
         // Storage object MUST still exist.
@@ -257,7 +257,7 @@ describe("MCP __test_delete_storage_object (emulator)", () => {
         const r = await testDeleteStorageObject(ADMIN, { fileId: TEST_UUID })
         expect(r).toMatchObject({
             ok: false,
-            error: "not_test_row",
+            error: { machine_code: "not_test_row" },
         })
         expect(storageState.has(pathFor(TEST_UUID, "application/pdf"))).toBe(true)
     })
@@ -268,7 +268,7 @@ describe("MCP __test_delete_storage_object (emulator)", () => {
         const r = await testDeleteStorageObject(ADMIN, { fileId: TEST_UUID })
         expect(r).toMatchObject({
             ok: false,
-            error: "storage_delete_failed",
+            error: { machine_code: "storage_delete_failed" },
             fileId: TEST_UUID,
         })
     })

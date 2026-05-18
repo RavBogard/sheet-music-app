@@ -286,9 +286,8 @@ describe("wait_for_setlist_change (emulator)", () => {
         })
         expect(noId).toMatchObject({
             ok: false,
-            error: { machine_code: "invalid_argument" },
+            error: { machine_code: "invalid_argument", message: expect.stringContaining("setlistId") },
             field: "setlistId",
-            message: expect.stringContaining("setlistId"),
         })
 
         const negVersion = await waitForSetlistChange("u", {
@@ -297,9 +296,8 @@ describe("wait_for_setlist_change (emulator)", () => {
         })
         expect(negVersion).toMatchObject({
             ok: false,
-            error: { machine_code: "invalid_argument" },
+            error: { machine_code: "invalid_argument", message: expect.stringContaining("sinceVersion") },
             field: "sinceVersion",
-            message: expect.stringContaining("sinceVersion"),
         })
     })
 

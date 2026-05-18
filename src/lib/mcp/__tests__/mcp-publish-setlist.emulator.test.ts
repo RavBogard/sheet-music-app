@@ -409,9 +409,8 @@ describe("MCP publish_setlist (emulator)", () => {
         const r = await publishSetlist(NONLEADER, { setlistId: id })
         expect(r).toMatchObject({
             ok: false,
-            error: { machine_code: "forbidden_role" },
+            error: { machine_code: "forbidden_role", message: expect.stringContaining("admin or band leader") },
             requiredRoles: expect.arrayContaining(["admin", "band_leader"]),
-            message: expect.stringContaining("admin or band leader"),
         })
     })
 
