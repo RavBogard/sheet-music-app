@@ -12,13 +12,13 @@ export function V2Footer() {
     <footer className="mt-auto border-t border-border/60 bg-card/30 px-6 py-5 text-center text-xs text-muted-foreground backdrop-blur">
       <div className="mx-auto flex max-w-4xl flex-col items-center gap-2">
         <V2BetaOptOutLink />
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground/60">
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
           <span title={`Commit: ${buildInfo.commit}`}>v{buildInfo.version}</span>
-          <span>·</span>
-          <Link href="/changelog" className="transition-colors hover:text-muted-foreground">
+          <span aria-hidden="true">·</span>
+          <Link href="/changelog" className="transition-colors hover:text-foreground">
             Changelog
           </Link>
-          <span>·</span>
+          <span aria-hidden="true">·</span>
           <span>v2 beta</span>
         </div>
       </div>

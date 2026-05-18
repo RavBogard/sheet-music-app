@@ -54,12 +54,12 @@ export default async function LoginPage() {
                 <div className="glass-card rounded-2xl p-6 space-y-5">
                     <LoginClient />
 
-                    <p className="text-xs text-muted-foreground/60">
+                    <p className="text-xs text-muted-foreground">
                         Only authorized accounts can access the full library.
                     </p>
                 </div>
 
-                <p className="text-xs text-muted-foreground/40">
+                <p className="text-xs text-muted-foreground">
                     {fullName} &middot; {location}
                 </p>
             </div>

@@ -69,8 +69,20 @@
  *   secondary-foreground — mid-tone labels/subheadings
  *   muted-foreground — tertiary/placeholder text (WCAG AA 4.5:1)
  *
- *   Light: 0.15 > 0.35 > 0.40  (on ~0.965 background)
- *   Dark:  0.97 > 0.82 > 0.72  (on ~0.13 background)
+ *   Light: foreground 0.15 c0.03 > secondary 0.35 c0.04 > muted 0.32 c0.02
+ *          (muted L≈secondary but lower chroma → "less saturated, more
+ *          neutral" reads as the muted tier without inverting L; both
+ *          land ≥4.5:1 on the ~0.965 background per axe-core 4.11.3
+ *          re-walk post-C4-002 token tighten 2026-05-18).
+ *   Dark:  foreground 0.97 c0.005 > secondary 0.82 c0.01 > muted 0.72 c0.015
+ *          (on ~0.13 background; muted ≈8:1 already AA — unchanged).
+ *
+ * The /40 and /60 opacity helpers (e.g. `text-muted-foreground/40`)
+ * are RESERVED for decorative non-text use (separators, hover-state
+ * icons, faded affordances). They DO NOT pass AA on light backgrounds
+ * even with the tightened token (alpha blending dilutes contrast to
+ * ~1.5:1). Body text MUST use the bare token. See C4-002 SHIP-NOTICE
+ * for the surface touch-list (login subtext, v1+v2 footers).
  */
 
 :root {
@@ -97,7 +109,7 @@
   --secondary-foreground: oklch(0.35 0.04 275);
 
   --muted: oklch(0.93 0.015 275 / 0.5);
-  --muted-foreground: oklch(0.40 0.03 275);
+  --muted-foreground: oklch(0.32 0.02 275);
 
   --accent: oklch(0.93 0.02 275);
   --accent-foreground: oklch(0.22 0.06 275);
