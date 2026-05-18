@@ -117,6 +117,45 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
     // v4.3 P10-01 — the bounce-count cookie must use path:'/' so the
     // counter accumulates across different target paths. Without it,
     // the >3-bounce → /auth-error escape hatch never fires.
+    // C5D-003 — per-request CSP nonce + strict-dynamic, no unsafe-eval.
+    describe('CSP nonce + strict-dynamic (C5D-003)', () => {
+        it('emits Content-Security-Policy on a public route', async () => {
+            const req = makeReq('/perform/setlist/abc')
+            const res = await proxy(req)
+            const csp = res.headers.get('content-security-policy')
+            expect(csp).toBeTruthy()
+            expect(csp).toMatch(/script-src[^;]*'strict-dynamic'/)
+            expect(csp).toMatch(/script-src[^;]*'nonce-[A-Za-z0-9+/=]+'/)
+            expect(csp).not.toMatch(/'unsafe-eval'/)
+        })
+
+        it('emits CSP on unauthenticated-redirect responses', async () => {
+            const req = makeReq('/setlists')
+            const res = await proxy(req)
+            // It's a redirect to /login
+            expect(res.headers.get('location')).toBe('http://localhost/login')
+            expect(res.headers.get('content-security-policy')).toBeTruthy()
+        })
+
+        it('emits a unique nonce on each request', async () => {
+            const a = await proxy(makeReq('/perform/x'))
+            const b = await proxy(makeReq('/perform/y'))
+            const nonceA = (a.headers.get('content-security-policy') || '').match(/'nonce-([^']+)'/)?.[1]
+            const nonceB = (b.headers.get('content-security-policy') || '').match(/'nonce-([^']+)'/)?.[1]
+            expect(nonceA).toBeTruthy()
+            expect(nonceB).toBeTruthy()
+            expect(nonceA).not.toBe(nonceB)
+        })
+
+        it('emits CSP on rewrite responses (leader-route deny)', async () => {
+            const token = createSessionToken({ role: 'member' })
+            const req = makeReq('/manage/settings', { __session: token })
+            const res = await proxy(req)
+            expect(res.headers.get('x-middleware-rewrite')).toBe('http://localhost/unauthorized')
+            expect(res.headers.get('content-security-policy')).toBeTruthy()
+        })
+    })
+
     it('bounce counter accumulates across paths and trips /auth-error once >3', async () => {
         // Simulate a loop: unauthenticated user keeps getting bounced to /login.
         // Carry the cookie forward manually to mimic the browser. Threshold is

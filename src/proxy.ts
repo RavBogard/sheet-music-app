@@ -19,6 +19,40 @@ function decodeJwtPayload(token: string) {
     }
 }
 
+// C5D-003: per-request nonce for script-src. 16 random bytes, base64.
+// Edge-runtime safe (no Buffer); pairs with `'strict-dynamic'` in the CSP
+// so nonced inline scripts are allowed to load any descendant scripts
+// (e.g. Next.js bootstrap → Firebase / Sentry chunks).
+function generateNonce(): string {
+    const bytes = new Uint8Array(16)
+    crypto.getRandomValues(bytes)
+    let binary = ''
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+    return btoa(binary)
+}
+
+function buildCsp(nonce: string): string {
+    // The fallback `'self' 'unsafe-inline' https://apis.google.com` is for
+    // CSP1/2 browsers without strict-dynamic support — modern browsers
+    // (CSP3) ignore these when a nonce is present. Per Next.js + MDN docs.
+    // `'unsafe-eval'` is intentionally NOT in the policy: production Next.js
+    // builds do not require it.
+    return [
+        `default-src 'self'`,
+        `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-inline' https://apis.google.com`,
+        `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
+        `font-src 'self' https://fonts.gstatic.com`,
+        `img-src 'self' data: blob: https://*.googleapis.com https://*.firebasestorage.app https://*.googleusercontent.com`,
+        `connect-src 'self' blob: https://*.googleapis.com https://apis.google.com https://accounts.google.com https://*.googleusercontent.com https://*.firebaseio.com https://*.firebasestorage.app https://firestore.googleapis.com wss://*.firebaseio.com https://generativelanguage.googleapis.com https://*.ingest.sentry.io https://*.sentry.io https://www.hebcal.com`,
+        `frame-src 'self' https://accounts.google.com https://*.firebaseapp.com`,
+        `worker-src 'self' blob:`,
+        `manifest-src 'self'`,
+        `media-src 'self' blob: https://*.firebasestorage.app`,
+        `base-uri 'self'`,
+        `form-action 'self'`,
+    ].join('; ')
+}
+
 // Exact-match public routes.
 // Legal/marketing pages (privacy/terms/sms-consent/changelog) MUST stay
 // public — A2P SMS carrier review needs to fetch /sms-consent without a
@@ -47,29 +81,55 @@ export async function proxy(request: NextRequest) {
     const roleCookie = request.cookies.get(SESSION_ROLE_COOKIE)?.value
     const ua = request.headers.get('user-agent') || ''
 
+    // C5D-003: generate per-request nonce + CSP up front. The nonce is
+    // forwarded as an `x-nonce` REQUEST header so RSC layouts can read it
+    // via `headers().get('x-nonce')` and apply it to inline scripts
+    // (next-themes, Sentry shim, etc.). The CSP itself is attached as a
+    // RESPONSE header before every return.
+    const nonce = generateNonce()
+    const cspHeader = buildCsp(nonce)
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-nonce', nonce)
+
     const isPublicRoute =
         publicExactRoutes.includes(pathname) ||
         publicPrefixes.some(p => pathname.startsWith(p))
     const isApiRoute = pathname.startsWith('/api')
     const isLeaderRoute = pathname.startsWith('/admin') || pathname.startsWith('/manage')
 
+    // Attach CSP + Permissions-Policy boundary headers to any response we
+    // return. (HSTS / COOP / X-Frame-Options / Referrer-Policy /
+    // X-Content-Type-Options are still set statically in next.config.ts.)
+    const withSecurityHeaders = (response: NextResponse) => {
+        response.headers.set('Content-Security-Policy', cspHeader)
+        return response
+    }
+
+    const nextWithHeaders = () =>
+        withSecurityHeaders(NextResponse.next({ request: { headers: requestHeaders } }))
+
+    const rewriteWithHeaders = (url: URL) =>
+        withSecurityHeaders(NextResponse.rewrite(url, { request: { headers: requestHeaders } }))
+
     // Allow social media crawlers through so they can read OG meta tags.
     // These bots only fetch HTML <head> for link previews — no security risk.
     const isSocialCrawler = /facebookexternalhit|Twitterbot|LinkedInBot|WhatsApp|Slackbot|Discordbot|TelegramBot/i.test(ua)
     if (isSocialCrawler) {
-        return NextResponse.next()
+        return nextWithHeaders()
     }
 
-    // We do not want to block API routes here; let them handle their own auth
+    // We do not want to block API routes here; let them handle their own auth.
+    // CSP still attached so any API route that renders HTML (none today)
+    // inherits the policy.
     if (isApiRoute) {
-        return NextResponse.next()
+        return nextWithHeaders()
     }
 
     // Helper to create a redirect with cache-busting headers
     const createNoCacheRedirect = (url: URL) => {
         const response = NextResponse.redirect(url)
         response.headers.set('Cache-Control', 'no-store, must-revalidate, max-age=0')
-        return response
+        return withSecurityHeaders(response)
     }
 
     // Redirect Loop Detection
@@ -151,13 +211,13 @@ export async function proxy(request: NextRequest) {
         if (isLeaderRoute) {
             if (role !== 'admin' && role !== 'band_leader') {
                 // Unprivileged user trying to access leader/admin routes
-                return NextResponse.rewrite(new URL('/unauthorized', request.url))
+                return rewriteWithHeaders(new URL('/unauthorized', request.url))
             }
         }
     }
 
     // Clear the bounce cookie on successful load of any non-redirected page
-    const response = NextResponse.next()
+    const response = nextWithHeaders()
     if (request.cookies.has('auth_bounce_count')) {
         response.cookies.set('auth_bounce_count', '', { maxAge: 0, path: '/' })
     }
