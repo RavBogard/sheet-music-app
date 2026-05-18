@@ -167,14 +167,14 @@ export function TextScoreViewer({ url }: TextScoreViewerProps) {
                 chunks: parseIntoChunks(current, '')
             })
         } else {
-            // Text-only line
-            let htmlLine = current
-            const plainText = htmlLine.replace(/<[^>]+>/g, '')
+            // Text-only line. Chart .txt files are user-uploaded plain monospace;
+            // render verbatim via React text children so any embedded markup is
+            // escaped (C5D-001 — prior unsafe HTML injection allowed stored XSS).
             parsedGroups.push({
                 type: 'text-only',
                 id: i,
-                textLength: plainText.trimEnd().length,
-                content: <div key={i} className="whitespace-pre min-h-[1.5em]" dangerouslySetInnerHTML={{ __html: htmlLine || ' ' }} />
+                textLength: current.trimEnd().length,
+                content: <div key={i} className="whitespace-pre min-h-[1.5em]">{current || ' '}</div>
             })
         }
     }
