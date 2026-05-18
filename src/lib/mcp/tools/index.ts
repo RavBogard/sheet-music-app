@@ -38,6 +38,14 @@ import {
 } from "./setlist-write"
 import { cloneSetlist } from "./clone-setlist"
 import {
+    listTemplates,
+    getTemplate,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+    cloneSetlistFromTemplate,
+} from "./templates"
+import {
     listMonitorBuses,
     getMix,
     getMatrix,
@@ -479,6 +487,195 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) => jsonResult(await cloneSetlist(uidFrom(extra), args)),
+    )
+
+    // ─── Setlist templates (cycle-6 Lane 2) ──────────────────────────────
+    // Templates encode the SERVICE KIND ("Shabbat morning", "B'nai Mitzvah",
+    // "Shir Shabbat") distinct from any one calendar date. Daniel + David's
+    // weekly authoring pattern is "start from the template, fill in the date
+    // and a few song tweaks". `clone_setlist` is for short-cycle copies of
+    // last week's actual service; `clone_setlist_from_template` is for the
+    // weekly-flow service-kind starting point. Closes the
+    // [[feedback_mcp_template_management]] memory gap. Data model:
+    // setlistTemplates/{templateId} with tracks embedded — templates are
+    // small (10-30 rows), never broadcast, never queried by setlistId.
+
+    server.registerTool(
+        "list_templates",
+        {
+            description:
+                "List setlist templates. Returns summaries (templateId, name, templateType, trackCount, ownerId, ownerName, updatedAt, version), most-recently-updated first. Optional filters: `templateType` (e.g. 'shabbat-morning'), `ownerUid`. Admin + band_leader only — templates are an authoring surface. Use this before clone_setlist_from_template to pick a starting point.",
+            inputSchema: {
+                templateType: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(
+                        "Filter by templateType (e.g. 'shabbat-morning', 'bnai-mitzvah', 'shir-shabbat'). Free-text — whatever was set at create_template time.",
+                    ),
+                ownerUid: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe("Filter to templates created by a specific uid."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await listTemplates(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "get_template",
+        {
+            description:
+                "Read a setlist template by id. Returns the full doc: name, templateType, serviceNotes, tracks[] (each with type, title, key, bpm, leadMusician, referenceLink, notes, songId, fileId, fileName), owner + version + timestamps. Admin + band_leader only. Use before update_template to fetch current state.",
+            inputSchema: {
+                templateId: z
+                    .string()
+                    .min(1)
+                    .describe("Template id from list_templates."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await getTemplate(uidFrom(extra), args.templateId)),
+    )
+
+    server.registerTool(
+        "create_template",
+        {
+            description:
+                "Create a new setlist template. Templates are re-usable starting points for `clone_setlist_from_template` — they encode the service kind, not a calendar date. `name` is required; `templateType` is a free-text classifier (e.g. 'shabbat-morning'); `serviceNotes` is the pastoral note that travels with every clone; `tracks[]` is the starting track list (each with optional type, title, key, bpm, leadMusician, referenceLink, notes, songId, fileId, fileName). Tracks default to empty — fill them in via update_template or by editing a clone. Admin + band_leader only. Returns `{templateId, name, ownerId, ownerName, trackCount, version: 1}`. Trusted-leader rate-limit bypass.",
+            inputSchema: {
+                name: z
+                    .string()
+                    .min(1)
+                    .describe("Template name (required)."),
+                templateType: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(
+                        "Free-text service-kind classifier (e.g. 'shabbat-morning', 'bnai-mitzvah', 'shir-shabbat'). Used as the list_templates filter key.",
+                    ),
+                serviceNotes: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Pastoral / liturgical notes that travel with the service kind. Cloned setlists copy this by default (override via clone_setlist_from_template `copyServiceNotes: false`).",
+                    ),
+                tracks: z
+                    .array(
+                        z.object({
+                            type: z.string().optional(),
+                            title: z.string().optional(),
+                            key: z.string().nullable().optional(),
+                            bpm: z.number().nullable().optional(),
+                            leadMusician: z.string().nullable().optional(),
+                            referenceLink: z.string().nullable().optional(),
+                            notes: z.string().nullable().optional(),
+                            songId: z.string().nullable().optional(),
+                            fileId: z.string().nullable().optional(),
+                            fileName: z.string().nullable().optional(),
+                        }),
+                    )
+                    .optional()
+                    .describe(
+                        "Initial track list. Each row defaults to type='song' + title='' if omitted. Chart bonds (fileId/fileName/songId) copy verbatim into cloned setlists.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await createTemplate(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "update_template",
+        {
+            description:
+                "Patch a setlist template. `patch` may include any of: `name` (non-empty string), `templateType` (string or null to clear), `serviceNotes` (string or null to clear), `tracks` (full replacement of the array). Idempotent — if the patch yields no actual change, returns `{templateId, changed: false, version}` without bumping. Otherwise bumps `version` + `updatedAt`. Admin + band_leader only.",
+            inputSchema: {
+                templateId: z
+                    .string()
+                    .min(1)
+                    .describe("Template id to patch."),
+                patch: z
+                    .object({
+                        name: z.string().min(1).optional(),
+                        templateType: z.string().nullable().optional(),
+                        serviceNotes: z.string().nullable().optional(),
+                        tracks: z
+                            .array(
+                                z.object({
+                                    type: z.string().optional(),
+                                    title: z.string().optional(),
+                                    key: z.string().nullable().optional(),
+                                    bpm: z.number().nullable().optional(),
+                                    leadMusician: z.string().nullable().optional(),
+                                    referenceLink: z.string().nullable().optional(),
+                                    notes: z.string().nullable().optional(),
+                                    songId: z.string().nullable().optional(),
+                                    fileId: z.string().nullable().optional(),
+                                    fileName: z.string().nullable().optional(),
+                                }),
+                            )
+                            .optional(),
+                    })
+                    .describe(
+                        "Fields to patch. Pass null on templateType/serviceNotes to clear them; pass a new tracks[] to fully replace the existing list.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await updateTemplate(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "delete_template",
+        {
+            description:
+                "Delete a setlist template. Idempotent — `{templateId, deleted: false}` if the template was already gone, `{templateId, deleted: true}` on a real deletion. Does NOT touch any setlists previously cloned from this template (they carry a `sourceTemplateId` snapshot; downstream setlists are independent). Admin + band_leader only.",
+            inputSchema: {
+                templateId: z
+                    .string()
+                    .min(1)
+                    .describe("Template id to delete."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await deleteTemplate(uidFrom(extra), args.templateId)),
+    )
+
+    server.registerTool(
+        "clone_setlist_from_template",
+        {
+            description:
+                "Create a new setlist from a template. The new setlist gets `sourceTemplateId` (snapshot of which template seeded it), the template's `templateType` + `serviceNotes` (unless `copyServiceNotes: false`), and one track row per `template.tracks[i]` (each with a fresh trackId, contiguous `order` from 0, version: 1, chart bonds copied verbatim). `newName` is required; `newEventDate` (YYYY-MM-DD or full ISO) is optional — pass null to leave the new setlist undated. The new setlist's `ownerId` is the caller. Admin + band_leader only. Trusted-leader rate-limit bypass.",
+            inputSchema: {
+                templateId: z
+                    .string()
+                    .min(1)
+                    .describe("Source template id."),
+                newName: z
+                    .string()
+                    .min(1)
+                    .describe("Name for the new setlist."),
+                newEventDate: z
+                    .string()
+                    .nullable()
+                    .optional()
+                    .describe(
+                        "ISO date for the new event (YYYY-MM-DD or full ISO). Pass null to leave the new setlist without an eventDate.",
+                    ),
+                copyServiceNotes: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "If true (default), copy the template's serviceNotes onto the new setlist.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await cloneSetlistFromTemplate(uidFrom(extra), args)),
     )
 
     server.registerTool(

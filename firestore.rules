@@ -180,6 +180,20 @@ service cloud.firestore {
       allow write: if isBandLeader();
     }
 
+    // SETLIST TEMPLATES (cycle-6 Lane 2) — re-usable starting points
+    // for clone_setlist_from_template. Distinct from /templates above
+    // (which carries liturgical-content overrides for the wizard).
+    // Read + write restricted to band_leader + admin — templates are an
+    // authoring surface, not consumed by /perform; ordinary musicians +
+    // members have no read need. Server writes via Admin SDK still
+    // bypass these rules.
+    match /setlistTemplates/{templateId} {
+      allow read: if isSignedIn() && (isBandLeader() || isAdmin());
+      allow create: if isSignedIn() && (isBandLeader() || isAdmin());
+      allow update: if isSignedIn() && (isBandLeader() || isAdmin());
+      allow delete: if isSignedIn() && (isBandLeader() || isAdmin());
+    }
+
     // CONGREGATION CONFIG (branding, feature flags)
     match /config/congregation {
       allow read: if isSignedIn();
