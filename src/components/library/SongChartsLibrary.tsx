@@ -4,7 +4,13 @@ import { useState, useMemo, useEffect, useRef, useLayoutEffect } from "react"
 import { ChevronLeft, Search, Music, CheckSquare } from "lucide-react"
 import { bareStem } from "@/lib/mcp/title-specificity"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+// C4-004: Radix Tabs removed from /library — the prior `<Tabs><TabsList>
+// <TabsTrigger/>` markup auto-emitted `aria-controls="radix-_r_N_-content-{val}"`
+// pointing at TabsContent panels that don't exist (the chart list renders
+// outside the Tabs subtree, conditioned on `tab` state directly). Axe-core
+// flagged it as `aria-valid-attr-value` CRITICAL on /library. Replaced with
+// a plain segmented-control: `role="group"` container + `aria-pressed`
+// toggle buttons. No ARIA tab semantics claimed → no panel obligation.
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LibrarySkeleton } from "./LibrarySkeleton"
@@ -314,7 +320,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 </Button>
             </div>
 
-            {/* Search & Tabs */}
+            {/* Search & section toggles */}
             <div className="p-4 border-b border-border space-y-4">
                 <div className="relative max-w-xl mx-auto">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
@@ -337,38 +343,38 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                     />
                 )}
 
-                {/* Tabs -- always show charts and supplemental */}
-                <Tabs value={tab} onValueChange={(v) => setTab(v as LibraryTab)} className="max-w-xl mx-auto">
-                    <TabsList variant="line" className="bg-transparent gap-2 h-auto p-0">
-                        <TabsTrigger
-                            value="core"
-                            className="rounded-full px-4 py-2 text-sm font-medium border border-transparent data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border"
-                        >
-                            CRC Charts ({allFilteredCore.length})
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="supplemental"
-                            className="rounded-full px-4 py-2 text-sm font-medium border border-transparent data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border"
-                        >
-                            Shireinu ({allFilteredSupplemental.length})
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="uploads"
-                            className="rounded-full px-4 py-2 text-sm font-medium border border-transparent data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border"
-                        >
-                            Uploads ({allFilteredUploads.length})
-                        </TabsTrigger>
-                        {hasAudio && (
-                            <TabsTrigger
-                                value="audio"
-                                className="rounded-full px-4 py-2 text-sm font-medium border border-transparent data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=active]:shadow-none data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border"
+                {/* Section toggles — plain segmented control; see C4-004 note on imports above. */}
+                <div
+                    role="group"
+                    aria-label="Library section"
+                    className="max-w-xl mx-auto inline-flex w-fit items-center justify-center gap-2 flex-wrap"
+                >
+                    {(
+                        [
+                            { value: 'core' as const, label: `CRC Charts (${allFilteredCore.length})`, icon: null },
+                            { value: 'supplemental' as const, label: `Shireinu (${allFilteredSupplemental.length})`, icon: null },
+                            { value: 'uploads' as const, label: `Uploads (${allFilteredUploads.length})`, icon: null },
+                            ...(hasAudio
+                                ? [{ value: 'audio' as const, label: `Audio (${audioFiles.length})`, icon: <Music className="w-3.5 h-3.5" /> }]
+                                : []),
+                        ]
+                    ).map(({ value, label, icon }) => {
+                        const active = tab === value
+                        return (
+                            <button
+                                key={value}
+                                type="button"
+                                aria-pressed={active}
+                                data-state={active ? 'active' : 'inactive'}
+                                onClick={() => setTab(value)}
+                                className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium border cursor-pointer transition-colors data-[state=active]:bg-brand/15 data-[state=active]:text-foreground data-[state=active]:border-brand/30 data-[state=active]:ring-1 data-[state=active]:ring-brand/30 data-[state=inactive]:bg-muted/50 data-[state=inactive]:text-muted-foreground data-[state=inactive]:border-border data-[state=inactive]:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                             >
-                                <Music className="w-3.5 h-3.5" />
-                                Audio ({audioFiles.length})
-                            </TabsTrigger>
-                        )}
-                    </TabsList>
-                </Tabs>
+                                {icon}
+                                {label}
+                            </button>
+                        )
+                    })}
+                </div>
             </div>
 
             {/* Content Search Results (searches within chord data) */}
