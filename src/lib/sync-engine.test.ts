@@ -41,7 +41,7 @@ function createMockDocRef(collection: string, id: string) {
 }
 
 function createMockCollection(collectionName: string) {
-    return {
+    const collection: Record<string, unknown> = {
         doc: vi.fn((id: string) => createMockDocRef(collectionName, id)),
         select: vi.fn(() => ({
             get: vi.fn(async () => {
@@ -55,7 +55,16 @@ function createMockCollection(collectionName: string) {
                 return { docs }
             }),
         })),
+        // sync-engine's concurrency guard runs
+        // collection('sync_runs').where(...).where(...).limit(1).get().
+        // Chain where/orderBy/limit back to the collection; the terminal get
+        // resolves empty so the guard sees no in-flight run.
+        where: vi.fn(() => collection),
+        orderBy: vi.fn(() => collection),
+        limit: vi.fn(() => collection),
+        get: vi.fn(async () => ({ empty: true, docs: [] })),
     }
+    return collection
 }
 
 const mockDb = {
@@ -249,7 +258,11 @@ describe('Sync Engine — Storage Copy Integration', () => {
 
     it('deletes Storage files for deleted Drive files', async () => {
         addExistingDoc('deleted-file', { modifiedTime: '2026-01-01T00:00:00Z' })
-        mockListAllFiles.mockResolvedValue([]) // file no longer in Drive
+        // Keep the Drive listing non-empty so the accidental-wipe guard
+        // (Drive returns 0 files -> abort) doesn't fire. deleted-file is absent
+        // from Drive, so it must still be removed from Storage.
+        const survivor = makeDriveFile({ id: 'surviving-file', name: 'Survivor.pdf' })
+        mockListAllFiles.mockResolvedValue([survivor])
 
         const { syncLibraryIndex } = await import('./sync-engine')
         const stats = await syncLibraryIndex()
@@ -258,7 +271,10 @@ describe('Sync Engine — Storage Copy Integration', () => {
     })
 
     it('writes a sync run document to sync_runs collection', async () => {
-        mockListAllFiles.mockResolvedValue([])
+        // A successful sync requires a non-empty Drive listing (the wipe-guard
+        // turns Drive=0 into a thrown abort, not a 'completed' run).
+        const file = makeDriveFile({ id: 'sync-doc-file', name: 'Song.pdf' })
+        mockListAllFiles.mockResolvedValue([file])
 
         const { syncLibraryIndex } = await import('./sync-engine')
         const stats = await syncLibraryIndex()
