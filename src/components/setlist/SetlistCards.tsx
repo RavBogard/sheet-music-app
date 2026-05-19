@@ -122,11 +122,15 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 relative z-10">
+            {/* C7I2-001: at <lg (iPad-Mini portrait is 768px = md, below lg 1024)
+                collapse Edit + Download into the overflow menu so the title
+                column gets allocated space first. Inline Edit/Download remain
+                on ≥lg viewports where there's room. */}
+            <div className="flex items-center gap-2 relative z-10 shrink-0">
                 <Button
                     variant="outline"
                     onClick={(e) => { e.stopPropagation(); onEdit(e); }}
-                    className="hidden sm:flex border-brand/20 text-foreground hover:bg-brand hover:text-brand-foreground hover:border-brand rounded-full px-4 h-11"
+                    className="hidden lg:flex border-brand/20 text-foreground hover:bg-brand hover:text-brand-foreground hover:border-brand rounded-full px-4 h-11"
                     aria-label={`Edit setlist — ${setlist.name}`}
                 >
                     <Pencil className="h-4 w-4 mr-2" />
@@ -139,7 +143,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                         e.stopPropagation()
                         onDownload(setlist)
                     }}
-                    className="w-11 h-11 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors cursor-pointer bg-transparent border-0"
+                    className="hidden lg:flex w-11 h-11 hover:bg-white/10 rounded-full items-center justify-center transition-colors cursor-pointer bg-transparent border-0"
                     aria-label={`Download setlist for offline — ${setlist.name}`}
                     title="Download for Offline"
                 >
@@ -164,9 +168,13 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                                     Clone for Next Week
                                 </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(e); }} className="sm:hidden">
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(e); }} className="lg:hidden">
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Edit Setlist
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDownload(setlist); }} className="lg:hidden">
+                                <Download className={`h-4 w-4 mr-2 ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
+                                Download for Offline
                             </DropdownMenuItem>
                             {canDuplicate && (
                                 <DropdownMenuItem onClick={(e) => onDuplicate(setlist, e)}>

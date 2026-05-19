@@ -101,7 +101,12 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                     type="button"
                     aria-label={isFolder ? `Open folder ${displayName}` : isAudio ? `${isPlaying ? 'Pause' : 'Play'} ${displayName}` : `View ${displayName}`}
                     aria-pressed={selectMode ? isSelected : undefined}
-                    className={`w-full h-auto text-left rounded-none whitespace-normal group relative active:scale-100 ${isSelected
+                    // C7I2-003: `justify-start` overrides the Button base
+                    // `justify-center`. Without it, when a long row name
+                    // exceeds the row width the flex content overflows
+                    // EQUALLY on both sides, clipping the leading character
+                    // ("Adonai Oz …" → "donai Oz …") at iPad-Mini viewport.
+                    className={`w-full h-auto text-left justify-start rounded-none whitespace-normal group relative active:scale-100 ${isSelected
                         ? 'bg-brand/10'
                         : isFolder
                             ? ''
