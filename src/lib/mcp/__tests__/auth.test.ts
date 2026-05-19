@@ -81,7 +81,7 @@ describe("verifyBearer", () => {
     it("returns the uid and stamps lastUsedAt for a valid token", async () => {
         mockGet.mockResolvedValue(snapshotOf([{ uid: "user-42", revokedAt: null }]))
         const res = await verifyBearer(makeReq("crl_live_validtoken"))
-        expect(res).toEqual({ uid: "user-42" })
+        expect(res).toEqual({ uid: "user-42", tokenId: "tok1", parentTokenId: null })
         expect(mockUpdate).toHaveBeenCalledWith({ lastUsedAt: "SERVER_TS" })
     })
 

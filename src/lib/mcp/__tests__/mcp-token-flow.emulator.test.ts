@@ -45,7 +45,11 @@ describe("MCP token flow (emulator)", () => {
     it("create → verifyBearer resolves the owner uid", async () => {
         const { id, rawToken } = await createMcpToken("user-1", "Claude Desktop")
         expect(id).toBeTruthy()
-        expect(await verifyBearer(bearerReq(rawToken))).toEqual({ uid: "user-1" })
+        expect(await verifyBearer(bearerReq(rawToken))).toEqual({
+            uid: "user-1",
+            tokenId: expect.any(String),
+            parentTokenId: null,
+        })
     })
 
     it("verifyBearer stamps lastUsedAt (fire-and-forget)", async () => {
@@ -69,7 +73,11 @@ describe("MCP token flow (emulator)", () => {
 
     it("revoked tokens are rejected and drop out of the list", async () => {
         const { id, rawToken } = await createMcpToken("user-1", "To Revoke")
-        expect(await verifyBearer(bearerReq(rawToken))).toEqual({ uid: "user-1" })
+        expect(await verifyBearer(bearerReq(rawToken))).toEqual({
+            uid: "user-1",
+            tokenId: expect.any(String),
+            parentTokenId: null,
+        })
 
         expect(await revokeMcpToken("user-1", id)).toBe(true)
 

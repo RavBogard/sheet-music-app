@@ -136,6 +136,10 @@ describe("MCP OAuth flow (emulator)", () => {
         const req = new Request("http://localhost/api/mcp", {
             headers: { authorization: `Bearer ${rawToken}` },
         })
-        expect(await verifyBearer(req)).toEqual({ uid: "rabbi-daniel" })
+        expect(await verifyBearer(req)).toEqual({
+            uid: "rabbi-daniel",
+            tokenId: expect.any(String),
+            parentTokenId: null,
+        })
     })
 })

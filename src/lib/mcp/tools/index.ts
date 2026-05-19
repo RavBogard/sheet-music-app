@@ -101,6 +101,7 @@ import {
 import { listServicePersonnel } from "./service-personnel"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
+export { registerMintAdminBearerTools } from "./mint-admin-bearer"
 
 /**
  * Validate that an `eventDate` string is parseable as a date. Previously the

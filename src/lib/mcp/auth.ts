@@ -8,19 +8,35 @@ import { logger } from "@/lib/logger"
  *
  * MCP tokens are NOT Firebase ID tokens — they are opaque `crl_live_` strings
  * hashed into the `mcpTokens` collection. On success this returns the resolved
- * owner `uid`, the same shape the `/api/*` routes pass downstream, so MCP tool
- * handlers can reuse the existing data layer unchanged.
+ * owner `uid` (plus the verified token's own doc id + `parentTokenId`), the
+ * same `uid` shape the `/api/*` routes pass downstream, so MCP tool handlers
+ * can reuse the existing data layer unchanged.
+ *
+ * The `tokenId` + `parentTokenId` additions are ADDITIVE — every existing
+ * caller destructures only `{ uid }`, so they keep compiling. The fields exist
+ * for `mint_admin_bearer`: it reads `parentTokenId` to enforce root-only
+ * minting (depth capped at 1), and the verifier itself does a child-only
+ * root-revocation cascade so revoking a root bearer instantly kills every
+ * bearer it minted.
  *
  * Never logs the raw token — only token doc ids.
  */
 
 const COLLECTION = "mcpTokens"
 
+export interface VerifiedBearer {
+    uid: string
+    /** The verified token's own `mcpTokens` doc id. */
+    tokenId: string
+    /** Parent token doc id for minted children; null for root + test tokens. */
+    parentTokenId: string | null
+}
+
 function unauthorized(): Response {
     return new Response("Unauthorized", { status: 401 })
 }
 
-export async function verifyBearer(req: Request): Promise<{ uid: string } | Response> {
+export async function verifyBearer(req: Request): Promise<VerifiedBearer | Response> {
     const header = req.headers.get("authorization")
     if (!header?.startsWith("Bearer ")) return unauthorized()
     const raw = header.slice(7).trim()
@@ -80,10 +96,38 @@ export async function verifyBearer(req: Request): Promise<{ uid: string } | Resp
         return unauthorized()
     }
 
+    // Root-revocation cascade. Minted-child bearers (kind: "minted_admin")
+    // carry a `parentTokenId`; revoking the root must instantly invalidate
+    // every child it minted. Rather than fan-out on revoke, we verify the
+    // parent lazily on the child's own request path: one extra read, only
+    // when `parentTokenId` is set. Root + test bearers have no
+    // `parentTokenId`, so this is zero overhead on every existing path.
+    const parentTokenId =
+        typeof data.parentTokenId === "string" && data.parentTokenId
+            ? data.parentTokenId
+            : null
+    if (parentTokenId) {
+        const parentSnap = await db.collection(COLLECTION).doc(parentTokenId).get()
+        const parent = parentSnap.data()
+        const parentExpired =
+            parent?.ttlExpiresAt instanceof Timestamp &&
+            parent.ttlExpiresAt.toMillis() <= Date.now()
+        if (!parentSnap.exists || parent?.revokedAt || parentExpired) {
+            logger.warn("[mcp-auth] bearer rejected: parent token invalid", {
+                tokenId: doc.id,
+                parentTokenId,
+                parentMissing: !parentSnap.exists,
+                parentRevoked: !!parent?.revokedAt,
+                parentExpired,
+            })
+            return unauthorized()
+        }
+    }
+
     // Best-effort — a failed lastUsedAt update must not fail the request.
     doc.ref
         .update({ lastUsedAt: FieldValue.serverTimestamp() })
         .catch(() => logger.warn("[mcp] lastUsedAt update failed", { tokenId: doc.id }))
 
-    return { uid: data.uid as string }
+    return { uid: data.uid as string, tokenId: doc.id, parentTokenId }
 }

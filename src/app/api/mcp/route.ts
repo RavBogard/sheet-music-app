@@ -9,6 +9,7 @@ import {
     registerMonitorTools,
     registerChartUploadTools,
     registerTestTokenTools,
+    registerMintAdminBearerTools,
     registerRosterTools,
     registerObservabilityTools,
 } from "@/lib/mcp/tools"
@@ -68,6 +69,7 @@ const baseHandler = createMcpHandler(
         registerMonitorTools(server)
         registerChartUploadTools(server)
         registerTestTokenTools(server)
+        registerMintAdminBearerTools(server)
         registerRosterTools(server)
         registerObservabilityTools(server)
     },
@@ -93,7 +95,15 @@ async function verifyToken(
         token: bearerToken,
         clientId: result.uid,
         scopes: [],
-        extra: { uid: result.uid },
+        // tokenId + parentTokenId are forwarded so admin-only tools
+        // (mint_admin_bearer) can enforce root-only minting from the
+        // caller's token identity. uid is the only field every other
+        // tool reads.
+        extra: {
+            uid: result.uid,
+            tokenId: result.tokenId,
+            parentTokenId: result.parentTokenId,
+        },
     }
 }
 

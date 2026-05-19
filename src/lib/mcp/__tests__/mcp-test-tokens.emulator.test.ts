@@ -141,9 +141,12 @@ describe("MCP test tokens (emulator)", () => {
         expect(userSnap.data()?.role).toBe("band_leader")
         expect(userSnap.data()?.isTestUser).toBe(true)
 
-        // Bearer resolves to the test uid via the unchanged verifyBearer
+        // Bearer resolves to the test uid via verifyBearer. tokenId is the
+        // doc id; test tokens carry no parentTokenId (root-shape).
         expect(await verifyBearer(bearerReq(result.token))).toEqual({
             uid: result.uid,
+            tokenId: expect.any(String),
+            parentTokenId: null,
         })
 
         // Firebase Auth user exists, disabled
@@ -203,6 +206,8 @@ describe("MCP test tokens (emulator)", () => {
         // Bearer works while live
         expect(await verifyBearer(bearerReq(result.token))).toEqual({
             uid: result.uid,
+            tokenId: expect.any(String),
+            parentTokenId: null,
         })
 
         // Force expiry by writing ttlExpiresAt to the past on the bearer doc.
