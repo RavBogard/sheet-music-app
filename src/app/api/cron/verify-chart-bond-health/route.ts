@@ -14,8 +14,10 @@ import { recomputeTrackCount } from "@/lib/setlist-track-count"
  * health probe `verify_setlist_charts` would, and writes a row to
  * `chart_bond_alerts/{alertId}` whenever:
  *
- *   - aggregate okCount/trackCount across the surveyed set is < 80%, OR
- *   - any individual surveyed setlist's okCount/trackCount is < 70%.
+ *   - aggregate okCount/bondedCount across the surveyed set is < 80%, OR
+ *   - any individual surveyed setlist's okCount/bondedCount is < 70%
+ *     (only setlists with at least MIN_BONDED_FOR_BREACH bonded tracks are
+ *     evaluated, so stub/skeleton setlists never alert).
  *
  * The alert document is the surface a future admin push notification reads.
  * No push wiring is shipped in this lane; the document is the contract.
@@ -33,6 +35,12 @@ import { recomputeTrackCount } from "@/lib/setlist-track-count"
 const CRON_LANE = "verify-chart-bond-health"
 const AGGREGATE_OK_THRESHOLD = 0.8
 const PER_SETLIST_OK_THRESHOLD = 0.7
+// C8I2-004: breach ratios are computed over BONDED tracks, not total tracks.
+// A typical Shabbat-morning service carries ~16/30 intentional unbonded section
+// markers, so an okCount/trackCount denominator false-fires (13/14 bonds healthy
+// scores 43%). Stub/skeleton setlists with very few bonds are excluded from the
+// per-setlist breach test entirely via this floor.
+const MIN_BONDED_FOR_BREACH = 3
 // Vercel cron invocations are anonymous from the function's POV — caller uid
 // is unavailable, so we plumb a synthetic `system-cron` uid into the read-
 // only `verifySetlistCharts` path. The role-gate inside it falls through to
@@ -117,6 +125,7 @@ export async function GET(req: NextRequest) {
 
         const summaries: PerSetlistSummary[] = []
         let aggTrack = 0
+        let aggBonded = 0
         let aggOk = 0
         let repaired = 0
         const repairs: { setlistId: string; from: number; to: number }[] = []
@@ -145,8 +154,8 @@ export async function GET(req: NextRequest) {
                 continue
             }
             const okPct =
-                result.trackCount > 0
-                    ? result.okCount / result.trackCount
+                result.bondedCount > 0
+                    ? result.okCount / result.bondedCount
                     : 1
             summaries.push({
                 setlistId: id,
@@ -166,14 +175,17 @@ export async function GET(req: NextRequest) {
                 repairedTrackCount: repair,
             })
             aggTrack += result.trackCount
+            aggBonded += result.bondedCount
             aggOk += result.okCount
         }
 
         const aggregateOkPct =
-            aggTrack > 0 ? aggOk / aggTrack : 1
+            aggBonded > 0 ? aggOk / aggBonded : 1
         const aggregateBreached = aggregateOkPct < AGGREGATE_OK_THRESHOLD
         const perSetlistBreached = summaries.filter(
-            (s) => s.trackCount > 0 && s.okCount / s.trackCount < PER_SETLIST_OK_THRESHOLD,
+            (s) =>
+                s.bondedCount >= MIN_BONDED_FOR_BREACH &&
+                s.okCount / s.bondedCount < PER_SETLIST_OK_THRESHOLD,
         )
 
         if (aggregateBreached || perSetlistBreached.length > 0) {

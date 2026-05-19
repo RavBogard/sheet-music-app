@@ -844,7 +844,7 @@ export async function suggestBand(
                 err instanceof Error ? err.message : String(err)
             }`,
             { setlistId: args.setlistId },
-            "Check Firestore index status at console.firebase.google.com/project/crcmusiccharts/firestore/indexes — `suggest_band` requires the `scheduling_assignments(status ASC, assignedAt ASC)` composite index. If indexes are deployed and green, fall back to verifying Firestore connectivity.",
+            "Check Firestore index status at console.firebase.google.com/project/crcmusiccharts/firestore/indexes — `suggest_band` requires the `scheduling_assignments(status ASC, assignedAt DESC)` composite index. If indexes are deployed and green, fall back to verifying Firestore connectivity.",
         )
     }
 }

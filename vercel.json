@@ -27,6 +27,10 @@
         {
             "path": "/api/cron/admin-consistency",
             "schedule": "0 4 * * *"
+        },
+        {
+            "path": "/api/cron/verify-chart-bond-health",
+            "schedule": "0 15 * * 4"
         }
     ]
 }

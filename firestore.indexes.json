@@ -94,7 +94,7 @@
         },
         {
           "fieldPath": "assignedAt",
-          "order": "ASCENDING"
+          "order": "DESCENDING"
         }
       ]
     },
