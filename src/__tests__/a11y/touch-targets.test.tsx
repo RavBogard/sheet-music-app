@@ -70,8 +70,11 @@ describe("U01: touch-target floor (44px) — source-level class assertions", () 
     const repoRoot = resolve(__dirname, "../../..")
 
     it("perform-view page header: back Link and toolbar buttons are ≥44px", () => {
+        // UNAUTH-009 split this route into a thin server page.tsx + the
+        // interactive SetlistPerformClient.tsx. The header (back Link + Gig
+        // Packet / Edit buttons) now lives in the client component.
         const src = readFileSync(
-            resolve(repoRoot, "src/app/perform/setlist/[id]/page.tsx"),
+            resolve(repoRoot, "src/app/perform/setlist/[id]/SetlistPerformClient.tsx"),
             "utf8"
         )
         // Back Link
