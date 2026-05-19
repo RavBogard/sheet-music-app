@@ -79,6 +79,12 @@ describe('SmartScoreViewer', () => {
     })
 
     it('sets TransposeCalculator before load() is called', async () => {
+        // Drive the in-memory aiXmlContent path: a non-URL XML string skips the
+        // component's fetch(sourceUrl) branch (which would otherwise hit the
+        // network — unmocked here — and abort before load() runs). load() is
+        // then called directly, letting us assert TC-before-load ordering.
+        mockStoreValues.aiXmlContent = '<score-partwise><part-list/></score-partwise>'
+
         // Track the order of operations
         const callOrder: string[] = []
         MockTC.mockImplementation(function (this: unknown) {
