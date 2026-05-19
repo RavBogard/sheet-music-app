@@ -12,6 +12,7 @@ import {
 import { generateRawToken, hashToken } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
 import { liftLegacyErrorEnvelope } from "@/lib/mcp/errors"
+import { isTestUid } from "@/lib/test-isolation"
 
 /**
  * MCP test-identity provisioning.
@@ -368,6 +369,10 @@ export async function listTestAccountsCore(
 /**
  * Cascade fields — collection → field equal-match against the test uid.
  * Schema-verified 2026-05-17 (see DESIGN.md §1.5).
+ *
+ * Cycle-7 Lane 1 (C7I3-007): `setlistTemplates` added so a revoke /
+ * cleanup-all sweep cascades through cycle-6-Lane-2's template CRUD pack.
+ * `ownerUid` is the field name set by `create_template`.
  */
 const CASCADE_FIELDS: Array<{ collection: string; field: string; storage?: boolean }> = [
     { collection: "library_index", field: "uploadedBy", storage: true },
@@ -377,6 +382,7 @@ const CASCADE_FIELDS: Array<{ collection: string; field: string; storage?: boole
     { collection: "bond_corrections", field: "correctedBy" },
     { collection: "scheduling_assignments", field: "musicianUid" },
     { collection: "musician_availability", field: "musicianUid" },
+    { collection: "setlistTemplates", field: "ownerUid" },
 ]
 
 export interface RevokeTestAccountResult {
@@ -392,6 +398,7 @@ export interface RevokeTestAccountResult {
         bond_corrections: number
         scheduling_assignments: number
         musician_availability: number
+        setlistTemplates: number
         mcpTokens: number
         storageDeleted: number
         storageFailed: number
@@ -582,6 +589,7 @@ async function revokeTestAccountUnchecked(
             bond_corrections: cascaded.bond_corrections ?? 0,
             scheduling_assignments: cascaded.scheduling_assignments ?? 0,
             musician_availability: cascaded.musician_availability ?? 0,
+            setlistTemplates: cascaded.setlistTemplates ?? 0,
             mcpTokens: cascaded.mcpTokens ?? 0,
             storageDeleted: storage.deleted,
             storageFailed: storage.failed,
@@ -700,6 +708,210 @@ export async function cleanupAllTestDataCore(
     return { removed, failures, aggregate }
 }
 
+// ─── Sweep orphan test data (Convergence C) ─────────────────────────────────
+
+export interface SweepOrphanTestDataArgs {
+    /**
+     * Optional further-narrowed prefix match. When set, only sweeps owner
+     * uids that match `isTestUid(uid) && uid.includes(uidPattern)`. Use to
+     * scope a sweep to one cycle/instance namespace (e.g. `c7i1`) without
+     * touching siblings. When omitted, sweeps every test-shape orphan.
+     */
+    uidPattern?: string
+    /**
+     * Standard F-05 dryRun. Default true (observability-first). When true,
+     * returns the per-collection orphan list without deleting; when false,
+     * performs the destructive sweep.
+     */
+    dryRun?: boolean
+    /**
+     * F-05 force gate. Real sweep (dryRun:false) requires force:true,
+     * matching `reconcile_library` / `backfill_setlist_test_flag` semantics.
+     */
+    force?: boolean
+}
+
+export interface SweepOrphanTestDataResult {
+    ok: true
+    dryRun: boolean
+    scanned: {
+        setlists: number
+        setlistTemplates: number
+    }
+    swept: {
+        setlists: number
+        setlistTemplates: number
+        tracks: number
+    }
+    orphans: Array<{
+        collection: "setlists" | "setlistTemplates"
+        id: string
+        ownerId: string
+        name: string | null
+    }>
+    orphansTruncated: boolean
+}
+
+const MAX_ORPHAN_SAMPLE = 500
+const ORPHAN_PATTERN_RE = /^[a-z0-9](?:[a-z0-9]|-(?!-)){0,30}[a-z0-9]$|^[a-z0-9]$/
+
+export async function sweepOrphanTestDataCore(
+    callerUid: string,
+    args: SweepOrphanTestDataArgs = {},
+): Promise<SweepOrphanTestDataResult | ReturnType<typeof envelope>> {
+    initAdmin()
+    const { role: callerRole } = await loadCallerRole(callerUid)
+    if (callerRole !== "admin") {
+        return envelope(
+            "forbidden_role",
+            "sweep_orphan_test_data is admin-only — it bypasses ownership and deletes orphan setlists/templates whose owner user-record is gone.",
+            { callerRole: callerRole ?? null, requiredRoles: ["admin"] },
+            "Ask an admin to run the sweep, or use cleanup_all_test_data({prefix}) for owner-bonded cascades.",
+        )
+    }
+
+    const dryRun = args.dryRun !== false // default true
+    const wantsWrite = !dryRun
+    if (wantsWrite && args.force !== true) {
+        return envelope(
+            "force_required",
+            "sweep_orphan_test_data with dryRun:false requires force:true. Returning the dry-run plan instead.",
+            { requestedDryRun: dryRun },
+            "Re-call with `dryRun:false, force:true` to actually delete the orphan rows; or inspect the plan first by calling without force.",
+        )
+    }
+
+    if (args.uidPattern !== undefined) {
+        if (!ORPHAN_PATTERN_RE.test(args.uidPattern)) {
+            return envelope(
+                "invalid_uid_pattern",
+                "uidPattern must be lowercase alphanumeric with single hyphens, 1-32 chars, no leading/trailing or consecutive hyphens.",
+                { requestedPattern: args.uidPattern },
+                "Pass a substring like 'c7i1' to scope the sweep; omit to sweep every test-shape orphan.",
+            )
+        }
+    }
+
+    const db = getFirestore()
+
+    // Helper — true when the owner uid is a test-shape AND user-doc is absent.
+    const orphanFilter = async (ownerId: string | undefined | null): Promise<boolean> => {
+        if (!isTestUid(ownerId)) return false
+        if (args.uidPattern && !ownerId!.includes(args.uidPattern)) return false
+        const userSnap = await db.collection(USERS).doc(ownerId!).get()
+        return !userSnap.exists
+    }
+
+    const orphans: SweepOrphanTestDataResult["orphans"] = []
+    const orphanSetlistIds: string[] = []
+    const orphanTemplateIds: string[] = []
+    let orphansTruncated = false
+
+    // Setlists — page through all docs (collection cardinality is small —
+    // ~44 at TRIAGE time, well within a single fetch).
+    const setlistsSnap = await db.collection("setlists").get()
+    for (const doc of setlistsSnap.docs) {
+        const data = doc.data() as Record<string, unknown>
+        const ownerId = typeof data.ownerId === "string" ? data.ownerId : null
+        if (!(await orphanFilter(ownerId))) continue
+        orphanSetlistIds.push(doc.id)
+        if (orphans.length < MAX_ORPHAN_SAMPLE) {
+            orphans.push({
+                collection: "setlists",
+                id: doc.id,
+                ownerId: ownerId!,
+                name: typeof data.name === "string" ? data.name : null,
+            })
+        } else {
+            orphansTruncated = true
+        }
+    }
+
+    // Templates — same shape.
+    const templatesSnap = await db.collection("setlistTemplates").get()
+    for (const doc of templatesSnap.docs) {
+        const data = doc.data() as Record<string, unknown>
+        const ownerUid = typeof data.ownerUid === "string" ? data.ownerUid : null
+        if (!(await orphanFilter(ownerUid))) continue
+        orphanTemplateIds.push(doc.id)
+        if (orphans.length < MAX_ORPHAN_SAMPLE) {
+            orphans.push({
+                collection: "setlistTemplates",
+                id: doc.id,
+                ownerId: ownerUid!,
+                name: typeof data.name === "string" ? data.name : null,
+            })
+        } else {
+            orphansTruncated = true
+        }
+    }
+
+    const scanned = {
+        setlists: setlistsSnap.size,
+        setlistTemplates: templatesSnap.size,
+    }
+    const swept = { setlists: 0, setlistTemplates: 0, tracks: 0 }
+
+    if (wantsWrite) {
+        // Delete tracks for orphan setlists first (preserve referential
+        // hygiene — track rows pointing at no setlist are themselves orphans).
+        for (const sid of orphanSetlistIds) {
+            const trackSnap = await db
+                .collection("tracks")
+                .where("setlistId", "==", sid)
+                .get()
+            const bw = db.bulkWriter()
+            for (const t of trackSnap.docs) bw.delete(t.ref)
+            await bw.close()
+            swept.tracks += trackSnap.size
+        }
+
+        if (orphanSetlistIds.length > 0) {
+            const bw = db.bulkWriter()
+            for (const sid of orphanSetlistIds) {
+                bw.delete(db.collection("setlists").doc(sid))
+            }
+            await bw.close()
+            swept.setlists = orphanSetlistIds.length
+        }
+
+        if (orphanTemplateIds.length > 0) {
+            const bw = db.bulkWriter()
+            for (const tid of orphanTemplateIds) {
+                bw.delete(db.collection("setlistTemplates").doc(tid))
+            }
+            await bw.close()
+            swept.setlistTemplates = orphanTemplateIds.length
+        }
+    }
+
+    breadcrumb("cleanup", {
+        callerUid,
+        op: "sweep_orphan_test_data",
+        dryRun,
+        scanned,
+        swept,
+        orphanCount: orphanSetlistIds.length + orphanTemplateIds.length,
+        uidPattern: args.uidPattern ?? null,
+    })
+    logger.info("[mcp-test-token] sweep_orphan_test_data", {
+        callerUid,
+        dryRun,
+        scanned,
+        swept,
+        orphanCount: orphanSetlistIds.length + orphanTemplateIds.length,
+    })
+
+    return {
+        ok: true,
+        dryRun,
+        scanned,
+        swept,
+        orphans,
+        orphansTruncated,
+    }
+}
+
 // ─── MCP tool registration ──────────────────────────────────────────────────
 
 type AuthExtra = { authInfo?: { extra?: Record<string, unknown> } }
@@ -798,6 +1010,41 @@ export function registerTestTokenTools(server: McpServer): void {
         },
         async (args, extra) => {
             const result = await revokeTestAccountCore(uidFrom(extra), args.uid)
+            return jsonResult(result)
+        },
+    )
+
+    server.registerTool(
+        "sweep_orphan_test_data",
+        {
+            description:
+                "Cycle-7 Lane 1 / Convergence C — admin-only sweep for orphan setlists + setlistTemplates whose owner uid matches `isTestUid` (test-*, c<N>i<N>-*, cf<N>-*) AND whose owner user-record is already absent from `users/`. These rows survive `cleanup_all_test_data` cascades when the user-record was deleted out-of-band (failed mid-revoke, console-deleted, sibling-instance cleanup that didn't carry the prefix, etc.). Defaults `dryRun:true`; pass `dryRun:false, force:true` for real deletes (F-05 standing rule). Cascade includes dependent `tracks` for orphan setlists. Optional `uidPattern` substring narrows the sweep to one cycle/instance (e.g. 'c7i1'). Returns `{scanned, swept, orphans[]}`; orphans[] is capped at 500 with `orphansTruncated:true` past that.",
+            inputSchema: {
+                uidPattern: z
+                    .string()
+                    .min(1)
+                    .max(32)
+                    .regex(ORPHAN_PATTERN_RE)
+                    .optional()
+                    .describe(
+                        "Optional substring to narrow the orphan sweep — only owner uids containing this substring are touched. Pass a cycle/instance label like 'c7i1' to scope to one namespace; omit to sweep every test-shape orphan.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true (default), returns the orphan list without writing. F-05 standing rule.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Required when `dryRun:false`. Real sweep without `force:true` returns the rich `force_required` envelope (REG-003: `{ok:false, error:{machine_code:'force_required'}}`) and no writes.",
+                    ),
+            },
+        },
+        async (args, extra) => {
+            const result = await sweepOrphanTestDataCore(uidFrom(extra), args)
             return jsonResult(result)
         },
     )

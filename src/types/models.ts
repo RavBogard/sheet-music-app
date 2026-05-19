@@ -109,17 +109,20 @@ export interface Setlist {
  * passes never disagree.
  *
  * Truthy when EITHER:
- *  - owner uid begins with `test-` (provisioned by `create_test_account`)
+ *  - owner uid matches `TEST_UID_PREFIXES` (cycle-7 Lane 1): `test-…`,
+ *    `c<N>i<N>[a]-…`, or `cf<N>-…` — broader than the historical
+ *    `startsWith("test-")` so cycle-NN cowork-probe uids classify too.
  *  - setlist name matches `^\[(TEST|CYCLE\d+-|CF\d+-)` — the prefix
- *    convention every cycle's stress-run uses
+ *    convention every cycle's stress-run uses for ad-hoc names.
  */
+import { isTestUid } from "@/lib/test-isolation"
 export const TEST_SETLIST_NAME_PATTERN = /^\[(TEST|CYCLE\d+-|CF\d+-)/i
 
 export function isTestSetlist(args: {
     name: string | null | undefined
     ownerId: string | null | undefined
 }): boolean {
-    if (args.ownerId && args.ownerId.startsWith("test-")) return true
+    if (isTestUid(args.ownerId)) return true
     if (args.name && TEST_SETLIST_NAME_PATTERN.test(args.name)) return true
     return false
 }

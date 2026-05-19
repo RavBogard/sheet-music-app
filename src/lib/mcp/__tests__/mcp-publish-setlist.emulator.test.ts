@@ -605,4 +605,136 @@ describe("MCP publish_setlist (emulator)", () => {
         const post = (await db().collection("setlists").doc(id).get()).data()!
         expect(post.publishedAt).toBeTruthy()
     })
+
+    // ── Cycle-7 Lane 1 — Convergence A: owner-shape gates ────────────────────
+
+    it("real-publish on a test-owned setlist refuses with test_owner_cannot_publish_to_real_humans (C7I1-008)", async () => {
+        const id = "set-test-owner"
+        const TEST_OWNER = "test-c7i1-band_leader-deadbeef"
+        await seedUser(TEST_OWNER, {
+            role: "band_leader",
+            email: "ignored@test",
+            isTestUser: true,
+        })
+        await seedSetlist(id, { ownerId: TEST_OWNER, isTest: true })
+        await seedTrack("t1", id, 0, {
+            type: "song",
+            title: "Test Song",
+            fileId: "upload-x",
+        })
+
+        // ADMIN (real uid) attempting real-publish on a test-owned setlist.
+        const r = await publishSetlist(ADMIN, { setlistId: id })
+        expect("ok" in r && r.ok).toBe(false)
+        if ("error" in r) {
+            expect(r.error.machine_code).toBe(
+                "test_owner_cannot_publish_to_real_humans",
+            )
+        }
+        // No fanout side-effects fired.
+        expect(mockSendPushToUsers).not.toHaveBeenCalled()
+        expect(mockEmailAllMembers).not.toHaveBeenCalled()
+        expect(mockSendSMS).not.toHaveBeenCalled()
+    })
+
+    it("dryRun on a test-owned setlist still works (observability per feedback_dryrun_is_observability)", async () => {
+        const id = "set-test-owner-dryrun"
+        const TEST_OWNER = "test-c7i1-band_leader-feedface"
+        await seedUser(TEST_OWNER, { role: "band_leader", isTestUser: true })
+        await seedSetlist(id, { ownerId: TEST_OWNER, isTest: true })
+        await seedTrack("t1", id, 0, {
+            type: "song",
+            title: "T",
+            fileId: "upload-y",
+        })
+
+        const r = await publishSetlist(ADMIN, { setlistId: id, dryRun: true })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+        expect(r.dryRun).toBe(true)
+        // Recipients derived but no fanout dispatched (dryRun).
+        expect(mockSendPushToUsers).not.toHaveBeenCalled()
+        expect(mockEmailAllMembers).not.toHaveBeenCalled()
+    })
+
+    it("real-publish from a test-shape caller on a real-owner setlist refuses with cross_owner_publish_forbidden (C7I3-002)", async () => {
+        const id = "set-real-owner-cross"
+        const TEST_CALLER = "test-c7i3-band_leader-cafe1234"
+        await seedUser(TEST_CALLER, { role: "band_leader", isTestUser: true })
+        await seedSetlist(id, { ownerId: ADMIN }) // owner is real (admin uid)
+        await seedTrack("t1", id, 0, {
+            type: "song",
+            title: "Oseh Shalom",
+            fileId: "upload-oseh",
+        })
+
+        const r = await publishSetlist(TEST_CALLER, { setlistId: id })
+        expect("ok" in r && r.ok).toBe(false)
+        if ("error" in r) {
+            expect(r.error.machine_code).toBe("cross_owner_publish_forbidden")
+        }
+        expect(mockEmailAllMembers).not.toHaveBeenCalled()
+    })
+
+    it("dryRun from a test-shape caller on a real-owner setlist proceeds (non-owner observability)", async () => {
+        const id = "set-real-owner-cross-dryrun"
+        const TEST_CALLER = "test-c7i3-band_leader-d34db33f"
+        await seedUser(TEST_CALLER, { role: "band_leader", isTestUser: true })
+        await seedSetlist(id, { ownerId: ADMIN })
+        await seedTrack("t1", id, 0, {
+            type: "song",
+            title: "T",
+            fileId: "upload-z",
+        })
+
+        const r = await publishSetlist(TEST_CALLER, {
+            setlistId: id,
+            dryRun: true,
+        })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+        expect(r.dryRun).toBe(true)
+        expect(mockEmailAllMembers).not.toHaveBeenCalled()
+    })
+
+    it("real-publish on a real-owner setlist by a real caller still works (no false-positive)", async () => {
+        const id = "set-real-real"
+        await seedSetlist(id, { ownerId: ADMIN })
+        await seedTrack("t1", id, 0, {
+            type: "song",
+            title: "Oseh Shalom",
+            fileId: "upload-oseh",
+        })
+        const r = await publishSetlist(ADMIN, { setlistId: id })
+        expect("ok" in r && r.ok).toBe(true)
+    })
+
+    it("override recipients[] containing a test-shape uid are filtered before fanout (defense-in-depth)", async () => {
+        const id = "set-override-filter"
+        const TEST_TARGET = "test-c7i1-musician-12345678"
+        await seedUser(TEST_TARGET, {
+            role: "musician",
+            email: "ignore@test",
+            displayName: "[TEST] m",
+            isTestUser: true,
+        })
+        await seedSetlist(id, { ownerId: ADMIN })
+        await seedTrack("t1", id, 0, {
+            type: "song",
+            title: "T",
+            fileId: "upload-x",
+        })
+
+        const r = await publishSetlist(ADMIN, {
+            setlistId: id,
+            recipients: [
+                { uid: LEADER },
+                { uid: TEST_TARGET },
+            ],
+        })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+        // Test-uid filtered; only LEADER remains.
+        expect(r.recipients.map((x) => x.uid).sort()).toEqual([LEADER].sort())
+    })
 })

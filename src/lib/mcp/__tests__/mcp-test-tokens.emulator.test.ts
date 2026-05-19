@@ -16,6 +16,7 @@ import {
     listTestAccountsCore,
     revokeTestAccountCore,
     cleanupAllTestDataCore,
+    sweepOrphanTestDataCore,
 } from "../tools/test-tokens"
 import { verifyBearer } from "../auth"
 import { checkUserRateLimit } from "@/lib/rate-limit"
@@ -70,6 +71,7 @@ describe("MCP test tokens (emulator)", () => {
             "mcpTestUsers",
             "users",
             "setlists",
+            "setlistTemplates",
             "tracks",
             "library_index",
             "songs",
@@ -566,5 +568,187 @@ describe("MCP test tokens (emulator)", () => {
         const survivorIdx = await db().collection("mcpTestUsers").doc(siblingB.uid).get()
         expect(survivorIdx.exists).toBe(true)
         await expect(getAuth().getUser(siblingB.uid)).resolves.toBeTruthy()
+    })
+
+    // ── Cycle-7 Lane 1: Convergence C cascade extension ──────────────────────
+
+    it("revoke cascades to setlistTemplates owned by the test uid (C7I3-007)", async () => {
+        const mint = await provisionTestAccount(ADMIN_UID, { role: "band_leader" })
+        if ("error" in mint) throw new Error("mint failed")
+        // Seed an owned template + an unrelated template owned by someone else.
+        await db().collection("setlistTemplates").doc("tpl-owned").set({
+            name: "Test template",
+            ownerUid: mint.uid,
+        })
+        await db().collection("setlistTemplates").doc("tpl-other").set({
+            name: "Other template",
+            ownerUid: "real-user-uid",
+        })
+
+        const revoked = await revokeTestAccountCore(ADMIN_UID, mint.uid)
+        if ("error" in revoked) throw new Error("revoke failed")
+        expect(revoked.cascaded.setlistTemplates).toBe(1)
+        expect(
+            (await db().collection("setlistTemplates").doc("tpl-owned").get()).exists,
+        ).toBe(false)
+        // Foreign template untouched.
+        expect(
+            (await db().collection("setlistTemplates").doc("tpl-other").get()).exists,
+        ).toBe(true)
+    })
+
+    it("cleanup_all_test_data with prefix cascade-deletes templates + setlists + tracks for the namespace (Convergence C)", async () => {
+        const a = await provisionTestAccount(ADMIN_UID, {
+            role: "band_leader",
+            uidPrefix: "c7l1",
+        })
+        if ("error" in a) throw new Error(`mint failed: ${a.error}`)
+        // Seed: 1 template + 1 setlist + 2 tracks owned by `a`.
+        await db().collection("setlistTemplates").doc("tpl-c7l1").set({
+            name: "c7l1 template",
+            ownerUid: a.uid,
+        })
+        await db().collection("setlists").doc("sl-c7l1").set({
+            name: "c7l1 setlist",
+            ownerId: a.uid,
+        })
+        for (const tid of ["tr-c7l1-1", "tr-c7l1-2"]) {
+            await db().collection("tracks").doc(tid).set({
+                setlistId: "sl-c7l1",
+                title: tid,
+            })
+        }
+        // Sibling namespace must survive.
+        await db().collection("setlistTemplates").doc("tpl-c7l2").set({
+            name: "c7l2 template",
+            ownerUid: "test-c7l2-band_leader-deadbeef",
+        })
+
+        const result = await cleanupAllTestDataCore(ADMIN_UID, { prefix: "c7l1" })
+        if ("error" in result) throw new Error("cleanup failed: " + result.error)
+        expect(result.aggregate.setlistTemplates ?? 0).toBe(1)
+        expect(result.aggregate.setlists ?? 0).toBe(1)
+        expect(result.aggregate.tracks ?? 0).toBe(2)
+
+        expect(
+            (await db().collection("setlistTemplates").doc("tpl-c7l1").get()).exists,
+        ).toBe(false)
+        expect((await db().collection("setlists").doc("sl-c7l1").get()).exists).toBe(false)
+        for (const tid of ["tr-c7l1-1", "tr-c7l1-2"]) {
+            expect((await db().collection("tracks").doc(tid).get()).exists).toBe(false)
+        }
+        // Sibling c7l2 template survives.
+        expect(
+            (await db().collection("setlistTemplates").doc("tpl-c7l2").get()).exists,
+        ).toBe(true)
+    })
+
+    // ── Cycle-7 Lane 1: sweep_orphan_test_data ───────────────────────────────
+
+    it("sweep_orphan_test_data refuses non-admin (band_leader denied — admin-only)", async () => {
+        const r = await sweepOrphanTestDataCore(LEADER_UID, { dryRun: true })
+        expect("error" in r).toBe(true)
+        if ("error" in r) expect(r.error).toBe("forbidden_role")
+    })
+
+    it("sweep_orphan_test_data dryRun returns orphan list without deleting", async () => {
+        // Seed: test-shape ownerId with NO matching users/{uid} doc (orphan).
+        await db().collection("setlists").doc("sl-orphan-1").set({
+            name: "Orphan SL",
+            ownerId: "test-c7i1-band_leader-feedface",
+        })
+        await db().collection("setlistTemplates").doc("tpl-orphan-1").set({
+            name: "Orphan TPL",
+            ownerUid: "test-c7i1-band_leader-feedface",
+        })
+        // Non-orphan: real-uid owner exists in users.
+        await db().collection("setlists").doc("sl-real").set({
+            name: "Real SL",
+            ownerId: ADMIN_UID,
+        })
+
+        const result = await sweepOrphanTestDataCore(ADMIN_UID, { dryRun: true })
+        if ("error" in result) throw new Error("dryRun failed: " + result.error)
+        expect(result.dryRun).toBe(true)
+        expect(result.swept.setlists).toBe(0)
+        expect(result.swept.setlistTemplates).toBe(0)
+        expect(result.orphans.length).toBe(2)
+        expect(result.orphans.map((o) => o.id).sort()).toEqual(
+            ["sl-orphan-1", "tpl-orphan-1"].sort(),
+        )
+        // Real setlist must NOT be in orphans.
+        expect(result.orphans.find((o) => o.id === "sl-real")).toBeUndefined()
+        // Nothing actually deleted.
+        expect((await db().collection("setlists").doc("sl-orphan-1").get()).exists).toBe(true)
+        expect((await db().collection("setlistTemplates").doc("tpl-orphan-1").get()).exists).toBe(true)
+    })
+
+    it("sweep_orphan_test_data refuses real-write without force (F-05 standing rule)", async () => {
+        const r = await sweepOrphanTestDataCore(ADMIN_UID, { dryRun: false })
+        expect("error" in r).toBe(true)
+        if ("error" in r) expect(r.error).toBe("force_required")
+    })
+
+    it("sweep_orphan_test_data with dryRun:false + force:true deletes orphans + dependent tracks; spares non-orphans", async () => {
+        // Orphan setlist + its tracks.
+        await db().collection("setlists").doc("sl-c7i3a-orph").set({
+            name: "Orphan from c7i3a",
+            ownerId: "c7i3a-band_leader-cafe1234",
+        })
+        for (const tid of ["t-1", "t-2", "t-3"]) {
+            await db().collection("tracks").doc(tid).set({
+                setlistId: "sl-c7i3a-orph",
+                title: tid,
+            })
+        }
+        // Orphan template.
+        await db().collection("setlistTemplates").doc("tpl-cf2-orph").set({
+            name: "Orphan from cf2",
+            ownerUid: "cf2-band_leader-deadbeef",
+        })
+        // Non-orphan: owner exists. uidPattern test below also relies on this.
+        await db().collection("setlists").doc("sl-with-owner").set({
+            name: "Has owner",
+            ownerId: ADMIN_UID,
+        })
+
+        const result = await sweepOrphanTestDataCore(ADMIN_UID, {
+            dryRun: false,
+            force: true,
+        })
+        if ("error" in result) throw new Error("sweep failed: " + result.error)
+        expect(result.dryRun).toBe(false)
+        expect(result.swept.setlists).toBe(1)
+        expect(result.swept.setlistTemplates).toBe(1)
+        expect(result.swept.tracks).toBe(3)
+
+        expect((await db().collection("setlists").doc("sl-c7i3a-orph").get()).exists).toBe(false)
+        expect((await db().collection("setlistTemplates").doc("tpl-cf2-orph").get()).exists).toBe(false)
+        for (const tid of ["t-1", "t-2", "t-3"]) {
+            expect((await db().collection("tracks").doc(tid).get()).exists).toBe(false)
+        }
+        expect((await db().collection("setlists").doc("sl-with-owner").get()).exists).toBe(true)
+    })
+
+    it("sweep_orphan_test_data uidPattern narrows the sweep to one cycle namespace", async () => {
+        await db().collection("setlists").doc("sl-c7i1").set({
+            name: "c7i1 orphan",
+            ownerId: "test-c7i1-band_leader-abc12345",
+        })
+        await db().collection("setlists").doc("sl-c7i5").set({
+            name: "c7i5 orphan",
+            ownerId: "test-c7i5-band_leader-xyz67890",
+        })
+
+        const result = await sweepOrphanTestDataCore(ADMIN_UID, {
+            dryRun: false,
+            force: true,
+            uidPattern: "c7i1",
+        })
+        if ("error" in result) throw new Error("sweep failed: " + result.error)
+        expect(result.swept.setlists).toBe(1)
+        // c7i1 swept, c7i5 survives because pattern didn't match.
+        expect((await db().collection("setlists").doc("sl-c7i1").get()).exists).toBe(false)
+        expect((await db().collection("setlists").doc("sl-c7i5").get()).exists).toBe(true)
     })
 })

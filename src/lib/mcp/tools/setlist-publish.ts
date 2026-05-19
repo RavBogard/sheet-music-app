@@ -16,6 +16,7 @@ import {
     type StaleVersionEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { getChartHealth } from "@/lib/file-fetcher"
+import { isTestUid } from "@/lib/test-isolation"
 import { logger } from "@/lib/logger"
 
 /**
@@ -180,16 +181,18 @@ const PUBLISH_AUDIENCE_ROLES_ALL = [
 
 /**
  * Cycle-5 C5C-005 — exclude test traffic from default-audience derivation.
- * Filters anyone whose uid starts with `test-` (every `create_test_account`-
- * minted user) OR whose displayName starts with `[TEST]` (autonomous-run
- * convention for test-account placeholders). Callers who legitimately
- * want test recipients on a publish must pass them via explicit
- * `recipients: [...]` — the auto-derive path stays clean for real
- * services. Doesn't filter the publisher's own uid (a separate `doc.id ===
- * callerUid` skip handles that).
+ * Filters anyone whose uid matches `isTestUid` (cycle-7 Lane 1 broadens this
+ * from `startsWith("test-")` to also cover `c<N>i<N>[a]-…` + `cf<N>-…`
+ * cowork-probe shapes) OR whose displayName starts with `[TEST]`
+ * (autonomous-run convention). Callers who legitimately want test
+ * recipients on a publish must pass them via explicit `recipients: [...]`
+ * AND short-circuit defenses below allow the override only when the
+ * setlist owner is a real prod uid (so cross-owner test-callers can't
+ * route through). Doesn't filter the publisher's own uid (a separate
+ * `doc.id === callerUid` skip handles that).
  */
 function isTestUserRow(uid: string, data: Record<string, unknown>): boolean {
-    if (typeof uid === "string" && uid.startsWith("test-")) return true
+    if (isTestUid(uid)) return true
     const displayName =
         typeof data.displayName === "string" ? data.displayName : null
     if (displayName && /^\[TEST\]/i.test(displayName)) return true
@@ -343,6 +346,52 @@ export async function publishSetlist(
             "Verify the id via list_setlists.",
         )
     const setlist = setlistSnap.data() as Record<string, unknown>
+
+    // Cycle-7 Lane 1 — Convergence A (closes C7I1-008 + C7I3-002 +
+    // Instance-5 headline). Real-publish (NOT dryRun) refuses on two
+    // owner-shape gates BEFORE recipient resolution so audience-leak to
+    // real humans is structurally impossible even when an explicit
+    // `recipients:[…]` override is supplied. dryRun stays observable per
+    // `[[feedback_dryrun_is_observability]]` — callers can still inspect
+    // would-be recipients without triggering the fanout.
+    //
+    //  Gate 1 — test-owner setlist: a setlist owned by a test-shape uid
+    //  must NEVER fan out to real humans, regardless of caller. Closes
+    //  the C7I1-008 audience-leak (caller=test, owner=test, recipients
+    //  auto-derived → 18 real emails).
+    //
+    //  Gate 2 — test-caller on real-owner setlist: a test bearer
+    //  cannot real-publish a real-owner setlist. dryRun is permitted
+    //  (observability). Closes the C7I3-002 non-owner PII visibility
+    //  concern for the real-publish path. Owners of their own real
+    //  setlists are unaffected (caller is not a test uid).
+    const ownerIdRaw = setlist.ownerId
+    const ownerId = typeof ownerIdRaw === "string" ? ownerIdRaw : null
+    if (!args.dryRun && isTestUid(ownerId)) {
+        return richError(
+            "test_owner_cannot_publish_to_real_humans",
+            "Refusing to publish a test-owned setlist to real humans. The setlist owner uid is a test-shape uid (test-*, c<N>i<N>-*, cf<N>-*); fan-out would route to production band members.",
+            {
+                errorCode: 403,
+                setlistId: args.setlistId,
+                ownerId,
+            },
+            "Use dryRun:true to inspect would-be recipients without sending. To actually publish, the setlist must be owned by a real (non-test) uid.",
+        )
+    }
+    if (!args.dryRun && isTestUid(callerUid) && ownerId && !isTestUid(ownerId)) {
+        return richError(
+            "cross_owner_publish_forbidden",
+            "Test-bearer callers may NOT real-publish a setlist owned by a real (non-test) uid. dryRun is permitted (observability).",
+            {
+                errorCode: 403,
+                setlistId: args.setlistId,
+                callerUid,
+                ownerId,
+            },
+            "Pass dryRun:true to inspect recipients, or use a real (non-test) bearer to actually publish on behalf of the owner.",
+        )
+    }
 
     // W-04 Plan 03: optional setlist-level stale-version gate. Fires
     // BEFORE the (expensive) chart-health pre-flight + recipient
@@ -513,6 +562,15 @@ export async function publishSetlist(
             callerUid,
             args.recipients,
         )
+        // Cycle-7 Lane 1 — defense-in-depth on the override path: drop any
+        // resolved recipient whose uid matches `isTestUid`. The Gate-1 +
+        // Gate-2 short-circuits above already block the load-bearing
+        // audience-leak shapes; this filter ensures that even if a future
+        // refactor moves either gate, an explicit `recipients:[<test-uid>]`
+        // override can never fan a real notification to a test bearer.
+        // Email-only entries (no uid) pass through unfiltered — operator
+        // is explicit and accepts responsibility for non-band recipients.
+        recipients = recipients.filter((r) => !isTestUid(r.uid))
         // Post-resolve validity guard: an entry is dispatchable if it has
         // either a Firestore-resolved user doc (uid-bearing entry that hit
         // userDataByUid) OR an explicit email. If none of the resolved

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Music, Calendar } from "lucide-react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
+import { isTestUid } from "@/lib/test-isolation"
 import { PublicSetlistSkeleton } from "./PublicSetlistSkeleton"
 
 /**
@@ -28,14 +29,19 @@ export function PublicSetlistListing() {
     // Sort by event date descending (most recent first). Cycle-2 SEC-004:
     // drop setlists marked `isTest:true` — stress-test runs and the
     // create_test_account-owned probes shouldn't appear on the public
-    // /perform landing surface. The flag is set at create_setlist write
-    // time AND backfilled across legacy rows by the admin
-    // `backfill_setlist_test_flag` MCP tool; legacy docs that haven't yet
-    // been backfilled fall through here (isTest === undefined) and remain
-    // visible until the next backfill pass.
+    // /perform landing surface.
+    //
+    // Cycle-7 Lane 1 (Convergence A / Instance-5 headline): the flag alone
+    // is structurally insufficient — `create_test_account`-owned setlists
+    // sometimes ship with `isTest:undefined` (legacy backfill gap; orphan
+    // rows surviving a partial cleanup). Belt-and-braces: ALSO drop any
+    // setlist whose `ownerId` matches the test-uid shape via
+    // `isTestUid(...)`, so cowork-probe surfaces (`test-…`, `c<N>i<N>-…`,
+    // `cf<N>-…`) can never leak onto the public listing regardless of
+    // flag state.
     const sortedSetlists = useMemo(() => {
         return setlists
-            .filter((s) => s.isTest !== true)
+            .filter((s) => s.isTest !== true && !isTestUid(s.ownerId))
             .sort((a, b) => {
                 const da = toDate(a.eventDate)
                 const db = toDate(b.eventDate)
