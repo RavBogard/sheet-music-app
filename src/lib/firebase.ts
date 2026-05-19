@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { initializeFirestore, getFirestore, Firestore, FirestoreSettings, persistentLocalCache, persistentSingleTabManager, memoryLocalCache, setLogLevel } from "firebase/firestore";
-import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithCustomToken, Auth } from "firebase/auth";
 
 import { env } from "./env";
 import { logger } from "@/lib/logger"
@@ -239,6 +239,23 @@ export function recoverFromFirestoreShutdown(err: unknown): boolean {
         })
     })
     return true
+}
+
+// Cycle-7-fixes Lane 4 sub-task A (C7I2-008 + C7I3-005): probe-harness
+// Web-SDK wiring. When NEXT_PUBLIC_PROBE_HARNESS_AUTH==='1', expose the
+// auth instance + a signIn helper on `window` so cowork Playwright
+// drivers can wire `firebaseAuth: getAuth()` via `page.evaluate`. When
+// the env var is absent (production builds), this branch never runs and
+// nothing is exposed.
+if (
+    typeof window !== "undefined" &&
+    process.env.NEXT_PUBLIC_PROBE_HARNESS_AUTH === "1" &&
+    auth
+) {
+    ;(window as unknown as { __c7_auth_for_probes__?: unknown }).__c7_auth_for_probes__ = {
+        auth,
+        signIn: (token: string) => signInWithCustomToken(auth, token),
+    }
 }
 
 export { app, db, auth, googleProvider };

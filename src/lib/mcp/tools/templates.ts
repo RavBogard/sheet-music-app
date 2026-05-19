@@ -560,6 +560,143 @@ export async function deleteTemplate(
     return { ok: true, templateId, deleted: true }
 }
 
+// ─── create_template_from_setlist ───────────────────────────────────────────
+
+export interface CreateTemplateFromSetlistArgs {
+    setlistId: string
+    name: string
+    templateType?: string | null
+    copyServiceNotes?: boolean
+}
+
+export interface CreateTemplateFromSetlistResult {
+    ok: true
+    templateId: string
+    sourceSetlistId: string
+    name: string
+    templateType: string | null
+    ownerId: string
+    ownerName: string
+    trackCount: number
+    version: 1
+}
+
+/**
+ * Cycle-7-fixes Lane 4 sub-task B (C7I1-007). Inverts
+ * `clone_setlist_from_template`: snapshots an existing setlist's tracks
+ * into a new `setlistTemplates/{templateId}` document. The caller becomes
+ * the template owner (NOT the source setlist owner) so the template is
+ * editable by the person who chose to template-ify it.
+ */
+export async function createTemplateFromSetlist(
+    uid: string,
+    args: CreateTemplateFromSetlistArgs,
+): Promise<CreateTemplateFromSetlistResult | RichErrorEnvelope> {
+    if (!args?.setlistId?.trim()) {
+        return richError(
+            "invalid_argument",
+            "setlistId is required.",
+            { setlistId: args?.setlistId ?? null },
+            "Pass a non-empty setlistId of the source setlist.",
+        )
+    }
+    if (typeof args.name !== "string" || !args.name.trim()) {
+        return richError(
+            "invalid_argument",
+            "`name` is required.",
+            { name: args.name ?? null },
+            "Pass a non-empty name for the new template.",
+        )
+    }
+    initAdmin()
+    const db = getFirestore()
+    const editor = await assertEditor(db, uid)
+    if (!editor.ok) return editor
+    const limit = await rateLimitGate(db, uid)
+    if (limit) return limit
+
+    const setlistRef = db.collection("setlists").doc(args.setlistId)
+    const setlistSnap = await setlistRef.get()
+    if (!setlistSnap.exists) {
+        return richError(
+            "setlist_not_found",
+            `Setlist '${args.setlistId}' was not found.`,
+            { setlistId: args.setlistId },
+            "Verify the id via list_setlists.",
+        )
+    }
+    const setlist = setlistSnap.data() as Record<string, unknown>
+
+    const tracksSnap = await db
+        .collection("tracks")
+        .where("setlistId", "==", args.setlistId)
+        .get()
+    const tracks: Record<string, unknown>[] = tracksSnap.docs
+        .map((d) => d.data() as Record<string, unknown>)
+        .sort((a, b) => {
+            const ao = typeof a.order === "number" ? a.order : 0
+            const bo = typeof b.order === "number" ? b.order : 0
+            return ao - bo
+        })
+        .map((t) => normalizeTemplateTrack(t as TemplateTrack))
+
+    const templateId = crypto.randomUUID()
+    const ownerName = await ownerNameFor(db, uid)
+    const copyServiceNotes = args.copyServiceNotes !== false
+
+    const payload: Record<string, unknown> = {
+        id: templateId,
+        name: args.name.trim(),
+        ownerId: uid,
+        ownerName,
+        tracks,
+        version: 1,
+        sourceSetlistId: args.setlistId,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+    }
+
+    // templateType arg overrides; null/undefined → no field. If arg
+    // entirely omitted, carry over the source setlist's templateType if
+    // it has one (most common shape: template-ify an existing service
+    // and want to keep the service-kind label).
+    if (Object.prototype.hasOwnProperty.call(args, "templateType")) {
+        if (typeof args.templateType === "string" && args.templateType.trim()) {
+            payload.templateType = args.templateType.trim()
+        }
+    } else if (typeof setlist.templateType === "string") {
+        payload.templateType = setlist.templateType
+    }
+
+    if (copyServiceNotes && typeof setlist.serviceNotes === "string") {
+        payload.serviceNotes = setlist.serviceNotes
+    }
+
+    await db.collection(COLLECTION).doc(templateId).set(payload)
+    logger.info("[mcp] create_template_from_setlist committed", {
+        templateId,
+        sourceSetlistId: args.setlistId,
+        ownerId: uid,
+        trackCount: tracks.length,
+        templateType: payload.templateType ?? null,
+    })
+
+    return {
+        ok: true,
+        templateId,
+        sourceSetlistId: args.setlistId,
+        name: args.name.trim(),
+        templateType:
+            typeof payload.templateType === "string"
+                ? payload.templateType
+                : null,
+        ownerId: uid,
+        ownerName,
+        trackCount: tracks.length,
+        version: 1,
+    }
+}
+
 // ─── clone_setlist_from_template ────────────────────────────────────────────
 
 export interface CloneSetlistFromTemplateArgs {

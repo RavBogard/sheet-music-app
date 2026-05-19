@@ -833,13 +833,18 @@ export async function suggestBand(
             suggestions: ranked.slice(0, 12),
         }
     } catch (err) {
+        // C7I1-005 (Lane 4 sub-task H): error hint now points at the most
+        // likely root cause — a missing composite index. The cycle-7
+        // repro was `FAILED_PRECONDITION: The query requires an index`
+        // surfaced as `Check Firestore connectivity`. Index status is
+        // the diagnostic the caller needs.
         return richError(
             "suggest_band_failed",
             `Failed to suggest band: ${
                 err instanceof Error ? err.message : String(err)
             }`,
             { setlistId: args.setlistId },
-            "Check Firestore connectivity.",
+            "Check Firestore index status at console.firebase.google.com/project/crcmusiccharts/firestore/indexes — `suggest_band` requires the `scheduling_assignments(status ASC, assignedAt ASC)` composite index. If indexes are deployed and green, fall back to verifying Firestore connectivity.",
         )
     }
 }

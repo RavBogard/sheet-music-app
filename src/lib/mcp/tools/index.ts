@@ -14,6 +14,7 @@ import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
 import { getCorrectionStats } from "./correction-stats"
 import { testDeleteStorageObject } from "./test-delete-storage-object"
 import { dumpCollectionSize } from "./dump-collection-size"
+import { getWebVitalsSummary } from "./web-vitals-summary"
 import {
     listReviewQueue,
     getEnrichmentSuggestion,
@@ -42,6 +43,7 @@ import {
     listTemplates,
     getTemplate,
     createTemplate,
+    createTemplateFromSetlist,
     updateTemplate,
     deleteTemplate,
     cloneSetlistFromTemplate,
@@ -324,7 +326,7 @@ export function registerReadTools(server: McpServer): void {
         "search_library",
         {
             description:
-                "Search the song library by title text, with optional musical key and BPM-range filters. Title matching normalizes underscores, hyphens, spaces, and diacritics, so query \"Shalom Rav\" matches catalog entries like \"Shalom_rav\" and \"shalom-rav (camp)\". BPMs are integers. Returns metadata only — never chart files. Pass an empty query (or omit it) to browse the first N library entries — useful for catalog discovery. Rows with `status: 'orphaned'` are hidden by default; pass includeOrphaned: true to see them (e.g. while triaging library hygiene). Non-chart artifacts (audio, spreadsheets, folders, dotfiles like .DS_Store) are hidden by default — same posture as list_library — pass includeNonCharts: true to see them (e.g. library-hygiene audits). Every result row carries `status` ('active' by default if the catalog row omits one).",
+                "Search the song library by title text, with optional musical key and BPM-range filters. Title matching normalizes underscores, hyphens, spaces, and diacritics, so query \"Shalom Rav\" matches catalog entries like \"Shalom_rav\" and \"shalom-rav (camp)\". BPMs are integers. Returns metadata only — never chart files. Pass an empty query (or omit it) to browse the first N library entries — useful for catalog discovery. Rows with `status: 'orphaned'` are hidden by default; pass includeOrphaned: true to see them (e.g. while triaging library hygiene). Non-chart artifacts (audio, spreadsheets, folders, dotfiles like .DS_Store) are hidden by default — same posture as list_library — pass includeNonCharts: true to see them (e.g. library-hygiene audits). Every result row carries `status` ('active' by default if the catalog row omits one). **Known limitation (C7I1-012, deferred):** Hebrew phonetic transliteration is NOT fuzzy-matched. Variant spellings of the same song (e.g. `Lechu Nranina` / `Lchu Neranena` / `Lekhu Neranena` for לכו נרננה) are treated as distinct substrings; only one will match a given catalog entry. Workaround: if a search returns 0 results, retry with 2–3 common transliteration variants (sub-stems like `Lechu` / `Lchu` / `Lekhu` typically suffice). A proper phonetic search layer (Levenshtein with Hebrew-aware weights OR Soundex-for-transliteration) is out of cycle-7 scope.",
             inputSchema: {
                 query: z
                     .string()
@@ -677,6 +679,39 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await cloneSetlistFromTemplate(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "create_template_from_setlist",
+        {
+            description:
+                "Snapshot an existing setlist's tracks into a new setlist template (inverse of clone_setlist_from_template). Use this to turn a real service that worked well into a reusable starting point. `setlistId` is the source setlist; `name` is the new template name (required). `templateType` is optional — pass a string to override, or omit to carry over the source setlist's templateType. `copyServiceNotes: true` (default) carries the source setlist's serviceNotes onto the template. The caller (NOT the source setlist owner) becomes the new template's owner. Admin + band_leader only. Trusted-leader rate-limit bypass. Returns `{templateId, sourceSetlistId, name, templateType, ownerId, ownerName, trackCount, version: 1}`.",
+            inputSchema: {
+                setlistId: z
+                    .string()
+                    .min(1)
+                    .describe("Source setlist id."),
+                name: z
+                    .string()
+                    .min(1)
+                    .describe("Name for the new template."),
+                templateType: z
+                    .string()
+                    .nullable()
+                    .optional()
+                    .describe(
+                        "Optional free-text classifier (e.g. 'shabbat-morning'). Omit to carry over the source setlist's templateType.",
+                    ),
+                copyServiceNotes: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "If true (default), copy the source setlist's serviceNotes onto the template.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await createTemplateFromSetlist(uidFrom(extra), args)),
     )
 
     server.registerTool(
@@ -2549,5 +2584,51 @@ export function registerObservabilityTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await dumpCollectionSize(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "get_web_vitals_summary",
+        {
+            description:
+                "Admin-only — read-projection over the `webVitalsObservations` field-RUM sink populated by `/api/web-vitals`. Returns p75 LCP / CLS / INP / FCP / TTFB per `surface` (route) across the lookback window, sorted by sample count. Use this to spot Core Web Vitals regressions per route without leaving Claude. Args: `surface?` filters to one route exact-match; `sinceDays?` (default 7, max 90 = sink TTL); `maxDocs?` safety cap on scan (default 20000, hard max 100000); `topRoutes?` cap on routes returned when no surface filter is set (default 5). Returns `{ok:true, sinceDays, since, sampleCount, truncated, routes:[{surface, sampleCount, metrics:{LCP:{p75, sampleCount}, ...}}]}`. p75 is null when a metric has zero samples for that route in-window.",
+            inputSchema: {
+                surface: z
+                    .string()
+                    .min(1)
+                    .max(200)
+                    .optional()
+                    .describe(
+                        "Exact-match filter on the `surface` field (typically the route path, e.g. '/perform'). Omit to return the top-N routes by sample count.",
+                    ),
+                sinceDays: z
+                    .number()
+                    .positive()
+                    .max(90)
+                    .optional()
+                    .describe(
+                        "Lookback window in days. Default 7. Max 90 (the field-data sink TTL).",
+                    ),
+                maxDocs: z
+                    .number()
+                    .int()
+                    .positive()
+                    .max(100_000)
+                    .optional()
+                    .describe(
+                        "Safety cap on docs scanned. Default 20000; hard max 100000. `truncated:true` means more observations match than fit under the cap.",
+                    ),
+                topRoutes: z
+                    .number()
+                    .int()
+                    .positive()
+                    .max(50)
+                    .optional()
+                    .describe(
+                        "When no `surface` filter is set, return at most this many routes (sorted by sample count). Default 5.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await getWebVitalsSummary(uidFrom(extra), args)),
     )
 }

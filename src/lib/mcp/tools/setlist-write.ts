@@ -272,6 +272,15 @@ export interface AddTrackToSetlistOk {
     trackId: string
     order: number
     track: Record<string, unknown>
+    /**
+     * Cycle-7-fixes Lane 4 sub-task H (C7I3-003) — when the caller passed
+     * `position` and it was out of `[0, existing.length]`, the insert
+     * silently clamped (to 0 for negatives, to `existing.length` for
+     * overshoot / undefined). The warning surfaces the clamp so callers
+     * can correct future calls (e.g. "I asked for 999, you got 10").
+     * Absent on a no-clamp insert.
+     */
+    warning?: string
 }
 
 export async function addTrackToSetlist(
@@ -340,7 +349,20 @@ export async function addTrackToSetlist(
         title: resolved.title,
     }
 
-    return { ok: true, trackId, order, track: { id: trackId, ...trackData } }
+    const result: AddTrackToSetlistOk = {
+        ok: true,
+        trackId,
+        order,
+        track: { id: trackId, ...trackData },
+    }
+    // C7I3-003: surface silent position clamping. addTrack treats any
+    // position outside [0, existing.length] as "append" — without this
+    // warning, callers who passed `position: 999` had no way to know
+    // their row landed at the end.
+    if (typeof args.position === "number" && args.position !== order) {
+        result.warning = `position clamped from ${args.position} to ${order} (insert range is [0, ${order}] for the post-insert track count of ${order + 1})`
+    }
+    return result
 }
 
 // ─── update_track (CF1) ─────────────────────────────────────────────────────

@@ -60,12 +60,21 @@ export async function requireAuth(
         // /api/library/list) ships the canonical `{ok:false, error:{
         // code, machine_code, message, ...}, hint?}` shape on auth
         // failures. Replaces the pre-cycle-5 flat `{error:"..."}`.
+        // C7I2-006 (Lane 4 sub-task H) — hint distinguishes the 3 401
+        // shapes a caller might land in: header absent (this branch),
+        // header malformed (the `startsWith("Bearer ")` guard above
+        // makes this collapse here too), and header present but token
+        // empty after trim. The 403 `invalid_bearer` path below covers
+        // post-verify failures (revoked / expired Firebase ID token).
+        const hint = authHeader
+            ? "Authorization header is present but the bearer token is empty or malformed. Send `Authorization: Bearer <Firebase-ID-token>` (NOT a raw `crl_live_…` MCP bearer — this endpoint uses Firebase ID tokens for the signed-in user)."
+            : "No Authorization header was sent. Send `Authorization: Bearer <Firebase-ID-token>` from `firebase.auth().currentUser.getIdToken()` after sign-in. (This endpoint uses Firebase ID tokens, NOT the `crl_live_…` MCP bearer — that bearer is for `/api/mcp` only.)"
         throw httpError(
             401,
             "missing_bearer",
             "Authentication required",
             { errorCode: 401 },
-            "Send `Authorization: Bearer <token>`.",
+            hint,
         )
     }
 
@@ -89,7 +98,7 @@ export async function requireAuth(
             "invalid_bearer",
             "Invalid or expired token",
             { errorCode: 403 },
-            "The bearer token failed verification — re-issue and retry.",
+            "The Firebase ID token failed verification — it may be expired (default 1h TTL), revoked, or from a different Firebase project. Re-issue via `firebase.auth().currentUser.getIdToken(/*forceRefresh*/ true)` and retry. (Reminder: this endpoint uses Firebase ID tokens, NOT `crl_live_…` MCP bearers.)",
         )
     }
 

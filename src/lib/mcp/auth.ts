@@ -37,11 +37,30 @@ export async function verifyBearer(req: Request): Promise<{ uid: string } | Resp
         .limit(1)
         .get()
 
-    if (snap.empty) return unauthorized()
+    if (snap.empty) {
+        // Cycle-7-fixes Lane 4 sub-task C (C7I1-011): every 401 path now
+        // logs a structured `[mcp-auth]` warn so the next premature-401
+        // repro is diagnosable. We log only the SHA-256 hash prefix of the
+        // raw bearer, never the bearer itself — the prefix is enough to
+        // correlate with mcpTokens doc ids in audit logs.
+        logger.warn("[mcp-auth] bearer rejected: hash not found", {
+            tokenHashPrefix: hashToken(raw).slice(0, 8),
+        })
+        return unauthorized()
+    }
 
     const doc = snap.docs[0]
     const data = doc.data()
-    if (data.revokedAt) return unauthorized()
+    if (data.revokedAt) {
+        logger.warn("[mcp-auth] bearer rejected: revokedAt set", {
+            tokenId: doc.id,
+            revokedAt:
+                data.revokedAt instanceof Timestamp
+                    ? data.revokedAt.toDate().toISOString()
+                    : String(data.revokedAt),
+        })
+        return unauthorized()
+    }
 
     // Test-token TTL enforcement. Real (non-test) mcpTokens have no
     // `ttlExpiresAt` field, so this is a no-op for the normal Daniel/David
@@ -51,6 +70,13 @@ export async function verifyBearer(req: Request): Promise<{ uid: string } | Resp
     // data are NOT deleted on TTL — `revoke_test_account` /
     // `cleanup_all_test_data` are the explicit cascade-delete paths.
     if (data.ttlExpiresAt instanceof Timestamp && data.ttlExpiresAt.toMillis() <= Date.now()) {
+        const expiredMs = data.ttlExpiresAt.toMillis()
+        logger.warn("[mcp-auth] bearer rejected: ttlExpiresAt in past", {
+            tokenId: doc.id,
+            ttlExpiresAt: new Date(expiredMs).toISOString(),
+            nowDriftSec: Math.round((Date.now() - expiredMs) / 1000),
+            kind: typeof data.kind === "string" ? data.kind : null,
+        })
         return unauthorized()
     }
 
