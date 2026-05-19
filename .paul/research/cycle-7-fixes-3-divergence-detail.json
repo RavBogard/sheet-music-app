@@ -1,0 +1,310 @@
+[
+  {
+    "fileId": "e16dbb6e-9b17-4518-978f-bc32de99fa39",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Aleinu-The Adoration (Isaacson) - Aleinu (Chajes)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "dcacad1e-5f4b-4d03-b221-58692b1b8d1e",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "All The World Sings To You (Rothchild)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "bf84ee28-7bb7-436e-9ab7-bdb5157a3e06",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "And The Youth Shall See Visions (Friedman)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "87bddcb0-5d4a-47f7-a7f2-20a99a17b5fc",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Birkat Hamazon (The Blessing After Meals) (Traditional)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "upload-9ffab05d-518c-45af-9cae-a5f140011093",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Dancing In The Dark",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "c5452a63-094f-40ce-a24c-bb7077ec0f92",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Down By The Riverside (Spiritual)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "c7e91f89-c940-4b30-8162-c5780ccdbcb1",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Eitz Chayim (Matthew Check And Naomi Less)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "34a3c3fc-d5ce-4b80-8d4f-77014f5412da",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Et Hamanginah (Rosenblum) - Fixin The World (Schachet-Briskin)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "6bddf129-6f1c-4fa4-bf54-3cf431a53219",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "If All Of The World (Sheldon Low)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "d1ccd776-0d8b-4860-8958-d8a9b0a5c254",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Just Another Foreigner (Sussman)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "8311b9ad-cce4-4d96-aa4d-ec615a7f7401",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Abanibi (Hirsch) - Achshav (Folk)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "72a7aa6a-7b08-4c78-862c-197bbffb9515",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Adon Olam (Folk)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "c9efe661-9eb8-42fc-89d5-13f026629dc7",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Adon Olam (Hitman-Ben-Hur) - Adon Olam (Dobin) - Shehecheyanu (Pik)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "edc49352-b032-4967-8ac4-c76ef3cf0beb",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Adonai Adonai (Sher)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "0ca658e4-c2e0-43df-9888-a7f2d536710a",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Adonai Oz (Klepper-Freelander) - Al Hanisim (Frimer) - Al Kol Eileh (Shemer)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "31e88e83-c880-43e5-9b12-37a7a119aeb0",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Bim Bam-Shabbat Shalom (Frankel)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "5e893824-0d8c-47e7-82fe-51240d027c00",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Candle Blessing (For Shabbat) (Binder)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "bd71fe2e-65aa-46aa-8674-0fb38c5f12c9",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Harachaman (For Shabbat) (Folk) - Ki Eshm'Ra Shabbat (Baghdad Melody)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "f9921a95-cab9-4b2b-9869-a024cfc21e2b",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Tein Shabbat (Seltzer) - Tzur Mishelo (Sephardic)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "upload-bb71e9e2-e3ce-4cad-b884-28f1d74f8970",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Mizmor L'David",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "218fc2a9-cbe4-4ff1-a056-68f7f55bbac2",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Mizmor Shir (Unknown)",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  },
+  {
+    "fileId": "upload-2db7e9ff-6224-4c0e-bbbe-4de37bf02f03",
+    "healthStatus": "missing",
+    "songExists": true,
+    "songStatus": "active",
+    "songTitle": "Mizmor Shiru Ladonai",
+    "libraryIndexExists": true,
+    "enrichmentRaw": {
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false
+    }
+  }
+]

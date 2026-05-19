@@ -79,6 +79,7 @@ export const POST = createApiHandler(
         let assignments = 0
         let tasks = 0
         let notifications = 0
+        let tracks = 0
 
         // 2) scheduling_assignments where setlistId == id
         try {
@@ -109,7 +110,24 @@ export const POST = createApiHandler(
             errors.push(`notifications: ${msg}`)
         }
 
-        // 5) recursiveDelete: parent + subcollections (history, emailEvents, ...)
+        // 5) tracks (top-level) where setlistId == id.
+        // v60-07-02 moved tracks from embedded → top-level. The MCP
+        // `delete_setlist` tool (src/lib/mcp/tools/setlist-write.ts) cascades
+        // these in a transaction; this HTTP route never picked up the
+        // cascade and orphaned the rows. Cycle-7 Lane 3 (C7I4-002): observed
+        // setlist `b12a5221-…` with `list_setlists.trackCount=43` but
+        // `tracks/{setlistId:b12a5221-…}` empty AND parent doc still present.
+        // The reverse shape (parent gone, top-level tracks present) is what
+        // we close here.
+        try {
+            tracks = await batchDeleteByField(db, "tracks", "setlistId", setlistId)
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e)
+            logger.error(`[setlist/delete] tracks cleanup failed for ${setlistId}: ${msg}`)
+            errors.push(`tracks: ${msg}`)
+        }
+
+        // 6) recursiveDelete: parent + subcollections (history, emailEvents, ...)
         try {
             await db.recursiveDelete(setlistRef)
         } catch (e) {
@@ -119,11 +137,11 @@ export const POST = createApiHandler(
         }
 
         logger.info(
-            `[setlist/delete] ${setlistId} — assignments=${assignments} tasks=${tasks} notifications=${notifications} errors=${errors.length}`,
+            `[setlist/delete] ${setlistId} — assignments=${assignments} tasks=${tasks} notifications=${notifications} tracks=${tracks} errors=${errors.length}`,
         )
 
         return NextResponse.json({
-            deleted: { setlist: 1, assignments, tasks, notifications },
+            deleted: { setlist: 1, assignments, tasks, notifications, tracks },
             errors,
         })
     },

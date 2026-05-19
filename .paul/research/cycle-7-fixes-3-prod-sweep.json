@@ -1,0 +1,880 @@
+{
+  "startedAt": "2026-05-19T17:51:08.904Z",
+  "steps": {
+    "reconcile": {
+      "ok": true,
+      "result": {
+        "ok": true,
+        "scanned": 286,
+        "alreadyHealthy": 231,
+        "driveMirror": {
+          "count": 0,
+          "rows": [],
+          "truncated": false
+        },
+        "orphan": {
+          "count": 24,
+          "rows": [
+            {
+              "fileId": "flow-2",
+              "name": "flow-2"
+            },
+            {
+              "fileId": "flow-3",
+              "name": "flow-3"
+            },
+            {
+              "fileId": "flow-5",
+              "name": "flow-5"
+            },
+            {
+              "fileId": "upload-037d9094-ccc8-4f0f-ba31-de1b3e4991b6",
+              "name": "Em Bar'chu-Yotzier Walkdown"
+            },
+            {
+              "fileId": "upload-0594bbd4-d661-42b9-b11d-feeb3ff4cda6",
+              "name": "Bar'chu Walkdown"
+            },
+            {
+              "fileId": "upload-0792351b-3ee8-4e96-b7a0-2eeeb3b7fab4",
+              "name": "Lecha Dodi Lincoln's Nigun"
+            },
+            {
+              "fileId": "upload-13ef3209-407e-4f36-a504-e16947665dd6",
+              "name": "Stuart's Hora Medley"
+            },
+            {
+              "fileId": "upload-1910a665-aae9-4e26-b517-17f61a3afb0b",
+              "name": "Yedid Nefesh revised 1-1-26"
+            },
+            {
+              "fileId": "upload-1e15a09a-2dbd-46a4-b8a7-e045e21af68c",
+              "name": "May the Memory - Full Score"
+            },
+            {
+              "fileId": "upload-2db7e9ff-6224-4c0e-bbbe-4de37bf02f03",
+              "name": "Mizmor Shiru Ladonai"
+            },
+            {
+              "fileId": "upload-32b4845e-8593-42cf-8264-caf2d0e348da",
+              "name": "Ana B'Koach mxl"
+            },
+            {
+              "fileId": "upload-32dbbab2-ee16-405d-a3e4-53c88450e1f4",
+              "name": "Sim Shalom - Bonia Shur"
+            },
+            {
+              "fileId": "upload-3f576cb7-9c10-4a68-849d-4f3d669bdf80",
+              "name": "Niggun - Bonia Shur"
+            },
+            {
+              "fileId": "upload-4698f776-b470-40e6-ad6d-4d99788d64de",
+              "name": "You're In My Heart"
+            },
+            {
+              "fileId": "upload-743787ce-d038-4b03-ae09-f4c6f6c0696b",
+              "name": "Ana B'Koach MuseScore File"
+            },
+            {
+              "fileId": "upload-9ffab05d-518c-45af-9cae-a5f140011093",
+              "name": "Dancing In The Dark"
+            },
+            {
+              "fileId": "upload-a06055c4-c67b-4f7c-8d1b-de4cc0082915",
+              "name": "Matir Asurim B minor"
+            },
+            {
+              "fileId": "upload-aa425f07-937a-4be7-a13d-1e3000d1d8fa",
+              "name": "Ve'imru amen - Full Score"
+            },
+            {
+              "fileId": "upload-b8afb8e6-2691-458e-b9a9-3d9258ffdd5f",
+              "name": "Ana B'Koach (as of 3-27-26)"
+            },
+            {
+              "fileId": "upload-bb71e9e2-e3ce-4cad-b884-28f1d74f8970",
+              "name": "Mizmor L'David"
+            },
+            {
+              "fileId": "upload-da196baf-05d3-411d-b129-456f2fc16de2",
+              "name": "Ana B'Koach"
+            },
+            {
+              "fileId": "upload-e0d24d07-ccbe-4576-9263-0577c596dad6",
+              "name": "Erev Shel Shoshanim _ Yamin U’smol"
+            },
+            {
+              "fileId": "upload-f39740c1-e90f-48c5-8adc-ab6b5d56fdbe",
+              "name": "Tu Bishvat"
+            },
+            {
+              "fileId": "upload-f74b8139-97c1-4fb0-8a0b-44576b26559a",
+              "name": "Mi_chamocha E (Moshav)"
+            }
+          ],
+          "truncated": false
+        },
+        "transient": {
+          "count": 2,
+          "rows": [
+            {
+              "fileId": "17TDzffOQT4ohO2p7yQCudUTYbj1tRg28",
+              "name": "Tu Bishvat.pdf",
+              "error": "library_index mimeType is application/vnd.google-apps.shortcut — re-bond to the shortcut target's fileId."
+            },
+            {
+              "fileId": "1jgs72zwhfEvqsqeeCFMw8Th7Zsk0mVJj",
+              "name": "Lechu Goldman.pdf",
+              "error": "library_index mimeType is application/vnd.google-apps.shortcut — re-bond to the shortcut target's fileId."
+            }
+          ],
+          "truncated": false
+        },
+        "skippedNonChart": {
+          "count": 29,
+          "rows": [
+            {
+              "fileId": "12if9gHg88ZqNMZjmLG1UH57GSriTHzqF",
+              "name": ".DS_Store",
+              "mimeType": "application/octet-stream",
+              "reason": "hidden_dotfile"
+            },
+            {
+              "fileId": "14vROgFHB9FPTgTE0su4ALy8Pno0L5o9UkX4DkzMK5zk",
+              "name": "Yom Kippur Day Service (Daniel and Karen) Band Charts to be Printed",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "173N8yeP19xEqNcofAbj0ZOnMK9pA7bGp",
+              "name": "Audio Files",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "17AVgm1u0g862bhM8WnvvL54hc3tthymc",
+              "name": "HHD",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1BlUWuZh0eWe6BLpBYjJLpY1VJXyiISHr",
+              "name": "Sheet Music",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1DeiuwNlb8i8nwz3vUwaXdiNIICSdPgTt",
+              "name": "2. Rosh ",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1FsZhGl3bxWja_KLVAliZb2hHg88JBcw3",
+              "name": "Choral Arrangements ",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1G4mI5dUgORJlwew8HnndtuORNLq89SgYXpQLYPJV12E",
+              "name": "Kol Nidre 2025/5786",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1G90XvxjphRA3ZenORmcO1P3FDUQJQNjugwN4D5aDb4s",
+              "name": "Rosh Day 2025/5786",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1HDRDxBLX7Rj41qF1LDcDAdi2cmPYOAQ96xj8IXB9GvA",
+              "name": "Erev Rosh 5786/2025",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1J4XKbecFdEJiEt-yuXWLmAXGqTi8L_Mk",
+              "name": "Piyutim-Pizmonim",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1NTR6j9rhwHAwoZjX34AVdyymz9IvPkTz",
+              "name": "Pre-Ceremony Music",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1PL-rwuqZOnftWzBFYa4ElTWinUpLSiyo",
+              "name": "Shir Shabbat (Choir)",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1QvrCC8R1yvCbK5jIB-yqw-vMQX1S62It637BHwSMaX4",
+              "name": "Shir Shabbat List",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1SYdDp-DbhO7e362YRZr3GQQ1pGwrdUlc",
+              "name": "4. Yom Kippur ",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1URRI7OBQnlsji5zn3oMkx6IplU3qhw99",
+              "name": "Shabbat morning",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1X9l2ZE7dGrJdej9Fr3PFieVt9EE3dEYT",
+              "name": "MP3's to Jam To",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1XVmOLlmKI2ztKTsVOg2-YbkJ9_DzJA7A23gJp-s_Xu4",
+              "name": "Shir Shabbat Set List",
+              "mimeType": "application/vnd.google-apps.spreadsheet",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1ZQUvXg4McVGhlkQ9rnJM4_2pdHup9mFBDXqoHqZtAds",
+              "name": "Yizkor and Neila",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1cZ0dW7ioUqQkV8m2ENr0ExEpMuYiP7ov6vy790kjbe4",
+              "name": "5786 / 2025 Kol Nidre Alternative Service Music Flow",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1ch79JH6B3rWcMnSLd9HtO4myytRHoicd",
+              "name": "Shabbat",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1fCgl4H4wIiqLK42rUkHmRYV5WzqLEOIU",
+              "name": "Kabbalat Shabbat",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1khYYPDmj7pOn_G8yl8mTJHcYFsLH5O65",
+              "name": "3. Kol Nidre",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1oqBCSHTMzCVUPvMtQNXEdg5V49mwvOYh",
+              "name": "High Holidays 2025 (Choir)",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1p-iGMt8OCpCJtk0eOn0mJL3aoNPcGUaK",
+              "name": "CRC Music Book",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1pwmleWt7QMPuEqTrM_Az9JFj5RUMS9F4",
+              "name": "Shir Shabbat Lead Sheets",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1tcdg8vTGcwuGX7gar1xJ0JDBdcyEi9yz",
+              "name": "1. Erev Rosh",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1xTYqs7MHxm8Q69jt9nNMqNwmU3QTM7uxEkofZpxIzcE",
+              "name": "Yom Kippur 2025/5786",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1zeTBJoffgVoqJYvjvZ6p3Tmm1JGXeOvR",
+              "name": "Niggunim",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            }
+          ],
+          "truncated": false
+        },
+        "coverage": {
+          "total": 568,
+          "eligible": 286,
+          "scanned": 286,
+          "filteredOut": {
+            "byStatus": {
+              "orphaned": 272,
+              "duplicate": 10
+            },
+            "byCollection": {},
+            "byOther": {}
+          }
+        },
+        "dryRun": false,
+        "committed": 24
+      }
+    },
+    "top10": [
+      {
+        "id": "XLRlBdThE5rUIkglEIDA",
+        "name": "5786 / 2025 Kol Nidre Alternative Service Music Flow",
+        "trackCount": 48
+      },
+      {
+        "id": "UnjLqKTtS4lNKQfMY6hB",
+        "name": "Shabbat Morning — Parashat Emor — May 2",
+        "trackCount": 45
+      },
+      {
+        "id": "IvowaTdXwZI7qu9U9QXc",
+        "name": "Shabbat Morning — Parashat Tazria-Metzora — April 18",
+        "trackCount": 45
+      },
+      {
+        "id": "fgxquthWA9IQ4UF2fZWw",
+        "name": "Shabbat Morning — April 11",
+        "trackCount": 44
+      },
+      {
+        "id": "b12a5221-111a-4ffa-b408-350cdbd28190",
+        "name": "Eitan Shabbat Morning 2/21",
+        "trackCount": 43
+      },
+      {
+        "id": "29EqdMESd6QjhfokL2Bu",
+        "name": "Shabbat Morning — March 21",
+        "trackCount": 43
+      },
+      {
+        "id": "KBDlDwRI0rfDdv8cxJG9",
+        "name": "Shabbat Morning — February 28",
+        "trackCount": 43
+      },
+      {
+        "id": "9bmwUMJzgIQgNRIe81jv",
+        "name": "Shabbat Morning — April 4",
+        "trackCount": 38
+      },
+      {
+        "id": "0RC4b6CpvnPbz09ue07q",
+        "name": "Shabbat Morning — March 28",
+        "trackCount": 38
+      },
+      {
+        "id": "LMkJRNf3HWa8l9Mqmr0Q",
+        "name": "Shabbat Morning — Parashat Vayakhel-Pekudei — March 14",
+        "trackCount": 36
+      }
+    ],
+    "verify": {
+      "perSetlist": [
+        {
+          "setlistId": "XLRlBdThE5rUIkglEIDA",
+          "name": "5786 / 2025 Kol Nidre Alternative Service Music Flow",
+          "trackCount": 0,
+          "okCount": 0,
+          "missingCount": 0,
+          "orphanedMarked": 0,
+          "phantomBonds": 0,
+          "shortcutUnresolvedCount": 0,
+          "needsSyncCount": 0
+        },
+        {
+          "setlistId": "UnjLqKTtS4lNKQfMY6hB",
+          "name": "Shabbat Morning — Parashat Emor — May 2",
+          "trackCount": 30,
+          "okCount": 13,
+          "missingCount": 1,
+          "orphanedMarked": 1,
+          "phantomBonds": 0,
+          "shortcutUnresolvedCount": 0,
+          "needsSyncCount": 0
+        },
+        {
+          "setlistId": "IvowaTdXwZI7qu9U9QXc",
+          "name": "Shabbat Morning — Parashat Tazria-Metzora — April 18",
+          "trackCount": 45,
+          "okCount": 20,
+          "missingCount": 2,
+          "orphanedMarked": 2,
+          "phantomBonds": 0,
+          "shortcutUnresolvedCount": 0,
+          "needsSyncCount": 0
+        },
+        {
+          "setlistId": "fgxquthWA9IQ4UF2fZWw",
+          "name": "Shabbat Morning — April 11",
+          "trackCount": 44,
+          "okCount": 19,
+          "missingCount": 3,
+          "orphanedMarked": 3,
+          "phantomBonds": 0,
+          "shortcutUnresolvedCount": 0,
+          "needsSyncCount": 0
+        },
+        {
+          "setlistId": "b12a5221-111a-4ffa-b408-350cdbd28190",
+          "name": "Eitan Shabbat Morning 2/21",
+          "trackCount": 0,
+          "okCount": 0,
+          "missingCount": 0,
+          "orphanedMarked": 0,
+          "phantomBonds": 0,
+          "shortcutUnresolvedCount": 0,
+          "needsSyncCount": 0
+        },
+        {
+          "setlistId": "29EqdMESd6QjhfokL2Bu",
+          "name": "Shabbat Morning — March 21",
+          "trackCount": 0,
+          "okCount": 0,
+          "missingCount": 0,
+          "orphanedMarked": 0,
+          "phantomBonds": 0,
+          "shortcutUnresolvedCount": 0,
+          "needsSyncCount": 0
+        },
+        {
+          "setlistId": "KBDlDwRI0rfDdv8cxJG9",
+          "name": "Shabbat Morning — February 28",
+          "trackCount": 0,
+          "okCount": 0,
+          "missingCount": 0,
+          "orphanedMarked": 0,
+          "phantomBonds": 0,
+          "shortcutUnresolvedCount": 0,
+          "needsSyncCount": 0
+        },
+        {
+          "setlistId": "9bmwUMJzgIQgNRIe81jv",
+          "name": "Shabbat Morning — April 4",
+          "trackCount": 38,
+          "okCount": 13,
+          "missingCount": 2,
+          "orphanedMarked": 2,
+          "phantomBonds": 0,
+          "shortcutUnresolvedCount": 0,
+          "needsSyncCount": 0
+        },
+        {
+          "setlistId": "0RC4b6CpvnPbz09ue07q",
+          "name": "Shabbat Morning — March 28",
+          "trackCount": 0,
+          "okCount": 0,
+          "missingCount": 0,
+          "orphanedMarked": 0,
+          "phantomBonds": 0,
+          "shortcutUnresolvedCount": 0,
+          "needsSyncCount": 0
+        },
+        {
+          "setlistId": "LMkJRNf3HWa8l9Mqmr0Q",
+          "name": "Shabbat Morning — Parashat Vayakhel-Pekudei — March 14",
+          "trackCount": 0,
+          "okCount": 0,
+          "missingCount": 0,
+          "orphanedMarked": 0,
+          "phantomBonds": 0,
+          "shortcutUnresolvedCount": 0,
+          "needsSyncCount": 0
+        }
+      ],
+      "aggregate": {
+        "trackCount": 157,
+        "okCount": 65,
+        "okPct": 41.4,
+        "orphanedMarked": 8,
+        "phantomBonds": 0
+      }
+    },
+    "reconcile_post": {
+      "ok": true,
+      "result": {
+        "ok": true,
+        "scanned": 262,
+        "alreadyHealthy": 231,
+        "driveMirror": {
+          "count": 0,
+          "rows": [],
+          "truncated": false
+        },
+        "orphan": {
+          "count": 0,
+          "rows": [],
+          "truncated": false
+        },
+        "transient": {
+          "count": 2,
+          "rows": [
+            {
+              "fileId": "17TDzffOQT4ohO2p7yQCudUTYbj1tRg28",
+              "name": "Tu Bishvat.pdf",
+              "error": "library_index mimeType is application/vnd.google-apps.shortcut — re-bond to the shortcut target's fileId."
+            },
+            {
+              "fileId": "1jgs72zwhfEvqsqeeCFMw8Th7Zsk0mVJj",
+              "name": "Lechu Goldman.pdf",
+              "error": "library_index mimeType is application/vnd.google-apps.shortcut — re-bond to the shortcut target's fileId."
+            }
+          ],
+          "truncated": false
+        },
+        "skippedNonChart": {
+          "count": 29,
+          "rows": [
+            {
+              "fileId": "12if9gHg88ZqNMZjmLG1UH57GSriTHzqF",
+              "name": ".DS_Store",
+              "mimeType": "application/octet-stream",
+              "reason": "hidden_dotfile"
+            },
+            {
+              "fileId": "14vROgFHB9FPTgTE0su4ALy8Pno0L5o9UkX4DkzMK5zk",
+              "name": "Yom Kippur Day Service (Daniel and Karen) Band Charts to be Printed",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "173N8yeP19xEqNcofAbj0ZOnMK9pA7bGp",
+              "name": "Audio Files",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "17AVgm1u0g862bhM8WnvvL54hc3tthymc",
+              "name": "HHD",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1BlUWuZh0eWe6BLpBYjJLpY1VJXyiISHr",
+              "name": "Sheet Music",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1DeiuwNlb8i8nwz3vUwaXdiNIICSdPgTt",
+              "name": "2. Rosh ",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1FsZhGl3bxWja_KLVAliZb2hHg88JBcw3",
+              "name": "Choral Arrangements ",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1G4mI5dUgORJlwew8HnndtuORNLq89SgYXpQLYPJV12E",
+              "name": "Kol Nidre 2025/5786",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1G90XvxjphRA3ZenORmcO1P3FDUQJQNjugwN4D5aDb4s",
+              "name": "Rosh Day 2025/5786",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1HDRDxBLX7Rj41qF1LDcDAdi2cmPYOAQ96xj8IXB9GvA",
+              "name": "Erev Rosh 5786/2025",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1J4XKbecFdEJiEt-yuXWLmAXGqTi8L_Mk",
+              "name": "Piyutim-Pizmonim",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1NTR6j9rhwHAwoZjX34AVdyymz9IvPkTz",
+              "name": "Pre-Ceremony Music",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1PL-rwuqZOnftWzBFYa4ElTWinUpLSiyo",
+              "name": "Shir Shabbat (Choir)",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1QvrCC8R1yvCbK5jIB-yqw-vMQX1S62It637BHwSMaX4",
+              "name": "Shir Shabbat List",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1SYdDp-DbhO7e362YRZr3GQQ1pGwrdUlc",
+              "name": "4. Yom Kippur ",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1URRI7OBQnlsji5zn3oMkx6IplU3qhw99",
+              "name": "Shabbat morning",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1X9l2ZE7dGrJdej9Fr3PFieVt9EE3dEYT",
+              "name": "MP3's to Jam To",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1XVmOLlmKI2ztKTsVOg2-YbkJ9_DzJA7A23gJp-s_Xu4",
+              "name": "Shir Shabbat Set List",
+              "mimeType": "application/vnd.google-apps.spreadsheet",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1ZQUvXg4McVGhlkQ9rnJM4_2pdHup9mFBDXqoHqZtAds",
+              "name": "Yizkor and Neila",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1cZ0dW7ioUqQkV8m2ENr0ExEpMuYiP7ov6vy790kjbe4",
+              "name": "5786 / 2025 Kol Nidre Alternative Service Music Flow",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1ch79JH6B3rWcMnSLd9HtO4myytRHoicd",
+              "name": "Shabbat",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1fCgl4H4wIiqLK42rUkHmRYV5WzqLEOIU",
+              "name": "Kabbalat Shabbat",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1khYYPDmj7pOn_G8yl8mTJHcYFsLH5O65",
+              "name": "3. Kol Nidre",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1oqBCSHTMzCVUPvMtQNXEdg5V49mwvOYh",
+              "name": "High Holidays 2025 (Choir)",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1p-iGMt8OCpCJtk0eOn0mJL3aoNPcGUaK",
+              "name": "CRC Music Book",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1pwmleWt7QMPuEqTrM_Az9JFj5RUMS9F4",
+              "name": "Shir Shabbat Lead Sheets",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1tcdg8vTGcwuGX7gar1xJ0JDBdcyEi9yz",
+              "name": "1. Erev Rosh",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1xTYqs7MHxm8Q69jt9nNMqNwmU3QTM7uxEkofZpxIzcE",
+              "name": "Yom Kippur 2025/5786",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1zeTBJoffgVoqJYvjvZ6p3Tmm1JGXeOvR",
+              "name": "Niggunim",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            }
+          ],
+          "truncated": false
+        },
+        "coverage": {
+          "total": 568,
+          "eligible": 262,
+          "scanned": 262,
+          "filteredOut": {
+            "byStatus": {
+              "orphaned": 297,
+              "duplicate": 9
+            },
+            "byCollection": {},
+            "byOther": {}
+          }
+        },
+        "dryRun": true,
+        "committed": 0
+      }
+    },
+    "search_divergence_post": {
+      "sampled": 35,
+      "still_missing": 20,
+      "detail": [
+        {
+          "fileId": "e16dbb6e-9b17-4518-978f-bc32de99fa39",
+          "status": "missing"
+        },
+        {
+          "fileId": "dcacad1e-5f4b-4d03-b221-58692b1b8d1e",
+          "status": "missing"
+        },
+        {
+          "fileId": "bf84ee28-7bb7-436e-9ab7-bdb5157a3e06",
+          "status": "missing"
+        },
+        {
+          "fileId": "87bddcb0-5d4a-47f7-a7f2-20a99a17b5fc",
+          "status": "missing"
+        },
+        {
+          "fileId": "c5452a63-094f-40ce-a24c-bb7077ec0f92",
+          "status": "missing"
+        },
+        {
+          "fileId": "c7e91f89-c940-4b30-8162-c5780ccdbcb1",
+          "status": "missing"
+        },
+        {
+          "fileId": "34a3c3fc-d5ce-4b80-8d4f-77014f5412da",
+          "status": "missing"
+        },
+        {
+          "fileId": "6bddf129-6f1c-4fa4-bf54-3cf431a53219",
+          "status": "missing"
+        },
+        {
+          "fileId": "d1ccd776-0d8b-4860-8958-d8a9b0a5c254",
+          "status": "missing"
+        },
+        {
+          "fileId": "dc3389ab-af69-42ac-ba08-e2f13c3d343f",
+          "status": "missing"
+        },
+        {
+          "fileId": "upload-0d872e08-88eb-4190-8cf0-a4591b7547a3",
+          "status": "ok"
+        },
+        {
+          "fileId": "upload-cef9ddf9-590e-47fc-8606-eb5bb3311925",
+          "status": "ok"
+        },
+        {
+          "fileId": "8311b9ad-cce4-4d96-aa4d-ec615a7f7401",
+          "status": "missing"
+        },
+        {
+          "fileId": "upload-823b20aa-c36f-4163-aab7-a1487a7526f0",
+          "status": "ok"
+        },
+        {
+          "fileId": "11vAgPi9J45X2b_MLc9SuqnNbKr_U2ePZ",
+          "status": "ok"
+        },
+        {
+          "fileId": "72a7aa6a-7b08-4c78-862c-197bbffb9515",
+          "status": "missing"
+        },
+        {
+          "fileId": "c9efe661-9eb8-42fc-89d5-13f026629dc7",
+          "status": "missing"
+        },
+        {
+          "fileId": "edc49352-b032-4967-8ac4-c76ef3cf0beb",
+          "status": "missing"
+        },
+        {
+          "fileId": "0ca658e4-c2e0-43df-9888-a7f2d536710a",
+          "status": "missing"
+        },
+        {
+          "fileId": "1c_8FuLAzM3S7TECBb4e1o11oUdoN8tlK",
+          "status": "ok"
+        },
+        {
+          "fileId": "31e88e83-c880-43e5-9b12-37a7a119aeb0",
+          "status": "missing"
+        },
+        {
+          "fileId": "5e893824-0d8c-47e7-82fe-51240d027c00",
+          "status": "missing"
+        },
+        {
+          "fileId": "bd71fe2e-65aa-46aa-8674-0fb38c5f12c9",
+          "status": "missing"
+        },
+        {
+          "fileId": "1BLARziE-ImWCPWDoU8utX5Cu7Jm4mxxJ",
+          "status": "ok"
+        },
+        {
+          "fileId": "1SH9vxGsFfIJ4mU_FaAaIX13hThwuqfH5",
+          "status": "ok"
+        },
+        {
+          "fileId": "19E8aTettqSQO1ZVtVhXCPfUJw1dw0f3G",
+          "status": "ok"
+        },
+        {
+          "fileId": "1AIwCXDw1mGHm_uhaoJfbpkri-ibzOLI4",
+          "status": "ok"
+        },
+        {
+          "fileId": "f9921a95-cab9-4b2b-9869-a024cfc21e2b",
+          "status": "missing"
+        },
+        {
+          "fileId": "1EiJJKn3ZmsWnXVYiEjMHQmR17t0ByDbG",
+          "status": "ok"
+        },
+        {
+          "fileId": "1yJjdDZ1ivU0if-T-d_uCYkH1rEIH-xs3",
+          "status": "ok"
+        },
+        {
+          "fileId": "1pu2JsvkgVnzmQ4CJySUd7PSm7F0yEd_x",
+          "status": "ok"
+        },
+        {
+          "fileId": "218fc2a9-cbe4-4ff1-a056-68f7f55bbac2",
+          "status": "missing"
+        },
+        {
+          "fileId": "1czN_ywRWm2bnjIrnNVg7ad4RyynM_GcR",
+          "status": "ok"
+        },
+        {
+          "fileId": "1-NNEkYLm4R7PJ7ttd1HVVQ55FYqps5fT",
+          "status": "ok"
+        },
+        {
+          "fileId": "19XVik7nlDmoUr8CcBJbjDsecLuqInQ_Z",
+          "status": "ok"
+        }
+      ]
+    }
+  },
+  "completedAt": "2026-05-19T17:52:09.032Z"
+}

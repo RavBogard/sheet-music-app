@@ -1,0 +1,1651 @@
+{
+  "capturedAt": "2026-05-19T17:35:12.664Z",
+  "prodSHA": "59b25c87a4cd52bd0d1a2826398595ce7eec3c80",
+  "probes": {
+    "dump_setlists": {
+      "ok": true,
+      "result": {
+        "collection": "setlists",
+        "docCount": 45,
+        "estimatedBytes": 148782,
+        "oldestTimestamp": null,
+        "newestTimestamp": null,
+        "truncated": false,
+        "scannedAt": "2026-05-19T17:35:14.555Z",
+        "sinceFilter": null
+      }
+    },
+    "dump_tracks": {
+      "ok": true,
+      "result": {
+        "collection": "tracks",
+        "docCount": 576,
+        "estimatedBytes": 222584,
+        "oldestTimestamp": null,
+        "newestTimestamp": null,
+        "truncated": false,
+        "scannedAt": "2026-05-19T17:35:15.358Z",
+        "sinceFilter": null
+      }
+    },
+    "dump_library_index": {
+      "ok": true,
+      "result": {
+        "collection": "library_index",
+        "docCount": 568,
+        "estimatedBytes": 307496,
+        "oldestTimestamp": null,
+        "newestTimestamp": null,
+        "truncated": false,
+        "scannedAt": "2026-05-19T17:35:15.811Z",
+        "sinceFilter": null
+      }
+    },
+    "dump_songs": {
+      "ok": true,
+      "result": {
+        "collection": "songs",
+        "docCount": 567,
+        "estimatedBytes": 155139,
+        "oldestTimestamp": null,
+        "newestTimestamp": null,
+        "truncated": false,
+        "scannedAt": "2026-05-19T17:35:16.306Z",
+        "sinceFilter": null
+      }
+    },
+    "dump_setlistTemplates": {
+      "ok": true,
+      "result": {
+        "collection": "setlistTemplates",
+        "docCount": 0,
+        "estimatedBytes": 0,
+        "oldestTimestamp": null,
+        "newestTimestamp": null,
+        "truncated": false,
+        "scannedAt": "2026-05-19T17:35:16.810Z",
+        "sinceFilter": null
+      }
+    },
+    "dump_users": {
+      "ok": true,
+      "result": {
+        "collection": "users",
+        "docCount": 19,
+        "estimatedBytes": 13221,
+        "oldestTimestamp": null,
+        "newestTimestamp": null,
+        "truncated": false,
+        "scannedAt": "2026-05-19T17:35:17.191Z",
+        "sinceFilter": null
+      }
+    },
+    "dump_scheduling_assignments": {
+      "ok": true,
+      "result": {
+        "collection": "scheduling_assignments",
+        "docCount": 0,
+        "estimatedBytes": 0,
+        "oldestTimestamp": null,
+        "newestTimestamp": null,
+        "truncated": false,
+        "scannedAt": "2026-05-19T17:35:17.558Z",
+        "sinceFilter": null
+      }
+    },
+    "dump_webVitalsObservations": {
+      "ok": true,
+      "result": {
+        "collection": "webVitalsObservations",
+        "docCount": 342,
+        "estimatedBytes": 149530,
+        "oldestTimestamp": "2026-05-18T00:41:58.884Z",
+        "newestTimestamp": "2026-05-19T16:28:37.203Z",
+        "truncated": false,
+        "scannedAt": "2026-05-19T17:35:18.103Z",
+        "sinceFilter": null
+      }
+    },
+    "reconcile_dryRun": {
+      "ok": true,
+      "result": {
+        "ok": true,
+        "scanned": 286,
+        "alreadyHealthy": 231,
+        "driveMirror": {
+          "count": 0,
+          "rows": [],
+          "truncated": false
+        },
+        "orphan": {
+          "count": 24,
+          "rows": [
+            {
+              "fileId": "flow-2",
+              "name": "flow-2"
+            },
+            {
+              "fileId": "flow-3",
+              "name": "flow-3"
+            },
+            {
+              "fileId": "flow-5",
+              "name": "flow-5"
+            },
+            {
+              "fileId": "upload-037d9094-ccc8-4f0f-ba31-de1b3e4991b6",
+              "name": "Em Bar'chu-Yotzier Walkdown"
+            },
+            {
+              "fileId": "upload-0594bbd4-d661-42b9-b11d-feeb3ff4cda6",
+              "name": "Bar'chu Walkdown"
+            },
+            {
+              "fileId": "upload-0792351b-3ee8-4e96-b7a0-2eeeb3b7fab4",
+              "name": "Lecha Dodi Lincoln's Nigun"
+            },
+            {
+              "fileId": "upload-13ef3209-407e-4f36-a504-e16947665dd6",
+              "name": "Stuart's Hora Medley"
+            },
+            {
+              "fileId": "upload-1910a665-aae9-4e26-b517-17f61a3afb0b",
+              "name": "Yedid Nefesh revised 1-1-26"
+            },
+            {
+              "fileId": "upload-1e15a09a-2dbd-46a4-b8a7-e045e21af68c",
+              "name": "May the Memory - Full Score"
+            },
+            {
+              "fileId": "upload-2db7e9ff-6224-4c0e-bbbe-4de37bf02f03",
+              "name": "Mizmor Shiru Ladonai"
+            },
+            {
+              "fileId": "upload-32b4845e-8593-42cf-8264-caf2d0e348da",
+              "name": "Ana B'Koach mxl"
+            },
+            {
+              "fileId": "upload-32dbbab2-ee16-405d-a3e4-53c88450e1f4",
+              "name": "Sim Shalom - Bonia Shur"
+            },
+            {
+              "fileId": "upload-3f576cb7-9c10-4a68-849d-4f3d669bdf80",
+              "name": "Niggun - Bonia Shur"
+            },
+            {
+              "fileId": "upload-4698f776-b470-40e6-ad6d-4d99788d64de",
+              "name": "You're In My Heart"
+            },
+            {
+              "fileId": "upload-743787ce-d038-4b03-ae09-f4c6f6c0696b",
+              "name": "Ana B'Koach MuseScore File"
+            },
+            {
+              "fileId": "upload-9ffab05d-518c-45af-9cae-a5f140011093",
+              "name": "Dancing In The Dark"
+            },
+            {
+              "fileId": "upload-a06055c4-c67b-4f7c-8d1b-de4cc0082915",
+              "name": "Matir Asurim B minor"
+            },
+            {
+              "fileId": "upload-aa425f07-937a-4be7-a13d-1e3000d1d8fa",
+              "name": "Ve'imru amen - Full Score"
+            },
+            {
+              "fileId": "upload-b8afb8e6-2691-458e-b9a9-3d9258ffdd5f",
+              "name": "Ana B'Koach (as of 3-27-26)"
+            },
+            {
+              "fileId": "upload-bb71e9e2-e3ce-4cad-b884-28f1d74f8970",
+              "name": "Mizmor L'David"
+            },
+            {
+              "fileId": "upload-da196baf-05d3-411d-b129-456f2fc16de2",
+              "name": "Ana B'Koach"
+            },
+            {
+              "fileId": "upload-e0d24d07-ccbe-4576-9263-0577c596dad6",
+              "name": "Erev Shel Shoshanim _ Yamin U’smol"
+            },
+            {
+              "fileId": "upload-f39740c1-e90f-48c5-8adc-ab6b5d56fdbe",
+              "name": "Tu Bishvat"
+            },
+            {
+              "fileId": "upload-f74b8139-97c1-4fb0-8a0b-44576b26559a",
+              "name": "Mi_chamocha E (Moshav)"
+            }
+          ],
+          "truncated": false
+        },
+        "transient": {
+          "count": 2,
+          "rows": [
+            {
+              "fileId": "17TDzffOQT4ohO2p7yQCudUTYbj1tRg28",
+              "name": "Tu Bishvat.pdf",
+              "error": "library_index mimeType is application/vnd.google-apps.shortcut — re-bond to the shortcut target's fileId."
+            },
+            {
+              "fileId": "1jgs72zwhfEvqsqeeCFMw8Th7Zsk0mVJj",
+              "name": "Lechu Goldman.pdf",
+              "error": "library_index mimeType is application/vnd.google-apps.shortcut — re-bond to the shortcut target's fileId."
+            }
+          ],
+          "truncated": false
+        },
+        "skippedNonChart": {
+          "count": 29,
+          "rows": [
+            {
+              "fileId": "12if9gHg88ZqNMZjmLG1UH57GSriTHzqF",
+              "name": ".DS_Store",
+              "mimeType": "application/octet-stream",
+              "reason": "hidden_dotfile"
+            },
+            {
+              "fileId": "14vROgFHB9FPTgTE0su4ALy8Pno0L5o9UkX4DkzMK5zk",
+              "name": "Yom Kippur Day Service (Daniel and Karen) Band Charts to be Printed",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "173N8yeP19xEqNcofAbj0ZOnMK9pA7bGp",
+              "name": "Audio Files",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "17AVgm1u0g862bhM8WnvvL54hc3tthymc",
+              "name": "HHD",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1BlUWuZh0eWe6BLpBYjJLpY1VJXyiISHr",
+              "name": "Sheet Music",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1DeiuwNlb8i8nwz3vUwaXdiNIICSdPgTt",
+              "name": "2. Rosh ",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1FsZhGl3bxWja_KLVAliZb2hHg88JBcw3",
+              "name": "Choral Arrangements ",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1G4mI5dUgORJlwew8HnndtuORNLq89SgYXpQLYPJV12E",
+              "name": "Kol Nidre 2025/5786",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1G90XvxjphRA3ZenORmcO1P3FDUQJQNjugwN4D5aDb4s",
+              "name": "Rosh Day 2025/5786",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1HDRDxBLX7Rj41qF1LDcDAdi2cmPYOAQ96xj8IXB9GvA",
+              "name": "Erev Rosh 5786/2025",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1J4XKbecFdEJiEt-yuXWLmAXGqTi8L_Mk",
+              "name": "Piyutim-Pizmonim",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1NTR6j9rhwHAwoZjX34AVdyymz9IvPkTz",
+              "name": "Pre-Ceremony Music",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1PL-rwuqZOnftWzBFYa4ElTWinUpLSiyo",
+              "name": "Shir Shabbat (Choir)",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1QvrCC8R1yvCbK5jIB-yqw-vMQX1S62It637BHwSMaX4",
+              "name": "Shir Shabbat List",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1SYdDp-DbhO7e362YRZr3GQQ1pGwrdUlc",
+              "name": "4. Yom Kippur ",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1URRI7OBQnlsji5zn3oMkx6IplU3qhw99",
+              "name": "Shabbat morning",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1X9l2ZE7dGrJdej9Fr3PFieVt9EE3dEYT",
+              "name": "MP3's to Jam To",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1XVmOLlmKI2ztKTsVOg2-YbkJ9_DzJA7A23gJp-s_Xu4",
+              "name": "Shir Shabbat Set List",
+              "mimeType": "application/vnd.google-apps.spreadsheet",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1ZQUvXg4McVGhlkQ9rnJM4_2pdHup9mFBDXqoHqZtAds",
+              "name": "Yizkor and Neila",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1cZ0dW7ioUqQkV8m2ENr0ExEpMuYiP7ov6vy790kjbe4",
+              "name": "5786 / 2025 Kol Nidre Alternative Service Music Flow",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1ch79JH6B3rWcMnSLd9HtO4myytRHoicd",
+              "name": "Shabbat",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1fCgl4H4wIiqLK42rUkHmRYV5WzqLEOIU",
+              "name": "Kabbalat Shabbat",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1khYYPDmj7pOn_G8yl8mTJHcYFsLH5O65",
+              "name": "3. Kol Nidre",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1oqBCSHTMzCVUPvMtQNXEdg5V49mwvOYh",
+              "name": "High Holidays 2025 (Choir)",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1p-iGMt8OCpCJtk0eOn0mJL3aoNPcGUaK",
+              "name": "CRC Music Book",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1pwmleWt7QMPuEqTrM_Az9JFj5RUMS9F4",
+              "name": "Shir Shabbat Lead Sheets",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1tcdg8vTGcwuGX7gar1xJ0JDBdcyEi9yz",
+              "name": "1. Erev Rosh",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1xTYqs7MHxm8Q69jt9nNMqNwmU3QTM7uxEkofZpxIzcE",
+              "name": "Yom Kippur 2025/5786",
+              "mimeType": "application/vnd.google-apps.document",
+              "reason": "drive_folder"
+            },
+            {
+              "fileId": "1zeTBJoffgVoqJYvjvZ6p3Tmm1JGXeOvR",
+              "name": "Niggunim",
+              "mimeType": "application/vnd.google-apps.folder",
+              "reason": "drive_folder"
+            }
+          ],
+          "truncated": false
+        },
+        "coverage": {
+          "total": 568,
+          "eligible": 286,
+          "scanned": 286,
+          "filteredOut": {
+            "byStatus": {
+              "orphaned": 272,
+              "duplicate": 10
+            },
+            "byCollection": {},
+            "byOther": {}
+          }
+        },
+        "dryRun": true,
+        "committed": 0
+      }
+    },
+    "list_setlists_50": {
+      "ok": true,
+      "result": [
+        {
+          "id": "b12a5221-111a-4ffa-b408-350cdbd28190",
+          "name": "Eitan Shabbat Morning 2/21",
+          "date": "2026-02-20T19:44:46.077Z",
+          "eventDate": "2026-02-21T12:00:00.000-06:00",
+          "trackCount": 43,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "NWPBba50fltX6pNcyOVK",
+          "name": "5/15 -- Shir Shabbat",
+          "date": "2026-05-20T19:53:47.014Z",
+          "eventDate": "2026-05-15T19:53:47.014Z",
+          "trackCount": 21,
+          "publishedAt": null,
+          "songCount": 15,
+          "version": 1
+        },
+        {
+          "id": "dc88e673-4728-47e2-a014-b64de7e84c57",
+          "name": "6fixes-l1-probe-shortcut",
+          "date": "2026-05-18T22:56:45.358Z",
+          "eventDate": "2026-05-25T12:00:00.000Z",
+          "trackCount": 0,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "97da3fc7-5eac-4865-acda-d916ad01a64b",
+          "name": "[TEST] cycle-3 probes",
+          "date": "2026-05-17T22:01:43.226Z",
+          "eventDate": "2026-12-31T12:00:00.000Z",
+          "trackCount": 0,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "c5d41b02-4888-41b7-a0e7-161250be9665",
+          "name": "Bar Mitzvah — Chase — May 16 (4pm Havdallah)",
+          "date": "2026-05-16T02:39:23.951Z",
+          "eventDate": "2026-05-16T12:00:00.000Z",
+          "trackCount": 21,
+          "publishedAt": "2026-05-16T02:41:08.294Z",
+          "version": 1
+        },
+        {
+          "id": "6b412089-e201-4579-9cc6-dbe4cc42ce3f",
+          "name": "CF1 Eval — Friday Evening (May 22)",
+          "date": "2026-05-15T16:35:04.269Z",
+          "eventDate": "2026-05-22T00:00:00.000Z",
+          "trackCount": 9,
+          "publishedAt": null,
+          "songCount": 9,
+          "version": 7
+        },
+        {
+          "id": "Ikl0sS4XcZil0Z04viAu",
+          "name": "Shir Shabbat —  — May 13",
+          "date": "2026-05-13T19:53:55.994Z",
+          "eventDate": "2026-05-13T19:53:47.014Z",
+          "trackCount": 18,
+          "publishedAt": null,
+          "songCount": 12,
+          "version": 1
+        },
+        {
+          "id": "vJqQL6jbpTwVVbv1Oahy",
+          "name": "Mother's Day",
+          "date": "2026-05-10T19:16:13.614Z",
+          "eventDate": "2026-05-10T05:00:00.000Z",
+          "trackCount": 2,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "xpFyGClkCD3je2WnQO10",
+          "name": "Bnei Mitzvah Morning (Template)",
+          "date": "2026-05-09T21:47:00.856Z",
+          "eventDate": null,
+          "trackCount": 0,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "eMFwUx7XBBAN0KUPmdhs",
+          "name": "Bnei Mitzvah Morning (Template)",
+          "date": "2026-05-09T14:04:31.044Z",
+          "eventDate": null,
+          "trackCount": 0,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "BozK3CzZIaSZvWK0hnRs",
+          "name": "Bnei Mitzvah Morning (Template)",
+          "date": "2026-05-09T13:58:56.744Z",
+          "eventDate": null,
+          "trackCount": 0,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "zyJGXUdIG80fLHaifJ7o",
+          "name": "Bnei Mitzvah Morning",
+          "date": "2026-05-09T13:51:43.110Z",
+          "eventDate": "2026-05-09T05:00:00.000Z",
+          "trackCount": 19,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "QQSsAK2XY4dc8k5sFXIa",
+          "name": "Confirmation Shabbat",
+          "date": "2026-05-08T21:16:45.268Z",
+          "eventDate": "2026-05-08T05:00:00.000Z",
+          "trackCount": 0,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "UnjLqKTtS4lNKQfMY6hB",
+          "name": "Shabbat Morning — Parashat Emor — May 2",
+          "date": "2026-05-02T13:59:06.161Z",
+          "eventDate": "2026-05-02T13:58:56.932Z",
+          "trackCount": 45,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "uBkulVkN8K7idSapCJjq",
+          "name": "Shabbat Morning — Parashat Achrei Mot-Kedoshim — April 25",
+          "date": "2026-04-25T14:41:12.040Z",
+          "eventDate": "2026-04-25T12:00:00.000-06:00",
+          "trackCount": 27,
+          "publishedAt": null,
+          "songCount": 18,
+          "version": 1
+        },
+        {
+          "id": "tIJ5DlvkeeN1CWAUTUM2",
+          "name": "Seui",
+          "date": "2026-04-20T04:28:30.545Z",
+          "eventDate": "2026-04-20T12:00:00.000-06:00",
+          "trackCount": 16,
+          "publishedAt": null,
+          "songCount": 16,
+          "version": 1
+        },
+        {
+          "id": "IvowaTdXwZI7qu9U9QXc",
+          "name": "Shabbat Morning — Parashat Tazria-Metzora — April 18",
+          "date": "2026-04-18T14:40:13.936Z",
+          "eventDate": "2026-04-18T12:00:00.000-06:00",
+          "trackCount": 45,
+          "publishedAt": null,
+          "songCount": 25,
+          "version": 1
+        },
+        {
+          "id": "fgxquthWA9IQ4UF2fZWw",
+          "name": "Shabbat Morning — April 11",
+          "date": "2026-04-11T18:00:00.000Z",
+          "eventDate": "2026-04-11T12:00:00.000-06:00",
+          "trackCount": 44,
+          "publishedAt": null,
+          "songCount": 24,
+          "version": 1
+        },
+        {
+          "id": "9bmwUMJzgIQgNRIe81jv",
+          "name": "Shabbat Morning — April 4",
+          "date": "2026-04-04T18:00:00.000Z",
+          "eventDate": "2026-04-04T12:00:00.000-06:00",
+          "trackCount": 38,
+          "publishedAt": null,
+          "songCount": 18,
+          "version": 1
+        },
+        {
+          "id": "FB2yEICglR8jQmG3pcnp",
+          "name": "Passover — April 3",
+          "date": "2026-04-03T18:00:00.000Z",
+          "eventDate": "2026-04-03T18:00:00.000Z",
+          "trackCount": 21,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "dHQyiWGoGww0aCeKk9Pj",
+          "name": "Shabbat Morning — Parashat Behar-Bechukotai — March 28",
+          "date": "2026-03-28T18:00:00.000Z",
+          "eventDate": "2026-03-28T18:00:00.000Z",
+          "trackCount": 28,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "RL1C7QW75134LNA3rvQD",
+          "name": "Shabbat Morning — Parashat Behar-Bechukotai — March 28",
+          "date": "2026-03-28T18:00:00.000Z",
+          "eventDate": "2026-03-28T18:00:00.000Z",
+          "trackCount": 28,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "s2nWyd63mWjQj3LAJ8zg",
+          "name": "Shir Shabbat — March 27",
+          "date": "2026-03-27T16:09:15.229Z",
+          "eventDate": "2026-03-27T12:00:00.000-06:00",
+          "trackCount": 21,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "0RC4b6CpvnPbz09ue07q",
+          "name": "Shabbat Morning — March 28",
+          "date": "2026-03-25T20:23:38.148Z",
+          "eventDate": "2026-03-28T12:00:00.000-06:00",
+          "trackCount": 38,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "5zLP8DidKQ2lLMKci2xI",
+          "name": "Religious School Morning Service",
+          "date": "2026-03-18T22:24:00.859Z",
+          "eventDate": "2026-03-29T12:00:00.000-06:00",
+          "trackCount": 8,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "29EqdMESd6QjhfokL2Bu",
+          "name": "Shabbat Morning — March 21",
+          "date": "2026-03-18T21:18:09.129Z",
+          "eventDate": "2026-03-21T12:00:00.000-06:00",
+          "trackCount": 43,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "LMkJRNf3HWa8l9Mqmr0Q",
+          "name": "Shabbat Morning — Parashat Vayakhel-Pekudei — March 14",
+          "date": "2026-03-10T20:24:56.415Z",
+          "eventDate": "2026-03-14T12:00:00.000-06:00",
+          "trackCount": 36,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "yGl9DLjYwm4jnPy0JTR4",
+          "name": "B'nei Mitzvah Saturday — March 14",
+          "date": "2026-03-09T23:50:46.888Z",
+          "eventDate": "2026-03-21T12:00:00.000-06:00",
+          "trackCount": 28,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "bmodfEvSr75S3A2Q1UZM",
+          "name": "Friday Night — Parashat Vayakhel-Pekudei — March 8",
+          "date": "2026-03-08T20:16:33.883Z",
+          "eventDate": null,
+          "trackCount": 22,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "QvykJoecFHvjTlxYblZz",
+          "name": "Friday Night — Parashat Vayakhel-Pekudei — March 8",
+          "date": "2026-03-08T20:15:42.071Z",
+          "eventDate": null,
+          "trackCount": 22,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "lMg22c7kmla21ZlWWuEK",
+          "name": "Friday Night — Parashat Vayakhel-Pekudei — March 8",
+          "date": "2026-03-08T20:15:16.066Z",
+          "eventDate": null,
+          "trackCount": 22,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "KBDlDwRI0rfDdv8cxJG9",
+          "name": "Shabbat Morning — February 28",
+          "date": "2026-02-28T18:00:00.000Z",
+          "eventDate": "2026-02-28T12:00:00.000-06:00",
+          "trackCount": 43,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "yFO1nWEMH2wGSthc766c",
+          "name": "Shir Shabbat 2/20",
+          "date": "2026-02-17T10:39:37.959Z",
+          "eventDate": "2026-02-20T12:00:00.000-06:00",
+          "trackCount": 21,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "W8Ahf3VvLhLgyaU7Z6lX",
+          "name": "Shir Shabbat - Feb 20, 2026",
+          "date": "2026-02-17T08:15:55.722Z",
+          "eventDate": null,
+          "trackCount": 16,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "jRBOCUjcMHEBP4IqgGUP",
+          "name": "Shabbat Morning January 31",
+          "date": "2026-01-28T15:25:41.779Z",
+          "eventDate": "2026-01-31T06:00:00.000Z",
+          "trackCount": 15,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "H06Xwyn74GiHHMKiEPZu",
+          "name": "Shabbat ",
+          "date": "2026-01-27T21:43:23.933Z",
+          "eventDate": null,
+          "trackCount": 27,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "4GVt6rK5RCVHr5BGPAUv",
+          "name": "Shabbat Morning",
+          "date": "2026-01-27T21:30:03.937Z",
+          "eventDate": "2026-01-03T06:00:00.000Z",
+          "trackCount": 10,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "yEGFPu8UnBHkMK0ZRREp",
+          "name": "Shabbat",
+          "date": "2026-01-27T21:15:44.973Z",
+          "eventDate": null,
+          "trackCount": 0,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "zKxsDLoVXFis7ADbqWsW",
+          "name": "testing",
+          "date": "2026-01-27T21:12:54.217Z",
+          "eventDate": null,
+          "trackCount": 0,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "dJuzNP3CMgtIFkssWiQ3",
+          "name": "Shabbat morning",
+          "date": "2026-01-27T14:45:24.704Z",
+          "eventDate": null,
+          "trackCount": 0,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "uVwbdrMFv5Uz6x4aFNwe",
+          "name": "Shabbat morning",
+          "date": "2026-01-26T22:09:35.943Z",
+          "eventDate": null,
+          "trackCount": 0,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "QUbPV0MELXnvfwoNkrtG",
+          "name": "Shabbat morning",
+          "date": "2026-01-26T15:38:16.578Z",
+          "eventDate": null,
+          "trackCount": 0,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "3ydVKM1WSADW0vn9vWaN",
+          "name": "Shir Shabbat List",
+          "date": "2026-01-26T00:18:21.911Z",
+          "eventDate": null,
+          "trackCount": 9,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "XLRlBdThE5rUIkglEIDA",
+          "name": "5786 / 2025 Kol Nidre Alternative Service Music Flow",
+          "date": "2026-01-26T00:01:10.999Z",
+          "eventDate": null,
+          "trackCount": 48,
+          "publishedAt": null,
+          "version": 1
+        },
+        {
+          "id": "KFx9qYacON5y7R9RtMrV",
+          "name": "New Setlist",
+          "date": "2026-01-25T23:30:15.752Z",
+          "eventDate": null,
+          "trackCount": 8,
+          "publishedAt": null,
+          "version": 1
+        }
+      ]
+    },
+    "top10_setlists": [
+      {
+        "id": "XLRlBdThE5rUIkglEIDA",
+        "name": "5786 / 2025 Kol Nidre Alternative Service Music Flow",
+        "trackCount": 48,
+        "eventDate": null,
+        "publishedAt": null
+      },
+      {
+        "id": "UnjLqKTtS4lNKQfMY6hB",
+        "name": "Shabbat Morning — Parashat Emor — May 2",
+        "trackCount": 45,
+        "eventDate": "2026-05-02T13:58:56.932Z",
+        "publishedAt": null
+      },
+      {
+        "id": "IvowaTdXwZI7qu9U9QXc",
+        "name": "Shabbat Morning — Parashat Tazria-Metzora — April 18",
+        "trackCount": 45,
+        "eventDate": "2026-04-18T12:00:00.000-06:00",
+        "publishedAt": null
+      },
+      {
+        "id": "fgxquthWA9IQ4UF2fZWw",
+        "name": "Shabbat Morning — April 11",
+        "trackCount": 44,
+        "eventDate": "2026-04-11T12:00:00.000-06:00",
+        "publishedAt": null
+      },
+      {
+        "id": "b12a5221-111a-4ffa-b408-350cdbd28190",
+        "name": "Eitan Shabbat Morning 2/21",
+        "trackCount": 43,
+        "eventDate": "2026-02-21T12:00:00.000-06:00",
+        "publishedAt": null
+      },
+      {
+        "id": "29EqdMESd6QjhfokL2Bu",
+        "name": "Shabbat Morning — March 21",
+        "trackCount": 43,
+        "eventDate": "2026-03-21T12:00:00.000-06:00",
+        "publishedAt": null
+      },
+      {
+        "id": "KBDlDwRI0rfDdv8cxJG9",
+        "name": "Shabbat Morning — February 28",
+        "trackCount": 43,
+        "eventDate": "2026-02-28T12:00:00.000-06:00",
+        "publishedAt": null
+      },
+      {
+        "id": "9bmwUMJzgIQgNRIe81jv",
+        "name": "Shabbat Morning — April 4",
+        "trackCount": 38,
+        "eventDate": "2026-04-04T12:00:00.000-06:00",
+        "publishedAt": null
+      },
+      {
+        "id": "0RC4b6CpvnPbz09ue07q",
+        "name": "Shabbat Morning — March 28",
+        "trackCount": 38,
+        "eventDate": "2026-03-28T12:00:00.000-06:00",
+        "publishedAt": null
+      },
+      {
+        "id": "LMkJRNf3HWa8l9Mqmr0Q",
+        "name": "Shabbat Morning — Parashat Vayakhel-Pekudei — March 14",
+        "trackCount": 36,
+        "eventDate": "2026-03-14T12:00:00.000-06:00",
+        "publishedAt": null
+      }
+    ],
+    "verify_top10": [
+      {
+        "setlistId": "XLRlBdThE5rUIkglEIDA",
+        "name": "5786 / 2025 Kol Nidre Alternative Service Music Flow",
+        "trackCount": 0,
+        "bondedCount": 0,
+        "okCount": 0,
+        "missingCount": 0,
+        "needsSyncCount": 0,
+        "shortcutUnresolvedCount": 0,
+        "phantomBonds": 0,
+        "unreachableCount": 0
+      },
+      {
+        "setlistId": "UnjLqKTtS4lNKQfMY6hB",
+        "name": "Shabbat Morning — Parashat Emor — May 2",
+        "trackCount": 30,
+        "bondedCount": 14,
+        "okCount": 13,
+        "missingCount": 1,
+        "needsSyncCount": 0,
+        "shortcutUnresolvedCount": 0,
+        "phantomBonds": 0,
+        "unreachableCount": 0
+      },
+      {
+        "setlistId": "IvowaTdXwZI7qu9U9QXc",
+        "name": "Shabbat Morning — Parashat Tazria-Metzora — April 18",
+        "trackCount": 45,
+        "bondedCount": 22,
+        "okCount": 20,
+        "missingCount": 2,
+        "needsSyncCount": 0,
+        "shortcutUnresolvedCount": 0,
+        "phantomBonds": 0,
+        "unreachableCount": 0
+      },
+      {
+        "setlistId": "fgxquthWA9IQ4UF2fZWw",
+        "name": "Shabbat Morning — April 11",
+        "trackCount": 44,
+        "bondedCount": 22,
+        "okCount": 19,
+        "missingCount": 3,
+        "needsSyncCount": 0,
+        "shortcutUnresolvedCount": 0,
+        "phantomBonds": 0,
+        "unreachableCount": 0
+      },
+      {
+        "setlistId": "b12a5221-111a-4ffa-b408-350cdbd28190",
+        "name": "Eitan Shabbat Morning 2/21",
+        "trackCount": 0,
+        "bondedCount": 0,
+        "okCount": 0,
+        "missingCount": 0,
+        "needsSyncCount": 0,
+        "shortcutUnresolvedCount": 0,
+        "phantomBonds": 0,
+        "unreachableCount": 0
+      },
+      {
+        "setlistId": "29EqdMESd6QjhfokL2Bu",
+        "name": "Shabbat Morning — March 21",
+        "trackCount": 0,
+        "bondedCount": 0,
+        "okCount": 0,
+        "missingCount": 0,
+        "needsSyncCount": 0,
+        "shortcutUnresolvedCount": 0,
+        "phantomBonds": 0,
+        "unreachableCount": 0
+      },
+      {
+        "setlistId": "KBDlDwRI0rfDdv8cxJG9",
+        "name": "Shabbat Morning — February 28",
+        "trackCount": 0,
+        "bondedCount": 0,
+        "okCount": 0,
+        "missingCount": 0,
+        "needsSyncCount": 0,
+        "shortcutUnresolvedCount": 0,
+        "phantomBonds": 0,
+        "unreachableCount": 0
+      },
+      {
+        "setlistId": "9bmwUMJzgIQgNRIe81jv",
+        "name": "Shabbat Morning — April 4",
+        "trackCount": 38,
+        "bondedCount": 15,
+        "okCount": 13,
+        "missingCount": 2,
+        "needsSyncCount": 0,
+        "shortcutUnresolvedCount": 0,
+        "phantomBonds": 0,
+        "unreachableCount": 0
+      },
+      {
+        "setlistId": "0RC4b6CpvnPbz09ue07q",
+        "name": "Shabbat Morning — March 28",
+        "trackCount": 0,
+        "bondedCount": 0,
+        "okCount": 0,
+        "missingCount": 0,
+        "needsSyncCount": 0,
+        "shortcutUnresolvedCount": 0,
+        "phantomBonds": 0,
+        "unreachableCount": 0
+      },
+      {
+        "setlistId": "LMkJRNf3HWa8l9Mqmr0Q",
+        "name": "Shabbat Morning — Parashat Vayakhel-Pekudei — March 14",
+        "trackCount": 0,
+        "bondedCount": 0,
+        "okCount": 0,
+        "missingCount": 0,
+        "needsSyncCount": 0,
+        "shortcutUnresolvedCount": 0,
+        "phantomBonds": 0,
+        "unreachableCount": 0
+      }
+    ],
+    "verify_top10_aggregate": {
+      "trackCount": 157,
+      "okCount": 65,
+      "bondedCount": 73,
+      "missingCount": 8,
+      "needsSyncCount": 0,
+      "shortcutUnresolvedCount": 0,
+      "phantomBonds": 0,
+      "okPct": 41.4,
+      "bondedPct": 46.5
+    },
+    "b12a5221_get_setlist": {
+      "ok": true,
+      "result": {
+        "id": "b12a5221-111a-4ffa-b408-350cdbd28190",
+        "date": "2026-02-20T19:44:46.077Z",
+        "ownerId": "93Xn3DbS0bSNb8zmfzLyfOMX1A13",
+        "eventDate": "2026-02-21T12:00:00.000-06:00",
+        "trackCount": 43,
+        "name": "Eitan Shabbat Morning 2/21",
+        "rabbi": "Daniel",
+        "ownerName": "Daniel Bogard",
+        "updatedAt": "2026-03-12T12:36:01.100Z",
+        "tracks": [],
+        "lastModifiedAt": "2026-05-17T01:45:14.480Z",
+        "version": 1,
+        "isTest": false
+      }
+    },
+    "b12a5221_verify": {
+      "ok": true,
+      "result": {
+        "ok": true,
+        "setlistId": "b12a5221-111a-4ffa-b408-350cdbd28190",
+        "trackCount": 0,
+        "bondedCount": 0,
+        "okCount": 0,
+        "missingCount": 0,
+        "unreachableCount": 0,
+        "needsSyncCount": 0,
+        "shortcutUnresolvedCount": 0,
+        "orphanedMarked": 0,
+        "phantomBonds": 0,
+        "rows": []
+      }
+    },
+    "search_library_samples": {
+      "the": {
+        "ok": true,
+        "result": [
+          {
+            "id": "e16dbb6e-9b17-4518-978f-bc32de99fa39",
+            "title": "Aleinu-The Adoration (Isaacson) - Aleinu (Chajes)",
+            "fileName": "Aleinu-The Adoration (Isaacson) - Aleinu (Chajes).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "dcacad1e-5f4b-4d03-b221-58692b1b8d1e",
+            "title": "All The World Sings To You (Rothchild)",
+            "fileName": "All The World Sings To You (Rothchild).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "bf84ee28-7bb7-436e-9ab7-bdb5157a3e06",
+            "title": "And The Youth Shall See Visions (Friedman)",
+            "fileName": "And The Youth Shall See Visions (Friedman).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "87bddcb0-5d4a-47f7-a7f2-20a99a17b5fc",
+            "title": "Birkat Hamazon (The Blessing After Meals) (Traditional)",
+            "fileName": "Birkat Hamazon (The Blessing After Meals) (Traditional).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "upload-9ffab05d-518c-45af-9cae-a5f140011093",
+            "title": "Dancing In The Dark",
+            "fileName": "Dancing In The Dark",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "c5452a63-094f-40ce-a24c-bb7077ec0f92",
+            "title": "Down By The Riverside (Spiritual)",
+            "fileName": "Down By The Riverside (Spiritual).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "c7e91f89-c940-4b30-8162-c5780ccdbcb1",
+            "title": "Eitz Chayim (Matthew Check And Naomi Less)",
+            "fileName": "Eitz Chayim (Matthew Check And Naomi Less).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "34a3c3fc-d5ce-4b80-8d4f-77014f5412da",
+            "title": "Et Hamanginah (Rosenblum) - Fixin The World (Schachet-Briskin)",
+            "fileName": "Et Hamanginah (Rosenblum) - Fixin The World (Schachet-Briskin).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "6bddf129-6f1c-4fa4-bf54-3cf431a53219",
+            "title": "If All Of The World (Sheldon Low)",
+            "fileName": "If All Of The World (Sheldon Low).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "d1ccd776-0d8b-4860-8958-d8a9b0a5c254",
+            "title": "Just Another Foreigner (Sussman)",
+            "fileName": "Just Another Foreigner (Sussman).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          }
+        ]
+      },
+      "a": {
+        "ok": true,
+        "result": [
+          {
+            "id": "upload-0d872e08-88eb-4190-8cf0-a4591b7547a3",
+            "title": "[role-band_leader] tiny",
+            "fileName": "[role-band_leader] tiny",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "upload-cef9ddf9-590e-47fc-8606-eb5bb3311925",
+            "title": "[role-musician] tiny",
+            "fileName": "[role-musician] tiny",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "8311b9ad-cce4-4d96-aa4d-ec615a7f7401",
+            "title": "Abanibi (Hirsch) - Achshav (Folk)",
+            "fileName": "Abanibi (Hirsch) - Achshav (Folk).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "upload-823b20aa-c36f-4163-aab7-a1487a7526f0",
+            "title": "Achot ketana",
+            "fileName": "Achot ketana",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "11vAgPi9J45X2b_MLc9SuqnNbKr_U2ePZ",
+            "title": "Adio kerida",
+            "fileName": "Adio kerida.pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "72a7aa6a-7b08-4c78-862c-197bbffb9515",
+            "title": "Adon Olam (Folk)",
+            "fileName": "Adon Olam (Folk).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "c9efe661-9eb8-42fc-89d5-13f026629dc7",
+            "title": "Adon Olam (Hitman-Ben-Hur) - Adon Olam (Dobin) - Shehecheyanu (Pik)",
+            "fileName": "Adon Olam (Hitman-Ben-Hur) - Adon Olam (Dobin) - Shehecheyanu (Pik).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "edc49352-b032-4967-8ac4-c76ef3cf0beb",
+            "title": "Adonai Adonai (Sher)",
+            "fileName": "Adonai Adonai (Sher).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "0ca658e4-c2e0-43df-9888-a7f2d536710a",
+            "title": "Adonai Oz (Klepper-Freelander) - Al Hanisim (Frimer) - Al Kol Eileh (Shemer)",
+            "fileName": "Adonai Oz (Klepper-Freelander) - Al Hanisim (Frimer) - Al Kol Eileh (Shemer).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "1c_8FuLAzM3S7TECBb4e1o11oUdoN8tlK",
+            "title": "Adonai s_fatai (chant)",
+            "fileName": "Adonai s_fatai (chant).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          }
+        ]
+      },
+      "shabbat": {
+        "ok": true,
+        "result": [
+          {
+            "id": "31e88e83-c880-43e5-9b12-37a7a119aeb0",
+            "title": "Bim Bam-Shabbat Shalom (Frankel)",
+            "fileName": "Bim Bam-Shabbat Shalom (Frankel).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "5e893824-0d8c-47e7-82fe-51240d027c00",
+            "title": "Candle Blessing (For Shabbat) (Binder)",
+            "fileName": "Candle Blessing (For Shabbat) (Binder).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "bd71fe2e-65aa-46aa-8674-0fb38c5f12c9",
+            "title": "Harachaman (For Shabbat) (Folk) - Ki Eshm'Ra Shabbat (Baghdad Melody)",
+            "fileName": "Harachaman (For Shabbat) (Folk) - Ki Eshm'Ra Shabbat (Baghdad Melody).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "1BLARziE-ImWCPWDoU8utX5Cu7Jm4mxxJ",
+            "title": "Shalom Alechem Shir Shabbat",
+            "fileName": "Shalom Alechem Shir Shabbat.pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "1SH9vxGsFfIJ4mU_FaAaIX13hThwuqfH5",
+            "title": "Shalom Alechem Shir Shabbat",
+            "fileName": "Shalom Alechem Shir Shabbat.pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "19E8aTettqSQO1ZVtVhXCPfUJw1dw0f3G",
+            "title": "Shiru L_Adonai Shir Shabbat",
+            "fileName": "Shiru L_Adonai Shir Shabbat.pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "1AIwCXDw1mGHm_uhaoJfbpkri-ibzOLI4",
+            "title": "Shiru L_Adonai Shir Shabbat",
+            "fileName": "Shiru L_Adonai Shir Shabbat.pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "f9921a95-cab9-4b2b-9869-a024cfc21e2b",
+            "title": "Tein Shabbat (Seltzer) - Tzur Mishelo (Sephardic)",
+            "fileName": "Tein Shabbat (Seltzer) - Tzur Mishelo (Sephardic).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          }
+        ]
+      },
+      "mizmor": {
+        "ok": true,
+        "result": [
+          {
+            "id": "1EiJJKn3ZmsWnXVYiEjMHQmR17t0ByDbG",
+            "title": "Mizmor l_David D",
+            "fileName": "Mizmor l_David D.pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "1yJjdDZ1ivU0if-T-d_uCYkH1rEIH-xs3",
+            "title": "Mizmor l_David D",
+            "fileName": "Mizmor l_David D.pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "upload-bb71e9e2-e3ce-4cad-b884-28f1d74f8970",
+            "title": "Mizmor L'David",
+            "fileName": "Mizmor L'David",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "1pu2JsvkgVnzmQ4CJySUd7PSm7F0yEd_x",
+            "title": "Mizmor leDavid",
+            "fileName": "Mizmor leDavid.pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "218fc2a9-cbe4-4ff1-a056-68f7f55bbac2",
+            "title": "Mizmor Shir (Unknown)",
+            "fileName": "Mizmor Shir (Unknown).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "1czN_ywRWm2bnjIrnNVg7ad4RyynM_GcR",
+            "title": "Mizmor Shiru Ladonai",
+            "fileName": "Mizmor Shiru Ladonai.pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "upload-2db7e9ff-6224-4c0e-bbbe-4de37bf02f03",
+            "title": "Mizmor Shiru Ladonai",
+            "fileName": "Mizmor Shiru Ladonai",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          }
+        ]
+      },
+      "shema": {
+        "ok": true,
+        "result": [
+          {
+            "id": "1-NNEkYLm4R7PJ7ttd1HVVQ55FYqps5fT",
+            "title": "Shema (major)",
+            "fileName": "Shema (major).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          },
+          {
+            "id": "19XVik7nlDmoUr8CcBJbjDsecLuqInQ_Z",
+            "title": "Shema (major)",
+            "fileName": "Shema (major).pdf",
+            "status": "active",
+            "enrichmentStatus": null,
+            "enrichmentConfidence": null,
+            "aiSuggestion": null,
+            "retryQueued": false
+          }
+        ]
+      }
+    },
+    "search_library_health_probe": [
+      {
+        "fileId": "e16dbb6e-9b17-4518-978f-bc32de99fa39",
+        "status": "missing"
+      },
+      {
+        "fileId": "dcacad1e-5f4b-4d03-b221-58692b1b8d1e",
+        "status": "missing"
+      },
+      {
+        "fileId": "bf84ee28-7bb7-436e-9ab7-bdb5157a3e06",
+        "status": "missing"
+      },
+      {
+        "fileId": "87bddcb0-5d4a-47f7-a7f2-20a99a17b5fc",
+        "status": "missing"
+      },
+      {
+        "fileId": "upload-9ffab05d-518c-45af-9cae-a5f140011093",
+        "status": "missing"
+      },
+      {
+        "fileId": "c5452a63-094f-40ce-a24c-bb7077ec0f92",
+        "status": "missing"
+      },
+      {
+        "fileId": "c7e91f89-c940-4b30-8162-c5780ccdbcb1",
+        "status": "missing"
+      },
+      {
+        "fileId": "34a3c3fc-d5ce-4b80-8d4f-77014f5412da",
+        "status": "missing"
+      },
+      {
+        "fileId": "6bddf129-6f1c-4fa4-bf54-3cf431a53219",
+        "status": "missing"
+      },
+      {
+        "fileId": "d1ccd776-0d8b-4860-8958-d8a9b0a5c254",
+        "status": "missing"
+      },
+      {
+        "fileId": "upload-0d872e08-88eb-4190-8cf0-a4591b7547a3",
+        "status": "ok"
+      },
+      {
+        "fileId": "upload-cef9ddf9-590e-47fc-8606-eb5bb3311925",
+        "status": "ok"
+      },
+      {
+        "fileId": "8311b9ad-cce4-4d96-aa4d-ec615a7f7401",
+        "status": "missing"
+      },
+      {
+        "fileId": "upload-823b20aa-c36f-4163-aab7-a1487a7526f0",
+        "status": "ok"
+      },
+      {
+        "fileId": "11vAgPi9J45X2b_MLc9SuqnNbKr_U2ePZ",
+        "status": "ok"
+      },
+      {
+        "fileId": "72a7aa6a-7b08-4c78-862c-197bbffb9515",
+        "status": "missing"
+      },
+      {
+        "fileId": "c9efe661-9eb8-42fc-89d5-13f026629dc7",
+        "status": "missing"
+      },
+      {
+        "fileId": "edc49352-b032-4967-8ac4-c76ef3cf0beb",
+        "status": "missing"
+      },
+      {
+        "fileId": "0ca658e4-c2e0-43df-9888-a7f2d536710a",
+        "status": "missing"
+      },
+      {
+        "fileId": "1c_8FuLAzM3S7TECBb4e1o11oUdoN8tlK",
+        "status": "ok"
+      },
+      {
+        "fileId": "31e88e83-c880-43e5-9b12-37a7a119aeb0",
+        "status": "missing"
+      },
+      {
+        "fileId": "5e893824-0d8c-47e7-82fe-51240d027c00",
+        "status": "missing"
+      },
+      {
+        "fileId": "bd71fe2e-65aa-46aa-8674-0fb38c5f12c9",
+        "status": "missing"
+      },
+      {
+        "fileId": "1BLARziE-ImWCPWDoU8utX5Cu7Jm4mxxJ",
+        "status": "ok"
+      },
+      {
+        "fileId": "1SH9vxGsFfIJ4mU_FaAaIX13hThwuqfH5",
+        "status": "ok"
+      },
+      {
+        "fileId": "19E8aTettqSQO1ZVtVhXCPfUJw1dw0f3G",
+        "status": "ok"
+      },
+      {
+        "fileId": "1AIwCXDw1mGHm_uhaoJfbpkri-ibzOLI4",
+        "status": "ok"
+      },
+      {
+        "fileId": "f9921a95-cab9-4b2b-9869-a024cfc21e2b",
+        "status": "missing"
+      },
+      {
+        "fileId": "1EiJJKn3ZmsWnXVYiEjMHQmR17t0ByDbG",
+        "status": "ok"
+      },
+      {
+        "fileId": "1yJjdDZ1ivU0if-T-d_uCYkH1rEIH-xs3",
+        "status": "ok"
+      },
+      {
+        "fileId": "upload-bb71e9e2-e3ce-4cad-b884-28f1d74f8970",
+        "status": "missing"
+      },
+      {
+        "fileId": "1pu2JsvkgVnzmQ4CJySUd7PSm7F0yEd_x",
+        "status": "ok"
+      },
+      {
+        "fileId": "218fc2a9-cbe4-4ff1-a056-68f7f55bbac2",
+        "status": "missing"
+      },
+      {
+        "fileId": "1czN_ywRWm2bnjIrnNVg7ad4RyynM_GcR",
+        "status": "ok"
+      },
+      {
+        "fileId": "upload-2db7e9ff-6224-4c0e-bbbe-4de37bf02f03",
+        "status": "missing"
+      },
+      {
+        "fileId": "1-NNEkYLm4R7PJ7ttd1HVVQ55FYqps5fT",
+        "status": "ok"
+      },
+      {
+        "fileId": "19XVik7nlDmoUr8CcBJbjDsecLuqInQ_Z",
+        "status": "ok"
+      }
+    ],
+    "search_library_divergence_count": {
+      "sampled": 37,
+      "missing_both_404": 22,
+      "targetForC7I1_009": "zero"
+    }
+  },
+  "versionRaw": {
+    "sha": "59b25c87a4cd52bd0d1a2826398595ce7eec3c80",
+    "builtAt": "5/18/2026",
+    "version": "7.0.0"
+  }
+}

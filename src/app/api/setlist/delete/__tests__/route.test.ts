@@ -149,11 +149,12 @@ describe("POST /api/setlist/delete — D01 cascade", () => {
         expect(batchDeleteSpy).not.toHaveBeenCalled()
     })
 
-    it("happy path: 3 assignments + 2 tasks + 1 notification → all deleted", async () => {
+    it("happy path: 3 assignments + 2 tasks + 1 notification + 4 tracks → all deleted", async () => {
         mockAuth("band_leader")
         queryResults["scheduling_assignments"] = () => mkDocs(3)
         queryResults["tasks"] = () => mkDocs(2)
         queryResults["cg|notifications"] = () => mkDocs(1)
+        queryResults["tracks"] = () => mkDocs(4)
 
         const req = makeReq("/api/setlist/delete", {
             method: "POST",
@@ -168,8 +169,60 @@ describe("POST /api/setlist/delete — D01 cascade", () => {
             assignments: 3,
             tasks: 2,
             notifications: 1,
+            tracks: 4,
         })
         expect(json.errors).toEqual([])
+        expect(recursiveDeleteSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it("C7I4-002 — tracks cascade closes the post-v60-07-02 top-level orphan gap", async () => {
+        // Pre-fix: /api/setlist/delete's recursiveDelete only swept
+        // subcollections under setlists/{id}/**, leaving top-level
+        // tracks/{id} rows where setlistId == id orphaned. The MCP
+        // delete_setlist tool cascades these; the HTTP route never did.
+        // Cycle-7 Lane 3 closes the gap.
+        mockAuth("band_leader")
+        queryResults["scheduling_assignments"] = () => mkDocs(0)
+        queryResults["tasks"] = () => mkDocs(0)
+        queryResults["cg|notifications"] = () => mkDocs(0)
+        queryResults["tracks"] = () => mkDocs(7)
+
+        const req = makeReq("/api/setlist/delete", {
+            method: "POST",
+            token: "valid",
+            body: { setlistId: "s-1" },
+        })
+        const res = await POST(req)
+        expect(res.status).toBe(200)
+        const json = await res.json()
+        expect(json.deleted.tracks).toBe(7)
+        // Tracks query AND notifications query both ran — proves the new
+        // phase didn't short-circuit any pre-existing cascade.
+        expect(json.errors).toEqual([])
+    })
+
+    it("tracks cleanup failure is recorded but doesn't halt the cascade", async () => {
+        mockAuth("band_leader")
+        // Throwing factory simulates a Firestore quota / network error
+        // partway through the per-batch loop.
+        queryResults["scheduling_assignments"] = () => mkDocs(0)
+        queryResults["tasks"] = () => mkDocs(0)
+        queryResults["cg|notifications"] = () => mkDocs(0)
+        queryResults["tracks"] = () => {
+            throw new Error("simulated firestore quota")
+        }
+
+        const req = makeReq("/api/setlist/delete", {
+            method: "POST",
+            token: "valid",
+            body: { setlistId: "s-1" },
+        })
+        const res = await POST(req)
+        expect(res.status).toBe(200)
+        const json = await res.json()
+        expect(json.deleted.tracks).toBe(0)
+        expect(json.errors.some((e: string) => e.startsWith("tracks:"))).toBe(true)
+        // recursiveDelete still ran (parent + subcollections cleaned).
         expect(recursiveDeleteSpy).toHaveBeenCalledTimes(1)
     })
 
@@ -199,6 +252,7 @@ describe("POST /api/setlist/delete — D01 cascade", () => {
         queryResults["scheduling_assignments"] = () => mkDocs(0)
         queryResults["tasks"] = () => mkDocs(0)
         queryResults["cg|notifications"] = () => mkDocs(0)
+        queryResults["tracks"] = () => mkDocs(0)
 
         const req = makeReq("/api/setlist/delete", {
             method: "POST",
@@ -213,6 +267,7 @@ describe("POST /api/setlist/delete — D01 cascade", () => {
             assignments: 0,
             tasks: 0,
             notifications: 0,
+            tracks: 0,
         })
         expect(json.errors).toEqual([])
         expect(recursiveDeleteSpy).toHaveBeenCalledTimes(1)

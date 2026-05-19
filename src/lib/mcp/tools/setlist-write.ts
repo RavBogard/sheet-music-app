@@ -830,3 +830,81 @@ export async function deleteSetlist(
     if (result.ok) return { ok: true, tracksDeleted: result.tracksDeleted }
     return result.envelope
 }
+
+// ─── recompute_setlist_track_count ──────────────────────────────────────────
+
+export interface RecomputeSetlistTrackCountArgs {
+    setlistId: string
+}
+
+export interface RecomputeSetlistTrackCountResult {
+    ok: true
+    setlistId: string
+    declared: number
+    actual: number
+    drifted: boolean
+    written: boolean
+}
+
+/**
+ * Cycle-7-fixes Lane 3 — admin-only one-shot to repair a stale denormalized
+ * `setlists/{id}.trackCount` counter. Re-reads the actual `tracks/{*}` top-
+ * level subcollection and writes the corrected count when drifted. Idempotent.
+ *
+ * Backstop for setlists outside the daily verify-chart-bond-health cron's
+ * window (past services, drafts). Closes C7I4-002 root-cause repairs that
+ * accumulated before the `/api/setlist/delete` HTTP cascade gap fix shipped.
+ *
+ * Admin-only: the underlying issue is data-hygiene and the operator should
+ * confirm intent. band_leader bypass not extended — this tool can mask real
+ * write-path bugs if called blindly across the catalog.
+ */
+export async function recomputeSetlistTrackCount(
+    uid: string,
+    args: RecomputeSetlistTrackCountArgs,
+): Promise<RecomputeSetlistTrackCountResult | RichErrorEnvelope> {
+    if (!args.setlistId?.trim())
+        return richError(
+            "invalid_argument",
+            "setlistId must be a non-empty string.",
+            { field: "setlistId" },
+        )
+
+    initAdmin()
+    const db = getFirestore()
+
+    const role = await readUserRole(db, uid)
+    if (role !== "admin") {
+        return richError(
+            "forbidden_role",
+            "recompute_setlist_track_count is admin-only.",
+            { callerRole: role ?? null, requiredRoles: ["admin"] },
+            "Ask an admin to run the repair, or invoke the verify-chart-bond-health cron which auto-heals upcoming-published setlists.",
+        )
+    }
+
+    const setlistRef = db.collection("setlists").doc(args.setlistId.trim())
+    const snap = await setlistRef.get()
+    if (!snap.exists) {
+        return richError(
+            "setlist_not_found",
+            `Setlist '${args.setlistId}' was not found.`,
+            { setlistId: args.setlistId },
+            "Verify the id via list_setlists.",
+        )
+    }
+    const { recomputeTrackCount } = await import("@/lib/setlist-track-count")
+    const result = await recomputeTrackCount(
+        db,
+        args.setlistId.trim(),
+        snap.data() as Record<string, unknown>,
+    )
+    return {
+        ok: true,
+        setlistId: result.setlistId,
+        declared: result.declared,
+        actual: result.actual,
+        drifted: result.drifted,
+        written: result.written,
+    }
+}

@@ -498,6 +498,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // CHART BOND ALERTS (Cycle-7-fixes Lane 3) — daily chart-bond health
+    // cron sink. /api/cron/verify-chart-bond-health enumerates upcoming
+    // published setlists, runs verify_setlist_charts on each, and writes
+    // here when aggregate ok% falls below 80% OR any individual setlist
+    // ok% falls below 70%. Reads are admin-only (operational alerts for
+    // Daniel pre-Friday-service); writes are server-only via Admin SDK.
+    match /chart_bond_alerts/{alertId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // WEB VITALS OBSERVATIONS (Cycle-3.5 P2-017) — Core Web Vitals
     // field-data sink. Every visitor's browser POSTs LCP/CLS/INP/FCP/TTFB
     // to /api/web-vitals on each page-load (via navigator.sendBeacon);
