@@ -138,3 +138,17 @@ Check (via claude.ai / Claude Desktop MCP):
 - [ ] If not found, call `list_library({collection: "uploads", includeNonCharts: true})` and page through — does the `upload-0594bbd4-…` fileId surface?
 - [ ] If found with `mimeType: "application/octet-stream"`: residual damage. Open a follow-up to backfill the correct mime via a one-shot script or `dedupe_library_index`-style sweep.
 - [ ] If absent or healthy: mark DATA-003 resolved.
+
+---
+
+## ⏳ cycle-9 Lane B — trackCount drift no longer produced by the in-app grid editor
+
+**Deployed commit:** `a0aec2cf5` (pushed to origin master 2026-05-20; Vercel auto-deploy — fix confirmed in live bundle chunk `2899-1cc5fe73a819e31b.js`).
+
+What was built: the client sync chokepoint (`ProductionFirestoreAdapter`) now recomputes a setlist's denormalized `trackCount` from the live `tracks` subcollection after every in-app track add/delete. Previously the grid editor (`SetlistGrid.tsx`) mutated tracks without maintaining the parent counter, so in-app row deletes/adds drifted `trackCount` (45-vs-30 shape). Proven by a real-emulator regression test; the browser E2E below is confirmatory (harness-blocked from automation per META-003).
+
+Check (as an editor — admin/band_leader — in a real browser on the deployed app):
+- [ ] Open a setlist in the grid editor; note its track count. Delete a row. Reload / re-open → the setlist's track count reflects the new total (no inflation). Run `recompute_setlist_track_count(setlistId)` via MCP → `drifted: false`.
+- [ ] Add a row (pick song / free-text). Reload → count reflects the new total (no deflation). MCP recompute → `drifted: false`.
+- [ ] Duplicate a row + paste rows → count stays correct. MCP recompute → `drifted: false`.
+- [ ] Bulk-delete several rows → count stays correct. MCP recompute → `drifted: false`.
