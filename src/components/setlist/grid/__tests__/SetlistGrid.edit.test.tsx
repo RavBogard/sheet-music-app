@@ -56,7 +56,15 @@ async function clearOutbox() {
     await getDb().outbox.clear()
 }
 
-describe('SetlistGrid (cell-edit interactions)', () => {
+// QUARANTINED (cycle-9 hardening Lane A, 2026-05-20): these assert the desktop
+// table cell-edit model (Title/Key/Lead cells, Tab-to-commit, Esc-to-discard,
+// Arrow-Down cell focus nav) that was DELETED with the TanStack table in
+// 0ec6773c. SetlistGrid now edits via the MobileRowCard tap-to-open edit pane
+// with blur-commit — there is no inter-cell keyboard nav to assert. Needs a
+// from-scratch card-edit suite — tracked in cycle-9-test-baseline-TRIAGE.md
+// Cluster 1 (recommend a dedicated rewrite lane). Card edit-commit/draft-flush
+// is partially covered by MobileRowCard.test.
+describe.skip('SetlistGrid (cell-edit interactions)', () => {
     beforeEach(async () => {
         await resetDbForTests()
         propagateSpy.mockClear()

@@ -95,7 +95,14 @@ function openContextMenu(target: HTMLElement) {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-describe('SetlistGrid — right-click ContextMenu + long-press for touch', () => {
+// QUARANTINED (cycle-9 hardening Lane A, 2026-05-20): these drive the desktop
+// TanStack-table rows (data-testid="drag-handle", role="row") + multi-select
+// bulk-delete — all DELETED in 0ec6773c. SetlistGrid now renders the mobile-
+// card list; the card context menu lives on MobileRowCard (mobile-card-context-
+// menu-*) and multi-select was removed entirely. Needs a from-scratch card-DOM
+// rewrite — tracked in cycle-9-test-baseline-TRIAGE.md Cluster 1 (recommend a
+// dedicated rewrite lane). Card long-press is covered by MobileCardList.test.
+describe.skip('SetlistGrid — right-click ContextMenu + long-press for touch', () => {
     beforeEach(async () => {
         await resetDbForTests()
         mockBack.mockClear()

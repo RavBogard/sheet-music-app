@@ -165,7 +165,13 @@ describe('SetlistGrid (drag / add / delete)', () => {
         expect(setRow?.payload).not.toHaveProperty('songId')
     })
 
-    it('AC-7 delete-row: empty row deletes immediately (no confirmation)', async () => {
+    // QUARANTINED (cycle-9 hardening Lane A, 2026-05-20): the 3 delete-row /
+    // drag-handle tests below drive the desktop table (data-testid="drag-handle",
+    // table rows) DELETED in 0ec6773c. SetlistGrid renders the mobile-card list;
+    // delete/drag now live on MobileRowCard. Needs a card-DOM rewrite — tracked
+    // in cycle-9-test-baseline-TRIAGE.md Cluster 1. The other 4 tests in this
+    // file (pure computeReorderUpdates logic) still run and pass.
+    it.skip('AC-7 delete-row: empty row deletes immediately (no confirmation)', async () => {
         await seedTracks('set-3', [{ id: 't-empty', order: 0 }])
         const confirmFn = vi.fn(() => true)
 
@@ -194,7 +200,8 @@ describe('SetlistGrid (drag / add / delete)', () => {
         expect(confirmFn).not.toHaveBeenCalled()
     })
 
-    it('AC-7 delete-row: titled row prompts confirmation; cancel preserves the row', async () => {
+    // QUARANTINED — see note above (desktop-table delete path removed in 0ec6773c).
+    it.skip('AC-7 delete-row: titled row prompts confirmation; cancel preserves the row', async () => {
         await seedTracks('set-4', [{ id: 't-1', order: 0, title: 'Aleinu' }])
         const confirmFn = vi.fn(() => false)
 
@@ -259,7 +266,9 @@ describe('SetlistGrid (drag / add / delete)', () => {
         ).toEqual([])
     })
 
-    it('drag handle has accessible label', async () => {
+    // QUARANTINED — see note above (desktop drag-handle removed in 0ec6773c;
+    // the card grip is mobile-card-handle-* on MobileRowCard).
+    it.skip('drag handle has accessible label', async () => {
         await seedTracks('set-6', [{ id: 't-1', order: 0, title: 'Aleinu' }])
         render(<SetlistGrid setlistId="set-6" />)
         await screen.findByText('Aleinu')

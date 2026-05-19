@@ -78,7 +78,13 @@ function dispatchRedo(target: HTMLElement) {
     })
 }
 
-describe('SetlistGrid — Undo via zustand temporal middleware (v50-05-05)', () => {
+// QUARANTINED (cycle-9 hardening Lane A, 2026-05-20): these drive undo/redo
+// through the desktop table (findByTestId('drag-handle') + table cell edits)
+// that was DELETED in 0ec6773c. The undo store (useUndoStore) still exists and
+// MobileCardList wires applyEdit + undo entries, but exercising it now requires
+// driving the card edit pane — a from-scratch rewrite. Tracked in
+// cycle-9-test-baseline-TRIAGE.md Cluster 1 (recommend a dedicated rewrite lane).
+describe.skip('SetlistGrid — Undo via zustand temporal middleware (v50-05-05)', () => {
     beforeEach(async () => {
         await resetDbForTests()
         mockBack.mockClear()

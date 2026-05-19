@@ -82,7 +82,15 @@ const axeOpts = {
     },
 }
 
-describe('SetlistGrid — WCAG AA audit (jest-axe / v50-05-05 §6.13)', () => {
+// QUARANTINED (cycle-9 hardening Lane A, 2026-05-20): these axe audits + Tab
+// order + sticky-right Chart column + section-row class assertions target the
+// desktop TanStack-table DOM (role="row", data-testid="drag-handle", table
+// cells) that was DELETED in 0ec6773c. SetlistGrid now renders the stacked
+// mobile-card list only, so the table structure these assert no longer exists.
+// Needs a from-scratch card-DOM a11y suite — tracked in
+// .paul/research/cycle-9-test-baseline-TRIAGE.md Cluster 1 (recommend a
+// dedicated rewrite lane). Card a11y is partially covered by MobileCardList.test.
+describe.skip('SetlistGrid — WCAG AA audit (jest-axe / v50-05-05 §6.13)', () => {
     beforeEach(async () => {
         await resetDbForTests()
         mockBack.mockClear()
