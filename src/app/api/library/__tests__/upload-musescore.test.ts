@@ -5,13 +5,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockSet = vi.fn()
 const mockUserDocGet = vi.fn()
 
+// Firestore writes go through a db.batch() (atomic-guard refactor 2026-05-15,
+// [[feedback_upload_atomicity]]): library_index + songs are batch.set; the
+// library_signals broadcast is the only direct doc().set() (→ mockSet).
+const mockBatchSet = vi.fn()
+const mockBatchUpdate = vi.fn()
+const mockBatchCommit = vi.fn().mockResolvedValue(undefined)
+
 const makeChainable = () => {
     const chain: Record<string, unknown> = {
         where: vi.fn(() => chain),
         orderBy: vi.fn(() => chain),
         limit: vi.fn(() => chain),
         select: vi.fn(() => chain),
-        get: vi.fn(async () => ({ docs: [], empty: true })),
+        get: vi.fn(async () => ({ docs: [], empty: true, size: 0 })),
         doc: vi.fn((id: string) => ({
             get: id === 'test-user' ? mockUserDocGet : vi.fn(async () => ({ exists: false })),
             set: mockSet,
@@ -22,6 +29,11 @@ const makeChainable = () => {
 
 const mockFirestore = {
     collection: vi.fn(() => makeChainable()),
+    batch: vi.fn(() => ({
+        set: mockBatchSet,
+        update: mockBatchUpdate,
+        commit: mockBatchCommit,
+    })),
 }
 
 vi.mock('@/lib/firebase-admin', () => ({
@@ -43,8 +55,21 @@ vi.mock('next/cache', () => ({
 }))
 
 const mockUploadToStorage = vi.fn().mockResolvedValue('gs://bucket/path')
+const mockDeleteStorageObjectAtPath = vi.fn().mockResolvedValue(undefined)
+// Atomic-guard read-verify ([[feedback_upload_atomicity]]): processChartUpload
+// re-reads the just-written blob's size and aborts (500) unless it matches the
+// uploaded buffer. Echo the byte length of the main (non-"originals/") upload.
+const mockGetStorageObjectSize = vi.fn(() => {
+    const mainCall = [...mockUploadToStorage.mock.calls]
+        .reverse()
+        .find((c) => !String(c[0]).startsWith('originals/'))
+    const buf = mainCall?.[1] as Buffer | undefined
+    return buf ? buf.byteLength : 0
+})
 vi.mock('@/lib/firebase-storage', () => ({
     uploadToStorage: (...args: unknown[]) => mockUploadToStorage(...args),
+    getStorageObjectSize: (...args: unknown[]) => mockGetStorageObjectSize(...args),
+    deleteStorageObjectAtPath: (...args: unknown[]) => mockDeleteStorageObjectAtPath(...args),
 }))
 
 const mockProcessMuseScoreFile = vi.fn().mockResolvedValue({
@@ -84,9 +109,22 @@ function createMockFile(name: string, content = 'file-content', type = 'applicat
 }
 
 /**
+ * Map a filename to the MIME a real uploader (in-app UploadDialog / MCP)
+ * would send. processChartUpload's G-7 guard rejects 'application/octet-stream'
+ * outright — a real, specific mimeType is required — so MuseScore uploads
+ * must carry their registered type. Unknown extensions intentionally fall
+ * back to octet-stream so the "rejects .doc/.exe" case still 400s.
+ */
+function mimeForFileName(name: string): string {
+    if (/\.mscz$/i.test(name)) return 'application/x-musescore'
+    if (/\.mscx$/i.test(name)) return 'application/x-musescore+xml'
+    return 'application/octet-stream'
+}
+
+/**
  * Create a NextRequest with a properly mocked formData() method.
  */
-function createUploadRequest(fileName: string, fileContent = 'file-content', mimeType = 'application/octet-stream') {
+function createUploadRequest(fileName: string, fileContent = 'file-content', mimeType = mimeForFileName(fileName)) {
     const mockFile = createMockFile(fileName, fileContent, mimeType)
 
     const formEntries = new Map<string, unknown>()
@@ -203,8 +241,9 @@ describe('Upload route - MuseScore files', () => {
         const req = createUploadRequest('test-song.mscz')
         await POST(req)
 
-        expect(mockSet).toHaveBeenCalledTimes(1)
-        const indexEntry = mockSet.mock.calls[0][0]
+        // The library_index row is the FIRST batch.set (ref, indexEntry).
+        expect(mockBatchSet).toHaveBeenCalled()
+        const indexEntry = mockBatchSet.mock.calls[0][1]
         expect(indexEntry.mimeType).toBe('application/xml')
         expect(indexEntry.originalStorageUrl).toMatch(/library\/originals\/.*\.mscz/)
         expect(indexEntry.sourceFormat).toBe('mscz')
