@@ -125,6 +125,20 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "webVitalsObservations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "surface",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

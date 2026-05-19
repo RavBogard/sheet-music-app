@@ -121,7 +121,34 @@ export async function getWebVitalsSummary(
         query = query.where("surface", "==", args.surface.trim())
     }
     // `limit(maxDocs + 1)` lets us detect truncation without a second scan.
-    const snap = await query.limit(maxDocs + 1).get()
+    // Cycle-7-fixes Lane 4 followup (auditor msg-024 BUG L4-I-B): wrap
+    // FAILED_PRECONDITION (missing composite index) in the rich-error
+    // envelope per `[[feedback_mcp_validation_shape]]`. Without this the
+    // raw GRPC text (`9 FAILED_PRECONDITION: The query requires an
+    // index. You can create it here: https://console.firebase.google.com/...`)
+    // leaks straight to the MCP caller — useful for debugging but
+    // off-shape vs every other MCP tool's error contract.
+    let snap: FirebaseFirestore.QuerySnapshot
+    try {
+        snap = await query.limit(maxDocs + 1).get()
+    } catch (err) {
+        const code = (err as { code?: number })?.code
+        const message =
+            err instanceof Error ? err.message : String(err)
+        if (code === 9 || message.includes("FAILED_PRECONDITION")) {
+            return richError(
+                "firestore_index_missing",
+                "Web-vitals query requires a Firestore composite index that is not yet provisioned.",
+                {
+                    surface: args.surface ?? null,
+                    sinceDays,
+                    upstreamCode: code ?? null,
+                },
+                "An admin must run `firebase deploy --only firestore:indexes --project crcmusiccharts`; index build is asynchronous (a few minutes). The required composite for the surface-filter codepath is `webVitalsObservations(surface ASC, timestamp ASC)`.",
+            )
+        }
+        throw err
+    }
     const truncated = snap.size > maxDocs
     const docs = truncated ? snap.docs.slice(0, maxDocs) : snap.docs
 
