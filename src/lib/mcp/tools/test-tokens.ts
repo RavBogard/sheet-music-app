@@ -372,7 +372,10 @@ export async function listTestAccountsCore(
  *
  * Cycle-7 Lane 1 (C7I3-007): `setlistTemplates` added so a revoke /
  * cleanup-all sweep cascades through cycle-6-Lane-2's template CRUD pack.
- * `ownerUid` is the field name set by `create_template`.
+ * Field name is `ownerId` — verified against the deployed shape via
+ * REPRO-L1-cleanup-cascades (the template doc returned by `create_template`
+ * has `ownerId`, not `ownerUid`). Caught at the addendum REPRO; emulator
+ * test was self-fulfillingly seeded with `ownerUid` and silently passed.
  */
 const CASCADE_FIELDS: Array<{ collection: string; field: string; storage?: boolean }> = [
     { collection: "library_index", field: "uploadedBy", storage: true },
@@ -382,7 +385,7 @@ const CASCADE_FIELDS: Array<{ collection: string; field: string; storage?: boole
     { collection: "bond_corrections", field: "correctedBy" },
     { collection: "scheduling_assignments", field: "musicianUid" },
     { collection: "musician_availability", field: "musicianUid" },
-    { collection: "setlistTemplates", field: "ownerUid" },
+    { collection: "setlistTemplates", field: "ownerId" },
 ]
 
 export interface RevokeTestAccountResult {
@@ -827,18 +830,20 @@ export async function sweepOrphanTestDataCore(
         }
     }
 
-    // Templates — same shape.
+    // Templates — same shape. Field name is `ownerId` (verified against
+    // deployed-surface `create_template` output 2026-05-19; matches
+    // CASCADE_FIELDS for the revoke path).
     const templatesSnap = await db.collection("setlistTemplates").get()
     for (const doc of templatesSnap.docs) {
         const data = doc.data() as Record<string, unknown>
-        const ownerUid = typeof data.ownerUid === "string" ? data.ownerUid : null
-        if (!(await orphanFilter(ownerUid))) continue
+        const ownerId = typeof data.ownerId === "string" ? data.ownerId : null
+        if (!(await orphanFilter(ownerId))) continue
         orphanTemplateIds.push(doc.id)
         if (orphans.length < MAX_ORPHAN_SAMPLE) {
             orphans.push({
                 collection: "setlistTemplates",
                 id: doc.id,
-                ownerId: ownerUid!,
+                ownerId: ownerId!,
                 name: typeof data.name === "string" ? data.name : null,
             })
         } else {

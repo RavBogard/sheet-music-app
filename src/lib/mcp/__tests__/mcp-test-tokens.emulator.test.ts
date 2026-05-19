@@ -578,11 +578,11 @@ describe("MCP test tokens (emulator)", () => {
         // Seed an owned template + an unrelated template owned by someone else.
         await db().collection("setlistTemplates").doc("tpl-owned").set({
             name: "Test template",
-            ownerUid: mint.uid,
+            ownerId: mint.uid,
         })
         await db().collection("setlistTemplates").doc("tpl-other").set({
             name: "Other template",
-            ownerUid: "real-user-uid",
+            ownerId: "real-user-uid",
         })
 
         const revoked = await revokeTestAccountCore(ADMIN_UID, mint.uid)
@@ -606,7 +606,7 @@ describe("MCP test tokens (emulator)", () => {
         // Seed: 1 template + 1 setlist + 2 tracks owned by `a`.
         await db().collection("setlistTemplates").doc("tpl-c7l1").set({
             name: "c7l1 template",
-            ownerUid: a.uid,
+            ownerId: a.uid,
         })
         await db().collection("setlists").doc("sl-c7l1").set({
             name: "c7l1 setlist",
@@ -621,7 +621,7 @@ describe("MCP test tokens (emulator)", () => {
         // Sibling namespace must survive.
         await db().collection("setlistTemplates").doc("tpl-c7l2").set({
             name: "c7l2 template",
-            ownerUid: "test-c7l2-band_leader-deadbeef",
+            ownerId: "test-c7l2-band_leader-deadbeef",
         })
 
         const result = await cleanupAllTestDataCore(ADMIN_UID, { prefix: "c7l1" })
@@ -659,7 +659,7 @@ describe("MCP test tokens (emulator)", () => {
         })
         await db().collection("setlistTemplates").doc("tpl-orphan-1").set({
             name: "Orphan TPL",
-            ownerUid: "test-c7i1-band_leader-feedface",
+            ownerId: "test-c7i1-band_leader-feedface",
         })
         // Non-orphan: real-uid owner exists in users.
         await db().collection("setlists").doc("sl-real").set({
@@ -704,7 +704,7 @@ describe("MCP test tokens (emulator)", () => {
         // Orphan template.
         await db().collection("setlistTemplates").doc("tpl-cf2-orph").set({
             name: "Orphan from cf2",
-            ownerUid: "cf2-band_leader-deadbeef",
+            ownerId: "cf2-band_leader-deadbeef",
         })
         // Non-orphan: owner exists. uidPattern test below also relies on this.
         await db().collection("setlists").doc("sl-with-owner").set({
