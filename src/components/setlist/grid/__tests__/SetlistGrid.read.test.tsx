@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getDb, resetDbForTests } from '@/lib/local/schema'
@@ -57,18 +57,22 @@ describe('SetlistGrid (read path)', () => {
         await screen.findByText('Lecha Dodi')
         await screen.findByText('Aleinu')
 
-        const rows = await screen.findAllByRole('row')
-        // 1 header row + 3 data rows
-        expect(rows).toHaveLength(4)
+        // SetlistGrid renders the stacked mobile-card list (the desktop
+        // TanStack table was deleted in 0ec6773c); cards are <li> items in
+        // track-order.
+        const list = screen.getByTestId('mobile-card-list')
+        const cards = within(list).getAllByRole('listitem')
+        expect(cards).toHaveLength(3)
 
-        const dataRows = rows.slice(1)
-        expect(dataRows[0]).toHaveAttribute('data-row-id', 't-1')
-        expect(dataRows[1]).toHaveAttribute('data-row-id', 't-2')
-        expect(dataRows[2]).toHaveAttribute('data-row-id', 't-3')
+        const rowId = (li: HTMLElement) =>
+            li.querySelector('[data-row-id]')?.getAttribute('data-row-id')
+        expect(rowId(cards[0])).toBe('t-1')
+        expect(rowId(cards[1])).toBe('t-2')
+        expect(rowId(cards[2])).toBe('t-3')
 
-        expect(dataRows[0]).toHaveTextContent('Adon Olam')
-        expect(dataRows[1]).toHaveTextContent('Lecha Dodi')
-        expect(dataRows[2]).toHaveTextContent('Aleinu')
+        expect(cards[0]).toHaveTextContent('Adon Olam')
+        expect(cards[1]).toHaveTextContent('Lecha Dodi')
+        expect(cards[2]).toHaveTextContent('Aleinu')
     })
 
     it('reactively picks up a new track inserted directly into Dexie', async () => {
@@ -80,8 +84,8 @@ describe('SetlistGrid (read path)', () => {
 
         // Wait for initial render to settle.
         await screen.findByText('Adon Olam')
-        const initial = screen.getAllByRole('row')
-        expect(initial).toHaveLength(2) // header + 1 data row
+        const list = screen.getByTestId('mobile-card-list')
+        expect(within(list).getAllByRole('listitem')).toHaveLength(1)
 
         await act(async () => {
             await getDb().tracks.put({
@@ -94,8 +98,7 @@ describe('SetlistGrid (read path)', () => {
         })
 
         await screen.findByText('Yigdal')
-        const updated = screen.getAllByRole('row')
-        expect(updated).toHaveLength(3) // header + 2 data rows
+        expect(within(list).getAllByRole('listitem')).toHaveLength(2)
     })
 
     it('back button calls router.back()', async () => {

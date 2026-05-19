@@ -135,26 +135,17 @@ describe('SetlistGrid v54-01-02 — handlePickSong + handleBindChart write fileI
 
         await screen.findByText('Hinei')
 
-        // Open the chart-cell ChartBindPopover for this track.
-        // ChartCell renders a button that opens ChartBindPopover.
-        // We locate it via the row's aria-rowindex-derived testid pattern.
-        const chartCellButton = screen
-            .getAllByRole('button')
-            .find(
-                (b) =>
-                    b.getAttribute('aria-label')?.toLowerCase().includes('chart') ??
-                    false,
-            )
-        expect(chartCellButton).toBeDefined()
-
         const user = userEvent.setup()
-        await user.click(chartCellButton!)
+        // Card UI bind flow (the desktop inline chart-cell ChartBindPopover was
+        // removed with the TanStack table in 0ec6773c): tap the card to open its
+        // edit pane, then use its "Bind Chart" button, which opens the centered
+        // ChartBindDialog.
+        await user.click(screen.getByTestId('mobile-card-t-hinei'))
+        await user.click(await screen.findByRole('button', { name: /bind chart/i }))
 
-        // Pick the library entry.
-        await waitFor(() => {
-            expect(screen.getByText('Hinei Ma Tov')).toBeInTheDocument()
-        })
-        await user.click(screen.getByText('Hinei Ma Tov'))
+        // ChartBindDialog opens; pick the library entry.
+        await screen.findByTestId('chart-bind-dialog')
+        await user.click(await screen.findByText('Hinei Ma Tov'))
 
         // Outbox `update` op on tracks/{t-hinei} should patch BOTH songId and
         // fileId. FAILING in a693d23 (pre-fix) — handleBindChart omitted fileId.
