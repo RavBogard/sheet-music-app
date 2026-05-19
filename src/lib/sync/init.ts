@@ -37,6 +37,7 @@ import {
     VersionMismatchError,
 } from './firestore-adapter'
 import { wireSyncEngineToStore } from './store'
+import { reconcileSetlistTrackCount } from './track-count-sync'
 
 /**
  * T1.3 (2026-05-12): exported for testing.
@@ -81,6 +82,22 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                         ...row.payload,
                         updatedAt: serverTimestamp(),
                     })
+                    // Cycle-9 Lane B: a track create through the grid editor
+                    // never maintains the parent setlist's `trackCount`.
+                    // Reconcile it here (the single client→Firestore chokepoint)
+                    // so the in-app add path can't deflate the counter. The
+                    // setlistId rides on the set payload; reconcile is
+                    // best-effort and never fails the committed track write.
+                    if (row.collection === 'tracks') {
+                        const setlistId = (row.payload as { setlistId?: unknown })
+                            .setlistId
+                        if (typeof setlistId === 'string' && setlistId) {
+                            await reconcileSetlistTrackCount(
+                                firestoreDb,
+                                setlistId,
+                            )
+                        }
+                    }
                     // Re-read to capture the resolved server timestamp
                     // (serverTimestamp() is a sentinel until commit). One
                     // extra read per commit is acceptable — v50-06
@@ -135,7 +152,29 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
                     return { updatedAt: ms }
                 }
                 case 'delete': {
-                    await deleteDoc(doc(firestoreDb, row.collection, row.docId))
+                    const ref = doc(firestoreDb, row.collection, row.docId)
+                    // Cycle-9 Lane B: a track delete through the grid editor
+                    // never decrements the parent setlist's `trackCount` (the
+                    // 45-vs-30 drift shape). Capture the parent setlistId from
+                    // the doc BEFORE deleting — the delete outbox payload is
+                    // empty — then reconcile the count after the delete lands.
+                    let trackParentSetlistId: string | undefined
+                    if (row.collection === 'tracks') {
+                        const snap = await getDoc(ref)
+                        const sid = snap.exists()
+                            ? (snap.data() as { setlistId?: unknown }).setlistId
+                            : undefined
+                        if (typeof sid === 'string' && sid) {
+                            trackParentSetlistId = sid
+                        }
+                    }
+                    await deleteDoc(ref)
+                    if (trackParentSetlistId) {
+                        await reconcileSetlistTrackCount(
+                            firestoreDb,
+                            trackParentSetlistId,
+                        )
+                    }
                     return {}
                 }
             }
