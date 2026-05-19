@@ -8,6 +8,17 @@ const mockListenForCacheInvalidation = vi.fn((_cb: () => void): (() => void) => 
 
 vi.mock('@/lib/firebase', () => ({
   auth: { currentUser: null },
+  // useLibrary's library_signals/latest onSnapshot effect reads `db`; it just
+  // needs to be a truthy value (the firebase/firestore calls are mocked below).
+  db: {},
+}))
+
+// useLibrary subscribes to library_signals/latest via a real
+// onSnapshot(doc(db, ...)) listener. Mock the firestore primitives so the
+// effect doesn't drive real Firebase against the stub `db`.
+vi.mock('firebase/firestore', () => ({
+  doc: vi.fn(() => ({})),
+  onSnapshot: vi.fn(() => () => {}),
 }))
 
 vi.mock('@/lib/auth-context', () => ({
