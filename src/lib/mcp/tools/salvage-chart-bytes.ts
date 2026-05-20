@@ -42,10 +42,12 @@ import {
  *   1. Fetch bytes from sourceUrl or Drive
  *   2. Storage upload at the EXISTING fileId path (`library/{fileId}<ext>`)
  *   3. Read-verify by size — refuse to mutate Firestore on mismatch
- *   4. Firestore merge-update — preserves every curation field (key, bpm,
- *      tags, leadMusician, composer, bondCorrectionHistory, stem,
- *      titleSpecificity). Only sets: mimeType, fileSize, source:'salvage',
- *      status:'active', salvagedAt.
+ *   4. Firestore merge-update — preserves every CURATION field (key, bpm,
+ *      tags, leadMusician, composer, arranger, bondCorrectionHistory) and
+ *      RECOMPUTES the derived dedup/search fields (normalizedName, stem,
+ *      titleSpecificity) from the title. Sets: mimeType, fileSize,
+ *      source:'salvage', status:'active', salvagedAt, enrichmentStatus:
+ *      'pending' (so the AI enrichment pass re-runs on the new bytes).
  *   5. Compensating-delete on Firestore failure — rolls Storage back so we
  *      never leave a reverse orphan (bytes-without-index-update).
  *   6. `library_signals/latest` broadcast — invalidates in-tab caches.

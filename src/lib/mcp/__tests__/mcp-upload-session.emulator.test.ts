@@ -79,6 +79,12 @@ import {
     requestChartUploadUrl,
     finalizeChartUpload,
 } from "../tools/library-upload-session"
+import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
+import {
+    onLibraryRowCreated,
+    __resetLibraryEventHandlersForTesting,
+    type LibraryRowCreatedEvent,
+} from "@/lib/library/library-events"
 
 describe("MCP chunked-upload session tools (emulator)", () => {
     let app: App
@@ -122,6 +128,7 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         mockStagedDownload.mockReset()
         mockStagedDelete.mockClear()
         mockProcessChartUpload.mockReset()
+        __resetLibraryEventHandlersForTesting()
     })
 
     it("request_chart_upload_url issues a session + signed PUT URL for an authorized uploader", async () => {
@@ -371,6 +378,12 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         mockStagedExists.mockResolvedValueOnce([true])
         mockStagedDownload.mockResolvedValueOnce([staged])
 
+        // Capture the library.row.created emit (re-arms AI enrichment on heal).
+        const healEvents: LibraryRowCreatedEvent[] = []
+        onLibraryRowCreated((e) => {
+            healEvents.push(e)
+        })
+
         const r = await finalizeChartUpload(ADMIN, {
             uploadSessionId: sessionId,
             targetFileId: ORPHAN,
@@ -396,6 +409,24 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         expect(row.fileSize).toBe(staged.byteLength)
         expect(row.key).toBe("G")
         expect(row.bpm).toBe(96)
+
+        // Derived dedup/search fields recomputed from the title + enrichment
+        // re-armed (coder-1 §3 delta fix). siblingsInCatalog === 1 (the orphan
+        // had no stem at compute time, so nothing else matches the new stem).
+        const HEAL_NAME = "Adon Olam (Folk).pdf"
+        expect(row.normalizedName).toBe(
+            HEAL_NAME.toLowerCase().replace(/[^a-z0-9]/g, ""),
+        )
+        expect(row.stem).toBe(bareStem(HEAL_NAME))
+        expect(row.titleSpecificity).toBe(titleSpecificity(HEAL_NAME, 1))
+        expect(row.enrichmentStatus).toBe("pending")
+
+        // library.row.created emitted with the target row's collection.
+        expect(healEvents).toHaveLength(1)
+        expect(healEvents[0].fileId).toBe(ORPHAN)
+        expect(healEvents[0].title).toBe(HEAL_NAME)
+        expect(healEvents[0].collection).toBe("supplemental")
+        expect(healEvents[0].contentHash).toMatch(/^[0-9a-f]{64}$/)
 
         // songs mirror flipped; bonded track untouched (bond preserved).
         const song = (await db().collection("songs").doc(ORPHAN).get()).data()!

@@ -135,6 +135,12 @@ afterAll(() => {
 
 // AFTER the mocks: import the module under test.
 import { salvageChartBytes } from "../tools/salvage-chart-bytes"
+import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
+import {
+    onLibraryRowCreated,
+    __resetLibraryEventHandlersForTesting,
+    type LibraryRowCreatedEvent,
+} from "@/lib/library/library-events"
 
 describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
     let app: App
@@ -183,6 +189,7 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         driveState.bytes.clear()
         driveState.getFileThrows.clear()
         fetchState.responses.clear()
+        __resetLibraryEventHandlersForTesting()
     })
 
     afterEach(() => {
@@ -348,6 +355,12 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
             body: bytes,
         })
 
+        // Capture the library.row.created emit (re-arms AI enrichment on heal).
+        const events: LibraryRowCreatedEvent[] = []
+        onLibraryRowCreated((e) => {
+            events.push(e)
+        })
+
         const r = await salvageChartBytes(ADMIN, {
             fileId: "upload-1",
             sourceUrl: "https://example.com/ana.pdf",
@@ -389,8 +402,16 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
             correctedTo: 3,
             correctedAwayFrom: 1,
         })
-        expect(data.stem).toBe("ana bkoach")
-        expect(data.titleSpecificity).toBe(0.92)
+        // Derived dedup/search fields are RECOMPUTED from the title (NOT
+        // preserved) so a healed row carries the same keys a fresh upload
+        // would. siblingsInCatalog === 1 (no other row shares the new stem).
+        expect(data.normalizedName).toBe("anabkoachpdf")
+        expect(data.stem).toBe(bareStem("Ana B_Koach.pdf"))
+        expect(data.titleSpecificity).toBe(
+            titleSpecificity("Ana B_Koach.pdf", 1),
+        )
+        // Enrichment re-armed on the new bytes.
+        expect(data.enrichmentStatus).toBe("pending")
         // Original name + mimeType preserved (merge didn't clobber them).
         expect(data.name).toBe("Ana B_Koach.pdf")
 
@@ -406,6 +427,14 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         expect(signal.data()?.op).toBe("salvage")
         expect(signal.data()?.fileId).toBe("upload-1")
         expect(signal.data()?.by).toBe(ADMIN)
+
+        // library.row.created emitted to re-trigger AI enrichment on the
+        // freshly-healed bytes (the heal path was previously enrichment-blind).
+        expect(events).toHaveLength(1)
+        expect(events[0].fileId).toBe("upload-1")
+        expect(events[0].title).toBe("Ana B_Koach.pdf")
+        expect(events[0].sizeBytes).toBe(bytes.byteLength)
+        expect(events[0].contentHash).toMatch(/^[0-9a-f]{64}$/)
     })
 
     it("falls back to Drive when sourceUrl omitted + driveFileId present", async () => {

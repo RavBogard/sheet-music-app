@@ -10,6 +10,7 @@ import {
 } from "./library"
 import { reconcileLibrary } from "./reconcile-library"
 import { salvageChartBytes } from "./salvage-chart-bytes"
+import { backfillHealMetadata } from "./backfill-heal-metadata"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
 import { getCorrectionStats } from "./correction-stats"
 import { testDeleteStorageObject } from "./test-delete-storage-object"
@@ -1463,7 +1464,7 @@ export function registerWriteTools(server: McpServer): void {
         "salvage_chart_bytes",
         {
             description:
-                "Admin-only HEAL tool — re-upload chart bytes onto an EXISTING orphaned `library_index/{fileId}` row, preserving every setlist/song bond pointing at that fileId (cycle-3 DATA-001). Use this BEFORE `reconcile_library({force:true})` would mark a row orphaned, when the song is load-bearing (the 24-orphan triage surfaced names like Ana B'Koach, Mizmor L'David, Tu Bishvat, Yedid Nefesh, May the Memory). Source-bytes resolution: (1) if `sourceUrl` is provided, fetch it (https only, 25MB cap); (2) else if the row carries `driveFileId`, re-fetch from Drive via the service account; (3) else refuse with `no_source_available`. HEAL contract (NOT a fresh-mint upload): bytes land at the SAME fileId, mimeType + fileSize + source:'salvage' + salvagedAt + status:'active' are merge-updated, every curation field (key, bpm, tags, leadMusician, composer, bondCorrectionHistory, stem, titleSpecificity) is preserved. Atomic-guard: read-verify + compensating-delete on Firestore failure + library_signals broadcast — same contract as reconcile_library and processChartUpload. Defaults `dryRun: true` per the F-05 dry-run-is-observability rule; the dryRun plan resolves bytes (and may fail at this stage if the source is broken) but writes nothing. Real run without `force: true` returns the plan with `refused: true`. Refusal envelopes (rich): `forbidden_role` (admin-only), `row_not_found`, `no_source_available`, `invalid_source_url`, `invalid_source_mime`, `source_fetch_failed`, `source_fetch_empty`, `source_too_large`, `storage_upload_failed`, `storage_verify_missing`, `storage_size_mismatch`, `firestore_write_failed`. Returns `{ok:true, fileId, rowName, source:'sourceUrl'|'drive', mimeType, sizeBytes, storagePath, dryRun, refused?}`.",
+                "Admin-only HEAL tool — re-upload chart bytes onto an EXISTING orphaned `library_index/{fileId}` row, preserving every setlist/song bond pointing at that fileId (cycle-3 DATA-001). Use this BEFORE `reconcile_library({force:true})` would mark a row orphaned, when the song is load-bearing (the 24-orphan triage surfaced names like Ana B'Koach, Mizmor L'David, Tu Bishvat, Yedid Nefesh, May the Memory). Source-bytes resolution: (1) if `sourceUrl` is provided, fetch it (https only, 25MB cap); (2) else if the row carries `driveFileId`, re-fetch from Drive via the service account; (3) else refuse with `no_source_available`. HEAL contract (NOT a fresh-mint upload): bytes land at the SAME fileId, mimeType + fileSize + source:'salvage' + salvagedAt + status:'active' are merge-updated, every curation field (key, bpm, tags, leadMusician, composer, arranger, bondCorrectionHistory) is preserved, and the derived dedup/search fields (normalizedName, stem, titleSpecificity) are RECOMPUTED + enrichmentStatus reset to 'pending' so the AI enrichment pass re-runs on the new bytes. Atomic-guard: read-verify + compensating-delete on Firestore failure + library_signals broadcast — same contract as reconcile_library and processChartUpload. Defaults `dryRun: true` per the F-05 dry-run-is-observability rule; the dryRun plan resolves bytes (and may fail at this stage if the source is broken) but writes nothing. Real run without `force: true` returns the plan with `refused: true`. Refusal envelopes (rich): `forbidden_role` (admin-only), `row_not_found`, `no_source_available`, `invalid_source_url`, `invalid_source_mime`, `source_fetch_failed`, `source_fetch_empty`, `source_too_large`, `storage_upload_failed`, `storage_verify_missing`, `storage_size_mismatch`, `firestore_write_failed`. Returns `{ok:true, fileId, rowName, source:'sourceUrl'|'drive', mimeType, sizeBytes, storagePath, dryRun, refused?}`.",
             inputSchema: {
                 fileId: z
                     .string()
@@ -1494,6 +1495,30 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await salvageChartBytes(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "backfill_heal_metadata",
+        {
+            description:
+                "Admin-only ONE-TIME backfill — for a single already-healed `library_index/{fileId}` row, recompute the derived dedup/search fields (`normalizedName`, `stem`, `titleSpecificity`) from the row's title and re-trigger the AI enrichment pass on its bytes. Use this ONLY for rows healed before the chart-heal metadata fix (the 271 Shireinu rows in heal-run-report.json `action:'healed'`) — fresh heals (salvage_chart_bytes / finalize_chart_upload) now stamp these fields inline. Skips (action:'skipped') any row whose status is not 'active' (an orphaned/missing-bytes row must be healed first, not metadata-papered). `dryRun` defaults true: it computes + returns the would-be fields (and the row's prior values) WITHOUT writing or spending Gemini tokens. On `dryRun:false` it merge-sets the four fields then runs the enrichment pass (awaited; deterministic) — this DOES spend a Gemini call per row, so drive it from the operator script after reviewing the dry-run. Returns `{ok:true, fileId, name, dryRun, action:'would-stamp'|'stamped'|'skipped', reason?, computed:{normalizedName, stem, titleSpecificity, enrichmentStatus}, prior:{...}, enrichmentStatus?, enrichment?:'ran'|'skipped_no_bytes'}`. Refusals (rich): `forbidden_role`, `row_not_found`, `invalid_argument`, `internal_error`.",
+            inputSchema: {
+                fileId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "The healed library_index row's fileId (from heal-run-report.json action:'healed' targetFileId).",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true (default), compute + return the plan + prior values without writing or enriching. Set false to stamp the fields + run the Gemini enrichment pass (token spend).",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await backfillHealMetadata(uidFrom(extra), args)),
     )
 
     server.registerTool(
