@@ -219,6 +219,38 @@ describe("MCP search_library — F-007 / F-024 non-chart filter (emulator)", () 
         expect(escape.map((row) => row.id)).toEqual(["keep"])
     })
 
+    it("Lane D / Bug 3: per-token AND-match finds composer-first / word-order queries", async () => {
+        // Live Shavuot-Yizkor bug: "Eitz chayim Weisberg" → 0 because the
+        // whole query had to be one contiguous substring. Token-AND lets a
+        // composer-first / reordered query hit the real chart.
+        await seedSong("eitz", "Eitz chayim - Weisenberg")
+        await seedIndex("eitz", {
+            name: "Eitz chayim - Weisenberg.pdf",
+            mimeType: "application/pdf",
+        })
+        await seedSong("lecha", "Lecha Dodi")
+        await seedIndex("lecha", {
+            name: "Lecha Dodi.pdf",
+            mimeType: "application/pdf",
+        })
+
+        // Composer-first, reordered — the reported failing shape.
+        const reordered = await searchLibrary(ANY_UID, {
+            query: "weisenberg eitz chayim",
+        })
+        expect(reordered.map((r) => r.id)).toEqual(["eitz"])
+
+        // Single-word query unchanged (strict superset).
+        const single = await searchLibrary(ANY_UID, { query: "lecha" })
+        expect(single.map((r) => r.id)).toEqual(["lecha"])
+
+        // A token absent from every title returns nothing.
+        const miss = await searchLibrary(ANY_UID, {
+            query: "eitz nonsensetoken",
+        })
+        expect(miss).toEqual([])
+    })
+
     it("does not leak internal join fields (mimeType, name) to the wire", async () => {
         // The W-02 join carries mimeType + name internally for the filter
         // step, but those must be stripped before returning so the

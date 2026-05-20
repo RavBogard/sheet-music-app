@@ -340,7 +340,19 @@ export async function searchLibrary(
             // dedupe report or list_library, not search.
             if (s.status === "duplicate") return false
             if (!args.includeOrphaned && s.status === "orphaned") return false
-            if (q && !normalizeForSearch(s.title).includes(q)) return false
+            // Lane D (Bug 3): per-token AND-match instead of one contiguous
+            // substring. Every whitespace token of the normalized query must
+            // appear somewhere in the normalized title, so word-order, dropped/
+            // extra words, and "title + composer" queries all hit (e.g.
+            // "weisenberg eitz chayim" finds "Eitz chayim - Weisenberg"). A
+            // single-token query is identical to the old `.includes` test, so
+            // this is a strict superset — nothing that matched before stops.
+            // (Typos like "weisberg" vs "weisenberg" still miss; Levenshtein
+            // is a deliberately-deferred future lane.)
+            if (q) {
+                const title = normalizeForSearch(s.title)
+                if (!q.split(" ").every((tok) => title.includes(tok))) return false
+            }
             if (key && s.key?.toLowerCase() !== key) return false
             if (args.bpmMin !== undefined && (s.bpm === undefined || s.bpm < args.bpmMin)) {
                 return false

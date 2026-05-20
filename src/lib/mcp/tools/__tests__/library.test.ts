@@ -151,6 +151,67 @@ describe("searchLibrary", () => {
         const r3 = await searchLibrary("u", { query: "Shabbat Shalom" })
         expect(r3.map((s) => s.id)).toContain("s8")
     })
+
+    // Lane D (Bug 3, setlist-fixes wave 2026-05-20): the live Shavuot-Yizkor
+    // session reported "Eitz chayim Weisberg" → 0 results. The match used to be
+    // a single contiguous substring of the whole query; now every whitespace
+    // token must appear (in any order, anywhere) in the normalized title.
+    describe("per-token AND-match (Lane D / Bug 3)", () => {
+        const tokSongs = [
+            {
+                id: "ec",
+                title: "Eitz chayim - Weisenberg",
+                key: "D",
+                status: "active",
+            },
+            { id: "ld", title: "Lecha Dodi", key: "G", status: "active" },
+            { id: "ms", title: "Mi Chamocha", key: "G", status: "active" },
+        ]
+        beforeEach(() => mockGetAllSongs.mockResolvedValue(tokSongs))
+
+        it("matches non-contiguous tokens in any order (composer-first query)", async () => {
+            const r = await searchLibrary("u", {
+                query: "weisenberg eitz chayim",
+            })
+            expect(r.map((s) => s.id)).toEqual(["ec"])
+        })
+
+        it("matches when an interior word is dropped", async () => {
+            const r = await searchLibrary("u", { query: "eitz weisenberg" })
+            expect(r.map((s) => s.id)).toEqual(["ec"])
+        })
+
+        it("still misses a typo'd token — Levenshtein is deliberately deferred", async () => {
+            const r = await searchLibrary("u", {
+                query: "eitz chayim weisberg",
+            })
+            expect(r).toEqual([])
+        })
+
+        it("does not match when ANY token is absent from the title", async () => {
+            // both single words exist as titles, but no single row has both.
+            const r = await searchLibrary("u", { query: "lecha chamocha" })
+            expect(r).toEqual([])
+        })
+
+        it("single-token query behaves exactly like the old .includes test", async () => {
+            const r = await searchLibrary("u", { query: "chayim" })
+            expect(r.map((s) => s.id)).toEqual(["ec"])
+        })
+
+        it("empty query still returns all (active) rows", async () => {
+            const r = await searchLibrary("u", { query: "" })
+            expect(r.map((s) => s.id).sort()).toEqual(["ec", "ld", "ms"])
+        })
+
+        it("hyphen/underscore between tokens is collapsed before splitting", async () => {
+            // "eitz-chayim weisenberg" normalizes to "eitz chayim weisenberg".
+            const r = await searchLibrary("u", {
+                query: "eitz-chayim weisenberg",
+            })
+            expect(r.map((s) => s.id)).toEqual(["ec"])
+        })
+    })
 })
 
 describe("getSong", () => {
