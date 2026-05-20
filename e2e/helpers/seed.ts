@@ -213,3 +213,108 @@ export async function seedPublishedSetlist(
         publishedAt: publishResult.publishedAt ?? new Date().toISOString(),
     }
 }
+
+/**
+ * Seed a LARGE published setlist for the iPad stress probe (`ipad-sweep-stress`).
+ *
+ * The band runs Perform mode on 6 iPads during a live service; a long
+ * Shabbat-morning setlist can exceed 40 rows. This seeds `trackCount`
+ * (default 42) lightweight title-only song rows via a single
+ * `bulk_add_tracks` call (max 50 rows/call — chunked above that) instead
+ * of N+1 `add_track_to_setlist` round-trips. Rows are unbound (no songId)
+ * so seeding stays cheap: the large-list probe measures layout / scroll /
+ * memory at the device width, NOT chart rendering (that's the bonded
+ * `seedPublishedSetlist` path). An optional `bondPdfId` appends one bonded
+ * curated-PDF row at the end so an "open a chart inside a 40-row list"
+ * sub-probe can target it.
+ *
+ * All rows are owned by `leaderBearer`'s test uid, so `revokeTestAccount`'s
+ * cascade tears the whole setlist down — no 40-track orphan left in prod
+ * ([[feedback_sandbox_test_isolation]]).
+ */
+export async function seedLargeSetlist(
+    request: APIRequestContext,
+    baseURL: string,
+    leaderBearer: string,
+    args: {
+        name: string
+        eventDate: string
+        trackCount?: number
+        /** Optional curated-PDF library fileId to bond as the final row. */
+        bondPdfId?: string
+        bondPdfTitle?: string
+        audience?: 'band' | 'all'
+    },
+): Promise<SeededSetlist> {
+    const created = await mcpCallOrThrow<{ id?: string; setlistId?: string }>(
+        request,
+        baseURL,
+        leaderBearer,
+        'create_setlist',
+        { name: args.name, eventDate: args.eventDate },
+    )
+    const setlistId = created.id ?? created.setlistId
+    if (!setlistId) {
+        throw new Error(
+            `create_setlist returned no id field: ${JSON.stringify(created)}`,
+        )
+    }
+
+    const count = args.trackCount ?? 42
+    const stamp = Date.now()
+    const KEYS = ['G', 'D', 'A', 'C', 'Em', 'Am', 'F', 'Bm']
+    const rows = Array.from({ length: count }, (_, i) => ({
+        title: `iPad Stress Row ${String(i + 1).padStart(2, '0')} — ${stamp}`,
+        key: KEYS[i % KEYS.length],
+    }))
+
+    const tracks: SeededTrack[] = []
+    // bulk_add_tracks caps at 50 rows/call — chunk for safety above that.
+    for (let start = 0; start < rows.length; start += 50) {
+        const chunk = rows.slice(start, start + 50)
+        const res = await mcpCallOrThrow<{
+            results?: Array<{ index: number; ok: boolean; trackId?: string }>
+        }>(request, baseURL, leaderBearer, 'bulk_add_tracks', {
+            setlistId,
+            tracks: chunk,
+            mode: 'atomic',
+        })
+        for (const r of res.results ?? []) {
+            if (r.ok && r.trackId) {
+                tracks.push({ id: r.trackId, title: chunk[r.index].title })
+            }
+        }
+    }
+
+    // Optional bonded curated-PDF row appended at the end.
+    if (args.bondPdfId) {
+        const pdfTitle = args.bondPdfTitle ?? `iPad Stress PDF — ${stamp}`
+        const added = await mcpCallOrThrow<{
+            track?: { id: string }
+            trackId?: string
+            id?: string
+        }>(request, baseURL, leaderBearer, 'add_track_to_setlist', {
+            setlistId,
+            title: pdfTitle,
+            songId: args.bondPdfId,
+            key: 'C',
+        })
+        const trackId = added.track?.id ?? added.trackId ?? added.id
+        if (trackId) tracks.push({ id: trackId, title: pdfTitle, fileId: args.bondPdfId })
+    }
+
+    const publishResult = await mcpCallOrThrow<{ publishedAt?: string }>(
+        request,
+        baseURL,
+        leaderBearer,
+        'publish_setlist',
+        { setlistId, audience: args.audience ?? 'band', dryRun: false },
+    )
+
+    return {
+        setlistId,
+        name: args.name,
+        tracks,
+        publishedAt: publishResult.publishedAt ?? new Date().toISOString(),
+    }
+}
