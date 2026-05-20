@@ -4,7 +4,8 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Loader2, Smartphone, ChevronDown } from "lucide-react"
+import { QRSignIn } from "@/components/auth/QRSignIn"
 
 /** Inline Google logo — avoids DNS+TLS to svgrepo.com. Used in the SSR'd
  * button shell AND the live hydrated button, so it must produce identical
@@ -25,6 +26,12 @@ export default function LoginClient() {
     const router = useRouter()
     const [signInState, setSignInState] = useState<"idle" | "loading">("idle")
     const [error, setError] = useState<string | null>(null)
+    // fix-onboarding-qr: shared-device (iPad) sign-in. The dashboard QR at `/`
+    // is unreachable (proxy redirects sessionless `/`→`/perform`), so the band
+    // could never onboard the iPads. /login is the reachable public surface.
+    // Mounted lazily on opt-in so a Google-only sign-in never registers a
+    // throwaway qr-session.
+    const [showQr, setShowQr] = useState(false)
 
     useEffect(() => {
         if (!loading && user) {
@@ -96,6 +103,41 @@ export default function LoginClient() {
             {error && (
                 <p className="text-xs text-destructive" role="alert">{error}</p>
             )}
+
+            {/* fix-onboarding-qr: shared-device QR sign-in for the band's iPads.
+                Scan the code with a signed-in phone to sign this device in — no
+                Google popup, no per-device account. */}
+            <div className="pt-1">
+                <div className="flex items-center gap-3 pb-1" aria-hidden="true">
+                    <div className="h-px flex-1 bg-border/60" />
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">or</span>
+                    <div className="h-px flex-1 bg-border/60" />
+                </div>
+
+                {!showQr ? (
+                    <button
+                        type="button"
+                        onClick={() => setShowQr(true)}
+                        aria-expanded={false}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-border/60 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-foreground/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                        <Smartphone className="h-4 w-4" />
+                        Set up this device — sign in with phone
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                ) : (
+                    <div className="rounded-xl border border-border/60 p-4">
+                        <QRSignIn />
+                        <button
+                            type="button"
+                            onClick={() => setShowQr(false)}
+                            className="mt-3 w-full text-center text-xs text-muted-foreground hover:text-foreground focus-visible:underline focus-visible:outline-none"
+                        >
+                            Hide
+                        </button>
+                    </div>
+                )}
+            </div>
         </>
     )
 }

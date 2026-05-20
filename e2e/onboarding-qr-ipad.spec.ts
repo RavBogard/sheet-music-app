@@ -118,11 +118,15 @@ test.describe('ipad-sweep-onboarding — no-auth QR surface probes (WebKit)', ()
 
     // ─── Group A — REACHABILITY of the QR display surface (the headline) ───
     //
-    // QRSignIn renders ONLY in DashboardClient.tsx at `/` under
-    // `{!user && !authLoading}`. But proxy.ts redirects any sessionless visit
-    // to `/` → `/perform`, and with a session `user` is always set (derived
-    // from serverUid). So there is no production state where the QR display is
-    // both reachable AND rendered. These tests prove it empirically at prod.
+    // ORIGINAL FINDING (F1, ipad-sweep-onboarding): QRSignIn rendered ONLY in
+    // DashboardClient.tsx at `/` under `{!user && !authLoading}`, but proxy.ts
+    // redirects any sessionless `/` → `/perform` and a session always sets
+    // `user` — so the QR display was never both reachable AND rendered.
+    // FIX (fix-onboarding-qr): the QR affordance now lives on `/login` (the
+    // reachable public sign-in surface). A1 still pins the UNAUTH-001 redirect
+    // (sessionless `/` → /perform, no auto-QR there); A3 proves the QR is now
+    // reachable + rendered on /login. The dashboard `/` QR is left in place as
+    // harmless dead code (still unreachable, but no longer the only entry).
 
     test('A1: unauthenticated `/` redirects to /perform — QR display never shows', async ({
         browser,
@@ -166,30 +170,59 @@ test.describe('ipad-sweep-onboarding — no-auth QR surface probes (WebKit)', ()
         }
     })
 
-    test('A3: /login (the reachable sign-in surface) offers Google only — no QR', async ({
+    test('A3 (FIX fix-onboarding-qr): /login offers QR shared-device sign-in that reveals the QR display', async ({
         browser,
         baseURL,
     }) => {
         if (!baseURL) throw new Error('PLAYWRIGHT_BASE_URL must be set')
-        const ctx = await browser.newContext()
+        const ctx = await browser.newContext() // fresh: no __session — the iPad's onboarding state
         try {
             const page = await ctx.newPage()
             await page.goto(`${baseURL}/login`, { waitUntil: 'domcontentloaded' })
 
+            // Google sign-in (for leaders) still present + iPad-sized.
             const googleBtn = page.getByRole('button', { name: /Sign in with Google/i })
             await expect(googleBtn, '/login must render the Google sign-in button').toBeVisible({
                 timeout: 15_000,
             })
-            await expect(page.getByText('Scan with your phone to sign in')).toHaveCount(0)
-
-            // iPad render quality on the reachable surface (probe point #6).
             const box = await googleBtn.boundingBox()
             expect(box, 'Google button must have a bounding box').not.toBeNull()
             expect(
                 box!.height,
                 `Google button tap target ${box!.height}px below the ${TAP_TARGET_MIN}px iOS HIG floor`,
             ).toBeGreaterThanOrEqual(TAP_TARGET_MIN)
-            await expectNoHorizontalOverflow(page, '/login')
+
+            // FIX (AC#1): the QR shared-device affordance is reachable on /login.
+            // It is lazy — the QR display itself only mounts on opt-in, so no
+            // throwaway qr-session is registered for a Google-only sign-in.
+            const phoneToggle = page.getByRole('button', { name: /sign in with phone/i })
+            await expect(
+                phoneToggle,
+                '/login must offer the shared-device QR affordance (was unreachable pre-fix — F1)',
+            ).toBeVisible({ timeout: 15_000 })
+            await expect(
+                page.getByText('Scan with your phone to sign in'),
+                'QR display must NOT mount until the band taps the affordance (lazy)',
+            ).toHaveCount(0)
+
+            const toggleBox = await phoneToggle.boundingBox()
+            expect(
+                toggleBox!.height,
+                `phone-signin affordance tap target ${toggleBox!.height}px below the ${TAP_TARGET_MIN}px iOS HIG floor`,
+            ).toBeGreaterThanOrEqual(TAP_TARGET_MIN)
+
+            // Tap → the QRSignIn display renders (the iPad now shows a scannable code).
+            await phoneToggle.click()
+            await expect(
+                page.getByText('Scan with your phone to sign in'),
+                'tapping the affordance must reveal the QR display (QRSignIn)',
+            ).toBeVisible({ timeout: 15_000 })
+            await expect(
+                page.locator('svg').first(),
+                'a QR code SVG must render in the revealed panel',
+            ).toBeVisible()
+
+            await expectNoHorizontalOverflow(page, '/login (QR revealed)')
 
             await expect(page.getByRole('link', { name: 'Privacy' })).toBeVisible()
             await expect(page.getByRole('link', { name: 'Accessibility' })).toBeVisible()
