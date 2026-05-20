@@ -46,6 +46,35 @@ vi.mock("@/lib/library-upload", async () => {
     }
 })
 
+// HEAL mode (targetFileId) writes through @/lib/chart-heal → @/lib/firebase-storage.
+// Mock the Storage seam (same posture as the salvage test) so the heal path runs
+// against the emulator Firestore but a fake Storage.
+const healStorage = {
+    uploaded: new Map<string, { bytes: number; mime: string }>(),
+    deletedPaths: [] as string[],
+}
+vi.mock("@/lib/firebase-storage", () => ({
+    uploadToStorage: vi.fn(async (fileId: string, buffer: Buffer, mime: string) => {
+        healStorage.uploaded.set(fileId, { bytes: buffer.byteLength, mime })
+        return `gs://mock/library/${fileId}`
+    }),
+    getStorageObjectSize: vi.fn(async (path: string) => {
+        const fileId = path.replace(/^library\//, "").replace(/\.[a-z0-9]+$/, "")
+        return healStorage.uploaded.get(fileId)?.bytes ?? null
+    }),
+    deleteStorageObjectAtPath: vi.fn(async (path: string) => {
+        healStorage.deletedPaths.push(path)
+        const fileId = path.replace(/^library\//, "").replace(/\.[a-z0-9]+$/, "")
+        healStorage.uploaded.delete(fileId)
+    }),
+    fileExistsInStorage: vi.fn(async () => ({ success: true as const, data: false })),
+    downloadFromStorage: vi.fn(),
+    getStorageUrl: vi.fn(),
+    getRecordingStoragePath: vi.fn(),
+    uploadRecordingToStorage: vi.fn(),
+    downloadFromStoragePath: vi.fn(),
+}))
+
 import {
     requestChartUploadUrl,
     finalizeChartUpload,
@@ -73,10 +102,12 @@ describe("MCP chunked-upload session tools (emulator)", () => {
     })
 
     beforeEach(async () => {
-        for (const col of ["users", "upload_sessions"]) {
+        for (const col of ["users", "upload_sessions", "library_index", "songs", "tracks"]) {
             const snap = await db().collection(col).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
+        healStorage.uploaded.clear()
+        healStorage.deletedPaths.length = 0
         await db()
             .collection("users")
             .doc(ADMIN)
@@ -299,5 +330,125 @@ describe("MCP chunked-upload session tools (emulator)", () => {
             ok: false,
             error: { message: expect.stringContaining("not found") },
         })
+    })
+
+    // ─── HEAL mode (targetFileId) — storage-recovery Lane B ──────────────────
+
+    async function stageSession(uid: string, mimeType = "application/pdf") {
+        mockGetSignedUrl.mockResolvedValueOnce(["https://signed.example/heal"])
+        // collection omitted → defaults to 'uploads' (no curated-catalog gate),
+        // so a musician can open a session; heal ignores session.collection and
+        // uses the target row's collection.
+        const init = await requestChartUploadUrl(uid, {
+            title: "Adon Olam (Folk)",
+            mimeType,
+        })
+        if (!("ok" in init) || !init.ok) throw new Error("init failed")
+        return init.uploadSessionId
+    }
+
+    it("heal mode writes staged bytes onto an EXISTING orphan, preserving the bond", async () => {
+        const ORPHAN = "upload-orphan-heal-1"
+        // Seed the orphaned row + its songs mirror + a setlist track bonded to it.
+        await db().collection("library_index").doc(ORPHAN).set({
+            name: "Adon Olam (Folk).pdf",
+            status: "orphaned",
+            source: "local_upload",
+            orphanedReason: "B-006",
+            collection: "supplemental",
+            key: "G",
+            bpm: 96,
+        })
+        await db().collection("songs").doc(ORPHAN).set({ status: "orphaned" })
+        await db().collection("tracks").doc("track-1").set({
+            setlistId: "setlist-1",
+            fileId: ORPHAN,
+            title: "Adon Olam",
+        })
+
+        const sessionId = await stageSession(ADMIN)
+        const staged = Buffer.from("%PDF-1.4 healed adon olam bytes")
+        mockStagedExists.mockResolvedValueOnce([true])
+        mockStagedDownload.mockResolvedValueOnce([staged])
+
+        const r = await finalizeChartUpload(ADMIN, {
+            uploadSessionId: sessionId,
+            targetFileId: ORPHAN,
+        })
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+        expect(r.fileId).toBe(ORPHAN)
+        expect(r.healed).toBe(true)
+        expect(r.sizeBytes).toBe(staged.byteLength)
+
+        // processChartUpload NOT used in heal mode (no new fileId).
+        expect(mockProcessChartUpload).not.toHaveBeenCalled()
+        // Bytes landed at the EXISTING fileId.
+        expect(healStorage.uploaded.get(ORPHAN)?.bytes).toBe(staged.byteLength)
+
+        // Row healed in place: status active, source salvage, mime+size set,
+        // curation fields (key/bpm) preserved, fileId unchanged.
+        const row = (await db().collection("library_index").doc(ORPHAN).get()).data()!
+        expect(row.status).toBe("active")
+        expect(row.source).toBe("salvage")
+        expect(row.salvagedFrom).toBe("upload-session")
+        expect(row.mimeType).toBe("application/pdf")
+        expect(row.fileSize).toBe(staged.byteLength)
+        expect(row.key).toBe("G")
+        expect(row.bpm).toBe(96)
+
+        // songs mirror flipped; bonded track untouched (bond preserved).
+        const song = (await db().collection("songs").doc(ORPHAN).get()).data()!
+        expect(song.status).toBe("active")
+        const track = (await db().collection("tracks").doc("track-1").get()).data()!
+        expect(track.fileId).toBe(ORPHAN)
+
+        // Session finalized against the target; staged blob deleted.
+        const session = (await db().collection("upload_sessions").doc(sessionId).get()).data()!
+        expect(session.status).toBe("finalized")
+        expect(session.resultFileId).toBe(ORPHAN)
+        expect(session.healedTarget).toBe(true)
+        expect(mockStagedDelete).toHaveBeenCalled()
+    })
+
+    it("heal mode is admin-only (musician → forbidden_role)", async () => {
+        const ORPHAN = "upload-orphan-heal-2"
+        await db().collection("library_index").doc(ORPHAN).set({
+            name: "Locked.pdf",
+            status: "orphaned",
+        })
+        // musician CAN open a session, but heal is admin-only.
+        const sessionId = await stageSession(MUSICIAN)
+        mockStagedExists.mockResolvedValueOnce([true])
+        mockStagedDownload.mockResolvedValueOnce([Buffer.from("%PDF")])
+
+        const r = await finalizeChartUpload(MUSICIAN, {
+            uploadSessionId: sessionId,
+            targetFileId: ORPHAN,
+        })
+        expect(r).toMatchObject({
+            ok: false,
+            error: { message: expect.stringContaining("admin-only") },
+        })
+        // No write happened — row stays orphaned.
+        const row = (await db().collection("library_index").doc(ORPHAN).get()).data()!
+        expect(row.status).toBe("orphaned")
+        expect(healStorage.uploaded.has(ORPHAN)).toBe(false)
+    })
+
+    it("heal mode refuses when the target row does not exist", async () => {
+        const sessionId = await stageSession(ADMIN)
+        mockStagedExists.mockResolvedValueOnce([true])
+        mockStagedDownload.mockResolvedValueOnce([Buffer.from("%PDF")])
+
+        const r = await finalizeChartUpload(ADMIN, {
+            uploadSessionId: sessionId,
+            targetFileId: "upload-does-not-exist",
+        })
+        expect(r).toMatchObject({
+            ok: false,
+            error: { message: expect.stringContaining("does not exist") },
+        })
+        expect(mockProcessChartUpload).not.toHaveBeenCalled()
     })
 })

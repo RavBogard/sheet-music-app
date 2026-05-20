@@ -2167,7 +2167,7 @@ export function registerChartUploadTools(server: McpServer): void {
         "finalize_chart_upload",
         {
             description:
-                "Step 2 of the chunked-upload flow (B-001). After PUTting bytes to the uploadUrl returned by request_chart_upload_url, call this with the uploadSessionId to run the bytes through processChartUpload (mime validation, MuseScore→MusicXML / HEIC→JPEG conversion, dedup, Storage write, library_index + songs write, library_signals broadcast). Returns the new fileId — bond it onto a setlist row via add_track_to_setlist / bulk_add_tracks. Pass `force: true` to bypass dedup (matches upload_chart's H-3 override).",
+                "Step 2 of the chunked-upload flow (B-001). After PUTting bytes to the uploadUrl returned by request_chart_upload_url, call this with the uploadSessionId to run the bytes through processChartUpload (mime validation, MuseScore→MusicXML / HEIC→JPEG conversion, dedup, Storage write, library_index + songs write, library_signals broadcast). Returns the new fileId — bond it onto a setlist row via add_track_to_setlist / bulk_add_tracks. Pass `force: true` to bypass dedup (matches upload_chart's H-3 override). HEAL mode (admin-only): pass `targetFileId` to write the staged bytes onto an EXISTING orphaned library_index id instead of minting a new one — preserves every setlist bond (used by storage-recovery to re-supply pre-atomic-guard orphan bytes). In heal mode there is no dedup or format conversion; the staged mime must be a renderable chart type.",
             inputSchema: {
                 uploadSessionId: z
                     .string()
@@ -2179,7 +2179,13 @@ export function registerChartUploadTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "Bypass duplicate detection (exact + fuzzy). Use when the chart is a legitimate variant that's tripping a 'similar name' error.",
+                        "Bypass duplicate detection (exact + fuzzy). Use when the chart is a legitimate variant that's tripping a 'similar name' error. Ignored in heal mode (targetFileId).",
+                    ),
+                targetFileId: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "HEAL mode (admin-only). Write the staged bytes onto this EXISTING library_index fileId (e.g. an orphaned upload-<uuid> / bare-UUID row), preserving all setlist bonds, instead of creating a new chart. No dedup or conversion is applied; the staged mime must be a renderable chart type (pdf/png/jpeg/musicxml/text).",
                     ),
             },
         },

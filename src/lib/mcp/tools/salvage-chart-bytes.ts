@@ -1,13 +1,14 @@
 import 'server-only'
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import {
-    uploadToStorage,
-    getStorageObjectSize,
-    deleteStorageObjectAtPath,
-} from "@/lib/firebase-storage"
 import { DriveClient } from "@/lib/google-drive"
 import { logger } from "@/lib/logger"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
+import {
+    healChartBytes,
+    inferChartExt,
+    isAllowedChartMime,
+    ALLOWED_CHART_MIME_PREFIXES,
+} from "@/lib/chart-heal"
 
 /**
  * Cycle-3 DATA-001 (Daniel-ratified 2026-05-18T18:45Z, decisions.md item 3)
@@ -65,16 +66,6 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 
 const MAX_FETCH_BYTES = 25 * 1024 * 1024 // 25 MB — matches processChartUpload's MAX_CHART_UPLOAD_BYTES
 
-const ALLOWED_MIME_PREFIXES = [
-    "application/pdf",
-    "application/xml",
-    "text/xml",
-    "application/vnd.recordare.musicxml",
-    "image/png",
-    "image/jpeg",
-    "text/plain",
-] as const
-
 export interface SalvageChartBytesArgs {
     /** The orphaned library_index row's fileId — typically `upload-<uuid>`. */
     fileId: string
@@ -109,18 +100,6 @@ export interface SalvageChartBytesOk {
 }
 
 export type SalvageChartBytesResult = SalvageChartBytesOk | RichErrorEnvelope
-
-function inferExt(mimeType: string): string {
-    if (mimeType.includes("pdf")) return ".pdf"
-    if (mimeType.includes("xml")) return ".xml"
-    if (mimeType.includes("audio")) return ".mp3"
-    return ""
-}
-
-function isAllowedMime(mime: string): boolean {
-    const lower = mime.toLowerCase()
-    return ALLOWED_MIME_PREFIXES.some((p) => lower.startsWith(p))
-}
 
 interface ResolvedSource {
     source: "sourceUrl" | "drive"
@@ -193,14 +172,14 @@ async function fetchFromSourceUrl(
     const contentTypeHeader =
         res.headers.get("content-type")?.split(";")[0]?.trim() ?? ""
     const mimeType = contentTypeHeader || "application/octet-stream"
-    if (!isAllowedMime(mimeType)) {
+    if (!isAllowedChartMime(mimeType)) {
         return {
             ok: false,
             envelope: richError(
                 "invalid_source_mime",
                 `sourceUrl served an unsupported mime '${mimeType}'.`,
                 { sourceUrl, mimeType, errorCode: 422 },
-                `Allowed: ${ALLOWED_MIME_PREFIXES.join(", ")}.`,
+                `Allowed: ${ALLOWED_CHART_MIME_PREFIXES.join(", ")}.`,
             ),
         }
     }
@@ -291,14 +270,14 @@ async function fetchFromDrive(
     // Drive doesn't return mime on download; reuse the row's stored mime
     // (which Drive sync populated) or default to PDF (the dominant chart type).
     const mimeType = currentMimeType || "application/pdf"
-    if (!isAllowedMime(mimeType)) {
+    if (!isAllowedChartMime(mimeType)) {
         return {
             ok: false,
             envelope: richError(
                 "invalid_source_mime",
                 `Drive payload has unsupported mime '${mimeType}'.`,
                 { driveFileId, mimeType, errorCode: 422 },
-                `Allowed: ${ALLOWED_MIME_PREFIXES.join(", ")}.`,
+                `Allowed: ${ALLOWED_CHART_MIME_PREFIXES.join(", ")}.`,
             ),
         }
     }
@@ -381,7 +360,7 @@ export async function salvageChartBytes(
             )
         }
 
-        const storagePath = `library/${fileId}${inferExt(resolved.mimeType)}`
+        const storagePath = `library/${fileId}${inferChartExt(resolved.mimeType)}`
 
         if (dryRun) {
             return {
@@ -416,110 +395,16 @@ export async function salvageChartBytes(
             }
         }
 
-        // ─── HEAL: Storage upload + read-verify ────────────────────────────
-
-        try {
-            await uploadToStorage(fileId, resolved.buffer, resolved.mimeType)
-        } catch (err) {
-            return richError(
-                "storage_upload_failed",
-                `Storage upload failed at ${storagePath}: ${err instanceof Error ? err.message : String(err)}`,
-                { fileId, storagePath },
-                "Retry the call; if the failure persists check Firebase Storage IAM.",
-            )
-        }
-
-        const verifiedSize = await getStorageObjectSize(storagePath)
-        if (verifiedSize === null || verifiedSize <= 0) {
-            try {
-                await deleteStorageObjectAtPath(storagePath)
-            } catch {
-                // best effort
-            }
-            return richError(
-                "storage_verify_missing",
-                `Storage write reported success but ${storagePath} is missing on read-verify.`,
-                { fileId, storagePath },
-                "Retry the call. Atomic-guard rolled back; the orphan row is unchanged.",
-            )
-        }
-        if (verifiedSize !== resolved.buffer.byteLength) {
-            try {
-                await deleteStorageObjectAtPath(storagePath)
-            } catch {
-                // best effort
-            }
-            return richError(
-                "storage_size_mismatch",
-                `Storage size mismatch at ${storagePath} (wrote ${resolved.buffer.byteLength}, read ${verifiedSize}).`,
-                {
-                    fileId,
-                    storagePath,
-                    wrote: resolved.buffer.byteLength,
-                    read: verifiedSize,
-                },
-                "Retry the call. Atomic-guard rolled back; the orphan row is unchanged.",
-            )
-        }
-
-        // ─── HEAL: Firestore merge-update ──────────────────────────────────
-
-        const nowIso = new Date().toISOString()
-        const patch: Record<string, unknown> = {
-            mimeType: resolved.mimeType,
-            fileSize: resolved.buffer.byteLength,
-            source: "salvage",
-            status: "active",
-            salvagedAt: nowIso,
-            salvagedBy: uid,
-            salvagedFrom: resolved.source,
-        }
-
-        try {
-            await db
-                .collection("library_index")
-                .doc(fileId)
-                .set(patch, { merge: true })
-            // Mirror status onto songs/{id} if present so search_library /
-            // list_library reflect the flip without a re-index round trip.
-            // set+merge is safe — songs/{id} may not exist for every row.
-            await db
-                .collection("songs")
-                .doc(fileId)
-                .set({ status: "active" }, { merge: true })
-        } catch (err) {
-            // Compensating-delete: roll Storage back so we never leave a
-            // reverse orphan (bytes-without-index-update).
-            try {
-                await deleteStorageObjectAtPath(storagePath)
-            } catch (rbErr) {
-                logger.warn(
-                    `[salvage_chart_bytes] compensating-delete failed for ${storagePath}: ${rbErr instanceof Error ? rbErr.message : String(rbErr)}`,
-                )
-            }
-            return richError(
-                "firestore_write_failed",
-                `Firestore merge-update failed: ${err instanceof Error ? err.message : String(err)}`,
-                { fileId, storagePath },
-                "Atomic-guard rolled back; the orphan row is unchanged. Retry.",
-            )
-        }
-
-        // library_signals broadcast — fail-open per the same pattern
-        // processChartUpload + reconcile_library use. Subscriber failure
-        // never propagates back into the success return.
-        try {
-            await db.collection("library_signals").doc("latest").set({
-                at: nowIso,
-                fileId,
-                op: "salvage",
-                by: uid,
-            })
-        } catch (sigErr) {
-            logger.warn(
-                `[salvage_chart_bytes] library_signals broadcast failed (non-fatal): ${sigErr instanceof Error ? sigErr.message : String(sigErr)}`,
-            )
-        }
+        // ─── HEAL via the shared atomic guard ([[feedback_upload_atomicity]]) ─
+        const healed = await healChartBytes(
+            db,
+            uid,
+            fileId,
+            resolved.buffer,
+            resolved.mimeType,
+            resolved.source,
+        )
+        if (!("ok" in healed) || !healed.ok) return healed
 
         logger.info("[mcp] salvage_chart_bytes committed", {
             uid,
@@ -536,7 +421,7 @@ export async function salvageChartBytes(
             source: resolved.source,
             mimeType: resolved.mimeType,
             sizeBytes: resolved.buffer.byteLength,
-            storagePath,
+            storagePath: healed.storagePath,
             dryRun: false,
         }
     } catch (err) {

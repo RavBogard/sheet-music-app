@@ -114,7 +114,12 @@ Spot-check `get_chart_status(fileId)` flips `missing → ok`; open a healed char
 
 ---
 
-## Open decisions for Daniel (see SHIP-NOTICE)
-1. **Path 1 (heal-in-place, +`targetFileId` prod tool) vs Path 2 (create-new + 51 swaps, shipped only).**
-2. **Gated inputs:** local batch folder + original upload method + filename convention.
-3. Build of the chosen path's final tooling proceeds once (1)+(2) are confirmed; manifest + matcher are ready now.
+## Resolution (Daniel, 2026-05-20)
+
+1. **Path 1 (heal-in-place) — CHOSEN + BUILT.** Shipped the `targetFileId` heal-mode on `finalize_chart_upload` (heal contract extracted into shared `src/lib/chart-heal.ts`, also now backing `salvage_chart_bytes`). Admin-only; no dedup/conversion; staged mime must be a renderable chart type. Emulator-tested (heal happy-path + admin-gate + row-not-found; salvage regression green). The runbook Step 1 Path-1 call sequence is live.
+2. **Original upload method = "not sure / need to check."** ⇒ recovery matches by **normalized filename** via `scripts/heal-orphans-from-local.ts` (dry-run reviewed before any write). No precise id↔file map assumed.
+
+### Still GATED on Daniel (the heal-RUN itself)
+- Local batch folder path (point the matcher `--dir` at it).
+- Confirm local filenames resemble the manifest `fileName`/`title` keys (the dry-run `heal-plan.json` surfaces mismatches as `unmatchedLocal`/`ambiguous` before any write).
+- Then run Step 1 (Path 1) per the runbook; unmatched orphans (no local original) → Lane C.

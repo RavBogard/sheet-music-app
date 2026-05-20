@@ -13,6 +13,7 @@ import {
     richError,
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
+import { healChartBytes, isAllowedChartMime, ALLOWED_CHART_MIME_PREFIXES } from "@/lib/chart-heal"
 import { logger } from "@/lib/logger"
 
 /**
@@ -259,6 +260,15 @@ export interface FinalizeChartUploadArgs {
     uploadSessionId: string
     /** Bypass dedup (exact + fuzzy). Same semantic as upload_chart's force. */
     force?: boolean
+    /**
+     * HEAL mode (admin-only, storage-recovery Lane B). When set, the staged
+     * bytes are written onto this EXISTING orphaned `library_index/{fileId}`
+     * via the shared atomic guard ([[feedback_upload_atomicity]]) instead of
+     * minting a new fileId — preserving every setlist bond. No dedup, no
+     * MuseScore/HEIC conversion: the staged mime must be a renderable chart
+     * type. Used to re-supply bytes for pre-atomic-guard orphans.
+     */
+    targetFileId?: string
 }
 
 export interface FinalizeChartUploadResult {
@@ -267,6 +277,8 @@ export interface FinalizeChartUploadResult {
     title: string
     collection: LibraryCollection
     sizeBytes: number
+    /** True when this finalize healed an existing orphan in place (targetFileId). */
+    healed?: boolean
 }
 
 export async function finalizeChartUpload(
@@ -388,6 +400,77 @@ export async function finalizeChartUpload(
     const fileName =
         (session.fileName as string | undefined) ||
         deriveFileName(title, mimeType)
+
+    // ─── HEAL mode (admin-only): write staged bytes onto an EXISTING orphan ──
+    if (args.targetFileId) {
+        const targetFileId = args.targetFileId
+        if (roles.role !== "admin") {
+            await stagedFile.delete().catch(() => undefined)
+            return forbiddenRoleEnvelope({
+                callerRole: roles.role ?? null,
+                requiredRoles: ["admin"],
+                message:
+                    "Heal mode (targetFileId) is admin-only — it rewrites the bytes every setlist bonded to that chart will render.",
+                hint: "Drop targetFileId to upload as a new chart, or ask an admin to run the heal.",
+                context: { targetFileId },
+            })
+        }
+        if (!isAllowedChartMime(mimeType)) {
+            await stagedFile.delete().catch(() => undefined)
+            return richError(
+                "invalid_source_mime",
+                `Heal mode requires a renderable chart mime; got '${mimeType}' (no conversion in heal mode).`,
+                { targetFileId, mimeType, errorCode: 422 },
+                `Allowed: ${ALLOWED_CHART_MIME_PREFIXES.join(", ")}. Pre-convert MuseScore/HEIC, or upload as a new chart (no targetFileId).`,
+            )
+        }
+        const targetSnap = await db.collection("library_index").doc(targetFileId).get()
+        if (!targetSnap.exists) {
+            await stagedFile.delete().catch(() => undefined)
+            return richError(
+                "row_not_found",
+                `library_index/${targetFileId} does not exist — nothing to heal.`,
+                { targetFileId, errorCode: 422 },
+                "Verify the orphan fileId via the orphan-recovery manifest or list_library.",
+            )
+        }
+        const healed = await healChartBytes(db, uid, targetFileId, buffer, mimeType, "upload-session")
+        await stagedFile.delete().catch((err) => {
+            logger.warn("[mcp] finalize_chart_upload (heal) staged cleanup failed", {
+                uploadSessionId: args.uploadSessionId,
+                err: err instanceof Error ? err.message : String(err),
+            })
+        })
+        if (!("ok" in healed) || !healed.ok) {
+            await sessionRef.update({
+                status: "failed",
+                failedAt: FieldValue.serverTimestamp(),
+                failureReason: healed.error?.message ?? "heal_failed",
+            })
+            return healed
+        }
+        const targetData = targetSnap.data() ?? {}
+        const rowName =
+            (typeof targetData.name === "string" && targetData.name) ||
+            (typeof targetData.title === "string" && targetData.title) ||
+            title
+        const rowCollection =
+            (targetData.collection as LibraryCollection | undefined) ?? "uploads"
+        await sessionRef.update({
+            status: "finalized",
+            finalizedAt: FieldValue.serverTimestamp(),
+            resultFileId: targetFileId,
+            healedTarget: true,
+        })
+        return {
+            ok: true,
+            fileId: targetFileId,
+            title: rowName,
+            collection: rowCollection,
+            sizeBytes: buffer.byteLength,
+            healed: true,
+        }
+    }
 
     const result = await processChartUpload({
         buffer,
