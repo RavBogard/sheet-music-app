@@ -18,6 +18,25 @@ export interface FetchedFile {
 }
 
 /**
+ * Storage-canonical cutover (Lane A — storage-canonical-migration-PLAN.md §2.3).
+ * The Drive byte/metadata fallback only makes sense for ids that are *actually*
+ * Google Drive file ids. Two other id shapes live in `library_index` and have no
+ * Drive backing, so a Drive round-trip on them can only ever 404 (slow dead weight):
+ *   - `upload-{uuid}` — local Storage uploads; bytes live at `library/upload-…`, never Drive.
+ *   - bare UUID       — pre-atomic-guard `local_upload` rows (the ~295 orphans); their
+ *                       bytes were never written anywhere (data loss, no `driveFileId`).
+ * Gating the fallback on "looks like a real Drive id" lets a missing non-Drive id
+ * return fast so the serving route 404s without a pointless Drive hop.
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isLikelyDriveId(cleanId: string): boolean {
+    if (cleanId.startsWith('upload-')) return false
+    if (UUID_RE.test(cleanId)) return false
+    return true
+}
+
+/**
  * Fetch a file by ID from Firebase Storage.
  *
  * @param fileId - File ID (originally from Google Drive)
@@ -56,12 +75,19 @@ export async function fetchFileById(fileId: string, mimeType?: string): Promise<
     } else if (storageResult.success === false && storageResult.reason === 'network') {
         logger.warn(`[FileFetcher] Storage error for ${fileId}: ${storageResult.message}`)
     } else {
-        logger.warn(`[FileFetcher] File not in Storage: ${fileId} — attempting Drive fallback`)
+        logger.warn(
+            isLikelyDriveId(cleanId)
+                ? `[FileFetcher] File not in Storage: ${fileId} — attempting Drive fallback`
+                : `[FileFetcher] File not in Storage: ${fileId} — no Drive fallback (non-Drive id)`,
+        )
     }
 
-    // Drive fallback: handles transient sync copy failures so files remain accessible
-    // Only runs when Storage misses; Drive IDs starting with 'upload-' are local-only and won't be in Drive
-    if (!cleanId.startsWith('upload-')) {
+    // Drive fallback: handles transient sync copy failures so Drive-keyed charts
+    // remain accessible. Storage-canonical cutover (Lane A): only run for ids that
+    // are actually Drive ids — `upload-` and bare-UUID rows have no Drive backing,
+    // so the fallback could only 404 slowly. Gating them out makes a missing
+    // non-Drive id return null fast (the byte route then 404s with no Drive hop).
+    if (isLikelyDriveId(cleanId)) {
         try {
             const drive = new DriveClient()
             // Cycle-5 C5C-006: `getFileWithMime` transparently resolves Drive
@@ -181,11 +207,16 @@ export async function getChartHealth(
         if (storage.success === false && storage.reason === "network") {
             return { status: "unreachable", error: storage.message }
         }
-        // Storage miss → only Drive can help for non-upload-prefixed ids.
-        if (cleanId.startsWith("upload-")) {
+        // Storage miss → only a real Drive id can be helped by the Drive probe.
+        // `upload-` and bare-UUID rows have no Drive backing (storage-canonical
+        // cutover, Lane A), so short-circuit to `missing` without a dead Drive
+        // metadata round-trip.
+        if (!isLikelyDriveId(cleanId)) {
             return {
                 status: "missing",
-                reason: "Not in Storage; upload- prefix has no Drive fallback",
+                reason: cleanId.startsWith("upload-")
+                    ? "Not in Storage; upload- prefix has no Drive fallback"
+                    : "Not in Storage; non-Drive id has no Drive fallback",
             }
         }
         try {
