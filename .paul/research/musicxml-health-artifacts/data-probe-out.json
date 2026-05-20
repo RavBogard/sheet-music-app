@@ -1,0 +1,21 @@
+{
+  "total": 438,
+  "sampleRow": {
+    "fileId": "1OUhfx4EW3ZAtuh-ZPnHxTF4-wGOJdBFy",
+    "name": " Ana B_Koach.pdf",
+    "collection": null,
+    "mimeType": "application/pdf",
+    "fileSize": null,
+    "uploadedAt": "2025-11-14T18:10:38.000Z",
+    "uploadedBy": null,
+    "key": null,
+    "bpm": null,
+    "tags": [],
+    "status": "active",
+    "enrichmentStatus": null,
+    "enrichmentConfidence": null,
+    "aiSuggestion": null,
+    "retryQueued": false
+  },
+  "xmlish": []
+}

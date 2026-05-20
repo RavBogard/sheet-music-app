@@ -1,0 +1,127 @@
+{
+  "prodSha": "0343f4c4961c76d1ac33371bba5de42420f93f52",
+  "uid": "test-zzmxl-band_leader-80c80bc0",
+  "charts": [
+    {
+      "tag": "xml",
+      "fileId": "upload-897575aa-9c6b-42d0-a664-e34c6df49334",
+      "renderMs": 3250,
+      "sig": {
+        "vfEls": 28,
+        "contPaths": 25,
+        "maxPaths": 25,
+        "contTextLen": 15,
+        "rendered": true
+      },
+      "state": {
+        "hasCanvas": false,
+        "failedPdf": false,
+        "failedXml": false,
+        "renderingScore": false,
+        "signInReq": false,
+        "bodySample": "Skip to main content 3 Untitled Score 100% BPM Transpose Monitor EXIT ZZ-MXLAUDIT-uncompressed-xml SONG 1 OF 1 "
+      },
+      "transpose": {
+        "popoverOpened": true,
+        "changed": false,
+        "ms": 1590,
+        "sig1": {
+          "vfEls": 28,
+          "contPaths": 25,
+          "maxPaths": 25,
+          "contTextLen": 15,
+          "rendered": true
+        },
+        "err": null
+      },
+      "consoleErrors": []
+    },
+    {
+      "tag": "mxl",
+      "fileId": "upload-8738c267-e699-4035-ad77-3bbeb0c818fe",
+      "renderMs": 2369,
+      "sig": {
+        "vfEls": 28,
+        "contPaths": 25,
+        "maxPaths": 25,
+        "contTextLen": 15,
+        "rendered": true
+      },
+      "state": {
+        "hasCanvas": false,
+        "failedPdf": false,
+        "failedXml": false,
+        "renderingScore": false,
+        "signInReq": false,
+        "bodySample": "Skip to main content 3 Untitled Score 100% BPM Transpose Monitor EXIT ZZ-MXLAUDIT-compressed-mxl SONG 1 OF 1 "
+      },
+      "transpose": {
+        "popoverOpened": true,
+        "changed": true,
+        "ms": 1609,
+        "sig1": {
+          "vfEls": 28,
+          "contPaths": 26,
+          "maxPaths": 26,
+          "contTextLen": 15,
+          "rendered": true
+        },
+        "err": null
+      },
+      "consoleErrors": []
+    },
+    {
+      "tag": "mscz",
+      "fileId": "upload-db18f672-ba75-403a-a3c8-de5d26dbc555",
+      "renderMs": 2504,
+      "sig": {
+        "vfEls": 47,
+        "contPaths": 27,
+        "maxPaths": 27,
+        "contTextLen": 13,
+        "rendered": true
+      },
+      "state": {
+        "hasCanvas": false,
+        "failedPdf": false,
+        "failedXml": false,
+        "renderingScore": false,
+        "signInReq": false,
+        "bodySample": "Skip to main content C Gm Test Score 100% BPM Transpose Monitor EXIT ZZ-MXLAUDIT-musescore-mscz SONG 1 OF 1 "
+      },
+      "transpose": {
+        "popoverOpened": true,
+        "changed": true,
+        "ms": 1588,
+        "sig1": {
+          "vfEls": 47,
+          "contPaths": 28,
+          "maxPaths": 28,
+          "contTextLen": 13,
+          "rendered": true
+        },
+        "err": null
+      },
+      "consoleErrors": []
+    }
+  ],
+  "setlistView": {
+    "tapped": false,
+    "renderMs": null,
+    "sig": {
+      "vfEls": 0,
+      "contPaths": 0,
+      "maxPaths": 4,
+      "contTextLen": 0,
+      "rendered": false
+    },
+    "state": {
+      "hasCanvas": false,
+      "failedPdf": false,
+      "failedXml": false,
+      "renderingScore": false,
+      "signInReq": false,
+      "bodySample": "Skip to main content CRC Music Setlists Schedule Library ZZ-MXLAUDIT-setlist 0 songs Gig Packet Edit No tracks yet No tracks yet Add tracks "
+    }
+  }
+}
