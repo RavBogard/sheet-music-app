@@ -1,6 +1,17 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
+
+// C9I2-001: add_track_to_setlist now probes the bound chart's byte health and
+// refuses dead bytes. Storage/Drive aren't in the firestore+auth emulator, so
+// mock the probe to healthy by default; the dedicated cycle-9 catalog test
+// overrides it to exercise the refuse/force paths.
+vi.mock("@/lib/file-fetcher", () => ({
+    getChartHealth: vi
+        .fn()
+        .mockResolvedValue({ status: "ok", source: "firebase-storage" }),
+    fetchFileById: vi.fn(),
+}))
 
 import {
     createSetlist,

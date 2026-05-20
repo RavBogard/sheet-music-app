@@ -8,6 +8,17 @@ vi.mock("@/lib/mcp/server-songs", () => ({
     getSongById: (id: string) => mockGetSongById(id),
 }))
 
+// C9I2-001: searchLibrary now probes per-row chart-byte health. This is a
+// unit test (no emulator/Storage), so mock the probe to healthy — these tests
+// assert title/key/bpm filtering + ranking, not byte health. Healthy rows
+// carry no chartHealth annotation and are never filtered, so assertions hold.
+vi.mock("@/lib/file-fetcher", () => ({
+    getChartHealth: vi
+        .fn()
+        .mockResolvedValue({ status: "ok", source: "firebase-storage" }),
+    fetchFileById: vi.fn(),
+}))
+
 import { searchLibrary, getSong } from "../library"
 
 const songs = [

@@ -365,6 +365,77 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
         expect(r.total).toBe(2)
     })
 
+    it("C9I4-001: matches ISO-STRING eventDate setlists (date-only form)", async () => {
+        // Every CURRENT setlist stores eventDate as an ISO string; the old
+        // Timestamp-only range query returned matchedSetlists:[] for them.
+        await db().collection("setlists").doc("set-str-dateonly").set({
+            name: "Erev Shabbat",
+            ownerId: ADMIN,
+            trackCount: 0,
+            eventDate: "2026-06-06", // STRING, not Timestamp
+        })
+        await seedAssignment("as1", {
+            setlistId: "set-str-dateonly",
+            musicianUid: MUSICIAN,
+            status: "confirmed",
+        })
+
+        const r = await listMusiciansOnDate(ADMIN, { eventDate: "2026-06-06" })
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        expect(r.matchedSetlists.map((s) => s.id)).toContain("set-str-dateonly")
+        expect(r.grouped.confirmed.map((a) => a.musicianUid)).toEqual([MUSICIAN])
+        expect(r.total).toBe(1)
+    })
+
+    it("C9I4-001: matches full-ISO-STRING eventDate within the day window", async () => {
+        await db().collection("setlists").doc("set-str-fulliso").set({
+            name: "Friday Night",
+            ownerId: ADMIN,
+            trackCount: 0,
+            eventDate: "2026-06-06T19:00:00.000Z", // STRING, time-of-day
+        })
+        await seedAssignment("as2", {
+            setlistId: "set-str-fulliso",
+            musicianUid: OTHER_MUSICIAN,
+            status: "pending",
+        })
+
+        const r = await listMusiciansOnDate(ADMIN, { eventDate: "2026-06-06" })
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        expect(r.matchedSetlists.map((s) => s.id)).toContain("set-str-fulliso")
+        expect(r.grouped.pending.map((a) => a.musicianUid)).toEqual([
+            OTHER_MUSICIAN,
+        ])
+    })
+
+    it("C9I4-001: still matches Timestamp eventDate rows (no regression)", async () => {
+        // seedSetlist stores a Timestamp — both query paths must coexist.
+        await seedSetlist(SETLIST_ID, { eventDate: EVENT_DATE_ISO })
+        await seedAssignment("as3", {
+            setlistId: SETLIST_ID,
+            musicianUid: MUSICIAN,
+            status: "pending",
+        })
+        const r = await listMusiciansOnDate(ADMIN, { eventDate: EVENT_DATE_ISO })
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        expect(r.matchedSetlists.map((s) => s.id)).toContain(SETLIST_ID)
+        expect(r.total).toBe(1)
+    })
+
+    it("C9I4-001: a string eventDate OUTSIDE the day window does not match", async () => {
+        await db().collection("setlists").doc("set-str-otherday").set({
+            name: "Next Week",
+            ownerId: ADMIN,
+            trackCount: 0,
+            eventDate: "2026-06-13",
+        })
+        const r = await listMusiciansOnDate(ADMIN, { eventDate: "2026-06-06" })
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        expect(r.matchedSetlists.map((s) => s.id)).not.toContain(
+            "set-str-otherday",
+        )
+    })
+
     // ─── list_pending_assignments ───────────────────────────────────────────
 
     it("list_pending_assignments: refuses non-trusted-leader caller", async () => {
@@ -454,6 +525,36 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
         // With no one selected, every required slot is uncovered.
         expect(r.coverageGap).toContain("acoustic_guitar")
         expect(r.coverageGap).toContain("hand_drums")
+    })
+
+    it("C9I4-004: free-text instruments count toward coverage (Guitar→acoustic_guitar, Drums→hand_drums)", async () => {
+        // A musician whose profile.instrument is the free-text "Guitar" / "Drums"
+        // (not the canonical slug) must satisfy the required slot. Pre-fix the
+        // exact-equality check left acoustic_guitar/hand_drums in the gap.
+        await seedUser("gtr-user", {
+            role: "musician",
+            instrument: "Guitar",
+            tier: "regular",
+        })
+        await seedUser("drm-user", {
+            role: "musician",
+            instrument: "Drums",
+            tier: "regular",
+        })
+        await seedSetlist(SETLIST_ID, {
+            eventDate: EVENT_DATE_ISO,
+            assignedUids: ["gtr-user", "drm-user"],
+        })
+
+        const r = await suggestBand(ADMIN, { setlistId: SETLIST_ID })
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        // Free-text Guitar/Drums now cover their required slugs.
+        expect(r.coverageGap).not.toContain("acoustic_guitar")
+        expect(r.coverageGap).not.toContain("hand_drums")
+        // Genuinely-uncovered slots still surface.
+        expect(r.coverageGap).toContain("electric_bass")
+        expect(r.coverageGap).toContain("piano")
+        expect(r.coverageGap).toContain("voice")
     })
 
     // ─── assign_musician ────────────────────────────────────────────────────

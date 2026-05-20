@@ -81,6 +81,23 @@ interface TransientRow {
     error: string
 }
 
+/**
+ * C9I3-002 — a `library_index` row whose canonical mime is a Google Drive
+ * shortcut (`application/vnd.google-apps.shortcut`). Its bytes are an
+ * unembeddable shortcut, not a chart, so a plain retry can NEVER heal it
+ * (pre-fix these were mislabeled `transient`, which implied "re-run later").
+ * A force-run attempts an in-place auto-resolve — download the shortcut
+ * TARGET's bytes and store them at this SAME fileId with the target mime,
+ * so every existing setlist/song bond keeps resolving. `error` is set on a
+ * dry-run-plan row (absent) vs a force-run row that couldn't auto-resolve
+ * (target gone, shortcut chain, empty bytes) and needs a manual re-bond.
+ */
+interface NeedsRebondRow {
+    fileId: string
+    name: string
+    error?: string
+}
+
 interface SkippedNonChartRow {
     fileId: string
     name: string
@@ -145,6 +162,20 @@ export interface ReconcileLibraryResult {
     transient: {
         count: number
         rows: TransientRow[]
+        truncated: boolean
+    }
+    /**
+     * C9I3-002 — rows whose canonical mime is a Drive shortcut. dryRun lists
+     * every shortcut row here (the plan). A force-run auto-resolves what it
+     * can in place (those move to `driveMirror` / `committed`); rows whose
+     * target is gone escalate to `orphan`; rows that still can't resolve
+     * (shortcut chain / empty target) stay here with a per-row `error` so
+     * the operator can re-bond manually. Previously these were silently
+     * (and wrongly) demoted to `transient`.
+     */
+    needsRebond: {
+        count: number
+        rows: NeedsRebondRow[]
         truncated: boolean
     }
     /**
@@ -253,7 +284,13 @@ async function loadAdminCandidates(
 
 interface ProbeResult {
     candidate: Candidate
-    bucket: "healthy" | "mirror" | "orphan" | "transient" | "skipped_non_chart"
+    bucket:
+        | "healthy"
+        | "mirror"
+        | "orphan"
+        | "transient"
+        | "skipped_non_chart"
+        | "needs_rebond"
     /** Set when bucket === 'mirror' or 'skipped_non_chart' — drive metadata. */
     driveMimeType?: string
     /** Set only when bucket === 'transient'. */
@@ -320,6 +357,15 @@ async function probeRow(c: Candidate): Promise<ProbeResult> {
         if (health.status === "missing") {
             return { candidate: c, bucket: "orphan" }
         }
+        if (health.status === "shortcut_unresolved") {
+            // C9I3-002: the row's bytes are an unembeddable Drive shortcut.
+            // It can NEVER heal via retry — pre-fix it fell through to the
+            // `transient` bucket below, so reconcile demoted Tu Bishvat /
+            // Lechu Goldman forever. Route to the needsRebond bucket; a
+            // force-run attempts in-place auto-resolution of the shortcut
+            // target.
+            return { candidate: c, bucket: "needs_rebond" }
+        }
         // status === "unreachable" — transient
         return {
             candidate: c,
@@ -364,61 +410,33 @@ type MirrorOutcome =
     | { ok: false; kind: "orphaned"; error: string }
     | { ok: false; kind: "transient"; error: string }
 
-async function mirrorRow(
+/**
+ * Shared atomic-guard tail for both the Drive-200 mirror and the C9I3-002
+ * shortcut-rebond heal: upload `buffer` to Storage at the EXISTING `fileId`,
+ * read-verify by byte size, then merge-update the storage-canonical surface
+ * (curation fields preserved by the merge), compensating-deleting the Storage
+ * blob if the Firestore write throws. Never returns `orphaned` — byte-source
+ * resolution (and 404→orphan escalation) is the caller's job.
+ */
+async function commitResolvedBytes(
     db: FirebaseFirestore.Firestore,
-    drive: DriveClient,
-    c: Candidate,
-    driveMimeType: string,
-    actorUid: string,
+    fileId: string,
+    buffer: Buffer,
+    mimeType: string,
 ): Promise<MirrorOutcome> {
-    // Drive 200 was confirmed at the METADATA probe step; the actual bytes
-    // can still 404 (deleted file, shortcut to a deleted target). C5C-007:
-    // distinguish a 404 byte fetch (orphan — escalate to the orphan bucket
-    // so the row's `status:'active'` finally flips to `'orphaned'`) from
-    // other failures (transient — leave the row untouched for re-run).
-    // Real-prod row Hashkiveinu (Brodsky-Zweiback) had this exact shape:
-    // metadata exists, bytes 404, so reconcile kept demoting it to transient
-    // forever instead of orphaning it.
-    let buffer: Buffer
-    try {
-        const bytes = await drive.getFile(c.fileId)
-        buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes as ArrayBuffer)
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        if (/not found|404/i.test(msg)) {
-            return {
-                ok: false,
-                kind: "orphaned",
-                error: `Drive byte fetch 404'd at commit time: ${msg}`,
-            }
-        }
-        return {
-            ok: false,
-            kind: "transient",
-            error: `Drive download failed: ${msg}`,
-        }
-    }
-    if (buffer.byteLength === 0) {
-        // Empty Drive payload — surface as transient rather than orphan;
-        // an operator-driven re-fetch is the right call, not a permanent
-        // status flip.
-        return { ok: false, kind: "transient", error: "Drive payload empty" }
-    }
-
-    // Storage upload + read-verify, atomic-guard pattern. The Storage path
-    // mirrors `getStoragePath` extension logic (pdf/xml/audio); for any
-    // other mime the extension is "" — matches `getStorageObjectSize`.
-    const ext = driveMimeType.includes("pdf")
+    // Storage path mirrors `getStoragePath` extension logic (pdf/xml/audio);
+    // any other mime gets "" — matches `getStorageObjectSize`.
+    const ext = mimeType.includes("pdf")
         ? ".pdf"
-        : driveMimeType.includes("xml")
+        : mimeType.includes("xml")
           ? ".xml"
-          : driveMimeType.includes("audio")
+          : mimeType.includes("audio")
             ? ".mp3"
             : ""
-    const storagePath = `library/${c.fileId}${ext}`
+    const storagePath = `library/${fileId}${ext}`
 
     try {
-        await uploadToStorage(c.fileId, buffer, driveMimeType)
+        await uploadToStorage(fileId, buffer, mimeType)
     } catch (err) {
         return {
             ok: false,
@@ -462,23 +480,15 @@ async function mirrorRow(
     // reconciledAt marker.
     const nowIso = new Date().toISOString()
     const patch: Record<string, unknown> = {
-        mimeType: driveMimeType,
+        mimeType,
         fileSize: buffer.byteLength,
         source: "drive-sync",
         status: "active",
         reconciledAt: nowIso,
-        // Provenance for the next NEW-1 cron tick to maintain. The Drive
-        // file ID for a reconcile-source row equals the library_index id
-        // (charts authored via the legacy Drive→Storage flow carry the
-        // Drive id as their library row id). Operators can confirm via
-        // `verify_setlist_charts` post-run.
-        driveFileId: c.fileId,
+        driveFileId: fileId,
     }
     try {
-        await db
-            .collection("library_index")
-            .doc(c.fileId)
-            .set(patch, { merge: true })
+        await db.collection("library_index").doc(fileId).set(patch, { merge: true })
     } catch (err) {
         // Compensating-delete: roll the Storage blob back so we don't
         // leave a reverse orphan (bytes-without-index-update).
@@ -495,11 +505,118 @@ async function mirrorRow(
             error: `Firestore merge-update failed: ${err instanceof Error ? err.message : String(err)}`,
         }
     }
+    return { ok: true, sizeBytes: buffer.byteLength }
+}
+
+async function mirrorRow(
+    db: FirebaseFirestore.Firestore,
+    drive: DriveClient,
+    c: Candidate,
+    driveMimeType: string,
+    actorUid: string,
+): Promise<MirrorOutcome> {
+    // Drive 200 was confirmed at the METADATA probe step; the actual bytes
+    // can still 404 (deleted file, shortcut to a deleted target). C5C-007:
+    // distinguish a 404 byte fetch (orphan — escalate to the orphan bucket
+    // so the row's `status:'active'` finally flips to `'orphaned'`) from
+    // other failures (transient — leave the row untouched for re-run).
+    // Real-prod row Hashkiveinu (Brodsky-Zweiback) had this exact shape:
+    // metadata exists, bytes 404, so reconcile kept demoting it to transient
+    // forever instead of orphaning it.
+    let buffer: Buffer
+    try {
+        const bytes = await drive.getFile(c.fileId)
+        buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes as ArrayBuffer)
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        if (/not found|404/i.test(msg)) {
+            return {
+                ok: false,
+                kind: "orphaned",
+                error: `Drive byte fetch 404'd at commit time: ${msg}`,
+            }
+        }
+        return {
+            ok: false,
+            kind: "transient",
+            error: `Drive download failed: ${msg}`,
+        }
+    }
+    if (buffer.byteLength === 0) {
+        // Empty Drive payload — surface as transient rather than orphan;
+        // an operator-driven re-fetch is the right call, not a permanent
+        // status flip.
+        return { ok: false, kind: "transient", error: "Drive payload empty" }
+    }
+
     // Note: actorUid kept on the call for future audit-log extension —
     // current writes carry the row-level reconciledAt timestamp; uploader
     // identity is left intact on the original row.
     void actorUid
-    return { ok: true, sizeBytes: buffer.byteLength }
+    // Storage upload + read-verify + Firestore merge — shared atomic-guard
+    // tail (also used by the C9I3-002 shortcut-rebond heal path).
+    return commitResolvedBytes(db, c.fileId, buffer, driveMimeType)
+}
+
+/**
+ * C9I3-002 — heal one shortcut-bonded row in place. Resolves the shortcut's
+ * TARGET via `getFileWithMime` (one Drive round-trip: target bytes + target
+ * mime), then writes those bytes to Storage at the SAME fileId with the
+ * target mime via the shared atomic-guard tail. The fileId is unchanged, so
+ * every existing setlist/song bond keeps resolving — this is a HEAL, not a
+ * re-key. A target that 404s escalates to the orphan bucket; an unresolvable
+ * shortcut (chain / no targetMimeType / empty target) stays needsRebond for
+ * a manual re-bond.
+ */
+type RebondOutcome =
+    | { ok: true; sizeBytes: number }
+    | { ok: false; kind: "orphaned"; error: string }
+    | { ok: false; kind: "needs_rebond"; error: string }
+
+async function rebondRow(
+    db: FirebaseFirestore.Firestore,
+    drive: DriveClient,
+    c: Candidate,
+): Promise<RebondOutcome> {
+    let data: ArrayBuffer
+    let targetMime: string | null
+    try {
+        const resolved = await drive.getFileWithMime(c.fileId)
+        data = resolved.data
+        targetMime = resolved.mimeType
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        if (/not found|404/i.test(msg)) {
+            return {
+                ok: false,
+                kind: "orphaned",
+                error: `Shortcut target 404'd at rebond time: ${msg}`,
+            }
+        }
+        // Shortcut chain exceeded, or any other Drive failure — needs a
+        // manual re-bond to the underlying chart fileId.
+        return { ok: false, kind: "needs_rebond", error: msg }
+    }
+    if (!targetMime || targetMime === "application/vnd.google-apps.shortcut") {
+        return {
+            ok: false,
+            kind: "needs_rebond",
+            error: "Shortcut target mime unresolved (chain or missing targetMimeType) — re-bond manually to the underlying chart fileId.",
+        }
+    }
+    const buffer = Buffer.from(data)
+    if (buffer.byteLength === 0) {
+        return {
+            ok: false,
+            kind: "needs_rebond",
+            error: "Shortcut target returned empty bytes.",
+        }
+    }
+    const out = await commitResolvedBytes(db, c.fileId, buffer, targetMime)
+    if (out.ok) return { ok: true, sizeBytes: out.sizeBytes }
+    // commitResolvedBytes only fails transiently (upload/verify/merge); keep
+    // the row in needsRebond so a re-run retries the heal.
+    return { ok: false, kind: "needs_rebond", error: out.error }
 }
 
 async function commitMirrorBatch(
@@ -561,6 +678,61 @@ async function commitMirrorBatch(
         }
     }
     return { committed, demoted, orphanedDuringMirror, sizes }
+}
+
+async function commitRebondBatch(
+    db: FirebaseFirestore.Firestore,
+    drive: DriveClient,
+    plan: ProbeResult[],
+): Promise<{
+    committed: number
+    /** Rows healed in place — folded into the driveMirror report. */
+    healed: MirrorRow[]
+    /** Rows whose shortcut target 404'd — folded into the orphan commit. */
+    orphanedDuringRebond: { probe: ProbeResult; row: OrphanRow; error: string }[]
+    /** Rows that still couldn't auto-resolve — surfaced for manual re-bond. */
+    stillNeedsRebond: NeedsRebondRow[]
+}> {
+    const healed: MirrorRow[] = []
+    const orphanedDuringRebond: {
+        probe: ProbeResult
+        row: OrphanRow
+        error: string
+    }[] = []
+    const stillNeedsRebond: NeedsRebondRow[] = []
+    let committed = 0
+    for (let i = 0; i < plan.length; i += MIRROR_CONCURRENCY) {
+        const batch = plan.slice(i, i + MIRROR_CONCURRENCY)
+        const results = await Promise.all(
+            batch.map(async (p) => {
+                const r = await rebondRow(db, drive, p.candidate)
+                return { p, r }
+            }),
+        )
+        for (const { p, r } of results) {
+            if (r.ok) {
+                committed++
+                healed.push({
+                    fileId: p.candidate.fileId,
+                    name: p.candidate.name,
+                    sizeBytes: r.sizeBytes,
+                })
+            } else if (r.kind === "orphaned") {
+                orphanedDuringRebond.push({
+                    probe: p,
+                    row: { fileId: p.candidate.fileId, name: p.candidate.name },
+                    error: r.error,
+                })
+            } else {
+                stillNeedsRebond.push({
+                    fileId: p.candidate.fileId,
+                    name: p.candidate.name,
+                    error: r.error,
+                })
+            }
+        }
+    }
+    return { committed, healed, orphanedDuringRebond, stillNeedsRebond }
 }
 
 async function commitOrphanBatch(
@@ -663,6 +835,7 @@ export async function reconcileLibrary(
                 orphan: { count: 0, rows: [], truncated: false },
                 transient: { count: 0, rows: [], truncated: false },
                 skippedNonChart: { count: 0, rows: [], truncated: false },
+                needsRebond: { count: 0, rows: [], truncated: false },
                 coverage,
             }
             if (!dryRun && !force) {
@@ -690,6 +863,9 @@ export async function reconcileLibrary(
         const skippedNonChartPlan = probes.filter(
             (p) => p.bucket === "skipped_non_chart",
         )
+        const needsRebondPlan = probes.filter(
+            (p) => p.bucket === "needs_rebond",
+        )
 
         const mirrorRows: MirrorRow[] = mirrorPlan.map((p) => ({
             fileId: p.candidate.fileId,
@@ -712,6 +888,10 @@ export async function reconcileLibrary(
                 reason: p.skipReason ?? "other_non_chart",
             }),
         )
+        const needsRebondRows: NeedsRebondRow[] = needsRebondPlan.map((p) => ({
+            fileId: p.candidate.fileId,
+            name: p.candidate.name,
+        }))
 
         if (dryRun) {
             return {
@@ -722,6 +902,7 @@ export async function reconcileLibrary(
                 orphan: bucketReport(orphanRows),
                 transient: bucketReport(transientRows),
                 skippedNonChart: bucketReport(skippedNonChartRows),
+                needsRebond: bucketReport(needsRebondRows),
                 coverage,
                 dryRun: true,
                 committed: 0,
@@ -747,6 +928,7 @@ export async function reconcileLibrary(
                         orphan: bucketReport(orphanRows),
                         transient: bucketReport(transientRows),
                         skippedNonChart: bucketReport(skippedNonChartRows),
+                        needsRebond: bucketReport(needsRebondRows),
                         coverage,
                     },
                 },
@@ -769,12 +951,21 @@ export async function reconcileLibrary(
             ...mirrorOutcome.demoted.map((d) => d.fileId),
             ...mirrorOutcome.orphanedDuringMirror.map((o) => o.row.fileId),
         ])
-        const finalMirrorRows: MirrorRow[] = mirrorRows
-            .filter((r) => !droppedFromMirror.has(r.fileId))
-            .map((r) => ({
-                ...r,
-                sizeBytes: mirrorOutcome.sizes.get(r.fileId),
-            }))
+        // C9I3-002: auto-resolve shortcut rows in place (download the target's
+        // bytes → store at this fileId with the target mime). Healed rows fold
+        // into the mirror report; targets that 404 escalate to orphan; the
+        // rest stay needsRebond for a manual re-bond.
+        const rebondOutcome = await commitRebondBatch(db, drive, needsRebondPlan)
+
+        const finalMirrorRows: MirrorRow[] = [
+            ...mirrorRows
+                .filter((r) => !droppedFromMirror.has(r.fileId))
+                .map((r) => ({
+                    ...r,
+                    sizeBytes: mirrorOutcome.sizes.get(r.fileId),
+                })),
+            ...rebondOutcome.healed,
+        ]
         const finalTransientRows: TransientRow[] = [
             ...transientRows,
             ...mirrorOutcome.demoted,
@@ -782,14 +973,27 @@ export async function reconcileLibrary(
         const escalatedOrphanProbes = mirrorOutcome.orphanedDuringMirror.map(
             (o) => o.probe,
         )
+        const rebondOrphanProbes = rebondOutcome.orphanedDuringRebond.map(
+            (o) => o.probe,
+        )
         const finalOrphanRows: OrphanRow[] = [
             ...orphanRows,
             ...mirrorOutcome.orphanedDuringMirror.map((o) => o.row),
+            ...rebondOutcome.orphanedDuringRebond.map((o) => o.row),
         ]
-        const fullOrphanPlan = [...orphanPlan, ...escalatedOrphanProbes]
+        const fullOrphanPlan = [
+            ...orphanPlan,
+            ...escalatedOrphanProbes,
+            ...rebondOrphanProbes,
+        ]
+        const finalNeedsRebondRows: NeedsRebondRow[] =
+            rebondOutcome.stillNeedsRebond
 
         const orphansCommitted = await commitOrphanBatch(db, fullOrphanPlan)
-        const committed = mirrorOutcome.committed + orphansCommitted
+        const committed =
+            mirrorOutcome.committed +
+            rebondOutcome.committed +
+            orphansCommitted
 
         await broadcastReconcileSignal(db, uid, committed)
 
@@ -798,8 +1002,11 @@ export async function reconcileLibrary(
             scanned: candidates.length,
             alreadyHealthy: healthy.length,
             mirrored: mirrorOutcome.committed,
+            rebonded: rebondOutcome.committed,
             orphaned: orphansCommitted,
             orphanedDuringMirror: mirrorOutcome.orphanedDuringMirror.length,
+            orphanedDuringRebond: rebondOutcome.orphanedDuringRebond.length,
+            stillNeedsRebond: finalNeedsRebondRows.length,
             transient: finalTransientRows.length,
         })
 
@@ -811,6 +1018,7 @@ export async function reconcileLibrary(
             orphan: bucketReport(finalOrphanRows),
             transient: bucketReport(finalTransientRows),
             skippedNonChart: bucketReport(skippedNonChartRows),
+            needsRebond: bucketReport(finalNeedsRebondRows),
             coverage,
             dryRun: false,
             committed,

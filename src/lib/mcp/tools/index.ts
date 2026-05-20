@@ -357,6 +357,12 @@ export function registerReadTools(server: McpServer): void {
                     .describe(
                         "If true, include non-chart artifacts (audio files, spreadsheets, Drive folders, dotfiles like .DS_Store) that the in-app library and list_library hide. Default false.",
                     ),
+                includeUnbindable: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "If true, include rows whose chart bytes are dead — missing (404 in both Storage and Drive) or an unembeddable Google Drive shortcut — that are hidden by default. Surfaced rows carry chartHealth.bindable:false so you can triage/heal/re-bond them. Default false (binding such a row 404s in Perform mode, so search hides them).",
+                    ),
             },
         },
         async (args, extra) => jsonResult(await searchLibrary(uidFrom(extra), args)),
@@ -776,6 +782,12 @@ export function registerWriteTools(server: McpServer): void {
                     .min(0)
                     .optional()
                     .describe("0-based insert index; omit to append"),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Bind even if the chart's bytes are dead. By default a songId whose chart is missing (404) or an unembeddable Google Drive shortcut is REFUSED with chart_unbindable — binding it would render a broken row in Perform mode and drop from gig packets. Set true to override (e.g. you're re-uploading the bytes next, or the row will be reconciled).",
+                    ),
             },
         },
         async (args, extra) => jsonResult(await addTrackToSetlist(uidFrom(extra), args)),
@@ -1407,7 +1419,7 @@ export function registerWriteTools(server: McpServer): void {
         "reconcile_library",
         {
             description:
-                "Admin-only one-shot bootstrap reconciliation for `library_index` rows under the storage-canonical direction (cycle-3 ADDENDUM-1 NEW-2). Walks every active row; for any whose Storage object 404s, probes Drive: Drive 200 + chart-shape → mirror the bytes into Storage at the EXISTING fileId (preserving every setlist/song bond) and flip `status: 'active'`; Drive 200 + non-chart mime (folder / audio / .DS_Store / Office doc) → route to `skippedNonChart` bucket and leave untouched (cycle-3 BUG-001 — prevents force-writes of 0-byte garbage at the existing fileId); Drive 404 → mark `status: 'orphaned'`; Drive 5xx / timeout → leave the row untouched and surface in the `transient` bucket so the operator can re-run later. Drains the ~250 dead-looking rows from the pre-NEW-1 era. Idempotent: rows already `status: 'orphaned'` or `status: 'duplicate'` are skipped, so a second run after a successful force-run leaves nothing to do. Defaults `dryRun: true` per the F-05 dry-run-is-observability rule — caller MUST pass `force: true` to actually write. dryRun returns the full plan (bucket counts + per-row preview, capped at 500 rows per bucket) without writes. Real run without `force: true` returns the rich `force_required` envelope (REG-003: `{ok:false, error:{machine_code:'force_required'}, dryRunPlan:<the plan>}`) and no writes. Mirror operation preserves processChartUpload's atomic-guard contract (read-verify + compensating-delete + library_signals broadcast). Returns `{scanned, alreadyHealthy, driveMirror:{count,rows,truncated}, orphan:{count,rows,truncated}, transient:{count,rows,truncated}, skippedNonChart:{count,rows,truncated}, coverage, dryRun, committed}` on success.",
+                "Admin-only one-shot bootstrap reconciliation for `library_index` rows under the storage-canonical direction (cycle-3 ADDENDUM-1 NEW-2). Walks every active row; for any whose Storage object 404s, probes Drive: Drive 200 + chart-shape → mirror the bytes into Storage at the EXISTING fileId (preserving every setlist/song bond) and flip `status: 'active'`; Drive 200 + non-chart mime (folder / audio / .DS_Store / Office doc) → route to `skippedNonChart` bucket and leave untouched (cycle-3 BUG-001 — prevents force-writes of 0-byte garbage at the existing fileId); Drive 404 → mark `status: 'orphaned'`; canonical mime is a Drive shortcut → route to the `needsRebond` bucket (C9I3-002), and on a force-run auto-resolve the shortcut TARGET's bytes in place at the same fileId (preserving bonds) — a target that 404s escalates to `orphan`, a shortcut chain / unresolvable target stays `needsRebond` for a manual re-bond; Drive 5xx / timeout → leave the row untouched and surface in the `transient` bucket so the operator can re-run later. Drains the ~250 dead-looking rows from the pre-NEW-1 era. Idempotent: rows already `status: 'orphaned'` or `status: 'duplicate'` are skipped, so a second run after a successful force-run leaves nothing to do. Defaults `dryRun: true` per the F-05 dry-run-is-observability rule — caller MUST pass `force: true` to actually write. dryRun returns the full plan (bucket counts + per-row preview, capped at 500 rows per bucket) without writes. Real run without `force: true` returns the rich `force_required` envelope (REG-003: `{ok:false, error:{machine_code:'force_required'}, dryRunPlan:<the plan>}`) and no writes. Mirror operation preserves processChartUpload's atomic-guard contract (read-verify + compensating-delete + library_signals broadcast). Returns `{scanned, alreadyHealthy, driveMirror:{count,rows,truncated}, orphan:{count,rows,truncated}, transient:{count,rows,truncated}, skippedNonChart:{count,rows,truncated}, needsRebond:{count,rows,truncated}, coverage, dryRun, committed}` on success.",
             inputSchema: {
                 dryRun: z
                     .boolean()

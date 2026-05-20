@@ -1,6 +1,7 @@
 import { getAllSongs, getSongById, type SongRecord } from "@/lib/mcp/server-songs"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getStorage } from "firebase-admin/storage"
+import { getChartHealth } from "@/lib/file-fetcher"
 import { logger } from "@/lib/logger"
 import { bareStem } from "@/lib/mcp/title-specificity"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
@@ -91,6 +92,16 @@ export interface SearchLibraryArgs {
      * rows in search results. Default false.
      */
     includeNonCharts?: boolean
+    /**
+     * C9I2-001: by default search hides rows whose chart bytes are dead —
+     * `missing` (404 in both Storage and Drive) or `shortcut_unresolved`
+     * (an unembeddable Google Drive shortcut). These are `active`-status
+     * catalog rows that would silently bind to a broken chart. Set true to
+     * surface them anyway, flagged with `chartHealth.bindable: false`, e.g.
+     * while triaging library hygiene or to re-bond a shortcut to its target.
+     * Default false.
+     */
+    includeUnbindable?: boolean
     /**
      * Context key for hint lookup — typically a setlist's templateType
      * (e.g. "friday-evening", "shabbat-morning"). When supplied, the
@@ -399,27 +410,71 @@ export async function searchLibrary(
             rankBias(r) + (preferredFileId === r.id ? CONTEXT_HINT_BOOST : 0),
     }))
     ranked.sort(compareRanked)
+    const sliced = ranked.slice(0, limit)
+
+    // C9I2-001: probe live chart-byte health for the bounded result set so
+    // the agent never silently binds (or surfaces as "clean") a dead chart.
+    // Reuses the existing getChartHealth machinery (Storage probe → Drive
+    // metadata fallback → shortcut detection) — same path verify_setlist_charts
+    // uses. The W-02-joined `mimeType` is passed so a library_index row whose
+    // canonical mime is a Drive shortcut is caught even when Storage holds a
+    // stale shortcut blob (BUG-002). Bounded to `limit` (≤50) rows so the
+    // probe cost stays comparable to the full-catalog read this tool already
+    // pays. Definitively-dead rows (missing / shortcut_unresolved) are dropped
+    // by default; `unreachable` (transient blip) and `needs_storage_sync`
+    // (serves via Drive fallback) stay — same not-punish-a-blip posture as
+    // verify_setlist_charts' orphan marking.
+    const healthProbes = await Promise.all(
+        sliced.map((r) => {
+            const m = r as SongRecord & { mimeType?: string }
+            return getChartHealth(r.id, m.mimeType).catch(() => ({
+                status: "unreachable" as const,
+                error: "health probe failed",
+            }))
+        }),
+    )
+
     // Strip internal _rank AND the join-only classification fields
     // (`mimeType` / `name` come from the W-02 join purely so the
     // F-007/F-024 filter step above can run isNonChartArtifactShape;
     // they are NOT part of the SongRecord wire contract).
-    return ranked.slice(0, limit).map((r) => {
+    const out: SongRecord[] = []
+    sliced.forEach((r, i) => {
+        const health = healthProbes[i]
+        const bindable =
+            health.status === "ok" ||
+            health.status === "needs_storage_sync" ||
+            health.status === "unreachable"
+        // Default: drop definitively-dead rows. includeUnbindable surfaces
+        // them flagged so hygiene/re-bond flows can still find them.
+        if (!bindable && !args.includeUnbindable) return
+
         const merged = r as SongRecord & {
             _rank: number
             mimeType?: string
             name?: string
         }
-        const {
-            _rank: _r,
-            mimeType: _m,
-            name: _n,
-            ...rest
-        } = merged
+        const { _rank: _r, mimeType: _m, name: _n, ...rest } = merged
         void _r
         void _m
         void _n
-        return rest as SongRecord
+        const row = rest as SongRecord
+        // Only annotate non-ok rows — keeps the healthy-row wire shape lean.
+        if (health.status !== "ok") {
+            row.chartHealth = {
+                status: health.status,
+                bindable,
+                reason:
+                    "reason" in health && typeof health.reason === "string"
+                        ? health.reason
+                        : "error" in health && typeof health.error === "string"
+                          ? health.error
+                          : undefined,
+            }
+        }
+        out.push(row)
     })
+    return out
 }
 
 export interface GetSongArgs {

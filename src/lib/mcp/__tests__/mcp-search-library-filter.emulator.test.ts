@@ -5,9 +5,20 @@ import {
     describe,
     expect,
     it,
+    vi,
 } from "vitest"
 import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
+
+// C9I2-001: searchLibrary now probes per-row chart-byte health. Storage/Drive
+// aren't in the firestore+auth emulator, so mock the probe to healthy by
+// default — these tests assert the title/mime/status filters, not byte health.
+vi.mock("@/lib/file-fetcher", () => ({
+    getChartHealth: vi
+        .fn()
+        .mockResolvedValue({ status: "ok", source: "firebase-storage" }),
+    fetchFileById: vi.fn(),
+}))
 
 import { searchLibrary } from "../tools/library"
 

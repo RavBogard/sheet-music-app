@@ -162,6 +162,21 @@ async function loadUserMusicianRow(
     return buildMusicianRow(uid, snap.data() ?? {})
 }
 
+/**
+ * C9I4-004 — loose instrument equivalence. Mirrors the normalization
+ * suggest_musicians already applies (lowercase, `_`→space, exact-or-substring)
+ * so a free-text profile value like "Guitar" / "Drums" counts toward a
+ * required slug like `acoustic_guitar` / `hand_drums`. Pre-fix, suggest_band's
+ * coverage-gap check used exact key equality, so free-text instruments never
+ * registered as covering a required slot.
+ */
+function instrumentMatches(have: string, want: string): boolean {
+    const h = have.toLowerCase().replace(/_/g, " ").trim()
+    const w = want.toLowerCase().replace(/_/g, " ").trim()
+    if (!h || !w) return false
+    return h === w || h.includes(w) || w.includes(h)
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // list_musicians
 // ────────────────────────────────────────────────────────────────────────────
@@ -400,22 +415,36 @@ export async function listMusiciansOnDate(
     if (!gate.ok) return gate
 
     try {
-        // Resolve setlists for the date window. eventDate field is a
-        // Firestore Timestamp in modern setlists, but legacy rows may store
-        // the string ISO. Use a range query on the timestamp side; legacy
-        // rows can be matched via a follow-up grep if needed.
+        // Resolve setlists for the date window. The `eventDate` field is a
+        // Firestore Timestamp on some rows but an ISO STRING on others — and
+        // C9I4-001 confirmed every CURRENT setlist stores the string form, so
+        // the Timestamp range query alone returned `matchedSetlists: []` for
+        // every real "who's playing on date X" question. Firestore range
+        // queries are type-scoped (a Timestamp bound never matches a string
+        // value and vice-versa), so we run BOTH a Timestamp-range query AND a
+        // lexical string-range query and merge by doc id. ISO date strings
+        // sort lexically, so the [YYYY-MM-DD, nextDay) bound matches both
+        // "2026-05-13" and "2026-05-13T19:00:00Z".
         const { Timestamp } = await import("firebase-admin/firestore")
         const startTs = Timestamp.fromDate(bounds.start)
         const endTs = Timestamp.fromDate(bounds.end)
+        const startStr = bounds.start.toISOString().slice(0, 10)
+        const endStr = bounds.end.toISOString().slice(0, 10)
 
-        const setlistsSnap = await db
-            .collection("setlists")
-            .where("eventDate", ">=", startTs)
-            .where("eventDate", "<", endTs)
-            .get()
+        const col = db.collection("setlists")
+        const [tsSnap, strSnap] = await Promise.all([
+            col.where("eventDate", ">=", startTs).where("eventDate", "<", endTs).get(),
+            col.where("eventDate", ">=", startStr).where("eventDate", "<", endStr).get(),
+        ])
+        const setlistDocs = new Map<
+            string,
+            FirebaseFirestore.QueryDocumentSnapshot
+        >()
+        for (const d of tsSnap.docs) setlistDocs.set(d.id, d)
+        for (const d of strSnap.docs) setlistDocs.set(d.id, d)
 
         const matchedSetlists: ListMusiciansOnDateResult["matchedSetlists"] = []
-        for (const d of setlistsSnap.docs) {
+        for (const d of setlistDocs.values()) {
             const data = d.data()
             if (
                 args.templateType &&
@@ -822,8 +851,11 @@ export async function suggestBand(
                     : null,
         })
 
+        // C9I4-004: loose-match selected instruments against required slugs so
+        // a free-text "Guitar"/"Drums" counts toward acoustic_guitar/hand_drums
+        // coverage (parity with suggest_musicians). Exact `.includes` missed them.
         const coverageGap = [...REQUIRED_INSTRUMENTS].filter(
-            (k) => !selectedInstrumentKeys.includes(k),
+            (k) => !selectedInstrumentKeys.some((have) => instrumentMatches(have, k)),
         )
 
         return {

@@ -123,6 +123,16 @@ const driveState = {
      * `mirrorRow` matches `/not found|404/i` against the thrown message.
      */
     getFile404Throws: new Set<string>(),
+    /**
+     * C9I3-002: getFileWithMime responses keyed by shortcut fileId. The
+     * shortcut-rebond heal path resolves the target bytes + target mime
+     * through this seam. "404" throws a not-found error (→ orphan escalation),
+     * "chain" throws a shortcut-chain error (→ stays needsRebond).
+     */
+    withMime: new Map<
+        string,
+        { data: Buffer; mimeType: string | null } | "404" | "chain"
+    >(),
 }
 
 vi.mock("@/lib/google-drive", () => ({
@@ -147,6 +157,22 @@ vi.mock("@/lib/google-drive", () => ({
             const b = driveState.bytes.get(fileId)
             if (!b) throw new Error("no bytes seeded")
             return b
+        }),
+        getFileWithMime: vi.fn(async (fileId: string) => {
+            const m = driveState.withMime.get(fileId)
+            if (!m || m === "404") {
+                throw new Error(`File not found: ${fileId} (404)`)
+            }
+            if (m === "chain") {
+                throw new Error(
+                    `Drive shortcut chain exceeded max-depth-1 (${fileId})`,
+                )
+            }
+            return {
+                data: m.data,
+                mimeType: m.mimeType,
+                resolvedFileId: `${fileId}-target`,
+            }
         }),
     })),
 }))
@@ -204,6 +230,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         driveState.bytes.clear()
         driveState.getFileThrows.clear()
         driveState.getFile404Throws.clear()
+        driveState.withMime.clear()
     })
 
     afterEach(() => {
@@ -697,5 +724,153 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
             .doc("hashkiveinu-bz-id")
             .get()
         expect(sng.data()?.status).toBe("orphaned")
+    })
+
+    // ─── C9I3-002: shortcut rows → needsRebond (was: silently transient) ──
+
+    const SHORTCUT_MIME = "application/vnd.google-apps.shortcut"
+
+    it("C9I3-002 dryRun: shortcut-mime rows classify as needsRebond, NOT transient", async () => {
+        await seedUser(ADMIN, "admin")
+        await seedIndex("tu-bishvat-id", {
+            name: "Tu Bishvat.pdf",
+            mimeType: SHORTCUT_MIME,
+            status: "active",
+        })
+        await seedIndex("lechu-goldman-id", {
+            name: "Lechu Goldman.pdf",
+            mimeType: SHORTCUT_MIME,
+            status: "active",
+        })
+
+        const r = await reconcileLibrary(ADMIN, { dryRun: true })
+        if ("error" in r)
+            throw new Error(
+                typeof r.error === "string" ? r.error : JSON.stringify(r.error),
+            )
+
+        expect(r.needsRebond.count).toBe(2)
+        expect(r.needsRebond.rows.map((x) => x.fileId).sort()).toEqual([
+            "lechu-goldman-id",
+            "tu-bishvat-id",
+        ])
+        // The bug: these used to land in transient.
+        expect(r.transient.count).toBe(0)
+        expect(r.committed).toBe(0)
+
+        // No writes in dryRun.
+        const idx = await db()
+            .collection("library_index")
+            .doc("tu-bishvat-id")
+            .get()
+        expect(idx.data()?.status).toBe("active")
+        expect(idx.data()?.mimeType).toBe(SHORTCUT_MIME)
+    })
+
+    it("C9I3-002 force: auto-resolves the shortcut target in place (heals to active)", async () => {
+        await seedUser(ADMIN, "admin")
+        const targetBytes = Buffer.from("resolved-target-pdf-bytes")
+        await seedIndex("tu-bishvat-id", {
+            name: "Tu Bishvat.pdf",
+            mimeType: SHORTCUT_MIME,
+            status: "active",
+            key: "Am", // curation must survive the heal merge
+        })
+        driveState.withMime.set("tu-bishvat-id", {
+            data: targetBytes,
+            mimeType: "application/pdf",
+        })
+
+        const r = await reconcileLibrary(ADMIN, { dryRun: false, force: true })
+        if ("error" in r)
+            throw new Error(
+                typeof r.error === "string" ? r.error : JSON.stringify(r.error),
+            )
+
+        expect(r.committed).toBe(1)
+        // Healed rows fold into the driveMirror report.
+        expect(r.driveMirror.rows.map((x) => x.fileId)).toContain("tu-bishvat-id")
+        expect(r.needsRebond.count).toBe(0)
+
+        // Same fileId, status flipped to active, mime now the TARGET's, bonds
+        // intact, curation preserved.
+        const idx = await db()
+            .collection("library_index")
+            .doc("tu-bishvat-id")
+            .get()
+        const data = idx.data() as Record<string, unknown>
+        expect(data.status).toBe("active")
+        expect(data.mimeType).toBe("application/pdf")
+        expect(data.fileSize).toBe(targetBytes.byteLength)
+        expect(data.key).toBe("Am")
+        // Bytes written to Storage at the SAME id.
+        expect(storageState.uploaded.get("tu-bishvat-id")).toEqual({
+            bytes: targetBytes.byteLength,
+            mime: "application/pdf",
+        })
+    })
+
+    it("C9I3-002 force: shortcut whose target 404s escalates to orphan", async () => {
+        await seedUser(ADMIN, "admin")
+        await seedIndex("dead-shortcut-id", {
+            name: "Dead Shortcut.pdf",
+            mimeType: SHORTCUT_MIME,
+            status: "active",
+        })
+        await seedSong("dead-shortcut-id", {
+            title: "Dead Shortcut",
+            status: "active",
+        })
+        driveState.withMime.set("dead-shortcut-id", "404")
+
+        const r = await reconcileLibrary(ADMIN, { dryRun: false, force: true })
+        if ("error" in r)
+            throw new Error(
+                typeof r.error === "string" ? r.error : JSON.stringify(r.error),
+            )
+
+        expect(r.committed).toBe(1)
+        expect(r.orphan.rows.map((x) => x.fileId)).toContain("dead-shortcut-id")
+        expect(r.needsRebond.count).toBe(0)
+
+        const idx = await db()
+            .collection("library_index")
+            .doc("dead-shortcut-id")
+            .get()
+        expect(idx.data()?.status).toBe("orphaned")
+        const sng = await db()
+            .collection("songs")
+            .doc("dead-shortcut-id")
+            .get()
+        expect(sng.data()?.status).toBe("orphaned")
+    })
+
+    it("C9I3-002 force: unresolvable shortcut chain stays needsRebond (manual re-bond)", async () => {
+        await seedUser(ADMIN, "admin")
+        await seedIndex("chain-shortcut-id", {
+            name: "Chain Shortcut.pdf",
+            mimeType: SHORTCUT_MIME,
+            status: "active",
+        })
+        driveState.withMime.set("chain-shortcut-id", "chain")
+
+        const r = await reconcileLibrary(ADMIN, { dryRun: false, force: true })
+        if ("error" in r)
+            throw new Error(
+                typeof r.error === "string" ? r.error : JSON.stringify(r.error),
+            )
+
+        expect(r.committed).toBe(0)
+        expect(r.needsRebond.count).toBe(1)
+        expect(r.needsRebond.rows[0].fileId).toBe("chain-shortcut-id")
+        expect(r.needsRebond.rows[0].error).toMatch(/chain/i)
+
+        // Untouched — no permanent flip; operator re-bonds manually.
+        const idx = await db()
+            .collection("library_index")
+            .doc("chain-shortcut-id")
+            .get()
+        expect(idx.data()?.status).toBe("active")
+        expect(idx.data()?.mimeType).toBe(SHORTCUT_MIME)
     })
 })

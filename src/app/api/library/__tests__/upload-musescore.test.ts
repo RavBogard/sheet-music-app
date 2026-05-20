@@ -260,3 +260,79 @@ describe('Upload route - MuseScore files', () => {
         expect(data.error).toContain('Failed to convert MuseScore file')
     })
 })
+
+describe('Upload route - C9I3-004 storageUrl alignment + C9I3-005 originals rollback', () => {
+    it('C9I3-004: text upload storageUrl has NO extension (matches real Storage path)', async () => {
+        // Pre-fix storageUrl used extForContentType → `library/{id}.txt`, but
+        // getStoragePath writes text with NO extension → consumers reading
+        // storageUrl directly 404'd. The stored URL must equal the real path.
+        const req = createUploadRequest('chords.txt', 'G C D chord text', 'text/plain')
+        const res = await POST(req)
+        expect(res.status).toBe(201)
+
+        const indexEntry = mockBatchSet.mock.calls[0][1]
+        expect(indexEntry.mimeType).toBe('text/plain')
+        expect(indexEntry.storageUrl).not.toMatch(/\.txt$/)
+        expect(indexEntry.storageUrl).toMatch(/^library\/upload-[0-9a-f-]+$/)
+    })
+
+    it('C9I3-004: png upload storageUrl has NO extension', async () => {
+        const req = createUploadRequest('scan.png', 'png-bytes', 'image/png')
+        const res = await POST(req)
+        expect(res.status).toBe(201)
+
+        const indexEntry = mockBatchSet.mock.calls[0][1]
+        expect(indexEntry.storageUrl).not.toMatch(/\.png$/)
+        expect(indexEntry.storageUrl).toMatch(/^library\/upload-[0-9a-f-]+$/)
+    })
+
+    it('C9I3-004: pdf upload storageUrl keeps the .pdf extension', async () => {
+        const req = createUploadRequest('lead-sheet.pdf', '%PDF-1.4 fake', 'application/pdf')
+        const res = await POST(req)
+        expect(res.status).toBe(201)
+
+        const indexEntry = mockBatchSet.mock.calls[0][1]
+        expect(indexEntry.storageUrl).toMatch(/^library\/upload-[0-9a-f-]+\.pdf$/)
+    })
+
+    it('C9I3-005: a Firestore-commit failure rolls back BOTH the chart AND the originals blob', async () => {
+        // The MuseScore path uploads originals/{id}.mscz BEFORE the Firestore
+        // batch. Pre-fix the compensating-delete only removed the converted
+        // chart, leaking the originals blob as a reverse orphan.
+        mockBatchCommit.mockRejectedValueOnce(new Error('Firestore unavailable'))
+
+        const req = createUploadRequest('orphan-me.mscz')
+        const res = await POST(req)
+        expect(res.status).toBe(500)
+
+        const deletedPaths = mockDeleteStorageObjectAtPath.mock.calls.map((c) =>
+            String(c[0]),
+        )
+        // Converted chart (xml) rolled back.
+        expect(deletedPaths.some((p) => /^library\/upload-.*\.xml$/.test(p))).toBe(
+            true,
+        )
+        // Originals blob rolled back too (the C9I3-005 fix).
+        expect(
+            deletedPaths.some((p) => /^library\/originals\/.*\.mscz$/.test(p)),
+        ).toBe(true)
+    })
+
+    it('C9I3-005: a plain (non-converted) upload rollback deletes only the chart blob', async () => {
+        // No originals/ blob exists for a plain PDF upload, so the rollback
+        // should delete exactly one path (no spurious originals delete).
+        mockBatchCommit.mockRejectedValueOnce(new Error('Firestore unavailable'))
+
+        const req = createUploadRequest('plain.pdf', '%PDF-1.4 fake', 'application/pdf')
+        const res = await POST(req)
+        expect(res.status).toBe(500)
+
+        const deletedPaths = mockDeleteStorageObjectAtPath.mock.calls.map((c) =>
+            String(c[0]),
+        )
+        expect(deletedPaths.some((p) => /^library\/upload-.*\.pdf$/.test(p))).toBe(
+            true,
+        )
+        expect(deletedPaths.some((p) => p.includes('originals/'))).toBe(false)
+    })
+})

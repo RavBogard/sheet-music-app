@@ -30,6 +30,7 @@ import {
     type TrackNotFoundEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { getSongById, resolveTrackBondDefaults } from "@/lib/mcp/server-songs"
+import { getChartHealth } from "@/lib/file-fetcher"
 
 /**
  * MCP write tools (Phase 4b). Plain async functions wrapping the shared
@@ -257,6 +258,14 @@ export interface AddTrackArgs {
     notes?: string
     /** 0-based insert index; omitted → append. */
     position?: number
+    /**
+     * C9I2-001: bypass the dead-chart bind guard. By default a songId whose
+     * chart bytes are dead (missing 404 or an unembeddable Drive shortcut)
+     * is refused — binding it would render a broken row in Perform mode and
+     * drop from gig packets. Set true to bind anyway (e.g. you're about to
+     * re-upload the bytes, or the row will be reconciled).
+     */
+    force?: boolean
 }
 
 /**
@@ -319,6 +328,48 @@ export async function addTrackToSetlist(
             { type },
             "Pass `title` for non-song rows, or `songId` to bind a library chart.",
         )
+    }
+
+    // C9I2-001: refuse binding a chart whose bytes are dead — `missing` (404
+    // in both Storage and Drive) or `shortcut_unresolved` (an unembeddable
+    // Google Drive shortcut). Pre-fix, active-status library_index rows whose
+    // bytes had 404'd were silently bindable, producing rows that 404 in
+    // Perform mode and drop from gig packets (the Lechu-Goldman class). The
+    // library_index mimeType hint is read so a row whose canonical mime is a
+    // shortcut is caught even when Storage holds a stale shortcut blob
+    // (BUG-002). `needs_storage_sync` (serves via Drive fallback) and
+    // `unreachable` (transient blip) are allowed. `force: true` overrides.
+    if (args.songId && !args.force) {
+        let mimeHint: string | undefined
+        try {
+            const idx = await db
+                .collection("library_index")
+                .doc(args.songId)
+                .get()
+            const m = idx.exists ? idx.data()?.mimeType : undefined
+            if (typeof m === "string") mimeHint = m
+        } catch {
+            // Fail-soft: probe without the hint (still catches missing bytes).
+        }
+        const health = await getChartHealth(args.songId, mimeHint)
+        if (
+            health.status === "missing" ||
+            health.status === "shortcut_unresolved"
+        ) {
+            return richError(
+                "chart_unbindable",
+                health.status === "missing"
+                    ? `Chart '${args.songId}' has no renderable bytes (Storage and Drive both miss). Binding it would create a row that 404s in Perform mode.`
+                    : `Chart '${args.songId}' resolves to an unembeddable Google Drive shortcut. Binding it would drop the chart from gig packets and 404 in Perform mode.`,
+                {
+                    songId: args.songId,
+                    chartStatus: health.status,
+                    reason:
+                        "reason" in health ? health.reason : undefined,
+                },
+                "Heal the chart first (re-upload the bytes, or run reconcile_library to re-bond a shortcut to its target), or pass force: true to bind anyway.",
+            )
+        }
     }
 
     const { trackId, order } = await addTrack(db, {

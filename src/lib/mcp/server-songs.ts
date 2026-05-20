@@ -43,6 +43,24 @@ export interface SongRecord {
     }
     /** From chart-verify pipeline; not stored, set by callers that probe. */
     fileHealthy?: boolean
+    /**
+     * C9I2-001: live chart-byte health, set by `search_library`'s per-row
+     * probe (not stored). Absent on healthy ('ok') rows to keep the common
+     * wire shape lean. `bindable: false` ⇒ the chart's bytes are dead
+     * (missing 404 or an unembeddable Drive shortcut) and binding it would
+     * render a broken row in Perform mode — `add_track_to_setlist` refuses
+     * such a bind unless `force: true`.
+     */
+    chartHealth?: {
+        status:
+            | "ok"
+            | "needs_storage_sync"
+            | "unreachable"
+            | "missing"
+            | "shortcut_unresolved"
+        bindable: boolean
+        reason?: string
+    }
     // ─── AI-001 enrichment projection (joined from library_index +
     //     aiEnrichmentRetryQueue by callers in src/lib/mcp/tools/library.ts).
     //     `null` ⇒ row never reached the AI subscriber (pre-NEW-3 upload, or

@@ -128,21 +128,12 @@ const ALLOWED_TYPES: Record<string, string> = {
     "image/heif": ".heif",
 }
 
-function extForContentType(ct: string): string {
-    if (ct.includes("pdf")) return ".pdf"
-    if (ct.includes("text")) return ".txt"
-    if (ct === "image/png") return ".png"
-    if (ct === "image/jpeg") return ".jpg"
-    return ".xml"
-}
-
 /**
  * Actual Storage path computed the SAME way firebase-storage.ts:getStoragePath
- * does — extension only for pdf/xml/audio. The library_index `storageUrl`
- * field uses extForContentType which adds .txt/.png/.jpg too, so the index
- * value can mismatch the real Storage path for text/image uploads (kept for
- * back-compat with existing readers). Use this for the atomic-guard's
- * read-verify so we look in the same place uploadToStorage wrote to.
+ * does — extension only for pdf/xml/audio (text/image get no extension). Used
+ * for both the atomic-guard read-verify AND the library_index `storageUrl`
+ * field (C9I3-004) so the stored URL always resolves to where uploadToStorage
+ * actually wrote.
  */
 function actualStoragePath(fileId: string, contentType: string): string {
     const ext = contentType.includes("pdf")
@@ -451,14 +442,19 @@ export async function processChartUpload(
     await uploadToStorage(fileId, buffer, contentType)
     stage("storage-upload:done")
 
-    const storageUrl = `library/${fileId}${extForContentType(contentType)}`
+    // C9I3-004: storageUrl MUST equal the real Storage path uploadToStorage
+    // wrote to (= getStoragePath, ext only for pdf/xml/audio). Pre-fix it used
+    // extForContentType, which appended .txt/.png/.jpg for text/image — paths
+    // getStoragePath never writes — so any consumer reading
+    // library_index.storageUrl directly for those types 404'd. Align them.
+    const realStoragePath = actualStoragePath(fileId, contentType)
+    const storageUrl = realStoragePath
 
     // Read-verify: confirm the blob exists with non-zero size at the path we
     // just wrote to. Catches any silent-failure class where `file.save()`
     // resolved but no bytes landed. Bucket-name resolution mirrors
     // firebase-storage.ts:getBucket().
     stage("storage-verify:start")
-    const realStoragePath = actualStoragePath(fileId, contentType)
     const verifiedSize = await getStorageObjectSize(realStoragePath)
     if (verifiedSize === null || verifiedSize <= 0) {
         stage("storage-verify:missing", { realStoragePath })
@@ -594,6 +590,26 @@ export async function processChartUpload(
             logger.error(
                 `[Upload ${traceId}] Storage rollback failed for ${storageUrl}: ${rbMessage}`,
             )
+        }
+        // C9I3-005: MuseScore/HEIC paths upload an `originals/{fileId}.{ext}`
+        // blob BEFORE this Firestore batch. Pre-fix the compensating-delete
+        // only removed the converted chart at realStoragePath, leaking the
+        // originals blob as a reverse orphan on a commit failure. Roll it back
+        // too. originalStorageUrl is the exact Storage path (it equals
+        // getStoragePath for the `originals/...` key — octet/heic mimes add no
+        // extension), so it's safe to delete directly.
+        if (originalStorageUrl) {
+            try {
+                await deleteStorageObjectAtPath(originalStorageUrl)
+                stage("firestore-write:originals-rolled-back")
+            } catch (rbErr) {
+                const rbMessage =
+                    rbErr instanceof Error ? rbErr.message : "Unknown error"
+                stage("firestore-write:originals-rollback-failed", { rbMessage })
+                logger.error(
+                    `[Upload ${traceId}] Originals rollback failed for ${originalStorageUrl}: ${rbMessage}`,
+                )
+            }
         }
         return {
             ok: false,

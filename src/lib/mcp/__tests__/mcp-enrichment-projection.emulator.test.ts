@@ -103,6 +103,14 @@ describe("MCP AI-001 enrichment projection — search_library + get_song + get_c
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
         mockGetChartHealth.mockReset()
+        // C9I2-001: searchLibrary now probes per-row chart health. Default to
+        // healthy so the enrichment-projection assertions (which don't care
+        // about byte health) still get their rows; getChartStatus sub-tests
+        // override per-call via mockResolvedValueOnce.
+        mockGetChartHealth.mockResolvedValue({
+            status: "ok",
+            source: "firebase-storage",
+        })
     })
 
     // ─── search_library ────────────────────────────────────────────────────
