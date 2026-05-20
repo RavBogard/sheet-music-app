@@ -216,7 +216,12 @@ test.describe('ipad-sweep-perform — deep Perform-mode (portrait 820)', () => {
         // sentinel line only TextScoreViewer could render.
         const textFixture = await uploadFixtureChart(request, baseURL, leaderBearer, {
             title: `iPad text-route fixture — ${new Date().toISOString()}`,
-            content: ['[Verse]', 'G        D', TEXT_SENTINEL, 'Em       C', 'second sentinel line'].join('\n'),
+            // TEXT_SENTINEL sits on its own non-chord line so TextScoreViewer
+            // renders it verbatim as ONE contiguous node (a lyric line UNDER a
+            // chord line gets split into per-chord chunks — see the chord/lyric
+            // section below — which would break getByText on the full sentinel).
+            // The chord section still exercises the chord-alignment render path.
+            content: [TEXT_SENTINEL, '', '[Verse]', 'G        D', 'a lyric under the chords', 'Em       C', 'a closing lyric line'].join('\n'),
         })
         textBonded = await seedPublishedSetlist(request, baseURL, leaderBearer, {
             name: `iPad Text Route — ${new Date().toISOString()}`,
