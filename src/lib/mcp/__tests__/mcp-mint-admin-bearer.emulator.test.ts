@@ -265,6 +265,57 @@ describe("MCP mint_admin_bearer (emulator)", () => {
         if (!denied.ok) expect(denied.error.machine_code).toBe("forbidden_role")
     })
 
+    // 9b. list_minted_bearers — C9I5-002: a child of a REVOKED root is derived
+    //     as `parent_revoked` (cascade-dead), surfaced even without flags,
+    //     instead of misleadingly showing `active`.
+    it("list_minted_bearers derives parent_revoked for children of a revoked root", async () => {
+        const root = await seedRootToken()
+        const child = await mintAdminBearerCore(rootCaller(root.tokenId), {
+            purpose: "cascade-dead audit-view child",
+        })
+        if (!child.ok) throw new Error("mint refused")
+
+        // While the root is live, the child reads as active.
+        const live = await listMintedBearersCore(ADMIN_UID, {})
+        if (!live.ok) throw new Error("list refused")
+        expect(live.bearers.find((x) => x.tokenId === child.tokenId)?.status).toBe(
+            "active",
+        )
+
+        // Daniel revokes the ROOT (via /settings/mcp soft-delete). The child's
+        // OWN revokedAt stays null + its OWN TTL is still live...
+        await db().collection("mcpTokens").doc(root.tokenId).update({
+            revokedAt: Timestamp.now(),
+        })
+
+        // ...but the audit view now derives parent_revoked, AND surfaces it by
+        // default (no includeRevoked flag) — that's the headline of the fix.
+        const after = await listMintedBearersCore(ADMIN_UID, {})
+        if (!after.ok) throw new Error("list refused")
+        const row = after.bearers.find((x) => x.tokenId === child.tokenId)
+        expect(row?.status).toBe("parent_revoked")
+        expect(row?.revokedAt).toBeNull() // own revokedAt untouched — derived only
+    })
+
+    // 9c. list_minted_bearers — a missing parent also cascades to parent_revoked.
+    it("list_minted_bearers derives parent_revoked when the root doc is gone", async () => {
+        const root = await seedRootToken()
+        const child = await mintAdminBearerCore(rootCaller(root.tokenId), {
+            purpose: "orphaned-parent audit child",
+        })
+        if (!child.ok) throw new Error("mint refused")
+
+        // Hard-delete the root doc (parent missing — mirrors verifyBearer's
+        // !parentSnap.exists branch).
+        await db().collection("mcpTokens").doc(root.tokenId).delete()
+
+        const after = await listMintedBearersCore(ADMIN_UID, {})
+        if (!after.ok) throw new Error("list refused")
+        expect(after.bearers.find((x) => x.tokenId === child.tokenId)?.status).toBe(
+            "parent_revoked",
+        )
+    })
+
     // 10. revoke_minted_bearer — stamps revokedAt; child fails after; idempotent;
     //     refuses non-minted-kind tokenId.
     it("revoke_minted_bearer revokes + is idempotent + refuses wrong-kind", async () => {

@@ -62,6 +62,17 @@ describe("MCP backfill_setlist_test_flag — SEC-004 (emulator)", () => {
         expect(isTestSetlist({ name: "[CF1-mcp] cowork", ownerId: ADMIN })).toBe(true)
         expect(isTestSetlist({ name: "Real Setlist (TEST mode)", ownerId: ADMIN })).toBe(false)
         expect(isTestSetlist({ name: null, ownerId: null })).toBe(false)
+
+        // C9I5 §6.2 — un-bracketed cowork conventions, admin-owned (so the uid
+        // check misses them) and no leading `[` (so the bracketed pattern
+        // misses them). These previously leaked onto public /perform.
+        expect(isTestSetlist({ name: "c9i5-clone-probe", ownerId: ADMIN })).toBe(true)
+        expect(isTestSetlist({ name: "test-rehearsal", ownerId: ADMIN })).toBe(true)
+        expect(isTestSetlist({ name: "cf2-followup", ownerId: ADMIN })).toBe(true)
+        expect(isTestSetlist({ name: "Shabbat-CLONE-fixture", ownerId: ADMIN })).toBe(true)
+        // Real names that merely CONTAIN the words must stay false.
+        expect(isTestSetlist({ name: "Latest Service", ownerId: ADMIN })).toBe(false)
+        expect(isTestSetlist({ name: "Copy of Shabbat Morning", ownerId: ADMIN })).toBe(false)
     })
 
     it("refuses non-admin callers", async () => {

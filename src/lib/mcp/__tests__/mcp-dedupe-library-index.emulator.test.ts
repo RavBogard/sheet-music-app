@@ -27,11 +27,16 @@ import { searchLibrary } from "../tools/library"
 describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
     let app: App
     const ADMIN = "rabbi-daniel"
+    const MUSICIAN = "musician-1"
+    const MEMBER = "member-1"
 
     function db() {
         return getFirestore(app)
     }
 
+    async function seedUser(uid: string, role: string) {
+        await db().collection("users").doc(uid).set({ role })
+    }
     async function seedIndex(id: string, data: Record<string, unknown>) {
         await db().collection("library_index").doc(id).set(data)
     }
@@ -58,10 +63,55 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
     })
 
     beforeEach(async () => {
-        for (const col of ["songs", "library_index"]) {
+        for (const col of ["songs", "library_index", "users"]) {
             const snap = await db().collection(col).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
+        await seedUser(ADMIN, "admin")
+        await seedUser(MUSICIAN, "musician")
+        await seedUser(MEMBER, "member")
+    })
+
+    it("C9I5-001 — refuses non-admin callers (musician + member) with rich forbidden_role", async () => {
+        await seedIndex("ana-clean", {
+            name: "Ana B_Koach.pdf",
+            uploadedAt: "2024-01-01T00:00:00Z",
+        })
+        await seedIndex("ana-leading-space", {
+            name: " Ana B_Koach.pdf",
+            uploadedAt: "2024-06-15T12:00:00Z",
+        })
+
+        for (const nonAdmin of [MUSICIAN, MEMBER]) {
+            // dryRun must ALSO be gated — the tool exposes the whole
+            // library_index shape, not just writes.
+            const r = await dedupeLibraryIndex(nonAdmin, { dryRun: true })
+            expect(r).toMatchObject({
+                ok: false,
+                error: { machine_code: "forbidden_role", code: 403 },
+                requiredRoles: ["admin"],
+            })
+            if ("error" in r && typeof r.error === "object" && r.error) {
+                expect(r.error.message).toMatch(/admin-only/i)
+            }
+
+            // A real-run attempt is likewise refused with NO writes.
+            const w = await dedupeLibraryIndex(nonAdmin, {
+                dryRun: false,
+                force: true,
+            })
+            expect(w).toMatchObject({
+                ok: false,
+                error: { machine_code: "forbidden_role" },
+            })
+        }
+
+        // The would-be loser was never marked.
+        const loser = await db()
+            .collection("library_index")
+            .doc("ana-leading-space")
+            .get()
+        expect(loser.data()?.status).toBeUndefined()
     })
 
     it("dryRun returns plan without writing", async () => {

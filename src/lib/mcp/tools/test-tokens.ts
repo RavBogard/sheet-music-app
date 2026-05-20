@@ -157,9 +157,12 @@ export async function provisionTestAccount(
     const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
     if (!isTrustedLeader) {
         return envelope(
-            "forbidden",
+            "forbidden_role",
             "create_test_account requires admin or band_leader role.",
-            { callerRole: callerRole ?? null },
+            {
+                callerRole: callerRole ?? null,
+                requiredRoles: ["admin", "band_leader"],
+            },
             "Sign in as admin/band_leader, or ask one to mint the test account for you.",
         )
     }
@@ -328,9 +331,13 @@ export async function listTestAccountsCore(
     const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
     if (!isTrustedLeader) {
         return envelope(
-            "forbidden",
+            "forbidden_role",
             "list_test_accounts requires admin or band_leader role.",
-            { callerRole: callerRole ?? null },
+            {
+                callerRole: callerRole ?? null,
+                requiredRoles: ["admin", "band_leader"],
+            },
+            "Sign in as admin/band_leader, or ask one to list test accounts for you.",
         )
     }
 
@@ -628,9 +635,13 @@ export async function cleanupAllTestDataCore(
     const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
     if (!isTrustedLeader) {
         return envelope(
-            "forbidden",
+            "forbidden_role",
             "cleanup_all_test_data requires admin or band_leader role.",
-            { callerRole: callerRole ?? null },
+            {
+                callerRole: callerRole ?? null,
+                requiredRoles: ["admin", "band_leader"],
+            },
+            "Sign in as admin/band_leader, or ask one to run cleanup for you.",
         )
     }
 

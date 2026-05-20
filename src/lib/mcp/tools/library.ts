@@ -941,7 +941,7 @@ function clusterBySimilarity(
 }
 
 export async function dedupeLibraryIndex(
-    _uid: string,
+    uid: string,
     args: DedupeLibraryIndexArgs = {},
 ): Promise<DedupeLibraryIndexResult | RichErrorEnvelope> {
     const dryRun = args.dryRun === true
@@ -959,6 +959,28 @@ export async function dedupeLibraryIndex(
     try {
         initAdmin()
         const db = getFirestore()
+
+        // C9I5-001 admin gate. Dry-run + real-run both require admin — this
+        // tool mutates library_index (marks rows `duplicate`) and mirrors into
+        // songs/{id}; it is exclusively a maintenance affordance, never a
+        // read-anywhere browse path. Mirrors backfill_library_index's gate so
+        // the whole admin-hygiene family is uniform.
+        const userSnap = await db.collection("users").doc(uid).get()
+        const role = userSnap.exists
+            ? (userSnap.data()?.role as string | undefined)
+            : undefined
+        if (role !== "admin") {
+            return richError(
+                "forbidden_role",
+                "dedupe_library is admin-only.",
+                {
+                    callerRole: role ?? null,
+                    requiredRoles: ["admin"],
+                },
+                "Ask an admin to elevate your account, or call a tool your role is allowed to use.",
+            )
+        }
+
         const snap = await db.collection("library_index").get()
 
         // Collect dedupable candidates. Skip rows already marked

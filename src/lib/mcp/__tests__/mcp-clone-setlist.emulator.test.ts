@@ -185,6 +185,59 @@ describe("MCP clone_setlist (emulator)", () => {
         expect(sourceTracksAfter.map((t) => t.id)).toEqual(
             sourceTracksBefore.map((t) => t.id),
         )
+        // C9I5 §6.2 regression guard: a NORMAL clone of a real source is NOT
+        // flagged isTest ("Copy of …" doesn't match the test-name patterns).
+        expect(cloneSetlistDoc.isTest).toBeUndefined()
+    })
+
+    it("C9I5 §6.2: a test-shaped newName stamps isTest:true (drops from public /perform)", async () => {
+        const sourceId = await buildSource() // clean source, real band_leader owner
+        const result = (await cloneSetlist(ADMIN, {
+            sourceSetlistId: sourceId,
+            newName: "c9i5-clone-probe",
+        })) as { ok: true; setlistId: string }
+        expect(result.ok).toBe(true)
+
+        const doc = (
+            await db().collection("setlists").doc(result.setlistId).get()
+        ).data() as Record<string, unknown>
+        // The clone is admin-owned (not a test- uid) — pre-fix it would have
+        // leaked onto /perform. The name heuristic now stamps it.
+        expect(doc.isTest).toBe(true)
+        expect(doc.ownerId).toBe(ADMIN)
+    })
+
+    it("C9I5 §6.2: a -CLONE- newName stamps isTest:true", async () => {
+        const sourceId = await buildSource()
+        const result = (await cloneSetlist(ADMIN, {
+            sourceSetlistId: sourceId,
+            newName: "Shabbat-CLONE-fixture",
+        })) as { ok: true; setlistId: string }
+        expect(result.ok).toBe(true)
+        const doc = (
+            await db().collection("setlists").doc(result.setlistId).get()
+        ).data() as Record<string, unknown>
+        expect(doc.isTest).toBe(true)
+    })
+
+    it("C9I5 §6.2: a clone of an isTest source stays isTest even with a clean newName", async () => {
+        // Admin-owned source explicitly flagged isTest (real-looking name, so
+        // the only signal is the source flag — exercises the inheritance branch).
+        const created = (await createSetlist(ADMIN, {
+            name: "Bar Mitzvah Rehearsal",
+            isTest: true,
+        })) as { setlistId: string }
+
+        const result = (await cloneSetlist(ADMIN, {
+            sourceSetlistId: created.setlistId,
+            newName: "Totally Normal Service Name",
+        })) as { ok: true; setlistId: string }
+        expect(result.ok).toBe(true)
+
+        const doc = (
+            await db().collection("setlists").doc(result.setlistId).get()
+        ).data() as Record<string, unknown>
+        expect(doc.isTest).toBe(true)
     })
 
     it("chart bonds (fileId + fileName + songId) copy verbatim to the clone's tracks", async () => {

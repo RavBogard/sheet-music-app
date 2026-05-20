@@ -11,6 +11,7 @@ import {
     richError,
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
+import { isTestSetlist } from "@/types/models"
 
 /**
  * GAP-002 (cycle-2) — clone an existing setlist into a brand new one.
@@ -218,6 +219,23 @@ export async function cloneSetlist(
     }
     if (copyServiceNotes && typeof sourceData.serviceNotes === "string") {
         setlistPayload.serviceNotes = sourceData.serviceNotes
+    }
+
+    // C9I5 §6.2 — writer-side isTest stamp. clone_setlist bypasses
+    // createSetlistServerSide (it writes the parent doc via a raw batch.set),
+    // so it never inherited the create-time isTest classification. A clone is a
+    // test artifact when EITHER (a) the source setlist was already isTest — a
+    // test fixture cloned stays a fixture even if renamed cleanly — OR (b) the
+    // new name classifies as test via the shared isTestSetlist heuristic
+    // (covers the un-bracketed `c<N>i<N>-` / `test-` / `-CLONE-` conventions).
+    // Without this, admin-owned test clones leaked into the public /perform
+    // listing and escaped cleanup_all_test_data (cross-confirmed C9I1-008 +
+    // C9I2-003 + i5). Only stamp when true — real clones keep the field absent.
+    if (
+        sourceData.isTest === true ||
+        isTestSetlist({ name: newName, ownerId: uid })
+    ) {
+        setlistPayload.isTest = true
     }
 
     // Carry the denormalized fileIds[] over so the client renders charts

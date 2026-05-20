@@ -151,10 +151,15 @@ export async function getMix(
     const busIndex =
         args.busIndex !== undefined ? args.busIndex : access.ownedBuses[0]
     if (busIndex === undefined) {
+        // C9I4-007: this is a client-precondition (caller passed no busIndex
+        // and owns none), not a server fault — emit 400, not the default 500.
+        // machine_code is unchanged; only the HTTP-like code is corrected via
+        // the factory's documented errorCode override (errors.ts is hard-rule
+        // read-only, and the map defaults unknown codes to 500).
         return richError(
             "monitor_no_bus_assigned",
             "No bus specified and you don't own any bus.",
-            { yourAssignedBuses: access.ownedBuses },
+            { yourAssignedBuses: access.ownedBuses, errorCode: 400 },
             "Pass a busIndex or ask an admin to assign one to you.",
         )
     }

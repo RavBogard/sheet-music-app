@@ -162,15 +162,20 @@ describe("MCP test tokens (emulator)", () => {
         expect("token" in result).toBe(true)
     })
 
-    it("musician CANNOT mint — structured forbidden envelope", async () => {
+    it("musician CANNOT mint — structured forbidden_role envelope", async () => {
         const result = await provisionTestAccount(MUSICIAN_UID, {
             role: "musician",
         })
         expect("error" in result).toBe(true)
         if ("error" in result) {
-            expect(result.error).toBe("forbidden")
+            // C9I5-003/C8I2-006: standardized on the rich forbidden_role
+            // machine_code (matches the 17 other tools + revoke_test_account).
+            expect(result.error).toBe("forbidden_role")
             expect(result.message).toContain("admin or band_leader")
-            expect(result.context).toMatchObject({ callerRole: "musician" })
+            expect(result.context).toMatchObject({
+                callerRole: "musician",
+                requiredRoles: ["admin", "band_leader"],
+            })
         }
     })
 

@@ -108,15 +108,26 @@ export interface Setlist {
  * walks legacy rows. Single source of truth so the write-time + backfill
  * passes never disagree.
  *
- * Truthy when EITHER:
+ * Truthy when ANY of:
  *  - owner uid matches `TEST_UID_PREFIXES` (cycle-7 Lane 1): `test-…`,
  *    `c<N>i<N>[a]-…`, or `cf<N>-…` — broader than the historical
  *    `startsWith("test-")` so cycle-NN cowork-probe uids classify too.
- *  - setlist name matches `^\[(TEST|CYCLE\d+-|CF\d+-)` — the prefix
+ *  - setlist name matches `^\[(TEST|CYCLE\d+-|CF\d+-)` — the BRACKETED prefix
  *    convention every cycle's stress-run uses for ad-hoc names.
+ *  - setlist name matches the UN-BRACKETED cowork conventions
+ *    (`^test-`, `^c<N>i<N>[a]-`, `^cf<N>-`, or `-CLONE-` anywhere). C9I5 §6.2:
+ *    cowork instances created admin-OWNED fixtures with these names (so the
+ *    uid check above missed them, since the owner is a real admin), and the
+ *    bracketed pattern missed them too (no leading `[`). They leaked into the
+ *    public `/perform` listing AND escaped the `cleanup_all_test_data` sweep.
+ *    Real setlists effectively never start with `test-`/`c\d+i\d+-`/`cf\d+-`
+ *    or contain `-CLONE-` (the clone tool's default is "Copy of …"), so the
+ *    false-positive risk is negligible.
  */
 import { isTestUid } from "@/lib/test-isolation"
 export const TEST_SETLIST_NAME_PATTERN = /^\[(TEST|CYCLE\d+-|CF\d+-)/i
+export const TEST_SETLIST_NAME_PATTERN_UNBRACKETED =
+    /(^(test-|c\d+i\d+[a-z]?-|cf\d+-))|(-CLONE-)/i
 
 export function isTestSetlist(args: {
     name: string | null | undefined
@@ -124,6 +135,8 @@ export function isTestSetlist(args: {
 }): boolean {
     if (isTestUid(args.ownerId)) return true
     if (args.name && TEST_SETLIST_NAME_PATTERN.test(args.name)) return true
+    if (args.name && TEST_SETLIST_NAME_PATTERN_UNBRACKETED.test(args.name))
+        return true
     return false
 }
 

@@ -252,10 +252,15 @@ describe("MCP monitor-control tools (emulator)", () => {
     it("get_mix with no busIndex and no owned bus errors helpfully", async () => {
         // ADMIN is privileged but owns no bus → can't default.
         // F-015: rich envelope shape.
+        // C9I4-007: this is a client-precondition → HTTP-like code 400, not 500.
         const r = await getMix(ADMIN, {})
         expect(r).toMatchObject({
             ok: false,
-            error: { machine_code: "monitor_no_bus_assigned", message: expect.stringContaining("don't own any bus") },
+            error: {
+                machine_code: "monitor_no_bus_assigned",
+                code: 400,
+                message: expect.stringContaining("don't own any bus"),
+            },
         })
     })
 

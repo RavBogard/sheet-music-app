@@ -244,7 +244,7 @@ export interface MintedBearerSummary {
     ttlExpiresAt: string | null
     revokedAt: string | null
     lastUsedAt: string | null
-    status: "active" | "revoked" | "expired"
+    status: "active" | "revoked" | "expired" | "parent_revoked"
 }
 
 export interface ListMintedBearersResult {
@@ -270,23 +270,55 @@ export async function listMintedBearersCore(
     const db = getFirestore()
     const snap = await db.collection(MCP_TOKENS).where("kind", "==", TOKEN_KIND).get()
     const now = Date.now()
+
+    // C9I5-002 cascade-dead derivation. A minted child whose ROOT parent is
+    // missing / revoked / TTL-expired is dead-on-use — verifyBearer (auth.ts)
+    // rejects it on its own request path — even though the child's own
+    // `revokedAt` is null and its own TTL is still in the future. The audit
+    // view previously showed such children as `active`, which is misleading
+    // (C8I1-001). We mirror verifyBearer's exact parent-deadness check and
+    // surface a derived `parent_revoked` status. Parent reads are memoized, so
+    // N children of one revoked root cost a single extra read.
+    const parentDeadCache = new Map<string, boolean>()
+    async function parentIsDead(parentTokenId: string): Promise<boolean> {
+        const cached = parentDeadCache.get(parentTokenId)
+        if (cached !== undefined) return cached
+        const parentSnap = await db.collection(MCP_TOKENS).doc(parentTokenId).get()
+        const parent = parentSnap.data()
+        const parentExpired =
+            parent?.ttlExpiresAt instanceof Timestamp &&
+            parent.ttlExpiresAt.toMillis() <= now
+        const dead = !parentSnap.exists || !!parent?.revokedAt || parentExpired
+        parentDeadCache.set(parentTokenId, dead)
+        return dead
+    }
+
     const bearers: MintedBearerSummary[] = []
     for (const doc of snap.docs) {
         const d = doc.data() as Record<string, unknown>
         const revokedAt = tsToIso(d.revokedAt)
         const ttlMs = d.ttlExpiresAt instanceof Timestamp ? d.ttlExpiresAt.toMillis() : null
         const expired = ttlMs !== null && ttlMs <= now
-        const status: MintedBearerSummary["status"] = revokedAt
-            ? "revoked"
-            : expired
-              ? "expired"
-              : "active"
+        const parentTokenId =
+            typeof d.parentTokenId === "string" ? d.parentTokenId : null
+
+        // Precedence: self-revoked > self-expired > cascade-dead > active.
+        let status: MintedBearerSummary["status"]
+        if (revokedAt) status = "revoked"
+        else if (expired) status = "expired"
+        else if (parentTokenId && (await parentIsDead(parentTokenId)))
+            status = "parent_revoked"
+        else status = "active"
+
         if (status === "revoked" && !args.includeRevoked) continue
         if (status === "expired" && !args.includeExpired) continue
+        // `parent_revoked` is ALWAYS surfaced — it is the headline of this audit
+        // view: a token that LOOKS alive but is cascade-dead. Hiding it behind a
+        // flag would recreate the exact C9I5-002 blind spot we're closing.
         // NEVER project tokenHash or any raw secret.
         bearers.push({
             tokenId: doc.id,
-            parentTokenId: typeof d.parentTokenId === "string" ? d.parentTokenId : null,
+            parentTokenId,
             purpose: typeof d.purpose === "string" ? d.purpose : null,
             mintedByUid: typeof d.mintedByUid === "string" ? d.mintedByUid : "",
             mintedAt: tsToIso(d.mintedAt),
@@ -434,7 +466,7 @@ export function registerMintAdminBearerTools(server: McpServer): void {
         "list_minted_bearers",
         {
             description:
-                "ADMIN only — list every programmatically-minted admin bearer (kind:'minted_admin') with provenance + lifecycle status. NEVER returns the token hash or any raw secret. Default-hides revoked + expired; pass includeRevoked/includeExpired to surface them. Each row: `{tokenId, parentTokenId, purpose, mintedByUid, mintedAt, ttlExpiresAt, revokedAt, lastUsedAt, status:'active'|'revoked'|'expired'}`. Use this to audit the pool + find tokenIds for revoke_minted_bearer.",
+                "ADMIN only — list every programmatically-minted admin bearer (kind:'minted_admin') with provenance + lifecycle status. NEVER returns the token hash or any raw secret. Default-hides revoked + expired; pass includeRevoked/includeExpired to surface them. Each row: `{tokenId, parentTokenId, purpose, mintedByUid, mintedAt, ttlExpiresAt, revokedAt, lastUsedAt, status:'active'|'revoked'|'expired'|'parent_revoked'}`. `parent_revoked` (C9I5-002) is a DERIVED status: the child's own revokedAt is null and its own TTL is live, but its root parent is missing/revoked/expired so verifyBearer rejects it on use — it is cascade-dead. These are ALWAYS surfaced (never hidden) so the audit doesn't mislead you into thinking a dead bearer is usable. Use this to audit the pool + find tokenIds for revoke_minted_bearer.",
             inputSchema: {
                 includeRevoked: z
                     .boolean()
