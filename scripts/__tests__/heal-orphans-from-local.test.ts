@@ -22,6 +22,33 @@ describe("normalizeForMatch", () => {
             normalizeForMatch("Ve'imru amen - Full Score.pdf"),
         )
     })
+
+    it("strips the Shireinu/Ruach catalog-code prefix so it matches the prefix-less orphan title", () => {
+        // local batch: "993122D003 ADONAI OZ (KLEPPER-FREELANDER).pdf"
+        // orphan row title: "Adonai Oz (Klepper-Freelander)"
+        expect(normalizeForMatch("993122D003 ADONAI OZ (KLEPPER-FREELANDER).pdf")).toBe(
+            normalizeForMatch("Adonai Oz (Klepper-Freelander)"),
+        )
+        // multi-song entry aligns 1:1 modulo the prefix
+        expect(
+            normalizeForMatch("993122D001 ABANIBI (HIRSCH) - ACHSHAV (FOLK).pdf"),
+        ).toBe(normalizeForMatch("Abanibi (Hirsch) - Achshav (Folk)"))
+        // Ruach 994059D prefix also stripped
+        expect(normalizeForMatch("994059D012 SHALOM RAV (STEINBERG).pdf")).toBe(
+            normalizeForMatch("Shalom Rav (Steinberg)"),
+        )
+        // a real title that merely starts with a digit is NOT mangled (no 99-prefix)
+        expect(normalizeForMatch("36 Tzadikim (Folk).pdf")).toBe("36tzadikimfolk")
+    })
+
+    it("matches local catalog-prefixed files end-to-end via matchOrphans", () => {
+        const plan = matchOrphans(
+            ["993122D900 Adon Olam (Folk).pdf"],
+            [{ id: "uuid-adon", title: "Adon Olam (Folk).pdf", fileName: "Adon Olam (Folk).pdf" }],
+        )
+        expect(plan.matched.map((m) => m.fileId)).toEqual(["uuid-adon"])
+        expect(plan.unmatchedLocal).toEqual([])
+    })
 })
 
 const orphans: OrphanRow[] = [

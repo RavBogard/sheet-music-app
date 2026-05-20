@@ -44,7 +44,14 @@ export interface HealPlan {
 export function normalizeForMatch(name: string): string {
     const base = path.basename(name)
     const noExt = base.replace(/\.[a-z0-9]{1,5}$/i, "")
-    return noExt.toLowerCase().replace(/[^a-z0-9]+/g, "")
+    // Strip a leading catalog-code prefix before squashing — the Shireinu
+    // batch names files `993122D003 TITLE (COMPOSER).pdf` and Ruach `994059D…`,
+    // but the orphan library_index rows carry NO catalog prefix (title is just
+    // "Title (Composer)"). The alphanumeric code (`993122d003`) survives the
+    // non-alphanumeric squash and poisons the key, so strip it first. Harmless
+    // to rows without a prefix (the pattern simply doesn't match).
+    const noPrefix = noExt.replace(/^99\d{4}[a-z]?\d+\s+/i, "")
+    return noPrefix.toLowerCase().replace(/[^a-z0-9]+/g, "")
 }
 
 /** Build key → orphanId[] from BOTH fileName and title (fileName preferred). */
