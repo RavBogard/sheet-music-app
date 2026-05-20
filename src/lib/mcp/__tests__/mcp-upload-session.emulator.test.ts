@@ -411,17 +411,21 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         expect(row.bpm).toBe(96)
 
         // Derived dedup/search fields recomputed from the title + enrichment
-        // re-armed (coder-1 §3 delta fix). siblingsInCatalog === 1 (the orphan
-        // had no stem at compute time, so nothing else matches the new stem).
+        // re-armed (coder-1 §3 delta fix). chart-heal strips the trailing
+        // ".pdf" before deriving keys, so they reflect "Adon Olam (Folk)"
+        // (→ stem "adon olam", a generic liturgical stem). siblingsInCatalog
+        // === 1 (the orphan had no stem at compute time).
         const HEAL_NAME = "Adon Olam (Folk).pdf"
+        const CLEAN = "Adon Olam (Folk)"
         expect(row.normalizedName).toBe(
-            HEAL_NAME.toLowerCase().replace(/[^a-z0-9]/g, ""),
+            CLEAN.toLowerCase().replace(/[^a-z0-9]/g, ""),
         )
-        expect(row.stem).toBe(bareStem(HEAL_NAME))
-        expect(row.titleSpecificity).toBe(titleSpecificity(HEAL_NAME, 1))
+        expect(row.stem).toBe(bareStem(CLEAN))
+        expect(row.titleSpecificity).toBe(titleSpecificity(CLEAN, 1))
         expect(row.enrichmentStatus).toBe("pending")
 
-        // library.row.created emitted with the target row's collection.
+        // library.row.created emitted with the target row's collection. The
+        // event title carries the row's actual name (extension not stripped).
         expect(healEvents).toHaveLength(1)
         expect(healEvents[0].fileId).toBe(ORPHAN)
         expect(healEvents[0].title).toBe(HEAL_NAME)

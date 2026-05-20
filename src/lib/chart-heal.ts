@@ -254,8 +254,20 @@ export async function computeHealRowMetadata(
     fileId: string,
     title: string,
 ): Promise<HealRowMetadata> {
-    const normalizedName = title.toLowerCase().replace(/[^a-z0-9]/g, "")
-    const stem = bareStem(title)
+    // Strip a trailing chart file-extension before deriving keys. The
+    // pre-atomic-guard orphan rows stored their name WITH the extension
+    // (e.g. "Oseh Shalom.pdf"), which would poison the stem
+    // ("oseh shalom pdf" misses GENERIC_LITURGICAL_STEMS → wrong specificity)
+    // and the fuzzy-dedup key. The upload path derives its keys from the
+    // extension-stripped title, so stripping here keeps a healed row's keys
+    // CONSISTENT with a fresh upload of the same song. Targeted to known
+    // chart extensions so legit dotted titles ("arr.", "Vol. 2") survive.
+    const cleanTitle = title.replace(
+        /\.(pdf|xml|musicxml|mxl|mscz|mscx|png|jpe?g|gif|webp|txt)$/i,
+        "",
+    )
+    const normalizedName = cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, "")
+    const stem = bareStem(cleanTitle)
     const siblingSnap = stem
         ? await db
               .collection("library_index")
@@ -274,7 +286,7 @@ export async function computeHealRowMetadata(
     return {
         normalizedName,
         stem,
-        titleSpecificity: titleSpecificity(title, siblingsInCatalog),
+        titleSpecificity: titleSpecificity(cleanTitle, siblingsInCatalog),
         enrichmentStatus: "pending",
     }
 }

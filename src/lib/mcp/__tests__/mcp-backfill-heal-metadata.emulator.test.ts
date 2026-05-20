@@ -144,9 +144,13 @@ describe("MCP backfill_heal_metadata — storage-recovery Lane B follow-up (emul
         expect(enrichLibraryRow).not.toHaveBeenCalled()
     })
 
-    it("dryRun computes the plan without writing or enriching", async () => {
+    it("dryRun computes the plan (extension stripped) without writing or enriching", async () => {
         await seedUser(ADMIN, "admin")
-        const NAME = "Abanibi (Hirsch) - Achshav (Folk)"
+        // Name carries the ".pdf" extension (as the pre-atomic-guard orphan
+        // rows do) — the tool must strip it before deriving keys so a common
+        // liturgical stem ("oseh shalom") is detected, not "oseh shalom pdf".
+        const NAME = "Oseh Shalom.pdf"
+        const CLEAN = "Oseh Shalom"
         await seedIndex("upload-heal-1", {
             name: NAME,
             status: "active",
@@ -159,8 +163,10 @@ describe("MCP backfill_heal_metadata — storage-recovery Lane B follow-up (emul
         if (!("ok" in r) || r.ok !== true) throw new Error("expected ok:true")
         expect(r.dryRun).toBe(true)
         expect(r.action).toBe("would-stamp")
-        expect(r.computed.stem).toBe(bareStem(NAME))
-        expect(r.computed.titleSpecificity).toBe(titleSpecificity(NAME, 1))
+        expect(r.computed.stem).toBe(bareStem(CLEAN))
+        expect(r.computed.stem).not.toContain("pdf")
+        expect(r.computed.normalizedName).toBe("osehshalom")
+        expect(r.computed.titleSpecificity).toBe(titleSpecificity(CLEAN, 1))
         expect(r.computed.enrichmentStatus).toBe("pending")
         expect(r.prior.normalizedName).toBeNull()
 

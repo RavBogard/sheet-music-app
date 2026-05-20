@@ -404,12 +404,13 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         })
         // Derived dedup/search fields are RECOMPUTED from the title (NOT
         // preserved) so a healed row carries the same keys a fresh upload
-        // would. siblingsInCatalog === 1 (no other row shares the new stem).
-        expect(data.normalizedName).toBe("anabkoachpdf")
-        expect(data.stem).toBe(bareStem("Ana B_Koach.pdf"))
-        expect(data.titleSpecificity).toBe(
-            titleSpecificity("Ana B_Koach.pdf", 1),
-        )
+        // would. chart-heal strips the trailing ".pdf" before deriving keys
+        // (the row name is "Ana B_Koach.pdf"), so they reflect "Ana B_Koach".
+        // siblingsInCatalog === 1 (no other row shares the new stem).
+        const cleanTitle = "Ana B_Koach"
+        expect(data.normalizedName).toBe("anabkoach")
+        expect(data.stem).toBe(bareStem(cleanTitle))
+        expect(data.titleSpecificity).toBe(titleSpecificity(cleanTitle, 1))
         // Enrichment re-armed on the new bytes.
         expect(data.enrichmentStatus).toBe("pending")
         // Original name + mimeType preserved (merge didn't clobber them).
