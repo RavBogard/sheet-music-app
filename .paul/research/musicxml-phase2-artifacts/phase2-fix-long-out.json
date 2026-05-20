@@ -1,0 +1,41 @@
+{
+  "prodSha": "1d1587807570e65254879c54efb32e95a9852057",
+  "label": "fix-long",
+  "fileId": "upload-8eafdbbf-0c31-4329-8b59-8c914620aff9",
+  "uid": "test-zzmxlp2-band_leader-e3bd7257",
+  "render": {
+    "renderMs": 2095,
+    "state": {
+      "failedPdf": false,
+      "failedXml": false,
+      "renderingScore": false,
+      "signInReq": false
+    }
+  },
+  "fit": {
+    "rendered": true,
+    "vf": 164,
+    "paths": 155,
+    "textsLen": 91,
+    "texts": "D|G|A|B|E|A|D|G|D|G|A|B|3|5|7|9|11|E|A|D|G|D|G|A|B|E|A|D|G|13|15|17|19|21|23|Untitled Score",
+    "containerW": 786,
+    "contentW": 747,
+    "contentH": 222,
+    "fitRatio": 0.95,
+    "svgRenderedW": 786,
+    "svgRenderedH": 319,
+    "viewportH": 1180,
+    "heightFrac": 0.27
+  },
+  "transpose": {
+    "popoverOpened": true,
+    "overlaySeenSingle": true,
+    "changedSingle": true,
+    "msSingle": 1754,
+    "overlaySeenRapid": true,
+    "finalTexts": "F|Bb|C|D|G|C|F|Bb|F|Bb|C|D|3|5|7|9|11|G|C|F|Bb|F|Bb|C|D|G|C|F|Bb|13|15|17|19|21|23|Untitled Score",
+    "err": null,
+    "staleAfterRapid": false
+  },
+  "consoleErrors": []
+}
