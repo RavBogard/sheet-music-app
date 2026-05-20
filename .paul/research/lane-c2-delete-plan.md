@@ -97,9 +97,11 @@ For each track: `update_track({setlistId, trackId, songId:null})` (clears songId
 
 ---
 
-## EXECUTION RESULT (2026-05-20, Daniel-confirmed "yes")
+## EXECUTION RESULT (2026-05-20/21, Daniel-confirmed "yes" + "A")
 
-**17 / 22 deleted · 5 blocked · library_index 463 → 446 (−17).** All 20 live bonded tracks unbonded + verified clean placeholders first. Bearer: pool ROOT (read+admin; not burned). Full machine record: `lane-c2-delete-RESULT.json`.
+**COMPLETE — 22 / 22 deleted · library_index 463 → 441 (−22).** All 20 live bonded tracks unbonded + verified clean placeholders first. Then 17 deleted directly; 5 blocked by dead-setlist dangling refs → cleared via the option-A admin purge (below) → final 5 deleted. Bearer: pool ROOT (read+admin; not burned) + Firebase admin SDK (vercel-pulled creds) for the purge. Full machine record: `lane-c2-delete-RESULT.json`.
+
+**Option-A purge (Daniel-confirmed):** `scripts/lane-c2-purge-dangling-tracks.mjs` queried `tracks where fileId in [5]`, verified **all 8 matched tracks had a MISSING (deleted) parent setlist — 0 live**, deleted the 8 dangling docs, then re-`delete_chart` on the 5 succeeded. Idempotent re-delete of the 5 → `chart_not_found` (rows gone).
 
 **Deleted (17):** all 10 originally-unbonded *minus none* + 12 unbond-then-delete that had no phantom bonds + the 5 direct-unbonded… i.e. every chart whose only bonds were live (now cleared) or none.
 
