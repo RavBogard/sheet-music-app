@@ -330,7 +330,8 @@ export interface UpdateTrackPatch {
     title?: string
     notes?: string
     type?: "song" | "header" | "reading" | "prayer" | "transition" | "note"
-    songId?: string
+    /** A string (re)bonds the row's chart; `null` unbonds (clears the chart, keeps the row). */
+    songId?: string | null
     referenceLink?: string
     /** 0-based target position; clamps into [0, trackCount-1]. */
     position?: number
@@ -417,13 +418,26 @@ export async function updateTrack(
     // Build the patch up front. Field-only validation; no Firestore writes
     // yet. We mutate `fieldUpdate` in place as we resolve songLookup-driven
     // side-effects so the tx body can apply it verbatim.
+    const wantsUnbond = patch.songId === null
     const fieldUpdate: Record<string, unknown> = {}
     let changed = false
     for (const k of UPDATABLE_FIELDS) {
-        if (patch[k] !== undefined) {
-            fieldUpdate[k] = patch[k]
-            changed = true
-        }
+        if (patch[k] === undefined) continue
+        // Unbond (`songId: null`) is applied via FieldValue.delete() below —
+        // never write a literal null into the row's songId.
+        if (k === "songId" && patch.songId === null) continue
+        fieldUpdate[k] = patch[k]
+        changed = true
+    }
+    if (wantsUnbond) {
+        // Clear the chart bond but keep the row. fileId + fileName follow
+        // songId out (the catalog is keyed by Drive file id, so a row with no
+        // songId has no chart). FieldValue.delete() removes the fields rather
+        // than leaving stale values readers would mistake for a live bond.
+        fieldUpdate.songId = FieldValue.delete()
+        fieldUpdate.fileId = FieldValue.delete()
+        fieldUpdate.fileName = FieldValue.delete()
+        changed = true
     }
     const wantsMove = patch.position !== undefined
     if (!changed && !wantsMove) {
@@ -447,7 +461,7 @@ export async function updateTrack(
             ? (peekData.fileId as string)
             : undefined
     let newFileId: string | undefined
-    if (patch.songId !== undefined && patch.songId !== peekData.songId) {
+    if (typeof patch.songId === "string" && patch.songId !== peekData.songId) {
         fieldUpdate.fileId = patch.songId
         newFileId = patch.songId
         if (songLookup) {
@@ -508,8 +522,14 @@ export async function updateTrack(
             }
         }
     }
+    // Re-bond rebuilds fileIds[] to point at the new chart; unbond rebuilds it
+    // to drop the cleared row's old chart. Both route through the SAME canonical
+    // rebuild below — for unbond `newFileId` stays undefined, so the target row
+    // contributes nothing to the recomputed set and its old fileId drops out
+    // (unless a sibling still references it).
     const wantsFileIdsRebuild =
-        newFileId !== undefined && newFileId !== oldFileId
+        (newFileId !== undefined && newFileId !== oldFileId) ||
+        (wantsUnbond && oldFileId !== undefined)
 
     // Stage B (inside tx): re-read track for version gating + existence
     // (atomic with the writes below). Also read sibling tracks via the
@@ -860,7 +880,9 @@ export async function bulkUpdateTracks(
     if (songLookup) {
         const idsToFetch = new Set<string>()
         for (const { trackId, patch } of patches) {
-            if (patch.songId === undefined) continue
+            // Only string songIds need a catalog lookup; `null` (unbond) and
+            // `undefined` (no change) have no new song to resolve.
+            if (typeof patch.songId !== "string") continue
             const row = byId.get(trackId) as Record<string, unknown> | undefined
             if (!row) continue
             if (patch.songId !== row.songId) {
@@ -932,7 +954,7 @@ export async function bulkUpdateTracks(
         // and the bond is actually changing.
         if (
             songLookup &&
-            patch.songId !== undefined &&
+            typeof patch.songId === "string" &&
             patch.songId !== row.songId &&
             songCache.get(patch.songId) === null
         ) {
@@ -947,7 +969,12 @@ export async function bulkUpdateTracks(
         }
         const preview: Record<string, unknown> = { ...row }
         for (const k of fields) preview[k] = patch[k]
-        if (patch.songId !== undefined && patch.songId !== row.songId) {
+        if (patch.songId === null) {
+            // Unbond preview: show the row with its chart cleared.
+            delete preview.songId
+            delete preview.fileId
+            delete preview.fileName
+        } else if (patch.songId !== undefined && patch.songId !== row.songId) {
             preview.fileId = patch.songId
         }
         return {
@@ -1008,7 +1035,13 @@ export async function bulkUpdateTracks(
         existingRow: Record<string, unknown>,
         patch: UpdateTrackPatch,
     ): void {
-        if (patch.songId === undefined || patch.songId === existingRow.songId) {
+        if (
+            patch.songId === undefined ||
+            patch.songId === null ||
+            patch.songId === existingRow.songId
+        ) {
+            // `null` (unbond) is handled by the field-clear loop in the write
+            // phase, which deletes songId/fileId/fileName — nothing to re-bond.
             return
         }
         update.fileId = patch.songId
@@ -1075,7 +1108,15 @@ export async function bulkUpdateTracks(
                     ...versionBumpFields(), // W-04 Plan 01
                 }
                 for (const k of UPDATABLE_FIELDS) {
-                    if (entry.patch[k] !== undefined) update[k] = entry.patch[k]
+                    if (entry.patch[k] === undefined) continue
+                    if (k === "songId" && entry.patch.songId === null) {
+                        // Unbond: clear the bond fields (parity with updateTrack).
+                        update.songId = FieldValue.delete()
+                        update.fileId = FieldValue.delete()
+                        update.fileName = FieldValue.delete()
+                        continue
+                    }
+                    update[k] = entry.patch[k]
                 }
                 const existingRow = byId.get(entry.trackId) as
                     | Record<string, unknown>
@@ -1103,7 +1144,9 @@ export async function bulkUpdateTracks(
                 ...versionBumpFields(), // W-04 Plan 01
             }
             if (anyRebond) {
-                const patchedFileId = new Map<string, string | undefined>()
+                // `null` entries (unbond) intentionally map a row to "no file"
+                // so the canonical filter below drops its old fileId.
+                const patchedFileId = new Map<string, string | null | undefined>()
                 for (const p of patches) {
                     const row = byId.get(p.trackId) as
                         | Record<string, unknown>

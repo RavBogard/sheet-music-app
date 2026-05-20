@@ -109,3 +109,29 @@ describe("updateTrackPatchSchema (H-2 partner)", () => {
         expect(result.success).toBe(false)
     })
 })
+
+/**
+ * Bug 2 / Bug 5 — `songId: null` must validate so a row can be UNBONDED
+ * (chart cleared, row kept) instead of forcing a delete + re-add. The
+ * patch surface is shared, so both update_track and bulk_update_tracks
+ * accept it. A string still re-bonds; omitting it leaves the bond untouched.
+ */
+describe("track patch songId nullable (Bug 2 / Bug 5 — unbond)", () => {
+    it("updateTrackPatchSchema accepts songId: null (unbond)", () => {
+        const result = updateTrackPatchSchema.safeParse({ songId: null })
+        expect(result.success).toBe(true)
+        if (result.success) expect(result.data.songId).toBeNull()
+    })
+
+    it("bulkTrackPatchSchema accepts songId: null (unbond)", () => {
+        const result = bulkTrackPatchSchema.safeParse({ songId: null })
+        expect(result.success).toBe(true)
+    })
+
+    it("still accepts a string songId (re-bond) and undefined (no change)", () => {
+        expect(updateTrackPatchSchema.safeParse({ songId: "song-id" }).success).toBe(
+            true,
+        )
+        expect(updateTrackPatchSchema.safeParse({ key: "G" }).success).toBe(true)
+    })
+})

@@ -988,6 +988,200 @@ describe("MCP setlist write tools (emulator)", () => {
             expect(setlist.fileIds).toEqual(["song-oseh"])
         })
 
+        // ─── unbond (songId: null) — Bug 2 / Bug 5 ──────────────────────────
+
+        it("update_track unbond (songId:null) clears the chart, keeps the row + its other fields, and drops the fileId from fileIds[]", async () => {
+            const id = await newSetlist()
+            // Row 0 is a plain row so the unbonded row has a non-zero position
+            // we can assert survives the unbond.
+            await addRow(id, "Opening Niggun")
+            // Row 1 bonds song-oseh (key/lead derived from the catalog).
+            const trackId = await addRow(id, "Oseh Shalom", { songId: "song-oseh" })
+
+            const before = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(before.songId).toBe("song-oseh")
+            expect(before.fileId).toBe("song-oseh")
+            expect(before.fileName).toBe("Oseh Shalom.pdf")
+            expect(before.order).toBe(1)
+            const setlistBefore = (
+                await db().collection("setlists").doc(id).get()
+            ).data()!
+            expect(setlistBefore.fileIds).toEqual(["song-oseh"])
+
+            const r = (await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId,
+                patch: { songId: null },
+            })) as { ok: true; track: Record<string, unknown> }
+            expect(r.ok).toBe(true)
+            // Echo reflects the cleared bond.
+            expect(r.track.songId).toBeUndefined()
+            expect(r.track.fileId).toBeUndefined()
+            expect(r.track.fileName).toBeUndefined()
+
+            // Persisted: bond fields gone; the row + its other fields survive.
+            const after = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(after.songId).toBeUndefined()
+            expect(after.fileId).toBeUndefined()
+            expect(after.fileName).toBeUndefined()
+            expect(after.title).toBe("Oseh Shalom")
+            expect(after.key).toBe("G")
+            expect(after.leadMusician).toBe("Cantor")
+            expect(after.order).toBe(1)
+            expect(after.type).toBe("song")
+
+            // The chart drops out of the parent aggregate, and the row itself
+            // is NOT deleted — both rows remain.
+            const setlistAfter = (
+                await db().collection("setlists").doc(id).get()
+            ).data()!
+            expect((setlistAfter.fileIds as string[] | undefined) ?? []).toEqual([])
+            expect(await tracksOf(id)).toHaveLength(2)
+        })
+
+        it("update_track unbond keeps a chart in fileIds[] when a sibling row still bonds it", async () => {
+            const id = await newSetlist()
+            const trackA = await addRow(id, "Row A", { songId: "song-oseh" })
+            await addRow(id, "Row B", { songId: "song-oseh" }) // second user of song-oseh
+
+            await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId: trackA,
+                patch: { songId: null },
+            })
+
+            // Row A is unbonded, but Row B still references song-oseh so the
+            // aggregate keeps it (distinct-set semantics, same as re-bond).
+            const rowA = (
+                await db().collection("tracks").doc(trackA).get()
+            ).data()!
+            expect(rowA.songId).toBeUndefined()
+            const setlist = (
+                await db().collection("setlists").doc(id).get()
+            ).data()!
+            expect(setlist.fileIds).toEqual(["song-oseh"])
+        })
+
+        it("update_track unbond + rename in one patch clears the bond and applies the new title", async () => {
+            const id = await newSetlist()
+            const trackId = await addRow(id, "Oseh Shalom", { songId: "song-oseh" })
+
+            await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId,
+                patch: { songId: null, title: "Silent Reflection" },
+            })
+
+            const after = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(after.songId).toBeUndefined()
+            expect(after.fileId).toBeUndefined()
+            expect(after.title).toBe("Silent Reflection")
+        })
+
+        it("re-bond after unbond restores the chart on the row + in fileIds[]", async () => {
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf" })
+            const id = await newSetlist()
+            const trackId = await addRow(id, "Oseh Shalom", { songId: "song-oseh" })
+
+            // Unbond, then re-bond to a different song.
+            await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId,
+                patch: { songId: null },
+            })
+            const unbonded = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(unbonded.fileId).toBeUndefined()
+
+            await updateSetlistTrack(ADMIN, {
+                setlistId: id,
+                trackId,
+                patch: { songId: "song-other" },
+            })
+            const rebonded = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(rebonded.songId).toBe("song-other")
+            expect(rebonded.fileId).toBe("song-other")
+            expect(rebonded.fileName).toBe("Hinei Ma Tov.pdf")
+            const setlist = (
+                await db().collection("setlists").doc(id).get()
+            ).data()!
+            expect(setlist.fileIds).toEqual(["song-other"])
+        })
+
+        it("bulk_update_tracks atomic unbond clears multiple rows + rebuilds fileIds[]", async () => {
+            await db()
+                .collection("songs")
+                .doc("song-other")
+                .set({ title: "Hinei Ma Tov.pdf" })
+            const id = await newSetlist()
+            const trackA = await addRow(id, "Row A", { songId: "song-oseh" })
+            const trackB = await addRow(id, "Row B", { songId: "song-other" })
+
+            const before = (
+                await db().collection("setlists").doc(id).get()
+            ).data()!
+            expect((before.fileIds as string[]).sort()).toEqual([
+                "song-oseh",
+                "song-other",
+            ])
+
+            const r = (await bulkUpdateSetlistTracks(ADMIN, {
+                setlistId: id,
+                patches: [
+                    { trackId: trackA, patch: { songId: null } },
+                    { trackId: trackB, patch: { songId: null } },
+                ],
+            })) as { ok: true; committed: boolean; results: Array<{ ok: boolean; track?: Record<string, unknown> }> }
+            expect(r.committed).toBe(true)
+            expect(r.results.every((x) => x.ok)).toBe(true)
+            expect(r.results[0].track?.songId).toBeUndefined()
+            expect(r.results[0].track?.fileId).toBeUndefined()
+
+            const rowA = (await db().collection("tracks").doc(trackA).get()).data()!
+            const rowB = (await db().collection("tracks").doc(trackB).get()).data()!
+            expect(rowA.songId).toBeUndefined()
+            expect(rowA.fileId).toBeUndefined()
+            expect(rowB.songId).toBeUndefined()
+            expect(rowB.fileId).toBeUndefined()
+
+            const after = (
+                await db().collection("setlists").doc(id).get()
+            ).data()!
+            expect((after.fileIds as string[] | undefined) ?? []).toEqual([])
+        })
+
+        it("bulk_update_tracks best-effort unbond clears the row", async () => {
+            const id = await newSetlist()
+            const trackId = await addRow(id, "Oseh Shalom", { songId: "song-oseh" })
+
+            const r = (await bulkUpdateSetlistTracks(ADMIN, {
+                setlistId: id,
+                mode: "best-effort",
+                patches: [{ trackId, patch: { songId: null } }],
+            })) as { ok: true; committed: boolean; results: Array<{ ok: boolean }> }
+            expect(r.committed).toBe(true)
+            expect(r.results[0].ok).toBe(true)
+
+            const after = (
+                await db().collection("tracks").doc(trackId).get()
+            ).data()!
+            expect(after.songId).toBeUndefined()
+            expect(after.fileId).toBeUndefined()
+            expect(after.fileName).toBeUndefined()
+        })
+
         // ─── bulk_update_tracks ─────────────────────────────────────────────
 
         it("bulk_update_tracks atomic happy path — 3 valid patches all land in one transaction (committed: true)", async () => {

@@ -147,7 +147,13 @@ const trackPatchFields = {
     type: z
         .enum(["song", "header", "reading", "prayer", "transition", "note"])
         .optional(),
-    songId: z.string().optional(),
+    songId: z
+        .string()
+        .nullable()
+        .optional()
+        .describe(
+            "Library song id to (re)bond this row's chart. Pass `null` to UNBOND — clears the chart (songId + fileId + fileName) while keeping the row and its title, key, position, lead, and notes intact. Omit to leave the existing bond unchanged.",
+        ),
     referenceLink: z.string().optional(),
 } as const
 
@@ -938,7 +944,7 @@ export function registerWriteTools(server: McpServer): void {
         "update_track",
         {
             description:
-                "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink) and optionally move it to a new position. Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Pass `position` to move the row in place (closes the 'must call reorder_setlist with the full ordered id list to move one row' gap). Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). Returns the post-update row. Admins and band leaders only. Pass `lastSeenVersion` (the track's `version` from your last get_setlist) for W-04 optimistic concurrency: rejects with `{error: 'stale_version', currentVersion, ...}` if another writer changed THIS track first, or `{error: 'track_not_found', setlistVersion, ...}` if the row was deleted out from under you.",
+                "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink) and optionally move it to a new position. Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Pass `position` to move the row in place (closes the 'must call reorder_setlist with the full ordered id list to move one row' gap). Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). Unbonding: pass `songId: null` to clear the chart (songId + fileId + fileName) while keeping the row, its title/key/position/notes, and dropping the chart from the setlist's fileIds aggregate — no need to delete + re-add a free-text row. Returns the post-update row. Admins and band leaders only. Every successful write bumps the setlist's `version` and echoes the row back; chain the returned `version` into the next call's `lastSeenVersion` rather than re-reading a stale get_setlist value. Pass `lastSeenVersion` (the track's `version` from your last get_setlist) for W-04 optimistic concurrency: rejects with `{error: 'stale_version', currentVersion, ...}` if another writer changed THIS track first, or `{error: 'track_not_found', setlistVersion, ...}` if the row was deleted out from under you.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 trackId: z
@@ -946,7 +952,7 @@ export function registerWriteTools(server: McpServer): void {
                     .min(1)
                     .describe("Track id (from get_setlist tracks[].id)"),
                 patch: updateTrackPatchSchema.describe(
-                    "Fields to update + optional `position` for in-place reorder. At least one field (or `position`) must be set. Pass `songId` to re-bond the row to a different library song (fileId follows automatically).",
+                    "Fields to update + optional `position` for in-place reorder. At least one field (or `position`) must be set. Pass `songId` to re-bond the row to a different library song (fileId follows automatically), or `songId: null` to unbond — clear the chart while keeping the row.",
                 ),
                 lastSeenVersion: lastSeenVersionSchema.describe(
                     "Optional track-level optimistic-concurrency gate. Pass the track's `version` from get_setlist; rejects with `{error: 'stale_version', currentVersion, lastSeenVersion, hint, ...}` on mismatch. Omit to keep last-writer-wins.",
@@ -987,7 +993,7 @@ export function registerWriteTools(server: McpServer): void {
         "bulk_update_tracks",
         {
             description:
-                "Update many tracks on one setlist in a single call. mode='atomic' (default) wraps every patch in a Firestore transaction — all-or-nothing; mode='best-effort' applies each patch independently and returns per-row results (prefer atomic for >5 rows; best-effort is N round-trips). dryRun=true returns the plan without writing — useful for confirming a large change before committing. Max 50 patches per call (chunk longer lists). RESPONSE: the `committed` boolean is the load-bearing signal — true iff writes actually landed in Firestore. dryRun=true and atomic-mode-with-any-rejected-patch both return `committed: false` (per-row results explain which patch failed and which were rolled back). `updatedAt` in each row's `track` echo is returned as an ISO string. W-04 Plan 03: each patch entry accepts an optional `lastSeenVersion` (the track's version from your last get_setlist). Atomic mode rejects the whole batch with `staleRows[]` on any mismatch — the previously-valid rows are NOT applied; each row's `error` is `'stale_version'` (with `currentVersion` + `lastSeenVersion`) for the stale ones and a rollback message for the rest. Best-effort skips just the stale row (`error: 'stale_version'`) and commits the others. Admins and band leaders only.",
+                "Update many tracks on one setlist in a single call. mode='atomic' (default) wraps every patch in a Firestore transaction — all-or-nothing; mode='best-effort' applies each patch independently and returns per-row results (prefer atomic for >5 rows; best-effort is N round-trips). dryRun=true returns the plan without writing — useful for confirming a large change before committing. Max 50 patches per call (chunk longer lists). Each patch may pass `songId: null` to UNBOND that row (clears its chart but keeps the row); a string `songId` re-bonds it. RESPONSE: the `committed` boolean is the load-bearing signal — true iff writes actually landed in Firestore. dryRun=true and atomic-mode-with-any-rejected-patch both return `committed: false` (per-row results explain which patch failed and which were rolled back). `updatedAt` in each row's `track` echo is returned as an ISO string. Every successful commit bumps the setlist's `version`; chain the returned version into your next `lastSeenVersion` rather than re-reading a stale get_setlist. W-04 Plan 03: each patch entry accepts an optional `lastSeenVersion` (the track's version from your last get_setlist). Atomic mode rejects the whole batch with `staleRows[]` on any mismatch — the previously-valid rows are NOT applied; each row's `error` is `'stale_version'` (with `currentVersion` + `lastSeenVersion`) for the stale ones and a rollback message for the rest. Best-effort skips just the stale row (`error: 'stale_version'`) and commits the others. Admins and band leaders only.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 patches: z
