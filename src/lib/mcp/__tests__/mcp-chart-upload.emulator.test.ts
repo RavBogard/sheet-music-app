@@ -530,6 +530,38 @@ describe("MCP chart-upload tools (emulator)", () => {
         expect(mockUploadToStorage).not.toHaveBeenCalled()
     })
 
+    it("upload_chart accepts octet-stream when fileName is a MusicXML extension (musicxml-health Phase 2)", async () => {
+        // Browsers send application/octet-stream for .mxl/.musicxml (no
+        // registered MIME). The extension resolves a real music mime so the
+        // file is accepted + typed application/xml (routes to SmartScoreViewer),
+        // instead of being bounced by G-7.
+        for (const fn of ["adon-olam.mxl", "adon-olam.musicxml"]) {
+            const result = (await uploadChart(ADMIN, {
+                title: `Octet ${fn}`,
+                fileBase64: b64("<?xml version=\"1.0\"?><score-partwise/>"),
+                mimeType: "application/octet-stream",
+                fileName: fn,
+            })) as { ok: true; fileId: string }
+            expect(result.ok).toBe(true)
+            const idx = (
+                await db().collection("library_index").doc(result.fileId).get()
+            ).data()!
+            expect(idx.mimeType).toBe("application/xml")
+        }
+        // G-7 still rejects octet-stream for a NON-music extension.
+        expect(
+            await uploadChart(ADMIN, {
+                title: "Octet Unknown",
+                fileBase64: b64("garbage"),
+                mimeType: "application/octet-stream",
+                fileName: "mystery.bin",
+            }),
+        ).toMatchObject({
+            ok: false,
+            error: { message: expect.stringContaining("application/octet-stream") },
+        })
+    })
+
     it("upload_chart format-validates fileBase64 (G-8)", async () => {
         expect(
             await uploadChart(ADMIN, {
@@ -1025,6 +1057,36 @@ describe("MCP chart-upload tools (emulator)", () => {
                 expect.any(Buffer),
                 "application/pdf",
             )
+        })
+
+        it("Drive MusicXML with octet/empty mime is typed application/xml, not PDF (musicxml-health Phase 2)", async () => {
+            // Google Drive reports .mxl/.musicxml as application/octet-stream or
+            // omits the mime; the old `driveMime || application/pdf` mis-typed
+            // these as PDF -> Perform routed to the PDF viewer. Now they resolve
+            // to MusicXML from the file name and store as application/xml.
+            for (const driveMime of ["application/octet-stream", ""]) {
+                mockDriveGetFileMetadata.mockResolvedValue({
+                    name: "Hineh Ma Tov.mxl",
+                    mimeType: driveMime,
+                })
+                mockDriveGetFile.mockResolvedValue(
+                    Buffer.from("PK\x03\x04 fake mxl zip bytes"),
+                )
+                const result = (await importChartFromDrive(ADMIN, {
+                    driveFileId: `drive-mxl-${driveMime || "empty"}`,
+                    force: true,
+                })) as { ok: true; fileId: string }
+                expect(result.ok).toBe(true)
+                const idx = (
+                    await db().collection("library_index").doc(result.fileId).get()
+                ).data()!
+                expect(idx.mimeType).toBe("application/xml")
+                expect(mockUploadToStorage).toHaveBeenCalledWith(
+                    expect.stringMatching(/^upload-/),
+                    expect.any(Buffer),
+                    "application/xml",
+                )
+            }
         })
 
         it("caller title override wins over the Drive file name", async () => {

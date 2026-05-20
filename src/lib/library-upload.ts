@@ -129,6 +129,28 @@ const ALLOWED_TYPES: Record<string, string> = {
 }
 
 /**
+ * Resolve a specific MusicXML / MuseScore mime from a file extension.
+ *
+ * Browsers and Google Drive report `.mxl/.musicxml/.mscz/.mscx` as
+ * `application/octet-stream` (these have no OS-registered MIME) or omit the
+ * type entirely. The G-7 octet-stream guard in `processChartUpload` would
+ * reject those, and `import_chart_from_drive` would mis-default them to
+ * `application/pdf` — either way MusicXML never reaches the SmartScoreViewer in
+ * Perform (it routes to the PDF viewer → "Failed to render PDF"). Resolving the
+ * mime from the extension keeps MusicXML routing correct. Returns null for any
+ * non-music extension, so G-7 still rejects genuinely-unknown octet-stream.
+ */
+export function musicMimeFromFileName(
+    fileName: string | undefined | null,
+): string | null {
+    const ext = fileName?.toLowerCase().match(/\.(mxl|musicxml|xml|mscz|mscx)$/)?.[1]
+    if (!ext) return null
+    if (ext === "mscz") return "application/x-musescore"
+    if (ext === "mscx") return "application/x-musescore+xml"
+    return "application/vnd.recordare.musicxml+xml" // mxl, musicxml, xml
+}
+
+/**
  * Actual Storage path computed the SAME way firebase-storage.ts:getStoragePath
  * does — extension only for pdf/xml/audio (text/image get no extension). Used
  * for both the atomic-guard read-verify AND the library_index `storageUrl`
@@ -192,7 +214,19 @@ export async function processChartUpload(
     }
 
     const fileName = input.originalFileName
-    const mimeType = input.mimeType || "application/octet-stream"
+    let mimeType = input.mimeType || "application/octet-stream"
+
+    // MusicXML/MuseScore intake hardening (musicxml-health Phase 2): browsers
+    // and Google Drive report .mxl/.musicxml/.mscz with no usable MIME
+    // (application/octet-stream or empty). Resolve a specific music mime from
+    // the file extension so these are accepted + typed as MusicXML rather than
+    // bounced by the G-7 guard below or mis-stored as PDF. Does NOT relax G-7
+    // for genuinely-unknown octet-stream bytes — musicMimeFromFileName returns
+    // null for any non-music extension, so that path still rejects.
+    if (mimeType === "application/octet-stream") {
+        const musicMime = musicMimeFromFileName(fileName)
+        if (musicMime) mimeType = musicMime
+    }
 
     // G-7: a real mimeType is required. Previously `mimeType OR a recognized
     // file extension` was accepted, but that let octet-stream + .pdf-named

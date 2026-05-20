@@ -2,6 +2,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import {
     processChartUpload,
+    musicMimeFromFileName,
     type LibraryCollection,
 } from "@/lib/library-upload"
 import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
@@ -544,7 +545,16 @@ export async function importChartFromDrive(
     const title = normalizeChartTitle(
         args.title?.trim() || driveName.replace(/\.[^/.]+$/, ""),
     )
-    const mimeType = driveMime || "application/pdf"
+    // musicxml-health Phase 2: Drive often reports .mxl/.musicxml/.mscz as
+    // application/octet-stream or omits the mime; the old
+    // `driveMime || "application/pdf"` then mis-typed MusicXML as PDF, so it
+    // routed to the PDF viewer in Perform instead of the SmartScoreViewer. When
+    // Drive gave no usable mime AND the file name is a known music extension,
+    // derive the music mime. Real PDFs/images (specific driveMime) unaffected.
+    const mimeType =
+        !driveMime || driveMime === "application/octet-stream"
+            ? (musicMimeFromFileName(driveName) ?? (driveMime || "application/pdf"))
+            : driveMime
     const predictedCollection: LibraryCollection = args.collection ?? "uploads"
 
     // ─── C5C-008 dryRun branch: probe, don't write ──────────────────────────
