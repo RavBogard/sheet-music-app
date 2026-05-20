@@ -55,6 +55,7 @@ export interface SetlistTrack {
     performer?: string // Who leads this moment: "Rabbi", "Cantor", "Congregation", "Band"
     estimatedMinutes?: number // Numeric duration for run sheet time calculations
     pageNumber?: number // Which page of a multi-page PDF to open to (1-indexed)
+    unmatched?: boolean // True when template expansion found no matching chart for this slot; title stays clean, search instructions live in notes.
 }
 
 /** A musician assigned to play a specific service/setlist */

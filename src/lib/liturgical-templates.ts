@@ -479,11 +479,14 @@ export function buildSetlistFromTemplate(
                 ...(slot.pageNumber ? { pageNumber: slot.pageNumber } : {}),
             })
         } else {
-            // No match — create a placeholder track with the liturgical name
+            // No match — create a placeholder track with the liturgical name.
+            // Title stays clean; the unmatched state is structured (search
+            // instructions live in notes).
             tracks.push({
                 id: crypto.randomUUID(),
-                title: `${slot.label} (unmatched)`,
+                title: slot.label,
                 type: 'song',
+                unmatched: true,
                 notes: `No matching file found. Search for: ${slot.queries.join(', ')}`,
             })
         }
@@ -510,8 +513,16 @@ export function convertSetlistToTemplate(tracks: SetlistTrack[]): TemplateSlot[]
                 slot.fileId = track.fileId
                 if (track.fileName) slot.fileName = track.fileName
             }
-            // Always set queries as fallback (lowercase title for fuzzy match)
-            slot.queries = [track.title.toLowerCase().replace(/\s*\(unmatched\)\s*$/, '')]
+            // Always set queries as fallback (lowercase title for fuzzy match).
+            // Unmatched tracks now carry a clean title plus the structured
+            // `unmatched` flag, so their title is used directly. The trailing
+            // "(unmatched)" strip remains only as a back-compat guard for
+            // legacy setlists saved before the flag existed — their titles
+            // still bake the suffix in and must not poison the derived query.
+            const queryTitle = track.unmatched
+                ? track.title
+                : track.title.replace(/\s*\(unmatched\)\s*$/, '')
+            slot.queries = [queryTitle.toLowerCase()]
             if (track.pageNumber) slot.pageNumber = track.pageNumber
         }
 

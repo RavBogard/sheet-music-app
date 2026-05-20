@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest'
 import {
     getTemplate,
     buildSetlistFromTemplate,
+    convertSetlistToTemplate,
     generateSetlistName,
     FRIDAY_NIGHT_TEMPLATE,
     SHABBAT_MORNING_TEMPLATE,
 } from './liturgical-templates'
-import type { DriveFile } from '@/types/models'
+import type { DriveFile, SetlistTrack } from '@/types/models'
 import type { ServiceContext } from './liturgical-calendar'
 
 // ── Mock Data ──
@@ -226,10 +227,18 @@ describe('buildSetlistFromTemplate', () => {
         expect(uniqueIds.size).toBe(fileIds.length)
     })
 
-    it('marks unmatched slots with (unmatched)', () => {
+    it('marks unmatched slots with the structured unmatched flag and a clean title', () => {
         const tracks = buildSetlistFromTemplate(FRIDAY_NIGHT_TEMPLATE, mockLibrary, mockContext)
-        const unmatched = tracks.filter(t => t.title.includes('(unmatched)'))
+        const unmatched = tracks.filter(t => t.unmatched === true)
         expect(unmatched.length).toBeGreaterThan(0)
+        // Title must stay clean — no "(unmatched)" baked into the display string.
+        for (const t of unmatched) {
+            expect(t.title).not.toContain('(unmatched)')
+            // Search instructions live in notes, not the title.
+            expect(t.notes).toContain('No matching file found')
+        }
+        // No track anywhere should carry the legacy title suffix.
+        expect(tracks.every(t => !t.title.includes('(unmatched)'))).toBe(true)
     })
 
     it('annotates Torah headers with parasha', () => {
@@ -358,5 +367,31 @@ describe('v5 — service flow types in templates', () => {
         const reading = tracks.find(t => t.type === 'reading' && t.title.includes('Torah'))
         expect(reading).toBeDefined()
         expect(reading!.description).toContain('Parashat Mishpatim')
+    })
+})
+
+describe('convertSetlistToTemplate', () => {
+    it('derives a clean query from a structured-unmatched track (no suffix strip needed)', () => {
+        const tracks = buildSetlistFromTemplate(FRIDAY_NIGHT_TEMPLATE, mockLibrary, mockContext)
+        const unmatched = tracks.find(t => t.unmatched === true)
+        expect(unmatched).toBeDefined()
+        const slots = convertSetlistToTemplate(tracks)
+        const slot = slots.find(s => s.label === unmatched!.title)
+        expect(slot).toBeDefined()
+        // Query is the clean lowercased title — never carries "(unmatched)".
+        expect(slot!.queries[0]).toBe(unmatched!.title.toLowerCase())
+        expect(slot!.queries[0]).not.toContain('(unmatched)')
+    })
+
+    it('strips a legacy baked-in "(unmatched)" suffix from pre-flag setlist tracks', () => {
+        // Mirrors real pre-fix production data (e.g. "Leslie Cohen's Hallelujah (unmatched)").
+        const legacyTrack: SetlistTrack = {
+            id: 'legacy-1',
+            title: "Leslie Cohen's Hallelujah (unmatched)",
+            type: 'song',
+        }
+        const [slot] = convertSetlistToTemplate([legacyTrack])
+        expect(slot.queries[0]).toBe("leslie cohen's hallelujah")
+        expect(slot.queries[0]).not.toContain('(unmatched)')
     })
 })
