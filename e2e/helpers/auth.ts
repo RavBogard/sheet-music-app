@@ -1,4 +1,4 @@
-import type { BrowserContext, APIRequestContext } from '@playwright/test'
+import type { BrowserContext, APIRequestContext, Page } from '@playwright/test'
 
 import { mcpCallOrThrow } from './mcp'
 
@@ -74,7 +74,15 @@ export async function loginAsTestUser(
     context: BrowserContext,
     baseURL: string,
     testBearer: string,
-): Promise<{ uid: string; role: string | null }> {
+): Promise<{
+    uid: string
+    role: string | null
+    /** META-003 server half: a fresh bearer-equivalent Firebase customToken
+     *  for `signInWithCustomToken` client-side. Bearer-sensitive — never log
+     *  or write to a tracked file. Pass straight into `signInWebSdk`. */
+    customToken: string | null
+    customTokenExpiresInSec?: number
+}> {
     const res = await context.request.post(`${baseURL}/api/auth/test-session`, {
         headers: { Authorization: `Bearer ${testBearer}` },
     })
@@ -84,8 +92,124 @@ export async function loginAsTestUser(
             `loginAsTestUser failed: ${res.status()} ${res.statusText()}\n${body.slice(0, 400)}`,
         )
     }
-    const data = (await res.json()) as { uid: string; role: string | null }
-    return data
+    const data = (await res.json()) as {
+        uid: string
+        role: string | null
+        customToken?: string | null
+        customTokenExpiresInSec?: number
+    }
+    return {
+        uid: data.uid,
+        role: data.role,
+        customToken: data.customToken ?? null,
+        customTokenExpiresInSec: data.customTokenExpiresInSec,
+    }
+}
+
+/**
+ * META-003 CLIENT half — populate the browser's Firebase Web SDK so
+ * `auth.currentUser` is non-null (the `__session` cookie alone only authes
+ * the *server*; client-listener-driven UI reads `auth.currentUser`).
+ *
+ * Mechanism (Option A — zero new prod surface): the app's own
+ * `src/lib/firebase.ts` exposes `window.__c7_auth_for_probes__ = { auth,
+ * signIn }` when built with `NEXT_PUBLIC_PROBE_HARNESS_AUTH==='1'` (the
+ * cycle-7 Lane-4 probe bridge). `signIn(token)` runs the exact
+ * `signInWithCustomToken(auth, token)` call `QRSignIn.tsx` uses, so the
+ * Web SDK session lands on the *same* default-app `auth` the app's
+ * components read.
+ *
+ * **The `page` MUST already be on an app route that loaded `@/lib/firebase`**
+ * (e.g. after a `page.goto('/perform/...')`) — the bridge is installed at
+ * that module's load time.
+ *
+ * `NEXT_PUBLIC_*` is build-time-inlined, so against a prod build WITHOUT the
+ * flag the bridge is dead code and absent. Behaviour then depends on
+ * `opts.required`:
+ *   - `required: true` (default) → throw a clear, token-free error.
+ *   - `required: false` → resolve `{ signedIn: false }` so a caller can
+ *     down-grade to cookie-only assertions.
+ *
+ * Security: the customToken is bearer-equivalent. It is passed into
+ * `page.evaluate` as an argument (not a URL, not a log) and is never echoed
+ * in any thrown message.
+ */
+export async function signInWebSdk(
+    page: Page,
+    customToken: string,
+    opts: { required?: boolean; timeoutMs?: number } = {},
+): Promise<{ signedIn: boolean; uid: string | null }> {
+    const required = opts.required ?? true
+    const timeout = opts.timeoutMs ?? 15_000
+
+    if (!customToken) {
+        if (required) {
+            throw new Error(
+                'signInWebSdk: no customToken supplied. The test-session route returns ' +
+                    '`customToken` (META-003 server half) — confirm loginAsTestUser captured it.',
+            )
+        }
+        return { signedIn: false, uid: null }
+    }
+
+    // Wait for the in-bundle probe bridge. Absent ⇒ the deployed build was
+    // not compiled with NEXT_PUBLIC_PROBE_HARNESS_AUTH=1.
+    const bridgeReady = await page
+        .waitForFunction(
+            () =>
+                typeof (window as unknown as { __c7_auth_for_probes__?: unknown })
+                    .__c7_auth_for_probes__ !== 'undefined',
+            null,
+            { timeout },
+        )
+        .then(() => true)
+        .catch(() => false)
+
+    if (!bridgeReady) {
+        const msg =
+            'signInWebSdk: window.__c7_auth_for_probes__ not present — the target build ' +
+            'lacks NEXT_PUBLIC_PROBE_HARNESS_AUTH=1 (the cycle-7 probe bridge is build-time ' +
+            'gated and dead-code-eliminated when the flag is off). Set the flag on the target ' +
+            'deployment (or run against a local build with it set) to drive Web-SDK sign-in.'
+        if (required) throw new Error(msg)
+        // eslint-disable-next-line no-console
+        console.warn(`[auth] ${msg} — continuing cookie-only (required:false).`)
+        return { signedIn: false, uid: null }
+    }
+
+    // Drive the sign-in through the app's own auth instance. Token passed as
+    // an evaluate arg — never logged, never in a URL.
+    await page.evaluate(async (token) => {
+        const bridge = (
+            window as unknown as {
+                __c7_auth_for_probes__: { signIn: (t: string) => Promise<unknown> }
+            }
+        ).__c7_auth_for_probes__
+        await bridge.signIn(token)
+    }, customToken)
+
+    // Acceptance bar: auth.currentUser must be non-null.
+    await page.waitForFunction(
+        () =>
+            !!(
+                window as unknown as {
+                    __c7_auth_for_probes__?: { auth?: { currentUser?: { uid?: string } | null } }
+                }
+            ).__c7_auth_for_probes__?.auth?.currentUser,
+        null,
+        { timeout },
+    )
+
+    const uid = await page.evaluate(
+        () =>
+            (
+                window as unknown as {
+                    __c7_auth_for_probes__?: { auth?: { currentUser?: { uid?: string } | null } }
+                }
+            ).__c7_auth_for_probes__?.auth?.currentUser?.uid ?? null,
+    )
+
+    return { signedIn: true, uid }
 }
 
 /**

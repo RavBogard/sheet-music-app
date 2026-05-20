@@ -89,6 +89,48 @@ export async function uploadFixtureChart(
 }
 
 /**
+ * Discover a real curated PDF chart in the production library so a test
+ * setlist can bond it. The text fixtures `uploadFixtureChart` mints render
+ * through `TextScoreViewer` — they NEVER exercise `react-pdf`. To test the
+ * actual iOS/WebKit risk (react-pdf's pdf.js worker rendering a chart), the
+ * bonded row must serve real PDF bytes. A bonded curated chart (Drive-id /
+ * `upload-*` fileId, no `.txt`/`.xml`/image extension) routes through
+ * `toQueueItem`'s default `'pdf'` branch → `PDFViewer`.
+ *
+ * Returns the first active `application/pdf` row, or an active `*.pdf`-named
+ * row if mimeType is unset on a legacy Drive entry. `null` if the library
+ * has no PDF (caller should down-grade the react-pdf assertion to a skip).
+ *
+ * Bonding a curated chart into a test setlist is safe: the chart is owned by
+ * the curated library (NOT the test uid), so `revokeTestAccount`'s cascade
+ * tears down only the test setlist + its track rows, leaving the shared
+ * chart intact. Chart bytes are public-by-design.
+ */
+export async function findCuratedPdf(
+    request: APIRequestContext,
+    baseURL: string,
+    bearer: string,
+): Promise<{ fileId: string; name: string } | null> {
+    const res = await mcpCallOrThrow<{
+        rows?: Array<{
+            fileId: string
+            name: string
+            mimeType: string | null
+            status: string
+        }>
+    }>(request, baseURL, bearer, 'list_library', { limit: 200 })
+    const rows = res.rows ?? []
+    const byMime = rows.find(
+        (r) => r.mimeType === 'application/pdf' && r.status === 'active',
+    )
+    if (byMime) return { fileId: byMime.fileId, name: byMime.name }
+    const byName = rows.find(
+        (r) => r.status === 'active' && /\.pdf$/i.test(r.name),
+    )
+    return byName ? { fileId: byName.fileId, name: byName.name } : null
+}
+
+/**
  * End-to-end seed: create a setlist owned by `leaderBearer`, add tracks,
  * publish to `audience` (default 'band' = admin+band_leader+musician).
  *
