@@ -43,6 +43,12 @@ interface TrackSeed {
     songId?: string
     /** Optional key, e.g. 'G' or 'Am'. */
     key?: string
+    /**
+     * Row type (default 'song'). Non-song rows (header / reading / prayer /
+     * transition / note) carry NO chart — no fixture chart is uploaded for them.
+     * 'header' renders as a non-interactive section divider in Perform mode.
+     */
+    type?: 'song' | 'header' | 'reading' | 'prayer' | 'transition' | 'note'
 }
 
 /** Mint a unique fixture chart in the test user's library. */
@@ -167,8 +173,11 @@ export async function seedPublishedSetlist(
 
     const tracks: SeededTrack[] = []
     for (const seed of args.tracks) {
+        const isSongRow = !seed.type || seed.type === 'song'
         let songId = seed.songId
-        if (!seed.unbound && !songId) {
+        // Only song rows carry a chart. Non-song rows (header/reading/...) and
+        // explicitly-unbound rows get no fixture upload.
+        if (isSongRow && !seed.unbound && !songId) {
             const uploaded = await uploadFixtureChart(request, baseURL, leaderBearer, {
                 title: `${seed.title} (b6-fixture ${Date.now()})`,
             })
@@ -180,6 +189,7 @@ export async function seedPublishedSetlist(
             title: seed.title,
         }
         if (songId) addArgs.songId = songId
+        if (seed.type) addArgs.type = seed.type
         if (seed.key) addArgs.key = seed.key
 
         const added = await mcpCallOrThrow<{
@@ -301,6 +311,84 @@ export async function seedLargeSetlist(
         })
         const trackId = added.track?.id ?? added.trackId ?? added.id
         if (trackId) tracks.push({ id: trackId, title: pdfTitle, fileId: args.bondPdfId })
+    }
+
+    const publishResult = await mcpCallOrThrow<{ publishedAt?: string }>(
+        request,
+        baseURL,
+        leaderBearer,
+        'publish_setlist',
+        { setlistId, audience: args.audience ?? 'band', dryRun: false },
+    )
+
+    return {
+        setlistId,
+        name: args.name,
+        tracks,
+        publishedAt: publishResult.publishedAt ?? new Date().toISOString(),
+    }
+}
+
+/**
+ * Seed a LONG published setlist (default 32 rows) for the iPad long-list probe.
+ *
+ * Cost + reliability discipline: all rows bond the SAME shared `songId` (one
+ * library chart) so every row is a real `role="button"` tap target without N
+ * uploads, and rows are inserted via ONE `bulk_add_tracks` call (≤50/row) — a
+ * single write minimises exposure to transient prod/MCP blips vs. N+1 sequential
+ * adds. Caller uploads the fixture chart first and passes its fileId.
+ */
+export async function seedLongPublishedSetlist(
+    request: APIRequestContext,
+    baseURL: string,
+    leaderBearer: string,
+    args: {
+        name: string
+        eventDate: string
+        songId: string
+        count?: number
+        audience?: 'band' | 'all'
+    },
+): Promise<SeededSetlist> {
+    const count = args.count ?? 32
+    const created = await mcpCallOrThrow<{ id?: string; setlistId?: string }>(
+        request,
+        baseURL,
+        leaderBearer,
+        'create_setlist',
+        { name: args.name, eventDate: args.eventDate },
+    )
+    const setlistId = created.id ?? created.setlistId
+    if (!setlistId) {
+        throw new Error(`create_setlist returned no id field: ${JSON.stringify(created)}`)
+    }
+
+    const keyCycle = ['G', 'D', 'A', 'C', 'E', 'Am', 'Em', 'Dm']
+    const rows = Array.from({ length: count }, (_, i) => ({
+        songId: args.songId,
+        title: `Long Row ${String(i + 1).padStart(2, '0')}`,
+        key: keyCycle[i % keyCycle.length],
+    }))
+
+    const tracks: SeededTrack[] = []
+    for (let off = 0; off < rows.length; off += 50) {
+        const chunk = rows.slice(off, off + 50)
+        const res = await mcpCallOrThrow<{
+            committed?: boolean
+            results?: Array<{ index: number; ok: boolean; trackId?: string }>
+        }>(request, baseURL, leaderBearer, 'bulk_add_tracks', {
+            setlistId,
+            tracks: chunk,
+            mode: 'atomic',
+        })
+        if (res.committed === false) {
+            throw new Error(`bulk_add_tracks did not commit: ${JSON.stringify(res).slice(0, 300)}`)
+        }
+        for (const r of res.results ?? []) {
+            if (r.ok && r.trackId) {
+                tracks.push({ id: r.trackId, title: chunk[r.index]?.title ?? '', fileId: args.songId })
+            }
+        }
     }
 
     const publishResult = await mcpCallOrThrow<{ publishedAt?: string }>(
