@@ -941,9 +941,14 @@ describe("MCP chart-upload tools (emulator)", () => {
             expect(ok).toEqual({ ok: true, deletedTracks: 0 })
         })
 
-        it("refuses to delete a chart bonded to any setlist track", async () => {
+        it("(a) refuses to delete a chart bonded to a LIVE setlist track", async () => {
             const fileId = await seedChart(ADMIN, "Bonded Chart")
 
+            // The parent setlist EXISTS → this is a live bond.
+            await db()
+                .collection("setlists")
+                .doc("set-1")
+                .set({ name: "Live Setlist", date: "2026-06-01" })
             await db().collection("tracks").doc("trk-1").set({
                 setlistId: "set-1",
                 fileId,
@@ -953,9 +958,15 @@ describe("MCP chart-upload tools (emulator)", () => {
 
             const refused = await deleteChart(ADMIN, { fileId })
             expect(refused).toMatchObject({
-            ok: false,
-            error: { message: expect.stringContaining("bonded to 1 setlist") },
-        })
+                ok: false,
+                error: { machine_code: "chart_in_use" },
+                boundTracks: 1,
+                liveSetlistIds: ["set-1"],
+                danglingTracksIgnored: 0,
+            })
+            expect(refused).toMatchObject({
+                error: { message: expect.stringContaining("bonded to 1 live setlist") },
+            })
 
             // Chart still exists.
             const idx = await db().collection("library_index").doc(fileId).get()
@@ -965,6 +976,62 @@ describe("MCP chart-upload tools (emulator)", () => {
             await db().collection("tracks").doc("trk-1").delete()
             const ok = await deleteChart(ADMIN, { fileId })
             expect(ok).toEqual({ ok: true, deletedTracks: 0 })
+        })
+
+        it("(b) deletes a chart whose only track has a DELETED parent setlist (dangling orphan)", async () => {
+            const fileId = await seedChart(ADMIN, "Orphan Chart")
+
+            // Dangling track: setlistId points at a setlist that does NOT exist
+            // (parent was deleted pre-cascade). remove_track can't clear it.
+            await db().collection("tracks").doc("trk-dangling").set({
+                setlistId: "deleted-set",
+                fileId,
+                title: "Orphan Chart",
+                order: 0,
+            })
+
+            // The guard must NOT count the dangling track → delete succeeds.
+            const ok = await deleteChart(ADMIN, { fileId })
+            expect(ok).toEqual({ ok: true, deletedTracks: 0 })
+
+            const idx = await db().collection("library_index").doc(fileId).get()
+            expect(idx.exists).toBe(false)
+        })
+
+        it("(c) blocks on the LIVE bond only when a chart has mixed live + dangling tracks", async () => {
+            const fileId = await seedChart(ADMIN, "Mixed Chart")
+
+            // One live parent…
+            await db()
+                .collection("setlists")
+                .doc("live-set")
+                .set({ name: "Live Setlist", date: "2026-06-07" })
+            await db().collection("tracks").doc("trk-live").set({
+                setlistId: "live-set",
+                fileId,
+                title: "Mixed Chart",
+                order: 0,
+            })
+            // …and one dangling track (dead parent).
+            await db().collection("tracks").doc("trk-dead").set({
+                setlistId: "dead-set",
+                fileId,
+                title: "Mixed Chart",
+                order: 0,
+            })
+
+            const refused = await deleteChart(ADMIN, { fileId })
+            expect(refused).toMatchObject({
+                ok: false,
+                error: { machine_code: "chart_in_use" },
+                boundTracks: 1, // live count only
+                liveSetlistIds: ["live-set"],
+                danglingTracksIgnored: 1,
+            })
+
+            // Chart still exists (a live setlist depends on it).
+            const idx = await db().collection("library_index").doc(fileId).get()
+            expect(idx.exists).toBe(true)
         })
 
         it("curated-catalog delete is admin-only (even for the uploader)", async () => {

@@ -739,18 +739,66 @@ export async function deleteChart(
         })
     }
 
+    // chart_in_use guard — count ONLY tracks whose parent setlist still EXISTS.
+    // Dangling tracks (parent `setlists/{setlistId}` deleted, or no setlistId)
+    // are data-loss orphans that `remove_track` can't clear (it 404s on the
+    // dead parent), so they must NOT falsely block deleting a true orphan
+    // chart. A chart is "in use" iff a LIVE setlist references it. (BUG-1 /
+    // C7I4-002 — pre-cascade orphan tracks were over-blocking real deletes.)
     const tracksSnap = await db
         .collection("tracks")
         .where("fileId", "==", args.fileId)
         .limit(50)
         .get()
     if (!tracksSnap.empty) {
-        return richError(
-            "chart_in_use",
-            `Cannot delete: this chart is bonded to ${tracksSnap.size} setlist track(s).`,
-            { fileId: args.fileId, boundTracks: tracksSnap.size },
-            "Remove the tracks first via remove_track, then retry delete_chart.",
+        const matched = tracksSnap.docs.map((d) => {
+            const sid = d.data().setlistId
+            return { id: d.id, setlistId: typeof sid === "string" ? sid : null }
+        })
+        const distinctSetlistIds = [
+            ...new Set(
+                matched
+                    .map((t) => t.setlistId)
+                    .filter((s): s is string => !!s),
+            ),
+        ]
+        const liveSetlistIds = new Set<string>()
+        if (distinctSetlistIds.length > 0) {
+            const parentSnaps = await db.getAll(
+                ...distinctSetlistIds.map((id) =>
+                    db.collection("setlists").doc(id),
+                ),
+            )
+            for (const snap of parentSnaps) {
+                if (snap.exists) liveSetlistIds.add(snap.id)
+            }
+        }
+        const liveTracks = matched.filter(
+            (t) => t.setlistId !== null && liveSetlistIds.has(t.setlistId),
         )
+        const danglingTracksIgnored = matched.length - liveTracks.length
+        if (liveTracks.length > 0) {
+            return richError(
+                "chart_in_use",
+                `Cannot delete: this chart is bonded to ${liveTracks.length} live setlist track(s).`,
+                {
+                    fileId: args.fileId,
+                    boundTracks: liveTracks.length,
+                    liveSetlistIds: [...liveSetlistIds],
+                    danglingTracksIgnored,
+                },
+                "Remove the tracks first via remove_track, then retry delete_chart.",
+            )
+        }
+        // All matched tracks are dangling (dead/absent parent setlist) — this
+        // is a true orphan chart; safe to delete. The dangling track docs are
+        // left intact for the separate orphan-sweep (coder-1) — not purged here.
+        if (danglingTracksIgnored > 0) {
+            logger.info(
+                `[delete_chart] ${args.fileId}: ignoring ${danglingTracksIgnored} dangling track(s) ` +
+                    `with no live parent setlist; proceeding with delete.`,
+            )
+        }
     }
 
     const songRef = db.collection("songs").doc(args.fileId)
