@@ -501,21 +501,20 @@ test.describe('ipad-sweep-perform — deep Perform-mode (portrait 820)', () => {
         ).toBe(0)
     })
 
-    test('probe 9 — FINDING [known-fail]: MCP-bonded text chart mis-routes to PDFViewer', async ({ context, page, baseURL }) => {
-        // KNOWN FINDING (ipad-sweep-perform). An MCP-bonded scraped TEXT chart
-        // renders through react-pdf in Perform mode instead of TextScoreViewer:
-        //   - add_track_to_setlist({songId}) does NOT stamp mimeType/fileName on
-        //     the SetlistTrack (only the in-app picker bind path does —
-        //     [[project_track_mimetype_gotcha]]).
-        //   - toQueueItem (queue-utils.ts) then can't detect 'text' (fileId is
-        //     `upload-<uuid>`, no extension) and DEFAULTS to 'pdf'.
-        //   - PDFOverlay's library_index mimeType backstop covers only images,
-        //     not text → react-pdf throws "Invalid PDF structure".
-        // Asserts the CORRECT behavior (TextScoreViewer renders the chart text).
-        // test.fail() pins it: while the bug stands the assertion fails (suite
-        // stays green); once mimeType is stamped / a text backstop lands, it
-        // PASSES unexpectedly → suite goes red → remove this marker.
-        test.fail(true, 'MCP-bonded text chart routes to PDFViewer (Invalid PDF structure) instead of TextScoreViewer in Perform mode.')
+    test('probe 9 — REGRESSION (fix-scraped-text-render): MCP-bonded text chart renders via TextScoreViewer in Perform', async ({ context, page, baseURL }) => {
+        // REGRESSION (fix-scraped-text-render). An MCP-bonded scraped TEXT chart
+        // must render through TextScoreViewer in Perform — NOT react-pdf. This was
+        // the ipad-sweep-perform F-1 finding (formerly pinned with test.fail);
+        // the fix landed so the marker was removed per its own instructions:
+        //   - add_track_to_setlist / swap_chart now stamp mimeType on the
+        //     SetlistTrack from the library_index row, so toQueueItem (which
+        //     defaults extension-less `upload-<uuid>` fileIds to 'pdf') resolves
+        //     'text'.
+        //   - PDFOverlay's library_index mimeType backstop now also covers
+        //     text/plain (+ musicxml), rescuing any already-bonded chart.
+        //   [[project_track_mimetype_gotcha]]
+        // Asserts the corrected behavior directly: TextScoreViewer renders a
+        // sentinel line that react-pdf could never display.
         if (!baseURL) throw new Error('PLAYWRIGHT_BASE_URL must be set')
         if (!textBonded) throw new Error('beforeAll did not seed the text-route setlist')
 

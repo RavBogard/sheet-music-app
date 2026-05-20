@@ -2014,4 +2014,84 @@ describe("MCP setlist write tools (emulator)", () => {
             expect(swap).toMatchObject(FORBIDDEN_ROLE_ENVELOPE)
         })
     })
+
+    // fix-scraped-text-render (P0): the track must carry the chart's mimeType so
+    // queue-utils.toQueueItem routes scraped text / musicxml / image charts to
+    // the right viewer instead of defaulting to the PDF renderer ("Failed to
+    // render PDF"). mimeType is sourced from the library_index row.
+    // [[project_track_mimetype_gotcha]]
+    describe("track mimeType persistence (fix-scraped-text-render)", () => {
+        it("add_track_to_setlist stamps the library_index mimeType onto the row", async () => {
+            await db().collection("songs").doc("song-scraped").set({ title: "Mi Shebeirach" })
+            await db().collection("library_index").doc("song-scraped").set({ mimeType: "text/plain" })
+            const id = await newSetlist()
+
+            await addTrackToSetlist(ADMIN, { setlistId: id, songId: "song-scraped" })
+
+            const [row] = await tracksOf(id)
+            expect(row.songId).toBe("song-scraped")
+            expect(row.mimeType).toBe("text/plain")
+        })
+
+        it("add_track_to_setlist stamps mimeType even with force:true (read no longer gated behind !force)", async () => {
+            await db().collection("songs").doc("song-scraped").set({ title: "Mi Shebeirach" })
+            await db().collection("library_index").doc("song-scraped").set({ mimeType: "text/plain" })
+            const id = await newSetlist()
+
+            await addTrackToSetlist(ADMIN, { setlistId: id, songId: "song-scraped", force: true })
+
+            const [row] = await tracksOf(id)
+            expect(row.mimeType).toBe("text/plain")
+        })
+
+        it("swap_chart refreshes mimeType to the new chart's library_index mime (PDF → scraped text)", async () => {
+            await db().collection("songs").doc("song-scraped").set({ title: "Mi Shebeirach" })
+            await db().collection("library_index").doc("song-scraped").set({ mimeType: "text/plain" })
+            await db().collection("library_index").doc("song-oseh").set({ mimeType: "application/pdf" })
+            const id = await newSetlist()
+            const r = (await addTrackToSetlist(ADMIN, {
+                setlistId: id,
+                songId: "song-oseh",
+            })) as { trackId: string }
+            // Sanity: the PDF bond stamped application/pdf up front.
+            expect(
+                (await db().collection("tracks").doc(r.trackId).get()).data()!.mimeType,
+            ).toBe("application/pdf")
+
+            await swapChart(ADMIN, {
+                setlistId: id,
+                trackId: r.trackId,
+                newSongId: "song-scraped",
+            })
+
+            const persisted = (await db().collection("tracks").doc(r.trackId).get()).data()!
+            expect(persisted.fileId).toBe("song-scraped")
+            expect(persisted.mimeType).toBe("text/plain")
+        })
+
+        it("swap_chart clears a stale mimeType when the new chart has no library_index mime", async () => {
+            await db().collection("songs").doc("song-scraped").set({ title: "Mi Shebeirach" })
+            await db().collection("library_index").doc("song-scraped").set({ mimeType: "text/plain" })
+            await db().collection("songs").doc("song-nomime").set({ title: "No Mime.pdf" })
+            // song-nomime intentionally has NO library_index row.
+            const id = await newSetlist()
+            const r = (await addTrackToSetlist(ADMIN, {
+                setlistId: id,
+                songId: "song-scraped",
+            })) as { trackId: string }
+            expect(
+                (await db().collection("tracks").doc(r.trackId).get()).data()!.mimeType,
+            ).toBe("text/plain")
+
+            await swapChart(ADMIN, {
+                setlistId: id,
+                trackId: r.trackId,
+                newSongId: "song-nomime",
+            })
+
+            const persisted = (await db().collection("tracks").doc(r.trackId).get()).data()!
+            expect(persisted.fileId).toBe("song-nomime")
+            expect(persisted.mimeType).toBeUndefined()
+        })
+    })
 })

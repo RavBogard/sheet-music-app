@@ -292,6 +292,27 @@ export interface AddTrackToSetlistOk {
     warning?: string
 }
 
+/**
+ * Read a chart's MIME from its library_index row — the source of truth for the
+ * track's mimeType cache. Scraped/text/image charts have extension-less fileIds
+ * (`upload-{uuid}`) and bare-title fileNames, so without persisting this mime
+ * onto the track, queue-utils.toQueueItem can't distinguish a text chart from a
+ * PDF and defaults to the PDF renderer → "Failed to render PDF" in Perform.
+ * Fail-soft: returns undefined on any miss. [[project_track_mimetype_gotcha]]
+ */
+async function readLibraryMimeType(
+    db: FirebaseFirestore.Firestore,
+    songId: string,
+): Promise<string | undefined> {
+    try {
+        const idx = await db.collection("library_index").doc(songId).get()
+        const m = idx.exists ? idx.data()?.mimeType : undefined
+        return typeof m === "string" ? m : undefined
+    } catch {
+        return undefined
+    }
+}
+
 export async function addTrackToSetlist(
     uid: string,
     args: AddTrackArgs,
@@ -339,18 +360,17 @@ export async function addTrackToSetlist(
     // shortcut is caught even when Storage holds a stale shortcut blob
     // (BUG-002). `needs_storage_sync` (serves via Drive fallback) and
     // `unreachable` (transient blip) are allowed. `force: true` overrides.
+    // Resolve the chart's library_index mimeType up front (cheap single-doc
+    // read): it is BOTH the chart-health hint AND the value persisted onto the
+    // track so queue-utils.toQueueItem routes scraped/text/image charts to the
+    // right viewer. Pre-fix this read was gated behind `!args.force`, so a
+    // forced bind never stamped mimeType and forced text charts rendered as
+    // broken PDFs. [[project_track_mimetype_gotcha]]
+    const mimeHint = args.songId
+        ? await readLibraryMimeType(db, args.songId)
+        : undefined
+
     if (args.songId && !args.force) {
-        let mimeHint: string | undefined
-        try {
-            const idx = await db
-                .collection("library_index")
-                .doc(args.songId)
-                .get()
-            const m = idx.exists ? idx.data()?.mimeType : undefined
-            if (typeof m === "string") mimeHint = m
-        } catch {
-            // Fail-soft: probe without the hint (still catches missing bytes).
-        }
         const health = await getChartHealth(args.songId, mimeHint)
         if (
             health.status === "missing" ||
@@ -384,6 +404,7 @@ export async function addTrackToSetlist(
         // chart file id — bond it as the track's fileId so the chart renders.
         fileId: args.songId,
         fileName: resolved.fileName,
+        mimeType: mimeHint,
         notes: args.notes,
         position: args.position,
     })
@@ -469,7 +490,11 @@ export async function updateSetlistTrack(
         async (songId) => {
             const song = await getSongById(songId)
             if (!song) return null
-            return { title: song.title, fileName: song.fileName }
+            return {
+                title: song.title,
+                fileName: song.fileName,
+                mimeType: await readLibraryMimeType(db, songId),
+            }
         },
         args.lastSeenVersion,
     )
@@ -573,7 +598,11 @@ export async function swapChart(
         async (songId) => {
             const song = await getSongById(songId)
             if (!song) return null
-            return { title: song.title, fileName: song.fileName }
+            return {
+                title: song.title,
+                fileName: song.fileName,
+                mimeType: await readLibraryMimeType(db, songId),
+            }
         },
     )
     if (result.ok) return { ok: true, track: result.track }
@@ -637,7 +666,11 @@ export async function bulkUpdateSetlistTracks(
         async (songId) => {
             const song = await getSongById(songId)
             if (!song) return null
-            return { title: song.title, fileName: song.fileName }
+            return {
+                title: song.title,
+                fileName: song.fileName,
+                mimeType: await readLibraryMimeType(db, songId),
+            }
         },
     )
     if (!result.ok)

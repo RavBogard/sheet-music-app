@@ -143,16 +143,20 @@ export function PDFOverlay({
 
     // Determine file type from current queue item
     const currentItem = useMusicStore(s => s.playbackQueue[s.queueIndex])
-    const isMusicXml = currentItem?.type === 'musicxml'
-    const isText = currentItem?.type === 'text'
-    // v70-01-01 Task 4 backstop: legacy already-bound image tracks may have
-    // type='pdf' (default fallback) because their SetlistTrack predates
-    // mimeType persistence. useLibraryStore.allFiles holds the authoritative
-    // mimeType from library_index — read it here to upgrade the viewer
-    // routing on the fly without requiring a rebind or data migration.
+    // v70-01-01 Task 4 backstop, extended (fix-scraped-text-render): a legacy or
+    // bulk-bonded track may carry type='pdf' (the toQueueItem default) because
+    // its SetlistTrack predates mimeType persistence — or was bonded via a path
+    // that doesn't stamp it. useLibraryStore.allFiles holds the authoritative
+    // mimeType from library_index — read it here to upgrade viewer routing on
+    // the fly without a rebind or data migration. Covers image (v70-01-01),
+    // text/plain (scraped charts), and MusicXML. [[project_track_mimetype_gotcha]]
     const libMimeType = useLibraryStore(s =>
         currentItem?.fileId ? s.allFiles.find(f => f.id === currentItem.fileId)?.mimeType : undefined,
     )
+    const isMusicXml = currentItem?.type === 'musicxml'
+        || (libMimeType?.includes('xml') ?? false)
+    const isText = currentItem?.type === 'text'
+        || (libMimeType?.startsWith('text/') ?? false)
     const isImage = currentItem?.type === 'image'
         || (libMimeType?.startsWith('image/') ?? false)
 

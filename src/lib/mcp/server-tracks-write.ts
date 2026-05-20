@@ -133,6 +133,14 @@ export interface AddTrackInput {
     fileId?: string
     /** Cached chart filename (the song's raw catalog title incl. extension). */
     fileName?: string
+    /**
+     * Cached chart MIME from the library_index row. Persisted so
+     * queue-utils.toQueueItem can route the row to the right viewer
+     * (text/musicxml/image) instead of defaulting to the PDF renderer for
+     * extension-less fileIds like scraped charts (`upload-{uuid}`, no .txt).
+     * [[project_track_mimetype_gotcha]]
+     */
+    mimeType?: string
     notes?: string
     /** 0-based insert index; out-of-range or omitted → append at the end. */
     position?: number
@@ -180,6 +188,7 @@ export async function addTrack(
     if (input.songId !== undefined) payload.songId = input.songId
     if (input.fileId !== undefined) payload.fileId = input.fileId
     if (input.fileName !== undefined) payload.fileName = input.fileName
+    if (input.mimeType !== undefined) payload.mimeType = input.mimeType
     if (input.notes !== undefined) payload.notes = input.notes
     batch.set(db.collection("tracks").doc(trackId), payload)
 
@@ -364,7 +373,7 @@ const UPDATABLE_FIELDS = [
  */
 export type SongLookup = (
     songId: string,
-) => Promise<{ title?: string; fileName?: string } | null>
+) => Promise<{ title?: string; fileName?: string; mimeType?: string } | null>
 
 export async function updateTrack(
     db: DB,
@@ -437,6 +446,7 @@ export async function updateTrack(
         fieldUpdate.songId = FieldValue.delete()
         fieldUpdate.fileId = FieldValue.delete()
         fieldUpdate.fileName = FieldValue.delete()
+        fieldUpdate.mimeType = FieldValue.delete()
         changed = true
     }
     const wantsMove = patch.position !== undefined
@@ -470,6 +480,17 @@ export async function updateTrack(
                 if (newSong?.fileName !== undefined) {
                     fieldUpdate.fileName = newSong.fileName
                 }
+                // Refresh the row's mimeType cache to the NEW chart's mime, or
+                // clear a stale one when the new chart's library_index row has
+                // none. queue-utils.toQueueItem reads track.mimeType FIRST to
+                // pick the viewer; a swap onto a scraped text chart that left a
+                // stale `application/pdf` (or no mime) routed the text bytes to
+                // the PDF renderer → "Failed to render PDF".
+                // [[project_track_mimetype_gotcha]]
+                fieldUpdate.mimeType =
+                    typeof newSong?.mimeType === "string"
+                        ? newSong.mimeType
+                        : FieldValue.delete()
                 // Stress-test v3 NOTE-1: on a re-bond, if the row's `title`
                 // still equals the OLD song's catalog title (i.e. the user
                 // hadn't customized it), auto-update title to the new
