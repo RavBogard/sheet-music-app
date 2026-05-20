@@ -94,3 +94,22 @@ For each track: `update_track({setlistId, trackId, songId:null})` (clears songId
 - NEVER `cleanup_all_test_data` ([[feedback_sandbox_test_isolation]]).
 - Rollback: rows are byte-less + the source uploads are gone (per coder-4 B1 verdict), so delete is terminal — but that's the explicit Daniel call ("write them all off"). Unbond is reversible (re-bind a chart later); the song titles stay in every setlist.
 - All affected setlists unpublished; Shavuot Yizkor May 23 is the only upcoming one and its bond is already broken (byte-less), so no working chart is lost — only a dead binding is cleared.
+
+---
+
+## EXECUTION RESULT (2026-05-20, Daniel-confirmed "yes")
+
+**17 / 22 deleted · 5 blocked · library_index 463 → 446 (−17).** All 20 live bonded tracks unbonded + verified clean placeholders first. Bearer: pool ROOT (read+admin; not burned). Full machine record: `lane-c2-delete-RESULT.json`.
+
+**Deleted (17):** all 10 originally-unbonded *minus none* + 12 unbond-then-delete that had no phantom bonds + the 5 direct-unbonded… i.e. every chart whose only bonds were live (now cleared) or none.
+
+**BLOCKED (5) — `delete_chart` → `chart_in_use`:** Em Bar'chu-Yotzier Walkdown (1), Lecha Dodi Lincoln's Nigun (1), Mizmor Shiru Ladonai (1), Niggun - Bonia Shur (2), Tu Bishvat (3).
+
+**Root cause (NEW finding, not in dry-run):** `list_setlists`/`get_setlist` are **owner-scoped**, so the dry-run's 42-setlist scan missed bonds the `delete_chart` guard still counts. Those extra bonds turned out to be **8 DANGLING track docs in 6 DELETED setlists** (`get_setlist` → 404 `setlist_not_found`): `pvL81pSC`, `WoguRLMM`, `5ZOswikr`, `CTAi6kgk`, `xr1cd7h4`, `htxUSjxt`. Those setlists were deleted before the v60-07-02 tracks-cascade fix (C7I4-002), orphaning their track docs. No setlist-scoped MCP tool (`update_track`/`remove_track`) can clear them — all 404 on the dead parent. The `chart_in_use` guard correctly refused all 5; nothing forced.
+
+**The 5 blocked rows now:** live bonds cleared (placeholders kept in the 9 live setlists), but the byte-less library_index row persists, blocked by dead-setlist dangling refs.
+
+**Resolution options for the final 5 (HELD for Daniel):**
+- **A** — targeted firebase admin script: delete `tracks` docs where `setlistId ∈` the 6 dead ids (8 docs), then re-run `delete_chart` on the 5. (firebase CLI is automatable per `[[feedback_firebase_cli]]`.)
+- **B** — new admin MCP tool to purge orphan tracks of deleted setlists (generalizes the cascade-gap cleanup; also fixes future occurrences + the `delete_chart`-guard-counts-dead-tracks bug).
+- **C** — leave the 5 as orphaned byte-less rows (live bonds already placeholdered); they linger until a tracks-cascade backfill runs.
