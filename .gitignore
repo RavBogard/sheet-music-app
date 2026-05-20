@@ -13,6 +13,11 @@
 # testing
 /coverage
 
+# playwright (harness output — dirtied by every run; never commit)
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
 # next.js
 /.next/
 /out/
