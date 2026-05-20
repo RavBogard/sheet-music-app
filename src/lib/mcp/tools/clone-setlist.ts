@@ -12,6 +12,7 @@ import {
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { isTestSetlist } from "@/types/models"
+import { auditBondedRows, detectOccasionTokens } from "./chart-bond-audit"
 
 /**
  * GAP-002 (cycle-2) — clone an existing setlist into a brand new one.
@@ -80,6 +81,29 @@ export interface CloneSetlistArgs {
     copyServiceNotes?: boolean
 }
 
+/** Cloned track row carrying occasion-specific tokens that may be stale. */
+export interface StaleMetadataRow {
+    trackId: string
+    title: string
+    /** Parsha/holiday/date tokens found in the title (see detectOccasionTokens). */
+    matchedTokens: string[]
+}
+
+/**
+ * setlist-fixes Lane B (Bug 4 / UX-7) — non-blocking staleness hints surfaced
+ * on a clone. The clone still copies everything verbatim; this is advisory.
+ */
+export interface StaleMetadataCandidates {
+    /** Cloned rows whose titles look occasion-specific (e.g. "Torah Service — Parashat Emor"). */
+    rows: StaleMetadataRow[]
+    /** True iff the clone's name carries an occasion/date token. */
+    nameFlagged: boolean
+    nameTokens: string[]
+    /** True iff the copied serviceNotes carry an occasion/date token. */
+    serviceNotesFlagged: boolean
+    serviceNotesTokens: string[]
+}
+
 export interface CloneSetlistResult {
     ok: true
     setlistId: string
@@ -89,6 +113,21 @@ export interface CloneSetlistResult {
     ownerName: string
     /** Always 1 — the clone is a fresh doc, not a forked version. */
     version: 1
+    /**
+     * setlist-fixes Lane B (Bug 1) — number of cloned rows whose song title
+     * diverges from the bonded chart's filename (clones inherit bonds verbatim,
+     * so a bad source bond propagates silently). Non-blocking; prompt Daniel to
+     * run `review_chart_bonds` post-clone to walk the flagged rows. 0 when no
+     * bonded row looks mismatched (or the audit read failed — fail-soft).
+     */
+    bondReviewCount: number
+    /**
+     * setlist-fixes Lane B (Bug 4 / UX-7) — advisory list of metadata that may
+     * be stale from the source's occasion (parsha/holiday/date tokens in track
+     * titles, the clone name, or the copied serviceNotes). The clone still
+     * wrote everything verbatim; this just flags what to double-check.
+     */
+    staleMetadataCandidates: StaleMetadataCandidates
 }
 
 /** Track-row fields safe to copy verbatim from source → clone. */
@@ -291,6 +330,47 @@ export async function cloneSetlist(
         bypass,
     })
 
+    // setlist-fixes Lane B — additive, advisory reports computed AFTER the
+    // commit so a failed audit never blocks the clone write. Bond review reuses
+    // the shared title-vs-filename detector; staleMetadata flags occasion tokens
+    // that travelled with the verbatim copy.
+    const titleByIndex = sourceTracks.map((src) =>
+        typeof src.data.title === "string" ? src.data.title : "",
+    )
+
+    let bondReviewCount = 0
+    try {
+        const bondedRows = sourceTracks
+            .map((src, i) => ({
+                trackId: newTrackIds[i],
+                title: titleByIndex[i],
+                fileId: typeof src.data.fileId === "string" ? src.data.fileId : "",
+            }))
+            .filter((b) => b.fileId)
+        const audit = await auditBondedRows(db, bondedRows)
+        bondReviewCount = audit.mismatchCount
+    } catch (err) {
+        logger.warn("[mcp] clone_setlist bond audit failed (fail-soft)", {
+            newSetlistId,
+            err: err instanceof Error ? err.message : String(err),
+        })
+    }
+
+    const staleRows: StaleMetadataRow[] = []
+    sourceTracks.forEach((_src, i) => {
+        const title = titleByIndex[i]
+        const matchedTokens = detectOccasionTokens(title)
+        if (matchedTokens.length > 0) {
+            staleRows.push({ trackId: newTrackIds[i], title, matchedTokens })
+        }
+    })
+    const nameTokens = detectOccasionTokens(newName)
+    const serviceNotesText =
+        typeof setlistPayload.serviceNotes === "string"
+            ? setlistPayload.serviceNotes
+            : ""
+    const serviceNotesTokens = detectOccasionTokens(serviceNotesText)
+
     return {
         ok: true,
         setlistId: newSetlistId,
@@ -299,5 +379,13 @@ export async function cloneSetlist(
         ownerId: uid,
         ownerName,
         version: 1,
+        bondReviewCount,
+        staleMetadataCandidates: {
+            rows: staleRows,
+            nameFlagged: nameTokens.length > 0,
+            nameTokens,
+            serviceNotesFlagged: serviceNotesTokens.length > 0,
+            serviceNotesTokens,
+        },
     }
 }

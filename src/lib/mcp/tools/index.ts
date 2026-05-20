@@ -68,6 +68,7 @@ import {
 import { downloadChart, generateGigPacket } from "./library-download"
 import { publishSetlist } from "./setlist-publish"
 import { getChartStatus, verifySetlistCharts } from "./library-verify"
+import { reviewChartBonds } from "./chart-bond-audit"
 import {
     requestChartUploadUrl,
     finalizeChartUpload,
@@ -470,7 +471,7 @@ export function registerWriteTools(server: McpServer): void {
         "clone_setlist",
         {
             description:
-                "GAP-002 — Clone an existing setlist into a brand-new one owned by the caller. Daniel's weekly authoring flow is 90% 'clone last week + tweak a few songs', so this short-circuits the get_setlist → create_setlist → bulk_add_tracks round trip. Reads the source's metadata (name → 'Copy of <source>' unless newName given; templateType, rabbi, serviceNotes travel with the clone) and every track (type, title, key, bpm, leadMusician, referenceLink, notes, songId, fileId, fileName — chart bonds copied verbatim, contiguous `order` from 0). Returns `{setlistId, sourceSetlistId, trackCount, ownerId, ownerName, version: 1}`. eventDate does NOT auto-copy — pass `newEventDate` for the new service day (omit to leave undated; pass null to be explicit). `copyServiceNotes` defaults to true. Admins and band leaders may clone (same gate as create_setlist) — band_leader may clone setlists owned by others. Trusted-leader rate-limit bypass applies.",
+                "GAP-002 — Clone an existing setlist into a brand-new one owned by the caller. Daniel's weekly authoring flow is 90% 'clone last week + tweak a few songs', so this short-circuits the get_setlist → create_setlist → bulk_add_tracks round trip. Reads the source's metadata (name → 'Copy of <source>' unless newName given; templateType, rabbi, serviceNotes travel with the clone) and every track (type, title, key, bpm, leadMusician, referenceLink, notes, songId, fileId, fileName — chart bonds copied verbatim, contiguous `order` from 0). Returns `{setlistId, sourceSetlistId, trackCount, ownerId, ownerName, version: 1}` plus two advisory reports since clones inherit the source's bonds + metadata verbatim: `bondReviewCount` (rows whose song title diverges from the bonded chart filename — if >0, run review_chart_bonds to walk them) and `staleMetadataCandidates` (track titles / clone name / serviceNotes carrying occasion-specific parsha/holiday/date tokens that may belong to the SOURCE's date — double-check them for the new service). Both are hints only; the clone still wrote everything verbatim. eventDate does NOT auto-copy — pass `newEventDate` for the new service day (omit to leave undated; pass null to be explicit). `copyServiceNotes` defaults to true. Admins and band leaders may clone (same gate as create_setlist) — band_leader may clone setlists owned by others. Trusted-leader rate-limit bypass applies.",
             inputSchema: {
                 sourceSetlistId: z
                     .string()
@@ -1333,6 +1334,19 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await verifySetlistCharts(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "review_chart_bonds",
+        {
+            description:
+                "Detect WRONG bonds on a setlist — rows where the song title and the bonded chart's filename diverge (e.g. a 'Barchu' row bonded to 'Ahava Raba.pdf'). Complements verify_setlist_charts: that tool checks whether a chart is REACHABLE; this one checks whether the reachable chart is the RIGHT song. For each bonded track it compares the normalized title against `library_index/{fileId}.name` (the raw chart filename) via conservative token-overlap and returns per-row `{trackId, title, fileId, chartFileName, overlapScore (0-1), mismatch}` plus aggregate `mismatchCount` / `bondedCount`. Run it after clone_setlist (clones inherit the source's bonds verbatim) or before publish to catch a mis-bond the band would otherwise see. Read-only — it reports; remediate a flagged row with swap_chart, then record_bond_correction to train ranking. A null `chartFileName` means the fileId has no catalog row (a byte-health issue — run verify_setlist_charts).",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist id"),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await reviewChartBonds(uidFrom(extra), args)),
     )
 
     server.registerTool(
