@@ -16,6 +16,32 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let bridgeStarted = false;
 
+// ─── Credential storage (Bug#1 fix: durable, install-path-independent) ───
+//
+// The 2026-05-21 outage: credential discovery was anchored to the exe directory only,
+// so reinstalling/updating the bridge to a new folder orphaned service-account-key.json
+// in the OLD folder and forced a (then-broken) re-credential. electron's userData path
+// is keyed by the app NAME, not the install path, so it survives reinstalls. We now
+// read+write creds at userData first, keep exeDir as a fallback (manual JSON-drop
+// emergency valve / legacy installs), and self-migrate an exeDir key into userData on
+// startup so the NEXT reinstall is non-destructive.
+const CRED_FILENAME = 'service-account-key.json';
+const CONFIG_FILENAME = 'bridge-config.json';
+
+/** Stable, install-path-independent credential directory (survives reinstalls). */
+function getCredDir(): string | null {
+    try {
+        return app.getPath('userData');
+    } catch {
+        return null; // non-Electron / dev context
+    }
+}
+
+/** Exe directory (install folder) — legacy / manual-JSON-drop fallback cred location. */
+function getExeDir(): string {
+    return app.isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..');
+}
+
 // ─── Single Instance Lock ───
 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -339,18 +365,22 @@ async function startBackgroundBridge() {
             mainWindow?.webContents.send('log', { level: 'warn', message: args.join(' ') });
         };
 
-        // Resolve paths relative to exe location (not asar)
-        const isPackaged = app.isPackaged;
-        const exeDir = isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..');
+        // Resolve credential locations: durable userData dir first, exe dir as fallback.
+        const exeDir = getExeDir();
+        const credDir = getCredDir();
 
         process.env.WS_PORT = "9000";
         process.env.HTTP_PORT = "9001";
         process.env.NODE_ENV = "production";
 
-        // Load bridge config
-        const configFile = path.join(exeDir, "bridge-config.json");
+        // Load bridge config — prefer the durable userData copy, fall back to exeDir.
         let keyPathFromConfig: string | null = null;
-        if (fs.existsSync(configFile)) {
+        const configCandidates = [
+            credDir ? path.join(credDir, CONFIG_FILENAME) : null,
+            path.join(exeDir, CONFIG_FILENAME),
+        ].filter(Boolean) as string[];
+        const configFile = configCandidates.find(p => fs.existsSync(p));
+        if (configFile) {
             try {
                 const cfg = JSON.parse(fs.readFileSync(configFile, 'utf8'));
                 if (cfg.wsPort) process.env.WS_PORT = String(cfg.wsPort);
@@ -361,10 +391,13 @@ async function startBackgroundBridge() {
             }
         }
 
-        // Find Firebase credentials
+        // Find Firebase credentials. Order: explicit env override → config-specified path →
+        // durable userData key → legacy/manual exeDir keys.
         const possibleKeys = [
+            process.env.FIREBASE_SA_KEY_PATH || null,
             keyPathFromConfig,
-            path.join(exeDir, "service-account-key.json"),
+            credDir ? path.join(credDir, CRED_FILENAME) : null,
+            path.join(exeDir, CRED_FILENAME),
             path.join(exeDir, "serviceAccountKey.json"),
             path.join(exeDir, "firebase-key.json")
         ].filter(Boolean) as string[];
@@ -373,6 +406,23 @@ async function startBackgroundBridge() {
         if (foundKey) {
             process.env.FIREBASE_SA_KEY_PATH = foundKey;
             console.log("Found Firebase credentials at:", foundKey);
+
+            // Self-migration (Bug#1): if the key lives OUTSIDE the durable userData dir, copy
+            // it in so the NEXT reinstall/update doesn't orphan it. Best-effort; never blocks
+            // startup. Also auto-rescues current manual-JSON-drop installs on first v10.0.1 run.
+            if (credDir) {
+                const durableKey = path.join(credDir, CRED_FILENAME);
+                if (foundKey !== durableKey && !fs.existsSync(durableKey)) {
+                    try {
+                        fs.mkdirSync(credDir, { recursive: true });
+                        fs.copyFileSync(foundKey, durableKey);
+                        console.log("Migrated Firebase credentials to durable location:", durableKey);
+                    } catch (e) {
+                        console.warn("Could not migrate credentials to userData (non-fatal):", e);
+                    }
+                }
+            }
+
             await startBridge();
         } else {
             console.error(`MISSING FIREBASE CREDENTIALS`);
@@ -413,13 +463,15 @@ ipcMain.handle('submit-setup-code', async (_event: Electron.IpcMainInvokeEvent, 
 
         const data = await response.json() as { credentials?: Record<string, unknown>; error?: string };
         if (data.credentials) {
-            const isPackaged = app.isPackaged;
-            const exeDir = isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..');
+            // Bug#1 fix: persist creds to the durable userData dir (survives reinstalls);
+            // fall back to exeDir only if userData is unavailable.
+            const credDir = getCredDir() ?? getExeDir();
+            try { fs.mkdirSync(credDir, { recursive: true }); } catch { /* dir usually already exists */ }
 
-            const keyPath = path.join(exeDir, "service-account-key.json");
+            const keyPath = path.join(credDir, CRED_FILENAME);
             fs.writeFileSync(keyPath, JSON.stringify(data.credentials, null, 2));
 
-            const configPath = path.join(exeDir, "bridge-config.json");
+            const configPath = path.join(credDir, CONFIG_FILENAME);
             let cfg: Record<string, unknown> = {};
             if (fs.existsSync(configPath)) {
                 try { cfg = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch { /* ignore */ }

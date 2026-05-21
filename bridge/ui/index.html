@@ -262,18 +262,19 @@
     <div id="setup-overlay" class="setup-overlay">
         <div class="setup-card">
             <h2>Bridge Setup</h2>
-            <p>Connect this bridge to your CentralReform cloud account via a 6-digit setup code.</p>
+            <p>Connect this bridge to your CentralReform cloud account via a 10-character setup code.</p>
 
             <div class="input-group">
                 <label>App URL</label>
                 <input type="url" id="setup-url" placeholder="https://..."
-                    value="https://centralreform.firebaseapp.com" />
+                    value="https://www.centralreform.live" />
             </div>
 
             <div class="input-group">
-                <label>6-Digit Code</label>
-                <input type="text" id="setup-code" placeholder="123456" maxlength="6"
-                    style="letter-spacing: 2px; text-align: center; font-size: 18px;" />
+                <label>Setup Code</label>
+                <input type="text" id="setup-code" placeholder="ABCD234XYZ" maxlength="10"
+                    autocapitalize="characters" spellcheck="false"
+                    style="letter-spacing: 2px; text-align: center; font-size: 18px; text-transform: uppercase;" />
             </div>
 
             <button id="setup-btn" class="setup-btn" onclick="submitSetup()">Connect Bridge</button>
@@ -357,7 +358,7 @@
 
         async function submitSetup() {
             const appUrl = setupUrlBtn.value.trim().replace(/\/$/, "");
-            const code = setupCodeBtn.value.trim();
+            const code = setupCodeBtn.value.trim().toUpperCase();
 
             if (!appUrl || !code) {
                 setupError.textContent = "Please enter both URL and Code";
