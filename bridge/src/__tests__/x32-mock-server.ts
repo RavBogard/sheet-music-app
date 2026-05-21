@@ -6,7 +6,7 @@
  *
  * Implements only the OSC addresses that the bridge actually uses:
  *   /xinfo              — Identify the mixer
- *   /xremote            — Subscription renewal (no response needed; bridge sends every 8s)
+ *   /xremote            — Subscription renewal (no response; the bridge sends every 8s)
  *   /ch/XX/config/name  — Channel name query
  *   /ch/XX/mix/YY/level — Channel→Bus send level get/set
  *   /ch/XX/mix/YY/on    — Channel→Bus send on/off get/set
@@ -15,6 +15,24 @@
  *   /mtx/XX/config/name — Matrix name query
  *   /mtx/XX/mix/fader   — Matrix fader get/set
  *   /mtx/XX/mix/on      — Matrix on/off get/set
+ *
+ * ─── Fidelity to the real X32 (Monitor Overhaul P0-B1) ───
+ * Two real-hardware behaviors are modeled here because they are load-bearing
+ * for the bridge's correctness (see `.paul/research/monitor-overhaul/AUDIT-bridge.md`):
+ *
+ *   1. The X32 does NOT echo a client's OWN write back to that same client. A SET
+ *      updates the mixer's value but the sender receives nothing; only OTHER
+ *      subscribed clients get the parameter echo. This is the entire R1
+ *      "read-of-own-write" bug class (AUDIT-bridge Part A R1 + B7): the bridge
+ *      sends a SET, gets no echo, and — having no query-after-command yet —
+ *      never refreshes its cache or `monitor-live/state`.
+ *   2. The X32 only sends parameter echoes to clients holding an ACTIVE `/xremote`
+ *      subscription, which expires (~10s) unless renewed. We track each
+ *      subscriber's expiry; manual/external changes and other clients' writes
+ *      reach a client only while its subscription is live.
+ *
+ * (The previous incarnation echoed every SET back to ALL clients unconditionally,
+ * including the sender — which masked R1 from CI. That was AUDIT-bridge B7.)
  *
  * Usage (development):
  *   ts-node bridge/src/__tests__/x32-mock-server.ts
@@ -53,7 +71,8 @@ function encodeOSCInt(val: number): Buffer {
     return buf
 }
 
-function buildOSCMessage(
+/** Exported for mock-fidelity tests that drive raw OSC over loopback UDP. */
+export function buildOSCMessage(
     address: string,
     args: Array<{ type: "f" | "i" | "s"; value: number | string }>
 ): Buffer {
@@ -75,12 +94,13 @@ function buildOSCMessage(
     return Buffer.concat([addressBuf, typeTagBuf, ...argBufs])
 }
 
-interface ParsedOSCMessage {
+export interface ParsedOSCMessage {
     address: string
     args: Array<{ type: string; value: number | string }>
 }
 
-function parseOSCMessage(buf: Buffer): ParsedOSCMessage | null {
+/** Exported for mock-fidelity tests that decode what the mock sent back. */
+export function parseOSCMessage(buf: Buffer): ParsedOSCMessage | null {
     try {
         let offset = 0
 
@@ -195,9 +215,10 @@ function buildDefaultState(): {
 // ─── X32 Mock Server ──────────────────────────────────────────────────────
 
 export interface X32MockServerOptions {
-    port?: number         // defaults to 10023
-    verbose?: boolean     // log all messages
-    latencyMs?: number    // artificial response latency (simulate network)
+    port?: number              // defaults to 10023
+    verbose?: boolean          // log all messages
+    latencyMs?: number         // artificial response latency (simulate network)
+    subscriptionTtlMs?: number // /xremote subscription lifetime; defaults to 10000 (real X32 ~10s)
 }
 
 export class X32MockServer extends EventEmitter {
@@ -205,20 +226,29 @@ export class X32MockServer extends EventEmitter {
     private readonly port: number
     private readonly verbose: boolean
     private readonly latencyMs: number
+    private readonly subscriptionTtlMs: number
 
     // Mocked mixer state
     channels: MockChannel[]
     buses: MockBus[]
     matrices: MockMatrix[]
 
-    // Track connected clients (address:port) for broadcast simulation
-    private clients: Map<string, { address: string; port: number }> = new Map()
+    // ── /xremote subscription model (faithful to the real X32) ──
+    // Maps a client key (`address:port`) → the epoch-ms timestamp at which its
+    // /xremote subscription expires. A subscriber is "live" only while
+    // Date.now() < expiry. Parameter echoes (other clients' writes + manual
+    // desk moves) go ONLY to live subscribers, and NEVER back to the client
+    // that originated a write (R1). Renewing (/xremote again) pushes the expiry
+    // forward. The old mock kept a flat client list and echoed to everyone
+    // unconditionally — including the sender — which masked R1 (AUDIT-bridge B7).
+    private subscriptions: Map<string, number> = new Map()
 
     constructor(options: X32MockServerOptions = {}) {
         super()
         this.port = options.port ?? 10023
         this.verbose = options.verbose ?? false
         this.latencyMs = options.latencyMs ?? 0
+        this.subscriptionTtlMs = options.subscriptionTtlMs ?? 10_000
 
         const state = buildDefaultState()
         this.channels = state.channels
@@ -236,13 +266,6 @@ export class X32MockServer extends EventEmitter {
             this.socket.on("message", (buf, rinfo) => {
                 const msg = parseOSCMessage(buf)
                 if (!msg) return
-
-                // Register this client
-                const clientKey = `${rinfo.address}:${rinfo.port}`
-                this.clients.set(clientKey, {
-                    address: rinfo.address,
-                    port: rinfo.port,
-                })
 
                 if (this.verbose) {
                     const argStr = msg.args
@@ -302,9 +325,46 @@ export class X32MockServer extends EventEmitter {
         })
     }
 
+    // ─── /xremote subscription helpers ────────────────────────────────────
+
+    private clientKey(rinfo: dgram.RemoteInfo): string {
+        return `${rinfo.address}:${rinfo.port}`
+    }
+
     /**
-     * Simulate the X32 broadcasting a parameter change (as if someone touched the console).
-     * Used in tests to simulate state changes from the hardware.
+     * The currently-live (non-expired) /xremote subscribers, optionally
+     * excluding one client key (used to suppress own-write echoes). Expired
+     * entries are pruned lazily here.
+     */
+    private liveSubscribers(excludeKey?: string): Array<{ address: string; port: number }> {
+        const now = Date.now()
+        const out: Array<{ address: string; port: number }> = []
+        for (const [key, expiry] of this.subscriptions) {
+            if (expiry <= now) {
+                this.subscriptions.delete(key)
+                continue
+            }
+            if (key === excludeKey) continue
+            const colon = key.lastIndexOf(":")
+            out.push({ address: key.slice(0, colon), port: Number(key.slice(colon + 1)) })
+        }
+        return out
+    }
+
+    /**
+     * Echo a parameter message to every live /xremote subscriber, except the
+     * optional originator (`excludeKey`). This is the ONLY echo path: own-writes
+     * are silent to the sender; non-subscribers receive nothing.
+     */
+    private echoToSubscribers(buf: Buffer, excludeKey?: string): void {
+        for (const client of this.liveSubscribers(excludeKey)) {
+            this.sendTo(buf, client.address, client.port)
+        }
+    }
+
+    /**
+     * Simulate the X32 broadcasting a parameter change (as if someone touched
+     * the console). On real hardware this reaches /xremote subscribers only.
      */
     broadcastBusFader(busIndex: number, value: number): void {
         const bus = this.buses.find((b) => b.index === busIndex)
@@ -312,10 +372,7 @@ export class X32MockServer extends EventEmitter {
 
         const addr = `/bus/${String(busIndex).padStart(2, "0")}/mix/fader`
         const msg = buildOSCMessage(addr, [{ type: "f", value }])
-
-        for (const client of this.clients.values()) {
-            this.sendTo(msg, client.address, client.port)
-        }
+        this.echoToSubscribers(msg)
     }
 
     broadcastSendLevel(channelIndex: number, busIndex: number, value: number): void {
@@ -327,10 +384,7 @@ export class X32MockServer extends EventEmitter {
 
         const addr = `/ch/${String(channelIndex).padStart(2, "0")}/mix/${String(busIndex).padStart(2, "0")}/level`
         const msg = buildOSCMessage(addr, [{ type: "f", value }])
-
-        for (const client of this.clients.values()) {
-            this.sendTo(msg, client.address, client.port)
-        }
+        this.echoToSubscribers(msg)
     }
 
     // ─── Message Handling ─────────────────────────────────────────────────
@@ -338,7 +392,7 @@ export class X32MockServer extends EventEmitter {
     private handleMessage(
         msg: ParsedOSCMessage,
         respond: (buf: Buffer) => void,
-        _rinfo: dgram.RemoteInfo
+        rinfo: dgram.RemoteInfo
     ): void {
         // /xinfo — identify mixer
         if (msg.address === "/xinfo") {
@@ -352,8 +406,10 @@ export class X32MockServer extends EventEmitter {
             return
         }
 
-        // /xremote — subscription renewal (X32 doesn't respond to this)
+        // /xremote — subscription register/renew (X32 sends no response).
+        // Registers the sender as a live subscriber for subscriptionTtlMs.
         if (msg.address === "/xremote") {
+            this.subscriptions.set(this.clientKey(rinfo), Date.now() + this.subscriptionTtlMs)
             this.emit("xremote")
             return
         }
@@ -385,15 +441,12 @@ export class X32MockServer extends EventEmitter {
             const bus = this.buses.find((b) => b.index === idx)
             if (bus) {
                 if (msg.args.length > 0 && msg.args[0].type === "f") {
-                    // SET — update state and echo back to all subscribers
+                    // SET — update state; echo to OTHER subscribers, never the sender (R1)
                     const newVal = Math.max(0, Math.min(1, msg.args[0].value as number))
                     bus.fader = newVal
                     this.emit("bus_fader_set", idx, newVal)
-                    // Echo to all clients (simulates X32 broadcasting to all subscribers)
                     const echo = buildOSCMessage(msg.address, [{ type: "f", value: newVal }])
-                    for (const client of this.clients.values()) {
-                        this.sendTo(echo, client.address, client.port)
-                    }
+                    this.echoToSubscribers(echo, this.clientKey(rinfo))
                 } else {
                     // GET — reply with current value
                     respond(buildOSCMessage(msg.address, [{ type: "f", value: bus.fader }]))
@@ -412,14 +465,12 @@ export class X32MockServer extends EventEmitter {
                 const send = bus.sends.find((s) => s.channelIndex === chIdx)
                 if (send) {
                     if (msg.args.length > 0 && msg.args[0].type === "f") {
-                        // SET
+                        // SET — echo to OTHER subscribers, never the sender (R1)
                         const newVal = Math.max(0, Math.min(1, msg.args[0].value as number))
                         send.level = newVal
                         this.emit("send_level_set", chIdx, busIdx, newVal)
                         const echo = buildOSCMessage(msg.address, [{ type: "f", value: newVal }])
-                        for (const client of this.clients.values()) {
-                            this.sendTo(echo, client.address, client.port)
-                        }
+                        this.echoToSubscribers(echo, this.clientKey(rinfo))
                     } else {
                         // GET
                         respond(buildOSCMessage(msg.address, [{ type: "f", value: send.level }]))
@@ -439,14 +490,12 @@ export class X32MockServer extends EventEmitter {
                 const send = bus.sends.find((s) => s.channelIndex === chIdx)
                 if (send) {
                     if (msg.args.length > 0) {
-                        // SET
+                        // SET — echo to OTHER subscribers, never the sender (R1)
                         const newVal = (msg.args[0].value as number) === 1
                         send.on = newVal
                         this.emit("send_on_set", chIdx, busIdx, newVal)
                         const echo = buildOSCMessage(msg.address, [{ type: "i", value: newVal ? 1 : 0 }])
-                        for (const client of this.clients.values()) {
-                            this.sendTo(echo, client.address, client.port)
-                        }
+                        this.echoToSubscribers(echo, this.clientKey(rinfo))
                     } else {
                         // GET
                         respond(
@@ -477,13 +526,12 @@ export class X32MockServer extends EventEmitter {
             const mtx = this.matrices.find((m) => m.index === idx)
             if (mtx) {
                 if (msg.args.length > 0 && msg.args[0].type === "f") {
+                    // SET — echo to OTHER subscribers, never the sender (R1)
                     const newVal = Math.max(0, Math.min(1, msg.args[0].value as number))
                     mtx.fader = newVal
                     this.emit("matrix_fader_set", idx, newVal)
                     const echo = buildOSCMessage(msg.address, [{ type: "f", value: newVal }])
-                    for (const client of this.clients.values()) {
-                        this.sendTo(echo, client.address, client.port)
-                    }
+                    this.echoToSubscribers(echo, this.clientKey(rinfo))
                 } else {
                     respond(buildOSCMessage(msg.address, [{ type: "f", value: mtx.fader }]))
                 }
@@ -498,13 +546,12 @@ export class X32MockServer extends EventEmitter {
             const mtx = this.matrices.find((m) => m.index === idx)
             if (mtx) {
                 if (msg.args.length > 0) {
+                    // SET — echo to OTHER subscribers, never the sender (R1)
                     const newVal = (msg.args[0].value as number) === 1
                     mtx.on = newVal
                     this.emit("matrix_on_set", idx, newVal)
                     const echo = buildOSCMessage(msg.address, [{ type: "i", value: newVal ? 1 : 0 }])
-                    for (const client of this.clients.values()) {
-                        this.sendTo(echo, client.address, client.port)
-                    }
+                    this.echoToSubscribers(echo, this.clientKey(rinfo))
                 } else {
                     respond(
                         buildOSCMessage(msg.address, [
@@ -536,8 +583,9 @@ export class X32MockServer extends EventEmitter {
  * Run as a standalone process for manual testing:
  *   ts-node bridge/src/__tests__/x32-mock-server.ts
  *
- * The mock will simulate fader changes every 5 seconds on Bus 1
- * so you can verify the bridge picks them up.
+ * The mock will simulate fader changes every 10 seconds on a rotating bus
+ * so you can verify the bridge picks them up. (The bridge subscribes via
+ * /xremote on connect + renews every 8s, so it stays a live subscriber.)
  */
 async function runStandalone() {
     const mock = new X32MockServer({ port: 10023, verbose: true })
