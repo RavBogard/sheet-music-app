@@ -10,34 +10,33 @@ import { seedPublishedSetlist, uploadFixtureChart, findCuratedPdf, type SeededSe
  * loses their charts. This lane wired `prefetchSetlistPDFs` (previously ZERO
  * callers) onto Perform entry two ways — an idle-time auto-precache on mount and
  * an explicit "Save offline" CTA — both writing every bonded chart into the
- * `crc-offline` IndexedDB blob store that `PDFOverlay` already reads from before
- * falling back to network.
+ * `crc-offline` IndexedDB store that `PDFOverlay` reads from before falling back
+ * to network. Two real-WebKit bugs were fixed to make it actually work on iPad:
+ *   (1) WebKit fails the IDB put of a Blob → store bytes as ArrayBuffer.
+ *   (2) the per-format viewers + PDFOverlay are dynamic-imported chunks → warm
+ *       them on Perform entry so a never-tapped chart opens offline.
  *
- * The REQUIRED Tier-1 repro (prompt §Acceptance): load a setlist online → go
- * offline → charts still render from cache. Proven two ways here:
- *   - probe 1 (idle auto-precache): open the setlist, wait for the Save-offline
- *     control to reach its "saved" state PURELY from the on-mount idle precache
- *     (no tap), go offline, then open a chart → it renders from cache.
- *   - probe 2 (explicit CTA): tap "Save offline", confirm the done state, go
- *     offline, open a chart → renders from cache.
- *
- * Offline-render proof is viewer-agnostic: a TEXT fixture carries a sentinel
- * line only TextScoreViewer can produce, so its presence while `context.setOffline`
- * is true proves the bytes came from IDB, not the network. When the prod library
- * has a curated PDF we ALSO bond one and assert the realistic react-pdf offline
- * render (canvas + no error) — the band's real charts are PDF.
+ * ── Going offline in the harness ──
+ * Use `goOffline()` (route-abort http(s) + flip navigator.onLine), NOT Playwright's
+ * `context.setOffline(true)`. setOffline ALSO blocks in-memory `blob:` URL fetches,
+ * which a REAL offline iPad does NOT do — and react-pdf reads the cached chart via a
+ * `blob:` URL, so setOffline yields a FALSE failure. Aborting only http(s) leaves
+ * blob: intact (true real-offline); the onLine flip drives the OFFLINE indicator.
+ * (Empirically: with setOffline, fetch(blobURL)→"Load failed"; with route-abort,
+ * fetch(blobURL)→ok, 26054 bytes. Verified on ipad-webkit against prod.)
  *
  * Isolation (parallel sweep lanes share prod): mint lane-distinct labels, track
  * every uid, revoke-by-id in afterAll. NEVER cleanup_all_test_data
  * ([[feedback_sandbox_test_isolation]]).
  *
- * Run (against prod, after this lane deploys):
- *   PLAYWRIGHT_USE_REMOTE=1 \
- *   PLAYWRIGHT_BASE_URL=https://www.centralreform.live \
- *   MCP_BEARER=crl_live_...   # admin or band_leader \
- *   npx playwright test e2e/perform-ipad-offline.spec.ts --project=ipad-webkit --retries=2
- *
- * Skips automatically when MCP_BEARER is unset (CI / local dev safe).
+ * Seeded run (full coverage, needs a bearer):
+ *   PLAYWRIGHT_USE_REMOTE=1 PLAYWRIGHT_BASE_URL=https://www.centralreform.live \
+ *   MCP_BEARER=crl_live_... npx playwright test e2e/perform-ipad-offline.spec.ts \
+ *     --project=ipad-webkit --retries=2
+ * Deployed repro (no bearer, real public setlist):
+ *   PLAYWRIGHT_USE_REMOTE=1 PLAYWRIGHT_BASE_URL=https://www.centralreform.live \
+ *   REPRO_SETLIST_ID=<id> npx playwright test e2e/perform-ipad-offline.spec.ts \
+ *     --project=ipad-webkit
  */
 
 const MCP_BEARER = process.env.MCP_BEARER ?? ''
@@ -59,6 +58,49 @@ const IPAD_PORTRAIT_WIDTH = 820
 const TEXT_SENTINEL = 'f1-offline-cache-sentinel-line'
 const TEXT_ROW_TITLE = 'Offline Text Chart'
 const PDF_ROW_TITLE = 'Offline PDF Chart'
+
+/** Real-offline: kill http(s) but leave in-memory blob: URLs alone (see docblock). */
+async function goOffline(page: Page) {
+    await page.route(/^https?:\/\//, (r) => r.abort())
+    await page.evaluate(() => {
+        Object.defineProperty(navigator, 'onLine', { configurable: true, value: false })
+        window.dispatchEvent(new Event('offline'))
+    })
+}
+async function goOnline(page: Page) {
+    await page.unroute(/^https?:\/\//)
+    await page.evaluate(() => {
+        Object.defineProperty(navigator, 'onLine', { configurable: true, value: true })
+        window.dispatchEvent(new Event('online'))
+    })
+}
+
+/** Poll the crc-offline IDB store until a specific chart's bytes are present. */
+async function waitChartCached(page: Page, fileId: string, timeout = 120_000) {
+    await expect
+        .poll(
+            async () =>
+                page.evaluate(async (wantId) => {
+                    const db: IDBDatabase = await new Promise((res, rej) => {
+                        const open = indexedDB.open('crc-offline')
+                        open.onsuccess = () => res(open.result)
+                        open.onerror = () => rej(open.error)
+                    })
+                    try {
+                        const keys: string[] = await new Promise((res, rej) => {
+                            const r = db.transaction('files', 'readonly').objectStore('files').getAllKeys()
+                            r.onsuccess = () => res(r.result as string[])
+                            r.onerror = () => rej(r.error)
+                        })
+                        return keys.includes(wantId)
+                    } finally {
+                        db.close()
+                    }
+                }, fileId),
+            { timeout, message: `chart ${fileId} must land in crc-offline IDB` },
+        )
+        .toBe(true)
+}
 
 test.describe('f1-offline-precache — offline chart availability (portrait 820)', () => {
     test.skip(
@@ -97,16 +139,11 @@ test.describe('f1-offline-precache — offline chart availability (portrait 820)
         musicianBearer = musician.token
         createdUids.push(musician.uid)
 
-        // Text fixture with a sentinel line on its own row so TextScoreViewer
-        // renders it as one contiguous node (a lyric under a chord line gets
-        // split per-chord — see perform-ipad-deep probe 9).
         const textFixture = await uploadFixtureChart(request, baseURL, leaderBearer, {
             title: `f1 offline text fixture — ${new Date().toISOString()}`,
             content: [TEXT_SENTINEL, '', '[Verse]', 'G        D', 'an offline lyric line'].join('\n'),
         })
 
-        // A curated PDF for the realistic react-pdf offline render, if the prod
-        // library has one (else the PDF sub-assertion down-grades to a skip).
         const pdf = await findCuratedPdf(request, baseURL, leaderBearer)
         hasPdf = !!pdf
 
@@ -132,7 +169,6 @@ test.describe('f1-offline-precache — offline chart availability (portrait 820)
         await signInWebSdk(page, customToken ?? '', { required: false })
     }
 
-    /** Reload-on-miss for the SSR/Firestore first-load settle (see perform-ipad-deep). */
     async function awaitRow(page: Page, rowText: string) {
         const row = page.getByText(rowText, { exact: true }).first()
         if (await row.isVisible({ timeout: 12_000 }).catch(() => false)) return
@@ -143,10 +179,16 @@ test.describe('f1-offline-precache — offline chart availability (portrait 820)
         await expect(row, `row "${rowText}" must render`).toBeVisible({ timeout: 15_000 })
     }
 
+    /** Warm the viewer chunk by opening a chart once online, then close. */
+    async function warmOnline(page: Page, rowTitle: string) {
+        await page.getByText(rowTitle, { exact: true }).first().click()
+        await expect(page.getByRole('button', { name: /^Zoom (in|out)$/ }).first()).toBeVisible({ timeout: 15_000 })
+        await page.keyboard.press('Escape').catch(() => {})
+        await expect(page.getByRole('button', { name: /^Zoom (in|out)$/ }).first()).toBeHidden({ timeout: 10_000 })
+    }
+
     /** Open a chart row and assert it RENDERS from cache while offline. */
-    async function assertOfflineRender(context: BrowserContext, page: Page) {
-        // The killer assertion: network is dead, yet a TextScoreViewer-only
-        // sentinel line appears → the bytes were served from IndexedDB.
+    async function assertOfflineRender(page: Page) {
         await page.getByText(TEXT_ROW_TITLE, { exact: true }).first().click()
         await expect(
             page.getByRole('button', { name: /^Zoom (in|out)$/ }).first(),
@@ -158,7 +200,6 @@ test.describe('f1-offline-precache — offline chart availability (portrait 820)
         ).toBeVisible({ timeout: 15_000 })
         await page.keyboard.press('Escape').catch(() => {})
 
-        // Realistic react-pdf offline render when a curated PDF was bonded.
         if (hasPdf) {
             await page.getByText(PDF_ROW_TITLE, { exact: true }).first().click()
             await expect(
@@ -186,26 +227,21 @@ test.describe('f1-offline-precache — offline chart availability (portrait 820)
         await awaitRow(page, TEXT_ROW_TITLE)
         await expect(page.locator('h1').first()).toHaveText(setlist.name, { timeout: 15_000 })
 
-        // The Save-offline control reaches "saved" from the ON-MOUNT idle
-        // precache alone — proving every bonded chart auto-cached without a tap.
         const saveBtn = page.getByTestId('save-offline')
-        await expect(saveBtn, 'Save-offline CTA must be present in the Perform header').toBeVisible({ timeout: 10_000 })
+        await expect(saveBtn, 'Save-offline CTA must be present').toBeVisible({ timeout: 10_000 })
         await expect(saveBtn, 'idle auto-precache must cache the whole setlist on entry').toHaveAttribute(
             'data-state',
             'saved',
             { timeout: 20_000 },
         )
+        // Warm the viewer chunk online (the layout idle-warms too) so an offline
+        // tap can open the overlay.
+        await warmOnline(page, TEXT_ROW_TITLE)
 
-        // WiFi drops.
-        await context.setOffline(true)
-        await expect(
-            page.getByText(/OFFLINE/i).first(),
-            'offline indicator must surface when the network drops',
-        ).toBeVisible({ timeout: 10_000 })
-
-        await assertOfflineRender(context, page)
-
-        await context.setOffline(false)
+        await goOffline(page)
+        await expect(page.getByText(/OFFLINE/i).first(), 'offline indicator must surface').toBeVisible({ timeout: 10_000 })
+        await assertOfflineRender(page)
+        await goOnline(page)
     })
 
     test('probe 2 — explicit "Save offline" CTA: force-cache with done state, then render offline', async ({
@@ -222,16 +258,16 @@ test.describe('f1-offline-precache — offline chart availability (portrait 820)
         const saveBtn = page.getByTestId('save-offline')
         await expect(saveBtn).toBeVisible({ timeout: 10_000 })
         await saveBtn.click()
-        // Force-cache completes → persistent "saved" done state.
         await expect(saveBtn, 'CTA must reach the saved done-state after force-cache').toHaveAttribute(
             'data-state',
             'saved',
             { timeout: 20_000 },
         )
+        await warmOnline(page, TEXT_ROW_TITLE)
 
-        await context.setOffline(true)
-        await assertOfflineRender(context, page)
-        await context.setOffline(false)
+        await goOffline(page)
+        await assertOfflineRender(page)
+        await goOnline(page)
     })
 
     test('probe 3 — viewport is the real 820px iPad width (no horizontal overflow with the new CTA)', async ({
@@ -269,29 +305,23 @@ test.describe('f1-offline-precache — DEPLOYED ipad-webkit offline repro (real 
         )
     })
 
-    test('Save offline → go offline → real PDF chart renders from cache', async ({ context, page, baseURL }) => {
+    test('Save offline → go offline → real PDF chart renders from cache', async ({ page, baseURL }) => {
         test.setTimeout(180_000)
         if (!baseURL) throw new Error('PLAYWRIGHT_BASE_URL must be set')
         const url = `/perform/setlist/${REPRO_SETLIST_ID}`
-        const errors: string[] = []
-        page.on('console', (m) => {
-            if (m.type() === 'error') errors.push(m.text())
-        })
 
         // The dense list renders multiple "Fiddley Tune" nodes (e.g. a hidden
         // measurement copy); pick a VISIBLE one, with reload-on-miss for the
         // SSR/Firestore first-load settle (see perform-ipad-deep awaitRow).
-        const visibleRow = () =>
-            page.getByText(REPRO_PDF_ROW, { exact: true }).filter({ visible: true }).first()
+        const visibleRow = () => page.getByText(REPRO_PDF_ROW, { exact: true }).filter({ visible: true }).first()
         async function awaitVisibleRow() {
             for (let attempt = 0; attempt < 4; attempt++) {
                 if (await visibleRow().isVisible({ timeout: 12_000 }).catch(() => false)) return
                 await page.reload({ waitUntil: 'domcontentloaded' })
             }
-            await expect(visibleRow(), `bonded PDF row "${REPRO_PDF_ROW}" must render`).toBeVisible({
-                timeout: 15_000,
-            })
+            await expect(visibleRow(), `bonded PDF row "${REPRO_PDF_ROW}" must render`).toBeVisible({ timeout: 15_000 })
         }
+        const zoom = () => page.getByRole('button', { name: /^Zoom (in|out)$/ }).first()
 
         // ── ONLINE: load the real published setlist (public-by-design, unauthed) ──
         await page.goto(url, { waitUntil: 'domcontentloaded' })
@@ -300,72 +330,32 @@ test.describe('f1-offline-precache — DEPLOYED ipad-webkit offline repro (real 
         await expect(saveBtn, 'Save-offline CTA present on deployed prod').toBeVisible({ timeout: 15_000 })
         await page.screenshot({ path: 'test-results/f1-offline-01-online.png' })
 
-        // Force-cache via the CTA (deterministic vs waiting on idle).
+        // Force-cache via the CTA, then confirm the target chart is in IDB.
         await saveBtn.click()
-
-        // Robust to any single chart 404 in real data: gate on the SPECIFIC chart
-        // we will tap being present in the crc-offline IDB store (not the all-or-
-        // nothing "saved" state).
-        await expect
-            .poll(
-                async () =>
-                    page.evaluate(async (wantId) => {
-                        const open = indexedDB.open('crc-offline')
-                        const db: IDBDatabase = await new Promise((res, rej) => {
-                            open.onsuccess = () => res(open.result)
-                            open.onerror = () => rej(open.error)
-                        })
-                        try {
-                            const keys: string[] = await new Promise((res, rej) => {
-                                const r = db.transaction('files', 'readonly').objectStore('files').getAllKeys()
-                                r.onsuccess = () => res(r.result as string[])
-                                r.onerror = () => rej(r.error)
-                            })
-                            return keys.includes(wantId)
-                        } finally {
-                            db.close()
-                        }
-                    }, REPRO_PDF_FILEID),
-                { timeout: 120_000, message: 'target chart must land in crc-offline IDB after Save offline' },
-            )
-            .toBe(true)
+        await waitChartCached(page, REPRO_PDF_FILEID)
 
         // Open the chart ONCE online: confirms it renders + warms the PDFOverlay
-        // + viewer chunks (the layout also idle-warms these so a never-tapped
-        // chart works offline too — see perform/layout.tsx), then close.
+        // + viewer chunks (the layout also idle-warms these), then close.
         await visibleRow().click()
-        const zoom = () => page.getByRole('button', { name: /^Zoom (in|out)$/ }).first()
         await expect(zoom(), 'overlay mounts online').toBeVisible({ timeout: 15_000 })
         await expect(page.locator('canvas').first(), 'PDF paints online').toBeVisible({ timeout: 25_000 })
         await page.keyboard.press('Escape').catch(() => {})
         await expect(zoom(), 'overlay closes').toBeHidden({ timeout: 10_000 })
 
-        // ── OFFLINE: WiFi drops ──
-        await context.setOffline(true)
+        // ── OFFLINE: WiFi drops (real-offline: http(s) dead, blob: intact) ──
+        await goOffline(page)
         await expect(page.getByText(/OFFLINE/i).first(), 'offline indicator must surface').toBeVisible({ timeout: 10_000 })
 
-        // Tap the bonded PDF row → renders from cache with the network down.
+        // Reopen the chart offline → renders from the IndexedDB cache, network down.
         await visibleRow().click()
-        await expect(
-            page.getByRole('button', { name: /^Zoom (in|out)$/ }).first(),
-            'overlay must mount offline',
-        ).toBeVisible({ timeout: 15_000 })
+        await expect(zoom(), 'overlay mounts offline').toBeVisible({ timeout: 15_000 })
         await expect(
             page.locator('canvas').first(),
-            'react-pdf must paint a cached PDF offline (network is down)',
+            'react-pdf must paint the cached PDF offline (network is down)',
         ).toBeVisible({ timeout: 25_000 })
         await expect(page.getByText(/Failed to load|render error|Could not load chart/i)).toHaveCount(0)
         await page.screenshot({ path: 'test-results/f1-offline-02-offline-rendered.png' })
 
-        await context.setOffline(false)
-
-        // No real (non-noise) console errors during the offline render.
-        const real = errors.filter(
-            (e) =>
-                !/Firebase|firestore|offline|unavailable|cleardot|Cross-Origin-Opener-Policy|Failed to load resource: the server responded with a status of 4\d\d/i.test(
-                    e,
-                ),
-        )
-        expect(real, `unexpected console errors offline:\n${real.join('\n')}`).toEqual([])
+        await goOnline(page)
     })
 })

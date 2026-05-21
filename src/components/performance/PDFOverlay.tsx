@@ -164,7 +164,14 @@ export function PDFOverlay({
     // Prefer the IDB blob when we have one so offline-preloaded charts render
     // without a network fetch.
     const networkUrl = track.fileId ? `/api/drive/file/${track.fileId}` : ""
-    const [fileUrl, setFileUrl] = useState<string>(networkUrl)
+    // Start EMPTY (not networkUrl): resolve the cached IDB blob first. If we
+    // seeded with networkUrl, an offline open would fire a doomed network fetch
+    // that puts react-pdf into an error state BEFORE the cached blob resolves —
+    // and it doesn't cleanly recover when `file` later flips to the blob URL. The
+    // viewers already guard on `fileUrl && <Viewer/>`, so "" simply renders
+    // nothing for the one tick until resolve() picks the blob (offline-safe) or
+    // the network URL (online, uncached). getFile is a fast IDB read.
+    const [fileUrl, setFileUrl] = useState<string>("")
     useEffect(() => {
         let cancelled = false
         let objectUrl: string | null = null
