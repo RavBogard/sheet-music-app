@@ -29,6 +29,7 @@ import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { useAuth } from "@/lib/auth-context"
 import { SetlistView } from "@/components/performance/SetlistView"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
+import { SaveOfflineButton } from "@/components/performance/SaveOfflineButton"
 import type { Setlist, SetlistTrack } from "@/types/models"
 
 const PrintModal = dynamic(
@@ -148,6 +149,10 @@ export function SetlistPerformClient({
                     </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                    {/* F1: pre-arm the whole setlist for offline use (idle auto-precache
+                        runs on mount; this CTA force-caches with progress). Shown to
+                        everyone performing — offline resilience isn't role-gated. */}
+                    {songFileIds.length > 0 && <SaveOfflineButton fileIds={songFileIds} />}
                     {canPrint && (
                         <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label="Open gig packet" className="h-11 min-w-11 gap-1.5 text-muted-foreground">
                             <Printer className="h-4 w-4" />
