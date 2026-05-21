@@ -41,6 +41,7 @@ vi.mock("@/lib/logger", () => ({
 
 // Import AFTER mocks
 import { GET } from "@/app/api/bridge/setup-code/route"
+import { logger } from "@/lib/logger"
 
 // ── Env for success path ──
 const ORIGINAL = { ...process.env }
@@ -49,6 +50,11 @@ beforeEach(() => {
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = "test-proj"
     process.env.FIREBASE_CLIENT_EMAIL = "svc@test.iam.gserviceaccount.com"
     process.env.FIREBASE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\\nX\\n-----END PRIVATE KEY-----"
+    // CRIT-003: default to NO scoped bridge SA so the base suite exercises the fallback.
+    // Scoped-vend tests set these explicitly.
+    delete process.env.BRIDGE_SA_CLIENT_EMAIL
+    delete process.env.BRIDGE_SA_PRIVATE_KEY
+    delete process.env.BRIDGE_SA_PRIVATE_KEY_ID
     // default: tx resolves as success with createdBy side-effect
     runTransactionMock.mockImplementation(async (fn: (tx: any) => Promise<any>) => {
         // Make the tx callback believe there's a valid doc and let it set createdBy
@@ -161,5 +167,66 @@ describe("GET /api/bridge/setup-code — S02 audit + email", () => {
         expect(addMock).toHaveBeenCalledTimes(1)
         await new Promise((r) => setImmediate(r))
         expect(alertSpy).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("GET /api/bridge/setup-code — CRIT-003 scoped bridge SA vending", () => {
+    it("vends the dedicated BRIDGE_SA_* identity when configured (scoped:true, no warning)", async () => {
+        process.env.BRIDGE_SA_CLIENT_EMAIL = "monitor-bridge@test.iam.gserviceaccount.com"
+        process.env.BRIDGE_SA_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\\nBRIDGE\\n-----END PRIVATE KEY-----"
+
+        const res = await GET(makeReq("AAAAAAAAAA"))
+        expect(res.status).toBe(200)
+        const body = await res.json()
+
+        // Vends the scoped identity, NOT the backend's FIREBASE_* credential
+        expect(body.scoped).toBe(true)
+        expect(body.credentials.client_email).toBe("monitor-bridge@test.iam.gserviceaccount.com")
+        expect(body.credentials.project_id).toBe("test-proj")
+        // \\n escapes are unescaped to real newlines for cert() compatibility
+        expect(body.credentials.private_key).toContain("\n")
+        expect(body.credentials.private_key).toContain("BRIDGE")
+        // No fallback warning when the scoped SA is present
+        expect(logger.warn).not.toHaveBeenCalled()
+        // Redemption gates still fire: audit doc written
+        expect(addMock).toHaveBeenCalledTimes(1)
+    })
+
+    it("falls back to the backend FIREBASE_* credential with a warning when BRIDGE_SA_* is unset", async () => {
+        // beforeEach already deleted BRIDGE_SA_* → fallback path
+        const res = await GET(makeReq("AAAAAAAAAA"))
+        expect(res.status).toBe(200)
+        const body = await res.json()
+
+        expect(body.scoped).toBe(false)
+        expect(body.credentials.client_email).toBe("svc@test.iam.gserviceaccount.com")
+        // Loud warning so the unscoped state is visible in logs
+        expect(logger.warn).toHaveBeenCalledTimes(1)
+        expect(vi.mocked(logger.warn).mock.calls[0][0]).toContain("BRIDGE_SA_")
+        // Redemption gates unaffected
+        expect(addMock).toHaveBeenCalledTimes(1)
+    })
+
+    it("uses BRIDGE_SA_PRIVATE_KEY_ID for private_key_id when provided (rotation hygiene)", async () => {
+        process.env.BRIDGE_SA_CLIENT_EMAIL = "monitor-bridge@test.iam.gserviceaccount.com"
+        process.env.BRIDGE_SA_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\\nBRIDGE\\n-----END PRIVATE KEY-----"
+        process.env.BRIDGE_SA_PRIVATE_KEY_ID = "key-abc123"
+
+        const res = await GET(makeReq("AAAAAAAAAA"))
+        expect(res.status).toBe(200)
+        const body = await res.json()
+        expect(body.credentials.private_key_id).toBe("key-abc123")
+    })
+
+    it("never vends a partial scoped credential: BRIDGE_SA email without key falls back", async () => {
+        process.env.BRIDGE_SA_CLIENT_EMAIL = "monitor-bridge@test.iam.gserviceaccount.com"
+        // BRIDGE_SA_PRIVATE_KEY intentionally unset
+        const res = await GET(makeReq("AAAAAAAAAA"))
+        expect(res.status).toBe(200)
+        const body = await res.json()
+        // Both must be present to count as scoped; otherwise fall back safely
+        expect(body.scoped).toBe(false)
+        expect(body.credentials.client_email).toBe("svc@test.iam.gserviceaccount.com")
+        expect(logger.warn).toHaveBeenCalledTimes(1)
     })
 })

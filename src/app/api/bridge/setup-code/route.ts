@@ -139,13 +139,48 @@ export async function GET(req: NextRequest) {
             })
             .catch((err) => logger.error("bridge alert email threw:", err))
 
-        // Build a minimal service account key from environment variables
+        // Build a minimal service account key from environment variables.
+        //
+        // CRIT-003 (a) — scoped bridge credential. Prefer a DEDICATED, least-privilege
+        // bridge service account (`BRIDGE_SA_*`) so the studio PC never holds the
+        // production backend's full-admin identity. The bridge's entire footprint is
+        // Firestore-only (config/monitor RW, users/{uid} read, monitor-live/** RW) — a
+        // SA with `roles/datastore.user` covers it; it needs NO Auth-admin, NO Storage,
+        // NO token minting (verified in the §0 safety map at crit-003-aPLUSd-rollout.md).
+        //
+        // Fallback: if the scoped SA isn't provisioned yet, vend the server's `FIREBASE_*`
+        // credential (current behavior) with a loud warning. This keeps redemption working
+        // before Daniel sets `BRIDGE_SA_*` in Vercel — the change can't break the bridge.
+        //
+        // CRIT-003 (d) — rotation hygiene. The vended key is read straight from env, so
+        // rotating it is a Vercel env swap with NO code change (see runbook).
         const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-        const clientEmail = process.env.FIREBASE_CLIENT_EMAIL
-        const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n")
+        // Both halves of the scoped pair must be present, or we fall back. Selecting the
+        // email + key together (NOT per-field `??`) guarantees a matched identity — a
+        // mixed pair (e.g. BRIDGE_SA email + server key) would silently fail to auth.
+        const usingScopedBridgeSa = !!(
+            process.env.BRIDGE_SA_CLIENT_EMAIL && process.env.BRIDGE_SA_PRIVATE_KEY
+        )
+        const clientEmail = usingScopedBridgeSa
+            ? process.env.BRIDGE_SA_CLIENT_EMAIL
+            : process.env.FIREBASE_CLIENT_EMAIL
+        const privateKey = (
+            usingScopedBridgeSa ? process.env.BRIDGE_SA_PRIVATE_KEY : process.env.FIREBASE_PRIVATE_KEY
+        )?.replace(/\\n/g, "\n")
+        const privateKeyId = usingScopedBridgeSa
+            ? (process.env.BRIDGE_SA_PRIVATE_KEY_ID ?? "bridge-generated")
+            : "bridge-generated"
 
         if (!projectId || !clientEmail || !privateKey) {
             return NextResponse.json({ error: "Server credentials not configured" }, { status: 500 })
+        }
+
+        if (!usingScopedBridgeSa) {
+            logger.warn(
+                "bridge setup-code: vending the backend FIREBASE_* credential — scoped " +
+                    "BRIDGE_SA_* is not configured. Set BRIDGE_SA_CLIENT_EMAIL + " +
+                    "BRIDGE_SA_PRIVATE_KEY in env to vend a least-privilege bridge SA (CRIT-003).",
+            )
         }
 
         const serviceAccountKey = {
@@ -154,13 +189,16 @@ export async function GET(req: NextRequest) {
             private_key: privateKey,
             client_email: clientEmail,
             // These fields are required by cert() for full compatibility
-            private_key_id: "bridge-generated",
+            private_key_id: privateKeyId,
             client_id: "",
             auth_uri: "https://accounts.google.com/o/oauth2/auth",
             token_uri: "https://oauth2.googleapis.com/token",
         }
 
-        return NextResponse.json({ credentials: serviceAccountKey })
+        // `scoped` lets the operator / deployed REPRO confirm which identity was vended
+        // without exposing the key itself. Non-breaking additive field (the bridge reads
+        // only `credentials`).
+        return NextResponse.json({ credentials: serviceAccountKey, scoped: usingScopedBridgeSa })
     } catch (error) {
         logger.error("Setup code activation error:", error)
         return NextResponse.json({ error: "Activation failed" }, { status: 500 })
