@@ -124,11 +124,8 @@ function createTrayIcon() {
     return nativeImage.createFromBuffer(canvas, { width: size, height: size });
 }
 
-function createTray() {
-    const icon = createTrayIcon();
-    tray = new Tray(icon);
-
-    const contextMenu = Menu.buildFromTemplate([
+function buildTrayMenu(): Menu {
+    const items: Electron.MenuItemConstructorOptions[] = [
         {
             label: 'Show Dashboard',
             click: () => {
@@ -141,6 +138,18 @@ function createTray() {
             label: 'Check for Updates',
             click: () => checkForUpdates()
         },
+    ];
+
+    // BR-03: a downloaded update no longer auto-restarts the bridge mid-service.
+    // Expose an explicit human "install now" path here (mirrors the install-update IPC).
+    if (pendingUpdateVersion) {
+        items.push({
+            label: `Install update v${pendingUpdateVersion} (restart now)`,
+            click: () => installPendingUpdate()
+        });
+    }
+
+    items.push(
         { type: 'separator' },
         {
             label: 'Quit Bridge',
@@ -149,10 +158,21 @@ function createTray() {
                 app.quit();
             }
         }
-    ]);
+    );
+
+    return Menu.buildFromTemplate(items);
+}
+
+function refreshTrayMenu() {
+    tray?.setContextMenu(buildTrayMenu());
+}
+
+function createTray() {
+    const icon = createTrayIcon();
+    tray = new Tray(icon);
 
     tray.setToolTip('CentralReform Bridge');
-    tray.setContextMenu(contextMenu);
+    refreshTrayMenu();
 
     tray.on('click', () => {
         if (mainWindow?.isVisible()) {
@@ -165,43 +185,111 @@ function createTray() {
 }
 
 // ─── Auto-Updates ───
+//
+// BR-03 fix: the bridge runs unattended in the system tray on the studio machine and
+// serves live monitor mixes to the band's iPads during Friday-evening / Shabbat-morning
+// services ([[project_shul_cadence]]). Previously electron-updater force-restarted the
+// app ~3s after ANY GitHub release downloaded (`quitAndInstall` on a timer) — a release
+// published mid-service froze every musician's mix.
+//
+// We still DOWNLOAD updates eagerly, but never INSTALL (which relaunches the process)
+// while a service could be live. A downloaded update is applied only when:
+//   1. the X32 has been continuously disconnected (idle, no service) for a sustained
+//      window — `x32Connected` can briefly flap (BR-02), so we require it to PERSIST;
+//   2. a human explicitly installs it (tray item / dashboard `install-update` IPC); or
+//   3. the app next quits (`autoInstallOnAppQuit`).
+
+/** Minutes the X32 must be continuously disconnected before a pending update auto-installs. */
+const IDLE_MINUTES_BEFORE_AUTO_INSTALL = 30;
+
+let pendingUpdateVersion: string | null = null;
+let consecutiveIdleMinutes = 0;
+let idleInstallTimer: NodeJS.Timeout | null = null;
+let updateHandlersRegistered = false;
+
+function installPendingUpdate() {
+    if (!pendingUpdateVersion) return;
+    console.log(`[Update] Installing v${pendingUpdateVersion} and relaunching...`);
+    if (idleInstallTimer) {
+        clearInterval(idleInstallTimer);
+        idleInstallTimer = null;
+    }
+    (app as any).isQuiting = true;
+    // isSilent = true, isForceRunAfter = true
+    autoUpdater.quitAndInstall(true, true);
+}
+
+// Auto-apply a downloaded update once the mixer has been idle long enough that no service
+// can plausibly be running. Guards against the BR-02 false-disconnect flap by requiring a
+// SUSTAINED disconnect (counted minute-by-minute), not an instantaneous reading.
+function startIdleInstallWatch() {
+    if (idleInstallTimer) return; // already watching
+    consecutiveIdleMinutes = 0;
+    idleInstallTimer = setInterval(() => {
+        if (!pendingUpdateVersion) return;
+
+        let x32Connected = false;
+        try {
+            x32Connected = !!getBridgeStatus()?.x32Connected;
+        } catch {
+            x32Connected = false;
+        }
+
+        if (x32Connected) {
+            consecutiveIdleMinutes = 0; // mixer live — service likely running, keep deferring
+            return;
+        }
+
+        consecutiveIdleMinutes += 1;
+        if (consecutiveIdleMinutes >= IDLE_MINUTES_BEFORE_AUTO_INSTALL) {
+            console.log(`[Update] X32 idle for ${consecutiveIdleMinutes}m — applying deferred update v${pendingUpdateVersion}.`);
+            installPendingUpdate();
+        }
+    }, 60_000);
+}
 
 function checkForUpdates() {
     try {
         autoUpdater.autoDownload = true;
+        // Safe fallback: if we never reach an idle window, the update lands the next time
+        // the app quits — never mid-service.
         autoUpdater.autoInstallOnAppQuit = true;
 
-        autoUpdater.on('update-available', (info) => {
-            console.log(`[Update] New version available: ${info.version}`);
-            mainWindow?.webContents.send('log', {
-                level: 'info',
-                message: `🔄 Update available: v${info.version} — downloading...`
+        // Register listeners once. checkForUpdates() is called on startup AND from the tray
+        // "Check for Updates" item, so re-registering would stack duplicate handlers on this
+        // long-running process.
+        if (!updateHandlersRegistered) {
+            updateHandlersRegistered = true;
+
+            autoUpdater.on('update-available', (info) => {
+                console.log(`[Update] New version available: ${info.version}`);
+                mainWindow?.webContents.send('log', {
+                    level: 'info',
+                    message: `🔄 Update available: v${info.version} — downloading...`
+                });
             });
-        });
 
-        autoUpdater.on('update-downloaded', (info) => {
-            console.log(`[Update] v${info.version} downloaded — installing silently in background...`);
-            mainWindow?.webContents.send('log', {
-                level: 'info',
-                message: `✅ Update v${info.version} downloaded — restarting to apply update`
+            autoUpdater.on('update-downloaded', (info) => {
+                pendingUpdateVersion = info.version;
+                console.log(`[Update] v${info.version} downloaded — deferring install (BR-03): will apply when the mixer is idle, on manual install, or on next quit.`);
+                mainWindow?.webContents.send('log', {
+                    level: 'info',
+                    message: `✅ Update v${info.version} ready — it will install when the mixer is idle or on the next restart, so it won't interrupt a live service. Use the tray "Install update" to apply it now.`
+                });
+                mainWindow?.webContents.send('update-pending', { version: info.version });
+                refreshTrayMenu();       // surface the explicit "Install update now" action
+                startIdleInstallWatch(); // auto-apply once the X32 has been idle long enough
             });
 
-            // Wait 3 seconds to let the UI log appear, then forcefully restart and update
-            setTimeout(() => {
-                (app as any).isQuiting = true;
-                // isSilent = true, isForceRunAfter = true
-                autoUpdater.quitAndInstall(true, true);
-            }, 3000);
-        });
+            autoUpdater.on('update-not-available', () => {
+                console.log('[Update] Already on latest version');
+            });
 
-        autoUpdater.on('update-not-available', () => {
-            console.log('[Update] Already on latest version');
-        });
-
-        autoUpdater.on('error', (err) => {
-            console.warn('[Update] Auto-update check failed:', err.message);
-            // Don't spam the user with update errors — it's not critical
-        });
+            autoUpdater.on('error', (err) => {
+                console.warn('[Update] Auto-update check failed:', err.message);
+                // Don't spam the user with update errors — it's not critical
+            });
+        }
 
         autoUpdater.checkForUpdates().catch(() => {
             // Silently fail — updates are best-effort
@@ -340,8 +428,8 @@ ipcMain.handle('submit-setup-code', async (_event: Electron.IpcMainInvokeEvent, 
 });
 
 ipcMain.handle('install-update', () => {
-    (app as any).isQuiting = true;
-    autoUpdater.quitAndInstall();
+    // Explicit human "install now" from the dashboard — same path as the tray item.
+    installPendingUpdate();
 });
 
 // ─── App Lifecycle ───
