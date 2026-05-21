@@ -159,9 +159,11 @@ describe("PDFOverlay", () => {
         vi.clearAllMocks()
     })
 
-    it("renders PDFViewer with correct URL", () => {
+    it("renders PDFViewer with correct URL", async () => {
         render(<PDFOverlay {...defaultProps} />)
-        const viewer = screen.getByTestId("pdf-viewer")
+        // fileUrl resolves asynchronously now (cached-blob-first; on a cache miss
+        // it falls back to the network URL) — await the resolved viewer.
+        const viewer = await screen.findByTestId("pdf-viewer")
         expect(viewer.getAttribute("data-url")).toBe("/api/drive/file/file-a")
     })
 
@@ -246,7 +248,7 @@ describe("PDFOverlay", () => {
             fileId: "db-test123",
         }
 
-        it("renders SmartScoreViewer for musicxml queue items", () => {
+        it("renders SmartScoreViewer for musicxml queue items", async () => {
             mockStoreState.playbackQueue = [
                 { name: "Test Score", fileId: "db-test123", type: "musicxml", setlistIndex: 0 },
             ] as never[]
@@ -259,11 +261,12 @@ describe("PDFOverlay", () => {
                     currentIndex={0}
                 />
             )
-            expect(screen.getByTestId("smart-score-viewer")).toBeTruthy()
+            // fileUrl resolves async (cached-blob-first) — await the viewer.
+            expect(await screen.findByTestId("smart-score-viewer")).toBeTruthy()
             expect(screen.queryByTestId("pdf-viewer")).toBeNull()
         })
 
-        it("renders PDFViewer for pdf queue items", () => {
+        it("renders PDFViewer for pdf queue items", async () => {
             mockStoreState.playbackQueue = [
                 { name: "Ma Tovu", fileId: "file-a", type: "pdf", setlistIndex: 0 },
             ] as never[]
@@ -276,7 +279,7 @@ describe("PDFOverlay", () => {
                     currentIndex={0}
                 />
             )
-            expect(screen.getByTestId("pdf-viewer")).toBeTruthy()
+            expect(await screen.findByTestId("pdf-viewer")).toBeTruthy()
             expect(screen.queryByTestId("smart-score-viewer")).toBeNull()
         })
 

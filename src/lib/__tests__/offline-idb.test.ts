@@ -61,4 +61,36 @@ describe('offline-idb', () => {
         const ids = await idb.listFileIds()
         expect(ids).toEqual(['f1'])
     })
+
+    it('stores bytes as an ArrayBuffer (WebKit-safe), not a Blob', async () => {
+        // WebKit / iOS Safari (the band's iPads) FAILS the IndexedDB put when the
+        // value contains a Blob, so the bytes must persist as an ArrayBuffer. Read
+        // the raw record to lock the on-disk shape (guards against reverting).
+        await idb.putFile('shape', new Blob(['abc'], { type: 'application/pdf' }))
+        const raw = await new Promise<Record<string, unknown> | undefined>((resolve, reject) => {
+            const open = indexedDB.open('crc-offline')
+            open.onsuccess = () => {
+                const db = open.result
+                const r = db.transaction('files', 'readonly').objectStore('files').get('shape')
+                r.onsuccess = () => {
+                    resolve(r.result as Record<string, unknown> | undefined)
+                    db.close()
+                }
+                r.onerror = () => reject(r.error)
+            }
+            open.onerror = () => reject(open.error)
+        })
+        // Duck-typed (cross-realm instanceof is unreliable under fake-indexeddb).
+        expect((raw?.data as ArrayBuffer | undefined)?.byteLength).toBe(3)
+        expect(raw?.data instanceof Blob).toBe(false)
+        expect(raw?.blob).toBeUndefined()
+    })
+
+    it('getFile reconstructs a Blob with the stored mime + bytes', async () => {
+        await idb.putFile('mime', new Blob(['xy'], { type: 'application/pdf' }))
+        const got = await idb.getFile('mime')
+        expect(got).toBeInstanceOf(Blob)
+        expect(got!.type).toBe('application/pdf')
+        expect(Array.from(new Uint8Array(await got!.arrayBuffer()))).toEqual([120, 121])
+    })
 })
