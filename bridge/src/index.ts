@@ -25,6 +25,14 @@ import { ConfigManager } from "./config"
 import { FirestoreTransport } from "./firestore-transport"
 
 /**
+ * Max age of the last successful monitor-live/state write before the bridge is
+ * considered unhealthy even with a live socket (C5/B3). Generously above the 10s
+ * state heartbeat so a healthy idle desk never trips it; it fires only when the
+ * state-write path is actually wedged while the config heartbeat still runs.
+ */
+const STATE_LIVENESS_THRESHOLD_MS = 30_000
+
+/**
  * Detect this machine's LAN IP address.
  * Picks the first non-internal IPv4 address, preferring Ethernet over Wi-Fi.
  */
@@ -111,16 +119,16 @@ async function main() {
         console.error("   Update the X32 IP in the CentralReform admin panel.\n")
     }
 
-    // 4. Sync full mixer state
-    if (x32.isConnected()) {
-        await x32.syncFullState(monitorConfig.monitorBuses)
-    }
-
-    // 4b. Start Firestore transport (replaces WebSocket for iPad communication)
-    //     iPads read state from and write commands to Firestore — zero config on devices
+    // 4. Start the Firestore transport FIRST (B2) so its state_synced listener is
+    //    attached BEFORE syncFullState emits — otherwise the initial event is lost.
+    //    iPads read state from and write commands to Firestore — zero config on devices.
     const transport = new FirestoreTransport(x32, config)
     transport.start()
+
+    // 4b. Sync full mixer state, then publish it. The first full-state `.set()`
+    //     also HEALS any corrupted (array→map) live state left by the old delta writer.
     if (x32.isConnected()) {
+        await x32.syncFullState(monitorConfig.monitorBuses)
         await transport.writeFullState()
     }
 
@@ -177,13 +185,21 @@ async function main() {
             await config.updateBridgeUrl(`firestore://${currentIp}`)
         }
 
-        // Update internal status for Electron UI
-        internalStatus.x32Connected = x32.isConnected()
+        // C5/B3 — liveness from (socket-alive AND state-fresh), not socket chatter
+        // alone. The bridge can hold a live socket while the state-write path is
+        // wedged; publishing x32Connected=true then is the "green health + dead
+        // writes" trap. state-age cross-checks that writes are actually flowing.
+        const socketAlive = x32.isConnected()
+        const stateFresh = transport.getStateAgeMs() < STATE_LIVENESS_THRESHOLD_MS
+        const healthy = socketAlive && stateFresh
+
+        // Local Electron UI shows the raw socket state ("connected to X32").
+        internalStatus.x32Connected = socketAlive
         internalStatus.connectedClients = 0
 
-        // Heartbeat: write status to Firestore
+        // Consumers (iPad / MCP) read the cross-checked health.
         await config.writeHeartbeat({
-            x32Connected: x32.isConnected(),
+            x32Connected: healthy,
             clients: 0,
             localIp: currentIp,
         })

@@ -129,6 +129,24 @@ export class X32Client extends EventEmitter {
     private static readonly MAX_BACKOFF = 60000
     private pendingCallbacks = new Map<string, (msg: ParsedOSCMessage) => void>()
 
+    // C2 — query-after-command confirmation (Monitor Overhaul Phase 1). The X32
+    // does NOT echo a client's OWN write back to the sender (R1), so after every
+    // SET we issue a debounced GET for the same address; its reply travels the
+    // normal inbound path (handleMessage → routeParameterChange), refreshing the
+    // cache and emitting the change event that the transport turns into a
+    // full-state write. Fire-and-forget (no pendingCallback → sidesteps the B9
+    // address-collision): latest-authoritative-value-wins, and a dropped reply
+    // simply leaves the value for the heartbeat to reconcile (never a fabricated
+    // value).
+    private confirmTimers = new Map<string, ReturnType<typeof setTimeout>>()
+    private readonly CONFIRM_DEBOUNCE_MS = 75
+
+    // B11 — confirmed-vs-unknown sentinel. Target keys whose value could not be
+    // read during the most recent syncFullState (query failed/timed out).
+    // Published in monitor-live/state so consumers can tell "unknown/unreachable"
+    // from a real 0/false/true rather than trusting a silently fabricated value.
+    private unconfirmed = new Set<string>()
+
     // Cached mixer state
     channels: ChannelInfo[] = []
     buses: BusInfo[] = []
@@ -194,6 +212,9 @@ export class X32Client extends EventEmitter {
             clearInterval(this.keepaliveInterval)
             this.keepaliveInterval = null
         }
+        // C2 — drop any pending confirm read-backs.
+        for (const t of this.confirmTimers.values()) clearTimeout(t)
+        this.confirmTimers.clear()
         this.connected = false
         this.reconnecting = false
         this.socket.close()
@@ -453,6 +474,30 @@ export class X32Client extends EventEmitter {
         })
     }
 
+    /**
+     * Schedule a debounced query-after-command (C2). Coalesces a fast gesture
+     * (many SETs to one target) into ONE read-back ~CONFIRM_DEBOUNCE_MS after the
+     * last SET. The GET reply refreshes the cache via the inbound path; we
+     * deliberately do NOT await it — latest-value-wins, and a dropped reply is
+     * left to the heartbeat (no fabricated value).
+     */
+    private scheduleConfirm(key: string, address: string): void {
+        const prev = this.confirmTimers.get(key)
+        if (prev) clearTimeout(prev)
+        this.confirmTimers.set(
+            key,
+            setTimeout(() => {
+                this.confirmTimers.delete(key)
+                this.send(address) // GET (no args) — reply routes to routeParameterChange
+            }, this.CONFIRM_DEBOUNCE_MS),
+        )
+    }
+
+    /** Target keys whose value is currently unconfirmed (B11). */
+    getUnconfirmed(): string[] {
+        return [...this.unconfirmed]
+    }
+
     async queryChannelName(ch: number): Promise<string> {
         const addr = `/ch/${String(ch).padStart(2, "0")}/config/name`
         const msg = await this.query(addr)
@@ -506,26 +551,31 @@ export class X32Client extends EventEmitter {
     setBusFader(bus: number, value: number): void {
         const addr = `/bus/${String(bus).padStart(2, "0")}/mix/fader`
         this.send(addr, [{ type: "f", value: Math.max(0, Math.min(1, value)) }])
+        this.scheduleConfirm(`bus_fader:${bus}`, addr) // C2
     }
 
     setSendLevel(ch: number, bus: number, value: number): void {
         const addr = `/ch/${String(ch).padStart(2, "0")}/mix/${String(bus).padStart(2, "0")}/level`
         this.send(addr, [{ type: "f", value: Math.max(0, Math.min(1, value)) }])
+        this.scheduleConfirm(`send_level:${ch}:${bus}`, addr) // C2
     }
 
     setSendOn(ch: number, bus: number, on: boolean): void {
         const addr = `/ch/${String(ch).padStart(2, "0")}/mix/${String(bus).padStart(2, "0")}/on`
         this.send(addr, [{ type: "i", value: on ? 1 : 0 }])
+        this.scheduleConfirm(`send_on:${ch}:${bus}`, addr) // C2
     }
 
     setMatrixFader(mtx: number, value: number): void {
         const addr = `/mtx/${String(mtx).padStart(2, "0")}/mix/fader`
         this.send(addr, [{ type: "f", value: Math.max(0, Math.min(1, value)) }])
+        this.scheduleConfirm(`matrix_fader:${mtx}`, addr) // C2
     }
 
     setMatrixOn(mtx: number, on: boolean): void {
         const addr = `/mtx/${String(mtx).padStart(2, "0")}/mix/on`
         this.send(addr, [{ type: "i", value: on ? 1 : 0 }])
+        this.scheduleConfirm(`matrix_on:${mtx}`, addr) // C2
     }
 
     // ─── Full State Sync ───
@@ -533,6 +583,11 @@ export class X32Client extends EventEmitter {
     async syncFullState(monitorBuses: number[]): Promise<void> {
         const start = Date.now()
         console.log("[X32] Syncing full mixer state (parallel)...")
+
+        // B11 — record which VALUE reads fail this sync so writeFullState can
+        // publish them as unconfirmed rather than shipping the fabricated
+        // fallback (0 / false / true) as if it were the desk's real value.
+        const unconfirmed = new Set<string>()
 
         // ── Channel names: all 32 in parallel ──
         const channelPromises = Array.from({ length: 32 }, (_, i) => {
@@ -550,21 +605,22 @@ export class X32Client extends EventEmitter {
                 // Bus name + fader in parallel
                 const [name, fader] = await Promise.all([
                     this.queryBusName(busIdx).catch(() => `Bus ${busIdx}`),
-                    this.queryBusFader(busIdx).catch(() => 0),
+                    this.queryBusFader(busIdx).catch(() => { unconfirmed.add(`bus_fader:${busIdx}`); return 0 }),
                 ])
 
                 // All 32 channel sends: level + on for each channel in parallel
                 const sendPromises = Array.from({ length: 32 }, (_, i) => {
                     const ch = i + 1
                     return Promise.all([
-                        this.querySendLevel(ch, busIdx).catch(() => 0),
-                        this.querySendOn(ch, busIdx).catch(() => false),
+                        this.querySendLevel(ch, busIdx).catch(() => { unconfirmed.add(`send_level:${ch}:${busIdx}`); return 0 }),
+                        this.querySendOn(ch, busIdx).catch(() => { unconfirmed.add(`send_on:${ch}:${busIdx}`); return false }),
                     ]).then(([level, on]) => ({ channelIndex: ch, level, on }))
                 })
                 const sends: BusSend[] = await Promise.all(sendPromises)
 
                 return { index: busIdx, name, fader, sends }
             } catch {
+                unconfirmed.add(`bus:${busIdx}`)
                 return { index: busIdx, name: `Bus ${busIdx}`, fader: 0, sends: [] as BusSend[] }
             }
         })
@@ -578,11 +634,14 @@ export class X32Client extends EventEmitter {
             const mtx = i + 1
             return Promise.all([
                 this.queryMatrixName(mtx).catch(() => `Matrix ${mtx}`),
-                this.queryMatrixFader(mtx).catch(() => 0),
-                this.queryMatrixOn(mtx).catch(() => true),
+                this.queryMatrixFader(mtx).catch(() => { unconfirmed.add(`matrix_fader:${mtx}`); return 0 }),
+                this.queryMatrixOn(mtx).catch(() => { unconfirmed.add(`matrix_on:${mtx}`); return true }),
             ]).then(([name, fader, on]) => ({ index: mtx, name, fader, on }))
         })
         this.matrices = await Promise.all(matrixPromises)
+
+        // B11 — publish the result of THIS sync (replaces any prior set).
+        this.unconfirmed = unconfirmed
 
         const totalElapsed = Date.now() - start
         console.log(`[X32] Read ${this.matrices.length} matrix outputs (${totalElapsed}ms total)`)

@@ -13,16 +13,17 @@ import { X32Client } from "../x32-client"
  *   refreshes the bridge's in-memory cache (which is what feeds
  *   monitor-live/state). See AUDIT-bridge.md Part A R1.
  *
- * This test asserts TODAY's (buggy) behavior so CI stays green. It is the
- * Phase-1 target: when query-after-command confirmation lands (AUDIT-bridge
- * Part C2), the marked assertion MUST be flipped — see the inline marker.
+ * Phase 1 (Lane P1-A) HAS LANDED the query-after-command confirmation
+ * (AUDIT-bridge Part C2): after a SET the X32Client issues a debounced read-back
+ * whose reply refreshes the cache. This test now asserts the FIXED behavior —
+ * the bridge's own write is confirmed from the desk. R1 is closed.
  */
 
 function delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-describe("X32 read-of-own-write (R1): a bridge-issued SET does not confirm itself", () => {
+describe("X32 read-of-own-write (R1): a bridge-issued SET now confirms itself", () => {
     let mock: X32MockServer
     let client: X32Client | undefined
 
@@ -34,7 +35,7 @@ describe("X32 read-of-own-write (R1): a bridge-issued SET does not confirm itsel
         if (mock) await mock.stop()
     })
 
-    it("leaves the bridge's cached value STALE after its own SET (today's behavior)", async () => {
+    it("refreshes the bridge's cached value from the desk after its own SET (R1 fixed)", async () => {
         mock = new X32MockServer({ port: 0 })
         const port = await mock.start()
 
@@ -48,26 +49,19 @@ describe("X32 read-of-own-write (R1): a bridge-issued SET does not confirm itsel
         const target = before > 0.5 ? 0.123 : 0.876
 
         // The bridge issues a fire-and-forget SET. The faithful mock applies it
-        // but does NOT echo it back to the sender (R1); with no query-after-
-        // command step, the bridge cannot learn the new value.
+        // but does NOT echo it back to the sender (R1). Phase-1 C2: the SET
+        // schedules a debounced GET (~75ms) whose reply refreshes the cache.
         client.setBusFader(bus, target)
-        await delay(120)
+        await delay(120) // > CONFIRM_DEBOUNCE_MS + the loopback round-trip
 
         const afterCache = client.buses.find((b) => b.index === bus)!.fader
 
-        // ─── PHASE-1 TARGET: flip when query-after-command lands (AUDIT-bridge C2) ───
-        // TODAY the bridge cache stays STALE — its own write was never confirmed.
-        // When Phase-1 adds query-after-command confirmation, the bridge WILL
-        // refresh from the desk and these two assertions MUST become:
-        //     expect(afterCache).toBeCloseTo(target, 5)
-        //     expect(afterCache).not.toBeCloseTo(before, 5)
-        expect(afterCache).toBeCloseTo(before, 5)
-        expect(afterCache).not.toBeCloseTo(target, 5)
+        // R1 CLOSED: the bridge's own write is now confirmed from the desk, so the
+        // cache reflects the value that is really on the X32 — not the stale prior.
+        expect(afterCache).toBeCloseTo(target, 5)
+        expect(afterCache).not.toBeCloseTo(before, 5)
 
-        // Proof the value really IS on the desk, so the Phase-1 fix is viable:
-        // the mock applied it, and a direct query returns it. (The query also
-        // refreshes the cache as a side effect — exactly the C2 mechanism — so
-        // it MUST run AFTER the stale-cache assertions above.)
+        // Corroboration: the desk really holds the value, and a direct query agrees.
         expect(mock.buses.find((b) => b.index === bus)!.fader).toBeCloseTo(target, 5)
         const queried = await client.queryBusFader(bus)
         expect(queried).toBeCloseTo(target, 5)

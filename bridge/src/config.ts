@@ -87,21 +87,6 @@ export class ConfigManager {
         this.listeners.push(fn)
     }
 
-    /** Verify a Firebase Auth ID token */
-    async verifyToken(token: string): Promise<{ uid: string; email?: string; role?: string; soundEngineer?: boolean } | null> {
-        try {
-            const decoded = await admin.auth().verifyIdToken(token)
-            return {
-                uid: decoded.uid,
-                email: decoded.email,
-                role: (decoded.role as string) || undefined,
-                soundEngineer: decoded.soundEngineer === true,
-            }
-        } catch {
-            return null
-        }
-    }
-
     /**
      * Check if a user is authorized for monitor access.
      * Authorized if: admin role, soundEngineer claim, or has a bus assigned.

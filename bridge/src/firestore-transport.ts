@@ -20,7 +20,9 @@
 import * as admin from "firebase-admin"
 import { X32Client } from "./x32-client"
 import { ConfigManager } from "./config"
-import { MixerSnapshot } from "./types"
+
+/** monitor-live/state schema version (C4). Bump on any shape change. */
+const STATE_SCHEMA_VERSION = 1
 
 interface PendingCommand {
     type: string
@@ -37,13 +39,23 @@ export class FirestoreTransport {
     private x32: X32Client
     private config: ConfigManager
     private commandUnsub: (() => void) | null = null
-    private stateThrottleTimer: ReturnType<typeof setTimeout> | null = null
-    private stateDirty = false
-    private fullSyncPending = false
-    private pendingDeltas: Record<string, any> = {}
-    private lastSnapshot: MixerSnapshot | null = null
+
+    // ── State-write path (Monitor Overhaul Phase 1, C1/C3) ──
+    // ONE throttled full-state `.set()` writer. The dot-path delta writer that
+    // converted the `buses` ARRAY into a MAP (R3) is deleted. Every trigger —
+    // inbound X32 echo, query-after-command confirm reply, startup sync, and the
+    // two heartbeats — funnels through scheduleStateWrite → writeFullState.
+    private stateWriteTimer: ReturnType<typeof setTimeout> | null = null
     private lastStateWrite = 0
-    private readonly STATE_WRITE_INTERVAL = 100 // Max 10 writes/sec
+    private lastSuccessfulStateWriteAt = 0
+    private stateSeq = 0
+    private readonly STATE_WRITE_INTERVAL = 100 // throttle: ≤10 writes/sec
+
+    // C3 — two-tier heartbeat timers.
+    private stateHeartbeatTimer: ReturnType<typeof setInterval> | null = null
+    private fullRequeryTimer: ReturnType<typeof setInterval> | null = null
+    private readonly STATE_HEARTBEAT_MS = 10_000 // cheap re-.set() of cached snapshot (idle never freezes — R2)
+    private readonly FULL_REQUERY_MS = 30_000 // authoritative syncFullState resync (catch drift / missed echoes)
 
     // Track the latest command timestamp for each target to discard obsolete delayed commands
     // Key format: "bus_master:1" or "send_level:1:5" or "matrix_fader:2"
@@ -74,103 +86,85 @@ export class FirestoreTransport {
     start(): void {
         this.listenForCommands()
         this.setupX32Listeners()
+
+        // C3 — cheap state-write heartbeat: re-.set() the cached snapshot so
+        // monitor-live/state.updatedAt advances even on a fully idle desk (kills
+        // R2). No X32 traffic — just republishes what's already in cache.
+        this.stateHeartbeatTimer = setInterval(
+            () => this.scheduleStateWrite(),
+            this.STATE_HEARTBEAT_MS,
+        )
+        // C3 — authoritative re-query resync: periodically re-read the desk to
+        // catch any drift or echo we missed. Restores (intentionally, at a sane
+        // cadence) the periodic resync BR-02 had removed as a side effect.
+        this.fullRequeryTimer = setInterval(() => {
+            if (this.x32.isConnected()) {
+                this.x32
+                    .syncFullState(this.config.getConfig().monitorBuses)
+                    .catch((err) =>
+                        console.error("[Transport] Full re-query failed:", (err as Error).message),
+                    )
+            }
+        }, this.FULL_REQUERY_MS)
+
         console.log("[Transport] Firestore transport active — iPads connect via Firestore")
     }
 
     /**
-     * Write the full mixer state snapshot to Firestore.
-     * Called on initial sync and periodically as state changes.
+     * Write the FULL mixer state snapshot to monitor-live/state via `.set()`
+     * (C1 — never a dot-path `.update()`, which corrupted the buses ARRAY into a
+     * MAP = R3). Carries light freshness/identity fields (C4): schemaVersion,
+     * bridgeVersion, stateSeq (monotonic), updatedAt, and the B11 `unconfirmed`
+     * list. Does NOT embed `config` — consumers read config/monitor directly;
+     * the embedded copy went stale and was the misleading bridge.version:"2.0.0"
+     * source.
      */
     async writeFullState(): Promise<void> {
-        const snapshot: MixerSnapshot = {
-            channels: this.x32.channels,
-            buses: this.x32.buses,
-            matrices: this.x32.matrices,
-            config: this.config.getConfig(),
-        }
-
+        this.lastStateWrite = Date.now()
         try {
             await this.db.doc("monitor-live/state").set({
-                ...snapshot,
+                schemaVersion: STATE_SCHEMA_VERSION,
+                channels: this.x32.channels,
+                buses: this.x32.buses,
+                matrices: this.x32.matrices,
+                unconfirmed: this.x32.getUnconfirmed(),
+                bridgeVersion: process.env.BRIDGE_VERSION || "2.0.0",
+                stateSeq: ++this.stateSeq,
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             })
+            this.lastSuccessfulStateWriteAt = Date.now()
         } catch (err) {
             console.error("[Transport] Failed to write state:", (err as Error).message)
         }
     }
 
     /**
-     * Mark a specific field as dirty to be written in the next throttled batch.
-     * Uses dot notation compatible with Firestore updates.
-     */
-    private scheduleDeltaWrite(field: string, value: any): void {
-        this.pendingDeltas[field] = value
-        this.stateDirty = true
-        this.scheduleStateWrite()
-    }
-
-    /**
-     * Throttled state write — batches rapid X32 changes into a single
-     * Firestore write at most every STATE_WRITE_INTERVAL ms.
+     * Throttled full-state write (≤10/s). Coalesces rapid changes: a write that
+     * is already scheduled captures the latest cache when it fires, so callers
+     * never track per-field dirtiness. ALL state-write triggers route here (C1/C5).
      */
     private scheduleStateWrite(): void {
-        const now = Date.now()
-        const elapsed = now - this.lastStateWrite
-
+        if (this.stateWriteTimer) return
+        const elapsed = Date.now() - this.lastStateWrite
         if (elapsed >= this.STATE_WRITE_INTERVAL) {
-            // Enough time has passed — write immediately
-            this.flushState()
-        } else if (!this.stateThrottleTimer) {
-            // Schedule a write for when the interval expires
-            this.stateThrottleTimer = setTimeout(() => {
-                this.flushState()
+            void this.writeFullState()
+        } else {
+            this.stateWriteTimer = setTimeout(() => {
+                this.stateWriteTimer = null
+                void this.writeFullState()
             }, this.STATE_WRITE_INTERVAL - elapsed)
         }
     }
 
-    private async flushState(): Promise<void> {
-        if (this.stateThrottleTimer) {
-            clearTimeout(this.stateThrottleTimer)
-            this.stateThrottleTimer = null
-        }
-
-        if (this.fullSyncPending) {
-            this.fullSyncPending = false
-            this.stateDirty = false
-            this.pendingDeltas = {}
-            this.lastStateWrite = Date.now()
-            await this.writeFullState()
-            return
-        }
-
-        if (!this.stateDirty) return
-
-        const deltas = { ...this.pendingDeltas }
-        this.stateDirty = false
-        this.pendingDeltas = {}
-        this.lastStateWrite = Date.now()
-
-        // Apply deltas to our local cached snapshot if it exists
-        if (this.lastSnapshot) {
-            // We just let the next full sync fix any drift
-            // The local cache isn't strictly necessary to maintain perfectly right now
-        }
-
-        try {
-            // Use update for deltas so we don't overwrite the whole document
-            await this.db.doc("monitor-live/state").update({
-                ...deltas,
-                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            })
-        } catch (err: any) {
-            // If update fails (e.g. document doesn't exist yet), fall back to a full write
-            if (err.code === 5 || err.message.includes("NOT_FOUND")) {
-                console.log("[Transport] State doc missing, falling back to full sync")
-                await this.writeFullState()
-            } else {
-                console.error("[Transport] Failed to write state deltas:", err.message)
-            }
-        }
+    /**
+     * Age in ms since the last SUCCESSFUL state write (Infinity if never).
+     * Lets the bridge heartbeat derive liveness from state-freshness, not just
+     * socket chatter (B3/C5).
+     */
+    getStateAgeMs(): number {
+        return this.lastSuccessfulStateWriteAt === 0
+            ? Infinity
+            : Date.now() - this.lastSuccessfulStateWriteAt
     }
 
     /**
@@ -237,8 +231,17 @@ export class FirestoreTransport {
         }
     }
 
+    // C4 (RESERVED — Phase 2, do NOT implement here): a per-command ack surface
+    // at monitor-live/acks/{commandId} = { commandId, status:
+    // 'applied'|'rejected'|'timeout', confirmedValue?, reason?, at }, server-write
+    // / client-read, TTL-swept — the read target for Phase-2 get_command_status
+    // (closes B6/MCP-D3). Not written in Phase 1.
+
     /**
      * Process a single command from an iPad. Does not delete immediately; adds delete to a batch.
+     * Confirmation of the applied value happens via the X32Client's
+     * query-after-command (C2): the SET schedules a debounced read-back whose
+     * reply refreshes the cache and triggers a full-state write here.
      */
     private async processCommand(
         cmd: PendingCommand,
@@ -385,76 +388,21 @@ export class FirestoreTransport {
     }
 
     /**
-     * Listen for X32 state changes and push to Firestore.
+     * Listen for X32 state changes and push to Firestore. Every change — an
+     * inbound echo (manual desk move / another client) OR a query-after-command
+     * confirm reply (C2) — refreshes the X32Client cache and emits one of these
+     * events; we respond with ONE throttled FULL-STATE write (C1). No per-field
+     * dot-path deltas (those coerced the array into a map — R3). `state_synced`
+     * covers startup, the periodic re-query, reconnect, and config-change syncs.
      */
     private setupX32Listeners(): void {
-        // Any fader/send/matrix change triggers a throttled delta write
-        this.x32.on("bus_fader", (busIndex, value) => {
-            // Assuming buses array is index 0-based in snapshot but 1-based in X32, usually handled in X32Client
-            // The array index matches the bus order
-            // Find the array index for this bus
-            const arrayIndex = this.x32.buses.findIndex(b => b.index === busIndex)
-            if (arrayIndex >= 0) {
-                this.scheduleDeltaWrite(`buses.${arrayIndex}.fader`, value)
-            } else {
-                this.fullSyncPending = true; this.scheduleStateWrite();
-            }
-        })
-
-        this.x32.on("send_level", (busIndex, channelIndex, value) => {
-            const busArrayIndex = this.x32.buses.findIndex(b => b.index === busIndex)
-            if (busArrayIndex >= 0) {
-                const sendArrayIndex = this.x32.buses[busArrayIndex].sends.findIndex(s => s.channelIndex === channelIndex)
-                if (sendArrayIndex >= 0) {
-                    this.scheduleDeltaWrite(`buses.${busArrayIndex}.sends.${sendArrayIndex}.level`, value)
-                } else {
-                    this.fullSyncPending = true; this.scheduleStateWrite();
-                }
-            }
-        })
-
-        this.x32.on("send_on", (busIndex, channelIndex, on) => {
-            const busArrayIndex = this.x32.buses.findIndex(b => b.index === busIndex)
-            if (busArrayIndex >= 0) {
-                const sendArrayIndex = this.x32.buses[busArrayIndex].sends.findIndex(s => s.channelIndex === channelIndex)
-                if (sendArrayIndex >= 0) {
-                    this.scheduleDeltaWrite(`buses.${busArrayIndex}.sends.${sendArrayIndex}.on`, on)
-                } else {
-                    this.fullSyncPending = true; this.scheduleStateWrite();
-                }
-            }
-        })
-
-        this.x32.on("matrix_fader", (matrixIndex, value) => {
-            const arrayIndex = this.x32.matrices?.findIndex(m => m.index === matrixIndex) ?? -1
-            if (arrayIndex >= 0) {
-                this.scheduleDeltaWrite(`matrices.${arrayIndex}.fader`, value)
-            } else {
-                this.fullSyncPending = true; this.scheduleStateWrite();
-            }
-        })
-
-        this.x32.on("matrix_on", (matrixIndex, on) => {
-            const arrayIndex = this.x32.matrices?.findIndex(m => m.index === matrixIndex) ?? -1
-            if (arrayIndex >= 0) {
-                this.scheduleDeltaWrite(`matrices.${arrayIndex}.on`, on)
-            } else {
-                this.fullSyncPending = true; this.scheduleStateWrite();
-            }
-        })
-
-        // Full state sync events
-        this.x32.on("state_synced", () => {
-            this.fullSyncPending = true
-            this.scheduleStateWrite()
-        })
-        this.x32.on("reconnected", () => {
-            // Small delay to let state populate
-            setTimeout(() => {
-                this.fullSyncPending = true
-                this.scheduleStateWrite()
-            }, 500)
-        })
+        const onChange = () => this.scheduleStateWrite()
+        this.x32.on("bus_fader", onChange)
+        this.x32.on("send_level", onChange)
+        this.x32.on("send_on", onChange)
+        this.x32.on("matrix_fader", onChange)
+        this.x32.on("matrix_on", onChange)
+        this.x32.on("state_synced", onChange)
     }
 
     /**
@@ -486,8 +434,17 @@ export class FirestoreTransport {
             this.commandUnsub()
             this.commandUnsub = null
         }
-        if (this.stateThrottleTimer) {
-            clearTimeout(this.stateThrottleTimer)
+        if (this.stateWriteTimer) {
+            clearTimeout(this.stateWriteTimer)
+            this.stateWriteTimer = null
+        }
+        if (this.stateHeartbeatTimer) {
+            clearInterval(this.stateHeartbeatTimer)
+            this.stateHeartbeatTimer = null
+        }
+        if (this.fullRequeryTimer) {
+            clearInterval(this.fullRequeryTimer)
+            this.fullRequeryTimer = null
         }
     }
 }
