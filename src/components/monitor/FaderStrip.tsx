@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useRef, useState, useEffect } from "react"
-import { Loader2 } from "lucide-react"
+import { Loader2, Clock } from "lucide-react"
 
 interface FaderStripProps {
     label: string
@@ -10,9 +10,16 @@ interface FaderStripProps {
     isMaster?: boolean
     onChange: (value: number) => void
     onUnmuteCheck?: () => void // Optional callback to ensure the channel is unmuted when dragged
+    /**
+     * C-6: the live mixer state is stale (frozen / >threshold old), so this
+     * displayed level may not reflect the desk. Surfaced as a non-blocking cue
+     * (Clock glyph + amber readout) — the fader stays draggable, since sending
+     * a command still works even when the readback is stale.
+     */
+    stale?: boolean
 }
 
-export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck }: FaderStripProps) {
+export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck, stale = false }: FaderStripProps) {
     const isDraggingRef = useRef(false)
     const [isDragging, setIsDragging] = useState(false)
     const sliderRef = useRef<HTMLDivElement>(null)
@@ -123,6 +130,9 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
     const percentage = Math.round(displayValue * 100)
     // If pending, slightly dim the bar to indicate latency taking effect
     const barOpacity = isDragging ? "opacity-100" : (isPending ? "opacity-70" : "opacity-100")
+    // C-6: only flag the value as stale when we're showing the authoritative
+    // value (not mid-drag / not awaiting our own optimistic write to settle).
+    const showStale = stale && !isDragging && !isPending
 
     return (
         <div className={`w-full py-1.5 transition-opacity ${!on ? "opacity-50 grayscale" : ""}`}>
@@ -152,7 +162,15 @@ export function FaderStrip({ label, value, on, isMaster, onChange, onUnmuteCheck
                         {isPending && !isDragging && (
                             <Loader2 className="w-3 h-3 text-zinc-400 animate-spin" />
                         )}
-                        <span className="text-xs font-mono font-bold text-zinc-400 shrink-0">
+                        {showStale && (
+                            <Clock
+                                data-testid="fader-stale-cue"
+                                role="img"
+                                aria-label="Level may be out of date — showing last known value"
+                                className="w-3 h-3 text-yellow-500 shrink-0"
+                            />
+                        )}
+                        <span className={`text-xs font-mono font-bold shrink-0 ${showStale ? "text-yellow-500/90" : "text-zinc-400"}`}>
                             {percentage}%
                         </span>
                     </div>

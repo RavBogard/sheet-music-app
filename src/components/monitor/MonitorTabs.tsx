@@ -1,14 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { FaderStrip } from "@/components/monitor/FaderStrip"
 import { MatrixPanel } from "@/components/monitor/MatrixPanel"
 import { BusAssignmentPanel } from "@/components/monitor/BusAssignmentPanel"
 import { DefaultChannelPicker } from "@/components/monitor/DefaultChannelPicker"
-import { ConnectionIndicator } from "@/components/monitor/ConnectionIndicator"
-import { useMonitorStore } from "@/lib/monitor-store"
+import { ConnectionIndicator, DisconnectedOverlay, isMixerOffline } from "@/components/monitor/ConnectionIndicator"
 import { getVisibleChannels } from "@/lib/monitor-store"
+import { useMonitorStaleness } from "@/lib/monitor/use-monitor-staleness"
 import { Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { BusInfo, BusSend, ChannelInfo, MatrixInfo, MonitorConfig } from "@/types/monitor"
@@ -34,37 +33,29 @@ interface MonitorTabsProps {
 }
 
 function HealthIndicator() {
-    const lastSnapshotAt = useMonitorStore(s => s.lastSnapshotAt)
-    const [isStale, setIsStale] = useState(false)
+    // C-6: staleness from the bridge's own `state.updatedAt` (90s threshold) —
+    // the same authoritative signal the MCP uses — not the `lastSnapshotAt`
+    // proxy, which reads "Live" on load against a long-frozen desk.
+    const { stale, hasState } = useMonitorStaleness()
 
-    useEffect(() => {
-        if (!lastSnapshotAt) return
-        const check = () => {
-            setIsStale(Date.now() - lastSnapshotAt > 10_000)
-        }
-        check()
-        const interval = setInterval(check, 2000)
-        return () => clearInterval(interval)
-    }, [lastSnapshotAt])
-
-    if (!lastSnapshotAt) return null
+    if (!hasState) return null
 
     return (
         <span
             className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${
-                isStale
+                stale
                     ? "bg-yellow-500/15 text-yellow-500"
                     : "bg-emerald-500/15 text-emerald-500"
             }`}
         >
             <span
                 className={`size-2 rounded-full ${
-                    isStale
+                    stale
                         ? "bg-yellow-500"
-                        : "bg-emerald-500 animate-pulse"
+                        : "bg-emerald-500 animate-pulse motion-reduce:animate-none"
                 }`}
             />
-            {isStale ? "Stale" : "Live"}
+            {stale ? "Stale" : "Live"}
         </span>
     )
 }
@@ -92,6 +83,11 @@ export function MonitorTabs({
     const visibleSends = allSends.filter(s => visibleIndices.includes(s.channelIndex))
     const myBusIndex = myBus.index
 
+    // C-6: per-fader staleness cue (idle/frozen state, control still works) +
+    // full DisconnectedOverlay only when control is HARD-offline (bridge/X32 down).
+    const { stale } = useMonitorStaleness()
+    const mixerOffline = isMixerOffline(status, config?.bridge)
+
     return (
         <div className="max-w-lg mx-auto p-4 pb-24">
             {/* Header */}
@@ -101,7 +97,7 @@ export function MonitorTabs({
                 </h1>
                 <div className="flex items-center gap-2">
                     <HealthIndicator />
-                    <ConnectionIndicator status={status} error={error} />
+                    <ConnectionIndicator status={status} bridgeStatus={config?.bridge} error={error} />
                 </div>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
@@ -133,51 +129,59 @@ export function MonitorTabs({
 
                 {/* My Mix Tab */}
                 <TabsContent value="my-mix" className="space-y-4">
-                    {/* Master fader */}
-                    <div className="bg-card border border-brand/10 rounded-xl p-4">
-                        <FaderStrip
-                            label="Master"
-                            value={myBus.fader}
-                            on={true}
-                            isMaster
-                            onChange={onBusMaster}
-                        />
-                    </div>
-
-                    {/* Visible channels (starred + defaults) */}
-                    <div className="bg-card border border-brand/10 rounded-xl p-4">
-                        <h2 className="text-sm font-medium text-muted-foreground mb-3">
-                            My Channels
-                        </h2>
-                        {visibleSends.length > 0 ? (
-                            <div className="space-y-1">
-                                {visibleSends.map(send => {
-                                    const ch = channelMap.get(send.channelIndex)
-                                    const name = ch?.name || `Ch ${send.channelIndex}`
-                                    return (
-                                        <div key={send.channelIndex} className="flex-1 min-w-0">
-                                            <FaderStrip
-                                                label={name}
-                                                value={send.level}
-                                                on={send.on}
-                                                onChange={(val) => onSendLevel(send.channelIndex, val)}
-                                                onUnmuteCheck={() => onSendOn(send.channelIndex, true)}
-                                            />
-                                        </div>
-                                    )
-                                })}
+                    <DisconnectedOverlay active={mixerOffline}>
+                        <div className="space-y-4">
+                            {/* Master fader */}
+                            <div className="bg-card border border-brand/10 rounded-xl p-4">
+                                <FaderStrip
+                                    label="Master"
+                                    value={myBus.fader}
+                                    on={true}
+                                    isMaster
+                                    stale={stale}
+                                    onChange={onBusMaster}
+                                />
                             </div>
-                        ) : (
-                            <p className="text-sm text-muted-foreground py-4 text-center">
-                                No channels in your mix yet. Go to the <strong>Channels</strong> tab and tap{" "}
-                                <Star className="w-3 h-3 inline text-yellow-500" /> to add channels.
-                            </p>
-                        )}
-                    </div>
+
+                            {/* Visible channels (starred + defaults) */}
+                            <div className="bg-card border border-brand/10 rounded-xl p-4">
+                                <h2 className="text-sm font-medium text-muted-foreground mb-3">
+                                    My Channels
+                                </h2>
+                                {visibleSends.length > 0 ? (
+                                    <div className="space-y-1">
+                                        {visibleSends.map(send => {
+                                            const ch = channelMap.get(send.channelIndex)
+                                            const name = ch?.name || `Ch ${send.channelIndex}`
+                                            return (
+                                                <div key={send.channelIndex} className="flex-1 min-w-0">
+                                                    <FaderStrip
+                                                        label={name}
+                                                        value={send.level}
+                                                        on={send.on}
+                                                        stale={stale}
+                                                        onChange={(val) => onSendLevel(send.channelIndex, val)}
+                                                        onUnmuteCheck={() => onSendOn(send.channelIndex, true)}
+                                                    />
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground py-4 text-center">
+                                        No channels in your mix yet. Go to the <strong>Channels</strong> tab and tap{" "}
+                                        <Star className="w-3 h-3 inline text-yellow-500" /> to add channels.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </DisconnectedOverlay>
                 </TabsContent>
 
                 {/* Channels Tab (All Channels) */}
                 <TabsContent value="channels" className="space-y-4">
+                    <DisconnectedOverlay active={mixerOffline}>
+                    <div className="space-y-4">
                     {/* Master fader */}
                     <div className="bg-card border border-brand/10 rounded-xl p-4">
                         <FaderStrip
@@ -185,6 +189,7 @@ export function MonitorTabs({
                             value={myBus.fader}
                             on={true}
                             isMaster
+                            stale={stale}
                             onChange={onBusMaster}
                         />
                     </div>
@@ -222,6 +227,7 @@ export function MonitorTabs({
                                                 label={name}
                                                 value={send.level}
                                                 on={send.on}
+                                                stale={stale}
                                                 onChange={(val) => onSendLevel(send.channelIndex, val)}
                                                 onUnmuteCheck={() => onSendOn(send.channelIndex, true)}
                                             />
@@ -241,6 +247,8 @@ export function MonitorTabs({
                             )}
                         </div>
                     </div>
+                    </div>
+                    </DisconnectedOverlay>
                 </TabsContent>
 
                 {/* Bus Tab (Engineers Only) */}

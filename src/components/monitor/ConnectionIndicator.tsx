@@ -76,6 +76,25 @@ export function getConnectionDisplayState(
     return { label: "Connected", color: "bg-green-500", isAnimated: false }
 }
 
+/**
+ * Whether the mixer is unreachable for *control* — the condition under which
+ * faders should be wrapped in `DisconnectedOverlay` ("last known levels",
+ * interaction disabled). This is the HARD-offline signal: the Firestore
+ * transport is down/errored, the bridge heartbeat is offline, or the bridge is
+ * up but the X32 is disconnected.
+ *
+ * A merely *stale* (idle-frozen) desk is deliberately NOT "offline" here — its
+ * control path still works, so blocking interaction would wrongly stop a
+ * musician on a healthy-but-idle desk. Staleness is surfaced non-blockingly via
+ * the per-fader cue + Live/Stale badge (see `useMonitorStaleness`).
+ */
+export function isMixerOffline(status: ConnectionStatus, bridge?: BridgeStatus): boolean {
+    if (status === "disconnected" || status === "error") return true
+    if (!bridge) return false
+    if (!isBridgeOnline(bridge)) return true
+    return bridge.x32Connected === false
+}
+
 // ─── ConnectionIndicator component ───
 
 interface ConnectionIndicatorProps {

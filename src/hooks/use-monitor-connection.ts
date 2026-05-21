@@ -78,9 +78,9 @@ function ensureConnected(userId: string): void {
 
     // Create and start the Firestore monitor client
     const client = new FirestoreMonitorClient({
-        onStateUpdate: (snapshot) => {
+        onStateUpdate: (snapshot, stateUpdatedAt) => {
             const uid = useMonitorStore.getState().userId || userId
-            useMonitorStore.getState().setSnapshot(snapshot, uid)
+            useMonitorStore.getState().setSnapshot(snapshot, uid, stateUpdatedAt)
         },
         onConfigUpdate: (cfg) => {
             useMonitorStore.getState().setConfig(cfg)

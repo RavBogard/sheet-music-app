@@ -30,6 +30,9 @@ export default function MonitorClient() {
     const buses = useMonitorStore(s => s.buses)
     const matrices = useMonitorStore(s => s.matrices)
     const config = useMonitorStore(s => s.config)
+    // C-6: bridge health read once (before any `!config` narrowing) so it can
+    // feed ConnectionIndicator in every branch, incl. the no-config error view.
+    const bridge = config?.bridge
     const myBusIndex = useMonitorStore(s => s.myBusIndex)
     const starredChannels = useMonitorStore(s => s.starredChannels)
     const defaultChannels = useMonitorStore(s => s.defaultChannels)
@@ -147,7 +150,7 @@ export default function MonitorClient() {
             <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
                 <Radio className="w-8 h-8 text-brand animate-pulse" />
                 <p className="text-muted-foreground">Connecting to mixer...</p>
-                <ConnectionIndicator status={status} error={error} />
+                <ConnectionIndicator status={status} bridgeStatus={bridge} error={error} />
             </div>
         )
     }
@@ -155,7 +158,7 @@ export default function MonitorClient() {
     if (status === "error" && !config) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-                <ConnectionIndicator status={status} error={error} />
+                <ConnectionIndicator status={status} bridgeStatus={bridge} error={error} />
                 <p className="text-sm text-muted-foreground mt-2">
                     Make sure the bridge server is running on the production PC.
                 </p>
@@ -169,7 +172,7 @@ export default function MonitorClient() {
             <div className="max-w-lg mx-auto p-4 space-y-6">
                 <div className="flex items-center justify-between mb-2">
                     <h1 className="text-2xl font-bold">Sound Engineer</h1>
-                    <ConnectionIndicator status={status} error={error} />
+                    <ConnectionIndicator status={status} bridgeStatus={bridge} error={error} />
                 </div>
 
                 <p className="text-sm text-muted-foreground">

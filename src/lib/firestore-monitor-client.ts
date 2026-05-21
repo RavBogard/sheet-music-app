@@ -20,12 +20,20 @@ import {
     Unsubscribe,
 } from "firebase/firestore"
 import { MixerSnapshot, MonitorConfig } from "@/types/monitor"
+import { coerceMixerSnapshot } from "@/lib/monitor/coerce-state"
+import { firestoreDateToMillis } from "@/lib/monitor/state-freshness"
 import { logger } from "@/lib/logger"
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error"
 
 export interface FirestoreMonitorClientOptions {
-    onStateUpdate: (snapshot: MixerSnapshot) => void
+    /**
+     * Fired with the coerced mixer snapshot and the bridge's own write time
+     * (`state.updatedAt`, epoch millis; null when the doc has no/uncoercible
+     * stamp). The timestamp drives consumer-side staleness (AUDIT-consumers
+     * C-6) instead of the weaker "snapshot arrived" proxy.
+     */
+    onStateUpdate: (snapshot: MixerSnapshot, stateUpdatedAt: number | null) => void
     onConfigUpdate: (config: MonitorConfig) => void
     onStatusChange: (status: ConnectionStatus, error?: string) => void
 }
@@ -56,6 +64,7 @@ export class FirestoreMonitorClient {
     private _lastSnapshotAt = 0
     private _snapshotDebounceTimer: ReturnType<typeof setTimeout> | null = null
     private _pendingSnapshot: MixerSnapshot | null = null
+    private _pendingStateUpdatedAt: number | null = null
     private _firstSnapshot = true
     private _consecutiveErrors = 0
     private _retryTimer: ReturnType<typeof setTimeout> | null = null
@@ -85,7 +94,7 @@ export class FirestoreMonitorClient {
                     return
                 }
 
-                const data = snap.data() as MixerSnapshot & { updatedAt?: unknown }
+                const data = snap.data() as Record<string, unknown>
 
                 if (!this._connected) {
                     this._connected = true
@@ -93,20 +102,11 @@ export class FirestoreMonitorClient {
                 }
                 this._consecutiveErrors = 0
 
-                // Firestore may return arrays as objects with numeric keys —
-                // ensure we always pass real arrays to the store
-                const toArray = <T>(val: unknown): T[] =>
-                    Array.isArray(val) ? val : val && typeof val === "object" ? Object.values(val) : []
-
-                const parsed: MixerSnapshot = {
-                    channels: toArray(data.channels),
-                    buses: toArray<Record<string, unknown>>(data.buses).map((b) => ({
-                        ...b,
-                        sends: toArray(b.sends),
-                    })) as MixerSnapshot["buses"],
-                    matrices: toArray(data.matrices),
-                    config: data.config,
-                }
+                // C-4: route every read through the ONE shared defensive guard,
+                // so a corrupted (array→map) `buses` degrades identically here
+                // and on the MCP side. C-6: capture the bridge's own write time.
+                const parsed = coerceMixerSnapshot(data)
+                const stateUpdatedAt = firestoreDateToMillis(data.updatedAt)
 
                 this._snapshotCount++
 
@@ -114,13 +114,14 @@ export class FirestoreMonitorClient {
                 if (this._firstSnapshot) {
                     this._firstSnapshot = false
                     logger.debug("[MonitorFS] First snapshot — forwarding immediately")
-                    this.forwardSnapshot(parsed)
+                    this.forwardSnapshot(parsed, stateUpdatedAt)
                     return
                 }
 
                 // Debounce subsequent snapshots
                 logger.debug("[MonitorFS] Snapshot received (debouncing)")
                 this._pendingSnapshot = parsed
+                this._pendingStateUpdatedAt = stateUpdatedAt
                 if (this._snapshotDebounceTimer) {
                     clearTimeout(this._snapshotDebounceTimer)
                 }
@@ -128,7 +129,7 @@ export class FirestoreMonitorClient {
                     // v4.3 P6-B03: bail if teardown happened between schedule + fire
                     if (this._disconnected) return
                     if (this._pendingSnapshot) {
-                        this.forwardSnapshot(this._pendingSnapshot)
+                        this.forwardSnapshot(this._pendingSnapshot, this._pendingStateUpdatedAt)
                         this._pendingSnapshot = null
                     }
                     this._snapshotDebounceTimer = null
@@ -164,14 +165,14 @@ export class FirestoreMonitorClient {
         )
     }
 
-    private forwardSnapshot(snapshot: MixerSnapshot): void {
+    private forwardSnapshot(snapshot: MixerSnapshot, stateUpdatedAt: number | null): void {
         // v4.3 P6-B03: guard against post-teardown forwarding. onSnapshot
         // unsubscription is asynchronous in Firestore, so a snapshot
         // callback can still fire briefly after disconnect().
         if (this._disconnected) return
         this._lastSnapshotAt = Date.now()
         logger.debug("[MonitorFS] Snapshot forwarded to store (total: %d)", this._snapshotCount)
-        this.options.onStateUpdate(snapshot)
+        this.options.onStateUpdate(snapshot, stateUpdatedAt)
     }
 
     /**
@@ -197,6 +198,7 @@ export class FirestoreMonitorClient {
             this._snapshotDebounceTimer = null
         }
         this._pendingSnapshot = null
+        this._pendingStateUpdatedAt = null
 
         // Flush any pending throttled commands before disconnecting
         // This ensures the last fader position is always sent

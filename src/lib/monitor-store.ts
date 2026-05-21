@@ -43,6 +43,17 @@ function findUserBus(busAssignments: Record<string, BusAssignment | BusAssignmen
 }
 
 /**
+ * Derive the user's assigned bus from the authoritative `config/monitor` copy
+ * (held in the store via `setConfig`). AUDIT-consumers C-7: this is the SINGLE
+ * source of `myBusIndex` — never the bridge-embedded `snapshot.config`, which
+ * P1-A is removing and which could disagree with `config/monitor`.
+ */
+function deriveMyBusIndex(config: MonitorConfig | null, userId: string | null): number | null {
+    if (!config?.busAssignments || !userId) return null
+    return findUserBus(config.busAssignments, userId)
+}
+
+/**
  * Pure function: compute visible channels for live mode.
  * Returns channel indices from the union of defaultChannels + starredChannels,
  * filtered to only channels that have sends on the user's bus, deduped.
@@ -79,10 +90,18 @@ interface MonitorState {
     // Connection health
     lastSnapshotAt: number
     snapshotCount: number
+    /**
+     * The bridge's own write time off `monitor-live/state.updatedAt` (epoch
+     * millis; null before the first snapshot or when unstamped). Drives
+     * staleness via `useMonitorStaleness` — the authoritative freshness signal
+     * (C-6), unlike `lastSnapshotAt` which only marks when a *changed* snapshot
+     * arrived and reads "fresh" on load against a frozen desk.
+     */
+    stateUpdatedAt: number | null
 
     // Actions
     setStatus: (status: ConnectionStatus, error?: string) => void
-    setSnapshot: (snapshot: MixerSnapshot, userId: string) => void
+    setSnapshot: (snapshot: MixerSnapshot, userId: string, stateUpdatedAt: number | null) => void
     updateBusFader: (busIndex: number, value: number) => void
     updateSendLevel: (busIndex: number, channelIndex: number, value: number) => void
     updateSendOn: (busIndex: number, channelIndex: number, on: boolean) => void
@@ -107,31 +126,34 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     defaultChannels: [],
     lastSnapshotAt: 0,
     snapshotCount: 0,
+    stateUpdatedAt: null,
 
     setStatus: (status, error) => set({ status, error: error || null }),
 
-    setSnapshot: (snapshot, userId) => {
+    setSnapshot: (snapshot, userId, stateUpdatedAt) => {
         const state = get()
-        
+
+        // Always update health tracking (even if data unchanged). C-6: carry
+        // the bridge's own write time so an idle/frozen desk reads stale.
+        const healthUpdate = {
+            lastSnapshotAt: Date.now(),
+            snapshotCount: state.snapshotCount + 1,
+            stateUpdatedAt,
+        }
+
         // Stale-while-revalidate: Ignore empty/malformed snapshots if we already have valid data
         if (snapshot.buses.length === 0 && state.buses.length > 0) {
             logger.warn("[MonitorStore] Received empty snapshot, freezing last known good state")
             // Still update health tracking so we know we got a ping
-            set({ lastSnapshotAt: Date.now(), snapshotCount: state.snapshotCount + 1 })
+            set(healthUpdate)
             return
         }
 
-        const myBusIndex = snapshot.config.busAssignments
-            ? findUserBus(snapshot.config.busAssignments, userId)
-            : null
+        // C-7: derive the user's bus from the authoritative config/monitor copy
+        // in the store, NEVER from the bridge-embedded snapshot.config.
+        const myBusIndex = deriveMyBusIndex(state.config, userId)
 
         const matrices = snapshot.matrices || []
-
-        // Always update health tracking (even if data unchanged)
-        const healthUpdate = {
-            lastSnapshotAt: Date.now(),
-            snapshotCount: state.snapshotCount + 1,
-        }
 
         // Shallow equality check — skip store update if nothing changed
         const channelsSame = shallowEqualArray(state.channels, snapshot.channels)
@@ -145,11 +167,12 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
             return
         }
 
+        // NOTE: `config` is intentionally NOT set from the snapshot — it is owned
+        // solely by the `config/monitor` listener via setConfig (C-7).
         set({
             channels: snapshot.channels,
             buses: snapshot.buses,
             matrices,
-            config: snapshot.config,
             myBusIndex,
             userId,
             ...healthUpdate,
@@ -220,9 +243,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
 
     setConfig: (config) => {
         const { userId } = get()
-        const myBusIndex = userId && config.busAssignments
-            ? findUserBus(config.busAssignments, userId)
-            : null
+        const myBusIndex = deriveMyBusIndex(config, userId)
         // Only update defaultChannels if the config actually has the field;
         // otherwise preserve current value (bridge config lacks this field)
         const { defaultChannels: current } = get()
@@ -242,5 +263,6 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         defaultChannels: [],
         lastSnapshotAt: 0,
         snapshotCount: 0,
+        stateUpdatedAt: null,
     }),
 }))
