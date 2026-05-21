@@ -389,9 +389,24 @@ service cloud.firestore {
 
     // Monitor commands — iPads write commands, bridge processes & deletes via Admin SDK.
     // S05: schema-check `type` against known allowlist and shape-fields by type.
+    //
+    // monitor-fix-f1 (F1): the BRIDGE is the AUTHORITATIVE bus-ownership gate — it
+    // re-checks isCommandAuthorized against config/monitor.busAssignments before
+    // touching the X32. These rules enforce only the CHEAP, high-value half of authZ
+    // so the bridge is genuine defense-in-depth rather than the SOLE gate:
+    //   - real membership (isMember/isSoundEngineer, NOT bare isSignedIn) so a
+    //     pending/denied account can't enqueue any command;
+    //   - self-attribution (uid == auth.uid);
+    //   - the FOH matrix primitives gated to admin / sound-engineer in-rule
+    //     (no per-bus data lookup needed — matrix is the most dangerous primitive);
+    //   - a closed field set + per-field type checks.
+    // Per-bus ownership is intentionally NOT enforced here: it needs a CEL get() on
+    // config/monitor + array membership, which is awkward and costs a read per
+    // command — that check stays at the bridge.
+    // See .paul/research/monitor-audit-lane2-app-mcp-FINDINGS.md (F1/F7).
     match /monitor-live/commands/pending/{commandId} {
       allow read: if false; // Bridge reads via Admin SDK
-      allow create: if isSignedIn()
+      allow create: if (isMember() || isSoundEngineer())
                     && request.resource.data.uid == request.auth.uid
                     && request.resource.data.createdAt is number
                     && request.resource.data.type in [
@@ -401,6 +416,17 @@ service cloud.firestore {
                         'set_matrix_fader',
                         'set_matrix_on'
                     ]
+                    // FOH matrix outputs are admin / sound-engineer only.
+                    && (
+                        !(request.resource.data.type in ['set_matrix_fader', 'set_matrix_on'])
+                        || isAdmin() || isSoundEngineer()
+                    )
+                    // Closed field set — the only Web SDK writer
+                    // (src/lib/firestore-monitor-client.ts) writes exactly these keys.
+                    && request.resource.data.keys().hasOnly([
+                        'type', 'uid', 'createdAt',
+                        'busIndex', 'channelIndex', 'matrixIndex', 'value'
+                    ])
                     && (!('busIndex' in request.resource.data)     || request.resource.data.busIndex is int)
                     && (!('channelIndex' in request.resource.data) || request.resource.data.channelIndex is int)
                     && (!('matrixIndex' in request.resource.data)  || request.resource.data.matrixIndex is int)

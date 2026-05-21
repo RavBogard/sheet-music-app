@@ -318,9 +318,12 @@ export class FirestoreTransport {
      * Check if a user is authorized to execute this command.
      */
     private async isCommandAuthorized(cmd: PendingCommand): Promise<boolean> {
-        // Need to verify the uid has access to the bus they're controlling.
-        // For now, we trust that the Firestore security rules enforce this.
-        // The bridge-side check is a defense-in-depth measure.
+        // This is the AUTHORITATIVE bus-ownership / privilege gate. firestore.rules
+        // does NOT enforce per-bus ownership (it only checks membership, self-
+        // attribution, the command shape, and admin/SE-gates the FOH matrix
+        // primitives — see firestore.rules monitor-live/commands/pending). So this
+        // check is the only thing verifying a user owns the bus they're driving;
+        // if it is removed or weakened, any member could control any bus.
         const userBus = this.config.getUserBus(cmd.uid)
 
         // Fetch user document to check if they are an admin or sound engineer
