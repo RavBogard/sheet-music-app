@@ -16,6 +16,7 @@ import { getCorrectionStats } from "./correction-stats"
 import { testDeleteStorageObject } from "./test-delete-storage-object"
 import { dumpCollectionSize } from "./dump-collection-size"
 import { getWebVitalsSummary } from "./web-vitals-summary"
+import { getAiSpendSummary } from "./ai-spend-summary"
 import {
     listReviewQueue,
     getEnrichmentSuggestion,
@@ -2694,5 +2695,26 @@ export function registerObservabilityTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await getWebVitalsSummary(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "get_ai_spend_summary",
+        {
+            description:
+                "Admin-only — trailing 7-day + 30-day rollup of AI enrichment token spend + estimated USD, read from the `aiSpend` sink (one doc per Gemini enrichment call). Use this to snapshot the AI-cost baseline without leaving Claude. REPORT-ONLY: there is no spend ceiling — Daniel's standing rule is 'AI cost is report, not ceiling'. Args: `maxDocs?` safety cap on docs scanned (default 20000, hard max 100000). Returns `{ok:true, generatedAt, truncated, windows:{last7Days, last30Days}}` where each window is `{sinceDays, since, sampleCount, totalTokens, totalCostUsd, byModel:{<model>:{sampleCount, totalTokens, totalCostUsd}}}`. Cost is an estimate from per-1M-token pricing constants, not billing-grade.",
+            inputSchema: {
+                maxDocs: z
+                    .number()
+                    .int()
+                    .positive()
+                    .max(100_000)
+                    .optional()
+                    .describe(
+                        "Safety cap on aiSpend docs scanned. Default 20000; hard max 100000. `truncated:true` means more docs match the 30-day scan window than fit under the cap.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await getAiSpendSummary(uidFrom(extra), args)),
     )
 }

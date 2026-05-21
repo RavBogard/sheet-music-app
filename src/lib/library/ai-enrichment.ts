@@ -77,6 +77,32 @@ export const AI_ENRICHMENT_MODEL = "gemini-3.1-pro-preview"
  */
 const MAX_OUTPUT_TOKENS = 1024
 
+/**
+ * PGR-04 (2026-05-21) — AI-spend visibility pricing constants.
+ *
+ * Gemini 3.1 Pro Preview token pricing (estimated USD per 1M tokens).
+ * Report-only cost VISIBILITY, NOT billing-grade — Daniel's standing rule
+ * is "AI cost is REPORT, not CEILING" ([[project_ai_cost_baseline]]).
+ * Tune these two constants if Google's published Gemini Pro pricing
+ * changes; every downstream cost figure derives from them. Input is
+ * billed at the prompt rate; everything else the model emits (candidate
+ * output + any reasoning/thought tokens) at the output rate.
+ */
+const USD_PER_1M_INPUT_TOKENS = 1.25
+const USD_PER_1M_OUTPUT_TOKENS = 10
+
+/**
+ * PGR-04 — hard cap on raw bytes inlined into a Gemini request (the
+ * `inlineData` PDF/image path). Two reasons:
+ *   1. Cost safety — a pathological multi-hundred-MB upload would balloon
+ *      prompt-token cost with no enrichment benefit.
+ *   2. Transport — Gemini's inline ceiling is ~20MB AFTER base64 (+33%);
+ *      10MB raw stays comfortably under it.
+ * Over-cap rows are skipped-with-signal (routed to review, NO model call)
+ * — enrichment stays fail-open + advisory, never blocking an import.
+ */
+const MAX_INLINE_INPUT_BYTES = 10 * 1024 * 1024
+
 /** Daniel-ratified default — config-driven via aiConfig/autoApplyEnabled. */
 export const DEFAULT_CONFIDENCE_THRESHOLD = 0.7
 
@@ -112,6 +138,25 @@ export const EnrichmentOutputSchema = z.object({
 })
 
 export type EnrichmentOutput = z.infer<typeof EnrichmentOutputSchema>
+
+/** PGR-04 — token usage captured from a Gemini `generateContent` response. */
+export interface GeminiTokenUsage {
+    promptTokenCount: number
+    candidatesTokenCount: number
+    totalTokenCount: number
+}
+
+/**
+ * PGR-04 — what the model call returns. Widened from a bare
+ * `EnrichmentOutput` to a wrapper that also carries token usage so
+ * {@link enrichLibraryRow} can record spend. BACKWARD COMPATIBLE:
+ * {@link unwrapModelResult} accepts either shape, so existing callers /
+ * tests that return a bare `EnrichmentOutput` keep working unchanged.
+ */
+export interface EnrichmentModelResult {
+    output: EnrichmentOutput
+    usage?: GeminiTokenUsage | null
+}
 
 /**
  * Gemini `responseSchema` mirror of EnrichmentOutputSchema. Gemini's
@@ -274,7 +319,7 @@ export interface AiEnrichmentDeps {
         event: LibraryRowCreatedEvent
         fileBytes: Buffer | null
         neighborTitles: string[]
-    }) => Promise<EnrichmentOutput>
+    }) => Promise<EnrichmentOutput | EnrichmentModelResult>
     /** Returns the file bytes (post-conversion) for AI inspection. */
     fetchBytes: (storagePath: string) => Promise<Buffer | null>
     /** Loads the aiConfig flag set. */
@@ -326,8 +371,28 @@ export async function enrichLibraryRow(
         // ─── Model call (with retry-queue routing on failure) ────────────
         try {
             const fileBytes = await fetchBytes(event.storagePath)
+
+            // PGR-04 input cap: oversized inline input → skip-with-signal,
+            // NO model call (no tokens spent). The row is routed to the A4
+            // review queue rather than ballooning prompt-token cost.
+            if (
+                fileBytes &&
+                exceedsInlineInputCap(event.mimeType, fileBytes.length)
+            ) {
+                await skipForOversizedInput(db, event, fileBytes.length)
+                return
+            }
+
             const neighborTitles = await fetchNeighborTitles(db, event)
-            output = await callModel({ event, fileBytes, neighborTitles })
+            const { output: modelOutput, usage } = unwrapModelResult(
+                await callModel({ event, fileBytes, neighborTitles }),
+            )
+
+            // PGR-04 spend capture — best-effort, fail-open, never blocks
+            // enrichment (a real call happened, so tokens were billed).
+            await recordAiSpend(db, event, usage)
+
+            output = modelOutput
 
             // Validate before any persistence — schema drift = retry-eligible failure.
             const validated = EnrichmentOutputSchema.safeParse(output)
@@ -493,7 +558,7 @@ export async function callGeminiForEnrichment(args: {
     event: LibraryRowCreatedEvent
     fileBytes: Buffer | null
     neighborTitles: string[]
-}): Promise<EnrichmentOutput> {
+}): Promise<EnrichmentModelResult> {
     const { event, fileBytes, neighborTitles } = args
     const ai = getGeminiClient()
 
@@ -533,7 +598,11 @@ export async function callGeminiForEnrichment(args: {
     }
     // Schema validation happens in the caller (enrichLibraryRow) —
     // defense in depth regardless of provider's structured-output gate.
-    return parsed as EnrichmentOutput
+    // PGR-04: also surface token usage so the caller can record spend.
+    return {
+        output: parsed as EnrichmentOutput,
+        usage: extractUsage(response),
+    }
 }
 
 type SupportedImageMediaType =
@@ -643,6 +712,140 @@ function buildUserContent(
     })
 
     return parts
+}
+
+// ─── PGR-04: spend capture + input cap ─────────────────────────────────────
+
+/**
+ * True only for the inline-binary send paths (PDF + supported image) whose
+ * raw byte length exceeds {@link MAX_INLINE_INPUT_BYTES}. The text path is
+ * already truncated to 12K chars and the metadata-only fallback is tiny, so
+ * neither needs a cap.
+ */
+export function exceedsInlineInputCap(
+    mimeType: string,
+    byteLength: number,
+): boolean {
+    const isInlineBinary =
+        mimeType === "application/pdf" ||
+        asSupportedImageMediaType(mimeType) !== null
+    return isInlineBinary && byteLength > MAX_INLINE_INPUT_BYTES
+}
+
+/**
+ * Estimate USD cost of one enrichment call from its token usage. Prompt
+ * tokens at the input rate; all other emitted tokens (candidate output +
+ * any reasoning/thought tokens) at the output rate. Output is derived as
+ * the non-prompt remainder so thought tokens — which some Gemini responses
+ * report outside `candidatesTokenCount` — are still billed. Returns 0 for
+ * absent usage.
+ */
+export function estimateEnrichmentCostUsd(
+    usage: GeminiTokenUsage | null | undefined,
+): number {
+    if (!usage) return 0
+    const prompt = Math.max(0, usage.promptTokenCount || 0)
+    const total = Math.max(0, usage.totalTokenCount || 0)
+    const output = Math.max(usage.candidatesTokenCount || 0, total - prompt)
+    return (
+        (prompt / 1_000_000) * USD_PER_1M_INPUT_TOKENS +
+        (output / 1_000_000) * USD_PER_1M_OUTPUT_TOKENS
+    )
+}
+
+/** Pull token usage off a Gemini response; null when unavailable. */
+function extractUsage(response: {
+    usageMetadata?: {
+        promptTokenCount?: number
+        candidatesTokenCount?: number
+        totalTokenCount?: number
+    } | null
+}): GeminiTokenUsage | null {
+    const u = response.usageMetadata
+    if (!u) return null
+    return {
+        promptTokenCount: u.promptTokenCount ?? 0,
+        candidatesTokenCount: u.candidatesTokenCount ?? 0,
+        totalTokenCount: u.totalTokenCount ?? 0,
+    }
+}
+
+/**
+ * Accepts either the legacy bare `EnrichmentOutput` (existing tests /
+ * callers) or the PGR-04 `{ output, usage }` wrapper, and normalizes to
+ * the wrapper shape. `EnrichmentOutput` never has an `output` key, so the
+ * presence of one unambiguously identifies the wrapper.
+ */
+function unwrapModelResult(
+    r: EnrichmentOutput | EnrichmentModelResult,
+): EnrichmentModelResult {
+    if (r && typeof r === "object" && "output" in r) {
+        const wrapped = r as EnrichmentModelResult
+        return { output: wrapped.output, usage: wrapped.usage ?? null }
+    }
+    return { output: r as EnrichmentOutput, usage: null }
+}
+
+/**
+ * PGR-04 — record one enrichment's token spend to `aiSpend/{auto}`.
+ * Best-effort + fail-open: a spend-write failure must NEVER affect the
+ * enrichment outcome (report-only). No-op when usage is unavailable
+ * (cache hit, or a mocked model that returned no usage).
+ */
+async function recordAiSpend(
+    db: Firestore,
+    event: LibraryRowCreatedEvent,
+    usage: GeminiTokenUsage | null | undefined,
+): Promise<void> {
+    if (!usage) return
+    try {
+        await db.collection("aiSpend").add({
+            rowId: event.rowId,
+            fileId: event.fileId,
+            model: AI_ENRICHMENT_MODEL,
+            promptTokens: usage.promptTokenCount,
+            candidatesTokens: usage.candidatesTokenCount,
+            totalTokens: usage.totalTokenCount,
+            costUsd: estimateEnrichmentCostUsd(usage),
+            ts: new Date().toISOString(),
+        })
+    } catch (err) {
+        logger.warn(
+            `[ai-enrichment] aiSpend write failed for ${event.rowId} (non-fatal): ${describeError(err)}`,
+        )
+    }
+}
+
+/**
+ * PGR-04 — oversized inline input: route to review WITHOUT a model call.
+ * The row keeps its raw metadata (fail-open) and surfaces in the A4 review
+ * queue via `enrichmentStatus:'review_pending'`. No tokens spent; any
+ * pending retry doc is cleared so the cron drain stops re-skipping it.
+ */
+async function skipForOversizedInput(
+    db: Firestore,
+    event: LibraryRowCreatedEvent,
+    byteLength: number,
+): Promise<void> {
+    logger.warn(
+        `[ai-enrichment] ${event.rowId} input ${byteLength}B exceeds ${MAX_INLINE_INPUT_BYTES}B inline cap (mime=${event.mimeType}); skipping AI, routing to review.`,
+    )
+    try {
+        await db.collection("library_index").doc(event.rowId).update({
+            enrichmentStatus: "review_pending",
+            enrichmentRanAt: new Date().toISOString(),
+            enrichmentModel: AI_ENRICHMENT_MODEL,
+            aiReviewTriggers: ["input_too_large"],
+            enrichmentSkippedReason: `input_exceeds_inline_cap:${byteLength}`,
+        })
+    } catch (err) {
+        // Fail-open: leave the row at 'pending' if the marker write fails
+        // (e.g. row deleted between import and enrichment).
+        logger.warn(
+            `[ai-enrichment] oversized-input marker write failed for ${event.rowId}: ${describeError(err)}`,
+        )
+    }
+    await clearRetry(db, event.rowId)
 }
 
 // ─── Firestore helpers ─────────────────────────────────────────────────────

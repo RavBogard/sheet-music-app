@@ -558,6 +558,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // AI SPEND (PGR-04 — 2026-05-21) — per-enrichment token + estimated-USD
+    // sink written by src/lib/library/ai-enrichment.ts via the Admin SDK.
+    // Reads are admin-only (cost data is operator-facing, surfaced via the
+    // get_ai_spend_summary MCP tool — band leaders should NOT see it);
+    // writes are server-only (the Admin SDK bypasses these rules). Mirrors
+    // the webVitalsObservations / aiCorrectionSignals access shape.
+    match /aiSpend/{spendId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Deny-all fallback — any collection not explicitly matched above is locked.
     // Prevents new collections from being accidentally accessible.
     match /{document=**} {

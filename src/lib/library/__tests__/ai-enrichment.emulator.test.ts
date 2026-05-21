@@ -151,6 +151,7 @@ describe("AI enrichment subscriber — NEW-3 (emulator)", () => {
             "aiConfig",
             "aiEnrichmentCache",
             "aiEnrichmentRetryQueue",
+            "aiSpend",
         ]) {
             const snap = await db().collection(coll).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
@@ -467,6 +468,108 @@ describe("AI enrichment subscriber — NEW-3 (emulator)", () => {
         await expect(
             applyEnrichment(db(), makeEvent(), out, cfg),
         ).resolves.toBeUndefined()
+    })
+
+    it("PGR-04: records an aiSpend doc when the model returns usage", async () => {
+        const event = makeEvent()
+        await seedRow(db(), event.rowId)
+        const callModel = vi.fn(async () => ({
+            output: passingOutput(),
+            usage: {
+                promptTokenCount: 1000,
+                candidatesTokenCount: 200,
+                totalTokenCount: 1200,
+            },
+        }))
+        const deps = buildTestDeps(db(), { callModel })
+
+        await enrichLibraryRow(event, deps)
+
+        const spendSnap = await db().collection("aiSpend").get()
+        expect(spendSnap.size).toBe(1)
+        const spend = spendSnap.docs[0].data()
+        expect(spend.rowId).toBe(event.rowId)
+        expect(spend.promptTokens).toBe(1000)
+        expect(spend.candidatesTokens).toBe(200)
+        expect(spend.totalTokens).toBe(1200)
+        expect(spend.model).toBeTruthy()
+        expect(typeof spend.ts).toBe("string")
+        // 1000/1e6*1.25 + 200/1e6*10 = 0.00125 + 0.002 = 0.00325
+        expect(spend.costUsd).toBeCloseTo(0.00325, 8)
+
+        // The row is still enriched normally — spend capture is a side-write.
+        const row = (
+            await db().collection("library_index").doc(event.rowId).get()
+        ).data()
+        expect(row?.enrichmentStatus).toBe("enriched")
+    })
+
+    it("PGR-04: legacy bare-EnrichmentOutput callModel still enriches, writes no spend", async () => {
+        const event = makeEvent()
+        await seedRow(db(), event.rowId)
+        // Default buildTestDeps callModel returns a bare EnrichmentOutput
+        // (the pre-PGR-04 shape) — backward-compat path.
+        const deps = buildTestDeps(db())
+
+        await enrichLibraryRow(event, deps)
+
+        const spendSnap = await db().collection("aiSpend").get()
+        expect(spendSnap.size).toBe(0) // no usage available → no spend doc
+        const row = (
+            await db().collection("library_index").doc(event.rowId).get()
+        ).data()
+        expect(row?.enrichmentStatus).toBe("enriched")
+    })
+
+    it("PGR-04: oversized inline input → skipped-with-signal, NO model call, NO spend", async () => {
+        const event = makeEvent({ mimeType: "application/pdf" })
+        await seedRow(db(), event.rowId)
+        const callModel = vi.fn(async () => passingOutput())
+        const big = Buffer.alloc(11 * 1024 * 1024, 1) // 11MB > 10MB cap
+        const deps = buildTestDeps(db(), {
+            callModel,
+            fetchBytes: vi.fn(async () => big),
+        })
+
+        await enrichLibraryRow(event, deps)
+
+        expect(callModel).not.toHaveBeenCalled()
+        const row = (
+            await db().collection("library_index").doc(event.rowId).get()
+        ).data()
+        expect(row?.enrichmentStatus).toBe("review_pending")
+        expect(row?.aiReviewTriggers).toContain("input_too_large")
+        expect(row?.enrichmentSkippedReason).toMatch(/input_exceeds_inline_cap/)
+
+        const spendSnap = await db().collection("aiSpend").get()
+        expect(spendSnap.size).toBe(0)
+    })
+
+    it("PGR-04: under-cap input proceeds to the model normally", async () => {
+        const event = makeEvent({ mimeType: "application/pdf" })
+        await seedRow(db(), event.rowId)
+        const callModel = vi.fn(async () => ({
+            output: passingOutput(),
+            usage: {
+                promptTokenCount: 10,
+                candidatesTokenCount: 5,
+                totalTokenCount: 15,
+            },
+        }))
+        const small = Buffer.alloc(1024, 1) // 1KB ≪ cap
+        const deps = buildTestDeps(db(), {
+            callModel,
+            fetchBytes: vi.fn(async () => small),
+        })
+
+        await enrichLibraryRow(event, deps)
+
+        expect(callModel).toHaveBeenCalledTimes(1)
+        const row = (
+            await db().collection("library_index").doc(event.rowId).get()
+        ).data()
+        expect(row?.enrichmentStatus).toBe("enriched")
+        expect((await db().collection("aiSpend").get()).size).toBe(1)
     })
 
     it("schema-invalid Gemini payload routes to retry queue", async () => {
