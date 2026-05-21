@@ -2,11 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 /**
  * Cycle-1 F-001/F-002/F-003 regression — defensive guards on mixer state
- * read by `list_monitor_buses` and `get_matrix`.
+ * read by `list_monitor_buses`, `get_mix`, and `get_matrix`.
+ *
+ * (get_mix was MISSED by the original cycle-1 sweep: it called
+ * `state.buses.find`/`.map`, `for…of state.channels`, and `bus.sends.map`
+ * with no `safeArray` guard and no try/catch. The 2026-05-21 staleness-guard
+ * ship surfaced it — `get_mix(busIndex=3)` threw `state.buses.find is not a
+ * function` at the deployed surface against the LIVE-stale `monitor-live/state`
+ * whose `buses` came back as a non-array. The get_mix block below is the
+ * regression that closes that gap.)
  *
  * Before the fix, if `monitor-live/state.buses` was stored as a non-array
  * (an object, a string, undefined behind a corrupted field), the handler
- * called `.map` on it and threw `TypeError: (...).map is not a function`.
+ * called `.map`/`.find` on it and threw `TypeError: (...) is not a function`.
  * The MCP framework propagated the throw as a raw error string with no
  * structured envelope, leaving agent callers with an un-typed failure.
  *
@@ -45,7 +53,7 @@ import {
     loadMixerStateMeta,
     isPrivilegedMonitor,
 } from "@/lib/mcp/server-monitor"
-import { listMonitorBuses, getMatrix } from "../tools/monitor"
+import { listMonitorBuses, getMatrix, getMix } from "../tools/monitor"
 import type { MixerSnapshot } from "@/types/monitor"
 
 /** Wrap a (possibly corrupted) snapshot in the loadMixerStateMeta envelope. */
@@ -244,6 +252,148 @@ describe("get_matrix — F-002 defensive guards", () => {
                 machine_code: "internal_error",
                 message: expect.stringMatching(
                     /get_matrix internal error: Bridge daemon unreachable/,
+                ),
+            },
+        })
+    })
+})
+
+describe("get_mix — defensive guards (deployed-surface regression 2026-05-21)", () => {
+    it("returns a graceful invalid_bus_index envelope (NOT a raw throw) when state.buses is a non-array — the exact LIVE-stale prod shape", async () => {
+        // The auditor's deployed repro: get_mix(busIndex=3) @ prod 70357f47f →
+        // "i.buses.find is not a function". The LIVE-stale monitor-live/state
+        // carries `buses` as a non-array object; safeArray must coerce it to []
+        // so .find returns undefined → graceful envelope, never a raw throw.
+        vi.mocked(loadMixerStateMeta).mockResolvedValue(
+            meta({
+                buses: { "3": { index: 3, name: "rabbi wedge" } },
+                channels: [],
+                matrices: [],
+                config: {},
+            }),
+        )
+
+        const result = await getMix("admin-uid", { busIndex: 3 })
+
+        // Did NOT throw, and degraded to the structured invalid_bus_index shape.
+        // richError spreads context extras at the TOP level of the envelope.
+        expect(result).toMatchObject({
+            ok: false,
+            error: { machine_code: "invalid_bus_index" },
+            validBusIndices: [],
+        })
+    })
+
+    it("returns a graceful invalid_bus_index when state.buses is missing entirely", async () => {
+        vi.mocked(loadMixerStateMeta).mockResolvedValue(
+            meta({ channels: [], matrices: [], config: {} }),
+        )
+
+        const result = await getMix("admin-uid", { busIndex: 3 })
+        expect(result).toMatchObject({
+            ok: false,
+            error: { machine_code: "invalid_bus_index" },
+        })
+        expect("buses" in (result as object)).toBe(false)
+    })
+
+    it("handles the happy path with real BusInfo[] and resolves channel names", async () => {
+        vi.mocked(loadMixerStateMeta).mockResolvedValue(
+            meta({
+                buses: [
+                    {
+                        index: 3,
+                        name: "rabbi wedge",
+                        fader: 0.74,
+                        sends: [
+                            { channelIndex: 1, level: 0.5, on: true },
+                            { channelIndex: 2, level: 0.2, on: false },
+                        ],
+                    },
+                ],
+                channels: [
+                    { index: 1, name: "Vox", color: 0 },
+                    { index: 2, name: "Bass", color: 0 },
+                ],
+                matrices: [],
+                config: {},
+            }),
+        )
+
+        const result = await getMix("admin-uid", { busIndex: 3 })
+        expect(result).toMatchObject({
+            busIndex: 3,
+            name: "rabbi wedge",
+            fader: 0.74,
+            sends: [
+                { channelIndex: 1, channelName: "Vox", level: 0.5, on: true, muted: false },
+                { channelIndex: 2, channelName: "Bass", level: 0.2, on: false, muted: true },
+            ],
+        })
+        expect("error" in (result as object)).toBe(false)
+    })
+
+    it("does not throw when state.channels is a non-array — channel names fall back to `Ch N`", async () => {
+        vi.mocked(loadMixerStateMeta).mockResolvedValue(
+            meta({
+                buses: [
+                    {
+                        index: 3,
+                        name: "rabbi wedge",
+                        fader: 0.5,
+                        sends: [{ channelIndex: 7, level: 0.3, on: true }],
+                    },
+                ],
+                channels: { "1": { index: 1, name: "Vox" } }, // corrupt non-array
+                matrices: [],
+                config: {},
+            }),
+        )
+
+        const result = (await getMix("admin-uid", { busIndex: 3 })) as {
+            sends: Array<{ channelIndex: number; channelName: string }>
+        }
+        expect(result.sends).toEqual([
+            { channelIndex: 7, channelName: "Ch 7", level: 0.3, on: true, muted: false },
+        ])
+    })
+
+    it("does not throw when the matched bus's sends is a non-array — sends degrades to []", async () => {
+        vi.mocked(loadMixerStateMeta).mockResolvedValue(
+            meta({
+                buses: [
+                    {
+                        index: 3,
+                        name: "rabbi wedge",
+                        fader: 0.5,
+                        sends: { "7": { channelIndex: 7 } }, // corrupt non-array
+                    },
+                ],
+                channels: [],
+                matrices: [],
+                config: {},
+            }),
+        )
+
+        const result = (await getMix("admin-uid", { busIndex: 3 })) as {
+            sends: unknown[]
+        }
+        expect(result.sends).toEqual([])
+        expect("error" in (result as object)).toBe(false)
+    })
+
+    it("F-003: unexpected throw inside handler returns the rich envelope (get_mix now has the same try/catch as its siblings)", async () => {
+        vi.mocked(loadMixerStateMeta).mockRejectedValue(
+            new Error("Firestore unavailable"),
+        )
+
+        const result = await getMix("admin-uid", { busIndex: 3 })
+        expect(result).toMatchObject({
+            ok: false,
+            error: {
+                machine_code: "internal_error",
+                message: expect.stringMatching(
+                    /get_mix internal error: Firestore unavailable/,
                 ),
             },
         })

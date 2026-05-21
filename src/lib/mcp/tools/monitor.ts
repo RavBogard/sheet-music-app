@@ -11,7 +11,13 @@ import {
     loadMixerStateMeta,
     serializeLastSeen,
 } from "@/lib/mcp/server-monitor"
-import type { BridgeStatus, BusAssignment } from "@/types/monitor"
+import type {
+    BridgeStatus,
+    BusAssignment,
+    BusInfo,
+    BusSend,
+    ChannelInfo,
+} from "@/types/monitor"
 
 /**
  * MCP monitor-control tools. Owner-scoped: any musician with an assigned bus
@@ -223,73 +229,95 @@ export async function getMix(
       }
     | RichErrorEnvelope
 > {
-    initAdmin()
-    const db = getFirestore()
+    try {
+        initAdmin()
+        const db = getFirestore()
 
-    const access = await assertMonitorAccess(db, uid)
-    if (!access.ok) return access
+        const access = await assertMonitorAccess(db, uid)
+        if (!access.ok) return access
 
-    const busIndex =
-        args.busIndex !== undefined ? args.busIndex : access.ownedBuses[0]
-    if (busIndex === undefined) {
-        // C9I4-007: this is a client-precondition (caller passed no busIndex
-        // and owns none), not a server fault — emit 400, not the default 500.
-        // machine_code is unchanged; only the HTTP-like code is corrected via
-        // the factory's documented errorCode override (errors.ts is hard-rule
-        // read-only, and the map defaults unknown codes to 500).
+        const busIndex =
+            args.busIndex !== undefined ? args.busIndex : access.ownedBuses[0]
+        if (busIndex === undefined) {
+            // C9I4-007: this is a client-precondition (caller passed no busIndex
+            // and owns none), not a server fault — emit 400, not the default 500.
+            // machine_code is unchanged; only the HTTP-like code is corrected via
+            // the factory's documented errorCode override (errors.ts is hard-rule
+            // read-only, and the map defaults unknown codes to 500).
+            return richError(
+                "monitor_no_bus_assigned",
+                "No bus specified and you don't own any bus.",
+                { yourAssignedBuses: access.ownedBuses, errorCode: 400 },
+                "Pass a busIndex or ask an admin to assign one to you.",
+            )
+        }
+
+        if (!canControlBus(access.user, access.ownedBuses, busIndex)) {
+            return richError(
+                "monitor_bus_forbidden",
+                `You don't have access to bus ${busIndex}.`,
+                { busIndex, yourAssignedBuses: access.ownedBuses },
+                "Use one of your assigned buses or ask an admin for access.",
+            )
+        }
+
+        const { snapshot: state, updatedAt } = await loadMixerStateMeta(db)
+        if (!state)
+            return richError(
+                "monitor_state_unavailable",
+                "Mixer state not available — is the bridge online?",
+                undefined,
+                "Check the bridge status via list_monitor_buses then retry.",
+            )
+
+        // Cycle-1 F-001/F-002 defense (was missing on get_mix — the gap that let
+        // the staleness-guard ship throw `state.buses.find is not a function` at
+        // the deployed surface, 2026-05-21 auditor BLOCK). The LIVE-stale prod
+        // `monitor-live/state` carries `buses`/`channels` as NON-arrays (corrupt
+        // / frozen write), so every array access here MUST go through safeArray —
+        // exactly as list_monitor_buses + get_matrix already do. Against a corrupt
+        // snapshot get_mix now degrades to a graceful `invalid_bus_index` envelope
+        // (validBusIndices: []) instead of a raw uncaught throw.
+        const buses = safeArray<BusInfo>(state.buses)
+        const bus = buses.find((b) => b.index === busIndex)
+        if (!bus)
+            return richError(
+                "invalid_bus_index",
+                `Bus ${busIndex} is not active on the live mixer.`,
+                {
+                    busIndex,
+                    validBusIndices: buses.map((b) => b.index),
+                },
+                "Call list_monitor_buses to see active buses.",
+            )
+
+        const channelNameByIndex = new Map<number, string>()
+        for (const ch of safeArray<ChannelInfo>(state.channels))
+            channelNameByIndex.set(ch.index, ch.name)
+
+        return {
+            busIndex: bus.index,
+            name: bus.name,
+            fader: bus.fader,
+            sends: safeArray<BusSend>(bus.sends).map((s) => ({
+                channelIndex: s.channelIndex,
+                channelName:
+                    channelNameByIndex.get(s.channelIndex) ??
+                    `Ch ${s.channelIndex}`,
+                level: s.level,
+                on: s.on,
+                muted: !s.on,
+            })),
+            bridge: buildBridgeHealth(access.config.bridge, updatedAt),
+        }
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
         return richError(
-            "monitor_no_bus_assigned",
-            "No bus specified and you don't own any bus.",
-            { yourAssignedBuses: access.ownedBuses, errorCode: 400 },
-            "Pass a busIndex or ask an admin to assign one to you.",
+            "internal_error",
+            `get_mix internal error: ${msg}`,
+            { tool: "get_mix" },
+            "Retry; if the error persists, check the bridge connection.",
         )
-    }
-
-    if (!canControlBus(access.user, access.ownedBuses, busIndex)) {
-        return richError(
-            "monitor_bus_forbidden",
-            `You don't have access to bus ${busIndex}.`,
-            { busIndex, yourAssignedBuses: access.ownedBuses },
-            "Use one of your assigned buses or ask an admin for access.",
-        )
-    }
-
-    const { snapshot: state, updatedAt } = await loadMixerStateMeta(db)
-    if (!state)
-        return richError(
-            "monitor_state_unavailable",
-            "Mixer state not available — is the bridge online?",
-            undefined,
-            "Check the bridge status via list_monitor_buses then retry.",
-        )
-
-    const bus = state.buses.find((b) => b.index === busIndex)
-    if (!bus)
-        return richError(
-            "invalid_bus_index",
-            `Bus ${busIndex} is not active on the live mixer.`,
-            {
-                busIndex,
-                validBusIndices: state.buses.map((b) => b.index),
-            },
-            "Call list_monitor_buses to see active buses.",
-        )
-
-    const channelNameByIndex = new Map<number, string>()
-    for (const ch of state.channels) channelNameByIndex.set(ch.index, ch.name)
-
-    return {
-        busIndex: bus.index,
-        name: bus.name,
-        fader: bus.fader,
-        sends: bus.sends.map((s) => ({
-            channelIndex: s.channelIndex,
-            channelName: channelNameByIndex.get(s.channelIndex) ?? `Ch ${s.channelIndex}`,
-            level: s.level,
-            on: s.on,
-            muted: !s.on,
-        })),
-        bridge: buildBridgeHealth(access.config.bridge, updatedAt),
     }
 }
 
