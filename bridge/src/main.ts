@@ -305,6 +305,21 @@ async function startBackgroundBridge() {
     if (bridgeStarted) return;
     bridgeStarted = true;
 
+    // Report the REAL packaged build version (Electron reads it from the bundled
+    // package.json) instead of the hardcoded "2.0.0" sentinel. Both the Firestore
+    // heartbeat (config.ts) and the console banner (index.ts) read BRIDGE_VERSION
+    // lazily, so setting it here — before startBridge() runs — makes them publish the
+    // true version (e.g. 10.0.0). This lets us confirm REMOTELY (via the heartbeat)
+    // that a deployed auto-update actually landed — closing the recon version-blind gap.
+    // An explicit env override still wins (only set when unset).
+    if (!process.env.BRIDGE_VERSION) {
+        try {
+            process.env.BRIDGE_VERSION = app.getVersion();
+        } catch {
+            // Non-Electron / dev context — fall back to the sentinel default.
+        }
+    }
+
     try {
         // Redirect console output to the Electron UI
         const originalLog = console.log;
