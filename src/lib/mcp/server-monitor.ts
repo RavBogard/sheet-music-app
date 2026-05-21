@@ -170,6 +170,35 @@ export function getOwnedBuses(config: MonitorConfig, uid: string): number[] {
 }
 
 /**
+ * Authoritative set of bus indices a caller may target, DECOUPLED from the
+ * (corruptible) live snapshot. Union of:
+ *   - configured monitor buses (`config.monitorBuses`),
+ *   - buses the caller owns (`getOwnedBuses` — passed in by the caller),
+ *   - buses currently present in the live snapshot (additive evidence only).
+ *
+ * The live snapshot is NEVER the sole gate. Under bridge bug R3 the dot-path
+ * delta writer corrupts `buses` ARRAY→MAP and drops owned/configured buses, so
+ * gating writes/reads on it falsely refused `invalid_bus_index` for a bus the
+ * caller genuinely owns and the command queue can still reach (DEFECT-REGISTER
+ * C-5 / MCP-D2; caught live by the P0-B2 probe). Validate against THIS set
+ * instead; demote live-snapshot absence to a soft warning. Sorted, unique, pure.
+ */
+export function validBusIndicesFor(
+    config: MonitorConfig,
+    ownedBuses: number[],
+    liveBusIndices: number[] = [],
+): number[] {
+    const set = new Set<number>()
+    const configured = Array.isArray(config.monitorBuses)
+        ? config.monitorBuses
+        : []
+    for (const b of configured) if (typeof b === "number") set.add(b)
+    for (const b of ownedBuses) set.add(b)
+    for (const b of liveBusIndices) set.add(b)
+    return [...set].sort((a, b) => a - b)
+}
+
+/**
  * Server `/monitor` page access gate — the SOLE predicate for whether a user
  * may load the mixer UI. Mirrors the client `useMonitorAccess` hook exactly by
  * reusing `getOwnedBuses` for the has-a-bus check, so the server gate and the

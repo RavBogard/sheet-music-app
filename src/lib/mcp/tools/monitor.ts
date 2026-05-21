@@ -10,6 +10,7 @@ import {
     loadMixerState,
     loadMixerStateMeta,
     serializeLastSeen,
+    validBusIndicesFor,
 } from "@/lib/mcp/server-monitor"
 import type {
     BridgeStatus,
@@ -208,8 +209,11 @@ export async function getMix(
 ): Promise<
     | {
           busIndex: number
-          name: string
-          fader: number
+          /** null in the degraded case (owned/configured bus dropped from the
+           * live snapshot — no live values to report). */
+          name: string | null
+          /** null in the degraded case (see `name`). */
+          fader: number | null
           sends: Array<{
               channelIndex: number
               channelName: string
@@ -226,6 +230,12 @@ export async function getMix(
            * exactly what tells a caller whether these values are trustworthy.
            */
           bridge: MonitorBridgeHealth | null
+          /**
+           * C-5 / MCP-D2: present only in the degraded case — the bus is owned or
+           * configured (authoritative) but absent from the live snapshot, so live
+           * values are unavailable. The bus is still valid for writes.
+           */
+          warning?: string
       }
     | RichErrorEnvelope
 > {
@@ -262,37 +272,54 @@ export async function getMix(
         }
 
         const { snapshot: state, updatedAt } = await loadMixerStateMeta(db)
-        if (!state)
-            return richError(
-                "monitor_state_unavailable",
-                "Mixer state not available — is the bridge online?",
-                undefined,
-                "Check the bridge status via list_monitor_buses then retry.",
-            )
+        const bridge = buildBridgeHealth(access.config.bridge, updatedAt)
 
-        // Cycle-1 F-001/F-002 defense (was missing on get_mix — the gap that let
-        // the staleness-guard ship throw `state.buses.find is not a function` at
-        // the deployed surface, 2026-05-21 auditor BLOCK). The LIVE-stale prod
-        // `monitor-live/state` carries `buses`/`channels` as NON-arrays (corrupt
-        // / frozen write), so every array access here MUST go through safeArray —
-        // exactly as list_monitor_buses + get_matrix already do. Against a corrupt
-        // snapshot get_mix now degrades to a graceful `invalid_bus_index` envelope
-        // (validBusIndices: []) instead of a raw uncaught throw.
-        const buses = safeArray<BusInfo>(state.buses)
+        // Cycle-1 F-001/F-002 defense: the LIVE-stale prod `monitor-live/state`
+        // carries `buses`/`channels` as NON-arrays (corrupt / frozen write), so
+        // every array access goes through safeArray (no raw throw — that was the
+        // 2026-05-21 auditor BLOCK). `state` may also be null when the bridge has
+        // never written; safeArray handles that too.
+        const buses = safeArray<BusInfo>(state?.buses)
         const bus = buses.find((b) => b.index === busIndex)
-        if (!bus)
+
+        if (!bus) {
+            // C-5 / MCP-D2: the bus is absent from the live snapshot — DON'T gate
+            // validity on the snapshot (under bridge bug R3 it drops owned/
+            // configured buses). If the bus is AUTHORITATIVE (owned per the
+            // config/monitor assignment OR a configured monitor bus) the read is
+            // still ALLOWED: return a degraded result + soft warning instead of a
+            // hard invalid_bus_index refuse. Only a bus that is neither owned,
+            // configured, nor live is genuinely unknown.
+            const ownedOrConfigured =
+                access.ownedBuses.includes(busIndex) ||
+                safeArray<number>(access.config.monitorBuses).includes(busIndex)
+            if (ownedOrConfigured) {
+                return {
+                    busIndex,
+                    name: null,
+                    fader: null,
+                    sends: [],
+                    bridge,
+                    warning: `Bus ${busIndex} is assigned/configured for you but is not currently visible on the live desk snapshot (the bridge state may be stale or corrupt). Live fader/send values are unavailable; the bus is still valid for writes.`,
+                }
+            }
             return richError(
                 "invalid_bus_index",
-                `Bus ${busIndex} is not active on the live mixer.`,
+                `Bus ${busIndex} is not a configured monitor bus.`,
                 {
                     busIndex,
-                    validBusIndices: buses.map((b) => b.index),
+                    validBusIndices: validBusIndicesFor(
+                        access.config,
+                        access.ownedBuses,
+                        buses.map((b) => b.index),
+                    ),
                 },
-                "Call list_monitor_buses to see active buses.",
+                "Call list_monitor_buses to see configured buses.",
             )
+        }
 
         const channelNameByIndex = new Map<number, string>()
-        for (const ch of safeArray<ChannelInfo>(state.channels))
+        for (const ch of safeArray<ChannelInfo>(state?.channels))
             channelNameByIndex.set(ch.index, ch.name)
 
         return {
@@ -308,7 +335,7 @@ export async function getMix(
                 on: s.on,
                 muted: !s.on,
             })),
-            bridge: buildBridgeHealth(access.config.bridge, updatedAt),
+            bridge,
         }
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err)
@@ -430,7 +457,7 @@ async function preflightBusWrite(
     uid: string,
     busIndex: number,
     channelIndex?: number,
-): Promise<{ ok: true } | RichErrorEnvelope> {
+): Promise<{ ok: true; warning?: string } | RichErrorEnvelope> {
     const access = await assertMonitorAccess(db, uid)
     if (!access.ok) return access
     if (!canControlBus(access.user, access.ownedBuses, busIndex)) {
@@ -446,81 +473,127 @@ async function preflightBusWrite(
                 : "Ask an admin to assign you a bus.",
         )
     }
-    // F-018 (cycle-1): validate the indices against the live mixer state
-    // before enqueueing. Pre-fix these tools returned `ok:true` even for
-    // bus/channel 99 (the bridge silently dropped the command); agents
-    // had no signal the write was nonsense. Cheap — one Firestore read of
-    // the monitor-live doc that's already in hot cache from the read tools.
+    // C-5 / MCP-D2: validate the bus against the AUTHORITATIVE assignment (owned
+    // buses + config.monitorBuses), NOT the live snapshot. The pre-fix F-018 gate
+    // read `state.buses` and refused `invalid_bus_index` whenever the index was
+    // absent from the live snapshot — but under bridge bug R3 the snapshot drops
+    // an owned/configured bus, so a musician who genuinely owns bus 3 was told it
+    // was "not active" and the write refused, even though the command queue still
+    // reaches it (the P0-B2 live probe caught exactly this). Live-snapshot
+    // presence is demoted to a soft "not currently visible" warning; the
+    // command-queue path is the source of truth for whether a write is delivered.
+    // (One cheap monitor-live read, already hot from the read tools.)
     const state = await loadMixerState(db)
-    if (!state) {
-        return richError(
-            "monitor_state_unavailable",
-            "Mixer state not available — is the bridge online?",
-            undefined,
-            "Check the bridge status via list_monitor_buses then retry.",
-        )
-    }
-    const busIndices = safeArray<{ index: number }>(state.buses).map(
+    const liveBusIndices = safeArray<{ index: number }>(state?.buses).map(
         (b) => b.index,
     )
-    if (!busIndices.includes(busIndex)) {
+    const ownsBus = access.ownedBuses.includes(busIndex)
+    const isConfiguredBus = safeArray<number>(
+        access.config.monitorBuses,
+    ).includes(busIndex)
+    const busInLiveState = liveBusIndices.includes(busIndex)
+
+    if (!ownsBus && !isConfiguredBus && !busInLiveState) {
         return richError(
             "invalid_bus_index",
-            `Bus ${busIndex} is not active on the live mixer.`,
-            { busIndex, validBusIndices: busIndices },
-            "Call list_monitor_buses to see active buses.",
+            `Bus ${busIndex} is not a configured monitor bus.`,
+            {
+                busIndex,
+                validBusIndices: validBusIndicesFor(
+                    access.config,
+                    access.ownedBuses,
+                    liveBusIndices,
+                ),
+            },
+            "Call list_monitor_buses to see configured buses.",
         )
     }
-    if (channelIndex !== undefined) {
-        const channelIndices = safeArray<{ index: number }>(state.channels).map(
-            (c) => c.index,
+
+    const warnings: string[] = []
+    if (!busInLiveState) {
+        warnings.push(
+            `Bus ${busIndex} is assigned/configured for you but is not currently visible on the live desk snapshot (bridge state may be stale or corrupt); the command was still queued.`,
         )
-        if (!channelIndices.includes(channelIndex)) {
-            // F-5: annotate the hint with each channel's name + whether it's live
-            // on THIS bus (a send that is on, or above zero), so the LLM can pick a
-            // real target instead of guessing from a bare [1..32]. The flat
-            // `validChannelIndices` array stays for back-compat.
-            const targetBus = safeArray<{
-                index: number
-                sends?: Array<{ channelIndex: number; level: number; on: boolean }>
-            }>(state.buses).find((b) => b.index === busIndex)
-            const sendByChannel = new Map<number, { level: number; on: boolean }>()
-            for (const s of safeArray<{
-                channelIndex: number
-                level: number
-                on: boolean
-            }>(targetBus?.sends)) {
-                sendByChannel.set(s.channelIndex, { level: s.level, on: s.on })
-            }
-            const validChannels = safeArray<{ index: number; name: string }>(
-                state.channels,
-            ).map((c) => {
-                const send = sendByChannel.get(c.index)
-                return {
-                    index: c.index,
-                    name: c.name,
-                    active: !!send && (send.on === true || send.level > 0),
+    }
+
+    if (channelIndex !== undefined) {
+        const liveChannelIndices = safeArray<{ index: number }>(
+            state?.channels,
+        ).map((c) => c.index)
+        const configuredChannels = safeArray<number>(
+            access.config.defaultChannels,
+        )
+        const channelKnown =
+            liveChannelIndices.includes(channelIndex) ||
+            configuredChannels.includes(channelIndex)
+        if (!channelKnown) {
+            // Only HARD-refuse when there IS a channel list to validate against
+            // (live channels present OR configured defaultChannels): then the
+            // channel is genuinely wrong and we keep the F-5 rich hint. When NO
+            // channel list exists at all (the live snapshot dropped channels too
+            // and none are configured) we can't prove invalidity — the index is
+            // already Zod-bounded [1..32] and the bridge is the final validator —
+            // so soft-warn instead of a false refuse (same C-5/MCP-D2 rationale
+            // as the bus check above).
+            const haveChannelList =
+                liveChannelIndices.length > 0 || configuredChannels.length > 0
+            if (haveChannelList) {
+                // F-5: annotate the hint with each channel's name + whether it's
+                // live on THIS bus (a send that is on, or above zero), so the LLM
+                // can pick a real target. Flat `validChannelIndices` stays for
+                // back-compat (union of live + configured, sorted/unique).
+                const targetBus = safeArray<{
+                    index: number
+                    sends?: Array<{ channelIndex: number; level: number; on: boolean }>
+                }>(state?.buses).find((b) => b.index === busIndex)
+                const sendByChannel = new Map<
+                    number,
+                    { level: number; on: boolean }
+                >()
+                for (const s of safeArray<{
+                    channelIndex: number
+                    level: number
+                    on: boolean
+                }>(targetBus?.sends)) {
+                    sendByChannel.set(s.channelIndex, { level: s.level, on: s.on })
                 }
-            })
-            // F-3 (R-12): `invalid_channel_index` isn't in ERROR_CODE_MAP, so it
-            // defaulted to 500 — a caller-fixable bad argument. Override to 400 so
-            // it's symmetric with `invalid_bus_index` (400). machine_code unchanged;
-            // only the HTTP-like code via the factory's documented errorCode override
-            // (errors.ts is hard-rule read-only).
-            return richError(
-                "invalid_channel_index",
-                `Channel ${channelIndex} is not active on the live mixer.`,
-                {
-                    channelIndex,
-                    validChannelIndices: channelIndices,
-                    validChannels,
-                    errorCode: 400,
-                },
-                "Call get_mix to see the bus's active channels — validChannels lists each channel's name and whether it's live on this bus.",
+                const validChannels = safeArray<{ index: number; name: string }>(
+                    state?.channels,
+                ).map((c) => {
+                    const send = sendByChannel.get(c.index)
+                    return {
+                        index: c.index,
+                        name: c.name,
+                        active: !!send && (send.on === true || send.level > 0),
+                    }
+                })
+                const validChannelIndices = [
+                    ...new Set([...liveChannelIndices, ...configuredChannels]),
+                ].sort((a, b) => a - b)
+                // F-3 (R-12): `invalid_channel_index` isn't in ERROR_CODE_MAP, so
+                // it defaulted to 500 — a caller-fixable bad argument. Override to
+                // 400 so it's symmetric with `invalid_bus_index` (400).
+                return richError(
+                    "invalid_channel_index",
+                    `Channel ${channelIndex} is not active on the live mixer.`,
+                    {
+                        channelIndex,
+                        validChannelIndices,
+                        validChannels,
+                        errorCode: 400,
+                    },
+                    "Call get_mix to see the bus's active channels — validChannels lists each channel's name and whether it's live on this bus.",
+                )
+            }
+            warnings.push(
+                `Channel ${channelIndex} could not be verified against the live desk snapshot (state may be stale or corrupt); the command was still queued.`,
             )
         }
     }
-    return { ok: true }
+
+    return warnings.length
+        ? { ok: true, warning: warnings.join(" ") }
+        : { ok: true }
 }
 
 async function preflightPrivilegedWrite(
@@ -577,7 +650,8 @@ export async function setSendLevel(
     uid: string,
     args: SetSendLevelArgs,
 ): Promise<
-    { ok: true; commandId: string; confidence: "queued" } | RichErrorEnvelope
+    | { ok: true; commandId: string; confidence: "queued"; warning?: string }
+    | RichErrorEnvelope
 > {
     initAdmin()
     const db = getFirestore()
@@ -593,7 +667,14 @@ export async function setSendLevel(
     // R-2: honest fire-and-forget receipt. ALWAYS "queued" — the command was
     // accepted into monitor-live/commands/pending; the app side cannot confirm
     // the X32 OSC ack (that's the held bridge lane), so it never claims "applied".
-    return { ok: true, commandId: r.id, confidence: "queued" as const }
+    // `pre.warning` (C-5/MCP-D2) rides along when the bus/channel is owned/
+    // configured but not currently visible on the (stale/corrupt) live snapshot.
+    return {
+        ok: true,
+        commandId: r.id,
+        confidence: "queued" as const,
+        ...(pre.warning ? { warning: pre.warning } : {}),
+    }
 }
 
 // ─── set_send_mute ──────────────────────────────────────────────────────────
@@ -613,7 +694,8 @@ export async function setSendMute(
     uid: string,
     args: SetSendMuteArgs,
 ): Promise<
-    { ok: true; commandId: string; confidence: "queued" } | RichErrorEnvelope
+    | { ok: true; commandId: string; confidence: "queued"; warning?: string }
+    | RichErrorEnvelope
 > {
     initAdmin()
     const db = getFirestore()
@@ -629,7 +711,14 @@ export async function setSendMute(
     // R-2: honest fire-and-forget receipt. ALWAYS "queued" — the command was
     // accepted into monitor-live/commands/pending; the app side cannot confirm
     // the X32 OSC ack (that's the held bridge lane), so it never claims "applied".
-    return { ok: true, commandId: r.id, confidence: "queued" as const }
+    // `pre.warning` (C-5/MCP-D2) rides along when the bus/channel is owned/
+    // configured but not currently visible on the (stale/corrupt) live snapshot.
+    return {
+        ok: true,
+        commandId: r.id,
+        confidence: "queued" as const,
+        ...(pre.warning ? { warning: pre.warning } : {}),
+    }
 }
 
 // ─── set_bus_fader (bus master) ─────────────────────────────────────────────
@@ -643,7 +732,8 @@ export async function setBusFader(
     uid: string,
     args: SetBusFaderArgs,
 ): Promise<
-    { ok: true; commandId: string; confidence: "queued" } | RichErrorEnvelope
+    | { ok: true; commandId: string; confidence: "queued"; warning?: string }
+    | RichErrorEnvelope
 > {
     initAdmin()
     const db = getFirestore()
@@ -658,7 +748,14 @@ export async function setBusFader(
     // R-2: honest fire-and-forget receipt. ALWAYS "queued" — the command was
     // accepted into monitor-live/commands/pending; the app side cannot confirm
     // the X32 OSC ack (that's the held bridge lane), so it never claims "applied".
-    return { ok: true, commandId: r.id, confidence: "queued" as const }
+    // `pre.warning` (C-5/MCP-D2) rides along when the bus is owned/configured but
+    // not currently visible on the (stale/corrupt) live snapshot.
+    return {
+        ok: true,
+        commandId: r.id,
+        confidence: "queued" as const,
+        ...(pre.warning ? { warning: pre.warning } : {}),
+    }
 }
 
 // ─── set_matrix_fader (admin/SE only) ───────────────────────────────────────

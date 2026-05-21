@@ -354,10 +354,12 @@ describe("MCP monitor-control tools (emulator)", () => {
 
     // ─── F-018: invalid index validation against live mixer state ─────────
 
-    it("F-018: set_send_level refuses invalid_bus_index (not active on live mixer)", async () => {
-        // ADMIN has privilege to control any bus, but bus 99 isn't seeded
-        // in mixer state — pre-fix this returned ok:true and silently dropped
-        // the command at the bridge.
+    it("F-018: set_send_level refuses invalid_bus_index for a bus that is neither owned, configured, nor live", async () => {
+        // ADMIN has privilege to control any bus, but bus 99 is not a configured
+        // monitor bus (config.monitorBuses = [1,2,3]), not owned, and not in the
+        // live snapshot — pre-fix this returned ok:true and the bridge silently
+        // dropped it. C-5/MCP-D2: validBusIndices is now the AUTHORITATIVE union
+        // (configured ∪ owned ∪ live) = [1,2,3], not just the live indices [1,2].
         const r = await setSendLevel(ADMIN, {
             busIndex: 99,
             channelIndex: 1,
@@ -367,7 +369,7 @@ describe("MCP monitor-control tools (emulator)", () => {
             ok: false,
             error: { machine_code: "invalid_bus_index" },
             busIndex: 99,
-            validBusIndices: [1, 2],
+            validBusIndices: [1, 2, 3],
         })
         expect(await pendingCommands()).toHaveLength(0)
     })
@@ -730,5 +732,141 @@ describe("MCP monitor-control tools (emulator)", () => {
             .update({ bridge: null })
         const list = (await listMonitorBuses(ADMIN)) as { bridge: BridgeHealth }
         expect(list.bridge).toBeNull()
+    })
+
+    // ─── C-5 / MCP-D2: validation decoupled from corrupted/stale live-state ──
+    // Pre-fix, preflightBusWrite + get_mix gated the bus index on the LIVE
+    // snapshot (`monitor-live/state.buses`). Under bridge bug R3 the snapshot
+    // drops an owned/configured bus, so a write/read to a bus the caller
+    // genuinely owns was falsely refused `invalid_bus_index`. These pin the new
+    // contract: validate against owned-buses + config.monitorBuses; the live
+    // snapshot only ever ADDS a soft warning, never a hard refuse.
+
+    async function dropLiveBuses() {
+        // Simulate the R3-corrupted / degraded "0 buses" live snapshot.
+        await db().collection("monitor-live").doc("state").update({ buses: [] })
+    }
+
+    it("set_bus_fader on a CONFIGURED bus absent from live-state is ALLOWED (was invalid_bus_index pre-fix)", async () => {
+        // Bus 3 ∈ config.monitorBuses [1,2,3] but the live snapshot only has [1,2]
+        // (bus 3 never seeded) — exactly the shape that pre-fix refused.
+        const r = (await setBusFader(ADMIN, { busIndex: 3, level: 0.4 })) as {
+            ok: boolean
+            confidence: string
+            warning?: string
+        }
+        expect(r.ok).toBe(true)
+        expect(r.confidence).toBe("queued")
+        expect(r.warning).toMatch(/not currently visible/i)
+        const cmds = await pendingCommands()
+        expect(cmds).toHaveLength(1)
+        expect(cmds[0]).toMatchObject({
+            type: "set_bus_master",
+            busIndex: 3,
+            value: 0.4,
+        })
+    })
+
+    it("set_bus_fader on an OWNED bus dropped from a corrupted live snapshot is ALLOWED", async () => {
+        await dropLiveBuses()
+        const r = (await setBusFader(GUITAR, { busIndex: 1, level: 0.6 })) as {
+            ok: boolean
+            confidence: string
+            warning?: string
+        }
+        expect(r.ok).toBe(true)
+        expect(r.confidence).toBe("queued")
+        expect(r.warning).toBeTruthy()
+        expect(await pendingCommands()).toHaveLength(1)
+    })
+
+    it("set_send_level on an owned bus survives FULL state corruption (buses+channels dropped) with a soft warning", async () => {
+        await db()
+            .collection("monitor-live")
+            .doc("state")
+            .update({ buses: [], channels: [] })
+        const r = (await setSendLevel(GUITAR, {
+            busIndex: 1,
+            channelIndex: 2,
+            level: 0.7,
+        })) as { ok: boolean; confidence: string; warning?: string }
+        expect(r.ok).toBe(true)
+        expect(r.confidence).toBe("queued")
+        expect(r.warning).toBeTruthy()
+        const cmds = await pendingCommands()
+        expect(cmds).toHaveLength(1)
+        expect(cmds[0]).toMatchObject({
+            type: "set_send_level",
+            busIndex: 1,
+            channelIndex: 2,
+            value: 0.7,
+        })
+    })
+
+    it("an unowned bus is STILL denied for a musician (auth gate fires first) even when configured", async () => {
+        // Bus 3 is configured but NOT owned by GUITAR → monitor_bus_forbidden,
+        // never invalid_bus_index. The C-5 fix does not loosen authorization.
+        const r = await setBusFader(GUITAR, { busIndex: 3, level: 0.5 })
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "monitor_bus_forbidden" },
+            busIndex: 3,
+        })
+        expect(await pendingCommands()).toHaveLength(0)
+    })
+
+    it("a bus neither owned, configured, nor live is DENIED even with the live snapshot dropped", async () => {
+        await dropLiveBuses()
+        // Bus 5 ≤ Zod max but ∉ config.monitorBuses [1,2,3], not owned, not live.
+        const r = await setBusFader(ADMIN, { busIndex: 5, level: 0.5 })
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "invalid_bus_index" },
+            busIndex: 5,
+            validBusIndices: [1, 2, 3],
+        })
+        expect(await pendingCommands()).toHaveLength(0)
+    })
+
+    it("get_mix on a CONFIGURED bus absent from live-state returns a degraded result (NOT invalid_bus_index)", async () => {
+        const r = (await getMix(ADMIN, { busIndex: 3 })) as {
+            busIndex: number
+            name: string | null
+            fader: number | null
+            sends: unknown[]
+            warning?: string
+        }
+        expect("error" in (r as object)).toBe(false)
+        expect(r.busIndex).toBe(3)
+        expect(r.name).toBeNull()
+        expect(r.fader).toBeNull()
+        expect(r.sends).toEqual([])
+        expect(r.warning).toMatch(/not currently visible/i)
+    })
+
+    it("get_mix on an OWNED bus dropped from a corrupted live snapshot returns a degraded result", async () => {
+        await dropLiveBuses()
+        const r = (await getMix(GUITAR, {})) as {
+            busIndex: number
+            name: string | null
+            fader: number | null
+            warning?: string
+        }
+        // GUITAR's first owned bus (1) still resolves from the config assignment.
+        expect("error" in (r as object)).toBe(false)
+        expect(r.busIndex).toBe(1)
+        expect(r.name).toBeNull()
+        expect(r.fader).toBeNull()
+        expect(r.warning).toBeTruthy()
+    })
+
+    it("get_mix on a bus neither owned, configured, nor live → invalid_bus_index", async () => {
+        const r = await getMix(ADMIN, { busIndex: 5 })
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "invalid_bus_index" },
+            busIndex: 5,
+            validBusIndices: [1, 2, 3],
+        })
     })
 })

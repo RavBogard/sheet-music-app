@@ -46,6 +46,10 @@ vi.mock("@/lib/mcp/server-monitor", () => ({
     enqueueCommand: vi.fn(),
     computeStateAgeSeconds: vi.fn(() => null),
     isStateStale: vi.fn(() => true),
+    // C-5/MCP-D2: get_mix's invalid-bus path now reports the authoritative valid
+    // set. These fixtures use an admin with empty config + a genuinely-unknown
+    // bus, so the set is empty.
+    validBusIndicesFor: vi.fn(() => []),
 }))
 
 import {
