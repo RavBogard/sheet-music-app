@@ -29,6 +29,14 @@ jobs:
       - name: TypeScript Check
         run: npx tsc --noEmit
 
+      # BR-19: the app↔bridge monitor type mirror (src/types/monitor.ts ↔
+      # bridge/src/types.ts) drifted unnoticed once (BR-04: bridge missed the
+      # BusAssignment[] variant → musicians locked out of their faders). The
+      # check:types guard existed but was never wired into a gate. This step
+      # makes any future drift a HARD CI FAILURE.
+      - name: Monitor type-mirror sync (app ↔ bridge)
+        run: npm run check:types
+
       - name: ESLint
         run: npx eslint src/ --quiet --max-warnings 0
 

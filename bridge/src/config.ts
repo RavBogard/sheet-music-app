@@ -113,10 +113,23 @@ export class ConfigManager {
         return false
     }
 
-    /** Get which bus is assigned to a user */
+    /**
+     * Get which bus is assigned to a user.
+     *
+     * `busAssignments[bus]` may be a single `BusAssignment`, an ARRAY of them
+     * (the shape the in-app BusAssignmentPanel actually writes — supports
+     * co-owning a bus), or `null`. Normalize all three so a regular musician's
+     * fader command isn't silently rejected (BR-04). Mirrors the canonical
+     * `getOwnedBuses` semantics in `src/lib/mcp/server-monitor.ts`.
+     *
+     * Returns the first matching bus index (a user may own several; the
+     * command authorizer checks the specific bus per command).
+     */
     getUserBus(uid: string): number | null {
         for (const [busStr, assignment] of Object.entries(this.config.busAssignments)) {
-            if (assignment && assignment.userId === uid) {
+            if (!assignment) continue
+            const occupants = Array.isArray(assignment) ? assignment : [assignment]
+            if (occupants.some((a) => a?.userId === uid)) {
                 return parseInt(busStr)
             }
         }

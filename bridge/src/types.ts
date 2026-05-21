@@ -7,19 +7,32 @@
  * These types define the WebSocket protocol and Firestore config shape.
  */
 
+/**
+ * Mirror of `FirestoreDate` from the app's `@/types/models`. Inlined here
+ * because the bridge is a standalone package and can't import the app's `@`
+ * path alias. Bridge-only (the canonical monitor.ts imports this name rather
+ * than declaring it), so `check:types` ignores it.
+ */
+type FirestoreDate =
+    | string
+    | Date
+    | number
+    | { seconds: number; nanoseconds?: number; toDate?: () => Date }
+    | { toDate: () => Date }
+
 export interface MonitorConfig {
     bridgeUrl: string
     x32Address: string
     x32Port: number
     monitorBuses: number[]
-    busAssignments: Record<string, BusAssignment | null>
+    busAssignments: Record<string, BusAssignment | BusAssignment[] | null>
     bridge?: BridgeStatus
     defaultChannels?: number[]
 }
 
 export interface BridgeStatus {
     status: "online" | "offline"
-    lastSeen: unknown // Firestore Timestamp
+    lastSeen: FirestoreDate | null
     x32Connected: boolean
     clients: number
     localIp: string | null

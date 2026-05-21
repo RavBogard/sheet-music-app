@@ -95,8 +95,13 @@ describe("MCP monitor-control tools (emulator)", () => {
                 x32Port: 10023,
                 monitorBuses: [1, 2, 3],
                 busAssignments: {
-                    "1": { userId: GUITAR, userName: "Guitar Player" },
-                    "2": { userId: BASS, userName: "Bass Player" },
+                    // Array shape — the shape the in-app BusAssignmentPanel
+                    // actually writes (BR-04/F2). Seeding the default fixture
+                    // this way exercises producer↔consumer drift end-to-end:
+                    // the whole monitor suite now runs against the prod shape,
+                    // not just the explicit co-ownership test below.
+                    "1": [{ userId: GUITAR, userName: "Guitar Player" }],
+                    "2": [{ userId: BASS, userName: "Bass Player" }],
                     "3": null,
                 },
                 bridge: {

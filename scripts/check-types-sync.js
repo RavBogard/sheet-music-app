@@ -87,7 +87,7 @@ for (const name of canonicalNames) {
     const mirrorBlock = extractTypeBlock(mirror, name)
 
     if (canonicalBlock && mirrorBlock && normalizeBlock(canonicalBlock) !== normalizeBlock(mirrorBlock)) {
-        issues.push(`⚠️  Drifted: ${name}`)
+        issues.push(`❌ Drifted: ${name}`)
         drifted = true
     }
 }
@@ -117,7 +117,8 @@ if (drifted) {
         fs.writeFileSync(MIRROR, output)
         console.log('✅ Fixed: canonical → bridge (preserved bridge-only types)')
     } else {
-        console.log('Run with --fix to sync, or update manually.')
+        console.error('❌ FAIL: app↔bridge monitor types have drifted.')
+        console.error('   Run `npm run check:types -- --fix` to sync, or update bridge/src/types.ts manually.')
         process.exit(1)
     }
 } else {
