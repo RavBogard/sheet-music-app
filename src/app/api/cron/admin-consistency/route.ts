@@ -3,6 +3,7 @@ import { timingSafeEqual } from "crypto"
 import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { env } from "@/env.mjs"
+import { captureException, captureMessage } from "@/lib/error-reporting"
 
 /**
  * v4.3 C02 — Admin-role consistency check.
@@ -72,6 +73,17 @@ export async function GET(req: NextRequest) {
             logger.warn(
                 `[admin-consistency] drift detected across ${drift.length}/${uids.length} bootstrap-admin uids: ${JSON.stringify(drift)}`,
             )
+            // PGR-03: admin-claim drift is an un-surfaced alert signal — a
+            // failed promotion otherwise lives only in logs. Route it to
+            // Sentry so it reaches Daniel.
+            captureMessage(
+                `[admin-consistency] claim drift across ${drift.length}/${uids.length} bootstrap-admin uids`,
+                {
+                    source: "cron",
+                    location: "admin-consistency",
+                    extra: { drift },
+                },
+            )
         } else {
             logger.info(`[admin-consistency] clean (${uids.length} uids)`)
         }
@@ -79,6 +91,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ checked: uids.length, drift })
     } catch (err) {
         logger.error("[admin-consistency] check failed:", err)
+        captureException(err, { source: "cron", location: "admin-consistency" })
         return NextResponse.json({ error: "Check failed" }, { status: 500 })
     }
 }

@@ -6,6 +6,7 @@ import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingReminderSMS } from "@/lib/sms"
 import { BASE_URL } from "@/lib/constants"
 import { env } from "@/env.mjs"
+import { captureException } from "@/lib/error-reporting"
 
 function safeCompare(a: string, b: string): boolean {
     if (a.length !== b.length) return false
@@ -173,6 +174,7 @@ export async function GET(req: Request) {
         })
     } catch (error) {
         logger.error('[Cron/Reminder] Failed:', error)
+        captureException(error, { source: 'cron', location: 'scheduling-reminder' })
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }

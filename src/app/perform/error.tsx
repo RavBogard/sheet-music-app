@@ -2,15 +2,28 @@
 
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { captureException } from "@/lib/error-reporting"
 
 export default function PerformError({
-    _error,
+    error,
     reset,
 }: {
-    _error: Error & { digest?: string }
+    error: Error & { digest?: string }
     reset: () => void
 }) {
     const router = useRouter()
+
+    // PGR-11: surface the band's hot-route chart-render crashes to Sentry.
+    // Previously the prop was `_error` (discarded) so an iPad failure
+    // mid-service never reached Daniel. Mirrors the client ErrorBoundary.
+    useEffect(() => {
+        captureException(error, {
+            source: "client",
+            location: "perform/error",
+            extra: { digest: error.digest },
+        })
+    }, [error])
 
     return (
         <div className="h-[100dvh] flex flex-col items-center justify-center gap-4 px-6 text-center bg-background text-foreground">

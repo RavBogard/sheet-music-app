@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger"
 import { env } from "@/env.mjs"
 import { verifySetlistCharts } from "@/lib/mcp/tools/library-verify"
 import { recomputeTrackCount } from "@/lib/setlist-track-count"
+import { captureException, captureMessage } from "@/lib/error-reporting"
 
 /**
  * Cycle-7-fixes Lane 3 — chart-bond health cron.
@@ -189,6 +190,29 @@ export async function GET(req: NextRequest) {
         )
 
         if (aggregateBreached || perSetlistBreached.length > 0) {
+            // PGR-03: chart_bond_alerts is a write-only queue with no reader,
+            // so route the breach to Sentry (live in prod) — that is how it
+            // actually reaches Daniel, the solo maintainer, before Friday.
+            captureMessage(
+                `[chart-bond-alert] ${perSetlistBreached.length} setlist(s) below ${PER_SETLIST_OK_THRESHOLD * 100}% bonded-OK; aggregate ${Math.round(aggregateOkPct * 1000) / 10}% across ${candidates.length} surveyed`,
+                {
+                    source: "cron",
+                    location: CRON_LANE,
+                    extra: {
+                        aggregateOkPct: Math.round(aggregateOkPct * 1000) / 10,
+                        aggregateBreached,
+                        perSetlistBreachedCount: perSetlistBreached.length,
+                        candidatesSurveyed: candidates.length,
+                        perSetlistBreached: perSetlistBreached.map((s) => ({
+                            setlistId: s.setlistId,
+                            name: s.name,
+                            eventDate: s.eventDate,
+                            okPct: s.okPct,
+                            missingCount: s.missingCount,
+                        })),
+                    },
+                },
+            )
             try {
                 await db.collection("chart_bond_alerts").add({
                     detectedAt: nowIso,
@@ -211,6 +235,10 @@ export async function GET(req: NextRequest) {
                 logger.warn(
                     `[cron/${CRON_LANE}] chart_bond_alerts write failed: ${err instanceof Error ? err.message : String(err)}`,
                 )
+                captureException(err, {
+                    source: "cron",
+                    location: `${CRON_LANE}:alert-write`,
+                })
             }
         }
 
@@ -234,6 +262,7 @@ export async function GET(req: NextRequest) {
         })
     } catch (err) {
         logger.error(`[cron/${CRON_LANE}] check failed:`, err)
+        captureException(err, { source: "cron", location: CRON_LANE })
         return NextResponse.json(
             { error: "Check failed", message: err instanceof Error ? err.message : String(err) },
             { status: 500 },
