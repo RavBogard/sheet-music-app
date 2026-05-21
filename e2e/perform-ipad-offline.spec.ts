@@ -278,12 +278,24 @@ test.describe('f1-offline-precache — DEPLOYED ipad-webkit offline repro (real 
             if (m.type() === 'error') errors.push(m.text())
         })
 
+        // The dense list renders multiple "Fiddley Tune" nodes (e.g. a hidden
+        // measurement copy); pick a VISIBLE one, with reload-on-miss for the
+        // SSR/Firestore first-load settle (see perform-ipad-deep awaitRow).
+        const visibleRow = () =>
+            page.getByText(REPRO_PDF_ROW, { exact: true }).filter({ visible: true }).first()
+        async function awaitVisibleRow() {
+            for (let attempt = 0; attempt < 4; attempt++) {
+                if (await visibleRow().isVisible({ timeout: 12_000 }).catch(() => false)) return
+                await page.reload({ waitUntil: 'domcontentloaded' })
+            }
+            await expect(visibleRow(), `bonded PDF row "${REPRO_PDF_ROW}" must render`).toBeVisible({
+                timeout: 15_000,
+            })
+        }
+
         // ── ONLINE: load the real published setlist (public-by-design, unauthed) ──
         await page.goto(url, { waitUntil: 'domcontentloaded' })
-        await expect(
-            page.getByText(REPRO_PDF_ROW, { exact: true }).first(),
-            `bonded PDF row "${REPRO_PDF_ROW}" must render`,
-        ).toBeVisible({ timeout: 20_000 })
+        await awaitVisibleRow()
         const saveBtn = page.getByTestId('save-offline')
         await expect(saveBtn, 'Save-offline CTA present on deployed prod').toBeVisible({ timeout: 15_000 })
         await page.screenshot({ path: 'test-results/f1-offline-01-online.png' })
@@ -318,12 +330,22 @@ test.describe('f1-offline-precache — DEPLOYED ipad-webkit offline repro (real 
             )
             .toBe(true)
 
+        // Open the chart ONCE online: confirms it renders + warms the PDFOverlay
+        // + viewer chunks (the layout also idle-warms these so a never-tapped
+        // chart works offline too — see perform/layout.tsx), then close.
+        await visibleRow().click()
+        const zoom = () => page.getByRole('button', { name: /^Zoom (in|out)$/ }).first()
+        await expect(zoom(), 'overlay mounts online').toBeVisible({ timeout: 15_000 })
+        await expect(page.locator('canvas').first(), 'PDF paints online').toBeVisible({ timeout: 25_000 })
+        await page.keyboard.press('Escape').catch(() => {})
+        await expect(zoom(), 'overlay closes').toBeHidden({ timeout: 10_000 })
+
         // ── OFFLINE: WiFi drops ──
         await context.setOffline(true)
         await expect(page.getByText(/OFFLINE/i).first(), 'offline indicator must surface').toBeVisible({ timeout: 10_000 })
 
         // Tap the bonded PDF row → renders from cache with the network down.
-        await page.getByText(REPRO_PDF_ROW, { exact: true }).first().click()
+        await visibleRow().click()
         await expect(
             page.getByRole('button', { name: /^Zoom (in|out)$/ }).first(),
             'overlay must mount offline',

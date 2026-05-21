@@ -68,6 +68,21 @@ function PdfWorkerPreload() {
                     /* fallback path in PDFViewer handles a real worker failure */
                 })
             })
+
+            // F1 offline-precache: warm the lazily-imported overlay + per-format
+            // viewer chunks so a chart still OPENS offline even if it was never
+            // tapped while online. PDFOverlay + the viewers are dynamic-imported,
+            // so their JS can't be fetched once WiFi drops — without this a band
+            // member who hits "Save offline" then loses WiFi before tapping a
+            // chart hits a chunk-load error instead of the cached chart. The
+            // chart BYTES are cached separately in IndexedDB (SaveOfflineButton);
+            // this warms the CODE. Fire-and-forget; non-fatal (online tap still
+            // lazy-loads on demand).
+            void import("@/components/performance/PDFOverlay").catch(() => {})
+            void import("@/components/music/PDFViewer").catch(() => {})
+            void import("@/components/music/TextScoreViewer").catch(() => {})
+            void import("@/components/music/SmartScoreViewer").catch(() => {})
+            void import("@/components/music/ImageScoreViewer").catch(() => {})
         }
 
         // Use requestIdleCallback where available with a 2s deadline (long
