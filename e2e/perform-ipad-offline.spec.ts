@@ -42,6 +42,16 @@ import { seedPublishedSetlist, uploadFixtureChart, findCuratedPdf, type SeededSe
 
 const MCP_BEARER = process.env.MCP_BEARER ?? ''
 
+/**
+ * DEPLOYED-repro mode (no seeding, no bearer). Set REPRO_SETLIST_ID to a real
+ * PUBLISHED setlist (public-by-design) to run the offline repro against prod
+ * unauthed — used for the Tier-1 deployed ipad-webkit evidence. REPRO_PDF_ROW
+ * + REPRO_PDF_FILEID name a bonded PDF row to tap + its fileId to poll in IDB.
+ */
+const REPRO_SETLIST_ID = process.env.REPRO_SETLIST_ID ?? ''
+const REPRO_PDF_ROW = process.env.REPRO_PDF_ROW ?? 'Fiddley Tune'
+const REPRO_PDF_FILEID = process.env.REPRO_PDF_FILEID ?? '11w4r08HnXYR-eRFzcMIs-ud4k1Ut1jwB'
+
 /** Standard 11" iPad portrait CSS viewport (Daniel-confirmed 2026-05-20). */
 const IPAD_PORTRAIT_WIDTH = 820
 
@@ -51,7 +61,10 @@ const TEXT_ROW_TITLE = 'Offline Text Chart'
 const PDF_ROW_TITLE = 'Offline PDF Chart'
 
 test.describe('f1-offline-precache — offline chart availability (portrait 820)', () => {
-    test.skip(!MCP_BEARER, 'needs MCP_BEARER (admin or band_leader) to mint test users + seed fixtures.')
+    test.skip(
+        !!REPRO_SETLIST_ID || !MCP_BEARER,
+        'seeded suite needs MCP_BEARER (admin/band_leader); skipped in REPRO_SETLIST_ID deployed-repro mode.',
+    )
 
     test.beforeEach(({}, testInfo) => {
         test.skip(
@@ -241,5 +254,96 @@ test.describe('f1-offline-precache — offline chart availability (portrait 820)
             `header with the Save-offline CTA must not overflow at 820px: ${overflow.scrollWidth} > ${overflow.clientWidth}`,
         ).toBeLessThanOrEqual(overflow.clientWidth + 1)
         expect(overflow.clientWidth).toBeLessThanOrEqual(IPAD_PORTRAIT_WIDTH)
+    })
+})
+
+// ───────── DEPLOYED repro (no seeding) — real published setlist, unauthed ─────────
+
+test.describe('f1-offline-precache — DEPLOYED ipad-webkit offline repro (real public setlist)', () => {
+    test.skip(!REPRO_SETLIST_ID, 'set REPRO_SETLIST_ID to a real published setlist to run the deployed repro.')
+
+    test.beforeEach(({}, testInfo) => {
+        test.skip(
+            testInfo.project.name !== 'ipad-webkit',
+            `deployed repro runs only under ipad-webkit; current: ${testInfo.project.name}`,
+        )
+    })
+
+    test('Save offline → go offline → real PDF chart renders from cache', async ({ context, page, baseURL }) => {
+        test.setTimeout(180_000)
+        if (!baseURL) throw new Error('PLAYWRIGHT_BASE_URL must be set')
+        const url = `/perform/setlist/${REPRO_SETLIST_ID}`
+        const errors: string[] = []
+        page.on('console', (m) => {
+            if (m.type() === 'error') errors.push(m.text())
+        })
+
+        // ── ONLINE: load the real published setlist (public-by-design, unauthed) ──
+        await page.goto(url, { waitUntil: 'domcontentloaded' })
+        await expect(
+            page.getByText(REPRO_PDF_ROW, { exact: true }).first(),
+            `bonded PDF row "${REPRO_PDF_ROW}" must render`,
+        ).toBeVisible({ timeout: 20_000 })
+        const saveBtn = page.getByTestId('save-offline')
+        await expect(saveBtn, 'Save-offline CTA present on deployed prod').toBeVisible({ timeout: 15_000 })
+        await page.screenshot({ path: 'test-results/f1-offline-01-online.png' })
+
+        // Force-cache via the CTA (deterministic vs waiting on idle).
+        await saveBtn.click()
+
+        // Robust to any single chart 404 in real data: gate on the SPECIFIC chart
+        // we will tap being present in the crc-offline IDB store (not the all-or-
+        // nothing "saved" state).
+        await expect
+            .poll(
+                async () =>
+                    page.evaluate(async (wantId) => {
+                        const open = indexedDB.open('crc-offline')
+                        const db: IDBDatabase = await new Promise((res, rej) => {
+                            open.onsuccess = () => res(open.result)
+                            open.onerror = () => rej(open.error)
+                        })
+                        try {
+                            const keys: string[] = await new Promise((res, rej) => {
+                                const r = db.transaction('files', 'readonly').objectStore('files').getAllKeys()
+                                r.onsuccess = () => res(r.result as string[])
+                                r.onerror = () => rej(r.error)
+                            })
+                            return keys.includes(wantId)
+                        } finally {
+                            db.close()
+                        }
+                    }, REPRO_PDF_FILEID),
+                { timeout: 120_000, message: 'target chart must land in crc-offline IDB after Save offline' },
+            )
+            .toBe(true)
+
+        // ── OFFLINE: WiFi drops ──
+        await context.setOffline(true)
+        await expect(page.getByText(/OFFLINE/i).first(), 'offline indicator must surface').toBeVisible({ timeout: 10_000 })
+
+        // Tap the bonded PDF row → renders from cache with the network down.
+        await page.getByText(REPRO_PDF_ROW, { exact: true }).first().click()
+        await expect(
+            page.getByRole('button', { name: /^Zoom (in|out)$/ }).first(),
+            'overlay must mount offline',
+        ).toBeVisible({ timeout: 15_000 })
+        await expect(
+            page.locator('canvas').first(),
+            'react-pdf must paint a cached PDF offline (network is down)',
+        ).toBeVisible({ timeout: 25_000 })
+        await expect(page.getByText(/Failed to load|render error|Could not load chart/i)).toHaveCount(0)
+        await page.screenshot({ path: 'test-results/f1-offline-02-offline-rendered.png' })
+
+        await context.setOffline(false)
+
+        // No real (non-noise) console errors during the offline render.
+        const real = errors.filter(
+            (e) =>
+                !/Firebase|firestore|offline|unavailable|cleardot|Cross-Origin-Opener-Policy|Failed to load resource: the server responded with a status of 4\d\d/i.test(
+                    e,
+                ),
+        )
+        expect(real, `unexpected console errors offline:\n${real.join('\n')}`).toEqual([])
     })
 })

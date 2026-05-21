@@ -17,7 +17,17 @@ const STORE_NAME = 'files'
 
 export interface OfflineFileEntry {
     fileId: string
-    blob: Blob
+    /**
+     * Chart bytes as an ArrayBuffer. WebKit / iOS Safari — the band's iPad
+     * hardware — FAILS the IndexedDB put transaction when the stored value
+     * contains a Blob (verified on the ipad-webkit project: `put(blob)` errors
+     * and nothing caches; `put(arrayBuffer)` succeeds). So bytes persist as an
+     * ArrayBuffer and the Blob is reconstructed on read.
+     */
+    data?: ArrayBuffer
+    /** @deprecated Legacy shape — Blob entries written on Chromium before the
+     *  WebKit fix. Read-only fallback in getFile; never written anymore. */
+    blob?: Blob
     mime: string
     size: number
     savedAt: number
@@ -69,9 +79,13 @@ function reqPromise<T>(req: IDBRequest<T>): Promise<T> {
 
 export async function putFile(fileId: string, blob: Blob): Promise<void> {
     if (!hasIDB()) return
+    // Persist as ArrayBuffer, NOT Blob. WebKit/iOS Safari (the band's iPads)
+    // errors the put transaction when the value contains a Blob, so nothing
+    // would cache; ArrayBuffer round-trips on every engine.
+    const data = await blob.arrayBuffer()
     const entry: OfflineFileEntry = {
         fileId,
-        blob,
+        data,
         mime: blob.type || 'application/octet-stream',
         size: blob.size,
         savedAt: Date.now(),
@@ -86,7 +100,11 @@ export async function getFile(fileId: string): Promise<Blob | null> {
     try {
         return await withStore('readonly', async (store) => {
             const entry = await reqPromise<OfflineFileEntry | undefined>(store.get(fileId))
-            return entry?.blob ?? null
+            if (!entry) return null
+            // New shape: rebuild the Blob from the stored ArrayBuffer.
+            if (entry.data) return new Blob([entry.data], { type: entry.mime || 'application/octet-stream' })
+            // Legacy shape: a Blob persisted on Chromium before the WebKit fix.
+            return entry.blob ?? null
         })
     } catch {
         return null
