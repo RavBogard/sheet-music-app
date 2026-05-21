@@ -3,12 +3,15 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import {
     assertMonitorAccess,
     canControlBus,
+    computeStateAgeSeconds,
     enqueueCommand,
     isPrivilegedMonitor,
+    isStateStale,
     loadMixerState,
+    loadMixerStateMeta,
     serializeLastSeen,
 } from "@/lib/mcp/server-monitor"
-import type { BusAssignment } from "@/types/monitor"
+import type { BridgeStatus, BusAssignment } from "@/types/monitor"
 
 /**
  * MCP monitor-control tools. Owner-scoped: any musician with an assigned bus
@@ -65,6 +68,55 @@ function readBusAssignment(
     return list.map((a) => ({ uid: a.userId, userName: a.userName }))
 }
 
+/**
+ * Bridge-health block shared by the read tools (list_monitor_buses / get_mix /
+ * get_matrix). Splices the FRESH `config/monitor` heartbeat (status /
+ * x32Connected / lastSeen / clients) onto a freshness signal for the SEPARATE
+ * `monitor-live/state` doc the fader/mute values come from.
+ */
+interface MonitorBridgeHealth {
+    status: "online" | "offline"
+    x32Connected: boolean
+    lastSeenIso: string | null
+    clients: number
+    /**
+     * Age of `monitor-live/state` (now − updatedAt) in seconds; null when the
+     * state doc or its `updatedAt` is missing. The fader/mute values in this
+     * response are only as fresh as this.
+     */
+    stateAgeSeconds: number | null
+    /**
+     * true when the live snapshot is stale (age > ~90s) OR carries no
+     * timestamp. When true the mixer values are NOT live and writes should not
+     * be assumed to apply — the heartbeat can read green (status:"online",
+     * x32Connected:true) while the bridge has stopped refreshing state (the
+     * post-BR-02 idle-freeze; coder-2 F-1 FINDINGS).
+     */
+    stateStale: boolean
+}
+
+/**
+ * Build the read-tools' bridge-health block. `bridge` is the `config/monitor`
+ * heartbeat; `updatedAt` is the raw `monitor-live/state` timestamp from
+ * loadMixerStateMeta. Returns null when no bridge is configured at all (a
+ * stronger "no bridge" signal than a stale snapshot).
+ */
+function buildBridgeHealth(
+    bridge: BridgeStatus | undefined,
+    updatedAt: unknown,
+): MonitorBridgeHealth | null {
+    if (!bridge) return null
+    const stateAgeSeconds = computeStateAgeSeconds(updatedAt)
+    return {
+        status: bridge.status,
+        x32Connected: bridge.x32Connected,
+        lastSeenIso: serializeLastSeen(bridge.lastSeen),
+        clients: bridge.clients ?? 0,
+        stateAgeSeconds,
+        stateStale: isStateStale(stateAgeSeconds),
+    }
+}
+
 // ─── list_monitor_buses ─────────────────────────────────────────────────────
 
 export async function listMonitorBuses(uid: string): Promise<
@@ -83,12 +135,7 @@ export async function listMonitorBuses(uid: string): Promise<
           matrices: Array<{ index: number; name: string }> | null
           myAssignedBuses: number[]
           isPrivileged: boolean
-          bridge: {
-              status: "online" | "offline"
-              x32Connected: boolean
-              lastSeenIso: string | null
-              clients: number
-          } | null
+          bridge: MonitorBridgeHealth | null
       }
     | RichErrorEnvelope
 > {
@@ -99,7 +146,7 @@ export async function listMonitorBuses(uid: string): Promise<
         const access = await assertMonitorAccess(db, uid)
         if (!access.ok) return access
 
-        const state = await loadMixerState(db)
+        const { snapshot: state, updatedAt } = await loadMixerStateMeta(db)
         const stateBuses = safeArray<{
             index: number
             name: string
@@ -122,14 +169,7 @@ export async function listMonitorBuses(uid: string): Promise<
               ).map((m) => ({ index: m.index, name: m.name }))
             : null
 
-        const bridge = access.config.bridge
-            ? {
-                  status: access.config.bridge.status,
-                  x32Connected: access.config.bridge.x32Connected,
-                  lastSeenIso: serializeLastSeen(access.config.bridge.lastSeen),
-                  clients: access.config.bridge.clients ?? 0,
-              }
-            : null
+        const bridge = buildBridgeHealth(access.config.bridge, updatedAt)
 
         return {
             buses,
@@ -174,6 +214,12 @@ export async function getMix(
                * caller never has to invert when round-tripping into set_send_mute. */
               muted: boolean
           }>
+          /**
+           * Bridge health incl. `stateStale` — get_mix returns LIVE fader/mute
+           * values off monitor-live/state, so the staleness of that snapshot is
+           * exactly what tells a caller whether these values are trustworthy.
+           */
+          bridge: MonitorBridgeHealth | null
       }
     | RichErrorEnvelope
 > {
@@ -208,7 +254,7 @@ export async function getMix(
         )
     }
 
-    const state = await loadMixerState(db)
+    const { snapshot: state, updatedAt } = await loadMixerStateMeta(db)
     if (!state)
         return richError(
             "monitor_state_unavailable",
@@ -243,6 +289,7 @@ export async function getMix(
             on: s.on,
             muted: !s.on,
         })),
+        bridge: buildBridgeHealth(access.config.bridge, updatedAt),
     }
 }
 
@@ -267,6 +314,12 @@ export async function getMatrix(
               /** F-6: additive inverse of `on` (true = muted) — mirrors set_matrix_mute's `muted` arg. */
               muted: boolean
           }>
+          /**
+           * Bridge health incl. `stateStale` — matrix fader/mute values come
+           * off the same monitor-live/state snapshot, so they're only live if
+           * `stateStale` is false.
+           */
+          bridge: MonitorBridgeHealth | null
       }
     | RichErrorEnvelope
 > {
@@ -289,7 +342,7 @@ export async function getMatrix(
             )
         }
 
-        const state = await loadMixerState(db)
+        const { snapshot: state, updatedAt } = await loadMixerStateMeta(db)
         if (!state)
             return richError(
                 "monitor_state_unavailable",
@@ -322,9 +375,15 @@ export async function getMatrix(
                     },
                     "Call get_matrix without matrixIndex to see active matrices.",
                 )
-            return { matrices: [one] }
+            return {
+                matrices: [one],
+                bridge: buildBridgeHealth(access.config.bridge, updatedAt),
+            }
         }
-        return { matrices: all }
+        return {
+            matrices: all,
+            bridge: buildBridgeHealth(access.config.bridge, updatedAt),
+        }
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err)
         return richError(

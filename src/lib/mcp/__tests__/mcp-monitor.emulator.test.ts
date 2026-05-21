@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
-import { getFirestore } from "firebase-admin/firestore"
+import { getFirestore, Timestamp } from "firebase-admin/firestore"
 
 import {
     listMonitorBuses,
@@ -644,5 +644,91 @@ describe("MCP monitor-control tools (emulator)", () => {
             expect(r.ok).toBe(true)
             expect(r.confidence).toBe("queued")
         }
+    })
+
+    // ─── state-staleness guard (bridge.stateAgeSeconds / bridge.stateStale) ──
+
+    type BridgeHealth = {
+        status: string
+        x32Connected: boolean
+        stateAgeSeconds: number | null
+        stateStale: boolean
+    } | null
+
+    async function setStateUpdatedAt(updatedAt: unknown) {
+        await db()
+            .collection("monitor-live")
+            .doc("state")
+            .update({ updatedAt })
+    }
+
+    it("flags a frozen snapshot stale while the heartbeat still reads green (list_monitor_buses + get_mix)", async () => {
+        // The "green health + dead writes" trap: config/monitor heartbeat is
+        // online + x32Connected (seeded in beforeEach), but monitor-live/state
+        // froze ~3h ago. Seeded as an admin Timestamp to exercise that path.
+        await setStateUpdatedAt(Timestamp.fromMillis(Date.now() - 3 * 3600 * 1000))
+
+        const list = (await listMonitorBuses(ADMIN)) as { bridge: BridgeHealth }
+        expect(list.bridge).not.toBeNull()
+        expect(list.bridge!.status).toBe("online")
+        expect(list.bridge!.x32Connected).toBe(true)
+        expect(list.bridge!.stateStale).toBe(true)
+        expect(list.bridge!.stateAgeSeconds!).toBeGreaterThanOrEqual(10795)
+        expect(list.bridge!.stateAgeSeconds!).toBeLessThanOrEqual(10810)
+
+        const mix = (await getMix(GUITAR, {})) as { busIndex: number; bridge: BridgeHealth }
+        expect(mix.busIndex).toBe(1)
+        expect(mix.bridge).not.toBeNull()
+        expect(mix.bridge!.status).toBe("online")
+        expect(mix.bridge!.x32Connected).toBe(true)
+        expect(mix.bridge!.stateStale).toBe(true)
+        expect(mix.bridge!.stateAgeSeconds!).toBeGreaterThanOrEqual(10795)
+    })
+
+    it("a fresh snapshot is not stale (ISO-string updatedAt)", async () => {
+        await setStateUpdatedAt(new Date(Date.now() - 5 * 1000).toISOString())
+
+        const list = (await listMonitorBuses(ADMIN)) as { bridge: BridgeHealth }
+        expect(list.bridge!.stateStale).toBe(false)
+        expect(list.bridge!.stateAgeSeconds!).toBeGreaterThanOrEqual(0)
+        expect(list.bridge!.stateAgeSeconds!).toBeLessThan(60)
+
+        const mix = (await getMix(GUITAR, {})) as { bridge: BridgeHealth }
+        expect(mix.bridge!.stateStale).toBe(false)
+        expect(mix.bridge!.stateAgeSeconds!).toBeLessThan(60)
+    })
+
+    it("a snapshot with no updatedAt → stateAgeSeconds null, stateStale true", async () => {
+        // beforeEach seeds monitor-live/state WITHOUT updatedAt → can't prove
+        // freshness, so it must read stale.
+        const list = (await listMonitorBuses(ADMIN)) as { bridge: BridgeHealth }
+        expect(list.bridge!.stateAgeSeconds).toBeNull()
+        expect(list.bridge!.stateStale).toBe(true)
+
+        const mix = (await getMix(GUITAR, {})) as { bridge: BridgeHealth }
+        expect(mix.bridge!.stateAgeSeconds).toBeNull()
+        expect(mix.bridge!.stateStale).toBe(true)
+    })
+
+    it("get_matrix carries the same bridge staleness block (admin/SE)", async () => {
+        await setStateUpdatedAt(Timestamp.fromMillis(Date.now() - 3 * 3600 * 1000))
+        const r = (await getMatrix(ADMIN, {})) as {
+            matrices: unknown[]
+            bridge: BridgeHealth
+        }
+        expect(r.matrices.length).toBeGreaterThan(0)
+        expect(r.bridge).not.toBeNull()
+        expect(r.bridge!.status).toBe("online")
+        expect(r.bridge!.stateStale).toBe(true)
+        expect(r.bridge!.stateAgeSeconds!).toBeGreaterThanOrEqual(10795)
+    })
+
+    it("bridge is null when config/monitor has no bridge block (still no crash)", async () => {
+        await db()
+            .collection("config")
+            .doc("monitor")
+            .update({ bridge: null })
+        const list = (await listMonitorBuses(ADMIN)) as { bridge: BridgeHealth }
+        expect(list.bridge).toBeNull()
     })
 })

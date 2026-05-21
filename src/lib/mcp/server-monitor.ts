@@ -45,9 +45,109 @@ export async function loadMonitorConfig(db: DB): Promise<MonitorConfig | null> {
     return snap.exists ? (snap.data() as MonitorConfig) : null
 }
 
-export async function loadMixerState(db: DB): Promise<MixerSnapshot | null> {
+export interface MixerStateMeta {
+    /** The mixer snapshot, or null when the bridge has never written state. */
+    snapshot: MixerSnapshot | null
+    /**
+     * Raw `updatedAt` off the state doc (FirestoreDate-ish), or null. The
+     * bridge stamps this on every write but `MixerSnapshot` doesn't model it.
+     */
+    updatedAt: unknown
+}
+
+/**
+ * Load `monitor-live/state` returning BOTH the typed snapshot and the doc's
+ * raw `updatedAt`. Single Firestore read; `loadMixerState` delegates here so
+ * its existing callers' contract is unchanged. Cast mirrors the iPad client
+ * (`firestore-monitor-client.ts`), which also reads `updatedAt` off the side.
+ */
+export async function loadMixerStateMeta(db: DB): Promise<MixerStateMeta> {
     const snap = await db.collection("monitor-live").doc("state").get()
-    return snap.exists ? (snap.data() as MixerSnapshot) : null
+    if (!snap.exists) return { snapshot: null, updatedAt: null }
+    const data = snap.data() as MixerSnapshot & { updatedAt?: unknown }
+    return { snapshot: data, updatedAt: data.updatedAt ?? null }
+}
+
+export async function loadMixerState(db: DB): Promise<MixerSnapshot | null> {
+    return (await loadMixerStateMeta(db)).snapshot
+}
+
+/**
+ * Staleness threshold for the live mixer snapshot (`monitor-live/state`).
+ *
+ * Why 90s: the bridge's `config/monitor` heartbeat advances every ~60s, but
+ * `monitor-live/state` (the fader/mute values get_mix/list_monitor_buses
+ * surface) is refreshed only on live X32 OSC echoes. After the v10.0.0 / BR-02
+ * change removed the idle false-disconnect resync — the only thing that
+ * periodically rewrote state on an idle desk — an idle desk's state stops
+ * advancing while the heartbeat stays green ("green health + dead writes",
+ * coder-2 F-1 FINDINGS). 90s leaves a comfortable margin over the 60s
+ * heartbeat so a desk that IS refreshing state never reads stale; once a
+ * bridge-side mixer-state heartbeat ships it will refresh well inside 90s.
+ * Until then an idle desk reads stale — which is CORRECT and honest. Callers
+ * also get the raw `stateAgeSeconds` to apply their own judgment.
+ */
+export const STALE_STATE_THRESHOLD_SECONDS = 90
+
+/**
+ * Coerce a FirestoreDate-ish value (admin Timestamp | Date | ISO string |
+ * epoch millis | raw `{seconds, nanoseconds}`) to epoch millis; null when
+ * absent or uncoercible.
+ */
+function firestoreDateToMillis(v: unknown): number | null {
+    if (v == null) return null
+    if (typeof v === "number") return Number.isFinite(v) ? v : null
+    if (typeof v === "string") {
+        const ms = Date.parse(v)
+        return Number.isNaN(ms) ? null : ms
+    }
+    if (typeof v === "object") {
+        const o = v as {
+            toMillis?: () => number
+            toDate?: () => Date
+            seconds?: number
+            nanoseconds?: number
+        }
+        if (typeof o.toMillis === "function") {
+            try {
+                return o.toMillis()
+            } catch {
+                return null
+            }
+        }
+        if (typeof o.toDate === "function") {
+            try {
+                return o.toDate().getTime()
+            } catch {
+                return null
+            }
+        }
+        if (typeof o.seconds === "number") {
+            const nanos = typeof o.nanoseconds === "number" ? o.nanoseconds : 0
+            return o.seconds * 1000 + Math.floor(nanos / 1e6)
+        }
+    }
+    return null
+}
+
+/**
+ * Age of the live mixer snapshot in whole seconds = (now − state.updatedAt).
+ * Returns null when `updatedAt` is missing or uncoercible — the caller treats
+ * null as stale (no timestamp ⇒ freshness can't be proven). `now` is
+ * injectable for deterministic tests. Pure.
+ */
+export function computeStateAgeSeconds(
+    updatedAt: unknown,
+    now: number = Date.now(),
+): number | null {
+    const ms = firestoreDateToMillis(updatedAt)
+    if (ms == null) return null
+    return Math.round((now - ms) / 1000)
+}
+
+/** A snapshot with no timestamp, or older than the threshold, is stale. */
+export function isStateStale(ageSeconds: number | null): boolean {
+    return ageSeconds == null || ageSeconds > STALE_STATE_THRESHOLD_SECONDS
 }
 
 /**

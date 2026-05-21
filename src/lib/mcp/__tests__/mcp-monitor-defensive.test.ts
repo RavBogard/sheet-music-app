@@ -15,8 +15,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
  *   2. Wrap the handler body in try/catch so any unexpected throw produces
  *      a structured `ToolError` instead of escaping as raw JS error.
  *
- * These tests mock `loadMixerState` directly so the handler is exercised
- * without an emulator (fast unit test). Access-side mocks let
+ * These tests mock `loadMixerStateMeta` directly so the handler is exercised
+ * without an emulator (fast unit test). `loadMixerStateMeta` returns BOTH the
+ * snapshot and the raw `updatedAt`; the staleness guard reads `updatedAt`, but
+ * since the mocked access config has `bridge: null` the bridge-health block is
+ * null and the pure age/stale helpers are never reached. Access-side mocks let
  * `assertMonitorAccess` pass cleanly.
  */
 
@@ -28,18 +31,27 @@ vi.mock("@/lib/firebase-admin", () => ({
 vi.mock("@/lib/mcp/server-monitor", () => ({
     assertMonitorAccess: vi.fn(),
     loadMixerState: vi.fn(),
+    loadMixerStateMeta: vi.fn(),
     isPrivilegedMonitor: vi.fn(() => true), // admin/SE path — surfaces matrices
     serializeLastSeen: vi.fn(() => null),
     canControlBus: vi.fn(() => true),
     enqueueCommand: vi.fn(),
+    computeStateAgeSeconds: vi.fn(() => null),
+    isStateStale: vi.fn(() => true),
 }))
 
 import {
     assertMonitorAccess,
-    loadMixerState,
+    loadMixerStateMeta,
     isPrivilegedMonitor,
 } from "@/lib/mcp/server-monitor"
 import { listMonitorBuses, getMatrix } from "../tools/monitor"
+import type { MixerSnapshot } from "@/types/monitor"
+
+/** Wrap a (possibly corrupted) snapshot in the loadMixerStateMeta envelope. */
+function meta(snapshot: unknown) {
+    return { snapshot: snapshot as MixerSnapshot, updatedAt: null }
+}
 
 const adminAccessOk = {
     ok: true as const,
@@ -62,13 +74,15 @@ afterEach(() => {
 
 describe("list_monitor_buses — F-001 defensive guards", () => {
     it("returns empty arrays when state.buses is an object (non-array)", async () => {
-        vi.mocked(loadMixerState).mockResolvedValue({
-            // Corrupted shape — TS type says `BusInfo[]` but Firestore returned an object.
-            buses: { "1": { index: 1, name: "Vox wedge" } } as unknown as never,
-            matrices: undefined as never,
-            channels: [] as never,
-            config: {} as never,
-        })
+        vi.mocked(loadMixerStateMeta).mockResolvedValue(
+            meta({
+                // Corrupted shape — TS type says `BusInfo[]` but Firestore returned an object.
+                buses: { "1": { index: 1, name: "Vox wedge" } },
+                matrices: undefined,
+                channels: [],
+                config: {},
+            }),
+        )
 
         const result = await listMonitorBuses("admin-uid")
 
@@ -82,27 +96,31 @@ describe("list_monitor_buses — F-001 defensive guards", () => {
     })
 
     it("returns empty arrays when state.matrices is an object (non-array)", async () => {
-        vi.mocked(loadMixerState).mockResolvedValue({
-            buses: [] as never,
-            matrices: { "1": { index: 1, name: "FOH-L" } } as unknown as never,
-            channels: [] as never,
-            config: {} as never,
-        })
+        vi.mocked(loadMixerStateMeta).mockResolvedValue(
+            meta({
+                buses: [],
+                matrices: { "1": { index: 1, name: "FOH-L" } },
+                channels: [],
+                config: {},
+            }),
+        )
 
         const result = await listMonitorBuses("admin-uid")
         expect(result).toMatchObject({ buses: [], matrices: [] })
     })
 
     it("handles happy path with real BusInfo[]", async () => {
-        vi.mocked(loadMixerState).mockResolvedValue({
-            buses: [
-                { index: 1, name: "Vox wedge" },
-                { index: 2, name: "Bass" },
-            ] as never,
-            matrices: [] as never,
-            channels: [] as never,
-            config: {} as never,
-        })
+        vi.mocked(loadMixerStateMeta).mockResolvedValue(
+            meta({
+                buses: [
+                    { index: 1, name: "Vox wedge" },
+                    { index: 2, name: "Bass" },
+                ],
+                matrices: [],
+                channels: [],
+                config: {},
+            }),
+        )
 
         const result = await listMonitorBuses("admin-uid")
         expect(result).toMatchObject({
@@ -114,29 +132,31 @@ describe("list_monitor_buses — F-001 defensive guards", () => {
     })
 
     it("F-7: marks each bus active (configured) vs inactive (never set up)", async () => {
-        vi.mocked(loadMixerState).mockResolvedValue({
-            buses: [
-                // named + a send on → active
-                {
-                    index: 1,
-                    name: "Vox wedge",
-                    fader: 0.5,
-                    sends: [{ channelIndex: 1, level: 0.4, on: true }],
-                },
-                // named, fader 0, only send off → still configured (active by name)
-                {
-                    index: 2,
-                    name: "Andrea Wedge",
-                    fader: 0,
-                    sends: [{ channelIndex: 1, level: 0, on: false }],
-                },
-                // no name, fader 0, no sends → never set up (inactive)
-                { index: 3, name: "", fader: 0, sends: [] },
-            ] as never,
-            matrices: [] as never,
-            channels: [] as never,
-            config: {} as never,
-        })
+        vi.mocked(loadMixerStateMeta).mockResolvedValue(
+            meta({
+                buses: [
+                    // named + a send on → active
+                    {
+                        index: 1,
+                        name: "Vox wedge",
+                        fader: 0.5,
+                        sends: [{ channelIndex: 1, level: 0.4, on: true }],
+                    },
+                    // named, fader 0, only send off → still configured (active by name)
+                    {
+                        index: 2,
+                        name: "Andrea Wedge",
+                        fader: 0,
+                        sends: [{ channelIndex: 1, level: 0, on: false }],
+                    },
+                    // no name, fader 0, no sends → never set up (inactive)
+                    { index: 3, name: "", fader: 0, sends: [] },
+                ],
+                matrices: [],
+                channels: [],
+                config: {},
+            }),
+        )
         const result = (await listMonitorBuses("admin-uid")) as {
             buses: Array<{ index: number; active: boolean }>
         }
@@ -149,7 +169,7 @@ describe("list_monitor_buses — F-001 defensive guards", () => {
     })
 
     it("F-003: unexpected throw inside handler returns the rich envelope", async () => {
-        vi.mocked(loadMixerState).mockRejectedValue(
+        vi.mocked(loadMixerStateMeta).mockRejectedValue(
             new Error("Firestore offline"),
         )
 
@@ -172,12 +192,14 @@ describe("list_monitor_buses — F-001 defensive guards", () => {
 
 describe("get_matrix — F-002 defensive guards", () => {
     it("returns empty matrices array when state.matrices is an object", async () => {
-        vi.mocked(loadMixerState).mockResolvedValue({
-            buses: [] as never,
-            matrices: { "1": { index: 1 } } as unknown as never,
-            channels: [] as never,
-            config: {} as never,
-        })
+        vi.mocked(loadMixerStateMeta).mockResolvedValue(
+            meta({
+                buses: [],
+                matrices: { "1": { index: 1 } },
+                channels: [],
+                config: {},
+            }),
+        )
 
         const result = await getMatrix("admin-uid", {})
         expect(result).toMatchObject({ matrices: [] })
@@ -185,15 +207,17 @@ describe("get_matrix — F-002 defensive guards", () => {
     })
 
     it("handles happy path with real MatrixInfo[]", async () => {
-        vi.mocked(loadMixerState).mockResolvedValue({
-            buses: [] as never,
-            matrices: [
-                { index: 1, name: "FOH-L", fader: 0.7, on: true },
-                { index: 2, name: "FOH-R", fader: 0.7, on: true },
-            ] as never,
-            channels: [] as never,
-            config: {} as never,
-        })
+        vi.mocked(loadMixerStateMeta).mockResolvedValue(
+            meta({
+                buses: [],
+                matrices: [
+                    { index: 1, name: "FOH-L", fader: 0.7, on: true },
+                    { index: 2, name: "FOH-R", fader: 0.7, on: true },
+                ],
+                channels: [],
+                config: {},
+            }),
+        )
 
         const result = await getMatrix("admin-uid", {})
         expect(result).toMatchObject({
@@ -205,7 +229,7 @@ describe("get_matrix — F-002 defensive guards", () => {
     })
 
     it("F-003: unexpected throw inside handler returns the rich envelope", async () => {
-        vi.mocked(loadMixerState).mockRejectedValue(
+        vi.mocked(loadMixerStateMeta).mockRejectedValue(
             new Error("Bridge daemon unreachable"),
         )
 
