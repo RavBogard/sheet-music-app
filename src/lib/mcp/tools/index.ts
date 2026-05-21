@@ -1,6 +1,7 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { listSetlists, getSetlist } from "./setlists"
+import { getCongregationContext } from "./congregation"
 import {
     searchLibrary,
     getSong,
@@ -445,6 +446,33 @@ export function registerReadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await listLibrary(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "get_congregation_context",
+        {
+            description:
+                "Get the congregation's standing context in one call so you don't have to be re-told it each authoring session: WHO the congregation is (name, location, the rabbi profiles, and the standing/core band roster) plus WHO has led recently. Use at the start of a weekly-setlist authoring session to ground yourself on the rabbis, the band, and the recent service cadence. Returns `congregation` (from the config/congregation doc; falls back to defaults with usingDefaults:true when absent) and `leadHistory` — the most-recent setlists each with the rabbi who led ('Led by'), the band that played, the service type, and dates. `historyLimit` (default 10, max 50) and `orderBy` ('eventDate' default = most-recent service day, or 'date' = doc write time) tune the history window. For the per-song Vocal Lead on a specific service, call get_setlist on that setlist id — this tool stays a single cheap read.",
+            inputSchema: {
+                historyLimit: z
+                    .number()
+                    .int()
+                    .positive()
+                    .max(50)
+                    .optional()
+                    .describe(
+                        "How many recent setlists to summarize in leadHistory (default 10, max 50).",
+                    ),
+                orderBy: z
+                    .enum(["eventDate", "date"])
+                    .optional()
+                    .describe(
+                        "Order leadHistory by service day ('eventDate', default) or doc write timestamp ('date'). Only setlists carrying the chosen field are returned.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await getCongregationContext(uidFrom(extra), args)),
     )
 }
 

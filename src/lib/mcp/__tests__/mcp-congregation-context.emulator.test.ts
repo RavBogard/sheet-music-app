@@ -1,0 +1,238 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
+import {
+    initializeApp,
+    deleteApp,
+    getApps,
+    type App,
+} from "firebase-admin/app"
+import { getFirestore, Timestamp } from "firebase-admin/firestore"
+
+import { getCongregationContext } from "../tools/congregation"
+
+/**
+ * F3 — emulator-backed get_congregation_context.
+ *
+ * Acceptance (lane prompt §Acceptance):
+ *  - returns config + lead-history in ONE call
+ *  - public-by-design auth posture (no role gate; any threaded uid works)
+ *  - falls back to defaults when config/congregation is absent
+ *  - "Vocal Lead"/"Led by" terminology — rabbi surfaces as the per-service
+ *    leader; band musicians are not labelled "leader"
+ */
+describe("MCP get_congregation_context (emulator)", () => {
+    let app: App
+    const ANY_UID = "rabbi-daniel" // public read — uid is threaded but ungated
+
+    function db() {
+        return getFirestore(app)
+    }
+
+    async function seedConfig() {
+        await db()
+            .collection("config")
+            .doc("congregation")
+            .set({
+                name: "Central Reform Congregation",
+                shortName: "CRC",
+                location: "St. Louis, MO",
+                description: "Reform Jewish synagogue",
+                features: { monitor: true, ai: true, audio: true, collaboration: true },
+                defaultMusicians: [
+                    { uid: "randy", name: "Randy", instrument: "piano" },
+                    { uid: "david", name: "David Lazaroff", instrument: "electric_guitar" },
+                ],
+                scheduling: {
+                    rabbiProfiles: [
+                        {
+                            name: "Rabbi Daniel Bogard",
+                            musicalRole: "full_band",
+                            bandSizeGuidance: "Full band on Shabbat morning",
+                            instruments: ["piano", "guitar"],
+                        },
+                        { name: "Rabbi Karen Bogard", musicalRole: "intimate" },
+                    ],
+                },
+            })
+    }
+
+    async function seedSetlist(
+        id: string,
+        opts: {
+            name: string
+            eventDate: string // ISO string (matches prod shape per C9I4-001)
+            date: Date
+            templateType?: string
+            rabbi?: string
+            musicians?: { name: string; instrument?: string }[]
+            trackCount?: number
+            songCount?: number
+        },
+    ) {
+        const payload: Record<string, unknown> = {
+            name: opts.name,
+            ownerId: ANY_UID,
+            eventDate: opts.eventDate,
+            date: Timestamp.fromDate(opts.date),
+            trackCount: opts.trackCount ?? 0,
+        }
+        if (opts.templateType) payload.templateType = opts.templateType
+        if (opts.rabbi) payload.rabbi = opts.rabbi
+        if (opts.musicians) payload.musicians = opts.musicians
+        if (opts.songCount !== undefined) payload.songCount = opts.songCount
+        await db().collection("setlists").doc(id).set(payload)
+    }
+
+    async function seedThreeServices() {
+        await seedSetlist("svc-old", {
+            name: "Shabbat Morning — May 30",
+            eventDate: "2026-05-30",
+            date: new Date("2026-05-20T00:00:00Z"),
+            templateType: "shabbat_morning",
+            rabbi: "Rabbi Daniel Bogard",
+            musicians: [{ name: "Randy", instrument: "piano" }],
+            trackCount: 12,
+            songCount: 8,
+        })
+        await seedSetlist("svc-mid", {
+            name: "Erev Shabbat — June 5",
+            eventDate: "2026-06-05",
+            date: new Date("2026-05-21T00:00:00Z"),
+            templateType: "friday_night",
+            rabbi: "Rabbi Karen Bogard",
+            musicians: [
+                { name: "David Lazaroff", instrument: "electric_guitar" },
+                { name: "Randy", instrument: "piano" },
+            ],
+            trackCount: 9,
+            songCount: 7,
+        })
+        await seedSetlist("svc-new", {
+            name: "Shabbat Morning — June 6",
+            eventDate: "2026-06-06",
+            date: new Date("2026-05-22T00:00:00Z"),
+            templateType: "shabbat_morning",
+            rabbi: "Rabbi Daniel Bogard",
+            musicians: [{ name: "David Lazaroff", instrument: "electric_guitar" }],
+            trackCount: 14,
+            songCount: 10,
+        })
+    }
+
+    beforeAll(async () => {
+        expect(process.env.FIRESTORE_EMULATOR_HOST).toBeTruthy()
+        app = getApps()[0] ?? initializeApp({ projectId: "demo-mcp-congregation" })
+    })
+
+    afterAll(async () => {
+        await deleteApp(app)
+    })
+
+    beforeEach(async () => {
+        for (const col of ["config", "setlists"]) {
+            const snap = await db().collection(col).get()
+            await Promise.all(snap.docs.map((d) => d.ref.delete()))
+        }
+    })
+
+    it("returns congregation config + lead-history in one call", async () => {
+        await seedConfig()
+        await seedThreeServices()
+
+        const r = await getCongregationContext(ANY_UID)
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+
+        // Congregation config
+        expect(r.congregation.name).toBe("Central Reform Congregation")
+        expect(r.congregation.location).toBe("St. Louis, MO")
+        expect(r.congregation.usingDefaults).toBe(false)
+        expect(r.congregation.rabbis.map((x) => x.name)).toEqual([
+            "Rabbi Daniel Bogard",
+            "Rabbi Karen Bogard",
+        ])
+        expect(r.congregation.rabbis[0].musicalRole).toBe("full_band")
+        expect(r.congregation.coreMusicians.map((m) => m.name)).toEqual([
+            "Randy",
+            "David Lazaroff",
+        ])
+        expect(r.congregation.features).toMatchObject({ monitor: true, ai: true })
+
+        // Lead history present in the same call
+        expect(r.historyCount).toBe(3)
+        const entry = r.leadHistory.find((h) => h.setlistId === "svc-new")!
+        expect(entry).toBeTruthy()
+        expect(entry.rabbi).toBe("Rabbi Daniel Bogard") // "Led by"
+        expect(entry.serviceType).toBe("shabbat_morning")
+        expect(entry.eventDate).toBe("2026-06-06")
+        expect(entry.trackCount).toBe(14)
+        expect(entry.songCount).toBe(10)
+        expect(entry.band).toEqual([
+            { name: "David Lazaroff", instrument: "electric_guitar" },
+        ])
+    })
+
+    it("orders lead-history by service eventDate descending (default)", async () => {
+        await seedConfig()
+        await seedThreeServices()
+
+        const r = await getCongregationContext(ANY_UID)
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        expect(r.leadHistory.map((h) => h.setlistId)).toEqual([
+            "svc-new", // 2026-06-06
+            "svc-mid", // 2026-06-05
+            "svc-old", // 2026-05-30
+        ])
+    })
+
+    it("respects historyLimit", async () => {
+        await seedConfig()
+        await seedThreeServices()
+
+        const r = await getCongregationContext(ANY_UID, { historyLimit: 2 })
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        expect(r.historyCount).toBe(2)
+        expect(r.leadHistory.map((h) => h.setlistId)).toEqual([
+            "svc-new",
+            "svc-mid",
+        ])
+    })
+
+    it("orderBy:'date' orders by the doc write timestamp", async () => {
+        await seedConfig()
+        await seedThreeServices()
+
+        const r = await getCongregationContext(ANY_UID, { orderBy: "date" })
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        // date desc: svc-new (05-22) > svc-mid (05-21) > svc-old (05-20)
+        expect(r.leadHistory.map((h) => h.setlistId)).toEqual([
+            "svc-new",
+            "svc-mid",
+            "svc-old",
+        ])
+    })
+
+    it("falls back to default identity when config/congregation is absent", async () => {
+        // No seedConfig — only setlists.
+        await seedThreeServices()
+
+        const r = await getCongregationContext(ANY_UID)
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        expect(r.congregation.usingDefaults).toBe(true)
+        expect(r.congregation.name).toBe("Central Reform Congregation")
+        expect(r.congregation.shortName).toBe("CRC Music")
+        expect(r.congregation.rabbis).toEqual([])
+        expect(r.congregation.coreMusicians).toEqual([])
+        expect(r.congregation.features).toBeNull()
+        // Lead history still resolves independently of config presence.
+        expect(r.historyCount).toBe(3)
+    })
+
+    it("is public-by-design: a non-leader uid still gets a full result (no role gate)", async () => {
+        await seedConfig()
+        await seedThreeServices()
+
+        const r = await getCongregationContext("some-plain-member-uid")
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        expect(r.historyCount).toBe(3)
+        expect(r.congregation.name).toBe("Central Reform Congregation")
+    })
+})
