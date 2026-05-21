@@ -169,6 +169,27 @@ export function getOwnedBuses(config: MonitorConfig, uid: string): number[] {
     return out.sort((a, b) => a - b)
 }
 
+/**
+ * Server `/monitor` page access gate — the SOLE predicate for whether a user
+ * may load the mixer UI. Mirrors the client `useMonitorAccess` hook exactly by
+ * reusing `getOwnedBuses` for the has-a-bus check, so the server gate and the
+ * client hook (and the perform-toolbar QuickMonitorPanel that uses it) cannot
+ * drift. Access = admin OR sound engineer OR owns >= 1 assigned bus.
+ *
+ * `busAssignments` is keyed by bus-index string, NOT by uid — a prior version
+ * indexed it by uid (`busAssignments[uid]`) which never matched, denying every
+ * non-privileged musician access to their own IEM bus (AUDIT-consumers C-1).
+ */
+export function hasMonitorPageAccess(
+    privileged: { isAdmin: boolean; isSoundEngineer: boolean },
+    config: MonitorConfig | null,
+    uid: string,
+): boolean {
+    if (privileged.isAdmin || privileged.isSoundEngineer) return true
+    if (!config) return false
+    return getOwnedBuses(config, uid).length > 0
+}
+
 export type AccessOk = {
     ok: true
     user: MonitorUser

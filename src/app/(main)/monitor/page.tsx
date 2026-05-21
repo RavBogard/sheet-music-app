@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import MonitorClient from "./MonitorClient"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { MonitorConfig } from "@/types/monitor"
+import { hasMonitorPageAccess } from "@/lib/mcp/server-monitor"
 
 export default async function MonitorPage() {
     const user = await getServerUser()
@@ -15,20 +16,23 @@ export default async function MonitorPage() {
     // Actually, just blocking guests is the most critical to prevent unauthorized WebSockets.
     // We can also fetch the monitor config to strictly gate it on the server.
     
+    // Access = admin OR sound engineer OR owns >= 1 assigned bus — the SAME
+    // predicate as the client `useMonitorAccess` hook, via the shared
+    // hasMonitorPageAccess helper, so the server gate cannot drift from it.
     let hasAccess = user.isAdmin || user.isSoundEngineer
 
     if (!hasAccess) {
-        // Fetch config to check if they have a bus assigned
+        // busAssignments is keyed by bus index (not uid), so the has-a-bus check
+        // value-iterates via getOwnedBuses inside hasMonitorPageAccess.
         initAdmin()
         const db = getFirestore()
         const docSnap = await db.collection("config").doc("monitor").get()
-        if (docSnap.exists) {
-            const config = docSnap.data() as MonitorConfig
-            const myBus = config.busAssignments?.[user.uid]
-            if (myBus) {
-                hasAccess = true
-            }
-        }
+        const config = docSnap.exists ? (docSnap.data() as MonitorConfig) : null
+        hasAccess = hasMonitorPageAccess(
+            { isAdmin: user.isAdmin, isSoundEngineer: user.isSoundEngineer },
+            config,
+            user.uid,
+        )
     }
 
     if (!hasAccess) {
