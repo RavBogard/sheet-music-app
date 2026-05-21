@@ -8,6 +8,8 @@
 
 ---
 
+> **POST-SHIP VERIFICATION (2026-05-21T14:50Z, coder-5):** PGR-02 **RESOLVED / refuted.** Live prod-bundle probe (Playwright `browser_evaluate` against www.centralreform.live) read the Sentry v10.39.0 client off the carrier scope: `clientFound:true`, `dsnConfigured:true` (`o4510899611828224.ingest.us.sentry.io/4510899613532160`), `enabled:true`, `environment:"production"`, `release:c180fbd85…` (the *current* master tip — so the DSN is inlined into the latest deployed build, satisfying the build-time-inlining caveat). Daniel confirmed the env var is set; this proves it's actually active client-side. **PGR-02 downgraded CRIT → RESOLVED (client-confirmed).** Server-side init (`sentry.server.config.ts`, same DSN var, same build) is therefore almost-certainly on too, but is browser-unprobeable — *high-confidence inference, not directly confirmed.* This makes **PGR-01 (no backup-DR) the standalone #1.** Note: PGR-03 (alert queues with no reader), PGR-04 (no AI-spend guard), and the crons that call **no** `captureException` at all (scheduling-reminder, verify-chart-bond-health) remain valid regardless — but Sentry being live means the crons that *do* capture now genuinely surface.
+
 ## TL;DR — the 5 most important MISSING pieces for band-readiness
 
 1. **There is NO functioning backup or disaster recovery for Firestore or Storage. (PGR-01, CRITICAL.)** A daily-backup cron exists *in code* but is (a) **not registered in `vercel.json`** so it never runs, (b) silently no-ops to a doc-*count* "logical backup" when `BACKUP_BUCKET` is unset, and (c) its admin trigger UI was deleted. Storage object versioning is disabled; soft-delete is 7 days. **If data is lost/corrupted mid-Shabbat, the recovery story is: there is none.** This is the headline gap. (Needs GCP/Vercel console to confirm `BACKUP_BUCKET` is truly unset.)
@@ -29,7 +31,7 @@
 | ID | Gap | Axis | Sev | Effort | NEW / KNOWN | Console? |
 |----|-----|------|-----|--------|-------------|----------|
 | **PGR-01** | No functioning Firestore/Storage backup or restore | backup-DR | **CRIT** | M | KNOWN (docs/v4.1-analysis; never wired) | **YES** (GCP/Vercel) |
-| **PGR-02** | Sentry dormant unless undocumented `NEXT_PUBLIC_SENTRY_DSN` set → silent failure default | error-monitoring | **CRIT** | S–M | KNOWN-shipped / NEW-as-risk | **YES** (Vercel) |
+| ~~**PGR-02**~~ | ~~Sentry dormant unless undocumented `NEXT_PUBLIC_SENTRY_DSN` set~~ → **RESOLVED 2026-05-21** (live prod bundle has client + DSN, env=production, release=current tip; client-confirmed) | error-monitoring | ~~CRIT~~ **RESOLVED** | — | KNOWN-shipped (now verified live) | done |
 | **PGR-03** | Alert signals are write-only / un-surfaced for a solo maintainer (`chart_bond_alerts`, admin-drift, backup staleness, all crons) | cron-alerting | **HIGH** | S–M | partly KNOWN-deferred | partial |
 | **PGR-04** | No AI-spend tracking / budget guard / cost alert | ai-spend | **HIGH** | M | NEW (manual concept only) | baseline only |
 | **PGR-05** | Materialized 297-orphan chart-byte loss; 30 bonded to 51 tracks across 10 live setlists | data-integrity | **HIGH** | L | KNOWN (storage-recovery-B) | recovery: YES |
@@ -76,7 +78,7 @@ The single highest-priority missing piece. *FACTS:* `vercel.json` lists 8 crons;
 
 ### Observability & alerting
 
-**PGR-02 — Sentry dormant unless undocumented env var is set → silent failure is the default. [CRITICAL]**
+**PGR-02 — Sentry dormant unless undocumented env var is set → silent failure is the default. [~~CRITICAL~~ → RESOLVED 2026-05-21, client-confirmed live; see Post-ship Verification banner at top.]**
 *FACTS:* `sentry.client.config.ts:9-11` + `sentry.server.config.ts:7-9` gate `Sentry.init` on `NEXT_PUBLIC_SENTRY_DSN`; `next.config.ts:76-82` only wraps `withSentryConfig` when the DSN is set; `instrumentation.ts:11` skips server config without it. The var appears **nowhere** in `src/env.mjs` (lines 16-62) and **not** in `.env.example`. *INFERENCE:* undocumented + unvalidated ⇒ plausibly never set in prod. If so, every `captureException` (`error-reporting.ts`, sync `sentry-capture.ts`, `global-error.tsx`) silently falls back to `console.*` → ephemeral Vercel logs. **The single highest-leverage action: verify/set `NEXT_PUBLIC_SENTRY_DSN` in Vercel** (it's `NEXT_PUBLIC_`, so it needs a fresh BUILD, not just a redeploy — per [[feedback_probe_harness_prod_flag]]). This one fix unblocks PGR-02 and most of PGR-03. **Needs Vercel console.**
 
 **PGR-03 — Alert signals are write-only / un-surfaced for a solo maintainer. [HIGH]**
