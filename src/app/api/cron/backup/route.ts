@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
+import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
 
 function safeCompare(a: string, b: string): boolean {
@@ -40,6 +41,9 @@ export async function GET(req: NextRequest) {
         return await runBackup()
     } catch (err) {
         logger.error("[Backup] Cron backup failed:", err)
+        // PGR-01: surface backup failures to Sentry (live in prod) so a
+        // silently-failing backup is observable, not just buried in logs.
+        captureException(err, { source: "cron", location: "backup" })
         // M9: Don't leak internal error details to client
         return NextResponse.json(
             { error: "Backup failed" },
@@ -79,6 +83,7 @@ export async function POST(req: NextRequest) {
         return await runBackup()
     } catch (err) {
         logger.error("[Backup] Manual backup failed:", err)
+        captureException(err, { source: "api", location: "backup-manual" })
         return NextResponse.json(
             { error: "Backup failed" },
             { status: 500 }
@@ -124,7 +129,7 @@ async function runBackup(): Promise<NextResponse> {
         const client = await auth.getClient()
         const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default):exportDocuments`
 
-        await client.request({
+        const res = await client.request({
             url,
             method: 'POST',
             data: {
@@ -133,18 +138,35 @@ async function runBackup(): Promise<NextResponse> {
             },
         })
 
+        // exportDocuments returns a long-running Operation; its name lets an
+        // operator (or PGR-03 later) check export completion via the API.
+        const exportOpName = (res?.data as { name?: string } | undefined)?.name
+
         // Log the backup in Firestore for admin dashboard
         await recordBackup(timestamp, 'gcs', outputUri)
+        // PGR-01: dated audit trail so staleness is observable.
+        await recordBackupAudit({
+            timestamp,
+            status: 'export_initiated',
+            type: 'gcs',
+            bucketPath: outputUri,
+            exportOpName,
+            collections: ['(all)'],
+        })
 
         logger.info(`[Backup] Export started: ${outputUri}`)
         return NextResponse.json({
             success: true,
             timestamp,
             outputUri,
+            exportOpName,
             message: "Firestore export initiated",
         })
     } catch (err) {
         logger.warn("[Backup] GCS export failed, falling back to logical backup:", err)
+        // PGR-01: the GCS export failing is a real (recovered) failure — the
+        // bytes were NOT exported. Surface to Sentry even though we fall back.
+        captureException(err, { source: "cron", location: "backup-gcs-export" })
         return await logicalBackup(projectId)
     }
 }
@@ -171,6 +193,15 @@ async function logicalBackup(projectId: string): Promise<NextResponse> {
     }
 
     await recordBackup(timestamp, 'logical', undefined, counts)
+    // PGR-01: dated audit trail (dormant-mode runs leave a record too, so a
+    // gap in dates means the cron itself stopped — not just the export).
+    await recordBackupAudit({
+        timestamp,
+        status: 'logical',
+        type: 'logical',
+        collections,
+        counts,
+    })
 
     return NextResponse.json({
         success: true,
@@ -179,6 +210,44 @@ async function logicalBackup(projectId: string): Promise<NextResponse> {
         counts,
         message: "Logical backup recorded. Set BACKUP_BUCKET env var for full GCS exports.",
     })
+}
+
+/**
+ * PGR-01: per-run dated audit doc at `backups/{YYYY-MM-DD}`. Unlike the
+ * single `config/backup` pointer (which only ever shows the latest run),
+ * this leaves a dated trail so staleness is observable — a missing recent
+ * date means backups stopped. Admin-read + server-only-write (firestore.rules).
+ * Feeds PGR-03 (alert surfacing) later. Same-day reruns overwrite (latest wins).
+ */
+async function recordBackupAudit(opts: {
+    timestamp: string
+    status: 'export_initiated' | 'logical' | 'error'
+    type: 'gcs' | 'logical'
+    bucketPath?: string
+    exportOpName?: string
+    collections?: string[]
+    counts?: Record<string, number>
+    error?: string
+}): Promise<void> {
+    try {
+        const db = getFirestore()
+        // timestamp is an ISO string with `:`/`.` replaced by `-`; the date
+        // portion (first 10 chars) has neither, so it stays `YYYY-MM-DD`.
+        const dateKey = opts.timestamp.slice(0, 10)
+        await db.collection('backups').doc(dateKey).set({
+            ts: new Date(),
+            timestamp: opts.timestamp,
+            status: opts.status,
+            type: opts.type,
+            ...(opts.bucketPath && { bucketPath: opts.bucketPath }),
+            ...(opts.exportOpName && { exportOpName: opts.exportOpName }),
+            ...(opts.collections && { collections: opts.collections }),
+            ...(opts.counts && { counts: opts.counts }),
+            ...(opts.error && { error: opts.error }),
+        })
+    } catch (err) {
+        logger.warn("[Backup] Failed to record backup audit doc:", err)
+    }
 }
 
 async function recordBackup(
