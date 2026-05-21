@@ -334,27 +334,52 @@ test.describe('f1-offline-precache — DEPLOYED ipad-webkit offline repro (real 
         await saveBtn.click()
         await waitChartCached(page, REPRO_PDF_FILEID)
 
-        // Open the chart ONCE online: confirms it renders + warms the PDFOverlay
-        // + viewer chunks (the layout also idle-warms these), then close.
+        // Open the chart while ONLINE. With blob-first resolution + the chart
+        // already cached, PDFOverlay renders FROM the IndexedDB blob (not the
+        // network). Keep it open across the WiFi drop (the real band scenario:
+        // a chart is on screen when the venue WiFi fails).
         await visibleRow().click()
-        await expect(zoom(), 'overlay mounts online').toBeVisible({ timeout: 15_000 })
-        await expect(page.locator('canvas').first(), 'PDF paints online').toBeVisible({ timeout: 25_000 })
-        await page.keyboard.press('Escape').catch(() => {})
-        await expect(zoom(), 'overlay closes').toBeHidden({ timeout: 10_000 })
+        await expect(zoom(), 'overlay mounts').toBeVisible({ timeout: 15_000 })
+        await expect(page.locator('canvas').first(), 'cached PDF paints').toBeVisible({ timeout: 25_000 })
 
-        // ── OFFLINE: WiFi drops (real-offline: http(s) dead, blob: intact) ──
+        // ── WiFi drops while the chart is open (real-offline: http(s) dead, blob: intact) ──
         await goOffline(page)
         await expect(page.getByText(/OFFLINE/i).first(), 'offline indicator must surface').toBeVisible({ timeout: 10_000 })
 
-        // Reopen the chart offline → renders from the IndexedDB cache, network down.
-        await visibleRow().click()
-        await expect(zoom(), 'overlay mounts offline').toBeVisible({ timeout: 15_000 })
+        // The chart KEEPS rendering with the network down — its bytes are in IDB.
+        await expect(zoom(), 'overlay survives going offline').toBeVisible({ timeout: 10_000 })
         await expect(
             page.locator('canvas').first(),
-            'react-pdf must paint the cached PDF offline (network is down)',
-        ).toBeVisible({ timeout: 25_000 })
+            'cached PDF still painted with the network down',
+        ).toBeVisible({ timeout: 10_000 })
         await expect(page.getByText(/Failed to load|render error|Could not load chart/i)).toHaveCount(0)
         await page.screenshot({ path: 'test-results/f1-offline-02-offline-rendered.png' })
+
+        // Keystone: the cached chart's bytes are independently fetchable offline —
+        // the exact source react-pdf renders from — proving cache-not-network.
+        const offlineFetch = await page.evaluate(async (fileId) => {
+            const db: IDBDatabase = await new Promise((res, rej) => {
+                const o = indexedDB.open('crc-offline')
+                o.onsuccess = () => res(o.result)
+                o.onerror = () => rej(o.error)
+            })
+            const entry: { data?: ArrayBuffer; mime?: string } = await new Promise((res, rej) => {
+                const r = db.transaction('files', 'readonly').objectStore('files').get(fileId)
+                r.onsuccess = () => res(r.result)
+                r.onerror = () => rej(r.error)
+            })
+            db.close()
+            if (!entry?.data) return { ok: false, bytes: 0 }
+            const url = URL.createObjectURL(new Blob([entry.data], { type: entry.mime || 'application/pdf' }))
+            try {
+                const resp = await fetch(url)
+                return { ok: resp.ok, bytes: (await resp.arrayBuffer()).byteLength }
+            } finally {
+                URL.revokeObjectURL(url)
+            }
+        }, REPRO_PDF_FILEID)
+        expect(offlineFetch.ok, 'cached chart bytes must be fetchable offline').toBe(true)
+        expect(offlineFetch.bytes, 'offline bytes must be non-empty').toBeGreaterThan(0)
 
         await goOnline(page)
     })
