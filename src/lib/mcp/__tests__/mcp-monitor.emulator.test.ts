@@ -497,4 +497,152 @@ describe("MCP monitor-control tools (emulator)", () => {
         })
         expect(ok).toMatchObject({ ok: true })
     })
+
+    // ─── monitor-mcp-polish: F-3 / F-5 / F-6 / F-7 / R-2 ────────────────────
+
+    it("F-3: set_send_level invalid channel → error.code 400 (was 500)", async () => {
+        // invalid_channel_index isn't in ERROR_CODE_MAP so it defaulted to 500;
+        // it's a caller-fixable bad arg → must be 400, symmetric with invalid_bus_index.
+        const r = await setSendLevel(ADMIN, {
+            busIndex: 1,
+            channelIndex: 999,
+            level: 0.5,
+        })
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "invalid_channel_index", code: 400 },
+        })
+        expect(await pendingCommands()).toHaveLength(0)
+    })
+
+    it("F-5: invalid_channel_index hint annotates channels with name + active-on-this-bus", async () => {
+        // Add a named channel routed to NO send on bus 1 → active:false on this bus.
+        await db()
+            .collection("monitor-live")
+            .doc("state")
+            .update({
+                channels: [
+                    { index: 1, name: "Vocals", color: 0 },
+                    { index: 2, name: "Guitar", color: 1 },
+                    { index: 3, name: "Bass", color: 2 },
+                    { index: 4, name: "Keys", color: 3 },
+                    { index: 5, name: "Spare", color: 4 },
+                ],
+            })
+        const r = (await setSendLevel(ADMIN, {
+            busIndex: 1,
+            channelIndex: 999,
+            level: 0.5,
+        })) as unknown as {
+            validChannelIndices: number[]
+            validChannels: Array<{ index: number; name: string; active: boolean }>
+        }
+        // Flat list stays for back-compat.
+        expect(r.validChannelIndices).toEqual([1, 2, 3, 4, 5])
+        const byIndex = Object.fromEntries(
+            r.validChannels.map((c) => [c.index, c]),
+        )
+        // Guitar (ch2) is on bus 1's send list, level 0.8 on → active.
+        expect(byIndex[2]).toMatchObject({
+            index: 2,
+            name: "Guitar",
+            active: true,
+        })
+        // Spare (ch5) is named but not routed to bus 1 → inactive on this bus.
+        expect(byIndex[5]).toMatchObject({
+            index: 5,
+            name: "Spare",
+            active: false,
+        })
+    })
+
+    it("F-6: get_mix sends carry BOTH `on` and `muted` (= !on)", async () => {
+        const r = (await getMix(GUITAR, {})) as {
+            sends: Array<{ channelIndex: number; on: boolean; muted: boolean }>
+        }
+        for (const s of r.sends) {
+            expect(s).toHaveProperty("on")
+            expect(s).toHaveProperty("muted")
+            expect(s.muted).toBe(!s.on)
+        }
+        // bus 1 ch4 is seeded on:false → muted:true; `on` preserved for iPad clients.
+        const ch4 = r.sends.find((s) => s.channelIndex === 4)!
+        expect(ch4.on).toBe(false)
+        expect(ch4.muted).toBe(true)
+    })
+
+    it("F-6: get_matrix matrices carry BOTH `on` and `muted` (= !on)", async () => {
+        const r = (await getMatrix(ADMIN, {})) as {
+            matrices: Array<{ index: number; on: boolean; muted: boolean }>
+        }
+        expect(r.matrices.length).toBeGreaterThan(0)
+        for (const m of r.matrices) {
+            expect(m).toHaveProperty("on")
+            expect(m).toHaveProperty("muted")
+            expect(m.muted).toBe(!m.on)
+        }
+    })
+
+    it("F-7: list_monitor_buses marks configured buses active", async () => {
+        const r = (await listMonitorBuses(ADMIN)) as {
+            buses: Array<{ index: number; name: string; active: boolean }>
+        }
+        // Both seeded buses are named with sends on → active.
+        expect(r.buses.length).toBe(2)
+        for (const b of r.buses) expect(b.active).toBe(true)
+    })
+
+    it("F-7: a named-but-pulled-down bus is active; a nameless zeroed bus is not", async () => {
+        await db()
+            .collection("monitor-live")
+            .doc("state")
+            .update({
+                buses: [
+                    // named, fader 0, only send off → still configured (active).
+                    {
+                        index: 1,
+                        name: "Andrea Wedge",
+                        fader: 0,
+                        sends: [{ channelIndex: 1, level: 0, on: false }],
+                    },
+                    // no name, fader 0, no sends → never set up (inactive).
+                    { index: 2, name: "", fader: 0, sends: [] },
+                ],
+            })
+        const r = (await listMonitorBuses(ADMIN)) as {
+            buses: Array<{ index: number; active: boolean }>
+        }
+        const byIndex = Object.fromEntries(r.buses.map((b) => [b.index, b]))
+        expect(byIndex[1].active).toBe(true)
+        expect(byIndex[2].active).toBe(false)
+    })
+
+    it("R-2: every write tool returns confidence:'queued' (never 'applied')", async () => {
+        const sl = (await setSendLevel(GUITAR, {
+            busIndex: 1,
+            channelIndex: 2,
+            level: 0.5,
+        })) as { ok: true; confidence: string }
+        const sm = (await setSendMute(GUITAR, {
+            busIndex: 1,
+            channelIndex: 2,
+            muted: true,
+        })) as { ok: true; confidence: string }
+        const bf = (await setBusFader(GUITAR, {
+            busIndex: 1,
+            level: 0.5,
+        })) as { ok: true; confidence: string }
+        const mf = (await setMatrixFader(ADMIN, {
+            matrixIndex: 1,
+            level: 0.5,
+        })) as { ok: true; confidence: string }
+        const mm = (await setMatrixMute(ADMIN, {
+            matrixIndex: 1,
+            muted: true,
+        })) as { ok: true; confidence: string }
+        for (const r of [sl, sm, bf, mf, mm]) {
+            expect(r.ok).toBe(true)
+            expect(r.confidence).toBe("queued")
+        }
+    })
 })

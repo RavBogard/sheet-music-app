@@ -34,6 +34,27 @@ function safeArray<T>(x: unknown): T[] {
     return Array.isArray(x) ? (x as T[]) : []
 }
 
+/**
+ * F-7: deterministic bus "active / configured" predicate. A bus counts as
+ * active if it carries any signal of being in use: a non-empty name, a bus
+ * master above zero, or at least one send turned on. A bus with no name, a
+ * zeroed master, and every send off reads as inactive (truly unused) — which
+ * lets a caller tell a deliberately pulled-down-but-named bus apart from one
+ * that was never set up. Pure function of the live-state row; no I/O.
+ */
+function isBusActive(b: {
+    name?: string
+    fader?: number
+    sends?: Array<{ level: number; on: boolean }>
+}): boolean {
+    const hasName = typeof b.name === "string" && b.name.trim().length > 0
+    const faderUp = typeof b.fader === "number" && b.fader > 0
+    const anySendOn = safeArray<{ level: number; on: boolean }>(b.sends).some(
+        (s) => s.on === true,
+    )
+    return hasName || faderUp || anySendOn
+}
+
 function readBusAssignment(
     assignments: Record<string, BusAssignment | BusAssignment[] | null> | undefined,
     busIndex: number,
@@ -51,6 +72,12 @@ export async function listMonitorBuses(uid: string): Promise<
           buses: Array<{
               index: number
               name: string
+              /**
+               * F-7: deterministic "this bus is configured / in use" signal so a
+               * pulled-down bus (named, fader 0, all sends off) is distinguishable
+               * from a truly-unused one. active = has a name OR fader>0 OR any send on.
+               */
+              active: boolean
               assignedTo: Array<{ uid: string; userName: string }>
           }>
           matrices: Array<{ index: number; name: string }> | null
@@ -73,12 +100,16 @@ export async function listMonitorBuses(uid: string): Promise<
         if (!access.ok) return access
 
         const state = await loadMixerState(db)
-        const stateBuses = safeArray<{ index: number; name: string }>(
-            state?.buses,
-        )
+        const stateBuses = safeArray<{
+            index: number
+            name: string
+            fader?: number
+            sends?: Array<{ channelIndex: number; level: number; on: boolean }>
+        }>(state?.buses)
         const buses = stateBuses.map((b) => ({
             index: b.index,
             name: b.name,
+            active: isBusActive(b),
             assignedTo: readBusAssignment(access.config.busAssignments, b.index),
         }))
 
@@ -137,7 +168,11 @@ export async function getMix(
               channelIndex: number
               channelName: string
               level: number
+              /** true = unmuted. KEEP — iPad /monitor + useMonitorStore read this. */
               on: boolean
+              /** F-6: additive convenience inverse of `on` (true = muted) so a
+               * caller never has to invert when round-tripping into set_send_mute. */
+              muted: boolean
           }>
       }
     | RichErrorEnvelope
@@ -206,6 +241,7 @@ export async function getMix(
             channelName: channelNameByIndex.get(s.channelIndex) ?? `Ch ${s.channelIndex}`,
             level: s.level,
             on: s.on,
+            muted: !s.on,
         })),
     }
 }
@@ -226,7 +262,10 @@ export async function getMatrix(
               index: number
               name: string
               fader: number
+              /** true = unmuted. KEEP — iPad /monitor + useMonitorStore read this. */
               on: boolean
+              /** F-6: additive inverse of `on` (true = muted) — mirrors set_matrix_mute's `muted` arg. */
+              muted: boolean
           }>
       }
     | RichErrorEnvelope
@@ -269,6 +308,7 @@ export async function getMatrix(
             name: m.name,
             fader: m.fader,
             on: m.on,
+            muted: !m.on,
         }))
         if (args.matrixIndex !== undefined) {
             const one = all.find((m) => m.index === args.matrixIndex)
@@ -349,11 +389,47 @@ async function preflightBusWrite(
             (c) => c.index,
         )
         if (!channelIndices.includes(channelIndex)) {
+            // F-5: annotate the hint with each channel's name + whether it's live
+            // on THIS bus (a send that is on, or above zero), so the LLM can pick a
+            // real target instead of guessing from a bare [1..32]. The flat
+            // `validChannelIndices` array stays for back-compat.
+            const targetBus = safeArray<{
+                index: number
+                sends?: Array<{ channelIndex: number; level: number; on: boolean }>
+            }>(state.buses).find((b) => b.index === busIndex)
+            const sendByChannel = new Map<number, { level: number; on: boolean }>()
+            for (const s of safeArray<{
+                channelIndex: number
+                level: number
+                on: boolean
+            }>(targetBus?.sends)) {
+                sendByChannel.set(s.channelIndex, { level: s.level, on: s.on })
+            }
+            const validChannels = safeArray<{ index: number; name: string }>(
+                state.channels,
+            ).map((c) => {
+                const send = sendByChannel.get(c.index)
+                return {
+                    index: c.index,
+                    name: c.name,
+                    active: !!send && (send.on === true || send.level > 0),
+                }
+            })
+            // F-3 (R-12): `invalid_channel_index` isn't in ERROR_CODE_MAP, so it
+            // defaulted to 500 — a caller-fixable bad argument. Override to 400 so
+            // it's symmetric with `invalid_bus_index` (400). machine_code unchanged;
+            // only the HTTP-like code via the factory's documented errorCode override
+            // (errors.ts is hard-rule read-only).
             return richError(
                 "invalid_channel_index",
                 `Channel ${channelIndex} is not active on the live mixer.`,
-                { channelIndex, validChannelIndices: channelIndices },
-                "Call get_mix to see the bus's active channels.",
+                {
+                    channelIndex,
+                    validChannelIndices: channelIndices,
+                    validChannels,
+                    errorCode: 400,
+                },
+                "Call get_mix to see the bus's active channels — validChannels lists each channel's name and whether it's live on this bus.",
             )
         }
     }
@@ -413,7 +489,9 @@ export interface SetSendLevelArgs {
 export async function setSendLevel(
     uid: string,
     args: SetSendLevelArgs,
-): Promise<{ ok: true; commandId: string } | RichErrorEnvelope> {
+): Promise<
+    { ok: true; commandId: string; confidence: "queued" } | RichErrorEnvelope
+> {
     initAdmin()
     const db = getFirestore()
     const pre = await preflightBusWrite(db, uid, args.busIndex, args.channelIndex)
@@ -425,7 +503,10 @@ export async function setSendLevel(
         channelIndex: args.channelIndex,
         value: args.level,
     })
-    return { ok: true, commandId: r.id }
+    // R-2: honest fire-and-forget receipt. ALWAYS "queued" — the command was
+    // accepted into monitor-live/commands/pending; the app side cannot confirm
+    // the X32 OSC ack (that's the held bridge lane), so it never claims "applied".
+    return { ok: true, commandId: r.id, confidence: "queued" as const }
 }
 
 // ─── set_send_mute ──────────────────────────────────────────────────────────
@@ -444,7 +525,9 @@ export interface SetSendMuteArgs {
 export async function setSendMute(
     uid: string,
     args: SetSendMuteArgs,
-): Promise<{ ok: true; commandId: string } | RichErrorEnvelope> {
+): Promise<
+    { ok: true; commandId: string; confidence: "queued" } | RichErrorEnvelope
+> {
     initAdmin()
     const db = getFirestore()
     const pre = await preflightBusWrite(db, uid, args.busIndex, args.channelIndex)
@@ -456,7 +539,10 @@ export async function setSendMute(
         channelIndex: args.channelIndex,
         value: !args.muted,
     })
-    return { ok: true, commandId: r.id }
+    // R-2: honest fire-and-forget receipt. ALWAYS "queued" — the command was
+    // accepted into monitor-live/commands/pending; the app side cannot confirm
+    // the X32 OSC ack (that's the held bridge lane), so it never claims "applied".
+    return { ok: true, commandId: r.id, confidence: "queued" as const }
 }
 
 // ─── set_bus_fader (bus master) ─────────────────────────────────────────────
@@ -469,7 +555,9 @@ export interface SetBusFaderArgs {
 export async function setBusFader(
     uid: string,
     args: SetBusFaderArgs,
-): Promise<{ ok: true; commandId: string } | RichErrorEnvelope> {
+): Promise<
+    { ok: true; commandId: string; confidence: "queued" } | RichErrorEnvelope
+> {
     initAdmin()
     const db = getFirestore()
     const pre = await preflightBusWrite(db, uid, args.busIndex)
@@ -480,7 +568,10 @@ export async function setBusFader(
         busIndex: args.busIndex,
         value: args.level,
     })
-    return { ok: true, commandId: r.id }
+    // R-2: honest fire-and-forget receipt. ALWAYS "queued" — the command was
+    // accepted into monitor-live/commands/pending; the app side cannot confirm
+    // the X32 OSC ack (that's the held bridge lane), so it never claims "applied".
+    return { ok: true, commandId: r.id, confidence: "queued" as const }
 }
 
 // ─── set_matrix_fader (admin/SE only) ───────────────────────────────────────
@@ -493,7 +584,9 @@ export interface SetMatrixFaderArgs {
 export async function setMatrixFader(
     uid: string,
     args: SetMatrixFaderArgs,
-): Promise<{ ok: true; commandId: string } | RichErrorEnvelope> {
+): Promise<
+    { ok: true; commandId: string; confidence: "queued" } | RichErrorEnvelope
+> {
     initAdmin()
     const db = getFirestore()
     const pre = await preflightPrivilegedWrite(db, uid, args.matrixIndex)
@@ -504,7 +597,10 @@ export async function setMatrixFader(
         matrixIndex: args.matrixIndex,
         value: args.level,
     })
-    return { ok: true, commandId: r.id }
+    // R-2: honest fire-and-forget receipt. ALWAYS "queued" — the command was
+    // accepted into monitor-live/commands/pending; the app side cannot confirm
+    // the X32 OSC ack (that's the held bridge lane), so it never claims "applied".
+    return { ok: true, commandId: r.id, confidence: "queued" as const }
 }
 
 // ─── set_matrix_mute (admin/SE only) ────────────────────────────────────────
@@ -517,7 +613,9 @@ export interface SetMatrixMuteArgs {
 export async function setMatrixMute(
     uid: string,
     args: SetMatrixMuteArgs,
-): Promise<{ ok: true; commandId: string } | RichErrorEnvelope> {
+): Promise<
+    { ok: true; commandId: string; confidence: "queued" } | RichErrorEnvelope
+> {
     initAdmin()
     const db = getFirestore()
     const pre = await preflightPrivilegedWrite(db, uid, args.matrixIndex)
@@ -528,5 +626,8 @@ export async function setMatrixMute(
         matrixIndex: args.matrixIndex,
         value: !args.muted,
     })
-    return { ok: true, commandId: r.id }
+    // R-2: honest fire-and-forget receipt. ALWAYS "queued" — the command was
+    // accepted into monitor-live/commands/pending; the app side cannot confirm
+    // the X32 OSC ack (that's the held bridge lane), so it never claims "applied".
+    return { ok: true, commandId: r.id, confidence: "queued" as const }
 }

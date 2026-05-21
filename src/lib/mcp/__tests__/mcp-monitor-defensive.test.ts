@@ -113,6 +113,41 @@ describe("list_monitor_buses — F-001 defensive guards", () => {
         })
     })
 
+    it("F-7: marks each bus active (configured) vs inactive (never set up)", async () => {
+        vi.mocked(loadMixerState).mockResolvedValue({
+            buses: [
+                // named + a send on → active
+                {
+                    index: 1,
+                    name: "Vox wedge",
+                    fader: 0.5,
+                    sends: [{ channelIndex: 1, level: 0.4, on: true }],
+                },
+                // named, fader 0, only send off → still configured (active by name)
+                {
+                    index: 2,
+                    name: "Andrea Wedge",
+                    fader: 0,
+                    sends: [{ channelIndex: 1, level: 0, on: false }],
+                },
+                // no name, fader 0, no sends → never set up (inactive)
+                { index: 3, name: "", fader: 0, sends: [] },
+            ] as never,
+            matrices: [] as never,
+            channels: [] as never,
+            config: {} as never,
+        })
+        const result = (await listMonitorBuses("admin-uid")) as {
+            buses: Array<{ index: number; active: boolean }>
+        }
+        const byIndex = Object.fromEntries(
+            result.buses.map((b) => [b.index, b]),
+        )
+        expect(byIndex[1].active).toBe(true)
+        expect(byIndex[2].active).toBe(true)
+        expect(byIndex[3].active).toBe(false)
+    })
+
     it("F-003: unexpected throw inside handler returns the rich envelope", async () => {
         vi.mocked(loadMixerState).mockRejectedValue(
             new Error("Firestore offline"),

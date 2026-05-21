@@ -1894,7 +1894,7 @@ export function registerMonitorTools(server: McpServer): void {
         "list_monitor_buses",
         {
             description:
-                "List the personal-IEM monitor buses, their assignments, the hardware bridge status, and (for admins/sound engineers) the X32 matrix outputs. Always call this first to discover bus and channel indexes before adjusting faders. Response includes `bridge.clients` — the number of WebSocket-attached clients currently connected to the bridge daemon (iPads on /monitor). MCP API callers (this session) go through the HTTP path and are NOT counted in this number; 0 here doesn't mean the bridge is unused, just that no iPads are open. `bridge.x32Connected` is an optimistic hint from the daemon; treat it as best-effort, not a guarantee the X32 hardware applied a write.",
+                "List the personal-IEM monitor buses, their assignments, the hardware bridge status, and (for admins/sound engineers) the X32 matrix outputs. Always call this first to discover bus and channel indexes before adjusting faders. Response includes `bridge.clients` — the number of WebSocket-attached clients currently connected to the bridge daemon (iPads on /monitor). MCP API callers (this session) go through the HTTP path and are NOT counted in this number; 0 here doesn't mean the bridge is unused, just that no iPads are open. `bridge.x32Connected` is an optimistic hint from the daemon; treat it as best-effort, not a guarantee the X32 hardware applied a write. Each bus carries `active` — true when the bus is configured/in use (has a name OR fader>0 OR any send on); false marks a never-set-up bus, so you can tell a deliberately pulled-down-but-named bus apart from an unused one.",
             inputSchema: {},
         },
         async (_args, extra) =>
@@ -1905,15 +1905,16 @@ export function registerMonitorTools(server: McpServer): void {
         "get_mix",
         {
             description:
-                "Get the current fader, mute, and channel names for one monitor bus. Omit busIndex to default to the caller's first assigned bus — useful for 'show me my mix'. Channel names come from the live X32 state; use them to map a request like 'turn up my guitar' to a channelIndex.",
+                "Get the current fader, mute, and channel names for one monitor bus. Omit busIndex to default to the caller's first assigned bus — useful for 'show me my mix'. Channel names come from the live X32 state; use them to map a request like 'turn up my guitar' to a channelIndex. Each send carries BOTH `on` (true = unmuted) and `muted` (= !on); pass `muted` straight to set_send_mute without inverting.",
             inputSchema: {
                 busIndex: z
                     .number()
                     .int()
                     .min(1)
+                    .max(5)
                     .optional()
                     .describe(
-                        "Bus index from list_monitor_buses (1-based); omit to use the caller's first assigned bus",
+                        "Bus index 1-5 from list_monitor_buses (1-based); omit to use the caller's first assigned bus",
                     ),
             },
         },
@@ -1924,7 +1925,7 @@ export function registerMonitorTools(server: McpServer): void {
         "get_matrix",
         {
             description:
-                "Read the current X32 matrix output state (fader + mute per matrix). Restricted to admins and sound engineers — matrices feed the FOH PA. Omit matrixIndex to return all matrices; pass 1–6 for a single matrix. Use this before set_matrix_fader / set_matrix_mute to capture the pre-write value so you can restore on revert.",
+                "Read the current X32 matrix output state (fader + mute per matrix). Restricted to admins and sound engineers — matrices feed the FOH PA. Omit matrixIndex to return all matrices; pass 1–6 for a single matrix. Use this before set_matrix_fader / set_matrix_mute to capture the pre-write value so you can restore on revert. Each matrix carries BOTH `on` (true = unmuted) and `muted` (= !on); pass `muted` straight to set_matrix_mute without inverting.",
             inputSchema: {
                 matrixIndex: z
                     .number()
@@ -1943,14 +1944,22 @@ export function registerMonitorTools(server: McpServer): void {
         "set_send_level",
         {
             description:
-                "Set the fader level for one channel in one monitor bus. level is a normalized fader position in [0.0, 1.0] — NOT dB. To 'turn up by a bit', read get_mix first and write level + ~0.05–0.1. Musicians may only adjust buses assigned to them; admins/sound engineers may adjust any bus. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_mix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee.",
+                "Set the fader level for one channel in one monitor bus. level is a normalized fader position in [0.0, 1.0] — NOT dB. To 'turn up by a bit', read get_mix first and write level + ~0.05–0.1. Musicians may only adjust buses assigned to them; admins/sound engineers may adjust any bus. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_mix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee. On success the response carries `confidence:\"queued\"` — the command was accepted into the bridge queue for send, NOT confirmed applied on the X32 (the app side cannot read an OSC ack).",
             inputSchema: {
-                busIndex: z.number().int().min(1).describe("Bus index (1-based)"),
+                busIndex: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(5)
+                    .describe("Bus index 1-5 (1-based, from list_monitor_buses)"),
                 channelIndex: z
                     .number()
                     .int()
                     .min(1)
-                    .describe("Channel index 1-based (from get_mix sends list)"),
+                    .max(32)
+                    .describe(
+                        "Channel index 1-32 (X32 input bank; from get_mix sends list)",
+                    ),
                 level: z
                     .number()
                     .min(0)
@@ -1966,14 +1975,20 @@ export function registerMonitorTools(server: McpServer): void {
         "set_send_mute",
         {
             description:
-                "Mute or unmute one channel in one monitor bus. muted=true silences the channel for that bus; muted=false unmutes. Affects only the bus, not the channel globally. Musicians may only mute on their own bus; admins/sound engineers may mute on any bus. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_mix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee.",
+                "Mute or unmute one channel in one monitor bus. muted=true silences the channel for that bus; muted=false unmutes. Affects only the bus, not the channel globally. Musicians may only mute on their own bus; admins/sound engineers may mute on any bus. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_mix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee. On success the response carries `confidence:\"queued\"` — the command was accepted into the bridge queue for send, NOT confirmed applied on the X32 (the app side cannot read an OSC ack).",
             inputSchema: {
-                busIndex: z.number().int().min(1).describe("Bus index (1-based)"),
+                busIndex: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(5)
+                    .describe("Bus index 1-5 (1-based, from list_monitor_buses)"),
                 channelIndex: z
                     .number()
                     .int()
                     .min(1)
-                    .describe("Channel index (1-based)"),
+                    .max(32)
+                    .describe("Channel index 1-32 (X32 input bank)"),
                 muted: z.boolean().describe("true = muted; false = unmuted"),
             },
         },
@@ -1985,9 +2000,14 @@ export function registerMonitorTools(server: McpServer): void {
         "set_bus_fader",
         {
             description:
-                "Set the bus master level — the overall in-ear volume for that monitor bus. Use when the user says 'turn up my whole mix' or 'I need more volume in my ears'. Musicians may only adjust their own bus; admins/sound engineers may adjust any bus. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_mix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee.",
+                "Set the bus master level — the overall in-ear volume for that monitor bus. Use when the user says 'turn up my whole mix' or 'I need more volume in my ears'. Musicians may only adjust their own bus; admins/sound engineers may adjust any bus. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_mix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee. On success the response carries `confidence:\"queued\"` — the command was accepted into the bridge queue for send, NOT confirmed applied on the X32 (the app side cannot read an OSC ack).",
             inputSchema: {
-                busIndex: z.number().int().min(1).describe("Bus index (1-based)"),
+                busIndex: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(5)
+                    .describe("Bus index 1-5 (1-based, from list_monitor_buses)"),
                 level: z
                     .number()
                     .min(0)
@@ -2003,7 +2023,7 @@ export function registerMonitorTools(server: McpServer): void {
         "set_matrix_fader",
         {
             description:
-                "Set the level of an X32 matrix output (mains, side-fills, sub-mix, etc). Restricted to admins and sound engineers — these outputs feed the FOH PA, not personal mixes. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_matrix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee.",
+                "Set the level of an X32 matrix output (mains, side-fills, sub-mix, etc). Restricted to admins and sound engineers — these outputs feed the FOH PA, not personal mixes. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_matrix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee. On success the response carries `confidence:\"queued\"` — the command was accepted into the bridge queue for send, NOT confirmed applied on the X32 (the app side cannot read an OSC ack).",
             inputSchema: {
                 matrixIndex: z
                     .number()
@@ -2022,7 +2042,7 @@ export function registerMonitorTools(server: McpServer): void {
         "set_matrix_mute",
         {
             description:
-                "Mute or unmute one X32 matrix output. Restricted to admins and sound engineers. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_matrix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee.",
+                "Mute or unmute one X32 matrix output. Restricted to admins and sound engineers. Writes are fire-and-forget: the bridge enqueues the command but cannot guarantee the X32 hardware applied it. Always re-read with get_matrix immediately after writing to confirm propagation. The bridge's x32Connected flag has been observed to be stale-true when the hardware is actually off — treat it as an optimistic hint, not a guarantee. On success the response carries `confidence:\"queued\"` — the command was accepted into the bridge queue for send, NOT confirmed applied on the X32 (the app side cannot read an OSC ack).",
             inputSchema: {
                 matrixIndex: z
                     .number()
