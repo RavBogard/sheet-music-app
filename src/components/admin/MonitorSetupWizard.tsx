@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Loader2, Radar, CheckCircle, ArrowRight, ArrowLeft, Wifi, Radio } from "lucide-react"
+import { CheckCircle, ArrowRight, ArrowLeft, Wifi, Radio } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface WizardProps {
@@ -11,9 +11,6 @@ interface WizardProps {
     setBridgeUrl: (v: string) => void
     x32Address: string
     setX32Address: (v: string) => void
-    onScan: () => Promise<void>
-    scanning: boolean
-    scanResult: string | null
     monitorBusesStr: string
     setMonitorBusesStr: (v: string) => void
     onComplete: () => void
@@ -28,7 +25,6 @@ const STEPS = [
 export function MonitorSetupWizard({
     bridgeUrl, setBridgeUrl,
     x32Address, setX32Address,
-    onScan, scanning, scanResult,
     monitorBusesStr, setMonitorBusesStr,
     onComplete,
 }: WizardProps) {
@@ -70,12 +66,12 @@ export function MonitorSetupWizard({
                 {step === 0 && (
                     <div className="space-y-3">
                         <p className="text-xs text-muted-foreground">
-                            Enter the WebSocket URL of the bridge server running on your production machine.
+                            The bridge address is auto-detected on startup. Override it here only if needed.
                         </p>
                         <Input
                             value={bridgeUrl}
                             onChange={e => setBridgeUrl(e.target.value)}
-                            placeholder="wss://192.168.1.50:9001"
+                            placeholder="firestore://192.168.1.50"
                         />
                     </div>
                 )}
@@ -83,25 +79,13 @@ export function MonitorSetupWizard({
                 {step === 1 && (
                     <div className="space-y-3">
                         <p className="text-xs text-muted-foreground">
-                            Scan your network for the X32, or enter its IP manually.
+                            The bridge auto-discovers the X32 on startup. Enter its IP manually only if needed.
                         </p>
-                        <div className="flex gap-2">
-                            <Input
-                                value={x32Address}
-                                onChange={e => setX32Address(e.target.value)}
-                                placeholder="Auto-detected"
-                                className="flex-1"
-                            />
-                            <Button variant="outline" onClick={onScan} disabled={scanning}>
-                                {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radar className="h-4 w-4" />}
-                                <span className="ml-2">Scan</span>
-                            </Button>
-                        </div>
-                        {scanResult && (
-                            <p className={cn("text-xs", scanResult.includes("Found") ? "text-success" : "text-amber-500")}>
-                                {scanResult}
-                            </p>
-                        )}
+                        <Input
+                            value={x32Address}
+                            onChange={e => setX32Address(e.target.value)}
+                            placeholder="Auto-detected by the bridge"
+                        />
                     </div>
                 )}
 

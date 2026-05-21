@@ -119,6 +119,7 @@ export class X32Client extends EventEmitter {
     private port: number
     private xremoteInterval: ReturnType<typeof setInterval> | null = null
     private healthCheckInterval: ReturnType<typeof setInterval> | null = null
+    private keepaliveInterval: ReturnType<typeof setInterval> | null = null
     private lastMessageAt: number = 0
     private connected = false
     private reconnecting = false
@@ -189,6 +190,10 @@ export class X32Client extends EventEmitter {
             clearInterval(this.healthCheckInterval)
             this.healthCheckInterval = null
         }
+        if (this.keepaliveInterval) {
+            clearInterval(this.keepaliveInterval)
+            this.keepaliveInterval = null
+        }
         this.connected = false
         this.reconnecting = false
         this.socket.close()
@@ -202,8 +207,35 @@ export class X32Client extends EventEmitter {
             this.send("/xremote")
         }, 8000)
 
-        // Health check: if no message received in 15s, X32 is gone
+        // Keepalive + response-based liveness check (BR-02)
+        this.startKeepalive()
         this.startHealthCheck()
+    }
+
+    /**
+     * Periodic /xinfo keepalive (BR-02).
+     *
+     * The X32 does NOT echo /xremote (it's a one-way subscription renewal),
+     * so on a quiet console — no fader/param activity — there is zero inbound
+     * traffic. The old health check inferred liveness purely from incidental
+     * traffic, so an idle-but-healthy mixer looked "disconnected" after 20s,
+     * triggering a needless reconnect + full `syncFullState` resync roughly
+     * every 20s.
+     *
+     * /xinfo IS answered by the X32 (it's how connect()/discover() probe it),
+     * so querying it on a short interval actively solicits a response whenever
+     * the mixer is alive. The response bumps `lastMessageAt` (handleMessage,
+     * via the socket "message" handler), turning the silence-based health
+     * check below into a true response-based liveness probe.
+     */
+    private startKeepalive(): void {
+        if (this.keepaliveInterval) clearInterval(this.keepaliveInterval)
+        // Probe once now so liveness is fresh immediately, then every 8s.
+        // With the 20s health window this tolerates a single dropped response.
+        this.send("/xinfo")
+        this.keepaliveInterval = setInterval(() => {
+            this.send("/xinfo")
+        }, 8000)
     }
 
     private startHealthCheck(): void {
@@ -213,10 +245,13 @@ export class X32Client extends EventEmitter {
             if (!this.connected) return
             const silent = Date.now() - this.lastMessageAt
 
-            // X32 sends /xremote responses every 8s. If we haven't heard
-            // anything in 20s, the mixer is unreachable.
+            // The /xinfo keepalive (startKeepalive) actively solicits a
+            // response every 8s, and any inbound OSC — keepalive echo OR real
+            // param traffic — refreshes lastMessageAt. So 20s of total silence
+            // means ~2+ missed keepalives: the mixer is genuinely unreachable,
+            // not merely idle.
             if (silent > 20000) {
-                console.warn("[X32] No response in 20s — marking disconnected")
+                console.warn("[X32] No response to keepalive in 20s — marking disconnected")
                 this.connected = false
                 this.emit("disconnected")
                 this.attemptReconnect()

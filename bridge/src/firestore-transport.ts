@@ -53,6 +53,15 @@ export class FirestoreTransport {
     private commandBatchTimer: ReturnType<typeof setTimeout> | null = null;
     private readonly COMMAND_BATCH_WINDOW = 20; // ms to accumulate commands before processing
 
+    // BR-01: cache each user's admin/soundEngineer ("engineer") flag so the
+    // authz check does NOT read users/{uid} from Firestore on every fader tick
+    // (the dominant avoidable latency + the dominant per-command read cost).
+    // role/soundEngineer change rarely; a short TTL keeps the gate correct
+    // within seconds of a role change. Only the SOURCE of the flag changes —
+    // the authorization logic in isCommandAuthorized is unchanged.
+    private engineerCache: Map<string, { isEngineer: boolean; expiresAt: number }> = new Map();
+    private readonly ENGINEER_CACHE_TTL_MS = 30_000;
+
     constructor(x32: X32Client, config: ConfigManager) {
         this.x32 = x32
         this.config = config
@@ -326,19 +335,8 @@ export class FirestoreTransport {
         // if it is removed or weakened, any member could control any bus.
         const userBus = this.config.getUserBus(cmd.uid)
 
-        // Fetch user document to check if they are an admin or sound engineer
-        let isEngineer = false;
-        try {
-            const userDoc = await this.db.collection("users").doc(cmd.uid).get();
-            if (userDoc.exists) {
-                const userData = userDoc.data();
-                if (userData?.role === "admin" || userData?.soundEngineer === true) {
-                    isEngineer = true;
-                }
-            }
-        } catch (e) {
-            console.error("[Transport] Failed to fetch user role for auth check:", e);
-        }
+        // Admin/sound-engineer privilege (cached — see getIsEngineer / BR-01).
+        const isEngineer = await this.getIsEngineer(cmd.uid)
 
         if (cmd.type === "set_matrix_fader" || cmd.type === "set_matrix_on") {
             return isEngineer
@@ -349,6 +347,41 @@ export class FirestoreTransport {
         }
 
         return false
+    }
+
+    /**
+     * Whether a user is an admin or sound engineer, cached in-memory with a
+     * short TTL (BR-01). On a cache miss/expiry it reads users/{uid} once and
+     * caches the result; subsequent commands within the TTL skip the read
+     * entirely. A failed read fails CLOSED (engineer=false) for that command
+     * and is NOT cached, so the next command retries — preserving the original
+     * per-command behavior on transient Firestore errors. Bus-ownership (via
+     * config.getUserBus) is unaffected by a read failure, exactly as before.
+     */
+    private async getIsEngineer(uid: string): Promise<boolean> {
+        const now = Date.now()
+        const cached = this.engineerCache.get(uid)
+        if (cached && cached.expiresAt > now) {
+            return cached.isEngineer
+        }
+
+        let isEngineer = false
+        try {
+            const userDoc = await this.db.collection("users").doc(uid).get()
+            if (userDoc.exists) {
+                const userData = userDoc.data()
+                if (userData?.role === "admin" || userData?.soundEngineer === true) {
+                    isEngineer = true
+                }
+            }
+            // Cache successful reads only (including negative results).
+            this.engineerCache.set(uid, { isEngineer, expiresAt: now + this.ENGINEER_CACHE_TTL_MS })
+        } catch (e) {
+            // Fail closed for engineer privilege; do NOT cache an error so the
+            // next command re-attempts the read.
+            console.error("[Transport] Failed to fetch user role for auth check:", e)
+        }
+        return isEngineer
     }
 
     /**

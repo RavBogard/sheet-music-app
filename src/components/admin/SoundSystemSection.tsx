@@ -14,12 +14,12 @@ import { logger } from "@/lib/logger"
 import { cn } from "@/lib/utils"
 import {
     Loader2, Radio, CheckCircle,
-    Radar, Save, Settings2, Download, Copy, KeyRound,
+    Save, Settings2, Download, Copy, KeyRound,
 } from "lucide-react"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 
 const DEFAULT_MONITOR_CONFIG: MonitorConfig = {
-    bridgeUrl: "wss://192.168.1.50:9001",
+    bridgeUrl: "firestore://192.168.1.50",
     x32Address: "192.168.1.100",
     x32Port: 10023,
     monitorBuses: [1, 2, 3, 4, 5],
@@ -35,23 +35,18 @@ export function SoundSystemSection() {
     const [x32Address, setX32Address] = useState("")
     const [x32Port, setX32Port] = useState("10023")
     const [monitorBusesStr, setMonitorBusesStr] = useState("")
-    const [scanning, setScanning] = useState(false)
-    const [scanResult, setScanResult] = useState<string | null>(null)
-    const [trustUrl, setTrustUrl] = useState<string | null>(null)
     const [bridgeStatus, setBridgeStatus] = useState<{ status: string; lastSeen: Date | null; x32Connected: boolean; clients: number; version: string } | null>(null)
     const [setupCode, setSetupCode] = useState<string | null>(null)
     const [setupCodeExpiry, setSetupCodeExpiry] = useState<number | null>(null)
     const [generatingCode, setGeneratingCode] = useState(false)
 
     const configRef = useMemo(() => doc(db, "config", "monitor"), [])
-    const scanControllerRef = useRef<AbortController | null>(null)
     const setupCodeControllerRef = useRef<AbortController | null>(null)
     const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     // Cancel all in-flight network and pending timers on unmount.
     useEffect(() => {
         return () => {
-            scanControllerRef.current?.abort()
             setupCodeControllerRef.current?.abort()
             if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
         }
@@ -96,53 +91,11 @@ export function SoundSystemSection() {
         }
     }, [configData, configLoading])
 
-    const handleScan = useCallback(async () => {
-        if (!bridgeUrl) { setScanResult("Set the bridge URL first"); return }
-        setScanning(true); setScanResult(null); setTrustUrl(null)
-
-        let wsUrl: URL;
-        try {
-            wsUrl = new URL(bridgeUrl)
-        } catch {
-            setScanResult("Invalid Bridge URL format")
-            setScanning(false)
-            return
-        }
-
-        const isSecure = bridgeUrl.startsWith("wss://")
-        const apiPort = isSecure ? wsUrl.port : String(parseInt(wsUrl.port) + 1)
-        const apiProto = isSecure ? "https" : "http"
-
-        // Compose a fresh unmount controller with the 8s timeout so either triggers abort.
-        scanControllerRef.current?.abort()
-        const unmountController = new AbortController()
-        scanControllerRef.current = unmountController
-        const timeoutSignal = AbortSignal.timeout(8000)
-        const signal = AbortSignal.any
-            ? AbortSignal.any([unmountController.signal, timeoutSignal])
-            : unmountController.signal
-
-        try {
-            const res = await fetch(`${apiProto}://${wsUrl.hostname}:${apiPort}/scan`, { signal })
-            if (unmountController.signal.aborted) return
-            const data = await res.json()
-            if (unmountController.signal.aborted) return
-            if (data.found) {
-                setX32Address(data.address)
-                setScanResult(`Found ${data.name} (${data.model}) at ${data.address}`)
-            } else {
-                setScanResult("No X32 found on the network")
-            }
-        } catch (e) {
-            if ((e as Error).name === 'AbortError' && unmountController.signal.aborted) return
-            setScanResult("Could not reach bridge server. If it's running, you may need to accept its local security certificate.")
-            if (isSecure) {
-                setTrustUrl(`${apiProto}://${wsUrl.hostname}:${apiPort}/trust`)
-            }
-        } finally {
-            if (!unmountController.signal.aborted) setScanning(false)
-        }
-    }, [bridgeUrl])
+    // BR-05: the manual "Scan for X32" flow was removed. It fetched `/scan` on
+    // a bridge HTTP port that no longer exists — the WebSocket/HTTP server was
+    // replaced by the Firestore transport, so the bridge starts no HTTP server.
+    // The X32 is auto-discovered on bridge startup (x32-client discover()) and
+    // its IP is written to config; manual entry remains as the override.
 
     const handleGenerateSetupCode = useCallback(async () => {
         setGeneratingCode(true)
@@ -227,9 +180,6 @@ export function SoundSystemSection() {
                         setBridgeUrl={setBridgeUrl}
                         x32Address={x32Address}
                         setX32Address={setX32Address}
-                        onScan={handleScan}
-                        scanning={scanning}
-                        scanResult={scanResult}
                         monitorBusesStr={monitorBusesStr}
                         setMonitorBusesStr={setMonitorBusesStr}
                         onComplete={() => { handleMonitorSave(); setMonitorConfigExists(true) }}
@@ -277,8 +227,8 @@ export function SoundSystemSection() {
                                 Bridge Server & X32
                             </h3>
                             <div>
-                                <label className="text-sm text-muted-foreground mb-1 block">Bridge WebSocket URL</label>
-                                <Input value={bridgeUrl} onChange={e => setBridgeUrl(e.target.value)} placeholder="wss://192.168.1.50:9001" />
+                                <label className="text-sm text-muted-foreground mb-1 block">Bridge Address</label>
+                                <Input value={bridgeUrl} onChange={e => setBridgeUrl(e.target.value)} placeholder="firestore://192.168.1.50" />
                                 <p className="text-xs text-muted-foreground mt-1">Auto-detected by the bridge on startup</p>
                             </div>
 
@@ -313,22 +263,8 @@ export function SoundSystemSection() {
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-sm text-muted-foreground mb-1 block">X32 IP Address</label>
-                                    <div className="flex gap-2">
-                                        <Input value={x32Address} onChange={e => setX32Address(e.target.value)} placeholder="Auto-detected" className="flex-1" />
-                                        <Button variant="outline" size="icon" onClick={handleScan} disabled={scanning} title="Scan network for X32">
-                                            {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radar className="h-4 w-4" />}
-                                        </Button>
-                                    </div>
-                                    {scanResult && (
-                                        <div className="mt-1">
-                                            <p className={cn("text-xs", scanResult.includes("Found") ? "text-success" : "text-amber-500")}>{scanResult}</p>
-                                            {trustUrl && (
-                                                <a href={trustUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand hover:text-brand/80 underline mt-1 block">
-                                                    Trust Bridge Certificate &rarr;
-                                                </a>
-                                            )}
-                                        </div>
-                                    )}
+                                    <Input value={x32Address} onChange={e => setX32Address(e.target.value)} placeholder="Auto-detected by the bridge" />
+                                    <p className="text-xs text-muted-foreground mt-1">The bridge auto-discovers the X32 on startup; override here only if needed.</p>
                                 </div>
                                 <div>
                                     <label className="text-sm text-muted-foreground mb-1 block">OSC Port</label>
