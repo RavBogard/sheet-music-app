@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
+import { primeOfflineWorker } from "@/lib/pdf-worker-offline"
 
 /**
  * Pre-warm the PDF.js worker on Perform-route mount so the worker module is
@@ -68,6 +69,13 @@ function PdfWorkerPreload() {
                     /* fallback path in PDFViewer handles a real worker failure */
                 })
             })
+
+            // offline-perform-fix: copy the worker bytes into IndexedDB while
+            // online so a chart NOT-yet-opened still renders after wifi drops.
+            // The HTTP-cache warm above does NOT survive a true offline open
+            // (the worker fetch 404s with no SW); the IDB copy feeds PDFViewer a
+            // blob: workerSrc offline. Best-effort, fire-and-forget.
+            void primeOfflineWorker()
 
             // F1 offline-precache: warm the lazily-imported overlay + per-format
             // viewer chunks so a chart still OPENS offline even if it was never

@@ -1,5 +1,6 @@
 import { QueueItem } from "@/lib/store"
 import { hasFile, putFile } from "@/lib/offline-idb"
+import { primeOfflineWorker } from "@/lib/pdf-worker-offline"
 
 /**
  * Prefetch upcoming files in the setlist queue into the IDB blob store
@@ -52,6 +53,11 @@ export async function prefetchSetlistPDFs(
     onProgress?: (cached: number, total: number) => void
 ): Promise<number> {
     if (!fileIds.length) return 0
+
+    // offline-perform-fix: a "saved" setlist must include the pdf.js worker, or a
+    // not-yet-opened chart can't render offline. Cache the worker bytes FIRST (and
+    // await it) so it's guaranteed present by the time the save reports complete.
+    await primeOfflineWorker()
 
     const unique = [...new Set(fileIds.filter(Boolean))]
     let newlyCached = 0

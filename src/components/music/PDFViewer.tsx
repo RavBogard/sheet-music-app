@@ -13,6 +13,7 @@ import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { logger } from "@/lib/logger"
 import { getFile } from '@/lib/offline-idb'
+import { desiredWorkerSrc, ensureOfflineWorkerReady } from '@/lib/pdf-worker-offline'
 
 // Configure PDF.js worker — use local copy from public/ (copied by
 // scripts/copy-pdf-worker.js during postinstall + build). Local worker
@@ -34,7 +35,9 @@ import { getFile } from '@/lib/offline-idb'
 // window` guard keeps the static-prerender of /perform safe (the module is
 // dynamically imported by PDFOverlay anyway, defense in depth).
 if (typeof window !== "undefined") {
-    pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.${pdfjs.version}.mjs`
+    // desiredWorkerSrc returns the static asset online and the cached blob: URL
+    // offline (offline-perform-fix). At module load we're online → static.
+    pdfjs.GlobalWorkerOptions.workerSrc = desiredWorkerSrc(pdfjs.version)
 }
 
 /**
@@ -75,7 +78,9 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     // module load, so we re-assert the correct URL on every render rather
     // than gating on `!workerSrc`. Cheap (one string write per render).
     if (typeof window !== "undefined") {
-        const want = `/pdf.worker.min.${pdfjs.version}.mjs`
+        // Offline-aware: static asset online, cached blob: URL offline. Never
+        // clobbers the offline blob src with the static (404-offline) URL.
+        const want = desiredWorkerSrc(pdfjs.version)
         if (pdfjs.GlobalWorkerOptions.workerSrc !== want) {
             pdfjs.GlobalWorkerOptions.workerSrc = want
         }
@@ -106,6 +111,16 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
         resolvedUrlRef.current = fetchUrl
 
         try {
+            // offline-perform-fix: ensure the pdf.js worker is resolvable OFFLINE
+            // (a blob: URL built from cached worker bytes) BEFORE <Document> mounts.
+            // No-op online. Without this, a cold offline open hits "Setting up fake
+            // worker failed" and offline nav hangs on "Rendering…". Re-assert
+            // workerSrc so the freshly-built blob URL is in place for worker creation.
+            await ensureOfflineWorkerReady(pdfjs.version)
+            if (typeof window !== "undefined") {
+                pdfjs.GlobalWorkerOptions.workerSrc = desiredWorkerSrc(pdfjs.version)
+            }
+
             // 1. Intercept for Offline PWA Support: Check Dexie IDB first
             const fileIdMatch = fetchUrl.match(/\/api\/drive\/file\/([^/?]+)/)
             if (fileIdMatch && fileIdMatch[1]) {
