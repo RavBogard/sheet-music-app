@@ -322,3 +322,169 @@ export function serializeLastSeen(v: unknown): string | null {
     }
     return null
 }
+
+// ─── P2-B (MCP-D3): command-ack surface for get_command_status ────────────
+
+/**
+ * Personal-IEM monitor buses are 1-5 on the X32. Shared by the MCP-D4
+ * assign/unassign tools (bus-range validation) and any caller that needs the
+ * canonical bounds without re-deriving them.
+ */
+export const MONITOR_BUS_MIN = 1
+export const MONITOR_BUS_MAX = 5
+
+/**
+ * Per-command ack document reference — the read target for `get_command_status`
+ * (MCP-D3 / DEFECT-REGISTER B6). The bridge (Lane P2-A) writes the result of
+ * each processed command here after its query-after-command confirmation
+ * (P1-A's C2) resolves to applied / rejected / timeout.
+ *
+ * ⚠️ CROSS-LANE PATH COORDINATION (P2-A ↔ P2-B). The reserved spec string is
+ * `monitor-live/acks/{commandId}` (firestore-transport.ts C4 comment +
+ * DEFECT-REGISTER §3). That literal 3-segment string is NOT a valid Firestore
+ * *document* path (odd segment count → it resolves to a collection ref). We
+ * resolve it to a valid 4-segment doc under the EXISTING `monitor-live/commands`
+ * container — `acks` as a sibling subcollection to `pending` — so all command
+ * lifecycle data stays grouped and no new container doc is introduced. THIS is
+ * the single source of truth for the path: if P2-A's ack-write lands on a
+ * different concrete path, change it HERE only. Until acks are written live
+ * (post the gated bridge release), `get_command_status` returns a clean
+ * `pending` result and never throws.
+ */
+export function commandAckRef(
+    db: DB,
+    commandId: string,
+): FirebaseFirestore.DocumentReference {
+    return db
+        .collection("monitor-live")
+        .doc("commands")
+        .collection("acks")
+        .doc(commandId)
+}
+
+export type CommandAckStatus =
+    | "applied"
+    | "rejected"
+    | "timeout"
+    | "pending"
+    | "unknown"
+
+export interface CommandAck {
+    /**
+     * `applied` | `rejected` | `timeout` come from the bridge; `pending` means
+     * no ack document exists yet (the bridge hasn't reported, or acks aren't
+     * being written until the P2-A release); `unknown` means an ack doc exists
+     * but carries an unrecognized status value.
+     */
+    status: CommandAckStatus
+    /** The X32-confirmed value (query-after-command), when the bridge supplied it. */
+    confirmedValue: number | boolean | null
+    /** Human reason for a rejection/timeout, when supplied. */
+    reason: string | null
+    /** ISO timestamp the bridge stamped the ack, when coercible. */
+    at: string | null
+    /** Whether an ack document actually existed (false ⇒ status:'pending'). */
+    found: boolean
+}
+
+const KNOWN_ACK_STATUSES = new Set(["applied", "rejected", "timeout"])
+
+/**
+ * Coerce a raw ack document (the `{ status, confirmedValue?, reason?, at }`
+ * shape P1-A reserved) into a typed CommandAck. Pure + total — NEVER throws:
+ *  - absent (undefined/null) → `{ status:'pending', found:false }`
+ *  - present with a known status → that status, `found:true`
+ *  - present with a missing/unrecognized status → `unknown`
+ * confirmedValue keeps only number|boolean; reason keeps only strings; `at`
+ * is coerced to ISO (Timestamp | Date | epoch-millis | ISO string) or null.
+ */
+export function coerceCommandAck(
+    raw: Record<string, unknown> | undefined | null,
+): CommandAck {
+    if (!raw) {
+        return {
+            status: "pending",
+            confirmedValue: null,
+            reason: null,
+            at: null,
+            found: false,
+        }
+    }
+    const rawStatus = typeof raw.status === "string" ? raw.status : ""
+    const status: CommandAckStatus = KNOWN_ACK_STATUSES.has(rawStatus)
+        ? (rawStatus as CommandAckStatus)
+        : "unknown"
+    const cv = raw.confirmedValue
+    const confirmedValue =
+        typeof cv === "number" || typeof cv === "boolean" ? cv : null
+    const reason = typeof raw.reason === "string" ? raw.reason : null
+    const atMs = firestoreDateToMillis(raw.at)
+    const at = atMs == null ? null : new Date(atMs).toISOString()
+    return { status, confirmedValue, reason, at, found: true }
+}
+
+// ─── P2-B (MCP-D4): bus-assignment mutation for assign/unassign_monitor_bus ─
+
+/**
+ * Normalize a `config/monitor.busAssignments[busIndex]` slot — which may be a
+ * single object (legacy), an array (the shape BusAssignmentPanel writes), or
+ * null/undefined — into a clean array. Mirrors the in-app panel's
+ * `getAssignments` so producer↔consumer can't drift.
+ */
+export function normalizeBusAssignmentList(
+    raw: BusAssignment | BusAssignment[] | null | undefined,
+): BusAssignment[] {
+    if (!raw) return []
+    return (Array.isArray(raw) ? raw : [raw]).filter(
+        (a): a is BusAssignment => !!a && typeof a.userId === "string",
+    )
+}
+
+export interface BusAssignmentMutation {
+    /**
+     * The new per-bus assignment list. The caller writes `next.length ? next :
+     * null` to `config/monitor` — `null`-when-empty mirrors BusAssignmentPanel.
+     */
+    next: BusAssignment[]
+    /** add: the uid was already on this bus; remove: the uid was on this bus. */
+    matched: boolean
+    /** Whether the list actually changed — drives idempotent no-op writes. */
+    changed: boolean
+}
+
+/**
+ * Add `entry` to a bus's assignment list, idempotently + co-ownership-safe
+ * (multiple users can share one bus). If the uid is already present its
+ * `userName` is refreshed (keeps the denormalized name current) and `changed`
+ * reflects whether that refresh altered anything. Pure.
+ */
+export function computeBusAssignmentAdd(
+    raw: BusAssignment | BusAssignment[] | null | undefined,
+    entry: BusAssignment,
+): BusAssignmentMutation {
+    const current = normalizeBusAssignmentList(raw)
+    const idx = current.findIndex((a) => a.userId === entry.userId)
+    if (idx >= 0) {
+        if (current[idx].userName === entry.userName) {
+            return { next: current, matched: true, changed: false }
+        }
+        const next = current.slice()
+        next[idx] = entry
+        return { next, matched: true, changed: true }
+    }
+    return { next: [...current, entry], matched: false, changed: true }
+}
+
+/**
+ * Remove a uid from a bus's assignment list. Idempotent — a no-op when the uid
+ * wasn't assigned (`matched:false, changed:false`). Pure.
+ */
+export function computeBusAssignmentRemove(
+    raw: BusAssignment | BusAssignment[] | null | undefined,
+    uid: string,
+): BusAssignmentMutation {
+    const current = normalizeBusAssignmentList(raw)
+    const next = current.filter((a) => a.userId !== uid)
+    const matched = next.length !== current.length
+    return { next, matched, changed: matched }
+}

@@ -62,6 +62,11 @@ import {
     setMatrixMute,
 } from "./monitor"
 import {
+    getCommandStatus,
+    assignMonitorBus,
+    unassignMonitorBus,
+} from "./monitor-observability"
+import {
     uploadChart,
     scrapeChartFromUrl,
     saveScrapedChart,
@@ -2055,6 +2060,86 @@ export function registerMonitorTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await setMatrixMute(uidFrom(extra), args)),
+    )
+
+    // ─── Phase 2 (P2-B) — observability + bus-assignment ─────────────────
+
+    server.registerTool(
+        "get_command_status",
+        {
+            description:
+                "Check the result of a monitor command you issued (set_bus_fader / set_send_level / set_send_mute / set_matrix_fader / set_matrix_mute). Those write tools are fire-and-forget and return `confidence:\"queued\"` — they do NOT tell you whether the X32 actually applied the change. Pass the `commandId` they returned to read the bridge's confirmation: `status` is 'applied' (the desk confirmed the value), 'rejected' (the bridge refused it), 'timeout' (the desk never confirmed), 'pending' (no confirmation yet — the bridge hasn't reported), or 'unknown' (a result exists but in an unrecognized shape). When the bridge confirmed a value it rides on `confirmedValue`; rejections/timeouts carry a `reason`; `at` is the ISO time of the ack; `found` is whether a result record existed. Same access as the other monitor read tools (admin, sound engineer, or anyone with an assigned bus). NOTE: the bridge ack surface ships in a later monitor release — until then every commandId reads `status:'pending', found:false` (the honest answer; there is no confirmation channel yet). Re-reading get_mix immediately after a write is the interim confirmation.",
+            inputSchema: {
+                commandId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "The commandId returned by a monitor write tool (set_bus_fader, set_send_level, set_send_mute, set_matrix_fader, set_matrix_mute).",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await getCommandStatus(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "assign_monitor_bus",
+        {
+            description:
+                "Assign a band member to a personal-IEM monitor bus so they can control their own in-ear mix (on /monitor and via the monitor MCP tools). Admin / band_leader only. busIndex is 1-5; uid is the member's user id (discover via list_musicians). The member's display name is denormalized onto the bus automatically. Co-ownership is supported — several members can share one bus (e.g. a shared wedge). Idempotent: re-assigning someone already on the bus is a no-op (`changed:false`), except to refresh a changed display name. Unlike assign_musician this fires NO email/SMS/push and is trivially reversible (unassign_monitor_bus), so `dryRun` defaults to FALSE — the call commits by default; pass `dryRun:true` to preview the plan (resolved name, resulting bus roster, alreadyAssigned) without writing. Returns `{ok, busIndex, uid, userName, assignedTo, alreadyAssigned, changed, configuredBus, dryRun, committed, warning?}`. `warning` appears when the bus is valid (1-5) but not yet in config.monitorBuses.",
+            inputSchema: {
+                busIndex: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(5)
+                    .describe("Monitor bus index 1-5 to assign the user to."),
+                uid: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "User id of the band member to assign — discover via list_musicians.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true, return the plan without writing. Defaults to FALSE (commit) — bus assignment has no notification side-effects and is reversible.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await assignMonitorBus(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "unassign_monitor_bus",
+        {
+            description:
+                "Remove a band member from a personal-IEM monitor bus (revokes their control of that bus's mix). Admin / band_leader only. busIndex is 1-5; uid is the member to remove. The member is NOT existence-checked, so you can clean up an assignment for a deleted user. Idempotent: removing someone who isn't on the bus is a safe no-op (`changed:false`). `dryRun` defaults to FALSE (commit); pass `dryRun:true` to preview. When the last user is removed the bus slot is cleared. Returns `{ok, busIndex, uid, assignedTo, previouslyAssigned, changed, dryRun, committed}`.",
+            inputSchema: {
+                busIndex: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(5)
+                    .describe("Monitor bus index 1-5 to remove the user from."),
+                uid: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "User id of the band member to remove — see list_monitor_buses for who's currently assigned.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true, return the plan without writing. Defaults to FALSE (commit).",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await unassignMonitorBus(uidFrom(extra), args)),
     )
 }
 
