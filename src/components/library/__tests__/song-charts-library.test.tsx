@@ -351,3 +351,61 @@ describe("SongChartsLibrary", () => {
         expect(mockHydrate).toHaveBeenCalledWith([chartFile1])
     })
 })
+
+// ── Dedupe arrangements (2026-05-22 fix) ──
+// Regression for the bug where the Library tab hid song arrangements:
+// `dedupeChartsByStem` keyed on `bareStem`, which strips the composer
+// parenthetical, so every "L'Chah Dodi (X)" collapsed to one row. The
+// dedupe key now preserves the disambiguator → distinct arrangements
+// survive, while a chart's format twins + exact-duplicate names still
+// collapse to one row.
+describe("SongChartsLibrary — dedupe keeps distinct arrangements", () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        mockInitialized = true
+    })
+
+    const pdf = (id: string, name: string): DriveFile => ({ id, name, mimeType: "application/pdf" })
+
+    it("keeps all 5 distinct L'Cha Dodi arrangements (different composer parentheticals)", () => {
+        mockDisplayedFiles = [
+            pdf("lcd-friedman", "L'Chah Dodi (Friedman).pdf"),
+            pdf("lcd-isaacson", "L'Chah Dodi (Isaacson).pdf"),
+            pdf("lcd-israeli", "L'Chah Dodi (Israeli).pdf"),
+            pdf("lcd-sephardic", "L'Chah Dodi (Sephardic).pdf"),
+            pdf("lcd-zeira", "L'Chah Dodi (Zeira) - (Rotenberg).pdf"),
+        ]
+        mockAllFiles = mockDisplayedFiles
+        render(<SongChartsLibrary />)
+        expect(screen.getByTestId("file-row-lcd-friedman")).toBeDefined()
+        expect(screen.getByTestId("file-row-lcd-isaacson")).toBeDefined()
+        expect(screen.getByTestId("file-row-lcd-israeli")).toBeDefined()
+        expect(screen.getByTestId("file-row-lcd-sephardic")).toBeDefined()
+        expect(screen.getByTestId("file-row-lcd-zeira")).toBeDefined()
+        expect(screen.getAllByTestId(/^file-row-/)).toHaveLength(5)
+    })
+
+    it("still collapses a chart's format twins (PDF + MusicXML of the same name) to one row", () => {
+        mockDisplayedFiles = [
+            { id: "foo-pdf", name: "Foo (Bar).pdf", mimeType: "application/pdf" },
+            { id: "foo-xml", name: "Foo (Bar).musicxml", mimeType: "application/xml" },
+        ]
+        mockAllFiles = mockDisplayedFiles
+        render(<SongChartsLibrary />)
+        expect(screen.getAllByTestId(/^file-row-/)).toHaveLength(1)
+        expect(screen.getByTestId("file-row-foo-pdf")).toBeDefined()
+        expect(screen.queryByTestId("file-row-foo-xml")).toBeNull()
+    })
+
+    it("still collapses exact-duplicate names to one row", () => {
+        mockDisplayedFiles = [
+            { id: "dup-1", name: "Hashkivenu (Klepper).pdf", mimeType: "application/pdf" },
+            { id: "dup-2", name: "Hashkivenu (Klepper).pdf", mimeType: "application/pdf" },
+        ]
+        mockAllFiles = mockDisplayedFiles
+        render(<SongChartsLibrary />)
+        expect(screen.getAllByTestId(/^file-row-/)).toHaveLength(1)
+        expect(screen.getByTestId("file-row-dup-1")).toBeDefined()
+        expect(screen.queryByTestId("file-row-dup-2")).toBeNull()
+    })
+})

@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect, useRef, useLayoutEffect } from "react"
 import { ChevronLeft, Search, Music, CheckSquare } from "lucide-react"
-import { bareStem } from "@/lib/mcp/title-specificity"
 import { Button } from "@/components/ui/button"
 // C4-004: Radix Tabs removed from /library — the prior `<Tabs><TabsList>
 // <TabsTrigger/>` markup auto-emitted `aria-controls="radix-_r_N_-content-{val}"`
@@ -55,33 +54,50 @@ function isChartFile(f: DriveFile) {
 
 const CHART_EXTENSION_PATTERN = /\.(pdf|musicxml|xml|mxl|chordpro|txt)$/i
 
-function chartStemKey(name: string): string {
-    return bareStem(name.replace(CHART_EXTENSION_PATTERN, '').replace(/_/g, ' '))
+/**
+ * Build the dedupe key for a chart filename: strip the chart extension,
+ * underscores → spaces, lowercase, collapse whitespace, trim — while
+ * KEEPING the composer/arrangement parenthetical. So a chart's format
+ * twins ("Foo (Bar).pdf" + "Foo (Bar).musicxml") and exact-duplicate
+ * names collapse to one row, but genuinely-different arrangements of the
+ * same liturgy ("L'Chah Dodi (Friedman)" vs "(Sephardic)") stay distinct.
+ */
+function chartDedupeKey(name: string): string {
+    return name
+        .replace(CHART_EXTENSION_PATTERN, '')
+        .replace(/_/g, ' ')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim()
 }
 
 /**
- * Cycle-2 UI-003: collapse duplicate library rows that map to the same
- * musical work (same `bareStem`) down to one display row. Pre-fix, the
- * /library tabs showed the chart-file row AND a separately-cataloged
- * "song" entry for the same piece (a Klepper "Hashkivenu" .pdf next to
- * a "Hashkivenu (Klepper)" stem-cataloged song row), plus PDF/MusicXML
- * pairs for the same chart. First-encountered row wins (input order is
- * already alphabetical via list_library's sort, so this collapses
- * sibling-pairs deterministically). Empty stems (rare — emoji-only or
- * pure-punctuation names) bypass dedup so they don't all collapse into
- * a single bucket.
+ * Cycle-2 UI-003 (revised 2026-05-22): collapse duplicate library rows that
+ * map to the SAME chart down to one display row — a chart's PDF/MusicXML
+ * format twins, and exact-duplicate names. First-encountered row wins (input
+ * is already alphabetical via list_library's sort, so this collapses
+ * sibling-pairs deterministically). Empty keys (rare — emoji-only or
+ * pure-punctuation names) bypass dedup so they don't all collapse into a
+ * single bucket.
+ *
+ * The original keyed on `bareStem`, which strips the composer parenthetical
+ * and so over-collapsed every arrangement of a piece (e.g. all 5 "L'Chah
+ * Dodi (X)" charts) down to the first-alphabetical one, hiding the rest.
+ * The key now preserves the disambiguator — two rows beats hiding an
+ * arrangement (Daniel-ratified). This intentionally drops the old chart-row-
+ * vs-song-stem collapse; post song/library unification it no longer fires.
  */
 function dedupeChartsByStem(items: DriveFile[]): DriveFile[] {
     const seen = new Set<string>()
     const out: DriveFile[] = []
     for (const item of items) {
-        const stem = chartStemKey(item.name)
-        if (stem.length === 0) {
+        const key = chartDedupeKey(item.name)
+        if (key.length === 0) {
             out.push(item)
             continue
         }
-        if (seen.has(stem)) continue
-        seen.add(stem)
+        if (seen.has(key)) continue
+        seen.add(key)
         out.push(item)
     }
     return out
