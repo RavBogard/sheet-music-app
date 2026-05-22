@@ -5,8 +5,8 @@ import Link from "next/link"
 import { Music, Calendar } from "lucide-react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
-import { isTestUid } from "@/lib/test-isolation"
 import { PublicSetlistSkeleton } from "./PublicSetlistSkeleton"
+import { splitPublicSetlists } from "./public-setlist-order"
 
 /**
  * Public setlist listing -- renders all public setlists for unauthenticated visitors.
@@ -26,28 +26,14 @@ export function PublicSetlistListing() {
         return () => unsub()
     }, [])
 
-    // Sort by event date descending (most recent first). Cycle-2 SEC-004:
-    // drop setlists marked `isTest:true` — stress-test runs and the
-    // create_test_account-owned probes shouldn't appear on the public
-    // /perform landing surface.
-    //
-    // Cycle-7 Lane 1 (Convergence A / Instance-5 headline): the flag alone
-    // is structurally insufficient — `create_test_account`-owned setlists
-    // sometimes ship with `isTest:undefined` (legacy backfill gap; orphan
-    // rows surviving a partial cleanup). Belt-and-braces: ALSO drop any
-    // setlist whose `ownerId` matches the test-uid shape via
-    // `isTestUid(...)`, so cowork-probe surfaces (`test-…`, `c<N>i<N>-…`,
-    // `cf<N>-…`) can never leak onto the public listing regardless of
-    // flag state.
-    const sortedSetlists = useMemo(() => {
-        return setlists
-            .filter((s) => s.isTest !== true && !isTestUid(s.ownerId))
-            .sort((a, b) => {
-                const da = toDate(a.eventDate)
-                const db = toDate(b.eventDate)
-                return (db?.getTime() || 0) - (da?.getTime() || 0)
-            })
-    }, [setlists])
+    // Split into UPCOMING (eventDate >= today@00:00, soonest first) and PAST
+    // (most-recent first; undated trailing), mirroring the authed /setlists
+    // dashboard so tonight's service sits above tomorrow's instead of a plain
+    // descending-date sort burying it. The helper also drops `isTest:true` rows
+    // AND test-uid-owned rows (Cycle-2 SEC-004 + Cycle-7 belt-and-braces), so
+    // probe surfaces never leak onto the public listing.
+    const { upcoming, past } = useMemo(() => splitPublicSetlists(setlists), [setlists])
+    const isEmpty = upcoming.length === 0 && past.length === 0
 
     if (loading) {
         // Cycle-3.5 P2-005: mirror the SSR skeleton from PerformPage so the
@@ -55,6 +41,41 @@ export function PublicSetlistListing() {
         // SSR'd skeleton. Eliminates the spinner-flash → cards swap on
         // first paint AND any CLS between SSR and hydration.
         return <PublicSetlistSkeleton />
+    }
+
+    const renderCard = (setlist: Setlist) => {
+        const eventDate = toDate(setlist.eventDate)
+        const songCount = setlist.songCount ?? 0
+
+        return (
+            <Link
+                key={setlist.id}
+                href={`/perform/setlist/${setlist.id}`}
+                className="block rounded-2xl border border-border/50 bg-card/50 p-4 hover:bg-muted/50 transition-colors"
+            >
+                <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-base truncate">
+                            {setlist.name}
+                        </h3>
+                        {eventDate && (
+                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {eventDate.toLocaleDateString(undefined, {
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                })}
+                            </p>
+                        )}
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0 mt-1">
+                        {songCount} song{songCount !== 1 ? "s" : ""}
+                    </span>
+                </div>
+            </Link>
+        )
     }
 
     return (
@@ -68,49 +89,34 @@ export function PublicSetlistListing() {
                 </div>
             </div>
 
-            {/* Setlist cards */}
-            {sortedSetlists.length === 0 ? (
+            {isEmpty ? (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                     <Music className="h-12 w-12 mb-3 opacity-30" />
                     <p className="text-lg font-medium">No public setlists available</p>
                 </div>
             ) : (
-                <div className="flex flex-col gap-3">
-                    {sortedSetlists.map((setlist) => {
-                        const eventDate = toDate(setlist.eventDate)
-                        const songCount = setlist.songCount ?? 0
-
-                        return (
-                            <Link
-                                key={setlist.id}
-                                href={`/perform/setlist/${setlist.id}`}
-                                className="block rounded-2xl border border-border/50 bg-card/50 p-4 hover:bg-muted/50 transition-colors"
-                            >
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="min-w-0 flex-1">
-                                        <h2 className="font-semibold text-base truncate">
-                                            {setlist.name}
-                                        </h2>
-                                        {eventDate && (
-                                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                                                <Calendar className="h-3 w-3" />
-                                                {eventDate.toLocaleDateString(undefined, {
-                                                    weekday: "short",
-                                                    month: "short",
-                                                    day: "numeric",
-                                                    year: "numeric",
-                                                })}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <span className="text-xs text-muted-foreground shrink-0 mt-1">
-                                        {songCount} song{songCount !== 1 ? "s" : ""}
-                                    </span>
-                                </div>
-                            </Link>
-                        )
-                    })}
-                </div>
+                <>
+                    {upcoming.length > 0 && (
+                        <section className="flex flex-col gap-3">
+                            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground px-1">
+                                Upcoming
+                            </h2>
+                            <div className="flex flex-col gap-3">
+                                {upcoming.map(renderCard)}
+                            </div>
+                        </section>
+                    )}
+                    {past.length > 0 && (
+                        <section className="flex flex-col gap-3 mt-5">
+                            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground px-1">
+                                Past services
+                            </h2>
+                            <div className="flex flex-col gap-3">
+                                {past.map(renderCard)}
+                            </div>
+                        </section>
+                    )}
+                </>
             )}
         </div>
     )
