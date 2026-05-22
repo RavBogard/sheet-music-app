@@ -1,5 +1,6 @@
 "use client"
 
+import { FileMusic, ChevronRight } from "lucide-react"
 import { SetlistTrack } from "@/types/models"
 import { getTransposedKeyName } from "@/lib/music-math"
 import { cn } from "@/lib/utils"
@@ -44,8 +45,16 @@ export function SetlistRow({
         return parenIdx > -1 ? fullName.substring(0, parenIdx) : fullName
     })()
 
-    const hasFile = isSong && !!track.fileId
+    // A bonded chart is openable for ANY non-header track (song, prayer,
+    // reading…), not just `song`-typed rows. Previously gated on `isSong`,
+    // which left real charts on prayer/reading tracks unopenable in Perform
+    // (R1 launch finding — e.g. a bonded Barechu / Adonai Sifatai).
+    const hasFile = !isHeader && !!track.fileId
     const isInteractive = hasFile || isLeader
+    // A non-song track that nonetheless carries an openable chart — it needs an
+    // explicit tap affordance (icon + chevron + label) since it doesn't get the
+    // song row's striped/bold treatment.
+    const openableNonSong = hasFile && !isSong
     const hasSecondLine = !!(track.leadMusician || track.performer)
 
     const handleClick = () => {
@@ -53,7 +62,7 @@ export function SetlistRow({
             onLeaderSetPosition()
         }
 
-        if (isSong && hasFile) {
+        if (hasFile) {
             onSongTap()
         }
     }
@@ -126,6 +135,15 @@ export function SetlistRow({
                 </p>
             )}
         </div>
+    ) : openableNonSong ? (
+        // Prayer/reading WITH a bonded chart: must read as tappable, not as a
+        // passive dimmed label. Leading chart glyph + foreground title + trailing
+        // chevron — affordance is shape-based (color-not-alone).
+        <div className="flex flex-1 items-center gap-2.5 min-w-0">
+            <FileMusic className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+            <span className="text-base text-foreground truncate min-w-0">{track.title}</span>
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground ml-auto" aria-hidden="true" />
+        </div>
     ) : (
         <span className="text-sm text-muted-foreground">{track.title}</span>
     )
@@ -134,7 +152,8 @@ export function SetlistRow({
         "flex items-center px-4 py-3 transition-colors",
         isCurrentPosition && "bg-brand/20 border-l-4 border-brand",
         !isCurrentPosition && isSong && (index % 2 === 0 ? "bg-amber-500/[0.10]" : "bg-brand/[0.12]"),
-        !isSong && "opacity-60"
+        // Passive non-song labels stay dimmed; an openable prayer/reading does NOT.
+        !isSong && !hasFile && "opacity-60"
     )
 
     // Non-interactive rows
@@ -151,6 +170,7 @@ export function SetlistRow({
         <div
             role="button"
             tabIndex={0}
+            aria-label={openableNonSong ? `Open chart: ${track.title}` : undefined}
             onClick={handleClick}
             onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -160,6 +180,7 @@ export function SetlistRow({
             }}
             className={cn(
                 rowClasses,
+                "min-h-11",
                 hasFile
                     ? "cursor-pointer hover:bg-muted/50 active:bg-muted/70"
                     : "cursor-default"

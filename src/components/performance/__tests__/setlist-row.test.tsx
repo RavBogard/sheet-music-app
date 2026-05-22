@@ -221,3 +221,90 @@ describe("SetlistRow", () => {
         expect(onLeaderSetPosition).toHaveBeenCalled()
     })
 })
+
+// perform-open-gate-fix: a bonded chart must open regardless of track TYPE.
+// Previously the open-gate was `isSong && hasFile`, so prayer/reading tracks
+// with a real fileId rendered as dead labels (R1 launch finding — tonight's
+// Barechu + Adonai Sifatai). The 4 invariants below pin the fixed behavior.
+describe("SetlistRow — open-gate (bonded chart opens regardless of track type)", () => {
+    beforeEach(() => vi.clearAllMocks())
+
+    // Invariant 2: song + fileId → opens (regression guard).
+    it("song with a fileId opens on tap", () => {
+        const onSongTap = vi.fn()
+        render(<SetlistRow track={baseSong} {...defaultProps} onSongTap={onSongTap} />)
+        fireEvent.click(screen.getByRole("button"))
+        expect(onSongTap).toHaveBeenCalledTimes(1)
+    })
+
+    // Invariant 3 (the fix): prayer + fileId → NOW opens.
+    it("prayer with a bonded fileId opens on tap", () => {
+        const prayer: SetlistTrack = { id: "p1", title: "Barechu", type: "prayer", fileId: "file-barechu" }
+        const onSongTap = vi.fn()
+        render(<SetlistRow track={prayer} {...defaultProps} onSongTap={onSongTap} />)
+        const row = screen.getByRole("button", { name: /Open chart: Barechu/ })
+        fireEvent.click(row)
+        expect(onSongTap).toHaveBeenCalledTimes(1)
+    })
+
+    // Invariant 3 (variant): reading + fileId → opens, and via keyboard too.
+    it("reading with a bonded fileId opens on Enter key", () => {
+        const reading: SetlistTrack = { id: "r1", title: "Torah Reading", type: "reading", fileId: "file-torah" }
+        const onSongTap = vi.fn()
+        render(<SetlistRow track={reading} {...defaultProps} onSongTap={onSongTap} />)
+        const row = screen.getByRole("button", { name: /Open chart: Torah Reading/ })
+        fireEvent.keyDown(row, { key: "Enter" })
+        expect(onSongTap).toHaveBeenCalledTimes(1)
+    })
+
+    // Invariant 4: any track WITHOUT a fileId stays non-interactive.
+    it("prayer without a fileId stays a non-interactive dimmed label", () => {
+        const prayer: SetlistTrack = { id: "p2", title: "Silent Meditation", type: "prayer" }
+        const onSongTap = vi.fn()
+        render(<SetlistRow track={prayer} {...defaultProps} onSongTap={onSongTap} />)
+        expect(screen.queryByRole("button")).toBeNull()
+        const row = screen.getByText("Silent Meditation").closest("div[class]")
+        expect(row?.className).toContain("opacity-60")
+        fireEvent.click(screen.getByText("Silent Meditation"))
+        expect(onSongTap).not.toHaveBeenCalled()
+    })
+
+    // Invariant 1: header NEVER opens a chart, even with a stray fileId, even
+    // for a leader (the leader header sets position, it does not open a chart).
+    it("header with a fileId never opens a chart", () => {
+        const header: SetlistTrack = { id: "h2", title: "Evening Service", type: "header", fileId: "file-stray" }
+        const onSongTap = vi.fn()
+        const onLeaderSetPosition = vi.fn()
+        const { rerender } = render(
+            <SetlistRow track={header} {...defaultProps} onSongTap={onSongTap} />
+        )
+        // Non-leader: header is a plain divider, no interactive affordance.
+        expect(screen.queryByRole("button")).toBeNull()
+
+        // Leader: header IS a button, but it sets position — never onSongTap.
+        rerender(
+            <SetlistRow
+                track={header}
+                {...defaultProps}
+                isLeader={true}
+                onSongTap={onSongTap}
+                onLeaderSetPosition={onLeaderSetPosition}
+            />
+        )
+        fireEvent.click(screen.getByRole("button", { name: /Evening Service/ }))
+        expect(onLeaderSetPosition).toHaveBeenCalledTimes(1)
+        expect(onSongTap).not.toHaveBeenCalled()
+    })
+
+    // Affordance (/ui-ux-pro-max): an openable prayer must LOOK tappable — full
+    // opacity (not the passive dim), shape-based cue (chevron, color-not-alone),
+    // and a ≥44px hit box.
+    it("openable prayer row reads as tappable (full opacity, chevron, ≥44px)", () => {
+        const prayer: SetlistTrack = { id: "p3", title: "Mourner's Kaddish", type: "prayer", fileId: "file-kaddish" }
+        render(<SetlistRow track={prayer} {...defaultProps} />)
+        const row = screen.getByRole("button", { name: /Open chart: Mourner's Kaddish/ })
+        expect(row.className).not.toContain("opacity-60")
+        expect(row.className).toContain("cursor-pointer")
+        expect(row.className).toContain("min-h-11")
+    })
+})
