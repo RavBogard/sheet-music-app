@@ -238,3 +238,148 @@ describe("PDFViewer retry cap", () => {
         vi.unstubAllGlobals()
     })
 })
+
+// ──────────────────────────────────────────────────────────────────────────
+// 6. webkit-pdf-reload-fix (R1 Finding B) — PDFOverlay must hand PDFViewer the
+//    network URL, NEVER a `blob:` object URL. iPad/iOS WebKit intermittently
+//    fails a fetch() of a freshly-created object URL ("Load failed") on first
+//    tap → "Failed to load PDF" (self-heals on Retry). Routing the PDF path
+//    through the `/api/drive/file/<id>` URL (PDFViewer's loader is IDB-first)
+//    removes the blob: round-trip and the race entirely.
+// ──────────────────────────────────────────────────────────────────────────
+describe("PDFOverlay webkit blob: race fix", () => {
+    beforeEach(() => { vi.resetModules() })
+
+    it("passes the network URL (not a blob: object URL) to PDFViewer even when the chart is cached in IDB", async () => {
+        // getFile RESOLVES a cached blob — under the old code this is exactly the
+        // branch that produced a `blob:` URL via URL.createObjectURL. The fix must
+        // NOT route that blob into PDFViewer.
+        vi.doMock("@/lib/offline-idb", () => ({
+            getFile: vi.fn(async () => new Blob([new Uint8Array(200)], { type: "application/pdf" })),
+            hasFile: vi.fn(async () => true),
+            putFile: vi.fn(async () => { }),
+        }))
+
+        // Capture the props handed to the (only) rendered dynamic viewer. For a
+        // `type: "song"` PDF track the MusicXML/text/image branches are all false,
+        // so the single dynamic component that actually renders is PDFViewer.
+        let capturedViewerUrl: string | undefined
+        vi.doMock("next/dynamic", () => ({
+            __esModule: true,
+            default: () => (props: { url?: string }) => {
+                if (props && typeof props.url === "string") capturedViewerUrl = props.url
+                return null
+            },
+        }))
+        vi.doMock("@/components/performance/PerformanceToolbar", () => ({
+            PerformanceToolbar: () => null,
+        }))
+        const store = {
+            setQueue: vi.fn(),
+            queueIndex: 0,
+            playbackQueue: [],
+            transposition: 0,
+            zoom: 1,
+            aiState: { isEnabled: false, pageData: {}, scanningPages: [], error: null },
+        }
+        vi.doMock("@/lib/store", () => ({
+            useMusicStore: Object.assign(
+                (sel?: (s: typeof store) => unknown) =>
+                    typeof sel === "function" ? sel(store) : store,
+                { getState: () => store }
+            ),
+        }))
+
+        // jsdom omits URL.createObjectURL. Stub it so the resolve effect's blob
+        // branch (the non-PDF viewers' offline path) runs cleanly — and so this
+        // test proves PDFViewer still gets the NETWORK url even when `fileUrl`
+        // does become a blob: URL.
+        const origCreate = URL.createObjectURL
+        const origRevoke = URL.revokeObjectURL
+        URL.createObjectURL = vi.fn(() => "blob:mock-object-url")
+        URL.revokeObjectURL = vi.fn()
+
+        const { PDFOverlay } = await import("../PDFOverlay")
+        const track = { id: "t", title: "x", fileId: "file-x", type: "song" as const }
+        let unmount: () => void = () => { }
+        await act(async () => {
+            const r = render(
+                <PDFOverlay
+                    track={track}
+                    tracks={[track]}
+                    currentIndex={0}
+                    onClose={() => { }}
+                    onNavigate={() => { }}
+                    isPublicView={false}
+                />
+            )
+            unmount = r.unmount
+            // Let the async getFile resolve — proves that even after a cache HIT
+            // the PDF path never swaps in a blob: URL.
+            await Promise.resolve()
+            await Promise.resolve()
+        })
+
+        expect(capturedViewerUrl).toBe("/api/drive/file/file-x")
+        expect(capturedViewerUrl?.startsWith("blob:")).toBe(false)
+
+        // Unmount while the stubs are still installed so the resolve effect's
+        // cleanup (revokeObjectURL) runs against the stub, then restore.
+        await act(async () => { unmount() })
+        URL.createObjectURL = origCreate
+        URL.revokeObjectURL = origRevoke
+    })
+})
+
+// ──────────────────────────────────────────────────────────────────────────
+// 7. webkit-pdf-reload-fix — PDFViewer resolves a cached chart IDB-first with
+//    ZERO fetch (no network, no blob: object URL). This is the offline/cached
+//    happy path that used to flow through the flaky WebKit blob: fetch; it now
+//    renders straight from the stored bytes.
+// ──────────────────────────────────────────────────────────────────────────
+describe("PDFViewer IDB-first cached load", () => {
+    beforeEach(() => { vi.resetModules() })
+
+    it("renders a cached chart from IndexedDB without any fetch", async () => {
+        vi.doMock("react-pdf", () => ({
+            Document: () => null,
+            pdfjs: { GlobalWorkerOptions: {}, version: "test" },
+        }))
+        vi.doMock("react-pdf/dist/Page/AnnotationLayer.css", () => ({}))
+        vi.doMock("react-pdf/dist/Page/TextLayer.css", () => ({}))
+        vi.doMock("@/lib/store", () => ({
+            useMusicStore: Object.assign(
+                (sel?: (s: Record<string, unknown>) => unknown) => {
+                    const s = { zoom: 1, transposition: 0 }
+                    return typeof sel === "function" ? sel(s) : s
+                },
+                { getState: () => ({ zoom: 1, transposition: 0 }) }
+            ),
+        }))
+        vi.doMock("./PDFPageWrapper", () => ({ PDFPageWrapper: () => null }))
+        vi.doMock("./ChartSuggestions", () => ({ ChartSuggestions: () => null }))
+        vi.doMock("@/lib/logger", () => ({
+            logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+        }))
+        // Cache HIT: getFile returns valid bytes, so fetchPdf must short-circuit
+        // before the network branch.
+        vi.doMock("@/lib/offline-idb", () => ({
+            getFile: vi.fn(async () => new Blob([new Uint8Array(2048)], { type: "application/pdf" })),
+        }))
+
+        const fetchMock = vi.fn(async () => new Response("nope", { status: 500 }))
+        vi.stubGlobal("fetch", fetchMock)
+
+        const { PDFViewer } = await import("../../music/PDFViewer")
+        const { container } = render(<PDFViewer url="/api/drive/file/cached-x" />)
+
+        await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve() })
+
+        // IDB-first: the cached path returns before any network fetch.
+        expect(fetchMock).not.toHaveBeenCalled()
+        // No error surfaced on the happy path.
+        expect(container.textContent).not.toContain("Failed to load PDF")
+
+        vi.unstubAllGlobals()
+    })
+})

@@ -160,17 +160,28 @@ export function PDFOverlay({
     const isImage = currentItem?.type === 'image'
         || (libMimeType?.startsWith('image/') ?? false)
 
-    // Build the file URL from the track's fileId (used for both PDF and MusicXML).
-    // Prefer the IDB blob when we have one so offline-preloaded charts render
-    // without a network fetch.
+    // Network URL for the chart bytes. PDFViewer is handed THIS directly (see the
+    // render branch below) — its loader is IDB-first: it extracts the fileId from
+    // the `/api/drive/file/<id>` shape and resolves the cached bytes straight into a
+    // Uint8Array, only hitting the network on a cache miss. So the PDF path needs
+    // NO blob: object URL.
+    //
+    // ⚠️ webkit-pdf-reload-fix (R1 Finding B, 2026-05-22): the PDF path used to be
+    // routed through `fileUrl` (a `blob:` object URL created from the IDB blob).
+    // PDFViewer then `fetch()`ed that blob: URL — and iPad/iOS WebKit intermittently
+    // fails a fetch of a freshly-created object URL with "Load failed" on the first
+    // tap, surfacing as "Failed to load PDF" (no /api/drive/file request; self-heals
+    // on Retry). Handing PDFViewer the network URL and letting its IDB-first loader
+    // resolve the cached bytes removes the blob: round-trip and the race entirely.
     const networkUrl = track.fileId ? `/api/drive/file/${track.fileId}` : ""
-    // Start EMPTY (not networkUrl): resolve the cached IDB blob first. If we
-    // seeded with networkUrl, an offline open would fire a doomed network fetch
-    // that puts react-pdf into an error state BEFORE the cached blob resolves —
-    // and it doesn't cleanly recover when `file` later flips to the blob URL. The
-    // viewers already guard on `fileUrl && <Viewer/>`, so "" simply renders
-    // nothing for the one tick until resolve() picks the blob (offline-safe) or
-    // the network URL (online, uncached). getFile is a fast IDB read.
+
+    // `fileUrl` (a cached-blob object URL, or the network URL on miss) is ONLY for
+    // the non-PDF viewers (SmartScore/Text/Image): they `fetch(url)` / `<img src>`
+    // the URL directly with NO IDB fallback, so the blob: URL is their offline path.
+    // Start EMPTY (not networkUrl): if we seeded with networkUrl, an offline open
+    // would fire a doomed network fetch BEFORE the cached blob resolves. The viewers
+    // guard on `fileUrl && <Viewer/>`, so "" renders nothing for the one tick until
+    // resolve() picks the blob (offline-safe) or the network URL (online, uncached).
     const [fileUrl, setFileUrl] = useState<string>("")
     useEffect(() => {
         let cancelled = false
@@ -193,7 +204,6 @@ export function PDFOverlay({
             if (objectUrl) URL.revokeObjectURL(objectUrl)
         }
     }, [track.fileId, networkUrl])
-    const pdfUrl = fileUrl
 
     // Prefetch the next 2 PDFs in the background
     const prefetchedRef = useRef(new Set<string>())
@@ -286,7 +296,11 @@ export function PDFOverlay({
                     ) : isImage ? (
                         fileUrl && <ImageScoreViewer url={fileUrl} alt={track.title} />
                     ) : (
-                        pdfUrl && <PDFViewer url={pdfUrl} trackName={track.title} />
+                        // PDF: hand PDFViewer the network URL, NOT a blob: object
+                        // URL. PDFViewer's loader is IDB-first, so cached charts
+                        // render straight from bytes (no network) and the WebKit
+                        // blob:-fetch race (R1 Finding B) can't occur on first tap.
+                        networkUrl && <PDFViewer url={networkUrl} trackName={track.title} />
                     )}
                 </SectionErrorBoundary>
                 {showTempoFlash && track.bpm && track.bpm > 0 && (
