@@ -141,11 +141,18 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
             stateUpdatedAt,
         }
 
-        // Stale-while-revalidate: Ignore empty/malformed snapshots if we already have valid data
+        // Stale-while-revalidate: Ignore empty/malformed snapshots if we already have valid data.
+        // C-8: do NOT advance `stateUpdatedAt` here — an empty/malformed snapshot must not
+        // refresh the freshness clock, or the frozen last-good values would read "Live"
+        // indefinitely and mask a real problem. Holding the prior `stateUpdatedAt` lets
+        // `useMonitorStaleness` age out and raise the staleness cue. We still bump
+        // `snapshotCount` (we got a ping) and `lastSnapshotAt`.
         if (snapshot.buses.length === 0 && state.buses.length > 0) {
-            logger.warn("[MonitorStore] Received empty snapshot, freezing last known good state")
-            // Still update health tracking so we know we got a ping
-            set(healthUpdate)
+            logger.warn("[MonitorStore] Received empty snapshot, freezing last known good state (freshness clock held — C-8)")
+            set({
+                lastSnapshotAt: Date.now(),
+                snapshotCount: state.snapshotCount + 1,
+            })
             return
         }
 

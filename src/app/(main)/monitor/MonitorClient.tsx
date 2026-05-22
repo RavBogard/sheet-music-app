@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
 import { useMonitorStore } from "@/lib/monitor-store"
+import { hasAssignedBus } from "@/lib/monitor/bus-index"
 import { ConnectionIndicator } from "@/components/monitor/ConnectionIndicator"
 import { MonitorTabs } from "@/components/monitor/MonitorTabs"
 import { MatrixPanel } from "@/components/monitor/MatrixPanel"
@@ -34,6 +35,9 @@ export default function MonitorClient() {
     // feed ConnectionIndicator in every branch, incl. the no-config error view.
     const bridge = config?.bridge
     const myBusIndex = useMonitorStore(s => s.myBusIndex)
+    // C-2: monotonic authoritative-snapshot counter — drives the fader
+    // confirmation machine's "real reflection vs optimistic echo" gate.
+    const snapshotSeq = useMonitorStore(s => s.snapshotCount)
     const starredChannels = useMonitorStore(s => s.starredChannels)
     const defaultChannels = useMonitorStore(s => s.defaultChannels)
     const updateBusFader = useMonitorStore(s => s.updateBusFader)
@@ -89,21 +93,22 @@ export default function MonitorClient() {
         }
     }, [user, starredChannels, setStarredChannels])
 
-    // Fader handlers -- own bus
+    // Fader handlers -- own bus. C-11: bus index 0 is a VALID bus — gate on
+    // `hasAssignedBus` (== null), never `!myBusIndex` truthiness.
     const handleBusMaster = useCallback((value: number) => {
-        if (!myBusIndex) return
+        if (!hasAssignedBus(myBusIndex)) return
         updateBusFader(myBusIndex, value)
         client?.setBusMaster(myBusIndex, value)
     }, [myBusIndex, updateBusFader, client])
 
     const handleSendLevel = useCallback((channelIndex: number, value: number) => {
-        if (!myBusIndex) return
+        if (!hasAssignedBus(myBusIndex)) return
         updateSendLevel(myBusIndex, channelIndex, value)
         client?.setSendLevel(myBusIndex, channelIndex, value)
     }, [myBusIndex, updateSendLevel, client])
 
     const handleSendOn = useCallback((channelIndex: number, on: boolean) => {
-        if (!myBusIndex) return
+        if (!hasAssignedBus(myBusIndex)) return
         updateSendOn(myBusIndex, channelIndex, on)
         client?.setSendOn(myBusIndex, channelIndex, on)
     }, [myBusIndex, updateSendOn, client])
@@ -227,6 +232,7 @@ export default function MonitorClient() {
             matrices={matrices}
             status={status}
             error={error}
+            snapshotSeq={snapshotSeq}
             onBusMaster={handleBusMaster}
             onSendLevel={handleSendLevel}
             onSendOn={handleSendOn}

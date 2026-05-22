@@ -1,16 +1,18 @@
 "use client"
 
-import { useEffect, useCallback, useState } from "react"
+import { useEffect, useCallback } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useMonitorStore, getVisibleChannels } from "@/lib/monitor-store"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
+import { useMonitorStaleness } from "@/lib/monitor/use-monitor-staleness"
+import { hasAssignedBus } from "@/lib/monitor/bus-index"
 import { getMonitorClient } from "@/hooks/use-monitor-connection"
 import { VerticalFaderStrip } from "@/components/monitor/VerticalFaderStrip"
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { Loader2, Wifi, WifiOff, Server, ServerOff } from "lucide-react"
+import { Loader2, Wifi, WifiOff, Server, ServerOff, Clock } from "lucide-react"
 import { ScrollFade } from "@/components/ui/scroll-fade"
-import { isBridgeOnline, getBridgeStatusMessage } from "@/components/monitor/ConnectionIndicator"
+import { getBridgeStatusMessage, isMixerOffline, DisconnectedOverlay } from "@/components/monitor/ConnectionIndicator"
 
 const noop = () => {} // Stable reference to prevent memo breaking
 
@@ -32,12 +34,16 @@ export function QuickMonitorPanel() {
     const buses = useMonitorStore(s => s.buses)
     const config = useMonitorStore(s => s.config)
     const myBusIndex = useMonitorStore(s => s.myBusIndex)
+    // C-2: authoritative-snapshot counter for the fader confirmation machine.
+    const snapshotSeq = useMonitorStore(s => s.snapshotCount)
     const starredChannels = useMonitorStore(s => s.starredChannels)
     const defaultChannels = useMonitorStore(s => s.defaultChannels)
     const setStarredChannels = useMonitorStore(s => s.setStarredChannels)
     const updateBusFader = useMonitorStore(s => s.updateBusFader)
     const updateSendLevel = useMonitorStore(s => s.updateSendLevel)
     const updateSendOn = useMonitorStore(s => s.updateSendOn)
+    // C-6: honest staleness on this perform-toolbar surface too (not just /monitor).
+    const { stale } = useMonitorStaleness()
 
     // Load starred channels from Firestore (backward compat: pinnedChannels field)
     useEffect(() => {
@@ -121,13 +127,16 @@ export function QuickMonitorPanel() {
         )
     }
 
-    if (!myBusIndex || !myBus) {
+    // C-11: bus index 0 is a valid bus — don't treat it as "no bus".
+    if (!hasAssignedBus(myBusIndex) || !myBus) {
         return (
             <div className="flex items-center justify-center py-6 text-muted-foreground text-xs">
                 No monitor bus assigned
             </div>
         )
     }
+
+    const mixerOffline = isMixerOffline(status, config?.bridge)
 
     return (
         <div className="w-full">
@@ -147,6 +156,12 @@ export function QuickMonitorPanel() {
                             <Server className="w-3 h-3 text-yellow-500" />
                             <span className="text-[10px] text-yellow-500">No mixer</span>
                         </>
+                    ) : stale ? (
+                        // C-6: honest staleness — don't show a green "Live" over a frozen desk.
+                        <>
+                            <Clock className="w-3 h-3 text-yellow-500" />
+                            <span className="text-[10px] text-yellow-500">Stale</span>
+                        </>
                     ) : (
                         <>
                             <Wifi className="w-3 h-3 text-green-500" />
@@ -156,45 +171,51 @@ export function QuickMonitorPanel() {
                 </div>
             </div>
 
-            {/* Vertical faders in horizontal row */}
-            <ScrollFade snap scrollClassName="flex flex-row gap-3 p-3 min-h-[280px]">
-                {/* Master bus fader (leftmost) */}
-                <VerticalFaderStrip
-                    label="Master"
-                    value={myBus.fader}
-                    on={true}
-                    isMaster
-                    onChange={handleBusMaster}
-                    onMuteToggle={noop}
-                />
+            {/* Vertical faders in horizontal row. C-6: HARD-offline → overlay (last known levels). */}
+            <DisconnectedOverlay active={mixerOffline}>
+                <ScrollFade snap scrollClassName="flex flex-row gap-3 p-3 min-h-[280px]">
+                    {/* Master bus fader (leftmost) */}
+                    <VerticalFaderStrip
+                        label="Master"
+                        value={myBus.fader}
+                        on={true}
+                        isMaster
+                        stale={stale}
+                        snapshotSeq={snapshotSeq}
+                        onChange={handleBusMaster}
+                        onMuteToggle={noop}
+                    />
 
-                {/* Divider between master and channels */}
-                {visibleSends.length > 0 && (
-                    <div className="w-px bg-brand/20 mx-1 self-stretch" />
-                )}
+                    {/* Divider between master and channels */}
+                    {visibleSends.length > 0 && (
+                        <div className="w-px bg-brand/20 mx-1 self-stretch" />
+                    )}
 
-                {/* Channel sends */}
-                {visibleSends.length === 0 ? (
-                    <div className="flex items-center justify-center flex-1 text-[10px] text-muted-foreground">
-                        No channels starred
-                    </div>
-                ) : (
-                    visibleSends.map(send => {
-                        const ch = channelMap.get(send.channelIndex)
-                        const name = ch?.name || `Ch ${send.channelIndex}`
-                        return (
-                            <VerticalFaderStrip
-                                key={send.channelIndex}
-                                label={name}
-                                value={send.level}
-                                on={send.on}
-                                onChange={(val) => handleSendLevel(send.channelIndex, val)}
-                                onMuteToggle={() => handleSendOn(send.channelIndex, !send.on)}
-                            />
-                        )
-                    })
-                )}
-            </ScrollFade>
+                    {/* Channel sends */}
+                    {visibleSends.length === 0 ? (
+                        <div className="flex items-center justify-center flex-1 text-[10px] text-muted-foreground">
+                            No channels starred
+                        </div>
+                    ) : (
+                        visibleSends.map(send => {
+                            const ch = channelMap.get(send.channelIndex)
+                            const name = ch?.name || `Ch ${send.channelIndex}`
+                            return (
+                                <VerticalFaderStrip
+                                    key={send.channelIndex}
+                                    label={name}
+                                    value={send.level}
+                                    on={send.on}
+                                    stale={stale}
+                                    snapshotSeq={snapshotSeq}
+                                    onChange={(val) => handleSendLevel(send.channelIndex, val)}
+                                    onMuteToggle={() => handleSendOn(send.channelIndex, !send.on)}
+                                />
+                            )
+                        })
+                    )}
+                </ScrollFade>
+            </DisconnectedOverlay>
         </div>
     )
 }

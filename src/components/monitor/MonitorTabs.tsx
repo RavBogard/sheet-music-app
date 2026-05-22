@@ -24,6 +24,8 @@ interface MonitorTabsProps {
     matrices: MatrixInfo[]
     status: ConnectionStatus
     error: string | null
+    /** Authoritative snapshot sequence (store `snapshotCount`) for the fader confirmation machine (C-2). */
+    snapshotSeq?: number
     onBusMaster: (value: number) => void
     onSendLevel: (channelIndex: number, value: number) => void
     onSendOn: (channelIndex: number, on: boolean) => void
@@ -71,6 +73,7 @@ export function MonitorTabs({
     matrices,
     status,
     error,
+    snapshotSeq,
     onBusMaster,
     onSendLevel,
     onSendOn,
@@ -138,7 +141,7 @@ export function MonitorTabs({
                                     value={myBus.fader}
                                     on={true}
                                     isMaster
-                                    stale={stale}
+                                    stale={stale} snapshotSeq={snapshotSeq}
                                     onChange={onBusMaster}
                                 />
                             </div>
@@ -159,7 +162,7 @@ export function MonitorTabs({
                                                         label={name}
                                                         value={send.level}
                                                         on={send.on}
-                                                        stale={stale}
+                                                        stale={stale} snapshotSeq={snapshotSeq}
                                                         onChange={(val) => onSendLevel(send.channelIndex, val)}
                                                         onUnmuteCheck={() => onSendOn(send.channelIndex, true)}
                                                     />
@@ -189,7 +192,7 @@ export function MonitorTabs({
                             value={myBus.fader}
                             on={true}
                             isMaster
-                            stale={stale}
+                            stale={stale} snapshotSeq={snapshotSeq}
                             onChange={onBusMaster}
                         />
                     </div>
@@ -227,7 +230,7 @@ export function MonitorTabs({
                                                 label={name}
                                                 value={send.level}
                                                 on={send.on}
-                                                stale={stale}
+                                                stale={stale} snapshotSeq={snapshotSeq}
                                                 onChange={(val) => onSendLevel(send.channelIndex, val)}
                                                 onUnmuteCheck={() => onSendOn(send.channelIndex, true)}
                                             />

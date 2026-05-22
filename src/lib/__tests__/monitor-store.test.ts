@@ -61,16 +61,21 @@ describe("monitor-store P1-C hardening", () => {
         expect(useMonitorStore.getState().stateUpdatedAt).toBe(555)
     })
 
-    it("empty/malformed snapshot freezes last-good buses but still advances stateUpdatedAt", () => {
+    it("C-8: empty/malformed snapshot freezes last-good buses and HOLDS the freshness clock", () => {
         useMonitorStore.getState().setConfig(cfg({}))
         useMonitorStore.getState().setSnapshot(snapshot([BUS(3)], cfg({})), "u1", 100)
         expect(useMonitorStore.getState().buses).toHaveLength(1)
+        const countBefore = useMonitorStore.getState().snapshotCount
 
-        // Empty buses while we already have data → frozen, but health/freshness advance
+        // Empty buses while we already have data → freeze last-good. C-8: do NOT
+        // advance stateUpdatedAt — a broken/empty write must not let the frozen
+        // values read "Live"; holding the clock at the last REAL snapshot lets the
+        // staleness cue surface the problem. snapshotCount still advances (a ping).
         useMonitorStore.getState().setSnapshot(snapshot([], cfg({})), "u1", 200)
         const s = useMonitorStore.getState()
         expect(s.buses).toHaveLength(1) // last-known-good frozen
-        expect(s.stateUpdatedAt).toBe(200) // freshness still advanced (honest "we got a write")
+        expect(s.stateUpdatedAt).toBe(100) // freshness clock HELD → ages out → stale cue fires
+        expect(s.snapshotCount).toBe(countBefore + 1) // ping still registered
     })
 
     it("reset clears stateUpdatedAt", () => {
