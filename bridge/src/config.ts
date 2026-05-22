@@ -210,4 +210,62 @@ export class ConfigManager {
             return { running: false }
         }
     }
+
+    /**
+     * B10 — single-writer lease (election). `checkForRunningInstance` only WARNS;
+     * two bridges on different PCs would then both drain `pending` and double-apply
+     * commands. This acquires/renews an atomic lease at `config/monitor.bridgeLease`
+     * via a Firestore transaction:
+     *   - free / expired / already-ours  → acquire (write owner + new expiry), true
+     *   - held by another, still live     → refuse, false (caller stays standby)
+     *
+     * Renew on an interval shorter than `ttlMs`; only the holder drains commands +
+     * writes state. The expiry is wall-clock (`Date.now()`); the large TTL (≫ NTP
+     * skew between two NTP-synced PCs) keeps this correct for the studio's
+     * single-PC-with-accidental-second-bridge case it guards. Fails CLOSED (false)
+     * on any transaction error so a bridge never assumes ownership it didn't win.
+     */
+    async acquireOrRenewLease(ownerId: string, ttlMs: number): Promise<boolean> {
+        const ref = this.db.collection("config").doc("monitor")
+        try {
+            return await this.db.runTransaction(async (tx) => {
+                const snap = await tx.get(ref)
+                const lease = snap.exists
+                    ? (snap.data()?.bridgeLease as { ownerId?: string; expiresAt?: number } | undefined)
+                    : undefined
+                const now = Date.now()
+                const heldByOther =
+                    !!lease &&
+                    lease.ownerId !== ownerId &&
+                    typeof lease.expiresAt === "number" &&
+                    lease.expiresAt > now
+                if (heldByOther) return false
+                tx.set(
+                    ref,
+                    { bridgeLease: { ownerId, acquiredAt: now, expiresAt: now + ttlMs } },
+                    { merge: true },
+                )
+                return true
+            })
+        } catch (err) {
+            console.error("[Lease] Acquire/renew failed:", (err as Error).message)
+            return false
+        }
+    }
+
+    /** B10 — release the lease iff we still own it (best-effort, on shutdown). */
+    async releaseLease(ownerId: string): Promise<void> {
+        const ref = this.db.collection("config").doc("monitor")
+        try {
+            await this.db.runTransaction(async (tx) => {
+                const snap = await tx.get(ref)
+                const lease = snap.data()?.bridgeLease as { ownerId?: string } | undefined
+                if (lease?.ownerId === ownerId) {
+                    tx.set(ref, { bridgeLease: admin.firestore.FieldValue.delete() }, { merge: true })
+                }
+            })
+        } catch {
+            // Best-effort on shutdown.
+        }
+    }
 }

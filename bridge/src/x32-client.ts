@@ -127,7 +127,15 @@ export class X32Client extends EventEmitter {
     currentBackoff: number = 2000 // Exposed for testing; starts at 2s
     private static readonly INITIAL_BACKOFF = 2000
     private static readonly MAX_BACKOFF = 60000
-    private pendingCallbacks = new Map<string, (msg: ParsedOSCMessage) => void>()
+    // B9 — per-address FIFO correlation. The X32 protocol has no correlation id
+    // (it replies to the same address it was queried on). A single-slot map
+    // clobbered an in-flight waiter when a second query to the SAME address
+    // started before the first replied — the earlier promise then hung to its
+    // 2s timeout. Now that C2 issues a query after every command, concurrent
+    // same-address queries are real (e.g. the 30s re-query overlapping a
+    // reconnect re-query). A FIFO queue per address hands each inbound reply to
+    // the OLDEST outstanding waiter, so concurrent queries/echoes can't cross.
+    private pendingCallbacks = new Map<string, Array<(msg: ParsedOSCMessage) => void>>()
 
     // C2 — query-after-command confirmation (Monitor Overhaul Phase 1). The X32
     // does NOT echo a client's OWN write back to the sender (R1), so after every
@@ -348,10 +356,13 @@ export class X32Client extends EventEmitter {
     private handleMessage(msg: ParsedOSCMessage): void {
         this.emit("raw_message", msg)
 
-        // Check for pending callback (query response)
-        const cb = this.pendingCallbacks.get(msg.address)
-        if (cb) {
-            this.pendingCallbacks.delete(msg.address)
+        // B9 — hand this reply to the OLDEST outstanding waiter for the address
+        // (FIFO), not a single clobberable slot. Concurrent same-address queries
+        // are resolved in send order.
+        const waiters = this.pendingCallbacks.get(msg.address)
+        if (waiters && waiters.length > 0) {
+            const cb = waiters.shift()!
+            if (waiters.length === 0) this.pendingCallbacks.delete(msg.address)
             cb(msg)
         }
 
@@ -460,15 +471,25 @@ export class X32Client extends EventEmitter {
 
     private query(address: string): Promise<ParsedOSCMessage> {
         return new Promise((resolve, reject) => {
+            const cb = (msg: ParsedOSCMessage) => {
+                clearTimeout(timeout)
+                resolve(msg)
+            }
             const timeout = setTimeout(() => {
-                this.pendingCallbacks.delete(address)
+                // B9 — remove THIS waiter only; the address slot may hold other
+                // concurrent waiters that must keep their place in line.
+                const waiters = this.pendingCallbacks.get(address)
+                if (waiters) {
+                    const i = waiters.indexOf(cb)
+                    if (i !== -1) waiters.splice(i, 1)
+                    if (waiters.length === 0) this.pendingCallbacks.delete(address)
+                }
                 reject(new Error(`Query timeout: ${address}`))
             }, 2000)
 
-            this.pendingCallbacks.set(address, (msg) => {
-                clearTimeout(timeout)
-                resolve(msg)
-            })
+            const waiters = this.pendingCallbacks.get(address)
+            if (waiters) waiters.push(cb)
+            else this.pendingCallbacks.set(address, [cb])
 
             this.send(address)
         })

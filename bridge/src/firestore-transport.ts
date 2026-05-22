@@ -20,6 +20,7 @@
 import * as admin from "firebase-admin"
 import { X32Client } from "./x32-client"
 import { ConfigManager } from "./config"
+import { AckWriter } from "./ack-writer"
 
 /** monitor-live/state schema version (C4). Bump on any shape change. */
 const STATE_SCHEMA_VERSION = 1
@@ -38,7 +39,15 @@ export class FirestoreTransport {
     private db: admin.firestore.Firestore
     private x32: X32Client
     private config: ConfigManager
+    private ackWriter: AckWriter
     private commandUnsub: (() => void) | null = null
+
+    // B10 — single-writer gate. Only the lease-holding ("active") bridge drains
+    // commands and writes state; a standby bridge listens but leaves the work to
+    // the active one (prevents two PCs both consuming `pending` → double-apply).
+    // Defaults to always-active so single-bridge deployments + unit tests are
+    // unaffected; index.ts wires this to the Firestore lease.
+    private isActiveBridge: () => boolean
 
     // ── State-write path (Monitor Overhaul Phase 1, C1/C3) ──
     // ONE throttled full-state `.set()` writer. The dot-path delta writer that
@@ -57,13 +66,38 @@ export class FirestoreTransport {
     private readonly STATE_HEARTBEAT_MS = 10_000 // cheap re-.set() of cached snapshot (idle never freezes — R2)
     private readonly FULL_REQUERY_MS = 30_000 // authoritative syncFullState resync (catch drift / missed echoes)
 
-    // Track the latest command timestamp for each target to discard obsolete delayed commands
-    // Key format: "bus_master:1" or "send_level:1:5" or "matrix_fader:2"
+    // Track the latest command time for each target to discard obsolete delayed
+    // commands. Keyed by command target ("set_bus_master:1", "set_send_level:1:5").
+    // VALUES are SERVER-relative times (B4) — the Firestore doc createTime, one
+    // clock for all clients — NOT the iPad wall-clock `createdAt`, which skews
+    // across machines and broke ordering + the staleness cutoff.
     private latestCommandTimestamps: Map<string, number> = new Map();
-    // Batch processing state
-    private pendingCommandQueue: { cmd: PendingCommand, ref: admin.firestore.DocumentReference }[] = [];
+    // Batch processing state. `serverCreateMs` is the B4 server-relative receipt
+    // time captured from the command doc's createTime.
+    private pendingCommandQueue: { cmd: PendingCommand, ref: admin.firestore.DocumentReference, serverCreateMs: number }[] = [];
     private commandBatchTimer: ReturnType<typeof setTimeout> | null = null;
     private readonly COMMAND_BATCH_WINDOW = 20; // ms to accumulate commands before processing
+    private readonly STALE_COMMAND_MS = 10_000; // discard commands older than this (B4, server-relative)
+
+    // B5 — idempotency. CommandIds already given a verdict, with the time they
+    // were processed. A re-delivered command (listener re-establish, etc.) is
+    // skipped so it can't double-apply on the X32. Pruned by TTL.
+    private processedCommandIds: Map<string, number> = new Map();
+    private readonly PROCESSED_TTL_MS = 60_000;
+
+    // B6 — pending command acks awaiting the C2 read-back confirmation. Keyed by
+    // the X32 confirm key ("bus_fader:5", "send_level:2:5"). On the matching
+    // change event we write an `applied` ack with the confirmed value; if none
+    // arrives within ACK_CONFIRM_TIMEOUT_MS we write a `timeout` ack.
+    private pendingAcks: Map<string, { commandId: string; timer: ReturnType<typeof setTimeout> }> = new Map();
+    private readonly ACK_CONFIRM_TIMEOUT_MS = 1_500;
+
+    // B13 — real connected-client count. With the Firestore transport there is no
+    // socket to count, so "active clients" = distinct uids that sent a command in
+    // the last CLIENT_ACTIVE_WINDOW_MS (the only client-presence signal the bridge
+    // observes). Replaces the hardcoded 0 in the heartbeat.
+    private recentClients: Map<string, number> = new Map();
+    private readonly CLIENT_ACTIVE_WINDOW_MS = 60_000;
 
     // BR-01: cache each user's admin/soundEngineer ("engineer") flag so the
     // authz check does NOT read users/{uid} from Firestore on every fader tick
@@ -74,10 +108,12 @@ export class FirestoreTransport {
     private engineerCache: Map<string, { isEngineer: boolean; expiresAt: number }> = new Map();
     private readonly ENGINEER_CACHE_TTL_MS = 30_000;
 
-    constructor(x32: X32Client, config: ConfigManager) {
+    constructor(x32: X32Client, config: ConfigManager, isActiveBridge: () => boolean = () => true) {
         this.x32 = x32
         this.config = config
+        this.isActiveBridge = isActiveBridge
         this.db = admin.firestore()
+        this.ackWriter = new AckWriter(this.db)
     }
 
     /**
@@ -120,6 +156,9 @@ export class FirestoreTransport {
      * source.
      */
     async writeFullState(): Promise<void> {
+        // B10 — a standby bridge must not write state (the active bridge owns
+        // monitor-live/state; two writers would fight over it).
+        if (!this.isActiveBridge()) return
         this.lastStateWrite = Date.now()
         try {
             await this.db.doc("monitor-live/state").set({
@@ -180,7 +219,13 @@ export class FirestoreTransport {
                     for (const change of snap.docChanges()) {
                         if (change.type === "added") {
                             const data = change.doc.data() as PendingCommand
-                            this.queueCommand(data, change.doc.ref)
+                            // B4 — capture the Firestore server-assigned create time
+                            // (one clock for every client) as the authoritative
+                            // ordering/staleness basis. Fall back to the client
+                            // `createdAt` only if createTime is unavailable.
+                            const serverCreateMs =
+                                change.doc.createTime?.toMillis?.() ?? data.createdAt
+                            this.queueCommand(data, change.doc.ref, serverCreateMs)
                         }
                     }
                 },
@@ -194,8 +239,11 @@ export class FirestoreTransport {
         console.log("[Transport] Listening for iPad commands")
     }
 
-    private queueCommand(cmd: PendingCommand, ref: admin.firestore.DocumentReference): void {
-        this.pendingCommandQueue.push({ cmd, ref });
+    private queueCommand(cmd: PendingCommand, ref: admin.firestore.DocumentReference, serverCreateMs: number): void {
+        // B13 — record client presence on every received command (even ones we'll
+        // refuse — the device is demonstrably active).
+        this.recordClientActivity(cmd.uid);
+        this.pendingCommandQueue.push({ cmd, ref, serverCreateMs });
         if (!this.commandBatchTimer) {
             this.commandBatchTimer = setTimeout(() => this.processCommandBatch(), this.COMMAND_BATCH_WINDOW);
         }
@@ -205,17 +253,27 @@ export class FirestoreTransport {
         this.commandBatchTimer = null;
         if (this.pendingCommandQueue.length === 0) return;
 
+        // B10 — only the active (lease-holding) bridge drains commands. A standby
+        // bridge drops its local copy and leaves the docs in Firestore for the
+        // active bridge's own listener to process (no double-apply, no deletes).
+        if (!this.isActiveBridge()) {
+            this.pendingCommandQueue = [];
+            return;
+        }
+
         const batchToProcess = [...this.pendingCommandQueue];
         this.pendingCommandQueue = [];
 
-        // Sort by creation time to ensure chronological processing within the batch
-        batchToProcess.sort((a, b) => a.cmd.createdAt - b.cmd.createdAt);
+        // B5 — order by the SERVER-relative create time (B4), not the skew-prone
+        // client `createdAt`, so concurrent multi-client commands apply in a
+        // single well-defined order.
+        batchToProcess.sort((a, b) => a.serverCreateMs - b.serverCreateMs);
 
         const firestoreBatch = this.db.batch();
         let batchCount = 0;
 
-        for (const { cmd, ref } of batchToProcess) {
-            await this.processCommand(cmd, ref, firestoreBatch);
+        for (const { cmd, ref, serverCreateMs } of batchToProcess) {
+            await this.processCommand(cmd, ref, firestoreBatch, serverCreateMs);
             batchCount++;
 
             // Firestore batches have a limit of 500 operations. 
@@ -231,34 +289,58 @@ export class FirestoreTransport {
         }
     }
 
-    // C4 (RESERVED — Phase 2, do NOT implement here): a per-command ack surface
-    // at monitor-live/acks/{commandId} = { commandId, status:
-    // 'applied'|'rejected'|'timeout', confirmedValue?, reason?, at }, server-write
-    // / client-read, TTL-swept — the read target for Phase-2 get_command_status
-    // (closes B6/MCP-D3). Not written in Phase 1.
+    // B6 — per-command ack surface. After a command reaches a verdict the bridge
+    // writes monitor-live/commands/acks/{commandId} (see ack-writer.ts; path is
+    // P2-B's commandAckRef single source of truth):
+    //   • rejected — unauthorized / superseded / unknown-or-malformed / X32 error
+    //   • timeout  — too old to apply, OR applied but the C2 read-back never
+    //                confirmed within ACK_CONFIRM_TIMEOUT_MS
+    //   • applied  — confirmed from the desk via the C2 query-after-command
+    //                (carries the confirmedValue)
+    // This is the read target for P2-B get_command_status (closes B6/MCP-D3).
 
     /**
      * Process a single command from an iPad. Does not delete immediately; adds delete to a batch.
      * Confirmation of the applied value happens via the X32Client's
      * query-after-command (C2): the SET schedules a debounced read-back whose
-     * reply refreshes the cache and triggers a full-state write here.
+     * reply routes back as a change event; setupX32Listeners resolves the pending
+     * ack with the confirmed value (B6).
      */
     private async processCommand(
         cmd: PendingCommand,
         ref: admin.firestore.DocumentReference,
-        batch: admin.firestore.WriteBatch
+        batch: admin.firestore.WriteBatch,
+        serverCreateMs: number
     ): Promise<void> {
+        const commandId = ref.id
         try {
+            // B5 — idempotency. A re-delivered command (e.g. listener
+            // re-establish) was already given a verdict + ack; never re-apply it
+            // to the desk. Just ensure the doc is cleaned up.
+            if (this.processedCommandIds.has(commandId)) {
+                batch.delete(ref)
+                return
+            }
+            // Mark BEFORE executing: retrying a fire-and-forget OSC SET can't
+            // recover and risks a double-apply, so a command gets exactly one shot.
+            this.processedCommandIds.set(commandId, Date.now())
+
             // Verify authorization
             const authorized = await this.isCommandAuthorized(cmd);
             if (!authorized) {
                 console.warn(`[Transport] Unauthorized command from ${cmd.uid}: ${cmd.type}`)
+                void this.ackWriter.write(commandId, "rejected", { reason: "unauthorized" })
                 batch.update(ref, { error: "Unauthorized", processedAt: Date.now() })
                 return
             }
 
-            // Discard stale commands (older than 10 seconds)
-            if (Date.now() - cmd.createdAt > 10_000) {
+            // B4 — discard stale commands on the SERVER-relative create time, not
+            // the iPad wall-clock (skew could make a fresh command look old or an
+            // old one look fresh).
+            if (Date.now() - serverCreateMs > this.STALE_COMMAND_MS) {
+                void this.ackWriter.write(commandId, "timeout", {
+                    reason: `command expired (age > ${this.STALE_COMMAND_MS}ms)`,
+                })
                 batch.update(ref, { error: "Timeout", processedAt: Date.now() })
                 return
             }
@@ -271,59 +353,154 @@ export class FirestoreTransport {
 
             const lastCmdTime = this.latestCommandTimestamps.get(targetKey) || 0;
 
-            // If we've already processed a NEWER command for this exact target, 
-            // discard this older one as obsolete (can happen due to Firestore latency/reordering jitter)
-            if (cmd.createdAt < lastCmdTime) {
-                // Obsolete
+            // B5 — if a NEWER command for this exact target already ran, this one
+            // is obsolete (Firestore reordering jitter / batch reorder). Compared
+            // on the server-relative time so cross-client ordering is consistent.
+            if (serverCreateMs < lastCmdTime) {
+                void this.ackWriter.write(commandId, "rejected", {
+                    reason: "superseded by a newer command for the same target",
+                })
                 batch.delete(ref)
                 return
             }
 
             // Record this as the latest command for this target
-            this.latestCommandTimestamps.set(targetKey, cmd.createdAt);
+            this.latestCommandTimestamps.set(targetKey, serverCreateMs);
+
+            // Validate shape + derive the C2 confirm key (B6). null = unknown type
+            // or missing required fields → a rejection, never sent to the desk.
+            const confirmKey = this.confirmKeyFor(cmd)
+            if (!confirmKey) {
+                console.warn(`[Transport] Unknown or malformed command: ${cmd.type}`)
+                void this.ackWriter.write(commandId, "rejected", {
+                    reason: `unknown or malformed command: ${cmd.type}`,
+                })
+                batch.delete(ref)
+                return
+            }
 
             // Execute the command on the X32
             switch (cmd.type) {
                 case "set_bus_master":
-                    if (cmd.busIndex !== undefined && cmd.value !== undefined) {
-                        this.x32.setBusFader(cmd.busIndex, cmd.value as number)
-                    }
+                    this.x32.setBusFader(cmd.busIndex!, cmd.value as number)
                     break
-
                 case "set_send_level":
-                    if (cmd.busIndex !== undefined && cmd.channelIndex !== undefined && cmd.value !== undefined) {
-                        this.x32.setSendLevel(cmd.channelIndex, cmd.busIndex, cmd.value as number)
-                    }
+                    this.x32.setSendLevel(cmd.channelIndex!, cmd.busIndex!, cmd.value as number)
                     break
-
                 case "set_send_on":
-                    if (cmd.busIndex !== undefined && cmd.channelIndex !== undefined && cmd.value !== undefined) {
-                        this.x32.setSendOn(cmd.channelIndex, cmd.busIndex, cmd.value as boolean)
-                    }
+                    this.x32.setSendOn(cmd.channelIndex!, cmd.busIndex!, cmd.value as boolean)
                     break
-
                 case "set_matrix_fader":
-                    if (cmd.matrixIndex !== undefined && cmd.value !== undefined) {
-                        this.x32.setMatrixFader(cmd.matrixIndex, cmd.value as number)
-                    }
+                    this.x32.setMatrixFader(cmd.matrixIndex!, cmd.value as number)
                     break
-
                 case "set_matrix_on":
-                    if (cmd.matrixIndex !== undefined && cmd.value !== undefined) {
-                        this.x32.setMatrixOn(cmd.matrixIndex, cmd.value as boolean)
-                    }
+                    this.x32.setMatrixOn(cmd.matrixIndex!, cmd.value as boolean)
                     break
-
-                default:
-                    console.warn(`[Transport] Unknown command type: ${cmd.type}`)
             }
+
+            // B6 — await the C2 read-back: an `applied` ack (with the confirmed
+            // value) on the matching change event, or a `timeout` ack if none
+            // arrives within the window.
+            this.registerPendingAck(confirmKey, commandId)
 
             // Mark for deletion after successful execution
             batch.delete(ref)
         } catch (err) {
             console.error(`[Transport] Command error:`, (err as Error).message)
+            void this.ackWriter.write(commandId, "rejected", { reason: (err as Error).message })
             batch.update(ref, { error: (err as Error).message, processedAt: Date.now() })
         }
+    }
+
+    /**
+     * Map a command to the X32 confirm key used by both the C2 read-back
+     * (x32-client scheduleConfirm) and the change-event handler (B6 ack
+     * resolution). Returns null for an unknown type or one missing its required
+     * fields — the caller treats that as a rejection.
+     */
+    private confirmKeyFor(cmd: PendingCommand): string | null {
+        switch (cmd.type) {
+            case "set_bus_master":
+                return cmd.busIndex !== undefined && cmd.value !== undefined
+                    ? `bus_fader:${cmd.busIndex}`
+                    : null
+            case "set_send_level":
+                return cmd.busIndex !== undefined && cmd.channelIndex !== undefined && cmd.value !== undefined
+                    ? `send_level:${cmd.channelIndex}:${cmd.busIndex}`
+                    : null
+            case "set_send_on":
+                return cmd.busIndex !== undefined && cmd.channelIndex !== undefined && cmd.value !== undefined
+                    ? `send_on:${cmd.channelIndex}:${cmd.busIndex}`
+                    : null
+            case "set_matrix_fader":
+                return cmd.matrixIndex !== undefined && cmd.value !== undefined
+                    ? `matrix_fader:${cmd.matrixIndex}`
+                    : null
+            case "set_matrix_on":
+                return cmd.matrixIndex !== undefined && cmd.value !== undefined
+                    ? `matrix_on:${cmd.matrixIndex}`
+                    : null
+            default:
+                return null
+        }
+    }
+
+    /**
+     * B6 — register a command awaiting C2 read-back confirmation, keyed by its
+     * X32 confirm key. A newer command for the same target supersedes an older
+     * still-pending one: the older was sent to the desk (so it's `applied`), but
+     * the newer command's read-back carries the authoritative value. If no
+     * confirmation arrives within ACK_CONFIRM_TIMEOUT_MS we write a `timeout`.
+     */
+    private registerPendingAck(confirmKey: string, commandId: string): void {
+        const existing = this.pendingAcks.get(confirmKey)
+        if (existing) {
+            clearTimeout(existing.timer)
+            void this.ackWriter.write(existing.commandId, "applied", {
+                reason: "superseded by a newer command for the same target",
+            })
+        }
+        const timer = setTimeout(() => {
+            this.pendingAcks.delete(confirmKey)
+            void this.ackWriter.write(commandId, "timeout", {
+                reason: `no read-back confirmation within ${this.ACK_CONFIRM_TIMEOUT_MS}ms`,
+            })
+        }, this.ACK_CONFIRM_TIMEOUT_MS)
+        this.pendingAcks.set(confirmKey, { commandId, timer })
+    }
+
+    /**
+     * B6 — resolve a pending ack from the desk's confirmed value (the C2
+     * read-back reply, surfaced as a change event). Writes the `applied` ack and
+     * cancels the timeout. A change event with no pending ack (a manual desk move)
+     * is ignored here.
+     */
+    private resolvePendingAck(confirmKey: string, confirmedValue: number | boolean): void {
+        const pending = this.pendingAcks.get(confirmKey)
+        if (!pending) return
+        clearTimeout(pending.timer)
+        this.pendingAcks.delete(confirmKey)
+        void this.ackWriter.write(pending.commandId, "applied", { confirmedValue })
+    }
+
+    /** B13 — record that a client is active (sent a command). */
+    private recordClientActivity(uid: string): void {
+        if (uid) this.recentClients.set(uid, Date.now())
+    }
+
+    /**
+     * B13 — count distinct clients active within the window (sent a command).
+     * The only client-presence signal the bridge has under the Firestore
+     * transport. Prunes expired entries as it counts.
+     */
+    getActiveClientCount(): number {
+        const cutoff = Date.now() - this.CLIENT_ACTIVE_WINDOW_MS
+        let active = 0
+        for (const [uid, last] of this.recentClients) {
+            if (last >= cutoff) active++
+            else this.recentClients.delete(uid)
+        }
+        return active
     }
 
     /**
@@ -396,13 +573,32 @@ export class FirestoreTransport {
      * covers startup, the periodic re-query, reconnect, and config-change syncs.
      */
     private setupX32Listeners(): void {
-        const onChange = () => this.scheduleStateWrite()
-        this.x32.on("bus_fader", onChange)
-        this.x32.on("send_level", onChange)
-        this.x32.on("send_on", onChange)
-        this.x32.on("matrix_fader", onChange)
-        this.x32.on("matrix_on", onChange)
-        this.x32.on("state_synced", onChange)
+        const onState = () => this.scheduleStateWrite()
+        // Each param change both schedules a full-state write (C1) AND, if it's
+        // the C2 read-back for a pending command, resolves that command's ack
+        // with the desk's confirmed value (B6). The event arg order matches
+        // x32-client's routeParameterChange emits.
+        this.x32.on("bus_fader", (idx: number, fader: number) => {
+            this.resolvePendingAck(`bus_fader:${idx}`, fader)
+            onState()
+        })
+        this.x32.on("send_level", (busIdx: number, chIdx: number, level: number) => {
+            this.resolvePendingAck(`send_level:${chIdx}:${busIdx}`, level)
+            onState()
+        })
+        this.x32.on("send_on", (busIdx: number, chIdx: number, on: boolean) => {
+            this.resolvePendingAck(`send_on:${chIdx}:${busIdx}`, on)
+            onState()
+        })
+        this.x32.on("matrix_fader", (idx: number, fader: number) => {
+            this.resolvePendingAck(`matrix_fader:${idx}`, fader)
+            onState()
+        })
+        this.x32.on("matrix_on", (idx: number, on: boolean) => {
+            this.resolvePendingAck(`matrix_on:${idx}`, on)
+            onState()
+        })
+        this.x32.on("state_synced", onState)
     }
 
     /**
@@ -427,6 +623,24 @@ export class FirestoreTransport {
         } catch {
             // Best effort
         }
+
+        // B6 — TTL-sweep old acks so the subcollection stays small.
+        await this.ackWriter.sweep()
+        // B5/B13 — prune the idempotency + client-presence maps so they don't
+        // grow without bound on a long-running bridge.
+        this.pruneExpiredMaps()
+    }
+
+    /** Drop expired processed-command + recent-client entries (B5/B13). */
+    private pruneExpiredMaps(): void {
+        const now = Date.now()
+        for (const [id, at] of this.processedCommandIds) {
+            if (now - at > this.PROCESSED_TTL_MS) this.processedCommandIds.delete(id)
+        }
+        const clientCutoff = now - this.CLIENT_ACTIVE_WINDOW_MS
+        for (const [uid, last] of this.recentClients) {
+            if (last < clientCutoff) this.recentClients.delete(uid)
+        }
     }
 
     stop(): void {
@@ -446,5 +660,8 @@ export class FirestoreTransport {
             clearInterval(this.fullRequeryTimer)
             this.fullRequeryTimer = null
         }
+        // B6 — drop any pending ack timeout timers.
+        for (const { timer } of this.pendingAcks.values()) clearTimeout(timer)
+        this.pendingAcks.clear()
     }
 }

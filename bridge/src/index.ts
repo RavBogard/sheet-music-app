@@ -20,6 +20,7 @@ import * as dotenv from "dotenv"
 dotenv.config()
 
 import * as os from "os"
+import { randomUUID } from "crypto"
 import { X32Client } from "./x32-client"
 import { ConfigManager } from "./config"
 import { FirestoreTransport } from "./firestore-transport"
@@ -31,6 +32,16 @@ import { FirestoreTransport } from "./firestore-transport"
  * state-write path is actually wedged while the config heartbeat still runs.
  */
 const STATE_LIVENESS_THRESHOLD_MS = 30_000
+
+/**
+ * B10 — single-writer lease (election). The active bridge holds a lease at
+ * config/monitor.bridgeLease for LEASE_TTL_MS and renews every LEASE_RENEW_MS;
+ * a bridge that can't hold it stands by (listens but does not drain commands or
+ * write state). TTL ≫ renew interval so one missed renewal doesn't drop it; TTL
+ * also ≫ realistic NTP skew between two PCs.
+ */
+const LEASE_TTL_MS = 90_000
+const LEASE_RENEW_MS = 20_000
 
 /**
  * Detect this machine's LAN IP address.
@@ -119,10 +130,23 @@ async function main() {
         console.error("   Update the X32 IP in the CentralReform admin panel.\n")
     }
 
+    // 3b. B10 — acquire the single-writer lease. If another bridge already holds
+    //     it, this one starts in STANDBY: it still listens, but won't drain
+    //     commands or write state (the transport's isActiveBridge gate). The renew
+    //     loop below promotes it to active if the lease later frees up.
+    const bridgeInstanceId = `${os.hostname()}-${process.pid}-${randomUUID().slice(0, 8)}`
+    let leaseHeld = await config.acquireOrRenewLease(bridgeInstanceId, LEASE_TTL_MS)
+    if (leaseHeld) {
+        console.log(`[Bridge] Single-writer lease ACQUIRED (${bridgeInstanceId}) — this bridge is ACTIVE`)
+    } else {
+        console.warn(`[Bridge] Single-writer lease held by another bridge — entering STANDBY (will not drive the X32)`)
+    }
+
     // 4. Start the Firestore transport FIRST (B2) so its state_synced listener is
     //    attached BEFORE syncFullState emits — otherwise the initial event is lost.
     //    iPads read state from and write commands to Firestore — zero config on devices.
-    const transport = new FirestoreTransport(x32, config)
+    //    B10 — the transport drains commands + writes state only while we hold the lease.
+    const transport = new FirestoreTransport(x32, config, () => leaseHeld)
     transport.start()
 
     // 4b. Sync full mixer state, then publish it. The first full-state `.set()`
@@ -189,29 +213,57 @@ async function main() {
         // alone. The bridge can hold a live socket while the state-write path is
         // wedged; publishing x32Connected=true then is the "green health + dead
         // writes" trap. state-age cross-checks that writes are actually flowing.
+        // B3 (verify-only): this state-age cross-check IS the state-freshness
+        // liveness B3 asked for (landed in P1-A's C5) — no further change needed.
         const socketAlive = x32.isConnected()
         const stateFresh = transport.getStateAgeMs() < STATE_LIVENESS_THRESHOLD_MS
         const healthy = socketAlive && stateFresh
 
+        // B13 — real connected-client count (distinct recently-commanding clients),
+        // replacing the hardcoded 0 that misled dashboards.
+        const clients = transport.getActiveClientCount()
+
         // Local Electron UI shows the raw socket state ("connected to X32").
         internalStatus.x32Connected = socketAlive
-        internalStatus.connectedClients = 0
+        internalStatus.connectedClients = clients
 
-        // Consumers (iPad / MCP) read the cross-checked health.
-        await config.writeHeartbeat({
-            x32Connected: healthy,
-            clients: 0,
-            localIp: currentIp,
-        })
+        // B10 — only the ACTIVE (lease-holding) bridge publishes the heartbeat and
+        // cleans up commands; a standby must not claim "online" or delete another
+        // bridge's pending docs.
+        if (leaseHeld) {
+            // Consumers (iPad / MCP) read the cross-checked health.
+            await config.writeHeartbeat({
+                x32Connected: healthy,
+                clients,
+                localIp: currentIp,
+            })
 
-        // Clean up stale commands (safety net)
-        await transport.cleanupStaleCommands()
+            // Clean up stale commands (safety net) + TTL-sweep acks.
+            await transport.cleanupStaleCommands()
+        }
     }
 
     // First heartbeat immediately
     await heartbeatLoop()
     // Then every 60 seconds
     const heartbeatInterval = setInterval(heartbeatLoop, 60_000)
+
+    // B10 — renew (or, if standing by, try to acquire) the single-writer lease.
+    // On a standby→active transition, resync the desk so the now-active bridge
+    // publishes fresh state instead of waiting for the 30s re-query.
+    const leaseInterval = setInterval(async () => {
+        const held = await config.acquireOrRenewLease(bridgeInstanceId, LEASE_TTL_MS)
+        if (held && !leaseHeld) {
+            console.log("[Bridge] Single-writer lease ACQUIRED — promoting to ACTIVE")
+            if (x32.isConnected()) {
+                await x32.syncFullState(config.getConfig().monitorBuses)
+                await transport.writeFullState()
+            }
+        } else if (!held && leaseHeld) {
+            console.warn("[Bridge] Single-writer lease LOST — another bridge is ACTIVE; standing by")
+        }
+        leaseHeld = held
+    }, LEASE_RENEW_MS)
 
     // 6. Watch for config changes
     config.startWatching()
@@ -238,8 +290,12 @@ async function main() {
     const shutdown = async () => {
         console.log("\n[Bridge] Shutting down...")
         clearInterval(heartbeatInterval)
+        clearInterval(leaseInterval)
         transport.stop()
         await config.writeOffline()
+        // B10 — release the lease so a standby bridge can take over immediately
+        // (rather than waiting out the TTL).
+        if (leaseHeld) await config.releaseLease(bridgeInstanceId)
         config.stopWatching()
         x32.disconnect()
         process.exit(0)
