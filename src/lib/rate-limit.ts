@@ -78,6 +78,7 @@ const limiterConfigs = {
     sync: { max: 3, window: 60 },
     ai: { max: 20, window: 60 },
     bridgeSetup: { max: 5, window: 60 },
+    chart: { max: 600, window: 60 },
 } as const
 
 const limiters = {
@@ -91,6 +92,19 @@ const limiters = {
     ai: createLimiter(20, 60),
     /** Bridge setup-code redemption: 5/min — credential-exchange endpoint */
     bridgeSetup: createLimiter(5, 60),
+    /**
+     * Chart bytes: 600 req/min — the `/api/drive/file/[fileId]` route only.
+     * The limiter keys by client IP, and CRC's band runs ~6 iPads behind ONE
+     * synagogue NAT, so the whole fleet shares a single IP bucket. The shared
+     * `api` tier (60/min) starved them mid-service: 6 iPads each prefetching /
+     * opening a ~20-chart setlist (plus retries) blow past 60/min → HTTP 429
+     * "Failed to load PDF". Chart GETs are public, idempotent, and CDN-cached
+     * (`public, s-maxage=604800`), so most repeat fetches never reach origin —
+     * this generous ceiling only has to absorb the cold/first-fetch burst when
+     * the fleet pre-caches a new setlist. 600/min covers that comfortably while
+     * staying a real ceiling (not unlimited) so a scraper can't hammer origin.
+     */
+    chart: createLimiter(600, 60),
 }
 
 // In-memory fallbacks used when Redis is unavailable (fail-closed)

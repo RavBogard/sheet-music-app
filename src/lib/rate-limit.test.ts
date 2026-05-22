@@ -65,6 +65,34 @@ describe('rate-limit', () => {
         expect(result?.status).toBe(429)
     })
 
+    it('chart tier does NOT block a NATed fleet past 60 from one IP', async () => {
+        // The /api/drive/file route uses the `chart` tier (600/min) so the ~6
+        // band iPads behind ONE synagogue NAT (one shared IP) don't starve on
+        // the 60/min `api` budget — the launch finding this lane fixes. 100
+        // chart fetches from a single IP must all pass (the `api` tier would
+        // have 429'd at 61).
+        const { checkRateLimit } = await import('./rate-limit')
+        const ip = '10.0.0.42'
+        for (let i = 0; i < 100; i++) {
+            const result = await checkRateLimit(mockReq(ip), 'chart')
+            expect(result).toBeNull()
+        }
+    })
+
+    it('chart tier ceiling is a real 600/min (not unlimited)', async () => {
+        // Generous but bounded so a scraper can't hammer origin past the CDN.
+        const { checkRateLimit } = await import('./rate-limit')
+        const ip = '10.0.0.43'
+        for (let i = 0; i < 600; i++) {
+            const ok = await checkRateLimit(mockReq(ip), 'chart')
+            expect(ok).toBeNull()
+        }
+        const result = await checkRateLimit(mockReq(ip), 'chart')
+        expect(result).not.toBeNull()
+        expect(result?.status).toBe(429)
+        expect(result?.headers.get('X-RateLimit-Limit')).toBe('600')
+    })
+
     it('returns proper 429 response with headers', async () => {
         const { checkRateLimit } = await import('./rate-limit')
         const ip = '10.0.0.100'
