@@ -1,20 +1,20 @@
-# Updating the CentralReform Bridge to v10.0.1 — Office Helper Steps
+# Updating the CentralReform Bridge to v10.0.2 — Office Helper Steps
 
 **Who this is for:** the person physically at the studio computer. You do **not**
 need any technical knowledge. Just follow the steps below, one at a time.
 
 **What you're doing:** replacing the small "CentralReform Bridge" program that runs in
-the background with its newest version (**v10.0.1**). It takes about 3–5 minutes. You
-will **not** lose anything — your saved login/credentials carry over automatically.
+the background with its newest version (**v10.0.2**). It takes about 3–5 minutes. You
+will **not** lose anything — your saved login/credentials carry over automatically
+(v10.0.1 already moved them to a safe place, so this update is non-destructive).
 
 **When to do it:** any time the sound system / mixer is **not** in use for a live
 service or rehearsal. (Installing restarts the program for a few seconds.)
 
 > ⚠️ **Why we're doing it this way (the direct-installer way) instead of the old
-> "Check for Updates" button:** last time, the built-in updater button got stuck and
-> took the program offline. So this time we install the new version **directly from a
-> file** — it's more reliable. Please follow these steps rather than the tray
-> "Check for Updates" item.
+> "Check for Updates" button:** a while back, the built-in updater button got stuck and
+> took the program offline. So we install the new version **directly from a file** — it's
+> more reliable. Please follow these steps rather than the tray "Check for Updates" item.
 
 ---
 
@@ -23,15 +23,15 @@ service or rehearsal. (Installing restarts the program for a few seconds.)
 We will send you a file named:
 
 ```
-CentralReform-Bridge-Setup-10.0.1.exe
+CentralReform-Bridge-Setup-10.0.2.exe
 ```
 
 (about 100 MB). It will come by **email or a Google Drive link** from us. Save it
 somewhere easy to find, like the **Desktop**.
 
 - If you'd rather download it yourself, it lives here:
-  **https://github.com/RavBogard/sheet-music-app/releases/tag/v10.0.1**
-  → under **"Assets"**, click `CentralReform-Bridge-Setup-10.0.1.exe`. (If the page
+  **https://github.com/RavBogard/sheet-music-app/releases/tag/v10.0.2**
+  → under **"Assets"**, click `CentralReform-Bridge-Setup-10.0.2.exe`. (If the page
   asks you to sign in, use the file we email you instead.)
 
 > 🛑 **If you can't find or open the file, STOP and tell us.** Don't continue.
@@ -56,7 +56,7 @@ So the new version can replace the old one cleanly, first close the running prog
 
 ## Step 3 — Run the installer
 
-1. **Double-click** the `CentralReform-Bridge-Setup-10.0.1.exe` file you saved.
+1. **Double-click** the `CentralReform-Bridge-Setup-10.0.2.exe` file you saved.
 2. Windows may show a blue **"Windows protected your PC"** box. If it does:
    click **"More info"**, then **"Run anyway"**. (This is normal for our program.)
 3. The installer runs on its own — a small window appears for a few seconds and then
@@ -80,8 +80,8 @@ So the new version can replace the old one cleanly, first close the running prog
 
 ## Backstop — only if it asks for a "Setup Code" (it shouldn't)
 
-With this version, your saved credentials are kept in a safe place that survives the
-update, so the Bridge should start **without** asking for anything.
+Your saved credentials are kept in a safe place that survives the update (this has been
+true since v10.0.1), so the Bridge should start **without** asking for anything.
 
 **If** the dashboard shows a **"Bridge Setup"** screen asking for a Setup Code:
 
@@ -98,24 +98,31 @@ update, so the Bridge should start **without** asking for anything.
 ## Notes (for us, not the helper)
 
 - **Primary path is the direct installer**, NOT the tray "Check for Updates" → "Install
-  update" flow. The 2026-05-21 outage involved the tray/auto-update path stalling
-  (and a separate cred-orphan bug); v10.0.1 fixes the cred bug but we still drive the
-  install by hand-running the signed installer for predictability.
-- **Bug#1 (durable creds) is in this build:** `main.ts` now reads/writes
-  `service-account-key.json` at `app.getPath('userData')`
-  (`%APPDATA%\CentralReform Bridge`) first, with the exe folder as a fallback, and
-  **self-migrates** an exe-folder key into userData on first run. So this is the last
-  install that can orphan creds — after v10.0.1 runs once, future reinstalls are
-  non-destructive. The manual JSON-drop into the exe folder still works as a backstop.
-- **Bug#2 (setup-code length) is in this build:** the setup overlay input is now
-  `maxlength=10` (was 6) and the copy says "10-character"; the appUrl default is
-  `https://www.centralreform.live` (was the wrong `centralreform.firebaseapp.com`).
-- **The installer is signed** (signtool, this build) — SmartScreen may still show
+  update" flow. The 2026-05-21 outage involved the tray/auto-update path stalling; we
+  drive the install by hand-running the signed installer for predictability.
+- **This is an in-place, non-destructive update.** v10.0.1 already moved the credential
+  to `app.getPath('userData')` (`%APPDATA%\CentralReform Bridge`) with self-migration,
+  so a v10.0.2 install over a working v10.0.1 keeps the saved cred automatically. (The
+  manual JSON-drop into the exe folder still works as a backstop.) The durable-cred and
+  setup-code-length fixes are unchanged from v10.0.1 — nothing about creds changes here.
+- **What v10.0.2 adds (Phase-2 "P2-A" bridge observability + robustness):**
+  - **Per-command acknowledgements** — each monitor command now writes an
+    `applied` / `rejected` / `timeout` ack (`monitor-live/commands/acks/{commandId}`) so
+    the app can eventually surface "did my fader move actually land?".
+  - **Server-time clock-skew handling** — command staleness/ordering keys off the
+    Firestore server clock, not the iPad's clock.
+  - **Command ordering + idempotency** — re-delivered commands aren't double-applied;
+    older-than-latest commands are rejected as superseded.
+  - **Query correlation (FIFO)** — concurrent reads of the same X32 address resolve in
+    send order (no hung waiters).
+  - **Two-bridge guard (single-writer lease)** — if two bridges ever run, only the
+    lease-holder writes state; the other stays on standby (fails closed).
+  - **Real connected-client count** in the heartbeat.
+- **The installer is signed** (signtool) — SmartScreen may still show
   "More info → Run anyway" on a low-reputation cert; that's expected, not an error.
 - **Confirm remotely after update:** Firestore `config/monitor.bridge.version` reads
-  **`10.0.1`** once the new build's heartbeat fires (`app.getVersion()` wiring), with a
+  **`10.0.2`** once the new build's heartbeat fires (`app.getVersion()` wiring), with a
   fresh `lastSeen` and `x32Connected: true`. That's our proof the update landed.
-- **The new version also carries the P1-A state-write root-fix** (full-state writes →
-  fixes the array→map corruption; query-after-command → fixes read-of-own-write;
-  2-tier heartbeat → fixes idle-freeze). The first full-state write after install
-  **heals** the currently MAP-corrupted `monitor-live/state`.
+- **Live acceptance of the ack surface:** after the desk runs v10.0.2, re-run the
+  P0-B2 live probe (`scripts/monitor-live-probe.mjs`) to confirm acks are written and
+  own-writes reflect end-to-end (the auditor's OPEN-FOLLOWUP from P2-A).
