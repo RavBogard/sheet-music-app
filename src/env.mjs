@@ -19,6 +19,12 @@ export const env = createEnv({
         FIREBASE_PRIVATE_KEY: prodRequired("FIREBASE_PRIVATE_KEY"),
         GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
         GOOGLE_PRIVATE_KEY: z.string().optional(),
+        // Schema hygiene (storage-phase2, Lane A §4): these are read via raw
+        // process.env in DriveClient / firebase-storage today. Declaring them
+        // here surfaces a misconfig at boot instead of at first backup run.
+        GOOGLE_CREDENTIALS_JSON: z.string().optional(),
+        GOOGLE_PROJECT_ID: z.string().optional(),
+        FIREBASE_STORAGE_BUCKET: z.string().optional(),
         GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
         UPSTASH_REDIS_REST_URL: z.string().optional(),
         UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
@@ -40,6 +46,14 @@ export const env = createEnv({
         // Daniel configures it. Distinct from GOOGLE_DRIVE_ROOT_FOLDER_ID
         // (which the legacy /api/cron/sync hourly mirror uses).
         DAVID_DRIVE_DROP_FOLDER_ID: z.string().optional(),
+        // storage-phase2 (Storage→Drive byte-mirror). Dedicated Drive folder
+        // (a Workspace Shared Drive) the nightly /api/cron/storage-backup
+        // mirrors chart bytes into. MUST be distinct from
+        // GOOGLE_DRIVE_ROOT_FOLDER_ID and DAVID_DRIVE_DROP_FOLDER_ID (and not
+        // a child of the latter) to avoid a re-import loop. Optional — when
+        // unset the cron is a graceful no-op so the route ships dormant until
+        // Daniel sets it in Vercel env.
+        CRC_BACKUP_DRIVE_FOLDER_ID: z.string().optional(),
         // Cycle-3 NEW-3 (a3, swapped 2026-05-18 a3-gemini-swap) — Gemini 3.1 Pro
         // for AI library enrichment. Optional: when unset the enrichment
         // subscriber is dormant and every library_index row stays at
@@ -66,6 +80,9 @@ export const env = createEnv({
         FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
         GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
         GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY,
+        GOOGLE_CREDENTIALS_JSON: process.env.GOOGLE_CREDENTIALS_JSON,
+        GOOGLE_PROJECT_ID: process.env.GOOGLE_PROJECT_ID,
+        FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET,
         GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
         NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
         NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -88,6 +105,7 @@ export const env = createEnv({
         BACKUP_BUCKET: process.env.BACKUP_BUCKET,
         GOOGLE_DRIVE_ROOT_FOLDER_ID: process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID,
         DAVID_DRIVE_DROP_FOLDER_ID: process.env.DAVID_DRIVE_DROP_FOLDER_ID,
+        CRC_BACKUP_DRIVE_FOLDER_ID: process.env.CRC_BACKUP_DRIVE_FOLDER_ID,
         GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     },
     skipValidation: !!process.env.SKIP_ENV_VALIDATION,

@@ -242,6 +242,40 @@ export async function getStorageObjectSize(
 }
 
 /**
+ * storage-phase2 (Storage→Drive byte-mirror). Resolve a library `fileId` to
+ * its Storage object's content MD5 (base64, as GCS stores it in `md5Hash`),
+ * byte size, and the exact path — WITHOUT downloading the bytes. The backup
+ * cron compares this md5 (base64→hex) against the Drive mirror's
+ * `md5Checksum` to decide create / skip / update, so a steady-state run does
+ * zero downloads. Returns null when no candidate path holds the object (or on
+ * error); the `path` lets the caller download via downloadFromStoragePath.
+ */
+export async function getStorageObjectMd5(
+    fileId: string,
+    mimeType?: string,
+): Promise<{ md5Base64: string; size: number; path: string } | null> {
+    try {
+        const bucket = getBucket()
+        const paths = getCandidatePaths(fileId, mimeType)
+        for (const path of paths) {
+            const file = bucket.file(path)
+            const [exists] = await file.exists()
+            if (!exists) continue
+            const [meta] = await file.getMetadata()
+            const size = Number(meta.size || 0)
+            return {
+                md5Base64: typeof meta.md5Hash === 'string' ? meta.md5Hash : '',
+                size: Number.isFinite(size) ? size : 0,
+                path,
+            }
+        }
+        return null
+    } catch {
+        return null
+    }
+}
+
+/**
  * 2026-05-15 — compensating-delete for a Storage object at an exact path.
  * Used by processChartUpload's atomic-guard when a downstream Firestore
  * write fails — rolls back the Storage blob so no reverse orphan stays.

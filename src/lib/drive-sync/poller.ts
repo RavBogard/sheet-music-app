@@ -108,6 +108,12 @@ interface DriveFile {
     parents?: string[]
     md5Checksum?: string
     size?: string | number
+    /**
+     * storage-phase2 loop-avoidance: the Storage→Drive backup mirror stamps
+     * its files `{ crcBackup: "1" }`. The importer skips these so a future
+     * folder misconfiguration can't re-ingest backups as new charts.
+     */
+    appProperties?: Record<string, string>
 }
 
 function defaultWatchState(
@@ -630,6 +636,10 @@ export async function runDriveSync(opts: {
         while (files.length < fileCap) {
             const res = await deps.drive.listFilesByQuery({
                 q,
+                // Explicit fields incl. appProperties so the storage-phase2
+                // loop-avoidance skip below can see the crcBackup stamp.
+                fields:
+                    "nextPageToken, files(id, name, mimeType, modifiedTime, parents, md5Checksum, size, appProperties)",
                 pageSize: Math.min(100, fileCap - files.length),
                 pageToken,
                 orderBy: "modifiedTime",
@@ -666,6 +676,14 @@ export async function runDriveSync(opts: {
 
     for (const file of files) {
         if (!file.id) continue
+        // storage-phase2 loop-avoidance: never re-import our own Storage→Drive
+        // backup files. The dedicated backup folder (not this drop folder nor a
+        // subfolder of it) is the primary guard; this appProperties skip is
+        // defence-in-depth against a future folder misconfiguration.
+        if (file.appProperties?.crcBackup) {
+            result.skipped++
+            continue
+        }
         const collection = resolveCollectionForFile(
             file,
             parentFolderId,

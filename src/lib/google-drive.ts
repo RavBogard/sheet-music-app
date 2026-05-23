@@ -1,5 +1,6 @@
 import { drive } from "@googleapis/drive"
 import { GoogleAuth } from "google-auth-library"
+import { Readable } from "node:stream"
 import { logger } from "@/lib/logger"
 
 const DRIVE_REQUEST_TIMEOUT_MS = 30_000
@@ -251,6 +252,7 @@ export class DriveClient {
             parents?: string[]
             md5Checksum?: string
             size?: string | number
+            appProperties?: Record<string, string>
         }>
         nextPageToken: string | null
     }> {
@@ -278,6 +280,7 @@ export class DriveClient {
                     parents?: string[]
                     md5Checksum?: string
                     size?: string | number
+                    appProperties?: Record<string, string>
                 }>,
                 nextPageToken: res.data.nextPageToken ?? null,
             }
@@ -462,6 +465,124 @@ export class DriveClient {
 
         } catch (error: unknown) {
             logger.error(`[Drive] Create Error:`, error)
+            throw error
+        }
+    }
+
+    /**
+     * storage-phase2 (Storage→Drive byte-mirror). Upload a **binary** file
+     * (PDF / MusicXML / mp3) to Drive. `createFile` above passes a string
+     * `body`, which corrupts binary content — this method streams the buffer
+     * via `Readable.from(buffer)` so the bytes land intact.
+     *
+     * Returns `id` + `md5Checksum` + `size` so the backup cron can record the
+     * pointer (`library_index.backupDriveId`) and verify the round-trip.
+     *
+     * `appProperties` lets the caller stamp `{ crcBackup: "1" }` so the
+     * drive-sync importer can skip backup files (loop-avoidance defence in
+     * depth; the dedicated backup folder is the primary guard).
+     */
+    async uploadBinaryFile(params: {
+        name: string
+        mimeType: string
+        buffer: Buffer
+        parents?: string[]
+        appProperties?: Record<string, string>
+    }): Promise<{ id?: string; name?: string; md5Checksum?: string; size?: string }> {
+        try {
+            const { name, mimeType, buffer, parents, appProperties } = params
+
+            const fileMetadata: {
+                name: string
+                mimeType: string
+                parents?: string[]
+                appProperties?: Record<string, string>
+            } = { name, mimeType }
+            if (parents && parents.length > 0) fileMetadata.parents = parents
+            if (appProperties) fileMetadata.appProperties = appProperties
+
+            const res = await withRetry(() => this.drive.files.create({
+                requestBody: fileMetadata,
+                // Fresh stream per attempt: withRetry re-invokes this thunk, and
+                // a Readable can only be consumed once — so build it here.
+                media: { mimeType, body: Readable.from(buffer) },
+                fields: 'id, name, md5Checksum, size',
+                supportsAllDrives: true,
+            })) as { data: { id?: string; name?: string; md5Checksum?: string; size?: string } }
+
+            logger.info(`[Drive] Uploaded binary file: ${res.data.id} (${name})`)
+            return res.data
+        } catch (error: unknown) {
+            logger.error(`[Drive] Binary upload error:`, error)
+            throw error
+        }
+    }
+
+    /**
+     * storage-phase2. Replace the **media** of an existing Drive file
+     * (`files.update`) — used when a chart was re-uploaded (Storage md5
+     * advanced). Drive keeps the prior revision automatically, giving a free
+     * versioning layer in the human-visible backup. Does NOT touch parents or
+     * name (media-only update).
+     */
+    async updateFileMedia(
+        fileId: string,
+        buffer: Buffer,
+        mimeType: string,
+    ): Promise<{ id?: string; md5Checksum?: string; size?: string }> {
+        try {
+            const res = await withRetry(() => this.drive.files.update({
+                fileId,
+                media: { mimeType, body: Readable.from(buffer) },
+                fields: 'id, md5Checksum, size',
+                supportsAllDrives: true,
+            })) as { data: { id?: string; md5Checksum?: string; size?: string } }
+
+            logger.info(`[Drive] Updated media for file: ${fileId}`)
+            return res.data
+        } catch (error: unknown) {
+            logger.error(`[Drive] Update media error for ${fileId}:`, error)
+            throw error
+        }
+    }
+
+    /**
+     * storage-phase2. Find-or-create a subfolder by exact name under
+     * `parentId`. Idempotent: returns the existing folder id if one already
+     * exists (first match), else creates it. Used by the backup cron to build
+     * the `charts/<collection>/` tree. Names are escaped for the Drive query.
+     */
+    async ensureFolder(params: { name: string; parentId: string }): Promise<string> {
+        const { name, parentId } = params
+        const safeName = sanitizeDriveQuery(name)
+        try {
+            const existing = await withRetry(() => this.drive.files.list({
+                q: `'${parentId}' in parents and name = '${safeName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+                fields: 'files(id, name)',
+                pageSize: 1,
+                supportsAllDrives: true,
+                includeItemsFromAllDrives: true,
+            })) as { data: { files?: Array<{ id?: string }> } }
+
+            const found = existing.data.files?.[0]?.id
+            if (found) return found
+
+            const created = await withRetry(() => this.drive.files.create({
+                requestBody: {
+                    name,
+                    mimeType: 'application/vnd.google-apps.folder',
+                    parents: [parentId],
+                },
+                fields: 'id',
+                supportsAllDrives: true,
+            })) as { data: { id?: string } }
+
+            const newId = created.data.id
+            if (!newId) throw new Error(`Drive folder create returned no id for "${name}"`)
+            logger.info(`[Drive] Created backup subfolder "${name}" → ${newId}`)
+            return newId
+        } catch (error: unknown) {
+            logger.error(`[Drive] ensureFolder error for "${name}" under ${parentId}:`, error)
             throw error
         }
     }
