@@ -3,7 +3,7 @@
  * and sync run logging.
  *
  * Mocks: firebase-admin (getFirestore), firebase-storage (uploadToStorage),
- *        google-drive (DriveClient), firebase-admin/storage (getStorage).
+ *        google-drive (DriveClient).
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -14,7 +14,6 @@ const mockDocs = new Map<string, Record<string, unknown>>()
 const mockBatchOps: Array<{ op: string; ref: string; data?: unknown }> = []
 let mockBatchCommitFn: ReturnType<typeof vi.fn>
 const mockSyncRunDocs = new Map<string, Record<string, unknown>>()
-const mockDeletedStorageFiles: string[] = []
 
 function createMockDocRef(collection: string, id: string) {
     return {
@@ -110,19 +109,6 @@ vi.mock('@/lib/google-drive', () => ({
     })),
 }))
 
-const mockBucketDelete = vi.fn(async () => {})
-const mockBucketFile = vi.fn(() => ({
-    delete: mockBucketDelete,
-}))
-
-vi.mock('firebase-admin/storage', () => ({
-    getStorage: vi.fn(() => ({
-        bucket: vi.fn(() => ({
-            file: mockBucketFile,
-        })),
-    })),
-}))
-
 vi.mock('@/lib/logger', () => ({
     logger: {
         info: vi.fn(),
@@ -159,7 +145,6 @@ describe('Sync Engine — Storage Copy Integration', () => {
         mockDocs.clear()
         mockSyncRunDocs.clear()
         mockBatchOps.length = 0
-        mockDeletedStorageFiles.length = 0
         mockUploadToStorage.mockResolvedValue('gs://bucket/library/test.pdf')
         mockGetFile.mockResolvedValue(new ArrayBuffer(100))
         mockListAllFiles.mockResolvedValue([])
@@ -254,20 +239,6 @@ describe('Sync Engine — Storage Copy Integration', () => {
             'application/pdf'
         )
         expect(stats.copiedToStorage).toBeGreaterThanOrEqual(1)
-    })
-
-    it('deletes Storage files for deleted Drive files', async () => {
-        addExistingDoc('deleted-file', { modifiedTime: '2026-01-01T00:00:00Z' })
-        // Keep the Drive listing non-empty so the accidental-wipe guard
-        // (Drive returns 0 files -> abort) doesn't fire. deleted-file is absent
-        // from Drive, so it must still be removed from Storage.
-        const survivor = makeDriveFile({ id: 'surviving-file', name: 'Survivor.pdf' })
-        mockListAllFiles.mockResolvedValue([survivor])
-
-        const { syncLibraryIndex } = await import('./sync-engine')
-        const stats = await syncLibraryIndex()
-
-        expect(stats.deletedFromStorage).toBeGreaterThanOrEqual(1)
     })
 
     it('writes a sync run document to sync_runs collection', async () => {

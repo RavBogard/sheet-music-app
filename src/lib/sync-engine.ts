@@ -3,7 +3,6 @@ import crypto from 'crypto'
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { DriveClient } from "@/lib/google-drive"
 import { uploadToStorage } from "@/lib/firebase-storage"
-import { getStorage } from 'firebase-admin/storage'
 import { logger } from "@/lib/logger"
 
 const COPY_DELAY_MS = 200 // Gentle pacing between Storage uploads
@@ -49,16 +48,13 @@ export interface SyncStats {
     totalScanned: number
     added: number
     updated: number
-    deleted: number
     errors: number
     addedFiles?: string[]
     updatedFiles?: string[]
-    deletedFiles?: string[]
     copiedToStorage: number
     copyErrors: number
     copyFailedFiles?: string[]
     retriedCopies: number
-    deletedFromStorage: number
     syncRunId?: string
 }
 
@@ -75,16 +71,13 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
         totalScanned: 0,
         added: 0,
         updated: 0,
-        deleted: 0,
         errors: 0,
         addedFiles: [],
         updatedFiles: [],
-        deletedFiles: [],
         copiedToStorage: 0,
         copyErrors: 0,
         copyFailedFiles: [],
         retriedCopies: 0,
-        deletedFromStorage: 0,
     }
 
     const syncErrors: SyncRunRecord['errors'] = []
@@ -155,7 +148,6 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                 storageFailed: data?.storageFailed || null,
             })
         }
-        const driveIds = new Set(allFiles.map(f => f.id))
 
         // Phase A: Identify files needing Storage copy
         const isFolder = (mimeType: string) => mimeType === 'application/vnd.google-apps.folder'
@@ -377,30 +369,6 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                 })
 
                 logger.warn(`[Sync] Copy failed for ${file.name}: ${errorMsg}`)
-            }
-        }
-
-        // 6. Detect deleted files (in DB but not in Drive) and clean up Storage
-        for (const doc of existingSnapshot.docs) {
-            if (!driveIds.has(doc.id)) {
-                stats.deleted++
-                stats.deletedFiles!.push(doc.id)
-
-                // Phase C: Delete from Storage
-                try {
-                    const bucket = getStorage().bucket(
-                        process.env.FIREBASE_STORAGE_BUCKET ||
-                        `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`
-                    )
-                    const extensions = ['.pdf', '.xml', '']
-                    for (const ext of extensions) {
-                        await bucket.file(`library/${doc.id}${ext}`).delete().catch(() => {})
-                    }
-                    stats.deletedFromStorage++
-                    logger.info(`[Sync] Deleted from Storage: ${doc.id}`)
-                } catch (err) {
-                    logger.warn(`[Sync] Storage cleanup failed for ${doc.id}:`, err)
-                }
             }
         }
 

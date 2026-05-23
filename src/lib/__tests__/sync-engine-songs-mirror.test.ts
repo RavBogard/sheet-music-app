@@ -113,12 +113,6 @@ vi.mock('@/lib/google-drive', () => ({
     })),
 }))
 
-vi.mock('firebase-admin/storage', () => ({
-    getStorage: vi.fn(() => ({
-        bucket: vi.fn(() => ({ file: vi.fn(() => ({ delete: vi.fn(async () => {}) })) })),
-    })),
-}))
-
 vi.mock('@/lib/logger', () => ({
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))

@@ -44,7 +44,7 @@ export const env = createEnv({
         // folder + its direct subfolders every 5 min. Optional — when unset,
         // the cron is a graceful no-op so the route ships dormant until
         // Daniel configures it. Distinct from GOOGLE_DRIVE_ROOT_FOLDER_ID
-        // (which the legacy /api/cron/sync hourly mirror uses).
+        // (which the admin-triggered /api/library/sync mirror uses).
         DAVID_DRIVE_DROP_FOLDER_ID: z.string().optional(),
         // storage-phase2 (Storage→Drive byte-mirror). Dedicated Drive folder
         // (a Workspace Shared Drive) the nightly /api/cron/storage-backup

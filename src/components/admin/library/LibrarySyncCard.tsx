@@ -75,7 +75,7 @@ export function LibrarySyncCard() {
                             ))}
                         </div>
                     )}
-                    {(lastStats.addedFiles?.length || lastStats.deletedFiles?.length) ? (
+                    {lastStats.addedFiles?.length ? (
                         <details className="mt-1">
                             <summary className="text-muted-foreground cursor-pointer hover:text-foreground text-[10px]">
                                 What changed?
@@ -83,9 +83,6 @@ export function LibrarySyncCard() {
                             <div className="mt-1 space-y-1 max-h-32 overflow-y-auto">
                                 {lastStats.addedFiles?.map((f, i) => (
                                     <div key={`a${i}`} className="text-success">+ {f}</div>
-                                ))}
-                                {lastStats.deletedFiles?.map((f, i) => (
-                                    <div key={`d${i}`} className="text-destructive">− {f}</div>
                                 ))}
                             </div>
                         </details>

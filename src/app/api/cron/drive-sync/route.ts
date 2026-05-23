@@ -26,9 +26,11 @@ export const maxDuration = 300
  * deletes do NOT propagate. Per-file failures land in `chartImportQueue`
  * (the NEW-4 review queue's source).
  *
- * Coexists with the legacy hourly `/api/cron/sync` (`syncLibraryIndex`,
+ * Coexists with the admin-triggered `/api/library/sync` (`syncLibraryIndex`,
  * keyed on `GOOGLE_DRIVE_ROOT_FOLDER_ID`) — different folders, different
- * concerns. See `.coord/shared/decisions.md` 2026-05-17T23:40Z.
+ * concerns. The legacy hourly `/api/cron/sync` was disarmed at e9442cae1
+ * and hard-removed in this lane (track-A1 sweep-delete blast radius).
+ * See `.coord/shared/decisions.md` 2026-05-17T23:40Z.
  *
  * Dormant by default: if `DAVID_DRIVE_DROP_FOLDER_ID` is unset, returns
  * `{watching: false}` and no-ops. Set the env var in Vercel to activate.
