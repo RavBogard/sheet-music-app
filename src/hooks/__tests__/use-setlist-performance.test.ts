@@ -33,11 +33,13 @@ vi.mock('@/hooks/use-safe-firestore-sync', () => ({
 }))
 
 const mockRequestWakeLock = vi.fn()
+const mockReleaseWakeLock = vi.fn()
 vi.mock('@/hooks/use-wake-lock', () => ({
   useWakeLock: () => ({
+    isSupported: true,
     isLocked: false,
     requestWakeLock: mockRequestWakeLock,
-    releaseWakeLock: vi.fn(),
+    releaseWakeLock: mockReleaseWakeLock,
   }),
 }))
 
@@ -119,9 +121,24 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
     expect(result.current.rabbi).toBe('Daniel')
   })
 
-  it('requests wake lock on mount', () => {
+  it('does NOT auto-request wake lock on mount (iOS Safari requires user gesture; lane: ipad-wake-lock-fix 2026-05-23)', () => {
+    // Regression guard for Daniel's Yizkor service iPad timeout: the prior
+    // implementation fired requestWakeLock() in a mount-time useEffect; iOS
+    // Safari rejects with NotAllowedError outside transient user activation
+    // and the swallowed rejection meant the lock silently never engaged.
+    // The Perform surfaces now render KeepAwakeToggle in the header and the
+    // hook is invoked from its onClick handler — verify nothing on the
+    // mount path re-introduces the silent-fail call.
     renderHook(() => useSetlistPerformance(SETLIST_ID))
-    expect(mockRequestWakeLock).toHaveBeenCalled()
+    expect(mockRequestWakeLock).not.toHaveBeenCalled()
+  })
+
+  it('exposes wake-lock controls + isSupported on the return shape', () => {
+    const { result } = renderHook(() => useSetlistPerformance(SETLIST_ID))
+    expect(result.current.isWakeLockActive).toBe(false)
+    expect(result.current.isWakeLockSupported).toBe(true)
+    expect(typeof result.current.requestWakeLock).toBe('function')
+    expect(typeof result.current.releaseWakeLock).toBe('function')
   })
 
   it('identifies leader status for admin', () => {

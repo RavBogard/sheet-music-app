@@ -29,6 +29,9 @@ interface UseSetlistPerformanceReturn {
     currentTrackIndex: number
     defaultTransposition: number
     isWakeLockActive: boolean
+    isWakeLockSupported: boolean
+    requestWakeLock: () => Promise<void>
+    releaseWakeLock: () => Promise<void>
     isLeader: boolean
     isPublicView: boolean
     setCurrentPosition: (index: number) => void
@@ -190,12 +193,20 @@ export function useSetlistPerformance(
 
     const defaultTransposition = musicianProfile?.defaultTransposition || 0
 
-    // Wake lock: acquire on mount
-    const { isLocked: isWakeLockActive, requestWakeLock } = useWakeLock()
-
-    useEffect(() => {
-        requestWakeLock()
-    }, [requestWakeLock])
+    // Wake lock: surface the controls so the caller can render a
+    // gesture-gated toggle (e.g. SetlistPerformClient's "Keep screen on"
+    // header button). DO NOT auto-call requestWakeLock on mount — iOS Safari
+    // rejects `navigator.wakeLock.request('screen')` with NotAllowedError
+    // outside a transient user-activation context, and the rejection is
+    // swallowed as a debug log. The Yizkor-service regression 2026-05-23
+    // (iPad screen timed out mid-service) was exactly this: the hook fired
+    // on mount, iOS no-op'd it, no UI surfaced the failure, the iPad slept.
+    const {
+        isSupported: isWakeLockSupported,
+        isLocked: isWakeLockActive,
+        requestWakeLock,
+        releaseWakeLock,
+    } = useWakeLock()
 
     // No-op position control (live stepping removed)
     const setCurrentPosition = () => {}
@@ -209,6 +220,9 @@ export function useSetlistPerformance(
         currentTrackIndex,
         defaultTransposition,
         isWakeLockActive,
+        isWakeLockSupported,
+        requestWakeLock,
+        releaseWakeLock,
         isLeader,
         isPublicView,
         setCurrentPosition,

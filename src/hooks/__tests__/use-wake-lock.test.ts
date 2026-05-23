@@ -44,6 +44,32 @@ describe('useWakeLock', () => {
     expect(result.current.isLocked).toBe(false)
   })
 
+  it('reports isSupported=true when navigator.wakeLock exists', async () => {
+    const { result } = renderHook(() => useWakeLock())
+    // isSupported is computed in an effect → settle one tick.
+    await act(async () => {})
+    expect(result.current.isSupported).toBe(true)
+  })
+
+  it('reports isSupported=false when navigator.wakeLock is missing (iOS <16.4 / older browsers)', async () => {
+    Object.defineProperty(navigator, 'wakeLock', {
+      writable: true,
+      configurable: true,
+      value: undefined,
+    })
+
+    const { result } = renderHook(() => useWakeLock())
+    await act(async () => {})
+    expect(result.current.isSupported).toBe(false)
+
+    // Calling requestWakeLock on an unsupported device is a graceful no-op
+    // (the toggle is disabled in the UI, but defensive in case it slips).
+    await act(async () => {
+      await result.current.requestWakeLock()
+    })
+    expect(result.current.isLocked).toBe(false)
+  })
+
   it('acquires wake lock and sets isLocked=true', async () => {
     const { result } = renderHook(() => useWakeLock())
 

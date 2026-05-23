@@ -5,7 +5,9 @@ import Link from "next/link"
 import { Music, Calendar } from "lucide-react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
+import { useWakeLock } from "@/hooks/use-wake-lock"
 import { PublicSetlistSkeleton } from "./PublicSetlistSkeleton"
+import { KeepAwakeToggle } from "./KeepAwakeToggle"
 import { splitPublicSetlists } from "./public-setlist-order"
 
 /**
@@ -16,6 +18,15 @@ import { splitPublicSetlists } from "./public-setlist-order"
 export function PublicSetlistListing() {
     const [setlists, setSetlists] = useState<Setlist[]>([])
     const [loading, setLoading] = useState(true)
+    // ipad-wake-lock-fix: belt+braces — Daniel sometimes leaves the picker
+    // visible during a service for quick song-pick. Same gesture-gated
+    // wake-lock affordance as the setlist detail page header.
+    const {
+        isSupported: isWakeLockSupported,
+        isLocked: isWakeLockActive,
+        requestWakeLock,
+        releaseWakeLock,
+    } = useWakeLock()
 
     useEffect(() => {
         const service = createSetlistService(null, null)
@@ -83,10 +94,16 @@ export function PublicSetlistListing() {
             {/* Header */}
             <div className="flex items-center gap-3 mb-2">
                 <Music className="h-6 w-6 text-muted-foreground" />
-                <div>
+                <div className="flex-1 min-w-0">
                     <h1 className="text-xl font-bold">CRC Music</h1>
                     <p className="text-sm text-muted-foreground">Public setlists</p>
                 </div>
+                <KeepAwakeToggle
+                    isActive={isWakeLockActive}
+                    isSupported={isWakeLockSupported}
+                    onRequest={requestWakeLock}
+                    onRelease={releaseWakeLock}
+                />
             </div>
 
             {isEmpty ? (

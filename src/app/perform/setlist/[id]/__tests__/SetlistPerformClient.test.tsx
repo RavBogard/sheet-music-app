@@ -46,6 +46,7 @@ vi.mock('@/hooks/use-safe-firestore-sync', () => ({
 
 vi.mock('@/hooks/use-wake-lock', () => ({
     useWakeLock: () => ({
+        isSupported: true,
         isLocked: false,
         requestWakeLock: vi.fn(),
         releaseWakeLock: vi.fn(),

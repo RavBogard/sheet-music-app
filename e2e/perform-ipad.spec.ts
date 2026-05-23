@@ -157,6 +157,77 @@ test.describe('ipad-uat-harness — Perform mode on standard 11" iPad (WebKit)',
         expect(webUid, 'auth.currentUser.uid must match the signed-in musician').toBe(musicianUid)
     })
 
+    test('Keep-screen-on toggle — gesture-gated wake-lock holds across the setlist (ipad-wake-lock-fix 2026-05-23)', async ({
+        context,
+        page,
+        baseURL,
+    }) => {
+        // Regression guard for Daniel's Yizkor service iPad timeout: the prior
+        // auto-on-mount path silently failed iOS Safari's transient-activation
+        // requirement, the lock never engaged, and the screen slept mid-
+        // service. The fix exposes a header "Keep screen on" toggle whose
+        // onClick acquires under user gesture. This test simulates the tap
+        // and asserts the lock is held in the navigator API (the most
+        // verifiable signal short of OS-level screen-on, which Playwright
+        // can't observe).
+        if (!baseURL) throw new Error('PLAYWRIGHT_BASE_URL must be set')
+        if (!seeded) throw new Error('beforeAll did not seed a setlist')
+
+        const { customToken } = await loginAsTestUser(context, baseURL, musicianBearer)
+        await page.goto(`/perform/setlist/${seeded.setlistId}`, { waitUntil: 'domcontentloaded' })
+        await signInWebSdk(page, customToken ?? '', { required: false })
+
+        // Wait for the header to settle before reading the toggle state.
+        await expect(page.locator('h1').first()).toHaveText(seeded.name, { timeout: 15_000 })
+
+        // WebKit Playwright doesn't grant navigator.wakeLock by default —
+        // skip if the API isn't on this build of WebKit (CI variance).
+        const hasWakeLock = await page.evaluate(() => 'wakeLock' in navigator)
+        test.skip(
+            !hasWakeLock,
+            'navigator.wakeLock not available in this WebKit build — toggle assertion skipped',
+        )
+
+        // Track lock requests through a tiny shim so we don't rely on a
+        // privately-held WakeLockSentinel reference in the page.
+        await page.evaluate(() => {
+            const w = window as unknown as { __wakeLockCount?: number }
+            w.__wakeLockCount = 0
+            const realRequest = navigator.wakeLock.request.bind(navigator.wakeLock)
+            navigator.wakeLock.request = async (type: WakeLockType) => {
+                w.__wakeLockCount = (w.__wakeLockCount ?? 0) + 1
+                return realRequest(type)
+            }
+        })
+
+        // The toggle's aria-label covers both off + on states; match either.
+        const toggle = page.getByRole('button', { name: /Keep screen on|Screen lock on/ })
+        await expect(toggle, 'KeepAwakeToggle must mount in the setlist header').toBeVisible({ timeout: 10_000 })
+
+        const box = await toggle.boundingBox()
+        expect(box, 'KeepAwakeToggle bounding box').not.toBeNull()
+        expect(
+            box!.height,
+            `KeepAwakeToggle height ${box!.height}px is below the ${TAP_TARGET_MIN}px iOS HIG floor`,
+        ).toBeGreaterThanOrEqual(TAP_TARGET_MIN)
+
+        // Tap (user gesture) → wakeLock.request fires once → aria-pressed flips.
+        await toggle.tap()
+
+        await expect(
+            toggle,
+            'KeepAwakeToggle must flip to aria-pressed="true" after a tap',
+        ).toHaveAttribute('aria-pressed', 'true', { timeout: 5_000 })
+
+        const requestCount = await page.evaluate(
+            () => (window as unknown as { __wakeLockCount?: number }).__wakeLockCount ?? 0,
+        )
+        expect(
+            requestCount,
+            'navigator.wakeLock.request must have fired exactly once under the tap gesture',
+        ).toBeGreaterThanOrEqual(1)
+    })
+
     test('iPad golden path — render, no overflow, tap targets, react-pdf, transpose, back', async ({
         context,
         page,

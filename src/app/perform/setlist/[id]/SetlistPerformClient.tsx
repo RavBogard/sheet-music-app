@@ -30,6 +30,7 @@ import { useAuth } from "@/lib/auth-context"
 import { SetlistView } from "@/components/performance/SetlistView"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
 import { SaveOfflineButton } from "@/components/performance/SaveOfflineButton"
+import { KeepAwakeToggle } from "@/components/performance/KeepAwakeToggle"
 import type { Setlist, SetlistTrack } from "@/types/models"
 
 const PrintModal = dynamic(
@@ -74,6 +75,10 @@ export function SetlistPerformClient({
         setCurrentPosition,
         musicians,
         rabbi,
+        isWakeLockActive,
+        isWakeLockSupported,
+        requestWakeLock,
+        releaseWakeLock,
     } = useSetlistPerformance(setlistId, {
         initial: initialSetlist ? { setlist: initialSetlist, tracks: initialTracks } : null,
     })
@@ -149,6 +154,19 @@ export function SetlistPerformClient({
                     </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                    {/* ipad-wake-lock-fix: gesture-gated "Keep screen on" toggle.
+                        iOS Safari refuses navigator.wakeLock.request without a
+                        user gesture; the prior auto-on-mount path silently failed
+                        through the Yizkor service 2026-05-23. Daniel taps once at
+                        the start of service → visibilitychange-rebind in the hook
+                        re-acquires across iOS lock-screen / app-switch for the
+                        rest of the session. */}
+                    <KeepAwakeToggle
+                        isActive={isWakeLockActive}
+                        isSupported={isWakeLockSupported}
+                        onRequest={requestWakeLock}
+                        onRelease={releaseWakeLock}
+                    />
                     {/* F1: pre-arm the whole setlist for offline use (idle auto-precache
                         runs on mount; this CTA force-caches with progress). Shown to
                         everyone performing — offline resilience isn't role-gated. */}
