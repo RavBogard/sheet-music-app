@@ -600,6 +600,36 @@ export interface LibraryIndexEntry {
     enrichmentConfidence: EnrichmentProjection["enrichmentConfidence"]
     aiSuggestion: EnrichmentProjection["aiSuggestion"]
     retryQueued: EnrichmentProjection["retryQueued"]
+    // Cowork #9 — last AI enrichment run timestamp (age/lag signal).
+    enrichmentRanAt: EnrichmentProjection["enrichmentRanAt"]
+}
+
+/**
+ * Cowork #9 (cowork-2026-05-22) — enrichment backlog summary surfaced on
+ * list_library so a curator can see at a glance how many rows are still
+ * unenriched (no collection / key / bpm filled in by the AI pass yet) instead
+ * of guessing core-vs-supplemental from filenames. Computed over the same
+ * `filtered` set that `total` reflects, so the counts match the rows the
+ * caller is browsing.
+ */
+export interface EnrichmentCoverage {
+    /** Row counts keyed by enrichmentStatus. `unenriched` = status is null
+     *  (pre-NEW-3 rows enrichment never touched). */
+    byStatus: {
+        pending: number
+        review_pending: number
+        enriched: number
+        failed: number
+        human_curated: number
+        human_rejected: number
+        unenriched: number
+    }
+    /**
+     * Rows that still need enrichment attention: `pending` + `review_pending`
+     * + `failed` + `unenriched`. The single number a curator watches as the
+     * backlog. (`enriched` / `human_curated` / `human_rejected` are settled.)
+     */
+    pendingEnrichmentCount: number
 }
 
 export interface ListLibraryResult {
@@ -609,6 +639,38 @@ export interface ListLibraryResult {
     limit: number
     /** Cycle-3 DATA-002 — uniform hygiene scan coverage. */
     coverage: HygieneCoverage
+    /** Cowork #9 — enrichment backlog summary over the `total` set. */
+    enrichmentCoverage: EnrichmentCoverage
+}
+
+/**
+ * Pure enrichment-backlog tally over a set of library rows. Extracted so the
+ * count logic is unit-testable without the emulator. `enrichmentStatus: null`
+ * (the empty projection) counts as `unenriched`.
+ */
+export function computeEnrichmentCoverage(
+    rows: Array<{ enrichmentStatus: EnrichmentProjection["enrichmentStatus"] }>,
+): EnrichmentCoverage {
+    const byStatus = {
+        pending: 0,
+        review_pending: 0,
+        enriched: 0,
+        failed: 0,
+        human_curated: 0,
+        human_rejected: 0,
+        unenriched: 0,
+    }
+    for (const r of rows) {
+        const s = r.enrichmentStatus
+        if (s === null || s === undefined) byStatus.unenriched++
+        else byStatus[s]++
+    }
+    const pendingEnrichmentCount =
+        byStatus.pending +
+        byStatus.review_pending +
+        byStatus.failed +
+        byStatus.unenriched
+    return { byStatus, pendingEnrichmentCount }
 }
 
 function toLibraryEntry(
@@ -807,6 +869,8 @@ export async function listLibrary(
                 scanned: filtered.length,
                 filteredOut,
             },
+            // Cowork #9 — backlog over the same `filtered` set `total` reflects.
+            enrichmentCoverage: computeEnrichmentCoverage(filtered),
         }
     } catch (err) {
         logger.warn("[mcp] list_library failed:", err)

@@ -109,6 +109,7 @@ import {
     respondToAssignment,
 } from "./roster"
 import { listServicePersonnel } from "./service-personnel"
+import { updateSong } from "./song-metadata"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 export { registerMintAdminBearerTools } from "./mint-admin-bearer"
@@ -1756,58 +1757,76 @@ export function registerWriteTools(server: McpServer): void {
             jsonResult(await rejectEnrichmentTool(uidFrom(extra), args)),
     )
 
+    // Cowork #4 — shared input schema for edit_enrichment + its edit_library_entry
+    // alias. The "enrichment" name undersold the tool: it works on ANY
+    // library_index row, not just AI-review-queue rows. The clearer-named alias +
+    // the description note below close that discoverability gap without breaking
+    // the existing `edit_enrichment` name.
+    const editLibraryEntryInputSchema = {
+        rowId: z
+            .string()
+            .min(1)
+            .describe(
+                "ANY library_index document id — from list_library / search_library / get_song (the fileId) OR list_review_queue. The row does NOT need to be in the AI review queue.",
+            ),
+        edits: z
+            .object({
+                title: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe("Display title; non-empty when supplied."),
+                collection: z
+                    .enum(["core", "supplemental", "uploads"])
+                    .optional()
+                    .describe(
+                        "Library collection. Operator override is permitted here (David's-subfolder authority does NOT bind operator edits, only AI).",
+                    ),
+                key: z
+                    .string()
+                    .optional()
+                    .describe("Musical key (e.g. 'Em', 'G')."),
+                bpm: z
+                    .number()
+                    .positive()
+                    .nullable()
+                    .optional()
+                    .describe(
+                        "Beats per minute, or null to clear an incorrect value.",
+                    ),
+                leadMusician: z
+                    .string()
+                    .optional()
+                    .describe("Vocal Lead for this chart."),
+                tags: z
+                    .array(z.string())
+                    .optional()
+                    .describe("Tag list (replaces existing tags)."),
+            })
+            .describe(
+                "At least one field required. The helper rejects empty / unknown fields with a rich invalid_field envelope.",
+            ),
+        dryRun: z.boolean().optional(),
+        force: z.boolean().optional(),
+    }
+
     server.registerTool(
         "edit_enrichment",
         {
             description:
-                "Admin-only — operator override on a `library_index` review row (cycle-3 a5). Calls a4's shared `editEnrichment` helper: applies the supplied `edits` payload directly to the doc (including `collection` — the operator override path IS allowed even though the AI's acceptEnrichment is NOT), sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and sets `humanRenamedAt` whenever `title` is changed (so future enrichment runs won't re-rename). Editable fields: title (non-empty), collection (core|supplemental|uploads), key (string), bpm (positive number or null to clear), leadMusician (string), tags (string[]). At least one field required. F-05 contract: `dryRun: true` (default) validates the edits payload + checks the row exists, returns `plannedPatch` without writing; real-run without `force: true` refuses. Validation failures surface as `invalid_field` rich envelopes. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
-            inputSchema: {
-                rowId: z
-                    .string()
-                    .min(1)
-                    .describe(
-                        "library_index document id from `list_review_queue`.",
-                    ),
-                edits: z
-                    .object({
-                        title: z
-                            .string()
-                            .min(1)
-                            .optional()
-                            .describe("Display title; non-empty when supplied."),
-                        collection: z
-                            .enum(["core", "supplemental", "uploads"])
-                            .optional()
-                            .describe(
-                                "Library collection. Operator override is permitted here (David's-subfolder authority does NOT bind operator edits, only AI).",
-                            ),
-                        key: z
-                            .string()
-                            .optional()
-                            .describe("Musical key (e.g. 'Em', 'G')."),
-                        bpm: z
-                            .number()
-                            .positive()
-                            .nullable()
-                            .optional()
-                            .describe(
-                                "Beats per minute, or null to clear an incorrect value.",
-                            ),
-                        leadMusician: z
-                            .string()
-                            .optional()
-                            .describe("Vocal Lead for this chart."),
-                        tags: z
-                            .array(z.string())
-                            .optional()
-                            .describe("Tag list (replaces existing tags)."),
-                    })
-                    .describe(
-                        "At least one field required. The helper rejects empty / unknown fields with a rich invalid_field envelope.",
-                    ),
-                dryRun: z.boolean().optional(),
-                force: z.boolean().optional(),
-            },
+                "Admin-only — operator edit of a `library_index` row (cycle-3 a5; also available under the clearer alias `edit_library_entry`). DESPITE THE NAME, this works on ANY library_index row, not just AI-review-queue rows — a row with `enrichmentStatus: null` (never enriched) is editable too. Calls a4's shared `editEnrichment` helper: applies the supplied `edits` payload directly to the doc (including `collection` — the operator override path IS allowed even though the AI's acceptEnrichment is NOT), sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and sets `humanRenamedAt` whenever `title` is changed (so future enrichment runs won't re-rename). Editable fields: title (non-empty), collection (core|supplemental|uploads), key (string), bpm (positive number or null to clear), leadMusician (string), tags (string[]). At least one field required. For just a key/bpm fix that musicians + band leaders (not only admins) can do, use update_song instead. F-05 contract: `dryRun: true` (default) validates the edits payload + checks the row exists, returns `plannedPatch` without writing; real-run without `force: true` refuses. Validation failures surface as `invalid_field` rich envelopes. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
+            inputSchema: editLibraryEntryInputSchema,
+        },
+        async (args, extra) =>
+            jsonResult(await editEnrichmentTool(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "edit_library_entry",
+        {
+            description:
+                "Admin-only — operator edit of ANY `library_index` row (clearer-named alias for `edit_enrichment`; identical behavior). Use this to set/correct a chart's title, collection (core|supplemental|uploads), key, bpm, leadMusician, or tags on any library entry — the row does NOT need to be in the AI review queue. Sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and `humanRenamedAt` on a title change. For a key/bpm-only fix that musicians + band leaders can also do, use update_song. F-05 contract: `dryRun: true` (default) returns `plannedPatch` without writing; real run needs `dryRun: false, force: true`. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
+            inputSchema: editLibraryEntryInputSchema,
         },
         async (args, extra) =>
             jsonResult(await editEnrichmentTool(uidFrom(extra), args)),
@@ -2406,7 +2425,7 @@ export function registerChartUploadTools(server: McpServer): void {
         "save_scraped_chart",
         {
             description:
-                "Save a chord chart's extracted text content into the library as a .txt entry. Use after scrape_chart_from_url (or with content the user pasted). Mirrors the in-app ScraperModal save path — the chart becomes immediately searchable, bondable to setlist tracks via add_track_to_setlist({songId: returned-fileId}), and visible in the library list under the chosen collection.",
+                "Save a chord chart's extracted text content into the library as a .txt entry. Use after scrape_chart_from_url (or with content the user pasted). Mirrors the in-app ScraperModal save path — the chart becomes immediately searchable, bondable to setlist tracks via add_track_to_setlist({songId: returned-fileId}), and visible in the library list under the chosen collection. Accepts optional key / bpm / leadMusician (parity with upload_chart) so you don't need a base64 detour just to set them — they're written to BOTH the songs catalog AND the library index so a bonded row picks them up.",
             inputSchema: {
                 title: z.string().min(1).describe("Chart title"),
                 content: z
@@ -2420,6 +2439,20 @@ export function registerChartUploadTools(server: McpServer): void {
                     .optional()
                     .describe("Optional artist name, prepended to the saved file"),
                 collection: collectionSchema,
+                key: z
+                    .string()
+                    .optional()
+                    .describe("Optional musical key (e.g. 'Em' or 'G')"),
+                bpm: z
+                    .number()
+                    .int()
+                    .positive()
+                    .optional()
+                    .describe("Optional tempo in BPM"),
+                leadMusician: z
+                    .string()
+                    .optional()
+                    .describe("Optional Vocal Lead for this chart"),
                 force: z
                     .boolean()
                     .optional()
@@ -2430,6 +2463,39 @@ export function registerChartUploadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await saveScrapedChart(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "update_song",
+        {
+            description:
+                "Fix a library entry's musical key or BPM without going through admin-only enrichment (cowork #5). Use when the catalog has a wrong/missing key or bpm — e.g. a chart saved with no key so bonded rows pull `key: null`. Admins, band leaders, AND musicians (the same accounts that may add charts) can call this; it is NOT admin-only like edit_enrichment. Writes BOTH the songs catalog (`defaults.key`/`defaults.bpm` — read by get_song / search_library and by bond resolution when you add the song to a setlist) AND the library_index row (read by list_library and the in-app catalog), so the fix shows up everywhere. Pass at least one of key/bpm. Idempotent. dryRun:true returns the before/after plan without writing (observability) — no `force` needed for the real write since this is a single-row, non-destructive metadata edit. Returns `{ok, id, dryRun, fieldsChanged, before, after, songWritten, indexWritten}`. To change a chart's collection / title / tags as well, use the admin-only edit_enrichment / edit_library_entry.",
+            inputSchema: {
+                id: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Library entry id (the fileId from search_library / list_library — same id used as add_track_to_setlist's songId).",
+                    ),
+                key: z
+                    .string()
+                    .optional()
+                    .describe("New musical key (e.g. 'Em' or 'G')."),
+                bpm: z
+                    .number()
+                    .int()
+                    .positive()
+                    .optional()
+                    .describe("New tempo in BPM (positive integer)."),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true, return the before/after plan without writing. Default false (writes directly — no force gate for this single-row metadata edit).",
+                    ),
+            },
+        },
+        async (args, extra) => jsonResult(await updateSong(uidFrom(extra), args)),
     )
 
     server.registerTool(

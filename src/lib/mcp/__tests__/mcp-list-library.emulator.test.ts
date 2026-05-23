@@ -73,6 +73,19 @@ describe("MCP list_library (emulator)", () => {
                 scanned: 0,
                 filteredOut: { byStatus: {}, byCollection: {}, byOther: {} },
             },
+            // Cowork #9 — enrichment backlog summary over the (empty) result set.
+            enrichmentCoverage: {
+                byStatus: {
+                    pending: 0,
+                    review_pending: 0,
+                    enriched: 0,
+                    failed: 0,
+                    human_curated: 0,
+                    human_rejected: 0,
+                    unenriched: 0,
+                },
+                pendingEnrichmentCount: 0,
+            },
         })
     })
 
@@ -306,6 +319,8 @@ describe("MCP list_library (emulator)", () => {
             enrichmentConfidence: null,
             aiSuggestion: null,
             retryQueued: false,
+            // Cowork #9 — enrichmentRanAt age signal (null for pre-enrichment rows).
+            enrichmentRanAt: null,
         })
     })
 

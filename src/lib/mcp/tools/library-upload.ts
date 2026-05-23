@@ -14,6 +14,19 @@ import {
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
+// Uploader role-gate helpers extracted to ./uploader-roles so song-metadata.ts
+// (update_song) can reuse the SAME gate without a circular import (this module
+// imports applySongMetadata back from song-metadata for the save_scraped_chart
+// parity path).
+import {
+    type UploaderRoles,
+    loadUploader,
+    isUploadAllowed,
+    isTrustedLeader,
+    uploadForbidden,
+    rateLimitEnvelope,
+} from "./uploader-roles"
+import { applySongMetadata } from "./song-metadata"
 
 /**
  * MCP chart-ingestion tools — three ways to add a chart to the library, all
@@ -35,59 +48,6 @@ import { logger } from "@/lib/logger"
  *
  * Cycle-2 REG-001b/MCP-003: every error returns the canonical rich envelope.
  */
-
-interface UploaderRoles {
-    role: string | undefined
-    canUpload: boolean
-    email: string | undefined
-}
-
-async function loadUploader(
-    db: FirebaseFirestore.Firestore,
-    uid: string,
-): Promise<UploaderRoles> {
-    const snap = await db.collection("users").doc(uid).get()
-    const d = snap.exists ? (snap.data() as Record<string, unknown>) : {}
-    return {
-        role: typeof d.role === "string" ? d.role : undefined,
-        canUpload: d.canUpload === true,
-        email: typeof d.email === "string" ? d.email : undefined,
-    }
-}
-
-function isUploadAllowed(roles: UploaderRoles): boolean {
-    // Mirror the HTTP route's gate: admin / band_leader / musician roles all
-    // get upload by default; anyone else needs the explicit canUpload flag.
-    if (roles.role === "admin") return true
-    if (roles.role === "band_leader") return true
-    if (roles.role === "musician") return true
-    return roles.canUpload
-}
-
-/** Trusted-leader role — bypasses rate limits AND gates curated-catalog writes. */
-function isTrustedLeader(roles: UploaderRoles): boolean {
-    return roles.role === "admin" || roles.role === "band_leader"
-}
-
-function uploadForbidden(roles: UploaderRoles): RichErrorEnvelope {
-    return forbiddenRoleEnvelope({
-        callerRole: roles.role ?? null,
-        requiredRoles: ["admin", "band_leader", "musician"],
-        message:
-            "Upload permission required. Ask an admin to enable uploads for your account.",
-        hint: "Ask an admin to add you as admin / band_leader / musician, or set canUpload on your user doc.",
-        context: { canUpload: roles.canUpload },
-    })
-}
-
-function rateLimitEnvelope(reason: string): RichErrorEnvelope {
-    return richError(
-        "rate_limited",
-        reason,
-        undefined,
-        "Retry after the cooldown window, or ask an admin to bypass via trusted-leader role.",
-    )
-}
 
 function curatedCatalogGate(
     roles: UploaderRoles,
@@ -946,6 +906,14 @@ export interface SaveScrapedChartArgs {
     collection?: LibraryCollection
     /** Bypass dedup (exact + fuzzy). H-3 override for legitimate variants. */
     force?: boolean
+    // Cowork #3 — optional catalog metadata, parity with upload_chart so authors
+    // don't need the base64 detour just to set a key/bpm/lead on a scraped chart.
+    /** Musical key, e.g. 'Em' or 'G'. */
+    key?: string
+    /** Tempo in BPM (positive). */
+    bpm?: number
+    /** Vocal lead for the chart. */
+    leadMusician?: string
 }
 
 export async function saveScrapedChart(
@@ -989,6 +957,11 @@ export async function saveScrapedChart(
         mimeType: "text/plain",
         title: args.title,
         collection: args.collection,
+        // Cowork #3 — key/bpm flow through the upload pipeline (→ library_index),
+        // same as upload_chart. leadMusician + the songs.defaults coherence are
+        // handled by the applySongMetadata post-step below.
+        key: args.key,
+        bpm: args.bpm,
         uploaderUid: uid,
         uploaderEmail: roles.email,
         force: args.force,
@@ -1001,6 +974,34 @@ export async function saveScrapedChart(
             { tool: "save_scraped_chart" },
             "Inspect the message; if dedup-related, retry with force: true.",
         )
+
+    // Cowork #3 — mirror key/bpm/leadMusician onto BOTH catalog surfaces so a
+    // scraped chart's metadata "sticks" everywhere: songs/{id}.defaults (read by
+    // get_song / search_library / bond resolution) AND library_index (read by
+    // list_library / the in-app catalog). processChartUpload only wrote
+    // library_index.{key,bpm}; this fills the songs.defaults gap + leadMusician.
+    // Best-effort: the chart is fully saved by here — a metadata-mirror failure
+    // must NOT fail the save (the author can re-set via update_song).
+    if (
+        args.key !== undefined ||
+        args.bpm !== undefined ||
+        args.leadMusician !== undefined
+    ) {
+        try {
+            await applySongMetadata(db, result.fileId, {
+                key: args.key,
+                bpm: args.bpm,
+                leadMusician: args.leadMusician,
+            })
+        } catch (err) {
+            logger.warn(
+                `[save_scraped_chart] metadata mirror failed for ${result.fileId} (non-fatal): ${
+                    err instanceof Error ? err.message : String(err)
+                }`,
+            )
+        }
+    }
+
     return {
         ok: true,
         fileId: result.fileId,

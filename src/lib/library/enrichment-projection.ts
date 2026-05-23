@@ -44,6 +44,16 @@ export interface EnrichmentProjection {
     enrichmentConfidence: number | null
     aiSuggestion: EnrichmentOutput | null
     retryQueued: boolean
+    /**
+     * Cowork #9 (cowork-2026-05-22) — ISO timestamp of the last AI enrichment
+     * run for this row (`library_index.enrichmentRanAt`, stamped by a3's
+     * `applyEnrichment`). `null` for rows enrichment has never touched
+     * (status 'pending' / no enrichment), letting a caller compute lag as
+     * `now - enrichmentRanAt` (enriched rows) or `now - uploadedAt` (stale
+     * pending rows) and flag unenriched entries for collection triage instead
+     * of guessing core-vs-supplemental from the filename.
+     */
+    enrichmentRanAt: string | null
 }
 
 export const EMPTY_ENRICHMENT_PROJECTION: EnrichmentProjection = {
@@ -51,6 +61,7 @@ export const EMPTY_ENRICHMENT_PROJECTION: EnrichmentProjection = {
     enrichmentConfidence: null,
     aiSuggestion: null,
     retryQueued: false,
+    enrichmentRanAt: null,
 }
 
 const ALLOWED_ENRICHMENT_STATUSES: ReadonlySet<EnrichmentStatus> = new Set([
@@ -90,11 +101,14 @@ export function projectionFromLibraryIndexData(
         suggestion && typeof suggestion.confidence === "number"
             ? suggestion.confidence
             : null
+    const enrichmentRanAt =
+        typeof data.enrichmentRanAt === "string" ? data.enrichmentRanAt : null
     return {
         enrichmentStatus: status,
         enrichmentConfidence: confidence,
         aiSuggestion: suggestion,
         retryQueued,
+        enrichmentRanAt,
     }
 }
 
