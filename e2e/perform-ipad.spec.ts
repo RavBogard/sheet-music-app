@@ -203,7 +203,14 @@ test.describe('ipad-uat-harness — Perform mode on standard 11" iPad (WebKit)',
             overflow.scrollWidth,
             `horizontal overflow at iPad width: scrollWidth ${overflow.scrollWidth} > clientWidth ${overflow.clientWidth}`,
         ).toBeLessThanOrEqual(overflow.clientWidth + 1)
-        expect(overflow.clientWidth, 'viewport must be the 820px iPad width').toBeLessThanOrEqual(IPAD_WIDTH)
+        // Sanity: we're actually at the configured iPad viewport, not a
+        // fallback. Derive the expected width from the project so the
+        // landscape variant (1180) doesn't false-fail against portrait 820.
+        const expectedWidth = testInfo.project.use.viewport?.width ?? IPAD_WIDTH
+        expect(
+            overflow.clientWidth,
+            `viewport must be the ${expectedWidth}px iPad width`,
+        ).toBeLessThanOrEqual(expectedWidth)
 
         // 5. Dense rows are tap-friendly. Interactive rows render as
         //    `<div role="button">` (SetlistRow.tsx); measure the bonded row's
