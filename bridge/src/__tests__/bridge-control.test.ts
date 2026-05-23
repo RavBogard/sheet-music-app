@@ -37,6 +37,7 @@ function makeDeps(over: Partial<BridgeControlDeps> = {}): BridgeControlDeps {
         getMonitorBuses: vi.fn(() => [1, 2, 3]),
         restart: vi.fn(),
         writeSelftest: vi.fn().mockResolvedValue(undefined),
+        clearBridgeControl: vi.fn().mockResolvedValue(undefined),
         startedAt: 0,
         now: () => 10_000,
         ...over,
@@ -110,10 +111,41 @@ describe("BridgeControlDispatcher (R1-R4, O4)", () => {
         expect(deps.x32.forceReconnect).toHaveBeenCalledTimes(1)
     })
 
-    it("restart invokes the restart hook", async () => {
+    it("restart clears the persisted bridgeControl doc BEFORE invoking restart hook (v10.0.5 boot-loop fix)", async () => {
+        const callOrder: string[] = []
+        deps = makeDeps({
+            clearBridgeControl: vi.fn(async () => {
+                callOrder.push("clear")
+            }),
+            restart: vi.fn(() => {
+                callOrder.push("restart")
+            }),
+        })
+        d = new BridgeControlDispatcher(deps)
         const out = await d.handle({ action: "restart", nonce: "n1" })
         expect(out).toEqual({ handled: true, action: "restart" })
+        expect(deps.clearBridgeControl).toHaveBeenCalledTimes(1)
         expect(deps.restart).toHaveBeenCalledTimes(1)
+        expect(callOrder).toEqual(["clear", "restart"])
+    })
+
+    it("restart STILL fires the restart hook even when clearBridgeControl rejects (failure-mode = current behavior)", async () => {
+        deps = makeDeps({
+            clearBridgeControl: vi.fn().mockRejectedValue(new Error("firestore unavailable")),
+        })
+        d = new BridgeControlDispatcher(deps)
+        const out = await d.handle({ action: "restart", nonce: "n1" })
+        expect(out).toEqual({ handled: true, action: "restart" })
+        expect(deps.clearBridgeControl).toHaveBeenCalledTimes(1)
+        // Refusing to restart on a clear-failure would itself wedge the bridge — must still relaunch.
+        expect(deps.restart).toHaveBeenCalledTimes(1)
+    })
+
+    it("non-restart actions do NOT touch clearBridgeControl (resync/reconnect/selftest are doc-write-safe)", async () => {
+        await d.handle({ action: "resync", nonce: "n1" })
+        await d.handle({ action: "reconnect", nonce: "n2" })
+        await d.handle({ action: "selftest", nonce: "n3" })
+        expect(deps.clearBridgeControl).not.toHaveBeenCalled()
     })
 
     it("selftest writes a diagnostic snapshot", async () => {
@@ -152,6 +184,83 @@ describe("BridgeControlDispatcher (R1-R4, O4)", () => {
         const second = await d.handle({ action: "resync", nonce: "n1" })
         expect(second).toEqual({ handled: false, reason: "duplicate-nonce" })
         expect(deps.x32.syncFullState).toHaveBeenCalledTimes(1)
+    })
+
+    /**
+     * v10.0.5 cross-process boot-loop regression guard. The original gap (this
+     * test would have FAILED before the fix): `lastHandledNonce` is in-memory
+     * only; `config/monitor.bridgeControl` persists. After ANY restart, the new
+     * dispatcher's `lastHandledNonce` is `null`, and the config snapshot listener
+     * re-delivers the SAME persisted `{action: "restart", nonce}` → another
+     * restart → infinite loop. The `requestedAt < processStartedAt` guard
+     * short-circuits this WITHOUT relying on the doc-clear (which is the primary
+     * fix but could have failed on the prior run).
+     */
+    it("CROSS-PROCESS: a fresh dispatcher rejects a persisted nonce whose requestedAt predates boot (boot-loop guard)", async () => {
+        // Simulate the boot-loop scenario: a restart was requested at t=5000,
+        // the bridge restarted at t=10000, and on next boot the persisted
+        // bridgeControl doc re-fires the listener.
+        deps = makeDeps({ startedAt: 10_000, now: () => 10_500 })
+        d = new BridgeControlDispatcher(deps)
+        const out = await d.handle({ action: "restart", nonce: "stale-from-prior-boot", requestedAt: 5_000 })
+        expect(out).toEqual({ handled: false, reason: "stale-request" })
+        expect(deps.clearBridgeControl).not.toHaveBeenCalled()
+        expect(deps.restart).not.toHaveBeenCalled()
+    })
+
+    it("CROSS-PROCESS: a fresh request (requestedAt > processStartedAt) is handled normally", async () => {
+        deps = makeDeps({ startedAt: 10_000, now: () => 12_000 })
+        d = new BridgeControlDispatcher(deps)
+        const out = await d.handle({ action: "reconnect", nonce: "fresh", requestedAt: 11_000 })
+        expect(out).toEqual({ handled: true, action: "reconnect" })
+        expect(deps.x32.forceReconnect).toHaveBeenCalledTimes(1)
+    })
+
+    it("requestedAt as ISO string AFTER startedAt is parsed + accepted", async () => {
+        const startedAt = Date.parse("2026-05-23T20:00:00.000Z")
+        const requestedAt = "2026-05-23T20:05:00.000Z"
+        deps = makeDeps({ startedAt })
+        d = new BridgeControlDispatcher(deps)
+        const out = await d.handle({ action: "reconnect", nonce: "iso-fresh", requestedAt })
+        expect(out).toEqual({ handled: true, action: "reconnect" })
+    })
+
+    it("requestedAt as ISO string BEFORE startedAt is parsed + rejected as stale", async () => {
+        const startedAt = Date.parse("2026-05-23T20:00:00.000Z")
+        const requestedAt = "2026-05-23T19:30:00.000Z"
+        deps = makeDeps({ startedAt })
+        d = new BridgeControlDispatcher(deps)
+        const out = await d.handle({ action: "restart", nonce: "iso-stale", requestedAt })
+        expect(out).toEqual({ handled: false, reason: "stale-request" })
+        expect(deps.restart).not.toHaveBeenCalled()
+    })
+
+    it("requestedAt as Firestore Timestamp shape ({seconds}) BEFORE startedAt is rejected as stale", async () => {
+        deps = makeDeps({ startedAt: 10_000_000, now: () => 10_001_000 })
+        d = new BridgeControlDispatcher(deps)
+        // {seconds: 5000} → 5_000_000 ms < startedAt 10_000_000 → stale
+        // @ts-expect-error — exercising the FirestoreDate Timestamp-ish shape on the runtime guard
+        const out = await d.handle({ action: "restart", nonce: "ts-stale", requestedAt: { seconds: 5000 } })
+        expect(out).toEqual({ handled: false, reason: "stale-request" })
+    })
+
+    it("requestedAt absent → falls through to in-memory nonce dedup (backwards compatible)", async () => {
+        // Writers (current & legacy) that don't populate requestedAt still work
+        // via the in-memory dedup; the cross-process guard is OPT-IN per writer.
+        deps = makeDeps({ startedAt: 10_000 })
+        d = new BridgeControlDispatcher(deps)
+        const first = await d.handle({ action: "reconnect", nonce: "no-ts" })
+        const second = await d.handle({ action: "reconnect", nonce: "no-ts" })
+        expect(first).toEqual({ handled: true, action: "reconnect" })
+        expect(second).toEqual({ handled: false, reason: "duplicate-nonce" })
+    })
+
+    it("requestedAt unparseable garbage → treated as absent (defensive), action proceeds", async () => {
+        deps = makeDeps({ startedAt: 10_000 })
+        d = new BridgeControlDispatcher(deps)
+        // @ts-expect-error — exercising the runtime guard against unexpected shapes
+        const out = await d.handle({ action: "reconnect", nonce: "garbage-ts", requestedAt: { notAShape: true } })
+        expect(out).toEqual({ handled: true, action: "reconnect" })
     })
 
     it("ignores malformed control (no control / no action / no nonce / unknown action)", async () => {

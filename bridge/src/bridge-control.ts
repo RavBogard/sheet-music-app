@@ -17,6 +17,39 @@
 
 import type { BridgeControl } from "./types"
 
+/**
+ * Convert a `FirestoreDate` (string | Date | number | Timestamp-ish) to epoch
+ * ms, or null when the shape is missing/unparseable. Defensive: bridgeControl
+ * docs can be hand-written via Firebase MCP, and a future MCP wrapper might
+ * populate `requestedAt` as a serverTimestamp object, a Date, or an ISO string.
+ * Pure (no admin imports) so it stays unit-testable.
+ */
+function firestoreDateToMs(d: unknown): number | null {
+    if (d == null) return null
+    if (typeof d === "number" && Number.isFinite(d)) return d
+    if (d instanceof Date) {
+        const ms = d.getTime()
+        return Number.isFinite(ms) ? ms : null
+    }
+    if (typeof d === "string") {
+        const ms = Date.parse(d)
+        return Number.isFinite(ms) ? ms : null
+    }
+    if (typeof d === "object") {
+        const obj = d as { seconds?: number; toDate?: () => Date }
+        if (typeof obj.toDate === "function") {
+            try {
+                const ms = obj.toDate().getTime()
+                return Number.isFinite(ms) ? ms : null
+            } catch {
+                return null
+            }
+        }
+        if (typeof obj.seconds === "number") return obj.seconds * 1000
+    }
+    return null
+}
+
 /** O2 — the additive diagnostics published on the heartbeat + by selftest. */
 export interface BridgeDiagnostics {
     /** Raw X32 socket liveness (NOT the folded x32Connected health bit). */
@@ -101,6 +134,20 @@ export interface BridgeControlDeps {
     writeSelftest: (
         snapshot: BridgeDiagnostics & { ts: number; bridgeVersion: string },
     ) => Promise<void>
+    /**
+     * v10.0.5 — clear the persisted `config/monitor.bridgeControl` doc field
+     * BEFORE invoking `restart()`. Closes the cross-process boot-loop: in-memory
+     * `lastHandledNonce` is lost on relaunch, and the config snapshot listener
+     * re-fires the same `{action: "restart", nonce}` on next boot → infinite
+     * loop. Clearing the field idempotently kills the source.
+     *
+     * Failure-mode = current behavior (boot loop possible if BOTH this fails AND
+     * the new `requestedAt < processStartedAt` skip-guard doesn't catch the
+     * re-fire because the writer didn't populate `requestedAt`). Dispatcher
+     * swallows + logs failure, then proceeds with `restart()` — refusing to
+     * restart on a clear-failure would itself wedge the bridge.
+     */
+    clearBridgeControl: () => Promise<void>
     startedAt: number
     now?: () => number
 }
@@ -113,6 +160,7 @@ export type DispatchOutcome =
               | "no-action"
               | "no-nonce"
               | "duplicate-nonce"
+              | "stale-request"
               | "unknown-action"
       }
     | { handled: true; action: BridgeControl["action"] }
@@ -128,9 +176,17 @@ export type DispatchOutcome =
 export class BridgeControlDispatcher {
     private lastHandledNonce: string | null = null
     private readonly deps: BridgeControlDeps
+    /**
+     * v10.0.5 — frozen at construction. The cross-process counterpart to
+     * `lastHandledNonce`: a request whose `requestedAt` predates the process
+     * boot cannot have been issued for THIS process and is by definition stale
+     * (it's the boot-loop fingerprint — same persisted nonce, fresh dispatcher).
+     */
+    private readonly processStartedAt: number
 
     constructor(deps: BridgeControlDeps) {
         this.deps = deps
+        this.processStartedAt = deps.startedAt
     }
 
     async handle(
@@ -144,6 +200,17 @@ export class BridgeControlDispatcher {
         if (!action) return { handled: false, reason: "no-action" }
         if (!nonce || typeof nonce !== "string") {
             return { handled: false, reason: "no-nonce" }
+        }
+        // v10.0.5 cross-process skip-guard. If the writer populated
+        // `requestedAt` AND it predates this process's boot, the request was
+        // issued for a previous bridge incarnation — skipping it short-circuits
+        // the restart-nonce boot loop even when the doc-clear in the restart
+        // branch (the primary fix) failed on the prior run. Missing /
+        // unparseable `requestedAt` falls through to the in-memory nonce dedup
+        // (current behavior — safe for same-process re-fires).
+        const requestedAtMs = firestoreDateToMs(ctrl.requestedAt)
+        if (requestedAtMs !== null && requestedAtMs < this.processStartedAt) {
+            return { handled: false, reason: "stale-request" }
         }
         if (nonce === this.lastHandledNonce) {
             return { handled: false, reason: "duplicate-nonce" }
@@ -168,6 +235,25 @@ export class BridgeControlDispatcher {
             }
             case "restart": {
                 console.warn("[Control] restart requested — relaunching the bridge process")
+                // v10.0.5 — clear the persisted bridgeControl field BEFORE
+                // relaunching. The next boot's config snapshot will fire the
+                // listener WITHOUT a `bridgeControl` field, so the dispatcher
+                // ignores it (no-control). Defense-in-depth: even if a writer
+                // races and re-populates the doc between this clear and the
+                // restart hook firing, the in-memory nonce dedup blocks the
+                // CURRENT process from double-firing, and the
+                // `requestedAt < processStartedAt` skip-guard blocks the NEXT
+                // process from re-firing the same nonce. Failure-mode: log and
+                // proceed with restart (refusing to restart on a clear-failure
+                // would itself wedge the bridge).
+                try {
+                    await this.deps.clearBridgeControl()
+                } catch (err) {
+                    console.error(
+                        "[Control] clearBridgeControl failed before restart:",
+                        (err as Error).message,
+                    )
+                }
                 this.deps.restart()
                 return { handled: true, action }
             }

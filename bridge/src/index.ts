@@ -349,6 +349,20 @@ async function main() {
                 console.error("[Control] selftest write failed:", (err as Error).message)
             }
         },
+        // v10.0.5 — clear the persisted bridgeControl field BEFORE the restart
+        // hook fires. The dispatcher wraps this call in try/catch and proceeds
+        // with `restart()` either way; we raise here so the dispatcher's log
+        // line surfaces the real cause. set+merge with FieldValue.delete keeps
+        // the rest of config/monitor intact + tolerates a missing doc (we use
+        // set not update to avoid throwing if the doc was ever removed).
+        clearBridgeControl: async () => {
+            await db.doc("config/monitor").set(
+                {
+                    bridgeControl: adminRef.firestore.FieldValue.delete(),
+                },
+                { merge: true },
+            )
+        },
         startedAt,
     })
 
