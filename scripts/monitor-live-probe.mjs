@@ -62,6 +62,16 @@
  *   GOOGLE_APPLICATION_CREDENTIALS=./sa.json \
  *   node scripts/monitor-live-probe.mjs
  *
+ *   # …plus the per-channel SEND tier (verifies the syncFullState throttle fix
+ *   # live): set PROBE_CHANNEL to drive set_send_on + set_send_level on PROBE_BUS,
+ *   # snapshot → write → readback (state.buses[B].sends[CH]) → byte-identical
+ *   # restore. Restore comes from the snapshot when readable, else provide
+ *   # PROBE_SEND_RESTORE_LEVEL + PROBE_SEND_RESTORE_ON.
+ *   CRL_MCP_TOKEN=crl_live_<root> \
+ *   PROBE_BUS=5 PROBE_CHANNEL=19 PROBE_SEND_TEST_LEVEL=0.5 \
+ *   GOOGLE_APPLICATION_CREDENTIALS=./sa.json \
+ *   node scripts/monitor-live-probe.mjs
+ *
  *   # MCP-only (no Firestore creds): still mints/revokes a child + reports the
  *   # MCP read + the MCP-write-blocked-by-R3 evidence; SKIPs the write tier.
  *   CRL_MCP_TOKEN=crl_live_<root> node scripts/monitor-live-probe.mjs --mcp-only
@@ -98,6 +108,29 @@ const CFG = {
     restoreValue:
         process.env.PROBE_RESTORE_VALUE !== undefined
             ? Number(process.env.PROBE_RESTORE_VALUE)
+            : undefined,
+    // ── per-channel send tier (monitor-sends throttle verification) ──
+    // Set PROBE_CHANNEL to enable the send tier on PROBE_BUS; it mirrors the
+    // master tier (snapshot → set_send_on + set_send_level → readback →
+    // byte-identical restore). This is the oracle that proves the syncFullState
+    // throttle fix on the live desk: after the fix, buses 2–5 send reads resolve
+    // confirmed, so a send write reflects in state instead of easing back to a
+    // fabricated 0 (synthesis §B / Lane-3 step 2).
+    channel:
+        process.env.PROBE_CHANNEL !== undefined
+            ? Number(process.env.PROBE_CHANNEL)
+            : undefined,
+    sendTestLevel:
+        process.env.PROBE_SEND_TEST_LEVEL !== undefined
+            ? Number(process.env.PROBE_SEND_TEST_LEVEL)
+            : 0.5,
+    sendRestoreLevel:
+        process.env.PROBE_SEND_RESTORE_LEVEL !== undefined
+            ? Number(process.env.PROBE_SEND_RESTORE_LEVEL)
+            : undefined,
+    sendRestoreOn:
+        process.env.PROBE_SEND_RESTORE_ON !== undefined
+            ? /^(1|true|on)$/i.test(process.env.PROBE_SEND_RESTORE_ON)
             : undefined,
     allowServiceWindow: process.env.PROBE_ALLOW_SERVICE_WINDOW === "1",
     // bridge liveness + readback budgets
@@ -288,6 +321,24 @@ function readBusFaderFromState(state, busIndex) {
     return { found: false, shape: typeof b }
 }
 
+/** Read one per-channel send {level,on} out of state.buses[B].sends[CH]. */
+function readSendFromState(state, busIndex, channelIndex) {
+    const b = state?.buses
+    let bus
+    if (Array.isArray(b)) bus = b.find((x) => x?.index === busIndex)
+    else if (b && typeof b === "object") bus = b[String(busIndex)]
+    if (!bus) return { found: false, shape: Array.isArray(b) ? "array" : typeof b }
+
+    const sends = bus.sends
+    let row
+    if (Array.isArray(sends)) row = sends.find((s) => s?.channelIndex === channelIndex)
+    else if (sends && typeof sends === "object") row = sends[String(channelIndex)]
+    const sendsShape = Array.isArray(sends) ? "array" : typeof sends
+    return row && typeof row.level === "number"
+        ? { found: true, level: row.level, on: row.on === true, shape: sendsShape }
+        : { found: false, shape: sendsShape }
+}
+
 // ─── main ────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -394,6 +445,14 @@ async function main() {
         section(`Firestore tier — enabled (${fs.how})`)
         assert("F0-firestore-creds", true, fs.how)
         await firestoreTier(fs, targetBus)
+        // Per-channel send tier (opt-in via PROBE_CHANNEL) — the live oracle for
+        // the syncFullState throttle fix. Runs after the master tier so the bus
+        // is in a known state first.
+        if (CFG.channel !== undefined) {
+            await sendTier(fs, targetBus)
+        } else {
+            note("Send tier skipped: set PROBE_CHANNEL=<1-32> to drive set_send_on + set_send_level on PROBE_BUS (verifies the throttle fix live).")
+        }
     }
 
     // ── revoke child bearer + post-revoke 401 ────────────────────────────────
@@ -524,6 +583,141 @@ async function firestoreTier(fs, targetBus) {
     }
 }
 
+/**
+ * Per-channel SEND tier — drives `set_send_on` + `set_send_level` on one
+ * channel of the target monitor bus, mirroring the master tier's
+ * snapshot → write → readback → byte-identical restore. This is the live
+ * oracle for the syncFullState throttle fix: after the fix the bus's send reads
+ * resolve confirmed, so a send write REFLECTS in monitor-live/state instead of
+ * the FaderStrip easing the knob back to a fabricated 0 (synthesis §B step 2 /
+ * Lane-3). Same hard rules as the master tier: desk-live gate, dry-run respect,
+ * and restore-or-refuse (won't write a send it can't restore byte-identical).
+ */
+async function sendTier(fs, targetBus) {
+    const { db } = fs
+    const channel = CFG.channel
+    section(`Send tier — bus ${targetBus} ch ${channel} (set_send_on + set_send_level)`)
+
+    const [stateSnap, cfgSnap] = await Promise.all([
+        db.collection("monitor-live").doc("state").get(),
+        db.collection("config").doc("monitor").get(),
+    ])
+    const state = stateSnap.exists ? stateSnap.data() : null
+    const cfg = cfgSnap.exists ? cfgSnap.data() : null
+
+    // desk-live (same gate as the master tier)
+    const hbMs = fsDateMillis(cfg?.bridge?.lastSeen)
+    const hbAgeSec = hbMs ? Math.round((Date.now() - hbMs) / 1000) : null
+    const deskLive = hbAgeSec !== null && hbAgeSec <= CFG.deskFreshSec && cfg?.bridge?.x32Connected === true
+
+    const snap = readSendFromState(state, targetBus, channel)
+    assert("F7-send-snapshot", true,
+        `bus ${targetBus} ch ${channel} send snapshot: ${snap.found ? `level=${snap.level} on=${snap.on}` : "NOT in state"} (${snap.shape})`)
+    if (!snap.found) {
+        note(`bus ${targetBus} ch ${channel} send is NOT readable in state — if it is in unconfirmed[], that is the syncFullState flood the throttle fix targets.`)
+    }
+
+    if (!deskLive) {
+        note("Desk not live (stale heartbeat or X32 down) — refusing to enqueue a send command.")
+        return
+    }
+    if (FLAG.dryRun) {
+        note("DRY-RUN: skipping the send write + restore.")
+        return
+    }
+
+    // restore-or-refuse: need BOTH a restore level AND a restore on-state.
+    const restoreLevel =
+        CFG.sendRestoreLevel !== undefined ? CFG.sendRestoreLevel
+        : snap.found ? snap.level
+        : undefined
+    const restoreOn =
+        CFG.sendRestoreOn !== undefined ? CFG.sendRestoreOn
+        : snap.found ? snap.on
+        : undefined
+    if (restoreLevel === undefined || restoreOn === undefined) {
+        assert("F8-send-restore-known", false,
+            "no PROBE_SEND_RESTORE_LEVEL/PROBE_SEND_RESTORE_ON and snapshot unreadable — REFUSING to write a send I cannot restore byte-identical.")
+        note("STOP for the send tier: provide PROBE_SEND_RESTORE_LEVEL + PROBE_SEND_RESTORE_ON (the channel's true current send) so the desk can be restored byte-identical.")
+        return
+    }
+    assert("F8-send-restore-known", true,
+        `restore target = level ${restoreLevel}, on ${restoreOn}${snap.found ? "" : " (operator-provided; snapshot hidden)"}`)
+
+    const pendingCol = db.collection("monitor-live").doc("commands").collection("pending")
+    const uid = pickUid(cfg, targetBus)
+
+    // ── send write (ii): on=true THEN level=testLevel (synthesis §B step 2) ──
+    // In-process createdAt lands inside the bridge's 10s window (B4), same as
+    // the master tier's iPad-path write.
+    const onRef = await pendingCol.add({
+        type: "set_send_on",
+        busIndex: targetBus,
+        channelIndex: channel,
+        value: true,
+        uid,
+        createdAt: Date.now(),
+    })
+    const onRes = await awaitCommandResult(db, onRef, CFG.drainTimeoutMs)
+    assert("F9-send-on-accepted", onRes.status === "applied",
+        onRes.status === "applied"
+            ? `set_send_on accepted + drained in ${onRes.ms}ms`
+            : `set_send_on ${onRes.status}${onRes.error ? ` (error="${onRes.error}")` : ""}`)
+
+    const lvlRef = await pendingCol.add({
+        type: "set_send_level",
+        busIndex: targetBus,
+        channelIndex: channel,
+        value: CFG.sendTestLevel,
+        uid,
+        createdAt: Date.now(),
+    })
+    log(`  enqueued iPad-path send command ${lvlRef.id}: bus ${targetBus} ch ${channel} → level ${CFG.sendTestLevel}, on true`)
+    const lvlRes = await awaitCommandResult(db, lvlRef, CFG.drainTimeoutMs)
+    RESULT.latency.sendEnqueueToDrainMs = lvlRes.ms
+    assert("F10-send-write-accepted", lvlRes.status === "applied",
+        lvlRes.status === "applied"
+            ? `set_send_level accepted + drained in ${lvlRes.ms}ms (send control path LIVE)`
+            : `set_send_level ${lvlRes.status}${lvlRes.error ? ` (error="${lvlRes.error}")` : ""} — reached the bridge but was declined`)
+
+    // state-reflect: buses[B].sends[CH] shows testLevel + on:true
+    const reflect = await pollUntil(async () => {
+        const s = (await db.collection("monitor-live").doc("state").get()).data()
+        const r = readSendFromState(s, targetBus, channel)
+        return r.found && r.on === true && Math.abs(r.level - CFG.sendTestLevel) < 0.02
+    }, CFG.reflectTimeoutMs)
+    RESULT.latency.sendEnqueueToStateReflectMs = reflect.ok ? reflect.ms : null
+    assert("F11-send-state-reflects", reflect.ok,
+        reflect.ok
+            ? `monitor-live/state reflected the send write in ${reflect.ms}ms (send readback WORKS — throttle fix verified live)`
+            : `state did NOT reflect the send within ${CFG.reflectTimeoutMs}ms — pre-fix this is the syncFullState flood (send read dropped → fabricated 0); post-fix a persistent miss points at desk config (bus subgroup / send physically off).`)
+
+    // ── restore byte-identical: level THEN on ──
+    const rLvlRef = await pendingCol.add({
+        type: "set_send_level",
+        busIndex: targetBus,
+        channelIndex: channel,
+        value: restoreLevel,
+        uid,
+        createdAt: Date.now(),
+    })
+    const rLvlRes = await awaitCommandResult(db, rLvlRef, CFG.drainTimeoutMs)
+    const rOnRef = await pendingCol.add({
+        type: "set_send_on",
+        busIndex: targetBus,
+        channelIndex: channel,
+        value: restoreOn,
+        uid,
+        createdAt: Date.now(),
+    })
+    const rOnRes = await awaitCommandResult(db, rOnRef, CFG.drainTimeoutMs)
+    const restored = rLvlRes.status === "applied" && rOnRes.status === "applied"
+    assert("F12-send-restore-applied", restored,
+        restored
+            ? `restore accepted + drained — desk send returned to level ${restoreLevel}, on ${restoreOn}`
+            : `restore incomplete (level=${rLvlRes.status}, on=${rOnRes.status}) — MANUAL CHECK bus ${targetBus} ch ${channel} → level ${restoreLevel}, on ${restoreOn}`)
+}
+
 /** Choose a uid that the bridge will authorize for this bus (owner if present). */
 function pickUid(cfg, busIndex) {
     const a = cfg?.busAssignments?.[String(busIndex)]
@@ -584,11 +778,23 @@ function finishAndExit(code, stopMsg) {
 
     section("VERDICT")
     log(RESULT.verdict)
+    // Send tier (per-channel send throttle-fix verification), when it ran.
+    if (RESULT.assertions.some((x) => x.id === "F11-send-state-reflects")) {
+        log(
+            a["F11-send-state-reflects"] === true
+                ? "SEND PATH: per-channel send write + readback CONFIRMED live — the syncFullState throttle fix is verified on the desk."
+                : "SEND PATH: per-channel send did NOT reflect — if it landed in unconfirmed[] pre-fix, that is the flood; post-fix, investigate desk config (bus subgroup / send off).",
+        )
+    }
     if (RESULT.latency.enqueueToDrainMs != null)
         log(`latency enqueue→bridge-drain: ${RESULT.latency.enqueueToDrainMs}ms`)
     if (RESULT.latency.enqueueToStateReflectMs != null)
         log(`latency enqueue→state-reflect: ${RESULT.latency.enqueueToStateReflectMs}ms`)
     else log(`latency enqueue→state-reflect: N/A (did not reflect)`)
+    if (RESULT.latency.sendEnqueueToDrainMs != null)
+        log(`latency send enqueue→bridge-drain: ${RESULT.latency.sendEnqueueToDrainMs}ms`)
+    if (RESULT.latency.sendEnqueueToStateReflectMs != null)
+        log(`latency send enqueue→state-reflect: ${RESULT.latency.sendEnqueueToStateReflectMs}ms`)
 
     if (FLAG.json) console.log(JSON.stringify(RESULT, null, 2))
     process.exit(code)

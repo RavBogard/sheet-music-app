@@ -12,7 +12,7 @@
 
 import * as dgram from "dgram"
 import { EventEmitter } from "events"
-import { ChannelInfo, BusInfo, BusSend, MatrixInfo } from "./types"
+import { ChannelInfo, BusInfo, MatrixInfo } from "./types"
 
 // OSC message encoding/decoding helpers
 function padTo4(len: number): number {
@@ -111,6 +111,21 @@ function parseOSCMessage(buf: Buffer): ParsedOSCMessage | null {
 export interface X32ClientOptions {
     address: string
     port: number
+    /**
+     * Max concurrent OSC value queries in flight during `syncFullState`
+     * (default 12). The X32 silently drops queries when flooded; the old
+     * unbounded `Promise.all` burst fired ~320 send queries at once and lost
+     * most of them for the later monitor buses. A small cap keeps every bus's
+     * send state readable. Exposed for testing.
+     */
+    syncQueryCap?: number
+    /**
+     * Total attempts per value read during `syncFullState` (default 3 = 1 try
+     * + 2 retries). A transient UDP drop is retried before the read is given
+     * up to the `unconfirmed` set, so a single dropped query no longer
+     * fabricates a 0/false fallback. Exposed for testing.
+     */
+    syncQueryAttempts?: number
 }
 
 export class X32Client extends EventEmitter {
@@ -127,6 +142,15 @@ export class X32Client extends EventEmitter {
     currentBackoff: number = 2000 // Exposed for testing; starts at 2s
     private static readonly INITIAL_BACKOFF = 2000
     private static readonly MAX_BACKOFF = 60000
+
+    // ── syncFullState OSC query throttle (monitor per-channel-send fix) ──
+    // The X32 drops OSC queries when flooded. Bound the number of value reads
+    // in flight at once + retry transient drops so every monitor bus's send
+    // state reads back reliably instead of fabricating 0/false fallbacks.
+    private static readonly DEFAULT_SYNC_QUERY_CAP = 12
+    private static readonly DEFAULT_SYNC_QUERY_ATTEMPTS = 3
+    private readonly syncQueryCap: number
+    private readonly syncQueryAttempts: number
     // B9 — per-address FIFO correlation. The X32 protocol has no correlation id
     // (it replies to the same address it was queried on). A single-slot map
     // clobbered an in-flight waiter when a second query to the SAME address
@@ -164,6 +188,8 @@ export class X32Client extends EventEmitter {
         super()
         this.address = options.address
         this.port = options.port
+        this.syncQueryCap = Math.max(1, options.syncQueryCap ?? X32Client.DEFAULT_SYNC_QUERY_CAP)
+        this.syncQueryAttempts = Math.max(1, options.syncQueryAttempts ?? X32Client.DEFAULT_SYNC_QUERY_ATTEMPTS)
         this.socket = dgram.createSocket("udp4")
 
         this.socket.on("message", (buf) => {
@@ -601,71 +627,145 @@ export class X32Client extends EventEmitter {
 
     // ─── Full State Sync ───
 
+    /**
+     * Bounded-concurrency runner: drains `tasks` with at most `cap` thunks in
+     * flight at once. Replaces the unbounded `Promise.all` bursts that fired
+     * ~320 send queries (32 ch × N buses × {level,on}) at the X32 at the same
+     * instant — the desk dropped most of them for the later monitor buses, so
+     * those reads timed out and the bridge published fabricated 0/false
+     * fallbacks for Daniel's real mix (the monitor per-channel-send defect).
+     * Keeping the in-flight count small lets every bus's send state read back
+     * reliably. Order-agnostic: each task mutates its own slot of the result
+     * skeletons, so results need not be collected.
+     */
+    private async runPooled(tasks: Array<() => Promise<void>>, cap: number): Promise<void> {
+        let next = 0
+        const worker = async (): Promise<void> => {
+            for (let i = next++; i < tasks.length; i = next++) {
+                await tasks[i]()
+            }
+        }
+        const workers = Math.max(1, Math.min(cap, tasks.length))
+        await Promise.all(Array.from({ length: workers }, () => worker()))
+    }
+
+    /**
+     * Run a single OSC read with bounded retries (`syncQueryAttempts`). A
+     * transient UDP drop should NOT immediately fabricate an `unconfirmed`
+     * value, so we re-issue the GET a few times before giving up. Each attempt
+     * is a fresh `query()` (its own 2s timeout + B9 per-address FIFO waiter),
+     * so the correlation invariant is preserved.
+     */
+    private async queryWithRetry<T>(fn: () => Promise<T>): Promise<T> {
+        let lastErr: unknown
+        for (let attempt = 0; attempt < this.syncQueryAttempts; attempt++) {
+            try {
+                return await fn()
+            } catch (err) {
+                lastErr = err
+            }
+        }
+        throw lastErr instanceof Error ? lastErr : new Error("query failed after retries")
+    }
+
     async syncFullState(monitorBuses: number[]): Promise<void> {
         const start = Date.now()
-        console.log("[X32] Syncing full mixer state (parallel)...")
+        console.log(
+            `[X32] Syncing full mixer state (throttled: cap=${this.syncQueryCap}, attempts=${this.syncQueryAttempts})...`,
+        )
 
         // B11 — record which VALUE reads fail this sync so writeFullState can
         // publish them as unconfirmed rather than shipping the fabricated
         // fallback (0 / false / true) as if it were the desk's real value.
         const unconfirmed = new Set<string>()
 
-        // ── Channel names: all 32 in parallel ──
-        const channelPromises = Array.from({ length: 32 }, (_, i) => {
-            const ch = i + 1
-            return this.queryChannelName(ch)
-                .then(name => ({ index: ch, name, color: 0 }))
-                .catch(() => ({ index: ch, name: `Ch ${ch}`, color: 0 }))
-        })
-        this.channels = await Promise.all(channelPromises)
-        console.log(`[X32] Read ${this.channels.length} channel names`)
+        // Pre-build the skeletons; each pooled task fills in exactly one value
+        // (or marks it unconfirmed on failure). Building ONE flat task list and
+        // draining it through a single bounded pool caps total in-flight
+        // queries across the WHOLE sync — not per-phase — so adding monitor
+        // buses can never re-create the ~320-concurrent-query flood.
+        const channels: ChannelInfo[] = Array.from({ length: 32 }, (_, i) => ({
+            index: i + 1,
+            name: `Ch ${i + 1}`,
+            color: 0,
+        }))
+        const buses: BusInfo[] = monitorBuses.map((busIdx) => ({
+            index: busIdx,
+            name: `Bus ${busIdx}`,
+            fader: 0,
+            sends: Array.from({ length: 32 }, (_, i) => ({ channelIndex: i + 1, level: 0, on: false })),
+        }))
+        const matrices: MatrixInfo[] = Array.from({ length: 6 }, (_, i) => ({
+            index: i + 1,
+            name: `Matrix ${i + 1}`,
+            fader: 0,
+            on: true,
+        }))
 
-        // ── Bus state: all buses + their sends in parallel ──
-        const busPromises = monitorBuses.map(async (busIdx) => {
-            try {
-                // Bus name + fader in parallel
-                const [name, fader] = await Promise.all([
-                    this.queryBusName(busIdx).catch(() => `Bus ${busIdx}`),
-                    this.queryBusFader(busIdx).catch(() => { unconfirmed.add(`bus_fader:${busIdx}`); return 0 }),
-                ])
+        const tasks: Array<() => Promise<void>> = []
 
-                // All 32 channel sends: level + on for each channel in parallel
-                const sendPromises = Array.from({ length: 32 }, (_, i) => {
-                    const ch = i + 1
-                    return Promise.all([
-                        this.querySendLevel(ch, busIdx).catch(() => { unconfirmed.add(`send_level:${ch}:${busIdx}`); return 0 }),
-                        this.querySendOn(ch, busIdx).catch(() => { unconfirmed.add(`send_on:${ch}:${busIdx}`); return false }),
-                    ]).then(([level, on]) => ({ channelIndex: ch, level, on }))
+        // Channel names — cosmetic; on failure keep the default `Ch N` (the
+        // value carries no audio meaning, so no `unconfirmed` marker).
+        for (const ch of channels) {
+            tasks.push(async () => {
+                try { ch.name = await this.queryWithRetry(() => this.queryChannelName(ch.index)) }
+                catch { /* keep default name */ }
+            })
+        }
+
+        // Bus name + master fader + every per-channel send (level + on).
+        for (const bus of buses) {
+            tasks.push(async () => {
+                try { bus.name = await this.queryWithRetry(() => this.queryBusName(bus.index)) }
+                catch { /* keep default name */ }
+            })
+            tasks.push(async () => {
+                try { bus.fader = await this.queryWithRetry(() => this.queryBusFader(bus.index)) }
+                catch { unconfirmed.add(`bus_fader:${bus.index}`); bus.fader = 0 }
+            })
+            for (const send of bus.sends) {
+                const ch = send.channelIndex
+                tasks.push(async () => {
+                    try { send.level = await this.queryWithRetry(() => this.querySendLevel(ch, bus.index)) }
+                    catch { unconfirmed.add(`send_level:${ch}:${bus.index}`); send.level = 0 }
                 })
-                const sends: BusSend[] = await Promise.all(sendPromises)
-
-                return { index: busIdx, name, fader, sends }
-            } catch {
-                unconfirmed.add(`bus:${busIdx}`)
-                return { index: busIdx, name: `Bus ${busIdx}`, fader: 0, sends: [] as BusSend[] }
+                tasks.push(async () => {
+                    try { send.on = await this.queryWithRetry(() => this.querySendOn(ch, bus.index)) }
+                    catch { unconfirmed.add(`send_on:${ch}:${bus.index}`); send.on = false }
+                })
             }
-        })
-        this.buses = await Promise.all(busPromises)
+        }
 
-        const elapsed = Date.now() - start
-        console.log(`[X32] Read ${this.buses.length} bus states with send levels (${elapsed}ms)`)
+        // Matrix outputs (name + fader + on). Matrix `on` keeps the historical
+        // true-on-failure default (B11).
+        for (const mtx of matrices) {
+            tasks.push(async () => {
+                try { mtx.name = await this.queryWithRetry(() => this.queryMatrixName(mtx.index)) }
+                catch { /* keep default name */ }
+            })
+            tasks.push(async () => {
+                try { mtx.fader = await this.queryWithRetry(() => this.queryMatrixFader(mtx.index)) }
+                catch { unconfirmed.add(`matrix_fader:${mtx.index}`); mtx.fader = 0 }
+            })
+            tasks.push(async () => {
+                try { mtx.on = await this.queryWithRetry(() => this.queryMatrixOn(mtx.index)) }
+                catch { unconfirmed.add(`matrix_on:${mtx.index}`); mtx.on = true }
+            })
+        }
 
-        // ── Matrix outputs: all 6 in parallel ──
-        const matrixPromises = Array.from({ length: 6 }, (_, i) => {
-            const mtx = i + 1
-            return Promise.all([
-                this.queryMatrixName(mtx).catch(() => `Matrix ${mtx}`),
-                this.queryMatrixFader(mtx).catch(() => { unconfirmed.add(`matrix_fader:${mtx}`); return 0 }),
-                this.queryMatrixOn(mtx).catch(() => { unconfirmed.add(`matrix_on:${mtx}`); return true }),
-            ]).then(([name, fader, on]) => ({ index: mtx, name, fader, on }))
-        })
-        this.matrices = await Promise.all(matrixPromises)
+        await this.runPooled(tasks, this.syncQueryCap)
 
+        this.channels = channels
+        this.buses = buses
+        this.matrices = matrices
         // B11 — publish the result of THIS sync (replaces any prior set).
         this.unconfirmed = unconfirmed
 
         const totalElapsed = Date.now() - start
-        console.log(`[X32] Read ${this.matrices.length} matrix outputs (${totalElapsed}ms total)`)
+        console.log(
+            `[X32] State sync complete: ${channels.length} channels, ${buses.length} buses, ` +
+            `${matrices.length} matrices, ${unconfirmed.size} unconfirmed (${totalElapsed}ms)`,
+        )
         this.emit("state_synced")
     }
 

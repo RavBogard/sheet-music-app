@@ -157,13 +157,16 @@ describe("X32Client query-after-command (C2) + B11 unconfirmed sentinel", () => 
         ;(mockSocket.send as ReturnType<typeof vi.fn>).mockClear()
 
         const sync = client.syncFullState([1]) // bus 1 only; the desk replies to nothing
-        // syncFullState runs sequential query waves (channels → bus name/fader →
-        // sends → matrices), each with its own 2s timeout, so the next wave can't
-        // schedule until the prior one settles. Advance in 2s steps until the sync
-        // settles (bounded), letting each wave's timers fire in turn.
+        // syncFullState now drains all reads through a bounded-concurrency pool
+        // (syncQueryCap in flight) and retries each read syncQueryAttempts times
+        // (each a fresh 2s query() timeout) before giving it up to `unconfirmed`.
+        // With nothing replying, every read exhausts its retries, so settling
+        // takes (tasks / cap) × (attempts × 2s) of virtual time — far longer
+        // than the old sequential waves. Advance in 2s steps until it settles
+        // (generously bounded), letting each query timeout fire in turn.
         let settled = false
         void sync.then(() => { settled = true })
-        for (let i = 0; i < 8 && !settled; i++) {
+        for (let i = 0; i < 80 && !settled; i++) {
             await vi.advanceTimersByTimeAsync(2100)
         }
         await sync

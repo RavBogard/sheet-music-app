@@ -233,6 +233,19 @@ export class X32MockServer extends EventEmitter {
     buses: MockBus[]
     matrices: MockMatrix[]
 
+    // ── Test instrumentation (opt-in; inert in normal use) ──
+    // Peak number of value-read GET responses in flight at once. With
+    // latencyMs > 0 each GET reply is held briefly, so a test can assert the
+    // bridge throttles syncFullState (bounded concurrency) instead of flooding
+    // the desk with ~320 simultaneous send queries.
+    private inFlightQueries = 0
+    maxConcurrentQueries = 0
+    // address → remaining number of GET responses to silently drop, simulating
+    // the X32 dropping a query under load. Exercises the bridge's read retry:
+    // a dropped query times out, the bridge re-issues it, and (drops exhausted)
+    // the desk answers — so the value confirms instead of being fabricated.
+    readonly dropQueryResponses = new Map<string, number>()
+
     // ── /xremote subscription model (faithful to the real X32) ──
     // Maps a client key (`address:port`) → the epoch-ms timestamp at which its
     // /xremote subscription expires. A subscriber is "live" only while
@@ -276,11 +289,32 @@ export class X32MockServer extends EventEmitter {
                     )
                 }
 
-                const respond = (buf: Buffer) => {
+                // Test hook: a value-read GET (no args, /ch|/bus|/mtx) can be
+                // silently dropped to simulate the X32 losing it under load.
+                const isValueGet = msg.args.length === 0 && /^\/(ch|bus|mtx)\//.test(msg.address)
+                if (isValueGet) {
+                    const drops = this.dropQueryResponses.get(msg.address) ?? 0
+                    if (drops > 0) {
+                        this.dropQueryResponses.set(msg.address, drops - 1)
+                        return // no response — the bridge's query() will time out
+                    }
+                }
+
+                const respond = (out: Buffer) => {
+                    const deliver = () => {
+                        if (isValueGet) this.inFlightQueries--
+                        this.sendTo(out, rinfo.address, rinfo.port)
+                    }
+                    if (isValueGet) {
+                        this.inFlightQueries++
+                        if (this.inFlightQueries > this.maxConcurrentQueries) {
+                            this.maxConcurrentQueries = this.inFlightQueries
+                        }
+                    }
                     if (this.latencyMs > 0) {
-                        setTimeout(() => this.sendTo(buf, rinfo.address, rinfo.port), this.latencyMs)
+                        setTimeout(deliver, this.latencyMs)
                     } else {
-                        this.sendTo(buf, rinfo.address, rinfo.port)
+                        deliver()
                     }
                 }
 
