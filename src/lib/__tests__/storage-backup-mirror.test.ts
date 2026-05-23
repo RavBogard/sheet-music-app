@@ -311,3 +311,218 @@ describe("runStorageBackup", () => {
         expect(res.created).toBe(1)
     })
 })
+
+// ── Fail-loud catch path ────────────────────────────────────────────────
+//
+// `runStorageBackup` wraps its body in a top-level try/catch that writes the
+// real exception text into `storageBackups/{date}.error` + sets
+// `config/storageBackup.lastError`, then re-throws so the route still 500s.
+// Closes the silent-failure gap that hid storage-phase2's first prod 500.
+//
+// Tests use a broader fake DB that tracks writes to ALL collections (the
+// success-path fake is library_index-only — see makeFakeDb above).
+
+interface DocWrite {
+    payload: Record<string, unknown>
+    merge: boolean
+}
+function makeMultiCollectionFakeDb(opts?: { failWrites?: Set<string> }) {
+    const writes = new Map<string, DocWrite[]>()
+    const fail = opts?.failWrites ?? new Set<string>()
+    const get = (k: string) => writes.get(k) ?? []
+
+    const db = {
+        collection(name: string) {
+            return {
+                where(_field: string, _op: string, _val: unknown) {
+                    return {
+                        async get() {
+                            // No active rows — keep the test focused on the
+                            // pre-loop crash path (ensureFolder throws).
+                            return { size: 0, docs: [] as Array<{ id: string; data: () => Record<string, unknown> }> }
+                        },
+                    }
+                },
+                doc(id: string) {
+                    return {
+                        async set(payload: Record<string, unknown>, options?: { merge?: boolean }) {
+                            const key = `${name}/${id}`
+                            if (fail.has(key)) throw new Error(`fake: write blocked at ${key}`)
+                            const arr = writes.get(key) ?? []
+                            arr.push({ payload, merge: !!options?.merge })
+                            writes.set(key, arr)
+                        },
+                    }
+                },
+            }
+        },
+    } as unknown as Firestore
+
+    return { db, writes, get }
+}
+
+function makeThrowingMockDriveOnEnsureFolder(boom: Error) {
+    const drive: StorageBackupDeps["drive"] = {
+        async ensureFolder() {
+            throw boom
+        },
+        async listFilesByQuery() {
+            return { files: [], nextPageToken: null }
+        },
+        async uploadBinaryFile() {
+            throw new Error("should not reach uploadBinaryFile")
+        },
+        async updateFileMedia() {
+            throw new Error("should not reach updateFileMedia")
+        },
+    }
+    return drive
+}
+
+describe("runStorageBackup — fail-loud catch", () => {
+    const NOW = new Date("2026-05-23T05:00:00.000Z")
+    const DATE_KEY = "2026-05-23"
+
+    function makeFailLoudDeps(overrides?: {
+        db?: Firestore
+        drive?: StorageBackupDeps["drive"]
+    }): StorageBackupDeps {
+        return {
+            db: overrides?.db ?? makeMultiCollectionFakeDb().db,
+            drive:
+                overrides?.drive ??
+                makeThrowingMockDriveOnEnsureFolder(new Error("Drive: insufficient scope")),
+            getStorageMd5: async () => null,
+            downloadStoragePath: async () => null,
+            now: () => NOW,
+            backupFolderId: "BK-shared-drive-root",
+        }
+    }
+
+    it("top-level throw writes storageBackups/{date}.error + config/storageBackup.lastError + re-throws original", async () => {
+        const { db, get } = makeMultiCollectionFakeDb()
+        const boom = new Error("Drive: insufficient scope")
+        const deps = makeFailLoudDeps({
+            db,
+            drive: makeThrowingMockDriveOnEnsureFolder(boom),
+        })
+
+        await expect(runStorageBackup(deps)).rejects.toThrowError(boom)
+
+        // storageBackups/{date} written with ran:false + the real exception
+        const dated = get(`storageBackups/${DATE_KEY}`)
+        expect(dated).toHaveLength(1)
+        expect(dated[0].merge).toBe(true)
+        expect(dated[0].payload).toMatchObject({
+            ran: false,
+            lastError: "Drive: insufficient scope",
+            error: {
+                message: "Drive: insufficient scope",
+                name: "Error",
+                httpStatus: null,
+            },
+            timestamp: NOW.toISOString(),
+        })
+        expect(typeof (dated[0].payload.error as { stack: string }).stack).toBe("string")
+
+        // config/storageBackup additive lastError pointer
+        const cfg = get("config/storageBackup")
+        expect(cfg).toHaveLength(1)
+        expect(cfg[0].merge).toBe(true)
+        expect(cfg[0].payload).toMatchObject({
+            lastError: "Drive: insufficient scope",
+        })
+        expect(cfg[0].payload.lastErrorAt).toBeInstanceOf(Date)
+    })
+
+    it("captures err.response.status as httpStatus (axios-style)", async () => {
+        const { db, get } = makeMultiCollectionFakeDb()
+        const httpErr = Object.assign(new Error("Forbidden"), {
+            response: { status: 403 },
+        })
+        const deps = makeFailLoudDeps({
+            db,
+            drive: makeThrowingMockDriveOnEnsureFolder(httpErr),
+        })
+
+        await expect(runStorageBackup(deps)).rejects.toThrow()
+
+        const dated = get(`storageBackups/${DATE_KEY}`)
+        expect(dated[0].payload).toMatchObject({
+            error: { message: "Forbidden", httpStatus: 403 },
+        })
+    })
+
+    it("captures err.code as httpStatus when present (googleapis-style)", async () => {
+        const { db, get } = makeMultiCollectionFakeDb()
+        const gErr = Object.assign(new Error("Not Found"), { code: 404 })
+        const deps = makeFailLoudDeps({
+            db,
+            drive: makeThrowingMockDriveOnEnsureFolder(gErr),
+        })
+
+        await expect(runStorageBackup(deps)).rejects.toThrow()
+
+        const dated = get(`storageBackups/${DATE_KEY}`)
+        expect(dated[0].payload).toMatchObject({
+            error: { httpStatus: 404 },
+        })
+    })
+
+    it("truncates very long stacks to 2000 chars", async () => {
+        const { db, get } = makeMultiCollectionFakeDb()
+        const bigErr = new Error("boom")
+        bigErr.stack = "stack-prefix\n" + "x".repeat(5000)
+        const deps = makeFailLoudDeps({
+            db,
+            drive: makeThrowingMockDriveOnEnsureFolder(bigErr),
+        })
+
+        await expect(runStorageBackup(deps)).rejects.toThrow()
+
+        const dated = get(`storageBackups/${DATE_KEY}`)
+        const stack = (dated[0].payload.error as { stack: string }).stack
+        expect(stack.length).toBe(2000)
+    })
+
+    it("catch-write failure does NOT double-fault — original error still re-thrown", async () => {
+        // Block the breadcrumb writes so the catch's own .set() throws.
+        const { db, get } = makeMultiCollectionFakeDb({
+            failWrites: new Set([
+                `storageBackups/${DATE_KEY}`,
+                "config/storageBackup",
+            ]),
+        })
+        const original = new Error("original cause")
+        const deps = makeFailLoudDeps({
+            db,
+            drive: makeThrowingMockDriveOnEnsureFolder(original),
+        })
+
+        // The ORIGINAL error must propagate, not the secondary write failure.
+        await expect(runStorageBackup(deps)).rejects.toThrowError(original)
+
+        // No writes recorded (both blocked).
+        expect(get(`storageBackups/${DATE_KEY}`)).toHaveLength(0)
+        expect(get("config/storageBackup")).toHaveLength(0)
+    })
+
+    it("successful run does NOT write the error doc (unregressed)", async () => {
+        // Reuse the success-path fake (library_index-only) but observe that
+        // runStorageBackup itself never writes storageBackups/* on success —
+        // that's recordStorageBackupRun's job, a separate function.
+        const buf = Buffer.from("%PDF success")
+        const objects = new Map([["upload-ok", buf]])
+        const rows: Row[] = [
+            { id: "upload-ok", data: { status: "active", collection: "uploads", mimeType: "application/pdf", stem: "OK" } },
+        ]
+        const mock = makeMockDrive()
+        const { deps } = makeDeps({ rows, objects, mock })
+
+        // makeFakeDb throws on any non-library_index collection — so a stray
+        // catch-path write on the success path would explode the test.
+        const res = await runStorageBackup(deps)
+        expect(res.ran).toBe(true)
+        expect(res.created).toBe(1)
+    })
+})

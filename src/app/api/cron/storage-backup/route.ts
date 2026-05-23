@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { runStorageBackupProd } from "@/lib/storage-backup/mirror"
+import {
+    runStorageBackupProd,
+    writeStorageBackupError,
+} from "@/lib/storage-backup/mirror"
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
@@ -10,6 +13,30 @@ import { httpError } from "@/lib/http/error-envelope"
 function safeCompare(a: string, b: string): boolean {
     if (a.length !== b.length) return false
     return timingSafeEqual(Buffer.from(a), Buffer.from(b))
+}
+
+/**
+ * Route-level fail-loud breadcrumb (defense in depth). If the mirror's own
+ * catch in `runStorageBackup` couldn't write — because the crash happened
+ * BEFORE the inner try (e.g. `new DriveClient()` threw, or `getFirestore()`
+ * returned a broken handle) — this still puts the real exception text into
+ * `storageBackups/{date}.error` + `config/storageBackup.lastError`.
+ *
+ * Idempotent with the mirror's own catch (`merge: true` overlays same-shape).
+ * Best-effort: any failure here is swallowed (only logged); the original
+ * route error is still returned as 500 to the caller.
+ */
+async function tryRouteFailLoudBreadcrumb(err: unknown): Promise<void> {
+    try {
+        if (!initAdmin()) return
+        await writeStorageBackupError(getFirestore(), err, new Date())
+    } catch (writeErr) {
+        logger.warn(
+            `[storage-backup] route-level fail-loud breadcrumb failed: ${
+                writeErr instanceof Error ? writeErr.message : String(writeErr)
+            }`,
+        )
+    }
 }
 
 export const dynamic = "force-dynamic"
@@ -54,12 +81,13 @@ export async function GET(req: NextRequest) {
     } catch (err) {
         logger.error("[storage-backup] cron failed:", err)
         captureException(err, { source: "cron", location: "storage-backup" })
+        await tryRouteFailLoudBreadcrumb(err)
         return httpError(
             500,
             "server_error",
             "Storage backup cron failed.",
             { debug: err instanceof Error ? err.message : String(err) },
-            "Check `[storage-backup]` logs in Vercel for the underlying error.",
+            "Check `storageBackups/{date}.error` in Firestore (written by the fail-loud catch) for the real exception; logs are a fallback.",
         )
     }
 }
@@ -90,12 +118,13 @@ export async function POST(req: NextRequest) {
     } catch (err) {
         logger.error("[storage-backup] manual backup failed:", err)
         captureException(err, { source: "api", location: "storage-backup-manual" })
+        await tryRouteFailLoudBreadcrumb(err)
         return httpError(
             500,
             "server_error",
             "Storage backup failed.",
             { debug: err instanceof Error ? err.message : String(err) },
-            "Check `[storage-backup]` logs in Vercel for the underlying error.",
+            "Check `storageBackups/{date}.error` in Firestore (written by the fail-loud catch) for the real exception; logs are a fallback.",
         )
     }
 }

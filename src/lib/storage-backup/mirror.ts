@@ -125,6 +125,21 @@ function pickStem(row: Record<string, unknown>, fileId: string): string {
 export async function runStorageBackup(
     deps: StorageBackupDeps,
 ): Promise<StorageBackupResult> {
+    try {
+        return await runStorageBackupInner(deps)
+    } catch (err) {
+        // Fail-loud: write the real exception into a doc anyone can read via MCP
+        // so the next failure self-diagnoses without log archaeology. Best-effort;
+        // a recording failure must NOT double-fault — swallow it and re-throw the
+        // original error so the route handler still returns 500.
+        await writeStorageBackupError(deps.db, err, deps.now())
+        throw err
+    }
+}
+
+async function runStorageBackupInner(
+    deps: StorageBackupDeps,
+): Promise<StorageBackupResult> {
     const result: StorageBackupResult = {
         ran: true,
         scanned: 0,
@@ -311,6 +326,84 @@ export async function runStorageBackup(
     }
 
     return result
+}
+
+/**
+ * Shape of the fail-loud error payload written to Firestore on a thrown run.
+ * Exposed so the route-level defense-in-depth catch (route.ts) can write the
+ * same shape if the mirror crashes before reaching its own catch.
+ */
+export interface StorageBackupErrorPayload {
+    message: string
+    name: string
+    stack: string | null
+    httpStatus: number | null
+}
+
+function buildErrorPayload(err: unknown): StorageBackupErrorPayload {
+    const e = err instanceof Error ? err : null
+    let httpStatus: number | null = null
+    if (err && typeof err === "object") {
+        const o = err as { response?: { status?: unknown }; code?: unknown }
+        if (typeof o.response?.status === "number") httpStatus = o.response.status
+        else if (typeof o.code === "number") httpStatus = o.code
+    }
+    return {
+        message: e?.message ?? String(err),
+        name: e?.name ?? "UnknownError",
+        stack: e?.stack ? e.stack.slice(0, 2000) : null,
+        httpStatus,
+    }
+}
+
+/**
+ * Fail-loud breadcrumb writer. On a thrown run, writes the real exception text +
+ * stack into `storageBackups/{YYYY-MM-DD}` + sets `config/storageBackup.lastError`
+ * so the next failure self-diagnoses without log archaeology. **Best-effort:**
+ * any Firestore write failure here is swallowed (logged only) — the caller
+ * re-throws the original error so the route returns 500 to the caller and we
+ * don't double-fault.
+ *
+ * `merge: true` on both writes is load-bearing: same-day prior success fields
+ * (`lastBackupAt`, counts) are preserved, and a duplicate write from a
+ * defense-in-depth route-level catch overlays idempotently.
+ *
+ * Exported so the route handler (`/api/cron/storage-backup`) can write the same
+ * shape if the mirror crashed BEFORE reaching its own catch (e.g. `new
+ * DriveClient()` threw, or `getFirestore()` returned a broken handle).
+ */
+export async function writeStorageBackupError(
+    db: Firestore,
+    err: unknown,
+    now: Date,
+): Promise<void> {
+    try {
+        const errorPayload = buildErrorPayload(err)
+        const iso = now.toISOString()
+        const dateKey = iso.slice(0, 10)
+        await db.collection("storageBackups").doc(dateKey).set(
+            {
+                ran: false,
+                error: errorPayload,
+                lastError: errorPayload.message,
+                attemptedAt: now,
+                timestamp: iso,
+            },
+            { merge: true },
+        )
+        await db.collection("config").doc("storageBackup").set(
+            { lastError: errorPayload.message, lastErrorAt: now },
+            { merge: true },
+        )
+    } catch (catchErr) {
+        // Defense in depth: never double-fault. The route-level catch may also
+        // try to write a breadcrumb; log and let the original error propagate.
+        logger.warn(
+            `[storage-backup] failed to record fail-loud error doc: ${
+                catchErr instanceof Error ? catchErr.message : String(catchErr)
+            }`,
+        )
+    }
 }
 
 /**
