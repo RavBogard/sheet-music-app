@@ -12,6 +12,7 @@ import {
 import { reconcileLibrary } from "./reconcile-library"
 import { salvageChartBytes } from "./salvage-chart-bytes"
 import { backfillHealMetadata } from "./backfill-heal-metadata"
+import { backfillTrackMimetype } from "./backfill-track-mimetype"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
 import { getCorrectionStats } from "./correction-stats"
 import { testDeleteStorageObject } from "./test-delete-storage-object"
@@ -1553,6 +1554,30 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await backfillHealMetadata(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "backfill_track_mimetype",
+        {
+            description:
+                "Trusted-leader (admin / band_leader) one-shot hygiene backfill — heal the denormalized `mimeType` cache on LEGACY setlist `tracks` rows ([[project_track_mimetype_gotcha]], cowork #2/#7). The in-app chart picker and (since 2026-05-20) the MCP bind path both stamp `mimeType` onto a track from its bonded `library_index/{fileId}` row, and Perform's viewer routing (queue-utils.toQueueItem) keys on it — so a scraped/text/image chart bonded BEFORE those fixes carries no `mimeType`, renders as the wrong 'sub-attached doc' / broken-PDF until re-bonded. This walks every `tracks` row that is bonded (`fileId` present) but missing `mimeType` and stamps the value from the bonded library_index entry (same source the live bind paths read). Does NOT touch the bond (`fileId`) — only the denormalized render-routing field. `dryRun` defaults TRUE (F-05): returns the full would-change report (counts + per-row before/after) WITHOUT writing. A real run (`dryRun:false`) still requires `force:true` or it returns the plan with `refused:true` and no writes. Idempotent — a second force-run finds zero candidates. Returns `{ok:true, scannedTracks, bondedTracks, alreadyHealthy, heal:{count,rows:[{trackId,setlistId,title,fileId,before:null,after}],truncated}, skipped:{count,rows:[{trackId,fileId,reason}],truncated}, dryRun, committed, refused?}` (rows capped at 500 with `truncated:true`). `skipped` rows are bonded-but-missing-mime tracks whose library_index entry is absent (`library_entry_not_found`) or itself carries no mimeType (`library_entry_no_mimetype`) — those need a chart heal, not a metadata stamp. ★ Run dryRun-first; the apply is a single-owner step.",
+            inputSchema: {
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true (default), returns the per-row would-change plan without writing. F-05 standing rule: dryRun does NOT require force.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes — even after `dryRun: false` is set.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await backfillTrackMimetype(uidFrom(extra), args)),
     )
 
     server.registerTool(
