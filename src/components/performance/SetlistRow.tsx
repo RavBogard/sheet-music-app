@@ -4,6 +4,7 @@ import { FileMusic, ChevronRight } from "lucide-react"
 import { SetlistTrack } from "@/types/models"
 import { getTransposedKeyName } from "@/lib/music-math"
 import { cn } from "@/lib/utils"
+import type { UseLongPressBag } from "@/hooks/use-long-press"
 
 export interface SetlistRowProps {
     track: SetlistTrack
@@ -14,6 +15,16 @@ export interface SetlistRowProps {
     onSongTap: () => void
     isLeader: boolean
     onLeaderSetPosition: () => void
+    /**
+     * Optional pointer/long-press handler bag from `useLongPress`. When
+     * present, the gesture target (the interactive row root) wires its
+     * pointer events so a ~500ms hold opens the live-director action sheet
+     * (`LiveDirectorGesture` upstream). The hook's `onClick` is composed
+     * with the existing tap-to-open click so a fired long-press suppresses
+     * the synthetic click. Absent on non-leader iPads and on the
+     * `openableNonSong` chevron rows (gesture only applies to song rows).
+     */
+    gestureHandlers?: UseLongPressBag
 }
 
 export function SetlistRow({
@@ -25,6 +36,7 @@ export function SetlistRow({
     onSongTap,
     isLeader,
     onLeaderSetPosition,
+    gestureHandlers,
 }: SetlistRowProps) {
     const isSong = !track.type || track.type === "song"
     const isHeader = track.type === "header"
@@ -166,18 +178,39 @@ export function SetlistRow({
     }
 
     // Interactive rows
+    // Compose the gesture handlers' onClick with the row's own click. The
+    // long-press hook calls e.preventDefault()+stopPropagation() when a
+    // long-press fired, and we then bail on the row's click handler.
+    const composedClick = (e: React.MouseEvent) => {
+        if (gestureHandlers) {
+            gestureHandlers.onClick(e)
+            if (e.defaultPrevented) return
+        }
+        handleClick()
+    }
+
     return (
         <div
             role="button"
             tabIndex={0}
             aria-label={openableNonSong ? `Open chart: ${track.title}` : undefined}
-            onClick={handleClick}
+            onClick={composedClick}
             onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault()
                     handleClick()
                 }
             }}
+            {...(gestureHandlers
+                ? {
+                    onPointerDown: gestureHandlers.onPointerDown,
+                    onPointerUp: gestureHandlers.onPointerUp,
+                    onPointerMove: gestureHandlers.onPointerMove,
+                    onPointerCancel: gestureHandlers.onPointerCancel,
+                    onContextMenu: gestureHandlers.onContextMenu,
+                    style: gestureHandlers.style,
+                }
+                : {})}
             className={cn(
                 rowClasses,
                 "min-h-11",

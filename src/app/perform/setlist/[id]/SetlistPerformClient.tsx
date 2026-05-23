@@ -27,6 +27,7 @@ import { Loader2, ArrowLeft, Music, Users, Pencil, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { useAuth } from "@/lib/auth-context"
+import { useLibrary } from "@/hooks/use-library"
 import { SetlistView } from "@/components/performance/SetlistView"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
 import { SaveOfflineButton } from "@/components/performance/SaveOfflineButton"
@@ -87,6 +88,13 @@ export function SetlistPerformClient({
     const [showPrintModal, setShowPrintModal] = useState(false)
     const { isMusician, isBandLeader, isAdmin } = useAuth()
     const canPrint = isMusician || isBandLeader || isAdmin
+
+    // live-director-gesture: the swap-chart / insert-song modals consume
+    // `useLibraryStore.allFiles`. Perform routes don't otherwise hydrate
+    // the library, so we drive `useLibrary` ONLY for the leader role
+    // (`band_leader || admin`) via a child component — musician + public
+    // iPads stay on the lean Perform payload.
+    const isLeaderRole = isBandLeader || isAdmin
 
     // Song fileIds for the offline indicator's IDB ground-truth count.
     const songFileIds = tracks
@@ -210,6 +218,9 @@ export function SetlistPerformClient({
                 </div>
             )}
 
+            {/* live-director-gesture library hydration (leader-only) */}
+            {isLeaderRole && <LibraryHydrator />}
+
             {/* Setlist content */}
             <SetlistView
                 tracks={tracks}
@@ -220,6 +231,7 @@ export function SetlistPerformClient({
                 onSongTap={(index) => setActiveSongIndex(index)}
                 onLeaderSetPosition={setCurrentPosition}
                 serviceNotes={serviceNotes}
+                setlistId={setlistId}
             />
 
             {/* PDF overlay: renders on top of setlist when a song is tapped */}
@@ -231,6 +243,8 @@ export function SetlistPerformClient({
                     onClose={() => setActiveSongIndex(null)}
                     onNavigate={(index) => setActiveSongIndex(index)}
                     isPublicView={isPublicView}
+                    isLeader={isLeader}
+                    setlistId={setlistId}
                 />
             )}
 
@@ -259,4 +273,17 @@ export function SetlistPerformClient({
             )}
         </div>
     )
+}
+
+/**
+ * Tiny child that triggers `useLibrary()` so the live-director swap-chart /
+ * insert-song modals have `useLibraryStore.allFiles` populated. Rendered
+ * only for `band_leader || admin` so non-leader iPads stay off the
+ * `/api/library/list` fetch path entirely (perf-frugal on the band's
+ * shared 6-iPad fleet over a single NAT'd WiFi budget — same constraint
+ * coder-4 surfaced in exec-system-stress).
+ */
+function LibraryHydrator() {
+    useLibrary(false, "all")
+    return null
 }

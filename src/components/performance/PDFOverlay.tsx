@@ -9,6 +9,7 @@ import { useMusicStore, QueueItem } from "@/lib/store"
 import { useLibraryStore } from "@/lib/library-store"
 import { toQueueItem } from "@/lib/queue-utils"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
+import { LiveDirectorGesture } from "./LiveDirectorGesture"
 const PrintModal = dynamic(() => import("@/components/setlist/PrintModal").then(m => m.PrintModal), { ssr: false })
 
 // Dynamically import PDFViewer to avoid SSR worker issues (per RESEARCH.md Pitfall 1)
@@ -42,6 +43,17 @@ export interface PDFOverlayProps {
     onClose: () => void
     onNavigate: (index: number) => void
     isPublicView: boolean
+    /**
+     * Whether the live-director long-press gesture is active on this chart
+     * surface. Mirrors `useSetlistPerformance().isLeader` (= isAdmin ||
+     * isBandLeader). When `true` AND `setlistId` is known, a ~500ms hold on
+     * the chart area opens the live-director action sheet
+     * (change-key / swap-chart / insert-song).
+     */
+    isLeader?: boolean
+    /** Parent setlist id — required for `isLeader` gesture to mount (insert
+     *  writes need it). */
+    setlistId?: string
 }
 
 /**
@@ -62,6 +74,8 @@ export function PDFOverlay({
     onClose,
     onNavigate,
     isPublicView,
+    isLeader = false,
+    setlistId: setlistIdProp,
 }: PDFOverlayProps) {
     const setQueue = useMusicStore(s => s.setQueue)
     const queueIndex = useMusicStore(s => s.queueIndex)
@@ -282,31 +296,71 @@ export function PDFOverlay({
     // Find setlist metadata if available (from parent hook or store)
     // The performance view is mounted under /perform/setlist/[id], so we can extract ID
     const params = typeof window !== 'undefined' ? window.location.pathname.split('/') : []
-    const setlistId = params.includes('setlist') ? params[params.indexOf('setlist') + 1] : undefined
+    const setlistIdFromPath = params.includes('setlist') ? params[params.indexOf('setlist') + 1] : undefined
+    const setlistId = setlistIdProp ?? setlistIdFromPath
+
+    // Live-director long-press only mounts when the viewer is a band_leader/
+    // admin AND we know which setlist this chart belongs to (insert writes
+    // need it). Off otherwise — keeps the native iOS callout / context menu
+    // behavior intact for musicians.
+    const gestureEligible = isLeader && !!setlistId && !!track.id
+
+    const chartSurface = (
+        <SectionErrorBoundary key={track.fileId} label="Chart">
+            {isMusicXml ? (
+                fileUrl && <SmartScoreViewer url={fileUrl} />
+            ) : isText ? (
+                fileUrl && <TextScoreViewer url={fileUrl} />
+            ) : isImage ? (
+                fileUrl && <ImageScoreViewer url={fileUrl} alt={track.title} />
+            ) : (
+                // PDF: hand PDFViewer the network URL, NOT a blob: object
+                // URL. PDFViewer's loader is IDB-first, so cached charts
+                // render straight from bytes (no network) and the WebKit
+                // blob:-fetch race (R1 Finding B) can't occur on first tap.
+                networkUrl && <PDFViewer url={networkUrl} trackName={track.title} />
+            )}
+        </SectionErrorBoundary>
+    )
 
     return (
         <div className="fixed inset-0 z-50 bg-background flex flex-col">
             {/* Content area -- branches on file type */}
-            <div className="flex-1 overflow-auto pb-0 relative">
-                <SectionErrorBoundary key={track.fileId} label="Chart">
-                    {isMusicXml ? (
-                        fileUrl && <SmartScoreViewer url={fileUrl} />
-                    ) : isText ? (
-                        fileUrl && <TextScoreViewer url={fileUrl} />
-                    ) : isImage ? (
-                        fileUrl && <ImageScoreViewer url={fileUrl} alt={track.title} />
-                    ) : (
-                        // PDF: hand PDFViewer the network URL, NOT a blob: object
-                        // URL. PDFViewer's loader is IDB-first, so cached charts
-                        // render straight from bytes (no network) and the WebKit
-                        // blob:-fetch race (R1 Finding B) can't occur on first tap.
-                        networkUrl && <PDFViewer url={networkUrl} trackName={track.title} />
+            {gestureEligible ? (
+                <LiveDirectorGesture
+                    enabled
+                    track={track}
+                    trackIndex={currentIndex}
+                    setlistTracks={tracks}
+                    setlistId={setlistId!}
+                >
+                    {({ handlers }) => (
+                        <div
+                            className="flex-1 overflow-auto pb-0 relative"
+                            data-live-director-surface="pdf-overlay"
+                            onPointerDown={handlers.onPointerDown}
+                            onPointerUp={handlers.onPointerUp}
+                            onPointerMove={handlers.onPointerMove}
+                            onPointerCancel={handlers.onPointerCancel}
+                            onContextMenu={handlers.onContextMenu}
+                            onClick={handlers.onClick}
+                            style={handlers.style}
+                        >
+                            {chartSurface}
+                            {showTempoFlash && track.bpm && track.bpm > 0 && (
+                                <TempoFlash bpm={track.bpm} onDismiss={() => setShowTempoFlash(false)} />
+                            )}
+                        </div>
                     )}
-                </SectionErrorBoundary>
-                {showTempoFlash && track.bpm && track.bpm > 0 && (
-                    <TempoFlash bpm={track.bpm} onDismiss={() => setShowTempoFlash(false)} />
-                )}
-            </div>
+                </LiveDirectorGesture>
+            ) : (
+                <div className="flex-1 overflow-auto pb-0 relative">
+                    {chartSurface}
+                    {showTempoFlash && track.bpm && track.bpm > 0 && (
+                        <TempoFlash bpm={track.bpm} onDismiss={() => setShowTempoFlash(false)} />
+                    )}
+                </div>
+            )}
 
             {/* Bottom toolbar — all viewports */}
             <PerformanceToolbar
