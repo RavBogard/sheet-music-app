@@ -72,6 +72,11 @@ export function MobileRowCard({
 
     const isSong = !track.type || track.type === 'song'
     const isSection = track.type === 'header' || track.type === 'section'
+    // A bonded chart is keyed on songId (handleBindChart writes songId+fileId
+    // for ANY row type, incl. prayer/reading). A bonded NON-song row must read
+    // as a real chart-bearing row — full-prominence title, not the passive
+    // dimmed-italic label an unbonded prayer/reading still gets. (cowork #6 opt b)
+    const hasChart = Boolean(track.songId)
 
     useEffect(() => {
         setTitle(String(track.title ?? ''))
@@ -268,7 +273,10 @@ export function MobileRowCard({
                             <span className={cn(
                                 "truncate transition-colors group-hover:text-brand",
                                 isSection ? "text-xs font-bold uppercase tracking-[0.1em] text-brand/80"
-                                : !isSong ? "text-sm italic text-muted-foreground/80"
+                                // Bonded prayer/reading reads as a full chart-bearing row
+                                // (foreground, non-italic); only an UNBONDED non-song row
+                                // keeps the passive dimmed-italic label.
+                                : !isSong ? (hasChart ? "text-base font-medium text-foreground" : "text-sm italic text-muted-foreground/80")
                                 : "text-lg font-semibold text-foreground"
                             )}>
                                 {track.title || (
@@ -295,12 +303,13 @@ export function MobileRowCard({
                             ) : null}
                         </div>
 
-                        {track.songId ? (
+                        {!isSection && track.songId ? (
                             // Bound chart → click-through link that opens the
                             // chart file in a new tab via the existing
                             // Storage-backed serving route. stopPropagation
                             // keeps the click from bubbling to the card's
-                            // tap-to-edit handler.
+                            // tap-to-edit handler. Section/header rows never get
+                            // a chart affordance even with a stray songId.
                             <a
                                 href={
                                     parseFileId(

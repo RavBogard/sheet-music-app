@@ -6,7 +6,7 @@ import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { ListMusic, PlayCircle, Globe } from "lucide-react"
+import { ListMusic, PlayCircle, Globe, FileMusic } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { useState, useEffect, useRef, useMemo } from "react"
@@ -14,6 +14,89 @@ import { useRouter } from "next/navigation"
 import { logger } from "@/lib/logger"
 import { getDb } from "@/lib/local/schema"
 import { getTracksForSetlistClient } from "@/lib/client-tracks"
+
+/**
+ * A single queue row inside the perform-nav drawer. Extracted from the
+ * virtualized list so the bonded-chart affordance is unit-testable without the
+ * virtualizer/store. cowork #6 (option b): a flow item (prayer/reading/…) that
+ * carries a bonded chart is openable, so it must read as tappable — leading
+ * FileMusic glyph (shape cue, color-not-alone) + full opacity — not the passive
+ * dimmed label an unbonded flow item gets. Song rows are unchanged.
+ */
+export function QueueRow({
+    track,
+    globalIndex,
+    isCurrent,
+    onOpen,
+}: {
+    track: QueueItem
+    globalIndex: number
+    isCurrent: boolean
+    onOpen: () => void
+}) {
+    const isFlowItem = Boolean(track.trackType && track.trackType !== 'song')
+    const openableFlowItem = isFlowItem && Boolean(track.fileId)
+
+    return (
+        <button
+            onClick={onOpen}
+            aria-label={openableFlowItem ? `Open chart: ${track.name}` : undefined}
+            className={cn(
+                "flex items-center gap-4 h-full px-4 rounded-xl transition-all text-left w-full",
+                isCurrent
+                    ? "bg-blue-600 text-white shadow-lg"
+                    : "hover:bg-card text-muted-foreground hover:text-foreground",
+                // Only a NON-openable flow item stays dimmed; an openable one
+                // reads as tappable at full opacity.
+                isFlowItem && !openableFlowItem && !isCurrent && "opacity-60"
+            )}
+        >
+            <div className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
+                isCurrent ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+            )}>
+                {globalIndex + 1}
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <div className="flex items-center gap-2">
+                    {openableFlowItem && (
+                        <FileMusic
+                            aria-hidden="true"
+                            data-testid="queue-row-chart-glyph"
+                            className={cn("h-4 w-4 shrink-0", isCurrent ? "text-white" : "text-brand")}
+                        />
+                    )}
+                    <div className={cn(
+                        "font-bold truncate",
+                        isFlowItem ? "text-base" : "text-lg",
+                        isCurrent && "text-white"
+                    )}>
+                        {track.name}
+                    </div>
+                    {track.key && (
+                        <span className={cn(
+                            "px-2 py-0.5 rounded text-xs font-bold border shrink-0",
+                            isCurrent
+                                ? "bg-transparent border-white/30 text-white"
+                                : "bg-muted border-border text-muted-foreground"
+                        )}>
+                            {track.key}
+                        </span>
+                    )}
+                </div>
+                {isFlowItem && track.trackType && (
+                    <div className={cn(
+                        "text-xs uppercase tracking-wider mt-0.5",
+                        isCurrent ? "opacity-90 text-blue-100" : "opacity-70"
+                    )}>
+                        {track.trackType}
+                    </div>
+                )}
+            </div>
+            {isCurrent && <PlayCircle className="h-6 w-6 fill-white text-blue-600 shrink-0" />}
+        </button>
+    )
+}
 
 export function SetlistDrawer() {
     const router = useRouter()
@@ -295,8 +378,6 @@ export function SetlistDrawer() {
                                         const track = item.track!
                                         const globalIndex = item.globalIndex!
                                         const isCurrent = globalIndex === queueIndex
-                                        const isFlowItem = track.trackType && track.trackType !== 'song'
-
                                         return (
                                             <div
                                                 key={virtualRow.index}
@@ -310,57 +391,16 @@ export function SetlistDrawer() {
                                                     padding: '4px 8px', // Outer spacing
                                                 }}
                                             >
-                                                <button
-                                                    onClick={() => {
+                                                <QueueRow
+                                                    track={track}
+                                                    globalIndex={globalIndex}
+                                                    isCurrent={isCurrent}
+                                                    onOpen={() => {
                                                         if (!track.fileId) return
                                                         router.push(`/perform/${track.fileId}`)
                                                         setOpen(false)
                                                     }}
-                                                    className={cn(
-                                                        "flex items-center gap-4 h-full px-4 rounded-xl transition-all text-left w-full",
-                                                        isCurrent
-                                                            ? "bg-blue-600 text-white shadow-lg"
-                                                            : "hover:bg-card text-muted-foreground hover:text-foreground",
-                                                        isFlowItem && !isCurrent && "opacity-60"
-                                                    )}
-                                                >
-                                                    <div className={cn(
-                                                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
-                                                        isCurrent ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
-                                                    )}>
-                                                        {globalIndex + 1}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className={cn(
-                                                                "font-bold truncate",
-                                                                isFlowItem ? "text-base" : "text-lg",
-                                                                isCurrent && "text-white"
-                                                            )}>
-                                                                {track.name}
-                                                            </div>
-                                                            {track.key && (
-                                                                <span className={cn(
-                                                                    "px-2 py-0.5 rounded text-xs font-bold border shrink-0",
-                                                                    isCurrent
-                                                                        ? "bg-transparent border-white/30 text-white"
-                                                                        : "bg-muted border-border text-muted-foreground"
-                                                                )}>
-                                                                    {track.key}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        {isFlowItem && track.trackType && (
-                                                            <div className={cn(
-                                                                "text-xs uppercase tracking-wider mt-0.5",
-                                                                isCurrent ? "opacity-90 text-blue-100" : "opacity-70"
-                                                            )}>
-                                                                {track.trackType}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    {isCurrent && <PlayCircle className="h-6 w-6 fill-white text-blue-600 shrink-0" />}
-                                                </button>
+                                                />
                                             </div>
                                         )
                                     })}
