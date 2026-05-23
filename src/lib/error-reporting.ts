@@ -54,14 +54,34 @@ export function captureException(error: unknown, context?: ErrorContext): void {
     }
 }
 
+/** Sentry severity levels we use for non-exception captures. */
+export type CaptureLevel = 'info' | 'warning' | 'error'
+
 /**
  * Report a warning or notable event (not an error).
+ *
+ * `level` selects the Sentry severity (default `'warning'` to preserve the
+ * pre-PGR-03 behavior — every existing caller wrote `logger.warn` locally
+ * and emitted at Sentry's default level) and also chooses which `logger`
+ * method emits the structured log line locally.
  */
-export function captureMessage(message: string, context?: ErrorContext): void {
-    logger.warn(`[ErrorReport] ${context?.source || 'unknown'}${context?.location ? `:${context.location}` : ''}: ${message}`)
+export function captureMessage(
+    message: string,
+    context?: ErrorContext,
+    level: CaptureLevel = 'warning',
+): void {
+    const tag = `[ErrorReport] ${context?.source || 'unknown'}${context?.location ? `:${context.location}` : ''}: ${message}`
+    if (level === 'error') {
+        logger.error(tag)
+    } else if (level === 'info') {
+        logger.info(tag)
+    } else {
+        logger.warn(tag)
+    }
 
     if (Sentry) {
         Sentry.captureMessage(message, {
+            level,
             tags: {
                 source: context?.source,
                 location: context?.location,
