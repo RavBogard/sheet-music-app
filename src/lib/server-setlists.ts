@@ -4,26 +4,61 @@ import { logger } from "@/lib/logger"
 import { serializeSetlist } from "@/lib/server-auth"
 
 /**
+ * `eventDate` is stored with MIXED Firestore types across the `setlists`
+ * collection — Timestamp on newer rows, ISO String on older/cloned rows,
+ * absent on templates (VERIFY-1 2026-05-23). After `serializeSetlist` both
+ * Timestamp and String arrive here as ISO text, so we parse to epoch ms for
+ * in-memory ordering/windowing. Returns `null` when the field is absent or
+ * unparseable. Doing the eventDate selection in memory avoids Firestore's
+ * cross-type pitfalls: its canonical sort ranks Timestamp < String (so
+ * `.orderBy('eventDate','desc').limit(n)` drops recent Timestamp-typed
+ * services behind the String-typed ones) and a `.where('eventDate','>=')`
+ * range filter matches ONLY Timestamp-typed values. The `heal-eventdate-
+ * types.mjs` script removes the root cause by normalising the stored type.
+ */
+function eventInstant(row: { eventDate?: unknown }): number | null {
+    const v = row.eventDate
+    if (typeof v !== "string") return null
+    const t = Date.parse(v)
+    return Number.isNaN(t) ? null : t
+}
+
+/**
  * Fetch upcoming setlists server-side for instant SSR.
  * Returns the next 5 upcoming setlists.
  * v4.0: No private/public distinction — all setlists are accessible.
+ *
+ * Mixed-type hazard (VERIFY-1 2026-05-23): a Firestore
+ * `.where('eventDate','>=',<Date>)` range filter matches only
+ * Timestamp-typed `eventDate` values, so String-typed upcoming services
+ * were silently omitted. Fetch by the type-consistent `date` field and
+ * compute the upcoming window in memory so both representations count.
  */
 export async function getUpcomingSetlists() {
     try {
         initAdmin()
         const db = getFirestore()
 
-        const now = new Date()
-        now.setHours(0, 0, 0, 0)
+        const startOfToday = new Date()
+        startOfToday.setHours(0, 0, 0, 0)
+        const cutoff = startOfToday.getTime()
 
         const snap = await db
             .collection("setlists")
-            .where("eventDate", ">=", now)
-            .orderBy("eventDate", "asc")
-            .limit(5)
+            .orderBy("date", "desc")
+            .limit(MAX_SETLIST_FETCH)
             .get()
 
-        return snap.docs.map((d) => serializeSetlist(d.id, d.data()))
+        return snap.docs
+            .map((d) => serializeSetlist(d.id, d.data()))
+            .map((setlist) => ({ setlist, ms: eventInstant(setlist) }))
+            .filter(
+                (x): x is { setlist: (typeof x)["setlist"]; ms: number } =>
+                    x.ms !== null && x.ms >= cutoff,
+            )
+            .sort((a, b) => a.ms - b.ms)
+            .slice(0, 5)
+            .map((x) => x.setlist)
     } catch (error) {
         logger.warn("Server setlist fetch failed:", error)
         return []
@@ -87,6 +122,36 @@ export async function getAllSetlists(
                 ? Math.min(opts.limit, MAX_SETLIST_FETCH)
                 : 50
         const orderBy: AllSetlistsOrderBy = opts.orderBy ?? "date"
+
+        if (orderBy === "eventDate") {
+            // Mixed-type hazard (VERIFY-1 2026-05-23): a direct
+            // `.orderBy('eventDate','desc').limit(n)` returns ALL String-typed
+            // eventDates before ANY Timestamp-typed one (Firestore ranks
+            // Timestamp < String), so a `limit` window drops the most recent
+            // (Timestamp-typed) services entirely — e.g. Kabbalat Shabbat /
+            // Shavuot vanished from list_setlists. Fetch by the
+            // type-consistent `date` field up to MAX_SETLIST_FETCH, then order
+            // by eventDate in memory so nothing is dropped at the fetch layer.
+            // Rows with no parseable eventDate sort last. Robust until the
+            // collection exceeds MAX_SETLIST_FETCH (heal-eventdate-types.mjs
+            // removes the underlying type drift).
+            const snap = await db
+                .collection("setlists")
+                .orderBy("date", "desc")
+                .limit(MAX_SETLIST_FETCH)
+                .get()
+
+            const rows = snap.docs.map((d) => serializeSetlist(d.id, d.data()))
+            rows.sort((a, b) => {
+                const am = eventInstant(a)
+                const bm = eventInstant(b)
+                if (am === null && bm === null) return 0
+                if (am === null) return 1
+                if (bm === null) return -1
+                return bm - am
+            })
+            return rows.slice(0, limit)
+        }
 
         const snap = await db
             .collection("setlists")

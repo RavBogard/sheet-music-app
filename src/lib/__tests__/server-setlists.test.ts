@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // ── Mock state ──
 
@@ -76,27 +76,43 @@ describe('getUpcomingSetlists', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockShouldThrow = false
+        // Pin "now" so the upcoming-window filter is deterministic.
+        vi.useFakeTimers()
+        vi.setSystemTime(new Date('2026-05-22T08:00:00.000Z'))
+        // Mixed-type corpus, returned in `date desc` order (the fetch field).
+        // serializeSetlist has already turned Firestore Timestamps into ISO
+        // strings, so both Timestamp-origin and String-origin eventDates
+        // arrive here as ISO text. `str-later` carries the offset-form string
+        // that the old `.where('eventDate','>=')` range filter dropped.
         mockSnapshotDocs = [
-            makeDoc('s1', { name: 'Shabbat', eventDate: '2026-04-01' }),
-            makeDoc('s2', { name: 'Friday Night', eventDate: '2026-04-02' }),
+            makeDoc('past', { name: 'Last week', date: '2026-05-15', eventDate: '2026-05-15T12:00:00Z' }),
+            makeDoc('ts-soon', { name: 'Kabbalat Shabbat', date: '2026-05-21', eventDate: '2026-05-22T12:00:00Z' }),
+            makeDoc('str-later', { name: 'Shabbat Morning', date: '2026-05-02', eventDate: '2026-05-23T12:00:00.000-06:00' }),
+            makeDoc('undated', { name: 'Template', date: '2026-05-09' }),
         ]
     })
 
-    it('returns serialized setlists for upcoming setlists', async () => {
-        const result = await getUpcomingSetlists()
-
-        expect(result).toHaveLength(2)
-        expect(result[0]).toEqual({ id: 's1', name: 'Shabbat', eventDate: '2026-04-01' })
-        expect(result[1]).toEqual({ id: 's2', name: 'Friday Night', eventDate: '2026-04-02' })
+    afterEach(() => {
+        vi.useRealTimers()
     })
 
-    it('queries with correct filters (eventDate >= now, no isPublic filter)', async () => {
+    it('fetches by the type-consistent `date` field (not the mixed-type eventDate where-filter)', async () => {
         await getUpcomingSetlists()
+        // No `.where('eventDate','>=')` — that range filter matches only
+        // Timestamp-typed values and silently dropped String-typed services.
+        expect(mockWhere).not.toHaveBeenCalled()
+        expect(mockOrderBy).toHaveBeenCalledWith('date', 'desc')
+        expect(mockLimit).toHaveBeenCalledWith(200) // MAX_SETLIST_FETCH
+    })
 
-        expect(mockWhere).toHaveBeenCalledWith('eventDate', '>=', expect.any(Date))
-        expect(mockWhere).not.toHaveBeenCalledWith('isPublic', '==', true)
-        expect(mockOrderBy).toHaveBeenCalledWith('eventDate', 'asc')
-        expect(mockLimit).toHaveBeenCalledWith(5)
+    it('returns future events (Timestamp- and String-typed) ascending; excludes past + undated', async () => {
+        const result = await getUpcomingSetlists()
+        expect(result.map((s) => s.id)).toEqual(['ts-soon', 'str-later'])
+    })
+
+    it('includes a String-typed future eventDate the old where-filter dropped (VERIFY-1 regression)', async () => {
+        const result = await getUpcomingSetlists()
+        expect(result.map((s) => s.id)).toContain('str-later')
     })
 
     it('returns empty array when no matching setlists', async () => {
@@ -113,7 +129,7 @@ describe('getUpcomingSetlists', () => {
 
     it('backward-compat alias getUpcomingPublicSetlists works', async () => {
         const result = await getUpcomingPublicSetlists()
-        expect(result).toHaveLength(2)
+        expect(result.map((s) => s.id)).toEqual(['ts-soon', 'str-later'])
     })
 })
 
@@ -200,5 +216,38 @@ describe('getAllSetlists', () => {
     it('backward-compat alias getAllPublicSetlists works', async () => {
         const result = await getAllPublicSetlists()
         expect(result).toHaveLength(2)
+    })
+
+    it("orderBy:'eventDate' fetches by the consistent `date` field, then sorts eventDate in memory (mixed-type safe — VERIFY-1)", async () => {
+        // Returned in `date desc` order (the fetch field). eventDate order
+        // differs from date order: the most recent service has the LATEST
+        // eventDate but is NOT first by `date`. The old code's
+        // `.orderBy('eventDate','desc').limit(n)` would rank String-typed
+        // eventDates above the Timestamp-typed target and drop it past `limit`.
+        mockSnapshotDocs = [
+            makeDoc('s-recentwrite', { name: 'Old event, recent write', date: '2026-05-20', eventDate: '2026-03-21' }),
+            makeDoc('s-target', { name: 'Kabbalat Shabbat', date: '2026-05-19', eventDate: '2026-05-22' }),
+            makeDoc('s-mid', { name: 'Mid', date: '2026-05-18', eventDate: '2026-04-10' }),
+            makeDoc('s-undated', { name: 'Template', date: '2026-05-17' }),
+        ]
+        const result = await getAllSetlists({ orderBy: 'eventDate', limit: 2 })
+        // Fetch uses the consistent `date` field (NOT mixed-type eventDate) and
+        // pulls the whole corpus (MAX) so nothing drops at the fetch layer.
+        expect(mockOrderBy).toHaveBeenCalledWith('date', 'desc')
+        expect(mockOrderBy).not.toHaveBeenCalledWith('eventDate', 'desc')
+        expect(mockLimit).toHaveBeenCalledWith(200) // MAX_SETLIST_FETCH
+        // In-memory eventDate desc → target (5/22) first even though it is not
+        // first by `date`; sliced to the requested limit (the target survives).
+        expect(result.map((s) => s.id)).toEqual(['s-target', 's-mid'])
+    })
+
+    it("orderBy:'eventDate' sorts rows without a parseable eventDate last", async () => {
+        mockSnapshotDocs = [
+            makeDoc('a', { date: '2026-05-20', eventDate: '2026-05-10' }),
+            makeDoc('undated', { date: '2026-05-19' }),
+            makeDoc('b', { date: '2026-05-18', eventDate: '2026-05-22' }),
+        ]
+        const result = await getAllSetlists({ orderBy: 'eventDate' })
+        expect(result.map((s) => s.id)).toEqual(['b', 'a', 'undated'])
     })
 })

@@ -85,12 +85,20 @@ export async function listSetlists(
             : 20
     const offset = args.offset && args.offset > 0 ? args.offset : 0
 
-    // Fetch enough to cover offset+limit from the underlying query. The
-    // upstream cap is MAX_SETLIST_FETCH (200) — beyond that, callers must
-    // slice the date range via `from`/`to` instead of paging blindly.
+    // When a `from`/`to` date window is in play the filter must run BEFORE
+    // the page slice, so the fetch has to cover the whole corpus: a target
+    // inside the window but outside the first `offset+limit` rows by sort
+    // order would otherwise be dropped at the fetch layer (VERIFY-1
+    // 2026-05-23 #2 — limit-before-filter; combined with the mixed-type
+    // `eventDate` sort this made `list_setlists` return `[]` for upcoming
+    // services). Without a window, fetch only enough to cover the requested
+    // page. Upstream cap is MAX_SETLIST_FETCH (200).
     // Cowork §7.7 regression: David has 41 setlists; default 20 limit
     // missed 21 of them. Paging closes that gap.
-    const fetchSize = Math.min(offset + limit, MAX_SETLIST_FETCH)
+    const hasDateWindow = args.from !== undefined || args.to !== undefined
+    const fetchSize = hasDateWindow
+        ? MAX_SETLIST_FETCH
+        : Math.min(offset + limit, MAX_SETLIST_FETCH)
     const orderBy = args.sort === "recent_event" ? "eventDate" : "date"
     const all = await getAllSetlists({ limit: fetchSize, orderBy })
     const from = args.from ? Date.parse(args.from) : NaN

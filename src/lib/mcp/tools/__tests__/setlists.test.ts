@@ -131,6 +131,45 @@ describe("listSetlists", () => {
         })
     })
 
+    it("VERIFY-1 #2 limit-before-filter: a windowed target beyond the page is not dropped at the fetch layer", async () => {
+        // 26 rows in `date desc` order; only the LAST (oldest by `date`) falls
+        // inside the requested event-date window. The mock HONOURS the fetch
+        // `limit` (unlike the other tests' static fixture) so a too-small fetch
+        // — the pre-fix `min(offset+limit, MAX)` — would slice the target away
+        // before the date filter ever runs (returns []). The fix fetches the
+        // whole corpus (MAX) when a `from`/`to` window is present.
+        const corpus = [
+            ...Array.from({ length: 25 }, (_, i) => ({
+                id: `out${i}`,
+                name: `Out ${i}`,
+                date: `2026-05-${String(25 - i).padStart(2, "0")}T00:00:00.000Z`,
+                eventDate: `2026-04-${String(25 - i).padStart(2, "0")}T00:00:00.000Z`,
+                trackCount: 1,
+            })),
+            {
+                id: "target",
+                name: "Kabbalat Shabbat",
+                date: "2026-04-01T00:00:00.000Z", // oldest by date → last fetched
+                eventDate: "2026-05-22T00:00:00.000Z", // inside the May-22 window
+                trackCount: 12,
+            },
+        ]
+        mockGetAllSetlists.mockImplementation((opts?: { limit?: number }) =>
+            Promise.resolve(corpus.slice(0, opts?.limit ?? 50)),
+        )
+        const r = (await listSetlists("u", {
+            from: "2026-05-22",
+            to: "2026-05-23",
+            limit: 5,
+        })) as Array<{ id: string }>
+        expect(r.map((s) => s.id)).toEqual(["target"])
+        // The windowed fetch covered the whole corpus (MAX), not offset+limit.
+        expect(mockGetAllSetlists).toHaveBeenLastCalledWith({
+            limit: 200,
+            orderBy: "date",
+        })
+    })
+
     it("Cycle-5 C5C-011 — publishedAt ISO strings round-trip when present on the row", async () => {
         mockGetAllSetlists.mockResolvedValueOnce([
             {
