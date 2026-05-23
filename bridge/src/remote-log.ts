@@ -22,6 +22,31 @@ import * as admin from "firebase-admin"
 
 export type LogLevel = "error" | "warn"
 
+/**
+ * v10.0.5 — known-benign cold-boot lines that pollute `errCount`/`lastError`
+ * without representing a real fault. Filtered AT INGEST so the heartbeat verdict
+ * and `get_bridge_health` reflect SIGNAL not noise; the entries themselves stay
+ * in the ring buffer for forensics (you can still find them in the published
+ * `entries[]` if you go looking, but they don't move the counter).
+ *
+ * Conservative on purpose — match Node's exact `[DEPNNNN]` shape and the
+ * specific `entering STANDBY` wording the bridge writes itself. Adding more
+ * patterns here should require a real observed cold-boot baseline, not
+ * speculation.
+ */
+export function isStartupNoise(text: string): boolean {
+    if (!text) return false
+    // Node deprecation warnings: e.g. "(node:1234) [DEP0040] DeprecationWarning:
+    // The `punycode` module is deprecated." Matches the `[DEPNNNN]` bracket
+    // shape Node uses for every numbered deprecation.
+    if (/\[DEP\d{4}\]/.test(text)) return true
+    // Benign lease-takeover STANDBY entry written by index.ts when another
+    // bridge already holds the single-writer lease (the bridge correctly stands
+    // down — not an error).
+    if (text.includes("entering STANDBY")) return true
+    return false
+}
+
 export interface LogEntry {
     level: LogLevel
     msg: string
@@ -81,8 +106,16 @@ export class RemoteLogger {
             if (this.ring.length > this.ringSize) {
                 this.ring.splice(0, this.ring.length - this.ringSize)
             }
-            this.errCount++
-            this.lastError = { msg: text, ts }
+            // v10.0.5 — startup-noise filter (item 2). Keep the entry in the
+            // ring (forensics still see it) but do NOT bump errCount or
+            // lastError. Otherwise every cold boot's 8 Node `[DEPNNNN]` +
+            // STANDBY lines baseline `errCount ≥ 8` and the get_bridge_health
+            // "lastError" surface shows a deprecation warning instead of the
+            // most-recent real fault.
+            if (!isStartupNoise(text)) {
+                this.errCount++
+                this.lastError = { msg: text, ts }
+            }
             this.dirty = true
             this.scheduleFlush()
         } catch {
