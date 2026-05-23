@@ -24,6 +24,20 @@ import { randomUUID } from "crypto"
 import { X32Client } from "./x32-client"
 import { ConfigManager } from "./config"
 import { FirestoreTransport } from "./firestore-transport"
+import { RemoteLogger } from "./remote-log"
+import { BridgeControlDispatcher, collectDiagnostics } from "./bridge-control"
+import type { BridgeControl, MonitorConfig } from "./types"
+
+/**
+ * R4 — process-restart hook. main.ts (Electron) injects
+ * `() => { app.relaunch(); app.exit(0) }` via setRestartHandler so a remote
+ * `bridgeControl.action === "restart"` can relaunch the unattended bridge. Off
+ * Electron (dev / tests) it stays null and the dispatcher logs a no-op.
+ */
+let restartHandler: (() => void) | null = null
+export function setRestartHandler(fn: () => void): void {
+    restartHandler = fn
+}
 
 /**
  * Max age of the last successful monitor-live/state write before the bridge is
@@ -69,6 +83,7 @@ function getLocalIp(): string | null {
 }
 
 async function main() {
+    const startedAt = Date.now()
     const version = process.env.BRIDGE_VERSION || "2.0.0"
     console.log("╔═══════════════════════════════════════════╗")
     console.log(`║  CentralReform X32 Monitor Bridge v${version}  ║`)
@@ -77,6 +92,29 @@ async function main() {
 
     // 1. Load config from Firestore
     const config = new ConfigManager()
+    // The ConfigManager constructor initializes firebase-admin, so the admin SDK
+    // is available from here on.
+    const adminRef = config.getAdmin()
+    const db = adminRef.firestore()
+
+    // O1 — remote error/event ring buffer. Wrap console.error/warn to ALSO record
+    // into a bounded, rate-limited, fail-open Firestore log so a crash/error at
+    // hour 30 of the unattended window leaves a remote trace (the bridge's only
+    // diagnostics are otherwise console-only → local Electron UI). The wrap
+    // composes on top of main.ts's UI redirect: each saves the current console.*
+    // and calls it, so both the UI send and the ring capture happen.
+    const remoteLogger = new RemoteLogger(db)
+    const baseError = console.error.bind(console)
+    const baseWarn = console.warn.bind(console)
+    console.error = (...args: unknown[]) => {
+        baseError(...args)
+        try { remoteLogger.record("error", args.map(String).join(" ")) } catch { /* fail-open */ }
+    }
+    console.warn = (...args: unknown[]) => {
+        baseWarn(...args)
+        try { remoteLogger.record("warn", args.map(String).join(" ")) } catch { /* fail-open */ }
+    }
+
     const monitorConfig = await config.loadConfig()
 
     // 1b. Check for another running bridge instance
@@ -168,6 +206,20 @@ async function main() {
     }
 
     // 5. X32 reconnect handling — re-sync state when mixer comes back
+    // B1 — CRASH GUARD. An EventEmitter "error" with NO listener THROWS → uncaught
+    // → the bridge process crashes with no relaunch. The most plausible unattended
+    // trigger is exactly this window's scenario: the board powers off while the
+    // bridge keeps probing it, Windows delivers UDP ECONNRESET to the socket, and
+    // x32-client emits "error" (x32-client.ts socket "error" handler). Attaching a
+    // listener turns that fatal path into a swallowed log; the keepalive/health
+    // loop + reconnect machinery handle the actual recovery. Pure-additive, zero
+    // behavior change when healthy. Highest-value fix in this build.
+    x32.on("error", (err: Error) => {
+        console.error(
+            "[Bridge] X32 socket error (swallowed — reconnect loop will recover):",
+            err?.message ?? String(err),
+        )
+    })
     x32.on("disconnected", () => {
         console.warn("[Bridge] X32 connection lost — fader changes will not work until reconnected")
     })
@@ -231,11 +283,18 @@ async function main() {
         // cleans up commands; a standby must not claim "online" or delete another
         // bridge's pending docs.
         if (leaseHeld) {
+            // O2 — additive diagnostics (raw socketAlive, stateAgeMs, unconfirmed
+            // count, last OSC rx / state write, uptime, queue depth, error count +
+            // last error). Pure reads of state the bridge already holds; lets a
+            // remote observer split socket-dead from state-wedged at a glance.
+            const diagnostics = collectDiagnostics({ x32, transport, logger: remoteLogger, startedAt })
+
             // Consumers (iPad / MCP) read the cross-checked health.
             await config.writeHeartbeat({
                 x32Connected: healthy,
                 clients,
                 localIp: currentIp,
+                diagnostics,
             })
 
             // Clean up stale commands (safety net) + TTL-sweep acks.
@@ -265,6 +324,34 @@ async function main() {
         leaseHeld = held
     }, LEASE_RENEW_MS)
 
+    // R1 — remote control & diagnostics channel. The dispatcher rides the EXISTING
+    // config listener (below): an admin writes config/monitor.bridgeControl
+    // {action, nonce, ...} and the bridge dispatches by action, deduped by nonce.
+    // This is the only remote lever for a box that is ON but physically unreachable.
+    const controlDispatcher = new BridgeControlDispatcher({
+        x32,
+        transport,
+        logger: remoteLogger,
+        getMonitorBuses: () => config.getConfig().monitorBuses,
+        // R4 — relaunch via the Electron app (injected by main.ts); no-op off Electron.
+        restart: () => {
+            if (restartHandler) restartHandler()
+            else console.warn("[Control] restart requested but no restart handler (non-Electron context)")
+        },
+        // O4 — selftest snapshot target (valid 2-segment doc path). Fail-open.
+        writeSelftest: async (snapshot) => {
+            try {
+                await db.doc("monitor-live/selftest").set({
+                    ...snapshot,
+                    updatedAt: adminRef.firestore.FieldValue.serverTimestamp(),
+                })
+            } catch (err) {
+                console.error("[Control] selftest write failed:", (err as Error).message)
+            }
+        },
+        startedAt,
+    })
+
     // 6. Watch for config changes
     config.startWatching()
 
@@ -281,6 +368,18 @@ async function main() {
         }
     })
 
+    // R1 — dispatch the remote control channel on every config snapshot. The
+    // bridge's own 60s heartbeat re-fires this listener with the SAME
+    // bridgeControl, so the dispatcher's nonce dedup (not this callback) is what
+    // makes it idempotent. bridgeControl is bridge-only, read off the live doc via
+    // a cast rather than widening the canonical MonitorConfig.
+    config.onChange((newConfig) => {
+        const ctrl = (newConfig as MonitorConfig & { bridgeControl?: BridgeControl }).bridgeControl
+        void controlDispatcher.handle(ctrl).catch((err) =>
+            console.error("[Control] bridgeControl dispatch failed:", (err as Error).message),
+        )
+    })
+
     // Status logging
     setInterval(() => {
         console.log(`[Bridge] Monitor Active | X32: ${x32.isConnected() ? "✓" : "✗"}`)
@@ -292,6 +391,7 @@ async function main() {
         clearInterval(heartbeatInterval)
         clearInterval(leaseInterval)
         transport.stop()
+        remoteLogger.stop()
         await config.writeOffline()
         // B10 — release the lease so a standby bridge can take over immediately
         // (rather than waiting out the TTL).

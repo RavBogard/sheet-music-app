@@ -99,4 +99,18 @@ describe("FirestoreTransport.isCommandAuthorized — per-user role cache (BR-01)
         // Both attempts re-read because the error was not cached.
         expect(getSpy).toHaveBeenCalledTimes(2)
     })
+
+    it("F1: a HUNG users/{uid} read times out, fails closed, and is NOT cached", async () => {
+        // A read that never resolves must not stall the command batch forever.
+        getSpy.mockReturnValue(new Promise(() => {}))
+        const p = authorize({ type: "set_matrix_fader", uid: "u-hang", matrixIndex: 1, value: 0.5, createdAt: Date.now() })
+        // Past the 3s ENGINEER_READ_TIMEOUT_MS the race rejects → fail closed.
+        await vi.advanceTimersByTimeAsync(3_001)
+        expect(await p).toBe(false)
+        // The timeout was not cached, so the next command re-reads.
+        const p2 = authorize({ type: "set_matrix_fader", uid: "u-hang", matrixIndex: 1, value: 0.5, createdAt: Date.now() })
+        await vi.advanceTimersByTimeAsync(3_001)
+        expect(await p2).toBe(false)
+        expect(getSpy).toHaveBeenCalledTimes(2)
+    })
 })

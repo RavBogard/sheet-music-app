@@ -67,6 +67,7 @@ import {
     assignMonitorBus,
     unassignMonitorBus,
 } from "./monitor-observability"
+import { getBridgeHealth } from "./bridge-health"
 import {
     uploadChart,
     scrapeChartFromUrl,
@@ -2112,7 +2113,7 @@ export function registerMonitorTools(server: McpServer): void {
         "get_command_status",
         {
             description:
-                "Check the result of a monitor command you issued (set_bus_fader / set_send_level / set_send_mute / set_matrix_fader / set_matrix_mute). Those write tools are fire-and-forget and return `confidence:\"queued\"` — they do NOT tell you whether the X32 actually applied the change. Pass the `commandId` they returned to read the bridge's confirmation: `status` is 'applied' (the desk confirmed the value), 'rejected' (the bridge refused it), 'timeout' (the desk never confirmed), 'pending' (no confirmation yet — the bridge hasn't reported), or 'unknown' (a result exists but in an unrecognized shape). When the bridge confirmed a value it rides on `confirmedValue`; rejections/timeouts carry a `reason`; `at` is the ISO time of the ack; `found` is whether a result record existed. Same access as the other monitor read tools (admin, sound engineer, or anyone with an assigned bus). NOTE: the bridge ack surface ships in a later monitor release — until then every commandId reads `status:'pending', found:false` (the honest answer; there is no confirmation channel yet). Re-reading get_mix immediately after a write is the interim confirmation.",
+                "Check the result of a monitor command you issued (set_bus_fader / set_send_level / set_send_mute / set_matrix_fader / set_matrix_mute). Those write tools are fire-and-forget and return `confidence:\"queued\"` — they do NOT tell you whether the X32 actually applied the change. Pass the `commandId` they returned to read the bridge's confirmation: `status` is 'applied' (the desk confirmed the value), 'rejected' (the bridge refused it), 'timeout' (the desk never confirmed), 'pending' (no confirmation yet — the bridge hasn't reported), or 'unknown' (a result exists but in an unrecognized shape). When the bridge confirmed a value it rides on `confirmedValue`; rejections/timeouts carry a `reason`; `at` is the ISO time of the ack; `found` is whether a result record existed. Same access as the other monitor read tools (admin, sound engineer, or anyone with an assigned bus). The bridge ack-writer is LIVE (shipped in the v10.0.3 bridge release), so a real `applied`/`rejected`/`timeout` ack normally appears within a couple of seconds; `status:'pending', found:false` means the bridge hasn't reported yet (or is offline — check get_bridge_health). Acks are TTL-swept after ~5 minutes, so read the status soon after issuing the command.",
             inputSchema: {
                 commandId: z
                     .string()
@@ -2184,6 +2185,17 @@ export function registerMonitorTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await unassignMonitorBus(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "get_bridge_health",
+        {
+            description:
+                "Probe the X32 monitor bridge's health remotely (admin / band_leader). One call returns a DERIVED `alive` verdict computed from how long ago the bridge last checked in — because the raw `status`/`x32Connected` fields are last-write-wins with NO expiry and keep reading \"online\"/true for hours after the bridge has actually died. Use this (not the raw fields) to know whether the bridge is up. Returns `{alive, lastSeenAgeS, stateAgeS, stateStale, leaseExpired, status, x32Connected, socketAlive, unconfirmedCount, queueDepth, version, clients, uptimeMs, errCount, lastError, summary}`. `alive` = last heartbeat within ~2 minutes; `stateStale` = the live mixer-values snapshot is older than ~90s (values not current); `socketAlive`/`unconfirmedCount`/`queueDepth`/`uptimeMs`/`errCount`/`lastError` are the v10.0.4 diagnostics (null against an older bridge) that split socket-dead from state-wedged and surface the most recent error. `summary` is a one-line human verdict.",
+            inputSchema: {},
+        },
+        async (_args, extra) =>
+            jsonResult(await getBridgeHealth(uidFrom(extra))),
     )
 }
 

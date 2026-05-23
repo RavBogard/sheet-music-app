@@ -10,11 +10,37 @@ import { app, BrowserWindow, Tray, Menu, ipcMain, shell, nativeImage } from 'ele
 import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
 import * as fs from 'fs';
-import { main as startBridge, getBridgeStatus } from './index';
+import { main as startBridge, getBridgeStatus, setRestartHandler } from './index';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let bridgeStarted = false;
+
+// ─── B1: last-resort crash guards (v10.0.4) ───
+//
+// An uncaught exception or unhandled rejection in the Electron main process
+// otherwise kills the bridge with NO relaunch — fatal for a box that is ON but
+// physically unreachable for ~2 days. Log it (captured by the O1 remote ring
+// once that's up) and DO NOT exit: staying up (even degraded) beats dying, and
+// the remote bridgeControl "restart" lever exists for a genuinely wedged process.
+process.on('uncaughtException', (err) => {
+    console.error('[Bridge] Uncaught exception (kept alive):', err?.stack || err?.message || String(err));
+});
+process.on('unhandledRejection', (reason) => {
+    console.error(
+        '[Bridge] Unhandled promise rejection (kept alive):',
+        reason instanceof Error ? (reason.stack || reason.message) : String(reason),
+    );
+});
+
+// R4 — hand index.ts the Electron relaunch lever so a remote
+// bridgeControl.action === "restart" can relaunch the unattended bridge.
+setRestartHandler(() => {
+    console.warn('[Bridge] Remote restart requested — relaunching the process.');
+    (app as any).isQuiting = true;
+    app.relaunch();
+    app.exit(0);
+});
 
 // ─── Credential storage (Bug#1 fix: durable, install-path-independent) ───
 //

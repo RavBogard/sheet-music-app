@@ -774,6 +774,31 @@ export class X32Client extends EventEmitter {
     }
 
     /**
+     * O2 — epoch ms of the last inbound OSC message (any reply or echo), or 0 if
+     * none yet. Published in the heartbeat as `lastOscRxAt` so a remote observer
+     * can tell a desk that is actually answering from one that has gone silent
+     * (distinct from the cached-state-write path, which advances regardless).
+     */
+    getLastMessageAt(): number {
+        return this.lastMessageAt
+    }
+
+    /**
+     * R3 — remote reconnect lever. Force the socket back into the reconnect loop
+     * without a process restart: flip to disconnected, emit "disconnected" (so
+     * index.ts logs it), and kick the existing capped-backoff `attemptReconnect`.
+     * If a reconnect is already in flight, `attemptReconnect` self-dedups (the
+     * `reconnecting` guard), so calling this repeatedly is safe. Recovers a
+     * wedged socket that the 20s health check hasn't yet caught.
+     */
+    forceReconnect(): void {
+        console.warn("[X32] Forced reconnect requested (remote bridgeControl)")
+        this.connected = false
+        this.emit("disconnected")
+        void this.attemptReconnect()
+    }
+
+    /**
      * Discover an X32 on the local network by broadcasting /xinfo to the
      * subnet broadcast address on port 10023. Returns the IP + model name
      * of the first X32 that responds, or null on timeout.

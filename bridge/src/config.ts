@@ -8,6 +8,7 @@
 
 import * as admin from "firebase-admin"
 import { MonitorConfig } from "./types"
+import type { BridgeDiagnostics } from "./bridge-control"
 
 const DEFAULT_CONFIG: MonitorConfig = {
     bridgeUrl: "wss://localhost:9001",
@@ -22,6 +23,9 @@ export class ConfigManager {
     private config: MonitorConfig = DEFAULT_CONFIG
     private unsubscribe: (() => void) | null = null
     private listeners: Array<(config: MonitorConfig, prev: MonitorConfig) => void> = []
+    // R5 — set true by stopWatching so a pending resubscribe-on-error timer does
+    // not re-attach the listener after a graceful shutdown.
+    private watchStopped = false
 
     constructor() {
         // Initialize Firebase Admin
@@ -58,6 +62,7 @@ export class ConfigManager {
     }
 
     startWatching(): void {
+        this.watchStopped = false
         this.unsubscribe = this.db.collection("config").doc("monitor")
             .onSnapshot((snap) => {
                 if (snap.exists) {
@@ -69,10 +74,24 @@ export class ConfigManager {
                 }
             }, (err) => {
                 console.error("[Config] Watch error:", err.message)
+                // R5 — the remote-recovery channel (bridgeControl) rides THIS
+                // listener; if it dies silently the bridge stops reacting to config
+                // changes AND to recovery commands for the rest of the unattended
+                // window. Firestore drops the listener on error, so re-establish it
+                // after a short delay (mirrors the command-listener resubscribe in
+                // firestore-transport.ts). Clear the stale handle first so a later
+                // stopWatching can't invoke a dead unsubscribe.
+                this.unsubscribe = null
+                if (!this.watchStopped) {
+                    setTimeout(() => {
+                        if (!this.watchStopped) this.startWatching()
+                    }, 5000)
+                }
             })
     }
 
     stopWatching(): void {
+        this.watchStopped = true
         if (this.unsubscribe) {
             this.unsubscribe()
             this.unsubscribe = null
@@ -147,20 +166,44 @@ export class ConfigManager {
         }
     }
 
-    /** Write heartbeat to Firestore. Fire-and-forget with timeout. */
+    /**
+     * Write heartbeat to Firestore. Fire-and-forget with timeout.
+     *
+     * O2 (v10.0.4): optional `diagnostics` adds extra `bridge.*` map fields so a
+     * remote observer can split socket-dead from state-wedged and see uptime /
+     * queue-depth / error-count / last-error at a glance. The existing keys
+     * (status / x32Connected / clients / version / lastSeen / localIp) keep their
+     * exact semantics — consumers depend on them — these are purely additive.
+     */
     async writeHeartbeat(data: {
         x32Connected: boolean
         clients: number
         localIp: string | null
+        diagnostics?: BridgeDiagnostics
     }): Promise<void> {
         try {
-            const update = {
+            const update: Record<string, unknown> = {
                 "bridge.lastSeen": admin.firestore.FieldValue.serverTimestamp(),
                 "bridge.status": "online",
                 "bridge.x32Connected": data.x32Connected,
                 "bridge.clients": data.clients,
                 "bridge.localIp": data.localIp,
                 "bridge.version": process.env.BRIDGE_VERSION || "2.0.0",
+            }
+            const d = data.diagnostics
+            if (d) {
+                // All values are pre-sanitized for Firestore by collectDiagnostics
+                // (no Infinity/NaN/undefined; null is allowed).
+                update["bridge.socketAlive"] = d.socketAlive
+                update["bridge.stateAgeMs"] = d.stateAgeMs
+                update["bridge.unconfirmedCount"] = d.unconfirmedCount
+                update["bridge.lastOscRxAt"] = d.lastOscRxAt
+                update["bridge.lastStateWriteAt"] = d.lastStateWriteAt
+                update["bridge.startedAt"] = d.startedAt
+                update["bridge.uptimeMs"] = d.uptimeMs
+                update["bridge.queueDepth"] = d.queueDepth
+                update["bridge.errCount"] = d.errCount
+                update["bridge.lastError"] = d.lastError
             }
             // 5s timeout — never let heartbeat block the bridge
             await Promise.race([

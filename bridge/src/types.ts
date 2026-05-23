@@ -95,3 +95,25 @@ export interface X32State {
     buses: BusInfo[]
     matrices: MatrixInfo[]
 }
+
+/**
+ * Remote bridge control & diagnostics channel (v10.0.4 — R1). An admin writes
+ * this to `config/monitor.bridgeControl` (via the app / Firebase MCP); the
+ * bridge's EXISTING config-snapshot listener picks it up, dispatches by
+ * `action`, and dedups by `nonce` (a nonce it already ran is ignored). This is
+ * the only remote lever for a box that is ON but physically unreachable.
+ *
+ *   - resync    — re-read the desk + re-publish state (no socket churn). Safest.
+ *   - reconnect — drop + re-establish the X32 socket (recovers a wedged socket).
+ *   - restart   — relaunch the bridge process (last resort; brief outage).
+ *   - selftest  — write a fresh diagnostic snapshot to monitor-live/diag/selftest.
+ *
+ * Bridge-only: not part of the canonical app↔bridge MonitorConfig contract, so
+ * it is read off the live config doc via a cast rather than widening MonitorConfig.
+ */
+export interface BridgeControl {
+    action: "resync" | "reconnect" | "restart" | "selftest"
+    nonce: string
+    requestedAt?: FirestoreDate
+    requestedBy?: string
+}

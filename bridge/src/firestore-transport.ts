@@ -107,6 +107,11 @@ export class FirestoreTransport {
     // the authorization logic in isCommandAuthorized is unchanged.
     private engineerCache: Map<string, { isEngineer: boolean; expiresAt: number }> = new Map();
     private readonly ENGINEER_CACHE_TTL_MS = 30_000;
+    // F1 — cap the users/{uid} role read so a hung Firestore read (e.g. a cache
+    // miss while the network is marginal) can't stall the whole command batch on
+    // an unattended box. On timeout the read fails CLOSED (engineer=false) and is
+    // NOT cached, so the next command retries — identical to the read-error path.
+    private readonly ENGINEER_READ_TIMEOUT_MS = 3_000;
 
     constructor(x32: X32Client, config: ConfigManager, isActiveBridge: () => boolean = () => true) {
         this.x32 = x32
@@ -204,6 +209,24 @@ export class FirestoreTransport {
         return this.lastSuccessfulStateWriteAt === 0
             ? Infinity
             : Date.now() - this.lastSuccessfulStateWriteAt
+    }
+
+    /**
+     * O2 — epoch ms of the last SUCCESSFUL state write (0 if never). Published in
+     * the heartbeat as `lastStateWriteAt` so a remote observer sees the absolute
+     * time, not just the relative age. Pairs with getStateAgeMs.
+     */
+    getLastStateWriteAt(): number {
+        return this.lastSuccessfulStateWriteAt
+    }
+
+    /**
+     * O2 — current depth of the in-memory command queue waiting to be drained.
+     * A growing queue is the clean "active bridge wedged / commands not draining"
+     * signal that the standby/lease caveat otherwise hides (OBSERVABILITY Q4/Q5).
+     */
+    getQueueDepth(): number {
+        return this.pendingCommandQueue.length
     }
 
     /**
@@ -547,7 +570,18 @@ export class FirestoreTransport {
 
         let isEngineer = false
         try {
-            const userDoc = await this.db.collection("users").doc(uid).get()
+            // F1 — race the read against a timeout so a hung get() can't block the
+            // command batch indefinitely. A rejection (timeout OR error) falls
+            // through to the catch → fail closed, not cached.
+            const userDoc = await Promise.race([
+                this.db.collection("users").doc(uid).get(),
+                new Promise<never>((_, reject) =>
+                    setTimeout(
+                        () => reject(new Error("users read timeout")),
+                        this.ENGINEER_READ_TIMEOUT_MS,
+                    ),
+                ),
+            ])
             if (userDoc.exists) {
                 const userData = userDoc.data()
                 if (userData?.role === "admin" || userData?.soundEngineer === true) {

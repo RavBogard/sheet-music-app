@@ -74,10 +74,11 @@ export interface GetCommandStatusArgs {
  * engineer OR has-an-assigned-bus). Never throws — a malformed or absent ack
  * degrades to a clean `pending`/`unknown` result via `coerceCommandAck`.
  *
- * **Live-data dependency:** the bridge ack-write ships in Lane P2-A and goes
- * live only after the next gated bridge release (~5/29). Until then this
- * returns `{status:'pending', found:false}` for every commandId — which is the
- * honest answer (no confirmation surface exists yet).
+ * **Ack surface is LIVE** (the bridge ack-writer shipped in the v10.0.3 bridge
+ * release; see bridge/src/ack-writer.ts). A real `applied`/`rejected`/`timeout`
+ * ack normally lands within a couple of seconds of the command; until the bridge
+ * reports (or if it's offline) this returns `{status:'pending', found:false}`.
+ * Acks are TTL-swept after ~5 minutes, so read the status promptly.
  */
 export async function getCommandStatus(
     uid: string,
