@@ -1,0 +1,94 @@
+{
+  "probedAt": "2026-05-23T21:12:26.907Z",
+  "bucket": "crcmusiccharts.firebasestorage.app",
+  "rows": [
+    {
+      "ok": true,
+      "sa": "firebase-admin",
+      "fileId": "6ca6e82c-e3be-4e6b-b6c1-63f60b3ac5cc",
+      "title": "Eili Eili (Zahavi)",
+      "objectName": "library/6ca6e82c-e3be-4e6b-b6c1-63f60b3ac5cc.pdf",
+      "versionCount": 1,
+      "currentExists": false,
+      "versions": [
+        {
+          "generation": 1779305933358550,
+          "timeCreated": "2026-05-20T19:38:53.363Z",
+          "timeDeleted": "2026-05-23T14:04:14.468Z",
+          "updated": "2026-05-20T19:38:53.363Z",
+          "size": "818041",
+          "md5Hash": "4WT6mkd0Y61OqXuctz40tg==",
+          "crc32c": "EauZLQ==",
+          "contentType": "application/pdf",
+          "isCurrent": false
+        }
+      ]
+    },
+    {
+      "ok": true,
+      "sa": "firebase-admin",
+      "fileId": "ae83649a-718d-4fc4-ace8-82a9f6c2a400",
+      "title": "Shiru Ladonai (Neimark-Gumer)",
+      "objectName": "library/ae83649a-718d-4fc4-ace8-82a9f6c2a400.pdf",
+      "versionCount": 1,
+      "currentExists": false,
+      "versions": [
+        {
+          "generation": 1779306119500106,
+          "timeCreated": "2026-05-20T19:41:59.506Z",
+          "timeDeleted": "2026-05-23T14:04:24.619Z",
+          "updated": "2026-05-20T19:41:59.506Z",
+          "size": "325620",
+          "md5Hash": "Y8M1RgChEG2KrywoumFUHA==",
+          "crc32c": "rGgKVA==",
+          "contentType": "application/pdf",
+          "isCurrent": false
+        }
+      ]
+    },
+    {
+      "ok": true,
+      "sa": "firebase-admin",
+      "fileId": "72a7aa6a-7b08-4c78-862c-197bbffb9515",
+      "title": "Adon Olam (Folk)",
+      "objectName": "library/72a7aa6a-7b08-4c78-862c-197bbffb9515.pdf",
+      "versionCount": 1,
+      "currentExists": false,
+      "versions": [
+        {
+          "generation": 1779306347679435,
+          "timeCreated": "2026-05-20T19:45:47.682Z",
+          "timeDeleted": "2026-05-23T14:04:15.839Z",
+          "updated": "2026-05-20T19:45:47.682Z",
+          "size": "388911",
+          "md5Hash": "RX2D+DZ2tJNg77/q6jAUiw==",
+          "crc32c": "2TPItw==",
+          "contentType": "application/pdf",
+          "isCurrent": false
+        }
+      ]
+    },
+    {
+      "ok": true,
+      "sa": "firebase-admin",
+      "fileId": "c9efe661-9eb8-42fc-89d5-13f026629dc7",
+      "title": "Adon Olam (Hitman-Ben-Hur)/medley",
+      "objectName": "library/c9efe661-9eb8-42fc-89d5-13f026629dc7.pdf",
+      "versionCount": 1,
+      "currentExists": false,
+      "versions": [
+        {
+          "generation": 1779306350220997,
+          "timeCreated": "2026-05-20T19:45:50.224Z",
+          "timeDeleted": "2026-05-23T14:04:29.240Z",
+          "updated": "2026-05-20T19:45:50.224Z",
+          "size": "1114724",
+          "md5Hash": "9/rqiWbGwYlu8nVciHQ5gA==",
+          "crc32c": "iWmy4Q==",
+          "contentType": "application/pdf",
+          "isCurrent": false
+        }
+      ]
+    }
+  ]
+}
