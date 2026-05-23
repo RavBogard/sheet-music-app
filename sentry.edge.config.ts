@@ -1,5 +1,5 @@
 /**
- * Sentry server-side configuration.
+ * Sentry edge-runtime configuration (Middleware, Edge Functions).
  * Activate by setting NEXT_PUBLIC_SENTRY_DSN in your environment.
  */
 import * as Sentry from "@sentry/nextjs"

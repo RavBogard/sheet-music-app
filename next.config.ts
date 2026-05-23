@@ -75,6 +75,18 @@ const combinedConfig = withBundleAnalyzer(nextConfig);
 
 export default process.env.NEXT_PUBLIC_SENTRY_DSN
   ? withSentryConfig(combinedConfig, {
+      // Sentry org/project — sourced from Vercel marketplace integration env
+      // vars (SENTRY_ORG / SENTRY_PROJECT) so they stay in sync if the org or
+      // project slug ever changes.  Fall back to the known slugs so local
+      // `next build --webpack` works without the marketplace env present.
+      org: process.env.SENTRY_ORG || "centralreform",
+      project: process.env.SENTRY_PROJECT || "sentry-orange-island",
+      // Source-map upload auth.  Token only set in Vercel build env; locally
+      // the upload step silently skips, which is the expected dev behavior.
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      // Upload a wider net of client chunks so stack traces resolve cleanly
+      // even when chunks come from outside the standard Next.js build dirs.
+      widenClientFileUpload: true,
       silent: true,
       sourcemaps: { disable: false },
       disableLogger: true,
