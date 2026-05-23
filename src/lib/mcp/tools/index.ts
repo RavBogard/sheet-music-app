@@ -69,6 +69,12 @@ import {
 } from "./monitor-observability"
 import { getBridgeHealth } from "./bridge-health"
 import {
+    bridgeResync,
+    bridgeReconnect,
+    bridgeSelftest,
+    bridgeRestart,
+} from "./bridge-recovery"
+import {
     uploadChart,
     scrapeChartFromUrl,
     saveScrapedChart,
@@ -2196,6 +2202,53 @@ export function registerMonitorTools(server: McpServer): void {
         },
         async (_args, extra) =>
             jsonResult(await getBridgeHealth(uidFrom(extra))),
+    )
+
+    // v10.0.5 item 3 — bridge-recovery wrappers. Each writes one row of
+    // config/monitor.bridgeControl (action + server-minted nonce + serverTimestamp
+    // requestedAt + requestedBy). The bridge's existing dispatcher picks it up on
+    // the next snapshot. Trusted-leader for the safe ops; admin-only for restart.
+    server.registerTool(
+        "bridge_resync",
+        {
+            description:
+                "Tell the X32 monitor bridge to re-read the desk and re-publish state without dropping the socket — non-disruptive recovery for when monitor-live/state has wedged but the bridge itself is alive. Trusted-leader (admin / band_leader). Server-mints the dedup nonce + requestedAt so the bridge's nonce-dedup + cross-process stale-request guards apply automatically. Returns `{ok:true, action:'resync', nonce, note}`; verify outcome with get_bridge_health (stateAgeS should drop within a few seconds).",
+            inputSchema: {},
+        },
+        async (_args, extra) => jsonResult(await bridgeResync(uidFrom(extra))),
+    )
+
+    server.registerTool(
+        "bridge_reconnect",
+        {
+            description:
+                "Tell the X32 monitor bridge to drop and re-establish the X32 socket — recovers a wedged socket where x32Connected reads true but no commands apply. Trusted-leader (admin / band_leader). Brief gap (~1s) where fader writes won't land; existing fader values stay on the desk. Server-mints nonce + requestedAt. Returns `{ok:true, action:'reconnect', nonce, note}`; verify with get_bridge_health.",
+            inputSchema: {},
+        },
+        async (_args, extra) =>
+            jsonResult(await bridgeReconnect(uidFrom(extra))),
+    )
+
+    server.registerTool(
+        "bridge_selftest",
+        {
+            description:
+                "Ask the X32 monitor bridge to write a fresh diagnostic snapshot to monitor-live/selftest — captures socketAlive, queueDepth, unconfirmedCount, uptimeMs, errCount, lastError without affecting the desk. Trusted-leader (admin / band_leader). Non-disruptive. Server-mints nonce + requestedAt. Returns `{ok:true, action:'selftest', nonce, note}`; read monitor-live/selftest to see the result.",
+            inputSchema: {},
+        },
+        async (_args, extra) =>
+            jsonResult(await bridgeSelftest(uidFrom(extra))),
+    )
+
+    server.registerTool(
+        "bridge_restart",
+        {
+            description:
+                "Relaunch the X32 monitor bridge process (Electron app.relaunch + exit) — last-resort recovery when resync / reconnect haven't unwedged the bridge. ADMIN ONLY (band_leader cannot call this) — restart causes a brief monitor outage (~3–8s) and is the most disruptive recovery action. Server-mints nonce + requestedAt so the bridge's cross-process boot-loop guards (item 1 of v10.0.5) catch any post-restart re-fire. Returns `{ok:true, action:'restart', nonce, note}`; verify alive via get_bridge_health after a few seconds.",
+            inputSchema: {},
+        },
+        async (_args, extra) =>
+            jsonResult(await bridgeRestart(uidFrom(extra))),
     )
 }
 
