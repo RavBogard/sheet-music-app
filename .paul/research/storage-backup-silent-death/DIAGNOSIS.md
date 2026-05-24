@@ -1,227 +1,237 @@
 # Storage-backup silent-death — DIAGNOSIS
 
-**Date:** 2026-05-24
+**Date:** 2026-05-24 (amended 2026-05-24T22:30Z post Vercel-log probe)
 **Lane:** `storage-backup-silent-death-probe` (coder-3)
-**Base SHA:** `1aea77464`
-**Status:** Phase 1 diagnose — root cause identified.
+**Base SHA:** `1aea77464` (initial diagnosis shipped at `36ca5bccf`)
+**Status:** Phase 1 diagnose — **AMENDED.** First-pass hypothesis was wrong; real root cause identified via Vercel log probe.
 
-## TL;DR
+## TL;DR (amended)
 
-The storage-backup cron is **not silently dying**. It's **silently no-op'ing**
-because the gating env var `CRC_BACKUP_DRIVE_FOLDER_ID` is unset in Vercel
-prod, and the dormant code-path returns BEFORE writing any Firestore
-heartbeat. PGR-03 then sees a missing `config/storageBackup` doc and
-fail-opens silently. The observability gap masquerades as a
-silent-cron-death failure.
+The storage-backup cron **IS firing nightly** and **IS reaching the real
+mirror code** (not the dormant path). On the 2026-05-24T05:00Z tick — the
+**only** real-mirror tick to have run since Daniel set
+`CRC_BACKUP_DRIVE_FOLDER_ID` in Vercel env ~1d ago — Google Drive's
+`/upload/drive/v3/files` endpoint returned **HTTP 400 Bad Request** on
+the very first `uploadBinaryFile` call. Mirror's per-row try/catch swallowed
+the error, incremented `failed`, and moved to the next row. With gaxios's
+3-retries × exponential backoff per row × hundreds of `library_index`
+active rows, the function blew past its `maxDuration: 300s` and **Vercel
+killed it externally → `recordStorageBackupRun` never executed →
+`writeStorageBackupError` never executed → zero Firestore writes per tick
+→ PGR-03 fail-opens on the missing-doc → silent.**
 
-The fix is to **always write a heartbeat** to `config/storageBackup` on
-every tick (dormant or active), and to teach PGR-03 to alarm on the new
-absent-but-deploy-aged signal.
+The fix from `36ca5bccf` (alarm tree + `lastTickAt` heartbeat) is still
+correct defense-in-depth: once a tick survives long enough to write
+`config/storageBackup`, the new `tickStale` alarm catches a recurrence
+of this exact failure mode. But it does NOT solve the underlying problem
+— a real backup needs to fix BOTH the Drive 400 AND the externally-killed-
+function silent-death gap. Both are NEW dispatched lane scope, not this
+lane's continuation.
 
-## Evidence
+## Evidence (amended)
 
-### vercel.json HAS the cron entry
+### vercel.json HAS the cron entry (unchanged from v1)
 
-`vercel.json` line 32-38 (verified at `1aea77464`):
+`vercel.json` line 32-38 at `origin/master`:
 
 ```json
-{
-    "path": "/api/cron/storage-backup",
-    "schedule": "0 5 * * *"
+{ "path": "/api/cron/storage-backup", "schedule": "0 5 * * *" }
+```
+
+### Env vars confirmed via `vercel env ls production`
+
+- `CRC_BACKUP_DRIVE_FOLDER_ID` — Encrypted, Production scope, **updated 1d ago**
+- `CRON_SECRET` — Encrypted, Production scope, **updated 1d ago**
+
+(My v1 inference from a missing `.env.local` entry in `sheet-music-app-mcp/`
+was wrong; Daniel maintains prod-only env vars separately and `.env.local`
+parity is not enforced.)
+
+### Real-mirror tick: 2026-05-24T05:00Z — single, killed by `maxDuration`
+
+`vercel logs --environment production --since 7d --no-branch --search "storage-backup" --expand` returned **one log row** over the entire 7-day window:
+
+```
+TIME         HOST                                                  LEVEL   STATUS
+00:00:12.08  sheet-music-5e1x9ftcr-ravbogards-projects.vercel.app  error   504
+GET /api/cron/storage-backup
+[Drive] Binary upload error: Error: Bad Request
+    at m._request (.next/server/chunks/5230.js:10:2422)
+    at async i.requestAsync (.next/server/chunks/5230.js:13:39642)
+    at async n (.next/server/chunks/8344.js:8:1923)
+    at async j (.next/server/chunks/7947.js:1:883)
+    at async k.uploadBinaryFile (.next/server/chunks/7947.js:1:6557)
+    at async k (.next/server/app/api/cron/storage-backup/route.js:1:9009)
+    ...
+  config: {
+    url: 'https://www.googleapis.com/upload/drive/v3/files
+          ?fields=id%2C%20name%2C%20md5Checksum%2C%20size
+          &supportsAllDrives=true
+          &uploadType=multipart',
+    method: 'POST',
+    ...
+  },
+  response: {
+    status: 400,
+    statusText: 'Bad Request',
+    data: { error: [Object] }   // (the embedded errors[] detail was truncated by gaxios redactor)
+  },
+  code: 400,
+  status: 400,
+  [cause]: { message: 'Bad Request', code: 400, status: 'Bad Request', errors: [Object] }
 }
 ```
 
-So the cron IS registered and Vercel IS invoking the route nightly at
-05:00Z. No vercel.json miss.
+The single log row is consistent with: pre-env-var-set, the cron hit the
+dormant early return at `route.ts:132-144` (returns 200 with no log), so
+no error logs surfaced. Once Daniel set the env var ~1d ago, the 05:00Z
+tick on 2026-05-24 was the first real-mirror run — and it died.
 
-### Route handler dormant-skip path
+### Why "no Firestore writes" follows from the 504
 
-`src/app/api/cron/storage-backup/route.ts:132-144`
-(`runAndRespond`, called from both the GET cron path and the POST admin
-manual path):
+The `runStorageBackup` per-row try/catch (`mirror.ts:238-325`) catches each
+Drive throw and continues. The audit doc write happens AFTER the for-loop
+in `recordStorageBackupRun` (`mirror.ts:417-449`), called from
+`runStorageBackupProd` (`mirror.ts:456-477`). When Vercel kills the function
+externally at `maxDuration`, no JavaScript runs after the kill — the route's
+outer try/catch (`route.ts:64-92`) **never fires** because there's no error
+to catch; the runtime is terminated. Hence zero `config/storageBackup` and
+zero `storageBackups/{date}` writes for the tick.
 
-```ts
-async function runAndRespond(req: NextRequest): Promise<NextResponse> {
-    const backupFolderId = env.CRC_BACKUP_DRIVE_FOLDER_ID
-    if (!backupFolderId) {
-        logger.info(
-            "[storage-backup] CRC_BACKUP_DRIVE_FOLDER_ID unset — cron is dormant",
-        )
-        return NextResponse.json({
-            success: true,
-            ran: false,
-            reason:
-                "CRC_BACKUP_DRIVE_FOLDER_ID env var not configured — set it in Vercel (a dedicated Shared Drive) to enable.",
-        })
-    }
-    // ... runStorageBackupProd + recordStorageBackupRun ...
-}
-```
+The `tryRouteFailLoudBreadcrumb` at `route.ts:29-40` is unreachable for the
+same reason — it lives inside the outer try/catch and runs only after a
+caught throw.
 
-The dormant return at line 138-143 **bypasses both**:
-
-- `recordStorageBackupRun(db, result, now())` — writes `config/storageBackup`
-  + `storageBackups/{date}` success doc (mirror.ts:417-449)
-- `writeStorageBackupError(deps.db, err, deps.now())` — writes
-  `storageBackups/{date}.error` + `config/storageBackup.lastError` on
-  thrown run (mirror.ts:375-407)
-
-Neither runs on the dormant path. **Zero Firestore writes per tick.**
-
-This matches the auditor's probe state observed at 2026-05-24T15:37Z:
-
-- `config/storageBackup` → NOT FOUND
-- `storageBackups/2026-05-24` → NOT FOUND
-- `storageBackups/2026-05-23` → NOT FOUND
-
-### PGR-03 fail-open on missing doc
-
-`src/app/api/cron/admin-consistency/route.ts:150-201`
-(`readAndAlertStorageBackupHealth`):
-
-```ts
-const health = checkStorageBackupHealth(snapshot, Date.now())
-if (health.status === "missing" || health.status === "unavailable") {
-    return health   // <-- silent fail-open; no captureMessage
-}
-```
-
-`src/lib/storage-backup/health.ts:83-97` (`checkStorageBackupHealth`):
-
-```ts
-if (!snapshot) return { status: "missing" }
-// ... if neither timestamp nor error string parseable ...
-if (lastBackupAt == null && lastErrorAt == null && !lastError) {
-    return { status: "missing" }
-}
-```
-
-The PGR-03 spec comment (line 76-78) even acknowledges this:
-
-> `null`/`undefined` snapshot means the cron has never run (or the doc was wiped); we report `missing` and let the caller decide whether to alarm (per spec — don't page on a never-run cron).
-
-In current state, "caller decides not to alarm" → silence. Combined with
-the dormant-skip in the route, this is the full silent-death class.
-
-### Env var inferred unset
-
-`.env.local` in the sibling `sheet-music-app-mcp/` worktree does NOT
-contain `CRC_BACKUP_DRIVE_FOLDER_ID`. Daniel's local env is the closest
-proxy I have to Vercel prod's env state from this lane; if it was set
-in Vercel, it would typically also be mirrored locally for parity. The
-storage-phase2 SHIP-NOTICE (master-tip's prior tip for `c4935b804`)
-described the feature as "dormant by default" — Daniel was always
-expected to set this manually post-deploy. There is no evidence that
-manual activation step happened.
-
-I cannot directly inspect Vercel prod env without auth from this lane,
-but the on-disk artefact pattern + the auditor's missing-doc evidence
-make "env var unset, dormant tick succeeding silently" the most likely
-hypothesis by far.
-
-## Branch on diagnosis
+## Branch on diagnosis (amended)
 
 Per dispatch §"Phase 2 — Branch on diagnosis":
 
-- **"cron didn't fire (vercel.json miss / route path stale)"** → REFUTED.
-  `vercel.json` is correct; the cron path matches; Vercel logs are not
-  needed to confirm because we have a stronger structural signal.
-- **"cron fired but crashed pre-try/catch"** → REFUTED. The route's
-  outer try/catch already wraps the entire handler INCLUDING the auth
-  gate (line 64-92), and `tryRouteFailLoudBreadcrumb` (line 29-40)
-  writes a breadcrumb if `runStorageBackup`'s own catch couldn't. A
-  pre-try crash would have surfaced in Vercel function logs as a 500
-  with no Firestore writes — but the dormant path returns 200 with
-  `{ ran: false }`, which is what we'd observe externally for an unset
-  env var.
-- **"cron fired on wrong project/environment"** → unlikely; the
-  observed behaviour is consistent with right-project + dormant-skip.
+- **"cron didn't fire (vercel.json miss / route path stale)"** → **REFUTED.**
+  vercel.json is correct; the cron fired (we have the log).
+- **"cron fired but crashed pre-try/catch"** → **REFUTED.** The crash was
+  mid-execution, deep in the mirror's per-row loop. The outer try/catch
+  works; it just never gets a chance to run when Vercel kills the function
+  externally.
+- **"cron fired on wrong project/environment"** → **REFUTED.** Log host
+  `sheet-music-5e1x9ftcr-ravbogards-projects.vercel.app` is the
+  ravbogards-projects/sheet-music-app prod deployment.
+- **NEW (not in original dispatch branches):** "cron fired, mirror ran,
+  Drive rejected the upload, mirror's per-row swallow-and-continue ate
+  every error, function externally killed by maxDuration before audit doc
+  write." → **CONFIRMED** by the Vercel log + the gaxios retryConfig
+  visible in the error envelope.
 
-**Confirmed branch:** the cron is firing nightly, hitting the dormant
-no-op path because `CRC_BACKUP_DRIVE_FOLDER_ID` is unset, and the
-no-op path lacks an observability heartbeat. PGR-03 then fail-opens on
-the missing doc.
+## Two-headed real fix (NEW dispatched lane scope, NOT this lane)
 
-## Fix shape
+### Fix A — Drive 400 root cause (Daniel-action + investigation lane)
 
-Tier-1 single-commit lane, ~120-180 LOC across:
+The Drive API rejected `POST /upload/drive/v3/files?supportsAllDrives=true&uploadType=multipart` with HTTP 400. Possibilities:
 
-### 1. `src/app/api/cron/storage-backup/route.ts` — dormant heartbeat
+1. **Shared Drive `0AGFG2GQLuWKKUk9PVA` setup:** the service account
+   (`FIREBASE_CLIENT_EMAIL`) may lack `writer` access on the Shared Drive,
+   or the Shared Drive may not have "Members outside your organization"
+   enabled. Daniel verify in the Shared Drive's Members panel.
+2. **Folder-id semantics:** `0AGFG2GQLuWKKUk9PVA` is a Shared-Drive root ID
+   (starts with `0A`). The mirror calls `ensureFolder({ name: 'charts', parentId: backupFolderId })`
+   first — this creates a folder inside the Shared Drive ROOT. If the
+   service account has only `commenter`/`reader` permissions (not `writer`),
+   the ensureFolder succeeds OR fails with 403; the subsequent
+   `uploadBinaryFile` into that folder could 400 if the API requires
+   `driveId` explicitly for Shared Drive uploads.
+3. **Multipart body shape:** `google-api-nodejs-client/8.0.1` is current,
+   but a regression in the multipart serializer is possible. Compare
+   request shape against a known-working `uploadBinaryFile` call in the
+   non-backup paths (e.g. drive-sync writer).
+4. **Quota / billing:** the Shared Drive might be over quota; Drive returns
+   400 for quota exhaustion on some paths.
 
-Before the early `return` on unset env var, write a "we ticked but did
-nothing" heartbeat to `config/storageBackup` + `storageBackups/{date}`.
-Keep `lastBackupAt` untouched (dormant != successful) and `lastError`
-untouched (dormant != error); set `dormant: true` + `lastTickAt: now` +
-`reason: 'CRC_BACKUP_DRIVE_FOLDER_ID unset'`.
+The redacted `errors: [Object]` in the error envelope holds the real Drive
+message. A manual curl with `CRON_SECRET` against the prod endpoint OR
+a one-off script that exercises `uploadBinaryFile` against
+`0AGFG2GQLuWKKUk9PVA` will surface it.
 
-### 2. `src/lib/storage-backup/mirror.ts` — `lastTickAt` everywhere
+### Fix B — Externally-killed silent-death observability gap (CODE LANE)
 
-Add `lastTickAt: now` to both `recordStorageBackupRun` (success path)
-and `writeStorageBackupError` (error path), AND set `dormant: false`
-explicitly on both. Add a new exported helper
-`writeStorageBackupDormantHeartbeat(db, now, reason)` that the route
-calls on the dormant tick — keeps the Firestore write shape co-located
-with the other two writers.
+Independent of Fix A's outcome, the route has a real bug: **when Vercel
+externally kills the function at `maxDuration: 300s`, no breadcrumb is
+written.** The existing fail-loud catches only fire on caught throws, not
+on hard-kill. To close the gap:
 
-### 3. `src/lib/storage-backup/health.ts` — `tickStale` + `dormant`
+- **Pre-write a "run started" breadcrumb at the TOP of `runAndRespond`
+  before the for-loop starts.** Single Firestore write to
+  `config/storageBackup.lastTickStartedAt = now` + `storageBackups/{date}.startedAt = now`.
+  If the function is later killed, the breadcrumb survives as the last
+  evidence — "we started at X, never reported done."
+- **Per-row time-budget guard:** check `Date.now() - startedAt > budgetMs`
+  every N rows; if approaching `maxDuration`, bail the for-loop early and
+  call `recordStorageBackupRun` with `partial: true` + `bailedAt: now`.
+  Avoids ever hitting the external kill in the first place.
+- **PGR-03 derived alarm:** `lastTickStartedAt` exists but no matching
+  `lastBackupAt` / `lastError` within 36h → "cron started but never
+  finished" alarm (different from `tickStale` which only fires when
+  `lastTickAt` itself is stale).
 
-Extend the `StorageBackupHealth.present` shape with:
+This is a NEW dispatched lane (~80-150 LOC: ~30 LOC route start-stamp +
+~40 LOC time-budget guard + ~20 LOC PGR-03 alarm + ~50 LOC tests). Should
+be dispatched only AFTER Fix A is resolved (otherwise the per-row time
+budget hides the Drive 400 instead of surfacing it).
 
-- `lastTickAt: number | null`
-- `tickStalenessHours: number`
-- `tickStale: boolean` — true when `lastTickAt > 36h` ago (independent
-  of `stale` which remains lastBackupAt-staleness)
-- `dormant: boolean` — pass-through from snapshot
+## What `36ca5bccf` actually delivered (revised honest assessment)
 
-Existing `stale` semantics preserved.
+- ✅ **Right code, wrong root-cause attribution in the doc.** The alarm
+  tree (`tickStale` + missing-doc + deploy-aged) + `lastTickAt` stamps +
+  bootstrap-stamp oracle are correct defensive observability and would
+  catch a *future* failure of the actual class diagnosed above. Auditor's
+  code-shape ACCEPT stands.
+- ✅ **The dormant-heartbeat write is HARMLESS in current prod** — env
+  var is set, so the dormant path doesn't fire. The helper exists as
+  defense-in-depth for any future scenario where the env var gets unset.
+- ❌ **Does NOT solve the actual prod failure.** A real backup tick still
+  needs Fix A (Drive 400) + Fix B (externally-killed silent-death) to
+  start succeeding.
+- ❌ **`config/healthBootstrap.firstAdminTickAt` deploy-age oracle is now
+  irrelevant for the missing-doc-aged alarm in this specific scenario** —
+  the doc will populate within 24h of next deploy via the dormant path
+  if env var ever gets unset, or via the start-stamp from Fix B if env
+  var stays set. The deploy-age oracle is still useful defense-in-depth.
 
-### 4. `src/app/api/cron/admin-consistency/route.ts` — three new alarms
+## Daniel-action checklist (updated)
 
-- **tickStale alarm:** `present` + `tickStale` → Sentry warning
-  "storage backup cron has not ticked in Nh" (catches the
-  cron-stopped-firing-entirely failure class — independent of dormant
-  status)
-- **missing-doc + deploy-aged alarm:** `missing` + bootstrap-stamp
-  age > 36h → Sentry warning "storage backup cron has never written
-  a heartbeat; check vercel.json + CRC_BACKUP_DRIVE_FOLDER_ID"
-- **Bootstrap stamp:** on every admin-consistency tick, idempotently
-  write `config/healthBootstrap.firstAdminTickAt` if unset; subsequent
-  reads derive deploy-age from it. Tiny (~5 LOC).
+1. ~~Set `CRC_BACKUP_DRIVE_FOLDER_ID` in Vercel prod~~ — ✅ already done
+2. **NEW:** Verify the service account (`FIREBASE_CLIENT_EMAIL`) is added
+   as a `Content manager` or `Manager` of the Shared Drive
+   `0AGFG2GQLuWKKUk9PVA`. Drive 400 on `uploadBinaryFile` is most commonly
+   a Shared-Drive-permissions issue. (If the service account isn't a
+   Member, Drive returns 404 or 403 instead — 400 suggests the SA IS a
+   member, but maybe with insufficient role.)
+3. **NEW:** Once Daniel confirms (2), trigger a manual fire to surface the
+   redacted Drive error body:
+   `curl -H "Authorization: Bearer $CRON_SECRET" -i https://www.centralreform.live/api/cron/storage-backup?max=1`
+   (`max=1` keeps it to a single row so the redacted Drive errors[] body
+   shows in the response without timeout pollution.)
 
-### 5. Tests — ~50 LOC
+## Out of scope (per dispatch — unchanged)
 
-- mirror.test (new file or extension): dormant-heartbeat writer writes
-  expected shape; recordStorageBackupRun + writeStorageBackupError now
-  stamp `lastTickAt` + `dormant: false`
-- health.test extension: `tickStale` derivation across the boundary;
-  `dormant` pass-through; existing `stale` unchanged
-- admin-consistency route.test extension: tickStale alarm fires;
-  missing+aged alarm fires; missing+fresh stays silent; dormant+fresh
-  stays silent; bootstrap stamp idempotent
-
-## Out of scope (per dispatch)
-
-- ⛔ NO touching storage-phase2 BLOCK lane (`c4935b804` HELD).
-- ⛔ NO Storage operations / destructive Firestore mutations beyond
-  the cron's own heartbeat writes.
+- ⛔ NO touching storage-phase2 BLOCK lane (`c4935b804` HELD; classification
+  amended to "UNKNOWN-CAUSE silent-death" per auditor → now amended to
+  "Drive 400 + externally-killed-function silent-death" per this probe).
+- ⛔ NO Storage operations / destructive Firestore mutations beyond the
+  cron's own writes.
 - ⛔ NO bridge / monitor / firestore.rules / env vars changes.
 - ⛔ NO SmartTransposer touches.
-- ⛔ NO touching coder-4's pgr-04-sample-fix at `e526055ba`. The new
-  `readAndAlertStorageBackupHealth` extension is ORTHOGONAL — same
-  file, different branch in the alarm tree. Read the diff first.
 
-## Daniel-action separate from this lane
+## Audit-trail notes
 
-`CRC_BACKUP_DRIVE_FOLDER_ID` needs to be set in Vercel prod with a
-dedicated Shared Drive folder ID to activate the actual backup. That's
-the storage-phase2 activation step, not this probe lane's fix. This
-lane only closes the **observability gap** so the next silent-skip
-(or real silent-death) is detected immediately.
-
-## Bundling note
-
-Per auditor's HEADS-UP CONCERN at 2026-05-24T15:40Z + dispatch §"Phase
-3 — PGR-03 extension (bundled)": the alarm-on-absent extension is
-folded into this single Tier-1 lane to "close the whole class" (cron×
-config asymmetry on the backup side, parallel to coder-4 FINDING-2 on
-the library-index side). Total LOC budget moves from ~60-120 → ~120-180.
+- **v1 of this doc** (shipped in `36ca5bccf`): claimed root cause was
+  `CRC_BACKUP_DRIVE_FOLDER_ID` unset → dormant-skip → no heartbeat. Wrong.
+  Caught at 2026-05-24T21:10Z when Daniel corrected me that the env var
+  IS set with value `0AGFG2GQLuWKKUk9PVA`.
+- **HEADS-UP** sent to `inbox/supervisor.md` + `inbox/auditor.md` at
+  2026-05-24T21:15Z recalling the v1 diagnosis.
+- **Auditor ACK** at 2026-05-24T22:00Z: code-shape ACCEPT on `36ca5bccf`
+  STANDS; DIAGNOSIS.md amendment is mine to push directly.
+- **Supervisor ratification** at 2026-05-24T22:05Z: push amendment
+  directly to master; if Fix B's src/ shape proceeds, that's a NEW
+  dispatched lane (HEADS-UP with shape + LOC).
+- **This amendment** committed 2026-05-24T22:30Z after Vercel log probe
+  surfaced the Drive 400 + maxDuration kill mechanism.
