@@ -1,0 +1,500 @@
+{
+  "summary": {
+    "mode": "dry-run",
+    "startedAt": "2026-05-24T03:05:40.071Z",
+    "projectId": "crcmusiccharts",
+    "scanned": 43,
+    "stale": 5,
+    "wouldUpdate": 5,
+    "updated": 0,
+    "writeErrors": 0,
+    "staleFraction": 0.11627906976744186,
+    "maxSingleSetlistFractionLost": 0.38461538461538464,
+    "sanityCeilings": {
+      "staleFractionCeiling": 0.05,
+      "maxSingleSetlistFractionLostCeiling": 0.5,
+      "staleFractionExceeded": true,
+      "maxSingleSetlistFractionLostExceeded": false
+    }
+  },
+  "records": [
+    {
+      "setlistId": "0RC4b6CpvnPbz09ue07q",
+      "setlistName": "Shabbat Morning — March 28",
+      "eventDate": "2026-03-28T18:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "226309e2-78b7-48af-aa21-6aaf606b4fbe",
+      "setlistName": "Kabbalat Shabbat — May 22, 2026",
+      "eventDate": "2026-05-22T12:00:00.000Z",
+      "currentDenormCount": 10,
+      "computedFromBondsCount": 10,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "29EqdMESd6QjhfokL2Bu",
+      "setlistName": "Shabbat Morning — March 21",
+      "eventDate": "2026-03-21T18:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "3ydVKM1WSADW0vn9vWaN",
+      "setlistName": "Shir Shabbat List",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "4GVt6rK5RCVHr5BGPAUv",
+      "setlistName": "Shabbat Morning",
+      "eventDate": "2026-01-03T06:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "5zLP8DidKQ2lLMKci2xI",
+      "setlistName": "Religious School Morning Service",
+      "eventDate": "2026-03-29T18:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "9bmwUMJzgIQgNRIe81jv",
+      "setlistName": "Shabbat Morning — April 4",
+      "eventDate": "2026-04-04T18:00:00.000Z",
+      "currentDenormCount": 13,
+      "computedFromBondsCount": 13,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "BozK3CzZIaSZvWK0hnRs",
+      "setlistName": "Bnei Mitzvah Morning (Template)",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "FB2yEICglR8jQmG3pcnp",
+      "setlistName": "Passover — April 3",
+      "eventDate": "2026-04-03T18:00:00.000Z",
+      "currentDenormCount": 9,
+      "computedFromBondsCount": 9,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "H06Xwyn74GiHHMKiEPZu",
+      "setlistName": "Shabbat ",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "Ikl0sS4XcZil0Z04viAu",
+      "setlistName": "Shir Shabbat —  — May 13",
+      "eventDate": "2026-05-13T19:53:47.014Z",
+      "currentDenormCount": 9,
+      "computedFromBondsCount": 9,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "IvowaTdXwZI7qu9U9QXc",
+      "setlistName": "Shabbat Morning — Parashat Tazria-Metzora — April 18",
+      "eventDate": "2026-04-18T18:00:00.000Z",
+      "currentDenormCount": 21,
+      "computedFromBondsCount": 21,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "KBDlDwRI0rfDdv8cxJG9",
+      "setlistName": "Shabbat Morning — February 28",
+      "eventDate": "2026-02-28T18:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "KFx9qYacON5y7R9RtMrV",
+      "setlistName": "New Setlist",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "LMkJRNf3HWa8l9Mqmr0Q",
+      "setlistName": "Shabbat Morning — Parashat Vayakhel-Pekudei — March 14",
+      "eventDate": "2026-03-14T18:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "NWPBba50fltX6pNcyOVK",
+      "setlistName": "5/15 -- Shir Shabbat",
+      "eventDate": "2026-05-15T19:53:47.014Z",
+      "currentDenormCount": 13,
+      "computedFromBondsCount": 14,
+      "extraInDenorm": [
+        "19E8aTettqSQO1ZVtVhXCPfUJw1dw0f3G",
+        "1BLARziE-ImWCPWDoU8utX5Cu7Jm4mxxJ",
+        "1TeiP5BlGnlP9ogYXO9yFL25J1Tz5k_RX",
+        "upload-2db7e9ff-6224-4c0e-bbbe-4de37bf02f03",
+        "upload-e0d24d07-ccbe-4576-9263-0577c596dad6"
+      ],
+      "missingFromDenorm": [
+        "1AIwCXDw1mGHm_uhaoJfbpkri-ibzOLI4",
+        "1SH9vxGsFfIJ4mU_FaAaIX13hThwuqfH5",
+        "1czN_ywRWm2bnjIrnNVg7ad4RyynM_GcR",
+        "upload-11a3e3a1-a0ac-4a12-8bc7-f33c7aa30716",
+        "upload-7131ee81-97e9-4064-8d7c-cb07b9370063",
+        "upload-783e2b75-596c-40b0-972d-3ebdcf23f17d"
+      ],
+      "updated": false
+    },
+    {
+      "setlistId": "QQSsAK2XY4dc8k5sFXIa",
+      "setlistName": "Confirmation Shabbat",
+      "eventDate": "2026-05-08T05:00:00.000Z",
+      "currentDenormCount": 5,
+      "computedFromBondsCount": 5,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "QUbPV0MELXnvfwoNkrtG",
+      "setlistName": "Shabbat morning",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "QvykJoecFHvjTlxYblZz",
+      "setlistName": "Friday Night — Parashat Vayakhel-Pekudei — March 8",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "RL1C7QW75134LNA3rvQD",
+      "setlistName": "Shabbat Morning — Parashat Behar-Bechukotai — March 28",
+      "eventDate": "2026-03-28T18:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "UnjLqKTtS4lNKQfMY6hB",
+      "setlistName": "Shavuot Yizkor — May 23",
+      "eventDate": "2026-05-23T10:00:00.000Z",
+      "currentDenormCount": 13,
+      "computedFromBondsCount": 13,
+      "extraInDenorm": [
+        "1t7fPtGbxIVUUaskwynvKjMYactKDbvGq"
+      ],
+      "missingFromDenorm": [
+        "upload-10da060e-40d1-41c2-bc14-36174d7a1b8a"
+      ],
+      "updated": false
+    },
+    {
+      "setlistId": "W8Ahf3VvLhLgyaU7Z6lX",
+      "setlistName": "Shir Shabbat - Feb 20, 2026",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "XLRlBdThE5rUIkglEIDA",
+      "setlistName": "5786 / 2025 Kol Nidre Alternative Service Music Flow",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "b12a5221-111a-4ffa-b408-350cdbd28190",
+      "setlistName": "Eitan Shabbat Morning 2/21",
+      "eventDate": "2026-02-21T18:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "bmodfEvSr75S3A2Q1UZM",
+      "setlistName": "Friday Night — Parashat Vayakhel-Pekudei — March 8",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "c5d41b02-4888-41b7-a0e7-161250be9665",
+      "setlistName": "Bar Mitzvah — Chase — May 16 (4pm Havdallah)",
+      "eventDate": "2026-05-16T12:00:00.000Z",
+      "currentDenormCount": 12,
+      "computedFromBondsCount": 12,
+      "extraInDenorm": [
+        "d22779d6-bd3f-436c-8d5a-cc6daa3d92e6"
+      ],
+      "missingFromDenorm": [
+        "upload-e64047ae-c1ec-475c-99c8-4ad2ed446c0e"
+      ],
+      "updated": false
+    },
+    {
+      "setlistId": "dHQyiWGoGww0aCeKk9Pj",
+      "setlistName": "Shabbat Morning — Parashat Behar-Bechukotai — March 28",
+      "eventDate": "2026-03-28T18:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "dJuzNP3CMgtIFkssWiQ3",
+      "setlistName": "Shabbat morning",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "eMFwUx7XBBAN0KUPmdhs",
+      "setlistName": "Bnei Mitzvah Morning (Template)",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "fgxquthWA9IQ4UF2fZWw",
+      "setlistName": "Shabbat Morning — April 11",
+      "eventDate": "2026-04-11T18:00:00.000Z",
+      "currentDenormCount": 20,
+      "computedFromBondsCount": 20,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "jRBOCUjcMHEBP4IqgGUP",
+      "setlistName": "Shabbat Morning January 31",
+      "eventDate": "2026-01-31T06:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "lMg22c7kmla21ZlWWuEK",
+      "setlistName": "Friday Night — Parashat Vayakhel-Pekudei — March 8",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "s2nWyd63mWjQj3LAJ8zg",
+      "setlistName": "Shir Shabbat — March 27",
+      "eventDate": "2026-03-27T18:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "tIJ5DlvkeeN1CWAUTUM2",
+      "setlistName": "Seui",
+      "eventDate": "2026-04-20T18:00:00.000Z",
+      "currentDenormCount": 10,
+      "computedFromBondsCount": 10,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "uBkulVkN8K7idSapCJjq",
+      "setlistName": "Shabbat Morning — Parashat Achrei Mot-Kedoshim — April 25",
+      "eventDate": "2026-04-25T18:00:00.000Z",
+      "currentDenormCount": 15,
+      "computedFromBondsCount": 15,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "uVwbdrMFv5Uz6x4aFNwe",
+      "setlistName": "Shabbat morning",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "vJqQL6jbpTwVVbv1Oahy",
+      "setlistName": "Mother's Day",
+      "eventDate": "2026-05-10T05:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "xpFyGClkCD3je2WnQO10",
+      "setlistName": "Bnei Mitzvah Morning (Template)",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "yEGFPu8UnBHkMK0ZRREp",
+      "setlistName": "Shabbat",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "yFO1nWEMH2wGSthc766c",
+      "setlistName": "Shir Shabbat 2/20",
+      "eventDate": "2026-02-20T18:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "yGl9DLjYwm4jnPy0JTR4",
+      "setlistName": "B'nei Mitzvah Saturday — March 14",
+      "eventDate": "2026-03-21T18:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 11,
+      "extraInDenorm": [],
+      "missingFromDenorm": [
+        "1-NNEkYLm4R7PJ7ttd1HVVQ55FYqps5fT",
+        "109L_MNigAZlIcxOJDVGu-mR1cPEWVDvH",
+        "12JfLCHytM5q59btBQ05sz-V_SurQmUoT",
+        "1LPfmwfa8On5YHco9nC-dt5IyWk7QO4gV",
+        "1URzdt7mdDjXZjO6J0ibl_E4SukMxfD4t",
+        "1bOTH11M28N7_c7avQGTYwzhhQlM2vKEK",
+        "1bntK0UHLQmq_z1dNsek7Rwue_HNr4jNQ",
+        "1ds1Ql2M3Fb9LRX-k8tGxbixPHZ756WE0",
+        "1j0vPyAIniwYKOh3mdo7Tly4WwugWuKLw",
+        "1pu2JsvkgVnzmQ4CJySUd7PSm7F0yEd_x",
+        "1t7fPtGbxIVUUaskwynvKjMYactKDbvGq"
+      ],
+      "updated": false
+    },
+    {
+      "setlistId": "zKxsDLoVXFis7ADbqWsW",
+      "setlistName": "testing",
+      "eventDate": null,
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 0,
+      "extraInDenorm": [],
+      "missingFromDenorm": [],
+      "updated": false
+    },
+    {
+      "setlistId": "zyJGXUdIG80fLHaifJ7o",
+      "setlistName": "Bnei Mitzvah Morning",
+      "eventDate": "2026-05-09T05:00:00.000Z",
+      "currentDenormCount": 0,
+      "computedFromBondsCount": 14,
+      "extraInDenorm": [],
+      "missingFromDenorm": [
+        "11w4r08HnXYR-eRFzcMIs-ud4k1Ut1jwB",
+        "12Q_6mN94HnSFNcDsHZtvzXX2TqXm9sqh",
+        "19FuqP-rbkufIUdAVCGMbXLuvDJKnicZM",
+        "1LPfmwfa8On5YHco9nC-dt5IyWk7QO4gV",
+        "1Mqje155L1D2TpfeoLycAL_pxEs04epFw",
+        "1VSB3wRDJN_1nvab8nyNG3W65QXup2YQV",
+        "1ds1Ql2M3Fb9LRX-k8tGxbixPHZ756WE0",
+        "1j0vPyAIniwYKOh3mdo7Tly4WwugWuKLw",
+        "1jiX9o2PFj6fGb-qDC5Uw5EtOTOnydzWh",
+        "1lhfSuwVN0-QmiaXm-nVQBlgIOX3bGkby",
+        "1oOys8D12_uDOG_2vcssAq8k5PLf4ZhBQ",
+        "1sNPYY73-mI4XBfASJBoHaTwxQH3IHr50",
+        "1t7fPtGbxIVUUaskwynvKjMYactKDbvGq",
+        "c98dd389-724e-4ffe-9eb0-8eed621b782b"
+      ],
+      "updated": false
+    }
+  ]
+}
