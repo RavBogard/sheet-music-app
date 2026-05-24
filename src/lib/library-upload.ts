@@ -21,6 +21,19 @@ import {
     type LibraryRowCreatedEvent,
 } from "@/lib/library/library-events"
 import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
+// F-5 (setlist-import-via-pcu-with-defaults-mirror lane): post-batch
+// dual-write of key/bpm/leadMusician to BOTH `library_index` and
+// `songs/{id}.defaults` via the shared `applySongMetadata` helper, so a
+// `processChartUpload` caller can supply songDefaults and have them stick on
+// every catalog read surface (list_library AND get_song / bond resolution).
+// Pre-fix PCU only wrote `library_index.{key,bpm}` (no `songs.defaults`, no
+// `leadMusician` anywhere), forcing bond resolution to pull `key: null` from
+// the catalog after upload. Cycle-safe import: `song-metadata.ts` does NOT
+// import back from `library-upload`; the cycle warning at
+// `mcp/tools/uploader-roles.ts:13` was about the MCP wrapper
+// `mcp/tools/library-upload.ts` (which already imports `applySongMetadata`),
+// not this module.
+import { applySongMetadata } from "@/lib/mcp/tools/song-metadata"
 
 /**
  * Shared library-upload pipeline. The single server-side codepath that:
@@ -82,6 +95,33 @@ export interface ProcessChartUploadInput {
         modifiedTime?: string
         md5Checksum?: string
         parents?: string[]
+    }
+    /**
+     * F-5 (setlist-import-via-pcu-with-defaults-mirror lane) — supply per-chart
+     * catalog metadata (key/bpm/leadMusician) that should land on BOTH
+     * `library_index/{id}` AND `songs/{id}.defaults` after the upload commits.
+     *
+     * Pre-fix PCU only wrote `library_index.{key,bpm}` from `input.key`/`bpm` —
+     * `songs/{id}.defaults` was left empty and `leadMusician` was unwritable at
+     * import time. Callers that knew the key/lead at import (setlist-import,
+     * scraper, MCP upload_chart) had to issue a follow-up `applySongMetadata`
+     * to keep both surfaces coherent (and `library-upload.ts` MCP wrapper L1013
+     * does exactly that for save_scraped_chart). Folding the dual-write into
+     * PCU itself closes the catalog-drift gap for every channel — the channel
+     * doesn't have to remember to fire the follow-up.
+     *
+     * `input.key`/`input.bpm` (the existing fields, written into `library_index`
+     * directly inside the index batch) and `songDefaults.{key,bpm}` are
+     * intentionally additive: when both are supplied, `applySongMetadata`'s
+     * patch wins and overwrites the library_index value to keep both surfaces
+     * consistent (it writes the same `key`/`bpm` field on library_index).
+     * Callers should normally set one OR the other; both is allowed but
+     * redundant.
+     */
+    songDefaults?: {
+        key?: string
+        bpm?: number
+        leadMusician?: string
     }
 }
 
@@ -721,6 +761,44 @@ export async function processChartUpload(
         logger.warn(
             `[Upload ${traceId}] library.row.created emit failed (non-fatal): ${message}`,
         )
+    }
+
+    // F-5 (setlist-import-via-pcu-with-defaults-mirror lane): mirror caller-
+    // supplied catalog metadata onto BOTH `library_index/{id}` AND
+    // `songs/{id}.defaults` via the shared `applySongMetadata` helper. Mirrors
+    // the post-upload pattern at `mcp/tools/library-upload.ts:1013` for
+    // save_scraped_chart, but folded into PCU itself so every channel
+    // (HTTP upload route, drive-sync cron, setlist-import-execute, MCP
+    // upload_chart, MCP save_scraped_chart) gets the dual-write for free.
+    // Best-effort: the chart is fully written by here — a metadata-mirror
+    // failure must NOT fail the upload (the author can re-set via
+    // `update_song` per the same convention as save_scraped_chart). The
+    // MCP save_scraped_chart caller still runs `applySongMetadata` after
+    // PCU returns (defense in depth — keeps both paths green even if one
+    // regresses; mirrors auditor recommendation in dispatch §Scope item 1).
+    const songDefaults = input.songDefaults
+    if (
+        songDefaults &&
+        (songDefaults.key !== undefined ||
+            songDefaults.bpm !== undefined ||
+            songDefaults.leadMusician !== undefined)
+    ) {
+        try {
+            stage("song-defaults-mirror:start")
+            await applySongMetadata(db, fileId, {
+                key: songDefaults.key,
+                bpm: songDefaults.bpm,
+                leadMusician: songDefaults.leadMusician,
+            })
+            stage("song-defaults-mirror:done")
+        } catch (mdErr) {
+            const message =
+                mdErr instanceof Error ? mdErr.message : "Unknown error"
+            stage("song-defaults-mirror:failed", { message })
+            logger.warn(
+                `[Upload ${traceId}] song-defaults mirror failed for ${fileId} (non-fatal): ${message}`,
+            )
+        }
     }
 
     stage("complete")
