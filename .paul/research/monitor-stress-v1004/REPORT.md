@@ -124,6 +124,8 @@ Net effect of the probe (pre-fix): the bus is left at ~50% when it started at ~7
 
 **Recommended follow-up lane (low priority, NOT in this lane scope):** move the F-tier snapshot ahead of the M-tier write so the F-tier restore returns to the true pre-probe value. ~10-15 LOC fix to `scripts/monitor-live-probe.mjs`. NOT a v10.0.4 issue — pre-existing since P0-B2 shipped.
 
+**Fix landed — `monitor-probe-nit2-fix` lane (2026-05-24):** Firestore init + raw `monitor-live/state` snapshot moved to the top of `main()`, BEFORE M0-M4, and `firestoreTier()` now accepts that pre-write snapshot as a 3rd arg for F2. A new `F3-restore-untainted` regression assertion refuses the F-tier write when the resolved restore value is ~equal to `PROBE_TEST_VALUE` and no operator `PROBE_RESTORE_VALUE` was supplied — prevents the bug from silently recurring if a future refactor breaks the ordering. Subsequent runs restore the bus byte-identical to the true M3 pre-probe value with no follow-up needed.
+
 ## Conclusion
 
 v10.0.4's unattended-remote observability ships **byte-identically as the SYNTHESIS.md spec promised**. All four O-numbered surfaces (O1/O2/O3/O4) are live and behaving correctly. Sustained-write stress shows the bridge stays at-rest queueDepth=0 + unconfirmedCount=0 between bursts; commands drain in ~400-570ms; state.updatedAt advances on every write (heartbeat-vs-state divergence per `[[project_bridge_state_freshness_diagnostic]]` does NOT reproduce — that memory's failure mode is **resolved** as of v10.0.4 deploy).

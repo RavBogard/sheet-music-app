@@ -362,6 +362,28 @@ async function main() {
     }
     assert("A2-service-window", true, `outside service window (${sw.why})`)
 
+    // ── pre-write Firestore init + state snapshot (NIT-2 ordering fix) ───────
+    // Capture raw monitor-live/state BEFORE any write side-effect (M4 set_bus_fader
+    // and F4 iPad-path addDoc), so the F2 snapshot reflects the TRUE pre-probe
+    // desk value rather than the post-write readback. Pre-fix the snapshot ran
+    // INSIDE firestoreTier, AFTER M4, so a successful M4 perturbed the snapshot
+    // value (e.g. 0.7614 → 0.4995 readback ≈ testValue 0.5) and F6 restored to
+    // the polluted value. Doing the init + snapshot up here is a no-op when
+    // creds are missing (firestoreTier still skips cleanly).
+    let fs = { ok: false, why: "skipped" }
+    let preWriteState = null
+    if (!FLAG.mcpOnly) {
+        fs = await tryInitFirestore()
+        if (fs.ok) {
+            try {
+                const earlySnap = await fs.db.collection("monitor-live").doc("state").get()
+                preWriteState = earlySnap.exists ? earlySnap.data() : null
+            } catch (e) {
+                note(`pre-write state read failed: ${String(e?.message || e)} — F2 will fall back to live state read (NIT-2 may recur for this run).`)
+            }
+        }
+    }
+
     // ── MCP tier ─────────────────────────────────────────────────────────────
     section("MCP tier — dogfood child bearer")
     const tl = await mcpRpc(CFG.token, "tools/list", {})
@@ -433,10 +455,8 @@ async function main() {
     }
 
     // ── Firestore tier (raw read + iPad-path write + restore) ────────────────
-    let fs = { ok: false, why: "skipped" }
-    if (!FLAG.mcpOnly) {
-        fs = await tryInitFirestore()
-    }
+    // (Firestore init + pre-write state snapshot already captured above, BEFORE
+    // M4 — see NIT-2 ordering fix.)
     if (!fs.ok) {
         section("Firestore tier — SKIPPED")
         note(`Firestore tier skipped: ${fs.why}. Provide GOOGLE_APPLICATION_CREDENTIALS / FIREBASE_SERVICE_ACCOUNT / FIREBASE_CLIENT_EMAIL+KEY to enable raw-state read, the iPad-path addDoc, and the byte-identical restore.`)
@@ -447,7 +467,7 @@ async function main() {
         // v10.0.4 surface tier runs FIRST (read-only) to snapshot the baseline
         // errCount + heartbeat shape before the F-tier write perturbs state.
         const baseline = await v1004Tier(fs, probeBearer)
-        const restoreValueForStress = await firestoreTier(fs, targetBus)
+        const restoreValueForStress = await firestoreTier(fs, targetBus, preWriteState)
         // Stress tier — 3-command burst at restoreValue (no desk motion) so we
         // can assert queueDepth/unconfirmedCount stay bounded + state.updatedAt
         // advanced (not just heartbeat) + errCount delta during the probe window.
@@ -483,15 +503,20 @@ async function main() {
     finishAndExit(0, null)
 }
 
-async function firestoreTier(fs, targetBus) {
+async function firestoreTier(fs, targetBus, preWriteState) {
     const { db } = fs
-    // raw snapshots
+    // raw snapshots — `state` here is the LIVE (post-MCP-tier) state used for
+    // freshness reporting; `preWriteState` (captured at the top of main(),
+    // BEFORE M4 + F4 writes) is the source of truth for F2's restore snapshot.
     const [stateSnap, cfgSnap] = await Promise.all([
         db.collection("monitor-live").doc("state").get(),
         db.collection("config").doc("monitor").get(),
     ])
     const state = stateSnap.exists ? stateSnap.data() : null
     const cfg = cfgSnap.exists ? cfgSnap.data() : null
+    // Fall back to the live state if a pre-write snapshot wasn't captured
+    // (e.g. doc didn't exist yet at startup). Note already logged in main().
+    const snapshotState = preWriteState !== null ? preWriteState : state
 
     // desk-live check (heartbeat freshness + x32Connected)
     const hbMs = fsDateMillis(cfg?.bridge?.lastSeen)
@@ -505,9 +530,12 @@ async function firestoreTier(fs, targetBus) {
     const stAge = stMs ? Math.round((Date.now() - stMs) / 1000) : null
     note(`raw monitor-live/state updatedAt age = ${stAge}s; buses shape = ${readBusFaderFromState(state, targetBus).shape}`)
 
-    // snapshot target bus value
-    const snap = readBusFaderFromState(state, targetBus)
-    assert("F2-snapshot", true, `bus ${targetBus} snapshot: ${snap.found ? snap.fader : "NOT in state"} (${snap.shape})`)
+    // snapshot target bus value — reads `snapshotState` (pre-M4-write capture
+    // from main()) NOT `state` (live post-write read). NIT-2 fix: without
+    // this, a successful M4 write polluted the snapshot.
+    const snap = readBusFaderFromState(snapshotState, targetBus)
+    const snapSource = preWriteState !== null ? "pre-write" : "live (fallback)"
+    assert("F2-snapshot", true, `bus ${targetBus} snapshot: ${snap.found ? snap.fader : "NOT in state"} (${snap.shape}, ${snapSource})`)
 
     if (!deskLive) {
         note("Desk not live (stale heartbeat or X32 down) — refusing to enqueue a command.")
@@ -531,6 +559,27 @@ async function firestoreTier(fs, targetBus) {
         return
     }
     assert("F3-restore-known", true, `restore target = ${restoreValue}${snap.found ? "" : " (operator-provided; snapshot hidden by R3)"}`)
+
+    // NIT-2 regression guard: if restoreValue came from the snapshot and is
+    // ~equal to CFG.testValue, the snapshot was captured AFTER the M-tier
+    // write (the bug this commit fixes). Refuse the write rather than
+    // "restoring" to the polluted value. Operator-supplied PROBE_RESTORE_VALUE
+    // bypasses this guard (Daniel may legitimately want to restore to the
+    // test value if the bus was genuinely at it pre-probe).
+    if (
+        CFG.restoreValue === undefined &&
+        typeof restoreValue === "number" &&
+        Math.abs(restoreValue - CFG.testValue) < 1e-3
+    ) {
+        assert("F3-restore-untainted", false,
+            `restore value ${restoreValue} ≈ test value ${CFG.testValue} — snapshot likely captured POST-write. Re-run with snapshot-first ordering, or set PROBE_RESTORE_VALUE explicitly if the bus was genuinely at the test value pre-probe.`)
+        note("STOP for the write tier: snapshot ordering tainted (NIT-2). Re-run after rebuilding from this commit, or supply PROBE_RESTORE_VALUE.")
+        return
+    }
+    assert("F3-restore-untainted", true,
+        CFG.restoreValue !== undefined
+            ? `operator-supplied restore (${restoreValue}); ordering check skipped`
+            : `restore ${restoreValue} ≠ test ${CFG.testValue} (snapshot-first ordering verified)`)
 
     const pendingCol = db.collection("monitor-live").doc("commands").collection("pending")
 

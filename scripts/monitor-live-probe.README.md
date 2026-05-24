@@ -10,6 +10,13 @@ the MCP path → reads the desk back → confirms `monitor-live/state` reflects 
 **restores byte-identical** → emits PASS/FAIL per assertion + the
 command→state round-trip latency.
 
+The F-tier snapshot is captured at the **top of `main()`**, BEFORE the M-tier
+MCP write, so the byte-identical restore returns the desk to the TRUE pre-probe
+value rather than the post-M4 quantized readback. A `F3-restore-untainted`
+assertion refuses the F-tier write if the resolved restore value is ~equal to
+`PROBE_TEST_VALUE` and no operator `PROBE_RESTORE_VALUE` was supplied — that
+combination is the signature of someone having reverted the snapshot ordering.
+
 Today (pre-Phase-1) it **reports the real state**: control reaches the desk but
 readback does not reflect own-writes (R1) and/or the idle snapshot is stale (R2)
 and/or `buses` is array→map corrupted (R3). After Phase 1 the *same* probe
@@ -74,10 +81,24 @@ the Firestore command bus directly, headless, with no browser.
 Flags: `--mcp-only` (skip Firestore tier), `--dry-run` (no desk writes — snapshot
 + report only), `--json` (emit the machine-readable result object).
 
+> **⚠ Always load `.env.local` via `node --env-file=`** when running locally.
+> Node does NOT auto-source `.env.local`, so without the flag the Firestore-tier
+> credentials are not visible to the probe and it falls back to ADC (which fails
+> if `gcloud auth application-default login` was never run). The M-tier MCP write
+> still goes through in that fallback — meaning the desk gets perturbed but the
+> F-tier byte-identical restore never runs. **Always pass `--env-file=.env.local`
+> (or export the creds yourself) before any probe run that crosses the M-tier
+> write boundary.** (Bit `monitor-probe-nit2-fix` smoke 2026-05-24 — recovered
+> via the `desk-restore-true-original.mjs` follow-up helper.)
+
 ## Examples
 
 ```bash
-# Full probe (both paths + restore), service account on disk:
+# Full probe (both paths + restore), credentials from .env.local:
+CRL_MCP_TOKEN=crl_live_<root> PROBE_BUS=5 \
+node --env-file=.env.local scripts/monitor-live-probe.mjs
+
+# Full probe with service account on disk (no .env.local needed):
 CRL_MCP_TOKEN=crl_live_<root> \
 PROBE_BUS=5 PROBE_TEST_VALUE=0.5 PROBE_RESTORE_VALUE=0.75 \
 GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
