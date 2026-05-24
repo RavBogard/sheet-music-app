@@ -14,7 +14,11 @@ export default defineConfig({
         // surfacing a fake-clock race in engine.test.ts AC-4 that passes
         // standalone in ~600ms. 10s leaves plenty of headroom without
         // masking real perf regressions.
-        testTimeout: 10000,
+        // 2026-05-24: 10s also tipped over (suite grew to ~250 files);
+        // bumped to 30s per .paul/research/parallel-load-flakes/FINDINGS.md.
+        // hookTimeout added explicit — route-auth.test.ts beforeAll loads.
+        testTimeout: 30000,
+        hookTimeout: 30000,
         include: [
             'src/**/*.test.ts',
             'src/**/*.test.tsx',
