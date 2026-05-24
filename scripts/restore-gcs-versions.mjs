@@ -22,8 +22,15 @@
  * Server-side copy; preserves md5Hash + crc32c (verified post-copy).
  *
  * Usage:
- *   node scripts/restore-gcs-versions.mjs           # DRY-RUN (default)
- *   node scripts/restore-gcs-versions.mjs --apply   # real run (Daniel only)
+ *   node scripts/restore-gcs-versions.mjs                            # DRY-RUN, default inventory
+ *   node scripts/restore-gcs-versions.mjs --apply                    # real run (Daniel only)
+ *   node scripts/restore-gcs-versions.mjs --from <path>              # DRY-RUN, alt inventory
+ *   node scripts/restore-gcs-versions.mjs --from <path> --apply      # real run on alt inventory
+ *
+ * `--from <path>` overrides the default `track-a2-resalvage` probe output.
+ * Absolute paths used as-is; relative paths joined to repo root. Schema is
+ * the same `{ bucket: string, rows: [...] }` shape the probe emits. The
+ * `wider-blast-probe-COMPAT.json` is a drop-in alt inventory.
  *
  * Auth path identical to the probe — `.env.local` FIREBASE_CLIENT_EMAIL +
  * FIREBASE_PRIVATE_KEY for the `firebase-adminsdk-fbsvc@crcmusiccharts` SA.
@@ -34,18 +41,31 @@
 import { Storage } from '@google-cloud/storage';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..');
 const ENV_PATH = join(REPO_ROOT, '.env.local');
-const PROBE_JSON_PATH = join(
-  REPO_ROOT,
-  '.paul',
-  'research',
-  'track-a2-resalvage',
-  'gcs-version-probe-output.json'
-);
+
+// `--from <path>` overrides the default inventory path. Per WIDER-BLAST-PROBE.md
+// recipe: absolute paths are used as-is; relative paths are joined to REPO_ROOT
+// (so the recipe `--from .paul/research/track-a2-wider/wider-blast-probe-COMPAT.json`
+// resolves the same regardless of cwd). Default preserves the original 4-row
+// `track-a2-resalvage` inventory for backward-compat + audit trail.
+const FROM_ARG_IDX = process.argv.indexOf('--from');
+const FROM_ARG_VAL =
+  FROM_ARG_IDX > -1 ? process.argv[FROM_ARG_IDX + 1] : undefined;
+const PROBE_JSON_PATH = FROM_ARG_VAL
+  ? isAbsolute(FROM_ARG_VAL)
+    ? FROM_ARG_VAL
+    : join(REPO_ROOT, FROM_ARG_VAL)
+  : join(
+      REPO_ROOT,
+      '.paul',
+      'research',
+      'track-a2-resalvage',
+      'gcs-version-probe-output.json'
+    );
 
 const APPLY = process.argv.includes('--apply');
 
