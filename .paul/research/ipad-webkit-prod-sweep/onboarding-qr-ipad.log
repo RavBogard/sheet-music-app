@@ -1,0 +1,15 @@
+
+Running 10 tests using 1 worker
+
+  ✓   1 [ipad-webkit] › e2e\onboarding-qr-ipad.spec.ts:131:9 › ipad-sweep-onboarding — no-auth QR surface probes (WebKit) › A1: unauthenticated `/` redirects to /perform — QR display never shows (1.4s)
+  ✓   2 [ipad-webkit] › e2e\onboarding-qr-ipad.spec.ts:160:9 › ipad-sweep-onboarding — no-auth QR surface probes (WebKit) › A2: /perform (public landing) offers no QR sign-in affordance (1.2s)
+  ✓   3 [ipad-webkit] › e2e\onboarding-qr-ipad.spec.ts:173:9 › ipad-sweep-onboarding — no-auth QR surface probes (WebKit) › A3 (FIX fix-onboarding-qr): /login offers QR shared-device sign-in that reveals the QR display (1.9s)
+  ✓   4 [ipad-webkit] › e2e\onboarding-qr-ipad.spec.ts:236:9 › ipad-sweep-onboarding — no-auth QR surface probes (WebKit) › C2: PUT without Authorization → 401; with a garbage token → 403 (432ms)
+  ✓   5 [ipad-webkit] › e2e\onboarding-qr-ipad.spec.ts:262:9 › ipad-sweep-onboarding — no-auth QR surface probes (WebKit) › D1: POST creates a pending session; poll of an unknown code → 404 (468ms)
+  ✓   6 [ipad-webkit] › e2e\onboarding-qr-ipad.spec.ts:285:9 › ipad-sweep-onboarding — no-auth QR surface probes (WebKit) › F1: /qr/<unknown> approve page shows Session Expired, no overflow (1.3s)
+  ✓   7 [ipad-webkit] › e2e\onboarding-qr-ipad.spec.ts:321:9 › ipad-sweep-onboarding — QR approve→sign-in cycle (WebKit) › B1: full QR cycle — approve(PUT) yields a customToken the iPad signs in with (5.4s)
+  ✓   8 [ipad-webkit] › e2e\onboarding-qr-ipad.spec.ts:381:9 › ipad-sweep-onboarding — QR approve→sign-in cycle (WebKit) › C1: musician + member approvers are accepted (member-allowed flagged in FINDINGS) (5.9s)
+  ✓   9 [ipad-webkit] › e2e\onboarding-qr-ipad.spec.ts:412:9 › ipad-sweep-onboarding — QR approve→sign-in cycle (WebKit) › D2: double-approve on the same code → 409 (already used) (2.9s)
+  ✓  10 [ipad-webkit] › e2e\onboarding-qr-ipad.spec.ts:437:9 › ipad-sweep-onboarding — QR approve→sign-in cycle (WebKit) › E1: shared iPad — sign out clears currentUser; next user signs in clean (5.3s)
+
+  10 passed (34.0s)

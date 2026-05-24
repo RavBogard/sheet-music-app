@@ -1,0 +1,88 @@
+
+Running 4 tests using 1 worker
+
+  -  1 [ipad-webkit] › e2e\perform-ipad-offline.spec.ts:308:9 › f1-offline-precache — DEPLOYED ipad-webkit offline repro (real public setlist) › Save offline → go offline → real PDF chart renders from cache
+  ✘  2 [ipad-webkit] › e2e\perform-ipad-offline.spec.ts:218:9 › f1-offline-precache — offline chart availability (portrait 820) › probe 1 — idle auto-precache: open online, go offline, chart renders from cache (no tap to save) (23.7s)
+  ✘  3 [ipad-webkit] › e2e\perform-ipad-offline.spec.ts:218:9 › f1-offline-precache — offline chart availability (portrait 820) › probe 1 — idle auto-precache: open online, go offline, chart renders from cache (no tap to save) (retry #1) (24.3s)
+  ✓  4 [ipad-webkit] › e2e\perform-ipad-offline.spec.ts:247:9 › f1-offline-precache — offline chart availability (portrait 820) › probe 2 — explicit "Save offline" CTA: force-cache with done state, then render offline (7.8s)
+  ✓  5 [ipad-webkit] › e2e\perform-ipad-offline.spec.ts:273:9 › f1-offline-precache — offline chart availability (portrait 820) › probe 3 — viewport is the real 820px iPad width (no horizontal overflow with the new CTA) (3.0s)
+
+
+  1) [ipad-webkit] › e2e\perform-ipad-offline.spec.ts:218:9 › f1-offline-precache — offline chart availability (portrait 820) › probe 1 — idle auto-precache: open online, go offline, chart renders from cache (no tap to save) 
+
+    Error: idle auto-precache must cache the whole setlist on entry
+
+    [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveAttribute[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByTestId('save-offline')
+    Expected: [32m"saved"[39m
+    Received: [31m"idle"[39m
+    Timeout:  20000ms
+
+    Call log:
+    [2m  - idle auto-precache must cache the whole setlist on entry with timeout 20000ms[22m
+    [2m  - waiting for getByTestId('save-offline')[22m
+    [2m    24 × locator resolved to <button data-size="sm" data-state="idle" data-slot="button" data-variant="ghost" data-testid="save-offline" aria-label="Save all charts for offline use" class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark…>…</button>[22m
+    [2m       - unexpected value "idle"[22m
+
+
+      230 |         const saveBtn = page.getByTestId('save-offline')
+      231 |         await expect(saveBtn, 'Save-offline CTA must be present').toBeVisible({ timeout: 10_000 })
+    > 232 |         await expect(saveBtn, 'idle auto-precache must cache the whole setlist on entry').toHaveAttribute(
+          |                                                                                           ^
+      233 |             'data-state',
+      234 |             'saved',
+      235 |             { timeout: 20_000 },
+        at C:\Users\dsbog\CentralReform.live\sheet-music-app-ipad-sweep\e2e\perform-ipad-offline.spec.ts:232:91
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\perform-ipad-offline-f1-of-83b71--from-cache-no-tap-to-save--ipad-webkit\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\perform-ipad-offline-f1-of-83b71--from-cache-no-tap-to-save--ipad-webkit\error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: idle auto-precache must cache the whole setlist on entry
+
+    [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveAttribute[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByTestId('save-offline')
+    Expected: [32m"saved"[39m
+    Received: [31m"idle"[39m
+    Timeout:  20000ms
+
+    Call log:
+    [2m  - idle auto-precache must cache the whole setlist on entry with timeout 20000ms[22m
+    [2m  - waiting for getByTestId('save-offline')[22m
+    [2m    24 × locator resolved to <button data-size="sm" data-state="idle" data-slot="button" data-variant="ghost" data-testid="save-offline" aria-label="Save all charts for offline use" class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark…>…</button>[22m
+    [2m       - unexpected value "idle"[22m
+
+
+      230 |         const saveBtn = page.getByTestId('save-offline')
+      231 |         await expect(saveBtn, 'Save-offline CTA must be present').toBeVisible({ timeout: 10_000 })
+    > 232 |         await expect(saveBtn, 'idle auto-precache must cache the whole setlist on entry').toHaveAttribute(
+          |                                                                                           ^
+      233 |             'data-state',
+      234 |             'saved',
+      235 |             { timeout: 20_000 },
+        at C:\Users\dsbog\CentralReform.live\sheet-music-app-ipad-sweep\e2e\perform-ipad-offline.spec.ts:232:91
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\perform-ipad-offline-f1-of-83b71--from-cache-no-tap-to-save--ipad-webkit-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\perform-ipad-offline-f1-of-83b71--from-cache-no-tap-to-save--ipad-webkit-retry1\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\perform-ipad-offline-f1-of-83b71--from-cache-no-tap-to-save--ipad-webkit-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\perform-ipad-offline-f1-of-83b71--from-cache-no-tap-to-save--ipad-webkit-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [ipad-webkit] › e2e\perform-ipad-offline.spec.ts:218:9 › f1-offline-precache — offline chart availability (portrait 820) › probe 1 — idle auto-precache: open online, go offline, chart renders from cache (no tap to save) 
+  1 skipped
+  2 passed (1.4m)

@@ -1,0 +1,8 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [ipad-webkit] › e2e\live-director-gesture.spec.ts:87:9 › live-director-gesture — band-leader long-press → action sheet › band-leader long-press on a setlist row → opens the live-director action sheet (4.3s)
+  ✓  2 [ipad-webkit] › e2e\live-director-gesture.spec.ts:129:9 › live-director-gesture — band-leader long-press → action sheet › band-leader change-key → Dexie patch lands → key badge updates on the row (5.3s)
+  ✓  3 [ipad-webkit] › e2e\live-director-gesture.spec.ts:168:9 › live-director-gesture — band-leader long-press → action sheet › musician iPad — same hold does NOT open the action sheet (auth gate) (4.3s)
+
+  3 passed (28.2s)
