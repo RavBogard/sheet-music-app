@@ -73,6 +73,34 @@ const RESIZE_DEBOUNCE_MS = 200
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
+/**
+ * S1 (transpose-jank polish, DISCUSSION.md §1.3): walk the DOM ancestry from
+ * the OSMD container looking for the nearest element that BOTH has overflow:auto
+ * |scroll AND is currently scrollable (`scrollHeight > clientHeight`). PDFOverlay
+ * wraps `<SmartScoreViewer/>` in `<div className="flex-1 overflow-auto pb-0 relative">`
+ * — that's the scroll surface we need to restore across the OSMD `<svg>` swap.
+ *
+ * Returns `null` in jsdom (no real layout) and when no scrollable ancestor exists.
+ * Callers must no-op on null.
+ */
+const findScrollableAncestor = (el: HTMLElement | null): HTMLElement | null => {
+    if (!el || typeof window === 'undefined') return null
+    let node: HTMLElement | null = el.parentElement
+    while (node) {
+        let overflowY = ''
+        try {
+            overflowY = window.getComputedStyle(node).overflowY
+        } catch {
+            // jsdom or detached node — skip.
+        }
+        if ((overflowY === 'auto' || overflowY === 'scroll') && node.scrollHeight > node.clientHeight) {
+            return node
+        }
+        node = node.parentElement
+    }
+    return null
+}
+
 export function SmartScoreViewer({ url, trackId, trackKey }: SmartScoreViewerProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const osmdRef = useRef<OpenSheetMusicDisplay | null>(null)
@@ -115,6 +143,15 @@ export function SmartScoreViewer({ url, trackId, trackKey }: SmartScoreViewerPro
     const transposeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const lastWidthRef = useRef<number>(0)
+    // S4 adaptive debounce (DISCUSSION.md §1.3): the 140ms debounce only
+    // collapses taps WITHIN the same window. A tap that arrives WHILE OSMD is
+    // mid-render lands AFTER `setTransposing(false)` clears the overlay, then
+    // schedules a fresh 140ms debounce — user sees the prior-key frame for
+    // ~140ms+render. `renderInFlightRef` lets the effect detect this and stash
+    // the latest values into `pendingRenderRef`; the in-flight render's
+    // post-render flush chains ONE final render at those latest values.
+    const renderInFlightRef = useRef(false)
+    const pendingRenderRef = useRef<{ transposition: number; zoom: number } | null>(null)
 
     useEffect(() => {
         let active = true
@@ -175,11 +212,21 @@ export function SmartScoreViewer({ url, trackId, trackKey }: SmartScoreViewerPro
             }
             const osmd = osmdRef.current
 
-            // PRIORITY: AI Content > Source URL
-            const contentToLoad = aiXmlContent || sourceUrl
+            // S7 (transpose-jank polish, DISCUSSION.md §1.3): MusicXML-aware
+            // priority. `SmartScoreViewer` is mounted EXCLUSIVELY for MusicXML
+            // tracks (`PDFOverlay.tsx:330` gates on `isMusicXml`), so when a
+            // `url` prop is supplied it IS the source-of-truth MusicXML. A
+            // non-null `aiXmlContent` at mount time would be stale leftover
+            // from a prior PDF viewer's AI transcription (or the test-only
+            // shortcut path) and MUST NOT override the fresh MusicXML mount.
+            // Pre-fix priority `aiXmlContent || sourceUrl` was a defensive-
+            // housekeeping bug per S7 — flipped to source-first; aiXmlContent
+            // remains the fallback for the (currently unused) inline-XML
+            // injection path.
+            const contentToLoad = sourceUrl || aiXmlContent
             if (!contentToLoad) return
 
-            logger.info("OSMD Loading:", aiXmlContent ? "AI Content (xml string)" : "Source URL")
+            logger.info("OSMD Loading:", sourceUrl ? "Source URL" : "AI Content (xml string)")
 
             try {
                 readyRef.current = false
@@ -306,7 +353,10 @@ export function SmartScoreViewer({ url, trackId, trackKey }: SmartScoreViewerPro
     }, [sourceUrl, aiXmlContent, setMusicXmlKey]) // Re-run if either changes
 
     // Transposition + manual-zoom updates — debounced, with a "working" overlay
-    // so a live key change never shows a stale frame mid-render.
+    // so a live key change never shows a stale frame mid-render. S1 + S4
+    // (transpose-jank polish, DISCUSSION.md §1.3) layered on top of the
+    // pre-existing debounce: scroll-position preservation across the OSMD
+    // `<svg>` swap (S1) + adaptive-debounce burst flush (S4).
     useEffect(() => {
         if (!readyRef.current) return
         const osmd = osmdRef.current
@@ -321,19 +371,67 @@ export function SmartScoreViewer({ url, trackId, trackKey }: SmartScoreViewerPro
         // so it already covers the score before the blocking render starts.
         setTransposing(true)
 
+        // S4: a render is currently executing the OSMD swap. Stash the latest
+        // values for the post-render flush instead of scheduling a competing
+        // setTimeout — the in-flight `runRender` finally block re-checks
+        // `pendingRenderRef` and chains ONE last render at the latest values.
+        // This absorbs burst-taps-after-render into a single trailing render
+        // (collapsing N taps mid/post-render into at most 2 renders total),
+        // eliminating the stale-frame symptom.
+        if (renderInFlightRef.current) {
+            pendingRenderRef.current = { transposition, zoom }
+            return
+        }
+
         if (transposeTimerRef.current) clearTimeout(transposeTimerRef.current)
         transposeTimerRef.current = setTimeout(() => {
-            try {
-                osmd.Sheet.Transpose = transposition
-                osmd.Zoom = clamp(fitBaseRef.current * zoom, FIT_MIN, FIT_MAX)
-                osmd.updateGraphic()
-                osmd.render()
-                appliedRef.current = { transposition, zoom }
-            } catch (err) {
-                logger.error("OSMD Update Error", err)
-            } finally {
-                setTransposing(false)
+            const runRender = (tp: number, zm: number): void => {
+                renderInFlightRef.current = true
+
+                // S1: capture the scrollable ancestor's `scrollTop` before the
+                // synchronous OSMD render replaces the `<svg>`, then restore
+                // after. PDFOverlay's `<div className="overflow-auto ...">`
+                // ancestor scroll resets on some WebKit layout paths during
+                // the SVG swap; explicit restore keeps the user's reading
+                // position. jsdom (no real layout) returns null → no-op.
+                const scrollEl = findScrollableAncestor(containerRef.current)
+                const scrollTopBefore = scrollEl?.scrollTop ?? 0
+
+                try {
+                    osmd.Sheet.Transpose = tp
+                    osmd.Zoom = clamp(fitBaseRef.current * zm, FIT_MIN, FIT_MAX)
+                    osmd.updateGraphic()
+                    osmd.render()
+                    if (scrollEl && scrollTopBefore > 0 && scrollEl.scrollTop !== scrollTopBefore) {
+                        scrollEl.scrollTop = scrollTopBefore
+                    }
+                    appliedRef.current = { transposition: tp, zoom: zm }
+                } catch (err) {
+                    logger.error("OSMD Update Error", err)
+                }
+
+                // S4 post-render flush: defer to a microtask so taps that
+                // queued DURING the synchronous OSMD render (events the
+                // browser couldn't dispatch while JS was blocked) fire their
+                // effect FIRST, land in `pendingRenderRef`, and get absorbed
+                // here. Without the microtask defer, `renderInFlightRef`
+                // would clear synchronously and the queued tap would start a
+                // fresh 140ms debounce → user stares at a stale frame for
+                // ~140ms + ~1s render. With the defer, the second tap chains
+                // immediately after the current render.
+                void Promise.resolve().then(() => {
+                    renderInFlightRef.current = false
+                    const pending = pendingRenderRef.current
+                    pendingRenderRef.current = null
+                    if (pending && (pending.transposition !== tp || pending.zoom !== zm)) {
+                        runRender(pending.transposition, pending.zoom)
+                    } else {
+                        setTransposing(false)
+                    }
+                })
             }
+
+            runRender(transposition, zoom)
         }, TRANSPOSE_DEBOUNCE_MS)
 
         return () => {

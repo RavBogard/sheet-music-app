@@ -111,10 +111,23 @@ describe('SmartScoreViewer', () => {
         mockStoreValues.aiXmlContent = null
         mockAuthValues.isBandLeader = false
         mockAuthValues.isAdmin = false
+
+        // S7 (transpose-jank polish, DISCUSSION.md §1.3): post-fix priority is
+        // `sourceUrl || aiXmlContent` — a `url` prop wins, and the fetch
+        // branch runs. Stub fetch globally so the load path succeeds without
+        // network for tests that previously relied on the `aiXmlContent`
+        // shortcut. The S7 regression test (below) overrides this stub to
+        // assert that `sourceUrl` content lands in `load()`, NOT the stale
+        // `aiXmlContent`.
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+            ok: true,
+            arrayBuffer: async () => new TextEncoder().encode(XML).buffer,
+        }))
     })
 
     afterEach(() => {
         vi.useRealTimers()
+        vi.unstubAllGlobals()
     })
 
     it('assigns TransposeCalculator to OSMD instance after initialization', async () => {
@@ -381,4 +394,155 @@ describe('SmartScoreViewer', () => {
         // After load settles, the overlay is gone (no error, no stuck spinner).
         expect(container.textContent).not.toContain('Rendering Score')
     })
+
+    // ── Transpose-jank polish (Build Lane B, DISCUSSION.md §1.3) ──
+
+    it('S1: preserves scrollable ancestor scrollTop across a transpose re-render', async () => {
+        // Mount inside a wrapper that mimics PDFOverlay's `<div className=
+        // "overflow-auto ...">` scroll surface. jsdom returns 0/0 for
+        // scrollHeight/clientHeight so the helper would normally skip; force
+        // realistic values so `findScrollableAncestor` walks through both the
+        // overflow-style check AND the `scrollHeight > clientHeight` check.
+        const Wrapper = ({ children }: { children: React.ReactNode }) => (
+            <div data-testid="scroll-host" style={{ overflowY: 'auto', height: '800px' }}>
+                {children}
+            </div>
+        )
+
+        let container!: HTMLElement
+        let rerender!: (ui: React.ReactElement) => void
+        await act(async () => {
+            const result = render(<Wrapper><SmartScoreViewer url="https://example.com/score.xml" /></Wrapper>)
+            container = result.container
+            rerender = result.rerender
+        })
+        await advance(250)
+
+        const scrollHost = container.querySelector('[data-testid="scroll-host"]') as HTMLDivElement
+        // Force layout dimensions so the helper accepts this node.
+        Object.defineProperty(scrollHost, 'scrollHeight', { configurable: true, get: () => 2000 })
+        Object.defineProperty(scrollHost, 'clientHeight', { configurable: true, get: () => 800 })
+        // Simulate the user having scrolled into the middle of a long score.
+        scrollHost.scrollTop = 750
+
+        // Simulate the WebKit layout reset that S1 is designed to undo: during
+        // the OSMD `render()` SVG swap, the ancestor's scrollTop gets reset to 0.
+        // The fix captures scrollTopBefore=750 and restores it after render.
+        mockOsmdInstance.render.mockImplementationOnce(() => {
+            scrollHost.scrollTop = 0
+        })
+
+        mockStoreValues.transposition = 2
+        await act(async () => {
+            rerender(<Wrapper><SmartScoreViewer url="https://example.com/score.xml" /></Wrapper>)
+        })
+        await advance(250) // fire the debounced render + microtask flush
+
+        expect(scrollHost.scrollTop).toBe(750)
+    })
+
+    it('S1: no-op when scrollTop was 0 (no jump to undo)', async () => {
+        // Defensive: if the user hasn't scrolled, the post-render restore must
+        // not touch scrollTop (avoids spurious style invalidation + the cheap
+        // path when no scroll preservation is actually needed).
+        const Wrapper = ({ children }: { children: React.ReactNode }) => (
+            <div data-testid="scroll-host" style={{ overflowY: 'auto', height: '800px' }}>
+                {children}
+            </div>
+        )
+
+        let container!: HTMLElement
+        let rerender!: (ui: React.ReactElement) => void
+        await act(async () => {
+            const result = render(<Wrapper><SmartScoreViewer url="https://example.com/score.xml" /></Wrapper>)
+            container = result.container
+            rerender = result.rerender
+        })
+        await advance(250)
+
+        const scrollHost = container.querySelector('[data-testid="scroll-host"]') as HTMLDivElement
+        Object.defineProperty(scrollHost, 'scrollHeight', { configurable: true, get: () => 2000 })
+        Object.defineProperty(scrollHost, 'clientHeight', { configurable: true, get: () => 800 })
+        // scrollTop stays at 0 throughout — user never scrolled.
+
+        // Track scrollTop writes via a setter spy so we can assert the
+        // restore branch was skipped (no write attempt to bring it back to 0).
+        let writeCount = 0
+        let storedScrollTop = 0
+        Object.defineProperty(scrollHost, 'scrollTop', {
+            configurable: true,
+            get: () => storedScrollTop,
+            set: (v: number) => { writeCount++; storedScrollTop = v },
+        })
+
+        mockStoreValues.transposition = 1
+        await act(async () => {
+            rerender(<Wrapper><SmartScoreViewer url="https://example.com/score.xml" /></Wrapper>)
+        })
+        await advance(250)
+
+        // No write attempt because scrollTopBefore was 0 — restore branch is guarded.
+        expect(writeCount).toBe(0)
+    })
+
+    it('S4: tap×3 within the debounce window fires exactly one render at the final value', async () => {
+        // Adaptive-debounce burst gate per DISCUSSION.md §1.3 + dispatch.
+        // Three rapid taps within 300ms must coalesce to a single render
+        // that lands the LAST value (T=3), not T=1 or T=2.
+        let rerender!: (ui: React.ReactElement) => void
+        await act(async () => {
+            const result = render(<SmartScoreViewer url="https://example.com/score.xml" />)
+            rerender = result.rerender
+        })
+        await advance(250) // initial load settle
+
+        mockOsmdInstance.render.mockClear()
+        mockOsmdInstance.updateGraphic.mockClear()
+
+        // Tap 1 → schedule debounce
+        mockStoreValues.transposition = 1
+        await act(async () => { rerender(<SmartScoreViewer url="https://example.com/score.xml" />) })
+        await advance(50)
+
+        // Tap 2 within window → reset debounce
+        mockStoreValues.transposition = 2
+        await act(async () => { rerender(<SmartScoreViewer url="https://example.com/score.xml" />) })
+        await advance(50)
+
+        // Tap 3 within window → reset debounce again
+        mockStoreValues.transposition = 3
+        await act(async () => { rerender(<SmartScoreViewer url="https://example.com/score.xml" />) })
+        await advance(250) // fire the (single, rescheduled) render
+
+        expect(mockOsmdInstance.render).toHaveBeenCalledTimes(1)
+        expect(mockOsmdInstance.Sheet.Transpose).toBe(3)
+    })
+
+    it('S7: prefers MusicXML sourceUrl over stale aiXmlContent at mount', async () => {
+        // Pre-fix priority was `aiXmlContent || sourceUrl` — if AI transcription
+        // for a prior PDF chart left `aiXmlContent` set in the store, mounting
+        // SmartScoreViewer for a NEW MusicXML chart would render the stale AI
+        // XML instead of the chart's actual MusicXML file. Post-fix priority
+        // is `sourceUrl || aiXmlContent`; sourceUrl wins.
+        const STALE_AI_XML = '<score-partwise data-source="stale-pdf-ai"><part-list/></score-partwise>'
+        const MUSICXML_FROM_URL = '<score-partwise data-source="fresh-musicxml-url"><part-list/></score-partwise>'
+
+        mockStoreValues.aiXmlContent = STALE_AI_XML
+        // Override the suite-default fetch stub to return distinct MusicXML
+        // bytes so we can assert which payload reached `load()`.
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+            ok: true,
+            arrayBuffer: async () => new TextEncoder().encode(MUSICXML_FROM_URL).buffer,
+        }))
+
+        await act(async () => {
+            render(<SmartScoreViewer url="https://example.com/fresh.xml" />)
+        })
+        await advance(250)
+
+        // sourceUrl content reached load(), aiXmlContent did NOT.
+        expect(mockOsmdInstance.load).toHaveBeenCalledWith(MUSICXML_FROM_URL)
+        expect(mockOsmdInstance.load).not.toHaveBeenCalledWith(STALE_AI_XML)
+    })
+
 })
