@@ -9,6 +9,16 @@ vi.mock("@/components/music/SmartScoreViewer", () => ({
     ),
 }))
 
+// audio-viewer-f7: mock AudioViewer so the dispatch test can assert
+// routing without exercising the real <audio> element / IDB.
+vi.mock("@/components/music/AudioViewer", () => ({
+    AudioViewer: ({ fileId, title }: { fileId: string; title?: string }) => (
+        <div data-testid="audio-viewer" data-file-id={fileId}>
+            {title}
+        </div>
+    ),
+}))
+
 // Mock PDFViewer module
 vi.mock("@/components/music/PDFViewer", () => ({
     PDFViewer: ({ url, trackName }: { url: string; trackName?: string }) => (
@@ -312,6 +322,63 @@ describe("PDFOverlay", () => {
                     currentIndex={0}
                 />
             )
+            expect(screen.queryByTestId("pdf-viewer")).toBeNull()
+        })
+
+        // audio-viewer-f7 (2026-05-24): a track bonded to a .mp3 fileId
+        // must route to AudioViewer, NOT PDFViewer. Before F7 the same
+        // input surfaced as a "Failed to load PDF" 404 (the Yizkor "Adon
+        // Olam" failure mode). Detection is extension-based here because
+        // toQueueItem's FileType union doesn't include 'audio' yet (out
+        // of scope per dispatch — separate lane owns track-type detection).
+        it("renders AudioViewer for a .mp3 fileId and NOT PDFViewer", async () => {
+            const audioTrack: SetlistTrack = {
+                id: "song-audio",
+                title: "Adon Olam",
+                type: "song",
+                fileId: "12JfLCHytM5q59btBQ05sz-V_SurQmUoT.mp3",
+            }
+            mockStoreState.playbackQueue = [
+                { name: "Adon Olam", fileId: audioTrack.fileId!, type: "pdf", setlistIndex: 0 },
+            ] as never[]
+            mockStoreState.queueIndex = 0
+            render(
+                <PDFOverlay
+                    {...defaultProps}
+                    track={audioTrack}
+                    tracks={[audioTrack]}
+                    currentIndex={0}
+                />
+            )
+            const audio = await screen.findByTestId("audio-viewer")
+            expect(audio.getAttribute("data-file-id")).toBe(
+                "12JfLCHytM5q59btBQ05sz-V_SurQmUoT.mp3",
+            )
+            expect(screen.queryByTestId("pdf-viewer")).toBeNull()
+        })
+
+        it("renders AudioViewer when track.fileName ends in an audio extension", async () => {
+            const audioTrack: SetlistTrack = {
+                id: "song-audio-fn",
+                title: "Hashkiveinu",
+                type: "song",
+                fileId: "upload-abc-123",
+                fileName: "hashkiveinu-cantor.m4a",
+            }
+            mockStoreState.playbackQueue = [
+                { name: "Hashkiveinu", fileId: audioTrack.fileId!, type: "pdf", setlistIndex: 0 },
+            ] as never[]
+            mockStoreState.queueIndex = 0
+            render(
+                <PDFOverlay
+                    {...defaultProps}
+                    track={audioTrack}
+                    tracks={[audioTrack]}
+                    currentIndex={0}
+                />
+            )
+            const audio = await screen.findByTestId("audio-viewer")
+            expect(audio.getAttribute("data-file-id")).toBe("upload-abc-123")
             expect(screen.queryByTestId("pdf-viewer")).toBeNull()
         })
     })

@@ -36,6 +36,14 @@ const ImageScoreViewer = dynamic(
     { ssr: false }
 )
 
+// audio-viewer-f7 (2026-05-24): audio-bond first-class viewer. Closes the
+// "track.type:'song' + .mp3 fileId → 404 via PDFViewer" silent failure
+// — see AudioViewer.tsx header for the full story.
+const AudioViewer = dynamic(
+    () => import("@/components/music/AudioViewer").then((mod) => mod.AudioViewer),
+    { ssr: false }
+)
+
 export interface PDFOverlayProps {
     track: SetlistTrack
     tracks: SetlistTrack[]
@@ -173,6 +181,17 @@ export function PDFOverlay({
         || (libMimeType?.startsWith('text/') ?? false)
     const isImage = currentItem?.type === 'image'
         || (libMimeType?.startsWith('image/') ?? false)
+    // audio-viewer-f7: audio-bond detection. toQueueItem's FileType union
+    // doesn't include 'audio' (out-of-scope per dispatch — track-type
+    // detection belongs to a separate lane), so this branch fires purely
+    // off the library mimeType backstop + fileName/fileId extension
+    // fallback — same pattern as isImage uses for HEIC legacy. The
+    // extension test is the only thing that catches a legacy bind where
+    // library_index never got a mimeType stamped.
+    const audioRe = /\.(mp3|wav|m4a|ogg)$/i
+    const isAudio = (libMimeType?.startsWith('audio/') ?? false)
+        || audioRe.test(track.fileName ?? '')
+        || audioRe.test(track.fileId ?? '')
 
     // Network URL for the chart bytes. PDFViewer is handed THIS directly (see the
     // render branch below) — its loader is IDB-first: it extracts the fileId from
@@ -313,6 +332,12 @@ export function PDFOverlay({
                 fileUrl && <TextScoreViewer url={fileUrl} />
             ) : isImage ? (
                 fileUrl && <ImageScoreViewer url={fileUrl} alt={track.title} />
+            ) : isAudio ? (
+                // audio-viewer-f7: AudioViewer self-resolves the source
+                // via offline-idb (mirrors PDFViewer's IDB-first pattern),
+                // so it doesn't depend on PDFOverlay's `fileUrl` blob
+                // lifecycle. fileId is the stable handle.
+                track.fileId && <AudioViewer fileId={track.fileId} title={track.title} />
             ) : (
                 // PDF: hand PDFViewer the network URL, NOT a blob: object
                 // URL. PDFViewer's loader is IDB-first, so cached charts
