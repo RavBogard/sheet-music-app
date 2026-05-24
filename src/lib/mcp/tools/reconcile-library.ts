@@ -3,8 +3,8 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import {
     uploadToStorage,
     getStorageObjectSize,
-    deleteStorageObjectAtPath,
 } from "@/lib/firebase-storage"
+import { safelyDeleteLibraryObject } from "@/lib/library/safely-delete-library-object"
 import { getChartHealth } from "@/lib/file-fetcher"
 import { DriveClient } from "@/lib/google-drive"
 import { logger } from "@/lib/logger"
@@ -423,6 +423,7 @@ async function commitResolvedBytes(
     fileId: string,
     buffer: Buffer,
     mimeType: string,
+    actorUid?: string,
 ): Promise<MirrorOutcome> {
     // Storage path mirrors `getStoragePath` extension logic (pdf/xml/audio);
     // any other mime gets "" — matches `getStorageObjectSize`.
@@ -449,8 +450,15 @@ async function commitResolvedBytes(
     if (verifiedSize === null || verifiedSize <= 0) {
         // Bytes vanished between write + read-verify — same posture as
         // processChartUpload: refuse to mutate Firestore on a broken write.
+        // force:true with explicit reason — atomic-guard rollback of bytes
+        // we just attempted to write; audit row records the override.
         try {
-            await deleteStorageObjectAtPath(storagePath)
+            await safelyDeleteLibraryObject(fileId, {
+                reason: "reconcile-compensation:storage-verify-missing",
+                force: true,
+                callerUid: actorUid,
+                exactPath: storagePath,
+            })
         } catch {
             // best effort
         }
@@ -462,7 +470,12 @@ async function commitResolvedBytes(
     }
     if (verifiedSize !== buffer.byteLength) {
         try {
-            await deleteStorageObjectAtPath(storagePath)
+            await safelyDeleteLibraryObject(fileId, {
+                reason: "reconcile-compensation:size-mismatch",
+                force: true,
+                callerUid: actorUid,
+                exactPath: storagePath,
+            })
         } catch {
             // best effort
         }
@@ -491,9 +504,16 @@ async function commitResolvedBytes(
         await db.collection("library_index").doc(fileId).set(patch, { merge: true })
     } catch (err) {
         // Compensating-delete: roll the Storage blob back so we don't
-        // leave a reverse orphan (bytes-without-index-update).
+        // leave a reverse orphan (bytes-without-index-update). force:true
+        // because reconcile heals an EXISTING fileId (the bond is by
+        // design); audit row records the override.
         try {
-            await deleteStorageObjectAtPath(storagePath)
+            await safelyDeleteLibraryObject(fileId, {
+                reason: "reconcile-compensation:firestore-merge-failed",
+                force: true,
+                callerUid: actorUid,
+                exactPath: storagePath,
+            })
         } catch (rbErr) {
             logger.warn(
                 `[reconcile_library] compensating-delete failed for ${storagePath}: ${rbErr instanceof Error ? rbErr.message : String(rbErr)}`,
@@ -549,13 +569,11 @@ async function mirrorRow(
         return { ok: false, kind: "transient", error: "Drive payload empty" }
     }
 
-    // Note: actorUid kept on the call for future audit-log extension —
-    // current writes carry the row-level reconciledAt timestamp; uploader
-    // identity is left intact on the original row.
-    void actorUid
     // Storage upload + read-verify + Firestore merge — shared atomic-guard
-    // tail (also used by the C9I3-002 shortcut-rebond heal path).
-    return commitResolvedBytes(db, c.fileId, buffer, driveMimeType)
+    // tail (also used by the C9I3-002 shortcut-rebond heal path). actorUid
+    // flows into the safely-delete-library-object audit row on any
+    // compensating-delete (bond-aware-delete-guard contract).
+    return commitResolvedBytes(db, c.fileId, buffer, driveMimeType, actorUid)
 }
 
 /**
@@ -577,6 +595,7 @@ async function rebondRow(
     db: FirebaseFirestore.Firestore,
     drive: DriveClient,
     c: Candidate,
+    actorUid?: string,
 ): Promise<RebondOutcome> {
     let data: ArrayBuffer
     let targetMime: string | null
@@ -612,7 +631,7 @@ async function rebondRow(
             error: "Shortcut target returned empty bytes.",
         }
     }
-    const out = await commitResolvedBytes(db, c.fileId, buffer, targetMime)
+    const out = await commitResolvedBytes(db, c.fileId, buffer, targetMime, actorUid)
     if (out.ok) return { ok: true, sizeBytes: out.sizeBytes }
     // commitResolvedBytes only fails transiently (upload/verify/merge); keep
     // the row in needsRebond so a re-run retries the heal.
@@ -684,6 +703,7 @@ async function commitRebondBatch(
     db: FirebaseFirestore.Firestore,
     drive: DriveClient,
     plan: ProbeResult[],
+    actorUid?: string,
 ): Promise<{
     committed: number
     /** Rows healed in place — folded into the driveMirror report. */
@@ -705,7 +725,7 @@ async function commitRebondBatch(
         const batch = plan.slice(i, i + MIRROR_CONCURRENCY)
         const results = await Promise.all(
             batch.map(async (p) => {
-                const r = await rebondRow(db, drive, p.candidate)
+                const r = await rebondRow(db, drive, p.candidate, actorUid)
                 return { p, r }
             }),
         )
@@ -955,7 +975,7 @@ export async function reconcileLibrary(
         // bytes → store at this fileId with the target mime). Healed rows fold
         // into the mirror report; targets that 404 escalate to orphan; the
         // rest stay needsRebond for a manual re-bond.
-        const rebondOutcome = await commitRebondBatch(db, drive, needsRebondPlan)
+        const rebondOutcome = await commitRebondBatch(db, drive, needsRebondPlan, uid)
 
         const finalMirrorRows: MirrorRow[] = [
             ...mirrorRows

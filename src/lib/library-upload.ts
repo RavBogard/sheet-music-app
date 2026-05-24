@@ -10,6 +10,7 @@ import {
     getStorageObjectSize,
     deleteStorageObjectAtPath,
 } from "@/lib/firebase-storage"
+import { safelyDeleteLibraryObject } from "@/lib/library/safely-delete-library-object"
 import { processMuseScoreFile } from "@/lib/musescore-converter"
 import { levenshteinDistance } from "@/lib/string-utils"
 import { logger } from "@/lib/logger"
@@ -615,7 +616,16 @@ export async function processChartUpload(
         const message = err instanceof Error ? err.message : "Unknown error"
         stage("firestore-write:failed", { message })
         try {
-            await deleteStorageObjectAtPath(realStoragePath)
+            // Atomic-guard rollback of just-uploaded bytes. force:true with
+            // explicit reason — for a brand-new upload (no fileId reuse) no
+            // bond can yet exist, but the helper still records an audit row
+            // so the rollback is traceable per [[feedback_upload_atomicity]].
+            await safelyDeleteLibraryObject(fileId, {
+                reason: "upload-compensation:firestore-batch-failed",
+                force: true,
+                callerUid: input.uploaderUid,
+                exactPath: realStoragePath,
+            })
             stage("firestore-write:storage-rolled-back")
         } catch (rbErr) {
             const rbMessage =

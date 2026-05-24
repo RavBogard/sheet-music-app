@@ -8,6 +8,7 @@ import {
 import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
 import { scrapeChart } from "@/lib/chart-scrape"
 import { DriveClient } from "@/lib/google-drive"
+import { safelyDeleteLibraryObject } from "@/lib/library/safely-delete-library-object"
 import {
     forbiddenRoleEnvelope,
     richError,
@@ -784,34 +785,55 @@ export async function deleteChart(
         )
     }
 
-    const storagePaths: string[] = []
-    if (typeof indexData.storageUrl === "string" && indexData.storageUrl) {
-        storagePaths.push(indexData.storageUrl)
+    // Storage cleanup. The library_index row + songs row are already gone
+    // above; bytes are best-effort cleanup. Split by subtree:
+    //
+    //  - `library/{fileId}.*` (the canonical chart-byte location) routes
+    //    through `safelyDeleteLibraryObject` so the bond-aware-delete-guard
+    //    contract applies even from this trusted call site. The upstream
+    //    `chart_in_use` guard (L702-752) has already proven no live bond,
+    //    so `force` defaults to false — the helper's bond check is defense
+    //    in depth for any TOCTOU window or future caller that lacks the
+    //    upstream guard. Deletes all three library/* variants for the fileId.
+    //
+    //  - `originals/*` (HEIC/MuseScore conversion sources) live in a
+    //    DIFFERENT Storage subtree and stay on the inline path — the
+    //    bond-aware helper intentionally only guards library/*.
+    try {
+        await safelyDeleteLibraryObject(args.fileId, {
+            reason: "mcp-delete-chart",
+            callerUid: uid,
+        })
+    } catch (err) {
+        logger.warn(
+            `[delete_chart] safelyDeleteLibraryObject failed (non-fatal): ${
+                err instanceof Error ? err.message : err
+            }`,
+        )
     }
-    if (
-        typeof indexData.originalStorageUrl === "string" &&
-        indexData.originalStorageUrl
-    ) {
-        storagePaths.push(indexData.originalStorageUrl)
-    }
-    if (storagePaths.length > 0) {
+
+    // `originalStorageUrl` lives under `originals/` not `library/` and is
+    // out of scope for the bond-aware helper. Keep the inline best-effort
+    // cleanup so HEIC/MuseScore conversion sources don't leak as bytes
+    // orphans after delete_chart.
+    const originalsPath =
+        typeof indexData.originalStorageUrl === "string"
+            ? indexData.originalStorageUrl
+            : null
+    if (originalsPath) {
         try {
             const { getStorage } = await import("firebase-admin/storage")
             const bucket = getStorage().bucket()
-            await Promise.all(
-                storagePaths.map((p) =>
-                    bucket
-                        .file(p)
-                        .delete()
-                        .catch((err) => {
-                            logger.warn(
-                                `[delete_chart] storage cleanup failed for ${p}: ${
-                                    err instanceof Error ? err.message : err
-                                }`,
-                            )
-                        }),
-                ),
-            )
+            await bucket
+                .file(originalsPath)
+                .delete()
+                .catch((err) => {
+                    logger.warn(
+                        `[delete_chart] originals cleanup failed for ${originalsPath}: ${
+                            err instanceof Error ? err.message : err
+                        }`,
+                    )
+                })
         } catch (err) {
             logger.warn(
                 `[delete_chart] storage module unavailable: ${

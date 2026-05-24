@@ -1,8 +1,6 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import {
-    fileExistsInStorage,
-    deleteStorageObjectAtPath,
-} from "@/lib/firebase-storage"
+import { fileExistsInStorage } from "@/lib/firebase-storage"
+import { safelyDeleteLibraryObject } from "@/lib/library/safely-delete-library-object"
 import { getStorage } from "firebase-admin/storage"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
@@ -203,7 +201,17 @@ export async function testDeleteStorageObject(
     }
 
     try {
-        await deleteStorageObjectAtPath(resolvedPath)
+        // force:true — the row's isTest:true gate above proves we're
+        // operating on a test fixture, but routing through the bond-aware
+        // helper gives us a uniform audit row + consistent path-resolution.
+        // The helper's bond check would normally find no live bonds on a
+        // test row; force is belt-and-braces, not a real bypass.
+        await safelyDeleteLibraryObject(fileId, {
+            reason: "test-fixture:__test_delete_storage_object",
+            force: true,
+            callerUid,
+            exactPath: resolvedPath,
+        })
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         logger.error("[mcp] __test_delete_storage_object delete failed", {

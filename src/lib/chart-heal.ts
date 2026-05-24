@@ -2,8 +2,8 @@ import "server-only"
 import {
     uploadToStorage,
     getStorageObjectSize,
-    deleteStorageObjectAtPath,
 } from "@/lib/firebase-storage"
+import { safelyDeleteLibraryObject } from "@/lib/library/safely-delete-library-object"
 import { logger } from "@/lib/logger"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
@@ -104,7 +104,16 @@ export async function healChartBytes(
     const verifiedSize = await getStorageObjectSize(storagePath)
     if (verifiedSize === null || verifiedSize <= 0) {
         try {
-            await deleteStorageObjectAtPath(storagePath)
+            // Atomic-guard rollback of OUR just-written bytes. The fileId
+            // may be bonded (heal targets EXISTING fileIds with live bonds);
+            // force:true with an explicit reason makes the override overt +
+            // audit-logged per the bond-aware-delete-guard contract.
+            await safelyDeleteLibraryObject(fileId, {
+                reason: "heal-compensation:storage-verify-missing",
+                force: true,
+                callerUid: uid,
+                exactPath: storagePath,
+            })
         } catch {
             // best effort
         }
@@ -117,7 +126,12 @@ export async function healChartBytes(
     }
     if (verifiedSize !== buffer.byteLength) {
         try {
-            await deleteStorageObjectAtPath(storagePath)
+            await safelyDeleteLibraryObject(fileId, {
+                reason: "heal-compensation:size-mismatch",
+                force: true,
+                callerUid: uid,
+                exactPath: storagePath,
+            })
         } catch {
             // best effort
         }
@@ -173,9 +187,17 @@ export async function healChartBytes(
             .set({ status: "active" }, { merge: true })
     } catch (err) {
         // Compensating-delete: roll Storage back so we never leave a reverse
-        // orphan (bytes-without-index-update).
+        // orphan (bytes-without-index-update). force:true is correct here —
+        // the row is bonded by definition (heal heals an EXISTING fileId)
+        // but the rollback restores the pre-heal state per atomic-guard
+        // contract. Audit row records the override.
         try {
-            await deleteStorageObjectAtPath(storagePath)
+            await safelyDeleteLibraryObject(fileId, {
+                reason: "heal-compensation:firestore-write-failed",
+                force: true,
+                callerUid: uid,
+                exactPath: storagePath,
+            })
         } catch (rbErr) {
             logger.warn(
                 `[healChartBytes] compensating-delete failed for ${storagePath}: ${rbErr instanceof Error ? rbErr.message : String(rbErr)}`,
