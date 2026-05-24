@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual } from "crypto"
+import { getStorage } from "firebase-admin/storage"
 import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { env } from "@/env.mjs"
@@ -8,6 +9,13 @@ import {
     type StorageBackupHealth,
     checkStorageBackupHealth,
 } from "@/lib/storage-backup/health"
+import {
+    DEFAULT_LIBRARY_BYTES_SAMPLE_SIZE,
+    checkLibraryBytesHealth,
+    type LibraryBytesBucket,
+    type LibraryBytesHealthResult,
+    type LibraryBytesRow,
+} from "@/lib/library/bytes-health"
 
 /**
  * v4.3 C02 — Admin-role consistency check + PGR-03 storage-backup staleness alarm.
@@ -33,6 +41,18 @@ import {
  * within the last 36h, we capture a Sentry message so the silent-
  * cron-death failure mode reaches Daniel.  The two signals are
  * independent — both can fire.
+ *
+ * PGR-04 (added 2026-05-24) folds a `libraryBytesHealth` check into
+ * the same response — the inverse of PGR-03's BACKUP-health. The
+ * primary `library/{fileId}` Storage bytes can silently vanish while
+ * the `library_index` row keeps claiming they exist (the failure
+ * mode of the 2026-05-23T14:04Z cron-blast disarmed at `e9442cae1`
+ * and hard-removed at `a41f9aef8`). We sample the N
+ * most-recently-`lastSyncedAt` active rows, probe their Storage bytes
+ * via a single prefix listing per row, and capture a Sentry message
+ * if any are missing. The two PGR-04 alarm levels (warning at <5% of
+ * sample, error at ≥5%) are independent from PGR-03; all three
+ * Sentry messages may co-fire on a really bad day.
  */
 
 function safeCompare(a: string, b: string): boolean {
@@ -102,10 +122,14 @@ export async function GET(req: NextRequest) {
         // PGR-03 — storage-backup staleness + recent-error alarm.
         const storageBackupHealth = await readAndAlertStorageBackupHealth(db)
 
+        // PGR-04 — primary library bytes-present invariant alarm.
+        const libraryBytesHealth = await readAndAlertLibraryBytesHealth(db)
+
         return NextResponse.json({
             checked: uids.length,
             drift,
             storageBackupHealth,
+            libraryBytesHealth,
         })
     } catch (err) {
         logger.error("[admin-consistency] check failed:", err)
@@ -174,4 +198,109 @@ async function readAndAlertStorageBackupHealth(
         )
     }
     return health
+}
+
+/**
+ * Output shape we hand back to the cron caller for the PGR-04 section.
+ * `'unavailable'` covers the read-throws path so a Firestore/Storage outage
+ * doesn't crash the surrounding admin-consistency check (fail-open mirrors
+ * the PGR-03 shape — silence the alarm rather than amplify the outage).
+ */
+type LibraryBytesHealthResponse =
+    | { status: "unavailable" }
+    | (LibraryBytesHealthResult & { status: "ok" })
+
+/**
+ * PGR-04 — sample the N most-recently-`lastSyncedAt` active library rows,
+ * probe their Storage bytes, and emit Sentry alarms on the dual threshold:
+ *   - 'warning' when any byte is missing (single-digit anomaly — could be
+ *     a legitimate orphan-mark-then-delete-bytes op the alarm is correctly
+ *     drawing attention to);
+ *   - 'error'   when the missing fraction crosses 5% of the sample
+ *     (high-confidence blast signal — mirror of the 2026-05-23 incident).
+ *
+ * Fail-open. A Firestore read failure or a Storage SDK init failure surfaces
+ * as `unavailable`; per-row probe failures are absorbed inside the helper.
+ */
+async function readAndAlertLibraryBytesHealth(
+    db: ReturnType<typeof getFirestore>,
+): Promise<LibraryBytesHealthResponse> {
+    let rows: LibraryBytesRow[]
+    let bucket: LibraryBytesBucket
+    try {
+        const snap = await db
+            .collection("library_index")
+            .where("status", "==", "active")
+            .orderBy("lastSyncedAt", "desc")
+            .limit(DEFAULT_LIBRARY_BYTES_SAMPLE_SIZE)
+            .get()
+        rows = snap.docs.map((doc) => {
+            const data = doc.data() as Record<string, unknown>
+            return {
+                fileId: doc.id,
+                lastSyncedAt: data.lastSyncedAt,
+                updatedAt: data.updatedAt,
+            }
+        })
+    } catch (e) {
+        logger.warn(
+            `[admin-consistency] library_index read failed: ${e instanceof Error ? e.message : String(e)}`,
+        )
+        return { status: "unavailable" }
+    }
+
+    try {
+        const bucketName =
+            process.env.FIREBASE_STORAGE_BUCKET ||
+            process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+            `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`
+        bucket = getStorage().bucket(bucketName) as unknown as LibraryBytesBucket
+    } catch (e) {
+        logger.warn(
+            `[admin-consistency] storage bucket init failed: ${e instanceof Error ? e.message : String(e)}`,
+        )
+        return { status: "unavailable" }
+    }
+
+    const health = await checkLibraryBytesHealth(rows, bucket, Date.now())
+
+    if (health.verdict === "warning") {
+        captureMessage(
+            `library_index bytes missing: ${health.missingCount} of ${health.scanned} sampled rows`,
+            {
+                source: "cron",
+                location: "admin-consistency",
+                extra: {
+                    subsystem: "library-bytes-health",
+                    missingCount: health.missingCount,
+                    scanned: health.scanned,
+                    sampleSize: health.sampleSize,
+                    oldestMissing: health.oldestMissing,
+                    oldestMissingAgeHours: health.oldestMissingAgeHours,
+                    missing: health.missing,
+                },
+            },
+            "warning",
+        )
+    } else if (health.verdict === "error") {
+        captureMessage(
+            `library_index bytes blast: ${health.missingCount} of ${health.scanned} sampled rows missing (≥5% threshold)`,
+            {
+                source: "cron",
+                location: "admin-consistency",
+                extra: {
+                    subsystem: "library-bytes-health",
+                    missingCount: health.missingCount,
+                    scanned: health.scanned,
+                    sampleSize: health.sampleSize,
+                    oldestMissing: health.oldestMissing,
+                    oldestMissingAgeHours: health.oldestMissingAgeHours,
+                    missing: health.missing,
+                },
+            },
+            "error",
+        )
+    }
+
+    return { status: "ok", ...health }
 }

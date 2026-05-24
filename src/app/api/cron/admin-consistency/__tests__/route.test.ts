@@ -1,6 +1,7 @@
 /**
  * GET /api/cron/admin-consistency — admin claim drift check
- *   + PGR-03 storage-backup staleness alarm.
+ *   + PGR-03 storage-backup staleness alarm
+ *   + PGR-04 library_index bytes-present invariant alarm.
  *
  * Mocked Firestore + Auth so we can drive the route across the
  * fresh / stale / recent-error / both / missing matrix and assert
@@ -17,6 +18,8 @@ let storageBackupDoc: Record<string, unknown> | null = null
 let storageBackupExists = false
 let storageBackupReadThrows = false
 let adminUids: string[] = []
+let libraryIndexDocs: Array<{ id: string; data: Record<string, unknown> }> = []
+let libraryIndexReadThrows = false
 
 const mockFirestore = {
     collection: vi.fn((name: string) => {
@@ -41,9 +44,48 @@ const mockFirestore = {
                 }),
             }
         }
+        if (name === "library_index") {
+            // Build a chainable where/orderBy/limit query that yields whatever
+            // libraryIndexDocs we've seeded. Order/limit are honored opaquely
+            // (the route trusts Firestore — the helper does the verdict math).
+            const query = {
+                where: () => query,
+                orderBy: () => query,
+                limit: () => query,
+                get: async () => {
+                    if (libraryIndexReadThrows) {
+                        throw new Error("firestore library_index read failed")
+                    }
+                    return {
+                        size: libraryIndexDocs.length,
+                        docs: libraryIndexDocs.map((d) => ({
+                            id: d.id,
+                            data: () => d.data,
+                        })),
+                    }
+                },
+            }
+            return query
+        }
         return { doc: () => ({ get: async () => ({ data: () => undefined }) }) }
     }),
 }
+
+// ── Storage bucket mock — drive missing/present + outage cases ──────────────
+let bucketPresent: Set<string> = new Set()
+let bucketInitThrows = false
+const getFilesMock = vi.fn(async ({ prefix }: { prefix: string }) => {
+    const id = prefix.replace(/^library\//, "")
+    if (bucketPresent.has(id)) return [[{ name: `library/${id}.pdf` }]]
+    return [[]]
+})
+
+vi.mock("firebase-admin/storage", () => ({
+    getStorage: vi.fn(() => {
+        if (bucketInitThrows) throw new Error("storage init failed")
+        return { bucket: () => ({ getFiles: getFilesMock }) }
+    }),
+}))
 
 const getUserMock = vi.fn(async (uid: string) => ({
     uid,
@@ -83,10 +125,15 @@ beforeEach(() => {
     captureMessageMock.mockClear()
     captureExceptionMock.mockClear()
     getUserMock.mockClear()
+    getFilesMock.mockClear()
     adminUids = []
     storageBackupDoc = null
     storageBackupExists = false
     storageBackupReadThrows = false
+    libraryIndexDocs = []
+    libraryIndexReadThrows = false
+    bucketPresent = new Set()
+    bucketInitThrows = false
 })
 
 describe("GET /api/cron/admin-consistency — auth", () => {
@@ -251,5 +298,154 @@ describe("admin-claim drift (regression — existing v4.3 C02 behavior preserved
             String(c[0]).includes("claim drift"),
         )
         expect(driftCall).toBeTruthy()
+    })
+})
+
+describe("PGR-04 — library_index bytes-present invariant alarm", () => {
+    const lib = (fileId: string, ageHours = 1) => ({
+        id: fileId,
+        data: { lastSyncedAt: NOW - ageHours * HOUR },
+    })
+
+    it("no Sentry call when every sampled row has bytes", async () => {
+        libraryIndexDocs = [lib("a"), lib("b"), lib("c")]
+        bucketPresent = new Set(["a", "b", "c"])
+        const res = await GET(
+            makeReq("/api/cron/admin-consistency", { token: SECRET }),
+        )
+        expect(res.status).toBe(200)
+        const json = (await res.json()) as {
+            libraryBytesHealth: {
+                status: string
+                missingCount: number
+                verdict: string
+            }
+        }
+        expect(json.libraryBytesHealth.status).toBe("ok")
+        expect(json.libraryBytesHealth.missingCount).toBe(0)
+        expect(json.libraryBytesHealth.verdict).toBe("healthy")
+        const pgr04 = captureMessageMock.mock.calls.find((c) =>
+            String(c[0]).includes("library_index"),
+        )
+        expect(pgr04).toBeFalsy()
+    })
+
+    it("captures a 'warning' when missing fraction is below 5%", async () => {
+        // 100 rows, 4 missing — under the 5% (=5) error threshold.
+        libraryIndexDocs = Array.from({ length: 100 }, (_, i) => lib(`f${i}`))
+        bucketPresent = new Set(
+            Array.from({ length: 96 }, (_, i) => `f${i + 4}`),
+        )
+        const res = await GET(
+            makeReq("/api/cron/admin-consistency", { token: SECRET }),
+        )
+        expect(res.status).toBe(200)
+        const pgr04 = captureMessageMock.mock.calls.find((c) =>
+            String(c[0]).includes("library_index"),
+        )
+        expect(pgr04).toBeTruthy()
+        const [msg, ctx, level] = pgr04!
+        expect(msg).toMatch(/library_index bytes missing.*4 of 100/i)
+        expect(ctx).toMatchObject({
+            source: "cron",
+            location: "admin-consistency",
+        })
+        expect(ctx.extra.subsystem).toBe("library-bytes-health")
+        expect(ctx.extra.missingCount).toBe(4)
+        expect(ctx.extra.scanned).toBe(100)
+        expect(ctx.extra.missing).toHaveLength(4)
+        expect(level).toBe("warning")
+    })
+
+    it("captures an 'error' when missing fraction reaches 5%", async () => {
+        // 100 rows, 5 missing — at the threshold.
+        libraryIndexDocs = Array.from({ length: 100 }, (_, i) => lib(`f${i}`))
+        bucketPresent = new Set(
+            Array.from({ length: 95 }, (_, i) => `f${i + 5}`),
+        )
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const pgr04 = captureMessageMock.mock.calls.find((c) =>
+            String(c[0]).includes("library_index"),
+        )
+        expect(pgr04).toBeTruthy()
+        const [msg, , level] = pgr04!
+        expect(msg).toMatch(/library_index bytes blast.*5 of 100/i)
+        expect(level).toBe("error")
+    })
+
+    it("includes oldestMissing + age in the Sentry extras", async () => {
+        // 100 rows; only the oldest two missing (so the oldest age dominates).
+        libraryIndexDocs = Array.from({ length: 100 }, (_, i) =>
+            lib(`f${i}`, i + 1),
+        )
+        bucketPresent = new Set(
+            Array.from({ length: 98 }, (_, i) => `f${i}`),
+        )
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const pgr04 = captureMessageMock.mock.calls.find((c) =>
+            String(c[0]).includes("library_index"),
+        )
+        expect(pgr04).toBeTruthy()
+        const [, ctx] = pgr04!
+        // Oldest missing fileId is f99 → 100h ago.
+        expect(ctx.extra.oldestMissingAgeHours).toBeCloseTo(100, 0)
+    })
+
+    it("reports libraryBytesHealth='unavailable' when library_index read throws", async () => {
+        libraryIndexReadThrows = true
+        const res = await GET(
+            makeReq("/api/cron/admin-consistency", { token: SECRET }),
+        )
+        expect(res.status).toBe(200)
+        const json = (await res.json()) as {
+            libraryBytesHealth: { status: string }
+        }
+        expect(json.libraryBytesHealth.status).toBe("unavailable")
+        // PGR-03 may have fired its own captures unrelated to PGR-04; make
+        // sure no PGR-04 message slipped through on a read failure.
+        const pgr04 = captureMessageMock.mock.calls.find((c) =>
+            String(c[0]).includes("library_index"),
+        )
+        expect(pgr04).toBeFalsy()
+    })
+
+    it("reports libraryBytesHealth='unavailable' when the Storage bucket init throws", async () => {
+        libraryIndexDocs = [lib("a")]
+        bucketInitThrows = true
+        const res = await GET(
+            makeReq("/api/cron/admin-consistency", { token: SECRET }),
+        )
+        expect(res.status).toBe(200)
+        const json = (await res.json()) as {
+            libraryBytesHealth: { status: string }
+        }
+        expect(json.libraryBytesHealth.status).toBe("unavailable")
+        const pgr04 = captureMessageMock.mock.calls.find((c) =>
+            String(c[0]).includes("library_index"),
+        )
+        expect(pgr04).toBeFalsy()
+    })
+
+    it("PGR-03 + PGR-04 alarms can co-fire on a really bad day", async () => {
+        // PGR-03: backup stale + recent error
+        storageBackupExists = true
+        storageBackupDoc = {
+            lastBackupAt: NOW - 48 * HOUR,
+            lastError: "boom",
+            lastErrorAt: NOW - 4 * HOUR,
+        }
+        // PGR-04: 100 rows, all missing → error
+        libraryIndexDocs = Array.from({ length: 100 }, (_, i) => lib(`f${i}`))
+        bucketPresent = new Set()
+
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const subjects = captureMessageMock.mock.calls.map((c) => String(c[0]))
+        expect(subjects.some((s) => /storage backup stale/i.test(s))).toBe(true)
+        expect(subjects.some((s) => /storage backup last run failed/i.test(s))).toBe(
+            true,
+        )
+        expect(subjects.some((s) => /library_index bytes blast/i.test(s))).toBe(
+            true,
+        )
     })
 })
