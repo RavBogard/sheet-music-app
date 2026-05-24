@@ -65,7 +65,11 @@ const CONSOLE_NOISE: RegExp[] = [
     /bonded to an audio file.*not a chart/i,
 ]
 
-const RENDER_ERROR = /Failed to load|render error|Could not load chart|Chart failed to load|Invalid PDF|chart load timed out/i
+// "Audio file not found" added 2026-05-24 (audio-viewer-blob-url-fix bundling
+// adjacent #2 per dispatch): pre-fix iPad WebKit audio bonds landed in
+// AudioViewer's status='error' render path; the probe needs to surface that
+// state directly rather than time out at 25s.
+const RENDER_ERROR = /Failed to load|render error|Could not load chart|Chart failed to load|Invalid PDF|chart load timed out|Audio file not found/i
 const AUDIO_BOND = /bonded to an audio file|not a chart/i
 
 const DEFAULT_TARGETS: { label: string; id: string; expectedCharts: number }[] = [
@@ -241,8 +245,15 @@ test.describe('ipad-stuck-spinner-probe (instrumentation-only)', () => {
                 ttfrMs: number
             }> {
                 const start = Date.now()
+                // `audio[src*="/api/drive/file/"]` added 2026-05-24 with the
+                // AudioViewer blob-URL fix: this probe IS the lane's deployed-surface
+                // verify-gate oracle — step-12 post-fix expects a `RENDERED`/`AUDIO`
+                // verdict with `audioCount: 1` + `audioElementSrc` matching
+                // `/api/drive/file/12JfLCHy…`. Without including the <audio> element
+                // here, the verify gate would still time out post-fix (correct DOM,
+                // unrecognised by classifier).
                 const renderSig = page
-                    .locator('canvas, [aria-label="Sheet music score"] svg, img[src*="/api/drive/file/"]')
+                    .locator('canvas, [aria-label="Sheet music score"] svg, img[src*="/api/drive/file/"], audio[src*="/api/drive/file/"]')
                     .first()
                 const textSig = page.locator('.text-brand.font-bold').first()
                 let verdict: 'RENDERED' | 'AUDIO' | 'FAILED' = 'FAILED'

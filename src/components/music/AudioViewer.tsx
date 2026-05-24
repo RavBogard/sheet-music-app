@@ -11,12 +11,20 @@ import { Loader2, AlertCircle } from "lucide-react"
  * tracks fell through PDFOverlay's dispatch into PDFViewer and surfaced
  * as a "Failed to load PDF" 404 — see lane prompt for the full story.
  *
- * Source-resolution mirrors PDFViewer's pattern: try the offline-idb
- * cached blob first (so a Save-Offline'd setlist plays during a network
- * blackout), fall back to the same `/api/drive/file/<id>` network path
- * the other viewers use. We hand the resolved URL straight to
- * `<audio src>` — there's no special bytes loader needed; the native
- * element handles HTTP range requests + buffering itself.
+ * Source-resolution: **online → network URL first; offline → IDB blob:
+ * fallback.** Mirrors `webkit-pdf-reload-fix` (`575bc47ae`, R1 Finding B):
+ * iPad WebKit rejects `<audio src="blob:…">` even for well-formed cached
+ * MP3 blobs, firing the audio element's `onError` immediately and
+ * landing the viewer in the `status='error'` "Audio file not found"
+ * state — exactly the F-2 mis-classified stuck-spinner mechanism that
+ * coder-5's `ipad-stuck-spinner-characterization` Tier-0 research
+ * (`1aea77464`) caught at step-12 of the Shavuot Yizkor walk. So
+ * `/api/drive/file/<id>` (which serves `audio/mpeg` with `Range:`
+ * support + s-maxage CDN cache) is the safe default. The IDB blob:
+ * path is still attempted when `navigator.onLine === false` as a
+ * best-effort offline-play branch — still subject to WebKit's
+ * blob:-rejection, but no worse than today's always-broken offline
+ * state.
  *
  * Touch sizing follows iPad band hardware (820×1180 WebKit) — the
  * native controls are sized large enough that finger taps don't
@@ -34,9 +42,11 @@ export function AudioViewer({ fileId, title }: AudioViewerProps) {
     const [src, setSrc] = useState<string>("")
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading")
 
-    // Resolve src: IDB-first, network fallback. Mirrors PDFOverlay's
-    // own resolve() pattern for the non-PDF viewers. Cleans up the
-    // object URL on unmount / fileId change to avoid leaks.
+    // Resolve src: network URL by default (the only path that survives
+    // iPad WebKit's `<audio src="blob:…">` rejection), with an IDB
+    // blob: fallback attempted ONLY when the browser reports offline.
+    // Mirrors webkit-pdf-reload-fix (R1 Finding B). Object URL is
+    // revoked on unmount / fileId change to avoid leaks.
     useEffect(() => {
         let cancelled = false
         let objectUrl: string | null = null
@@ -47,6 +57,24 @@ export function AudioViewer({ fileId, title }: AudioViewerProps) {
                 setStatus("error")
                 return
             }
+            const networkUrl = `/api/drive/file/${fileId}`
+
+            // Online (default + SSR — navigator may be undefined): hand
+            // the network URL to <audio>. The route serves audio/mpeg
+            // with Range support; native element handles streaming.
+            const online =
+                typeof navigator === "undefined" || navigator.onLine !== false
+            if (online) {
+                setSrc(networkUrl)
+                setStatus("loading")
+                return
+            }
+
+            // Offline best-effort: try the IDB blob (may still be
+            // rejected by WebKit; no worse than the always-broken
+            // state pre-fix). Fall back to the network URL on miss /
+            // IDB unavailability so we at least surface a clean
+            // network-error state when connectivity returns.
             try {
                 const { getFile } = await import("@/lib/offline-idb")
                 const blob = await getFile(fileId)
@@ -55,14 +83,12 @@ export function AudioViewer({ fileId, title }: AudioViewerProps) {
                     objectUrl = URL.createObjectURL(blob)
                     setSrc(objectUrl)
                 } else {
-                    setSrc(`/api/drive/file/${fileId}`)
+                    setSrc(networkUrl)
                 }
                 setStatus("loading")
             } catch {
                 if (cancelled) return
-                // IDB unavailable (private-mode Safari etc.) — try the
-                // network path anyway so we don't strand the viewer.
-                setSrc(`/api/drive/file/${fileId}`)
+                setSrc(networkUrl)
                 setStatus("loading")
             }
         }

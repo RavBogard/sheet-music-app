@@ -112,7 +112,12 @@ function trackConsoleErrors(page: Page): string[] {
     return errors
 }
 
-const RENDER_ERROR = /Failed to load|render error|Could not load chart|Chart failed to load|Invalid PDF|chart load timed out/i
+// "Audio file not found" added 2026-05-24 (audio-viewer-blob-url-fix bundling
+// adjacent #2 per dispatch): pre-fix iPad WebKit audio bonds landed in
+// AudioViewer's status='error' render path, which classifyCurrent didn't
+// recognise → 25s stuck-spinner false-positive. Post-fix this state should
+// not occur in prod, but the classifier still needs to surface it if it does.
+const RENDER_ERROR = /Failed to load|render error|Could not load chart|Chart failed to load|Invalid PDF|chart load timed out|Audio file not found/i
 const AUDIO_BOND = /bonded to an audio file|not a chart/i
 
 test.describe('R1 real-setlist render sweep (iPad WebKit portrait 820)', () => {
@@ -187,8 +192,14 @@ test.describe('R1 real-setlist render sweep (iPad WebKit portrait 820)', () => {
 
             // Classify the current overlay chart: RENDERED | AUDIO | FAILED.
             async function classifyCurrent(): Promise<{ verdict: 'RENDERED' | 'AUDIO' | 'FAILED'; detail: string }> {
+                // `audio[src*="/api/drive/file/"]` added 2026-05-24 with the
+                // AudioViewer blob-URL fix: a successful audio-bond render mounts
+                // an <audio> element with the network URL — without including it
+                // here, classifyCurrent times out at 25s on every audio-bonded row
+                // and false-positives as "stuck spinner". Mirrors the renderSig
+                // widening in `ipad-stuck-spinner-probe.spec.ts`.
                 const renderSig = page
-                    .locator('canvas, [aria-label="Sheet music score"] svg, img[src*="/api/drive/file/"]')
+                    .locator('canvas, [aria-label="Sheet music score"] svg, img[src*="/api/drive/file/"], audio[src*="/api/drive/file/"]')
                     .first()
                 const textSig = page.locator('.text-brand.font-bold').first()
                 let verdict: 'RENDERED' | 'AUDIO' | 'FAILED' = 'FAILED'
