@@ -1,0 +1,25 @@
+[90mstderr[2m | src/lib/sync/__tests__/edit-log.test.ts[2m > [22m[2medit-log helper (v5h3-01-02)[2m > [22m[2mclearUploaded swallows failures (does not throw)
+[22m[39m[edit-log] clearUploaded failed (swallowed) Error: injected delete failure
+    at Table.<anonymous> [90m(C:\Users\dsbog\centralreform.live\sheet-music-app-flake-research\[39msrc\lib\sync\__tests__\edit-log.test.ts:152:23[90m)[39m
+    at Table.mockCall (file:///C:/Users/dsbog/CentralReform.live/sheet-music-app-auditor-validation/node_modules/[4m@vitest/spy[24m/dist/index.js:96:15)
+    at Table.spy [as where] (file:///C:/Users/dsbog/CentralReform.live/sheet-music-app-auditor-validation/node_modules/[4mtinyspy[24m/dist/index.js:47:80)
+    at clearUploaded (C:\Users\dsbog\CentralReform.live\sheet-music-app-flake-research\src\lib\sync\edit-log.ts:98:27)
+    at [90mC:\Users\dsbog\centralreform.live\sheet-music-app-flake-research\[39msrc\lib\sync\__tests__\edit-log.test.ts:155:22
+    at file:///C:/Users/dsbog/CentralReform.live/sheet-music-app-auditor-validation/node_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at file:///C:/Users/dsbog/CentralReform.live/sheet-music-app-auditor-validation/node_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at file:///C:/Users/dsbog/CentralReform.live/sheet-music-app-auditor-validation/node_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///C:/Users/dsbog/CentralReform.live/sheet-music-app-auditor-validation/node_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10)
+
+[90mstderr[2m | src/lib/sync/__tests__/edit-log.test.ts[2m > [22m[2medit-log helper (v5h3-01-02)[2m > [22m[2msite-contract: applyEdit records a stable-identifier-only row on success
+[22m[39mFirebase API Key missing. Using mock app.
+
+ [32m✓[39m src/lib/sync/__tests__/edit-log.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 5335[2mms[22m[39m
+   [33m[2m✓[22m[39m edit-log helper (v5h3-01-02)[2m > [22mrecordEdit applies FIFO cap at EDIT_LOG_MAX_ROWS — oldest evicted, newest retained [33m 827[2mms[22m[39m
+   [33m[2m✓[22m[39m edit-log helper (v5h3-01-02)[2m > [22msite-contract: applyEdit records a stable-identifier-only row on success [33m 4179[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m11 passed[39m[22m[90m (11)[39m
+[2m   Start at [22m 22:06:55
+[2m   Duration [22m 11.13s[2m (transform 466ms, setup 65ms, collect 311ms, tests 5.33s, environment 2.66s, prepare 295ms)[22m
+
