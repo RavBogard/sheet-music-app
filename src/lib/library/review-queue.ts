@@ -54,6 +54,8 @@ import {
     type CorrectionSignalInput,
 } from "@/lib/library/correction-signals"
 import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
+import { recomputeIndexNameFields } from "@/lib/library/recompute-index-name-fields"
+import { bareStem } from "@/lib/mcp/title-specificity"
 import { logger } from "@/lib/logger"
 
 const ALLOWED_COLLECTIONS = ["core", "supplemental", "uploads"] as const
@@ -512,8 +514,35 @@ export async function editEnrichment(
                 message: "title cannot be empty when supplied.",
             }
         }
+        // F-7 W-02 recompute: editEnrichment pre-fix wrote only
+        // `nameLower` (3 of 5 W-02 fields stale → fuzzy dedup blind +
+        // ranking drift). Compute all four derivatives off the new
+        // title + sibling count under the new stem (excluding self).
+        // Read scope is library_index — same collection this branch is
+        // writing to, so admin auth covers it.
+        const newStem = bareStem(t)
+        const siblingSnap = newStem
+            ? await db
+                  .collection("library_index")
+                  .where("stem", "==", newStem)
+                  .select("stem", "name", "status")
+                  .get()
+            : null
+        const existingSiblings = siblingSnap
+            ? siblingSnap.docs.filter(
+                  (d) =>
+                      d.id !== rowId &&
+                      (d.data().status as string | undefined) !==
+                          "orphaned",
+              )
+            : []
+        const siblingsInCatalog = existingSiblings.length + 1
+        const w02 = recomputeIndexNameFields(t, siblingsInCatalog)
         update.name = t
-        update.nameLower = t.toLowerCase()
+        update.nameLower = w02.nameLower
+        update.normalizedName = w02.normalizedName
+        update.stem = w02.stem
+        update.titleSpecificity = w02.titleSpecificity
         update.humanRenamedAt = new Date().toISOString()
         fieldsChanged.push("title")
     }
