@@ -135,6 +135,7 @@ describe("MCP backfill_track_mimetype — cowork #2/#7 (emulator)", () => {
             setlistId: "s1",
             title: "Hinei Ma Tov",
             fileId: "upload-text",
+            bondKind: "fileId",
             before: null,
             after: "text/plain",
         })
@@ -144,6 +145,9 @@ describe("MCP backfill_track_mimetype — cowork #2/#7 (emulator)", () => {
         )
         expect(skippedById["t-noidx"]).toBe("library_entry_not_found")
         expect(skippedById["t-nomime"]).toBe("library_entry_no_mimetype")
+        for (const s of r.skipped.rows) {
+            expect(s.bondKind).toBe("fileId")
+        }
 
         // Nothing written.
         const heal = (await db().collection("tracks").doc("t-heal").get()).data() ?? {}
@@ -197,5 +201,89 @@ describe("MCP backfill_track_mimetype — cowork #2/#7 (emulator)", () => {
         expect(r2.committed).toBe(0)
         expect(r2.heal.count).toBe(0)
         expect(r2.alreadyHealthy).toBe(1)
+    })
+
+    // ─── FINDING-6 (ingest-mutator-matrix) — audioFileId-only audio bonds ────
+    // audio-viewer-f7 (`912ea2c3d`) introduced bonded `track.type:'song'` rows
+    // carrying ONLY `audioFileId` (no `fileId`). The legacy candidate filter
+    // (`if (!fileId) continue`) skipped them as unbonded; their `mimeType`
+    // stayed un-healed. The fix accepts `audioFileId` as a fallback lookup key.
+    it("FINDING-6: heals an audioFileId-only bonded track from library_index/{audioFileId}.mimeType", async () => {
+        // audio-only bond: no fileId, audioFileId set, mimeType missing.
+        await seedTrack("t-audio", {
+            setlistId: "s1",
+            title: "Adon Olam",
+            audioFileId: "upload-mp3",
+        })
+        await seedIndex("upload-mp3", { mimeType: "audio/mpeg" })
+
+        const r = await backfillTrackMimetype(ADMIN, { dryRun: false, force: true })
+        if (!r.ok) throw new Error("expected ok:true")
+        expect(r.bondedTracks).toBe(1)
+        expect(r.committed).toBe(1)
+        expect(r.heal.count).toBe(1)
+        expect(r.heal.rows[0]).toMatchObject({
+            trackId: "t-audio",
+            setlistId: "s1",
+            title: "Adon Olam",
+            fileId: "upload-mp3",
+            bondKind: "audioFileId",
+            before: null,
+            after: "audio/mpeg",
+        })
+        const after = (await db().collection("tracks").doc("t-audio").get()).data() ?? {}
+        expect(after.mimeType).toBe("audio/mpeg")
+        // Bond fields untouched (merge-set).
+        expect(after.audioFileId).toBe("upload-mp3")
+        expect(after.fileId).toBeUndefined()
+    })
+
+    it("FINDING-6: heals from fileId when both fileId AND audioFileId are present (chart bond is primary)", async () => {
+        // Multi-bond shape: fileId points at a PDF, audioFileId points at an
+        // mp3, mimeType missing. PDFOverlay dispatches off the chart-bond
+        // mimeType, so we heal from library_index/{fileId} (the PDF), not the
+        // audio entry. Track has only one mimeType field; the audio side stays
+        // out of scope of this denorm cache.
+        await seedTrack("t-multi", {
+            setlistId: "s1",
+            title: "Hashkivenu",
+            fileId: "upload-pdf",
+            audioFileId: "upload-mp3",
+        })
+        await seedIndex("upload-pdf", { mimeType: "application/pdf" })
+        await seedIndex("upload-mp3", { mimeType: "audio/mpeg" })
+
+        const r = await backfillTrackMimetype(ADMIN, { dryRun: false, force: true })
+        if (!r.ok) throw new Error("expected ok:true")
+        expect(r.committed).toBe(1)
+        expect(r.heal.count).toBe(1)
+        expect(r.heal.rows[0]).toMatchObject({
+            trackId: "t-multi",
+            fileId: "upload-pdf",
+            bondKind: "fileId",
+            after: "application/pdf",
+        })
+        const after = (await db().collection("tracks").doc("t-multi").get()).data() ?? {}
+        expect(after.mimeType).toBe("application/pdf")
+    })
+
+    it("FINDING-6: skips an audioFileId-only track when library_index entry is missing (preserves bondKind)", async () => {
+        await seedTrack("t-audio-ghost", {
+            setlistId: "s1",
+            audioFileId: "ghost-audio",
+        })
+        // No library_index row seeded for "ghost-audio".
+
+        const r = await backfillTrackMimetype(ADMIN, {})
+        if (!r.ok) throw new Error("expected ok:true")
+        expect(r.bondedTracks).toBe(1)
+        expect(r.heal.count).toBe(0)
+        expect(r.skipped.count).toBe(1)
+        expect(r.skipped.rows[0]).toMatchObject({
+            trackId: "t-audio-ghost",
+            fileId: "ghost-audio",
+            bondKind: "audioFileId",
+            reason: "library_entry_not_found",
+        })
     })
 })

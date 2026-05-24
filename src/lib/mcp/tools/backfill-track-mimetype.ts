@@ -20,10 +20,14 @@ import { logger } from "@/lib/logger"
  * defaults to the PDF renderer and shows the wrong "sub-attached doc" styling
  * (#7) until the row is re-bonded.
  *
- * This tool scans every `tracks` row that is bonded (`fileId` present) but
- * missing `mimeType`, and stamps the value from the bonded `library_index`
- * entry — exactly the same source the live bind paths read. It does NOT touch
- * the bond (`fileId`), only the denormalized render-routing field.
+ * This tool scans every `tracks` row that is bonded (`fileId` OR `audioFileId`
+ * present — ingest-mutator-matrix FINDING-6: audio-viewer-f7 introduced
+ * `audioFileId`-only audio bonds that the legacy `fileId`-only filter missed)
+ * but missing `mimeType`, and stamps the value from the bonded `library_index`
+ * entry — exactly the same source the live bind paths read. When both fields
+ * are present we prefer `fileId` (chart bond — PDFOverlay's primary dispatch
+ * key); audio-only rows fall back to `audioFileId`. It does NOT touch the
+ * bond, only the denormalized render-routing field.
  *
  * Atomic-guard note ([[feedback_upload_atomicity]]): there is NO Storage write
  * here, so the contract reduces to a merge-set (never clobber sibling track
@@ -60,11 +64,24 @@ export interface BackfillTrackMimetypeArgs {
     force?: boolean
 }
 
+/**
+ * Which track-side field supplied the `library_index` lookup key for this row.
+ * `fileId` is the chart bond (PDF/MusicXML/text/image; PDFOverlay's primary
+ * dispatch key); `audioFileId` is the audio bond (audio-viewer-f7 shape,
+ * `track.type:'song'` with only an mp3/wav bonded). When both fields are
+ * present we prefer `fileId` — the track has a single `mimeType` field and the
+ * chart-side mime drives the routing the user actually sees.
+ */
+export type BondKind = "fileId" | "audioFileId"
+
 export interface HealRow {
     trackId: string
     setlistId: string | null
     title: string | null
+    /** The lookup key used to read library_index — either fileId or audioFileId. */
     fileId: string
+    /** Which track-side field supplied the lookup key. FINDING-6 observability. */
+    bondKind: BondKind
     /** Always null — these are the rows we're healing (missing/empty mimeType). */
     before: null
     /** mimeType resolved from the bonded library_index entry. */
@@ -74,6 +91,8 @@ export interface HealRow {
 export interface SkippedRow {
     trackId: string
     fileId: string
+    /** Which track-side field supplied the lookup key. FINDING-6 observability. */
+    bondKind: BondKind
     /**
      * Why the row can't be healed from the catalog:
      *  - library_entry_not_found  → no library_index/{fileId} doc
@@ -118,7 +137,9 @@ interface Candidate {
     trackId: string
     setlistId: string | null
     title: string | null
+    /** library_index lookup key — either the row's `fileId` or `audioFileId`. */
     fileId: string
+    bondKind: BondKind
 }
 
 export async function backfillTrackMimetype(
@@ -151,7 +172,17 @@ export async function backfillTrackMimetype(
             const data = d.data()
             const fileId =
                 typeof data.fileId === "string" ? data.fileId.trim() : ""
-            if (!fileId) continue // unbonded row — no chart to route; skip
+            // FINDING-6: audio bonds via audio-viewer-f7 may carry only
+            // `audioFileId` (no `fileId`). Accept that as a bonded row too.
+            // When both are set, prefer `fileId` (chart bond — drives PDFOverlay
+            // dispatch off `library_index/{fileId}.mimeType`, which is the
+            // mimeType the user actually sees rendered).
+            const audioFileId =
+                typeof data.audioFileId === "string"
+                    ? data.audioFileId.trim()
+                    : ""
+            const bondKey = fileId || audioFileId
+            if (!bondKey) continue // unbonded row — no chart or audio to route; skip
             bondedTracks++
             const mime =
                 typeof data.mimeType === "string" ? data.mimeType.trim() : ""
@@ -164,7 +195,8 @@ export async function backfillTrackMimetype(
                 setlistId:
                     typeof data.setlistId === "string" ? data.setlistId : null,
                 title: typeof data.title === "string" ? data.title : null,
-                fileId,
+                fileId: bondKey,
+                bondKind: fileId ? "fileId" : "audioFileId",
             })
         }
 
@@ -198,6 +230,7 @@ export async function backfillTrackMimetype(
                 skippedRows.push({
                     trackId: c.trackId,
                     fileId: c.fileId,
+                    bondKind: c.bondKind,
                     reason: libExists.has(c.fileId)
                         ? "library_entry_no_mimetype"
                         : "library_entry_not_found",
@@ -209,6 +242,7 @@ export async function backfillTrackMimetype(
                 setlistId: c.setlistId,
                 title: c.title,
                 fileId: c.fileId,
+                bondKind: c.bondKind,
                 before: null,
                 after: mime,
             })
