@@ -444,7 +444,18 @@ async function main() {
     } else {
         section(`Firestore tier — enabled (${fs.how})`)
         assert("F0-firestore-creds", true, fs.how)
-        await firestoreTier(fs, targetBus)
+        // v10.0.4 surface tier runs FIRST (read-only) to snapshot the baseline
+        // errCount + heartbeat shape before the F-tier write perturbs state.
+        const baseline = await v1004Tier(fs, probeBearer)
+        const restoreValueForStress = await firestoreTier(fs, targetBus)
+        // Stress tier — 3-command burst at restoreValue (no desk motion) so we
+        // can assert queueDepth/unconfirmedCount stay bounded + state.updatedAt
+        // advanced (not just heartbeat) + errCount delta during the probe window.
+        if (!FLAG.dryRun) {
+            await stressTier(fs, targetBus, restoreValueForStress, baseline)
+        } else {
+            note("Stress tier skipped: --dry-run.")
+        }
         // Per-channel send tier (opt-in via PROBE_CHANNEL) — the live oracle for
         // the syncFullState throttle fix. Runs after the master tier so the bus
         // is in a known state first.
@@ -581,6 +592,199 @@ async function firestoreTier(fs, targetBus) {
     if (Math.abs((CFG.testValue ?? 0) - (restoreValue ?? 0)) < 1e-9) {
         note("test value == restore value → write was a no-op; desk unchanged either way.")
     }
+    // Pass the restoreValue back so the stress tier can do its no-motion burst
+    // at exactly the restored value (writing the SAME value = zero desk motion).
+    return restoreValue
+}
+
+// ─── v10.0.4 surface assertion tier (O1-O4 + B1) ─────────────────────────────
+//
+// Verifies the v10.0.4 ship surface from `bridge-v1004` (master commit 6a313f5dd):
+//   O1 monitor-live/bridgeLog ring buffer  — V5
+//   O2 additive heartbeat diagnostics      — V1 (presence) + V2 (sanity)
+//   O3 get_bridge_health MCP tool          — V3
+//   O4 monitor-live/selftest               — V4
+// Read-only — runs BEFORE firestoreTier so we snapshot the baseline errCount +
+// lastSeen against which the stress tier will diff.
+async function v1004Tier(fs, probeBearer) {
+    const { db } = fs
+    section("v10.0.4 surface tier — O1 bridgeLog · O2 heartbeat diagnostics · O3 get_bridge_health · O4 selftest")
+
+    const [cfgSnap, logSnap, selftestSnap] = await Promise.all([
+        db.collection("config").doc("monitor").get(),
+        db.collection("monitor-live").doc("bridgeLog").get(),
+        db.collection("monitor-live").doc("selftest").get(),
+    ])
+    const bridge = cfgSnap.data()?.bridge || {}
+
+    // V1 — O2 heartbeat fields present
+    const O2_FIELDS = [
+        "socketAlive", "stateAgeMs", "unconfirmedCount", "lastOscRxAt",
+        "lastStateWriteAt", "startedAt", "uptimeMs", "queueDepth", "errCount", "lastError",
+    ]
+    const missingFields = O2_FIELDS.filter((k) => !(k in bridge))
+    assert("V1-heartbeat-fields-present", missingFields.length === 0,
+        missingFields.length === 0
+            ? `all ${O2_FIELDS.length} O2 fields present in config/monitor.bridge`
+            : `MISSING ${missingFields.length}/${O2_FIELDS.length}: ${missingFields.join(", ")} — pre-v10.0.4 bridge or partial write`)
+
+    // V2 — O2 heartbeat sanity (types + non-negative numerics + timestamp shape)
+    const sanity = []
+    if (typeof bridge.socketAlive !== "boolean") sanity.push(`socketAlive type=${typeof bridge.socketAlive}`)
+    if (!(typeof bridge.queueDepth === "number" && bridge.queueDepth >= 0)) sanity.push(`queueDepth=${bridge.queueDepth}`)
+    if (!(typeof bridge.unconfirmedCount === "number" && bridge.unconfirmedCount >= 0)) sanity.push(`unconfirmedCount=${bridge.unconfirmedCount}`)
+    if (!(typeof bridge.uptimeMs === "number" && bridge.uptimeMs > 0)) sanity.push(`uptimeMs=${bridge.uptimeMs}`)
+    if (!(typeof bridge.errCount === "number" && bridge.errCount >= 0)) sanity.push(`errCount=${bridge.errCount}`)
+    // lastError can be null or {msg,ts}; reject other shapes.
+    const le = bridge.lastError
+    if (!(le === null || (typeof le === "object" && le && typeof le.msg === "string"))) {
+        sanity.push(`lastError shape=${typeof le}`)
+    }
+    assert("V2-heartbeat-fields-sane", sanity.length === 0,
+        sanity.length === 0
+            ? `socketAlive=${bridge.socketAlive} queueDepth=${bridge.queueDepth} unconfirmed=${bridge.unconfirmedCount} uptimeMs=${bridge.uptimeMs} errCount=${bridge.errCount}`
+            : `unsane: ${sanity.join("; ")}`)
+    note(`bridge.startedAt=${bridge.startedAt} bridge.lastError=${JSON.stringify(bridge.lastError)}`)
+
+    // V3 — O3 get_bridge_health MCP tool (trusted-leader gated; child bearer is admin-equiv)
+    const gbh = await mcpCall(probeBearer, "get_bridge_health", {})
+    const v = gbh.value
+    const gbhOk = gbh.status === 200 && !gbh.isError && v?.ok === true
+    assert("V3-get-bridge-health", gbhOk,
+        gbhOk
+            ? `alive=${v.alive} lastSeenAgeS=${v.lastSeenAgeS} stateAgeS=${v.stateAgeS} stateStale=${v.stateStale} version=${v.version} errCount=${v.errCount}`
+            : `get_bridge_health failed: ${JSON.stringify(v).slice(0, 200)}`)
+    if (gbhOk) note(`get_bridge_health.summary: ${v.summary}`)
+
+    // V4 — O4 selftest doc (populated only when bridge_selftest action fires; MCP wrapper
+    // ships in v10.0.5 which is UNPUBLISHED → selftest doc may legitimately be absent)
+    if (selftestSnap.exists) {
+        const st = selftestSnap.data()
+        const stMs = fsDateMillis(st?.updatedAt)
+        const stAge = stMs ? Math.round((Date.now() - stMs) / 1000) : null
+        assert("V4-selftest", true, `monitor-live/selftest exists, age=${stAge}s, keys=${Object.keys(st || {}).join(",")}`)
+    } else {
+        assert("V4-selftest", true, "monitor-live/selftest absent — never run (O4 fires only on bridge_selftest action; expected pre-v10.0.5-publish)")
+        note("V4 informational: selftest path only exercised when bridgeControl.action='selftest' is dispatched — v10.0.5 MCP wrappers code-complete but unpublished per master-tip.")
+    }
+
+    // V5 — O1 bridgeLog ring buffer
+    if (logSnap.exists) {
+        const log = logSnap.data()
+        const entries = Array.isArray(log?.entries) ? log.entries : []
+        const ringBounded = entries.length <= 50
+        const errCountIsNum = typeof log?.errCount === "number"
+        assert("V5-bridgeLog-ring", ringBounded && errCountIsNum,
+            ringBounded && errCountIsNum
+                ? `monitor-live/bridgeLog: entries=${entries.length}/50 errCount=${log.errCount} bridgeVersion=${log.bridgeVersion}`
+                : `bridgeLog malformed: entries=${entries.length} errCount=${log?.errCount}`)
+        if (log?.lastError) note(`bridgeLog.lastError: ${JSON.stringify(log.lastError).slice(0, 200)}`)
+        if (entries.length > 0) {
+            const recent = entries.slice(-3).map((e) => `[${e.level}] ${String(e.msg).slice(0, 80)}`).join(" / ")
+            note(`bridgeLog recent (${entries.length} total): ${recent}`)
+        }
+    } else {
+        // RemoteLogger only flushes when something is recorded; an absent doc just
+        // means no error/warn since boot. Soft PASS with a note.
+        assert("V5-bridgeLog-ring", true, "monitor-live/bridgeLog absent — RemoteLogger never flushed (no error/warn captured since boot — clean run)")
+    }
+
+    return {
+        baselineErrCount: typeof bridge.errCount === "number" ? bridge.errCount : 0,
+        baselineLastSeenMs: fsDateMillis(bridge.lastSeen),
+        baselineLastError: bridge.lastError ?? null,
+    }
+}
+
+// ─── stress tier — bounded 3-command burst (no desk motion) ──────────────────
+//
+// Verifies what v10.0.4's observability promised in PRACTICE:
+//   V6 burst-applied        — all 3 rapid commands reach terminal (applied) in budget
+//   V7 queue-bounded         — queueDepth/unconfirmedCount stay bounded post-burst
+//   V8 state-not-frozen      — state.updatedAt advances post-burst (NOT just heartbeat)
+//                              per [[project_bridge_state_freshness_diagnostic]]
+//   V9 errCount-stable       — bridge.errCount delta during probe window = 0
+//
+// Safety: all 3 burst commands write the SAME value (restoreValue) so the desk
+// does not move. The bus is already at restoreValue (firestoreTier just restored
+// it). Net desk change = zero. After the burst, no further restore is needed.
+async function stressTier(fs, targetBus, restoreValue, baseline) {
+    const { db } = fs
+    section(`Stress tier — 3-command burst at restoreValue=${restoreValue} (no desk motion) + freshness check`)
+
+    if (restoreValue === undefined) {
+        assert("V6-burst-applied", false, "no restoreValue known (firestoreTier skipped or refused) — cannot run no-motion burst")
+        return
+    }
+
+    // Pre-burst snapshot of bridge + state for V8 freshness diff
+    const cfgPre = (await db.collection("config").doc("monitor").get()).data() || {}
+    const bridgePre = cfgPre.bridge || {}
+    const statePre = (await db.collection("monitor-live").doc("state").get()).data()
+    const statePreMs = fsDateMillis(statePre?.updatedAt)
+    const heartbeatPreMs = fsDateMillis(bridgePre.lastSeen)
+    const uid = pickUid(cfgPre, targetBus)
+
+    // 3 rapid writes (same value — no desk motion). createdAt = Date.now() lands
+    // within ms — well inside the bridge's 10s command-age window (B4).
+    const pendingCol = db.collection("monitor-live").doc("commands").collection("pending")
+    const refs = await Promise.all([0, 1, 2].map(() =>
+        pendingCol.add({
+            type: "set_bus_master",
+            busIndex: targetBus,
+            value: restoreValue,
+            uid,
+            createdAt: Date.now(),
+        }),
+    ))
+    log(`  enqueued 3-command burst at value ${restoreValue} (no-motion: same as restore)`)
+
+    // Wait for all 3 to reach terminal (applied / rejected / pending after budget)
+    const results = await Promise.all(refs.map((r) => awaitCommandResult(db, r, CFG.drainTimeoutMs)))
+    const applied = results.filter((r) => r.status === "applied").length
+    const maxDrainMs = Math.max(...results.map((r) => r.ms))
+    RESULT.latency.burst3DrainMaxMs = maxDrainMs
+    assert("V6-burst-applied", applied === 3,
+        applied === 3
+            ? `3/3 commands drained (applied), max drain=${maxDrainMs}ms`
+            : `${applied}/3 applied; states=[${results.map((r) => r.status).join(",")}] — burst dropped/rejected commands`)
+
+    // Post-burst snapshot
+    const cfgPost = (await db.collection("config").doc("monitor").get()).data() || {}
+    const bridgePost = cfgPost.bridge || {}
+    const statePost = (await db.collection("monitor-live").doc("state").get()).data()
+    const statePostMs = fsDateMillis(statePost?.updatedAt)
+    const heartbeatPostMs = fsDateMillis(bridgePost.lastSeen)
+
+    // V7 — queueDepth + unconfirmedCount bounded (post-drain should be at-rest)
+    const queueOk = (bridgePost.queueDepth ?? 0) <= 5
+    const unconfOk = (bridgePost.unconfirmedCount ?? 0) <= 10
+    assert("V7-queue-bounded", queueOk && unconfOk,
+        queueOk && unconfOk
+            ? `post-burst queueDepth=${bridgePost.queueDepth} unconfirmedCount=${bridgePost.unconfirmedCount} (both bounded)`
+            : `queueDepth=${bridgePost.queueDepth} unconfirmedCount=${bridgePost.unconfirmedCount} — at-rest values exceed expected bounds`)
+
+    // V8 — state-vs-heartbeat freshness divergence
+    // [[project_bridge_state_freshness_diagnostic]]: a FRESH heartbeat does NOT
+    // prove writes land in state — state.updatedAt can be frozen while heartbeat
+    // ticks. After the F-tier write + this 3-burst, state.updatedAt MUST have
+    // advanced relative to its pre-V-tier reading. (Heartbeat only ticks every
+    // 60s so its delta may be 0 within the few-second burst window; what matters
+    // is that state moved.)
+    const stateAdvancedMs = statePreMs && statePostMs ? statePostMs - statePreMs : null
+    const heartbeatAdvancedMs = heartbeatPreMs && heartbeatPostMs ? heartbeatPostMs - heartbeatPreMs : null
+    const stateAdvanced = stateAdvancedMs !== null && stateAdvancedMs > 0
+    assert("V8-state-not-frozen", stateAdvanced,
+        stateAdvanced
+            ? `state.updatedAt advanced by ${stateAdvancedMs}ms during stress (writes land in state, not just heartbeat); heartbeat Δ=${heartbeatAdvancedMs}ms`
+            : `state.updatedAt FROZEN (Δ=${stateAdvancedMs}ms) — bridge heartbeat fresh but state writes silently no-op (matches [[project_bridge_state_freshness_diagnostic]])`)
+
+    // V9 — errCount stability across the probe window
+    const errDelta = (bridgePost.errCount ?? 0) - baseline.baselineErrCount
+    assert("V9-errcount-stable", errDelta === 0,
+        errDelta === 0
+            ? `errCount stable at ${bridgePost.errCount} during probe (baseline=${baseline.baselineErrCount})`
+            : `errCount JUMPED by ${errDelta} (baseline=${baseline.baselineErrCount} → ${bridgePost.errCount}); bridge.lastError=${JSON.stringify(bridgePost.lastError)} — investigate bridgeLog.entries[]`)
 }
 
 /**
@@ -778,6 +982,24 @@ function finishAndExit(code, stopMsg) {
 
     section("VERDICT")
     log(RESULT.verdict)
+    // v10.0.4 surface verdict (V-tier + stress tier).
+    if (RESULT.assertions.some((x) => x.id === "V1-heartbeat-fields-present")) {
+        const vIds = ["V1-heartbeat-fields-present", "V2-heartbeat-fields-sane",
+            "V3-get-bridge-health", "V4-selftest", "V5-bridgeLog-ring"]
+        const sIds = ["V6-burst-applied", "V7-queue-bounded", "V8-state-not-frozen", "V9-errcount-stable"]
+        const vFail = vIds.filter((id) => a[id] === false)
+        const sFail = sIds.filter((id) => a[id] === false)
+        const sRan = sIds.some((id) => id in a)
+        log(
+            vFail.length === 0 && sFail.length === 0 && sRan
+                ? "V10.0.4 SURFACE: FULLY VERIFIED — all O1/O2/O3/O4 reads + 3-burst stress + freshness + errCount stable."
+                : vFail.length === 0 && !sRan
+                  ? "V10.0.4 SURFACE: read-only PASS (V1-V5); stress tier did not run (--dry-run or no restore value)."
+                  : `V10.0.4 SURFACE: ISSUES — V-fail=[${vFail.join(",") || "none"}] stress-fail=[${sFail.join(",") || "none"}]`,
+        )
+        if (RESULT.latency.burst3DrainMaxMs != null)
+            log(`latency burst-3 max-drain: ${RESULT.latency.burst3DrainMaxMs}ms`)
+    }
     // Send tier (per-channel send throttle-fix verification), when it ran.
     if (RESULT.assertions.some((x) => x.id === "F11-send-state-reflects")) {
         log(

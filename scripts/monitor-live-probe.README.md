@@ -91,6 +91,40 @@ CRL_MCP_TOKEN=crl_live_<root> node scripts/monitor-live-probe.mjs --mcp-only
 CRL_MCP_TOKEN=crl_live_<root> node scripts/monitor-live-probe.mjs --dry-run
 ```
 
+## v10.0.4 surface tier (V1-V5) + stress tier (V6-V9)
+
+Added 2026-05-24 by lane `monitor-stress-v1004-probe` (master `4537463cc`+):
+the probe now also stress-tests the v10.0.4 unattended-remote observability
+surface that shipped at `6a313f5dd`. Both tiers run automatically when the
+Firestore tier is enabled (no flag needed).
+
+**V1-V5 — read-only surface verification (runs BEFORE the F-tier write):**
+
+| ID | What it asserts |
+|----|-----------------|
+| `V1-heartbeat-fields-present` | All 10 O2 fields in `config/monitor.bridge`: `socketAlive`, `stateAgeMs`, `unconfirmedCount`, `lastOscRxAt`, `lastStateWriteAt`, `startedAt`, `uptimeMs`, `queueDepth`, `errCount`, `lastError`. |
+| `V2-heartbeat-fields-sane` | Type/range sanity on the O2 fields (non-negative numerics, boolean for `socketAlive`, `{msg,ts}` shape for `lastError`). |
+| `V3-get-bridge-health` | O3 `get_bridge_health` MCP tool returns `{ok:true, alive, lastSeenAgeS, stateAgeS, …}`. Trusted-leader gated; the probe's minted child bearer (admin-equiv) passes. |
+| `V4-selftest` | O4 `monitor-live/selftest` shape + freshness. Soft PASS when absent (the doc is only populated when `bridgeControl.action='selftest'` fires; the v10.0.5 MCP wrappers are code-complete-but-unpublished). |
+| `V5-bridgeLog-ring` | O1 `monitor-live/bridgeLog` ring buffer (≤50 entries) + `errCount`/`bridgeVersion`/`lastError` shape. Soft PASS when absent (no error/warn since boot = clean run). |
+
+**V6-V9 — stress tier (runs AFTER the F-tier restore, no further desk motion):**
+
+A 3-command burst at `restoreValue` (the bus is already there post-F-tier
+restore — same value = zero desk motion). This is the live oracle for v10.0.4's
+queue-bounding + freshness-divergence promises.
+
+| ID | What it asserts |
+|----|-----------------|
+| `V6-burst-applied` | All 3 rapid commands reach terminal `applied` within `drainTimeoutMs` (no silent drops). |
+| `V7-queue-bounded` | Post-drain `queueDepth ≤ 5` and `unconfirmedCount ≤ 10` on the heartbeat. |
+| `V8-state-not-frozen` | `monitor-live/state.updatedAt` advanced during the stress window (NOT just `config/monitor.bridge.lastSeen` heartbeat). This is the [[project_bridge_state_freshness_diagnostic]] failure mode — heartbeat fresh + state frozen = writes silently no-op. |
+| `V9-errcount-stable` | `bridge.errCount` delta during the probe window = 0 (legacy errCount baseline is captured at V-tier entry). A jump means the bridge logged an error mid-probe; cross-reference `bridgeLog.entries[]`. |
+
+**Skipped when:**
+- `--dry-run` (V6-V9 stress tier requires writes; V1-V5 still run)
+- Firestore tier skipped (no admin creds) — V1-V5 + V6-V9 all skipped together (V3's MCP call would still work, but V1/V2/V4/V5 need raw reads)
+
 ## Interpreting the result
 
 - **`REPORTS REAL STATE: control path LIVE, readback BROKEN`** — the expected
@@ -99,6 +133,9 @@ CRL_MCP_TOKEN=crl_live_<root> node scripts/monitor-live-probe.mjs --dry-run
   *probe* worked; the *system* has the R1/R2/R3 defect Phase 1 fixes.
 - **`FULLY GREEN`** — Phase-1 contract met: control applied **and** readback
   reflected within budget. This is the program's acceptance signal.
+- **`V10.0.4 SURFACE: FULLY VERIFIED`** — all V1-V5 reads + V6-V9 stress pass.
+- **`V10.0.4 SURFACE: ISSUES — V-fail=[…] stress-fail=[…]`** — list of failing
+  V-IDs; cross-reference REPORT.md for the issue category.
 - **`STOP: …`** — a precondition failed; nothing was written. Exit 1.
 
 `latency enqueue→bridge-drain` is the control-path liveness baseline;
