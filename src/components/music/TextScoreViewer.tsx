@@ -6,11 +6,32 @@ import { transposeChord, keyUsesFlats } from "@/lib/music-math"
 import { Loader2, WrapText, Maximize2, ZoomIn, ZoomOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
+/**
+ * Text-bonded chart viewer (chord-over-lyrics monospace .txt charts).
+ *
+ * Source-resolution mirrors `AudioViewer` (`audio-viewer-f7`, 912ea2c3d):
+ * try the offline-idb cached blob first, fall back to `/api/drive/file/<id>`
+ * on miss. Closes ipad-sweep FINDINGS §F-1 — before
+ * `ipad-text-viewer-fetch-fix` the viewer took a URL prop and was handed
+ * `PDFOverlay`'s resolved `fileUrl`, which is a `blob:` object URL when
+ * the chart is IDB-cached. iPad WebKit intermittently fails a `fetch()`
+ * against a freshly-created object URL with "Load failed" — the same
+ * race that bit the PDF path on 2026-05-22 (R1 Finding B, fixed by
+ * `webkit-pdf-reload-fix` `575bc47ae`). We dodge it the same way: when
+ * we have the blob in hand from `getFile()`, read it via `blob.text()`
+ * (a direct Blob API read — no fetch round-trip), and only `fetch()` for
+ * the network fallback path.
+ *
+ * Surfaces the C5D-001 XSS regression behavior unchanged — the fetched
+ * bytes are rendered through React text children, never via raw HTML.
+ */
 interface TextScoreViewerProps {
-    url: string
+    /** Library fileId — used to look up the offline blob and as the
+     *  `/api/drive/file/<id>` fallback path. */
+    fileId: string
 }
 
-export function TextScoreViewer({ url }: TextScoreViewerProps) {
+export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
     const { transposition } = useMusicStore()
     const [content, setContent] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
@@ -30,24 +51,52 @@ export function TextScoreViewer({ url }: TextScoreViewerProps) {
         async function loadText() {
             setLoading(true)
             setError(null)
-            try {
-                const res = await fetch(url)
-                if (!res.ok) throw new Error("Failed to load text file")
-                const text = await res.text()
+            if (!fileId) {
                 if (!cancelled) {
-                    setContent(text)
+                    setError("Failed to load chart")
                     setLoading(false)
                 }
-            } catch (err: any) {
+                return
+            }
+            try {
+                // IDB-first: read cached bytes directly through the Blob
+                // API (`blob.text()`) — NO `fetch(blob:url)` round-trip,
+                // which is the WebKit failure mode that surfaced as F-1.
+                // `getFile` swallows its own IDB errors and returns null,
+                // but we still wrap the import + call in try/catch so any
+                // future change there can't strand the viewer.
+                let text: string | null = null
+                try {
+                    const { getFile } = await import("@/lib/offline-idb")
+                    const blob = await getFile(fileId)
+                    if (cancelled) return
+                    if (blob) {
+                        text = await blob.text()
+                    }
+                } catch {
+                    // IDB unavailable (Private-mode Safari, etc.) — fall
+                    // through to the network path. Don't surface to UI.
+                }
+                if (cancelled) return
+                if (text === null) {
+                    const res = await fetch(`/api/drive/file/${fileId}`)
+                    if (cancelled) return
+                    if (!res.ok) throw new Error("Failed to load text file")
+                    text = await res.text()
+                    if (cancelled) return
+                }
+                setContent(text)
+                setLoading(false)
+            } catch (err: unknown) {
                 if (!cancelled) {
-                    setError(err.message || "Failed to load chart")
+                    setError(err instanceof Error ? err.message : "Failed to load chart")
                     setLoading(false)
                 }
             }
         }
         loadText()
         return () => { cancelled = true }
-    }, [url])
+    }, [fileId])
 
     if (loading) {
         return (

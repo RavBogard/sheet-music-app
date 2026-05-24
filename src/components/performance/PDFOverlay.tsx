@@ -329,7 +329,13 @@ export function PDFOverlay({
             {isMusicXml ? (
                 fileUrl && <SmartScoreViewer url={fileUrl} trackId={track.id} trackKey={track.key} />
             ) : isText ? (
-                fileUrl && <TextScoreViewer url={fileUrl} />
+                // ipad-text-viewer-fetch-fix (F-1, 2026-05-24): TextScoreViewer
+                // self-resolves the source via offline-idb (mirrors AudioViewer's
+                // IDB-first pattern), so it dodges the WebKit `fetch(blob:)`
+                // race that bit row 5 of Kabbalat Shabbat 5/22. fileId is the
+                // stable handle; we no longer route through PDFOverlay's
+                // `fileUrl` blob: pipe for text-typed rows.
+                track.fileId && <TextScoreViewer fileId={track.fileId} />
             ) : isImage ? (
                 fileUrl && <ImageScoreViewer url={fileUrl} alt={track.title} />
             ) : isAudio ? (
