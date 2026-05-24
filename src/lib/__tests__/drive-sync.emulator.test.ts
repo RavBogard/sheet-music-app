@@ -352,6 +352,87 @@ describe("Drive-sync poller (emulator)", () => {
         ).data()!
         expect(after.name).toBe("Hashkivenu (Israeli)")
         expect(after.driveMd5).toBe("md5-hashk-v1")
+
+        // drive-sync-rename-replace-stem-titlespecificity (this lane): RENAME
+        // branch now recomputes all 5 W-02 trust-calibration fields via the
+        // helper at `src/lib/library/recompute-index-name-fields.ts` (shipped
+        // by coder-5 in F-7 at `4a9e3d896`). Pre-fix only `nameLower +
+        // normalizedName` were inline-recomputed and `stem + titleSpecificity`
+        // went stale.
+        //
+        // Witness assertion: titleSpecificity for `"Hashkivenu"` (no parens,
+        // generic-stem, unique sibling) = 0.5 -0.3 +0.2 = 0.4. After rename to
+        // `"Hashkivenu (Israeli)"` (parens-bonus +0.2 now stacks) it is
+        // 0.5 +0.2 -0.3 +0.2 = 0.6. Pre-fix this stayed at 0.4; post-fix it is
+        // 0.6.
+        expect(after.nameLower).toBe("hashkivenu (israeli)")
+        expect(after.normalizedName).toBe("hashkivenuisraeli")
+        expect(after.stem).toBe("hashkivenu") // bareStem strips the parens
+        expect(after.titleSpecificity).toBe(0.6)
+    })
+
+    it("rename + replace: advanced md5 AND name change → all 5 W-02 fields recomputed (REPLACE branch path)", async () => {
+        // drive-sync-rename-replace-stem-titlespecificity (this lane): exercise
+        // the REPLACE branch's W-02 recompute. The existing `replace:` test at
+        // line 357 only advances md5 (name unchanged → REPLACE branch's
+        // nameChanged-W-02 path doesn't fire). This test renames AND advances
+        // md5 in one Drive event so the poller picks REPLACE branch AND the
+        // nameChanged sub-branch.
+        const t0 = new Date("2026-05-17T23:50:00.000Z")
+        await runDriveSync({ deps: makeDeps(t0), parentFolderId: PARENT })
+
+        seedDriveFile({
+            id: "drive-replace-rename-1",
+            name: "Oseh Shalom.pdf",
+            parents: [PARENT],
+            modifiedTime: "2026-05-17T23:55:00.000Z",
+            md5Checksum: "md5-oseh-v1",
+        })
+        await runDriveSync({
+            deps: makeDeps(new Date("2026-05-18T00:00:00.000Z")),
+            parentFolderId: PARENT,
+        })
+        const initial = await db()
+            .collection("library_index")
+            .where("driveFileId", "==", "drive-replace-rename-1")
+            .get()
+        const initialDocId = initial.docs[0].id
+        const initialRow = initial.docs[0].data()
+        // Pre-rename baseline: bare generic stem, unique sibling →
+        // 0.5 -0.3 +0.2 = 0.4.
+        expect(initialRow.titleSpecificity).toBe(0.4)
+        expect(initialRow.stem).toBe("oseh shalom")
+
+        // Rename AND advance md5 in Drive in a single event.
+        const f = driveFiles.get("drive-replace-rename-1")!
+        f.name = "Oseh Shalom (Hashkamah).pdf"
+        f.md5Checksum = "md5-oseh-v2"
+        f.bytes = Buffer.from("%PDF-1.4 oseh-shalom-hashkamah-bytes")
+        f.modifiedTime = "2026-05-18T00:05:00.000Z"
+
+        const r = await runDriveSync({
+            deps: makeDeps(new Date("2026-05-18T00:10:00.000Z")),
+            parentFolderId: PARENT,
+        })
+        expect(r.replaced).toBe(1)
+        expect(r.renamed).toBe(0) // REPLACE branch wins when md5Advanced
+
+        const after = (
+            await db().collection("library_index").doc(initialDocId).get()
+        ).data()!
+        // REPLACE branch wrote md5 + bytes (existing contract preserved).
+        expect(after.driveMd5).toBe("md5-oseh-v2")
+        expect(after.fileSize).toBe(f.bytes.byteLength)
+        // …AND recomputed all 5 W-02 fields (this lane's fix).
+        expect(after.name).toBe("Oseh Shalom (Hashkamah)")
+        expect(after.nameLower).toBe("oseh shalom (hashkamah)")
+        expect(after.normalizedName).toBe("osehshalomhashkamah")
+        expect(after.stem).toBe("oseh shalom") // bareStem strips parens
+        // Post-rename: parens-bonus (+0.2) + generic-stem penalty (-0.3) +
+        // unique-sibling (+0.2) + tokens>=3 (+0.1, because normalizeStem
+        // strips parens → "oseh shalom hashkamah" = 3 tokens) = 0.7. Pre-fix
+        // this stayed at 0.4 (the original "Oseh Shalom" value).
+        expect(after.titleSpecificity).toBe(0.7)
     })
 
     it("replace: advanced md5 → rewrites Storage, version-bump, library_signals broadcast", async () => {

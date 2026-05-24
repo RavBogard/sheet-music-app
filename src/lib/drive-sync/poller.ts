@@ -7,6 +7,11 @@ import {
     type ProcessChartUploadResult,
 } from "@/lib/library-upload"
 import { uploadToStorage } from "@/lib/firebase-storage"
+import {
+    recomputeIndexNameFields,
+    type IndexNameFields,
+} from "@/lib/library/recompute-index-name-fields"
+import { bareStem } from "@/lib/mcp/title-specificity"
 import { logger } from "@/lib/logger"
 
 /**
@@ -354,6 +359,42 @@ interface HandleExistingFileOutcome {
     queueStatus?: ChartImportQueueStatus
 }
 
+/**
+ * Drive-sync RENAME + REPLACE branches recompute all five W-02 trust-
+ * calibration fields any time `name` mutates, mirroring PCU's pattern
+ * at `library-upload.ts:562-577`. Closes the 2-of-5-stale shape the
+ * auditor flagged in wave-4a9e3d896-ACCEPT: pre-fix only inline-computed
+ * `nameLower + normalizedName` here, so `stem + titleSpecificity` went
+ * stale until the next upload or rename PATCH re-ran PCU's full compute.
+ *
+ * Sibling-query runs under the poller's admin Firestore handle (the
+ * same `deps.db` the surrounding `library_index.update` + signals write
+ * use). Helper returns 4 fields; the caller writes `name` alongside.
+ */
+async function computeRenamedIndexNameFields(
+    db: Firestore,
+    newTitle: string,
+    existingDocId: string,
+): Promise<IndexNameFields> {
+    const stem = bareStem(newTitle)
+    const siblingSnap = stem
+        ? await db
+              .collection("library_index")
+              .where("stem", "==", stem)
+              .select("stem", "name", "status")
+              .get()
+        : null
+    const existingSiblings = siblingSnap
+        ? siblingSnap.docs.filter(
+              (d) =>
+                  d.id !== existingDocId &&
+                  (d.data().status as string | undefined) !== "orphaned",
+          )
+        : []
+    const siblingsInCatalog = existingSiblings.length + 1
+    return recomputeIndexNameFields(newTitle, siblingsInCatalog)
+}
+
 async function handleExistingFile(
     deps: DriveSyncDeps,
     file: DriveFile,
@@ -436,11 +477,16 @@ async function handleExistingFile(
         if (file.md5Checksum) updates.driveMd5 = file.md5Checksum
         if (file.modifiedTime) updates.driveModifiedTime = file.modifiedTime
         if (nameChanged) {
+            const renamedFields = await computeRenamedIndexNameFields(
+                db,
+                newTitle,
+                existing.docId,
+            )
             updates.name = newTitle
-            updates.nameLower = newTitle.toLowerCase()
-            updates.normalizedName = newTitle
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, "")
+            updates.nameLower = renamedFields.nameLower
+            updates.normalizedName = renamedFields.normalizedName
+            updates.stem = renamedFields.stem
+            updates.titleSpecificity = renamedFields.titleSpecificity
             updates.originalName = driveName
         }
         if (collectionChanged) updates.collection = newCollection
@@ -474,12 +520,17 @@ async function handleExistingFile(
 
     // RENAME: md5 unchanged (or unknown) but name changed → update name fields only.
     if (nameChanged && !md5Advanced) {
+        const renamedFields = await computeRenamedIndexNameFields(
+            db,
+            newTitle,
+            existing.docId,
+        )
         const updates: Record<string, unknown> = {
             name: newTitle,
-            nameLower: newTitle.toLowerCase(),
-            normalizedName: newTitle
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, ""),
+            nameLower: renamedFields.nameLower,
+            normalizedName: renamedFields.normalizedName,
+            stem: renamedFields.stem,
+            titleSpecificity: renamedFields.titleSpecificity,
             originalName: driveName,
         }
         if (file.modifiedTime) updates.driveModifiedTime = file.modifiedTime
