@@ -7,7 +7,11 @@ import {
     backupFileName,
     fileIdFromBackupName,
     sanitizeStem,
+    recordStorageBackupRun,
+    writeStorageBackupDormantHeartbeat,
+    writeStorageBackupError,
     type StorageBackupDeps,
+    type StorageBackupResult,
 } from "@/lib/storage-backup/mirror"
 
 /**
@@ -524,5 +528,125 @@ describe("runStorageBackup — fail-loud catch", () => {
         const res = await runStorageBackup(deps)
         expect(res.ran).toBe(true)
         expect(res.created).toBe(1)
+    })
+})
+
+// ── lastTickAt + dormant + heartbeat (storage-backup-silent-death-probe) ────
+//
+// The dormant-skip in `route.ts` (CRC_BACKUP_DRIVE_FOLDER_ID unset) bypasses
+// both writers above, so the observability stack was blind to "cron ticked
+// but did nothing". Heartbeat writer + lastTickAt stamps close that gap.
+
+describe("storage-backup mirror — lastTickAt + dormant + heartbeat", () => {
+    const NOW = new Date("2026-05-24T05:00:00.000Z")
+    const DATE_KEY = "2026-05-24"
+
+    it("writeStorageBackupDormantHeartbeat stamps both docs with dormant:true + lastTickAt", async () => {
+        const { db, get } = makeMultiCollectionFakeDb()
+        const reason = "CRC_BACKUP_DRIVE_FOLDER_ID env var not configured"
+
+        await writeStorageBackupDormantHeartbeat(db, NOW, reason)
+
+        const cfg = get("config/storageBackup")
+        expect(cfg).toHaveLength(1)
+        expect(cfg[0].merge).toBe(true)
+        expect(cfg[0].payload).toMatchObject({
+            lastTickAt: NOW,
+            dormant: true,
+            dormantReason: reason,
+        })
+        // CRITICAL: dormant heartbeat must NOT touch lastBackupAt (would
+        // falsely satisfy the staleness check) or lastError (would falsely
+        // fire the recentError alarm).
+        expect(cfg[0].payload).not.toHaveProperty("lastBackupAt")
+        expect(cfg[0].payload).not.toHaveProperty("lastError")
+
+        const dated = get(`storageBackups/${DATE_KEY}`)
+        expect(dated).toHaveLength(1)
+        expect(dated[0].merge).toBe(true)
+        expect(dated[0].payload).toMatchObject({
+            ran: false,
+            dormant: true,
+            dormantReason: reason,
+            lastTickAt: NOW,
+            timestamp: NOW.toISOString(),
+        })
+    })
+
+    it("writeStorageBackupDormantHeartbeat fail-opens when Firestore writes throw", async () => {
+        const { db } = makeMultiCollectionFakeDb({
+            failWrites: new Set([
+                "config/storageBackup",
+                `storageBackups/${DATE_KEY}`,
+            ]),
+        })
+        // Must NOT throw — the route's dormant path is best-effort and a
+        // Firestore outage here should not 500 the cron.
+        await expect(
+            writeStorageBackupDormantHeartbeat(db, NOW, "reason"),
+        ).resolves.toBeUndefined()
+    })
+
+    it("recordStorageBackupRun now stamps lastTickAt + dormant:false on success", async () => {
+        const { db, get } = makeMultiCollectionFakeDb()
+        const result: StorageBackupResult = {
+            ran: true,
+            scanned: 5,
+            mirrored: 2,
+            created: 1,
+            updated: 1,
+            skipped: 3,
+            deferred: 0,
+            failed: 0,
+            bytesMirrored: 12345,
+            errors: [],
+            lastError: null,
+        }
+
+        await recordStorageBackupRun(db, result, NOW)
+
+        const cfg = get("config/storageBackup")
+        expect(cfg).toHaveLength(1)
+        expect(cfg[0].payload).toMatchObject({
+            lastBackupAt: NOW,
+            lastTickAt: NOW,
+            dormant: false,
+            ran: true,
+            scanned: 5,
+            created: 1,
+        })
+
+        const dated = get(`storageBackups/${DATE_KEY}`)
+        expect(dated).toHaveLength(1)
+        expect(dated[0].payload).toMatchObject({
+            lastTickAt: NOW,
+            dormant: false,
+            ran: true,
+        })
+    })
+
+    it("writeStorageBackupError now stamps lastTickAt + dormant:false on failure", async () => {
+        const { db, get } = makeMultiCollectionFakeDb()
+        const err = new Error("boom")
+
+        await writeStorageBackupError(db, err, NOW)
+
+        const cfg = get("config/storageBackup")
+        expect(cfg).toHaveLength(1)
+        expect(cfg[0].payload).toMatchObject({
+            lastError: "boom",
+            lastErrorAt: NOW,
+            lastTickAt: NOW,
+            dormant: false,
+        })
+
+        const dated = get(`storageBackups/${DATE_KEY}`)
+        expect(dated).toHaveLength(1)
+        expect(dated[0].payload).toMatchObject({
+            ran: false,
+            dormant: false,
+            lastTickAt: NOW,
+            lastError: "boom",
+        })
     })
 })

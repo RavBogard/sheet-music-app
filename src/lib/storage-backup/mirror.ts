@@ -384,15 +384,22 @@ export async function writeStorageBackupError(
         await db.collection("storageBackups").doc(dateKey).set(
             {
                 ran: false,
+                dormant: false,
                 error: errorPayload,
                 lastError: errorPayload.message,
                 attemptedAt: now,
+                lastTickAt: now,
                 timestamp: iso,
             },
             { merge: true },
         )
         await db.collection("config").doc("storageBackup").set(
-            { lastError: errorPayload.message, lastErrorAt: now },
+            {
+                lastError: errorPayload.message,
+                lastErrorAt: now,
+                lastTickAt: now,
+                dormant: false,
+            },
             { merge: true },
         )
     } catch (catchErr) {
@@ -400,6 +407,56 @@ export async function writeStorageBackupError(
         // try to write a breadcrumb; log and let the original error propagate.
         logger.warn(
             `[storage-backup] failed to record fail-loud error doc: ${
+                catchErr instanceof Error ? catchErr.message : String(catchErr)
+            }`,
+        )
+    }
+}
+
+/**
+ * Dormant-tick heartbeat. The route hits its `CRC_BACKUP_DRIVE_FOLDER_ID`-unset
+ * early return BEFORE `runStorageBackupProd` runs, so neither `recordStorageBackupRun`
+ * (success) nor `writeStorageBackupError` (failure) ever writes a doc. Without
+ * this heartbeat PGR-03 sees a permanently missing `config/storageBackup` and
+ * silently fail-opens — the "silent death" failure mode (see
+ * `.paul/research/storage-backup-silent-death/DIAGNOSIS.md`).
+ *
+ * Writes `lastTickAt` + `dormant: true` + `dormantReason` to both
+ * `config/storageBackup` (merge) and `storageBackups/{YYYY-MM-DD}` (merge so a
+ * same-day prior real run is preserved). Critically does NOT touch
+ * `lastBackupAt` (dormant != successful backup) or `lastError` (dormant !=
+ * error). Fail-open — a Firestore write failure is logged but the route still
+ * returns 200 with `ran: false`.
+ */
+export async function writeStorageBackupDormantHeartbeat(
+    db: Firestore,
+    now: Date,
+    reason: string,
+): Promise<void> {
+    try {
+        const iso = now.toISOString()
+        const dateKey = iso.slice(0, 10)
+        await db.collection("config").doc("storageBackup").set(
+            {
+                lastTickAt: now,
+                dormant: true,
+                dormantReason: reason,
+            },
+            { merge: true },
+        )
+        await db.collection("storageBackups").doc(dateKey).set(
+            {
+                ran: false,
+                dormant: true,
+                dormantReason: reason,
+                lastTickAt: now,
+                timestamp: iso,
+            },
+            { merge: true },
+        )
+    } catch (catchErr) {
+        logger.warn(
+            `[storage-backup] failed to record dormant heartbeat: ${
                 catchErr instanceof Error ? catchErr.message : String(catchErr)
             }`,
         )
@@ -425,6 +482,7 @@ export async function recordStorageBackupRun(
         ts: now,
         timestamp: iso,
         ran: result.ran,
+        dormant: false,
         scanned: result.scanned,
         mirrored: result.mirrored,
         created: result.created,
@@ -434,6 +492,7 @@ export async function recordStorageBackupRun(
         failed: result.failed,
         bytesMirrored: result.bytesMirrored,
         lastError: result.lastError,
+        lastTickAt: now,
     }
     try {
         await db.collection("config").doc("storageBackup").set(

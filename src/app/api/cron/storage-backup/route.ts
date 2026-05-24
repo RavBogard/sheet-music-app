@@ -3,6 +3,7 @@ import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import {
     runStorageBackupProd,
+    writeStorageBackupDormantHeartbeat,
     writeStorageBackupError,
 } from "@/lib/storage-backup/mirror"
 import { logger } from "@/lib/logger"
@@ -131,15 +132,28 @@ export async function POST(req: NextRequest) {
 
 async function runAndRespond(req: NextRequest): Promise<NextResponse> {
     const backupFolderId = env.CRC_BACKUP_DRIVE_FOLDER_ID
+    const dormantReason =
+        "CRC_BACKUP_DRIVE_FOLDER_ID env var not configured — set it in Vercel (a dedicated Shared Drive) to enable."
     if (!backupFolderId) {
         logger.info(
             "[storage-backup] CRC_BACKUP_DRIVE_FOLDER_ID unset — cron is dormant",
         )
+        // Heartbeat the dormant tick so PGR-03 can distinguish "cron fired,
+        // env unset" (intentional, no alarm) from "cron never fired"
+        // (real silent death, alarm). Fail-open: Firestore-down here returns
+        // ran:false with no breadcrumb but never 500s — the dormant path is
+        // already best-effort.
+        if (initAdmin()) {
+            await writeStorageBackupDormantHeartbeat(
+                getFirestore(),
+                new Date(),
+                dormantReason,
+            )
+        }
         return NextResponse.json({
             success: true,
             ran: false,
-            reason:
-                "CRC_BACKUP_DRIVE_FOLDER_ID env var not configured — set it in Vercel (a dedicated Shared Drive) to enable.",
+            reason: dormantReason,
         })
     }
     if (!initAdmin()) {

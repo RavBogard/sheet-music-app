@@ -138,4 +138,89 @@ describe("checkStorageBackupHealth", () => {
         expect(result.stale).toBe(false)
         expect(result.recentError).toBe(true)
     })
+
+    describe("tickStale + dormant (storage-backup-silent-death-probe)", () => {
+        it("reports present when only lastTickAt is set (dormant-heartbeat-only doc)", () => {
+            const result = checkStorageBackupHealth(
+                { lastTickAt: NOW - 2 * HOUR, dormant: true },
+                NOW,
+            )
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.lastTickAt).toBe(NOW - 2 * HOUR)
+            expect(result.tickStale).toBe(false)
+            expect(result.tickStalenessHours).toBeCloseTo(2, 1)
+            expect(result.dormant).toBe(true)
+            // No lastBackupAt → stale is false (PGR-01 territory).
+            expect(result.stale).toBe(false)
+            // No lastError → recentError is false.
+            expect(result.recentError).toBe(false)
+        })
+
+        it("flags tickStale when lastTickAt exceeds the staleness window", () => {
+            const result = checkStorageBackupHealth(
+                {
+                    lastTickAt: NOW - (STORAGE_BACKUP_STALENESS_HOURS + 5) * HOUR,
+                    dormant: true,
+                },
+                NOW,
+            )
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.tickStale).toBe(true)
+            expect(result.tickStalenessHours).toBeGreaterThan(
+                STORAGE_BACKUP_STALENESS_HOURS,
+            )
+            expect(result.dormant).toBe(true)
+        })
+
+        it("does NOT flag tickStale when lastTickAt is missing (pre-fix legacy doc)", () => {
+            // Pre-storage-backup-silent-death-probe docs have only lastBackupAt
+            // without lastTickAt. The new code must NOT spuriously alarm them
+            // — the next deployed tick will stamp lastTickAt and the alarm
+            // becomes meaningful.
+            const result = checkStorageBackupHealth(
+                { lastBackupAt: NOW - 10 * HOUR },
+                NOW,
+            )
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.lastTickAt).toBe(null)
+            expect(result.tickStale).toBe(false)
+            expect(result.tickStalenessHours).toBe(Infinity)
+            expect(result.dormant).toBe(false)
+        })
+
+        it("flags both stale AND tickStale when both apply", () => {
+            const result = checkStorageBackupHealth(
+                {
+                    lastBackupAt: NOW - 48 * HOUR,
+                    lastTickAt: NOW - 48 * HOUR,
+                    dormant: false,
+                },
+                NOW,
+            )
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.stale).toBe(true)
+            expect(result.tickStale).toBe(true)
+            expect(result.dormant).toBe(false)
+        })
+
+        it("dormant pass-through defaults to false when snapshot omits it", () => {
+            const result = checkStorageBackupHealth(
+                { lastTickAt: NOW - 2 * HOUR, lastBackupAt: NOW - 2 * HOUR },
+                NOW,
+            )
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.dormant).toBe(false)
+        })
+
+        it("accepts a Firestore Timestamp-shaped lastTickAt", () => {
+            const ts = {
+                toMillis: () => NOW - 8 * HOUR,
+                seconds: Math.floor((NOW - 8 * HOUR) / 1000),
+            }
+            const result = checkStorageBackupHealth({ lastTickAt: ts }, NOW)
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.lastTickAt).toBe(NOW - 8 * HOUR)
+            expect(result.tickStalenessHours).toBeCloseTo(8, 1)
+        })
+    })
 })

@@ -6,6 +6,8 @@ import { logger } from "@/lib/logger"
 import { env } from "@/env.mjs"
 import { captureException, captureMessage } from "@/lib/error-reporting"
 import {
+    STORAGE_BACKUP_STALENESS_HOURS,
+    STORAGE_BACKUP_STALENESS_MS,
     type StorageBackupHealth,
     checkStorageBackupHealth,
 } from "@/lib/storage-backup/health"
@@ -119,8 +121,19 @@ export async function GET(req: NextRequest) {
             logger.info(`[admin-consistency] clean (${uids.length} uids)`)
         }
 
-        // PGR-03 — storage-backup staleness + recent-error alarm.
-        const storageBackupHealth = await readAndAlertStorageBackupHealth(db)
+        // Bootstrap stamp — first time admin-consistency ever tick'd. Acts as a
+        // deploy-age oracle for PGR-03's missing-doc alarm (storage-backup
+        // missing for >36h post-deploy → real silent death; missing in the
+        // first 36h post-deploy → pre-activation/no-yet-fired, do not alarm).
+        // Idempotent: only writes on the very first tick.
+        const deployAgeMs = await ensureAdminConsistencyBootstrap(db, new Date())
+
+        // PGR-03 — storage-backup staleness + recent-error + tickStale +
+        // missing-aged alarms (bundled per storage-backup-silent-death-probe).
+        const storageBackupHealth = await readAndAlertStorageBackupHealth(
+            db,
+            deployAgeMs,
+        )
 
         // PGR-04 — primary library bytes-present invariant alarm.
         const libraryBytesHealth = await readAndAlertLibraryBytesHealth(db)
@@ -139,16 +152,92 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Read `config/storageBackup`, derive freshness + last-error state, and emit
- * Sentry messages on the two independent alarm conditions.  Returns the
- * derived health shape so callers can roll it into their response (the cron
- * endpoint's `storageBackupHealth` key).
+ * Idempotently stamp `config/healthBootstrap.firstAdminTickAt` on the very
+ * first admin-consistency cron tick after a fresh deploy. Acts as the
+ * deploy-age oracle for PGR-03's missing-storage-backup-doc alarm: if
+ * storage-backup hasn't ticked at all in the first 36h post-deploy, that's
+ * "pre-activation, do not alarm"; if it hasn't ticked after 36h post-deploy,
+ * that's "real silent death, alarm".
+ *
+ * Returns the ms-age since first bootstrap (or null on Firestore error /
+ * brand-new deploy where this tick IS the first one — for the first tick
+ * deploy-age is 0 so the missing-doc alarm cannot fire yet, exactly the
+ * right behavior).
+ */
+async function ensureAdminConsistencyBootstrap(
+    db: ReturnType<typeof getFirestore>,
+    now: Date,
+): Promise<number | null> {
+    try {
+        const ref = db.collection("config").doc("healthBootstrap")
+        const doc = await ref.get()
+        if (!doc.exists) {
+            await ref.set({ firstAdminTickAt: now })
+            return 0
+        }
+        const data = (doc.data() ?? {}) as Record<string, unknown>
+        const raw = data.firstAdminTickAt
+        let firstMs: number | null = null
+        // `instanceof Date` must come BEFORE the generic object check —
+        // Date is also typeof 'object'.
+        if (raw instanceof Date) {
+            firstMs = raw.getTime()
+        } else if (typeof raw === "number") {
+            firstMs = raw
+        } else if (typeof raw === "string") {
+            const parsed = Date.parse(raw)
+            firstMs = Number.isFinite(parsed) ? parsed : null
+        } else if (raw && typeof raw === "object") {
+            const obj = raw as { toMillis?: unknown; seconds?: unknown }
+            if (typeof obj.toMillis === "function") {
+                try {
+                    firstMs = (obj.toMillis as () => number).call(obj)
+                } catch {
+                    firstMs = null
+                }
+            } else if (typeof obj.seconds === "number") {
+                firstMs = obj.seconds * 1000
+            }
+        }
+        if (firstMs == null || !Number.isFinite(firstMs)) {
+            // Doc exists but stamp unreadable — backfill on this tick.
+            await ref.set({ firstAdminTickAt: now }, { merge: true })
+            return 0
+        }
+        return now.getTime() - firstMs
+    } catch (e) {
+        logger.warn(
+            `[admin-consistency] healthBootstrap stamp/read failed: ${e instanceof Error ? e.message : String(e)}`,
+        )
+        return null
+    }
+}
+
+/**
+ * Read `config/storageBackup`, derive freshness + last-error + tick state,
+ * and emit Sentry messages on the four independent alarm conditions:
+ *   - `stale`         — lastBackupAt > 36h ago (warning)
+ *   - `recentError`   — lastError + lastErrorAt within 36h (error)
+ *   - `tickStale`     — cron has not ticked at all in >36h (warning).
+ *                       Independent of dormant vs active mode; catches the
+ *                       "cron stopped firing entirely" failure class
+ *                       (e.g. vercel.json miss, route 500'ing pre-handler).
+ *   - missing-aged    — config/storageBackup doc absent AND deploy-age > 36h
+ *                       (warning). Distinguishes "pre-activation, expect
+ *                       fail-open" from "real silent death" — the failure
+ *                       class that left storage-backup-silent-death-probe's
+ *                       diagnosis pointing at a dormant-skip + no-heartbeat
+ *                       observability gap.
+ *
+ * `deployAgeMs` is the ms-age of the admin-consistency bootstrap stamp; null
+ * means the read/stamp failed (treat as 0 → don't alarm missing-aged).
  *
  * Fail-open: a Firestore read failure surfaces as `unavailable` in the
  * health doc, never crashes the surrounding admin-consistency check.
  */
 async function readAndAlertStorageBackupHealth(
     db: ReturnType<typeof getFirestore>,
+    deployAgeMs: number | null,
 ): Promise<StorageBackupHealth> {
     let snapshot: Record<string, unknown> | undefined
     try {
@@ -163,8 +252,56 @@ async function readAndAlertStorageBackupHealth(
 
     const health = checkStorageBackupHealth(snapshot, Date.now())
 
-    if (health.status === "missing" || health.status === "unavailable") {
+    if (health.status === "unavailable") {
         return health
+    }
+
+    // missing-aged alarm — storage-backup has never written ANY doc and
+    // the cron has had time to fire by now. Pre-fix-deploy state had the
+    // doc permanently missing because of the dormant-skip; this alarm
+    // catches the re-occurrence path (real silent death, vercel.json
+    // regression, or a route that 500s before reaching even the dormant
+    // heartbeat write).
+    if (health.status === "missing") {
+        if (
+            deployAgeMs != null &&
+            deployAgeMs > STORAGE_BACKUP_STALENESS_MS
+        ) {
+            captureMessage(
+                `storage backup cron has never written a heartbeat in the ${STORAGE_BACKUP_STALENESS_HOURS}h since deploy — check vercel.json + route handler + CRC_BACKUP_DRIVE_FOLDER_ID`,
+                {
+                    source: "cron",
+                    location: "admin-consistency",
+                    extra: {
+                        subsystem: "storage-backup-health",
+                        deployAgeHours: deployAgeMs / (60 * 60 * 1000),
+                    },
+                },
+                "warning",
+            )
+        }
+        return health
+    }
+
+    // tickStale alarm — cron has not ticked in >36h. Fires whether dormant
+    // or active; a dormant cron that stops ticking is just as broken as an
+    // active one (the failure mode this lane is structurally guarding
+    // against). Independent of `stale` (lastBackupAt-stale).
+    if (health.tickStale) {
+        captureMessage(
+            `storage backup cron has not ticked in ${health.tickStalenessHours.toFixed(1)}h — dormant=${health.dormant}`,
+            {
+                source: "cron",
+                location: "admin-consistency",
+                extra: {
+                    subsystem: "storage-backup-health",
+                    lastTickAt: health.lastTickAt,
+                    tickStalenessHours: health.tickStalenessHours,
+                    dormant: health.dormant,
+                },
+            },
+            "warning",
+        )
     }
     if (health.stale) {
         captureMessage(

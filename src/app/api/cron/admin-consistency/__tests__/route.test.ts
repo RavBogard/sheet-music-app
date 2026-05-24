@@ -20,6 +20,9 @@ let storageBackupReadThrows = false
 let adminUids: string[] = []
 let libraryIndexDocs: Array<{ id: string; data: Record<string, unknown> }> = []
 let libraryIndexReadThrows = false
+let healthBootstrapDoc: Record<string, unknown> | null = null
+let healthBootstrapExists = false
+const healthBootstrapWrites: Array<{ payload: Record<string, unknown>; merge: boolean }> = []
 
 const mockFirestore = {
     collection: vi.fn((name: string) => {
@@ -39,7 +42,31 @@ const mockFirestore = {
                                 data: () => storageBackupDoc ?? undefined,
                             }
                         }
+                        if (id === "healthBootstrap") {
+                            return {
+                                exists: healthBootstrapExists,
+                                data: () => healthBootstrapDoc ?? undefined,
+                            }
+                        }
                         return { data: () => undefined }
+                    },
+                    set: async (
+                        payload: Record<string, unknown>,
+                        options?: { merge?: boolean },
+                    ) => {
+                        if (id === "healthBootstrap") {
+                            healthBootstrapWrites.push({
+                                payload,
+                                merge: !!options?.merge,
+                            })
+                            // mirror the write so subsequent reads in the same
+                            // tick see the stamp
+                            healthBootstrapExists = true
+                            healthBootstrapDoc = {
+                                ...(healthBootstrapDoc ?? {}),
+                                ...payload,
+                            }
+                        }
                     },
                 }),
             }
@@ -146,6 +173,9 @@ beforeEach(() => {
     libraryIndexReadThrows = false
     bucketPresent = new Set()
     bucketInitThrows = false
+    healthBootstrapDoc = null
+    healthBootstrapExists = false
+    healthBootstrapWrites.length = 0
 })
 
 describe("GET /api/cron/admin-consistency — auth", () => {
@@ -506,5 +536,178 @@ describe("PGR-04 — library_index bytes-present invariant alarm", () => {
         expect(subjects.some((s) => /library_index bytes blast/i.test(s))).toBe(
             true,
         )
+    })
+})
+
+// ── tickStale + missing-aged + bootstrap stamp ─────────────────────────────
+//
+// storage-backup-silent-death-probe: the dormant-skip in
+// /api/cron/storage-backup/route.ts was invisible to PGR-03 because the
+// dormant path wrote zero docs and PGR-03 fail-opened silently on missing-
+// doc. The fix writes a `lastTickAt` heartbeat on every tick (success,
+// error, OR dormant) so PGR-03 can distinguish "cron is firing but env
+// unset" from "cron stopped firing entirely". The bootstrap stamp on
+// `config/healthBootstrap.firstAdminTickAt` is the deploy-age oracle that
+// distinguishes "pre-activation" from "real silent death" when the
+// storage-backup doc is missing altogether.
+
+describe("PGR-03 — tickStale alarm (cron stopped firing)", () => {
+    it("captures a 'warning' when lastTickAt is older than 36h, even in dormant mode", async () => {
+        // Cron has been dormant for a while AND stopped ticking entirely —
+        // distinct from a healthy-dormant tick (which would be fresh).
+        storageBackupExists = true
+        storageBackupDoc = {
+            lastTickAt: NOW - 48 * HOUR,
+            dormant: true,
+            dormantReason: "CRC_BACKUP_DRIVE_FOLDER_ID unset",
+        }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const tickStaleCall = captureMessageMock.mock.calls.find((c) =>
+            String(c[0]).includes("has not ticked"),
+        )
+        expect(tickStaleCall).toBeTruthy()
+        const [msg, ctx, level] = tickStaleCall!
+        expect(msg).toMatch(/dormant=true/)
+        expect(ctx).toMatchObject({
+            source: "cron",
+            location: "admin-consistency",
+        })
+        expect(ctx.extra.tickStalenessHours).toBeCloseTo(48, 0)
+        expect(ctx.extra.dormant).toBe(true)
+        expect(level).toBe("warning")
+    })
+
+    it("does NOT alarm tickStale when dormant tick is fresh (intentional pre-activation state)", async () => {
+        storageBackupExists = true
+        storageBackupDoc = {
+            lastTickAt: NOW - 2 * HOUR,
+            dormant: true,
+            dormantReason: "CRC_BACKUP_DRIVE_FOLDER_ID unset",
+        }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const tickStaleCall = captureMessageMock.mock.calls.find((c) =>
+            String(c[0]).includes("has not ticked"),
+        )
+        expect(tickStaleCall).toBeFalsy()
+    })
+
+    it("captures a 'warning' when an active cron's lastTickAt goes stale even with fresh lastBackupAt", async () => {
+        // Pathological case: success was recorded, then writeStorageBackupRun
+        // started failing in a way that no longer stamps lastTickAt. Defensive
+        // coverage — practically impossible after this lane lands, but the
+        // alarm is independent of stale so a regression in the writer would
+        // be caught.
+        storageBackupExists = true
+        storageBackupDoc = {
+            lastBackupAt: NOW - 10 * HOUR, // fresh per existing PGR-03
+            lastTickAt: NOW - 48 * HOUR, // but tick stamps stopped
+            dormant: false,
+        }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const tickStaleCall = captureMessageMock.mock.calls.find((c) =>
+            String(c[0]).includes("has not ticked"),
+        )
+        expect(tickStaleCall).toBeTruthy()
+    })
+
+    it("pre-fix legacy doc (lastBackupAt present, lastTickAt absent) does NOT spuriously alarm tickStale", async () => {
+        // Real prod doc shape on first deploy of this lane — the existing
+        // recordStorageBackupRun's `lastBackupAt` write predates lastTickAt.
+        // Until the next deployed tick re-writes, lastTickAt is null →
+        // tickStale should be false (no false-positive page).
+        storageBackupExists = true
+        storageBackupDoc = { lastBackupAt: NOW - 10 * HOUR }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const tickStaleCall = captureMessageMock.mock.calls.find((c) =>
+            String(c[0]).includes("has not ticked"),
+        )
+        expect(tickStaleCall).toBeFalsy()
+    })
+})
+
+describe("PGR-03 — missing-doc + deploy-aged alarm", () => {
+    it("captures a 'warning' when storageBackup doc is missing AND bootstrap is >36h old", async () => {
+        storageBackupExists = false
+        // Bootstrap stamp predates this tick by 48h — deploy is mature, the
+        // cron should have written something by now → real silent death.
+        healthBootstrapExists = true
+        healthBootstrapDoc = { firstAdminTickAt: new Date(NOW - 48 * HOUR) }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const missingAgedCall = captureMessageMock.mock.calls.find((c) =>
+            String(c[0]).includes("never written a heartbeat"),
+        )
+        expect(missingAgedCall).toBeTruthy()
+        const [, ctx, level] = missingAgedCall!
+        expect(ctx).toMatchObject({
+            source: "cron",
+            location: "admin-consistency",
+        })
+        expect(ctx.extra.subsystem).toBe("storage-backup-health")
+        expect(ctx.extra.deployAgeHours).toBeCloseTo(48, 0)
+        expect(level).toBe("warning")
+    })
+
+    it("does NOT alarm missing-doc on a fresh deploy (bootstrap <36h old)", async () => {
+        // PGR-03 spec: don't page on a never-run cron in the first 36h post-
+        // deploy. The bootstrap stamp is fresh → pre-activation state.
+        storageBackupExists = false
+        healthBootstrapExists = true
+        healthBootstrapDoc = { firstAdminTickAt: new Date(NOW - 2 * HOUR) }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const missingAgedCall = captureMessageMock.mock.calls.find((c) =>
+            String(c[0]).includes("never written a heartbeat"),
+        )
+        expect(missingAgedCall).toBeFalsy()
+    })
+
+    it("does NOT alarm missing-doc on the very first admin-consistency tick (bootstrap not yet stamped)", async () => {
+        storageBackupExists = false
+        healthBootstrapExists = false // first ever tick
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const missingAgedCall = captureMessageMock.mock.calls.find((c) =>
+            String(c[0]).includes("never written a heartbeat"),
+        )
+        expect(missingAgedCall).toBeFalsy()
+        // And the bootstrap stamp WAS written this tick.
+        expect(healthBootstrapWrites).toHaveLength(1)
+        expect(healthBootstrapWrites[0].payload).toHaveProperty("firstAdminTickAt")
+    })
+
+    it("bootstrap stamp is idempotent — second tick does NOT overwrite firstAdminTickAt", async () => {
+        // First tick — seed it via the actual route call so the test mirrors
+        // prod behavior.
+        healthBootstrapExists = false
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        expect(healthBootstrapWrites).toHaveLength(1)
+        const firstWrite = healthBootstrapWrites[0]
+
+        // Second tick — should NOT write again (doc now exists with valid
+        // stamp).
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        expect(healthBootstrapWrites).toHaveLength(1) // unchanged
+        expect(healthBootstrapWrites[0]).toBe(firstWrite)
+    })
+})
+
+describe("PGR-03 — dormant fresh tick is intentionally silent", () => {
+    it("dormant + fresh tick fires NO Sentry alarms (pre-activation steady state)", async () => {
+        // Fresh deploy, env var unset, cron tick'd happily — the new
+        // observable steady state. PGR-03 must remain silent here, otherwise
+        // we'd be paging Daniel daily while he sets up the Shared Drive.
+        storageBackupExists = true
+        storageBackupDoc = {
+            lastTickAt: NOW - 1 * HOUR,
+            dormant: true,
+            dormantReason: "CRC_BACKUP_DRIVE_FOLDER_ID unset",
+        }
+        // Bootstrap fresh too.
+        healthBootstrapExists = true
+        healthBootstrapDoc = { firstAdminTickAt: new Date(NOW - 5 * HOUR) }
+
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const storageBackupCalls = captureMessageMock.mock.calls.filter((c) =>
+            /storage backup/i.test(String(c[0])),
+        )
+        expect(storageBackupCalls).toHaveLength(0)
     })
 })

@@ -33,6 +33,30 @@ export type StorageBackupHealth =
           lastError: string | null
           lastErrorAt: number | null
           recentError: boolean
+          /**
+           * Wall-clock of the most recent cron tick (success, error, OR
+           * dormant). Independent of `lastBackupAt` which only stamps on a
+           * successful real backup. Null only on pre-fix legacy docs that
+           * predate the dormant-heartbeat write (storage-backup-silent-death-probe).
+           */
+          lastTickAt: number | null
+          /** Hours since `lastTickAt`, or Infinity if null. */
+          tickStalenessHours: number
+          /**
+           * True when `lastTickAt` is older than `STORAGE_BACKUP_STALENESS_HOURS`,
+           * i.e. the cron itself has stopped firing (independent of dormant vs
+           * active mode). PGR-03 alarms on this regardless of `dormant` —
+           * a dormant cron that stops ticking is just as broken as an active
+           * one.
+           */
+          tickStale: boolean
+          /**
+           * True when the last tick was a dormant no-op (CRC_BACKUP_DRIVE_FOLDER_ID
+           * unset). PGR-03 does NOT alarm on dormant+fresh — that's
+           * intentional pre-activation state. dormant+tickStale STILL alarms
+           * via `tickStale`.
+           */
+          dormant: boolean
       }
 
 /**
@@ -84,15 +108,23 @@ export function checkStorageBackupHealth(
 
     const lastBackupAt = toMillis(snapshot.lastBackupAt)
     const lastErrorAt = toMillis(snapshot.lastErrorAt)
+    const lastTickAt = toMillis(snapshot.lastTickAt)
     const rawLastError = snapshot.lastError
     const lastError =
         typeof rawLastError === "string" && rawLastError.length > 0
             ? rawLastError
             : null
+    const dormant = snapshot.dormant === true
 
-    // If neither timestamp is parseable AND there's no error string, the
-    // doc exists but carries no signal we can act on — treat as missing.
-    if (lastBackupAt == null && lastErrorAt == null && !lastError) {
+    // If no timestamps OR error string are parseable, the doc exists but
+    // carries no signal we can act on — treat as missing. `lastTickAt`
+    // counts as signal: a dormant-heartbeat-only doc IS present + actionable.
+    if (
+        lastBackupAt == null &&
+        lastErrorAt == null &&
+        lastTickAt == null &&
+        !lastError
+    ) {
         return { status: "missing" }
     }
 
@@ -108,6 +140,16 @@ export function checkStorageBackupHealth(
         lastErrorAt != null &&
         nowMs - lastErrorAt <= STORAGE_BACKUP_STALENESS_MS
 
+    const tickStalenessMs = lastTickAt != null ? nowMs - lastTickAt : Infinity
+    const tickStalenessHours =
+        lastTickAt != null ? tickStalenessMs / (60 * 60 * 1000) : Infinity
+    // Mirrors `stale`'s never-run policy: only alarm tickStale if we have
+    // observed a tick before (lastTickAt parseable). Pre-fix legacy docs
+    // without lastTickAt will register tickStalenessHours=Infinity but
+    // tickStale=false until the next deployed tick stamps lastTickAt.
+    const tickStale =
+        lastTickAt != null && tickStalenessMs > STORAGE_BACKUP_STALENESS_MS
+
     return {
         status: "present",
         lastBackupAt,
@@ -116,5 +158,9 @@ export function checkStorageBackupHealth(
         lastError,
         lastErrorAt,
         recentError,
+        lastTickAt,
+        tickStalenessHours,
+        tickStale,
+        dormant,
     }
 }
