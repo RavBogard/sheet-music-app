@@ -109,12 +109,24 @@ export const POST = createApiHandler(
                                 await uploadToStorage(newLibraryId, buffer, 'application/pdf')
 
                                 // Create index record
+                                // FINDING-1 write-symmetry (drive-id-write-symmetry-fix
+                                // lane): `fileId` here is the Drive file ID extracted
+                                // from `item.chartUrl` (driveRegex), and we're about to
+                                // download bytes from Drive for this exact ID. Persist
+                                // it as `driveFileId` so a later drive-sync tick — which
+                                // queries `library_index where driveFileId == X` via
+                                // `findRowByDriveFileId` — finds THIS row and routes to
+                                // `handleExistingFile`, instead of misclassifying NEW
+                                // and minting a duplicate via PCU. The doc-id stays
+                                // `upload-<uuid>` (set above) to honor PCU's id shape;
+                                // `driveFileId` is the lookup key, not the doc-id.
                                 const indexEntry = {
                                     name: finalTitle,
                                     originalName: `${finalTitle}.pdf`,
                                     mimeType: 'application/pdf',
                                     fileSize: buffer.length,
                                     source: 'upload' as const,
+                                    driveFileId: fileId,
                                     uploadedBy: ctx.auth.uid,
                                     uploadedByEmail: ctx.auth.email || 'unknown',
                                     uploadedAt: new Date().toISOString(),

@@ -247,6 +247,14 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
 
                 batch.set(docRef, {
                     id: file.id,
+                    // FINDING-1 write-symmetry (drive-id-write-symmetry-fix lane):
+                    // the drive-sync poller queries `library_index where driveFileId == X`
+                    // (`src/lib/drive-sync/poller.ts:findRowByDriveFileId`). Without
+                    // this field on SLI-shape rows, the poller misclassifies an
+                    // already-synced Drive file as NEW and PCU mints a duplicate row
+                    // at `library_index/upload-<uuid>`. Set this to match `id` so the
+                    // SLI row is queryable by the same key the poller queries on.
+                    driveFileId: file.id,
                     name: cleanName,
                     nameLower: cleanName.toLowerCase(),
                     mimeType: file.mimeType,

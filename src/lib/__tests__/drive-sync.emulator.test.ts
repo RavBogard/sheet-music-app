@@ -563,4 +563,122 @@ describe("Drive-sync poller (emulator)", () => {
         ).data()!
         expect(state.lastPollAt).toBe("2026-05-18T00:08:00.000Z")
     })
+
+    // ─── FINDING-1 write-symmetry (drive-id-write-symmetry-fix lane) ───
+    //
+    // The drive-sync poller queries `library_index where driveFileId == X`
+    // via `findRowByDriveFileId`. Pre-fix, two other write channels
+    // (`syncLibraryIndex` SLI rows + setlist-import-execute `upload-{uuid}`
+    // rows) skipped the `driveFileId` field, so the poller misclassified
+    // already-synced Drive files as NEW and PCU minted duplicate rows.
+    // These tests pin the post-fix invariant: a row written by either
+    // channel for a Drive file is reachable via that query, and a
+    // subsequent drive-sync tick DOES NOT mint a duplicate.
+
+    it("FINDING-1: SLI-shape row (doc-id == driveFileId) is queryable; second drive-sync tick does NOT mint a duplicate", async () => {
+        const t0 = new Date("2026-05-17T23:50:00.000Z")
+        await runDriveSync({ deps: makeDeps(t0), parentFolderId: PARENT })
+        await db().collection("driveWatchState").doc(PARENT).update({
+            [`collectionMap.${FRIDAY_SUB}.collection`]: "core",
+        })
+
+        // Mirror syncLibraryIndex's post-fix batch.set output: doc id == driveFileId,
+        // the `driveFileId` field present (THE FIX), no `normalizedName` (SLI rows
+        // skip that — PCU's fuzzy dedup is blind here, hence the original bug).
+        const DRIVE_ID = "drive-sli-shape-shalom"
+        await db().collection("library_index").doc(DRIVE_ID).set({
+            id: DRIVE_ID,
+            driveFileId: DRIVE_ID,
+            name: "Shalom Rav",
+            nameLower: "shalom rav",
+            mimeType: "application/pdf",
+            modifiedTime: "2026-05-17T23:55:00.000Z",
+            webViewLink: null,
+            parents: [FRIDAY_SUB],
+            fileSize: 4096,
+            lastSyncedAt: t0.toISOString(),
+            source: "google_drive",
+        })
+
+        // The poller's query shape must find the SLI row.
+        const findSnap = await db()
+            .collection("library_index")
+            .where("driveFileId", "==", DRIVE_ID)
+            .limit(1)
+            .get()
+        expect(findSnap.empty).toBe(false)
+        expect(findSnap.docs[0].id).toBe(DRIVE_ID)
+
+        // Now expose the same Drive file via the poller. Pre-fix this misclassified
+        // NEW and minted a second row via PCU; post-fix the poller finds the SLI
+        // row and routes to handleExistingFile (no new import).
+        seedDriveFile({
+            id: DRIVE_ID,
+            name: "Shalom Rav.pdf",
+            parents: [FRIDAY_SUB],
+            modifiedTime: "2026-05-18T00:00:00.000Z",
+            md5Checksum: "md5-sli-shape-v1",
+        })
+        const r = await runDriveSync({
+            deps: makeDeps(new Date("2026-05-18T00:00:00.000Z")),
+            parentFolderId: PARENT,
+        })
+
+        expect(r.imported).toBe(0)
+        // Exactly one row matching this driveFileId — no duplicate.
+        const finalSnap = await db()
+            .collection("library_index")
+            .where("driveFileId", "==", DRIVE_ID)
+            .get()
+        expect(finalSnap.size).toBe(1)
+    })
+
+    it("FINDING-1: setlist-import shape (doc-id starts `upload-`, driveFileId field set) is queryable; drive-sync tick does NOT mint a duplicate", async () => {
+        const t0 = new Date("2026-05-17T23:50:00.000Z")
+        await runDriveSync({ deps: makeDeps(t0), parentFolderId: PARENT })
+        await db().collection("driveWatchState").doc(PARENT).update({
+            [`collectionMap.${FRIDAY_SUB}.collection`]: "core",
+        })
+
+        // Mirror setlist-import-execute's post-fix `indexEntry` output: doc id is
+        // `upload-<uuid>` (NOT the Drive id), but `driveFileId` is set to the
+        // Drive id so a later drive-sync tick finds it. This is the second of the
+        // two write channels FINDING-1 identified.
+        const DRIVE_ID = "drive-import-shape-mi-chamocha"
+        const UPLOAD_ID = "upload-set-import-mi-chamocha"
+        await db().collection("library_index").doc(UPLOAD_ID).set({
+            name: "Mi Chamocha",
+            originalName: "Mi Chamocha.pdf",
+            mimeType: "application/pdf",
+            fileSize: 5120,
+            source: "upload",
+            driveFileId: DRIVE_ID,
+            uploadedBy: "test-uid",
+            uploadedByEmail: "test@example.com",
+            uploadedAt: t0.toISOString(),
+            modifiedTime: t0.toISOString(),
+            storageUrl: `library/${UPLOAD_ID}.pdf`,
+            status: "active",
+        })
+
+        seedDriveFile({
+            id: DRIVE_ID,
+            name: "Mi Chamocha.pdf",
+            parents: [FRIDAY_SUB],
+            modifiedTime: "2026-05-18T00:00:00.000Z",
+            md5Checksum: "md5-import-shape-v1",
+        })
+        const r = await runDriveSync({
+            deps: makeDeps(new Date("2026-05-18T00:00:00.000Z")),
+            parentFolderId: PARENT,
+        })
+
+        expect(r.imported).toBe(0)
+        const finalSnap = await db()
+            .collection("library_index")
+            .where("driveFileId", "==", DRIVE_ID)
+            .get()
+        expect(finalSnap.size).toBe(1)
+        expect(finalSnap.docs[0].id).toBe(UPLOAD_ID)
+    })
 })
