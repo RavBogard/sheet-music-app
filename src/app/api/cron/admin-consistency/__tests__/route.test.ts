@@ -46,19 +46,31 @@ const mockFirestore = {
         }
         if (name === "library_index") {
             // Build a chainable where/orderBy/limit query that yields whatever
-            // libraryIndexDocs we've seeded. Order/limit are honored opaquely
-            // (the route trusts Firestore — the helper does the verdict math).
+            // libraryIndexDocs we've seeded. orderBy(field, ...) models
+            // Firestore's STRICT-EXCLUDE semantics: docs missing the ordered
+            // field are filtered out of the result set (the bug that PGR-04
+            // sample-fix targets — `lastSyncedAt` is only stamped on the
+            // legacy Drive-sync path, so the upload-{uuid} majority was
+            // silently excluded). Where/limit are honored opaquely; the
+            // helper does the verdict math.
+            const orderByFields: string[] = []
             const query = {
                 where: () => query,
-                orderBy: () => query,
+                orderBy: (field: string) => {
+                    orderByFields.push(field)
+                    return query
+                },
                 limit: () => query,
                 get: async () => {
                     if (libraryIndexReadThrows) {
                         throw new Error("firestore library_index read failed")
                     }
+                    const filtered = libraryIndexDocs.filter((d) =>
+                        orderByFields.every((f) => f in d.data),
+                    )
                     return {
-                        size: libraryIndexDocs.length,
-                        docs: libraryIndexDocs.map((d) => ({
+                        size: filtered.length,
+                        docs: filtered.map((d) => ({
                             id: d.id,
                             data: () => d.data,
                         })),
@@ -424,6 +436,53 @@ describe("PGR-04 — library_index bytes-present invariant alarm", () => {
             String(c[0]).includes("library_index"),
         )
         expect(pgr04).toBeFalsy()
+    })
+
+    it("samples upload-{uuid}-shape rows (no lastSyncedAt) alongside Drive-sync rows", async () => {
+        // FINDING-2 regression guard. `lastSyncedAt` is written ONLY by
+        // syncLibraryIndex (the Drive-sync path). The modern upload path
+        // — `upload-{uuid}` doc ids minted by processChartUpload, which
+        // is the post-Drive-sync majority — never stamps it. A naive
+        // `.orderBy("lastSyncedAt", "desc")` here would silently strict-
+        // exclude every upload-{uuid} row, so a future bytes-blast hitting
+        // them wouldn't trip PGR-04 regardless of how many vanished. The
+        // sample must include both shapes when present in the active set.
+        libraryIndexDocs = [
+            // Drive-sync shape — bare Drive file id, lastSyncedAt stamped.
+            { id: "1AbCdEf_drive_id", data: { lastSyncedAt: NOW - 1 * HOUR } },
+            // Modern upload shape — `upload-{uuid}`, no lastSyncedAt.
+            { id: "upload-11111111-2222-3333-4444-555555555555", data: {} },
+            { id: "upload-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", data: {} },
+        ]
+        // Drive row has bytes; both upload rows have missing bytes →
+        // 2 of 3 missing → verdict = error (well above the 5% threshold).
+        bucketPresent = new Set(["1AbCdEf_drive_id"])
+        const res = await GET(
+            makeReq("/api/cron/admin-consistency", { token: SECRET }),
+        )
+        expect(res.status).toBe(200)
+        const json = (await res.json()) as {
+            libraryBytesHealth: {
+                status: string
+                scanned: number
+                missingCount: number
+                missing: Array<{ fileId: string }>
+                verdict: string
+            }
+        }
+        expect(json.libraryBytesHealth.status).toBe("ok")
+        // The smoking gun: all 3 rows reach the helper, NOT just the
+        // single Drive-sync row. Pre-fix, orderBy("lastSyncedAt") would
+        // strict-exclude the 2 upload rows → scanned=1.
+        expect(json.libraryBytesHealth.scanned).toBe(3)
+        expect(json.libraryBytesHealth.missingCount).toBe(2)
+        const missingIds = json.libraryBytesHealth.missing.map((m) => m.fileId)
+        expect(missingIds).toEqual(
+            expect.arrayContaining([
+                "upload-11111111-2222-3333-4444-555555555555",
+                "upload-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            ]),
+        )
     })
 
     it("PGR-03 + PGR-04 alarms can co-fire on a really bad day", async () => {

@@ -228,10 +228,21 @@ async function readAndAlertLibraryBytesHealth(
     let rows: LibraryBytesRow[]
     let bucket: LibraryBytesBucket
     try {
+        // No .orderBy() — Firestore strict-excludes docs missing the
+        // ordered field, and `lastSyncedAt` is stamped ONLY by
+        // syncLibraryIndex (the legacy Drive-sync path). The modern
+        // `upload-{uuid}` rows minted by processChartUpload — the
+        // post-Drive-sync majority — never get `lastSyncedAt`, so an
+        // orderBy on it would silently exclude them and a blast hitting
+        // them wouldn't trip this alarm. See
+        // .paul/research/ingest-mutator-matrix/FINDINGS.md §FINDING-2
+        // + FINDINGS-AUDIT.md §FINDING-2 (auditor REVISED — locus is
+        // here, not the helper). Default doc-id ordering gives an
+        // effectively-random sample of the active set, which is what
+        // PGR-04 wants.
         const snap = await db
             .collection("library_index")
             .where("status", "==", "active")
-            .orderBy("lastSyncedAt", "desc")
             .limit(DEFAULT_LIBRARY_BYTES_SAMPLE_SIZE)
             .get()
         rows = snap.docs.map((doc) => {
