@@ -36,6 +36,7 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
         queueIndex,
         setEditingChords,
         fileUrl,
+        musicXmlKey,
     } = useMusicStore()
 
     // Musician profile for auto-transposition indicator
@@ -84,11 +85,16 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
         )
     }, [aiState.pageData])
 
-    // Detect key from chords
+    // Detect key from chords. PDF AI-chord path stays authoritative when
+    // populated (`estimateKey(allChords)`); MusicXML's native first-measure
+    // key is the fallback for chart types where the AI overlay never runs.
+    // Per DISCUSSION.md §2.1 build-lane A — Q-DETECT-1=C heal happens at
+    // write-time in SmartScoreViewer; here we only LIGHT UP the existing
+    // capo grid by feeding `effectiveKey` a non-null value.
     const detectedKey = useMemo(() => {
-        if (allChords.length === 0) return null
-        return estimateKey(allChords)
-    }, [allChords])
+        const aiEstimate = allChords.length === 0 ? null : estimateKey(allChords)
+        return aiEstimate ?? musicXmlKey ?? null
+    }, [allChords, musicXmlKey])
 
     // The "effective key" for capo calculations:
     // If there's a setlist key, use it (that's what everyone is playing in)

@@ -327,7 +327,7 @@ export function PDFOverlay({
     const chartSurface = (
         <SectionErrorBoundary key={track.fileId} label="Chart">
             {isMusicXml ? (
-                fileUrl && <SmartScoreViewer url={fileUrl} />
+                fileUrl && <SmartScoreViewer url={fileUrl} trackId={track.id} trackKey={track.key} />
             ) : isText ? (
                 fileUrl && <TextScoreViewer url={fileUrl} />
             ) : isImage ? (

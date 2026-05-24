@@ -67,6 +67,23 @@ export interface MusicState {
     capoFret: number | null
     setCapoFret: (fret: number | null) => void
 
+    /**
+     * Native key parsed from MusicXML's first `<key>` signature, written by
+     * `SmartScoreViewer` after `osmd.load()` succeeds and cleared on
+     * unmount / sourceUrl change. Render-time only: NOT persisted (kept out
+     * of `partialize` below).
+     *
+     * Consumers (`TransposerMenu`, `PerformanceToolbar`) use it as the
+     * fallback for `detectedKey` when the PDF AI-chord overlay path
+     * (`aiState.pageData`-derived key) is empty — which is the steady state
+     * for MusicXML files. PDF AI-chord remains authoritative when present.
+     *
+     * See `.paul/research/musicxml-phase2-discuss/DISCUSSION.md` §2.1
+     * (Build Lane A) for the broader rationale.
+     */
+    musicXmlKey: string | null
+    setMusicXmlKey: (key: string | null) => void
+
     setFile: (url: string | null, type: FileType | null, returnPath?: string) => void
     setTransposition: (semitones: number) => void
     setZoom: (zoom: number) => void
@@ -123,6 +140,7 @@ export const useMusicStore = create<MusicState>()(
             pendingEditCount: 0,
             gigModeActive: false,
             capoFret: null,
+            musicXmlKey: null,
 
             audio: {
                 fileId: null,
@@ -138,6 +156,7 @@ export const useMusicStore = create<MusicState>()(
                 returnPath: returnPath ?? get().returnPath,
                 transposition: 0,
                 capoFret: null,
+                musicXmlKey: null,
                 isEditingChords: false,
                 aiState: { isEnabled: false, scanningPages: [], pageData: {}, error: null },
                 aiXmlContent: null, // Clear AI content
@@ -231,6 +250,7 @@ export const useMusicStore = create<MusicState>()(
             })),
 
             setCapoFret: (fret) => set({ capoFret: fret }),
+            setMusicXmlKey: (key) => set({ musicXmlKey: key }),
 
             setEditingChords: (editing) => set({ isEditingChords: editing, ...(editing ? {} : { pendingEditCount: 0 }) }),
             incrementPendingEdits: () => set(s => ({ pendingEditCount: s.pendingEditCount + 1 })),
@@ -247,6 +267,7 @@ export const useMusicStore = create<MusicState>()(
                 pendingEditCount: 0,
                 gigModeActive: false,
                 capoFret: null,
+                musicXmlKey: null,
                 playbackQueue: [],
                 queueIndex: -1,
                 returnPath: null,

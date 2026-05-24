@@ -26,7 +26,7 @@ interface PerformanceToolbarProps {
 
 export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: PerformanceToolbarProps) {
     const {
-        aiState, setAiEnabled, capoFret, transposition, zoom, setZoom
+        aiState, setAiEnabled, capoFret, transposition, zoom, setZoom, musicXmlKey
     } = useMusicStore()
     // v70-01-01 Task 3: image-typed charts have no extractable chord data,
     // so transposition + AI-chord editing are unavailable. Disable the
@@ -71,14 +71,18 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
         onMenuOpenChange?.(openPopovers.size > 0)
     }, [openPopovers.size, onMenuOpenChange])
 
-    // Detected key for button display
+    // Detected key for button display. PDF AI-chord path stays authoritative
+    // when populated; MusicXML's native first-measure key is the fallback so
+    // the toolbar label + capo badge light up for MusicXML charts that have
+    // no AI overlay. (Parallel of TransposerMenu's detectedKey fallback —
+    // both surfaces feed off this same store slot.)
     const detectedKey = useMemo(() => {
         const chords = Object.values(aiState.pageData).flatMap(
             p => p.chords.map((c: { originalText?: string; text: string }) => c.originalText || c.text)
         )
-        if (chords.length === 0) return null
-        return estimateKey(chords)
-    }, [aiState.pageData])
+        const aiEstimate = chords.length === 0 ? null : estimateKey(chords)
+        return aiEstimate ?? musicXmlKey ?? null
+    }, [aiState.pageData, musicXmlKey])
 
     // Transposer button label
     const buttonLabel = useMemo(() => {
