@@ -134,4 +134,158 @@ describe('SaveOfflineButton', () => {
         await waitFor(() => expect(btn().getAttribute('data-state')).toBe('partial'))
         expect(btn().textContent).toContain('Save 1/2')
     })
+
+    /**
+     * ipad-idle-auto-precache-fix REGRESSION.
+     *
+     * Reproduces the iPad-WebKit F-4 symptom (FINDINGS: probe 1 stuck at
+     * `data-state="idle"` for 23s; probe 2 manual-tap path works).
+     *
+     * Mechanism: in the previous implementation the auto-precache useEffect
+     *   1. checked `idleKickedRef.current === sig` and returned early if matched
+     *   2. set `idleKickedRef.current = sig`
+     *   3. scheduled `requestIdleCallback(run, {timeout: 3000})` and stashed
+     *      the handle into the cleanup closure
+     *
+     * The parent (SetlistPerformClient) re-renders the moment Dexie's live-
+     * query delivers its first frame for the setlist's tracks. `cacheable`
+     * is `useMemo(... [fileIds])`, and `fileIds` is a NEW array reference on
+     * every parent render — so `cacheable` and `recount` (`useCallback`d on
+     * `cacheable`) are both new identities → the effect re-runs.
+     *
+     * On the re-run:
+     *   - cleanup of the prior effect fires `cancelIdleCallback(handle)`
+     *   - the new effect sees `idleKickedRef.current === sig` and RETURNS
+     *     EARLY without re-scheduling
+     *   - result: the rIC was cancelled and never re-scheduled → `run()` (and
+     *     therefore `prefetchSetlistPDFs`) is never invoked → `recount`'s
+     *     post-prefetch path never updates `readyCount` → `data-state`
+     *     remains `"idle"` until a manual tap.
+     *
+     * Reproduced here by stubbing rIC so the callback NEVER fires (mirrors
+     * iOS WebKit / Playwright WebKit's real async-schedule behaviour), then
+     * re-rendering with a NEW-reference-same-content fileIds array (the
+     * Dexie live-query shape). After the fix, the latest rIC must still be
+     * pending — i.e. the schedule must have been re-issued on the re-render.
+     */
+    it('re-render with new fileIds reference re-schedules the idle kick (F-4)', async () => {
+        const scheduled: IdleRequestCallback[] = []
+        const cancelled: number[] = []
+        let nextHandle = 1
+        vi.stubGlobal('requestIdleCallback', (cb: IdleRequestCallback) => {
+            scheduled.push(cb)
+            return nextHandle++
+        })
+        vi.stubGlobal('cancelIdleCallback', (h: number) => {
+            cancelled.push(h)
+        })
+
+        const ids1 = ['upload-1', 'upload-2']
+        const { rerender } = render(<SaveOfflineButton fileIds={ids1} />)
+        await waitFor(() => expect(scheduled.length).toBe(1))
+
+        // Parent re-renders with a NEW array reference but same content
+        // (the Dexie liveQuery shape on first delivery of an SSR-seeded set).
+        rerender(<SaveOfflineButton fileIds={[...ids1]} />)
+
+        // The previous rIC handle was cancelled by cleanup — expected.
+        expect(cancelled).toContain(1)
+
+        // CRITICAL: after the re-render, the precache must still have a
+        // PENDING rIC. Pre-fix this assertion fails: only `scheduled.length === 1`
+        // (the original handle 1, now cancelled), so nothing will ever fire.
+        expect(
+            scheduled.length,
+            'idle auto-precache must re-schedule after a same-content re-render (else iPad-WebKit F-4)',
+        ).toBeGreaterThan(1)
+
+        // Fire the latest still-pending rIC and confirm prefetch lands.
+        await act(async () => {
+            scheduled[scheduled.length - 1]({
+                didTimeout: false,
+                timeRemaining: () => 0,
+            } as IdleDeadline)
+        })
+        await waitFor(() => expect(mockPrefetch).toHaveBeenCalled())
+        expect(mockPrefetch.mock.calls[0][0]).toEqual(ids1)
+    })
+
+    /**
+     * Sibling case — same root cause, setTimeout fallback path (rIC absent).
+     * iOS Safari < 17.4 (and any WebKit build without requestIdleCallback)
+     * runs the 2000ms setTimeout fallback; the same cancel-on-re-render race
+     * applies. Asserts the fix re-schedules the fallback too.
+     *
+     * Implementation note: we intercept the native `setTimeout` directly
+     * rather than `vi.useFakeTimers`, which interacts badly with @testing-
+     * library's render / waitFor (those rely on real microtask + timer
+     * scheduling). Recording calls lets us assert the cancel-then-re-schedule
+     * shape deterministically without touching the global clock.
+     */
+    it('re-render re-schedules the setTimeout fallback when rIC is absent (F-4 fallback)', async () => {
+        // Strip rIC entirely so the setTimeout fallback path is exercised.
+        vi.stubGlobal('requestIdleCallback', undefined)
+        vi.stubGlobal('cancelIdleCallback', undefined)
+
+        const realSetTimeout = globalThis.setTimeout
+        const realClearTimeout = globalThis.clearTimeout
+        const scheduled2s: { id: number; cb: () => void }[] = []
+        const cleared: number[] = []
+        let nextTimerId = 1_000_000
+
+        const fakeSetTimeout = ((cb: (...args: unknown[]) => void, ms?: number, ...args: unknown[]) => {
+            // Only intercept the SaveOfflineButton's 2s schedule; let
+            // React / @testing-library's own microtask + timer hops use the
+            // real clock.
+            if (ms === 2000) {
+                const id = nextTimerId++
+                scheduled2s.push({ id, cb: () => cb(...args) })
+                return id as unknown as ReturnType<typeof setTimeout>
+            }
+            return realSetTimeout(cb, ms, ...args)
+        }) as typeof setTimeout
+        const fakeClearTimeout = ((id: number) => {
+            if (id >= 1_000_000) {
+                cleared.push(id)
+                return
+            }
+            realClearTimeout(id as unknown as Parameters<typeof clearTimeout>[0])
+        }) as typeof clearTimeout
+        vi.stubGlobal('setTimeout', fakeSetTimeout)
+        vi.stubGlobal('clearTimeout', fakeClearTimeout)
+
+        try {
+            const ids = ['upload-x']
+            const { rerender } = render(<SaveOfflineButton fileIds={ids} />)
+            // First effect scheduled a 2s setTimeout via the fallback branch.
+            expect(scheduled2s.length).toBe(1)
+            const firstId = scheduled2s[0].id
+
+            // Parent re-renders with a new array reference, same content.
+            rerender(<SaveOfflineButton fileIds={[...ids]} />)
+
+            // Cleanup cleared the first fallback timer — expected.
+            expect(cleared).toContain(firstId)
+
+            // CRITICAL: a fresh 2s timer must be pending after the re-render.
+            // Pre-fix this fails (scheduled2s.length stays 1, both cancelled
+            // and unreplaced); post-fix it is 2 with the latest one still
+            // alive (not in `cleared`).
+            expect(
+                scheduled2s.length,
+                'setTimeout fallback must be re-scheduled after a same-content re-render',
+            ).toBeGreaterThan(1)
+            const latest = scheduled2s[scheduled2s.length - 1]
+            expect(cleared).not.toContain(latest.id)
+
+            // Fire the latest still-pending timer and confirm prefetch lands.
+            await act(async () => {
+                latest.cb()
+            })
+            await waitFor(() => expect(mockPrefetch).toHaveBeenCalled())
+            expect(mockPrefetch.mock.calls[0][0]).toEqual(ids)
+        } finally {
+            // Globals restored by afterEach via vi.unstubAllGlobals().
+        }
+    })
 })

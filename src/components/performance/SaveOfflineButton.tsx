@@ -69,12 +69,26 @@ export function SaveOfflineButton({ fileIds }: Props) {
     // Idle-time auto-precache on entry. Online-only, best-effort, non-blocking.
     // Re-runs only when the setlist's cacheable set changes (sig), guarded by a
     // ref so a re-render with the same set doesn't re-schedule.
+    //
+    // ipad-idle-auto-precache-fix (F-4): the kick-flag is marked INSIDE the
+    // deferred firing closure (`fire`), not before scheduling. The parent
+    // (`SetlistPerformClient`) re-renders the moment Dexie's `useLiveQuery`
+    // delivers its first frame for the setlist's tracks — `fileIds` is a new
+    // array reference, so `cacheable` + `recount` are new identities and this
+    // effect re-runs. With the previous "mark before schedule" shape, the
+    // cleanup would `cancelIdleCallback(handle)` the pending kick and the
+    // new effect would see `idleKickedRef.current === sig` and bail without
+    // re-scheduling — leaving the rIC cancelled-and-never-replaced, the
+    // precache never firing, and `data-state` stuck on `"idle"` (probe 1 in
+    // `e2e/perform-ipad-offline.spec.ts:218`). Marking inside `fire` lets the
+    // re-render re-schedule cleanly; once the kick actually runs, the ref
+    // flips and subsequent re-renders correctly return early (no double-fire).
+    // See `.paul/research/ipad-idle-auto-precache-fix/DIAGNOSIS.md`.
     const idleKickedRef = useRef<string | null>(null)
     useEffect(() => {
         if (total === 0) return
         recount()
         if (idleKickedRef.current === sig) return
-        idleKickedRef.current = sig
         // Can't fetch while offline — the user can still hit "Save offline"
         // once they reconnect.
         if (typeof navigator !== "undefined" && navigator.onLine === false) return
@@ -83,8 +97,11 @@ export function SaveOfflineButton({ fileIds }: Props) {
         let handle: number | null = null
         let fallback: ReturnType<typeof setTimeout> | null = null
 
-        const run = () => {
+        const fire = () => {
             if (cancelled) return
+            // Mark kicked HERE (not before scheduling) so a re-render that
+            // cancels the pending rIC re-schedules instead of bailing.
+            idleKickedRef.current = sig
             // Silent path — no progress UI for the passive precache; the button
             // simply flips to "Saved" via recount once it finishes.
             prefetchSetlistPDFs(cacheable)
@@ -100,7 +117,7 @@ export function SaveOfflineButton({ fileIds }: Props) {
             handle = ric(
                 () => {
                     handle = null
-                    run()
+                    fire()
                 },
                 { timeout: 3000 },
             )
@@ -108,7 +125,7 @@ export function SaveOfflineButton({ fileIds }: Props) {
             // Safari iOS omits requestIdleCallback — defer past first paint.
             fallback = setTimeout(() => {
                 fallback = null
-                run()
+                fire()
             }, 2000)
         }
 
