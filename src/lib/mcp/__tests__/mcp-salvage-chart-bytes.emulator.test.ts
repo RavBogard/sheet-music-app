@@ -122,7 +122,7 @@ beforeAll(() => {
             if (!r) {
                 throw new Error(`fetch not seeded for ${url}`)
             }
-            return new Response(r.body, {
+            return new Response(r.body as unknown as BodyInit, {
                 status: r.status,
                 headers: { "content-type": r.contentType },
             })

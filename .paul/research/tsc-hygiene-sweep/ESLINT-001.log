@@ -1,0 +1,9 @@
+
+C:\Users\dsbog\CentralReform.live\sheet-music-app-tsc-hygiene\src\components\performance\__tests__\performance-toolbar.test.tsx
+  124:13  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  157:13  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+✖ 2 problems (0 errors, 2 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+ESLint found too many warnings (maximum: 0).

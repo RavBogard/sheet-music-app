@@ -212,7 +212,7 @@ describe("MCP publish_setlist (emulator)", () => {
         // LEADER + MUSICIAN_1 + MUSICIAN_2 + NONLEADER are eligible (4 band-
         // role accounts minus ADMIN himself).
         expect(r.recipientCount).toBe(4)
-        const uids = r.recipients.map((x) => x.uid).sort()
+        const uids = r.recipients.map((x) => x.uid as string).sort()
         expect(uids).toEqual([LEADER, MUSICIAN_1, MUSICIAN_2, NONLEADER].sort())
 
         // Snapshot captured the two song rows but not the header.
@@ -345,7 +345,7 @@ describe("MCP publish_setlist (emulator)", () => {
             dryRun: true,
         })
         if (!("ok" in r) || !r.ok) throw new Error("expected ok result")
-        const uids = r.recipients.map((x) => x.uid).sort()
+        const uids = r.recipients.map((x) => x.uid as string).sort()
         expect(uids).toEqual(
             [LEADER, MUSICIAN_1, MUSICIAN_2, MEMBER, NONLEADER].sort(),
         )
@@ -445,7 +445,7 @@ describe("MCP publish_setlist (emulator)", () => {
         const r = await publishSetlist(ADMIN, { setlistId: id })
         expect(r).toMatchObject({
             ok: false,
-            error: { machine_code: "publish_refused_unhealthy_charts", message: expect.stringMatching(/Publish refused.*won't render.*Mi Chamocha/s) },
+            error: { machine_code: "publish_refused_unhealthy_charts", message: expect.stringMatching(/Publish refused[\s\S]*won't render[\s\S]*Mi Chamocha/) },
             hint: expect.stringContaining("force: true"),
         })
 

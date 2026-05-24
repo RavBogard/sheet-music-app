@@ -36,7 +36,7 @@ const mockUpdateUser = vi.fn(async () => ({}))
 const FAKE_CUSTOM_TOKEN = "eyJhbGciOiJSUzI1NiJ9.eyJ1aWQiOiJ0ZXN0In0.signature"
 const mockCreateCustomToken = vi.fn(async () => FAKE_CUSTOM_TOKEN)
 const mockCreateSessionCookie = vi.fn(async () => "fake-session-cookie")
-const mockSignRoleCookie = vi.fn(async () => "fake-role-cookie")
+const mockSignRoleCookie = vi.fn<(...args: unknown[]) => Promise<string>>(async () => "fake-role-cookie")
 const mockFetch = vi.fn()
 
 vi.mock("@/lib/mcp/auth", () => ({

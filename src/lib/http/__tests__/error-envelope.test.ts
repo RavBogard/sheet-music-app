@@ -78,14 +78,18 @@ describe("httpError", () => {
 describe("redactInProduction", () => {
     // Node's process.env can be reassigned directly; defineProperty
     // throws in Node 22+ because the descriptor is non-configurable.
-    const originalEnv = process.env.NODE_ENV
+    // The `as` cast bridges Node 22's `@types/node` making NODE_ENV
+    // read-only on the typed `process.env` (TS2540) — runtime mutation
+    // works fine because the underlying property is writable in test.
+    const env = process.env as Record<string, string | undefined>
+    const originalEnv = env.NODE_ENV
 
     afterEach(() => {
-        process.env.NODE_ENV = originalEnv
+        env.NODE_ENV = originalEnv
     })
 
     it("keeps all fields in development / test mode", () => {
-        process.env.NODE_ENV = "development"
+        env.NODE_ENV = "development"
         const ctx = { fileId: "abc", debug: { receivedId: "abc" } }
         const out = redactInProduction(ctx, ["debug"])
         expect(out.fileId).toBe("abc")
@@ -93,7 +97,7 @@ describe("redactInProduction", () => {
     })
 
     it("strips the named keys when NODE_ENV === 'production'", () => {
-        process.env.NODE_ENV = "production"
+        env.NODE_ENV = "production"
         const ctx = { fileId: "abc", debug: { receivedId: "abc" } }
         const out = redactInProduction(ctx, ["debug"])
         expect(out.fileId).toBe("abc")
@@ -101,7 +105,7 @@ describe("redactInProduction", () => {
     })
 
     it("does not mutate the input object", () => {
-        process.env.NODE_ENV = "production"
+        env.NODE_ENV = "production"
         const ctx = { fileId: "abc", debug: { receivedId: "abc" } }
         const out = redactInProduction(ctx, ["debug"])
         expect(ctx.debug).toEqual({ receivedId: "abc" }) // input untouched
@@ -109,7 +113,7 @@ describe("redactInProduction", () => {
     })
 
     it("handles missing keys gracefully (no-op for absent fields)", () => {
-        process.env.NODE_ENV = "production"
+        env.NODE_ENV = "production"
         const ctx: { fileId: string; other?: string } = { fileId: "abc" }
         const out = redactInProduction(ctx, ["fileId", "other"])
         expect("fileId" in out).toBe(false)

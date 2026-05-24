@@ -58,7 +58,7 @@ describe("computeEnrichmentCoverage (cowork #9)", () => {
 
     it("treats undefined enrichmentStatus as unenriched (defensive)", () => {
         const cov = computeEnrichmentCoverage([
-            { enrichmentStatus: undefined } as Parameters<
+            { enrichmentStatus: undefined } as unknown as Parameters<
                 typeof computeEnrichmentCoverage
             >[0][number],
         ])

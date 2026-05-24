@@ -13,7 +13,7 @@ vi.mock("firebase-admin/firestore", () => ({
 const mockGet = vi.fn()
 const mockUpdate = vi.fn().mockResolvedValue(undefined)
 const mockLimit = vi.fn(() => ({ get: mockGet }))
-const mockWhere = vi.fn(() => ({ limit: mockLimit }))
+const mockWhere = vi.fn<(...args: unknown[]) => { limit: typeof mockLimit }>(() => ({ limit: mockLimit }))
 const mockCollection = vi.fn(() => ({ where: mockWhere }))
 
 vi.mock("@/lib/firebase-admin", () => ({

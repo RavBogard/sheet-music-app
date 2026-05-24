@@ -59,7 +59,7 @@ const mockDeleteStorageObjectAtPath = vi.fn().mockResolvedValue(undefined)
 // Atomic-guard read-verify ([[feedback_upload_atomicity]]): processChartUpload
 // re-reads the just-written blob's size and aborts (500) unless it matches the
 // uploaded buffer. Echo the byte length of the main (non-"originals/") upload.
-const mockGetStorageObjectSize = vi.fn(() => {
+const mockGetStorageObjectSize = vi.fn<(...args: unknown[]) => number>(() => {
     const mainCall = [...mockUploadToStorage.mock.calls]
         .reverse()
         .find((c) => !String(c[0]).startsWith('originals/'))

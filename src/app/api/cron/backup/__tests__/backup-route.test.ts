@@ -8,8 +8,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { makeReq } from "@/__tests__/api-test-helpers"
 
 // ── Firestore mock (collection-aware so we can assert on backups/ + config/) ──
-const backupsDocSet = vi.fn(async () => undefined)
-const configDocSet = vi.fn(async () => undefined)
+const backupsDocSet = vi.fn<(...args: unknown[]) => Promise<undefined>>(async () => undefined)
+const configDocSet = vi.fn<(...args: unknown[]) => Promise<undefined>>(async () => undefined)
 let backupsDocId = ""
 
 const mockFirestore = {
@@ -52,7 +52,7 @@ vi.mock("@/env.mjs", () => ({
 
 // google-auth-library export client — request spy lets us assert the
 // Firestore exportDocuments REST call shape.
-const requestSpy = vi.fn(async () => ({
+const requestSpy = vi.fn<(...args: unknown[]) => Promise<{ data: { name: string } }>>(async () => ({
     data: { name: "projects/demo-proj/operations/op-abc123" },
 }))
 vi.mock("google-auth-library", () => ({

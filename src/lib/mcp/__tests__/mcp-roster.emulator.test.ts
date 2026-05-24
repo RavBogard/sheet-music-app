@@ -50,7 +50,9 @@ vi.mock("@/lib/constants", () => ({
     BASE_URL: "http://localhost:3000",
 }))
 
-const mockCheckUserRateLimit = vi.fn(async () => null)
+const mockCheckUserRateLimit = vi.fn<
+    (uid: string, tier: string, opts?: unknown) => Promise<null | { error: string; retryAfterSec: number }>
+>(async () => null)
 vi.mock("@/lib/rate-limit", () => ({
     checkUserRateLimit: (uid: string, tier: string, opts?: unknown) =>
         mockCheckUserRateLimit(uid, tier, opts),

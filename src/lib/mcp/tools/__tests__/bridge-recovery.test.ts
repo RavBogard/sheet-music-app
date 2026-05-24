@@ -151,7 +151,9 @@ describe("bridgeRestart (ADMIN ONLY — stricter gate than the trusted-leader tr
         if ("error" in res) {
             expect(res.error.machine_code).toBe("forbidden_role")
             // Hint should steer the band_leader to the safer resync/reconnect.
-            expect(res.hint ?? "").toMatch(/bridge_resync|bridge_reconnect/)
+            // `RichErrorEnvelope` doesn't declare `hint?` but `richError`'s
+            // runtime envelope (errors.ts:193 `& { hint?: string }`) does.
+            expect((res as { hint?: string }).hint ?? "").toMatch(/bridge_resync|bridge_reconnect/)
         }
         expect(setSpy).not.toHaveBeenCalled()
     })

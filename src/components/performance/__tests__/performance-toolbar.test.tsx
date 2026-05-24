@@ -12,7 +12,7 @@ const mockSetZoom = vi.fn()
 const mockStoreState = {
     setQueue: vi.fn(),
     queueIndex: 0,
-    playbackQueue: [],
+    playbackQueue: [] as unknown[],
     aiState: { isEnabled: false, pageData: {}, scanningPages: [], error: null },
     setAiEnabled: vi.fn(),
     capoFret: null,
@@ -121,7 +121,6 @@ describe("PerformanceToolbar", () => {
     // tooltip via native title=, and is aria-disabled.
     it("v70-01-01 Task 3: disables transposer trigger when current chart is an image", () => {
         mockStoreState.playbackQueue = [
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             { fileId: 'upload-abc', type: 'image', title: 'Dodi Li' } as any,
         ]
         mockStoreState.queueIndex = 0
@@ -154,7 +153,6 @@ describe("PerformanceToolbar", () => {
 
     it("v70-01-01 Task 3: renders the normal transposer Popover when current chart is NOT an image", () => {
         mockStoreState.playbackQueue = [
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             { fileId: 'pdf-xyz', type: 'pdf', title: 'Adon Olam' } as any,
         ]
         mockStoreState.queueIndex = 0

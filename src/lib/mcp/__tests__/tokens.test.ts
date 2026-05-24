@@ -88,7 +88,7 @@ describe("listMcpTokens", () => {
                     data: () => ({
                         uid: "u",
                         label: "A",
-                        createdAt: new Timestamp(1000),
+                        createdAt: new Timestamp(1000, 0),
                         lastUsedAt: null,
                         revokedAt: null,
                         tokenHash: "HASH_A",
@@ -99,8 +99,8 @@ describe("listMcpTokens", () => {
                     data: () => ({
                         uid: "u",
                         label: "B",
-                        createdAt: new Timestamp(2000),
-                        lastUsedAt: new Timestamp(2500),
+                        createdAt: new Timestamp(2000, 0),
+                        lastUsedAt: new Timestamp(2500, 0),
                         revokedAt: null,
                         tokenHash: "HASH_B",
                     }),
@@ -110,8 +110,8 @@ describe("listMcpTokens", () => {
                     data: () => ({
                         uid: "u",
                         label: "C revoked",
-                        createdAt: new Timestamp(1500),
-                        revokedAt: new Timestamp(3000),
+                        createdAt: new Timestamp(1500, 0),
+                        revokedAt: new Timestamp(3000, 0),
                         tokenHash: "HASH_C",
                     }),
                 },
