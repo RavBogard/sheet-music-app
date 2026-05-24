@@ -1,0 +1,31 @@
+
+Running 1 test using 1 worker
+
+[probe] shavuot-yizkor-5-23: heading="Shavuot Yizkor — May 23" chartRows=9 viewport=820×1180
+  ✘  1 [ipad-webkit] › e2e\ipad-stuck-spinner-probe.spec.ts:133:13 › ipad-stuck-spinner-probe (instrumentation-only) › walk + sample — shavuot-yizkor-5-23 (UnjLqKTtS4lNKQfMY6hB) (27.8s)
+
+
+  1) [ipad-webkit] › e2e\ipad-stuck-spinner-probe.spec.ts:133:13 › ipad-stuck-spinner-probe (instrumentation-only) › walk + sample — shavuot-yizkor-5-23 (UnjLqKTtS4lNKQfMY6hB) 
+
+    TimeoutError: locator.scrollIntoViewIfNeeded: Timeout 8000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[role="button"]').filter({ has: getByTestId('key-badge') }).first()[22m
+
+
+      202 |                     if (await zoom.isVisible().catch(() => false)) break // already open
+      203 |                     const firstRow = chartRows.first()
+    > 204 |                     await firstRow.scrollIntoViewIfNeeded({ timeout: 8_000 })
+          |                                    ^
+      205 |                     await firstRow.click({ timeout: 8_000, force: true, noWaitAfter: true })
+      206 |                     await expect(zoom).toBeVisible({ timeout: 15_000 })
+      207 |                     break
+        at C:\Users\dsbog\CentralReform.live\sheet-music-app-stuck-spinner\e2e\ipad-stuck-spinner-probe.spec.ts:204:36
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\ipad-stuck-spinner-probe-i-cf43b--5-23-UnjLqKTtS4lNKQfMY6hB--ipad-webkit\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\ipad-stuck-spinner-probe-i-cf43b--5-23-UnjLqKTtS4lNKQfMY6hB--ipad-webkit\error-context.md
+
+  1 failed
+    [ipad-webkit] › e2e\ipad-stuck-spinner-probe.spec.ts:133:13 › ipad-stuck-spinner-probe (instrumentation-only) › walk + sample — shavuot-yizkor-5-23 (UnjLqKTtS4lNKQfMY6hB) 

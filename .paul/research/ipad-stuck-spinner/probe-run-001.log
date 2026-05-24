@@ -1,0 +1,60 @@
+
+Running 1 test using 1 worker
+
+[probe] shavuot-yizkor-5-23: heading="Shavuot Yizkor — May 23" chartRows=9 viewport=820×1180
+  ✘  1 [ipad-webkit] › e2e\ipad-stuck-spinner-probe.spec.ts:133:13 › ipad-stuck-spinner-probe (instrumentation-only) › walk + sample — shavuot-yizkor-5-23 (UnjLqKTtS4lNKQfMY6hB) (56.1s)
+
+
+  1) [ipad-webkit] › e2e\ipad-stuck-spinner-probe.spec.ts:133:13 › ipad-stuck-spinner-probe (instrumentation-only) › walk + sample — shavuot-yizkor-5-23 (UnjLqKTtS4lNKQfMY6hB) 
+
+    TimeoutError: locator.click: Timeout 8000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[role="button"]').filter({ has: getByTestId('key-badge') }).first()[22m
+    [2m    - locator resolved to <div tabindex="0" role="button" class="flex items-center px-4 py-3 transition-colors bg-amber-500/[0.10] min-h-11 cursor-pointer hover:bg-muted/50 active:bg-muted/70">…</div>[22m
+    [2m  - attempting click action[22m
+    [2m    - waiting for element to be visible, enabled and stable[22m
+    [2m    - element is visible, enabled and stable[22m
+    [2m    - scrolling into view if needed[22m
+    [2m    - done scrolling[22m
+    [2m    - <div class="react-pdf__Document flex flex-col items-center min-h-screen">…</div> from <div class="fixed inset-0 z-50 bg-background flex flex-col">…</div> subtree intercepts pointer events[22m
+    [2m  - retrying click action[22m
+    [2m    - waiting for element to be visible, enabled and stable[22m
+    [2m    - element is visible, enabled and stable[22m
+    [2m    - scrolling into view if needed[22m
+    [2m    - done scrolling[22m
+    [2m    - <div class="react-pdf__Page__textContent textLayer"></div> from <div class="fixed inset-0 z-50 bg-background flex flex-col">…</div> subtree intercepts pointer events[22m
+    [2m  - retrying click action[22m
+    [2m    - waiting 20ms[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is visible, enabled and stable[22m
+    [2m      - scrolling into view if needed[22m
+    [2m      - done scrolling[22m
+    [2m      - <div data-main-rotation="0" class="react-pdf__Page__textContent textLayer">…</div> from <div class="fixed inset-0 z-50 bg-background flex flex-col">…</div> subtree intercepts pointer events[22m
+    [2m    - retrying click action[22m
+    [2m      - waiting 100ms[22m
+    [2m    3 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is visible, enabled and stable[22m
+    [2m      - scrolling into view if needed[22m
+    [2m      - done scrolling[22m
+    [2m      - <div data-main-rotation="0" class="react-pdf__Page__textContent textLayer">…</div> from <div class="fixed inset-0 z-50 bg-background flex flex-col">…</div> subtree intercepts pointer events[22m
+    [2m    - retrying click action[22m
+    [2m      - waiting 500ms[22m
+
+
+      198 |                     const firstRow = chartRows.first()
+      199 |                     await firstRow.scrollIntoViewIfNeeded({ timeout: 8_000 })
+    > 200 |                     await firstRow.click({ timeout: 8_000 })
+          |                                    ^
+      201 |                     await expect(zoom).toBeVisible({ timeout: 15_000 })
+      202 |                     break
+      203 |                 } catch (err) {
+        at C:\Users\dsbog\CentralReform.live\sheet-music-app-stuck-spinner\e2e\ipad-stuck-spinner-probe.spec.ts:200:36
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\ipad-stuck-spinner-probe-i-cf43b--5-23-UnjLqKTtS4lNKQfMY6hB--ipad-webkit\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\ipad-stuck-spinner-probe-i-cf43b--5-23-UnjLqKTtS4lNKQfMY6hB--ipad-webkit\error-context.md
+
+  1 failed
+    [ipad-webkit] › e2e\ipad-stuck-spinner-probe.spec.ts:133:13 › ipad-stuck-spinner-probe (instrumentation-only) › walk + sample — shavuot-yizkor-5-23 (UnjLqKTtS4lNKQfMY6hB) 
