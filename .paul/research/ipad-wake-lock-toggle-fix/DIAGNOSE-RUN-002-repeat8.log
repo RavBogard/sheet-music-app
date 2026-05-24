@@ -1,0 +1,81 @@
+
+Running 8 tests using 8 workers
+
+  ✘  3 [ipad-webkit] › e2e\perform-ipad.spec.ts:160:9 › ipad-uat-harness — Perform mode on standard 11" iPad (WebKit) › Keep-screen-on toggle — gesture-gated wake-lock holds across the setlist (ipad-wake-lock-fix 2026-05-23) (27.1s)
+  ✓  1 [ipad-webkit] › e2e\perform-ipad.spec.ts:160:9 › ipad-uat-harness — Perform mode on standard 11" iPad (WebKit) › Keep-screen-on toggle — gesture-gated wake-lock holds across the setlist (ipad-wake-lock-fix 2026-05-23) (26.6s)
+  ✓  2 [ipad-webkit] › e2e\perform-ipad.spec.ts:160:9 › ipad-uat-harness — Perform mode on standard 11" iPad (WebKit) › Keep-screen-on toggle — gesture-gated wake-lock holds across the setlist (ipad-wake-lock-fix 2026-05-23) (25.8s)
+  ✘  4 [ipad-webkit] › e2e\perform-ipad.spec.ts:160:9 › ipad-uat-harness — Perform mode on standard 11" iPad (WebKit) › Keep-screen-on toggle — gesture-gated wake-lock holds across the setlist (ipad-wake-lock-fix 2026-05-23) (25.4s)
+  ✓  8 [ipad-webkit] › e2e\perform-ipad.spec.ts:160:9 › ipad-uat-harness — Perform mode on standard 11" iPad (WebKit) › Keep-screen-on toggle — gesture-gated wake-lock holds across the setlist (ipad-wake-lock-fix 2026-05-23) (25.3s)
+  ✓  7 [ipad-webkit] › e2e\perform-ipad.spec.ts:160:9 › ipad-uat-harness — Perform mode on standard 11" iPad (WebKit) › Keep-screen-on toggle — gesture-gated wake-lock holds across the setlist (ipad-wake-lock-fix 2026-05-23) (26.1s)
+  ✓  5 [ipad-webkit] › e2e\perform-ipad.spec.ts:160:9 › ipad-uat-harness — Perform mode on standard 11" iPad (WebKit) › Keep-screen-on toggle — gesture-gated wake-lock holds across the setlist (ipad-wake-lock-fix 2026-05-23) (26.4s)
+  ✓  6 [ipad-webkit] › e2e\perform-ipad.spec.ts:160:9 › ipad-uat-harness — Perform mode on standard 11" iPad (WebKit) › Keep-screen-on toggle — gesture-gated wake-lock holds across the setlist (ipad-wake-lock-fix 2026-05-23) (29.2s)
+
+
+  1) [ipad-webkit] › e2e\perform-ipad.spec.ts:160:9 › ipad-uat-harness — Perform mode on standard 11" iPad (WebKit) › Keep-screen-on toggle — gesture-gated wake-lock holds across the setlist (ipad-wake-lock-fix 2026-05-23) 
+
+    Error: navigator.wakeLock.request must have fired exactly once under the tap gesture
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoBeGreaterThanOrEqual[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: >= [32m1[39m
+    Received:    [31m0[39m
+
+      226 |             requestCount,
+      227 |             'navigator.wakeLock.request must have fired exactly once under the tap gesture',
+    > 228 |         ).toBeGreaterThanOrEqual(1)
+          |           ^
+      229 |     })
+      230 |
+      231 |     test('iPad golden path — render, no overflow, tap targets, react-pdf, transpose, back', async ({
+        at C:\Users\dsbog\CentralReform.live\sheet-music-app-wake-lock-fix\e2e\perform-ipad.spec.ts:228:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\perform-ipad-ipad-uat-harn-9b87d-d-wake-lock-fix-2026-05-23--ipad-webkit-repeat1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\perform-ipad-ipad-uat-harn-9b87d-d-wake-lock-fix-2026-05-23--ipad-webkit-repeat1\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\perform-ipad-ipad-uat-harn-9b87d-d-wake-lock-fix-2026-05-23--ipad-webkit-repeat1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\perform-ipad-ipad-uat-harn-9b87d-d-wake-lock-fix-2026-05-23--ipad-webkit-repeat1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [ipad-webkit] › e2e\perform-ipad.spec.ts:160:9 › ipad-uat-harness — Perform mode on standard 11" iPad (WebKit) › Keep-screen-on toggle — gesture-gated wake-lock holds across the setlist (ipad-wake-lock-fix 2026-05-23) 
+
+    Error: navigator.wakeLock.request must have fired exactly once under the tap gesture
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoBeGreaterThanOrEqual[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: >= [32m1[39m
+    Received:    [31m0[39m
+
+      226 |             requestCount,
+      227 |             'navigator.wakeLock.request must have fired exactly once under the tap gesture',
+    > 228 |         ).toBeGreaterThanOrEqual(1)
+          |           ^
+      229 |     })
+      230 |
+      231 |     test('iPad golden path — render, no overflow, tap targets, react-pdf, transpose, back', async ({
+        at C:\Users\dsbog\CentralReform.live\sheet-music-app-wake-lock-fix\e2e\perform-ipad.spec.ts:228:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\perform-ipad-ipad-uat-harn-9b87d-d-wake-lock-fix-2026-05-23--ipad-webkit-repeat3\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\perform-ipad-ipad-uat-harn-9b87d-d-wake-lock-fix-2026-05-23--ipad-webkit-repeat3\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\perform-ipad-ipad-uat-harn-9b87d-d-wake-lock-fix-2026-05-23--ipad-webkit-repeat3\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\perform-ipad-ipad-uat-harn-9b87d-d-wake-lock-fix-2026-05-23--ipad-webkit-repeat3\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [ipad-webkit] › e2e\perform-ipad.spec.ts:160:9 › ipad-uat-harness — Perform mode on standard 11" iPad (WebKit) › Keep-screen-on toggle — gesture-gated wake-lock holds across the setlist (ipad-wake-lock-fix 2026-05-23) 
+    [ipad-webkit] › e2e\perform-ipad.spec.ts:160:9 › ipad-uat-harness — Perform mode on standard 11" iPad (WebKit) › Keep-screen-on toggle — gesture-gated wake-lock holds across the setlist (ipad-wake-lock-fix 2026-05-23) 
+  6 passed (60.0s)

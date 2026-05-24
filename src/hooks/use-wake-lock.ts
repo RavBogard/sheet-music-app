@@ -2,6 +2,28 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { logger } from "@/lib/logger"
 
 /**
+ * Probe-harness sentinel exposure flag — when
+ * `NEXT_PUBLIC_PROBE_HARNESS_AUTH==='1'` (the same flag already gating the
+ * Web-SDK auth bridge in `src/lib/firebase.ts:252`), `acquireLock` writes
+ * the live `WakeLockSentinel` into `window.__c7_wakeLockSentinel__` so
+ * Playwright iPad-WebKit specs can read sentinel state directly instead
+ * of relying on a JS shim that this WebKit/Playwright build silently
+ * bypasses (~25-40% fail rate — see
+ * `.paul/research/ipad-wake-lock-toggle-fix/DIAGNOSIS.md`). The window
+ * slot is cleared on release / re-acquire / unmount so the spec sees a
+ * single live sentinel per session. Production builds (without the env
+ * var) never run this branch. See `[[feedback_probe_harness_prod_flag]]`.
+ */
+const PROBE_HARNESS_ENABLED =
+    typeof process !== "undefined" &&
+    process.env.NEXT_PUBLIC_PROBE_HARNESS_AUTH === "1"
+
+function exposeSentinelForProbe(sentinel: WakeLockSentinel | null): void {
+    if (!PROBE_HARNESS_ENABLED || typeof window === "undefined") return
+    ;(window as unknown as { __c7_wakeLockSentinel__?: WakeLockSentinel | null }).__c7_wakeLockSentinel__ = sentinel
+}
+
+/**
  * Screen Wake Lock hook (iOS Safari 16.4+, modern Chromium, recent Firefox).
  *
  * **Gesture contract — load-bearing:** iOS Safari rejects
@@ -55,12 +77,14 @@ export function useWakeLock() {
             const lock = await navigator.wakeLock.request("screen")
             setWakeLock(lock)
             setIsLocked(true)
+            exposeSentinelForProbe(lock)
             logger.info("Wake Lock active")
 
             lock.addEventListener("release", () => {
                 logger.info("Wake Lock released")
                 setIsLocked(false)
                 setWakeLock(null)
+                exposeSentinelForProbe(null)
             })
         } catch (err: unknown) {
             const name = (err as { name?: string } | null)?.name
@@ -88,13 +112,19 @@ export function useWakeLock() {
                 await wakeLock.release()
                 setWakeLock(null)
                 setIsLocked(false)
+                exposeSentinelForProbe(null)
             } catch (err) {
                 logger.error("Failed to release Wake Lock:", err)
             }
         }
     }, [wakeLock])
 
-    // Cleanup on unmount
+    // Cleanup on unmount. NOTE: this effect's cleanup also fires on every
+    // wakeLock-change re-render (React effect-cleanup semantics), so we
+    // canNOT clear the probe-harness slot here — the slot is written in
+    // `acquireLock` AFTER `setWakeLock(lock)`, which means the
+    // wakeLock-change cleanup would race and wipe a freshly-exposed
+    // sentinel. The probe-slot has its own mount-scoped cleanup below.
     useEffect(() => {
         return () => {
             shouldLockRef.current = false
@@ -103,6 +133,18 @@ export function useWakeLock() {
             }
         }
     }, [wakeLock])
+
+    // Probe-harness slot cleanup — scoped to actual unmount only (empty
+    // deps), so wakeLock-state-change re-renders do NOT clobber the slot.
+    // The `acquireLock` / `release-event-listener` / `releaseWakeLock`
+    // paths already keep the slot in sync during the hook's lifetime;
+    // this final clear covers a component that unmounts while holding a
+    // lock (the held sentinel becomes inaccessible to the page anyway).
+    useEffect(() => {
+        return () => {
+            exposeSentinelForProbe(null)
+        }
+    }, [])
 
     // Auto re-acquire on visibility change. Re-fires only if the user
     // previously tapped to enable the lock (shouldLockRef), so a tab that was

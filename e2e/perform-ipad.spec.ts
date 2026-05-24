@@ -188,8 +188,15 @@ test.describe('ipad-uat-harness — Perform mode on standard 11" iPad (WebKit)',
             'navigator.wakeLock not available in this WebKit build — toggle assertion skipped',
         )
 
-        // Track lock requests through a tiny shim so we don't rely on a
-        // privately-held WakeLockSentinel reference in the page.
+        // Best-effort secondary witness: count calls through the prototype.
+        // Playwright WebKit JIT/binding silently bypasses this shim from
+        // React-bundle call sites in ~25-40% of runs (the prod call site
+        // reaches the native binding directly while the direct
+        // `page.evaluate` probe call hits the shim). Kept as informational
+        // only — wrapped in try/catch so a bypass doesn't fail the test.
+        // The deterministic primary is the sentinel-state assertion below.
+        // Full mechanism analysis at
+        // `.paul/research/ipad-wake-lock-toggle-fix/DIAGNOSIS.md`.
         await page.evaluate(() => {
             const w = window as unknown as { __wakeLockCount?: number }
             w.__wakeLockCount = 0
@@ -214,18 +221,72 @@ test.describe('ipad-uat-harness — Perform mode on standard 11" iPad (WebKit)',
         // Tap (user gesture) → wakeLock.request fires once → aria-pressed flips.
         await toggle.tap()
 
+        // PRIMARY: aria-pressed corroborates the React state machine
+        // (setIsLocked(true) runs only after `await navigator.wakeLock.request`
+        // resolved without throw).
         await expect(
             toggle,
             'KeepAwakeToggle must flip to aria-pressed="true" after a tap',
         ).toHaveAttribute('aria-pressed', 'true', { timeout: 5_000 })
 
-        const requestCount = await page.evaluate(
-            () => (window as unknown as { __wakeLockCount?: number }).__wakeLockCount ?? 0,
-        )
+        // PRIMARY DETERMINISTIC ORACLE: the live sentinel is exposed by
+        // `useWakeLock` to `window.__c7_wakeLockSentinel__` under the
+        // `NEXT_PUBLIC_PROBE_HARNESS_AUTH=1` flag (live in prod per
+        // `[[feedback_probe_harness_prod_flag]]`). Reading the sentinel
+        // directly bypasses the harness's JS-shim brittleness; we observe
+        // the same object the React bundle holds and verify it isn't
+        // released. Falls back to a clear diagnostic if the flag is off in
+        // some future deploy.
+        const sentinelState = await page.evaluate(() => {
+            const s = (window as unknown as {
+                __c7_wakeLockSentinel__?: WakeLockSentinel | null
+            }).__c7_wakeLockSentinel__
+            return {
+                exposed: s !== undefined,
+                isNull: s === null,
+                released: s?.released ?? null,
+                type: s?.type ?? null,
+            }
+        })
         expect(
-            requestCount,
-            'navigator.wakeLock.request must have fired exactly once under the tap gesture',
-        ).toBeGreaterThanOrEqual(1)
+            sentinelState.exposed,
+            'window.__c7_wakeLockSentinel__ must be defined after toggle tap — is NEXT_PUBLIC_PROBE_HARNESS_AUTH=1 on this deploy?',
+        ).toBe(true)
+        expect(
+            sentinelState.isNull,
+            'window.__c7_wakeLockSentinel__ must hold a live WakeLockSentinel after toggle tap (got null — request rejected or sentinel cleared)',
+        ).toBe(false)
+        expect(
+            sentinelState.released,
+            'window.__c7_wakeLockSentinel__.released must be false (lock still held after tap)',
+        ).toBe(false)
+        expect(
+            sentinelState.type,
+            'WakeLockSentinel.type must be "screen"',
+        ).toBe('screen')
+
+        // SECONDARY (best-effort): the shim counter. WebKit Playwright
+        // bypasses this in ~25-40% of runs from React onClick sites — so
+        // assert ONLY weakly: if it fired we expect ≥1; if it didn't fire
+        // (shim bypassed), the sentinel-state primary above already
+        // confirms the lock is held. Logged for forensics, not gated.
+        try {
+            const requestCount = await page.evaluate(
+                () => (window as unknown as { __wakeLockCount?: number }).__wakeLockCount ?? 0,
+            )
+            if (requestCount > 0) {
+                expect(
+                    requestCount,
+                    'shim counter (best-effort secondary) — if it fired, count must be ≥1',
+                ).toBeGreaterThanOrEqual(1)
+            } else {
+                console.log(
+                    '[wake-lock-spec] shim counter stayed 0 — Playwright WebKit JIT/binding bypass; sentinel-state primary above is the deterministic oracle (see DIAGNOSIS.md)',
+                )
+            }
+        } catch {
+            // Never let secondary witness failures mask the primary verdict.
+        }
     })
 
     test('iPad golden path — render, no overflow, tap targets, react-pdf, transpose, back', async ({

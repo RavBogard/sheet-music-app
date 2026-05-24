@@ -156,3 +156,175 @@ describe('useWakeLock', () => {
     removeSpy.mockRestore()
   })
 })
+
+/**
+ * Probe-harness sentinel exposure (ipad-wake-lock-toggle-fix 2026-05-24).
+ *
+ * `useWakeLock` reads `process.env.NEXT_PUBLIC_PROBE_HARNESS_AUTH` at module
+ * load to decide whether to mirror the live `WakeLockSentinel` into
+ * `window.__c7_wakeLockSentinel__`. Each test in this block dynamically
+ * re-imports the module under a fresh env stub so the module-top const
+ * picks up the right flag value. Without this flag the slot must never
+ * appear on `window` (production builds rely on that posture).
+ *
+ * Background: the prior Playwright shim-counter assertion was bypassed by
+ * Playwright-WebKit's JIT/binding in ~25-40% of runs from React onClick
+ * sites (see `.paul/research/ipad-wake-lock-toggle-fix/DIAGNOSIS.md`).
+ * The harness now reads the sentinel object directly — these tests pin
+ * the contract the spec depends on.
+ */
+describe('useWakeLock — probe-harness sentinel exposure', () => {
+  type WakeLockWindow = Window & { __c7_wakeLockSentinel__?: WakeLockSentinel | null }
+
+  let releaseHandler: (() => void) | null = null
+
+  function installMockNavigatorWakeLock(): { sentinel: ReturnType<typeof createMockSentinel> } {
+    const sentinel = createMockSentinel()
+    Object.defineProperty(navigator, 'wakeLock', {
+      writable: true,
+      configurable: true,
+      value: { request: vi.fn(() => Promise.resolve(sentinel)) },
+    })
+    return { sentinel }
+  }
+
+  function createMockSentinel() {
+    return {
+      release: vi.fn(() => Promise.resolve()),
+      addEventListener: vi.fn((event: string, handler: () => void) => {
+        if (event === 'release') releaseHandler = handler
+      }),
+      released: false,
+      type: 'screen' as const,
+    }
+  }
+
+  beforeEach(() => {
+    releaseHandler = null
+    delete (window as WakeLockWindow).__c7_wakeLockSentinel__
+    vi.resetModules()
+    // resetModules wipes module mocks too — re-install the logger mock so
+    // the freshly-imported hook still has its logger silenced.
+    vi.doMock('@/lib/logger', () => ({
+      logger: {
+        warn: vi.fn(),
+        info: vi.fn(),
+        debug: vi.fn(),
+        error: vi.fn(),
+      },
+    }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    delete (window as WakeLockWindow).__c7_wakeLockSentinel__
+  })
+
+  it('exposes the sentinel to window when NEXT_PUBLIC_PROBE_HARNESS_AUTH=1 (post-acquire)', async () => {
+    vi.stubEnv('NEXT_PUBLIC_PROBE_HARNESS_AUTH', '1')
+    const { useWakeLock: useWakeLockFlagged } = await import('@/hooks/use-wake-lock')
+    const { sentinel } = installMockNavigatorWakeLock()
+
+    const { result } = renderHook(() => useWakeLockFlagged())
+
+    expect(
+      (window as WakeLockWindow).__c7_wakeLockSentinel__,
+      'window slot must be absent before any acquire (must be undefined, not null)',
+    ).toBeUndefined()
+
+    await act(async () => {
+      await result.current.requestWakeLock()
+    })
+
+    const exposed = (window as WakeLockWindow).__c7_wakeLockSentinel__
+    expect(exposed, 'window slot must hold the live sentinel after acquire').toBe(sentinel)
+    expect(exposed?.released, 'exposed sentinel must report released=false while held').toBe(false)
+    expect(exposed?.type, 'exposed sentinel must report type="screen"').toBe('screen')
+  })
+
+  it('clears the window slot (null) when the sentinel fires its release event', async () => {
+    vi.stubEnv('NEXT_PUBLIC_PROBE_HARNESS_AUTH', '1')
+    const { useWakeLock: useWakeLockFlagged } = await import('@/hooks/use-wake-lock')
+    installMockNavigatorWakeLock()
+
+    const { result } = renderHook(() => useWakeLockFlagged())
+
+    await act(async () => {
+      await result.current.requestWakeLock()
+    })
+    expect((window as WakeLockWindow).__c7_wakeLockSentinel__, 'sentinel exposed').toBeTruthy()
+
+    // System-side release (lock screen, tab hidden in some browsers, etc.)
+    act(() => {
+      releaseHandler?.()
+    })
+
+    expect(
+      (window as WakeLockWindow).__c7_wakeLockSentinel__,
+      'window slot must be null after sentinel release (the slot stays present so probes can distinguish "not exposed yet" from "released"; null = released)',
+    ).toBeNull()
+  })
+
+  it('clears the window slot when releaseWakeLock() is called explicitly', async () => {
+    vi.stubEnv('NEXT_PUBLIC_PROBE_HARNESS_AUTH', '1')
+    const { useWakeLock: useWakeLockFlagged } = await import('@/hooks/use-wake-lock')
+    installMockNavigatorWakeLock()
+
+    const { result } = renderHook(() => useWakeLockFlagged())
+    await act(async () => {
+      await result.current.requestWakeLock()
+    })
+    expect((window as WakeLockWindow).__c7_wakeLockSentinel__, 'sentinel exposed').toBeTruthy()
+
+    await act(async () => {
+      await result.current.releaseWakeLock()
+    })
+
+    expect(
+      (window as WakeLockWindow).__c7_wakeLockSentinel__,
+      'window slot must be null after explicit release',
+    ).toBeNull()
+  })
+
+  it('clears the window slot on unmount (held-while-mounted path)', async () => {
+    vi.stubEnv('NEXT_PUBLIC_PROBE_HARNESS_AUTH', '1')
+    const { useWakeLock: useWakeLockFlagged } = await import('@/hooks/use-wake-lock')
+    installMockNavigatorWakeLock()
+
+    const { result, unmount } = renderHook(() => useWakeLockFlagged())
+    await act(async () => {
+      await result.current.requestWakeLock()
+    })
+    expect((window as WakeLockWindow).__c7_wakeLockSentinel__, 'sentinel exposed').toBeTruthy()
+
+    unmount()
+
+    expect(
+      (window as WakeLockWindow).__c7_wakeLockSentinel__,
+      'window slot must be null after unmount cleanup',
+    ).toBeNull()
+  })
+
+  it('never exposes the sentinel when the flag is unset (production posture)', async () => {
+    // Explicitly stub to NOT '1' — covers both unset and any non-'1' value.
+    vi.stubEnv('NEXT_PUBLIC_PROBE_HARNESS_AUTH', '')
+    const { useWakeLock: useWakeLockUnflagged } = await import('@/hooks/use-wake-lock')
+    installMockNavigatorWakeLock()
+
+    const { result, unmount } = renderHook(() => useWakeLockUnflagged())
+
+    await act(async () => {
+      await result.current.requestWakeLock()
+    })
+    expect(
+      (window as WakeLockWindow).__c7_wakeLockSentinel__,
+      'window slot must remain absent in non-probe builds — never expose internal state to prod surface',
+    ).toBeUndefined()
+
+    await act(async () => {
+      await result.current.releaseWakeLock()
+    })
+    unmount()
+    expect((window as WakeLockWindow).__c7_wakeLockSentinel__).toBeUndefined()
+  })
+})
