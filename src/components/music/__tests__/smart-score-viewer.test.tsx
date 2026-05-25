@@ -41,6 +41,12 @@ const { mockStoreValues, mockSetMusicXmlKey } = vi.hoisted(() => {
         zoom: 1,
         aiXmlContent: null as string | null,
         setMusicXmlKey: mockSetMusicXmlKey,
+        // Phase-2 MED: the key header reads `musicXmlKey` from the store to
+        // display "Key: <X>" / "Written: X · Labeled: Y" + match-button.
+        // Default null (header hidden) so legacy tests that pre-date the
+        // header remain unaffected; the header-specific tests below set it
+        // explicitly before render.
+        musicXmlKey: null as string | null,
     }
     return { mockStoreValues, mockSetMusicXmlKey }
 })
@@ -84,7 +90,36 @@ vi.mock('@/components/ui/card', () => ({
     ),
 }))
 
+vi.mock('@/components/ui/button', () => ({
+    Button: ({
+        children,
+        onClick,
+        disabled,
+        type,
+        'aria-label': ariaLabel,
+        className,
+    }: {
+        children: React.ReactNode
+        onClick?: () => void
+        disabled?: boolean
+        type?: 'button' | 'submit' | 'reset'
+        'aria-label'?: string
+        className?: string
+    }) => (
+        <button
+            type={type ?? 'button'}
+            onClick={onClick}
+            disabled={disabled}
+            aria-label={ariaLabel}
+            className={className}
+        >
+            {children}
+        </button>
+    ),
+}))
+
 import { SmartScoreViewer } from '../SmartScoreViewer'
+import { fireEvent, screen } from '@testing-library/react'
 
 const XML = '<score-partwise><part-list/></score-partwise>'
 
@@ -109,6 +144,7 @@ describe('SmartScoreViewer', () => {
         mockStoreValues.transposition = 0
         mockStoreValues.zoom = 1
         mockStoreValues.aiXmlContent = null
+        mockStoreValues.musicXmlKey = null
         mockAuthValues.isBandLeader = false
         mockAuthValues.isAdmin = false
 
@@ -545,4 +581,119 @@ describe('SmartScoreViewer', () => {
         expect(mockOsmdInstance.load).not.toHaveBeenCalledWith(STALE_AI_XML)
     })
 
+    // ── Phase-2 MED: detected-key header + "Match label to written key" ──
+    // The header surfaces `musicXmlKey` above the score; when the bound
+    // track has a non-equal labeled key, both are shown and a leader-only
+    // "Match" button overwrites the labeled key via changeTrackKey. The
+    // empty-`trackKey` case is silently healed by the load effect
+    // (b3ef132b0); the Match button only ever offers to overwrite an
+    // existing label — that's the user-facing fix path.
+
+    it('Header: hides entirely when musicXmlKey is null (no parse, modal mode, pre-load)', () => {
+        mockStoreValues.musicXmlKey = null
+        // Use real timers + sync render so we can inspect the initial paint
+        // without waiting for the load effect.
+        vi.useRealTimers()
+        const { container } = (() => {
+            const r = render(<SmartScoreViewer url="https://example.com/x.xml" />)
+            return r
+        })()
+        expect(container.querySelector('[data-testid="musicxml-key-header"]')).toBeNull()
+        vi.useFakeTimers()
+    })
+
+    it('Header: renders "Key: <X>" when musicXmlKey is set and no trackKey provided', () => {
+        mockStoreValues.musicXmlKey = 'D'
+        vi.useRealTimers()
+        render(<SmartScoreViewer url="https://example.com/x.xml" />)
+        const header = screen.getByTestId('musicxml-key-header')
+        expect(header).toBeTruthy()
+        expect(header.textContent).toMatch(/Key/i)
+        expect(header.textContent).toMatch(/D/)
+        // Match button absent: no labeled key to overwrite.
+        expect(screen.queryByLabelText(/Match label to written key/i)).toBeNull()
+        vi.useFakeTimers()
+    })
+
+    it('Header: shows "Written: X · Labeled: Y" when both keys differ', () => {
+        mockStoreValues.musicXmlKey = 'Eb'
+        mockAuthValues.isBandLeader = true
+        vi.useRealTimers()
+        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-1" trackKey="D" />)
+        const header = screen.getByTestId('musicxml-key-header')
+        expect(header.textContent).toMatch(/Written/i)
+        expect(header.textContent).toMatch(/Eb/)
+        expect(header.textContent).toMatch(/Labeled/i)
+        expect(header.textContent).toMatch(/D/)
+        vi.useFakeTimers()
+    })
+
+    it('Match button: VISIBLE for band_leader when keys differ + trackId+trackKey supplied', () => {
+        mockStoreValues.musicXmlKey = 'Eb'
+        mockAuthValues.isBandLeader = true
+        mockAuthValues.isAdmin = false
+        vi.useRealTimers()
+        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-1" trackKey="D" />)
+        expect(screen.getByLabelText(/Match label to written key Eb/i)).toBeTruthy()
+        vi.useFakeTimers()
+    })
+
+    it('Match button: VISIBLE for admin even when band_leader is false', () => {
+        mockStoreValues.musicXmlKey = 'F#'
+        mockAuthValues.isBandLeader = false
+        mockAuthValues.isAdmin = true
+        vi.useRealTimers()
+        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-2" trackKey="G" />)
+        expect(screen.getByLabelText(/Match label to written key/i)).toBeTruthy()
+        vi.useFakeTimers()
+    })
+
+    it('Match button: HIDDEN for non-leader (musician / member) — gate fails closed', () => {
+        mockStoreValues.musicXmlKey = 'Eb'
+        mockAuthValues.isBandLeader = false
+        mockAuthValues.isAdmin = false
+        vi.useRealTimers()
+        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-1" trackKey="D" />)
+        // Header still renders (informational); button does NOT.
+        expect(screen.getByTestId('musicxml-key-header')).toBeTruthy()
+        expect(screen.queryByLabelText(/Match label to written key/i)).toBeNull()
+        vi.useFakeTimers()
+    })
+
+    it('Match button: HIDDEN when keys are equal (nothing to do)', () => {
+        mockStoreValues.musicXmlKey = 'C'
+        mockAuthValues.isBandLeader = true
+        vi.useRealTimers()
+        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-1" trackKey="C" />)
+        expect(screen.queryByLabelText(/Match label to written key/i)).toBeNull()
+        // Header still shows informational "Key: C".
+        expect(screen.getByTestId('musicxml-key-header').textContent).toMatch(/C/)
+        vi.useFakeTimers()
+    })
+
+    it('Match button: HIDDEN when trackKey is empty (heal path handles that case silently)', () => {
+        mockStoreValues.musicXmlKey = 'Eb'
+        mockAuthValues.isBandLeader = true
+        vi.useRealTimers()
+        // No trackKey prop — the load effect's heal handles this case.
+        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-1" />)
+        expect(screen.queryByLabelText(/Match label to written key/i)).toBeNull()
+        vi.useFakeTimers()
+    })
+
+    it('Match button click calls changeTrackKey(trackId, musicXmlKey)', async () => {
+        mockStoreValues.musicXmlKey = 'Eb'
+        mockAuthValues.isBandLeader = true
+        vi.useRealTimers()
+        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-9" trackKey="D" />)
+
+        const btn = screen.getByLabelText(/Match label to written key Eb/i)
+        await act(async () => {
+            fireEvent.click(btn)
+            // Let the pending state settle and the await on changeTrackKey resolve.
+            await Promise.resolve()
+        })
+        expect(mockChangeTrackKey).toHaveBeenCalledWith('t-9', 'Eb')
+        vi.useFakeTimers()
+    })
 })

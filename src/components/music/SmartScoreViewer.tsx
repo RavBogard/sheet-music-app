@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { OpenSheetMusicDisplay, TransposeCalculator } from 'opensheetmusicdisplay'
-import { Loader2, Music2 } from 'lucide-react'
+import { Loader2, Music2, Check } from 'lucide-react'
 import { useMusicStore } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
 import { changeTrackKey } from '@/lib/live-director'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { logger } from "@/lib/logger"
 
@@ -111,7 +112,12 @@ export function SmartScoreViewer({ url, trackId, trackKey }: SmartScoreViewerPro
     // Offline / Source URL Logic
     const [sourceUrl, setSourceUrl] = useState<string>(url)
 
-    const { transposition, zoom, aiXmlContent, setMusicXmlKey } = useMusicStore()
+    const { transposition, zoom, aiXmlContent, setMusicXmlKey, musicXmlKey } = useMusicStore()
+    // Match-button feedback state: 'idle' → 'pending' (write in flight) →
+    // 'done' (briefly green-check) → back to 'idle'. Local only; the
+    // authoritative track.key value flows in via the trackKey prop from
+    // the SetlistPerformClient → PDFOverlay parent chain.
+    const [matchState, setMatchState] = useState<'idle' | 'pending' | 'done'>('idle')
 
     // Heal-gating inputs — read non-reactively at the moment of decision so
     // role flips after mount don't trigger a stale heal (and so test mocks
@@ -477,9 +483,86 @@ export function SmartScoreViewer({ url, trackId, trackKey }: SmartScoreViewerPro
     }, [])
 
     const showOverlay = loading || transposing
+    const isLeader = isBandLeader || isAdmin
+    // Match-button visibility: leader role + both keys present + non-equal.
+    // The button only ever offers to overwrite an EXISTING `track.key`; the
+    // empty-`track.key` case is already silently healed by the load effect
+    // (Q-DETECT-1=C, b3ef132b0). Both `null` and `undefined` count as empty.
+    const keyMismatch = !!musicXmlKey && !!trackKey && musicXmlKey !== trackKey
+    const showMatchButton = isLeader && keyMismatch && !!trackId
+
+    const handleMatchKey = async () => {
+        if (!trackId || !musicXmlKey) return
+        setMatchState('pending')
+        try {
+            await changeTrackKey(trackId, musicXmlKey)
+            setMatchState('done')
+            // The trackKey prop from the parent will flow back through the
+            // setlist listener once Firestore round-trips; the brief 'done'
+            // pulse confirms the click landed. Snap back after ~1.2s in
+            // case the parent prop doesn't refresh quickly enough.
+            setTimeout(() => setMatchState('idle'), 1200)
+        } catch (err) {
+            logger.error("Match label to written key failed", err)
+            setMatchState('idle')
+        }
+    }
 
     return (
         <div className="relative flex flex-col items-center w-full" aria-label="Sheet music score">
+            {/* ── Detected-key header (Phase-2 MED) ─────────────────────────
+                 Surfaces the MusicXML's native key signature ("written key")
+                 above the score. When the bound track has a different
+                 user-labeled key, both are shown for clarity — the leader-
+                 only "Match" button overwrites the labeled key with the
+                 written one. Hidden entirely when no MusicXML key is yet
+                 parsed (load failed / pre-parse / modal mode). */}
+            {musicXmlKey && (
+                <div
+                    className="w-full flex items-center justify-between gap-3 px-3 py-1.5 mb-1 rounded-md bg-muted/40 border border-border/60 text-xs"
+                    data-testid="musicxml-key-header"
+                >
+                    {keyMismatch ? (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-muted-foreground">Written:</span>
+                            <span className="font-bold text-foreground">{musicXmlKey}</span>
+                            <span className="text-muted-foreground/60">·</span>
+                            <span className="text-muted-foreground">Labeled:</span>
+                            <span className="font-bold text-violet-300">{trackKey}</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground font-bold uppercase tracking-wider">
+                                Key
+                            </span>
+                            <span className="text-foreground font-bold">{musicXmlKey}</span>
+                        </div>
+                    )}
+                    {showMatchButton && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            aria-label={`Match label to written key ${musicXmlKey}`}
+                            onClick={handleMatchKey}
+                            disabled={matchState !== 'idle'}
+                            className="h-7 px-2 text-[11px] text-violet-300 hover:bg-violet-500/10"
+                        >
+                            {matchState === 'done' ? (
+                                <>
+                                    <Check className="h-3 w-3 mr-1" aria-hidden="true" />
+                                    Matched
+                                </>
+                            ) : matchState === 'pending' ? (
+                                'Matching…'
+                            ) : (
+                                `Match → ${musicXmlKey}`
+                            )}
+                        </Button>
+                    )}
+                </div>
+            )}
+
             <Card className="w-full bg-white dark:bg-zinc-100 p-4">
                 {/* OSMD renders dark text by default, so we enforce a light background to ensure contrast */}
                 <div ref={containerRef} className="w-full text-black min-h-[400px]" />

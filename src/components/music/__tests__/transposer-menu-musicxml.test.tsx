@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 
 /**
  * MusicXML detected-key fallback test (Build Lane A, DISCUSSION §2.1).
@@ -22,7 +22,8 @@ import { render, screen } from '@testing-library/react'
  */
 
 // --- Mock the store with mutable per-test values ---
-const { mockStoreValues } = vi.hoisted(() => {
+const { mockStoreValues, mockSetCapoSemitones } = vi.hoisted(() => {
+    const mockSetCapoSemitones = vi.fn()
     const mockStoreValues = {
         transposition: 0,
         setTransposition: vi.fn(),
@@ -37,13 +38,15 @@ const { mockStoreValues } = vi.hoisted(() => {
         },
         setCapoFret: vi.fn(),
         capoFret: null as number | null,
+        capoSemitones: 0,
+        setCapoSemitones: mockSetCapoSemitones,
         playbackQueue: [] as Array<{ fileId?: string; key?: string }>,
         queueIndex: -1,
         setEditingChords: vi.fn(),
         fileUrl: null as string | null,
         musicXmlKey: null as string | null,
     }
-    return { mockStoreValues }
+    return { mockStoreValues, mockSetCapoSemitones }
 })
 
 vi.mock('@/lib/store', () => ({
@@ -71,6 +74,7 @@ describe('TransposerMenu — MusicXML detected-key fallback', () => {
         mockStoreValues.aiState.pageData = {}
         mockStoreValues.aiState.scanningPages = []
         mockStoreValues.capoFret = null
+        mockStoreValues.capoSemitones = 0
         mockStoreValues.playbackQueue = []
         mockStoreValues.queueIndex = -1
         mockStoreValues.fileUrl = null
@@ -138,5 +142,101 @@ describe('TransposerMenu — MusicXML detected-key fallback', () => {
         expect(screen.getByText(/Waiting for scan/i)).toBeTruthy()
         // Grid header absent → effectiveKey is null.
         expect(screen.queryByText(/Play As \(with capo\)/i)).toBeNull()
+    })
+})
+
+/**
+ * Capo panel input tests (Phase-2 MED Phase-1).
+ *
+ * Verifies the new INPUT-side capo control: 12 semitone buttons (0..11),
+ * `setCapoSemitones` dispatch on click, active-pressed state from store,
+ * "Capo N → play in <X> shapes" indicator only when capo > 0, "Off"
+ * reset button only when capo > 0, panel hidden when no `effectiveKey`.
+ */
+describe('TransposerMenu — capo panel input (Phase-2 MED)', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        mockStoreValues.transposition = 0
+        mockStoreValues.aiState.pageData = {}
+        mockStoreValues.aiState.scanningPages = []
+        mockStoreValues.capoFret = null
+        mockStoreValues.capoSemitones = 0
+        mockStoreValues.playbackQueue = []
+        mockStoreValues.queueIndex = -1
+        mockStoreValues.fileUrl = null
+        mockStoreValues.musicXmlKey = null
+    })
+
+    it('renders 12 semitone buttons (0 + 1..11) when effectiveKey present', () => {
+        mockStoreValues.musicXmlKey = 'D' // gives effectiveKey
+        render(<TransposerMenu />)
+
+        // Off button (semitone 0)
+        expect(screen.getByLabelText('Capo off')).toBeTruthy()
+        // 11 numbered buttons
+        for (let n = 1; n <= 11; n++) {
+            expect(screen.getByLabelText(`Capo ${n}`)).toBeTruthy()
+        }
+        expect(screen.getByText(/Capo \(your guitar\)/i)).toBeTruthy()
+    })
+
+    it('does NOT render the capo panel when effectiveKey is null', () => {
+        // Both AI chords AND musicXmlKey empty → effectiveKey null → panel hidden
+        mockStoreValues.musicXmlKey = null
+        render(<TransposerMenu />)
+
+        expect(screen.queryByText(/Capo \(your guitar\)/i)).toBeNull()
+        expect(screen.queryByLabelText('Capo off')).toBeNull()
+    })
+
+    it('click on a capo button calls setCapoSemitones with that fret value', () => {
+        mockStoreValues.musicXmlKey = 'Eb'
+        render(<TransposerMenu />)
+
+        fireEvent.click(screen.getByLabelText('Capo 3'))
+        expect(mockSetCapoSemitones).toHaveBeenCalledWith(3)
+
+        fireEvent.click(screen.getByLabelText('Capo off'))
+        expect(mockSetCapoSemitones).toHaveBeenCalledWith(0)
+    })
+
+    it('active-pressed state reflects current capoSemitones', () => {
+        mockStoreValues.musicXmlKey = 'D'
+        mockStoreValues.capoSemitones = 5
+        render(<TransposerMenu />)
+
+        const active = screen.getByLabelText('Capo 5')
+        expect(active.getAttribute('aria-pressed')).toBe('true')
+        const inactive = screen.getByLabelText('Capo 3')
+        expect(inactive.getAttribute('aria-pressed')).toBe('false')
+    })
+
+    it('shows the "Capo N → play in <X> shapes" indicator only when capo > 0', () => {
+        mockStoreValues.musicXmlKey = 'D'
+        mockStoreValues.capoSemitones = 0
+        const { rerender } = render(<TransposerMenu />)
+
+        // Capo 0 (off): no "play in" indicator
+        expect(screen.queryByText(/play in/i)).toBeNull()
+        // No "Off" reset button when already off
+        expect(screen.queryByText(/^Off$/)).toBeNull()
+
+        // Capo 2 — written D, play in C (D down 2 semitones)
+        mockStoreValues.capoSemitones = 2
+        rerender(<TransposerMenu />)
+
+        expect(screen.getByText(/Capo 2/)).toBeTruthy()
+        expect(screen.getByText(/play in C shapes/i)).toBeTruthy()
+        // Off button now visible (capo > 0)
+        expect(screen.getByText(/^Off$/)).toBeTruthy()
+    })
+
+    it('Off button click dispatches setCapoSemitones(0)', () => {
+        mockStoreValues.musicXmlKey = 'D'
+        mockStoreValues.capoSemitones = 4
+        render(<TransposerMenu />)
+
+        fireEvent.click(screen.getByLabelText('Clear capo'))
+        expect(mockSetCapoSemitones).toHaveBeenCalledWith(0)
     })
 })

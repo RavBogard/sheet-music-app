@@ -32,6 +32,8 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
         aiState,
         setCapoFret,
         capoFret,
+        capoSemitones,
+        setCapoSemitones,
         playbackQueue,
         queueIndex,
         setEditingChords,
@@ -144,6 +146,29 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
         setEditingChords(true)
         onRequestClose?.()
     }
+
+    // ── Capo panel input (Phase-2 MED) ──────────────────────────────────
+    // INPUT-side capo (distinct from the "Play As" grid above, which is an
+    // OUTPUT — picking a shape SETS `capoFret` + `transposition`). Here the
+    // guitarist dials their actual capo position; the chart's written/sounding
+    // key DOESN'T change, only the shape-name hint changes.
+    //
+    // Math: capo at N semitones means fingerings are N frets HIGHER than the
+    // shape's open-position root, so the played shape is the key TRANSPOSED
+    // DOWN by N semitones. "Written Eb + capo 3 → play in C shapes."
+    //
+    // We key off `effectiveKey` (setlist key when set, else transposed
+    // detected key) so the indicator stays accurate when the band has chosen
+    // a different performance key OR the chart has been transposed.
+    const playingShapeKey = useMemo(() => {
+        if (!effectiveKey || capoSemitones === 0) return null
+        return transposeChord(effectiveKey, -capoSemitones)
+    }, [effectiveKey, capoSemitones])
+
+    const handleCapoSemitones = (n: number) => {
+        setCapoSemitones(n)
+    }
+    // ────────────────────────────────────────────────────────────────────
 
     const isScanning = aiState.scanningPages.length > 0
     const hasChords = allChords.length > 0
@@ -308,6 +333,64 @@ export function TransposerMenu({ onRequestClose }: TransposerMenuProps) {
                             <span className="text-muted-foreground text-sm mx-2">→</span>
                             <span className="text-foreground text-sm font-medium">
                                 sounds {effectiveKey}
+                            </span>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ── Capo (guitarist input) ── */}
+            {/* Distinct from the "Play As" output grid above: this is the
+                 player's actual capo position. Adjusting it changes the
+                 "play in <X> shapes" hint without altering the rendered or
+                 sounding key. Visible whenever we have ANY notion of the
+                 chart key (effectiveKey), since the indicator is only
+                 meaningful with a written/sounding reference. */}
+            {effectiveKey && (
+                <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                        <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                            Capo (your guitar)
+                        </div>
+                        {capoSemitones > 0 && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                aria-label="Clear capo"
+                                onClick={() => handleCapoSemitones(0)}
+                                className="text-muted-foreground hover:text-foreground h-6 px-2 text-[10px]"
+                            >
+                                Off
+                            </Button>
+                        )}
+                    </div>
+                    <div className="grid grid-cols-6 gap-1">
+                        {Array.from({ length: 12 }, (_, fret) => {
+                            const isActive = capoSemitones === fret
+                            return (
+                                <button
+                                    key={fret}
+                                    type="button"
+                                    aria-label={fret === 0 ? "Capo off" : `Capo ${fret}`}
+                                    aria-pressed={isActive}
+                                    onClick={() => handleCapoSemitones(fret)}
+                                    className={cn(
+                                        "rounded-md py-1.5 text-center text-xs transition-all border font-semibold",
+                                        isActive
+                                            ? "bg-violet-600/20 border-violet-500/40 text-violet-300"
+                                            : "bg-muted border-border text-foreground/70 hover:bg-muted/80 hover:text-foreground"
+                                    )}
+                                >
+                                    {fret === 0 ? "—" : fret}
+                                </button>
+                            )
+                        })}
+                    </div>
+                    {capoSemitones > 0 && playingShapeKey && (
+                        <div className="bg-violet-600/10 border border-violet-500/20 rounded-lg px-3 py-2 text-center">
+                            <span className="text-muted-foreground text-sm">Capo {capoSemitones} →</span>
+                            <span className="text-violet-300 text-sm font-bold ml-2">
+                                play in {playingShapeKey} shapes
                             </span>
                         </div>
                     )}

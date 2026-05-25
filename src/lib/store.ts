@@ -68,6 +68,21 @@ export interface MusicState {
     setCapoFret: (fret: number | null) => void
 
     /**
+     * Guitarist-set capo position in semitones (0-11). UNLIKE `capoFret`
+     * (which the "Play As" shape grid sets as a transposition-bundled output:
+     * choose D shapes → setCapoFret(2) + setTransposition(...)), this is an
+     * INPUT the guitarist dials independently of the rendered key. The chart
+     * still renders / sounds in its written key; the capo panel shows what
+     * SHAPES the capo'd guitarist plays — written Eb + capo 3 → play C
+     * shapes (`transposeChord(writtenKey, -capoSemitones)`).
+     *
+     * Render-time, in-memory, per-iPad. NOT persisted (kept out of
+     * `partialize` — mirrors `musicXmlKey`). 0 = no capo (off).
+     */
+    capoSemitones: number
+    setCapoSemitones: (n: number) => void
+
+    /**
      * Native key parsed from MusicXML's first `<key>` signature, written by
      * `SmartScoreViewer` after `osmd.load()` succeeds and cleared on
      * unmount / sourceUrl change. Render-time only: NOT persisted (kept out
@@ -140,6 +155,7 @@ export const useMusicStore = create<MusicState>()(
             pendingEditCount: 0,
             gigModeActive: false,
             capoFret: null,
+            capoSemitones: 0,
             musicXmlKey: null,
 
             audio: {
@@ -156,6 +172,7 @@ export const useMusicStore = create<MusicState>()(
                 returnPath: returnPath ?? get().returnPath,
                 transposition: 0,
                 capoFret: null,
+                capoSemitones: 0,
                 musicXmlKey: null,
                 isEditingChords: false,
                 aiState: { isEnabled: false, scanningPages: [], pageData: {}, error: null },
@@ -250,6 +267,7 @@ export const useMusicStore = create<MusicState>()(
             })),
 
             setCapoFret: (fret) => set({ capoFret: fret }),
+            setCapoSemitones: (n) => set({ capoSemitones: Math.max(0, Math.min(11, Math.floor(n))) }),
             setMusicXmlKey: (key) => set({ musicXmlKey: key }),
 
             setEditingChords: (editing) => set({ isEditingChords: editing, ...(editing ? {} : { pendingEditCount: 0 }) }),
@@ -267,6 +285,7 @@ export const useMusicStore = create<MusicState>()(
                 pendingEditCount: 0,
                 gigModeActive: false,
                 capoFret: null,
+                capoSemitones: 0,
                 musicXmlKey: null,
                 playbackQueue: [],
                 queueIndex: -1,
