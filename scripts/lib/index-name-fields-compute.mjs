@@ -156,7 +156,11 @@ export function titleSpecificity(title, siblingsInCatalog) {
  */
 export function recomputeIndexNameFields(title, siblingsInCatalog) {
     const nameLower = title.toLowerCase()
-    const normalizedName = nameLower.replace(/[^a-z0-9]/g, "")
+    // Strip trailing media extension BEFORE alphanumeric collapse (mirror
+    // of the canonical TS helper post 2026-05-25 normalizedname-pin lane).
+    const normalizedName = nameLower
+        .replace(STRIPPABLE_EXTENSION_RE, "")
+        .replace(/[^a-z0-9]/g, "")
     const stem = bareStem(title)
     return {
         nameLower,

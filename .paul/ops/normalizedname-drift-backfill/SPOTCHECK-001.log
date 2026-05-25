@@ -1,0 +1,12 @@
+# Sourcing 5 random samples from 241 restamped records
+  PASS  1-7s6O5YGk5noWiVhtktHwpr7SHOq8_09  name="B'sefer chayim & Hashiveinu.pdf"  normalizedName: "bseferchayimhashiveinupdf" -> "bseferchayimhashiveinu"
+  PASS  1Bquaq3tlSoRAovWcCkynShUuepgEgYZ_  name="Hineni Rosenblatt.pdf"  normalizedName: "hinenirosenblattpdf" -> "hinenirosenblatt"
+  PASS  1O1pvTb9_U_1Dh9TCookPxS7AlwfMA_Nh  name="Fish Jam .mp3"  normalizedName: "fishjammp3" -> "fishjam"
+  PASS  1_E1AIJH9j0I-jkESHlhKFN8ZGazdusFd  name="El Dyo alto.pdf"  normalizedName: "eldyoaltopdf" -> "eldyoalto"
+  PASS  1yLSZnOX9RKJKliQpNvJ78yWhzJ51jLNW  name="Kedusha Am.pdf"  normalizedName: "kedushaampdf" -> "kedushaam"
+
+=== SPOTCHECK-001 Summary ===
+  totalRestamped: 241
+  sampled:        5
+  passed:         5
+  failed:         0

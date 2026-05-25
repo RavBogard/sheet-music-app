@@ -40,7 +40,11 @@
  * drifts, the parity test fails loudly.
  */
 
-import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
+import {
+    STRIPPABLE_EXTENSION_RE,
+    bareStem,
+    titleSpecificity,
+} from "@/lib/mcp/title-specificity"
 
 export interface IndexNameFields {
     nameLower: string
@@ -59,13 +63,22 @@ export interface IndexNameFields {
  *   sharing `bareStem(title)`, **including** the row being written. Pass
  *   1 for the unique-stem case. Matches `processChartUpload`'s convention
  *   at `library-upload.ts:537`.
+ *
+ * `normalizedName` strips a trailing media extension BEFORE the
+ * alphanumeric collapse, so historical-correct shapes are preserved:
+ * `"Hodu (Silver).pdf" → "hodusilver"` (not `"hodusilverpdf"`). Mirrors
+ * the `bareStem` extension-strip introduced by the 2026-05-25 pdf-stem-
+ * drift lane (`e01dc2b1a`) on the `normalizedName` axis. See
+ * `.paul/research/recompute-helper-normalizedname-drift/FINDINGS.md`.
  */
 export function recomputeIndexNameFields(
     title: string,
     siblingsInCatalog: number,
 ): IndexNameFields {
     const nameLower = title.toLowerCase()
-    const normalizedName = nameLower.replace(/[^a-z0-9]/g, "")
+    const normalizedName = nameLower
+        .replace(STRIPPABLE_EXTENSION_RE, "")
+        .replace(/[^a-z0-9]/g, "")
     const stem = bareStem(title)
     return {
         nameLower,

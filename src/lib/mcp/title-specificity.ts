@@ -120,7 +120,7 @@ export function normalizeStem(title: string): string {
  * will catch any drift from the mirror at
  * `scripts/lib/index-name-fields-compute.mjs`.
  */
-const STRIPPABLE_EXTENSION_RE =
+export const STRIPPABLE_EXTENSION_RE =
     /\.(pdf|musicxml|xml|mxl|jpg|png|webp|mp3|m4a|wav)$/i
 
 /**

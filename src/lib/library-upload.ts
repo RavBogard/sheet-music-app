@@ -15,7 +15,11 @@ import { processMuseScoreFile } from "@/lib/musescore-converter"
 import { levenshteinDistance } from "@/lib/string-utils"
 import { logger } from "@/lib/logger"
 import heicConvert from "heic-convert"
-import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
+import {
+    STRIPPABLE_EXTENSION_RE,
+    bareStem,
+    titleSpecificity,
+} from "@/lib/mcp/title-specificity"
 import {
     emitLibraryRowCreated,
     type LibraryRowCreatedEvent,
@@ -429,7 +433,16 @@ export async function processChartUpload(
     // emoji-prefixed candidates entirely. Index a `normalizedName` field and
     // query that. Backfill is optional — without it, new uploads still won't
     // fuzzy-match against pre-G-5 entries that lack `normalizedName`.
-    const normalizedName = nameLower.replace(/[^a-z0-9]/g, "")
+    //
+    // Strip a trailing media extension BEFORE the alphanumeric collapse
+    // (mirrors `recomputeIndexNameFields` post 2026-05-25 helper-pin) so
+    // `"Hodu (Silver).pdf"` produces `"hodusilver"` not `"hodusilverpdf"`.
+    // Aligns with the prefix-range historical shape — pre-α stored rows
+    // still match via the 6-char prefix overlap, and new writes land on
+    // the historical-correct ext-stripped key.
+    const normalizedName = nameLower
+        .replace(STRIPPABLE_EXTENSION_RE, "")
+        .replace(/[^a-z0-9]/g, "")
     if (!input.force) {
         stage("dedup-exact:start")
         const exactMatch = await db
