@@ -113,10 +113,18 @@ function initFirestore() {
 // We treat `^[A-Za-z0-9_-]{25,}$` AND no `upload-` prefix as a match.
 // PCU's `upload-{uuid}` ids contain `-` segments but start with `upload-`,
 // so the prefix check is sufficient to exclude them.
+// **UUID v4 exclusion (amendment 2026-05-25, per supervisor ruling msg-002):** bare
+// UUID v4 doc-ids (no `upload-` prefix) are B-006 salvage rows; their Drive id
+// lives in `backupDriveId`, NOT in the docId. Stamping `driveFileId = docId` on
+// those would write the UUID as a false Drive-id. The salvage-row recovery rule
+// (stamp `driveFileId = backupDriveId`) is queued as a separate follow-up lane.
+// See `.paul/ops/backfill-drive-id/PROBE-001-FINDINGS.md` for the 10/10 probe.
 const DRIVE_ID_REGEX = /^[A-Za-z0-9_-]{25,}$/
+const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 function looksLikeDriveId(docId) {
     if (typeof docId !== "string") return false
     if (docId.startsWith("upload-")) return false
+    if (UUID_V4_REGEX.test(docId)) return false
     return DRIVE_ID_REGEX.test(docId)
 }
 
