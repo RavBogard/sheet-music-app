@@ -1,373 +1,91 @@
-# Production PC Setup Guide — CentralReform X32 Monitor Bridge
+# Production PC Setup — CentralReform X32 Monitor Bridge
 
-This is the step-by-step guide for getting the bridge server running on the production PC at CRC. The bridge sits between the musicians' iPads/phones and the Behringer X32 mixer, letting everyone control their own monitor mix from the CentralReform app.
+Step-by-step for getting a fresh studio PC running the bridge. The bridge is a
+small Electron tray app that talks to the X32 over OSC and to iPads through
+Firestore — no firewall holes, no inbound ports, no Node install on the studio PC.
 
 ```
-Musicians' iPads ──WiFi──► Production PC (this bridge) ──Ethernet/WiFi──► X32 Mixer
+   iPads ──► Firestore ──► Bridge (this PC) ──OSC/UDP──► X32
 ```
 
----
+## What you need
 
-## What You Need Before Starting
-
-- The production PC (Windows), connected to the same network as the X32
+- The studio PC (Windows), on the same LAN as the X32
 - The X32 powered on and connected to the network
 - Admin access to the CentralReform web app
 - About 5 minutes
 
----
+## Step 1 — Download the installer
 
-## The Easy Way: One-Click Installer
+From the [GitHub releases page](https://github.com/RavBogard/sheet-music-app/releases),
+download the latest **`CentralReform-Bridge-Setup-x.y.z.exe`** and run it.
+NSIS will install the bridge under `%LOCALAPPDATA%\Programs\CentralReform Bridge`
+and launch it. The tray icon (purple circle) appears in the Windows
+system tray.
 
-### Step 1: Download the EXE
+> **First-run SmartScreen:** "Windows protected your PC" → click **More info** →
+> **Run anyway**. The installer is unsigned; this is expected.
 
-Download **CentralReform-Bridge.exe** from the [GitHub releases page](https://github.com/RavBogard/sheet-music-app/releases) and put it in a folder (like `C:\CentralReform\`).
+## Step 2 — Generate a setup code
 
-### Step 2: Get a Setup Code
+1. In a browser, open the CentralReform admin panel and go to **Sound System**.
+2. Click **Generate Setup Code**.
+3. You'll see a **10-character code** (letters and digits, no `0/O/1/I`)
+   that's valid for 10 minutes. Leave the page open.
 
-1. Open your CentralReform admin panel → **Sound System**
-2. Click **"Generate Setup Code"**
-3. You'll see a 6-character code (valid for 10 minutes)
+## Step 3 — Connect the bridge
 
-### Step 3: Double-Click the EXE
+The bridge opens to a setup overlay on first run.
 
-The setup wizard walks you through everything:
+1. **App URL** — pre-filled with `https://www.centralreform.live`. Change it
+   only if you're running against a different deployment.
+2. **Setup Code** — type or paste the 10-character code from Step 2.
+3. Click **Connect Bridge**. The bridge calls `/api/bridge/setup-code`,
+   receives a scoped service-account credential, and stores it in the
+   Electron user-data directory.
 
-1. **Site URL** — Enter your CentralReform address (e.g., `https://your-app.vercel.app`)
-2. **Setup code** — Enter the 6-character code from Step 2. Credentials are downloaded automatically.
-3. **Ports** — Defaults are fine (9000 for iPads, 9001 for health checks). Hit Enter.
-4. **Firewall** — If running as admin, it opens the ports automatically. Hit Enter.
-5. **Service** — Installs as a Windows service so it auto-starts on boot. Hit Enter.
+Within a few seconds the dashboard switches to the live status view:
+the X32 badge turns green, the log panel starts streaming, and the bridge
+publishes its heartbeat to `config/monitor.bridge`.
 
-That's it. The bridge is running. No Firebase Console visit needed.
+## Step 4 — Configure buses (one-time)
 
-### Step 4: Configure Buses in the Web App
+Back in the admin panel → **Sound System**:
 
-1. Open your admin panel → **Sound System**
-2. The Bridge URL is already filled in (the bridge published it automatically)
-3. Choose which **monitor buses** to expose (e.g., buses 1–4)
-4. **Assign buses** to musicians and **authorize** who gets access
-5. Save
+1. Choose which **monitor buses** to expose to iPads (e.g., buses 1–4).
+2. **Assign buses** to musicians and **authorize** who can see the Monitor tab.
+3. Save.
 
-### Step 5: Test
+The bridge picks up config changes from Firestore in real time — no restart.
 
-On a musician's iPad, open the app → tap the Audio button in performance mode. Faders should appear. Move one — the X32 responds.
+## Step 5 — Verify
 
----
+On an authorized iPad (same WiFi):
 
-## After Setup
+1. Open the CentralReform app and sign in.
+2. Tap the **Monitor** tab (or the Audio button in performance mode).
+3. The assigned bus's fader strip should appear.
+4. Move the fader — the X32 responds.
+5. Move a fader on the X32 — the iPad updates.
 
-The bridge runs silently in the background. It starts on boot, restarts on crash, and logs to `bridge.log` in the same folder as the exe.
+## After setup
 
-| To do this... | Do this |
+The bridge auto-starts at every Windows login and runs in the tray.
+Right-click the tray icon for: **Open Dashboard**, **Check for Updates**,
+**Quit**. New releases install themselves during idle periods.
+
+## Troubleshooting
+
+| Problem | Fix |
 |---|---|
-| Re-run setup | `CentralReform-Bridge.exe --setup` |
-| Remove the service | `CentralReform-Bridge.exe --uninstall` |
-| Check it's running | Open a browser to `http://localhost:9001/health` |
-| Read logs | Open `bridge.log` in the exe folder |
-| Update after code changes | Download the new exe, replace the old one, reboot |
-
----
-
-## Troubleshooting
-
-| Problem | Fix |
-|---------|-----|
-| "Windows protected your PC" on first run | Click "More info" → "Run anyway" |
-| Setup code rejected | Code expires after 10 minutes. Generate a new one from the admin panel |
-| "Could not reach app" during setup | Check the site URL you entered. Try opening it in a browser first |
-| iPads can't connect | Check firewall (re-run with `--setup`), confirm same WiFi |
-| Bridge starts but X32 not found | Verify X32 is on, check its IP on the X32 Setup screen |
-| Faders move on iPad but X32 doesn't respond | Check bridge.log for errors |
-| Service won't install | Right-click the exe → "Run as administrator" |
-
----
-
----
-
-## The Manual Way (for developers)
-
-If you prefer to run from source instead of the exe, expand below.
-
-<details>
-<summary>Click to expand manual setup instructions</summary>
-
-### Part 1: Install Node.js
-
-The bridge server runs on Node.js. You only need to do this once.
-
-1. Open a browser on the production PC and go to **https://nodejs.org**
-2. Download the **LTS** version (should be 20.x or higher)
-3. Run the installer — accept all defaults, click through to finish
-4. Open **Command Prompt** (or PowerShell) and verify:
-
-```
-node --version
-```
-
-You should see something like `v20.11.0` or higher. If you see an error, restart the PC and try again.
-
----
-
-## Part 2: Get the Bridge Code
-
-You have two options depending on whether Git is installed.
-
-### Option A: Clone with Git (preferred)
-
-```
-git clone https://github.com/RavBogard/sheet-music-app.git
-cd sheet-music-app/bridge
-```
-
-### Option B: Download ZIP
-
-1. Go to **https://github.com/RavBogard/sheet-music-app**
-2. Click the green **Code** button → **Download ZIP**
-3. Extract the ZIP somewhere easy to find (like `C:\CentralReform\`)
-4. Open Command Prompt and navigate to the bridge folder:
-
-```
-cd C:\CentralReform\sheet-music-app\bridge
-```
-
----
-
-## Part 3: Install Dependencies
-
-From inside the `bridge` folder:
-
-```
-npm install
-```
-
-This downloads everything the bridge needs (Firebase Admin SDK, OSC library, WebSocket server). Takes about a minute.
-
----
-
-## Part 4: Get the Firebase Service Account Key
-
-The bridge needs a key file to authenticate with Firebase (to verify musician logins and read the config you set in the admin panel).
-
-1. Go to **https://console.firebase.google.com**
-2. Select the **CentralReform** project
-3. Click the **gear icon** (⚙️) → **Project settings**
-4. Click the **Service accounts** tab
-5. Click **"Generate new private key"**
-6. Save the downloaded JSON file into the `bridge` folder and rename it to:
-
-```
-service-account-key.json
-```
-
-So you should now have `bridge/service-account-key.json` sitting right next to `bridge/package.json`.
-
-**Keep this file safe.** It grants admin access to the Firebase project. Don't commit it to Git or share it.
-
----
-
-## Part 5: Create the .env File
-
-In the `bridge` folder, copy the example file:
-
-```
-copy .env.example .env
-```
-
-Open `.env` in Notepad and verify these values:
-
-```
-WS_PORT=9000
-HTTP_PORT=9001
-FIREBASE_SA_KEY_PATH=./service-account-key.json
-```
-
-The defaults are fine — you shouldn't need to change anything unless you have a port conflict.
-
----
-
-## Part 6: Build and Start the Bridge
-
-```
-npm run build
-npm start
-```
-
-You should see output like:
-
-```
-[Config] Loaded: {"x32":"192.168.1.100:10023","buses":[1,2,3,4],"authorized":3}
-[X32] Connected to 192.168.1.100
-[WS] WebSocket server listening on port 9000
-[HTTP] Health/status API on port 9001
-```
-
-**If it can't find the X32**, check:
-- Is the X32 powered on?
-- Is the PC on the same network/subnet as the X32?
-- What IP does the X32 show on its Setup screen?
-
-You can verify it's working:
-
-```
-curl http://localhost:9001/health
-```
-
-Should return `{"status":"ok","x32Connected":true,...}`
-
----
-
-## Part 7: Configure the Firewall
-
-Windows Firewall will block incoming connections from the iPads unless you allow the bridge ports.
-
-1. Open **Windows Defender Firewall** (search for "firewall" in Start)
-2. Click **"Allow an app or feature through Windows Defender Firewall"**
-3. Click **"Change settings"** → **"Allow another app..."**
-4. Browse to `C:\Program Files\nodejs\node.exe`
-5. Check both **Private** and **Public** checkboxes
-6. Click **OK**
-
-Alternatively, create specific port rules:
-
-1. Click **"Advanced settings"** (left sidebar)
-2. Click **"Inbound Rules"** → **"New Rule..."**
-3. Select **Port** → **TCP** → enter **9000, 9001**
-4. Allow the connection → apply to all profiles
-5. Name it **"CentralReform Bridge"**
-
----
-
-## Part 8: Configure in the Web App
-
-Now set up the connection from the CentralReform admin panel.
-
-1. Open **https://your-site.vercel.app/admin** on any device
-2. Scroll to the **Sound System** section (or click the Setup Wizard if it's your first time)
-3. Set the **Bridge URL** to the production PC's local IP:
-
-```
-ws://192.168.1.50:9000
-```
-
-Replace `192.168.1.50` with whatever the production PC's actual IP address is on the network. To find it, run `ipconfig` in Command Prompt and look for the IPv4 address.
-
-4. The wizard will try to connect and scan for the X32 automatically
-5. Choose which **monitor buses** to expose (e.g., buses 1–4)
-6. **Assign buses** to musicians and **authorize** who can access the Monitor tab
-7. Save
-
-Once saved, the bridge picks up the config changes in real time — no restart needed.
-
----
-
-## Part 9: Install as a Windows Service (Auto-Start)
-
-You don't want to manually start the bridge every time the PC reboots. Install it as a Windows service so it starts automatically.
-
-First, install the service manager globally:
-
-```
-npm install -g node-windows
-```
-
-Then register the bridge:
-
-```
-npm run install-service
-```
-
-You should see:
-
-```
-✅ Service installed and started!
-   The bridge will now start automatically on boot.
-```
-
-The service:
-- Starts automatically when Windows boots
-- Restarts automatically if it crashes
-- Runs in the background (no Command Prompt window needed)
-
-**To remove the service later:**
-
-```
-npm run uninstall-service
-```
-
----
-
-## Part 10: Test It End to End
-
-1. On the production PC, verify the bridge is running:
-   ```
-   curl http://localhost:9001/health
-   ```
-
-2. On a musician's iPad (connected to the same WiFi):
-   - Open the CentralReform app
-   - Log in with an authorized account
-   - Tap the **Monitor** tab (or the **Audio** button in performance mode)
-   - You should see the fader controls for their assigned bus
-
-3. Move a fader on the iPad — the X32 should respond in real time
-
-4. Move a fader on the X32 — the iPad should update to match
-
-If something doesn't work, check the bridge logs. If it's running as a service, you can see logs in Windows Event Viewer under **Applications**, or stop the service and run `npm start` manually to see console output.
-
----
-
-## Quick Reference
-
-| What | Where |
-|------|-------|
-| Bridge folder | `sheet-music-app/bridge/` |
-| Service account key | `bridge/service-account-key.json` |
-| Config file | `bridge/.env` |
-| WebSocket port | 9000 (iPads connect here) |
-| HTTP API port | 9001 (health checks) |
-| Start manually | `cd bridge && npm start` |
-| Install service | `cd bridge && npm run install-service` |
-| Check health | `curl http://localhost:9001/health` |
-| View X32 status | `curl http://localhost:9001/status` |
-| Scan for mixers | `curl http://localhost:9001/scan` |
-| Web admin config | `/admin` → Sound System |
-
----
-
-## Troubleshooting
-
-| Problem | Fix |
-|---------|-----|
-| `node: command not found` | Restart PC after installing Node.js |
-| `Cannot find module` on `npm start` | Run `npm run build` first |
-| Bridge starts but can't find X32 | Check IP, make sure same subnet, X32 is powered on |
-| iPads can't connect to bridge | Check firewall (Part 7), confirm same WiFi network |
-| "Unauthorized" errors from iPads | Regenerate service account key, check it's the right Firebase project |
-| Faders move on iPad but X32 doesn't respond | Check bridge logs for OSC errors, verify X32 IP in admin config |
-| Service won't install | Run Command Prompt as Administrator |
-| After a code update | `git pull && npm install && npm run build` then restart service |
-
----
-
-## Updating the Bridge After Code Changes
-
-If you or I push updates to the bridge code:
-
-```
-cd sheet-music-app
-git pull
-cd bridge
-npm install
-npm run build
-```
-
-Then restart the service — either reboot the PC or:
-
-```
-npm run uninstall-service
-npm run install-service
-```
-
-</details>
+| Tray icon doesn't appear | Open Task Manager → look for "CentralReform Bridge". If absent, re-run the installer. |
+| Setup code rejected | Codes expire after 10 minutes and can only be used once. Generate a new one in the admin panel. |
+| "Could not reach app" during setup | Check the App URL. Verify the PC has internet (open `https://www.centralreform.live` in a browser). |
+| X32 badge red | Check the X32 is powered on, on the same subnet, and that its IP matches what the bridge discovered (visible in the dashboard logs). |
+| Faders move on iPad but X32 doesn't respond | Open the tray dashboard and read the log stream for OSC errors. |
+| Credentials lost (PC reinstall, exe moved) | Right-click the tray icon → re-run setup wizard, or generate a fresh setup code in the admin panel. |
+| Bridge silent for hours | Daniel: check `config/monitor.bridge.lastSeen` via Firebase MCP, or call `get_bridge_health` from Claude Desktop. |
+
+Recovery + operating detail (credential paths, setup-code re-credential,
+diagnostics) lives in the `[[project_bridge_update_ops]]` and
+`[[project_bridge_state_freshness_diagnostic]]` memory entries.

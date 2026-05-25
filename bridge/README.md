@@ -1,207 +1,99 @@
 # CentralReform X32 Monitor Bridge
 
-A lightweight Node.js server that runs on the production PC at CRC, bridging WebSocket connections from musicians' iPads to OSC commands for the Behringer X32 mixer.
+A small Electron tray app that runs on the studio PC at CRC, connecting the
+musicians' iPads to the Behringer X32 mixer. All iPad↔bridge traffic flows
+through Firestore — the bridge does **not** open any inbound network ports.
 
 ## Architecture
 
 ```
-iPad Browser ──WebSocket──► Bridge Server ──OSC/UDP──► X32
-                              │
-                              ├── Reads config from Firestore
-                              ├── Verifies Firebase auth tokens
-                              ├── Syncs bus fader state bidirectionally
-                              ├── Matrix output control (sound engineers)
-                              └── Auto-discovers X32, publishes bridge URL
+   ┌──────────────┐   ┌─────────────────────────────────────────┐   ┌────────┐
+   │ iPads / web  │──►│ Firestore (monitor-live/* + config/*)   │◄─►│ Bridge │──OSC/UDP──► X32
+   │ admin panel  │   │ • state, commands/pending, acks         │   │ tray   │
+   └──────────────┘   │ • bridgeLog, selftest, bridge.heartbeat │   │ app    │
+                      └─────────────────────────────────────────┘   └────────┘
 ```
 
-### v2.0.0 Changes
-- **Matrix output support** — Sound engineers can mute/unmute and control levels for all 6 matrix outputs (house speakers, lobby, stream, recording, etc.)
-- **Sound engineer role** — The `soundEngineer` custom claim grants automatic monitor access + matrix controls. No manual authorized-user list needed.
-- **Broader authorization** — Users with an assigned bus get auto-access. Sound engineers get full access. The authorized-users list is now a fallback.
-- **Bus assignment by engineers** — Sound engineers can assign musicians to buses from the Monitor page (no admin panel needed).
+- **Electron tray app** (`src/main.ts`). Hidden window + tray icon; auto-starts
+  at Windows login (when installed via the EXE).
+- **Firestore message bus** — bridge writes state and reads `monitor-live/commands/pending`.
+  No WebSocket server, no inbound HTTP, nothing to firewall.
+- **Single-writer lease** — multiple bridges on the same network self-elect; only
+  one writes to the X32 at a time.
+- **Auto-update** — `electron-updater` polls GitHub releases and installs new
+  versions during studio idle (won't restart mid-service).
 
-## Quick Start
+The bridge talks to the X32 over OSC/UDP on port `10023` (outbound only).
+Configuration lives in Firestore under `config/monitor`; everything is managed
+from the CentralReform admin panel.
 
-### Option A: One-Click Installer (recommended)
+## Installation
 
-The simplest way. No Node.js, no terminal commands, no build steps.
+The only supported install path is the EXE installer.
 
-1. Download `CentralReform-Bridge.exe` from the [latest release](https://github.com/RavBogard/sheet-music-app/releases)
-2. Download your Firebase service account key (see below) and put it in the same folder
-3. **Double-click** `CentralReform-Bridge.exe`
-4. Follow the 4-step setup wizard (finds your key, opens firewall, installs as auto-start service)
-5. Done — configure buses and access in the CentralReform admin panel
+1. Download the latest **`CentralReform-Bridge-Setup-x.y.z.exe`** from the
+   [GitHub releases page](https://github.com/RavBogard/sheet-music-app/releases)
+   and run it. (NSIS one-click; installs to per-user `%LOCALAPPDATA%`.)
+2. Open the CentralReform admin panel → **Sound System** → **Generate Setup Code**.
+   You'll get a **10-character code** valid for 10 minutes.
+3. The bridge opens to a setup wizard on first run. Enter the App URL
+   (`https://www.centralreform.live`) and the 10-character code, then click
+   **Connect Bridge**. The bridge redeems the code at `/api/bridge/setup-code`
+   and stores the returned service-account credential under the Electron
+   user-data directory.
+4. From then on, the bridge auto-starts at login, runs in the tray, and updates
+   itself in place.
 
-After setup, the bridge runs as a Windows service in the background. It starts automatically when the PC boots and restarts itself if it crashes.
+See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for the step-by-step walkthrough.
 
-**Useful flags:**
-```
-CentralReform-Bridge.exe --setup       # Re-run the setup wizard
-CentralReform-Bridge.exe --uninstall   # Remove the Windows service
-```
+## Operating
 
-### Prerequisites (all options)
+- **Tray icon** — right-click → open the dashboard, view logs, check for
+  updates, quit.
+- **Dashboard** (`ui/index.html`) — X32 connection badge, client count, live
+  log stream, and the setup-code overlay on first run.
+- **Logs** — also streamed to Firestore as a bounded ring (`monitor-live/bridgeLog`,
+  last ~50 errors), visible to admins via the `get_bridge_health` MCP tool.
+- **Recovery** — if the studio PC is reinstalled or the EXE is moved to a new
+  path, the previously-redeemed credential lives in the Electron user-data
+  directory (the bridge auto-migrates from the legacy `exeDir` location on
+  first boot of v10.x). If credentials are lost, re-run the setup wizard from
+  the tray menu.
 
-- Firebase service account key (see below)
-- X32 mixer on the same network as this PC
-
-### 1. Get the Firebase Service Account Key
-
-1. Go to [Firebase Console](https://console.firebase.google.com) → Your Project → Project Settings → Service Accounts
-2. Click **"Generate New Private Key"**
-3. Save the JSON file as `bridge/service-account-key.json`
-
-### 2. Choose a Deployment Method
-
----
-
-#### Option A: Docker (recommended)
-
-The simplest way to run the bridge with auto-restart and logging.
-
-```bash
-cd bridge
-
-# Place your service-account-key.json in this directory, then:
-docker compose up -d
-```
-
-That's it. The bridge starts, auto-restarts on crash or reboot, and logs are managed automatically.
-
-**Useful commands:**
-```bash
-docker compose logs -f          # Watch logs
-docker compose restart           # Restart
-docker compose down              # Stop
-docker compose up -d --build     # Rebuild after code changes
-```
-
-**Health check:**
-```bash
-curl http://localhost:9001/health
-```
-
----
-
-#### Option B: Windows Service
-
-For running directly on Windows without Docker.
-
-```bash
-cd bridge
-npm install
-npm run build
-
-# Install as auto-start Windows service:
-npm install -g node-windows
-npm run install-service
-```
-
-**Manage the service:**
-```bash
-npm run uninstall-service        # Remove auto-start service
-```
-
-The service starts automatically on boot and restarts on crash.
-
----
-
-#### Option C: Manual / Development
-
-```bash
-cd bridge
-npm install
-cp .env.example .env             # Edit if needed (defaults are fine)
-
-npm run dev                      # Development (auto-restart on file changes)
-
-# — or —
-
-npm run build
-npm start                        # Production
-```
-
----
-
-## Configuration
-
-**All configuration is done through the CentralReform web app** at `/admin` → Sound System section (or the Setup Wizard for first-time config).
-
-The web app manages:
-
-| Setting | Description |
-|---------|-------------|
-| Bridge URL | WebSocket address (e.g., `ws://192.168.1.50:9000`) |
-| X32 IP | Mixer's network address (auto-discovered on bridge startup) |
-| Monitor Buses | Which buses are available as monitor sends |
-| Bus Assignments | Which musician gets which bus |
-| Authorized Users | Who can access the Monitor tab |
-
-You don't need to edit any config files on the bridge server — it reads everything from Firestore in real time.
-
-## HTTP API
-
-The bridge exposes a small HTTP API on port 9001:
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /health` | Health check — returns `{ status: "ok", uptime, x32Connected, clients }` |
-| `GET /status` | Full status — X32 connection, address, client count, bus list |
-| `GET /scan` | Scan local network for X32 mixers (used by admin Setup Wizard) |
-
-## Ports
-
-| Port | Protocol | Purpose |
-|------|----------|---------|
-| 9000 | WebSocket | iPad connections |
-| 9001 | HTTP | API (health, status, scan) |
-| 10023 | UDP (outbound) | OSC commands to X32 |
-
-Make sure your firewall allows inbound connections on ports 9000 and 9001.
-
-## Troubleshooting
-
-| Issue | Fix |
-|-------|-----|
-| "Connection timeout" on startup | Check X32 IP, ensure both devices are on same network |
-| iPads can't connect | Check firewall allows port 9000, verify WiFi is on same subnet |
-| Fader changes not syncing | Verify `/xremote` subscription (check bridge logs) |
-| Auth failures | Regenerate service account key, check it's in the right path |
-| Docker can't reach X32 | Uses `network_mode: host` — ensure Docker has LAN access |
-| Health check failing | Check that port 9001 is not blocked |
-
-## Building the Installer EXE
-
-To compile a new `CentralReform-Bridge.exe` (only needed if you change the bridge code):
-
-```bash
-cd bridge
-npm install
-npm run build-exe
-```
-
-This uses [pkg](https://github.com/yao-pkg/pkg) to bundle Node.js + all dependencies into a single ~60MB executable. The output goes to `dist/CentralReform-Bridge.exe`.
-
-To distribute: just share the `.exe` file. The user only needs the exe and their Firebase key file.
-
-## File Structure
+## File structure
 
 ```
 bridge/
-├── Dockerfile                 # Container image definition
-├── docker-compose.yml         # One-command deployment
-├── .dockerignore
-├── .env.example               # Environment variable template
-├── package.json
+├── package.json              # entry: dist/main.js (Electron)
 ├── tsconfig.json
-├── scripts/
-│   ├── install-service.js     # Windows service installer
-│   └── uninstall-service.js   # Windows service uninstaller
-└── src/
-    ├── launcher.ts            # Smart entry point (setup wizard + service manager)
-    ├── index.ts               # Bridge server — startup, HTTP API
-    ├── config.ts              # Firestore config manager
-    ├── ws-server.ts           # WebSocket server for iPads
-    ├── x32-client.ts          # OSC client for Behringer X32
-    └── types.ts               # TypeScript interfaces
+├── src/
+│   ├── main.ts               # Electron entry — tray, IPC, auto-updater, cred discovery
+│   ├── index.ts              # bridge boot — heartbeat, lease, sleep/wake detect
+│   ├── x32-client.ts         # OSC/UDP transport — /xremote, /xinfo, reconnect, sync pool
+│   ├── firestore-transport.ts # Firestore message bus — commands, acks, state writes
+│   ├── ack-writer.ts         # monitor-live/commands/acks/{id} writer + TTL sweep
+│   ├── config.ts             # Firestore config snapshot + R5 resubscribe-on-error
+│   ├── bridge-control.ts     # remote dispatch (resync / reconnect / restart / selftest)
+│   ├── remote-log.ts         # bounded error ring + startup-noise filter
+│   └── types.ts
+├── ui/index.html             # tray dashboard + setup-wizard overlay
+└── __tests__/                # vitest suites (mocked firebase-admin, dgram)
 ```
+
+## Building a release
+
+Releases are produced from this directory via `electron-builder` and published
+to GitHub. See the `[[project_bridge_release_build]]` memory entry for the
+end-to-end procedure (build, gh release upload, electron-updater
+`latest.yml`).
+
+```bash
+cd bridge
+npm install
+npm run build      # tsc
+npm run dist       # tsc && electron-builder --win  →  release/CentralReform-Bridge-Setup-*.exe
+```
+
+Operating + recovery notes (credential paths, setup-code re-credential,
+bridge health diagnostics) live in `[[project_bridge_update_ops]]` and
+`[[project_bridge_state_freshness_diagnostic]]`.
