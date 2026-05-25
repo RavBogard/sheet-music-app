@@ -2,9 +2,82 @@ import { describe, expect, it } from "vitest"
 import {
     GENERIC_LITURGICAL_STEMS,
     STOP_AND_ASK_THRESHOLD,
+    bareStem,
     normalizeStem,
     titleSpecificity,
 } from "./title-specificity"
+
+describe("bareStem", () => {
+    // Pre-existing behavior (parens drop + hyphen-composer drop + normalize).
+    // Regression-pinned here so the β extension-strip step can't accidentally
+    // weaken the older contract.
+    it("drops parenthesized clarifier", () => {
+        expect(bareStem("Hashkivenu (Klepper-Freelander)")).toBe("hashkivenu")
+    })
+    it("drops hyphen-composer suffix", () => {
+        expect(bareStem("Eitz Chayim - Weisenberg")).toBe("eitz chayim")
+    })
+    it("hyphen INSIDE parens does NOT trigger composer-drop", () => {
+        // Parens stripped first → "Hashkivenu" remains, no surrounding " - ".
+        expect(bareStem("Hashkivenu (Klepper-Freelander)")).toBe("hashkivenu")
+    })
+    it("folds diacritics via normalizeStem", () => {
+        expect(bareStem("Hashkīvēnu")).toBe("hashkivenu")
+    })
+
+    // β — trailing media extension strip (case-insensitive, single match,
+    // BEFORE parens/hyphen drop). Mirrors STRIPPABLE_EXTENSION_RE in
+    // title-specificity.ts (and parity-mirrored in
+    // scripts/lib/index-name-fields-compute.mjs).
+    it("strips trailing .pdf extension before parens drop", () => {
+        // "Hodu (Silver).pdf" → strip .pdf → "Hodu (Silver)" → drop parens
+        // → "Hodu" → normalizeStem → "hodu".
+        expect(bareStem("Hodu (Silver).pdf")).toBe("hodu")
+    })
+    it("strips trailing .musicxml extension and preserves apostrophe", () => {
+        expect(bareStem("V'Shamru.musicxml")).toBe("v'shamru")
+    })
+    it("strips trailing .mp3 extension on multi-word title", () => {
+        expect(bareStem("Adon Olam.mp3")).toBe("adon olam")
+    })
+    it("leaves no-extension titles unchanged", () => {
+        expect(bareStem("Hashkivenu")).toBe("hashkivenu")
+    })
+    it("strips trailing extension case-insensitively (.PDF, .MusicXML, .MP3)", () => {
+        expect(bareStem("song.PDF")).toBe("song")
+        expect(bareStem("song.MusicXML")).toBe("song")
+        expect(bareStem("song.MP3")).toBe("song")
+    })
+    it("strips ONE trailing extension only (regex has no /g flag)", () => {
+        // "song.pdf.pdf" → strip trailing .pdf → "song.pdf" → no parens/hyphen
+        // → normalizeStem strips inner "." → "songpdf". Dispatch literal
+        // expected "song.pdf" reflected the post-strip pre-normalize state;
+        // canonical bareStem returns the post-normalize value, hence "songpdf".
+        // The semantic intent (only one extension removed) is preserved.
+        expect(bareStem("song.pdf.pdf")).toBe("songpdf")
+    })
+    it("does NOT strip unknown extensions (e.g. .txt, .doc, .gif)", () => {
+        // Conservative whitelist — unknown extensions stay; normalizeStem
+        // folds the inner period away. Distinct from the strip-step path.
+        expect(bareStem("notes.txt")).toBe("notestxt")
+        expect(bareStem("scan.doc")).toBe("scandoc")
+        expect(bareStem("art.gif")).toBe("artgif")
+    })
+    it("strips extension THEN drops hyphen-composer suffix", () => {
+        // "Eitz Chayim - Weisenberg.pdf" → strip .pdf → "Eitz Chayim - Weisenberg"
+        // → drop hyphen-composer → "Eitz Chayim" → normalize → "eitz chayim".
+        expect(bareStem("Eitz Chayim - Weisenberg.pdf")).toBe("eitz chayim")
+    })
+    it("strips ALL covered audio/image extensions", () => {
+        expect(bareStem("foo.xml")).toBe("foo")
+        expect(bareStem("foo.mxl")).toBe("foo")
+        expect(bareStem("foo.jpg")).toBe("foo")
+        expect(bareStem("foo.png")).toBe("foo")
+        expect(bareStem("foo.webp")).toBe("foo")
+        expect(bareStem("foo.m4a")).toBe("foo")
+        expect(bareStem("foo.wav")).toBe("foo")
+    })
+})
 
 describe("normalizeStem", () => {
     it("lowercases and collapses separators", () => {

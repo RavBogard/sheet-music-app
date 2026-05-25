@@ -76,6 +76,23 @@ const FIXTURES: Case[] = [
     { title: "Tu Bishvat (Folk)", siblings: 1, note: "paren clarifier, non-generic stem" },
     { title: "Adonai S'fatai", siblings: 1, note: "Hebrew apostrophe (curly variant)" },
     { title: "Adonai S'fatai", siblings: 1, note: "Hebrew apostrophe (straight ASCII)" },
+
+    // ---- branch: β — trailing media extension strip (added 2026-05-25
+    // pdf-stem-drift lane). Mirrors STRIPPABLE_EXTENSION_RE in
+    // title-specificity.ts (and the mirror in
+    // scripts/lib/index-name-fields-compute.mjs). Parity is the load-bearing
+    // assertion — concrete bareStem outputs live in title-specificity.test.ts.
+    { title: "Hodu (Silver).pdf", siblings: 2, note: "β — .pdf extension + paren clarifier" },
+    { title: "V'Shamru.musicxml", siblings: 3, note: "β — .musicxml + Hebrew apostrophe + generic stem" },
+    { title: "Adon Olam.mp3", siblings: 1, note: "β — .mp3 + generic stem + multi-word" },
+    { title: "song.PDF", siblings: 1, note: "β — uppercase .PDF (case-insensitive)" },
+    { title: "song.pdf.pdf", siblings: 1, note: "β — single trailing extension stripped (no /g flag)" },
+    { title: "Eitz Chayim - Weisenberg.pdf", siblings: 1, note: "β — extension + hyphen-composer chain" },
+    { title: "Hashkivenu (Klepper-Freelander).pdf", siblings: 2, note: "β — extension + paren + generic stem" },
+    { title: "notes.txt", siblings: 1, note: "β — unknown extension stays (whitelist guard)" },
+    { title: "art.gif", siblings: 1, note: "β — unknown extension (.gif) stays" },
+    { title: "foo.wav", siblings: 1, note: "β — .wav covered" },
+    { title: "foo.m4a", siblings: 1, note: "β — .m4a covered" },
 ]
 
 describe("script mirror parity — scripts/lib/index-name-fields-compute.mjs vs src/lib/library/recompute-index-name-fields.ts", () => {

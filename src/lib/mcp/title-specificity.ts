@@ -103,11 +103,37 @@ export function normalizeStem(title: string): string {
 }
 
 /**
+ * Trailing media file extensions that get stripped before bare-stem
+ * computation. Chart titles often arrive with these baked into the name
+ * (`Hodu (Silver).pdf`, `V'Shamru.musicxml`, `Adon Olam.mp3`) but the
+ * extension is packaging, not part of the canonical stem — pinning it as
+ * a known set keeps the sibling-recount equality lookup stable across
+ * Drive/Storage/scrape ingest paths that may or may not preserve the
+ * extension in the `name` field.
+ *
+ * Case-insensitive. Only the TRAILING extension is stripped (no `g`
+ * flag) — a `song.pdf.pdf` input strips one extension, normalizeStem
+ * folds the inner period away.
+ *
+ * Extend by adding a token; downstream parity test
+ * (`src/lib/library/__tests__/index-name-fields-compute-parity.test.ts`)
+ * will catch any drift from the mirror at
+ * `scripts/lib/index-name-fields-compute.mjs`.
+ */
+const STRIPPABLE_EXTENSION_RE =
+    /\.(pdf|musicxml|xml|mxl|jpg|png|webp|mp3|m4a|wav)$/i
+
+/**
  * Strip the parenthesized clarifier portion (and anything after a hyphen-
  * separator composer pattern) so the stem reflects just the core liturgy
  * name. Used by the generic-stem check so "Hashkivenu (Klepper-Freelander)"
  * still tests against the generic "hashkivenu" stem (and still earns the
  * -0.3 penalty), and so the +0.2 unique-clarifier bonus stacks correctly.
+ *
+ * Also strips a trailing media extension (`.pdf`, `.musicxml`, `.mp3`, …)
+ * BEFORE the parens/hyphen drop, so ingest paths that preserve the
+ * extension in `name` (Drive sync, some scrape paths) produce the same
+ * stem as paths that strip it upstream. See STRIPPABLE_EXTENSION_RE.
  *
  * EXPORTED — `library_index` write path stores this as a `stem` field at
  * upload time so the sibling-recount query is a single equality lookup
@@ -115,8 +141,10 @@ export function normalizeStem(title: string): string {
  * iff they're arrangement variants of the same liturgical piece.
  */
 export function bareStem(title: string): string {
+    // strip trailing media extension (single match; case-insensitive)
+    const withoutExtension = title.replace(STRIPPABLE_EXTENSION_RE, "")
     // drop parenthesized clarifier(s)
-    const withoutParens = title.replace(/\([^)]*\)/g, "").trim()
+    const withoutParens = withoutExtension.replace(/\([^)]*\)/g, "").trim()
     // drop hyphen-composer suffix: "Eitz Chayim - Weisenberg" → "Eitz Chayim"
     const withoutComposer = withoutParens.split(/\s+-\s+/)[0] ?? withoutParens
     return normalizeStem(withoutComposer)

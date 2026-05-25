@@ -82,8 +82,16 @@ export function normalizeStem(title) {
         .trim()
 }
 
+// Mirror of STRIPPABLE_EXTENSION_RE in src/lib/mcp/title-specificity.ts.
+// Strip a trailing media extension before parens/hyphen drop so ingest
+// paths that preserve the extension in `name` produce the same stem as
+// paths that strip it upstream. Single trailing match (no /g flag).
+const STRIPPABLE_EXTENSION_RE =
+    /\.(pdf|musicxml|xml|mxl|jpg|png|webp|mp3|m4a|wav)$/i
+
 export function bareStem(title) {
-    const withoutParens = title.replace(/\([^)]*\)/g, "").trim()
+    const withoutExtension = title.replace(STRIPPABLE_EXTENSION_RE, "")
+    const withoutParens = withoutExtension.replace(/\([^)]*\)/g, "").trim()
     const withoutComposer = withoutParens.split(/\s+-\s+/)[0] ?? withoutParens
     return normalizeStem(withoutComposer)
 }
