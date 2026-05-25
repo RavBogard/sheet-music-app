@@ -1799,6 +1799,19 @@ describe('v50-07-04: kitchen-sink under random failure mix', () => {
                 } else if (action.kind === 'lazy-hydrate') {
                     const calls = (lazyHydrateCalls.get(action.setlistId) ?? 0) + 1
                     lazyHydrateCalls.set(action.setlistId, calls)
+                    // ac1-lazy-hydration-characterization 2026-05-26 — mirror
+                    // production SetlistGridHydrator.fanoutStartedRef
+                    // (`SetlistGridHydrator.tsx:85`): component-instance
+                    // in-memory dedup, independent of Dexie row state. Without
+                    // this guard, an intervening `edit-set setlists/S` between
+                    // two `lazy-hydrate S` calls wipes the local `hydrated:true`
+                    // flag (full-doc replace in `applyEdit` —
+                    // `src/lib/local/write.ts:106`), defeating
+                    // simulateLazyHydration's Dexie-flag-only dedup gate and
+                    // letting the second call re-fan-out. Production does NOT
+                    // re-fan-out in that scenario because `fanoutStartedRef`
+                    // survives Dexie row mutations. See FINDINGS.md.
+                    if (calls > 1) continue
                     const cs = await simulateLazyHydration(action.setlistId, action.trackIds)
                     if (cs.length > 0) {
                         lazyHydratedSetlists.add(action.setlistId)
@@ -2004,6 +2017,27 @@ describe('v50-07-04: kitchen-sink under random failure mix', () => {
                 trackIds: ['ks-t1', 'ks-t2', 'ks-t3'],
             },
             { kind: 'tick', ms: 1000 },
+        ])
+    }, 30_000)
+
+    // Deterministic regression — ac1-lazy-hydration-characterization
+    // 2026-05-26. AC-1 fast-check shrunk repeatedly to this shape (seed
+    // -823001267 + others, ~2/2000 runs at LF=1): an intervening
+    // `edit-set setlists/S` between two `lazy-hydrate S` calls wipes the
+    // local Dexie `hydrated:true` flag (full-doc replace in `applyEdit` —
+    // `src/lib/local/write.ts:106`). Pre-fix, the second `lazy-hydrate`
+    // re-fans-out + commits a duplicate `hydrated:true` update, blowing the
+    // idempotency invariant. Post-fix, `runKitchenSink`'s in-memory
+    // `lazyHydrateCalls` counter short-circuits the second call (mirroring
+    // production `SetlistGridHydrator.fanoutStartedRef`). Locks the fix in
+    // independently of fast-check seed luck.
+    it('lazy-hydration idempotency survives an intervening edit-set on the setlist row', async () => {
+        await runKitchenSink([
+            { kind: 'lazy-hydrate', setlistId: 'ks-s2', trackIds: ['ks-t1'] },
+            { kind: 'edit-set', collection: 'setlists', docId: 'ks-s2', payload: { v: 0 } },
+            { kind: 'edit-set', collection: 'tracks', docId: 'ks-t1', payload: { v: 0 } },
+            { kind: 'tick', ms: 0 },
+            { kind: 'lazy-hydrate', setlistId: 'ks-s2', trackIds: ['ks-t1'] },
         ])
     }, 30_000)
 
