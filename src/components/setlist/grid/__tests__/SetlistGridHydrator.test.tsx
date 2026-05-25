@@ -9,6 +9,10 @@ import type {
     LocalSetlist,
     LocalTrack,
 } from '@/lib/local/types'
+import {
+    loadAdjusted,
+    loadAdjustedDelay,
+} from '@/test-utils/load-adjusted-timing'
 
 type ApplyEditSpyArgs = [
     edit: EditDescriptor,
@@ -388,8 +392,10 @@ describe('SetlistGridHydrator', () => {
             />,
         )
 
-        // Drain microtasks; ensure no additional calls landed.
-        await new Promise((r) => setTimeout(r, 20))
+        // Drain microtasks; ensure no additional calls landed. Scaled by
+        // VITEST_LOAD_FACTOR so suite-wide parallel CPU pressure can't
+        // squeeze the drain below microtask quiescence.
+        await loadAdjustedDelay(20)
         expect(applyEditSpy).toHaveBeenCalledTimes(3)
     })
 
@@ -816,6 +822,9 @@ describe('SetlistGridHydrator', () => {
             )
 
             // Reconciler is debounced 800ms; allow up to 3s for the spy to fire.
+            // Scaled by VITEST_LOAD_FACTOR so suite-wide parallel CPU pressure
+            // doesn't squeeze the (3000 - 800) ≈ 2200ms buffer below the
+            // debounce + applyEdit settlement window.
             await waitFor(
                 () => {
                     const trackCountCall = applyEditSpy.mock.calls.find(
@@ -827,7 +836,7 @@ describe('SetlistGridHydrator', () => {
                     )
                     expect(trackCountCall).toBeDefined()
                 },
-                { timeout: 3000 },
+                { timeout: loadAdjusted(3000) },
             )
         })
 
@@ -862,7 +871,10 @@ describe('SetlistGridHydrator', () => {
             )
 
             // Wait past the debounce window. No trackCount patch should fire.
-            await new Promise((resolve) => setTimeout(resolve, 1200))
+            // 1200ms vs 800ms debounce → only 400ms cushion; scaled by
+            // VITEST_LOAD_FACTOR so parallel-load timer drift can't fire the
+            // debounce later than our absence-assertion window.
+            await loadAdjustedDelay(1200)
             const trackCountCalls = applyEditSpy.mock.calls.filter(
                 ([edit]) =>
                     edit.op === 'update' &&

@@ -24,6 +24,7 @@ import {
     TransientError,
     VersionMismatchError,
 } from '../firestore-adapter'
+import { loadAdjusted } from '@/test-utils/load-adjusted-timing'
 
 // ---------- Test scaffolding ----------
 
@@ -1918,12 +1919,23 @@ describe('v50-07-04: kitchen-sink under random failure mix', () => {
                     // shape sends the engine into a runaway pump loop, fail
                     // the iteration so fast-check can shrink to the
                     // offending sequence instead of timing out the entire
-                    // test. 8s is well above the observed median of ~0.7s.
+                    // test. 8s is well above the observed median of ~0.7s
+                    // — but under suite-wide parallel CPU pressure the
+                    // budget gets squeezed on specific fast-check seeds.
+                    // Wrap the wall-clock budget in `loadAdjusted` so the
+                    // deadline scales with `VITEST_LOAD_FACTOR` (default
+                    // 1.5×; see `[[feedback_parallel_load_flake_baseline]]`).
+                    const ITER_TIMEOUT_MS = loadAdjusted(8_000)
                     let timer: ReturnType<typeof setTimeout> | undefined
                     const timeout = new Promise<void>((_, reject) => {
                         timer = setTimeout(
-                            () => reject(new Error('iteration > 8s — runaway')),
-                            8_000,
+                            () =>
+                                reject(
+                                    new Error(
+                                        `iteration > ${ITER_TIMEOUT_MS}ms — runaway`,
+                                    ),
+                                ),
+                            ITER_TIMEOUT_MS,
                         )
                     })
                     try {

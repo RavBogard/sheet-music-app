@@ -1,6 +1,12 @@
 import { describe, it, expect, afterEach } from "vitest"
 import { X32MockServer } from "./x32-mock-server"
 import { X32Client } from "../x32-client"
+// Relative cross-tree import: bridge tsc compiles only `bridge/src/**` non-test
+// files today (verified via `npx tsc --listFiles` — `__tests__/` is not in the
+// compiled set); vitest at runtime resolves the path fine. Kept RELATIVE
+// (not `@/test-utils/...`) so a future bridge-tsc-includes-tests regression
+// doesn't break on the missing alias in bridge/tsconfig.json.
+import { loadAdjustedDelay } from "../../../src/test-utils/load-adjusted-timing"
 
 /**
  * R1 — read-of-own-write reproduction (Monitor Overhaul P0-B1).
@@ -18,10 +24,6 @@ import { X32Client } from "../x32-client"
  * whose reply refreshes the cache. This test now asserts the FIXED behavior —
  * the bridge's own write is confirmed from the desk. R1 is closed.
  */
-
-function delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms))
-}
 
 describe("X32 read-of-own-write (R1): a bridge-issued SET now confirms itself", () => {
     let mock: X32MockServer
@@ -52,7 +54,12 @@ describe("X32 read-of-own-write (R1): a bridge-issued SET now confirms itself", 
         // but does NOT echo it back to the sender (R1). Phase-1 C2: the SET
         // schedules a debounced GET (~75ms) whose reply refreshes the cache.
         client.setBusFader(bus, target)
-        await delay(120) // > CONFIRM_DEBOUNCE_MS + the loopback round-trip
+        // > CONFIRM_DEBOUNCE_MS (~75ms) + the loopback round-trip. 120 ms's
+        // 45 ms slack is the tightest margin in the flake population; scale
+        // it by VITEST_LOAD_FACTOR (default 1.5×; see
+        // `[[feedback_parallel_load_flake_baseline]]`) so suite-wide UDP
+        // socket + event-loop contention can't squeeze it.
+        await loadAdjustedDelay(120)
 
         const afterCache = client.buses.find((b) => b.index === bus)!.fader
 
