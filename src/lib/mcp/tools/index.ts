@@ -75,6 +75,11 @@ import {
     bridgeRestart,
 } from "./bridge-recovery"
 import {
+    bridgeClearAcks,
+    bridgeClearPendingCommands,
+    bridgeGetLog,
+} from "./bridge-housekeeping"
+import {
     uploadChart,
     scrapeChartFromUrl,
     saveScrapedChart,
@@ -2249,6 +2254,41 @@ export function registerMonitorTools(server: McpServer): void {
         },
         async (_args, extra) =>
             jsonResult(await bridgeRestart(uidFrom(extra))),
+    )
+
+    // FINDINGS §4 Lane #7 — bridge housekeeping. Three admin-only ops on the
+    // bridge's transient Firestore surface (ack receipts, pending-command queue,
+    // ring-buffer log). Cleanup + remote forensics without firing Firebase MCP.
+    server.registerTool(
+        "bridge_clear_acks",
+        {
+            description:
+                "Sweep the monitor-live/commands/acks subcollection — the bridge already TTL-sweeps acks at 5-minute intervals (ack-writer.ts), but if it stalls and acks pile up, this is the manual flush. ADMIN ONLY (housekeeping op on a shared singleton). Batched-delete in pages of 250 to stay under Firestore's 500-op batch cap. Returns `{ok:true, action:'clear_acks', cleared:<n>}` — `cleared:0` means nothing was queued (no-op, idempotent).",
+            inputSchema: {},
+        },
+        async (_args, extra) =>
+            jsonResult(await bridgeClearAcks(uidFrom(extra))),
+    )
+
+    server.registerTool(
+        "bridge_clear_pending_commands",
+        {
+            description:
+                "Sweep the monitor-live/commands/pending subcollection — the manual-flush complement to the bridge's automatic STANDBY drop (bridge-standby-ack-cleanup `b5583eb90`). Use when the queue wedged with nobody to drain it (active bridge crashed mid-burst OR writes landed while no bridge was alive). Each deleted pending doc loses its chance to apply to the X32 — there is NO compensating ack-write here (use sparingly; usually bridge_resync recovers first). ADMIN ONLY. Batched-delete in pages of 250. Returns `{ok:true, action:'clear_pending_commands', cleared:<n>}`.",
+            inputSchema: {},
+        },
+        async (_args, extra) =>
+            jsonResult(await bridgeClearPendingCommands(uidFrom(extra))),
+    )
+
+    server.registerTool(
+        "bridge_get_log",
+        {
+            description:
+                "Read the bridge's ring-buffer log doc (monitor-live/bridgeLog, capped at 50 entries by remote-log.ts) without a Firebase MCP round-trip — gives an admin the recent error/warn lines + running errCount + most-recent lastError in one call. ADMIN ONLY. Startup-noise (`[DEPnnnn]`, `entering STANDBY`) is filtered out of errCount/lastError by the bridge's ingest (v10.0.5 item 2) but the raw entries are preserved in the ring for forensics. Returns `{ok:true, entries:[{level,msg,ts}...], errCount, lastError, bridgeVersion}`; `entries:[]` + `errCount:0` when the doc doesn't exist yet (cold bridge, nothing logged).",
+            inputSchema: {},
+        },
+        async (_args, extra) => jsonResult(await bridgeGetLog(uidFrom(extra))),
     )
 }
 
