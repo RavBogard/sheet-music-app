@@ -146,6 +146,67 @@ export function pickLocalIp(
     return candidates[0].address
 }
 
+/**
+ * Sibling of `pickLocalIp`. Returns ALL physical-LAN IPv4 interfaces
+ * that the bridge may broadcast on, sorted by tier (real Ethernet >
+ * WiFi > other-physical). Virtual adapters (Hyper-V, WSL, Docker,
+ * VirtualBox, VMware, VPN tunnels, Tailscale/ZeroTier, named Microsoft
+ * Loopback Adapter) and internal-flagged loopback are excluded —
+ * broadcasting `/xinfo` onto a Hyper-V virtual subnet can't reach the
+ * X32 sitting on the real LAN (and wastes a UDP send on a synthetic
+ * subnet that may sometimes echo discovery packets back to confuse the
+ * caller).
+ *
+ * Closes the cousin-finding flagged in lane `bridge-getLocalIp-virtual-adapter-test`
+ * SHIP-NOTICE `7ead263d5` §"Open follow-ups": x32-client.ts L842
+ * discovery-broadcast iteration used the same naive `os.networkInterfaces()`
+ * shape that the tray-IP lane just fixed for `pickLocalIp`.
+ *
+ * Interfaces missing a `netmask` are skipped defensively — broadcast
+ * address `ip | ~netmask` is undefined without one. Real `os.networkInterfaces()`
+ * always supplies a netmask; the type marks it optional so this guard
+ * makes the return type concretely usable by callers that compute
+ * subnet broadcasts.
+ *
+ * @param networkInterfaces inject `os.networkInterfaces` here; tests
+ *                          pass a synthetic record, production passes
+ *                          `() => os.networkInterfaces()`.
+ */
+export interface BroadcastableInterface {
+    name: string
+    address: string
+    netmask: string
+}
+
+export function pickBroadcastableInterfaces(
+    networkInterfaces: () => NetworkInterfacesLike
+): BroadcastableInterface[] {
+    const interfaces = networkInterfaces()
+    const candidates: BroadcastableInterface[] = []
+
+    for (const [name, addrs] of Object.entries(interfaces)) {
+        for (const iface of addrs || []) {
+            if (!isIPv4(iface) || iface.internal) continue
+            if (nameMatches(name, VIRTUAL_NAME_PATTERNS)) continue
+            if (!iface.netmask) continue   // can't compute subnet broadcast without one
+            candidates.push({ name, address: iface.address, netmask: iface.netmask })
+        }
+    }
+
+    // Tier: Ethernet (0) > WiFi (1) > other-physical (2).
+    // Array.prototype.sort is stable in V8 >= 7.0 (Node 11+), so
+    // within-tier order preserves Object.entries iteration order — same
+    // determinism contract pickLocalIp relies on for multi-Ethernet boxes.
+    const tier = (name: string): number => {
+        if (nameMatches(name, ETHERNET_NAME_PATTERNS)) return 0
+        if (nameMatches(name, WIFI_NAME_PATTERNS)) return 1
+        return 2
+    }
+    candidates.sort((a, b) => tier(a.name) - tier(b.name))
+
+    return candidates
+}
+
 // Re-exports for direct unit tests on the predicate sets.
 export const __TEST_ONLY__ = {
     VIRTUAL_NAME_PATTERNS,

@@ -13,6 +13,7 @@
 import * as dgram from "dgram"
 import { EventEmitter } from "events"
 import { ChannelInfo, BusInfo, MatrixInfo } from "./types"
+import { pickBroadcastableInterfaces } from "./get-local-ip"
 
 // OSC message encoding/decoding helpers
 function padTo4(len: number): number {
@@ -836,21 +837,24 @@ export class X32Client extends EventEmitter {
                 const xinfoMsg = buildOSCMessage("/xinfo", [])
                 // Broadcast to 255.255.255.255 — works on most LAN configs
                 sock.send(xinfoMsg, 0, xinfoMsg.length, port, "255.255.255.255")
-                // Also try common subnet broadcasts
+                // Also try common subnet broadcasts on PHYSICAL adapters only.
+                // pickBroadcastableInterfaces() filters out Hyper-V vEthernet,
+                // WSL, Docker, VirtualBox/VMware host-only, VPN tunnels, and
+                // named Microsoft Loopback — the same virtual-adapter shapes
+                // `pickLocalIp` rejected for tray-IP display (lane
+                // `bridge-getLocalIp-virtual-adapter-test`, shipped 7ead263d5).
+                // Broadcasting `/xinfo` on a Hyper-V or WSL synthetic subnet
+                // can't reach the X32 on the real LAN; this prunes those.
                 try {
                     const os = require("os")
-                    const ifaces = os.networkInterfaces()
-                    for (const name of Object.keys(ifaces)) {
-                        for (const iface of ifaces[name]) {
-                            if (iface.family === "IPv4" && !iface.internal) {
-                                // Calculate broadcast: IP | ~netmask
-                                const ipParts = iface.address.split(".").map(Number)
-                                const maskParts = iface.netmask.split(".").map(Number)
-                                const broadcast = ipParts.map((p: number, i: number) => p | (~maskParts[i] & 255)).join(".")
-                                if (broadcast !== "255.255.255.255") {
-                                    sock.send(xinfoMsg, 0, xinfoMsg.length, port, broadcast)
-                                }
-                            }
+                    const targets = pickBroadcastableInterfaces(() => os.networkInterfaces())
+                    for (const { address, netmask } of targets) {
+                        // Calculate broadcast: IP | ~netmask
+                        const ipParts = address.split(".").map(Number)
+                        const maskParts = netmask.split(".").map(Number)
+                        const broadcast = ipParts.map((p: number, i: number) => p | (~maskParts[i] & 255)).join(".")
+                        if (broadcast !== "255.255.255.255") {
+                            sock.send(xinfoMsg, 0, xinfoMsg.length, port, broadcast)
                         }
                     }
                 } catch {
