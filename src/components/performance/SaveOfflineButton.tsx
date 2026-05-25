@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { prefetchSetlistPDFs } from "@/lib/prefetch"
 import { listFileIds } from "@/lib/offline-idb"
 import { logger } from "@/lib/logger"
+import { PERFORM_PRECACHE_DONE_EVENT } from "@/hooks/use-perform-entry-precache"
 
 interface Props {
     /** Song-track fileIds for this setlist (cacheable charts). */
@@ -145,6 +146,26 @@ export function SaveOfflineButton({ fileIds }: Props) {
             if (fallback !== null) clearTimeout(fallback)
         }
     }, [sig, total, cacheable, recount])
+
+    // F1 (perform-entry-precache): the `usePerformEntryPrecache` hook in
+    // `SetlistPerformClient` fires `prefetchSetlistPDFs` via `queueMicrotask`
+    // on overlay mount — earlier than this component's own rIC fallback.
+    // When that pass settles it dispatches `PERFORM_PRECACHE_DONE_EVENT`
+    // on the window; we recount here so `data-state` can flip from `"idle"`
+    // to `"saved"` without waiting for our rIC schedule to land
+    // (closes `e2e/perform-ipad-offline.spec.ts:218` probe 1 reliance on
+    // rIC firing on a fresh install).
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        const handler = () => {
+            // Best-effort; recount catches its own errors.
+            void recount()
+        }
+        window.addEventListener(PERFORM_PRECACHE_DONE_EVENT, handler)
+        return () => {
+            window.removeEventListener(PERFORM_PRECACHE_DONE_EVENT, handler)
+        }
+    }, [recount])
 
     // Explicit force-cache with live progress.
     const saveOffline = useCallback(async () => {

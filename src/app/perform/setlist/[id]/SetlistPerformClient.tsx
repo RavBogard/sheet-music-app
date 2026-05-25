@@ -26,6 +26,7 @@ import Link from "next/link"
 import { Loader2, ArrowLeft, Music, Users, Pencil, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
+import { usePerformEntryPrecache } from "@/hooks/use-perform-entry-precache"
 import { useAuth } from "@/lib/auth-context"
 import { useLibrary } from "@/hooks/use-library"
 import { SetlistView } from "@/components/performance/SetlistView"
@@ -100,6 +101,16 @@ export function SetlistPerformClient({
     const songFileIds = tracks
         .filter(t => (!t.type || t.type === "song") && t.fileId)
         .map(t => t.fileId as string)
+
+    // F1 (perform-entry-precache): warm Dexie with every bonded chart the
+    // moment the overlay mounts — `requestIdleCallback` (the SaveOfflineButton
+    // path) only fires on browser idle, which leaves a window where a band
+    // member on weak shul WiFi can lose connectivity before the rIC pass
+    // ever runs. This hook fires via `queueMicrotask`, deferred only past
+    // the current render tick, idempotent with the rIC + explicit-tap paths
+    // via `prefetchSetlistPDFs`'s `hasFile` short-circuit. Best-effort;
+    // failures are swallowed.
+    usePerformEntryPrecache(songFileIds)
 
     // Song count for header
     const songCount = tracks.filter((t) => !t.type || t.type === "song").length

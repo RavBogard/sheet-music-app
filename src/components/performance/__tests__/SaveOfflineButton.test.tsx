@@ -24,6 +24,7 @@ vi.mock('@/lib/offline-idb', () => ({
 }))
 
 import { SaveOfflineButton } from '@/components/performance/SaveOfflineButton'
+import { PERFORM_PRECACHE_DONE_EVENT } from '@/hooks/use-perform-entry-precache'
 
 /** requestIdleCallback that runs its callback synchronously (idle path = immediate). */
 function stubSyncIdle() {
@@ -124,6 +125,36 @@ describe('SaveOfflineButton', () => {
         await waitFor(() => expect(btn().getAttribute('data-state')).toBe('saved'))
         expect(btn().textContent).toContain('Saved')
         expect((btn() as HTMLButtonElement).disabled).toBe(false)
+    })
+
+    /**
+     * F1 (perform-entry-precache) — recount on `crc-perform-precache-done`.
+     *
+     * `usePerformEntryPrecache` (in `SetlistPerformClient`) fires the
+     * Dexie warm-up via `queueMicrotask` and dispatches this event when
+     * it settles. SaveOfflineButton must recount immediately so the
+     * `data-state` can flip from `"idle"` to `"saved"` on a fresh
+     * install without waiting for its own rIC schedule to fire
+     * (closes `e2e/perform-ipad-offline.spec.ts:218` probe 1).
+     */
+    it('recounts and flips data-state to "saved" when crc-perform-precache-done fires', async () => {
+        stubNoopIdle() // isolate the entry-precache → recount path
+        // First read = nothing cached; after entry-precache settles, recount
+        // sees both ids in IDB → readyCount === total → data-state "saved".
+        let cached: string[] = []
+        mockListFileIds.mockImplementation(async () => cached)
+
+        render(<SaveOfflineButton fileIds={['upload-1', 'upload-2']} />)
+        const btn = () => screen.getByTestId('save-offline')
+        await waitFor(() => expect(btn().getAttribute('data-state')).toBe('idle'))
+
+        // Simulate the entry-precache finishing in SetlistPerformClient.
+        cached = ['upload-1', 'upload-2']
+        await act(async () => {
+            window.dispatchEvent(new Event(PERFORM_PRECACHE_DONE_EVENT))
+        })
+        await waitFor(() => expect(btn().getAttribute('data-state')).toBe('saved'))
+        expect(btn().textContent).toContain('Saved')
     })
 
     it('shows the partial (amber) state when some but not all charts are cached', async () => {
