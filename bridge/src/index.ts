@@ -26,6 +26,7 @@ import { ConfigManager } from "./config"
 import { FirestoreTransport } from "./firestore-transport"
 import { RemoteLogger } from "./remote-log"
 import { BridgeControlDispatcher, collectDiagnostics } from "./bridge-control"
+import { pickLocalIp } from "./get-local-ip"
 import type { BridgeControl, MonitorConfig } from "./types"
 
 /**
@@ -70,27 +71,13 @@ const SELFTEST_CADENCE_MS = 10 * 60_000
 
 /**
  * Detect this machine's LAN IP address.
- * Picks the first non-internal IPv4 address, preferring Ethernet over Wi-Fi.
+ *
+ * Real impl lives in `./get-local-ip` (testable; rejects Hyper-V / WSL /
+ * Docker / VirtualBox / VMware virtual adapters per coder-6 FINDINGS
+ * TOP-10 #10). This wrapper just binds it to the live `os.networkInterfaces`.
  */
 function getLocalIp(): string | null {
-    const interfaces = os.networkInterfaces()
-    const candidates: { address: string; name: string }[] = []
-
-    for (const [name, addrs] of Object.entries(interfaces)) {
-        for (const iface of addrs || []) {
-            if (iface.family === "IPv4" && !iface.internal) {
-                candidates.push({ address: iface.address, name })
-            }
-        }
-    }
-
-    if (candidates.length === 0) return null
-
-    // Prefer wired (Ethernet) over wireless
-    const wired = candidates.find(c =>
-        /ethernet|eth\d|en\d/i.test(c.name)
-    )
-    return wired?.address || candidates[0].address
+    return pickLocalIp(() => os.networkInterfaces())
 }
 
 async function main() {
