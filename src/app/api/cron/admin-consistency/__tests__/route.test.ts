@@ -23,6 +23,14 @@ let libraryIndexReadThrows = false
 let healthBootstrapDoc: Record<string, unknown> | null = null
 let healthBootstrapExists = false
 const healthBootstrapWrites: Array<{ payload: Record<string, unknown>; merge: boolean }> = []
+// Bridge-health fixtures — `config/monitor.bridge` heartbeat surface +
+// `monitor-live/bridgeLog` (authoritative errCount source) + the
+// `config/bridgeHealth` snapshot doc that carries cross-run delta state.
+let bridgeMonitorBridgeField: Record<string, unknown> | null = null
+let bridgeMonitorReadThrows = false
+let bridgeLogDoc: Record<string, unknown> | null = null
+let bridgeHealthSnapshot: Record<string, unknown> | null = null
+const bridgeHealthWrites: Array<{ payload: Record<string, unknown>; merge: boolean }> = []
 
 const mockFirestore = {
     collection: vi.fn((name: string) => {
@@ -48,6 +56,24 @@ const mockFirestore = {
                                 data: () => healthBootstrapDoc ?? undefined,
                             }
                         }
+                        if (id === "monitor") {
+                            if (bridgeMonitorReadThrows) {
+                                throw new Error("firestore read transient failure")
+                            }
+                            return {
+                                exists: bridgeMonitorBridgeField != null,
+                                data: () =>
+                                    bridgeMonitorBridgeField != null
+                                        ? { bridge: bridgeMonitorBridgeField }
+                                        : undefined,
+                            }
+                        }
+                        if (id === "bridgeHealth") {
+                            return {
+                                exists: bridgeHealthSnapshot != null,
+                                data: () => bridgeHealthSnapshot ?? undefined,
+                            }
+                        }
                         return { data: () => undefined }
                     },
                     set: async (
@@ -67,6 +93,34 @@ const mockFirestore = {
                                 ...payload,
                             }
                         }
+                        if (id === "bridgeHealth") {
+                            bridgeHealthWrites.push({
+                                payload,
+                                merge: !!options?.merge,
+                            })
+                            // mirror — subsequent reads in the same tick (and
+                            // across consecutive route invocations within one
+                            // test) see the persisted snapshot
+                            bridgeHealthSnapshot = {
+                                ...(bridgeHealthSnapshot ?? {}),
+                                ...payload,
+                            }
+                        }
+                    },
+                }),
+            }
+        }
+        if (name === "monitor-live") {
+            return {
+                doc: (id: string) => ({
+                    get: async () => {
+                        if (id === "bridgeLog") {
+                            return {
+                                exists: bridgeLogDoc != null,
+                                data: () => bridgeLogDoc ?? undefined,
+                            }
+                        }
+                        return { exists: false, data: () => undefined }
                     },
                 }),
             }
@@ -176,6 +230,11 @@ beforeEach(() => {
     healthBootstrapDoc = null
     healthBootstrapExists = false
     healthBootstrapWrites.length = 0
+    bridgeMonitorBridgeField = null
+    bridgeMonitorReadThrows = false
+    bridgeLogDoc = null
+    bridgeHealthSnapshot = null
+    bridgeHealthWrites.length = 0
 })
 
 describe("GET /api/cron/admin-consistency — auth", () => {
@@ -709,5 +768,264 @@ describe("PGR-03 — dormant fresh tick is intentionally silent", () => {
             /storage backup/i.test(String(c[0])),
         )
         expect(storageBackupCalls).toHaveLength(0)
+    })
+})
+
+// ── Bridge-health alarms (added 2026-05-25 — closes bridge-analysis ──────────
+// FINDINGS TOP-10 #1+#8). Three independent Sentry warnings:
+//   - errCount delta > 5 per run
+//   - lastSeen > 3 minutes
+//   - x32Connected==false sustained > 5 minutes
+// Snapshot doc `config/bridgeHealth` carries cross-run delta state.
+
+const MIN = 60 * 1000
+
+const healthyBridge = (overrides: Record<string, unknown> = {}) => ({
+    lastSeen: new Date(NOW - 30 * 1000),
+    status: "online",
+    x32Connected: true,
+    errCount: 0,
+    ...overrides,
+})
+
+describe("bridge-health — status:'unavailable' fail-open", () => {
+    it("reports unavailable when config/monitor has no `bridge` field (bridge has never heartbeat'd)", async () => {
+        bridgeMonitorBridgeField = null
+        const res = await GET(
+            makeReq("/api/cron/admin-consistency", { token: SECRET }),
+        )
+        expect(res.status).toBe(200)
+        const json = (await res.json()) as {
+            bridgeHealth: { status: string }
+        }
+        expect(json.bridgeHealth.status).toBe("unavailable")
+        // No bridge-health Sentry call without a baseline to alarm against.
+        const bridgeCall = captureMessageMock.mock.calls.find((c) =>
+            /\bbridge\b/i.test(String(c[0])),
+        )
+        expect(bridgeCall).toBeFalsy()
+        // And no snapshot is written when there's nothing to snapshot.
+        expect(bridgeHealthWrites).toHaveLength(0)
+    })
+
+    it("reports unavailable when the config/monitor read throws", async () => {
+        bridgeMonitorReadThrows = true
+        const res = await GET(
+            makeReq("/api/cron/admin-consistency", { token: SECRET }),
+        )
+        expect(res.status).toBe(200)
+        const json = (await res.json()) as {
+            bridgeHealth: { status: string }
+        }
+        expect(json.bridgeHealth.status).toBe("unavailable")
+        const bridgeCall = captureMessageMock.mock.calls.find((c) =>
+            /\bbridge\b/i.test(String(c[0])),
+        )
+        expect(bridgeCall).toBeFalsy()
+    })
+})
+
+describe("bridge-health — healthy path is silent", () => {
+    it("fires NO Sentry calls when heartbeat is fresh + x32Connected + errCount stable", async () => {
+        bridgeMonitorBridgeField = healthyBridge()
+        bridgeLogDoc = { errCount: 12, lastError: null }
+        bridgeHealthSnapshot = {
+            errCount: 12, // delta = 0
+            x32DisconnectedSince: null,
+        }
+        const res = await GET(
+            makeReq("/api/cron/admin-consistency", { token: SECRET }),
+        )
+        expect(res.status).toBe(200)
+        const json = (await res.json()) as {
+            bridgeHealth: {
+                status: string
+                lastSeen: string | null
+                stalenessSeconds: number
+                errCount: number
+                errCountDelta: number
+                x32Connected: boolean
+                x32DisconnectedSeconds: number | null
+            }
+        }
+        expect(json.bridgeHealth.status).toBe("ok")
+        expect(json.bridgeHealth.x32Connected).toBe(true)
+        expect(json.bridgeHealth.errCount).toBe(12)
+        expect(json.bridgeHealth.errCountDelta).toBe(0)
+        expect(json.bridgeHealth.x32DisconnectedSeconds).toBeNull()
+        expect(json.bridgeHealth.stalenessSeconds).toBeLessThan(180)
+        const bridgeCall = captureMessageMock.mock.calls.find((c) =>
+            /\bbridge\b|x32 disconnect/i.test(String(c[0])),
+        )
+        expect(bridgeCall).toBeFalsy()
+        // Snapshot is merge-written every tick (idempotency requires it).
+        expect(bridgeHealthWrites).toHaveLength(1)
+        expect(bridgeHealthWrites[0].merge).toBe(true)
+        expect(bridgeHealthWrites[0].payload.errCount).toBe(12)
+        expect(bridgeHealthWrites[0].payload.x32DisconnectedSince).toBeNull()
+    })
+})
+
+describe("bridge-health — errCount spike alarm (delta > 5/run)", () => {
+    it("captures a 'warning' when errCount delta exceeds 5 between snapshots", async () => {
+        bridgeMonitorBridgeField = healthyBridge()
+        // Previous run saw errCount=10; this run sees errCount=20 → delta=10.
+        bridgeLogDoc = { errCount: 20, lastError: { msg: "OSC timeout", ts: NOW - 10_000 } }
+        bridgeHealthSnapshot = { errCount: 10, x32DisconnectedSince: null }
+
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const spikeCall = captureMessageMock.mock.calls.find((c) =>
+            /errCount spike/i.test(String(c[0])),
+        )
+        expect(spikeCall).toBeTruthy()
+        const [msg, ctx, level] = spikeCall!
+        expect(msg).toMatch(/\+10 new errors/i)
+        expect(ctx).toMatchObject({
+            source: "cron",
+            location: "admin-consistency",
+        })
+        expect(ctx.extra.subsystem).toBe("bridge-health")
+        expect(ctx.extra.errCountDelta).toBe(10)
+        expect(ctx.extra.errCount).toBe(20)
+        expect(ctx.extra.prevErrCount).toBe(10)
+        expect(ctx.extra.lastError).toMatchObject({ msg: "OSC timeout" })
+        expect(level).toBe("warning")
+        // Snapshot now reflects the new errCount for the NEXT delta.
+        expect(bridgeHealthWrites).toHaveLength(1)
+        expect(bridgeHealthWrites[0].payload.errCount).toBe(20)
+    })
+
+    it("does NOT alarm when errCount delta is below threshold (delta=5 is exact, not >)", async () => {
+        bridgeMonitorBridgeField = healthyBridge()
+        bridgeLogDoc = { errCount: 15 }
+        bridgeHealthSnapshot = { errCount: 10, x32DisconnectedSince: null } // delta=5 → no alarm
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const spikeCall = captureMessageMock.mock.calls.find((c) =>
+            /errCount spike/i.test(String(c[0])),
+        )
+        expect(spikeCall).toBeFalsy()
+    })
+
+    it("does NOT alarm on a bridge restart (current errCount < prev → delta clamped to 0)", async () => {
+        // The bridge resetting in-memory counters is not a spike. Math.max(0, ...).
+        bridgeMonitorBridgeField = healthyBridge()
+        bridgeLogDoc = { errCount: 2 }
+        bridgeHealthSnapshot = { errCount: 100, x32DisconnectedSince: null }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const spikeCall = captureMessageMock.mock.calls.find((c) =>
+            /errCount spike/i.test(String(c[0])),
+        )
+        expect(spikeCall).toBeFalsy()
+        // Snapshot still tracks the new errCount so the NEXT delta is correct.
+        expect(bridgeHealthWrites[0].payload.errCount).toBe(2)
+    })
+})
+
+describe("bridge-health — lastSeen staleness alarm (> 3 min)", () => {
+    it("captures a 'warning' when lastSeen is > 3 minutes ago (bridge silent)", async () => {
+        bridgeMonitorBridgeField = healthyBridge({
+            lastSeen: new Date(NOW - 5 * MIN),
+        })
+        bridgeLogDoc = { errCount: 0 }
+        bridgeHealthSnapshot = { errCount: 0, x32DisconnectedSince: null }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const silentCall = captureMessageMock.mock.calls.find((c) =>
+            /bridge silent/i.test(String(c[0])),
+        )
+        expect(silentCall).toBeTruthy()
+        const [, ctx, level] = silentCall!
+        expect(ctx.extra.subsystem).toBe("bridge-health")
+        expect(ctx.extra.stalenessSeconds).toBeGreaterThanOrEqual(5 * 60)
+        expect(ctx.extra.lastSeen).toBe(new Date(NOW - 5 * MIN).toISOString())
+        expect(level).toBe("warning")
+    })
+
+    it("does NOT alarm when lastSeen is fresh (< 3 minutes)", async () => {
+        bridgeMonitorBridgeField = healthyBridge({
+            lastSeen: new Date(NOW - 90 * 1000),
+        })
+        bridgeLogDoc = { errCount: 0 }
+        bridgeHealthSnapshot = { errCount: 0, x32DisconnectedSince: null }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const silentCall = captureMessageMock.mock.calls.find((c) =>
+            /bridge silent/i.test(String(c[0])),
+        )
+        expect(silentCall).toBeFalsy()
+    })
+})
+
+describe("bridge-health — X32 sustained-disconnect alarm (> 5 min)", () => {
+    it("captures a 'warning' when x32Connected==false has been sustained > 5 min", async () => {
+        bridgeMonitorBridgeField = healthyBridge({ x32Connected: false })
+        bridgeLogDoc = { errCount: 0 }
+        bridgeHealthSnapshot = {
+            errCount: 0,
+            // Disconnect started 6 minutes ago → sustained.
+            x32DisconnectedSince: new Date(NOW - 6 * MIN),
+        }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const x32Call = captureMessageMock.mock.calls.find((c) =>
+            /X32 disconnected/i.test(String(c[0])),
+        )
+        expect(x32Call).toBeTruthy()
+        const [, ctx, level] = x32Call!
+        expect(ctx.extra.subsystem).toBe("bridge-health")
+        expect(ctx.extra.x32DisconnectedSeconds).toBeGreaterThanOrEqual(6 * 60)
+        expect(level).toBe("warning")
+        // Snapshot preserves the original disconnect timestamp (does NOT reset).
+        expect(bridgeHealthWrites[0].payload.x32DisconnectedSince).toEqual(
+            new Date(NOW - 6 * MIN),
+        )
+    })
+
+    it("does NOT alarm on the FIRST observation of x32Connected==false (no prev snapshot — just disconnected)", async () => {
+        bridgeMonitorBridgeField = healthyBridge({ x32Connected: false })
+        bridgeLogDoc = { errCount: 0 }
+        bridgeHealthSnapshot = null // first ever tick — no prior disconnect window
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const x32Call = captureMessageMock.mock.calls.find((c) =>
+            /X32 disconnected/i.test(String(c[0])),
+        )
+        expect(x32Call).toBeFalsy()
+        // Snapshot STARTS the disconnect window so the NEXT run can age it.
+        expect(bridgeHealthWrites[0].payload.x32DisconnectedSince).toEqual(
+            new Date(NOW),
+        )
+    })
+
+    it("clears x32DisconnectedSince when the desk reconnects", async () => {
+        bridgeMonitorBridgeField = healthyBridge({ x32Connected: true })
+        bridgeLogDoc = { errCount: 0 }
+        // Prior run saw a disconnect window; now reconnected.
+        bridgeHealthSnapshot = {
+            errCount: 0,
+            x32DisconnectedSince: new Date(NOW - 4 * MIN),
+        }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const x32Call = captureMessageMock.mock.calls.find((c) =>
+            /X32 disconnected/i.test(String(c[0])),
+        )
+        expect(x32Call).toBeFalsy()
+        expect(bridgeHealthWrites[0].payload.x32DisconnectedSince).toBeNull()
+    })
+})
+
+describe("bridge-health — co-fire with PGR-03 + PGR-04 on a really bad day", () => {
+    it("all three alarms can fire in the same tick (errCount spike + stale heartbeat + sustained X32 disconnect)", async () => {
+        bridgeMonitorBridgeField = healthyBridge({
+            lastSeen: new Date(NOW - 10 * MIN),
+            x32Connected: false,
+            errCount: 30,
+        })
+        bridgeLogDoc = { errCount: 30 }
+        bridgeHealthSnapshot = {
+            errCount: 10, // delta=20 → spike
+            x32DisconnectedSince: new Date(NOW - 10 * MIN), // sustained
+        }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+        const subjects = captureMessageMock.mock.calls.map((c) => String(c[0]))
+        expect(subjects.some((s) => /errCount spike/i.test(s))).toBe(true)
+        expect(subjects.some((s) => /bridge silent/i.test(s))).toBe(true)
+        expect(subjects.some((s) => /X32 disconnected/i.test(s))).toBe(true)
     })
 })

@@ -20,6 +20,20 @@ import {
 } from "@/lib/library/bytes-health"
 
 /**
+ * Bridge-health alarm tuning (added 2026-05-25 — closes
+ * `.paul/research/bridge-analysis/FINDINGS.md` TOP-10 #1+#8). All thresholds
+ * are sized off the bridge's actual write cadence:
+ *   - 60s heartbeat → 3min lastSeen = 3 missed heartbeats (real silence).
+ *   - 5s remote-log debounce → 5/run errCount delta is the smallest spike
+ *     above ambient noise.
+ *   - 5min X32 disconnect = past the desk's transient reconnect window
+ *     (anything shorter would page on every brief loopback hiccup).
+ */
+const BRIDGE_LASTSEEN_STALENESS_MS = 3 * 60 * 1000
+const BRIDGE_X32_DISCONNECT_ALARM_MS = 5 * 60 * 1000
+const BRIDGE_ERRCOUNT_DELTA_THRESHOLD = 5
+
+/**
  * v4.3 C02 — Admin-role consistency check + PGR-03 storage-backup staleness alarm.
  *
  * firestore.rules grants admin access via EITHER a custom claim
@@ -55,7 +69,45 @@ import {
  * if any are missing. The two PGR-04 alarm levels (warning at <5% of
  * sample, error at ≥5%) are independent from PGR-03; all three
  * Sentry messages may co-fire on a really bad day.
+ *
+ * Bridge-health (added 2026-05-25) folds a `bridgeHealth` check into
+ * the same response, closing bridge-analysis FINDINGS TOP-10 #1+#8.
+ * The bridge silently going dark on a Friday night used to be
+ * invisible until Daniel noticed; this section adds three independent
+ * Sentry alarms — errCount delta > 5/run, lastSeen stale > 3min,
+ * x32Connected==false sustained > 5min — patterned on PGR-03. Delta
+ * tracking lives at `config/bridgeHealth` (merge-write each run). The
+ * `monitor-live/bridgeLog.errCount` doc is the authoritative source
+ * for delta computation; `config/monitor.bridge.{lastSeen,x32Connected}`
+ * carries the heartbeat fields. Memory
+ * `[[project_bridge_state_freshness_diagnostic]]` — a fresh heartbeat
+ * does NOT mean writes land; that's the OBSERVABILITY layer monitor-
+ * live-probe owns. This lane is the silence/error-spike SAFETY NET.
  */
+
+/** Tolerant Firestore timestamp → ms parser; null-on-unparseable. */
+function bridgeHealthParseTimestampMs(raw: unknown): number | null {
+    if (raw == null) return null
+    if (raw instanceof Date) return raw.getTime()
+    if (typeof raw === "number") return Number.isFinite(raw) ? raw : null
+    if (typeof raw === "string") {
+        const parsed = Date.parse(raw)
+        return Number.isFinite(parsed) ? parsed : null
+    }
+    if (typeof raw === "object") {
+        const obj = raw as { toMillis?: unknown; seconds?: unknown }
+        if (typeof obj.toMillis === "function") {
+            try {
+                const ms = (obj.toMillis as () => number).call(obj)
+                return Number.isFinite(ms) ? ms : null
+            } catch {
+                return null
+            }
+        }
+        if (typeof obj.seconds === "number") return obj.seconds * 1000
+    }
+    return null
+}
 
 function safeCompare(a: string, b: string): boolean {
     if (a.length !== b.length) return false
@@ -138,11 +190,15 @@ export async function GET(req: NextRequest) {
         // PGR-04 — primary library bytes-present invariant alarm.
         const libraryBytesHealth = await readAndAlertLibraryBytesHealth(db)
 
+        // Bridge-health — silence + error-spike + X32-disconnect alarms.
+        const bridgeHealth = await readAndAlertBridgeHealth(db, Date.now())
+
         return NextResponse.json({
             checked: uids.length,
             drift,
             storageBackupHealth,
             libraryBytesHealth,
+            bridgeHealth,
         })
     } catch (err) {
         logger.error("[admin-consistency] check failed:", err)
@@ -451,4 +507,225 @@ async function readAndAlertLibraryBytesHealth(
     }
 
     return { status: "ok", ...health }
+}
+
+/**
+ * Output shape returned to the cron caller for the bridge-health section.
+ * `'unavailable'` covers BOTH "config/monitor doc missing or `bridge` field
+ * missing" and "Firestore read threw" — same fail-open posture as PGR-03/04;
+ * silence the alarm rather than amplify an outage. When `'ok'`, the six
+ * documented fields are always populated (sub-fields may be null if Firestore
+ * never wrote them yet, e.g. first heartbeat hasn't run).
+ */
+type BridgeHealthResponse =
+    | { status: "unavailable" }
+    | {
+          status: "ok"
+          lastSeen: string | null
+          stalenessSeconds: number | null
+          errCount: number
+          errCountDelta: number
+          x32Connected: boolean
+          x32DisconnectedSeconds: number | null
+      }
+
+/**
+ * Bridge-health — read `config/monitor.bridge` (heartbeat surface) +
+ * `monitor-live/bridgeLog` (authoritative errCount) + the previous
+ * `config/bridgeHealth` snapshot (for errCount delta + x32-disconnect
+ * window), emit Sentry messages on the three independent alarm conditions,
+ * then merge-write a fresh snapshot for next run.
+ *
+ *   - errCount-spike  — `delta > 5/run` (warning). 5/min run cadence × 5s
+ *                       remote-log debounce means 5 NEW errors in a single
+ *                       admin-consistency window is the smallest real spike
+ *                       above ambient.  Tune later if noisy.
+ *   - lastSeen-stale  — `> 3min` (warning). Bridge heartbeats at 60s; 3min
+ *                       = 3 consecutive missed heartbeats, the
+ *                       no-misinterpretation threshold for "bridge is
+ *                       silent". Lower than storage-backup's 36h because
+ *                       bridge silence is a live-service problem.
+ *   - x32-disconnect  — `> 5min sustained` (warning). The desk's transient
+ *                       reconnect window is sub-minute; 5min sustained
+ *                       means the X32 is genuinely disconnected and worth
+ *                       paging. State tracked via persisted
+ *                       `x32DisconnectedSince` timestamp on the snapshot
+ *                       doc, set on the FIRST disconnect observation and
+ *                       cleared whenever `x32Connected === true`.
+ *
+ * Per memory `[[project_bridge_state_freshness_diagnostic]]`, a fresh
+ * heartbeat does NOT prove writes land — that's `monitor-live/state.updatedAt`,
+ * which monitor-live-probe and other observability tools cover. This lane
+ * is the silence/error-spike safety net only.
+ *
+ * Fail-open. Either Firestore read failing OR `bridge` subfield missing
+ * surfaces as `unavailable`; the snapshot write is best-effort and a
+ * failure there is logged + swallowed (does not derail the alarm path).
+ */
+async function readAndAlertBridgeHealth(
+    db: ReturnType<typeof getFirestore>,
+    nowMs: number,
+): Promise<BridgeHealthResponse> {
+    let bridge: Record<string, unknown> | undefined
+    let log: Record<string, unknown> | undefined
+    let prevSnapshot: Record<string, unknown> | undefined
+    try {
+        const monitorDoc = await db.collection("config").doc("monitor").get()
+        if (monitorDoc.exists) {
+            const data = monitorDoc.data() as Record<string, unknown> | undefined
+            const b = data?.bridge
+            if (b && typeof b === "object") {
+                bridge = b as Record<string, unknown>
+            }
+        }
+
+        const logDoc = await db.collection("monitor-live").doc("bridgeLog").get()
+        if (logDoc.exists) {
+            log = logDoc.data() as Record<string, unknown>
+        }
+
+        const prevDoc = await db.collection("config").doc("bridgeHealth").get()
+        if (prevDoc.exists) {
+            prevSnapshot = prevDoc.data() as Record<string, unknown>
+        }
+    } catch (e) {
+        logger.warn(
+            `[admin-consistency] bridge-health read failed: ${e instanceof Error ? e.message : String(e)}`,
+        )
+        return { status: "unavailable" }
+    }
+
+    if (!bridge) {
+        // No heartbeat ever recorded (bridge has never run). Distinct from
+        // "bridge silent" — there's no baseline to silence-alarm against.
+        return { status: "unavailable" }
+    }
+
+    const lastSeenMs = bridgeHealthParseTimestampMs(bridge.lastSeen)
+    const lastSeenIso = lastSeenMs != null ? new Date(lastSeenMs).toISOString() : null
+    const stalenessSeconds =
+        lastSeenMs != null ? Math.max(0, Math.round((nowMs - lastSeenMs) / 1000)) : null
+
+    // Prefer the bridgeLog doc (authoritative; flushed direct from RemoteLogger)
+    // and fall back to the heartbeat copy if the log doc hasn't published yet.
+    const currentErrCount =
+        typeof log?.errCount === "number"
+            ? log.errCount
+            : typeof bridge.errCount === "number"
+              ? bridge.errCount
+              : 0
+    const prevErrCountRaw = prevSnapshot?.errCount
+    const prevErrCount = typeof prevErrCountRaw === "number" ? prevErrCountRaw : null
+    // Math.max(0, ...) because a bridge restart resets errCount to 0 and the
+    // resulting "negative delta" is not a spike.
+    const errCountDelta =
+        prevErrCount != null ? Math.max(0, currentErrCount - prevErrCount) : 0
+
+    const x32Connected = bridge.x32Connected === true
+    const prevX32DisconnectedSinceMs = bridgeHealthParseTimestampMs(
+        prevSnapshot?.x32DisconnectedSince,
+    )
+    let x32DisconnectedSinceMs: number | null
+    if (x32Connected) {
+        x32DisconnectedSinceMs = null
+    } else if (prevX32DisconnectedSinceMs != null) {
+        // Carry the previously-recorded disconnect start; persistence tracks the
+        // sustained window across runs (this cron runs every ~5min so a single
+        // tick is not enough to know "5min sustained").
+        x32DisconnectedSinceMs = prevX32DisconnectedSinceMs
+    } else {
+        x32DisconnectedSinceMs = nowMs
+    }
+    const x32DisconnectedSeconds =
+        x32DisconnectedSinceMs != null
+            ? Math.max(0, Math.round((nowMs - x32DisconnectedSinceMs) / 1000))
+            : null
+
+    // Alarms — all three independent; any subset may fire on a given run.
+    if (errCountDelta > BRIDGE_ERRCOUNT_DELTA_THRESHOLD) {
+        captureMessage(
+            `bridge errCount spike: +${errCountDelta} new errors since last admin-consistency tick (now ${currentErrCount})`,
+            {
+                source: "cron",
+                location: "admin-consistency",
+                extra: {
+                    subsystem: "bridge-health",
+                    errCount: currentErrCount,
+                    errCountDelta,
+                    prevErrCount,
+                    lastError: log?.lastError ?? bridge.lastError ?? null,
+                },
+            },
+            "warning",
+        )
+    }
+    if (
+        stalenessSeconds != null &&
+        stalenessSeconds * 1000 > BRIDGE_LASTSEEN_STALENESS_MS
+    ) {
+        captureMessage(
+            `bridge silent: ${(stalenessSeconds / 60).toFixed(1)}min since last heartbeat`,
+            {
+                source: "cron",
+                location: "admin-consistency",
+                extra: {
+                    subsystem: "bridge-health",
+                    lastSeen: lastSeenIso,
+                    stalenessSeconds,
+                },
+            },
+            "warning",
+        )
+    }
+    if (
+        !x32Connected &&
+        x32DisconnectedSeconds != null &&
+        x32DisconnectedSeconds * 1000 > BRIDGE_X32_DISCONNECT_ALARM_MS
+    ) {
+        captureMessage(
+            `X32 disconnected: ${(x32DisconnectedSeconds / 60).toFixed(1)}min sustained`,
+            {
+                source: "cron",
+                location: "admin-consistency",
+                extra: {
+                    subsystem: "bridge-health",
+                    x32DisconnectedSeconds,
+                },
+            },
+            "warning",
+        )
+    }
+
+    // Merge-write snapshot for next run's delta. Best-effort — a write failure
+    // here MUST NOT poison the alarm path (the alarms above have already fired).
+    try {
+        await db
+            .collection("config")
+            .doc("bridgeHealth")
+            .set(
+                {
+                    errCount: currentErrCount,
+                    x32DisconnectedSince:
+                        x32DisconnectedSinceMs != null
+                            ? new Date(x32DisconnectedSinceMs)
+                            : null,
+                    lastUpdatedAt: new Date(nowMs),
+                },
+                { merge: true },
+            )
+    } catch (e) {
+        logger.warn(
+            `[admin-consistency] bridgeHealth snapshot write failed: ${e instanceof Error ? e.message : String(e)}`,
+        )
+    }
+
+    return {
+        status: "ok",
+        lastSeen: lastSeenIso,
+        stalenessSeconds,
+        errCount: currentErrCount,
+        errCountDelta,
+        x32Connected,
+        x32DisconnectedSeconds,
+    }
 }
