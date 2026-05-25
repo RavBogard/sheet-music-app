@@ -58,6 +58,17 @@ const LEASE_TTL_MS = 90_000
 const LEASE_RENEW_MS = 20_000
 
 /**
+ * O4 (passive cadence) — periodic selftest write interval. The dispatcher's
+ * `selftest` action writes `monitor-live/selftest` on demand; this passive
+ * cadence guarantees the most recent forensic snapshot is never stale by more
+ * than this window even without an MCP dispatch. 10 min is well below the
+ * humanly-tolerable "is the bridge alive?" question window, well above the 60s
+ * heartbeat cadence + 20s lease renew so it doesn't crowd Firestore writes, and
+ * matches the bridge-analysis FINDINGS TOP-10 #4 prescription.
+ */
+const SELFTEST_CADENCE_MS = 10 * 60_000
+
+/**
  * Detect this machine's LAN IP address.
  * Picks the first non-internal IPv4 address, preferring Ethernet over Wi-Fi.
  */
@@ -324,6 +335,27 @@ async function main() {
         leaseHeld = held
     }, LEASE_RENEW_MS)
 
+    // O4 (passive cadence) — periodic selftest write so the most recent forensic
+    // snapshot at monitor-live/selftest is never older than SELFTEST_CADENCE_MS
+    // without an MCP dispatch. Mirrors the dispatcher's `selftest` action body
+    // (collectDiagnostics + ts + bridgeVersion → set monitor-live/selftest).
+    // Fail-open: a Firestore write failure logs + drops the tick; the next tick
+    // tries again. No lease gate — matches the on-demand path (both bridges
+    // in a rare two-bridge window would write; selftest is diagnostic, not
+    // user-visible state). See FINDINGS §3.4 / TOP-10 #4 / §4 Lane #4.
+    const selftestInterval = setInterval(async () => {
+        try {
+            await db.doc("monitor-live/selftest").set({
+                ...collectDiagnostics({ x32, transport, logger: remoteLogger, startedAt }),
+                ts: Date.now(),
+                bridgeVersion: process.env.BRIDGE_VERSION || "2.0.0",
+                updatedAt: adminRef.firestore.FieldValue.serverTimestamp(),
+            })
+        } catch (err) {
+            console.error("[Control] periodic selftest write failed:", (err as Error).message)
+        }
+    }, SELFTEST_CADENCE_MS)
+
     // R1 — remote control & diagnostics channel. The dispatcher rides the EXISTING
     // config listener (below): an admin writes config/monitor.bridgeControl
     // {action, nonce, ...} and the bridge dispatches by action, deduped by nonce.
@@ -404,6 +436,7 @@ async function main() {
         console.log("\n[Bridge] Shutting down...")
         clearInterval(heartbeatInterval)
         clearInterval(leaseInterval)
+        clearInterval(selftestInterval)
         transport.stop()
         remoteLogger.stop()
         await config.writeOffline()
