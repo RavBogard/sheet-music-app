@@ -1,20 +1,39 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { _resetPagehideHookForTests, installPagehideDrainHook } from '../init'
+import { useSyncStatus } from '../store'
+
 /**
  * v60-02 (2026-05-12) — exercises the pagehide → whenEngineIdle(2000)
  * drain coordinator. We test the standalone `installPagehideDrainHook`
  * helper (exported for testability) so the assertions don't require
  * mocking firebase/Dexie to boot the full engine.
  *
- * Reset module state between tests via `vi.resetModules()` so the
- * `pagehideHookInstalled` module-level flag resets — otherwise the
- * idempotency test would only assert state inherited from a prior test.
+ * 2026-05-25 — restructured for parallel-load resilience
+ * (`init-pagehide-listener-race-fix`, 5th instance of
+ * `[[feedback_parallel_load_flake_baseline]]`):
+ *
+ *  - Static top-level import of `../init` + `../store` (was per-test
+ *    `await import(...)` inside `vi.resetModules()`-rebooted module
+ *    graphs). Removes the vite-transform pressure that the original
+ *    flake-research lane (.paul/research/parallel-load-flakes/FINDINGS.md
+ *    §3.5) named as the root cause.
+ *  - Explicit `_resetPagehideHookForTests()` between tests replaces the
+ *    `vi.resetModules()` reset path. Under suite-wide parallel load the
+ *    resetModules timing slipped enough that the next test's import
+ *    occasionally returned the cached module (flag stuck at `true` from
+ *    a prior test), producing a delta of 0 instead of 1.
+ *
+ * The leaked listeners from prior tests stay attached to `window` for the
+ * lifetime of this file (we don't remove them — production never has
+ * cause to either), but each test's assertion is a DELTA on a freshly-
+ * created spy so accumulation is invisible to the assertions.
  */
 describe('installPagehideDrainHook', () => {
     let addSpy: ReturnType<typeof vi.spyOn> | null = null
 
     beforeEach(() => {
-        vi.resetModules()
+        _resetPagehideHookForTests()
         addSpy = vi.spyOn(window, 'addEventListener')
     })
 
@@ -23,22 +42,18 @@ describe('installPagehideDrainHook', () => {
         addSpy = null
         // Re-seed the sync store back to idle so other suites that read
         // it post-this-file aren't affected.
-        return import('../store').then(({ useSyncStatus }) => {
-            useSyncStatus.setState({
-                state: 'idle',
-                queued: 0,
-                lastError: undefined,
-                lastSyncAt: undefined,
-            })
+        useSyncStatus.setState({
+            state: 'idle',
+            queued: 0,
+            lastError: undefined,
+            lastSyncAt: undefined,
         })
     })
 
-    it('registers exactly one pagehide listener on window', async () => {
-        const { installPagehideDrainHook } = await import('../init')
-
+    it('registers exactly one pagehide listener on window', () => {
         // Snapshot pre-install pagehide calls (any module-level listeners
-        // installed during the dynamic import) so we measure ONLY the
-        // delta produced by installPagehideDrainHook itself.
+        // installed by other code) so we measure ONLY the delta produced
+        // by installPagehideDrainHook itself.
         const preCount = addSpy!.mock.calls.filter(
             (c) => c[0] === 'pagehide',
         ).length
@@ -55,9 +70,7 @@ describe('installPagehideDrainHook', () => {
         expect(typeof last[1]).toBe('function')
     })
 
-    it('is idempotent — repeated calls do NOT re-register', async () => {
-        const { installPagehideDrainHook } = await import('../init')
-
+    it('is idempotent — repeated calls do NOT re-register', () => {
         const preCount = addSpy!.mock.calls.filter(
             (c) => c[0] === 'pagehide',
         ).length
@@ -74,13 +87,11 @@ describe('installPagehideDrainHook', () => {
     })
 
     it('dispatching pagehide invokes the engine-idle subscription path', async () => {
-        const storeMod = await import('../store')
         // Force engine to non-idle so whenEngineIdle takes the
         // subscribe-and-wait branch (instead of resolving synchronously).
-        storeMod.useSyncStatus.setState({ state: 'saving', queued: 2 })
-        const subscribeSpy = vi.spyOn(storeMod.useSyncStatus, 'subscribe')
+        useSyncStatus.setState({ state: 'saving', queued: 2 })
+        const subscribeSpy = vi.spyOn(useSyncStatus, 'subscribe')
 
-        const { installPagehideDrainHook } = await import('../init')
         installPagehideDrainHook()
 
         window.dispatchEvent(new Event('pagehide'))
@@ -107,11 +118,9 @@ describe('installPagehideDrainHook', () => {
         expect(src).toMatch(/whenEngineIdle\(2000\)/)
     })
 
-    it('dispatching pagehide does not throw when engine is already idle', async () => {
-        const { useSyncStatus } = await import('../store')
+    it('dispatching pagehide does not throw when engine is already idle', () => {
         useSyncStatus.setState({ state: 'idle', queued: 0 })
 
-        const { installPagehideDrainHook } = await import('../init')
         installPagehideDrainHook()
 
         expect(() => window.dispatchEvent(new Event('pagehide'))).not.toThrow()

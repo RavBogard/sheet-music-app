@@ -256,6 +256,30 @@ export function installPagehideDrainHook(): void {
     })
 }
 
+/**
+ * @internal — test-only helper used by `init-pagehide.test.ts` to reset
+ * the module-level idempotency flag between tests. Production callers
+ * MUST NOT invoke this; the flag latches once per page lifetime by
+ * design, and re-installing the listener would attach a duplicate.
+ *
+ * Flake history this defeats: under suite-wide parallel load the vite
+ * transform queue saturates and `vi.resetModules()` becomes a timing
+ * race — the next `await import('../init')` can return either a fresh
+ * module (flag=false, hook installs, delta=1, test PASSES) or the
+ * cached module from a prior test's call (flag=true, hook skips,
+ * delta=0, test FAILS). The test file used to depend on resetModules +
+ * per-test dynamic imports for both isolation AND for resetting this
+ * flag; switching it to a static top-level import + explicit reset via
+ * this helper removes the race entirely and makes each test sync-fast.
+ *
+ * See `[[feedback_parallel_load_flake_baseline]]` 6-back-8 (the 5th
+ * documented parallel-load flake instance, surfaced by auditor's
+ * wave-`2f1e9cfa6` cross-lane regression sweep 2026-05-25T~20Z).
+ */
+export function _resetPagehideHookForTests(): void {
+    pagehideHookInstalled = false
+}
+
 function bootEngineOnce(): SyncEngine | null {
     if (typeof window === 'undefined') return null
     if (booted) return engineSingleton
