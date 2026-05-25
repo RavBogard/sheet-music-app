@@ -378,14 +378,22 @@ test.describe('ipad-sweep-onboarding — QR approve→sign-in cycle (WebKit)', (
         expect(reRead.status(), 'consumed QR session must be gone (single-use)').toBe(404)
     })
 
-    test('C1: musician + member approvers are accepted (member-allowed flagged in FINDINGS)', async ({
+    test('C1: musician approver is accepted (200); member approver is correctly rejected (403)', async ({
         request,
         browser,
         baseURL,
     }) => {
         if (!baseURL) throw new Error('PLAYWRIGHT_BASE_URL must be set')
 
-        for (const role of ['musician', 'member'] as const) {
+        // QR device-approval is band-only. `musician`/`band_leader`/`admin`
+        // pass; non-band `member` accounts are rejected (matches the route's
+        // allowedRoles set — see `src/app/api/auth/qr/route.ts`).
+        const cases: Array<{ role: 'musician' | 'member'; expectedStatus: 200 | 403 }> = [
+            { role: 'musician', expectedStatus: 200 },
+            { role: 'member', expectedStatus: 403 },
+        ]
+
+        for (const { role, expectedStatus } of cases) {
             const code = genCode()
             await request.post(`${baseURL}/api/auth/qr`, {
                 data: { code },
@@ -399,13 +407,10 @@ test.describe('ipad-sweep-onboarding — QR approve→sign-in cycle (WebKit)', (
                 data: { code },
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
             })
-            // CURRENT behavior: route.ts allowedRoles = {member,musician,band_leader,admin}.
-            // `member` passing is the finding (the code comment says the gate is
-            // for "members (musician/band_leader/admin)"). Asserted as-is.
             expect(
                 res.status(),
-                `${role} approver PUT (current behavior is 200-allowed); body: ${await res.text()}`,
-            ).toBe(200)
+                `${role} approver PUT should return ${expectedStatus}; body: ${await res.text()}`,
+            ).toBe(expectedStatus)
         }
     })
 

@@ -150,12 +150,12 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: "Invalid token" }, { status: 403 })
         }
 
-        // v4.3 P6-S04: QR approval is a session-mint operation. Gate it to
-        // members (musician/band_leader/admin) so pending accounts can't
-        // participate in device sign-in. Pending users have no business on
-        // a shared iPad yet.
+        // v4.3 P6-S04: QR approval is a session-mint operation. Gate to band
+        // members only (musician/band_leader/admin) so non-band `member`
+        // accounts can't device-approve and pending accounts can't participate
+        // in device sign-in. Shared iPads are a band-only surface.
         const role = decoded.role as string | undefined
-        const allowedRoles = new Set(["member", "musician", "band_leader", "admin"])
+        const allowedRoles = new Set(["musician", "band_leader", "admin"])
         if (!role || !allowedRoles.has(role)) {
             return NextResponse.json(
                 { error: "Approval requires an approved member account" },
