@@ -1286,6 +1286,25 @@ describe('v50-06-03: sequential offline edits queue and drain in order', () => {
             channelFactory: (n) => hub.create(n),
             leaseMs: 5000,
         })
+        // Engine + db are declared up here so the finally block below can
+        // reach them even if a body assertion throws. Mirrors the
+        // v50-07-04 runKitchenSink try/finally teardown pattern (see
+        // line ~1900): on failure we still want shutdown + flush + close
+        // to run so the next test starts clean, AND on success we need
+        // a microtask flush between shutdown() and db.close() to drain
+        // in-flight pump-finally `notifyFromDb` / `scheduleNextPump`
+        // awaits (both touch `db.outbox`) that were scheduled via
+        // `setTimeout(0)` during the explicit `engine.pump()` /
+        // `flushTwoWriter()` loop above. Without the flush, those
+        // fire-and-forget pump promises hit `db.close()` mid-await and
+        // surface `DatabaseClosedError` on the NEXT test (Vitest
+        // misattributes the failure to AC-5; the actual repro stack
+        // points at v50-07-04 kitchen-sink's `runKitchenSink`).
+        // Empirically reproduces at ~10% under VITEST_LOAD_FACTOR=2
+        // file-solo, ~15% under full-suite parallel load. Closes
+        // `[[feedback_parallel_load_flake_baseline]]` "1 remaining".
+        let engineForCleanup: SyncEngine | undefined
+        try {
 
         // Manual online-event dispatcher — production wires this to
         // window.addEventListener('online'). The test fires it after
@@ -1306,6 +1325,7 @@ describe('v50-06-03: sequential offline edits queue and drain in order', () => {
             isOnline: () => isOnline,
             onlineListener,
         })
+        engineForCleanup = engine
 
         await engine.start()
         await flushTwoWriter()
@@ -1380,9 +1400,24 @@ describe('v50-06-03: sequential offline edits queue and drain in order', () => {
         const finalDoc = remote.snapshot().get('tracks/t1')
         expect(finalDoc?.payload.key).toBe('C')
         expect(engine.getState()).toBe('idle')
-
-        engine.shutdown()
-        db.close()
+        } finally {
+            // Drain any in-flight pump-finally microtasks BEFORE closing
+            // the Dexie handle. `engine.shutdown()` sets `started=false`
+            // + clears the next-pump setTimeout, but a pump that already
+            // entered the `finally { … }` block past the top-of-pump
+            // `if (!this.started) return` guard will still run
+            // `notifyFromDb()` + `scheduleNextPump()` — both of which
+            // await `db.outbox.*`. Without this flush, those fire-and-
+            // forget pump promises (scheduled via `setTimeout(0)` from
+            // each prior drain iteration) race `db.close()` and surface
+            // `DatabaseClosedError` on the NEXT test, which Vitest
+            // misattributes to AC-5 (the actual repro stack lands in
+            // v50-07-04 `runKitchenSink`). Same teardown pattern as
+            // the kitchen-sink suite's finally block (~line 1900-1905).
+            try { engineForCleanup?.shutdown() } catch { /* idempotent */ }
+            await flushTwoWriter()
+            try { db.close() } catch { /* idempotent */ }
+        }
     }, 30_000)
 })
 
