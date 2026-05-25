@@ -5,6 +5,7 @@ import {
     runStorageBackupProd,
     writeStorageBackupDormantHeartbeat,
     writeStorageBackupError,
+    writeStorageBackupTickStart,
 } from "@/lib/storage-backup/mirror"
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
@@ -166,6 +167,15 @@ async function runAndRespond(req: NextRequest): Promise<NextResponse> {
         )
     }
     const db = getFirestore()
+
+    // Fix B — pre-flight tick-start breadcrumb. Stamps `lastTickStartedAt` on
+    // both `config/storageBackup` (merge) and `storageBackups/{date}.startedAt`
+    // (merge) BEFORE the for-loop in `runStorageBackupProd` begins. If Vercel
+    // later hard-kills the function at `maxDuration: 300s`, this breadcrumb
+    // survives as the last evidence — "we started at X, never reported done"
+    // — and `admin-consistency` trips the `startedButNotFinished` Sentry alarm
+    // on its next tick. Best-effort (fail-open inside the helper).
+    await writeStorageBackupTickStart(db, new Date())
 
     const maxParam = req.nextUrl.searchParams.get("max")
     const maxMirrorsPerRun =

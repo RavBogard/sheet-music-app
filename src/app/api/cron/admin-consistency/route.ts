@@ -271,7 +271,7 @@ async function ensureAdminConsistencyBootstrap(
 
 /**
  * Read `config/storageBackup`, derive freshness + last-error + tick state,
- * and emit Sentry messages on the four independent alarm conditions:
+ * and emit Sentry messages on the five independent alarm conditions:
  *   - `stale`         — lastBackupAt > 36h ago (warning)
  *   - `recentError`   — lastError + lastErrorAt within 36h (error)
  *   - `tickStale`     — cron has not ticked at all in >36h (warning).
@@ -284,6 +284,17 @@ async function ensureAdminConsistencyBootstrap(
  *                       class that left storage-backup-silent-death-probe's
  *                       diagnosis pointing at a dormant-skip + no-heartbeat
  *                       observability gap.
+ *   - `startedButNotFinished` — Fix B's 5th alarm (warning). `lastTickStartedAt`
+ *                       is set AND no matching `lastBackupAt` / `lastErrorAt`
+ *                       LATER than the start, AND the start is older than
+ *                       `STORAGE_BACKUP_START_NEVER_FINISHED_HOURS` (1h).
+ *                       The externally-killed silent-death signature: the cron
+ *                       reached the real-mirror entry point, Vercel hard-killed
+ *                       it at `maxDuration:300s` before audit/error writes
+ *                       could complete, and no later tick has cleared the
+ *                       start stamp. Closes the failure class diagnosed at
+ *                       `.paul/research/storage-backup-silent-death/DIAGNOSIS.md`
+ *                       §"Two-headed real fix" Fix B.
  *
  * `deployAgeMs` is the ms-age of the admin-consistency bootstrap stamp; null
  * means the read/stamp failed (treat as 0 → don't alarm missing-aged).
@@ -370,6 +381,37 @@ async function readAndAlertStorageBackupHealth(
                     stalenessHours: health.stalenessHours,
                     lastError: health.lastError ?? null,
                     lastErrorAt: health.lastErrorAt ?? null,
+                },
+            },
+            "warning",
+        )
+    }
+    // Fix B — 5th alarm: `startedButNotFinished`. The storage-backup route
+    // stamps `lastTickStartedAt` BEFORE `runStorageBackupProd` enters its
+    // for-loop. If Vercel later hard-kills the function at `maxDuration:300s`,
+    // neither `recordStorageBackupRun` (success) nor `writeStorageBackupError`
+    // (failure) ever runs — so no `lastBackupAt`/`lastErrorAt` write happens.
+    // The start stamp survives as the only evidence. After the 1h threshold
+    // the health helper trips this flag and we emit a Sentry warning so the
+    // 2026-05-24T05:00Z-class silent death surfaces in the next 5-min cron
+    // tick instead of waiting for a human to notice. Independent of `stale`
+    // and `tickStale`: those need the doc to be missing OR the END-state
+    // stamps to be stale — this one fires when the START stamp is present
+    // and ahead of any END stamp.
+    if (health.startedButNotFinished && health.lastTickStartedAt != null) {
+        const startedHoursAgo =
+            (Date.now() - health.lastTickStartedAt) / (60 * 60 * 1000)
+        captureMessage(
+            `storage backup cron started but never finished: ${startedHoursAgo.toFixed(1)}h since lastTickStartedAt with no matching lastBackupAt/lastErrorAt — likely externally killed at maxDuration:300s`,
+            {
+                source: "cron",
+                location: "admin-consistency",
+                extra: {
+                    subsystem: "storage-backup-health",
+                    lastTickStartedAt: health.lastTickStartedAt,
+                    startedHoursAgo,
+                    lastBackupAt: health.lastBackupAt,
+                    lastErrorAt: health.lastErrorAt,
                 },
             },
             "warning",

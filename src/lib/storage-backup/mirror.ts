@@ -57,6 +57,23 @@ export interface StorageBackupDeps {
      * capped run is safe — the rest land next tick. Default 200.
      */
     maxMirrorsPerRun?: number
+    /**
+     * Fix B — per-row wall-clock time-budget guard. When the elapsed run-time
+     * since the for-loop started exceeds this many milliseconds, the per-row
+     * loop bails early and the result is stamped `partial: true` + `bailedAt`
+     * (the iso timestamp of the bail). The remaining unprocessed rows are
+     * folded into `deferred` so the next tick picks them up (idempotent).
+     *
+     * Default is 240_000ms (4 minutes) — well under Vercel's `maxDuration:300`
+     * cron budget. Set to `0` or `Infinity` to disable (test-only convenience).
+     *
+     * This guards the exact failure mode diagnosed in
+     * `.paul/research/storage-backup-silent-death/DIAGNOSIS.md`: a Drive 400
+     * with gaxios's 3× exponential-backoff retry-per-row blew through the
+     * 300s budget; Vercel hard-killed the function before
+     * `recordStorageBackupRun` ran → no audit doc → silent death.
+     */
+    budgetMs?: number
 }
 
 export interface StorageBackupResult {
@@ -68,13 +85,30 @@ export interface StorageBackupResult {
     created: number
     updated: number
     skipped: number
-    /** rows left for a later tick because maxMirrorsPerRun was hit. */
+    /**
+     * Rows left for a later tick. Includes BOTH the maxMirrorsPerRun cap
+     * (capacity throttle) AND the Fix-B time-budget bail (timeout safety).
+     * When `partial` is true, every row encountered after the bail point
+     * counts as deferred so the next tick picks them up idempotently.
+     */
     deferred: number
     failed: number
     bytesMirrored: number
     /** bounded to 20 entries. */
     errors: string[]
     lastError: string | null
+    /**
+     * Fix B — true when the per-row time-budget guard tripped and the loop
+     * bailed before scanning every active row. Distinguishes "ran cleanly to
+     * end" from "ran into the 300s `maxDuration` ceiling". Recorded in the
+     * audit doc so the externally-killed silent-death alarm path stays clear.
+     */
+    partial: boolean
+    /**
+     * Fix B — iso timestamp of the bail point when `partial` is true; null
+     * otherwise. Helpful for forensics: which tick segment hit the budget.
+     */
+    bailedAt: string | null
 }
 
 /** GCS stores the content MD5 base64-encoded; Drive reports it as lowercase hex. */
@@ -152,6 +186,8 @@ async function runStorageBackupInner(
         bytesMirrored: 0,
         errors: [],
         lastError: null,
+        partial: false,
+        bailedAt: null,
     }
     const pushErr = (msg: string) => {
         result.lastError = msg
@@ -162,6 +198,17 @@ async function runStorageBackupInner(
         return { ...result, ran: false }
     }
     const cap = deps.maxMirrorsPerRun ?? 200
+    // Fix B — per-row time-budget guard. Default 240s leaves ~60s headroom
+    // under Vercel's 300s `maxDuration: 300` cron budget for the post-loop
+    // `recordStorageBackupRun` audit write. budgetMs=0 / Infinity disables
+    // (test-only convenience; default-on in prod).
+    const budgetMs =
+        deps.budgetMs == null
+            ? 240_000
+            : deps.budgetMs <= 0
+              ? Number.POSITIVE_INFINITY
+              : deps.budgetMs
+    const runStartMs = deps.now().getTime()
 
     // charts/ wrapper under the backup root (collection subfolders live below it).
     const chartsRootId = await deps.drive.ensureFolder({
@@ -223,6 +270,23 @@ async function runStorageBackupInner(
     let mirrorOps = 0
 
     for (const doc of snap.docs) {
+        // Fix B — per-row wall-clock budget guard. Check BEFORE doing any
+        // per-row work so even the cheap SKIP path (md5 read + folder list)
+        // doesn't keep accumulating cost past the budget. When bailed, the
+        // remaining docs in `snap.docs` (including this one) are folded into
+        // `deferred` so the next tick picks them up idempotently.
+        if (
+            !result.partial &&
+            deps.now().getTime() - runStartMs > budgetMs
+        ) {
+            result.partial = true
+            result.bailedAt = deps.now().toISOString()
+        }
+        if (result.partial) {
+            result.deferred++
+            continue
+        }
+
         const fileId = doc.id
         const row = doc.data() as Record<string, unknown>
         const mimeType =
@@ -321,11 +385,74 @@ async function runStorageBackupInner(
             }
         } catch (err) {
             result.failed++
-            pushErr(`${fileId}: ${err instanceof Error ? err.message : String(err)}`)
+            pushErr(`${fileId}: ${describeDriveError(err)}`)
         }
     }
 
     return result
+}
+
+/**
+ * Fix B — verbose Drive-error describer for the per-row catch. The gaxios
+ * default `err.message` collapses to the opaque string `"Bad Request"` for
+ * any 4xx response, hiding the real `errors[]` body that Drive returns
+ * (the field that says e.g. "Service Accounts cannot upload to non-shared
+ * Drives" / "The user does not have sufficient permissions for file …").
+ * This is exactly the failure surfaced by the 2026-05-24T05:00Z silent-death
+ * tick (see DIAGNOSIS.md §Evidence): we want the embedded body in the
+ * recorded per-row error string so the next failure self-diagnoses without
+ * a Vercel-log archaeology pass.
+ *
+ * Falls back to `err.message` (then `String(err)`) when no structured Drive
+ * body is attached, so non-Drive errors keep their existing shape.
+ */
+function describeDriveError(err: unknown): string {
+    const base = err instanceof Error ? err.message : String(err)
+    if (!err || typeof err !== "object") return base
+    const o = err as {
+        response?: { data?: unknown; status?: unknown }
+        code?: unknown
+        errors?: unknown
+    }
+
+    // Try response.data first (gaxios-style). Drive returns either
+    // `{ error: { code, message, errors: [{ domain, reason, message, ... }] } }`
+    // OR a bare buffer/string that we should JSON.stringify as a fallback.
+    const data = o.response?.data
+    const detail = extractDriveErrorBody(data) ?? extractDriveErrorBody(o.errors)
+    if (detail) return `${base} | ${detail}`
+    return base
+}
+
+function extractDriveErrorBody(raw: unknown): string | null {
+    if (raw == null) return null
+    // Buffer / typed array → stringify
+    if (typeof raw === "string") return raw.length > 0 ? raw.slice(0, 1000) : null
+    if (typeof raw !== "object") return null
+    const obj = raw as { error?: unknown; errors?: unknown }
+    // Nested `error` envelope (Drive standard shape)
+    if (obj.error && typeof obj.error === "object") {
+        try {
+            return JSON.stringify(obj.error).slice(0, 1000)
+        } catch {
+            // fall through
+        }
+    }
+    // Direct errors[] array (some legacy shapes)
+    if (Array.isArray(obj.errors) && obj.errors.length > 0) {
+        try {
+            return JSON.stringify(obj.errors).slice(0, 1000)
+        } catch {
+            return null
+        }
+    }
+    // Generic stringify if the object has any keys at all
+    try {
+        const s = JSON.stringify(raw)
+        return s && s !== "{}" ? s.slice(0, 1000) : null
+    } catch {
+        return null
+    }
 }
 
 /**
@@ -464,6 +591,69 @@ export async function writeStorageBackupDormantHeartbeat(
 }
 
 /**
+ * Fix B — pre-flight tick-start breadcrumb. Stamps `lastTickStartedAt` on
+ * both `config/storageBackup` (merge) and `storageBackups/{YYYY-MM-DD}.startedAt`
+ * (merge) BEFORE `runStorageBackupProd` enters its for-loop. The route calls
+ * this once at the top of `runAndRespond` on the active path (dormant path
+ * already heartbeats via `writeStorageBackupDormantHeartbeat`).
+ *
+ * The reason for the dual-write is symmetry with the success/error writers:
+ * the daily audit doc carries `startedAt` so a future forensic pass can
+ * answer "did the 2026-05-24T05:00Z tick reach the real-mirror entry-point?"
+ * without consulting Vercel logs.
+ *
+ * Fail-open by design. When Vercel later kills the function externally at
+ * `maxDuration: 300s`, no further write happens — but THIS breadcrumb has
+ * already landed, so PGR-03's 5th alarm
+ * (`storageBackupHealth.startedButNotFinished`) trips on the next
+ * admin-consistency tick.
+ *
+ * Critically does NOT touch:
+ *   - `lastBackupAt` (only `recordStorageBackupRun` sets this; success-only)
+ *   - `lastError` (only `writeStorageBackupError` sets this; failure-only)
+ *   - `lastTickAt`/`dormant` (their semantics are tied to whether the tick
+ *     reached its END state, not its start)
+ *
+ * Idempotent within a same-day re-run: a later success-path write to
+ * `lastBackupAt` makes the start-stamp benign (the
+ * `startedButNotFinished` flag only fires when `lastBackupAt` is OLDER than
+ * `lastTickStartedAt`); a later error-path write does the same via
+ * `lastErrorAt`.
+ */
+export async function writeStorageBackupTickStart(
+    db: Firestore,
+    now: Date,
+): Promise<void> {
+    try {
+        const iso = now.toISOString()
+        const dateKey = iso.slice(0, 10)
+        await db.collection("config").doc("storageBackup").set(
+            {
+                lastTickStartedAt: now,
+            },
+            { merge: true },
+        )
+        await db.collection("storageBackups").doc(dateKey).set(
+            {
+                startedAt: now,
+                timestamp: iso,
+            },
+            { merge: true },
+        )
+    } catch (catchErr) {
+        // Fail-open — the cron must not 500 because a breadcrumb write failed.
+        // If this throws, the 5th alarm can't fire on the next
+        // admin-consistency tick — but the tickStale / missing-aged alarms
+        // already cover the broader "cron stopped firing" case as a fallback.
+        logger.warn(
+            `[storage-backup] failed to record tick-start breadcrumb: ${
+                catchErr instanceof Error ? catchErr.message : String(catchErr)
+            }`,
+        )
+    }
+}
+
+/**
  * Persist the run outcome for observability (mirrors `/api/cron/backup`'s
  * `config/backup` + `backups/{date}` pattern). `config/storageBackup` is the
  * single latest-run pointer; `storageBackups/{YYYY-MM-DD}` is the dated audit
@@ -493,6 +683,11 @@ export async function recordStorageBackupRun(
         bytesMirrored: result.bytesMirrored,
         lastError: result.lastError,
         lastTickAt: now,
+        // Fix B — observability for time-budget bails (no behavior change;
+        // `lastBackupAt` is still stamped because a partial run that handled
+        // the rows it had time for IS a successful tick and the rest defer).
+        partial: result.partial,
+        bailedAt: result.bailedAt,
     }
     try {
         await db.collection("config").doc("storageBackup").set(
@@ -515,7 +710,7 @@ export async function recordStorageBackupRun(
 export async function runStorageBackupProd(
     db: Firestore,
     backupFolderId: string | undefined,
-    opts?: { maxMirrorsPerRun?: number },
+    opts?: { maxMirrorsPerRun?: number; budgetMs?: number },
 ): Promise<StorageBackupResult> {
     const drive = new DriveClient()
     const now = () => new Date()
@@ -530,6 +725,7 @@ export async function runStorageBackupProd(
         now,
         backupFolderId,
         maxMirrorsPerRun: opts?.maxMirrorsPerRun,
+        budgetMs: opts?.budgetMs,
     })
     await recordStorageBackupRun(db, result, now())
     return result

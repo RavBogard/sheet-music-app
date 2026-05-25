@@ -10,6 +10,7 @@ import {
     recordStorageBackupRun,
     writeStorageBackupDormantHeartbeat,
     writeStorageBackupError,
+    writeStorageBackupTickStart,
     type StorageBackupDeps,
     type StorageBackupResult,
 } from "@/lib/storage-backup/mirror"
@@ -601,6 +602,8 @@ describe("storage-backup mirror — lastTickAt + dormant + heartbeat", () => {
             bytesMirrored: 12345,
             errors: [],
             lastError: null,
+            partial: false,
+            bailedAt: null,
         }
 
         await recordStorageBackupRun(db, result, NOW)
@@ -648,5 +651,341 @@ describe("storage-backup mirror — lastTickAt + dormant + heartbeat", () => {
             lastTickAt: NOW,
             lastError: "boom",
         })
+    })
+})
+
+// ── Fix B — writeStorageBackupTickStart pre-flight breadcrumb ───────────
+//
+// The route calls this at the TOP of `runAndRespond` after `initAdmin` +
+// `getFirestore` but BEFORE `runStorageBackupProd`. When Vercel later
+// externally kills the function at `maxDuration:300s`, no further write
+// happens — the start stamp is the last evidence. PGR-03 trips
+// `startedButNotFinished` on the next admin-consistency tick.
+
+describe("storage-backup mirror — writeStorageBackupTickStart (Fix B pre-flight)", () => {
+    const NOW = new Date("2026-05-24T05:00:00.000Z")
+    const DATE_KEY = "2026-05-24"
+
+    it("stamps lastTickStartedAt on config/storageBackup + startedAt on storageBackups/{date}", async () => {
+        const { db, get } = makeMultiCollectionFakeDb()
+
+        await writeStorageBackupTickStart(db, NOW)
+
+        const cfg = get("config/storageBackup")
+        expect(cfg).toHaveLength(1)
+        expect(cfg[0].merge).toBe(true)
+        expect(cfg[0].payload).toMatchObject({
+            lastTickStartedAt: NOW,
+        })
+        // CRITICAL: a tick-START stamp must NOT touch any END-state fields,
+        // else PGR-03 alarms misfire on a started-but-not-yet-done tick.
+        expect(cfg[0].payload).not.toHaveProperty("lastBackupAt")
+        expect(cfg[0].payload).not.toHaveProperty("lastError")
+        expect(cfg[0].payload).not.toHaveProperty("lastErrorAt")
+        expect(cfg[0].payload).not.toHaveProperty("lastTickAt")
+        expect(cfg[0].payload).not.toHaveProperty("dormant")
+
+        const dated = get(`storageBackups/${DATE_KEY}`)
+        expect(dated).toHaveLength(1)
+        expect(dated[0].merge).toBe(true)
+        expect(dated[0].payload).toMatchObject({
+            startedAt: NOW,
+            timestamp: NOW.toISOString(),
+        })
+    })
+
+    it("fail-opens when both Firestore writes throw — the route must not 500", async () => {
+        const { db } = makeMultiCollectionFakeDb({
+            failWrites: new Set([
+                "config/storageBackup",
+                `storageBackups/${DATE_KEY}`,
+            ]),
+        })
+        await expect(
+            writeStorageBackupTickStart(db, NOW),
+        ).resolves.toBeUndefined()
+    })
+
+    it("is idempotent within a same-day re-fire (merge:true on both docs)", async () => {
+        const { db, get } = makeMultiCollectionFakeDb()
+        const LATER = new Date("2026-05-24T05:00:30.000Z") // 30s after first
+
+        await writeStorageBackupTickStart(db, NOW)
+        await writeStorageBackupTickStart(db, LATER)
+
+        const cfg = get("config/storageBackup")
+        expect(cfg).toHaveLength(2)
+        // Latest stamp wins; merge:true preserves any sibling fields the
+        // recorder writes later in the same tick.
+        expect(cfg[1].merge).toBe(true)
+        expect(cfg[1].payload).toMatchObject({ lastTickStartedAt: LATER })
+    })
+})
+
+// ── Fix B — per-row time-budget guard (partial:true + bailedAt) ─────────
+//
+// The mirror's per-row try/catch swallows individual failures and continues.
+// With a 3× exponential-backoff retry per row at the Drive layer, a single
+// failing endpoint can blow past Vercel's 300s `maxDuration` ceiling and
+// trigger an external function kill. The pre-loop budget guard avoids ever
+// reaching that ceiling: when wall-clock elapsed since the for-loop start
+// crosses `budgetMs`, the loop bails — remaining rows fold into `deferred`
+// and the next tick picks them up idempotently.
+
+describe("runStorageBackup — per-row time-budget guard (Fix B)", () => {
+    it("bails the loop when wall-clock elapsed crosses budgetMs; remaining rows defer; partial:true + bailedAt set", async () => {
+        const RUN_START = new Date("2026-05-24T05:00:00.000Z").getTime()
+        // Advance the fake clock by 100ms on every now() call so that:
+        //   - the run-start anchor lands at t=0
+        //   - after a few iterations the elapsed reading crosses the budget
+        let nowCalls = 0
+        const advancingNow = () => new Date(RUN_START + nowCalls++ * 100)
+
+        // 6 active rows. Budget is 250ms with the 100ms-per-now() clock, so
+        // the guard trips before the loop processes all of them. The exact
+        // count after the first row processed depends on how many now() calls
+        // happen per iteration; the assertions below check the invariants
+        // (partial:true + scanned==6 + deferred>=1 + a bailedAt iso), NOT a
+        // specific deferred count, so the test is robust against minor inner-
+        // loop calling changes.
+        const rows: Row[] = []
+        const objects = new Map<string, Buffer>()
+        for (let i = 0; i < 6; i++) {
+            objects.set(`u${i}`, Buffer.from(`%PDF body ${i}`))
+            rows.push({
+                id: `u${i}`,
+                data: { status: "active", collection: "uploads", mimeType: "application/pdf", stem: `Stem${i}` },
+            })
+        }
+        const mock = makeMockDrive()
+        const readers = makeStorageReaders(objects, mock.downloadCalls)
+        const deps: StorageBackupDeps = {
+            db: makeFakeDb(rows),
+            drive: mock.drive,
+            getStorageMd5: readers.getStorageMd5,
+            downloadStoragePath: readers.downloadStoragePath,
+            now: advancingNow,
+            backupFolderId: "BK-shared-drive-root",
+            budgetMs: 250,
+        }
+
+        const res = await runStorageBackup(deps)
+
+        expect(res.scanned).toBe(6)
+        expect(res.partial).toBe(true)
+        expect(typeof res.bailedAt).toBe("string")
+        expect(res.bailedAt).toMatch(/^2026-05-24T05:00:/)
+        // some rows processed before bail + remaining deferred; sum = scanned
+        expect(res.created + res.skipped + res.updated + res.failed + res.deferred).toBe(6)
+        expect(res.deferred).toBeGreaterThanOrEqual(1)
+    })
+
+    it("does NOT mark partial when the run finishes inside the budget", async () => {
+        const NOW = new Date("2026-05-24T05:00:00.000Z")
+        const buf = Buffer.from("%PDF tiny")
+        const objects = new Map([["upload-x", buf]])
+        const rows: Row[] = [
+            { id: "upload-x", data: { status: "active", collection: "uploads", mimeType: "application/pdf", stem: "Tiny" } },
+        ]
+        const mock = makeMockDrive()
+        const { deps } = makeDeps({ rows, objects, mock })
+        // Override budget to a generous value (default 240000 is also fine
+        // since the test now() returns a frozen Date).
+        deps.budgetMs = 600_000
+        deps.now = () => NOW
+
+        const res = await runStorageBackup(deps)
+
+        expect(res.partial).toBe(false)
+        expect(res.bailedAt).toBe(null)
+        expect(res.created).toBe(1)
+    })
+
+    it("budgetMs=0 disables the guard entirely (Infinity semantic; test-only convenience)", async () => {
+        const RUN_START = new Date("2026-05-24T05:00:00.000Z").getTime()
+        // Advance fake clock 1 minute per call — would trip ANY positive budget
+        let nowCalls = 0
+        const advancingNow = () => new Date(RUN_START + nowCalls++ * 60_000)
+
+        const objects = new Map([["upload-y", Buffer.from("%PDF y")]])
+        const rows: Row[] = [
+            { id: "upload-y", data: { status: "active", collection: "uploads", mimeType: "application/pdf", stem: "Y" } },
+        ]
+        const mock = makeMockDrive()
+        const readers = makeStorageReaders(objects, mock.downloadCalls)
+        const deps: StorageBackupDeps = {
+            db: makeFakeDb(rows),
+            drive: mock.drive,
+            getStorageMd5: readers.getStorageMd5,
+            downloadStoragePath: readers.downloadStoragePath,
+            now: advancingNow,
+            backupFolderId: "BK-shared-drive-root",
+            budgetMs: 0,
+        }
+
+        const res = await runStorageBackup(deps)
+
+        expect(res.partial).toBe(false)
+        expect(res.bailedAt).toBe(null)
+        expect(res.created).toBe(1)
+    })
+
+    it("recordStorageBackupRun forwards partial + bailedAt into the audit doc + pointer", async () => {
+        const NOW = new Date("2026-05-24T05:01:00.000Z")
+        const DATE_KEY = "2026-05-24"
+        const { db, get } = makeMultiCollectionFakeDb()
+        const result: StorageBackupResult = {
+            ran: true,
+            scanned: 100,
+            mirrored: 40,
+            created: 30,
+            updated: 10,
+            skipped: 20,
+            deferred: 40,
+            failed: 0,
+            bytesMirrored: 9001,
+            errors: [],
+            lastError: null,
+            partial: true,
+            bailedAt: "2026-05-24T05:00:55.000Z",
+        }
+
+        await recordStorageBackupRun(db, result, NOW)
+
+        const cfg = get("config/storageBackup")
+        expect(cfg[0].payload).toMatchObject({
+            // Partial runs STILL stamp lastBackupAt — partial completion is
+            // still a successful tick; deferred rows ride the next tick.
+            lastBackupAt: NOW,
+            partial: true,
+            bailedAt: "2026-05-24T05:00:55.000Z",
+        })
+        const audit = get(`storageBackups/${DATE_KEY}`)
+        expect(audit[0].payload).toMatchObject({
+            partial: true,
+            bailedAt: "2026-05-24T05:00:55.000Z",
+            deferred: 40,
+        })
+    })
+})
+
+// ── Fix B — verbose Drive errors[] body capture in per-row catch ───────
+//
+// The 2026-05-24T05:00Z prod silent-death log surfaced a Drive 400 whose
+// `err.message` collapsed to "Bad Request" while the real Drive error body
+// (the `errors[]` JSON with `reason`/`message`/`location`) was redacted by
+// gaxios. The per-row catch must extract that body into the recorded
+// `lastError` string so the next failure self-diagnoses.
+
+describe("runStorageBackup — verbose Drive error capture (Fix B)", () => {
+    function makeUploadFailingDrive(uploadErr: unknown) {
+        const drive: StorageBackupDeps["drive"] = {
+            async ensureFolder({ name, parentId }) {
+                return folderIdFor(parentId, name)
+            },
+            async listFilesByQuery() {
+                return { files: [], nextPageToken: null }
+            },
+            async uploadBinaryFile() {
+                throw uploadErr
+            },
+            async updateFileMedia() {
+                throw new Error("should not reach updateFileMedia")
+            },
+        }
+        return drive
+    }
+
+    function makeDepsWithDrive(drive: StorageBackupDeps["drive"]): StorageBackupDeps {
+        const buf = Buffer.from("%PDF tiny")
+        const objects = new Map([["upload-err", buf]])
+        const rows: Row[] = [
+            { id: "upload-err", data: { status: "active", collection: "uploads", mimeType: "application/pdf", stem: "Err" } },
+        ]
+        const downloadCalls: string[] = []
+        const readers = makeStorageReaders(objects, downloadCalls)
+        return {
+            db: makeFakeDb(rows),
+            drive,
+            getStorageMd5: readers.getStorageMd5,
+            downloadStoragePath: readers.downloadStoragePath,
+            now: () => new Date("2026-05-24T05:00:00.000Z"),
+            backupFolderId: "BK-shared-drive-root",
+        }
+    }
+
+    it("captures err.response.data.error envelope (gaxios Drive 400 shape) into lastError", async () => {
+        // Exact shape Drive returns for a permissions-class 400 — the body
+        // gaxios's redactor was hiding before Fix B.
+        const driveBody = {
+            error: {
+                code: 400,
+                message: "Bad Request",
+                errors: [
+                    {
+                        domain: "global",
+                        reason: "badRequest",
+                        message:
+                            "Service Accounts do not have storage quota. Specify a Shared Drive.",
+                    },
+                ],
+            },
+        }
+        const uploadErr = Object.assign(new Error("Bad Request"), {
+            response: { status: 400, data: driveBody },
+            code: 400,
+        })
+        const deps = makeDepsWithDrive(makeUploadFailingDrive(uploadErr))
+
+        const res = await runStorageBackup(deps)
+
+        expect(res.failed).toBe(1)
+        expect(res.lastError).toBeTruthy()
+        // base message preserved AND verbose Drive body appended after `|`
+        expect(res.lastError).toContain("Bad Request")
+        expect(res.lastError).toContain("badRequest")
+        expect(res.lastError).toContain("Shared Drive")
+        // fileId prefix preserved (existing pushErr contract)
+        expect(res.lastError).toMatch(/^upload-err: /)
+        expect(res.errors).toHaveLength(1)
+    })
+
+    it("captures a top-level errors[] (legacy googleapis shape) when response.data is missing", async () => {
+        const uploadErr = Object.assign(new Error("Forbidden"), {
+            errors: [
+                { reason: "insufficientPermissions", message: "lacks role X" },
+            ],
+        })
+        const deps = makeDepsWithDrive(makeUploadFailingDrive(uploadErr))
+
+        const res = await runStorageBackup(deps)
+
+        expect(res.lastError).toContain("Forbidden")
+        expect(res.lastError).toContain("insufficientPermissions")
+    })
+
+    it("falls back to err.message when no structured Drive body is attached", async () => {
+        const uploadErr = new Error("plain network blip")
+        const deps = makeDepsWithDrive(makeUploadFailingDrive(uploadErr))
+
+        const res = await runStorageBackup(deps)
+
+        expect(res.lastError).toBe("upload-err: plain network blip")
+    })
+
+    it("truncates very long Drive error bodies to ~1000 chars to keep the Firestore doc small", async () => {
+        const huge = "z".repeat(5000)
+        const uploadErr = Object.assign(new Error("Boom"), {
+            response: { data: { error: { message: huge, errors: [] } } },
+        })
+        const deps = makeDepsWithDrive(makeUploadFailingDrive(uploadErr))
+
+        const res = await runStorageBackup(deps)
+
+        // base "Boom" + " | " + body (capped). The verbose chunk after the
+        // pipe must stay under the 1000-char per-segment ceiling.
+        expect(res.lastError).toBeTruthy()
+        const afterPipe = (res.lastError as string).split(" | ")[1] ?? ""
+        expect(afterPipe.length).toBeLessThanOrEqual(1000)
     })
 })

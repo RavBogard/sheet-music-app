@@ -21,6 +21,16 @@ export const STORAGE_BACKUP_STALENESS_HOURS = 36
 export const STORAGE_BACKUP_STALENESS_MS =
     STORAGE_BACKUP_STALENESS_HOURS * 60 * 60 * 1000
 
+/**
+ * 1h threshold for "cron started but never finished" — Vercel's `maxDuration`
+ * for /api/cron/storage-backup is 300s, so any tick that started >1h ago and
+ * still has no matching `lastBackupAt`/`lastErrorAt` later than the start is
+ * an externally-killed run (the silent-death failure class Fix B closes).
+ */
+export const STORAGE_BACKUP_START_NEVER_FINISHED_HOURS = 1
+export const STORAGE_BACKUP_START_NEVER_FINISHED_MS =
+    STORAGE_BACKUP_START_NEVER_FINISHED_HOURS * 60 * 60 * 1000
+
 /** Output shape returned to the cron caller. */
 export type StorageBackupHealth =
     | { status: "unavailable" }
@@ -57,6 +67,24 @@ export type StorageBackupHealth =
            * via `tickStale`.
            */
           dormant: boolean
+          /**
+           * Wall-clock of the most recent cron tick that began real-mirror
+           * execution (after the active-path `initAdmin`+`getFirestore`, just
+           * before `runStorageBackupProd`). Written by `writeStorageBackupTickStart`
+           * in mirror.ts. Null on dormant ticks (no real-mirror started) or on
+           * legacy pre-Fix-B docs.
+           */
+          lastTickStartedAt: number | null
+          /**
+           * True when `lastTickStartedAt` is set AND no later `lastBackupAt`
+           * (success) AND no later `lastErrorAt` (caught failure) AND the
+           * start is older than `STORAGE_BACKUP_START_NEVER_FINISHED_HOURS`.
+           * The "externally-killed silent-death" condition: the function
+           * started a real-mirror run, Vercel killed it at `maxDuration: 300s`
+           * before audit/error writes could complete, and now no further
+           * tick has run to overwrite the start stamp. Fix B's 5th alarm.
+           */
+          startedButNotFinished: boolean
       }
 
 /**
@@ -109,6 +137,7 @@ export function checkStorageBackupHealth(
     const lastBackupAt = toMillis(snapshot.lastBackupAt)
     const lastErrorAt = toMillis(snapshot.lastErrorAt)
     const lastTickAt = toMillis(snapshot.lastTickAt)
+    const lastTickStartedAt = toMillis(snapshot.lastTickStartedAt)
     const rawLastError = snapshot.lastError
     const lastError =
         typeof rawLastError === "string" && rawLastError.length > 0
@@ -117,12 +146,14 @@ export function checkStorageBackupHealth(
     const dormant = snapshot.dormant === true
 
     // If no timestamps OR error string are parseable, the doc exists but
-    // carries no signal we can act on — treat as missing. `lastTickAt`
-    // counts as signal: a dormant-heartbeat-only doc IS present + actionable.
+    // carries no signal we can act on — treat as missing. `lastTickAt` and
+    // `lastTickStartedAt` both count as signal: a dormant-heartbeat-only doc
+    // OR a Fix-B-start-stamp-only doc IS present + actionable.
     if (
         lastBackupAt == null &&
         lastErrorAt == null &&
         lastTickAt == null &&
+        lastTickStartedAt == null &&
         !lastError
     ) {
         return { status: "missing" }
@@ -150,6 +181,21 @@ export function checkStorageBackupHealth(
     const tickStale =
         lastTickAt != null && tickStalenessMs > STORAGE_BACKUP_STALENESS_MS
 
+    // startedButNotFinished — Fix B's 5th alarm. The route stamps
+    // `lastTickStartedAt` at the top of `runAndRespond` BEFORE
+    // `runStorageBackupProd`. If Vercel later hard-kills the function at
+    // `maxDuration`, no `lastBackupAt` / `lastErrorAt` write happens (those
+    // are inside the loop's recordStorageBackupRun / writeStorageBackupError
+    // calls). So a `lastTickStartedAt` with no later `lastBackupAt` or
+    // `lastErrorAt` is the externally-killed silent-death signature.
+    // 1h threshold lets the in-flight run finish; longer than that and the
+    // 300s `maxDuration` budget guarantees the run is dead, not slow.
+    const startedButNotFinished =
+        lastTickStartedAt != null &&
+        nowMs - lastTickStartedAt > STORAGE_BACKUP_START_NEVER_FINISHED_MS &&
+        (lastBackupAt == null || lastBackupAt < lastTickStartedAt) &&
+        (lastErrorAt == null || lastErrorAt < lastTickStartedAt)
+
     return {
         status: "present",
         lastBackupAt,
@@ -162,5 +208,7 @@ export function checkStorageBackupHealth(
         tickStalenessHours,
         tickStale,
         dormant,
+        lastTickStartedAt,
+        startedButNotFinished,
     }
 }

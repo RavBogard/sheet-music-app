@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
     STORAGE_BACKUP_STALENESS_HOURS,
+    STORAGE_BACKUP_START_NEVER_FINISHED_HOURS,
     checkStorageBackupHealth,
 } from "../health"
 
@@ -221,6 +222,129 @@ describe("checkStorageBackupHealth", () => {
             if (result.status !== "present") throw new Error("expected present")
             expect(result.lastTickAt).toBe(NOW - 8 * HOUR)
             expect(result.tickStalenessHours).toBeCloseTo(8, 1)
+        })
+    })
+
+    // ── Fix B — startedButNotFinished (5th alarm: externally-killed silent death) ──
+    //
+    // The route stamps `lastTickStartedAt` BEFORE `runStorageBackupProd` enters
+    // its for-loop. If Vercel later hard-kills the function at `maxDuration:300s`,
+    // neither `recordStorageBackupRun` (success) nor `writeStorageBackupError`
+    // (failure) ever runs — so no `lastBackupAt` / `lastErrorAt` write happens.
+    // The start stamp survives as the only evidence. After the 1h threshold the
+    // health helper trips `startedButNotFinished`, and admin-consistency emits a
+    // Sentry warning. Closes the silent-death failure class diagnosed at
+    // `.paul/research/storage-backup-silent-death/DIAGNOSIS.md`.
+    describe("startedButNotFinished (Fix B — externally-killed silent death)", () => {
+        const STARTED_AGE =
+            (STORAGE_BACKUP_START_NEVER_FINISHED_HOURS + 0.5) * HOUR
+
+        it("flags startedButNotFinished when start is older than 1h with no later success/error", () => {
+            const result = checkStorageBackupHealth(
+                { lastTickStartedAt: NOW - STARTED_AGE },
+                NOW,
+            )
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.lastTickStartedAt).toBe(NOW - STARTED_AGE)
+            expect(result.startedButNotFinished).toBe(true)
+        })
+
+        it("does NOT flag startedButNotFinished when lastBackupAt is later than the start", () => {
+            // A success-path write landed after the start stamp → the tick
+            // finished. The start stamp is benign at this point.
+            const result = checkStorageBackupHealth(
+                {
+                    lastTickStartedAt: NOW - STARTED_AGE,
+                    lastBackupAt: NOW - 5 * 60 * 1000, // 5 min ago, AFTER start
+                },
+                NOW,
+            )
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.startedButNotFinished).toBe(false)
+        })
+
+        it("does NOT flag startedButNotFinished when lastErrorAt is later than the start", () => {
+            // A caught-error write landed after the start stamp → the run
+            // failed cleanly (writeStorageBackupError ran). That's a different
+            // failure class — `recentError` covers it.
+            const result = checkStorageBackupHealth(
+                {
+                    lastTickStartedAt: NOW - STARTED_AGE,
+                    lastError: "Drive 400",
+                    lastErrorAt: NOW - 5 * 60 * 1000,
+                },
+                NOW,
+            )
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.startedButNotFinished).toBe(false)
+            // The recentError alarm catches THIS path.
+            expect(result.recentError).toBe(true)
+        })
+
+        it("does NOT flag startedButNotFinished when the start is younger than the 1h threshold", () => {
+            // In-flight run — still has time to either succeed or fail cleanly.
+            const result = checkStorageBackupHealth(
+                {
+                    lastTickStartedAt:
+                        NOW - (STORAGE_BACKUP_START_NEVER_FINISHED_HOURS - 0.5) * HOUR,
+                },
+                NOW,
+            )
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.startedButNotFinished).toBe(false)
+        })
+
+        it("DOES flag startedButNotFinished when lastBackupAt is OLDER than the start (prior tick succeeded, current tick stuck)", () => {
+            // A previous tick set lastBackupAt; the current tick started and
+            // died externally. The fact that there's a stale success in the
+            // record must NOT mask the new silent death.
+            const result = checkStorageBackupHealth(
+                {
+                    lastTickStartedAt: NOW - STARTED_AGE,
+                    lastBackupAt: NOW - 26 * HOUR, // 26h ago, BEFORE the new start
+                },
+                NOW,
+            )
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.startedButNotFinished).toBe(true)
+        })
+
+        it("does NOT flag startedButNotFinished when no start stamp is present (pre-Fix-B legacy doc)", () => {
+            // Pre-Fix-B prod doc — no lastTickStartedAt. Must not spuriously
+            // alarm until the next deployed tick writes one.
+            const result = checkStorageBackupHealth(
+                { lastBackupAt: NOW - 10 * HOUR, lastTickAt: NOW - 10 * HOUR },
+                NOW,
+            )
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.lastTickStartedAt).toBe(null)
+            expect(result.startedButNotFinished).toBe(false)
+        })
+
+        it("treats a Firestore-Timestamp lastTickStartedAt the same as a number", () => {
+            const ts = {
+                toMillis: () => NOW - STARTED_AGE,
+                seconds: Math.floor((NOW - STARTED_AGE) / 1000),
+            }
+            const result = checkStorageBackupHealth(
+                { lastTickStartedAt: ts },
+                NOW,
+            )
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.lastTickStartedAt).toBe(NOW - STARTED_AGE)
+            expect(result.startedButNotFinished).toBe(true)
+        })
+
+        it("present-status with only lastTickStartedAt as signal (no lastTickAt/lastBackupAt) reports the alarm", () => {
+            // A doc that contains ONLY a Fix-B start stamp is still "present"
+            // (start is signal), and the alarm should fire.
+            const result = checkStorageBackupHealth(
+                { lastTickStartedAt: NOW - STARTED_AGE },
+                NOW,
+            )
+            expect(result.status).toBe("present")
+            if (result.status !== "present") throw new Error("expected present")
+            expect(result.startedButNotFinished).toBe(true)
         })
     })
 })

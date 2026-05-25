@@ -139,6 +139,7 @@ describe("storage-backup mirror (emulator)", () => {
         const result = {
             ran: true, scanned: 5, mirrored: 2, created: 2, updated: 0,
             skipped: 3, deferred: 0, failed: 0, bytesMirrored: 1234, errors: [], lastError: null,
+            partial: false, bailedAt: null,
         }
         await recordStorageBackupRun(db(), result, new Date("2026-05-23T05:00:00.000Z"))
 

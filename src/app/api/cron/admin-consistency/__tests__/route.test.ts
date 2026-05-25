@@ -771,6 +771,122 @@ describe("PGR-03 — dormant fresh tick is intentionally silent", () => {
     })
 })
 
+// ── Fix B — `startedButNotFinished` 5th alarm (externally-killed silent death)
+//
+// The /api/cron/storage-backup route stamps `lastTickStartedAt` at the top
+// of `runAndRespond` BEFORE the for-loop runs. If Vercel later hard-kills
+// the function at `maxDuration: 300s`, neither `lastBackupAt` nor
+// `lastErrorAt` ever gets written — the start stamp survives as the only
+// evidence. This alarm fires when the start is >1h old AND no later end-
+// state stamp landed. Closes the failure class diagnosed in
+// `.paul/research/storage-backup-silent-death/DIAGNOSIS.md` §"Fix B".
+describe("PGR-03 — startedButNotFinished alarm (Fix B — externally-killed silent death)", () => {
+    it("captures a 'warning' when lastTickStartedAt is >1h old and no later success/error", async () => {
+        storageBackupExists = true
+        storageBackupDoc = {
+            lastTickStartedAt: NOW - 2 * HOUR,
+            // No lastBackupAt, no lastErrorAt — function killed mid-run.
+        }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+
+        const call = captureMessageMock.mock.calls.find((c) =>
+            /started but never finished/i.test(String(c[0])),
+        )
+        expect(call).toBeTruthy()
+        const [msg, ctx, level] = call!
+        expect(msg).toMatch(/storage backup cron started but never finished/i)
+        expect(msg).toMatch(/externally killed at maxDuration/i)
+        expect(ctx).toMatchObject({
+            source: "cron",
+            location: "admin-consistency",
+        })
+        expect(ctx.extra.subsystem).toBe("storage-backup-health")
+        expect(ctx.extra.startedHoursAgo).toBeCloseTo(2, 0)
+        expect(ctx.extra.lastTickStartedAt).toBe(NOW - 2 * HOUR)
+        expect(level).toBe("warning")
+    })
+
+    it("does NOT alarm startedButNotFinished when the start is younger than 1h (still in flight)", async () => {
+        storageBackupExists = true
+        storageBackupDoc = {
+            lastTickStartedAt: NOW - 20 * 60 * 1000, // 20 min ago — in flight
+        }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+
+        const call = captureMessageMock.mock.calls.find((c) =>
+            /started but never finished/i.test(String(c[0])),
+        )
+        expect(call).toBeFalsy()
+    })
+
+    it("does NOT alarm startedButNotFinished when lastBackupAt is later than the start (run finished cleanly)", async () => {
+        storageBackupExists = true
+        storageBackupDoc = {
+            lastTickStartedAt: NOW - 4 * HOUR, // 4h ago — would alarm by itself
+            lastBackupAt: NOW - 3.5 * HOUR, // …but the run finished 30min later
+            lastTickAt: NOW - 3.5 * HOUR,
+        }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+
+        const call = captureMessageMock.mock.calls.find((c) =>
+            /started but never finished/i.test(String(c[0])),
+        )
+        expect(call).toBeFalsy()
+    })
+
+    it("does NOT alarm startedButNotFinished when lastErrorAt is later than the start (run failed cleanly)", async () => {
+        storageBackupExists = true
+        storageBackupDoc = {
+            lastTickStartedAt: NOW - 4 * HOUR,
+            lastError: "Drive 400",
+            lastErrorAt: NOW - 3.5 * HOUR,
+            lastTickAt: NOW - 3.5 * HOUR,
+        }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+
+        const startedCall = captureMessageMock.mock.calls.find((c) =>
+            /started but never finished/i.test(String(c[0])),
+        )
+        expect(startedCall).toBeFalsy()
+        // recentError still fires — separate alarm.
+        const errCall = captureMessageMock.mock.calls.find((c) =>
+            /last run failed/i.test(String(c[0])),
+        )
+        expect(errCall).toBeTruthy()
+    })
+
+    it("alarms startedButNotFinished even when a PRIOR successful lastBackupAt is OLDER than the start", async () => {
+        // Yesterday's tick succeeded; today's tick started and died externally.
+        // The stale success record must NOT mask the new silent death.
+        storageBackupExists = true
+        storageBackupDoc = {
+            lastBackupAt: NOW - 26 * HOUR,
+            lastTickAt: NOW - 26 * HOUR,
+            lastTickStartedAt: NOW - 3 * HOUR, // newer start, never finished
+        }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+
+        const call = captureMessageMock.mock.calls.find((c) =>
+            /started but never finished/i.test(String(c[0])),
+        )
+        expect(call).toBeTruthy()
+    })
+
+    it("does NOT alarm startedButNotFinished on pre-Fix-B docs that have no lastTickStartedAt", async () => {
+        storageBackupExists = true
+        storageBackupDoc = {
+            lastBackupAt: NOW - 10 * HOUR,
+            lastTickAt: NOW - 10 * HOUR,
+        }
+        await GET(makeReq("/api/cron/admin-consistency", { token: SECRET }))
+
+        const call = captureMessageMock.mock.calls.find((c) =>
+            /started but never finished/i.test(String(c[0])),
+        )
+        expect(call).toBeFalsy()
+    })
+})
+
 // ── Bridge-health alarms (added 2026-05-25 — closes bridge-analysis ──────────
 // FINDINGS TOP-10 #1+#8). Three independent Sentry warnings:
 //   - errCount delta > 5 per run
