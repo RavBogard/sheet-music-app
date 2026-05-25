@@ -279,7 +279,19 @@ export class FirestoreTransport {
         // B10 — only the active (lease-holding) bridge drains commands. A standby
         // bridge drops its local copy and leaves the docs in Firestore for the
         // active bridge's own listener to process (no double-apply, no deletes).
+        //
+        // B-A4 — but a silent drop strands the issuing iPad: it polls
+        // monitor-live/commands/acks/{id}, waits the ~1.5s ACK_CONFIRM_TIMEOUT_MS,
+        // and falls back to "unknown" (confused UX during a lease-flip window).
+        // Write a per-command rejection ack BEFORE clearing so clients can surface
+        // "Bridge briefly unavailable, try again." immediately. The active bridge's
+        // own listener will still process the pending doc; the rejection ack is
+        // for THIS local copy of the queue only — no double-apply because the ack
+        // surface and the pending-command surface are different docs.
         if (!this.isActiveBridge()) {
+            for (const { ref } of this.pendingCommandQueue) {
+                void this.ackWriter.write(ref.id, "rejected", { reason: "bridge-standby" })
+            }
             this.pendingCommandQueue = [];
             return;
         }

@@ -297,16 +297,57 @@ describe("FirestoreTransport — command acks + robustness (Phase 2 B4/B5/B6/B10
         t.stop()
     })
 
-    it("B10: a STANDBY bridge (no lease) does not drain commands, write acks, or write state", async () => {
+    it("B10 + B-A4: a STANDBY bridge does not drain commands or write state, but DOES write a rejection ack (reason: bridge-standby) so iPad clients aren't stranded waiting for the ACK_CONFIRM_TIMEOUT_MS fallback", async () => {
         const { x32, t } = start((uid) => (uid === "u-keys" ? 5 : null), /* isActive */ false)
         await feed([{ type: "set_bus_master", busIndex: 5, value: 0.2, uid: "u-keys", id: "c-standby" }])
         await runBatch()
         expect((x32 as unknown as { setBusFader: ReturnType<typeof vi.fn> }).setBusFader).not.toHaveBeenCalled()
         expect(batchDeletes).toHaveLength(0) // leaves pending docs for the active bridge
-        expect(ackFor("c-standby")).toBeUndefined()
+        const ack = ackFor("c-standby")
+        expect(ack?.status).toBe("rejected")
+        expect(ack?.reason).toBe("bridge-standby")
 
         await t.writeFullState()
         expect(stateSetCalls).toHaveLength(0) // standby never writes state
+        t.stop()
+    })
+
+    it("B-A4: a STANDBY bridge writes ONE rejection ack per queued command (N commands → N acks, each reason: bridge-standby)", async () => {
+        const { t } = start((uid) => (uid === "u-keys" ? 5 : null), /* isActive */ false)
+        const ids = ["c-sb-1", "c-sb-2", "c-sb-3", "c-sb-4", "c-sb-5"]
+        await feed(
+            ids.map((id, i) => ({ type: "set_bus_master", busIndex: 5, value: 0.1 * (i + 1), uid: "u-keys", id })),
+        )
+        await runBatch()
+        for (const id of ids) {
+            const ack = ackFor(id)
+            expect(ack?.status, `${id} must be rejected`).toBe("rejected")
+            expect(ack?.reason, `${id} reason`).toBe("bridge-standby")
+        }
+        expect(ackSetCalls.filter((a) => (a.data as { reason?: string }).reason === "bridge-standby")).toHaveLength(5)
+        t.stop()
+    })
+
+    it("B-A4: an empty-queue tick on a STANDBY bridge writes zero acks (no spurious writes when nothing was queued)", async () => {
+        const { t } = start(() => 5, /* isActive */ false)
+        // No feed() — queue stays empty. Advance past COMMAND_BATCH_WINDOW so the
+        // periodic processCommandBatch path would fire if it were going to.
+        await runBatch()
+        expect(ackSetCalls).toHaveLength(0)
+        t.stop()
+    })
+
+    it("B-A4 regression guard: the ACTIVE-mode success path never writes a bridge-standby rejection ack (only the standby-drop branch uses that reason)", async () => {
+        const { x32, t } = start((uid) => (uid === "u-keys" ? 5 : null), /* isActive */ true)
+        await feed([{ type: "set_bus_master", busIndex: 5, value: 0.2, uid: "u-keys", id: "c-active" }])
+        await runBatch()
+        expect((x32 as unknown as { setBusFader: ReturnType<typeof vi.fn> }).setBusFader).toHaveBeenCalledWith(5, 0.2)
+        ;(x32 as unknown as EventEmitter).emit("bus_fader", 5, 0.2)
+        const ack = ackFor("c-active")
+        expect(ack?.status).toBe("applied")
+        expect(ack?.reason).toBeUndefined()
+        // And no other ack write in this run carried the standby reason.
+        expect(ackSetCalls.filter((a) => (a.data as { reason?: string }).reason === "bridge-standby")).toHaveLength(0)
         t.stop()
     })
 
