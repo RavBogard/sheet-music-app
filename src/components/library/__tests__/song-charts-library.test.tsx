@@ -76,17 +76,6 @@ vi.mock("@/hooks/use-library", () => ({
     }),
 }))
 
-// Mock content search
-vi.mock("@/hooks/use-content-search", () => ({
-    useContentSearch: () => ({
-        results: [],
-        searching: false,
-        query: "",
-        search: vi.fn(),
-        clear: vi.fn(),
-    }),
-}))
-
 // Mock useLibraryActions
 vi.mock("../useLibraryActions", () => ({
     useLibraryActions: () => ({
@@ -159,9 +148,6 @@ vi.mock("../LibraryFilters", () => ({
     LibraryFilters: () => <div data-testid="library-filters" />,
     applyLibraryFilters: (files: DriveFile[]) => files,
     createEmptyFilters: () => ({}),
-}))
-vi.mock("@/components/library/ContentSearchResults", () => ({
-    ContentSearchResults: () => <div data-testid="content-search-results" />,
 }))
 vi.mock("@/components/audio/AudioPlayer", () => ({
     AudioPlayer: () => <div data-testid="audio-player" />,

@@ -21,8 +21,6 @@ import { ErrorState } from "@/components/ui/error-state"
 import { useLibraryStore } from "@/lib/library-store"
 import { logger } from "@/lib/logger"
 import { useLibrary } from "@/hooks/use-library"
-import { useContentSearch } from "@/hooks/use-content-search"
-import { ContentSearchResults } from "@/components/library/ContentSearchResults"
 import { DriveFile } from "@/types/models"
 import { LibraryFilters, applyLibraryFilters, createEmptyFilters, LibraryFilterState } from "@/components/library/LibraryFilters"
 import { useAuth } from "@/lib/auth-context"
@@ -114,7 +112,6 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     const { setFile } = useMusicStore()
 
     const {
-        allFiles,
         displayedFiles,
         loading: filtering,
         setFilter,
@@ -172,21 +169,6 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
     // Multi-select mode
     const [selectMode, setSelectMode] = useState(false)
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-
-    // Content search (searches within chord data / lyrics)
-    const contentSearch = useContentSearch()
-    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-    const handleSearchChange = (value: string) => {
-        setSearchQuery(value)
-        // Debounce content search (only triggers for 3+ chars after 500ms)
-        if (debounceRef.current) clearTimeout(debounceRef.current)
-        if (value.length >= 3) {
-            debounceRef.current = setTimeout(() => contentSearch.search(value), 500)
-        } else {
-            contentSearch.clear()
-        }
-    }
 
     useEffect(() => { setFilter(searchQuery) }, [searchQuery, setFilter])
 
@@ -350,7 +332,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
                     <Input
                         value={searchQuery}
-                        onChange={(e) => handleSearchChange(e.target.value)}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder={tab === "audio" ? "Search audio files..." : "Search by name, key, topic..."}
                         aria-label={tab === "audio" ? "Search audio files" : "Search song charts by name, key, or topic"}
                         className="pl-12 h-14 text-xl rounded-full bg-brand/5 border-brand/10 focus:border-brand focus:ring-brand/20"
@@ -400,21 +382,6 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                     })}
                 </div>
             </div>
-
-            {/* Content Search Results (searches within chord data) */}
-            {searchQuery.length >= 3 && (
-                <ContentSearchResults
-                    results={contentSearch.results}
-                    searching={contentSearch.searching}
-                    query={contentSearch.query}
-                    onSelectFile={handleSelectFile}
-                    canAddToSetlist={addToSetlist.canAddToSetlist}
-                    onAddToSetlist={(fileId, fileName) => {
-                        const file = allFiles.find(f => f.id === fileId)
-                        if (file) addToSetlist.openForSongs([file])
-                    }}
-                />
-            )}
 
             {/* File List */}
             <ScrollArea className="flex-1 p-4">
