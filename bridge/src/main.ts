@@ -6,15 +6,20 @@
  * Auto-updates from GitHub releases.
  */
 
-import { app, BrowserWindow, Tray, Menu, ipcMain, shell, nativeImage } from 'electron';
+import { app, BrowserWindow, Tray, Menu, ipcMain, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
 import * as fs from 'fs';
 import { main as startBridge, getBridgeStatus, setRestartHandler } from './index';
+import { createTrayIcon as createHealthTrayIcon, pickTrayColor, type TrayHealthColor } from './tray-icon';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let bridgeStarted = false;
+// F-A3 / Lane #9 — last applied tray color, so we only call tray.setImage() on
+// transitions instead of every poll tick.
+let lastTrayColor: TrayHealthColor | null = null;
+let trayHealthInterval: NodeJS.Timeout | null = null;
 
 // ─── B1: last-resort crash guards (v10.0.4) ───
 //
@@ -141,45 +146,14 @@ function createWindow() {
 }
 
 // ─── System Tray ───
+//
+// Tray icon doubles as a peripheral health signal (F-A3 / Lane #9). The factory
+// + color selector live in ./tray-icon.ts (pure, unit-tested); this module wires
+// them to the live bridge status via a 2s polling tick that calls tray.setImage()
+// only on color transitions.
 
-function createTrayIcon() {
-    // Try loading icon file first
-    const iconPath = path.join(__dirname, '../ui/icon.png');
-    if (fs.existsSync(iconPath)) {
-        return nativeImage.createFromPath(iconPath);
-    }
-
-    // Generate a simple 16x16 tray icon programmatically
-    // Purple/violet circle on transparent background (matches the app's violet theme)
-    const size = 16;
-    const canvas = Buffer.alloc(size * size * 4); // RGBA
-
-    for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-            const cx = x - size / 2 + 0.5;
-            const cy = y - size / 2 + 0.5;
-            const dist = Math.sqrt(cx * cx + cy * cy);
-            const offset = (y * size + x) * 4;
-
-            if (dist < size / 2 - 0.5) {
-                // Violet fill: #8b5cf6
-                canvas[offset] = 0x8b;     // R
-                canvas[offset + 1] = 0x5c; // G
-                canvas[offset + 2] = 0xf6; // B
-                canvas[offset + 3] = 0xff; // A
-            } else if (dist < size / 2 + 0.5) {
-                // Anti-aliased edge
-                const alpha = Math.round((size / 2 + 0.5 - dist) * 255);
-                canvas[offset] = 0x8b;
-                canvas[offset + 1] = 0x5c;
-                canvas[offset + 2] = 0xf6;
-                canvas[offset + 3] = Math.max(0, Math.min(255, alpha));
-            }
-            // else: transparent (already zeroed)
-        }
-    }
-
-    return nativeImage.createFromBuffer(canvas, { width: size, height: size });
+function createTrayIcon(color: TrayHealthColor = 'green') {
+    return createHealthTrayIcon(color);
 }
 
 function buildTrayMenu(): Menu {
@@ -226,10 +200,13 @@ function refreshTrayMenu() {
 }
 
 function createTray() {
-    const icon = createTrayIcon();
+    // Initial color: red (defensive — the bridge hasn't started yet, so status is unknown).
+    const initialColor = pickTrayColor(safeGetBridgeStatus());
+    const icon = createTrayIcon(initialColor);
     tray = new Tray(icon);
+    lastTrayColor = initialColor;
 
-    tray.setToolTip('CentralReform Bridge');
+    tray.setToolTip(trayTooltipFor(initialColor));
     refreshTrayMenu();
 
     tray.on('click', () => {
@@ -240,6 +217,50 @@ function createTray() {
             mainWindow?.focus();
         }
     });
+
+    startTrayHealthPolling();
+}
+
+/** Cheap, throw-proof getBridgeStatus() wrapper — pickTrayColor will pickup the red default. */
+function safeGetBridgeStatus(): { x32Connected?: boolean; stateFresh?: boolean } | null {
+    try {
+        return (getBridgeStatus?.() ?? null) as { x32Connected?: boolean; stateFresh?: boolean } | null;
+    } catch {
+        return null;
+    }
+}
+
+function trayTooltipFor(color: TrayHealthColor): string {
+    switch (color) {
+        case 'green':
+            return 'CentralReform Bridge — healthy (X32 connected)';
+        case 'orange':
+            return 'CentralReform Bridge — X32 connected, state writes stale';
+        case 'red':
+            return 'CentralReform Bridge — X32 unreachable';
+    }
+}
+
+/**
+ * Poll the bridge status every 2s; on a color change, swap the tray icon +
+ * update the tooltip. setImage on every tick is unnecessary work, so we only
+ * touch the tray on transitions. Mirrors the existing 2s status-IPC cadence in
+ * startBackgroundBridge so the tray and the dashboard stay in lockstep.
+ */
+function startTrayHealthPolling() {
+    if (trayHealthInterval) return;
+    trayHealthInterval = setInterval(() => {
+        if (!tray) return;
+        const nextColor = pickTrayColor(safeGetBridgeStatus());
+        if (nextColor === lastTrayColor) return;
+        try {
+            tray.setImage(createTrayIcon(nextColor));
+            tray.setToolTip(trayTooltipFor(nextColor));
+            lastTrayColor = nextColor;
+        } catch (err) {
+            console.warn('[Bridge] Tray health-color update failed (non-fatal):', (err as Error).message);
+        }
+    }, 2000);
 }
 
 // ─── Auto-Updates ───
