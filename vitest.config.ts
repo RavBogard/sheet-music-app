@@ -1,7 +1,28 @@
 import { defineConfig } from 'vitest/config'
 import { resolve } from 'path'
 
+// Strip Node `#!`-shebangs from local `.mjs`/`.cjs`/`.js` source before
+// Vite's transform pipeline runs esbuild on them. esbuild flags `#!` as
+// `SyntaxError: Invalid or unexpected token` when invoked as a transformer
+// (Node strips shebangs at runtime, but Vite never delegates to Node for
+// in-test loads). Without this, any `.test.ts` that imports a CLI-style
+// script (e.g. `scripts/supervisor-prod-bearer.mjs`) fails to load with
+// the error surfacing at the importer's line. The shebang is replaced
+// in-place (not deleted) so the source line count — and any downstream
+// stack-frame line numbers — stay stable. `enforce: 'pre'` runs us before
+// Vite's built-in esbuild transform plugin sees the source.
+const stripShebangPlugin = {
+    name: 'crc:strip-shebang',
+    enforce: 'pre' as const,
+    transform(code: string, id: string) {
+        if (!/\.[mc]?js(\?|$)/.test(id)) return null
+        if (!code.startsWith('#!')) return null
+        return { code: code.replace(/^#![^\n]*/, '//-shebang-stripped'), map: null }
+    },
+}
+
 export default defineConfig({
+    plugins: [stripShebangPlugin],
     test: {
         environment: 'jsdom',
         globals: true,
