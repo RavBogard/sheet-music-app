@@ -224,7 +224,8 @@ export async function runLatencyMeasurement(
     } = options
 
     // Dynamically import Firebase to work in browser context
-    const { db, auth } = await import("@/lib/firebase")
+    const { getDb, auth } = await import("@/lib/firebase")
+    const db = await getDb()
     const { addDoc, collection, doc, onSnapshot } = await import("firebase/firestore")
 
     console.log(`[LatencyTest] Starting ${rounds} measurements (${scenarioName})...`)
@@ -291,7 +292,8 @@ export async function runRapidDragTest(
         busIndex = 1,
     } = options
 
-    const { db, auth } = await import("@/lib/firebase")
+    const { getDb, auth } = await import("@/lib/firebase")
+    const db = await getDb()
     const { addDoc, collection } = await import("firebase/firestore")
 
     const user = auth.currentUser

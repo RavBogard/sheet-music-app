@@ -4,6 +4,11 @@ import { render, screen } from "@testing-library/react"
 // Mock firebase modules before any component imports
 vi.mock("@/lib/firebase", () => ({
     db: {},
+    getDb: vi.fn(async () => ({})),
+    subscribeWithDb: vi.fn((setup: (db: unknown) => (() => void) | void) => {
+        const u = setup({})
+        return typeof u === 'function' ? u : () => {}
+    }),
     auth: {},
     googleProvider: {},
 }))

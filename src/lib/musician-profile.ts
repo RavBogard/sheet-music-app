@@ -1,4 +1,4 @@
-import { db, auth } from "./firebase"
+import { getDb, auth, subscribeWithDb } from "./firebase"
 import { doc, updateDoc, onSnapshot, collection, query, where } from "firebase/firestore"
 import { MusicianProfile } from "@/types/models"
 import { logger } from "@/lib/logger"
@@ -10,6 +10,7 @@ import { logger } from "@/lib/logger"
 export async function saveMusicianProfile(profile: MusicianProfile): Promise<void> {
     const user = auth.currentUser
     if (!user) throw new Error("Not authenticated")
+    const db = await getDb()
     if (!db || Object.keys(db).length === 0) throw new Error("Database not initialized")
 
     const ref = doc(db, "users", user.uid)
@@ -24,18 +25,20 @@ export function subscribeToMusicianProfile(
     uid: string,
     callback: (profile: MusicianProfile | null) => void
 ): () => void {
-    if (!db || Object.keys(db).length === 0) return () => { }
+    return subscribeWithDb((db) => {
+        if (!db || Object.keys(db).length === 0) return () => { }
 
-    const ref = doc(db, "users", uid)
-    return onSnapshot(ref, (snap) => {
-        if (snap.exists()) {
-            const data = snap.data()
-            callback(data.musicianProfile || null)
-        } else {
-            callback(null)
-        }
-    }, (err) => {
-        logger.error("[MusicianProfile] Listener error:", err)
+        const ref = doc(db, "users", uid)
+        return onSnapshot(ref, (snap) => {
+            if (snap.exists()) {
+                const data = snap.data()
+                callback(data.musicianProfile || null)
+            } else {
+                callback(null)
+            }
+        }, (err) => {
+            logger.error("[MusicianProfile] Listener error:", err)
+        })
     })
 }
 
@@ -99,24 +102,26 @@ export const ONBOARDING_INSTRUMENT_KEYS = [
 export function subscribeToAllMusicianProfiles(
     callback: (profiles: { uid: string; displayName: string; profile: MusicianProfile }[]) => void
 ): () => void {
-    if (!db || Object.keys(db).length === 0) return () => { }
+    return subscribeWithDb((db) => {
+        if (!db || Object.keys(db).length === 0) return () => { }
 
-    const q = query(collection(db, "users"), where("role", "in", ["musician", "band_leader", "admin", "sound_engineer"]))
-    return onSnapshot(q, (snap) => {
-        const musicians = snap.docs
-            .map(d => {
-                const data = d.data()
-                return {
-                    uid: d.id,
-                    displayName: data.displayName || 'Unknown',
-                    profile: data.musicianProfile as MusicianProfile | undefined,
-                }
-            })
-            .filter((m): m is { uid: string; displayName: string; profile: MusicianProfile } => 
-                !!m.profile && !!m.profile.instrument
-            )
-        callback(musicians)
-    }, (err) => {
-        logger.error("[MusicianProfile] All profiles listener error:", err)
+        const q = query(collection(db, "users"), where("role", "in", ["musician", "band_leader", "admin", "sound_engineer"]))
+        return onSnapshot(q, (snap) => {
+            const musicians = snap.docs
+                .map(d => {
+                    const data = d.data()
+                    return {
+                        uid: d.id,
+                        displayName: data.displayName || 'Unknown',
+                        profile: data.musicianProfile as MusicianProfile | undefined,
+                    }
+                })
+                .filter((m): m is { uid: string; displayName: string; profile: MusicianProfile } =>
+                    !!m.profile && !!m.profile.instrument
+                )
+            callback(musicians)
+        }, (err) => {
+            logger.error("[MusicianProfile] All profiles listener error:", err)
+        })
     })
 }

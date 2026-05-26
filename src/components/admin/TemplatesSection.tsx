@@ -4,8 +4,8 @@ import { useState, useCallback } from "react"
 import { Loader2, Import } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { collection, query, orderBy, limit, where, getDocs } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { collection, query, orderBy, limit, getDocs } from "firebase/firestore"
+import { getDb } from "@/lib/firebase"
 import { getAllTemplateKeys, getDefaultTemplate, TEMPLATE_LABELS, convertSetlistToTemplate, type TemplateSlot } from "@/lib/liturgical-templates"
 import { useCustomTemplates } from "@/lib/template-firebase"
 import { TemplateEditor } from "@/app/(main)/manage/templates/TemplateEditor"
@@ -42,6 +42,7 @@ export function TemplatesSection() {
         setLoadingSetlists(true)
         setShowImportPicker(true)
         try {
+            const db = await getDb()
             const q = query(
                 collection(db, "setlists"),
                 orderBy("date", "desc"),

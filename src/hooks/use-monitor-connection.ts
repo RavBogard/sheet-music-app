@@ -26,7 +26,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useMonitorStore } from "@/lib/monitor-store"
 import { FirestoreMonitorClient } from "@/lib/firestore-monitor-client"
 import { doc, onSnapshot } from "firebase/firestore"
-import { db, auth, recoverFromFirestoreShutdown } from "@/lib/firebase"
+import { auth, subscribeWithDb, recoverFromFirestoreShutdown } from "@/lib/firebase"
 import { MonitorConfig } from "@/types/monitor"
 import { logger } from "@/lib/logger"
 import { onAuthStateChanged } from "firebase/auth"
@@ -65,8 +65,10 @@ function ensureConnected(userId: string): void {
     connectedUserId = userId
     logger.info("[MonitorConn] Establishing persistent connection for user %s", userId)
 
-    // Watch config/monitor for bus assignments and bridge status
-    configUnsub = onSnapshot(doc(db, "config", "monitor"), (snap) => {
+    // Watch config/monitor for bus assignments and bridge status. Firestore
+    // SDK is lazy-loaded via subscribeWithDb to keep the chunk off the eager
+    // preload graph — the sync-unsub contract is preserved.
+    configUnsub = subscribeWithDb((db) => onSnapshot(doc(db, "config", "monitor"), (snap) => {
         if (!snap.exists()) return
         const config = snap.data() as MonitorConfig
         useMonitorStore.getState().setConfig(config)
@@ -74,7 +76,7 @@ function ensureConnected(userId: string): void {
         if (!recoverFromFirestoreShutdown(err)) {
             logger.error("[MonitorConn] Config listener error:", err)
         }
-    })
+    }))
 
     // Create and start the Firestore monitor client
     const client = new FirestoreMonitorClient({

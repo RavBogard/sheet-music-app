@@ -1,4 +1,4 @@
-import { db, auth, recoverFromFirestoreShutdown } from "./firebase"
+import { getDb, auth, recoverFromFirestoreShutdown, subscribeWithDb } from "./firebase"
 import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, orderBy, Timestamp } from "firebase/firestore"
 import { User } from "firebase/auth"
 import { UserProfile, UserRole } from "@/types/models"
@@ -13,6 +13,7 @@ export type { UserProfile, UserRole }
  * Creates one with 'pending' role if it doesn't exist.
  */
 export async function ensureUserProfile(user: User): Promise<UserProfile> {
+    const db = await getDb()
     if (!db || Object.keys(db).length === 0) {
         return { uid: user.uid, role: "pending" } as UserProfile
     }
@@ -57,41 +58,43 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
 
 /**
  * Subscribe to the current user's profile.
- * 
+ *
  * Deduplicates updates: only fires callback when meaningful fields change.
  * This prevents the ensureUserProfile() lastLoginAt update from triggering
  * a re-render cascade through the entire app via AuthContext.
  */
 export function subscribeToUserProfile(uid: string, callback: (profile: UserProfile | null) => void) {
-    if (!db || Object.keys(db).length === 0) return () => { }
-    const ref = doc(db, "users", uid).withConverter(userProfileConverter)
-    // Use sentinel to distinguish "never fired" from "fired with null".
-    // Without this, a new user whose profile doc doesn't exist yet would
-    // never get the initial null callback (lastProfile starts null, guard
-    // `lastProfile !== null` would be false), leaving loading stuck forever.
-    const NEVER_FIRED = '__NEVER_FIRED__'
-    let lastProfile: string | null = NEVER_FIRED as string | null
+    return subscribeWithDb((db) => {
+        if (!db || Object.keys(db).length === 0) return () => { }
+        const ref = doc(db, "users", uid).withConverter(userProfileConverter)
+        // Use sentinel to distinguish "never fired" from "fired with null".
+        // Without this, a new user whose profile doc doesn't exist yet would
+        // never get the initial null callback (lastProfile starts null, guard
+        // `lastProfile !== null` would be false), leaving loading stuck forever.
+        const NEVER_FIRED = '__NEVER_FIRED__'
+        let lastProfile: string | null = NEVER_FIRED as string | null
 
-    return onSnapshot(ref, (snap) => {
-        if (snap.exists()) {
-            const profile = snap.data()
-            if (!profile) return // Zod conversion failed, essentially treat as non-existent or ignore invalid state
-            // Compare meaningful fields only (skip lastLoginAt which changes every session)
-            const key = `${profile.uid}|${profile.role}|${profile.email}|${profile.displayName}|${profile.photoURL}`
-            if (key !== lastProfile) {
-                lastProfile = key
-                callback(profile)
+        return onSnapshot(ref, (snap) => {
+            if (snap.exists()) {
+                const profile = snap.data()
+                if (!profile) return // Zod conversion failed, essentially treat as non-existent or ignore invalid state
+                // Compare meaningful fields only (skip lastLoginAt which changes every session)
+                const key = `${profile.uid}|${profile.role}|${profile.email}|${profile.displayName}|${profile.photoURL}`
+                if (key !== lastProfile) {
+                    lastProfile = key
+                    callback(profile)
+                }
+            } else {
+                if (lastProfile !== null) {
+                    lastProfile = null
+                    callback(null)
+                }
             }
-        } else {
-            if (lastProfile !== null) {
-                lastProfile = null
-                callback(null)
+        }, (err) => {
+            if (!recoverFromFirestoreShutdown(err)) {
+                logger.error("[Users] Profile listener error:", err)
             }
-        }
-    }, (err) => {
-        if (!recoverFromFirestoreShutdown(err)) {
-            logger.error("[Users] Profile listener error:", err)
-        }
+        })
     })
 }
 
@@ -102,17 +105,19 @@ export function subscribeToUserProfile(uid: string, callback: (profile: UserProf
  * Subscribe to ALL users (for Admin page)
  */
 export function subscribeToAllUsers(callback: (users: UserProfile[]) => void, onError?: (error: Error) => void) {
-    // Build safety
-    if (!db || Object.keys(db).length === 0) return () => { }
+    return subscribeWithDb((db) => {
+        // Build safety
+        if (!db || Object.keys(db).length === 0) return () => { }
 
-    const collectionRef = collection(db, "users").withConverter(userProfileConverter)
-    const q = query(collectionRef, orderBy("createdAt", "desc"))
-    return onSnapshot(q, (snap) => {
-        const users = snap.docs.map(d => d.data()).filter(Boolean) as UserProfile[]
-        callback(users)
-    }, (error) => {
-        if (onError) onError(error)
-        else logger.error("Snapshot error:", error)
+        const collectionRef = collection(db, "users").withConverter(userProfileConverter)
+        const q = query(collectionRef, orderBy("createdAt", "desc"))
+        return onSnapshot(q, (snap) => {
+            const users = snap.docs.map(d => d.data()).filter(Boolean) as UserProfile[]
+            callback(users)
+        }, (error) => {
+            if (onError) onError(error)
+            else logger.error("Snapshot error:", error)
+        })
     })
 }
 
@@ -173,6 +178,7 @@ export async function updateUserDisplayName(_uid: string, displayName: string) {
  * Mark that the user has seen the welcome modal
  */
 export async function markWelcomeModalViewed(uid: string) {
+    const db = await getDb()
     if (!db || Object.keys(db).length === 0) return
     await updateDoc(doc(db, "users", uid), { viewedWelcomeModal: true })
 }

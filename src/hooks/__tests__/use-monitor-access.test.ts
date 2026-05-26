@@ -5,6 +5,11 @@ import { renderHook } from '@testing-library/react'
 
 vi.mock('@/lib/firebase', () => ({
   db: {},
+  getDb: vi.fn(async () => ({})),
+  subscribeWithDb: vi.fn((setup: (db: unknown) => (() => void) | void) => {
+    const u = setup({})
+    return typeof u === 'function' ? u : () => {}
+  }),
 }))
 
 vi.mock('firebase/firestore', () => ({

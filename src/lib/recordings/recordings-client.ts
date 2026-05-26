@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore"
 
 import { apiFetch } from "@/lib/api-client"
-import { db, recoverFromFirestoreShutdown } from "@/lib/firebase"
+import { subscribeWithDb, recoverFromFirestoreShutdown } from "@/lib/firebase"
 import type { Recording } from "@/types/models"
 
 /**
@@ -24,27 +24,29 @@ export function subscribeRecordingsForSong(
     songId: string,
     cb: (recordings: Recording[]) => void,
 ): () => void {
-    const q = query(
-        collection(db, "recordings"),
-        where("songId", "==", songId),
-        orderBy("createdAt", "desc"),
-    )
-    return onSnapshot(
-        q,
-        (snap) => {
-            const recordings = snap.docs.map((d) => ({
-                ...(d.data() as Recording),
-                id: d.id,
-            }))
-            cb(recordings)
-        },
-        (err) => {
-            // Project-wide listener-resilience pattern: a multi-tab IDB
-            // version change can kill the listener with "Firestore shutting
-            // down" — reload once to recover.
-            recoverFromFirestoreShutdown(err)
-        },
-    )
+    return subscribeWithDb((db) => {
+        const q = query(
+            collection(db, "recordings"),
+            where("songId", "==", songId),
+            orderBy("createdAt", "desc"),
+        )
+        return onSnapshot(
+            q,
+            (snap) => {
+                const recordings = snap.docs.map((d) => ({
+                    ...(d.data() as Recording),
+                    id: d.id,
+                }))
+                cb(recordings)
+            },
+            (err) => {
+                // Project-wide listener-resilience pattern: a multi-tab IDB
+                // version change can kill the listener with "Firestore shutting
+                // down" — reload once to recover.
+                recoverFromFirestoreShutdown(err)
+            },
+        )
+    })
 }
 
 /**

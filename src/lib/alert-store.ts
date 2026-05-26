@@ -1,4 +1,4 @@
-import { db, recoverFromFirestoreShutdown } from "@/lib/firebase"
+import { getDb, subscribeWithDb, recoverFromFirestoreShutdown } from "@/lib/firebase"
 import { doc, onSnapshot, setDoc } from "firebase/firestore"
 import { create } from "zustand"
 import { logger } from "@/lib/logger"
@@ -26,27 +26,31 @@ export const useAlertStore = create<AlertStore>((set) => ({
     init: () => {
         // B02: if already subscribed, no-op (prevents listener stacking on
         // duplicate init calls). If db wasn't available on first call, we
-        // don't latch `initialized` — so a later call can retry.
+        // don't latch `initialized` — so a later call can retry. The latch
+        // lives INSIDE the subscribeWithDb setup callback so the missing-db
+        // path stays unlatched even after firestore lazy-loads.
         if (initialized) return
-        if (!db) return
-        initialized = true
-        const ref = doc(db, "system", "globalAlert")
-        unsubscribe = onSnapshot(ref, (snap) => {
-            if (snap.exists()) {
-                set({ alert: snap.data() as GlobalAlert, loading: false })
-            } else {
-                set({ alert: { visible: false, message: "", type: "info" }, loading: false })
-            }
-        }, (err) => {
-            // If this is a shutdown cascade, the recovery handler will log + reload;
-            // staying quiet here prevents the console flood cowork flagged.
-            if (!recoverFromFirestoreShutdown(err)) {
-                // B02: surface the real error to telemetry — previously silently
-                // set loading: false with no diagnostic, making permission /
-                // rule failures invisible in prod.
-                logger.warn("[alert-store] globalAlert subscription failed:", err)
-            }
-            set({ loading: false })
+        unsubscribe = subscribeWithDb((db) => {
+            if (!db || Object.keys(db).length === 0) return () => { }
+            initialized = true
+            const ref = doc(db, "system", "globalAlert")
+            return onSnapshot(ref, (snap) => {
+                if (snap.exists()) {
+                    set({ alert: snap.data() as GlobalAlert, loading: false })
+                } else {
+                    set({ alert: { visible: false, message: "", type: "info" }, loading: false })
+                }
+            }, (err) => {
+                // If this is a shutdown cascade, the recovery handler will log + reload;
+                // staying quiet here prevents the console flood cowork flagged.
+                if (!recoverFromFirestoreShutdown(err)) {
+                    // B02: surface the real error to telemetry — previously silently
+                    // set loading: false with no diagnostic, making permission /
+                    // rule failures invisible in prod.
+                    logger.warn("[alert-store] globalAlert subscription failed:", err)
+                }
+                set({ loading: false })
+            })
         })
     },
     destroy: () => {
@@ -57,7 +61,8 @@ export const useAlertStore = create<AlertStore>((set) => ({
         initialized = false
     },
     setAlert: async (alert: GlobalAlert) => {
-        if (!db) return
+        const db = await getDb()
+        if (!db || Object.keys(db).length === 0) return
         const ref = doc(db, "system", "globalAlert")
         await setDoc(ref, alert, { merge: true })
         // Optimistic UI

@@ -35,6 +35,11 @@ vi.mock('firebase/firestore', () => ({
 
 vi.mock('@/lib/firebase', () => ({
     db: { __mock: true },
+    getDb: vi.fn(async () => ({ __mock: true })),
+    subscribeWithDb: vi.fn((setup: (db: unknown) => (() => void) | void) => {
+        const u = setup({ __mock: true })
+        return typeof u === 'function' ? u : () => {}
+    }),
     auth: {
         currentUser: {
             uid: 'test-uid',
@@ -175,10 +180,13 @@ describe('ensureUserProfile', () => {
     })
 
     it('returns minimal fallback when db is empty/uninitialized', async () => {
-        // Temporarily override db to empty object
+        // After the firestore lazy-import refactor, the production path resolves
+        // the db via `await getDb()` rather than reading a module-top binding.
+        // Override the `getDb` mock to resolve with an empty object so the
+        // production `Object.keys(db).length === 0` short-circuit fires.
         const firebase = await import('@/lib/firebase')
-        const originalDb = firebase.db
-        Object.defineProperty(firebase, 'db', { value: {}, writable: true, configurable: true })
+        const originalGetDb = firebase.getDb
+        ;(firebase as { getDb: unknown }).getDb = vi.fn(async () => ({}))
 
         const result = await ensureUserProfile(makeUser())
 
@@ -186,7 +194,7 @@ describe('ensureUserProfile', () => {
         expect(result.role).toBe('pending')
         expect(mockGetDoc).not.toHaveBeenCalled()
 
-        Object.defineProperty(firebase, 'db', { value: originalDb, writable: true, configurable: true })
+        ;(firebase as { getDb: unknown }).getDb = originalGetDb
     })
 })
 
@@ -249,9 +257,17 @@ describe('subscribeToUserProfile', () => {
     })
 
     it('returns noop when db is empty', async () => {
+        // After the firestore lazy-import refactor, subscription wiring runs
+        // inside `subscribeWithDb(setup)`. Override the mock so it calls setup
+        // with an empty db and verify the production guard short-circuits.
         const firebase = await import('@/lib/firebase')
-        const originalDb = firebase.db
-        Object.defineProperty(firebase, 'db', { value: {}, writable: true, configurable: true })
+        const originalSubscribeWithDb = firebase.subscribeWithDb
+        ;(firebase as { subscribeWithDb: unknown }).subscribeWithDb = vi.fn(
+            (setup: (db: unknown) => (() => void) | void) => {
+                const u = setup({})
+                return typeof u === 'function' ? u : () => {}
+            },
+        )
 
         const cb = vi.fn()
         const unsub = subscribeToUserProfile('user-1', cb)
@@ -259,7 +275,7 @@ describe('subscribeToUserProfile', () => {
         expect(typeof unsub).toBe('function')
         expect(mockOnSnapshot).not.toHaveBeenCalled()
 
-        Object.defineProperty(firebase, 'db', { value: originalDb, writable: true, configurable: true })
+        ;(firebase as { subscribeWithDb: unknown }).subscribeWithDb = originalSubscribeWithDb
     })
 })
 
@@ -385,13 +401,13 @@ describe('markWelcomeModalViewed', () => {
 
     it('no-ops when db is empty', async () => {
         const firebase = await import('@/lib/firebase')
-        const originalDb = firebase.db
-        Object.defineProperty(firebase, 'db', { value: {}, writable: true, configurable: true })
+        const originalGetDb = firebase.getDb
+        ;(firebase as { getDb: unknown }).getDb = vi.fn(async () => ({}))
 
         await markWelcomeModalViewed('user-1')
 
         expect(mockUpdateDoc).not.toHaveBeenCalled()
 
-        Object.defineProperty(firebase, 'db', { value: originalDb, writable: true, configurable: true })
+        ;(firebase as { getDb: unknown }).getDb = originalGetDb
     })
 })

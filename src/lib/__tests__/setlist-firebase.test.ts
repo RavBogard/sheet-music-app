@@ -43,7 +43,14 @@ vi.mock('firebase/firestore', () => ({
     },
 }))
 
-vi.mock('@/lib/firebase', () => ({ db: { __mock: true } }))
+vi.mock('@/lib/firebase', () => ({
+    db: { __mock: true },
+    getDb: vi.fn(async () => ({ __mock: true })),
+    subscribeWithDb: vi.fn((setup: (db: unknown) => (() => void) | void) => {
+        const u = setup({ __mock: true })
+        return typeof u === 'function' ? u : () => {}
+    }),
+}))
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
 vi.mock('@/lib/api-client', () => ({ apiFetch: vi.fn() }))
 vi.mock('@/lib/setlist-audit', () => ({ logSetlistChange: vi.fn() }))

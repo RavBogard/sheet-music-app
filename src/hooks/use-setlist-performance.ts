@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { doc } from "firebase/firestore"
+import { doc, type DocumentReference } from "firebase/firestore"
 import { useLiveQuery } from "dexie-react-hooks"
 
-import { db } from "@/lib/firebase"
+import { getDb as getFirestoreDb } from "@/lib/firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { useWakeLock } from "@/hooks/use-wake-lock"
@@ -93,10 +93,19 @@ export function useSetlistPerformance(
     const startSnapshotListener =
         opts.startSnapshotListener ?? defaultStartSnapshotListener
 
-    const setlistRef = useMemo(
-        () => (setlistId ? doc(db, "setlists", setlistId) : null),
-        [setlistId]
-    )
+    // Firestore SDK is lazy-loaded; build the doc-ref in an effect. The hook's
+    // observable surface (`{ data, loading, error }`) is unchanged: useSafe
+    // FirestoreSync renders `loading:false, data:null` until the ref lands,
+    // then re-runs its own subscribe-effect.
+    const [setlistRef, setSetlistRef] = useState<DocumentReference | null>(null)
+    useEffect(() => {
+        if (!setlistId) { setSetlistRef(null); return }
+        let cancelled = false
+        void getFirestoreDb().then((d) => {
+            if (!cancelled) setSetlistRef(doc(d, "setlists", setlistId))
+        })
+        return () => { cancelled = true }
+    }, [setlistId])
     const { data: setlistData, loading: setlistLoading, error } =
         useSafeFirestoreSync<Setlist>(setlistRef)
 

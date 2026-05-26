@@ -11,7 +11,7 @@ import {
     doc, getDoc, setDoc, deleteDoc, onSnapshot,
     collection, Timestamp,
 } from "firebase/firestore"
-import { db } from "./firebase"
+import { getDb, subscribeWithDb } from "./firebase"
 import type { TemplateSlot } from "./liturgical-templates"
 import { logger } from "@/lib/logger"
 
@@ -28,6 +28,7 @@ export interface CustomTemplateDoc {
  * Returns null if no override exists (use hardcoded default).
  */
 export async function getCustomTemplate(key: string): Promise<TemplateSlot[] | null> {
+    const db = await getDb()
     const snap = await getDoc(doc(db, COLLECTION, key))
     if (!snap.exists()) return null
     return (snap.data() as CustomTemplateDoc).slots
@@ -48,6 +49,7 @@ export async function saveCustomTemplate(
     slots: TemplateSlot[],
     userId: string,
 ): Promise<void> {
+    const db = await getDb()
     const cleanSlots = slots.map(s => stripUndefined({ ...s }))
     await setDoc(doc(db, COLLECTION, key), {
         slots: cleanSlots,
@@ -60,6 +62,7 @@ export async function saveCustomTemplate(
  * Delete a custom template override, reverting to hardcoded default.
  */
 export async function deleteCustomTemplate(key: string): Promise<void> {
+    const db = await getDb()
     await deleteDoc(doc(db, COLLECTION, key))
 }
 
@@ -94,7 +97,7 @@ export function useCustomTemplates(): {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        const unsub = onSnapshot(
+        const unsub = subscribeWithDb((db) => onSnapshot(
             collection(db, COLLECTION),
             (snap) => {
                 const result: Record<string, TemplateSlot[]> = {}
@@ -111,7 +114,7 @@ export function useCustomTemplates(): {
                 logger.warn("[Templates] Listener error (using defaults):", err)
                 setLoading(false)
             },
-        )
+        ))
         return unsub
     }, [])
 

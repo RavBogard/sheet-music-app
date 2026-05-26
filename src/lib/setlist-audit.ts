@@ -9,7 +9,7 @@
  * History entries are append-only and never modified or deleted by the app.
  */
 
-import { db } from "./firebase"
+import { getDb } from "./firebase"
 import { collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs } from "firebase/firestore"
 import { logger } from "@/lib/logger"
 
@@ -55,8 +55,6 @@ export function logSetlistChange(
 ): void {
     if (!setlistId || !userId) return
 
-    const historyRef = collection(db, 'setlists', setlistId, 'history')
-
     const entry: Record<string, unknown> = {
         action,
         userId,
@@ -78,7 +76,9 @@ export function logSetlistChange(
         }))
     }
 
-    addDoc(historyRef, entry).catch(err => {
+    // Fire-and-forget: firestore is lazy-loaded so we chain getDb() before
+    // addDoc and swallow the rejection — caller still treats this as void.
+    void getDb().then(db => addDoc(collection(db, 'setlists', setlistId, 'history'), entry)).catch(err => {
         logger.warn('[Audit] Failed to log setlist change:', err)
     })
 }
@@ -92,6 +92,7 @@ export async function getSetlistHistory(
     maxEntries: number = 50
 ): Promise<AuditEntry[]> {
     try {
+        const db = await getDb()
         const historyRef = collection(db, 'setlists', setlistId, 'history')
         const q = query(historyRef, orderBy('timestamp', 'desc'), limit(maxEntries))
         const snapshot = await getDocs(q)

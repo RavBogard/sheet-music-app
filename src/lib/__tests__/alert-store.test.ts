@@ -14,6 +14,14 @@ const { dbRef, onSnapshotMock } = vi.hoisted(() => ({
 
 vi.mock("@/lib/firebase", () => ({
     get db() { return dbRef.value },
+    getDb: vi.fn(async () => dbRef.value),
+    // Sync-friendly subscribeWithDb for unit tests: calls setup immediately
+    // with the CURRENT dbRef.value so the test assertions can run sync.
+    subscribeWithDb: vi.fn((setup: (db: unknown) => (() => void) | void) => {
+        const u = setup(dbRef.value)
+        return typeof u === 'function' ? u : () => {}
+    }),
+    recoverFromFirestoreShutdown: vi.fn(),
 }))
 
 vi.mock("firebase/firestore", () => ({
@@ -38,13 +46,13 @@ describe("useAlertStore.init (B02)", () => {
         expect(onSnapshotMock).not.toHaveBeenCalled()
 
         // Now db becomes available — a second init() call should actually subscribe.
-        dbRef.value = {}
+        dbRef.value = { __mock: true }
         mod.useAlertStore.getState().init()
         expect(onSnapshotMock).toHaveBeenCalledTimes(1)
     })
 
     it("duplicate init() after successful subscribe is a no-op (no stacking)", async () => {
-        dbRef.value = {}
+        dbRef.value = { __mock: true }
         const mod = await import("@/lib/alert-store")
         mod.useAlertStore.getState().init()
         mod.useAlertStore.getState().init()
@@ -55,7 +63,7 @@ describe("useAlertStore.init (B02)", () => {
     it("destroy() unsubscribes and allows re-init", async () => {
         const unsub = vi.fn()
         onSnapshotMock.mockImplementationOnce(() => unsub)
-        dbRef.value = {}
+        dbRef.value = { __mock: true }
         const mod = await import("@/lib/alert-store")
         mod.useAlertStore.getState().init()
         mod.useAlertStore.getState().destroy()

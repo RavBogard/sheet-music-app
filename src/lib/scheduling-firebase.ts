@@ -5,7 +5,7 @@
  * Write operations go through API routes (Admin SDK).
  */
 
-import { db } from '@/lib/firebase'
+import { getDb, subscribeWithDb } from '@/lib/firebase'
 import {
     collection, query, where, orderBy, onSnapshot,
     updateDoc, doc, Timestamp,
@@ -22,22 +22,24 @@ export function subscribeToMyAssignments(
     uid: string,
     callback: (assignments: SchedulingAssignment[]) => void
 ): () => void {
-    const q = query(
-        collection(db, 'scheduling_assignments'),
-        where('musicianUid', '==', uid),
-        where('status', 'in', ['pending', 'confirmed']),
-        orderBy('assignedAt', 'desc'),
-    )
+    return subscribeWithDb((db) => {
+        const q = query(
+            collection(db, 'scheduling_assignments'),
+            where('musicianUid', '==', uid),
+            where('status', 'in', ['pending', 'confirmed']),
+            orderBy('assignedAt', 'desc'),
+        )
 
-    return onSnapshot(q, (snap) => {
-        const assignments = snap.docs.map(d => ({
-            id: d.id,
-            ...d.data(),
-        } as SchedulingAssignment))
-        callback(assignments)
-    }, (err) => {
-        logger.warn('[Scheduling] Subscribe to my assignments failed:', err)
-        callback([])
+        return onSnapshot(q, (snap) => {
+            const assignments = snap.docs.map(d => ({
+                id: d.id,
+                ...d.data(),
+            } as SchedulingAssignment))
+            callback(assignments)
+        }, (err) => {
+            logger.warn('[Scheduling] Subscribe to my assignments failed:', err)
+            callback([])
+        })
     })
 }
 
@@ -48,21 +50,23 @@ export function subscribeToSetlistAssignments(
     setlistId: string,
     callback: (assignments: SchedulingAssignment[]) => void
 ): () => void {
-    const q = query(
-        collection(db, 'scheduling_assignments'),
-        where('setlistId', '==', setlistId),
-        where('status', 'in', ['pending', 'confirmed', 'declined']),
-    )
+    return subscribeWithDb((db) => {
+        const q = query(
+            collection(db, 'scheduling_assignments'),
+            where('setlistId', '==', setlistId),
+            where('status', 'in', ['pending', 'confirmed', 'declined']),
+        )
 
-    return onSnapshot(q, (snap) => {
-        const assignments = snap.docs.map(d => ({
-            id: d.id,
-            ...d.data(),
-        } as SchedulingAssignment))
-        callback(assignments)
-    }, (err) => {
-        logger.warn('[Scheduling] Subscribe to setlist assignments failed:', err)
-        callback([])
+        return onSnapshot(q, (snap) => {
+            const assignments = snap.docs.map(d => ({
+                id: d.id,
+                ...d.data(),
+            } as SchedulingAssignment))
+            callback(assignments)
+        }, (err) => {
+            logger.warn('[Scheduling] Subscribe to setlist assignments failed:', err)
+            callback([])
+        })
     })
 }
 
@@ -72,21 +76,23 @@ export function subscribeToSetlistAssignments(
 export function subscribeToAllUpcomingAssignments(
     callback: (assignments: SchedulingAssignment[]) => void
 ): () => void {
-    const q = query(
-        collection(db, 'scheduling_assignments'),
-        where('status', 'in', ['pending', 'confirmed']),
-        orderBy('assignedAt', 'desc'),
-    )
+    return subscribeWithDb((db) => {
+        const q = query(
+            collection(db, 'scheduling_assignments'),
+            where('status', 'in', ['pending', 'confirmed']),
+            orderBy('assignedAt', 'desc'),
+        )
 
-    return onSnapshot(q, (snap) => {
-        const assignments = snap.docs.map(d => ({
-            id: d.id,
-            ...d.data(),
-        } as SchedulingAssignment))
-        callback(assignments)
-    }, (err) => {
-        logger.warn('[Scheduling] Subscribe to all assignments failed:', err)
-        callback([])
+        return onSnapshot(q, (snap) => {
+            const assignments = snap.docs.map(d => ({
+                id: d.id,
+                ...d.data(),
+            } as SchedulingAssignment))
+            callback(assignments)
+        }, (err) => {
+            logger.warn('[Scheduling] Subscribe to all assignments failed:', err)
+            callback([])
+        })
     })
 }
 
@@ -100,22 +106,24 @@ export function subscribeToUpcomingSetlists(
     const now = new Date()
     now.setHours(0, 0, 0, 0)
 
-    const q = query(
-        collection(db, 'setlists'),
-        where('eventDate', '>=', Timestamp.fromDate(now)),
-        orderBy('eventDate', 'asc'),
-    )
+    return subscribeWithDb((db) => {
+        const q = query(
+            collection(db, 'setlists'),
+            where('eventDate', '>=', Timestamp.fromDate(now)),
+            orderBy('eventDate', 'asc'),
+        )
 
-    return onSnapshot(q, (snap) => {
-        const setlists = snap.docs.map(d => ({
-            id: d.id,
-            name: (d.data().name as string) || 'Untitled',
-            eventDate: d.data().eventDate,
-        }))
-        callback(setlists)
-    }, (err) => {
-        logger.warn('[Scheduling] Subscribe to upcoming setlists failed:', err)
-        callback([])
+        return onSnapshot(q, (snap) => {
+            const setlists = snap.docs.map(d => ({
+                id: d.id,
+                name: (d.data().name as string) || 'Untitled',
+                eventDate: d.data().eventDate,
+            }))
+            callback(setlists)
+        }, (err) => {
+            logger.warn('[Scheduling] Subscribe to upcoming setlists failed:', err)
+            callback([])
+        })
     })
 }
 
@@ -185,6 +193,7 @@ export async function generateCalendarFeedToken(uid: string): Promise<string> {
     const token = Array.from(array, b => b.toString(16).padStart(2, '0')).join('')
 
     // Save to the user document
+    const db = await getDb()
     const userRef = doc(db, 'users', uid)
     await updateDoc(userRef, {
         'musicianProfile.calendarFeedToken': token,

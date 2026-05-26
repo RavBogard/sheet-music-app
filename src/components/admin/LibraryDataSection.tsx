@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Loader2, CheckCircle, AlertCircle, Clock, ArchiveRestore, ChevronDown, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { db } from "@/lib/firebase"
+import { getDb } from "@/lib/firebase"
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore"
 import { LibrarySyncCard } from "./library/LibrarySyncCard"
 import { Button } from "@/components/ui/button"
@@ -78,6 +78,7 @@ export function LibraryDataSection() {
             try {
                 // v4.3 P05: parallelize the two independent reads (~half the
                 // wall-time for the admin Data tab first-paint).
+                const db = await getDb()
                 const syncRunsQuery = query(
                     collection(db, "sync_runs"),
                     orderBy("startedAt", "desc"),

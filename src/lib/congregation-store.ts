@@ -1,7 +1,13 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { db, auth } from "@/lib/firebase"
-import { doc, onSnapshot } from "firebase/firestore"
+import { auth, subscribeWithDb } from "@/lib/firebase"
+// Phase 1.6 Option C-1 (cascading lazy) — `doc` and `onSnapshot` are imported
+// DYNAMICALLY inside attachListener() below so /login's static-import graph
+// doesn't pull the firestore SDK chunk through this module. congregation-store
+// is loaded by every route via <ClientProviders> in root layout.tsx; keeping
+// firestore off the module-top graph keeps `d94474cc-*.js` + cousin out of
+// /login's preload manifest. See
+// `.paul/research/bundle-diet-firestore-lazy-import/FINDINGS.md` §Phase-1.6.
 import { onAuthStateChanged } from "firebase/auth"
 import { logger } from "@/lib/logger"
 import type { RabbiProfile } from "@/types/models"
@@ -73,12 +79,21 @@ export const useCongregationStore = create<CongregationStore>()(
                 // Gate the listener on `auth.currentUser`; unauth surfaces
                 // continue to use the persisted DEFAULT_CONFIG fallback.
                 let firestoreUnsub: (() => void) | null = null
+                // Phase 1.6 race-guard: attachListener became async (dynamic
+                // `import("firebase/firestore")` adds a microtask boundary).
+                // If the user signs out while a prior attach's import is in
+                // flight, detachListener bumps the generation so the stale
+                // attach's post-await assignment is skipped — otherwise we'd
+                // leak a subscription tied to a signed-out session.
+                let attachGen = 0
 
-                const attachListener = () => {
+                const attachListener = async () => {
                     if (firestoreUnsub) return
-                    const ref = doc(db, "config", "congregation")
-                    firestoreUnsub = onSnapshot(
-                        ref,
+                    const myGen = ++attachGen
+                    const { doc, onSnapshot } = await import("firebase/firestore")
+                    if (myGen !== attachGen || firestoreUnsub) return // detach fired or already attached
+                    firestoreUnsub = subscribeWithDb((db) => onSnapshot(
+                        doc(db, "config", "congregation"),
                         (snap) => {
                             if (snap.exists()) {
                                 const updated = { ...DEFAULT_CONFIG, ...snap.data() as Partial<CongregationConfig> }
@@ -88,10 +103,11 @@ export const useCongregationStore = create<CongregationStore>()(
                         (err) => {
                             logger.error("[Congregation] Failed to sync config:", err)
                         }
-                    )
+                    ))
                 }
 
                 const detachListener = () => {
+                    attachGen++ // invalidate any in-flight attach awaiting the firestore module
                     if (firestoreUnsub) {
                         firestoreUnsub()
                         firestoreUnsub = null
@@ -99,7 +115,7 @@ export const useCongregationStore = create<CongregationStore>()(
                 }
 
                 const authUnsub = onAuthStateChanged(auth, (user) => {
-                    if (user) attachListener()
+                    if (user) void attachListener()
                     else detachListener()
                 })
 

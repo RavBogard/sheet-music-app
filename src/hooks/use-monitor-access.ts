@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
-import { doc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { useState, useEffect } from "react"
+import { doc, type DocumentReference } from "firebase/firestore"
+import { getDb } from "@/lib/firebase"
 import { useAuth } from "@/lib/auth-context"
 import { MonitorConfig } from "@/types/monitor"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
@@ -41,7 +41,18 @@ export function useMonitorAccess(props?: UseMonitorAccessProps): {
     // but we still wait for config to know *which* bus they have if they aren't admin/SE.
     const [loading, setLoading] = useState(true)
 
-    const ref = useMemo(() => user ? doc(db, "config", "monitor") : null, [user])
+    // Firestore SDK is lazy-loaded; resolve the doc-ref in an effect so the
+    // module-top is still free of `firebase/firestore`. `useSafeFirestoreSync`
+    // tolerates null and renders loading:false until the ref arrives.
+    const [ref, setRef] = useState<DocumentReference | null>(null)
+    useEffect(() => {
+        if (!user) { setRef(null); return }
+        let cancelled = false
+        void getDb().then((d) => {
+            if (!cancelled) setRef(doc(d, "config", "monitor"))
+        })
+        return () => { cancelled = true }
+    }, [user])
     const { data: configData, loading: configLoading } = useSafeFirestoreSync<MonitorConfig>(ref)
 
     useEffect(() => {

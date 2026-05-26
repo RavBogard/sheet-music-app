@@ -9,7 +9,7 @@ import { hasAssignedBus } from "@/lib/monitor/bus-index"
 import { getMonitorClient } from "@/hooks/use-monitor-connection"
 import { VerticalFaderStrip } from "@/components/monitor/VerticalFaderStrip"
 import { doc, getDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { getDb } from "@/lib/firebase"
 import { Loader2, Wifi, WifiOff, Server, ServerOff, Clock } from "lucide-react"
 import { ScrollFade } from "@/components/ui/scroll-fade"
 import { getBridgeStatusMessage, isMixerOffline, DisconnectedOverlay } from "@/components/monitor/ConnectionIndicator"
@@ -48,17 +48,24 @@ export function QuickMonitorPanel() {
     // Load starred channels from Firestore (backward compat: pinnedChannels field)
     useEffect(() => {
         if (!user) return
-        getDoc(doc(db, "users", user.uid, "preferences", "monitor")).then(snap => {
-            if (snap.exists()) {
-                const data = snap.data()
-                const channels = data.pinnedChannels || []
-                // Only set if store doesn't already have starred channels
-                // (store may have been populated by configure mode)
-                if (channels.length > 0) {
-                    setStarredChannels(channels)
+        let cancelled = false
+        void (async () => {
+            try {
+                const db = await getDb()
+                const snap = await getDoc(doc(db, "users", user.uid, "preferences", "monitor"))
+                if (cancelled) return
+                if (snap.exists()) {
+                    const data = snap.data()
+                    const channels = data.pinnedChannels || []
+                    // Only set if store doesn't already have starred channels
+                    // (store may have been populated by configure mode)
+                    if (channels.length > 0) {
+                        setStarredChannels(channels)
+                    }
                 }
-            }
-        }).catch(() => { })
+            } catch { /* silent — preferences are optional */ }
+        })()
+        return () => { cancelled = true }
     }, [user, setStarredChannels])
 
     // Fader handlers

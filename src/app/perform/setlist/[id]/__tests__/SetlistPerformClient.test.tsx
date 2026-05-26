@@ -24,7 +24,14 @@ import { resetDbForTests } from '@/lib/local/schema'
 
 // ── Mocks (mirror the hook test's stubs) ─────────────────────────────
 
-vi.mock('@/lib/firebase', () => ({ db: {} }))
+vi.mock('@/lib/firebase', () => ({
+    db: {},
+    getDb: vi.fn(async () => ({})),
+    subscribeWithDb: vi.fn((setup: (db: unknown) => (() => void) | void) => {
+        const u = setup({})
+        return typeof u === 'function' ? u : () => {}
+    }),
+}))
 vi.mock('firebase/firestore', () => ({ doc: vi.fn() }))
 
 vi.mock('@/lib/auth-context', () => ({

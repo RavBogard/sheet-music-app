@@ -13,7 +13,14 @@ const mockUseAuth = vi.fn((): { user: { uid: string } | null; isMember: boolean 
 }))
 vi.mock('@/lib/auth-context', () => ({ useAuth: () => mockUseAuth() }))
 
-vi.mock('@/lib/firebase', () => ({ db: {} }))
+vi.mock('@/lib/firebase', () => ({
+  db: {},
+  getDb: vi.fn(async () => ({})),
+  subscribeWithDb: vi.fn((setup: (db: unknown) => (() => void) | void) => {
+    const u = setup({})
+    return typeof u === 'function' ? u : () => {}
+  }),
+}))
 
 const mockSyncData = { current: null as unknown, loading: false }
 vi.mock('@/hooks/use-safe-firestore-sync', () => ({

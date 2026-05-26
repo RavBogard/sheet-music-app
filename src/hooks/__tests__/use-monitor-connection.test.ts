@@ -16,6 +16,12 @@ vi.mock('@/lib/auth-context', () => ({ useAuth: () => mockUseAuth() }))
 const mockAuth: { currentUser: { uid: string } | null } = { currentUser: { uid: 'user-1' } }
 vi.mock('@/lib/firebase', () => ({
   db: {},
+  getDb: vi.fn(async () => ({})),
+  subscribeWithDb: vi.fn((setup: (db: unknown) => (() => void) | void) => {
+    const u = setup({})
+    return typeof u === 'function' ? u : () => {}
+  }),
+  recoverFromFirestoreShutdown: vi.fn(),
   auth: mockAuth,
 }))
 

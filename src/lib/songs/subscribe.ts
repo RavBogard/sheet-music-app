@@ -1,6 +1,6 @@
 import { collection, onSnapshot, type DocumentChange } from 'firebase/firestore'
 
-import { db as firestoreDb, recoverFromFirestoreShutdown } from '@/lib/firebase'
+import { subscribeWithDb, recoverFromFirestoreShutdown } from '@/lib/firebase'
 import { getDb, type LocalDb } from '@/lib/local/schema'
 import type { LocalSong } from '@/lib/local/types'
 import { logger } from '@/lib/logger'
@@ -32,19 +32,21 @@ export interface SubscribeSongsLibraryOptions {
 
 const defaultFirestoreAdapter: SubscribeAdapter = {
     subscribe(handler, onError) {
-        const ref = collection(firestoreDb, 'songs')
-        return onSnapshot(
-            ref,
-            (snap) => {
-                const changes: DocChange[] = snap.docChanges().map((c: DocumentChange) => ({
-                    type: c.type,
-                    id: c.doc.id,
-                    data: c.doc.data() as Partial<LocalSong>,
-                }))
-                handler(changes)
-            },
-            (err) => onError(err),
-        )
+        return subscribeWithDb((firestoreDb) => {
+            const ref = collection(firestoreDb, 'songs')
+            return onSnapshot(
+                ref,
+                (snap) => {
+                    const changes: DocChange[] = snap.docChanges().map((c: DocumentChange) => ({
+                        type: c.type,
+                        id: c.doc.id,
+                        data: c.doc.data() as Partial<LocalSong>,
+                    }))
+                    handler(changes)
+                },
+                (err) => onError(err),
+            )
+        })
     },
 }
 

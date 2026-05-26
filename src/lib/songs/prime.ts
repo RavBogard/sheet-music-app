@@ -5,7 +5,7 @@
 
 import { collection, getDocs } from 'firebase/firestore'
 
-import { db as firestoreDb } from '@/lib/firebase'
+import { getDb as getFirestoreDb } from '@/lib/firebase'
 import { getDb, type LocalDb } from '@/lib/local/schema'
 import type { LocalSong } from '@/lib/local/types'
 import { logger } from '@/lib/logger'
@@ -35,6 +35,7 @@ export interface PrimeSongsLibraryOptions {
  */
 const defaultFirestoreAdapter: PrimeAdapter = {
     async getAllSongs() {
+        const firestoreDb = await getFirestoreDb()
         const snap = await getDocs(collection(firestoreDb, 'songs'))
         return snap.docs.map((d) => ({
             id: d.id,

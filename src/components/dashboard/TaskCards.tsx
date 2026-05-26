@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { db } from "@/lib/firebase"
+import { subscribeWithDb } from "@/lib/firebase"
 import { collection, query, where, orderBy, limit, onSnapshot } from "firebase/firestore"
 import { toDate } from "@/lib/firestore-helpers"
 import { CheckSquare, Square, Clock } from "lucide-react"
@@ -28,30 +28,32 @@ export function TaskCards() {
     useEffect(() => {
         if (!user) return
 
-        const q = query(
-            collection(db, 'tasks'),
-            where('assigneeId', '==', user.uid),
-            where('status', '==', 'todo'),
-            orderBy('createdAt', 'desc'),
-            limit(5)
-        )
+        const unsub = subscribeWithDb((db) => {
+            const q = query(
+                collection(db, 'tasks'),
+                where('assigneeId', '==', user.uid),
+                where('status', '==', 'todo'),
+                orderBy('createdAt', 'desc'),
+                limit(5)
+            )
 
-        const unsub = onSnapshot(q, (snap) => {
-            const items: TaskItem[] = snap.docs.map(d => {
-                const data = d.data()
-                return {
-                    id: d.id,
-                    title: data.title,
-                    description: data.description,
-                    status: data.status,
-                    setlistName: data.setlistName || '',
-                    eventDate: toDate(data.eventDate),
-                }
+            return onSnapshot(q, (snap) => {
+                const items: TaskItem[] = snap.docs.map(d => {
+                    const data = d.data()
+                    return {
+                        id: d.id,
+                        title: data.title,
+                        description: data.description,
+                        status: data.status,
+                        setlistName: data.setlistName || '',
+                        eventDate: toDate(data.eventDate),
+                    }
+                })
+                setTasks(items)
+            }, (err) => {
+                logger.error("[TaskCards] Listener error:", err)
+                setTasks([])
             })
-            setTasks(items)
-        }, (err) => {
-            logger.error("[TaskCards] Listener error:", err)
-            setTasks([])
         })
 
         return () => unsub()

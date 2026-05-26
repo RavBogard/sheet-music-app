@@ -6,7 +6,14 @@ import { render, screen, cleanup } from "@testing-library/react"
 
 import { OnboardingCard } from "../OnboardingCard"
 
-vi.mock("@/lib/firebase", () => ({ db: {} }))
+vi.mock("@/lib/firebase", () => ({
+    db: {},
+    getDb: vi.fn(async () => ({})),
+    subscribeWithDb: vi.fn((setup: (db: unknown) => (() => void) | void) => {
+        const u = setup({})
+        return typeof u === 'function' ? u : () => {}
+    }),
+}))
 vi.mock("firebase/firestore", () => ({
     doc: vi.fn(),
     updateDoc: vi.fn(),

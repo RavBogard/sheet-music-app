@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { MonitorConfig, BusAssignment } from "@/types/monitor"
 import { subscribeToAllUsers, UserProfile } from "@/lib/users-firebase"
 import { doc, updateDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { getDb } from "@/lib/firebase"
 import { toast } from "sonner"
 import { Users, X, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -69,6 +69,7 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
         newAssignments[String(busIdx)] = assignments.length > 0 ? assignments : null
 
         try {
+            const db = await getDb()
             await updateDoc(doc(db, "config", "monitor"), {
                 busAssignments: newAssignments,
             })

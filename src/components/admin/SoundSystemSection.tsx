@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react"
-import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { doc, getDoc, updateDoc, setDoc, type DocumentReference } from "firebase/firestore"
+import { getDb } from "@/lib/firebase"
 import { MonitorSetupWizard } from "@/components/admin/MonitorSetupWizard"
 import { DefaultChannelPicker } from "@/components/monitor/DefaultChannelPicker"
 import { MonitorConfig } from "@/types/monitor"
@@ -40,7 +40,17 @@ export function SoundSystemSection() {
     const [setupCodeExpiry, setSetupCodeExpiry] = useState<number | null>(null)
     const [generatingCode, setGeneratingCode] = useState(false)
 
-    const configRef = useMemo(() => doc(db, "config", "monitor"), [])
+    // Firestore SDK is lazy-loaded; resolve the doc-ref in an effect so the
+    // module-top stays free of `firebase/firestore`. useSafeFirestoreSync
+    // tolerates a null ref until the lazy-load lands.
+    const [configRef, setConfigRef] = useState<DocumentReference | null>(null)
+    useEffect(() => {
+        let cancelled = false
+        void getDb().then((d) => {
+            if (!cancelled) setConfigRef(doc(d, "config", "monitor"))
+        })
+        return () => { cancelled = true }
+    }, [])
     const setupCodeControllerRef = useRef<AbortController | null>(null)
     const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -141,6 +151,7 @@ export function SoundSystemSection() {
             monitorBuses: monitorBusesStr.split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= 1 && n <= 16),
         }
         try {
+            const db = await getDb()
             const ref = doc(db, "config", "monitor")
             const existing = await getDoc(ref)
             if (existing.exists()) { await updateDoc(ref, { ...parsed } as Record<string, unknown>) }

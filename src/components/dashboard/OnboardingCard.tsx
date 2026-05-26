@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { doc, updateDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { getDb } from "@/lib/firebase"
 import { Music2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PendingAccountIllustration } from "@/components/ui/illustrations"
@@ -50,6 +50,7 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
         if (!userId || !selectedInstrument) return
         setSaving(true)
         try {
+            const db = await getDb()
             const userRef = doc(db, "users", userId)
             await updateDoc(userRef, { "musicianProfile.instrument": selectedInstrument })
             if (andMarkViewed) {

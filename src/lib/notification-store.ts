@@ -16,7 +16,7 @@
  *   - scheduling_cancelled: A service assignment was cancelled
  */
 
-import { db, recoverFromFirestoreShutdown } from '@/lib/firebase'
+import { getDb, subscribeWithDb, recoverFromFirestoreShutdown } from '@/lib/firebase'
 import {
     collection, query, where, orderBy, limit,
     onSnapshot, doc, updateDoc, writeBatch,
@@ -51,23 +51,25 @@ export function subscribeToNotifications(
     uid: string,
     callback: (notifications: Notification[]) => void
 ) {
-    const q = query(
-        collection(db, 'users', uid, 'notifications'),
-        orderBy('createdAt', 'desc'),
-        limit(20)
-    )
+    return subscribeWithDb((db) => {
+        const q = query(
+            collection(db, 'users', uid, 'notifications'),
+            orderBy('createdAt', 'desc'),
+            limit(20)
+        )
 
-    return onSnapshot(q, (snap) => {
-        const notifs = snap.docs.map(d => ({
-            id: d.id,
-            ...d.data()
-        }) as Notification)
-        callback(notifs)
-    }, (err) => {
-        if (!recoverFromFirestoreShutdown(err)) {
-            logger.warn('[Notifications] Subscribe failed:', err)
-        }
-        callback([])
+        return onSnapshot(q, (snap) => {
+            const notifs = snap.docs.map(d => ({
+                id: d.id,
+                ...d.data()
+            }) as Notification)
+            callback(notifs)
+        }, (err) => {
+            if (!recoverFromFirestoreShutdown(err)) {
+                logger.warn('[Notifications] Subscribe failed:', err)
+            }
+            callback([])
+        })
     })
 }
 
@@ -76,6 +78,7 @@ export function subscribeToNotifications(
  */
 export async function markAsRead(uid: string, notificationId: string): Promise<void> {
     try {
+        const db = await getDb()
         const ref = doc(db, 'users', uid, 'notifications', notificationId)
         await updateDoc(ref, { read: true })
     } catch (err) {
@@ -103,6 +106,7 @@ export async function markAllAsRead(uid: string): Promise<void> {
     }
 
     try {
+        const db = await getDb()
         const q = query(
             collection(db, 'users', uid, 'notifications'),
             where('read', '==', false)
@@ -133,6 +137,7 @@ export async function createNotification(
     notification: Omit<Notification, 'id' | 'read' | 'createdAt'>
 ): Promise<void> {
     try {
+        const db = await getDb()
         const ref = collection(db, 'users', uid, 'notifications')
         await addDoc(ref, {
             ...notification,
@@ -155,6 +160,7 @@ export async function broadcastNotification(
     notification: Omit<Notification, 'id' | 'read' | 'createdAt'>
 ): Promise<void> {
     // Batch write to avoid hitting transaction limits
+    const db = await getDb()
     const batchSize = 50
     for (let i = 0; i < memberUids.length; i += batchSize) {
         const batch = writeBatch(db)
@@ -207,6 +213,7 @@ async function sendPushForBroadcast(
  */
 async function getActiveMemberUids(excludeUid?: string): Promise<string[]> {
     // M2 fix: Use filtered query instead of fetching all users
+    const db = await getDb()
     const q = query(
         collection(db, 'users'),
         where('role', 'in', ['admin', 'band_leader', 'musician', 'member'])

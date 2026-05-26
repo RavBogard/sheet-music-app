@@ -37,7 +37,18 @@ const {
 } = hoisted
 void _MockTimestamp; void _mockUpdateDoc; void _mockOnSnapshot
 
-vi.mock('./firebase', () => ({ db: {}, auth: { currentUser: null } }))
+vi.mock('./firebase', () => {
+    const stubDb = { __mock: true }
+    return {
+        db: stubDb,
+        auth: { currentUser: null },
+        getDb: vi.fn(async () => stubDb),
+        subscribeWithDb: vi.fn((setup: (db: unknown) => unknown) => {
+            const u = setup(stubDb)
+            return typeof u === 'function' ? (u as () => void) : () => {}
+        }),
+    }
+})
 vi.mock('firebase/firestore', () => ({
     collection: vi.fn((_db: unknown, path: string) => ({ path })),
     addDoc: (...args: unknown[]) => hoisted.mockAddDoc(...args),

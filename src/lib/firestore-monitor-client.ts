@@ -11,7 +11,7 @@
  * Zero configuration on iPads — uses the existing authenticated Firestore connection.
  */
 
-import { db, auth, recoverFromFirestoreShutdown } from "@/lib/firebase"
+import { getDb, auth, subscribeWithDb, recoverFromFirestoreShutdown } from "@/lib/firebase"
 import {
     doc,
     collection,
@@ -82,8 +82,11 @@ export class FirestoreMonitorClient {
         this.options.onStatusChange("connecting")
         this._firstSnapshot = true
 
-        // Listen to the live mixer state document
-        this.stateUnsub = onSnapshot(
+        // Listen to the live mixer state document. Firestore SDK is lazy-loaded,
+        // so we wrap onSnapshot in subscribeWithDb to preserve the sync-unsub
+        // contract while deferring the actual subscription attach until the
+        // firestore module resolves.
+        this.stateUnsub = subscribeWithDb((db) => onSnapshot(
             doc(db, "monitor-live", "state"),
             (snap) => {
                 if (!snap.exists()) {
@@ -162,7 +165,7 @@ export class FirestoreMonitorClient {
                     }, ERROR_RETRY_DELAY_MS)
                 }
             }
-        )
+        ))
     }
 
     private forwardSnapshot(snapshot: MixerSnapshot, stateUpdatedAt: number | null): void {
@@ -297,6 +300,7 @@ export class FirestoreMonitorClient {
         if (!user) return
 
         try {
+            const db = await getDb()
             await addDoc(collection(db, "monitor-live", "commands", "pending"), {
                 ...data,
                 uid: user.uid,

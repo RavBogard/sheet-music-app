@@ -60,12 +60,34 @@ import { join } from 'node:path'
 // firestore-lazy-import refactor which should drop ~230 KB. NEVER tune
 // up without a matching follow-up phase to claw back the regression.
 //
-// Current baseline at 59e0448c7 (post `refactor(client-providers): hoist
-// QueryClientProvider into authed-only layouts`): ~1615 KB / 37 chunks.
-// Budget: +10% headroom over current measurement. Documented further
-// headroom (~20%) projected once firestore SDK is moved off /login's
-// preload graph by the firestore-lazy-import-refactor lane.
-const RAW_BUDGET_BYTES = 1_843_200 // 1800 KB (~10% headroom over 1615 KB)
+// Historical baseline at 59e0448c7 (post `refactor(client-providers): hoist
+// QueryClientProvider into authed-only layouts`): ~1615 KB / 37 chunks under
+// the original 1800 KB budget.
+//
+// 2026-05-26 budget step-down to 1700 KB after the `firestore-lazy-import-refactor`
+// lane (coder-1, base `9d8a75d7d`): Phase 1-4 caller migration + Option B
+// (auth-context dynamic-import users-firebase) + Option C-1 (congregation-store
+// dynamic-import `doc`/`onSnapshot`) all shipped. Current measurement under
+// this test's regex-extract methodology: 1600.3 KB / 37 chunks. Budget tuned
+// to ~6% above that (1700 KB) to lock any future regression at this test's
+// measurement granularity.
+//
+// IMPORTANT — measurement caveat (see FINDINGS §6, 2026-05-26): this test
+// reads `.next/server/app/login/page_client-reference-manifest.js` which is
+// Next.js's GLOBALLY AGGREGATED client-module registry, NOT a per-route
+// preload list. It systematically over-counts by ~120% (real /login cold-start
+// preload is ~729 KB deduped per the per-route `e.O(0, [...])` directive in
+// the page chunk; this test reports ~1600 KB). The architectural cleanup the
+// `firestore-lazy-import-refactor` lane shipped IS real (no eager firestore
+// SDK symbols at module-top anywhere) but invisible to this test by design.
+// The companion test `login-import-graph-regression.test.ts` uses the
+// CORRECT per-route methodology via `extractLoginChunkGraph()` — that's
+// where future bundle-diet lanes should lock module-presence wins.
+//
+// A separate methodology-fix lane (supervisor-scoped) will replace this test
+// with a per-route SSR-preload reader; until then, the budget below is
+// pinned at the over-counted measurement granularity for defense-in-depth.
+const RAW_BUDGET_BYTES = 1_740_800 // 1700 KB (~6% headroom over 1600.3 KB)
 
 const NEXT_DIR = join(process.cwd(), '.next')
 const BUILD_MANIFEST = join(NEXT_DIR, 'build-manifest.json')

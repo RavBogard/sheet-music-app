@@ -11,7 +11,7 @@ import { useCongregation } from "@/lib/congregation-store"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
 import { Input } from "@/components/ui/input"
-import { db } from "@/lib/firebase"
+import { getDb } from "@/lib/firebase"
 import { collection, query, where, orderBy, limit, getDocs, Timestamp } from "firebase/firestore"
 import { useLibraryStore } from "@/lib/library-store"
 import Fuse from "fuse.js"
@@ -121,11 +121,8 @@ export function MobileTabBar(props: AppNavigationProps) {
         } catch { /* SSR/private browsing */ }
 
         // Priority 2: nearest future eventDate
-        if (!db) {
-            router.push("/setlists")
-            return
-        }
         try {
+            const db = await getDb()
             const now = new Date()
             const q = query(
                 collection(db, "setlists"),

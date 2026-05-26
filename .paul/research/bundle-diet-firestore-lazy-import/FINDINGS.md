@@ -206,3 +206,114 @@ console.log('  /login-extras slice:', ((total-totalRoot)/1024).toFixed(1), 'KB')
 
 **Authoring:** coder-6 (`feat/bundle-diet-firestore-lazy-import`, base `59e0448c7`)
 **Lane B ship:** 2026-05-26T~04:10Z
+
+---
+
+## 6 — Phase 1.5 + 1.6 + methodology-over-count discovery (coder-1 follow-up, 2026-05-26T04:30Z)
+
+**Continuation of this lane as `firestore-lazy-import-refactor`** (re-dispatched per supervisor option-P 04:00Z). After Phase 1-4 mechanical caller migration, Option B (auth-context.tsx dynamic import of users-firebase) and Option C-1 (congregation-store.ts dynamic import of `doc`/`onSnapshot` from firebase/firestore) BOTH applied cleanly per ratified RULINGs, but neither moved the `login-full-payload-size.test.ts` measurement (1602 KB → 1600 KB → 1600.3 KB across the three checkpoints; all within ±0.3 KB measurement noise). Empirical investigation traced the cause to a **fundamental over-count in the test's measurement methodology**, not to incomplete refactor coverage.
+
+### 6.1 — What the test measures
+
+`src/__tests__/login-full-payload-size.test.ts` regex-extracts every chunk filename mentioned anywhere in `.next/server/app/login/page_client-reference-manifest.js`:
+
+```ts
+const loginManifestSrc = readFileSync(LOGIN_CLIENT_MANIFEST, 'utf8')
+const chunkCandidates = Array.from(
+    new Set(loginManifestSrc.match(/[a-zA-Z0-9_-]+-[a-z0-9]+\.js/g) ?? []),
+)
+const loginChunks = chunkCandidates
+    .map((c) => `static/chunks/${c}`)
+    .filter((p) => existsSync(join(NEXT_DIR, p)))
+```
+
+### 6.2 — What that manifest actually contains
+
+`page_client-reference-manifest.js` is **Next.js's globally-aggregated client-module registry**, keyed by absolute filesystem path, so the React server runtime can resolve any `"use client"` reference it encounters during streaming. It is NOT a per-route preload list. Empirically, /login's manifest references 6 distinct client modules whose `chunks` arrays include `d94474cc-*.js`, but none of which is reachable from /login's static graph:
+
+```
+entry id   filesystem path
+58162      src\components\authed-query-provider.tsx
+72539      src\components\Footer.tsx
+50688      src\components\layout\LazyClientComponents.tsx
+86123      src\components\layout\PageTransition.tsx
+76142      src\components\nav\AppNavigation.tsx
+94611      src\app\(main)\DashboardClient.tsx
+```
+
+These are all (main)-area or authed-only client components, mounted under `(main)/layout.tsx` or `perform/layout.tsx`. Their presence in /login's `page_client-reference-manifest.js` is by Next.js's serialization design — the manifest is a global registry replicated per-route — not because /login statically reaches them.
+
+### 6.3 — What /login's REAL per-route preload list contains
+
+Next.js App Router emits the actual per-route preload directive at the bottom of each route's compiled page chunk:
+
+```
+.next/static/chunks/app/login/page-aaa9c5c90b97f92a.js
+…last line: …,e=>{e.O(0,[5563,8409,7458,7737,1305,2735,8441,3794,7358],()=>e(e.s=46427)),_N_E=e.O()}]);
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                            numeric chunk-IDs the page module preloads
+```
+
+Resolving these IDs (+ rootMainFiles + polyfills, deduped) yields /login's REAL cold-start preload graph:
+
+```
+TOTAL real cold-start: 728.9 KB across 11 chunks
+   217.2 KB  [ROOT         ]  static/chunks/3794-3e29288ed8954e61.js
+   195.2 KB  [ROOT         ]  static/chunks/4bd1b696-df4c0fb946159b6a.js
+   131.5 KB  [PRELOAD[7458]]  static/chunks/7458-911a7c405caa7d04.js
+   110.0 KB  [POLY         ]  static/chunks/polyfills-42372ed130431b0a.js
+    24.7 KB  [PRELOAD[8409]]  static/chunks/8409-a60ef4e8d3f496e7.js
+    17.8 KB  [PRELOAD[7737]]  static/chunks/7737-fbdb84c1ac2bd115.js
+    10.7 KB  [PRELOAD[1305]]  static/chunks/1305-409a641f8d5f22e1.js
+     7.5 KB  [PAGE         ]  static/chunks/app/login/page-aaa9c5c90b97f92a.js
+     7.3 KB  [PRELOAD[2735]]  static/chunks/2735-6d4705a05e88690f.js
+     6.6 KB  [ROOT         ]  static/chunks/webpack-64f9705a127ca9f2.js
+     0.5 KB  [ROOT         ]  static/chunks/main-app-27b47e96991b053d.js
+
+d94474cc present? false
+1531-prefix present? false
+```
+
+**`d94474cc-*.js` and `1531-*.js` are NOT in /login's real cold-start preload list.** They never were — the regex-extract methodology was counting (main)/* + perform/* module entries' chunks as if /login preloaded them.
+
+### 6.4 — Test methodology over-count quantification
+
+| Methodology                                          | /login cold-start | Status |
+|------------------------------------------------------|-------------------|--------|
+| `login-full-payload-size.test.ts` (regex-extract)    | 1600.3 KB / 37 chunks | Over-counted by 871.4 KB (119.6%) |
+| Per-route e.O directive (correct)                    |   728.9 KB / 11 chunks | Ground truth |
+
+### 6.5 — coder-2's `extractLoginChunkGraph()` helper is per-route-aware (✓)
+
+`src/__tests__/helpers/page-chunk-graph.ts` correctly parses the `e.O(0, [<ids>], …)` preload directive from the per-route page chunk and resolves each ID against `.next/static/chunks/<id>-<hash>.js`. This methodology IS the correct one — the test `src/__tests__/login-import-graph-regression.test.ts` built on it is therefore trustworthy. The FORBIDDEN_MODULES list it gates can be safely appended to.
+
+### 6.6 — Practical consequence + what this lane ships
+
+- **Phase 1-4 (caller migration), Option B (auth-context), Option C-1 (congregation-store) are all genuine architectural improvements** — no eager firestore SDK symbols at module-top anywhere they were previously eager. This locks against future eager-firestore-import drift, even if invisible to today's `login-full-payload-size.test.ts`.
+- **The lane's stated "~230 KB cold-start savings" goal is unverifiable with current tooling.** The ground-truth cold-start cost was 946 KB (or 729 KB deduped) the whole time, not the 1615 KB the original lane-B baseline implied.
+- **Ship Option D-a per supervisor RULING msg-firestore-refactor-ruling-confirm-then-option-d-a 08:55Z:** lock the architectural cleanup in, tune `RAW_BUDGET_BYTES` DOWN modestly to 1700 KB (~6% above current over-counted 1600.3 KB measurement; locks any future REAL regression at the existing test's measurement granularity), append `firebase/firestore` to `FORBIDDEN_MODULES` (via coder-2's per-route-aware helper) with signature `WebChannel` (uniqueness-verified: appears only in 1531 + d94474cc, neither of which is in /login's real preload list).
+- **Fresh follow-up lane `bundle-size-test-methodology-fix`** scoped by supervisor — replace `login-full-payload-size.test.ts`'s regex-extract with a per-route SSR-preload reader, update memory with `[[feedback_login_payload_test_overcounts]]`.
+
+### 6.7 — Why `WebChannel` over `initializeFirestore` as the FORBIDDEN signature
+
+Signature uniqueness scan across all `.next/static/chunks/*.js`:
+
+```
+initializeFirestore   hits (3): 1305-*.js, 1531-*.js, d94474cc-*.js
+WebChannel            hits (2): 1531-*.js, d94474cc-*.js
+persistentLocalCache  hits (2): 1305-*.js, 1531-*.js
+FirestoreSettings     hits (0):
+```
+
+`initializeFirestore` and `persistentLocalCache` BOTH appear in chunk `1305-*.js`, which IS in /login's REAL preload list — but as JS identifier strings from `src/lib/firebase.ts`'s dynamic-import destructure (`const { initializeFirestore, getFirestore, persistentLocalCache, ... } = await import("firebase/firestore")`), NOT as firestore SDK runtime code. Using these as FORBIDDEN signatures would yield a false-positive on the current GREEN build. `WebChannel` appears only in firestore SDK chunks themselves (the SDK's transport class) — clean unique signature.
+
+### 6.8 — Open follow-ups not closed by this lane
+
+- C-2 architectural decision (hoist `useCongregationStore.init()` into authed-only provider) — separate ratified scope.
+- Audit any other auth-only `firebase/firestore` static-importer reachable from /login if a future probe finds one (the over-counting was masking this side of the question; with real-preload measurement now in hand, future bundle-diet lanes can probe accurately).
+- Bundle-diet methodology lane (supervisor-scoped) — replace regex-extract.
+
+---
+
+**Phase 1.5+1.6+methodology authoring:** coder-1 (`feat/firestore-lazy-import-refactor`, base `9d8a75d7d` → rebased forward at ship time)
+**Ship:** 2026-05-26T~05:00Z (Option D-a, per supervisor RULING `msg-firestore-refactor-ruling-confirm-then-option-d-a`)

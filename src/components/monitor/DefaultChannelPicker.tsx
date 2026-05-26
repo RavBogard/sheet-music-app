@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { doc, getDoc, updateDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { getDb } from "@/lib/firebase"
 import { useMonitorStore } from "@/lib/monitor-store"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { Check, ListChecks, Loader2 } from "lucide-react"
@@ -26,15 +26,23 @@ export function DefaultChannelPicker() {
 
     // Load default channels from Firestore on mount
     useEffect(() => {
-        getDoc(doc(db, "config", "monitor")).then(snap => {
-            if (snap.exists()) {
-                const data = snap.data()
-                const defaults = data.defaultChannels || []
-                setSelected(defaults)
-                setDefaultChannels(defaults)
+        let cancelled = false
+        void (async () => {
+            try {
+                const db = await getDb()
+                const snap = await getDoc(doc(db, "config", "monitor"))
+                if (cancelled) return
+                if (snap.exists()) {
+                    const data = snap.data()
+                    const defaults = data.defaultChannels || []
+                    setSelected(defaults)
+                    setDefaultChannels(defaults)
+                }
+            } finally {
+                if (!cancelled) setLoaded(true)
             }
-            setLoaded(true)
-        }).catch(() => setLoaded(true))
+        })()
+        return () => { cancelled = true }
     }, [setDefaultChannels])
 
     // Sync from store if it changes externally (but not while we're saving)
@@ -54,6 +62,7 @@ export function DefaultChannelPicker() {
         setSaving(true)
 
         try {
+            const db = await getDb()
             await updateDoc(doc(db, "config", "monitor"), {
                 defaultChannels: next,
             })

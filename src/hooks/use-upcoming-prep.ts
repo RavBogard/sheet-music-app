@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { db } from "@/lib/firebase"
-import { collection, query, where, orderBy, limit, doc, getDoc, getDocFromCache, setDoc, documentId, getDocs, Timestamp, serverTimestamp } from "firebase/firestore"
+import { getDb } from "@/lib/firebase"
+import { collection, query, where, orderBy, limit, doc, getDoc, getDocFromCache, setDoc, documentId, getDocs, Timestamp, serverTimestamp, type Query, type DocumentData } from "firebase/firestore"
 import { toDate } from "@/lib/firestore-helpers"
 import { Setlist, type SetlistTrack } from "@/lib/setlist-firebase"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
@@ -54,38 +54,52 @@ export function useUpcomingPrep() {
         return () => clearInterval(iv)
     }, [])
 
-    // Track last visit time — cache-first for instant load
+    // Track last visit time — cache-first for instant load. Firestore SDK is
+    // lazy-loaded; await getDb() at the top of the effect before building
+    // refs.
     useEffect(() => {
         if (!user?.uid) return
         let cancelled = false
-        const prefRef = doc(db, 'users', user.uid, 'preferences', 'app')
-        // Read from cache first, then update in background
-        getDocFromCache(prefRef).catch(() => getDoc(prefRef)).then(snap => {
+        void (async () => {
+            const db = await getDb()
             if (cancelled) return
-            const ts = snap.data()?.lastVisitedAt
-            if (ts?.toDate) setLastVisitedAt(ts.toDate())
-            else if (ts) setLastVisitedAt(new Date(ts))
-            setDoc(prefRef, { lastVisitedAt: serverTimestamp() }, { merge: true }).catch(err => reportSaveError(err, "last-visit timestamp", { silent: true }))
-        }).catch(err => reportSaveError(err, "dashboard prefetch", { silent: true }))
+            const prefRef = doc(db, 'users', user.uid, 'preferences', 'app')
+            try {
+                const snap = await getDocFromCache(prefRef).catch(() => getDoc(prefRef))
+                if (cancelled) return
+                const ts = snap.data()?.lastVisitedAt
+                if (ts?.toDate) setLastVisitedAt(ts.toDate())
+                else if (ts) setLastVisitedAt(new Date(ts))
+                setDoc(prefRef, { lastVisitedAt: serverTimestamp() }, { merge: true }).catch(err => reportSaveError(err, "last-visit timestamp", { silent: true }))
+            } catch (err) {
+                reportSaveError(err, "dashboard prefetch", { silent: true })
+            }
+        })()
         return () => { cancelled = true }
     }, [user?.uid])
 
-    // Subscribe to upcoming public setlists (next 7 days)
-    const q = useMemo(() => {
-        if (!user || !isMember) return null
-
-        const now = new Date()
-        now.setHours(0, 0, 0, 0)
-        const nextWeek = new Date(now)
-        nextWeek.setDate(nextWeek.getDate() + 7)
-
-        return query(
-            collection(db, 'setlists'),
-            where('eventDate', '>=', Timestamp.fromDate(now)),
-            where('eventDate', '<=', Timestamp.fromDate(nextWeek)),
-            orderBy('eventDate', 'asc'),
-            limit(5)
-        )
+    // Subscribe to upcoming public setlists (next 7 days). Firestore SDK is
+    // lazy-loaded; resolve the query in an effect rather than useMemo so the
+    // module-top stays free of firebase/firestore.
+    const [q, setQ] = useState<Query<DocumentData> | null>(null)
+    useEffect(() => {
+        if (!user || !isMember) { setQ(null); return }
+        let cancelled = false
+        void getDb().then((db) => {
+            if (cancelled) return
+            const now = new Date()
+            now.setHours(0, 0, 0, 0)
+            const nextWeek = new Date(now)
+            nextWeek.setDate(nextWeek.getDate() + 7)
+            setQ(query(
+                collection(db, 'setlists'),
+                where('eventDate', '>=', Timestamp.fromDate(now)),
+                where('eventDate', '<=', Timestamp.fromDate(nextWeek)),
+                orderBy('eventDate', 'asc'),
+                limit(5)
+            ))
+        })
+        return () => { cancelled = true }
     }, [user, isMember])
 
     const { data, loading: subLoading } = useSafeFirestoreSync<Setlist[]>(q)
@@ -115,6 +129,7 @@ export function useUpcomingPrep() {
         const BATCH_SIZE = 30 // Firestore 'in' query limit
 
         const loadBatches = async () => {
+            const db = await getDb()
             const prefs: Record<string, SongPref> = {}
 
             for (let i = 0; i < allIds.length; i += BATCH_SIZE) {
@@ -213,8 +228,12 @@ export function useUpcomingPrep() {
         items: enriched,
         // Honest loading signal: reflects the subscription's own loading state,
         // not "setlists is empty" — an empty snapshot (no upcoming services)
-        // previously left this stuck at true forever.
-        isLoading: !!user && isMember && q !== null && subLoading,
+        // previously left this stuck at true forever. After the firestore
+        // lazy-import refactor we no longer gate on `q !== null` because q is
+        // briefly null while getDb() resolves; the subLoading flag from the
+        // sync hook is the source of truth (it stays `true` until the first
+        // snapshot delivers, by which point q has been wired up).
+        isLoading: !!user && isMember && subLoading,
         hasData: enriched.length > 0,
     }
 }

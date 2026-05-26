@@ -9,7 +9,12 @@ import {
     signOut as firebaseSignOut,
 } from "firebase/auth"
 import { auth, googleProvider } from "./firebase"
-import { ensureUserProfile, subscribeToUserProfile } from "./users-firebase"
+// Phase 1.5 (Option B) — users-firebase is imported DYNAMICALLY below from
+// the `if (currentUser)` branch so /login's static-import graph doesn't pull
+// firestore symbols through this chain. Pre-auth (no currentUser) never
+// enters that branch → users-firebase + its firestore imports stay out of
+// /login's preload manifest. See
+// `.paul/research/bundle-diet-firestore-lazy-import/FINDINGS.md` §Option-B.
 import { UserProfile } from "@/types/models"
 import { logger } from "@/lib/logger"
 import { deriveRoles } from "@/lib/roles"
@@ -85,8 +90,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let unsubscribeProfile: (() => void) | null = null
         let sessionReady = false
         let profileReady = false
+        // Generation counter so a stale-by-the-time-the-dynamic-import-resolves
+        // auth callback cannot overwrite a newer subscription. The original
+        // sync-import code didn't need this — `subscribeToUserProfile` was
+        // called synchronously inside the same tick as the cleanup-at-top.
+        // The Option-B dynamic-import adds an await point between them, so we
+        // gate the post-await assignment on the per-invocation generation
+        // still being the latest.
+        let callbackGen = 0
 
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+            const myGen = ++callbackGen
             // Clean up previous profile subscription
             if (unsubscribeProfile) { unsubscribeProfile(); unsubscribeProfile = null }
             sessionReady = false
@@ -113,6 +127,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     sessionReady = true
                     if (profileReady) setLoading(false)
                 })
+
+                // Phase 1.5 Option B: lazy-load users-firebase ONLY on the authed
+                // path so /login (pre-auth) never reaches it through the static
+                // import graph. After the first sign-in the module promise is
+                // cached by the runtime, so subsequent auth events resolve it
+                // synchronously — no perceptible latency penalty for returning
+                // users (99% of sign-ins per existing inline comment).
+                const { ensureUserProfile, subscribeToUserProfile } = await import("./users-firebase")
+                if (myGen !== callbackGen) return // a newer auth event has fired; abort
 
                 // Start subscription IMMEDIATELY — for returning users (99% of sign-ins)
                 // this returns profile data just as fast as a getDoc, without blocking.

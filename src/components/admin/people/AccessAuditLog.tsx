@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
-import { collection, query, orderBy, limit } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { useState, useEffect } from "react"
+import { collection, query, orderBy, limit, type Query, type DocumentData } from "firebase/firestore"
+import { getDb } from "@/lib/firebase"
 import { Shield, ArrowRight, Loader2 } from "lucide-react"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { cn } from "@/lib/utils"
@@ -24,11 +24,21 @@ export function AccessAuditLog() {
     const [logs, setLogs] = useState<AuditLog[]>([])
     const [loading, setLoading] = useState(true)
 
-    const q = useMemo(() => query(
-        collection(db, "auditLogs"),
-        orderBy("timestamp", "desc"),
-        limit(20) // Only show the last 20 actions
-    ), [])
+    // Firestore SDK is lazy-loaded; resolve the query in an effect.
+    // useSafeFirestoreSync tolerates `q === null` and renders loading:false.
+    const [q, setQ] = useState<Query<DocumentData> | null>(null)
+    useEffect(() => {
+        let cancelled = false
+        void getDb().then((db) => {
+            if (cancelled) return
+            setQ(query(
+                collection(db, "auditLogs"),
+                orderBy("timestamp", "desc"),
+                limit(20) // Only show the last 20 actions
+            ))
+        })
+        return () => { cancelled = true }
+    }, [])
 
     const { data: rawLogs, loading: isLogsLoading, error: logsError } = useSafeFirestoreSync<any[]>(q)
 

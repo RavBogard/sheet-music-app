@@ -1,4 +1,4 @@
-import { db } from "./firebase";
+import { getDb, subscribeWithDb } from "./firebase";
 import {
     collection,
     addDoc,
@@ -48,6 +48,7 @@ async function updateSetlistWithVersion(
     expectedUpdatedAt: Timestamp | null,
     patch: Record<string, unknown>,
 ): Promise<void> {
+    const db = await getDb()
     await runTransaction(db, async (tx) => {
         const snap = await tx.get(ref)
         if (!snap.exists()) throw new Error('NOT_FOUND')
@@ -183,6 +184,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
     return {
         async createSetlist(name: string, tracks: SetlistTrack[], additionalData: Partial<Setlist> = {}) {
             try {
+                const db = await getDb()
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), {
                     name,
                     date: serverTimestamp(),
@@ -217,22 +219,25 @@ export function createSetlistService(userId: string | null, userName?: string | 
         },
         // Subscribe to a single setlist by ID
         subscribeToSetlist(id: string, callback: (setlist: Setlist | null) => void) {
-            const docRef = doc(db, COLLECTION_PATH, id).withConverter(setlistConverter)
-            return onSnapshot(docRef, (snap) => {
-                if (snap.exists()) {
-                    callback(snap.data() as Setlist);
-                } else {
-                    callback(null);
-                }
-            }, (err) => {
-                logger.error("[Setlist] Listener error for %s:", id, err)
-            });
+            return subscribeWithDb((db) => {
+                const docRef = doc(db, COLLECTION_PATH, id).withConverter(setlistConverter)
+                return onSnapshot(docRef, (snap) => {
+                    if (snap.exists()) {
+                        callback(snap.data() as Setlist);
+                    } else {
+                        callback(null);
+                    }
+                }, (err) => {
+                    logger.error("[Setlist] Listener error for %s:", id, err)
+                });
+            })
         },
 
         // Update a setlist with concurrency protection. Pass expectedUpdatedAt
         // to enforce the precondition; the write will throw StaleWriteError
         // if the remote doc has been modified since the caller last saw it.
         async updateSetlist(id: string, data: Partial<Setlist>, expectedUpdatedAt: Timestamp | null = null) {
+            const db = await getDb()
             const docRef = doc(db, COLLECTION_PATH, id);
             const cleanData = stripUndefinedDeep(data) as Record<string, unknown>;
             // updateSetlistWithVersion adds its own updatedAt; don't double-set
@@ -281,25 +286,27 @@ export function createSetlistService(userId: string | null, userName?: string | 
 
         // Subscribe to ALL setlists (v4.0: no private/public distinction)
         subscribeToAllSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void) {
-            const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
-            const q = query(
-                collectionRef,
-                orderBy("date", "desc"),
-                limit(50)
-            );
+            return subscribeWithDb((db) => {
+                const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
+                const q = query(
+                    collectionRef,
+                    orderBy("date", "desc"),
+                    limit(50)
+                );
 
-            return onSnapshot(q, {
-                next: (snapshot) => {
-                    const setlists = snapshot.docs
-                        .map(doc => doc.data())
-                        .filter(Boolean) as Setlist[];
-                    callback(setlists, snapshot.metadata.fromCache);
-                },
-                error: (error) => {
-                    logger.error("Error subscribing to setlists:", error)
-                    if (onError) onError(error)
-                }
-            });
+                return onSnapshot(q, {
+                    next: (snapshot) => {
+                        const setlists = snapshot.docs
+                            .map(doc => doc.data())
+                            .filter(Boolean) as Setlist[];
+                        callback(setlists, snapshot.metadata.fromCache);
+                    },
+                    error: (error) => {
+                        logger.error("Error subscribing to setlists:", error)
+                        if (onError) onError(error)
+                    }
+                });
+            })
         },
 
         // Duplicate a setlist (creates a copy owned by current user)
@@ -323,6 +330,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     ownerName: userName || "Anonymous",
                     copiedFrom: sourceSetlistId
                 }) as Record<string, unknown>
+                const db = await getDb()
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), copyData);
                 await seedTopLevelTracks(docRef.id, freshTracks)
                 return docRef.id;
@@ -339,6 +347,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // through to the legacy 20-most-recent query on null (Track D OQ Q5).
         async getDefaultForServiceType(serviceType: ServiceType): Promise<string | null> {
             try {
+                const db = await getDb()
                 const ref = doc(db, 'config', 'defaults')
                 const snap = await getDoc(ref)
                 if (!snap.exists()) return null
@@ -357,6 +366,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // admin-only at the server (allow write: if isAdmin()); this method
         // does not gate client-side beyond what rules already enforce.
         async setDefaultForServiceType(serviceType: ServiceType, setlistId: string): Promise<void> {
+            const db = await getDb()
             const ref = doc(db, 'config', 'defaults')
             await setDoc(
                 ref,
@@ -384,6 +394,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
             try {
                 const defaultId = await this.getDefaultForServiceType(serviceType)
                 if (defaultId) {
+                    const db = await getDb()
                     const ref = doc(db, COLLECTION_PATH, defaultId).withConverter(setlistConverter)
                     const snap = await getDoc(ref)
                     if (snap.exists()) {
@@ -403,6 +414,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
             }
 
             try {
+                const db = await getDb()
                 const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
                 const q = query(collectionRef, orderBy('date', 'desc'), limit(20))
                 const snap = await getDocs(q)
@@ -463,6 +475,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     ...(source.rabbi ? { rabbi: source.rabbi } : {}),
                     clonedFrom: source.id,
                 }) as Record<string, unknown>
+                const db = await getDb()
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), cloneData)
                 await seedTopLevelTracks(docRef.id, freshTracks)
 
@@ -515,6 +528,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
                 }) as Record<string, unknown>
+                const db = await getDb()
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), templateData)
                 await seedTopLevelTracks(docRef.id, freshTracks)
 

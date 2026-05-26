@@ -12,7 +12,7 @@ import { MatrixPanel } from "@/components/monitor/MatrixPanel"
 import { BusAssignmentPanel } from "@/components/monitor/BusAssignmentPanel"
 import { DefaultChannelPicker } from "@/components/monitor/DefaultChannelPicker"
 import { doc, getDoc, setDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { getDb } from "@/lib/firebase"
 import { Loader2, Radio } from "lucide-react"
 import { logger } from "@/lib/logger"
 import { toast } from "sonner"
@@ -54,21 +54,29 @@ export default function MonitorClient() {
     // Load starred channels (pinnedChannels in Firestore) and default channels on mount
     useEffect(() => {
         if (!user) return
-        // Load starred channels from user preferences
-        getDoc(doc(db, "users", user.uid, "preferences", "monitor")).then(snap => {
-            if (snap.exists()) {
-                const data = snap.data()
-                setStarredChannels(data.pinnedChannels || [])
-            }
-        }).catch(() => { /* ignore */ })
+        let cancelled = false
+        void (async () => {
+            const db = await getDb()
+            if (cancelled) return
+            // Load starred channels from user preferences
+            getDoc(doc(db, "users", user.uid, "preferences", "monitor")).then(snap => {
+                if (cancelled) return
+                if (snap.exists()) {
+                    const data = snap.data()
+                    setStarredChannels(data.pinnedChannels || [])
+                }
+            }).catch(() => { /* ignore */ })
 
-        // Load default channels from config
-        getDoc(doc(db, "config", "monitor")).then(snap => {
-            if (snap.exists()) {
-                const data = snap.data()
-                setDefaultChannels(data.defaultChannels || [])
-            }
-        }).catch(() => { /* ignore */ })
+            // Load default channels from config
+            getDoc(doc(db, "config", "monitor")).then(snap => {
+                if (cancelled) return
+                if (snap.exists()) {
+                    const data = snap.data()
+                    setDefaultChannels(data.defaultChannels || [])
+                }
+            }).catch(() => { /* ignore */ })
+        })()
+        return () => { cancelled = true }
     }, [user, setStarredChannels, setDefaultChannels])
 
     // Toggle star on a channel
@@ -82,6 +90,7 @@ export default function MonitorClient() {
         // v4.4 E-005: was silent; surface failures so the user knows their
         // starred channels won't survive a reload.
         try {
+            const db = await getDb()
             await setDoc(
                 doc(db, "users", user.uid, "preferences", "monitor"),
                 { pinnedChannels: next },

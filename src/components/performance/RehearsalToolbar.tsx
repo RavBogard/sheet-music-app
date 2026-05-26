@@ -56,26 +56,34 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
     // Load preferred speed and cumulative stats from Firestore
     useEffect(() => {
         if (!fileId) return
-        import("@/lib/firebase").then(({ auth, db: clientDb }) => {
+        let cancelled = false
+        void (async () => {
+            const { auth, getDb: getClientDb } = await import("@/lib/firebase")
             const uid = auth.currentUser?.uid
-            if (!uid) return
-            import("firebase/firestore").then(({ doc, getDoc }) => {
-                getDoc(doc(clientDb, 'users', uid, 'songPreferences', fileId)).then(snap => {
-                    const data = snap.data()
-                    const saved = data?.preferredSpeed
-                    if (saved && SPEED_OPTIONS.includes(saved)) {
-                        setSpeed(saved)
-                        if (audioRef.current) audioRef.current.playbackRate = saved
-                    }
-                    if (data?.practiceSeconds) {
-                        setCumulativeStats({
-                            seconds: data.practiceSeconds || 0,
-                            sessions: data.practiceSessionCount || 0,
-                        })
-                    }
-                }).catch(() => { })
-            })
-        })
+            if (!uid || cancelled) return
+            const [{ doc, getDoc }, clientDb] = await Promise.all([
+                import("firebase/firestore"),
+                getClientDb(),
+            ])
+            if (cancelled) return
+            try {
+                const snap = await getDoc(doc(clientDb, 'users', uid, 'songPreferences', fileId))
+                if (cancelled) return
+                const data = snap.data()
+                const saved = data?.preferredSpeed
+                if (saved && SPEED_OPTIONS.includes(saved)) {
+                    setSpeed(saved)
+                    if (audioRef.current) audioRef.current.playbackRate = saved
+                }
+                if (data?.practiceSeconds) {
+                    setCumulativeStats({
+                        seconds: data.practiceSeconds || 0,
+                        sessions: data.practiceSessionCount || 0,
+                    })
+                }
+            } catch { /* silent — preferences optional */ }
+        })()
+        return () => { cancelled = true }
     }, [fileId])
 
     // Initialize audio element
@@ -171,14 +179,17 @@ export function RehearsalToolbar({ audioUrl, title: _title, fileId, onPracticeTi
         setSpeed(newSpeed)
         // Persist preferred speed
         if (fileId) {
-            import("@/lib/firebase").then(({ auth, db: clientDb }) => {
+            void (async () => {
+                const { auth, getDb: getClientDb } = await import("@/lib/firebase")
                 const uid = auth.currentUser?.uid
                 if (!uid) return
-                import("firebase/firestore").then(({ doc, setDoc }) => {
-                    const ref = doc(clientDb, 'users', uid, 'songPreferences', fileId)
-                    setDoc(ref, { preferredSpeed: newSpeed }, { merge: true }).catch(err => reportSaveError(err, "metronome speed"))
-                })
-            })
+                const [{ doc, setDoc }, clientDb] = await Promise.all([
+                    import("firebase/firestore"),
+                    getClientDb(),
+                ])
+                const ref = doc(clientDb, 'users', uid, 'songPreferences', fileId)
+                setDoc(ref, { preferredSpeed: newSpeed }, { merge: true }).catch(err => reportSaveError(err, "metronome speed"))
+            })()
         }
     }, [fileId])
 

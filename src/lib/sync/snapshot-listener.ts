@@ -33,7 +33,7 @@ import {
 } from 'firebase/firestore'
 import type { Firestore } from 'firebase/firestore'
 
-import { db as defaultFirestoreDb } from '@/lib/firebase'
+import { subscribeWithDb } from '@/lib/firebase'
 import type { LocalDb } from '@/lib/local/schema'
 import type { LocalCollection, LocalSetlist, LocalTrack } from '@/lib/local/types'
 import { logger as defaultLogger } from '@/lib/logger'
@@ -47,8 +47,10 @@ interface ListenerLogger {
 export interface SnapshotListenerOpts {
     setlistId: string
     db: LocalDb
-    /** Override for tests. Defaults to the production Firestore from
-     *  `@/lib/firebase`. */
+    /** Override for tests. When provided, the subscriber wraps the given
+     *  Firestore synchronously (no lazy-load deferral). When absent, the
+     *  default subscriber lazy-resolves Firestore via `subscribeWithDb`
+     *  so the SDK chunk stays out of the eager preload graph. */
     firestoreDb?: Firestore
     /** Override for tests. Defaults to the app logger. */
     logger?: ListenerLogger
@@ -97,7 +99,9 @@ function timestampToMs(value: unknown): number {
     return 0
 }
 
-/** Production subscriber: wraps `firebase/firestore` onSnapshot. */
+/** Test-path subscriber: wraps `firebase/firestore` onSnapshot synchronously
+ *  against a caller-provided Firestore instance. Used only when tests inject
+ *  `opts.firestoreDb`. */
 function makeFirestoreSubscriber(firestoreDb: Firestore): SnapshotSubscriber {
     return {
         subscribeSetlist(setlistId, onNext, onError) {
@@ -143,6 +147,59 @@ function makeFirestoreSubscriber(firestoreDb: Firestore): SnapshotSubscriber {
     }
 }
 
+/** Production subscriber: lazy-resolves Firestore via `subscribeWithDb` so the
+ *  SDK chunk stays out of the eager preload graph. The sync unsubscribe
+ *  contract is preserved by `subscribeWithDb` (calling it before the inner
+ *  attach lands cleanly cancels). */
+function makeLazyFirestoreSubscriber(): SnapshotSubscriber {
+    return {
+        subscribeSetlist(setlistId, onNext, onError) {
+            return subscribeWithDb((firestoreDb) => {
+                const ref = fsDoc(firestoreDb, 'setlists', setlistId)
+                return onSnapshot(
+                    ref,
+                    (snap) => {
+                        if (!snap.exists()) {
+                            onNext(null)
+                            return
+                        }
+                        const data = snap.data() as Record<string, unknown>
+                        const updatedAt = timestampToMs(data.updatedAt)
+                        onNext({ data, updatedAt })
+                    },
+                    (err) => onError(err as Error),
+                )
+            })
+        },
+        subscribeTracks(setlistId, onChanges, onError) {
+            return subscribeWithDb((firestoreDb) => {
+                const q = query(
+                    fsCollection(firestoreDb, 'tracks'),
+                    where('setlistId', '==', setlistId),
+                )
+                return onSnapshot(
+                    q,
+                    (snap) => {
+                        const changes: TrackChange[] = snap.docChanges().map((c) => {
+                            const data = c.doc.data() as Record<string, unknown>
+                            const updatedAt =
+                                c.type === 'removed' ? 0 : timestampToMs(data.updatedAt)
+                            return {
+                                type: c.type as TrackChangeType,
+                                docId: c.doc.id,
+                                data,
+                                updatedAt,
+                            }
+                        })
+                        if (changes.length > 0) onChanges(changes)
+                    },
+                    (err) => onError(err as Error),
+                )
+            })
+        },
+    }
+}
+
 async function hasPendingOutboxRow(
     db: LocalDb,
     collection: LocalCollection,
@@ -162,13 +219,16 @@ export function startSnapshotListener(opts: SnapshotListenerOpts): () => void {
     const {
         setlistId,
         db,
-        firestoreDb = defaultFirestoreDb,
+        firestoreDb,
         logger = defaultLogger,
         subscriber,
     } = opts
 
     const transport =
-        subscriber ?? makeFirestoreSubscriber(firestoreDb)
+        subscriber ??
+        (firestoreDb
+            ? makeFirestoreSubscriber(firestoreDb)
+            : makeLazyFirestoreSubscriber())
 
     let cancelled = false
 

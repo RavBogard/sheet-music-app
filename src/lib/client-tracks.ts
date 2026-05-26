@@ -9,7 +9,7 @@
 //    snapshot listener. Always queries top-level `tracks/{id}`.
 
 import { collection, query, where, getDocs } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { getDb } from "@/lib/firebase"
 import type { LocalTrack } from "@/lib/local/types"
 import type { SetlistTrack } from "@/types/models"
 
@@ -26,6 +26,7 @@ export async function fetchTracksForSetlistClient(
     _setlistData?: { hydrated?: boolean; tracks?: unknown } | null,
 ): Promise<SetlistTrack[]> {
     void _setlistData
+    const db = await getDb()
     const q = query(
         collection(db, "tracks"),
         where("setlistId", "==", setlistId),

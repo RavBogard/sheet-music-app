@@ -15,7 +15,7 @@
  */
 
 import { doc, getDoc, setDoc } from "firebase/firestore"
-import { db } from "./firebase"
+import { getDb } from "./firebase"
 
 export interface SongPreference {
     transposition: number
@@ -30,6 +30,7 @@ export async function saveSongPreference(
     fileId: string,
     transposition: number
 ): Promise<void> {
+    const db = await getDb()
     const ref = doc(db, "users", uid, "songPreferences", fileId)
 
     await setDoc(ref, {
@@ -46,6 +47,7 @@ export async function loadSongPreference(
     uid: string,
     fileId: string
 ): Promise<SongPreference | null> {
+    const db = await getDb()
     const ref = doc(db, "users", uid, "songPreferences", fileId)
 
     const snap = await getDoc(ref)

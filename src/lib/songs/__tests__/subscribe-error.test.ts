@@ -18,6 +18,11 @@ import { subscribeSongsLibrary, type DocChange, type SubscribeAdapter } from '@/
 
 vi.mock('@/lib/firebase', () => ({
     db: {},
+    getDb: vi.fn(async () => ({})),
+    subscribeWithDb: vi.fn((setup: (db: unknown) => (() => void) | void) => {
+        const u = setup({})
+        return typeof u === 'function' ? u : () => {}
+    }),
     recoverFromFirestoreShutdown: vi.fn(),
 }))
 

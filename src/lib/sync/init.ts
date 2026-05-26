@@ -11,7 +11,7 @@ import {
     setDoc,
 } from 'firebase/firestore'
 
-import { auth, db as firestoreDb } from '@/lib/firebase'
+import { auth, getDb as getFirestoreDb } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 import type { LocalCollection, OutboxRow } from '@/lib/local/types'
 
@@ -75,6 +75,7 @@ export function checkUpdatePrecondition(
 class ProductionFirestoreAdapter implements FirestoreAdapter {
     async commitOutboxRow(row: OutboxRow): Promise<CommitResult> {
         try {
+            const firestoreDb = await getFirestoreDb()
             switch (row.op) {
                 case 'set': {
                     const ref = doc(firestoreDb, row.collection, row.docId)
@@ -216,6 +217,7 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
         collection: LocalCollection,
         docId: string,
     ): Promise<RemoteDocSnapshot | null> {
+        const firestoreDb = await getFirestoreDb()
         const ref = doc(firestoreDb, collection, docId)
         const snap = await getDoc(ref)
         if (!snap.exists()) return null

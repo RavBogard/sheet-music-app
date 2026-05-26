@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { auth, db } from "@/lib/firebase"
+import { auth, subscribeWithDb } from "@/lib/firebase"
 import { doc, onSnapshot } from "firebase/firestore"
 import { DriveFile } from "@/types/models"
 import { useEffect } from "react"
@@ -77,15 +77,15 @@ export function useLibrary(force = false, collection = 'all') {
     // (~1s). The first snapshot fires immediately on subscribe — skip it so
     // we don't refetch on every mount; only act on subsequent updates.
     useEffect(() => {
-        if (!user || !db) return
+        if (!user) return
         let firstSnapshot = true
-        const unsub = onSnapshot(doc(db, "library_signals", "latest"), () => {
+        const unsub = subscribeWithDb((db) => onSnapshot(doc(db, "library_signals", "latest"), () => {
             if (firstSnapshot) {
                 firstSnapshot = false
                 return
             }
             queryClient.invalidateQueries({ queryKey: ['library'] })
-        })
+        }))
         return unsub
     }, [user, queryClient])
 

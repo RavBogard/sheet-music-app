@@ -67,8 +67,24 @@ const FORBIDDEN_MODULES: ForbiddenModule[] = [
         signatures: ['QueryClientProvider', 'QueryClient'],
         closedBy: '42b38044c — coder-5 react-query-lazy-import (hoisted QueryClientProvider out of root client-providers.tsx into (main)+perform-scoped layouts; dropped 15.4 KB chunk 5543-*.js from /login cold-load)',
     },
+    {
+        name: 'firebase/firestore',
+        // `WebChannel` is the Firestore SDK's transport class name; webpack
+        // preserves it verbatim in chunk `d94474cc-*.js` (the firestore SDK
+        // chunk) and its cousin `1531-*.js`. Uniqueness verified at
+        // write-time via signature scan across `.next/static/chunks/*.js`:
+        // hits only in firestore SDK chunks themselves — does NOT appear in
+        // any other production chunk. Other candidates (`initializeFirestore`,
+        // `persistentLocalCache`) leak into chunk `1305-*.js` as JS identifier
+        // strings from `src/lib/firebase.ts`'s dynamic-import destructure
+        // (`const { initializeFirestore, persistentLocalCache, ... } = await
+        // import("firebase/firestore")`), so they cannot serve as forbidden
+        // signatures without false-positive on the current GREEN build.
+        // See FINDINGS §6.7.
+        signatures: ['WebChannel'],
+        closedBy: '<filled-at-ship> — coder-1 firestore-lazy-import-refactor (Phase 1-4 caller migration + Option B auth-context + Option C-1 congregation-store; no eager firestore SDK symbols at module-top anywhere reachable from /login; the d94474cc + 1531 chunks remain in the build but are not in /login\'s per-route preload graph)',
+    },
     // Future bundle-diet lanes APPEND here:
-    //   { name: 'firebase/firestore', signatures: ['<distinctive-api-name>'], closedBy: '<sha> …' },
     //   { name: '@firebase/firestore', signatures: ['<distinctive-api-name>'], closedBy: '<sha> …' },
 ]
 

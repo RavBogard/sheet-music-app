@@ -13,7 +13,7 @@
  * This module handles the client-side portion.
  */
 
-import { db } from "./firebase"
+import { getDb } from "./firebase"
 import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore"
 import { logger } from "./logger"
 
@@ -66,6 +66,7 @@ export async function registerPushNotifications(uid: string): Promise<string | n
         }
 
         // Store token in user's Firestore profile
+        const db = await getDb()
         const userRef = doc(db, 'users', uid)
         await updateDoc(userRef, {
             fcmTokens: arrayUnion(token),
@@ -84,6 +85,7 @@ export async function registerPushNotifications(uid: string): Promise<string | n
  */
 export async function unregisterPushNotifications(uid: string, token: string): Promise<void> {
     try {
+        const db = await getDb()
         const userRef = doc(db, 'users', uid)
         await updateDoc(userRef, {
             fcmTokens: arrayRemove(token),

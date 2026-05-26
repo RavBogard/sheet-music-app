@@ -33,6 +33,11 @@ vi.mock('firebase/firestore', () => ({
 
 vi.mock('@/lib/firebase', () => ({
     db: { __mock: true },
+    getDb: vi.fn(async () => ({ __mock: true })),
+    subscribeWithDb: vi.fn((setup: (db: unknown) => (() => void) | void) => {
+        const u = setup({ __mock: true })
+        return typeof u === 'function' ? u : () => {}
+    }),
 }))
 
 vi.mock('@/lib/logger', () => ({

@@ -1,6 +1,11 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { initializeFirestore, getFirestore, Firestore, FirestoreSettings, persistentLocalCache, persistentSingleTabManager, memoryLocalCache, setLogLevel } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, signInWithCustomToken, Auth } from "firebase/auth";
+
+// firestore is dynamic-imported by `getDb()` — keeping it out of the
+// module-top graph moves the firestore SDK chunk (~236 KB) out of
+// /login's preload graph. See `.paul/research/bundle-diet-firestore-lazy-import/FINDINGS.md`
+// for the cold-start cost analysis.
+import type { Firestore, FirestoreSettings } from "firebase/firestore";
 
 import { env } from "./env";
 import { logger } from "@/lib/logger"
@@ -17,7 +22,6 @@ const firebaseConfig = {
 
 // Singleton pattern to prevent multiple initializations in dev hot-reloads
 let app: FirebaseApp;
-let db: Firestore;
 let auth: Auth;
 let googleProvider: GoogleAuthProvider;
 
@@ -33,13 +37,101 @@ try {
     }
 
     if (firebaseConfig.apiKey) {
-        // Use WebChannel streaming (the default) for best performance.
-        // All Firestore listeners share a single multiplexed connection,
-        // giving ~200-500ms faster cold reads vs the old long-polling config.
-        //
-        // Historical note: Long polling was previously enabled to suppress
-        // AbortError console noise in Firebase SDK <12.5. That bug is fixed
-        // in v12.9+, so we use the default streaming transport now.
+        auth = getAuth(app);
+        googleProvider = new GoogleAuthProvider();
+        googleProvider.addScope('profile');
+    } else {
+        auth = {} as unknown as Auth
+        googleProvider = new GoogleAuthProvider()
+        googleProvider.addScope('profile');
+    }
+
+} catch (e) {
+    logger.error("Firebase Initialization Failed", e);
+    app = {} as unknown as FirebaseApp;
+    auth = {} as unknown as Auth;
+    googleProvider = new GoogleAuthProvider();
+    googleProvider.addScope('profile');
+}
+
+/**
+ * Lazy-initialized Firestore singleton. The firestore SDK module is
+ * dynamic-imported on first call, so it lives in its own webpack chunk
+ * instead of being eagerly bundled into every client route's initial
+ * preload graph.
+ *
+ * Why a Promise (Pattern A) and not a top-level await: avoid blocking
+ * the parent module's load on a (potentially slow) IDB probe. Callers
+ * `await getDb()` at the entry of their async path; subsequent calls
+ * return the cached promise.
+ *
+ * The cache strategy (persistentLocalCache vs memoryLocalCache) is
+ * decided at first-call time using the same `storageOk` localStorage
+ * probe as the pre-lazy version. WebChannel + setLogLevel('error') +
+ * persistent-single-tab manager behavior is preserved verbatim.
+ *
+ * Historical note: long polling was previously enabled to suppress
+ * AbortError console noise in Firebase SDK <12.5. That bug is fixed
+ * in v12.9+, so we use the default streaming transport now.
+ */
+let firestorePromise: Promise<Firestore> | null = null;
+
+/**
+ * Cancellation-token wrapper for the async-init-returns-sync-unsub
+ * pattern. Use this for `onSnapshot`-style subscribers where the
+ * caller treats the return value as a synchronous unsubscribe
+ * function but the underlying firestore SDK is now lazy-loaded.
+ *
+ * ```ts
+ * const unsub = subscribeWithDb(db => {
+ *   const ref = doc(db, "setlists", id)
+ *   return onSnapshot(ref, snap => ...)
+ * })
+ * // Later, sync:
+ * unsub()
+ * ```
+ *
+ * If unsub() runs before the firestore promise resolves, the inner
+ * subscription is never attached — cleanup is correct.
+ */
+export type Unsubscribe = () => void;
+export function subscribeWithDb(
+    setup: (db: Firestore) => Unsubscribe,
+): Unsubscribe {
+    let inner: Unsubscribe | null = null;
+    let cancelled = false;
+    void getDb().then((db) => {
+        if (cancelled) return;
+        inner = setup(db);
+    }).catch((e) => {
+        logger.error("[firebase] subscribeWithDb setup threw", e);
+    });
+    return () => {
+        cancelled = true;
+        if (inner) {
+            try { inner(); } catch (e) { logger.warn("[firebase] inner unsub threw", e); }
+            inner = null;
+        }
+    };
+}
+
+export function getDb(): Promise<Firestore> {
+    if (firestorePromise) return firestorePromise;
+    if (!firebaseConfig.apiKey) {
+        // No config — return a mock that preserves the pre-lazy
+        // "throws on use" shape rather than blocking the caller.
+        firestorePromise = Promise.resolve({} as unknown as Firestore);
+        return firestorePromise;
+    }
+    firestorePromise = (async () => {
+        const {
+            initializeFirestore,
+            getFirestore,
+            persistentLocalCache,
+            persistentSingleTabManager,
+            memoryLocalCache,
+            setLogLevel,
+        } = await import("firebase/firestore");
 
         // Suppress harmless "Detected an update time that is in the future" clock-skew warnings
         setLogLevel("error");
@@ -70,7 +162,7 @@ try {
         })()
 
         try {
-            db = initializeFirestore(app, storageOk ? {
+            const db = initializeFirestore(app, storageOk ? {
                 // persistentSingleTabManager: each tab manages its own IDB independently.
                 // Eliminates the cross-tab IDB version coordination that caused the
                 // "Firestore shutting down" cascade when multiple tabs were open and
@@ -90,34 +182,21 @@ try {
             if (!storageOk) {
                 logger.warn("Firestore: restricted-storage detected (likely incognito) — using memory cache, no offline persistence");
             }
+            return db;
         } catch (e1) {
             // Persistence may fail in private browsing or restricted environments.
             // Fall back to in-memory cache (no offline persistence).
             try {
-                db = initializeFirestore(app, { localCache: memoryLocalCache() } as FirestoreSettings);
+                return initializeFirestore(app, { localCache: memoryLocalCache() } as FirestoreSettings);
             } catch {
                 // Already initialized (e.g. hot reload)
-                db = getFirestore(app);
+                return getFirestore(app);
+            } finally {
+                logger.warn("Firestore persistent cache failed at init, fell back to memory cache", e1);
             }
-            logger.warn("Firestore persistent cache failed at init, fell back to memory cache", e1);
         }
-        auth = getAuth(app);
-        googleProvider = new GoogleAuthProvider();
-        googleProvider.addScope('profile');
-    } else {
-        db = {} as unknown as Firestore
-        auth = {} as unknown as Auth
-        googleProvider = new GoogleAuthProvider()
-        googleProvider.addScope('profile');
-    }
-
-} catch (e) {
-    logger.error("Firebase Initialization Failed", e);
-    app = {} as unknown as FirebaseApp;
-    db = {} as unknown as Firestore;
-    auth = {} as unknown as Auth;
-    googleProvider = new GoogleAuthProvider();
-    googleProvider.addScope('profile');
+    })();
+    return firestorePromise;
 }
 
 /**
@@ -258,4 +337,4 @@ if (
     }
 }
 
-export { app, db, auth, googleProvider };
+export { app, auth, googleProvider };
