@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { AuthedQueryProvider } from "@/components/authed-query-provider"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
 import { primeOfflineWorker } from "@/lib/pdf-worker-offline"
 
@@ -146,10 +147,12 @@ export default function PerformLayout({
     // Using <main> instead of <div> here gives the landmark + keeps the id stable
     // for any callers wiring skip-link/anchor links to #main-content.
     return (
-        <main id="main-content" className="min-h-screen">
-            <PdfWorkerPreload />
-            <PerformanceOfflineIndicator />
-            {children}
-        </main>
+        <AuthedQueryProvider>
+            <main id="main-content" className="min-h-screen">
+                <PdfWorkerPreload />
+                <PerformanceOfflineIndicator />
+                {children}
+            </main>
+        </AuthedQueryProvider>
     )
 }
