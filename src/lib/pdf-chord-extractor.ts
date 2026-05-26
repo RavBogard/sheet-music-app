@@ -42,17 +42,45 @@ export interface ExtractionResult {
 let _pdfjsModule: typeof import('pdfjs-dist') | null = null
 
 // Exported (v70-04) so the setlist-import document extractor reuses the same
-// server-side loader (legacy build, worker disabled) instead of duplicating it.
+// server-side loader (legacy build) instead of duplicating it. Callers MUST
+// spread `PDFJS_NODE_SAFE_OPTIONS` into their `getDocument({...})` call —
+// see the constant's docstring below for why.
 export async function getPdfjs() {
     if (!_pdfjsModule) {
         _pdfjsModule = await import("pdfjs-dist/legacy/build/pdf.mjs")
-        // Disable worker threads in server/serverless context
-        if (_pdfjsModule.GlobalWorkerOptions) {
-            _pdfjsModule.GlobalWorkerOptions.workerSrc = ""
-        }
     }
     return _pdfjsModule
 }
+
+/**
+ * Documented Node-safe `getDocument()` options for pdfjs-dist v5 in
+ * serverless Node. Required because pdfjs-dist's default
+ * fake-worker path (triggered by `GlobalWorkerOptions.workerSrc=""`
+ * or by not configuring a worker at all) evals a code segment that
+ * constructs `new DOMMatrix()`. Vercel serverless Node (<22.13) does
+ * not expose `DOMMatrix` globally → `DOMMatrix is not defined`.
+ *
+ * `disableWorker:true` bypasses the fake-worker entirely; the
+ * remaining flags disable other DOM-coupled paths (font enumeration,
+ * worker fetch, eval-based optimizations) that the text-extraction
+ * + chord-extraction codepaths do not need.
+ *
+ * Caught 2026-05-26 by supervisor dry-running
+ * `backfill_searchable_text({dryRun:true, limit:10})` against prod
+ * (10/10 errors, all "DOMMatrix is not defined"). Closes the F4-B
+ * Phase 4 APPLY blocker AND incidentally restores
+ * `/api/setlists/import/extract-document` (PDF branch),
+ * `/api/setlist/print/*`, and `/api/library/detect-key`, all of
+ * which were silently failing on the same code path.
+ */
+export const PDFJS_NODE_SAFE_OPTIONS = {
+    disableWorker: true,
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    useSystemFonts: false,
+    disableFontFace: true,
+    verbosity: 0,
+} as const
 
 // ─── Chord Detection ─────────────────────────────────────────────────
 
@@ -160,9 +188,8 @@ export async function extractChordsFromPdf(
     const data = pdfData instanceof ArrayBuffer ? new Uint8Array(pdfData) : pdfData
 
     const pdfDoc = await pdfjs.getDocument({
+        ...PDFJS_NODE_SAFE_OPTIONS,
         data,
-        useSystemFonts: true,
-        verbosity: 0,
     }).promise
 
     const pages: PageChords[] = []
@@ -218,9 +245,8 @@ export async function extractChordsFromPage(
     const data = pdfData instanceof ArrayBuffer ? new Uint8Array(pdfData) : pdfData
 
     const pdfDoc = await pdfjs.getDocument({
+        ...PDFJS_NODE_SAFE_OPTIONS,
         data,
-        useSystemFonts: true,
-        verbosity: 0,
     }).promise
 
     if (pageNumber < 1 || pageNumber > pdfDoc.numPages) return null

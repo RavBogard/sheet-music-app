@@ -11,7 +11,7 @@ import 'server-only'
 
 import mammoth from 'mammoth'
 
-import { getPdfjs } from '@/lib/pdf-chord-extractor'
+import { getPdfjs, PDFJS_NODE_SAFE_OPTIONS } from '@/lib/pdf-chord-extractor'
 
 export type DocumentFormat = 'docx' | 'pdf' | 'txt'
 
@@ -54,8 +54,14 @@ export function detectDocumentFormat(
 /** Extract all text from a PDF buffer using the shared server-side pdfjs loader. */
 async function extractPdfText(buffer: Buffer): Promise<string> {
     const pdfjs = await getPdfjs()
-    const pdfDoc = await pdfjs.getDocument({ data: new Uint8Array(buffer) })
-        .promise
+    // PDFJS_NODE_SAFE_OPTIONS bypasses the fake-worker path that requires
+    // globalThis.DOMMatrix (absent on Vercel serverless Node <22.13). Caught
+    // 2026-05-26 by supervisor dry-run of backfill_searchable_text (10/10
+    // errors, all "DOMMatrix is not defined"). See pdf-chord-extractor.ts.
+    const pdfDoc = await pdfjs.getDocument({
+        ...PDFJS_NODE_SAFE_OPTIONS,
+        data: new Uint8Array(buffer),
+    }).promise
 
     // Cap the page-iteration loop. extractDocumentText's try/catch converts this
     // throw into a typed { ok: false, reason: 'extraction_failed' } result.
