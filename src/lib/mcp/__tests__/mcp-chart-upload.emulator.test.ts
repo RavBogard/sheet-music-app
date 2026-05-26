@@ -543,9 +543,22 @@ describe("MCP chart-upload tools (emulator)", () => {
         // registered MIME). The extension resolves a real music mime so the
         // file is accepted + typed application/xml (routes to SmartScoreViewer),
         // instead of being bounced by G-7.
-        for (const fn of ["adon-olam.mxl", "adon-olam.musicxml"]) {
+        //
+        // Two iterations exercise BOTH extensions (`.mxl` and `.musicxml`)
+        // through the same octet-stream → application/xml mime-rewrite path.
+        // Titles MUST stay chart-distinct under coder-5's `6325cc787`
+        // STRIPPABLE_EXTENSION_RE dedup pin (which collapses media extensions
+        // out of `normalizedName` so `.mxl`/`.musicxml` variants of the same
+        // chart cluster — semantically correct for the dedup contract, but
+        // means iter-2 must use a different stem to avoid an unintended
+        // fuzzy-dedup collision unrelated to what THIS test asserts).
+        const cases = [
+            { fn: "adon-olam.mxl", title: "Octet MXL adon-olam" },
+            { fn: "hashkivenu.musicxml", title: "Octet MusicXML hashkivenu" },
+        ]
+        for (const { fn, title } of cases) {
             const result = (await uploadChart(ADMIN, {
-                title: `Octet ${fn}`,
+                title,
                 fileBase64: b64("<?xml version=\"1.0\"?><score-partwise/>"),
                 mimeType: "application/octet-stream",
                 fileName: fn,
