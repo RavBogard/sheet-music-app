@@ -56,25 +56,50 @@ probe BOTH modes (incognito + signed-in) and call out divergences.
      BY DESIGN per `[[feedback_setlist_public_policy]]` — don't flag exposure
      as a security finding.
    - For authed probes (Dashboard, Library, Setlist editor, Monitor): Daniel
-     will paste a root admin bearer at session start. Mint a band_leader-role
-     test account via `create_test_account({ role: "band_leader", uidPrefix: "<your-id>" })`
-     and use that account's bearer + `cycle-4/harness/lib/probe.mjs:mintSession`
-     for Firebase Web SDK listener wiring (test-session cookie + customToken).
+     will paste a root admin bearer at session start AND drop you into a
+     Daniel-signed-in browser session (CFC or Playwright `mintSession` with
+     Daniel's uid). UI authoring probes against your `STRESS-TEST-<run-id>-*`
+     scratch setlists (per Out-of-scope §2 above) ride that admin session
+     directly — `create_test_account`-minted bearers have `disabled:true`
+     Firebase Auth users and CANNOT sign into the UI.
+   - Test accounts are still useful for MCP-side role-gate probes and as a
+     non-leader counterparty for `isLeader`-only surface probes via Playwright
+     `mintSession`. Mint them when needed via
+     `create_test_account({ role: "band_leader" | "musician" | "member", uidPrefix: "<your-id>" })`.
 3. **Instance id:** Generate `cowork-web-<NNNN>` (e.g. `cowork-web-20260526a`).
    You'll use this as the `uidPrefix` everywhere.
 4. **Cleanup contract:**
    - End-of-run: `cleanup_all_test_data({ prefix: "<your-id>" })` via MCP
-     (note: param name is `prefix`, NOT `uidPrefix` — asymmetric API, verified
-     against `src/lib/mcp/tools/test-tokens.ts`).
-   - If you create setlists / library entries via the UI as your test account,
-     they'll be swept by the cleanup-cascade. If you create them as Daniel
-     (admin bearer), they will NOT be swept — DON'T do this; always create
-     via the test account.
+     sweeps every test-account-owned fixture (param is `prefix`, NOT
+     `uidPrefix` — asymmetric API; verified against `src/lib/mcp/tools/test-tokens.ts`).
+   - For Daniel-owned scratch setlists/library entries tagged
+     `STRESS-TEST-<your-run-id>-*` (per Out-of-scope bullet 2 above): these
+     are NOT swept by `cleanup_all_test_data`. YOU are responsible for
+     deleting them explicitly via UI delete OR MCP `delete_setlist` /
+     `archive_chart`. Track + report.
+   - If you mint test accounts via `create_test_account`, note their Auth
+     users come back with `disabled:true` — they CAN call MCP with their
+     bearer but CANNOT sign into the UI. So test accounts are good for
+     MCP-side probes; Daniel's admin session is the path for UI authoring
+     probes against scratch setlists.
 
 ### Out of scope (hard boundaries)
 
-- ⛔ **NO writes to real Daniel/David setlists** through the UI or MCP. All
-  authoring probes happen against test-account-owned fixtures.
+- ⛔ **NO MUTATIONS of EXISTING real setlists.** Don't touch Daniel/David's actual
+  catalog — leave "Shabbat morning Shabbat," "Bar Mitzvah Chase," "Shavuot Yizkor,"
+  and every other pre-existing setlist alone. Read-probes are fine.
+- ✓ **DO create NEW Daniel-owned setlists** tagged `STRESS-TEST-<your-run-id>-*`
+  for stress-testing the create / bind / edit / delete authoring flows. This IS
+  part of the stress test — exercising the create path end-to-end is high-value.
+  Use Daniel's signed-in admin session (no test-account-fixtures dance needed
+  for these write probes). You may also upload library charts tagged with the
+  same run-id prefix.
+- **Cleanup contract for setlists/library entries you created:** at end of run,
+  delete every setlist + library entry you created (via UI delete OR MCP
+  `delete_setlist` / `archive_chart`). Track them in a `Setlists/library
+  entries created + deleted` list in your report so the human can verify zero
+  leakage afterward. If you abort mid-run, append a `## Manual cleanup needed`
+  block to your report listing the IDs that survived.
 - ⛔ **NO Monitor writes against the live X32 desk** — even if it appears
   connected. Monitor probes are READ + UI-shape only (panel renders, fader
   affordance present, role-gate banner visible). Toggling a fader against a
@@ -218,8 +243,10 @@ debounce too slow on iPad keyboard, scroll position lost on search-clear.
 
 ### E — Setlist editing + chart-bind picker (~10 min)
 
-1. As band_leader, create a fixture setlist via the UI Creation Wizard (or
-   MCP `create_setlist`). Title: `STRESS <your-id> — <iso>`.
+1. In Daniel's signed-in admin session, create a scratch setlist via the UI
+   Creation Wizard (or MCP `create_setlist`). Title: `STRESS-TEST-<your-id> — <iso>`.
+   Track the returned setlistId in your report's `Setlists/library entries
+   created + deleted` block for end-of-run cleanup.
 2. Add tracks via the in-app picker AND via `add_track_to_setlist` MCP —
    compare the two paths: do both end up with `mimeType` denormalized on
    the track per `[[project_track_mimetype_gotcha]]`?
@@ -361,14 +388,20 @@ probe is 1-2 min wall-clock, multi-spec run can chew 5-15 min).
 ## Cleanup (end-of-run, ~5 min)
 
 ```
-1. delete_chart / delete_setlist for any UI-created fixtures owned by your test account
-   (the cleanup_all_test_data cascade should catch these, but explicit deletes
+1. EXPLICITLY delete every Daniel-owned scratch setlist + library entry you
+   created (tagged STRESS-TEST-<your-id>-*) via UI delete OR MCP
+   delete_setlist / archive_chart. These are NOT swept by
+   cleanup_all_test_data — YOU own this list.
+2. delete_chart for any test-account-owned UI fixtures (the
+   cleanup_all_test_data cascade should catch these, but explicit deletes
    first reduce surface area for the cascade).
-2. cleanup_all_test_data({ prefix: "<your-id>" }) via MCP
-3. Verify residuals:
+3. cleanup_all_test_data({ prefix: "<your-id>" }) via MCP
+4. Verify residuals:
    - list_test_accounts() — none matching your prefix
    - search_library({ query: "<your-id>" }) — empty
-   - list_setlists({ limit: 20 }) — no fixtures matching your prefix
+   - search_library({ query: "STRESS-TEST-<your-id>" }) — empty
+   - list_setlists({ limit: 50 }) — no fixtures matching your prefix
+     AND no STRESS-TEST-<your-id>-* titles
 ```
 
 Per `[[feedback_sandbox_test_isolation]]`: ALWAYS pass `prefix`. A
@@ -386,7 +419,8 @@ Write findings to `.paul/research/cowork-stress-test-2026-05-26/REPORT-web-stres
 
 **Run date:** 2026-05-26T<hh:mm>Z
 **Harness mix:** [CFC primary, Playwright fallback used for: <categories>]
-**Authed-as:** band_leader (uid: test-<your-id>-band_leader-<hex>)
+**Authed-as (UI):** Daniel signed-in admin session (scratch setlists tagged STRESS-TEST-<your-id>-*)
+**Authed-as (MCP, test counterparties):** band_leader (uid: test-<your-id>-band_leader-<hex>), musician, member as needed
 **Viewport observed:** 820×1180 portrait (iPad) / <other if applicable>
 **Master SHA at run:** <captured by hitting /api/health or similar, OR skip>
 **Cleanup state:** [clean / partial — list orphans by fileId/setlistId/uid]
@@ -397,7 +431,18 @@ Write findings to `.paul/research/cowork-stress-test-2026-05-26/REPORT-web-stres
 - Findings: <n> (BLOCKER:<n> / HIGH:<n> / MED:<n> / LOW:<n> / INFO:<n>)
 - Pages touched: <list>
 - Test accounts created: <n>
-- Fixture setlists/charts created: <n>
+- Daniel-owned scratch setlists created: <n>
+- Library entries (charts) created: <n>
+
+## Setlists/library entries created + deleted
+
+| Kind | id / title | Created | Deleted | Notes |
+|------|------------|---------|---------|-------|
+| setlist | STRESS-TEST-<your-id>-... (id ...) | YYYY-MM-DDTHH:MM | YYYY-MM-DDTHH:MM | |
+| chart   | upload-... / STRESS-TEST-<your-id>-... | YYYY-MM-DDTHH:MM | YYYY-MM-DDTHH:MM | |
+
+(If anything in this table is created-but-not-deleted at end of run, also
+mirror it under `## Manual cleanup needed` with a one-line reason.)
 
 ## Findings
 
