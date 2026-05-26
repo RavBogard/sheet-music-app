@@ -120,6 +120,12 @@ function createWindow() {
         // Do NOT show window on startup, stay minimized in system tray
         startBackgroundBridge();
         checkForUpdates();
+        // bridge-analysis #6: previously the bridge only checked for updates at
+        // launch — long-lived tray processes could go weeks without discovering a
+        // published release. Schedule a 4h recurring check so in-field bridges
+        // pick up newly-published builds within at most 4 hours. Install timing
+        // is still gated by BR-03 (idle window / next quit / manual install).
+        startPeriodicUpdateCheck();
     });
 
     // Minimize to tray instead of closing
@@ -259,6 +265,22 @@ let consecutiveIdleMinutes = 0;
 let idleInstallTimer: NodeJS.Timeout | null = null;
 let updateHandlersRegistered = false;
 
+// Re-entrancy guard for checkForUpdates() — the periodic 4h interval (see
+// startPeriodicUpdateCheck below) can fire while a prior check is still in-flight
+// (electron-updater stages: probe → download → ready-to-install). Without this
+// flag, a long-download window crossing the 4h boundary would issue a second
+// concurrent checkForUpdates(); the handlers are already once-registered so they
+// wouldn't double-fire, but the underlying electron-updater state machine should
+// not see overlapping check requests. Flag is cleared in the terminal handlers
+// (update-not-available / update-downloaded / error) and in the checkForUpdates
+// rejection path. closes bridge-analysis FINDINGS §4 #6 + T-A3.
+let updateInProgress = false;
+
+/** Wall-clock interval between periodic auto-update checks (4h). */
+const PERIODIC_UPDATE_CHECK_MS = 4 * 60 * 60_000;
+
+let periodicUpdateTimer: NodeJS.Timeout | null = null;
+
 function installPendingUpdate() {
     if (!pendingUpdateVersion) return;
     console.log(`[Update] Installing v${pendingUpdateVersion} and relaunching...`);
@@ -301,6 +323,14 @@ function startIdleInstallWatch() {
 }
 
 function checkForUpdates() {
+    // Re-entrancy guard: a periodic check firing while a prior check is still
+    // probing/downloading would issue a second concurrent autoUpdater.checkForUpdates()
+    // call against the electron-updater state machine. Bail early; the in-flight
+    // cycle will land via its own handler.
+    if (updateInProgress) {
+        return;
+    }
+
     try {
         autoUpdater.autoDownload = true;
         // Safe fallback: if we never reach an idle window, the update lands the next time
@@ -319,6 +349,8 @@ function checkForUpdates() {
                     level: 'info',
                     message: `🔄 Update available: v${info.version} — downloading...`
                 });
+                // Keep `updateInProgress = true` here — the download is still running;
+                // the cycle terminates at update-downloaded / error.
             });
 
             autoUpdater.on('update-downloaded', (info) => {
@@ -331,24 +363,56 @@ function checkForUpdates() {
                 mainWindow?.webContents.send('update-pending', { version: info.version });
                 refreshTrayMenu();       // surface the explicit "Install update now" action
                 startIdleInstallWatch(); // auto-apply once the X32 has been idle long enough
+                updateInProgress = false; // download done; idle-watcher owns install timing
             });
 
             autoUpdater.on('update-not-available', () => {
                 console.log('[Update] Already on latest version');
+                updateInProgress = false;
             });
 
             autoUpdater.on('error', (err) => {
                 console.warn('[Update] Auto-update check failed:', err.message);
                 // Don't spam the user with update errors — it's not critical
+                updateInProgress = false;
             });
         }
 
+        updateInProgress = true;
         autoUpdater.checkForUpdates().catch(() => {
-            // Silently fail — updates are best-effort
+            // Silently fail — updates are best-effort. Promise rejection means we
+            // never reached a handler, so clear the flag here too.
+            updateInProgress = false;
         });
     } catch {
         // Auto-update not available in dev mode — that's fine
+        updateInProgress = false;
     }
+}
+
+/**
+ * Schedule a recurring `checkForUpdates()` every PERIODIC_UPDATE_CHECK_MS (4h).
+ *
+ * Previously the bridge only checked for updates ONCE per launch (at
+ * ready-to-show). Since the bridge is intentionally long-lived in the system
+ * tray — it auto-starts on Windows login and stays running across services —
+ * a long-running process could go weeks without picking up a published update
+ * unless the user restarted manually. With a 4h cadence, in-field bridges
+ * detect a newly-published v10.0.6+ within at most 4 hours of publish; the
+ * downloaded update still defers install per BR-03 (idle window / quit /
+ * manual), so this is purely about closing the discovery latency.
+ *
+ * Idempotent — multiple calls collapse to a single timer. The re-entrancy
+ * guard in checkForUpdates() handles the case where a tick fires while a
+ * prior cycle is still in-flight.
+ *
+ * Closes bridge-analysis FINDINGS §4 #6.
+ */
+function startPeriodicUpdateCheck() {
+    if (periodicUpdateTimer) return;
+    periodicUpdateTimer = setInterval(() => {
+        checkForUpdates();
+    }, PERIODIC_UPDATE_CHECK_MS);
 }
 
 // ─── Bridge Startup ───
