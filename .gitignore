@@ -29,6 +29,13 @@
 .DS_Store
 *.pem
 
+# per-worktree-git-identity-enforcement (see scripts/setup-coord-worktree.sh):
+# this marker is set per-worktree by the setup script and read by the
+# pre-commit hook to enforce coder-N@coord.local attribution. NEVER commit
+# it — it would ship one coder's id across all branches and defeat the
+# per-worktree contract.
+.coord/.worktree-coder
+
 # debug
 npm-debug.log*
 yarn-debug.log*

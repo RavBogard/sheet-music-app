@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# scripts/git-hooks/pre-commit
+#
+# Per-worktree git identity assertion for .coord/-managed worktrees.
+# Closes [[feedback_per_worktree_git_identity]] — the recurring leak where
+# a sibling worktree's bare `git config user.email <val>` overwrites the
+# shared .git/config [user] block and your commit attributes to them.
+#
+# Logic:
+#   - If `.coord/.worktree-coder` is absent at the worktree root → bypass
+#     (canonical worktrees / non-coord checkouts have no marker).
+#   - Otherwise read the marker (expected: `coder-N`), compare against
+#     effective `git config user.email/user.name`, and HARD-FAIL the
+#     commit on mismatch with an actionable recovery recipe.
+#
+# Activation:
+#   git config core.hooksPath scripts/git-hooks
+# (The setup script sets this automatically for new worktree bootstraps.)
+
+set -eu
+
+WT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -z "$WT_ROOT" ]; then
+  # Not inside a git working tree — let git handle it.
+  exit 0
+fi
+
+MARKER="${WT_ROOT}/.coord/.worktree-coder"
+
+# Bypass when not a .coord/-managed worktree (canonical / non-coord checkouts).
+if [ ! -f "$MARKER" ]; then
+  exit 0
+fi
+
+# Read + trim whitespace; validate shape.
+EXPECTED_CODER_ID="$(tr -d '[:space:]' < "$MARKER")"
+case "$EXPECTED_CODER_ID" in
+  coder-[0-9]*) : ;;
+  *)
+    echo "pre-commit: malformed .coord/.worktree-coder content: '${EXPECTED_CODER_ID}' (expected 'coder-N')" >&2
+    echo "  delete the file to bypass this check, or re-run:" >&2
+    echo "    bash scripts/setup-coord-worktree.sh <N> <branch> <path>" >&2
+    exit 1
+    ;;
+esac
+
+EXPECTED_EMAIL="${EXPECTED_CODER_ID}@coord.local"
+EXPECTED_NAME="${EXPECTED_CODER_ID}"
+ACTUAL_EMAIL="$(git config user.email 2>/dev/null || echo "")"
+ACTUAL_NAME="$(git config user.name 2>/dev/null || echo "")"
+
+if [ "$ACTUAL_EMAIL" != "$EXPECTED_EMAIL" ] || [ "$ACTUAL_NAME" != "$EXPECTED_NAME" ]; then
+  cat >&2 <<MSG
+pre-commit: git identity mismatch (per-worktree-git-identity-enforcement)
+  worktree:  ${WT_ROOT}
+  expected:  ${EXPECTED_NAME} <${EXPECTED_EMAIL}>
+  actual:    ${ACTUAL_NAME} <${ACTUAL_EMAIL}>
+
+  Likely a sibling worktree clobbered the shared .git/config [user] block.
+  Fix:
+    cd "${WT_ROOT}"
+    git config --worktree user.email ${EXPECTED_EMAIL}
+    git config --worktree user.name  ${EXPECTED_NAME}
+  Requires extensions.worktreeConfig=true on shared .git (re-run the setup
+  script if missing):
+    bash scripts/setup-coord-worktree.sh ${EXPECTED_CODER_ID#coder-} <branch> <path>
+MSG
+  exit 1
+fi
+
+exit 0
