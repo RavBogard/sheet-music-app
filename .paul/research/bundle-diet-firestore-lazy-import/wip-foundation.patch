@@ -1,0 +1,596 @@
+diff --git a/src/build-info.json b/src/build-info.json
+index 040cbf6e0..68c80ee81 100644
+--- a/src/build-info.json
++++ b/src/build-info.json
+@@ -1,7 +1,7 @@
+ {
+   "version": "7.0.0",
+-  "commit": "6a126f189",
+-  "branch": "feat/a3-gemini-swap",
+-  "buildDate": "5/17/2026",
++  "commit": "35177f0c8",
++  "branch": "feat/bundle-diet-firestore-lazy-import",
++  "buildDate": "5/25/2026",
+   "changelog": []
+ }
+diff --git a/src/lib/firebase.ts b/src/lib/firebase.ts
+index e4b9c1e2b..5d27ea40a 100644
+--- a/src/lib/firebase.ts
++++ b/src/lib/firebase.ts
+@@ -1,7 +1,12 @@
+ import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+-import { initializeFirestore, getFirestore, Firestore, FirestoreSettings, persistentLocalCache, persistentSingleTabManager, memoryLocalCache, setLogLevel } from "firebase/firestore";
+ import { getAuth, GoogleAuthProvider, signInWithCustomToken, Auth } from "firebase/auth";
+ 
++// firestore is dynamic-imported by `getDb()` — keeping it out of the
++// module-top graph moves the firestore SDK chunk (~236 KB) out of
++// /login's preload graph. See `.paul/research/bundle-diet-firestore-lazy-import/FINDINGS.md`
++// for the cold-start cost analysis.
++import type { Firestore, FirestoreSettings } from "firebase/firestore";
++
+ import { env } from "./env";
+ import { logger } from "@/lib/logger"
+ 
+@@ -17,7 +22,6 @@ const firebaseConfig = {
+ 
+ // Singleton pattern to prevent multiple initializations in dev hot-reloads
+ let app: FirebaseApp;
+-let db: Firestore;
+ let auth: Auth;
+ let googleProvider: GoogleAuthProvider;
+ 
+@@ -33,13 +37,101 @@ try {
+     }
+ 
+     if (firebaseConfig.apiKey) {
+-        // Use WebChannel streaming (the default) for best performance.
+-        // All Firestore listeners share a single multiplexed connection,
+-        // giving ~200-500ms faster cold reads vs the old long-polling config.
+-        //
+-        // Historical note: Long polling was previously enabled to suppress
+-        // AbortError console noise in Firebase SDK <12.5. That bug is fixed
+-        // in v12.9+, so we use the default streaming transport now.
++        auth = getAuth(app);
++        googleProvider = new GoogleAuthProvider();
++        googleProvider.addScope('profile');
++    } else {
++        auth = {} as unknown as Auth
++        googleProvider = new GoogleAuthProvider()
++        googleProvider.addScope('profile');
++    }
++
++} catch (e) {
++    logger.error("Firebase Initialization Failed", e);
++    app = {} as unknown as FirebaseApp;
++    auth = {} as unknown as Auth;
++    googleProvider = new GoogleAuthProvider();
++    googleProvider.addScope('profile');
++}
++
++/**
++ * Lazy-initialized Firestore singleton. The firestore SDK module is
++ * dynamic-imported on first call, so it lives in its own webpack chunk
++ * instead of being eagerly bundled into every client route's initial
++ * preload graph.
++ *
++ * Why a Promise (Pattern A) and not a top-level await: avoid blocking
++ * the parent module's load on a (potentially slow) IDB probe. Callers
++ * `await getDb()` at the entry of their async path; subsequent calls
++ * return the cached promise.
++ *
++ * The cache strategy (persistentLocalCache vs memoryLocalCache) is
++ * decided at first-call time using the same `storageOk` localStorage
++ * probe as the pre-lazy version. WebChannel + setLogLevel('error') +
++ * persistent-single-tab manager behavior is preserved verbatim.
++ *
++ * Historical note: long polling was previously enabled to suppress
++ * AbortError console noise in Firebase SDK <12.5. That bug is fixed
++ * in v12.9+, so we use the default streaming transport now.
++ */
++let firestorePromise: Promise<Firestore> | null = null;
++
++/**
++ * Cancellation-token wrapper for the async-init-returns-sync-unsub
++ * pattern. Use this for `onSnapshot`-style subscribers where the
++ * caller treats the return value as a synchronous unsubscribe
++ * function but the underlying firestore SDK is now lazy-loaded.
++ *
++ * ```ts
++ * const unsub = subscribeWithDb(db => {
++ *   const ref = doc(db, "setlists", id)
++ *   return onSnapshot(ref, snap => ...)
++ * })
++ * // Later, sync:
++ * unsub()
++ * ```
++ *
++ * If unsub() runs before the firestore promise resolves, the inner
++ * subscription is never attached — cleanup is correct.
++ */
++export type Unsubscribe = () => void;
++export function subscribeWithDb(
++    setup: (db: Firestore) => Unsubscribe,
++): Unsubscribe {
++    let inner: Unsubscribe | null = null;
++    let cancelled = false;
++    void getDb().then((db) => {
++        if (cancelled) return;
++        inner = setup(db);
++    }).catch((e) => {
++        logger.error("[firebase] subscribeWithDb setup threw", e);
++    });
++    return () => {
++        cancelled = true;
++        if (inner) {
++            try { inner(); } catch (e) { logger.warn("[firebase] inner unsub threw", e); }
++            inner = null;
++        }
++    };
++}
++
++export function getDb(): Promise<Firestore> {
++    if (firestorePromise) return firestorePromise;
++    if (!firebaseConfig.apiKey) {
++        // No config — return a mock that preserves the pre-lazy
++        // "throws on use" shape rather than blocking the caller.
++        firestorePromise = Promise.resolve({} as unknown as Firestore);
++        return firestorePromise;
++    }
++    firestorePromise = (async () => {
++        const {
++            initializeFirestore,
++            getFirestore,
++            persistentLocalCache,
++            persistentSingleTabManager,
++            memoryLocalCache,
++            setLogLevel,
++        } = await import("firebase/firestore");
+ 
+         // Suppress harmless "Detected an update time that is in the future" clock-skew warnings
+         setLogLevel("error");
+@@ -70,7 +162,7 @@ try {
+         })()
+ 
+         try {
+-            db = initializeFirestore(app, storageOk ? {
++            const db = initializeFirestore(app, storageOk ? {
+                 // persistentSingleTabManager: each tab manages its own IDB independently.
+                 // Eliminates the cross-tab IDB version coordination that caused the
+                 // "Firestore shutting down" cascade when multiple tabs were open and
+@@ -90,34 +182,21 @@ try {
+             if (!storageOk) {
+                 logger.warn("Firestore: restricted-storage detected (likely incognito) — using memory cache, no offline persistence");
+             }
++            return db;
+         } catch (e1) {
+             // Persistence may fail in private browsing or restricted environments.
+             // Fall back to in-memory cache (no offline persistence).
+             try {
+-                db = initializeFirestore(app, { localCache: memoryLocalCache() } as FirestoreSettings);
++                return initializeFirestore(app, { localCache: memoryLocalCache() } as FirestoreSettings);
+             } catch {
+                 // Already initialized (e.g. hot reload)
+-                db = getFirestore(app);
++                return getFirestore(app);
++            } finally {
++                logger.warn("Firestore persistent cache failed at init, fell back to memory cache", e1);
+             }
+-            logger.warn("Firestore persistent cache failed at init, fell back to memory cache", e1);
+         }
+-        auth = getAuth(app);
+-        googleProvider = new GoogleAuthProvider();
+-        googleProvider.addScope('profile');
+-    } else {
+-        db = {} as unknown as Firestore
+-        auth = {} as unknown as Auth
+-        googleProvider = new GoogleAuthProvider()
+-        googleProvider.addScope('profile');
+-    }
+-
+-} catch (e) {
+-    logger.error("Firebase Initialization Failed", e);
+-    app = {} as unknown as FirebaseApp;
+-    db = {} as unknown as Firestore;
+-    auth = {} as unknown as Auth;
+-    googleProvider = new GoogleAuthProvider();
+-    googleProvider.addScope('profile');
++    })();
++    return firestorePromise;
+ }
+ 
+ /**
+@@ -258,4 +337,4 @@ if (
+     }
+ }
+ 
+-export { app, db, auth, googleProvider };
++export { app, auth, googleProvider };
+diff --git a/src/lib/musician-profile.ts b/src/lib/musician-profile.ts
+index 721a2a0d6..04575d843 100644
+--- a/src/lib/musician-profile.ts
++++ b/src/lib/musician-profile.ts
+@@ -1,4 +1,4 @@
+-import { db, auth } from "./firebase"
++import { getDb, auth, subscribeWithDb } from "./firebase"
+ import { doc, updateDoc, onSnapshot, collection, query, where } from "firebase/firestore"
+ import { MusicianProfile } from "@/types/models"
+ import { logger } from "@/lib/logger"
+@@ -10,6 +10,7 @@ import { logger } from "@/lib/logger"
+ export async function saveMusicianProfile(profile: MusicianProfile): Promise<void> {
+     const user = auth.currentUser
+     if (!user) throw new Error("Not authenticated")
++    const db = await getDb()
+     if (!db || Object.keys(db).length === 0) throw new Error("Database not initialized")
+ 
+     const ref = doc(db, "users", user.uid)
+@@ -24,18 +25,20 @@ export function subscribeToMusicianProfile(
+     uid: string,
+     callback: (profile: MusicianProfile | null) => void
+ ): () => void {
+-    if (!db || Object.keys(db).length === 0) return () => { }
++    return subscribeWithDb((db) => {
++        if (!db || Object.keys(db).length === 0) return () => { }
+ 
+-    const ref = doc(db, "users", uid)
+-    return onSnapshot(ref, (snap) => {
+-        if (snap.exists()) {
+-            const data = snap.data()
+-            callback(data.musicianProfile || null)
+-        } else {
+-            callback(null)
+-        }
+-    }, (err) => {
+-        logger.error("[MusicianProfile] Listener error:", err)
++        const ref = doc(db, "users", uid)
++        return onSnapshot(ref, (snap) => {
++            if (snap.exists()) {
++                const data = snap.data()
++                callback(data.musicianProfile || null)
++            } else {
++                callback(null)
++            }
++        }, (err) => {
++            logger.error("[MusicianProfile] Listener error:", err)
++        })
+     })
+ }
+ 
+@@ -99,24 +102,26 @@ export const ONBOARDING_INSTRUMENT_KEYS = [
+ export function subscribeToAllMusicianProfiles(
+     callback: (profiles: { uid: string; displayName: string; profile: MusicianProfile }[]) => void
+ ): () => void {
+-    if (!db || Object.keys(db).length === 0) return () => { }
++    return subscribeWithDb((db) => {
++        if (!db || Object.keys(db).length === 0) return () => { }
+ 
+-    const q = query(collection(db, "users"), where("role", "in", ["musician", "band_leader", "admin", "sound_engineer"]))
+-    return onSnapshot(q, (snap) => {
+-        const musicians = snap.docs
+-            .map(d => {
+-                const data = d.data()
+-                return {
+-                    uid: d.id,
+-                    displayName: data.displayName || 'Unknown',
+-                    profile: data.musicianProfile as MusicianProfile | undefined,
+-                }
+-            })
+-            .filter((m): m is { uid: string; displayName: string; profile: MusicianProfile } => 
+-                !!m.profile && !!m.profile.instrument
+-            )
+-        callback(musicians)
+-    }, (err) => {
+-        logger.error("[MusicianProfile] All profiles listener error:", err)
++        const q = query(collection(db, "users"), where("role", "in", ["musician", "band_leader", "admin", "sound_engineer"]))
++        return onSnapshot(q, (snap) => {
++            const musicians = snap.docs
++                .map(d => {
++                    const data = d.data()
++                    return {
++                        uid: d.id,
++                        displayName: data.displayName || 'Unknown',
++                        profile: data.musicianProfile as MusicianProfile | undefined,
++                    }
++                })
++                .filter((m): m is { uid: string; displayName: string; profile: MusicianProfile } =>
++                    !!m.profile && !!m.profile.instrument
++                )
++            callback(musicians)
++        }, (err) => {
++            logger.error("[MusicianProfile] All profiles listener error:", err)
++        })
+     })
+ }
+diff --git a/src/lib/setlist-firebase.ts b/src/lib/setlist-firebase.ts
+index d9ee46156..ecbd99836 100644
+--- a/src/lib/setlist-firebase.ts
++++ b/src/lib/setlist-firebase.ts
+@@ -1,4 +1,4 @@
+-import { db } from "./firebase";
++import { getDb, subscribeWithDb } from "./firebase";
+ import {
+     collection,
+     addDoc,
+@@ -48,6 +48,7 @@ async function updateSetlistWithVersion(
+     expectedUpdatedAt: Timestamp | null,
+     patch: Record<string, unknown>,
+ ): Promise<void> {
++    const db = await getDb()
+     await runTransaction(db, async (tx) => {
+         const snap = await tx.get(ref)
+         if (!snap.exists()) throw new Error('NOT_FOUND')
+@@ -183,6 +184,7 @@ export function createSetlistService(userId: string | null, userName?: string |
+     return {
+         async createSetlist(name: string, tracks: SetlistTrack[], additionalData: Partial<Setlist> = {}) {
+             try {
++                const db = await getDb()
+                 const docRef = await addDoc(collection(db, COLLECTION_PATH), {
+                     name,
+                     date: serverTimestamp(),
+@@ -217,22 +219,25 @@ export function createSetlistService(userId: string | null, userName?: string |
+         },
+         // Subscribe to a single setlist by ID
+         subscribeToSetlist(id: string, callback: (setlist: Setlist | null) => void) {
+-            const docRef = doc(db, COLLECTION_PATH, id).withConverter(setlistConverter)
+-            return onSnapshot(docRef, (snap) => {
+-                if (snap.exists()) {
+-                    callback(snap.data() as Setlist);
+-                } else {
+-                    callback(null);
+-                }
+-            }, (err) => {
+-                logger.error("[Setlist] Listener error for %s:", id, err)
+-            });
++            return subscribeWithDb((db) => {
++                const docRef = doc(db, COLLECTION_PATH, id).withConverter(setlistConverter)
++                return onSnapshot(docRef, (snap) => {
++                    if (snap.exists()) {
++                        callback(snap.data() as Setlist);
++                    } else {
++                        callback(null);
++                    }
++                }, (err) => {
++                    logger.error("[Setlist] Listener error for %s:", id, err)
++                });
++            })
+         },
+ 
+         // Update a setlist with concurrency protection. Pass expectedUpdatedAt
+         // to enforce the precondition; the write will throw StaleWriteError
+         // if the remote doc has been modified since the caller last saw it.
+         async updateSetlist(id: string, data: Partial<Setlist>, expectedUpdatedAt: Timestamp | null = null) {
++            const db = await getDb()
+             const docRef = doc(db, COLLECTION_PATH, id);
+             const cleanData = stripUndefinedDeep(data) as Record<string, unknown>;
+             // updateSetlistWithVersion adds its own updatedAt; don't double-set
+@@ -281,25 +286,27 @@ export function createSetlistService(userId: string | null, userName?: string |
+ 
+         // Subscribe to ALL setlists (v4.0: no private/public distinction)
+         subscribeToAllSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void) {
+-            const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
+-            const q = query(
+-                collectionRef,
+-                orderBy("date", "desc"),
+-                limit(50)
+-            );
+-
+-            return onSnapshot(q, {
+-                next: (snapshot) => {
+-                    const setlists = snapshot.docs
+-                        .map(doc => doc.data())
+-                        .filter(Boolean) as Setlist[];
+-                    callback(setlists, snapshot.metadata.fromCache);
+-                },
+-                error: (error) => {
+-                    logger.error("Error subscribing to setlists:", error)
+-                    if (onError) onError(error)
+-                }
+-            });
++            return subscribeWithDb((db) => {
++                const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
++                const q = query(
++                    collectionRef,
++                    orderBy("date", "desc"),
++                    limit(50)
++                );
++
++                return onSnapshot(q, {
++                    next: (snapshot) => {
++                        const setlists = snapshot.docs
++                            .map(doc => doc.data())
++                            .filter(Boolean) as Setlist[];
++                        callback(setlists, snapshot.metadata.fromCache);
++                    },
++                    error: (error) => {
++                        logger.error("Error subscribing to setlists:", error)
++                        if (onError) onError(error)
++                    }
++                });
++            })
+         },
+ 
+         // Duplicate a setlist (creates a copy owned by current user)
+@@ -323,6 +330,7 @@ export function createSetlistService(userId: string | null, userName?: string |
+                     ownerName: userName || "Anonymous",
+                     copiedFrom: sourceSetlistId
+                 }) as Record<string, unknown>
++                const db = await getDb()
+                 const docRef = await addDoc(collection(db, COLLECTION_PATH), copyData);
+                 await seedTopLevelTracks(docRef.id, freshTracks)
+                 return docRef.id;
+@@ -339,6 +347,7 @@ export function createSetlistService(userId: string | null, userName?: string |
+         // through to the legacy 20-most-recent query on null (Track D OQ Q5).
+         async getDefaultForServiceType(serviceType: ServiceType): Promise<string | null> {
+             try {
++                const db = await getDb()
+                 const ref = doc(db, 'config', 'defaults')
+                 const snap = await getDoc(ref)
+                 if (!snap.exists()) return null
+@@ -357,6 +366,7 @@ export function createSetlistService(userId: string | null, userName?: string |
+         // admin-only at the server (allow write: if isAdmin()); this method
+         // does not gate client-side beyond what rules already enforce.
+         async setDefaultForServiceType(serviceType: ServiceType, setlistId: string): Promise<void> {
++            const db = await getDb()
+             const ref = doc(db, 'config', 'defaults')
+             await setDoc(
+                 ref,
+@@ -384,6 +394,7 @@ export function createSetlistService(userId: string | null, userName?: string |
+             try {
+                 const defaultId = await this.getDefaultForServiceType(serviceType)
+                 if (defaultId) {
++                    const db = await getDb()
+                     const ref = doc(db, COLLECTION_PATH, defaultId).withConverter(setlistConverter)
+                     const snap = await getDoc(ref)
+                     if (snap.exists()) {
+@@ -403,6 +414,7 @@ export function createSetlistService(userId: string | null, userName?: string |
+             }
+ 
+             try {
++                const db = await getDb()
+                 const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
+                 const q = query(collectionRef, orderBy('date', 'desc'), limit(20))
+                 const snap = await getDocs(q)
+@@ -463,6 +475,7 @@ export function createSetlistService(userId: string | null, userName?: string |
+                     ...(source.rabbi ? { rabbi: source.rabbi } : {}),
+                     clonedFrom: source.id,
+                 }) as Record<string, unknown>
++                const db = await getDb()
+                 const docRef = await addDoc(collection(db, COLLECTION_PATH), cloneData)
+                 await seedTopLevelTracks(docRef.id, freshTracks)
+ 
+@@ -515,6 +528,7 @@ export function createSetlistService(userId: string | null, userName?: string |
+                     ownerId: userId,
+                     ownerName: userName || "Anonymous",
+                 }) as Record<string, unknown>
++                const db = await getDb()
+                 const docRef = await addDoc(collection(db, COLLECTION_PATH), templateData)
+                 await seedTopLevelTracks(docRef.id, freshTracks)
+ 
+diff --git a/src/lib/users-firebase.ts b/src/lib/users-firebase.ts
+index aa30c5372..7bc17fa57 100644
+--- a/src/lib/users-firebase.ts
++++ b/src/lib/users-firebase.ts
+@@ -1,4 +1,4 @@
+-import { db, auth, recoverFromFirestoreShutdown } from "./firebase"
++import { getDb, auth, recoverFromFirestoreShutdown, subscribeWithDb } from "./firebase"
+ import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, orderBy, Timestamp } from "firebase/firestore"
+ import { User } from "firebase/auth"
+ import { UserProfile, UserRole } from "@/types/models"
+@@ -13,6 +13,7 @@ export type { UserProfile, UserRole }
+  * Creates one with 'pending' role if it doesn't exist.
+  */
+ export async function ensureUserProfile(user: User): Promise<UserProfile> {
++    const db = await getDb()
+     if (!db || Object.keys(db).length === 0) {
+         return { uid: user.uid, role: "pending" } as UserProfile
+     }
+@@ -57,41 +58,43 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
+ 
+ /**
+  * Subscribe to the current user's profile.
+- * 
++ *
+  * Deduplicates updates: only fires callback when meaningful fields change.
+  * This prevents the ensureUserProfile() lastLoginAt update from triggering
+  * a re-render cascade through the entire app via AuthContext.
+  */
+ export function subscribeToUserProfile(uid: string, callback: (profile: UserProfile | null) => void) {
+-    if (!db || Object.keys(db).length === 0) return () => { }
+-    const ref = doc(db, "users", uid).withConverter(userProfileConverter)
+-    // Use sentinel to distinguish "never fired" from "fired with null".
+-    // Without this, a new user whose profile doc doesn't exist yet would
+-    // never get the initial null callback (lastProfile starts null, guard
+-    // `lastProfile !== null` would be false), leaving loading stuck forever.
+-    const NEVER_FIRED = '__NEVER_FIRED__'
+-    let lastProfile: string | null = NEVER_FIRED as string | null
+-
+-    return onSnapshot(ref, (snap) => {
+-        if (snap.exists()) {
+-            const profile = snap.data()
+-            if (!profile) return // Zod conversion failed, essentially treat as non-existent or ignore invalid state
+-            // Compare meaningful fields only (skip lastLoginAt which changes every session)
+-            const key = `${profile.uid}|${profile.role}|${profile.email}|${profile.displayName}|${profile.photoURL}`
+-            if (key !== lastProfile) {
+-                lastProfile = key
+-                callback(profile)
++    return subscribeWithDb((db) => {
++        if (!db || Object.keys(db).length === 0) return () => { }
++        const ref = doc(db, "users", uid).withConverter(userProfileConverter)
++        // Use sentinel to distinguish "never fired" from "fired with null".
++        // Without this, a new user whose profile doc doesn't exist yet would
++        // never get the initial null callback (lastProfile starts null, guard
++        // `lastProfile !== null` would be false), leaving loading stuck forever.
++        const NEVER_FIRED = '__NEVER_FIRED__'
++        let lastProfile: string | null = NEVER_FIRED as string | null
++
++        return onSnapshot(ref, (snap) => {
++            if (snap.exists()) {
++                const profile = snap.data()
++                if (!profile) return // Zod conversion failed, essentially treat as non-existent or ignore invalid state
++                // Compare meaningful fields only (skip lastLoginAt which changes every session)
++                const key = `${profile.uid}|${profile.role}|${profile.email}|${profile.displayName}|${profile.photoURL}`
++                if (key !== lastProfile) {
++                    lastProfile = key
++                    callback(profile)
++                }
++            } else {
++                if (lastProfile !== null) {
++                    lastProfile = null
++                    callback(null)
++                }
+             }
+-        } else {
+-            if (lastProfile !== null) {
+-                lastProfile = null
+-                callback(null)
++        }, (err) => {
++            if (!recoverFromFirestoreShutdown(err)) {
++                logger.error("[Users] Profile listener error:", err)
+             }
+-        }
+-    }, (err) => {
+-        if (!recoverFromFirestoreShutdown(err)) {
+-            logger.error("[Users] Profile listener error:", err)
+-        }
++        })
+     })
+ }
+ 
+@@ -102,17 +105,19 @@ export function subscribeToUserProfile(uid: string, callback: (profile: UserProf
+  * Subscribe to ALL users (for Admin page)
+  */
+ export function subscribeToAllUsers(callback: (users: UserProfile[]) => void, onError?: (error: Error) => void) {
+-    // Build safety
+-    if (!db || Object.keys(db).length === 0) return () => { }
+-
+-    const collectionRef = collection(db, "users").withConverter(userProfileConverter)
+-    const q = query(collectionRef, orderBy("createdAt", "desc"))
+-    return onSnapshot(q, (snap) => {
+-        const users = snap.docs.map(d => d.data()).filter(Boolean) as UserProfile[]
+-        callback(users)
+-    }, (error) => {
+-        if (onError) onError(error)
+-        else logger.error("Snapshot error:", error)
++    return subscribeWithDb((db) => {
++        // Build safety
++        if (!db || Object.keys(db).length === 0) return () => { }
++
++        const collectionRef = collection(db, "users").withConverter(userProfileConverter)
++        const q = query(collectionRef, orderBy("createdAt", "desc"))
++        return onSnapshot(q, (snap) => {
++            const users = snap.docs.map(d => d.data()).filter(Boolean) as UserProfile[]
++            callback(users)
++        }, (error) => {
++            if (onError) onError(error)
++            else logger.error("Snapshot error:", error)
++        })
+     })
+ }
+ 
+@@ -173,6 +178,7 @@ export async function updateUserDisplayName(_uid: string, displayName: string) {
+  * Mark that the user has seen the welcome modal
+  */
+ export async function markWelcomeModalViewed(uid: string) {
++    const db = await getDb()
+     if (!db || Object.keys(db).length === 0) return
+     await updateDoc(doc(db, "users", uid), { viewedWelcomeModal: true })
+ }

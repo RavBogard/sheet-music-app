@@ -3,31 +3,42 @@ import { readFileSync, existsSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
- * Regression watchdog for the unauthenticated client JavaScript payload.
+ * Regression watchdog for the SHARED rootMainFiles client JavaScript
+ * chain (loaded by every route, authed or not, on first paint).
  *
- * Cycle-5 finding C5B-011 measured the unauth `/login` bundle at ~1247 KB
- * raw across ~22 chunks. The lane's nominal target is <500 KB raw / <200
- * KB gzipped, but that requires a structural refactor — `src/lib/firebase.ts`
- * eagerly imports `firebase/firestore` at module top (~236 KB of the
- * baseline) which any unauth import path drags in. That refactor is
- * deferred to a dedicated follow-up phase.
+ * Companion file `login-full-payload-size.test.ts` measures the full
+ * /login cold-start payload (rootMainFiles + the chunks listed in
+ * `/login/page_client-reference-manifest.js` — i.e. everything the
+ * browser actually downloads on a fresh /login visit). Use that test
+ * to track the band-iPad cold-start cost; use THIS test to track the
+ * baseline that affects every page.
  *
- * This test enforces the WEAKER but immediately useful guarantee: the
- * shared client JS that every page (authed or not) loads on first paint
- * does not silently regress past today's baseline. CI fails if the sum
- * of `rootMainFiles` in `.next/build-manifest.json` exceeds the budget.
- * Tune the budget DOWN as bundle-diet phases land.
+ * History note (corrected 2026-05-26 by `bundle-diet-firestore-lazy-import`
+ * Phase 0 measurement): the original comment here claimed
+ * `src/lib/firebase.ts` eagerly imports `firebase/firestore` at module
+ * top contributing "~236 KB of the baseline." That was inferred from a
+ * chunk size, not measured — direct grep of every rootMainFiles chunk
+ * for `initializeFirestore`/`Firestore`/`persistentLocalCache`/
+ * `WebChannel`/`GoogleAuthProvider` signatures returns ZERO matches.
+ * The firestore SDK lives in its own chunk (`d94474cc-*.js`, ~236 KB
+ * on disk) that is referenced by `/login/page_client-reference-manifest.js`
+ * — meaning it preloads on cold /login — but is NOT in rootMainFiles.
+ * The companion `login-full-payload-size.test.ts` is the metric that
+ * actually catches a firestore lazy-import savings; this test will
+ * NOT shrink when that refactor lands. See
+ * `.paul/research/bundle-diet-firestore-lazy-import/FINDINGS.md`
+ * for the full measurement trail.
  *
  * Why rootMainFiles and not the per-page HTML: cycle-5-fixes-1-sec
  * landed per-request CSP nonces in `src/proxy.ts`, which switched
  * `/login` from a static prerender (`.next/server/app/login.html`) to
  * dynamic SSR — the static HTML no longer exists post-build. The
- * `rootMainFiles` list (loaded by every route, authed or not) is the
- * stable artifact. It's a subset of the previous /login measurement
- * (the static HTML also pre-referenced async client chunks), so the
- * budget here is correspondingly smaller — when the dynamic-import
- * follow-up phase trims authed-only imports out of the rootMainFiles
- * chain, this budget should drop with it.
+ * `rootMainFiles` list is the stable always-loaded artifact.
+ *
+ * Build hygiene: ALWAYS `rm -rf .next && npm run build` before
+ * quoting any bundle-size measurement (per the build-hygiene rule from
+ * `4cc575444` FINDINGS — stale build-manifest.json can produce
+ * arbitrarily inflated totals).
  *
  * Skip behavior: only runs when `.next/build-manifest.json` exists
  * (post-build). Locally: `npm run build` then
