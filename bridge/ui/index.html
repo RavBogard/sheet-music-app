@@ -229,6 +229,84 @@
             margin-top: 12px;
             min-height: 20px;
         }
+
+        /* Update-available banner (bridge-analysis Lane #5 / R-A2). Sits above the
+           status grid as a subtle accent strip; hidden by default until
+           main.ts forwards the `update-pending` IPC. */
+        .update-pending {
+            display: none;
+            align-items: center;
+            gap: 16px;
+            background: linear-gradient(135deg, rgba(166, 227, 161, 0.10), rgba(166, 227, 161, 0.04));
+            border: 1px solid rgba(166, 227, 161, 0.35);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+        }
+
+        .update-pending.visible {
+            display: flex;
+        }
+
+        .update-pending-icon {
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .update-pending-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .update-pending-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0 0 2px 0;
+        }
+
+        .update-pending-sub {
+            font-size: 12px;
+            color: var(--subtext);
+            margin: 0;
+        }
+
+        .update-pending-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .update-btn {
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, background 0.2s;
+            font-family: inherit;
+        }
+
+        .update-btn.primary {
+            background: var(--green);
+            color: #11111b;
+        }
+
+        .update-btn.primary:hover {
+            opacity: 0.85;
+        }
+
+        .update-btn.secondary {
+            background: transparent;
+            color: var(--subtext);
+            border: 1px solid #45475a;
+        }
+
+        .update-btn.secondary:hover {
+            color: var(--text);
+            border-color: var(--subtext);
+        }
     </style>
 </head>
 
@@ -236,6 +314,25 @@
     <div class="header">
         <h1>CentralReform Bridge</h1>
         <div id="connection-status" class="status-badge offline">X32 Offline</div>
+    </div>
+
+    <!-- Update-available banner. Hidden by default; surfaced by the `update-pending`
+         IPC fired from main.ts after electron-updater downloads a new release
+         (BR-03 deferred-install flow — installs only on idle / explicit click / quit). -->
+    <div id="update-pending" class="update-pending" role="status" aria-live="polite">
+        <span class="update-pending-icon" aria-hidden="true">⬆</span>
+        <div class="update-pending-text">
+            <p class="update-pending-title">
+                Update available: <span id="update-pending-version">—</span>
+            </p>
+            <p class="update-pending-sub" id="update-pending-sub">
+                Downloaded and ready. Installing relaunches the bridge.
+            </p>
+        </div>
+        <div class="update-pending-actions">
+            <button id="update-install-btn" class="update-btn primary" type="button">Install &amp; Restart</button>
+            <button id="update-later-btn" class="update-btn secondary" type="button">Remind me later</button>
+        </div>
     </div>
 
     <div class="grid">
@@ -284,6 +381,13 @@
 
     <script>
         const { ipcRenderer } = require('electron');
+        // Pure state-machine for the `#update-pending` banner. Lives at
+        // bridge/src/update-panel-state.ts; `tsc` emits it to bridge/dist/, which
+        // this renderer loads relative to bridge/ui/index.html.
+        const {
+            applyUpdateInfo,
+            initialUpdatePanelState,
+        } = require('../dist/update-panel-state.js');
 
         const logsContainer = document.getElementById('logs-container');
         const statusBadge = document.getElementById('connection-status');
@@ -293,6 +397,64 @@
         const trustLink = document.getElementById('trust-link');
 
         let currentTrustHref = "";
+
+        // ─── Update-available banner state + DOM-apply shim ───
+        const updatePanel = document.getElementById('update-pending');
+        const updateVersionEl = document.getElementById('update-pending-version');
+        const updateSubEl = document.getElementById('update-pending-sub');
+        const updateInstallBtn = document.getElementById('update-install-btn');
+        const updateLaterBtn = document.getElementById('update-later-btn');
+
+        let updatePanelState = initialUpdatePanelState;
+
+        function renderUpdatePanel(state) {
+            if (state.visible) {
+                updatePanel.classList.add('visible');
+            } else {
+                updatePanel.classList.remove('visible');
+            }
+            updateVersionEl.textContent = state.version ? `v${state.version}` : '—';
+            // If main.ts ever starts forwarding releaseNotes on the IPC payload,
+            // surface them as plain text under the title. Keep raw — no markdown
+            // lib (out-of-scope per the dispatch). Falls back to the BR-03 prose
+            // when notes aren't provided.
+            if (state.releaseNotes) {
+                updateSubEl.textContent = String(state.releaseNotes);
+            } else {
+                updateSubEl.textContent = 'Downloaded and ready. Installing relaunches the bridge.';
+            }
+        }
+
+        function dispatchUpdateEvent(event) {
+            updatePanelState = applyUpdateInfo(updatePanelState, event);
+            renderUpdatePanel(updatePanelState);
+        }
+
+        ipcRenderer.on('update-pending', (event, info) => {
+            // main.ts emits this AFTER `update-downloaded` (BR-03 deferred-install
+            // path). Payload today is `{version}`; releaseNotes accepted defensively.
+            dispatchUpdateEvent({
+                kind: 'update-pending',
+                info: info || { version: 'unknown' },
+            });
+        });
+
+        updateInstallBtn.addEventListener('click', () => {
+            // Optimistically hide the banner; installPendingUpdate() relaunches the
+            // process so the DOM is about to be torn down. If install somehow
+            // fails, a fresh `update-pending` re-surfaces the panel.
+            dispatchUpdateEvent({ kind: 'install-clicked' });
+            ipcRenderer.invoke('install-update').catch((err) => {
+                console.warn('[update-panel] install-update IPC failed:', err);
+            });
+        });
+
+        updateLaterBtn.addEventListener('click', () => {
+            dispatchUpdateEvent({ kind: 'dismiss' });
+        });
+
+        // Initial paint — ensures the panel is hidden + version cleared on load.
+        renderUpdatePanel(updatePanelState);
 
         ipcRenderer.on('log', (event, { level, message }) => {
             if (logsContainer.querySelector('.empty-logs')) {
