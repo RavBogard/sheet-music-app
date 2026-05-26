@@ -125,6 +125,28 @@ if [[ "$actual_email" != "$EXPECTED_EMAIL" || "$actual_name" != "$EXPECTED_NAME"
   exit 1
 fi
 
+# Step 7: install bridge/ deps if the sub-package exists (idempotent — npm ci
+# is a no-op when node_modules already matches the lockfile). Closes the
+# recurring "bridge tests fail with `Cannot find module 'electron'`" gotcha
+# on every fresh worktree — bridge/ has its OWN package.json + node_modules
+# and root `npm ci --prefer-offline` doesn't reach into it. Surfaced by
+# coder-5's monitor-popup-fullbottom-redesign SHIP-NOTICE 2026-05-26T~15:55Z
+# (open follow-up #2) + coder-3 bridge-v1006 bundle-publish + auditor's
+# bundle-size verification — all ate the same gotcha before this step landed.
+# Documented at [[project_worktree_test_harness_node_modules]].
+if [[ -f "$WT_PATH/bridge/package.json" ]]; then
+  echo "[setup-coord-worktree] installing bridge/ deps (npm ci --prefer-offline)..."
+  if ( cd "$WT_PATH/bridge" && npm ci --prefer-offline ); then
+    echo "[setup-coord-worktree] ✓ bridge deps installed"
+  else
+    echo "[setup-coord-worktree] ERR: bridge npm ci failed (exit $?)" >&2
+    echo "[setup-coord-worktree] recover: cd ${WT_PATH}/bridge && npm ci --prefer-offline" >&2
+    exit 1
+  fi
+else
+  echo "[setup-coord-worktree] no bridge/package.json — skipping bridge npm ci"
+fi
+
 cat <<DONE
 
 [setup-coord-worktree] ✓ identity verified: ${actual_name} <${actual_email}>
@@ -132,6 +154,6 @@ cat <<DONE
 
 Next:
   cd ${WT_PATH}
-  npm install --prefer-offline  # if not already installed
+  npm install --prefer-offline  # if not already installed (bridge handled automatically above)
   # commits in this worktree are now identity-guarded by scripts/git-hooks/pre-commit
 DONE
