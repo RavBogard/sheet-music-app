@@ -10,6 +10,7 @@ import { useLibraryStore } from "@/lib/library-store"
 import { toQueueItem } from "@/lib/queue-utils"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 import { LiveDirectorGesture } from "./LiveDirectorGesture"
+import { resolveViewerKind } from "./resolveViewerKind"
 const PrintModal = dynamic(() => import("@/components/setlist/PrintModal").then(m => m.PrintModal), { ssr: false })
 
 // Dynamically import PDFViewer to avoid SSR worker issues (per RESEARCH.md Pitfall 1)
@@ -163,35 +164,16 @@ export function PDFOverlay({
         }
     }, [])
 
-    // Determine file type from current queue item
-    const currentItem = useMusicStore(s => s.playbackQueue[s.queueIndex])
-    // v70-01-01 Task 4 backstop, extended (fix-scraped-text-render): a legacy or
-    // bulk-bonded track may carry type='pdf' (the toQueueItem default) because
-    // its SetlistTrack predates mimeType persistence — or was bonded via a path
-    // that doesn't stamp it. useLibraryStore.allFiles holds the authoritative
-    // mimeType from library_index — read it here to upgrade viewer routing on
-    // the fly without a rebind or data migration. Covers image (v70-01-01),
-    // text/plain (scraped charts), and MusicXML. [[project_track_mimetype_gotcha]]
-    const libMimeType = useLibraryStore(s =>
-        currentItem?.fileId ? s.allFiles.find(f => f.id === currentItem.fileId)?.mimeType : undefined,
+    // Determine the viewer kind via the shared resolver. See
+    // `resolveViewerKind.ts` for the full priority stack — library_index
+    // `mimeType` wins, then library_index `name` extension (the
+    // octet-stream MusicXML and legacy-audio rescue tier), then per-track
+    // signals, then `'unknown'` (explicit fallback UI instead of silent
+    // PDFViewer-404; the Adon Olam shape). [[project_track_mimetype_gotcha]]
+    const libraryRow = useLibraryStore(s =>
+        track.fileId ? s.allFiles.find(f => f.id === track.fileId) : undefined,
     )
-    const isMusicXml = currentItem?.type === 'musicxml'
-        || (libMimeType?.includes('xml') ?? false)
-    const isText = currentItem?.type === 'text'
-        || (libMimeType?.startsWith('text/') ?? false)
-    const isImage = currentItem?.type === 'image'
-        || (libMimeType?.startsWith('image/') ?? false)
-    // audio-viewer-f7: audio-bond detection. toQueueItem's FileType union
-    // doesn't include 'audio' (out-of-scope per dispatch — track-type
-    // detection belongs to a separate lane), so this branch fires purely
-    // off the library mimeType backstop + fileName/fileId extension
-    // fallback — same pattern as isImage uses for HEIC legacy. The
-    // extension test is the only thing that catches a legacy bind where
-    // library_index never got a mimeType stamped.
-    const audioRe = /\.(mp3|wav|m4a|ogg)$/i
-    const isAudio = (libMimeType?.startsWith('audio/') ?? false)
-        || audioRe.test(track.fileName ?? '')
-        || audioRe.test(track.fileId ?? '')
+    const viewerKind = resolveViewerKind(track, libraryRow)
 
     // Network URL for the chart bytes. PDFViewer is handed THIS directly (see the
     // render branch below) — its loader is IDB-first: it extracts the fileId from
@@ -326,9 +308,9 @@ export function PDFOverlay({
 
     const chartSurface = (
         <SectionErrorBoundary key={track.fileId} label="Chart">
-            {isMusicXml ? (
+            {viewerKind === 'musicxml' ? (
                 fileUrl && <SmartScoreViewer url={fileUrl} trackId={track.id} trackKey={track.key} />
-            ) : isText ? (
+            ) : viewerKind === 'text' ? (
                 // ipad-text-viewer-fetch-fix (F-1, 2026-05-24): TextScoreViewer
                 // self-resolves the source via offline-idb (mirrors AudioViewer's
                 // IDB-first pattern), so it dodges the WebKit `fetch(blob:)`
@@ -336,15 +318,36 @@ export function PDFOverlay({
                 // stable handle; we no longer route through PDFOverlay's
                 // `fileUrl` blob: pipe for text-typed rows.
                 track.fileId && <TextScoreViewer fileId={track.fileId} />
-            ) : isImage ? (
+            ) : viewerKind === 'image' ? (
                 fileUrl && <ImageScoreViewer url={fileUrl} alt={track.title} />
-            ) : isAudio ? (
+            ) : viewerKind === 'audio' ? (
                 // audio-viewer-f7: AudioViewer self-resolves the source
                 // via offline-idb (mirrors PDFViewer's IDB-first pattern),
                 // so it doesn't depend on PDFOverlay's `fileUrl` blob
                 // lifecycle. fileId is the stable handle.
                 track.fileId && <AudioViewer fileId={track.fileId} title={track.title} />
+            ) : viewerKind === 'unknown' ? (
+                // Explicit terminal — keeps a non-PDF byte payload from
+                // landing in PDFViewer and 404ing (the Adon Olam shape
+                // pre-fix). See resolveViewerKind.ts + FINDINGS.md.
+                <div
+                    data-testid="viewer-unknown-fallback"
+                    role="alert"
+                    className="flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground"
+                >
+                    <p className="font-medium">Can't render this file type yet</p>
+                    <p className="text-xs">
+                        The chart bonded to <span className="font-mono">{track.title}</span> isn't
+                        a recognized format. Try re-binding it from the library, or open the
+                        original file directly.
+                    </p>
+                </div>
             ) : (
+                // viewerKind === 'pdf' (or 'chordpro' — chordpro currently
+                // routes to PDFViewer for display until a dedicated viewer
+                // lands; PDFViewer's IDB-first loader handles both byte
+                // shapes the same way).
+                //
                 // PDF: hand PDFViewer the network URL, NOT a blob: object
                 // URL. PDFViewer's loader is IDB-first, so cached charts
                 // render straight from bytes (no network) and the WebKit

@@ -28,6 +28,21 @@ vi.mock("@/components/music/PDFViewer", () => ({
     ),
 }))
 
+// Mock TextScoreViewer for the dispatch tests so we can assert routing
+// without exercising the real fetch / offline-idb resolve.
+vi.mock("@/components/music/TextScoreViewer", () => ({
+    TextScoreViewer: ({ fileId }: { fileId: string }) => (
+        <div data-testid="text-score-viewer" data-file-id={fileId}>Text Viewer</div>
+    ),
+}))
+
+// Mock ImageScoreViewer for the dispatch tests.
+vi.mock("@/components/music/ImageScoreViewer", () => ({
+    ImageScoreViewer: ({ url, alt }: { url: string; alt?: string }) => (
+        <div data-testid="image-score-viewer" data-url={url}>{alt}</div>
+    ),
+}))
+
 // Mock next/dynamic to synchronously resolve the loader
 vi.mock("next/dynamic", () => ({
     __esModule: true,
@@ -83,6 +98,19 @@ vi.mock("@/lib/store", () => ({
         { getState: () => mockStoreState }
     ),
     QueueItem: {},
+}))
+
+// audio-render-type-discriminator: PDFOverlay now reads the libraryRow
+// (not just `mimeType`) via `useLibraryStore`. The dispatch tests below
+// drive scenarios that exercise libraryRow.mimeType + libraryRow.name —
+// mock the store with a mutable `allFiles` array so each test can stage
+// the row it needs without poking the real zustand store.
+const mockLibraryState: { allFiles: { id: string; name: string; mimeType: string }[] } = {
+    allFiles: [],
+}
+vi.mock("@/lib/library-store", () => ({
+    useLibraryStore: (selector?: (s: typeof mockLibraryState) => unknown) =>
+        typeof selector === "function" ? selector(mockLibraryState) : mockLibraryState,
 }))
 
 // Mock hooks used by PerformanceToolbar
@@ -167,6 +195,7 @@ describe("PDFOverlay", () => {
 
     beforeEach(() => {
         vi.clearAllMocks()
+        mockLibraryState.allFiles = []
     })
 
     it("renders PDFViewer with correct URL", async () => {
@@ -380,6 +409,142 @@ describe("PDFOverlay", () => {
             const audio = await screen.findByTestId("audio-viewer")
             expect(audio.getAttribute("data-file-id")).toBe("upload-abc-123")
             expect(screen.queryByTestId("pdf-viewer")).toBeNull()
+        })
+    })
+
+    // audio-render-type-discriminator (2026-05-26): the dispatch now goes
+    // through `resolveViewerKind`, which reads libraryRow signals BEFORE
+    // track signals. Cover the priority tiers + the Adon Olam regressions
+    // + the explicit "unknown" fallback so any future tweak to the
+    // resolver surfaces here.
+    describe("viewer-dispatch via resolveViewerKind", () => {
+        it("Adon Olam regression — upload-{uuid} + libraryRow.mimeType='audio/mpeg' → AudioViewer (was: PDFViewer 404)", async () => {
+            const t: SetlistTrack = {
+                id: "song-adon",
+                title: "Adon Olam",
+                type: "song",
+                fileId: "upload-c7c8-aaaa-bbbb",
+            }
+            mockLibraryState.allFiles = [
+                { id: t.fileId!, name: "", mimeType: "audio/mpeg" },
+            ]
+            render(<PDFOverlay {...defaultProps} track={t} tracks={[t]} currentIndex={0} />)
+            const audio = await screen.findByTestId("audio-viewer")
+            expect(audio.getAttribute("data-file-id")).toBe(t.fileId)
+            expect(screen.queryByTestId("pdf-viewer")).toBeNull()
+        })
+
+        it("Adon Olam regression — upload-{uuid} + libraryRow.name='Adon Olam.mp3' → AudioViewer", async () => {
+            const t: SetlistTrack = {
+                id: "song-adon-name",
+                title: "Adon Olam",
+                type: "song",
+                fileId: "upload-c7c8-aaaa-cccc",
+            }
+            mockLibraryState.allFiles = [
+                { id: t.fileId!, name: "Adon Olam.mp3", mimeType: "" },
+            ]
+            render(<PDFOverlay {...defaultProps} track={t} tracks={[t]} currentIndex={0} />)
+            const audio = await screen.findByTestId("audio-viewer")
+            expect(audio.getAttribute("data-file-id")).toBe(t.fileId)
+            expect(screen.queryByTestId("pdf-viewer")).toBeNull()
+        })
+
+        it("priority-1 — libraryRow.mimeType beats track-side fileId extension", async () => {
+            // track.fileId says .pdf, library_index says audio → audio wins.
+            const t: SetlistTrack = {
+                id: "song-priority",
+                title: "Mislabeled Bond",
+                type: "song",
+                fileId: "looks-like-a-pdf.pdf",
+            }
+            mockLibraryState.allFiles = [
+                { id: t.fileId!, name: "actual-cantor-take.mp3", mimeType: "audio/mpeg" },
+            ]
+            render(<PDFOverlay {...defaultProps} track={t} tracks={[t]} currentIndex={0} />)
+            expect(await screen.findByTestId("audio-viewer")).toBeTruthy()
+            expect(screen.queryByTestId("pdf-viewer")).toBeNull()
+        })
+
+        it("priority-2 — libraryRow.name rescues octet-stream MusicXML (mimetype weak link)", async () => {
+            // application/octet-stream falls through to filename; .musicxml
+            // ext on the library_index row wins → SmartScoreViewer renders.
+            const t: SetlistTrack = {
+                id: "song-mxml-octet",
+                title: "Hashiveinu",
+                type: "song",
+                fileId: "upload-mxml-aaa",
+            }
+            mockLibraryState.allFiles = [
+                { id: t.fileId!, name: "hashiveinu.musicxml", mimeType: "application/octet-stream" },
+            ]
+            render(<PDFOverlay {...defaultProps} track={t} tracks={[t]} currentIndex={0} />)
+            expect(await screen.findByTestId("smart-score-viewer")).toBeTruthy()
+            expect(screen.queryByTestId("pdf-viewer")).toBeNull()
+        })
+
+        it("text bond — libraryRow.mimeType='text/plain' → TextScoreViewer", async () => {
+            const t: SetlistTrack = {
+                id: "song-text",
+                title: "Scraped Chart",
+                type: "song",
+                fileId: "upload-text-aaa",
+            }
+            mockLibraryState.allFiles = [
+                { id: t.fileId!, name: "scraped.txt", mimeType: "text/plain" },
+            ]
+            render(<PDFOverlay {...defaultProps} track={t} tracks={[t]} currentIndex={0} />)
+            const text = await screen.findByTestId("text-score-viewer")
+            expect(text.getAttribute("data-file-id")).toBe(t.fileId)
+            expect(screen.queryByTestId("pdf-viewer")).toBeNull()
+        })
+
+        it("image bond — libraryRow.mimeType='image/png' → ImageScoreViewer", async () => {
+            const t: SetlistTrack = {
+                id: "song-img",
+                title: "Scanned Chart",
+                type: "song",
+                fileId: "upload-img-aaa",
+            }
+            mockLibraryState.allFiles = [
+                { id: t.fileId!, name: "scan.png", mimeType: "image/png" },
+            ]
+            render(<PDFOverlay {...defaultProps} track={t} tracks={[t]} currentIndex={0} />)
+            expect(await screen.findByTestId("image-score-viewer")).toBeTruthy()
+            expect(screen.queryByTestId("pdf-viewer")).toBeNull()
+        })
+
+        it("positively-unrecognized libraryRow.name ext → 'unknown' fallback UI (NOT PDFViewer, NOT blank)", () => {
+            const t: SetlistTrack = {
+                id: "song-weird",
+                title: "Weird Bond",
+                type: "song",
+                fileId: "upload-weird-aaa",
+            }
+            mockLibraryState.allFiles = [
+                { id: t.fileId!, name: "resume.docx", mimeType: "" },
+            ]
+            render(<PDFOverlay {...defaultProps} track={t} tracks={[t]} currentIndex={0} />)
+            expect(screen.getByTestId("viewer-unknown-fallback")).toBeTruthy()
+            expect(screen.queryByTestId("pdf-viewer")).toBeNull()
+            expect(screen.queryByTestId("audio-viewer")).toBeNull()
+            expect(screen.getByTestId("viewer-unknown-fallback").textContent).toMatch(/can't render/i)
+        })
+
+        it("bare Drive ID with no signals → still PDFViewer (legacy default preserved; no false 'unknown')", async () => {
+            // The Drive-bond happy path that pre-dates mimeType persistence.
+            // libraryRow may not be hydrated yet; no extension on the id;
+            // dispatch must keep rendering through PDFViewer.
+            const t: SetlistTrack = {
+                id: "legacy-drive",
+                title: "Legacy Drive Chart",
+                type: "song",
+                fileId: "1AbCdEfGhIjKlMnOpQrStUvWxYz", // Drive ID shape
+            }
+            // No library row staged → undefined libraryRow.
+            render(<PDFOverlay {...defaultProps} track={t} tracks={[t]} currentIndex={0} />)
+            expect(await screen.findByTestId("pdf-viewer")).toBeTruthy()
+            expect(screen.queryByTestId("viewer-unknown-fallback")).toBeNull()
         })
     })
 })
