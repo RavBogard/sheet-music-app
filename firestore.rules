@@ -411,6 +411,7 @@ service cloud.firestore {
                     && request.resource.data.createdAt is number
                     && request.resource.data.type in [
                         'set_bus_master',
+                        'set_bus_on',
                         'set_send_level',
                         'set_send_on',
                         'set_matrix_fader',

@@ -51,10 +51,19 @@ export function coerceMixerSnapshot(raw: unknown): MixerSnapshot {
     const data = (raw && typeof raw === "object" ? raw : {}) as Partial<MixerSnapshot>
     return {
         channels: coerceArray<ChannelInfo>(data.channels),
-        buses: coerceArray<Record<string, unknown>>(data.buses).map((b) => ({
-            ...(b as object),
-            sends: coerceArray((b as { sends?: unknown }).sends),
-        })) as BusInfo[],
+        buses: coerceArray<Record<string, unknown>>(data.buses).map((b) => {
+            // master-mute: read explicit `on` if present; default `true` (unmuted)
+            // for back-compat with pre-v10.0.7 bridges that didn't publish the slot
+            // — conservative reading so a fresh-install iPad doesn't show a master
+            // as muted on first frame.
+            const raw = b as { on?: unknown; sends?: unknown }
+            const on = typeof raw.on === "boolean" ? raw.on : true
+            return {
+                ...(b as object),
+                on,
+                sends: coerceArray(raw.sends),
+            }
+        }) as BusInfo[],
         matrices: coerceArray<MatrixInfo>(data.matrices),
         config: data.config as MixerSnapshot["config"],
     }

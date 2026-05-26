@@ -41,6 +41,7 @@ export default function MonitorClient() {
     const starredChannels = useMonitorStore(s => s.starredChannels)
     const defaultChannels = useMonitorStore(s => s.defaultChannels)
     const updateBusFader = useMonitorStore(s => s.updateBusFader)
+    const updateBusOn = useMonitorStore(s => s.updateBusOn)
     const updateSendLevel = useMonitorStore(s => s.updateSendLevel)
     const updateSendOn = useMonitorStore(s => s.updateSendOn)
     const updateMatrixFader = useMonitorStore(s => s.updateMatrixFader)
@@ -109,6 +110,14 @@ export default function MonitorClient() {
         updateBusFader(myBusIndex, value)
         client?.setBusMaster(myBusIndex, value)
     }, [myBusIndex, updateBusFader, client])
+
+    const handleBusOn = useCallback((on: boolean) => {
+        // Master-mute toggle — mirrors handleSendOn / handleMatrixOn shape;
+        // routes to `setBusOn` → Firestore `set_bus_on` → bridge OSC `/bus/MM/mix/on`.
+        if (!hasAssignedBus(myBusIndex)) return
+        updateBusOn(myBusIndex, on)
+        client?.setBusOn(myBusIndex, on)
+    }, [myBusIndex, updateBusOn, client])
 
     const handleSendLevel = useCallback((channelIndex: number, value: number) => {
         if (!hasAssignedBus(myBusIndex)) return
@@ -243,6 +252,7 @@ export default function MonitorClient() {
             error={error}
             snapshotSeq={snapshotSeq}
             onBusMaster={handleBusMaster}
+            onBusOn={handleBusOn}
             onSendLevel={handleSendLevel}
             onSendOn={handleSendOn}
             onMatrixFader={handleMatrixFader}

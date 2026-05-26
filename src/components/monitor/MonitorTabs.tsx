@@ -27,6 +27,14 @@ interface MonitorTabsProps {
     /** Authoritative snapshot sequence (store `snapshotCount`) for the fader confirmation machine (C-2). */
     snapshotSeq?: number
     onBusMaster: (value: number) => void
+    /**
+     * Master-mute toggle. The horizontal `FaderStrip` carries no mute UI on this
+     * surface (display-only on mute via opacity-50), so this prop is currently
+     * unused by `MonitorTabs` itself — kept on the contract to keep `MonitorClient`
+     * symmetric with `QuickMonitorPanel` and future-proof for a redesign that
+     * adds an inline mute affordance (coder-5's redesign track may pick this up).
+     */
+    onBusOn: (on: boolean) => void
     onSendLevel: (channelIndex: number, value: number) => void
     onSendOn: (channelIndex: number, on: boolean) => void
     onMatrixFader: (matrixIndex: number, value: number) => void
@@ -75,6 +83,7 @@ export function MonitorTabs({
     error,
     snapshotSeq,
     onBusMaster,
+    onBusOn: _onBusOn, // eslint-disable-line @typescript-eslint/no-unused-vars -- on-contract for symmetry; see prop-type comment
     onSendLevel,
     onSendOn,
     onMatrixFader,
@@ -139,7 +148,7 @@ export function MonitorTabs({
                                 <FaderStrip
                                     label="Master"
                                     value={myBus.fader}
-                                    on={true}
+                                    on={myBus.on ?? true}
                                     isMaster
                                     stale={stale} snapshotSeq={snapshotSeq}
                                     onChange={onBusMaster}

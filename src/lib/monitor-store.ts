@@ -103,6 +103,7 @@ interface MonitorState {
     setStatus: (status: ConnectionStatus, error?: string) => void
     setSnapshot: (snapshot: MixerSnapshot, userId: string, stateUpdatedAt: number | null) => void
     updateBusFader: (busIndex: number, value: number) => void
+    updateBusOn: (busIndex: number, on: boolean) => void
     updateSendLevel: (busIndex: number, channelIndex: number, value: number) => void
     updateSendOn: (busIndex: number, channelIndex: number, on: boolean) => void
     updateMatrixFader: (matrixIndex: number, value: number) => void
@@ -191,6 +192,19 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         set({
             buses: buses.map(b =>
                 b.index === busIndex ? { ...b, fader: value } : b
+            )
+        })
+    },
+
+    updateBusOn: (busIndex, on) => {
+        // Optimistic master-mute write — mirrors `updateMatrixOn` shape so the
+        // fader confirmation machine (C-2) sees the local set, then reconciles
+        // against the bridge's authoritative snapshot once the OSC round-trip
+        // lands on `/bus/MM/mix/on`.
+        const { buses } = get()
+        set({
+            buses: buses.map(b =>
+                b.index === busIndex ? { ...b, on } : b
             )
         })
     },

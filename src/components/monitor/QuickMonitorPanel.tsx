@@ -14,8 +14,6 @@ import { Loader2, Wifi, WifiOff, Server, ServerOff, Clock, X } from "lucide-reac
 import { ScrollFade } from "@/components/ui/scroll-fade"
 import { getBridgeStatusMessage, isMixerOffline, DisconnectedOverlay } from "@/components/monitor/ConnectionIndicator"
 
-const noop = () => {} // Stable reference to prevent memo breaking
-
 /**
  * Compact monitor mixer panel for the performance toolbar.
  * Shows master fader + starred/default channel sends as vertical faders.
@@ -52,6 +50,7 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
     const defaultChannels = useMonitorStore(s => s.defaultChannels)
     const setStarredChannels = useMonitorStore(s => s.setStarredChannels)
     const updateBusFader = useMonitorStore(s => s.updateBusFader)
+    const updateBusOn = useMonitorStore(s => s.updateBusOn)
     const updateSendLevel = useMonitorStore(s => s.updateSendLevel)
     const updateSendOn = useMonitorStore(s => s.updateSendOn)
     // C-6: honest staleness on this perform-toolbar surface too (not just /monitor).
@@ -86,6 +85,17 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
         updateBusFader(myBusIndex, value)
         getMonitorClient()?.setBusMaster(myBusIndex, value)
     }, [myBusIndex, updateBusFader])
+
+    const handleBusOn = useCallback((on: boolean) => {
+        // Master-mute toggle — mirrors handleSendOn shape; routes to
+        // `setBusOn` → Firestore `set_bus_on` command → bridge OSC `/bus/MM/mix/on`.
+        // Pre-v10.0.7 bridges will reject this with "unknown command" (the fader
+        // confirmation machine reverts the optimistic toggle after timeout),
+        // which is the acceptable degrade until v10.0.7 ships.
+        if (myBusIndex == null) return
+        updateBusOn(myBusIndex, on)
+        getMonitorClient()?.setBusOn(myBusIndex, on)
+    }, [myBusIndex, updateBusOn])
 
     const handleSendLevel = useCallback((channelIndex: number, value: number) => {
         if (myBusIndex == null) return
@@ -205,16 +215,18 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
             <div className="flex-1 min-h-0">
             <DisconnectedOverlay active={mixerOffline}>
                 <ScrollFade snap className="h-full" scrollClassName="flex flex-row gap-6 px-6 py-4 min-h-[280px]">
-                    {/* Master bus fader (leftmost) */}
+                    {/* Master bus fader (leftmost) — `on` reads the authoritative
+                        bus mute (X32 `/bus/MM/mix/on`); pre-v10.0.7 snapshots default
+                        to `true` (unmuted) via the coerce-state guard. */}
                     <VerticalFaderStrip
                         label="Master"
                         value={myBus.fader}
-                        on={true}
+                        on={myBus.on ?? true}
                         isMaster
                         stale={stale}
                         snapshotSeq={snapshotSeq}
                         onChange={handleBusMaster}
-                        onMuteToggle={noop}
+                        onMuteToggle={() => handleBusOn(!(myBus.on ?? true))}
                     />
 
                     {/* Divider between master and channels — slightly stronger break for the wider layout */}

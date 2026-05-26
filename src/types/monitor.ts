@@ -41,6 +41,13 @@ export interface BusInfo {
     index: number
     name: string
     fader: number
+    /**
+     * Bus master mute (X32 `/bus/MM/mix/on`; true = unmuted, mirrors `BusSend.on`
+     * and `MatrixInfo.on`). Optional for back-compat with snapshots written by
+     * pre-v10.0.7 bridges that didn't read this slot — consumers default to
+     * `true` (unmuted, the conservative reading) when absent.
+     */
+    on?: boolean
     sends: BusSend[]
 }
 
@@ -71,6 +78,7 @@ export interface MixerSnapshot {
 export type ClientMessage =
     | { type: "auth"; token: string }
     | { type: "set_bus_master"; busIndex: number; value: number }
+    | { type: "set_bus_on"; busIndex: number; value: boolean }
     | { type: "set_send_level"; busIndex: number; channelIndex: number; value: number }
     | { type: "set_send_on"; busIndex: number; channelIndex: number; value: boolean }
     | { type: "set_matrix_fader"; matrixIndex: number; value: number }

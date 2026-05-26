@@ -419,6 +419,9 @@ export class FirestoreTransport {
                 case "set_bus_master":
                     this.x32.setBusFader(cmd.busIndex!, cmd.value as number)
                     break
+                case "set_bus_on":
+                    this.x32.setBusOn(cmd.busIndex!, cmd.value as boolean)
+                    break
                 case "set_send_level":
                     this.x32.setSendLevel(cmd.channelIndex!, cmd.busIndex!, cmd.value as number)
                     break
@@ -458,6 +461,10 @@ export class FirestoreTransport {
             case "set_bus_master":
                 return cmd.busIndex !== undefined && cmd.value !== undefined
                     ? `bus_fader:${cmd.busIndex}`
+                    : null
+            case "set_bus_on":
+                return cmd.busIndex !== undefined && cmd.value !== undefined
+                    ? `bus_on:${cmd.busIndex}`
                     : null
             case "set_send_level":
                 return cmd.busIndex !== undefined && cmd.channelIndex !== undefined && cmd.value !== undefined
@@ -626,6 +633,10 @@ export class FirestoreTransport {
         // x32-client's routeParameterChange emits.
         this.x32.on("bus_fader", (idx: number, fader: number) => {
             this.resolvePendingAck(`bus_fader:${idx}`, fader)
+            onState()
+        })
+        this.x32.on("bus_on", (idx: number, on: boolean) => {
+            this.resolvePendingAck(`bus_on:${idx}`, on)
             onState()
         })
         this.x32.on("send_level", (busIdx: number, chIdx: number, level: number) => {

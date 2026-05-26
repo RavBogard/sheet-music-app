@@ -65,4 +65,40 @@ describe("coerceMixerSnapshot (C-4 shared read guard)", () => {
         expect(snap.buses).toEqual([])
         expect(snap.matrices).toEqual([])
     })
+
+    describe("BusInfo.on — master-mute back-compat (monitor-master-mute-fix)", () => {
+        it("reads explicit bus.on=false (master muted) from a v10.0.7+ snapshot", () => {
+            const raw = {
+                buses: [{ index: 5, name: "IEM", fader: 0.7, on: false, sends: [] }],
+            }
+            const snap = coerceMixerSnapshot(raw)
+            expect(snap.buses[0].on).toBe(false)
+        })
+
+        it("reads explicit bus.on=true (master unmuted) from a v10.0.7+ snapshot", () => {
+            const raw = {
+                buses: [{ index: 5, name: "IEM", fader: 0.7, on: true, sends: [] }],
+            }
+            const snap = coerceMixerSnapshot(raw)
+            expect(snap.buses[0].on).toBe(true)
+        })
+
+        it("defaults bus.on=true (unmuted) when the field is absent (pre-v10.0.7 bridge)", () => {
+            // The conservative reading — a fresh-install iPad won't display a
+            // master as muted on first frame against an older bridge.
+            const raw = {
+                buses: [{ index: 5, name: "IEM", fader: 0.7, sends: [] }],
+            }
+            const snap = coerceMixerSnapshot(raw)
+            expect(snap.buses[0].on).toBe(true)
+        })
+
+        it("defaults bus.on=true when the field is present but non-boolean (corrupt write)", () => {
+            const raw = {
+                buses: [{ index: 5, name: "IEM", fader: 0.7, on: "muted", sends: [] }],
+            }
+            const snap = coerceMixerSnapshot(raw)
+            expect(snap.buses[0].on).toBe(true)
+        })
+    })
 })

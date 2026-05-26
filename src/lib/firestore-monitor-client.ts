@@ -225,6 +225,16 @@ export class FirestoreMonitorClient {
         })
     }
 
+    setBusOn(busIndex: number, on: boolean): void {
+        // Master bus mute (X32 `/bus/MM/mix/on`). On/off toggles send immediately
+        // (no throttle), mirroring `setSendOn` / `setMatrixOn`.
+        this.sendCommandImmediate({
+            type: "set_bus_on",
+            busIndex,
+            value: on,
+        })
+    }
+
     setSendLevel(busIndex: number, channelIndex: number, value: number): void {
         this.sendCommand(`send_level_${busIndex}_${channelIndex}`, {
             type: "set_send_level",

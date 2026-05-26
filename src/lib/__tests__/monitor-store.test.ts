@@ -84,4 +84,58 @@ describe("monitor-store P1-C hardening", () => {
         useMonitorStore.getState().reset()
         expect(useMonitorStore.getState().stateUpdatedAt).toBeNull()
     })
+
+    describe("updateBusOn (monitor-master-mute-fix — master-mute optimistic write)", () => {
+        it("flips bus.on for the targeted bus only", () => {
+            useMonitorStore.getState().setConfig(cfg({}))
+            useMonitorStore.getState().setSnapshot(
+                snapshot([{ ...BUS(3), on: true }, { ...BUS(5), on: true }], cfg({})),
+                "u1",
+                100,
+            )
+
+            useMonitorStore.getState().updateBusOn(3, false)
+            const s = useMonitorStore.getState()
+            expect(s.buses.find((b) => b.index === 3)?.on).toBe(false)
+            // sibling bus is untouched (no collateral mutation)
+            expect(s.buses.find((b) => b.index === 5)?.on).toBe(true)
+        })
+
+        it("is idempotent — same value twice is a stable result", () => {
+            useMonitorStore.getState().setConfig(cfg({}))
+            useMonitorStore.getState().setSnapshot(
+                snapshot([{ ...BUS(3), on: true }], cfg({})),
+                "u1",
+                100,
+            )
+            useMonitorStore.getState().updateBusOn(3, false)
+            useMonitorStore.getState().updateBusOn(3, false)
+            expect(useMonitorStore.getState().buses[0].on).toBe(false)
+        })
+
+        it("toggles round-trip (false → true) — the master-unmute Daniel reported broken", () => {
+            useMonitorStore.getState().setConfig(cfg({}))
+            useMonitorStore.getState().setSnapshot(
+                snapshot([{ ...BUS(3), on: false }], cfg({})),
+                "u1",
+                100,
+            )
+            // Daniel's UAT: master is muted, tap unmute → master must read unmuted.
+            useMonitorStore.getState().updateBusOn(3, true)
+            expect(useMonitorStore.getState().buses[0].on).toBe(true)
+        })
+
+        it("no-op when the busIndex is unknown (preserves all buses byte-stable)", () => {
+            useMonitorStore.getState().setConfig(cfg({}))
+            useMonitorStore.getState().setSnapshot(
+                snapshot([{ ...BUS(3), on: true }], cfg({})),
+                "u1",
+                100,
+            )
+            const before = useMonitorStore.getState().buses
+            useMonitorStore.getState().updateBusOn(999, false)
+            const after = useMonitorStore.getState().buses
+            expect(after).toEqual(before)
+        })
+    })
 })

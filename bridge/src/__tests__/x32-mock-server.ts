@@ -12,6 +12,7 @@
  *   /ch/XX/mix/YY/on    — Channel→Bus send on/off get/set
  *   /bus/XX/config/name — Bus name query
  *   /bus/XX/mix/fader   — Bus master fader get/set
+ *   /bus/XX/mix/on      — Bus master mute get/set (monitor-master-mute-fix)
  *   /mtx/XX/config/name — Matrix name query
  *   /mtx/XX/mix/fader   — Matrix fader get/set
  *   /mtx/XX/mix/on      — Matrix on/off get/set
@@ -156,6 +157,7 @@ interface MockBus {
     index: number
     name: string
     fader: number
+    on: boolean
     sends: MockBusSend[]
 }
 
@@ -194,6 +196,7 @@ function buildDefaultState(): {
                 ? "Keys"
                 : "Drums",
         fader: 0.75,
+        on: true, // master-mute default (X32 convention: on=true = unmuted)
         sends: Array.from({ length: 32 }, (_, i) => ({
             channelIndex: i + 1,
             level: 0.5 + Math.random() * 0.3, // realistic starting levels
@@ -568,6 +571,29 @@ export class X32MockServer extends EventEmitter {
                     this.echoToSubscribers(echo, this.clientKey(rinfo))
                 } else {
                     respond(buildOSCMessage(msg.address, [{ type: "f", value: mtx.fader }]))
+                }
+            }
+            return
+        }
+
+        // /bus/XX/mix/on — bus master mute get/set (monitor-master-mute-fix)
+        const busOnMatch = msg.address.match(/^\/bus\/(\d+)\/mix\/on$/)
+        if (busOnMatch) {
+            const idx = parseInt(busOnMatch[1])
+            const bus = this.buses.find((b) => b.index === idx)
+            if (bus) {
+                if (msg.args.length > 0) {
+                    const newVal = (msg.args[0].value as number) === 1
+                    bus.on = newVal
+                    this.emit("bus_on_set", idx, newVal)
+                    const echo = buildOSCMessage(msg.address, [{ type: "i", value: newVal ? 1 : 0 }])
+                    this.echoToSubscribers(echo, this.clientKey(rinfo))
+                } else {
+                    respond(
+                        buildOSCMessage(msg.address, [
+                            { type: "i", value: bus.on ? 1 : 0 },
+                        ])
+                    )
                 }
             }
             return

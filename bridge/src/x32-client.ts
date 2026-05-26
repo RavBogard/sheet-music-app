@@ -428,6 +428,19 @@ export class X32Client extends EventEmitter {
             return
         }
 
+        // Bus master mute: /bus/01/mix/on — mirror of /mtx/MM/mix/on for buses
+        // (the master-mute slot per-channel sends already have via /ch/CC/mix/MM/on).
+        const busOnMatch = msg.address.match(/^\/bus\/(\d+)\/mix\/on$/)
+        if (busOnMatch && msg.args[0]) {
+            const idx = parseInt(busOnMatch[1])
+            const bus = this.buses.find(b => b.index === idx)
+            if (bus) {
+                bus.on = (msg.args[0].value as number) === 1
+                this.emit("bus_on", idx, bus.on)
+            }
+            return
+        }
+
         // Channel→Bus send level: /ch/01/mix/01/level
         const sendLevelMatch = msg.address.match(/^\/ch\/(\d+)\/mix\/(\d+)\/level$/)
         if (sendLevelMatch && msg.args[0]?.type === "f") {
@@ -564,6 +577,13 @@ export class X32Client extends EventEmitter {
         return (msg.args[0]?.value as number) || 0
     }
 
+    async queryBusOn(bus: number): Promise<boolean> {
+        // Mirror of queryMatrixOn — read the bus master mute state.
+        const addr = `/bus/${String(bus).padStart(2, "0")}/mix/on`
+        const msg = await this.query(addr)
+        return (msg.args[0]?.value as number) === 1
+    }
+
     async querySendLevel(ch: number, bus: number): Promise<number> {
         const addr = `/ch/${String(ch).padStart(2, "0")}/mix/${String(bus).padStart(2, "0")}/level`
         const msg = await this.query(addr)
@@ -600,6 +620,15 @@ export class X32Client extends EventEmitter {
         const addr = `/bus/${String(bus).padStart(2, "0")}/mix/fader`
         this.send(addr, [{ type: "f", value: Math.max(0, Math.min(1, value)) }])
         this.scheduleConfirm(`bus_fader:${bus}`, addr) // C2
+    }
+
+    setBusOn(bus: number, on: boolean): void {
+        // Mirror of setMatrixOn — write the bus master mute state. C2 read-back
+        // schedules a GET on `/bus/MM/mix/on` so the desk's confirmed value lands
+        // back through routeParameterChange and resolves the pending ack.
+        const addr = `/bus/${String(bus).padStart(2, "0")}/mix/on`
+        this.send(addr, [{ type: "i", value: on ? 1 : 0 }])
+        this.scheduleConfirm(`bus_on:${bus}`, addr) // C2
     }
 
     setSendLevel(ch: number, bus: number, value: number): void {
@@ -694,6 +723,7 @@ export class X32Client extends EventEmitter {
             index: busIdx,
             name: `Bus ${busIdx}`,
             fader: 0,
+            on: true, // master-mute default unmuted; overwritten by queryBusOn below
             sends: Array.from({ length: 32 }, (_, i) => ({ channelIndex: i + 1, level: 0, on: false })),
         }))
         const matrices: MatrixInfo[] = Array.from({ length: 6 }, (_, i) => ({
@@ -723,6 +753,13 @@ export class X32Client extends EventEmitter {
             tasks.push(async () => {
                 try { bus.fader = await this.queryWithRetry(() => this.queryBusFader(bus.index)) }
                 catch { unconfirmed.add(`bus_fader:${bus.index}`); bus.fader = 0 }
+            })
+            tasks.push(async () => {
+                // Master-mute readback. Mirror of matrix.on: keep true-on-failure
+                // as the conservative default so a transient query timeout never
+                // displays a master as muted (B11 — surfaced via `unconfirmed`).
+                try { bus.on = await this.queryWithRetry(() => this.queryBusOn(bus.index)) }
+                catch { unconfirmed.add(`bus_on:${bus.index}`); bus.on = true }
             })
             for (const send of bus.sends) {
                 const ch = send.channelIndex

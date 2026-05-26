@@ -90,6 +90,7 @@ function makeX32() {
     ;(e as Record<string, unknown>).isConnected = () => true
     ;(e as Record<string, unknown>).syncFullState = vi.fn().mockResolvedValue(undefined)
     ;(e as Record<string, unknown>).setBusFader = vi.fn()
+    ;(e as Record<string, unknown>).setBusOn = vi.fn()
     ;(e as Record<string, unknown>).setSendLevel = vi.fn()
     ;(e as Record<string, unknown>).setSendOn = vi.fn()
     ;(e as Record<string, unknown>).setMatrixFader = vi.fn()
@@ -362,6 +363,59 @@ describe("FirestoreTransport — command acks + robustness (Phase 2 B4/B5/B6/B10
         const ack = ackFor("c-mtx")
         expect(ack?.status).toBe("applied")
         expect(ack?.confirmedValue).toBe(false)
+        t.stop()
+    })
+
+    // ─── monitor-master-mute-fix — set_bus_on round-trip mirror of set_matrix_on ──
+    it("B6 bus_on: an authorized bus-owner master-mute command confirms to APPLIED with bool value", async () => {
+        const { x32, t } = start((uid) => (uid === "u-keys" ? 5 : null))
+        await feed([{ type: "set_bus_on", busIndex: 5, value: false, uid: "u-keys", id: "c-busmute" }])
+        await runBatch()
+        // SET reached the desk via setBusOn(5, false)
+        expect((x32 as unknown as { setBusOn: ReturnType<typeof vi.fn> }).setBusOn).toHaveBeenCalledWith(5, false)
+        // No ack yet — awaiting C2 read-back on /bus/05/mix/on
+        expect(ackFor("c-busmute")).toBeUndefined()
+
+        // The C2 read-back arrives as a `bus_on` change event with the confirmed value.
+        ;(x32 as unknown as EventEmitter).emit("bus_on", 5, false)
+        const ack = ackFor("c-busmute")
+        expect(ack?.status).toBe("applied")
+        expect(ack?.confirmedValue).toBe(false)
+        t.stop()
+    })
+
+    it("B6 bus_on: an unauthorized non-owner master-mute command is REJECTED and not sent to the desk", async () => {
+        const { x32, t } = start(() => null) // owns no bus, not engineer
+        await feed([{ type: "set_bus_on", busIndex: 5, value: false, uid: "intruder", id: "c-busmute-unauth" }])
+        await runBatch()
+        expect((x32 as unknown as { setBusOn: ReturnType<typeof vi.fn> }).setBusOn).not.toHaveBeenCalled()
+        const ack = ackFor("c-busmute-unauth")
+        expect(ack?.status).toBe("rejected")
+        expect(ack?.reason).toBe("unauthorized")
+        t.stop()
+    })
+
+    it("B6 bus_on: a malformed bus_on (missing value) gets REJECTED via confirmKeyFor null branch", async () => {
+        const { x32, t } = start((uid) => (uid === "u-keys" ? 5 : null))
+        await feed([{ type: "set_bus_on", busIndex: 5, uid: "u-keys", id: "c-busmute-malformed" }])
+        await runBatch()
+        expect((x32 as unknown as { setBusOn: ReturnType<typeof vi.fn> }).setBusOn).not.toHaveBeenCalled()
+        const ack = ackFor("c-busmute-malformed")
+        expect(ack?.status).toBe("rejected")
+        expect(String(ack?.reason)).toContain("unknown or malformed")
+        t.stop()
+    })
+
+    it("B6 bus_on: an engineer can master-mute any bus regardless of bus-ownership (mirrors set_bus_master)", async () => {
+        usersMap = { "u-eng": { soundEngineer: true } }
+        const { x32, t } = start(() => null) // not bus-owner; engineer via users doc
+        await feed([{ type: "set_bus_on", busIndex: 3, value: true, uid: "u-eng", id: "c-busmute-eng" }])
+        await runBatch()
+        expect((x32 as unknown as { setBusOn: ReturnType<typeof vi.fn> }).setBusOn).toHaveBeenCalledWith(3, true)
+        ;(x32 as unknown as EventEmitter).emit("bus_on", 3, true)
+        const ack = ackFor("c-busmute-eng")
+        expect(ack?.status).toBe("applied")
+        expect(ack?.confirmedValue).toBe(true)
         t.stop()
     })
 })
