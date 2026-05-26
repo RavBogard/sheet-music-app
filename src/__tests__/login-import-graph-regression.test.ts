@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
 import { basename } from 'node:path'
-import { extractLoginChunkGraph } from './helpers/page-chunk-graph'
+import { extractLoginChunkGraph } from '@/test-utils/per-route-bundle-size'
 
 /**
  * Regression-guard for `/login`'s client-chunk import graph.
