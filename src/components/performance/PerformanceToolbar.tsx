@@ -56,6 +56,12 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
     // (the hidden breakpoint's portal fires onOpenChange(false) immediately)
     const [transposerOpenMobile, setTransposerOpenMobile] = useState(false)
     const [transposerOpenDesktop, setTransposerOpenDesktop] = useState(false)
+    // 2026-05-26 monitor-popup-fullbottom-redesign: monitor popovers now controlled so
+    // the in-panel close (×) button can programmatically dismiss. Same dual-state
+    // shape as transposer (one per breakpoint) to avoid the hidden-portal dismiss-layer
+    // race documented above.
+    const [monitorOpenMobile, setMonitorOpenMobile] = useState(false)
+    const [monitorOpenDesktop, setMonitorOpenDesktop] = useState(false)
 
     const trackPopover = useCallback((id: string, open: boolean) => {
         setOpenPopovers(prev => {
@@ -138,8 +144,14 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
 
 
 
-    const monitorPopover = (id: string, compact = false, side: "top" | "left" = "top") => (
-        <Popover onOpenChange={(open) => trackPopover(id, open)}>
+    const monitorPopover = (
+        id: string,
+        openState: boolean,
+        setOpenState: (open: boolean) => void,
+        compact = false,
+        side: "top" | "left" = "top"
+    ) => (
+        <Popover open={openState} onOpenChange={(open) => { setOpenState(open); trackPopover(id, open) }}>
             <PopoverTrigger asChild>
                 <Button variant="ghost" className={cn(
                     "rounded-xl fluid-interaction glass-card text-foreground/80 hover:text-foreground flex items-center justify-center",
@@ -149,14 +161,21 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                     <span className="hidden md:inline">{compact ? "Monitor" : "MONITOR"}</span>
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-popover border-border space-y-3" align={side === "left" ? "start" : "center"} side={side}>
-                <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider px-1 flex items-center gap-1.5">
-                    <Speaker className="h-3 w-3" /> Monitor Mix
-                </div>
+            {/* 2026-05-26 monitor-popup-fullbottom-redesign (coder-5): popup spans the FULL
+                bottom-third of the chart viewport (w-screen + h-[33vh]) so faders get real
+                horizontal room on iPad portrait (820×1180). align="center" + collisionPadding=0
+                lets Radix Floating UI clamp the 100vw content to left:0 inside the viewport. */}
+            <PopoverContent
+                className="w-screen max-w-[100vw] h-[33vh] min-h-[280px] max-h-[420px] p-0 bg-popover border-x border-t border-b-0 border-border rounded-t-2xl rounded-b-none"
+                align={side === "left" ? "start" : "center"}
+                side={side}
+                sideOffset={4}
+                collisionPadding={0}
+            >
                 {hasMonitorAccess ? (
-                    <QuickMonitorPanel />
+                    <QuickMonitorPanel onClose={() => setOpenState(false)} />
                 ) : (
-                    <div className="text-xs text-muted-foreground/60 px-1 py-2">No monitor connected</div>
+                    <div className="flex h-full items-center justify-center text-xs text-muted-foreground/60 px-4 py-6">No monitor connected</div>
                 )}
             </PopoverContent>
         </Popover>
@@ -254,7 +273,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                     {zoomControls(true)}
                     <MetronomeControl />
                     {transposerPopover(transposerOpenMobile, setTransposerOpenMobile, 'transposer', true, 'top')}
-                    {monitorPopover('tools', true)}
+                    {monitorPopover('tools', monitorOpenMobile, setMonitorOpenMobile, true)}
                 </div>
 
                 {/* Row 2 (bottom): Home | Song Navigation (flex-center, never covered) | Setlist */}
@@ -313,7 +332,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                 <div className="flex items-center justify-end gap-3 shrink-0">
 
                     {/* Monitor Mix popover */}
-                    {monitorPopover('tools-desktop', false)}
+                    {monitorPopover('tools-desktop', monitorOpenDesktop, setMonitorOpenDesktop, false)}
 
                     <div className="w-px h-8 bg-border/50" />
 

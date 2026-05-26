@@ -10,7 +10,7 @@ import { getMonitorClient } from "@/hooks/use-monitor-connection"
 import { VerticalFaderStrip } from "@/components/monitor/VerticalFaderStrip"
 import { doc, getDoc } from "firebase/firestore"
 import { getDb } from "@/lib/firebase"
-import { Loader2, Wifi, WifiOff, Server, ServerOff, Clock } from "lucide-react"
+import { Loader2, Wifi, WifiOff, Server, ServerOff, Clock, X } from "lucide-react"
 import { ScrollFade } from "@/components/ui/scroll-fade"
 import { getBridgeStatusMessage, isMixerOffline, DisconnectedOverlay } from "@/components/monitor/ConnectionIndicator"
 
@@ -23,8 +23,20 @@ const noop = () => {} // Stable reference to prevent memo breaking
  *
  * Live mode popup: vertical faders in horizontal row, no "More Me!" macro,
  * channels filtered via getVisibleChannels (defaults + starred).
+ *
+ * 2026-05-26 (monitor-popup-fullbottom-redesign coder-5): outer container
+ * now stretches to fill the full bottom-third footprint allocated by the
+ * caller (`PerformanceToolbar.tsx` `<PopoverContent>` width:100vw +
+ * h-[33vh]). Header gets a 44×44 close button + dividing border; fader row
+ * gets gap-6 + px-6 py-4 spacing and `flex-1` to fill the remaining
+ * vertical band — no longer cramped on iPad portrait at 820×1180.
  */
-export function QuickMonitorPanel() {
+interface QuickMonitorPanelProps {
+    /** Caller (the Popover wrapping this panel) closes when invoked. iPad UX guard against missed outside-click dismiss. */
+    onClose?: () => void
+}
+
+export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
     const { user } = useAuth()
     const { hasAccess } = useMonitorAccess()
 
@@ -109,7 +121,7 @@ export function QuickMonitorPanel() {
     if (bridgeMessage) {
         const isMixerOnly = bridgeMessage.includes("mixer disconnected")
         return (
-            <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+            <div className="flex h-full items-center justify-center gap-2 text-muted-foreground">
                 {isMixerOnly ? <ServerOff className="w-4 h-4 text-yellow-600" /> : <ServerOff className="w-4 h-4" />}
                 <span className="text-xs">{bridgeMessage}</span>
             </div>
@@ -118,7 +130,7 @@ export function QuickMonitorPanel() {
 
     if (status === "connecting") {
         return (
-            <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+            <div className="flex h-full items-center justify-center gap-2 text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-xs">Connecting to mixer...</span>
             </div>
@@ -127,7 +139,7 @@ export function QuickMonitorPanel() {
 
     if (status === "error" || status === "disconnected") {
         return (
-            <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+            <div className="flex h-full items-center justify-center gap-2 text-muted-foreground">
                 <WifiOff className="w-4 h-4" />
                 <span className="text-xs">Mixer offline</span>
             </div>
@@ -137,7 +149,7 @@ export function QuickMonitorPanel() {
     // C-11: bus index 0 is a valid bus — don't treat it as "no bus".
     if (!hasAssignedBus(myBusIndex) || !myBus) {
         return (
-            <div className="flex items-center justify-center py-6 text-muted-foreground text-xs">
+            <div className="flex h-full items-center justify-center text-muted-foreground text-xs">
                 No monitor bus assigned
             </div>
         )
@@ -146,41 +158,53 @@ export function QuickMonitorPanel() {
     const mixerOffline = isMixerOffline(status, config?.bridge)
 
     return (
-        <div className="w-full">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        <div className="w-full h-full flex flex-col">
+            {/* Header — px-6 py-3 + border divider; close button (44×44 touch target) right-side */}
+            <div className="flex items-center justify-between px-6 py-3 border-b border-border/40 shrink-0">
                 <div>
-                    <div className="text-sm font-semibold text-foreground truncate pr-2 max-w-[140px]">
+                    <div className="text-sm font-semibold text-foreground truncate pr-2 max-w-[180px]">
                         {myBus.name && myBus.name !== `Bus ${myBusIndex}` ? myBus.name : "My Monitor"}
                     </div>
                     <div className="text-[10px] text-muted-foreground">
                         Bus {myBusIndex}
                     </div>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-3">
                     {config?.bridge?.x32Connected === false ? (
-                        <>
+                        <div className="flex items-center gap-1.5">
                             <Server className="w-3 h-3 text-yellow-500" />
                             <span className="text-[10px] text-yellow-500">No mixer</span>
-                        </>
+                        </div>
                     ) : stale ? (
                         // C-6: honest staleness — don't show a green "Live" over a frozen desk.
-                        <>
+                        <div className="flex items-center gap-1.5">
                             <Clock className="w-3 h-3 text-yellow-500" />
                             <span className="text-[10px] text-yellow-500">Stale</span>
-                        </>
+                        </div>
                     ) : (
-                        <>
+                        <div className="flex items-center gap-1.5">
                             <Wifi className="w-3 h-3 text-green-500" />
                             <span className="text-[10px] text-green-500">Live</span>
-                        </>
+                        </div>
                     )}
+                    {onClose ? (
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            aria-label="Close monitor mix"
+                            className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    ) : null}
                 </div>
             </div>
 
-            {/* Vertical faders in horizontal row. C-6: HARD-offline → overlay (last known levels). */}
+            {/* Vertical faders in horizontal row — gap-6 + px-6 py-4 spread; flex-1 fills remaining height.
+                C-6: HARD-offline → overlay (last known levels). */}
+            <div className="flex-1 min-h-0">
             <DisconnectedOverlay active={mixerOffline}>
-                <ScrollFade snap scrollClassName="flex flex-row gap-3 p-3 min-h-[280px]">
+                <ScrollFade snap className="h-full" scrollClassName="flex flex-row gap-6 px-6 py-4 min-h-[280px]">
                     {/* Master bus fader (leftmost) */}
                     <VerticalFaderStrip
                         label="Master"
@@ -193,9 +217,9 @@ export function QuickMonitorPanel() {
                         onMuteToggle={noop}
                     />
 
-                    {/* Divider between master and channels */}
+                    {/* Divider between master and channels — slightly stronger break for the wider layout */}
                     {visibleSends.length > 0 && (
-                        <div className="w-px bg-brand/20 mx-1 self-stretch" />
+                        <div className="w-px bg-border/60 mx-2 self-stretch" />
                     )}
 
                     {/* Channel sends */}
@@ -223,6 +247,7 @@ export function QuickMonitorPanel() {
                     )}
                 </ScrollFade>
             </DisconnectedOverlay>
+            </div>
         </div>
     )
 }
