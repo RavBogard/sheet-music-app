@@ -1,43 +1,31 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest'
 
-// ── Mock pdfjs-dist ────────────────────────────────────────────────
-// Real pdfjs does not run under vitest's jsdom environment — the sibling
-// pdf-chord-extractor.test.ts mocks `pdfjs-dist/legacy/build/pdf.mjs` for the
-// same reason. extract-document.ts loads pdfjs lazily via getPdfjs() (from
-// pdf-chord-extractor.ts), which dynamically imports this exact module path,
-// so mocking it here exercises the real page-iteration + text-join logic of
-// extractDocumentText's pdf path against controlled text items. The .pdf
-// success path is also covered end-to-end by `next build` + production use.
+// ── Mock unpdf ─────────────────────────────────────────────────────
+// After the f4-b-pdf-extractor-serverless-fix-v2 engine swap, extract-document.ts
+// extracts PDF text via `unpdf.extractText({mergePages:true})`. Mocking that
+// shape lets us drive the page-cap + error branches without invoking the real
+// engine. The real engine is exercised against a pdf-lib-synthesized fixture
+// in `pdf-extract-real-engine.test.ts` (sibling file, no engine mock).
 const { KNOWN_PDF_TEXT } = vi.hoisted(() => ({
     KNOWN_PDF_TEXT: 'Lecha Dodi Shabbat Morning',
 }))
 
-vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
-    GlobalWorkerOptions: { workerSrc: '' },
-    getDocument: ({ data }: { data: Uint8Array }) => {
+vi.mock('unpdf', () => ({
+    extractText: async (
+        data: Uint8Array,
+        _opts?: { mergePages?: boolean },
+    ): Promise<{ text: string; totalPages: number }> => {
         // Treat buffers without the %PDF- magic header as corrupt — the mock
         // rejects so extractDocumentText's try/catch yields 'extraction_failed'.
         const content = Buffer.from(data).toString('latin1')
         if (content.slice(0, 5) !== '%PDF-') {
-            return { promise: Promise.reject(new Error('Invalid PDF structure')) }
+            throw new Error('Invalid PDF structure')
         }
         // A `PAGES=N` marker in the buffer lets a test simulate a multi-page PDF
         // (exercises the MAX_PDF_PAGES cap); absent the marker, a 1-page doc.
         const pageMatch = content.match(/PAGES=(\d+)/)
-        const numPages = pageMatch ? parseInt(pageMatch[1], 10) : 1
-        const pdfDoc = {
-            numPages,
-            getPage: () =>
-                Promise.resolve({
-                    getTextContent: () =>
-                        Promise.resolve({
-                            items: KNOWN_PDF_TEXT.split(' ').map((str) => ({
-                                str,
-                            })),
-                        }),
-                }),
-        }
-        return { promise: Promise.resolve(pdfDoc) }
+        const totalPages = pageMatch ? parseInt(pageMatch[1], 10) : 1
+        return { text: KNOWN_PDF_TEXT, totalPages }
     },
 }))
 

@@ -11,29 +11,24 @@ import 'server-only'
 
 import mammoth from 'mammoth'
 
-import { getPdfjs, PDFJS_NODE_SAFE_OPTIONS } from '@/lib/pdf-chord-extractor'
-
-// === F4B-DIAG temp instrumentation (Phase 6a — remove before final ship) ===
-// Logs Node version + DOMMatrix / Path2D / ImageData global state at the
-// moment this module is first imported in the Vercel runtime. Captures
-// whether the env is missing the polyfills pdfjs-dist v5 needs at module-
-// load time, BEFORE any getDocument({disableWorker:true}) flag is consulted.
-let _f4bModuleLoadLogged = false
-function _f4bLogModuleLoad() {
-    if (_f4bModuleLoadLogged) return
-    _f4bModuleLoadLogged = true
-    console.error('[F4B-DIAG] extract-document module-load', {
-        node: process.version,
-        hasDOMMatrix: typeof (globalThis as { DOMMatrix?: unknown }).DOMMatrix !== 'undefined',
-        hasPath2D: typeof (globalThis as { Path2D?: unknown }).Path2D !== 'undefined',
-        hasImageData: typeof (globalThis as { ImageData?: unknown }).ImageData !== 'undefined',
-        hasOffscreenCanvas: typeof (globalThis as { OffscreenCanvas?: unknown }).OffscreenCanvas !== 'undefined',
-        runtime: process.env.NEXT_RUNTIME ?? 'unknown',
-        vercelRegion: process.env.VERCEL_REGION ?? 'unknown',
-    })
-}
-_f4bLogModuleLoad()
-// === /F4B-DIAG ===
+// f4-b-pdf-extractor-serverless-fix-v2 (Tier-2, 2026-05-26): swap pdfjs-dist
+// → unpdf for the text-extraction path. Phase 6a runtime evidence (Daniel
+// bearer @ 13:09Z) showed stage=`getPdfjs` — pdfjs-dist v5's
+// `legacy/build/pdf.mjs` constructs `new DOMMatrix()` during class /
+// prototype init at MODULE LOAD on Vercel serverless. That happens BEFORE
+// any `getDocument({disableWorker:true})` flag is consulted, so the v1
+// runtime-option fix (`e2271c02d` `PDFJS_NODE_SAFE_OPTIONS`) couldn't
+// reach it. unpdf bundles a pdfjs build with internal DOM polyfills
+// applied BEFORE module-load class init — designed for serverless Node.
+// Its `extractText` helper is a drop-in for our text-extraction path
+// (we only consume the joined plain-text body, never per-item positions).
+//
+// The chord-extractor path (`src/lib/pdf-chord-extractor.ts`'s
+// `extractChordsFromPdf` / `extractChordsFromPage`) still uses pdfjs-dist
+// for positional `transform`/`width`/`height` data; that path likely has
+// the same module-load DOMMatrix bug and is flagged as a separate
+// follow-up lane (probe `/api/library/detect-key` to confirm).
+import { extractText } from 'unpdf'
 
 export type DocumentFormat = 'docx' | 'pdf' | 'txt'
 
@@ -73,73 +68,31 @@ export function detectDocumentFormat(
     return null
 }
 
-/** Extract all text from a PDF buffer using the shared server-side pdfjs loader. */
+/**
+ * Extract all text from a PDF buffer via unpdf (serverless-safe pdfjs).
+ *
+ * unpdf's `extractText({mergePages:true})` returns `{ text, totalPages }`.
+ * totalPages lets us preserve the MAX_PDF_PAGES cap. The text is joined
+ * across pages with form-feeds, which we re-normalize to newlines so
+ * downstream consumers (the F4-B `searchable-text.ts` walker and the
+ * v70-05 Gemini structured extractor) see the same shape they got from
+ * the pdfjs path.
+ */
 async function extractPdfText(buffer: Buffer): Promise<string> {
-    // === F4B-DIAG temp instrumentation (Phase 6a — remove before final ship) ===
-    // Tags WHICH pdfjs lifecycle stage throws on Vercel: getPdfjs (load),
-    // getDocument (parse), getPage / getTextContent (per-page). Stack from
-    // each stage is captured and attached to the error message so the
-    // extractDocumentText catch block surfaces it through to the MCP envelope.
-    let _f4bStage = 'getPdfjs'
-    try {
-        const pdfjs = await getPdfjs()
-        // Read pdfjs.version defensively — vitest's strict mock in
-        // extract-document.test.ts doesn't define `version` and any access
-        // (incl. `in` operator) on the mock surface throws an error. Wrap
-        // in try/catch so the diagnostic stays log-only and never breaks
-        // production OR mocked-engine tests.
-        let pdfjsVersion = 'unknown'
-        try {
-            const v = (pdfjs as unknown as { version?: unknown }).version
-            if (typeof v === 'string') pdfjsVersion = v
-        } catch {
-            // mocked-engine strict surface — ignore
-        }
-        console.error('[F4B-DIAG] extractPdfText pre-getDocument', {
-            pdfjsVersion,
-            node: process.version,
-            hasDOMMatrix: typeof (globalThis as { DOMMatrix?: unknown }).DOMMatrix !== 'undefined',
-            optionsKeys: Object.keys(PDFJS_NODE_SAFE_OPTIONS),
-            bufLen: buffer.length,
-        })
+    const data = new Uint8Array(buffer)
+    const { text, totalPages } = await extractText(data, { mergePages: true })
 
-        _f4bStage = 'getDocument'
-        const pdfDoc = await pdfjs.getDocument({
-            ...PDFJS_NODE_SAFE_OPTIONS,
-            data: new Uint8Array(buffer),
-        }).promise
-
-        if (pdfDoc.numPages > MAX_PDF_PAGES) {
-            throw new Error(`PDF exceeds the ${MAX_PDF_PAGES}-page limit.`)
-        }
-
-        const pages: string[] = []
-        for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-            _f4bStage = `getPage(${pageNum})`
-            const page = await pdfDoc.getPage(pageNum)
-            _f4bStage = `getTextContent(${pageNum})`
-            const textContent = await page.getTextContent()
-            const pageText = textContent.items
-                .map((item) => ('str' in item ? item.str : ''))
-                .join(' ')
-            pages.push(pageText)
-        }
-        return pages.join('\n')
-    } catch (err) {
-        console.error('[F4B-DIAG] extractPdfText FAIL', {
-            stage: _f4bStage,
-            message: err instanceof Error ? err.message : String(err),
-            stack: err instanceof Error ? err.stack : undefined,
-            errName: err instanceof Error ? err.name : typeof err,
-        })
-        // Re-throw with stage prefix so the extractDocumentText catch surfaces it
-        // to the MCP backfill envelope (visible in supervisor's dry-run output).
-        const msg = err instanceof Error ? err.message : String(err)
-        const wrapped = new Error(`[F4B-DIAG stage=${_f4bStage}] ${msg}`)
-        if (err instanceof Error && err.stack) wrapped.stack = err.stack
-        throw wrapped
+    // extractDocumentText's try/catch converts this throw into a typed
+    // { ok: false, reason: 'extraction_failed' } result.
+    if (totalPages > MAX_PDF_PAGES) {
+        throw new Error(`PDF exceeds the ${MAX_PDF_PAGES}-page limit.`)
     }
-    // === /F4B-DIAG ===
+
+    // `extractText({mergePages:true})` types `text` as `string` per unpdf's
+    // README, but be defensive: if it ever returns string[] (mergePages:false
+    // contract) we join with newlines.
+    const joined = Array.isArray(text) ? text.join('\n') : text
+    return joined
 }
 
 /**
