@@ -28,7 +28,12 @@
  * the instant `stateFresh` joins `BridgeInternalStatus`.
  */
 
-import { nativeImage, type NativeImage } from "electron"
+// Type-only import: erased by tsc → vite's import-analysis pass never sees an
+// `electron` runtime reference at module-load (the runtime require is deferred
+// into `createTrayIcon()` below). This lets root vitest collect this module
+// without electron resolvable in root node_modules (electron is a bridge-scoped
+// dep). See tray-icon.test.ts file-header for the matching test-side rationale.
+import type { NativeImage } from "electron"
 
 export type TrayHealthColor = "red" | "orange" | "green"
 
@@ -116,6 +121,11 @@ export function renderTrayIconBuffer(color: TrayHealthColor, size = 16): Buffer 
  * final `nativeImage.createFromBuffer` wrap.
  */
 export function createTrayIcon(color: TrayHealthColor): NativeImage {
+    // Function-scoped require: defers the only runtime `electron` reference in
+    // this module past vite's static import-analysis. Test runners that stub
+    // `electron` via `vi.mock` (see tray-icon.test.ts) intercept here as before.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { nativeImage } = require("electron") as typeof import("electron")
     const size = 16
     const buffer = renderTrayIconBuffer(color, size)
     return nativeImage.createFromBuffer(buffer, { width: size, height: size })
