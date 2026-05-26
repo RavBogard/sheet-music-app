@@ -27,6 +27,7 @@ import { Check, ChevronDown, ChevronRight, Loader2, RefreshCw, Sparkles, X } fro
 import { toast } from "sonner"
 
 import { apiFetch } from "@/lib/api-client"
+import { formatError } from "@/lib/format-error"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,8 +73,7 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
             const { ok: _ok, ...payload } = body
             setData(payload as ReviewQueueResult)
         } catch (err) {
-            const message = err instanceof Error ? err.message : String(err)
-            setError(`Queue refresh failed: ${message}`)
+            setError(`Queue refresh failed: ${formatError(err)}`)
         } finally {
             setLoading(false)
         }
@@ -162,8 +162,7 @@ export default function LibraryReviewClient({ initial, initialError }: Props) {
                 await refetch()
                 return true
             } catch (err) {
-                const message = err instanceof Error ? err.message : String(err)
-                toast.error(`Action failed: ${message}`)
+                toast.error(`Action failed: ${formatError(err)}`)
                 return false
             } finally {
                 setBusy(false)

@@ -6,6 +6,7 @@ import { Loader2, RefreshCw } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useMusicStore } from '@/lib/store'
+import { formatError } from '@/lib/format-error'
 import { PDFPageWrapper } from './PDFPageWrapper'
 import { ChartSuggestions } from './ChartSuggestions'
 
@@ -201,7 +202,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
         } catch (e) {
             // Abort is an expected outcome on unmount / URL change — swallow quietly.
             if (e instanceof Error && e.name === 'AbortError') return
-            const msg = e instanceof Error ? e.message : String(e)
+            const msg = formatError(e)
             // F-07 dedup: only log once per unique (url, msg) pair so a
             // broken-bond chart click + Retry doesn't write 4 Sentry rows
             // for the same failure. Dedup state is module-scoped above so

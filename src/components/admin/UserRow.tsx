@@ -1,6 +1,7 @@
 "use client"
 
 import { UserProfile, UserRole, updateUserRole } from "@/lib/users-firebase"
+import { formatError } from "@/lib/format-error"
 import { ROLE_LABELS } from "@/lib/roles"
 import { toDate } from "@/lib/firestore-helpers"
 import { notifyRoleChanged } from "@/lib/notification-store"
@@ -96,7 +97,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
             logger.error(e)
             // v4.4 U-001: surface the real reason so admins can act (permission
             // denied? network? server error?).
-            const msg = e instanceof Error ? e.message : String(e)
+            const msg = formatError(e)
             toast.error(`Couldn't update role: ${msg}`)
         } finally {
             setLoading(false)
@@ -123,7 +124,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
         } catch (e) {
             logger.error(e)
             // v4.4 U-002: surface the real failure reason
-            const msg = e instanceof Error ? e.message : String(e)
+            const msg = formatError(e)
             toast.error(`Couldn't update sound engineer flag: ${msg}`)
         } finally {
             setSoundEngLoading(false)
@@ -157,7 +158,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
         } catch (e) {
             logger.error(e)
             // v4.4 U-003: surface the real failure
-            const msg = e instanceof Error ? e.message : String(e)
+            const msg = formatError(e)
             toast.error(`Couldn't remove user: ${msg}`)
         } finally {
             setDeleteLoading(false)

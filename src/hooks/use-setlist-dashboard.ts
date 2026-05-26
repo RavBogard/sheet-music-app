@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react"
+import { formatError } from "@/lib/format-error"
 import { useRouter } from "next/navigation"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { SERVICE_TYPE_LABELS } from "@/components/setlist/SetlistCards"
@@ -266,7 +267,7 @@ export function useSetlistDashboard({
             setSelectedSetlistForTransfer(null)
         } catch (err: unknown) {
             if (!isMountedRef.current) return
-            toast.error(`Transfer Failed: ${err instanceof Error ? err.message : "Unknown error"}`)
+            toast.error(`Transfer Failed: ${formatError(err)}`)
         } finally {
             if (isMountedRef.current) setTransferring(false)
         }

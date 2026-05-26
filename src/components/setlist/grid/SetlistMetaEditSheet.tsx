@@ -5,6 +5,8 @@ import { Calendar as CalendarIcon, Check, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
+import { formatError } from '@/lib/format-error'
+
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Input } from '@/components/ui/input'
@@ -156,11 +158,7 @@ export function SetlistMetaEditSheet({
             toast.success('Setlist details updated')
             onOpenChange(false)
         } catch (err) {
-            toast.error(
-                err instanceof Error
-                    ? `Couldn't save setlist details: ${err.message}`
-                    : "Couldn't save setlist details",
-            )
+            toast.error(`Couldn't save setlist details: ${formatError(err)}`)
             // Keep the sheet open so the edits aren't lost — Daniel can retry.
         } finally {
             setSaving(false)

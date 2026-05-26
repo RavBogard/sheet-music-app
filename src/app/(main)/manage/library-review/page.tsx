@@ -13,6 +13,7 @@ import { readReviewQueue } from "@/lib/library/review-queue"
 import { getServerUser } from "@/lib/server-auth"
 
 import LibraryReviewClient from "./LibraryReviewClient"
+import { formatError } from "@/lib/format-error"
 
 export const dynamic = "force-dynamic"
 
@@ -40,7 +41,7 @@ export default async function LibraryReviewPage() {
         const initial = await readReviewQueue(getFirestore())
         return <LibraryReviewClient initial={initial} initialError={null} />
     } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
+        const message = formatError(err)
         return (
             <LibraryReviewClient
                 initial={null}

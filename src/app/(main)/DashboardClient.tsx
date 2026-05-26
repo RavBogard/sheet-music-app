@@ -14,6 +14,7 @@ import { NextServiceCard } from "@/components/home/NextServiceCard"
 import { CompactSetlistRow } from "@/components/dashboard"
 import { OnboardingCard } from "@/components/dashboard/OnboardingCard"
 import { cn } from "@/lib/utils"
+import { formatError } from "@/lib/format-error"
 
 // Dashboard complexity components -- commented out per Phase 3 Plan 03 redesign.
 // Retained for potential use in Phase 4 (template management) or Phase 6 (notifications).
@@ -192,7 +193,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                 console.info(`[Dashboard] subscription fired: ${setlists.length} setlists, fromCache=${fromCache}`)
             },
             (err) => {
-                const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+                const msg = err instanceof Error ? `${err.name}: ${err.message}` : formatError(err)
                 // eslint-disable-next-line no-console
                 console.error('[Dashboard] subscription error:', msg, err)
                 setSubscriptionError(msg)

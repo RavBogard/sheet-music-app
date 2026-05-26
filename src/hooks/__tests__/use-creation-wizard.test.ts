@@ -225,6 +225,23 @@ describe('useCreationWizard (single-step)', () => {
     expect(result.current.creating).toBe(false)
   })
 
+  it('create() unwraps a thrown RichErrorEnvelope (no "[object Object]")', async () => {
+    // Regression for the `error-object-stringification` lane — before
+    // formatError, a rejected envelope object hit `String(err)` → "[object Object]".
+    mockCreateSetlist.mockRejectedValue({
+      ok: false,
+      error: { code: 422, machine_code: 'stale_version', message: 'Setlist was modified' },
+    })
+    const { result } = renderHook(() => useCreationWizard())
+    act(() => { result.current.setName('Envelope Fail Setlist') })
+
+    await act(async () => { await result.current.create() })
+
+    expect(toast.error).toHaveBeenCalledWith('Failed to create setlist: Setlist was modified', undefined)
+    const errorCall = (toast.error as unknown as { mock: { calls: unknown[][] } }).mock.calls.at(-1)
+    expect(JSON.stringify(errorCall)).not.toContain('[object Object]')
+  })
+
   it('reset() clears all state', async () => {
     const { result } = renderHook(() => useCreationWizard())
     act(() => {

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
+import { formatError } from "@/lib/format-error"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { createSetlistService, type Setlist } from "@/lib/setlist-firebase"
@@ -261,7 +262,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
         } catch (err) {
             // v51-h01: surface the underlying SDK error so Daniel-on-phone can
             // see WHY a save failed (was: bare catch swallowed the message).
-            const detail = err instanceof Error ? err.message : String(err ?? '')
+            const detail = formatError(err)
             toast.error(
                 detail ? `Failed to create setlist: ${detail}` : 'Failed to create setlist',
                 loadingId ? { id: loadingId } : undefined,
