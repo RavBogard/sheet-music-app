@@ -13,6 +13,23 @@
  *  5. Return structured chord positions per page
  */
 
+// chord-extractor-serverless-fix (Tier-1, 2026-05-26): install the
+// `globalThis.DOMMatrix` polyfill BEFORE the dynamic `pdfjs-dist`
+// import runs. pdfjs-dist v5's `legacy/build/pdf.mjs` constructs
+// `new DOMMatrix()` at MODULE LOAD time (~L15620 in v5.4.296); Vercel
+// serverless Node lacks the global, and pdfjs's own
+// `require("@napi-rs/canvas")` polyfill silently fails when that
+// package isn't installed. The companion lane
+// `f4-b-pdf-extractor-serverless-fix-v2` (`6d4c37042b`) swapped
+// `src/lib/setlist-import/extract-document.ts` to `unpdf` for the
+// text-extraction path; THIS surface stays on pdfjs because the
+// chord extractor needs the positional `transform`/`width`/`height`
+// data that unpdf's `getDocumentProxy().getPage().getTextContent()`
+// throws DataCloneError on (postMessage worker-transfer issue on
+// serverless Node). Side-effect import — runs once at module-eval,
+// idempotent inside the polyfill module.
+import './pdf/dommatrix-polyfill'
+
 // ─── Types ───────────────────────────────────────────────────────────
 
 export interface ExtractedChord {
