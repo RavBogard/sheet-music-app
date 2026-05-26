@@ -9,6 +9,7 @@ import {
     dedupeLibraryIndex,
     backfillLibraryIndex,
 } from "./library"
+import { searchChartText } from "./chart-text-search"
 import { reconcileLibrary } from "./reconcile-library"
 import { salvageChartBytes } from "./salvage-chart-bytes"
 import { backfillHealMetadata } from "./backfill-heal-metadata"
@@ -492,6 +493,53 @@ export function registerReadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await getCongregationContext(uidFrom(extra), args)),
+    )
+
+    // F4 (2026-05-26): Tier-1 full-text-ish search across PERSISTED chart-
+    // text surfaces. Three scopes — metadata (title + nameLower +
+    // aiSuggestion.{suggested_title, suggested_lead, suggested_tags,
+    // concerns}), chords (collectionGroup('chordData') on chords[].text),
+    // and all (union). Lyric search intentionally absent — lyrics aren't
+    // persisted; queued as a Tier-2 pipeline-mod follow-on per supervisor
+    // ratify msg 2026-05-26T03:30Z. Replaces the silent-broken
+    // `/api/library/search-content` endpoint (deleted in this lane).
+    server.registerTool(
+        "search_chart_text",
+        {
+            description:
+                "Search inside the PERSISTED text content of charts in the library — useful when title alone doesn't surface the chart, e.g. you remember David annotated Rabbi Daniel as the lead, or that the AI flagged a concern, or the chart uses a `Bm7b5`. Three scopes: `metadata` (default — searches `library_index/{id}.{title, nameLower}` + `aiSuggestion.{suggested_title, suggested_lead, suggested_tags, concerns}`); `chords` (searches the per-page chord-symbol cache at `chordData/page_<n>.chords[].text`/`.originalText` — finds charts by chord progression, e.g. query 'Bm7b5'); `all` (union). Returns `{ok, scope, query, results:[{chartId, title, field, page?, snippet?, matchPosition}], totalScanned, capped}`. **Important limitation:** lyric search is NOT supported — lyrics are not persisted to Firestore today, only chord symbols and metadata are. A future pipeline-mod lane (`f4-lyric-search-persistence-mod`) is queued for when Daniel ratifies persisting extracted PDF text. Substring scan is case-insensitive; results limited to top `limit` (default 20, max 100); the underlying Firestore scan is capped at 1000 docs per scope. `capped: true` means more matches likely exist beyond what's returned — narrow the query or widen `limit`. Role gate: admin or band_leader only (full-text-ish search is an authoring surface). Use `search_library` for the role-ungated title+key+bpm search the wider band has access to.",
+            inputSchema: {
+                query: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Substring to search for, case-insensitive. Required and non-empty.",
+                    ),
+                limit: z
+                    .number()
+                    .int()
+                    .positive()
+                    .max(100)
+                    .optional()
+                    .describe(
+                        "Maximum results to return (default 20, max 100). When more matches exist, the response carries `capped: true`.",
+                    ),
+                includeSnippets: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true (default), each result carries a `snippet` field with ±40 characters of context around the match. Pass false to omit snippets (smaller payload).",
+                    ),
+                scope: z
+                    .enum(["metadata", "chords", "all"])
+                    .optional()
+                    .describe(
+                        "Search scope. 'metadata' (default) — library_index titles + aiSuggestion fields. 'chords' — per-page chord-symbol cache (find by chord progression). 'all' — union.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await searchChartText(uidFrom(extra), args)),
     )
 }
 
