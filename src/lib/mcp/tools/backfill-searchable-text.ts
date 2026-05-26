@@ -117,8 +117,15 @@ export interface HealRow {
 export interface SkippedRow {
     fileId: string
     title: string | null
-    reason: SkipReason
-    /** Extractor / Storage error message when reason is *_failed. */
+    /**
+     * Why this row was skipped. Field name mirrors the extractor's
+     * `ExtractSearchableTextResult.skipReason` discriminator for consistent
+     * client-side parsing across the dryRun response — readers that walk
+     * `skipped.rows[].skipReason` work uniformly with extractor-side
+     * `extracted.skipReason` for the same row class.
+     */
+    skipReason: SkipReason
+    /** Extractor / Storage error message when skipReason is *_failed. */
     detail?: string
 }
 
@@ -318,7 +325,7 @@ export async function backfillSearchableText(
                 skippedRows.push({
                     fileId: c.fileId,
                     title: c.title,
-                    reason: "already_populated",
+                    skipReason: "already_populated",
                 })
                 continue
             }
@@ -341,7 +348,7 @@ export async function backfillSearchableText(
                     skippedRows.push({
                         fileId: c.fileId,
                         title: c.title,
-                        reason:
+                        skipReason:
                             downloaded.reason === "not_found"
                                 ? "storage_missing"
                                 : "storage_download_failed",
@@ -372,7 +379,7 @@ export async function backfillSearchableText(
 
                 if (extracted.text === null) {
                     const sub = extracted.skipReason ?? "no_text"
-                    const reason: SkipReason =
+                    const skipReason: SkipReason =
                         sub === "image"
                             ? "extraction_skipped_image"
                             : sub === "audio"
@@ -383,7 +390,7 @@ export async function backfillSearchableText(
                     skippedRows.push({
                         fileId: c.fileId,
                         title: c.title,
-                        reason,
+                        skipReason,
                     })
                     continue
                 }

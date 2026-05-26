@@ -333,7 +333,7 @@ describe("backfill_searchable_text write semantics", () => {
 // ─── (5/6) Idempotency + overwrite ──────────────────────────────────────────
 
 describe("backfill_searchable_text idempotency", () => {
-    it("skips already-populated rows with reason:already_populated (targeted branch)", async () => {
+    it("skips already-populated rows with skipReason:already_populated (targeted branch)", async () => {
         resetFixture({
             libraryRows: [
                 row("f1", { searchableText: "pre-existing body" }),
@@ -347,7 +347,7 @@ describe("backfill_searchable_text idempotency", () => {
         expect(r.ok).toBe(true)
         if (!r.ok) return
         expect(r.heal.count).toBe(0)
-        expect(r.skipped.rows[0]?.reason).toBe("already_populated")
+        expect(r.skipped.rows[0]?.skipReason).toBe("already_populated")
         expect(r.committed).toBe(0)
         expect(updateMock).not.toHaveBeenCalled()
     })
@@ -458,7 +458,7 @@ describe("backfill_searchable_text skip taxonomy", () => {
         const r = await backfillSearchableText("admin-uid", { dryRun: true })
         expect(r.ok).toBe(true)
         if (!r.ok) return
-        expect(r.skipped.rows[0]?.reason).toBe("extraction_skipped_image")
+        expect(r.skipped.rows[0]?.skipReason).toBe("extraction_skipped_image")
     })
 
     it("maps extraction skip:audio to extraction_skipped_audio", async () => {
@@ -473,7 +473,7 @@ describe("backfill_searchable_text skip taxonomy", () => {
         const r = await backfillSearchableText("admin-uid", { dryRun: true })
         expect(r.ok).toBe(true)
         if (!r.ok) return
-        expect(r.skipped.rows[0]?.reason).toBe("extraction_skipped_audio")
+        expect(r.skipped.rows[0]?.skipReason).toBe("extraction_skipped_audio")
     })
 
     it("maps storage not_found to storage_missing", async () => {
@@ -483,7 +483,7 @@ describe("backfill_searchable_text skip taxonomy", () => {
         const r = await backfillSearchableText("admin-uid", { dryRun: true })
         expect(r.ok).toBe(true)
         if (!r.ok) return
-        expect(r.skipped.rows[0]?.reason).toBe("storage_missing")
+        expect(r.skipped.rows[0]?.skipReason).toBe("storage_missing")
     })
 
     it("maps storage network failure to storage_download_failed", async () => {
@@ -493,7 +493,7 @@ describe("backfill_searchable_text skip taxonomy", () => {
         const r = await backfillSearchableText("admin-uid", { dryRun: true })
         expect(r.ok).toBe(true)
         if (!r.ok) return
-        expect(r.skipped.rows[0]?.reason).toBe("storage_download_failed")
+        expect(r.skipped.rows[0]?.skipReason).toBe("storage_download_failed")
         expect(r.skipped.rows[0]?.detail).toContain("network down")
     })
 })
@@ -562,6 +562,6 @@ describe("backfill_searchable_text empty-extraction", () => {
         const r = await backfillSearchableText("admin-uid", { dryRun: true })
         expect(r.ok).toBe(true)
         if (!r.ok) return
-        expect(r.skipped.rows[0]?.reason).toBe("extraction_skipped_no_text")
+        expect(r.skipped.rows[0]?.skipReason).toBe("extraction_skipped_no_text")
     })
 })
