@@ -650,3 +650,263 @@ describe("search_chart_text error handling", () => {
         ).toBe("internal_error")
     })
 })
+
+// ─── (11) Lyrics scope — f4-lyric-search-persistence-mod ───────────────────
+//
+// Lyrics scope reads `library_index/{id}.searchableText` — the lowercased +
+// whitespace-normalized chart body persisted at PCU write time. Tests below
+// are PURELY ADDITIVE — the 23 F4-A tests above stay byte-identical.
+
+describe("search_chart_text lyrics scope", () => {
+    it("matches against searchableText body", async () => {
+        resetFixture({
+            libraryIndex: [
+                {
+                    id: "f1",
+                    data: {
+                        title: "Hineh Ma Tov",
+                        // searchableText is stored lowercased at write time.
+                        searchableText:
+                            "hineh ma tov uma na'im shevet achim gam yachad",
+                    },
+                },
+                {
+                    id: "f2",
+                    data: {
+                        title: "Adon Olam",
+                        searchableText: "adon olam asher malach b'terem",
+                    },
+                },
+            ],
+        })
+        const r = await searchChartText("admin-uid", {
+            query: "shevet achim",
+            scope: "lyrics",
+        })
+        ok(r)
+        expect(r.results).toHaveLength(1)
+        expect(r.results[0]).toMatchObject({
+            chartId: "f1",
+            title: "Hineh Ma Tov",
+            field: "searchableText",
+        })
+    })
+
+    it("does NOT match against title/nameLower/aiSuggestion when scope is 'lyrics' only", async () => {
+        resetFixture({
+            libraryIndex: [
+                {
+                    id: "f1",
+                    data: {
+                        title: "Hineh Ma Tov", // would match if scope were 'metadata'
+                        nameLower: "hineh_ma_tov.pdf",
+                        aiSuggestion: { suggested_lead: "Daniel Hineh" },
+                        // No searchableText — should NOT match in 'lyrics' scope.
+                    },
+                },
+            ],
+        })
+        const r = await searchChartText("admin-uid", {
+            query: "Hineh",
+            scope: "lyrics",
+        })
+        ok(r)
+        expect(r.results).toEqual([])
+        // Confirm the metadata path didn't smuggle a hit through.
+        expect(r.totalScanned).toBe(1)
+    })
+
+    it("skips rows missing searchableText cleanly (pre-backfill historical rows)", async () => {
+        resetFixture({
+            libraryIndex: [
+                { id: "f_legacy", data: { title: "Old Chart" /* no searchableText */ } },
+                {
+                    id: "f_new",
+                    data: {
+                        title: "New Chart",
+                        searchableText: "verse one of the new chart",
+                    },
+                },
+            ],
+        })
+        const r = await searchChartText("admin-uid", {
+            query: "verse one",
+            scope: "lyrics",
+        })
+        ok(r)
+        expect(r.results).toHaveLength(1)
+        expect(r.results[0].chartId).toBe("f_new")
+        // Both rows still get scanned (the loop visits every doc) — totalScanned
+        // counts visits, not matches.
+        expect(r.totalScanned).toBe(2)
+    })
+
+    it("skips rows with empty-string searchableText cleanly", async () => {
+        resetFixture({
+            libraryIndex: [
+                { id: "f1", data: { title: "Empty Body", searchableText: "" } },
+            ],
+        })
+        const r = await searchChartText("admin-uid", {
+            query: "anything",
+            scope: "lyrics",
+        })
+        ok(r)
+        expect(r.results).toEqual([])
+    })
+
+    it("builds a snippet from the searchableText body around the match", async () => {
+        const body =
+            "intro and a long preamble before the actual NEEDLE we want and then a long tail"
+        resetFixture({
+            libraryIndex: [
+                { id: "f1", data: { title: "Test", searchableText: body } },
+            ],
+        })
+        const r = await searchChartText("admin-uid", {
+            query: "needle",
+            scope: "lyrics",
+        })
+        ok(r)
+        expect(r.results[0].snippet).toBeDefined()
+        expect(r.results[0].snippet!.toLowerCase()).toContain("needle")
+    })
+
+    it("'all' scope returns lyric hit when only searchableText matches", async () => {
+        resetFixture({
+            libraryIndex: [
+                {
+                    id: "f_meta",
+                    data: { title: "Adon Olam" },
+                },
+                {
+                    id: "f_lyric",
+                    data: {
+                        title: "Hineh Ma Tov",
+                        searchableText:
+                            "hineh ma tov uma na'im shevet achim gam yachad",
+                    },
+                },
+            ],
+        })
+        const r = await searchChartText("admin-uid", {
+            query: "shevet achim",
+            scope: "all",
+        })
+        ok(r)
+        expect(r.results).toHaveLength(1)
+        expect(r.results[0].chartId).toBe("f_lyric")
+        expect(r.results[0].field).toBe("searchableText")
+    })
+
+    it("'all' scope: metadata field takes priority over searchableText for same chart", async () => {
+        // Both title AND searchableText contain "Adon"; the union loop should
+        // pick the metadata candidate first (priority order: title > nameLower
+        // > aiSug > searchableText). One hit per chart.
+        resetFixture({
+            libraryIndex: [
+                {
+                    id: "f1",
+                    data: {
+                        title: "Adon Olam",
+                        searchableText:
+                            "adon olam asher malach b'terem kol y'tsir",
+                    },
+                },
+            ],
+        })
+        const r = await searchChartText("admin-uid", {
+            query: "Adon",
+            scope: "all",
+        })
+        ok(r)
+        expect(r.results).toHaveLength(1)
+        expect(r.results[0].field).toBe("title")
+    })
+
+    it("'all' scope: one chart-per-result; lyric and metadata matches on different charts both appear", async () => {
+        resetFixture({
+            libraryIndex: [
+                { id: "fA", data: { title: "Adon Olam" } },
+                {
+                    id: "fB",
+                    data: {
+                        title: "Some Unrelated Title",
+                        searchableText: "the second verse mentions adon directly",
+                    },
+                },
+            ],
+        })
+        const r = await searchChartText("admin-uid", {
+            query: "adon",
+            scope: "all",
+        })
+        ok(r)
+        const ids = new Set(r.results.map((x) => x.chartId))
+        expect(ids.has("fA")).toBe(true)
+        expect(ids.has("fB")).toBe(true)
+        expect(r.results.find((x) => x.chartId === "fA")?.field).toBe("title")
+        expect(r.results.find((x) => x.chartId === "fB")?.field).toBe(
+            "searchableText",
+        )
+    })
+
+    it("'lyrics' scope respects SCAN_CAP → capped:true", async () => {
+        resetFixture({
+            libraryIndex: [
+                {
+                    id: "f1",
+                    data: { title: "x", searchableText: "needle present" },
+                },
+            ],
+            libraryIndexCap: 1000, // SCAN_CAP
+        })
+        const r = await searchChartText("admin-uid", {
+            query: "needle",
+            scope: "lyrics",
+        })
+        ok(r)
+        expect(r.results).toHaveLength(1)
+        expect(r.capped).toBe(true)
+    })
+
+    it("'lyrics' scope: limit truncation → capped:true", async () => {
+        const rows = Array.from({ length: 5 }, (_, i) => ({
+            id: `f${i}`,
+            data: {
+                title: `T${i}`,
+                searchableText: `searchable body needle ${i}`,
+            },
+        }))
+        resetFixture({ libraryIndex: rows })
+        const r = await searchChartText("admin-uid", {
+            query: "needle",
+            scope: "lyrics",
+            limit: 2,
+        })
+        ok(r)
+        expect(r.results).toHaveLength(2)
+        expect(r.capped).toBe(true)
+    })
+
+    it("'lyrics' scope does NOT run the chordData collectionGroup scan", async () => {
+        resetFixture({
+            libraryIndex: [
+                {
+                    id: "f1",
+                    data: { title: "x", searchableText: "body" },
+                },
+            ],
+            // Chord scan would throw — but we should never reach it under
+            // scope:'lyrics' so the result still succeeds.
+            chordDataThrows: true,
+        })
+        const r = await searchChartText("admin-uid", {
+            query: "body",
+            scope: "lyrics",
+        })
+        ok(r)
+        expect(r.results).toHaveLength(1)
+        expect(collectionGroupGetMock).not.toHaveBeenCalled()
+    })
+})

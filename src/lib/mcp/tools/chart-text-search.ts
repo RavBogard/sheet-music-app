@@ -8,10 +8,11 @@ import {
 import { loadUploader } from "./uploader-roles"
 
 /**
- * `search_chart_text` — Tier-1 F4 lane (Option A+ ratify 2026-05-26).
+ * `search_chart_text` — F4 Tier-1 (Option A+ ratify 2026-05-26) +
+ * F4 Tier-2 `f4-lyric-search-persistence-mod` (2026-05-26).
  *
  * Substring search across the PERSISTED text surfaces of the chart
- * library. Three scopes:
+ * library. Four scopes:
  *
  *  - `metadata` (default): `library_index/{id}.{title, nameLower}` plus
  *    `aiSuggestion.{suggested_title, suggested_lead, suggested_tags,
@@ -21,13 +22,15 @@ import { loadUploader } from "./uploader-roles"
  *    `chords[].text` / `chords[].originalText`. Enables "find every
  *    chart that uses Bm7b5 somewhere" — a surface Daniel + David don't
  *    have today.
- *  - `all`: union of the two.
- *
- * Lyric search is intentionally NOT supported: lyrics are never persisted
- * as a Firestore field. See `.paul/research/f4-chart-search-mcp/FINDINGS.md`
- * for the full persistence map. Adding lyric-body persistence is a
- * pipeline-mod Tier-2 follow-on (`f4-lyric-search-persistence-mod`
- * queued by supervisor 2026-05-26).
+ *  - `lyrics`: substring scan on `library_index/{id}.searchableText` —
+ *    the lowercased + whitespace-normalized chart body extracted at PCU
+ *    write time (PDF via pdfjs, TXT verbatim, MusicXML via the
+ *    `<lyric><text>` walker). Lets Daniel find a chart by remembered
+ *    lyric text ("the chart with 'hineh ma tov'"). Rows without
+ *    `searchableText` (image/audio/skipped/failed at extraction, or
+ *    pre-backfill historical rows) skip cleanly. `backfill_searchable_text`
+ *    heals historical rows.
+ *  - `all`: union of all three.
  *
  * This tool also closes the silent-broken `/api/library/search-content`
  * HTTP endpoint — that route attempted the same `collectionGroup`
@@ -53,7 +56,7 @@ export const MAX_LIMIT = 100
 /** Snippet context window: ±N characters around the match. */
 export const SNIPPET_PADDING = 40
 
-export type SearchScope = "metadata" | "chords" | "all"
+export type SearchScope = "metadata" | "chords" | "lyrics" | "all"
 
 export interface SearchChartTextArgs {
     query: string
@@ -76,6 +79,7 @@ export interface SearchChartTextMatch {
         | "aiSuggestion.suggested_tags"
         | "aiSuggestion.concerns"
         | "chordData"
+        | "searchableText"
     /** 1-indexed page number — populated only for `chordData` matches. */
     page?: number
     /** ±SNIPPET_PADDING chars around the match. Present when includeSnippets !== false. */
@@ -140,8 +144,18 @@ export async function searchChartText(
     let scanCapped = false
     let limitTruncated = false
 
-    // ─── metadata scope ─────────────────────────────────────────────
-    if (scope === "metadata" || scope === "all") {
+    // ─── metadata + lyrics scopes (shared library_index scan) ───────
+    //
+    // Both scopes scan the same `library_index` collection — metadata
+    // matches against title/nameLower/aiSuggestion.* fields; lyrics
+    // matches against the `searchableText` body persisted at PCU write
+    // time by the f4-lyric-search-persistence-mod lane. Unified into ONE
+    // loop so the `all` scope doesn't pay for two full collection
+    // scans, and so a chart matched in metadata isn't re-scanned for
+    // lyrics (priority order: title > nameLower > aiSug > searchableText).
+    const includeMetadata = scope === "metadata" || scope === "all"
+    const includeLyrics = scope === "lyrics" || scope === "all"
+    if (includeMetadata || includeLyrics) {
         try {
             const snap = await db
                 .collection("library_index")
@@ -161,31 +175,43 @@ export async function searchChartText(
                     field: SearchChartTextMatch["field"]
                     text: string
                 }> = []
-                pushString(candidates, "title", data.title)
-                pushString(candidates, "nameLower", data.nameLower)
-                const aiSug = data.aiSuggestion as
-                    | Record<string, unknown>
-                    | undefined
-                if (aiSug && typeof aiSug === "object") {
+                if (includeMetadata) {
+                    pushString(candidates, "title", data.title)
+                    pushString(candidates, "nameLower", data.nameLower)
+                    const aiSug = data.aiSuggestion as
+                        | Record<string, unknown>
+                        | undefined
+                    if (aiSug && typeof aiSug === "object") {
+                        pushString(
+                            candidates,
+                            "aiSuggestion.suggested_title",
+                            aiSug.suggested_title,
+                        )
+                        pushString(
+                            candidates,
+                            "aiSuggestion.suggested_lead",
+                            aiSug.suggested_lead,
+                        )
+                        pushStringArray(
+                            candidates,
+                            "aiSuggestion.suggested_tags",
+                            aiSug.suggested_tags,
+                        )
+                        pushStringArray(
+                            candidates,
+                            "aiSuggestion.concerns",
+                            aiSug.concerns,
+                        )
+                    }
+                }
+                if (includeLyrics) {
+                    // searchableText is already lowercase + normalized at
+                    // write time, so the indexOf below sees a clean haystack
+                    // (no per-call toLowerCase() needed on the field).
                     pushString(
                         candidates,
-                        "aiSuggestion.suggested_title",
-                        aiSug.suggested_title,
-                    )
-                    pushString(
-                        candidates,
-                        "aiSuggestion.suggested_lead",
-                        aiSug.suggested_lead,
-                    )
-                    pushStringArray(
-                        candidates,
-                        "aiSuggestion.suggested_tags",
-                        aiSug.suggested_tags,
-                    )
-                    pushStringArray(
-                        candidates,
-                        "aiSuggestion.concerns",
-                        aiSug.concerns,
+                        "searchableText",
+                        data.searchableText,
                     )
                 }
                 for (const c of candidates) {
@@ -212,10 +238,10 @@ export async function searchChartText(
             }
         } catch (err) {
             const message = err instanceof Error ? err.message : "Unknown error"
-            logger.warn(`[search_chart_text] metadata scan failed: ${message}`)
+            logger.warn(`[search_chart_text] library_index scan failed: ${message}`)
             return richError(
                 "internal_error",
-                `Metadata search failed: ${message}`,
+                `Search failed: ${message}`,
                 { scope, query },
             )
         }
