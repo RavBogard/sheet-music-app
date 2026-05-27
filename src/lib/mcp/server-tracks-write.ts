@@ -15,6 +15,19 @@ import {
 } from "@/lib/mcp/error-envelopes"
 
 /**
+ * F-015: Strip null bytes and C0/C1 control characters from user-supplied
+ * freeform string fields (notes, title, leadMusician, referenceLink) before
+ * writing to Firestore. Printable Unicode (including Hebrew, emoji) is
+ * preserved; only invisible/control characters that can corrupt display or
+ * break downstream parsers are removed. Applied at the MCP boundary.
+ */
+export function sanitizeFreeformString(s: string): string {
+    // Remove null bytes and ASCII C0 controls (0x00–0x1F) except tab (0x09),
+    // LF (0x0A), CR (0x0D), and DEL (0x7F) + C1 controls (0x80–0x9F).
+    return s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\x80-\x9F]/g, "")
+}
+
+/**
  * W-04 Plan 01: every write path stamps `version: increment(1)` +
  * `lastModifiedAt` on the setlist + affected tracks. Plan 02 swaps to
  * read-check-write transactions for stale-version rejection; Plan 01
@@ -180,19 +193,20 @@ export async function addTrack(
         setlistId: input.setlistId,
         order: insertAt,
         type: input.type,
-        title: input.title,
+        title: sanitizeFreeformString(input.title),
         updatedAt: FieldValue.serverTimestamp(),
         ...initialVersionFields(), // W-04 Plan 01: new track → version 1
     }
-    if (input.key !== undefined) payload.key = input.key
+    if (input.key !== undefined) payload.key = sanitizeFreeformString(input.key)
+    // bpm is numeric (coder-3 f017) — not a freeform string, no sanitization.
     if (input.bpm !== undefined) payload.bpm = input.bpm
-    if (input.leadMusician !== undefined) payload.leadMusician = input.leadMusician
-    if (input.referenceLink !== undefined) payload.referenceLink = input.referenceLink
+    if (input.leadMusician !== undefined) payload.leadMusician = sanitizeFreeformString(input.leadMusician)
+    if (input.referenceLink !== undefined) payload.referenceLink = sanitizeFreeformString(input.referenceLink)
     if (input.songId !== undefined) payload.songId = input.songId
     if (input.fileId !== undefined) payload.fileId = input.fileId
     if (input.fileName !== undefined) payload.fileName = input.fileName
     if (input.mimeType !== undefined) payload.mimeType = input.mimeType
-    if (input.notes !== undefined) payload.notes = input.notes
+    if (input.notes !== undefined) payload.notes = sanitizeFreeformString(input.notes)
     batch.set(db.collection("tracks").doc(trackId), payload)
 
     // W-04 Plan 01: shifted siblings get their version bumped too — their
@@ -434,6 +448,7 @@ export async function updateTrack(
     // yet. We mutate `fieldUpdate` in place as we resolve songLookup-driven
     // side-effects so the tx body can apply it verbatim.
     const wantsUnbond = patch.songId === null
+    const FREEFORM_FIELDS = new Set(["key", "leadMusician", "title", "notes", "referenceLink"])
     const fieldUpdate: Record<string, unknown> = {}
     let changed = false
     for (const k of UPDATABLE_FIELDS) {
@@ -441,7 +456,9 @@ export async function updateTrack(
         // Unbond (`songId: null`) is applied via FieldValue.delete() below —
         // never write a literal null into the row's songId.
         if (k === "songId" && patch.songId === null) continue
-        fieldUpdate[k] = patch[k]
+        // F-015: strip control chars/null bytes from user freeform string fields.
+        const v = patch[k]
+        fieldUpdate[k] = FREEFORM_FIELDS.has(k) && typeof v === "string" ? sanitizeFreeformString(v) : v
         changed = true
     }
     if (wantsUnbond) {
@@ -1134,6 +1151,7 @@ export async function bulkUpdateTracks(
                     updatedAt: FieldValue.serverTimestamp(),
                     ...versionBumpFields(), // W-04 Plan 01
                 }
+                const BULK_FREEFORM = new Set(["key", "leadMusician", "title", "notes", "referenceLink"])
                 for (const k of UPDATABLE_FIELDS) {
                     if (entry.patch[k] === undefined) continue
                     if (k === "songId" && entry.patch.songId === null) {
@@ -1143,7 +1161,9 @@ export async function bulkUpdateTracks(
                         update.fileName = FieldValue.delete()
                         continue
                     }
-                    update[k] = entry.patch[k]
+                    // F-015: strip control chars/null bytes from freeform strings.
+                    const bv = entry.patch[k]
+                    update[k] = BULK_FREEFORM.has(k) && typeof bv === "string" ? sanitizeFreeformString(bv) : bv
                 }
                 const existingRow = byId.get(entry.trackId) as
                     | Record<string, unknown>

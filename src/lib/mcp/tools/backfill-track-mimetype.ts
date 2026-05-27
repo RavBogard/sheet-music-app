@@ -123,6 +123,13 @@ export interface BackfillTrackMimetypeResult {
     committed: number
     /** Set when a real run omitted `force` — plan returned, no writes. */
     refused?: boolean
+    /**
+     * F-008: set true when the caller passed `force:true` but the call still
+     * dry-ran — `dryRun` defaults true, so `{force:true}` alone NEVER commits.
+     * Flags the force flag as a no-op so the caller doesn't assume a write
+     * landed; re-call with `{dryRun:false, force:true}` to actually heal.
+     */
+    forceWithoutCommit?: boolean
 }
 
 function rowReport<T>(rows: T[]): RowReport<T> {
@@ -259,6 +266,9 @@ export async function backfillTrackMimetype(
                 skipped: rowReport(skippedRows),
                 dryRun: true,
                 committed: 0,
+                // F-008: `{force:true}` without `dryRun:false` is a no-op —
+                // flag it so the caller knows force didn't write anything.
+                ...(force ? { forceWithoutCommit: true } : {}),
             }
         }
 

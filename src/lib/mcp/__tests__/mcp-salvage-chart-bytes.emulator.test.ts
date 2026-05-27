@@ -228,10 +228,12 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         })
         expect("ok" in r && r.ok === false).toBe(true)
         if ("ok" in r && r.ok === false) {
-            expect((r.error as { machine_code: string }).machine_code).toBe(
-                "row_not_found",
-            )
+            const errObj = r.error as { machine_code: string; message: string }
+            expect(errObj.machine_code).toBe("row_not_found")
             expect((r as { fileId?: string }).fileId).toBe("upload-nonexistent")
+            // F-007: prose must be caller-friendly — no internal collection-path leak.
+            expect(errObj.message).not.toContain("library_index/")
+            expect(errObj.message).toContain("catalog")
         }
     })
 
@@ -251,9 +253,15 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         if ("ok" in r && r.ok === false) {
             // Cycle-5 C5D-011 — client-precondition refusals land at 422
             // (Unprocessable Entity), reserving 500 for genuine server faults.
-            const errObj = r.error as { machine_code: string; code: number }
+            const errObj = r.error as {
+                machine_code: string
+                code: number
+                message: string
+            }
             expect(errObj.machine_code).toBe("no_source_available")
             expect(errObj.code).toBe(422)
+            // F-007: prose must not leak the internal library_index/{id} path.
+            expect(errObj.message).not.toContain("library_index/")
         }
     })
 

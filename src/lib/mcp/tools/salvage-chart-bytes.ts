@@ -327,7 +327,7 @@ export async function salvageChartBytes(
         if (!rowSnap.exists) {
             return richError(
                 "row_not_found",
-                `library_index/${fileId} does not exist.`,
+                `Chart '${fileId}' was not found in the catalog.`,
                 { fileId },
                 "Verify the fileId via reconcile_library({dryRun:true}).orphan.rows[] or list_library.",
             )
@@ -356,7 +356,7 @@ export async function salvageChartBytes(
         } else {
             return richError(
                 "no_source_available",
-                `library_index/${fileId} has no driveFileId and no sourceUrl was provided. Cannot resolve bytes.`,
+                `Chart '${fileId}' has no Drive source on record and no sourceUrl was provided, so its bytes cannot be located.`,
                 { fileId, hasDriveFileId: false, errorCode: 422 },
                 "Pass an explicit sourceUrl (https URL serving the chart bytes).",
             )

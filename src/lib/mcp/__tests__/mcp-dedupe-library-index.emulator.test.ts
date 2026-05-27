@@ -132,7 +132,9 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         expect(r.dryRun).toBe(true)
         expect(r.scanned).toBe(2)
         expect(r.groupsFound).toBe(1)
-        expect(r.duplicatesMarked).toBe(1)
+        // F-005: dryRun reports the PLAN size in wouldMark but commits nothing.
+        expect(r.wouldMark).toBe(1)
+        expect(r.committed).toBe(0)
         expect(r.songsMirrored).toBe(0)
 
         // Verify NO writes happened.
@@ -166,7 +168,8 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
         expect(r.groupsFound).toBe(1)
-        expect(r.duplicatesMarked).toBe(1)
+        expect(r.wouldMark).toBe(1)
+        expect(r.committed).toBe(1) // F-005: real-run commits the plan
         expect(r.groups[0].kept.fileId).toBe("ana-clean") // earliest uploadedAt
         expect(r.groups[0].duplicates.map((d) => d.fileId)).toEqual([
             "ana-leading-space",
@@ -272,13 +275,14 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
 
         const first = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in first) throw new Error(typeof first.error === "string" ? first.error : JSON.stringify(first.error))
-        expect(first.duplicatesMarked).toBe(1)
+        expect(first.committed).toBe(1)
 
         const second = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in second) throw new Error(typeof second.error === "string" ? second.error : JSON.stringify(second.error))
         expect(second.scanned).toBe(1) // already-duplicate row excluded
         expect(second.groupsFound).toBe(0)
-        expect(second.duplicatesMarked).toBe(0)
+        expect(second.wouldMark).toBe(0)
+        expect(second.committed).toBe(0)
         expect(second.groups).toEqual([])
     })
 
@@ -291,7 +295,8 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
         expect(r.scanned).toBe(3)
         expect(r.groupsFound).toBe(0)
-        expect(r.duplicatesMarked).toBe(0)
+        expect(r.wouldMark).toBe(0)
+        expect(r.committed).toBe(0)
     })
 
     it("excludes archived rows from grouping", async () => {
@@ -349,7 +354,9 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         expect(r.refused).toBe(true)
         expect(r.dryRun).toBe(false)
         expect(r.groupsFound).toBe(1) // plan still surfaces
-        expect(r.duplicatesMarked).toBe(1)
+        // F-005: refused real-run surfaces the plan in wouldMark, commits nothing.
+        expect(r.wouldMark).toBe(1)
+        expect(r.committed).toBe(0)
         expect(r.songsMirrored).toBe(0)
 
         // No writes happened — the loser is still unmarked.
@@ -425,7 +432,8 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         if ("error" in withFuzzy) throw new Error(typeof withFuzzy.error === "string" ? withFuzzy.error : JSON.stringify(withFuzzy.error))
         expect(withFuzzy.groupsFound).toBe(1)
         expect(withFuzzy.threshold).toBe(0.8)
-        expect(withFuzzy.duplicatesMarked).toBe(1)
+        expect(withFuzzy.wouldMark).toBe(1) // F-005: dryRun plan size
+        expect(withFuzzy.committed).toBe(0)
         expect(withFuzzy.groups[0].kept.fileId).toBe("hash-a") // earliest
         expect(withFuzzy.groups[0].duplicates.map((d) => d.fileId)).toEqual([
             "hash-b",

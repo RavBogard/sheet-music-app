@@ -46,6 +46,7 @@ import {
     recomputeSetlistTrackCount,
 } from "./setlist-write"
 import { cloneSetlist } from "./clone-setlist"
+import { isErrorEnvelope } from "./result-iserror"
 import {
     listTemplates,
     getTemplate,
@@ -280,13 +281,19 @@ function normalizeErrorEnvelope(data: unknown): unknown {
 }
 
 function jsonResult(data: unknown) {
+    const normalized = normalizeErrorEnvelope(data)
+    // F-001: propagate isError on runtime-error path per [[feedback_mcp_validation_shape]].
+    // Zod failures already set isError via the SDK remap; ok:false runtime
+    // rejections must too. Decision extracted to ./result-iserror for testing.
+    const isErrorResult = isErrorEnvelope(normalized)
     return {
         content: [
             {
                 type: "text" as const,
-                text: JSON.stringify(normalizeErrorEnvelope(data), null, 2),
+                text: JSON.stringify(normalized, null, 2),
             },
         ],
+        ...(isErrorResult ? { isError: true as const } : {}),
     }
 }
 
@@ -1458,7 +1465,7 @@ export function registerWriteTools(server: McpServer): void {
         "dedupe_library",
         {
             description:
-                "Admin-only one-shot idempotent library_index hygiene sweep — finds active rows whose normalized names collide (e.g. `\" Ana B_Koach.pdf\"` leading-space dupes; or two uploads of the same chart name) and marks all-but-one `status: \"duplicate\"`. Canonical row is the one with the earliest `uploadedAt` (fileId asc as tiebreak); losers also get the status mirrored into `songs/{id}` when that doc exists. searchLibrary + list_library hide `status: \"duplicate\"` from their default surface, so the practical effect is collapsing dupes to one visible row without deleting any bytes. Already-`duplicate` and `archived` rows are skipped → safe to re-run. CYCLE-3 MCP-001 (Daniel-ratified 2026-05-18T18:45Z): F-05 contract aligned with reconcile/backfill — dryRun-default; a real run without `force: true` returns the plan with `refused: true` and no writes. Optional `forceScore` (0..1) enables an ADDITIONAL fuzzy-similarity grouping pass on top of the default exact-normalize: Levenshtein-similarity > threshold clusters rows that survived exact-grouping. PER-CALL TUNING ONLY — the standing 0.85 strict threshold elsewhere in the codebase is unchanged. Omitting `forceScore` preserves the historical exact-normalize-only behavior. Returns `{scanned, groupsFound, duplicatesMarked, songsMirrored, groups[], dryRun, refused?, threshold, coverage:{total,eligible,scanned,filteredOut}}`.",
+                "Admin-only one-shot idempotent library_index hygiene sweep — finds active rows whose normalized names collide (e.g. `\" Ana B_Koach.pdf\"` leading-space dupes; or two uploads of the same chart name) and marks all-but-one `status: \"duplicate\"`. Canonical row is the one with the earliest `uploadedAt` (fileId asc as tiebreak); losers also get the status mirrored into `songs/{id}` when that doc exists. searchLibrary + list_library hide `status: \"duplicate\"` from their default surface, so the practical effect is collapsing dupes to one visible row without deleting any bytes. Already-`duplicate` and `archived` rows are skipped → safe to re-run. CYCLE-3 MCP-001 (Daniel-ratified 2026-05-18T18:45Z): F-05 contract aligned with reconcile/backfill — dryRun-default; a real run without `force: true` returns the plan with `refused: true` and no writes. Optional `forceScore` (0..1) enables an ADDITIONAL fuzzy-similarity grouping pass on top of the default exact-normalize: Levenshtein-similarity > threshold clusters rows that survived exact-grouping. PER-CALL TUNING ONLY — the standing 0.85 strict threshold elsewhere in the codebase is unchanged. Omitting `forceScore` preserves the historical exact-normalize-only behavior. Returns `{scanned, groupsFound, wouldMark, committed, songsMirrored, groups[], dryRun, refused?, threshold, coverage:{total,eligible,scanned,filteredOut}}` — `wouldMark` is the planned loser count (surfaced on every path); `committed` is the count actually marked this call (0 on dryRun/refused, equals `wouldMark` on a committed real-run).",
             inputSchema: {
                 dryRun: z
                     .boolean()
@@ -1623,7 +1630,7 @@ export function registerWriteTools(server: McpServer): void {
         "backfill_track_mimetype",
         {
             description:
-                "Trusted-leader (admin / band_leader) one-shot hygiene backfill — heal the denormalized `mimeType` cache on LEGACY setlist `tracks` rows ([[project_track_mimetype_gotcha]], cowork #2/#7). The in-app chart picker and (since 2026-05-20) the MCP bind path both stamp `mimeType` onto a track from its bonded `library_index/{fileId}` row, and Perform's viewer routing (queue-utils.toQueueItem) keys on it — so a scraped/text/image chart bonded BEFORE those fixes carries no `mimeType`, renders as the wrong 'sub-attached doc' / broken-PDF until re-bonded. This walks every `tracks` row that is bonded (`fileId` present) but missing `mimeType` and stamps the value from the bonded library_index entry (same source the live bind paths read). Does NOT touch the bond (`fileId`) — only the denormalized render-routing field. `dryRun` defaults TRUE (F-05): returns the full would-change report (counts + per-row before/after) WITHOUT writing. A real run (`dryRun:false`) still requires `force:true` or it returns the plan with `refused:true` and no writes. Idempotent — a second force-run finds zero candidates. Returns `{ok:true, scannedTracks, bondedTracks, alreadyHealthy, heal:{count,rows:[{trackId,setlistId,title,fileId,before:null,after}],truncated}, skipped:{count,rows:[{trackId,fileId,reason}],truncated}, dryRun, committed, refused?}` (rows capped at 500 with `truncated:true`). `skipped` rows are bonded-but-missing-mime tracks whose library_index entry is absent (`library_entry_not_found`) or itself carries no mimeType (`library_entry_no_mimetype`) — those need a chart heal, not a metadata stamp. ★ Run dryRun-first; the apply is a single-owner step.",
+                "Trusted-leader (admin / band_leader) one-shot hygiene backfill — heal the denormalized `mimeType` cache on LEGACY setlist `tracks` rows ([[project_track_mimetype_gotcha]], cowork #2/#7). The in-app chart picker and (since 2026-05-20) the MCP bind path both stamp `mimeType` onto a track from its bonded `library_index/{fileId}` row, and Perform's viewer routing (queue-utils.toQueueItem) keys on it — so a scraped/text/image chart bonded BEFORE those fixes carries no `mimeType`, renders as the wrong 'sub-attached doc' / broken-PDF until re-bonded. This walks every `tracks` row that is bonded (`fileId` present) but missing `mimeType` and stamps the value from the bonded library_index entry (same source the live bind paths read). Does NOT touch the bond (`fileId`) — only the denormalized render-routing field. `dryRun` defaults TRUE (F-05): returns the full would-change report (counts + per-row before/after) WITHOUT writing. A real run (`dryRun:false`) still requires `force:true` or it returns the plan with `refused:true` and no writes. Idempotent — a second force-run finds zero candidates. Returns `{ok:true, scannedTracks, bondedTracks, alreadyHealthy, heal:{count,rows:[{trackId,setlistId,title,fileId,before:null,after}],truncated}, skipped:{count,rows:[{trackId,fileId,reason}],truncated}, dryRun, committed, refused?, forceWithoutCommit?}` (rows capped at 500 with `truncated:true`). NOTE: `force:true` WITHOUT `dryRun:false` still dry-runs (dryRun defaults true) and returns `forceWithoutCommit:true, committed:0` so you know no write landed — pair `dryRun:false, force:true` to actually heal. `skipped` rows are bonded-but-missing-mime tracks whose library_index entry is absent (`library_entry_not_found`) or itself carries no mimeType (`library_entry_no_mimetype`) — those need a chart heal, not a metadata stamp. ★ Run dryRun-first; the apply is a single-owner step.",
             inputSchema: {
                 dryRun: z
                     .boolean()

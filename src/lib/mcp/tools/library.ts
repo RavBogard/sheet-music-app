@@ -956,9 +956,21 @@ export interface DedupeLibraryIndexResult {
     scanned: number
     /** Number of dupe groups (groups with >=2 rows). */
     groupsFound: number
-    /** Total loser rows marked. */
-    duplicatesMarked: number
-    /** Of the marked losers, how many had a matching `songs/{id}` mirror updated. */
+    /**
+     * F-005: planned loser count — how many rows WOULD be marked `duplicate`.
+     * Populated on every path (dryRun, refused, and committed) so the caller
+     * always sees the plan size without inferring it from `groups`.
+     */
+    wouldMark: number
+    /**
+     * F-005: loser rows ACTUALLY marked `duplicate` this call. 0 on dryRun
+     * and on a refused real-run (no `force`); equals `wouldMark` on a
+     * committed real-run. Replaces the old `duplicatesMarked`, which reported
+     * the plan size even when nothing was written (refused/dryRun) — actively
+     * misleading the caller into thinking dedupe had happened.
+     */
+    committed: number
+    /** Of the committed losers, how many had a matching `songs/{id}` mirror updated. */
     songsMirrored: number
     /** Per-group plan (for audit / dryRun). */
     groups: DedupeGroup[]
@@ -1270,7 +1282,8 @@ export async function dedupeLibraryIndex(
             return {
                 scanned: candidates.length,
                 groupsFound: dupeGroups.length,
-                duplicatesMarked: losers.length,
+                wouldMark: losers.length,
+                committed: 0,
                 songsMirrored: 0,
                 groups: dupeGroups,
                 dryRun: false,
@@ -1325,7 +1338,10 @@ export async function dedupeLibraryIndex(
         return {
             scanned: candidates.length,
             groupsFound: dupeGroups.length,
-            duplicatesMarked: losers.length,
+            wouldMark: losers.length,
+            // F-005: on dryRun nothing is written; on a committed real-run
+            // every loser is marked, so committed == wouldMark.
+            committed: dryRun ? 0 : losers.length,
             songsMirrored,
             groups: dupeGroups,
             dryRun,

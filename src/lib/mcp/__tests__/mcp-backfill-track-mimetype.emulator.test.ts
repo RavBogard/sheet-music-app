@@ -154,6 +154,28 @@ describe("MCP backfill_track_mimetype — cowork #2/#7 (emulator)", () => {
         expect(heal.mimeType).toBeUndefined()
     })
 
+    it("F-008 — force:true without dryRun:false silently dry-runs → forceWithoutCommit flag", async () => {
+        await seedTrack("t-heal", { setlistId: "s1", fileId: "upload-text" })
+        await seedIndex("upload-text", { mimeType: "text/plain" })
+
+        // {force:true} alone — dryRun defaults TRUE, so this is a no-op write.
+        const r = await backfillTrackMimetype(ADMIN, { force: true })
+        if (!r.ok) throw new Error("expected ok:true")
+        expect(r.dryRun).toBe(true)
+        expect(r.committed).toBe(0)
+        expect(r.forceWithoutCommit).toBe(true)
+
+        // Nothing written despite the force flag.
+        const heal =
+            (await db().collection("tracks").doc("t-heal").get()).data() ?? {}
+        expect(heal.mimeType).toBeUndefined()
+
+        // A plain dryRun (no force) must NOT carry the flag.
+        const plain = await backfillTrackMimetype(ADMIN, {})
+        if (!plain.ok) throw new Error("expected ok:true")
+        expect(plain.forceWithoutCommit).toBeUndefined()
+    })
+
     it("refuses a real run without force — returns plan with refused:true, no writes", async () => {
         await seedTrack("t-heal", { setlistId: "s1", fileId: "upload-text" })
         await seedIndex("upload-text", { mimeType: "text/plain" })
