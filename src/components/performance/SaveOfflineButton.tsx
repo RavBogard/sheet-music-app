@@ -192,13 +192,14 @@ export function SaveOfflineButton({ fileIds }: Props) {
     const partial = !saving && readyCount > 0 && !allReady
 
     // Color + icon BOTH carry the state (never color-only).
-    // Light-mode shades (green-700 / amber-700) for WCAG AA contrast on the
+    // Light-mode shades (green-800 / amber-800) for WCAG AA contrast on the
     // light-theme header glass — green-400 / amber-400 fail there (axe color-
-    // contrast, 1.6:1 on the "Saved" state). Dark mode keeps the vivid shades.
+    // contrast, 1.6:1 on the "Saved" state); green-700 was marginal (4.46:1 on
+    // prod), green-800 clears at 6.43:1. Dark mode keeps the vivid shades.
     const accent = allReady
-        ? "text-green-700 dark:text-green-400"
+        ? "text-green-800 dark:text-green-400"
         : partial
-          ? "text-amber-700 dark:text-amber-400"
+          ? "text-amber-800 dark:text-amber-400"
           : "text-muted-foreground"
 
     const label = saving
