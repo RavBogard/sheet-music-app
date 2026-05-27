@@ -123,6 +123,8 @@ export interface AddTrackInput {
     type: "song" | "header" | "reading" | "prayer" | "transition" | "note"
     title: string
     key?: string
+    /** F-017 — denormed tempo (catalog default or caller override). */
+    bpm?: number
     leadMusician?: string
     referenceLink?: string
     /** Library song id this row references, if any. */
@@ -183,6 +185,7 @@ export async function addTrack(
         ...initialVersionFields(), // W-04 Plan 01: new track → version 1
     }
     if (input.key !== undefined) payload.key = input.key
+    if (input.bpm !== undefined) payload.bpm = input.bpm
     if (input.leadMusician !== undefined) payload.leadMusician = input.leadMusician
     if (input.referenceLink !== undefined) payload.referenceLink = input.referenceLink
     if (input.songId !== undefined) payload.songId = input.songId
@@ -335,6 +338,8 @@ export async function reorderTracks(
  */
 export interface UpdateTrackPatch {
     key?: string
+    /** F-017 — settable tempo (parity with key). */
+    bpm?: number
     leadMusician?: string
     title?: string
     notes?: string
@@ -349,6 +354,7 @@ export interface UpdateTrackPatch {
 /** Field patches that survive into the Firestore update (not the reorder). */
 const UPDATABLE_FIELDS = [
     "key",
+    "bpm",
     "leadMusician",
     "title",
     "notes",
@@ -1318,6 +1324,8 @@ export interface BulkAddTrackInput {
     type?: "song" | "header" | "reading" | "prayer" | "transition" | "note"
     title?: string
     key?: string
+    /** F-017 — denormed tempo (catalog default or caller override). */
+    bpm?: number
     leadMusician?: string
     referenceLink?: string
     songId?: string
@@ -1371,7 +1379,13 @@ export async function bulkAddTracks(
     options: BulkAddTracksOptions = {},
     resolveSongTitle?: (
         songId: string,
-    ) => Promise<{ title: string; key?: string; lead?: string; fileName?: string } | null>,
+    ) => Promise<{
+        title: string
+        key?: string
+        bpm?: number
+        lead?: string
+        fileName?: string
+    } | null>,
 ): Promise<
     | {
           ok: true
@@ -1419,6 +1433,7 @@ export async function bulkAddTracks(
 
         let title = row.title
         let key = row.key
+        let bpm = row.bpm
         let leadMusician = row.leadMusician
         let fileId = row.fileId
         let fileName = row.fileName
@@ -1443,6 +1458,7 @@ export async function bulkAddTracks(
             }
             title = title ?? song.title
             key = key ?? song.key
+            bpm = bpm ?? song.bpm
             leadMusician = leadMusician ?? song.lead
             fileName = fileName ?? song.fileName
             fileId = fileId ?? row.songId
@@ -1470,6 +1486,7 @@ export async function bulkAddTracks(
             ...initialVersionFields(), // W-04 Plan 01: new track → version 1
         }
         if (key !== undefined) payload.key = key
+        if (bpm !== undefined) payload.bpm = bpm
         if (leadMusician !== undefined) payload.leadMusician = leadMusician
         if (row.referenceLink !== undefined) payload.referenceLink = row.referenceLink
         if (row.songId !== undefined) payload.songId = row.songId
@@ -1561,6 +1578,7 @@ export async function bulkAddTracks(
                     type: (p.payload.type as BulkAddTrackInput["type"]) ?? "song",
                     title: p.payload.title as string,
                     key: p.payload.key as string | undefined,
+                    bpm: p.payload.bpm as number | undefined,
                     leadMusician: p.payload.leadMusician as string | undefined,
                     referenceLink: p.payload.referenceLink as string | undefined,
                     songId: p.payload.songId as string | undefined,

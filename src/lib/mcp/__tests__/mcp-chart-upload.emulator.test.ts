@@ -94,6 +94,7 @@ import {
     deleteChart,
     importChartFromDrive,
 } from "../tools/library-upload"
+import { getSongById } from "../server-songs"
 
 /**
  * MCP chart-upload tools against the Firebase emulator.
@@ -231,6 +232,35 @@ describe("MCP chart-upload tools (emulator)", () => {
             expect.any(Buffer),
             "application/pdf",
         )
+    })
+
+    it("upload_chart with key/bpm reaches songs.defaults AND get_song — no update_song needed (F-016)", async () => {
+        // F-016: pre-fix, upload-supplied key/bpm landed in library_index ONLY,
+        // so get_song / search_library (which read songs/{id}.defaults) never saw
+        // them until an update_song rewrite. The songDefaults write-through now
+        // mirrors them onto songs.defaults at upload time.
+        const result = (await uploadChart(ADMIN, {
+            title: "Hashkivenu",
+            fileBase64: b64("%PDF-1.4 fake"),
+            mimeType: "application/pdf",
+            key: "Am",
+            bpm: 72,
+        })) as { ok: true; fileId: string }
+        expect(result.ok).toBe(true)
+
+        // Write side: songs.defaults carries key/bpm (the gap F-016 closed) AND
+        // library_index keeps them (existing behavior, unregressed).
+        const song = (await db().collection("songs").doc(result.fileId).get()).data()!
+        expect(song.defaults).toMatchObject({ key: "Am", bpm: 72 })
+        const idx = (
+            await db().collection("library_index").doc(result.fileId).get()
+        ).data()!
+        expect(idx).toMatchObject({ key: "Am", bpm: 72 })
+
+        // Read side: get_song (→ toSongRecord over songs.defaults) returns them
+        // WITHOUT any update_song call.
+        const fetched = await getSongById(result.fileId)
+        expect(fetched).toMatchObject({ key: "Am", bpm: 72 })
     })
 
     it("respects the collection arg and defaults to 'uploads'", async () => {

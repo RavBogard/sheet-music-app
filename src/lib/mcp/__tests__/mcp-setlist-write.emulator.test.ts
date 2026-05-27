@@ -91,7 +91,10 @@ describe("MCP setlist write tools (emulator)", () => {
         await db()
             .collection("songs")
             .doc("song-oseh")
-            .set({ title: "Oseh Shalom.pdf", defaults: { key: "G", lead: "Cantor" } })
+            .set({
+                title: "Oseh Shalom.pdf",
+                defaults: { key: "G", bpm: 84, lead: "Cantor" },
+            })
     })
 
     afterAll(async () => {
@@ -275,6 +278,8 @@ describe("MCP setlist write tools (emulator)", () => {
         expect(result.track.setlistId).toBe(id)
         expect(result.track.title).toBe("Oseh Shalom")
         expect(result.track.key).toBe("G")
+        // F-017 — bpm now denorms onto the bonded row alongside key.
+        expect(result.track.bpm).toBe(84)
         expect(result.track.leadMusician).toBe("Cantor")
         expect(result.track.fileId).toBe("song-oseh")
         expect(result.track.fileName).toBe("Oseh Shalom.pdf")
@@ -323,9 +328,36 @@ describe("MCP setlist write tools (emulator)", () => {
         const [row] = await tracksOf(id)
         expect(row.title).toBe("Oseh Shalom") // file extension stripped
         expect(row.key).toBe("G")
+        expect(row.bpm).toBe(84) // F-017 — tempo denormed from catalog
         expect(row.leadMusician).toBe("Cantor")
         expect(row.songId).toBe("song-oseh")
         expect(row.type).toBe("song")
+    })
+
+    it("add_track_to_setlist heals key+bpm from library_index for an uploaded-only song (F-016/F-017)", async () => {
+        // The weekly Bar Mitzvah class: a chart uploaded via upload_chart before
+        // the songDefaults write-through landed has songs/{id} with NO defaults;
+        // its key/bpm live only in library_index. getSongById's fallback should
+        // surface them so the bonded row carries key+bpm without an update_song.
+        const songId = "song-uploadonly-f017"
+        await db()
+            .collection("songs")
+            .doc(songId)
+            .set({ title: "Niggun.pdf", status: "active" }) // no defaults
+        await db()
+            .collection("library_index")
+            .doc(songId)
+            .set({ name: "Niggun.pdf", key: "Am", bpm: 96, status: "active" })
+
+        const id = await newSetlist()
+        // force:true sidesteps the dead-bytes bind guard (no real Storage object
+        // in the emulator) — this test is about metadata denorm, not health.
+        await addTrackToSetlist(ADMIN, { setlistId: id, songId, force: true })
+
+        const [row] = await tracksOf(id)
+        expect(row.key).toBe("Am")
+        expect(row.bpm).toBe(96)
+        expect(row.songId).toBe(songId)
     })
 
     it("add_track_to_setlist bonds the song's chart — fileId/fileName on the row, fileIds on the parent", async () => {
@@ -1770,6 +1802,7 @@ describe("MCP setlist write tools (emulator)", () => {
             ).data()!
             expect(row.title).toBe("Oseh Shalom")
             expect(row.key).toBe("G")
+            expect(row.bpm).toBe(84) // F-017 — clone/bulk path denorms tempo too
             expect(row.leadMusician).toBe("Cantor")
             expect(row.fileId).toBe("song-oseh")
 

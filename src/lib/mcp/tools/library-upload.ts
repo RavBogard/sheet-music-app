@@ -155,6 +155,16 @@ export async function uploadChart(
         collection: args.collection,
         key: args.key,
         bpm: args.bpm,
+        // F-016 — also mirror key/bpm onto `songs/{id}.defaults` (not just
+        // `library_index`) so get_song / search_library / bonded-track
+        // resolution see them WITHOUT an update_song rewrite. PCU's
+        // songDefaults branch runs applySongMetadata post-batch (dual-write);
+        // top-level key/bpm above still seed library_index inline as before.
+        // [[project_catalog_dual_read_surfaces]]
+        songDefaults:
+            args.key !== undefined || args.bpm !== undefined
+                ? { key: args.key, bpm: args.bpm }
+                : undefined,
         tags: args.tags,
         uploaderUid: uid,
         uploaderEmail: roles.email,
@@ -573,6 +583,11 @@ export async function importChartFromDrive(
         collection: args.collection,
         key: args.key,
         bpm: args.bpm,
+        // F-016 — mirror key/bpm onto `songs/{id}.defaults` too (see upload_chart).
+        songDefaults:
+            args.key !== undefined || args.bpm !== undefined
+                ? { key: args.key, bpm: args.bpm }
+                : undefined,
         tags: args.tags,
         uploaderUid: uid,
         uploaderEmail: roles.email,

@@ -253,6 +253,8 @@ export interface AddTrackArgs {
     title?: string
     type?: "song" | "header" | "reading" | "prayer" | "transition" | "note"
     key?: string
+    /** F-017 — override the denormed tempo; otherwise inherited from the song. */
+    bpm?: number
     leadMusician?: string
     referenceLink?: string
     notes?: string
@@ -332,6 +334,7 @@ export async function addTrackToSetlist(
         songId: args.songId,
         title: args.title,
         key: args.key,
+        bpm: args.bpm,
         leadMusician: args.leadMusician,
     })
     if (resolved.songMissing) {
@@ -397,6 +400,7 @@ export async function addTrackToSetlist(
         type,
         title: resolved.title,
         key: resolved.key,
+        bpm: resolved.bpm,
         leadMusician: resolved.leadMusician,
         referenceLink: args.referenceLink,
         songId: args.songId,
@@ -531,7 +535,7 @@ export interface SwapChartArgs {
  * one call gives the agent a clean swap.
  *
  * Preserves: leadMusician, notes, referenceLink, position. Refreshes:
- * fileId, fileName, title, key (when syncMetadata = true, default).
+ * fileId, fileName, title, key, bpm (when syncMetadata = true, default).
  */
 export async function swapChart(
     uid: string,
@@ -588,6 +592,8 @@ export async function swapChart(
     if (syncMetadata) {
         patch.title = newSong.title
         if (newSong.key !== undefined) patch.key = newSong.key
+        // F-017 — sync tempo alongside key so a swap leaves a coherent row.
+        if (newSong.bpm !== undefined) patch.bpm = newSong.bpm
     }
 
     const result = await updateTrack(
@@ -741,6 +747,7 @@ export async function bulkAddSetlistTracks(
             return {
                 title: song.title,
                 key: song.key,
+                bpm: song.bpm,
                 lead: song.lead,
                 fileName: song.fileName,
             }

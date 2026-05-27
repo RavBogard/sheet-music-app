@@ -151,7 +151,31 @@ export async function getSongById(id: string): Promise<SongRecord | null> {
         const db = getFirestore()
         const doc = await db.collection("songs").doc(id).get()
         if (!doc.exists) return null
-        return toSongRecord(doc.id, doc.data() ?? {})
+        const rec = toSongRecord(doc.id, doc.data() ?? {})
+        // F-016/F-017 catalog dual-read heal: `songs/{id}.defaults` is sparsely
+        // populated — charts uploaded via upload_chart / import_chart_from_drive
+        // before the songDefaults write-through (F-016) landed carry key/bpm/lead
+        // in `library_index/{id}` ONLY. When the canonical doc (+ recent[]) lacks
+        // a field, fall back to library_index so a bonded track AND get_song see
+        // the value WITHOUT requiring an update_song rewrite — closes the weekly
+        // "bonded row pulls key:null" pain for the pre-existing rows too.
+        // [[project_catalog_dual_read_surfaces]]. One extra single-doc read on the
+        // get-by-id path only; getAllSongs (search_library) intentionally skips
+        // this to stay a single collection scan (new uploads carry songs.defaults
+        // via the F-016 write-through, so the list path needs no per-row join).
+        if (rec.key === undefined || rec.bpm === undefined || rec.lead === undefined) {
+            const idxSnap = await db.collection("library_index").doc(id).get()
+            if (idxSnap.exists) {
+                const idx = idxSnap.data() ?? {}
+                if (rec.key === undefined && typeof idx.key === "string")
+                    rec.key = idx.key
+                if (rec.bpm === undefined && typeof idx.bpm === "number")
+                    rec.bpm = idx.bpm
+                if (rec.lead === undefined && typeof idx.leadMusician === "string")
+                    rec.lead = idx.leadMusician
+            }
+        }
+        return rec
     } catch (error) {
         logger.warn("[mcp] song fetch failed:", error)
         return null
@@ -171,6 +195,8 @@ export interface TrackBondOverrides {
     songId?: string
     title?: string
     key?: string
+    /** F-017 — caller-supplied tempo; otherwise denormed from the catalog default. */
+    bpm?: number
     leadMusician?: string
 }
 
@@ -179,6 +205,8 @@ export interface ResolvedTrackBond {
     title: string | undefined
     /** Final key — caller override wins; otherwise catalog default key. */
     key: string | undefined
+    /** Final tempo — caller override wins; otherwise catalog default bpm (F-017). */
+    bpm: number | undefined
     /** Final vocal lead — caller override wins; otherwise catalog default lead. */
     leadMusician: string | undefined
     /** Cached chart filename from the catalog (never overridable). */
@@ -203,6 +231,7 @@ export async function resolveTrackBondDefaults(
 ): Promise<ResolvedTrackBond> {
     let title = overrides.title
     let key = overrides.key
+    let bpm = overrides.bpm
     let leadMusician = overrides.leadMusician
     let fileName: string | undefined
     let songMissing = false
@@ -213,9 +242,10 @@ export async function resolveTrackBondDefaults(
         } else {
             title = title ?? song.title
             key = key ?? song.key
+            bpm = bpm ?? song.bpm
             leadMusician = leadMusician ?? song.lead
             fileName = song.fileName
         }
     }
-    return { title, key, leadMusician, fileName, songMissing }
+    return { title, key, bpm, leadMusician, fileName, songMissing }
 }

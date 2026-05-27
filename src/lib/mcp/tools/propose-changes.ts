@@ -74,6 +74,8 @@ export interface ProposalInput {
     songId?: string
     title?: string
     key?: string
+    /** F-017 — tempo; denormed from the song catalog on a bond when omitted. */
+    bpm?: number
     leadMusician?: string
     referenceLink?: string
     notes?: string
@@ -307,6 +309,7 @@ export async function commitStagedChanges(
                 songId: p.songId,
                 title: p.title,
                 key: p.key,
+                bpm: p.bpm,
                 leadMusician: p.leadMusician,
             })
         }),
@@ -651,6 +654,7 @@ function buildFieldPatch(p: ProposalInput): Record<string, unknown> {
     const out: Record<string, unknown> = {}
     if (p.title !== undefined) out.title = p.title
     if (p.key !== undefined) out.key = p.key
+    if (p.bpm !== undefined) out.bpm = p.bpm
     if (p.leadMusician !== undefined) out.leadMusician = p.leadMusician
     if (p.notes !== undefined) out.notes = p.notes
     if (p.type !== undefined) out.type = p.type
@@ -677,6 +681,7 @@ function buildNewTrackPayload(
     // flag, so we don't re-block at commit time.
     const title = resolved?.title ?? p.title ?? ""
     const key = resolved?.key ?? p.key
+    const bpm = resolved?.bpm ?? p.bpm
     const leadMusician = resolved?.leadMusician ?? p.leadMusician
     const fileName = resolved?.fileName
 
@@ -689,6 +694,7 @@ function buildNewTrackPayload(
         lastModifiedAt: new Date().toISOString(),
     }
     if (key !== undefined) payload.key = key
+    if (bpm !== undefined) payload.bpm = bpm
     if (leadMusician !== undefined) payload.leadMusician = leadMusician
     if (p.notes !== undefined) payload.notes = p.notes
     if (p.referenceLink !== undefined) payload.referenceLink = p.referenceLink

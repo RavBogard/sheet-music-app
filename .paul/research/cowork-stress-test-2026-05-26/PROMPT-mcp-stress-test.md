@@ -175,9 +175,12 @@ the envelope:
 - `delete_setlist({ setlistId: "<fixture-id>" })` from C (musician) and D (member) →
   expect role-envelope rejection; quote exact text.
 - `assign_monitor_bus(...)` from C (musician) → expect role-envelope rejection.
-- `bridge_resync({})` from B (band_leader) → expect rejection (per
-  `bridge-recovery.ts:assertAdmin` — band_leader is NOT trusted-leader for the bridge
-  ops, despite being trusted-leader for the upload bypass).
+- `bridge_resync({})` from B (band_leader) → expect SUCCESS (per
+  `bridge-recovery.ts:assertEditor` — band_leader IS trusted-leader for the SAFE
+  bridge ops `bridge_resync`/`bridge_reconnect`/`bridge_selftest`. Only the
+  outage-causing `bridge_restart` (+ housekeeping/clear_pending) is admin-only via
+  `assertAdmin`. F-018 verdict 2026-05-27: the prior "expect rejection" here was a
+  STALE PROMPT, not a privilege-escalation bug — see `.coord/audits/cowork-mcp-2026-05-26-VERIFY.md`).
 - `mint_admin_bearer({ purpose: "test" })` from A (admin, but NOT root since A's bearer
   was itself minted) → expect rejection (depth-1 cap).
 
