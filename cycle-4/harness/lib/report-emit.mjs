@@ -295,6 +295,28 @@ export function extractMcpFindings(rows, opts = {}) {
     return out
 }
 
+/**
+ * Count MCP probe rows toward the report's `Probes executed` summary so a
+ * `--surface=mcp` run that passes clean doesn't say "0 probes executed" —
+ * the cowork report schema's `Probes executed` is the TOTAL probe count,
+ * not the Playwright-test count. (Lane A blind spot Lane C surfaces.)
+ *
+ * @param {Array<object>} rows
+ * @returns {{ probeCount:number, passed:number, failed:number }}
+ */
+export function countMcpProbes(rows) {
+    let probeCount = 0
+    let passed = 0
+    let failed = 0
+    for (const row of rows ?? []) {
+        if (row?.kind !== "probe:result") continue
+        probeCount++
+        if (row.ok) passed++
+        else failed++
+    }
+    return { probeCount, passed, failed }
+}
+
 /** Count findings by severity. */
 function severityCounts(findings) {
     const counts = Object.fromEntries(SEVERITY_ORDER.map((s) => [s, 0]))
@@ -471,6 +493,7 @@ export async function emitReport(args) {
     })
 
     let mcpFindings = []
+    let mcpStats = { probeCount: 0, passed: 0, failed: 0 }
     if (mcpJsonlPath) {
         try {
             const txt = await fs.readFile(mcpJsonlPath, "utf8")
@@ -480,10 +503,16 @@ export async function emitReport(args) {
                 .filter(Boolean)
                 .map((l) => JSON.parse(l))
             mcpFindings = extractMcpFindings(rows)
+            mcpStats = countMcpProbes(rows)
         } catch {
             // No MCP JSONL → web-only run; that's the v1 default. Stay quiet.
         }
     }
+    // Roll MCP probe counts into the unified stats so the report's
+    // "Probes executed" reflects the total surface count, not just Playwright.
+    stats.testCount = (stats.testCount ?? 0) + mcpStats.probeCount
+    stats.passed = (stats.passed ?? 0) + mcpStats.passed
+    stats.failed = (stats.failed ?? 0) + mcpStats.failed
 
     // Merge web + mcp, re-number deterministically (web first by sort, then mcp).
     const merged = [

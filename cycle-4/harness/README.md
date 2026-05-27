@@ -58,20 +58,31 @@ The orchestrator maps the cowork PROMPT categories to the existing specs
 | C | Live Director gesture | `live-director-gesture.spec.ts` |
 | D | Library workflow + chart search | `library-ipad`, `library-review-flow` |
 | E | Setlist editing + chart-bind picker | `chart-bind-ipad`, `chart-bind-picker`, `gig-packet-print`, `f023-live-rename` |
+| F | Authoring (Scraper / UploadDialog) | `authoring-stress.spec.ts` |
 | H | Offline behavior | `perform-ipad-offline`, `r1-offline-decisive`, `perform-ipad-pwa-fresh-install` |
+| I | Role-gate matrix (3-of-4 roles) | `role-gate.spec.ts`, `role-gate-matrix.spec.ts` |
+| J | Accessibility (axe-core sweep) | `axe-stress.spec.ts` |
 | K | Onboarding (QR / fresh device) | `onboarding-qr-ipad.spec.ts` |
 | L | Large-setlist stress | `stress-ipad.spec.ts` |
 | S | Smoke (fast public sanity) | `smoke.spec.ts` |
 
-**Documented coverage gaps (Lane C fast-follow — surfaced by `--help`, not faked):**
+**MCP surface (Cat M).** `--surface=mcp|both` runs every `cycle-4/harness/probes/*.mjs`
+through `scripts/probe-batch.mjs` → JSONL, which the emitter consumes as
+Category-M findings. The Lane-C shipped probes (read-mostly):
+
+| Probe | What it checks |
+|-------|----------------|
+| `server-tools-list.mjs` | `tools/list` returns a non-empty registry (floor: 50; deployed baseline 108 per `_parity.json` 2026-05-26) |
+| `get-bridge-health.mjs` | `get_bridge_health` envelope shape (version / x32Connected / lastSeen recorded, NOT asserted online) |
+| `list-setlists.mjs` | `list_setlists` returns ≥1 row (catastrophic-regression floor) and the array-shape contract holds |
+| `role-gate-musician-refusal.mjs` | mints a `test-musician-*` (uidPrefix `stress-c7-`), confirms an admin-gated tool refuses with `isError:true`, revokes by uid (NEVER `cleanup_all_test_data` — per `[[feedback_sandbox_test_isolation]]`) |
+
+**Documented coverage gaps (residual — future lane):**
 
 | Letter | Gap |
 |--------|-----|
-| F | Authoring flow (Scraper / UploadDialog) — no spec yet |
 | G | iPad touch-target ergonomics audit — woven into B today; no dedicated spec |
-| I | Monitor surface UI-shape / role-gate — no spec yet |
-| J | Accessibility (axe-core) — `runAxe.mjs` exists; not yet wired into stress-run |
-| M | MCP tool surface — probe modules under `probes/` are Lane C |
+| N | Monitor surface UI-shape (panel render / fader affordance) — CFC cowork only, no Playwright spec yet |
 
 ## How a Playwright run becomes cowork findings
 

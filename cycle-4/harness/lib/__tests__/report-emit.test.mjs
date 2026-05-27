@@ -8,6 +8,7 @@ import {
     flattenSpecs,
     extractFindings,
     extractMcpFindings,
+    countMcpProbes,
     buildReport,
     emitReport,
     SEVERITY_ORDER,
@@ -221,6 +222,23 @@ describe("report-emit — extractMcpFindings", () => {
     })
 })
 
+describe("report-emit — countMcpProbes", () => {
+    it("counts probe:result rows and splits pass/fail", () => {
+        const rows = [
+            { kind: "batch:start" }, // ignored
+            { kind: "probe:result", ok: true, probe: "a" },
+            { kind: "probe:result", ok: true, probe: "b" },
+            { kind: "probe:result", ok: false, probe: "c", error: { message: "x" } },
+            { kind: "batch:end" }, // ignored
+        ]
+        expect(countMcpProbes(rows)).toEqual({ probeCount: 3, passed: 2, failed: 1 })
+    })
+    it("returns zero counts for an empty/undefined input", () => {
+        expect(countMcpProbes([])).toEqual({ probeCount: 0, passed: 0, failed: 0 })
+        expect(countMcpProbes(undefined)).toEqual({ probeCount: 0, passed: 0, failed: 0 })
+    })
+})
+
 describe("report-emit — buildReport", () => {
     const { findings, stats } = extractFindings(makeFixture(), {
         categoryMap: CATEGORY_MAP,
@@ -327,6 +345,35 @@ describe("report-emit — emitReport (fs)", () => {
         expect(res.findings.length).toBe(3)
         expect(res.findings.map((f) => f.id)).toEqual(["F-001", "F-002", "F-003"])
         expect(onDisk).toContain("### Category M — MCP tool surface")
+    })
+
+    it("rolls MCP probe counts into stats so 'Probes executed' is the total surface count", async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), "stress-emit-"))
+        const mcpPath = path.join(dir, "mcp.jsonl")
+        await fs.writeFile(
+            mcpPath,
+            [
+                JSON.stringify({ kind: "batch:start" }),
+                JSON.stringify({ kind: "probe:result", probe: "a", ok: true }),
+                JSON.stringify({ kind: "probe:result", probe: "b", ok: true }),
+                JSON.stringify({ kind: "probe:result", probe: "c", ok: true }),
+                JSON.stringify({ kind: "batch:end" }),
+            ].join("\n"),
+            "utf8",
+        )
+        const res = await emitReport({
+            // resultsPath omitted — surface=mcp scenario, no Playwright JSON.
+            mcpJsonlPath: mcpPath,
+            outDir: path.join(dir, "out"),
+            runId: "mcp-only",
+            meta: { surface: "mcp" },
+        })
+        expect(res.stats.testCount).toBe(3)
+        expect(res.stats.passed).toBe(3)
+        expect(res.stats.failed).toBe(0)
+        expect(res.findings.length).toBe(0)
+        expect(res.report).toContain("- Probes executed: 3")
+        expect(res.report).toContain("3 passed / 0 failed")
     })
 
     it("produces a valid report even when the results file is missing", async () => {

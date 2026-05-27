@@ -86,6 +86,11 @@ export const CATEGORIES = {
             "f023-live-rename.spec.ts",
         ],
     },
+    F: {
+        label: "Authoring (Scraper / UploadDialog)",
+        severity: "MED",
+        specs: ["authoring-stress.spec.ts"],
+    },
     H: {
         label: "Offline behavior",
         severity: "HIGH",
@@ -94,6 +99,16 @@ export const CATEGORIES = {
             "r1-offline-decisive.spec.ts",
             "perform-ipad-pwa-fresh-install.spec.ts",
         ],
+    },
+    I: {
+        label: "Role-gate matrix (3-of-4 roles)",
+        severity: "HIGH",
+        specs: ["role-gate.spec.ts", "role-gate-matrix.spec.ts"],
+    },
+    J: {
+        label: "Accessibility (axe-core sweep)",
+        severity: "MED",
+        specs: ["axe-stress.spec.ts"],
     },
     K: {
         label: "Onboarding (QR / fresh device)",
@@ -113,16 +128,14 @@ export const CATEGORIES = {
 }
 
 /**
- * Documented coverage gaps the cowork PROMPT has but no dedicated spec yet —
- * Lane C (coverage) fast-follow. Surfaced in --dry-run / --help so the gap
- * is visible, not silently dropped.
+ * Documented coverage gaps the cowork PROMPT has but no dedicated spec yet.
+ * Lane C (`7d0af39e91` follow-on) CLOSED F/I/J/M; G + Monitor-UI-shape remain
+ * residual gaps. Surfaced in --dry-run / --help so the gap is visible, not
+ * silently dropped.
  */
 export const COVERAGE_GAPS = {
-    F: "Authoring flow (Scraper / UploadDialog) — no spec yet (Lane C)",
-    G: "iPad touch-target ergonomics audit — woven into B today; no dedicated spec (Lane C)",
-    I: "Monitor surface UI-shape / role-gate — no spec yet (Lane C)",
-    J: "Accessibility (axe-core) — runAxe.mjs exists; not yet wired into stress-run (Lane C)",
-    M: "MCP tool surface — probe modules under probes/ are Lane C; --surface=mcp no-ops in v1",
+    G: "iPad touch-target ergonomics audit — woven into B today; no dedicated spec (future lane)",
+    N: "Monitor surface UI-shape (panel render / fader affordance) — covered by CFC cowork runs, no Playwright spec yet (future lane)",
 }
 
 export const DEFAULT_BASE_URL = "https://www.centralreform.live"
@@ -275,14 +288,35 @@ async function main() {
     const runWeb = surface === "web" || surface === "both"
     const runMcp = surface === "mcp" || surface === "both"
 
+    // Enumerate MCP probes up-front so `--surface=mcp --dry-run` honestly
+    // surfaces what WOULD run — Lane A returned early before this enum, which
+    // made the gate ("resolves the full plan") incomplete for the MCP surface.
+    const probesDir = path.join(HARNESS_DIR, "probes")
+    let probeFiles = []
+    if (runMcp) {
+        try {
+            probeFiles = (await fs.readdir(probesDir))
+                .filter((f) => f.endsWith(".mjs"))
+                .map((f) => `cycle-4/harness/probes/${f}`)
+        } catch {
+            // no probes/ dir
+        }
+    }
+
     console.log("── stress-run plan ──────────────────────────────")
     console.log(`  surface     : ${surface}`)
     console.log(`  base-url    : ${baseUrl}`)
     console.log(`  bearer      : ${bearer ? "provided (authed specs enabled)" : "ABSENT (authed specs will skip/degrade)"}`)
-    console.log(`  categories  : ${plan.categories.join(", ") || "(none)"}`)
-    console.log(`  projects    : ${projects.join(", ")}`)
-    console.log(`  web specs   : ${plan.specs.length}`)
-    plan.specs.forEach((s) => console.log(`      • ${s}`))
+    if (runWeb) {
+        console.log(`  categories  : ${plan.categories.join(", ") || "(none)"}`)
+        console.log(`  projects    : ${projects.join(", ")}`)
+        console.log(`  web specs   : ${plan.specs.length}`)
+        plan.specs.forEach((s) => console.log(`      • ${s}`))
+    }
+    if (runMcp) {
+        console.log(`  mcp probes  : ${probeFiles.length}`)
+        probeFiles.forEach((p) => console.log(`      • ${p}`))
+    }
     console.log(`  run-id      : ${runId}`)
     console.log(`  out         : ${path.relative(HARNESS_DIR, outDir) || "."}/REPORT-stress-${runId}.md`)
     console.log("─────────────────────────────────────────────────")
@@ -323,17 +357,9 @@ async function main() {
     }
 
     // ── MCP surface (probe-batch) ─────────────────────────────────
+    // probeFiles was enumerated up-front (so --dry-run can honestly list them).
     let mcpJsonlPath
     if (runMcp) {
-        const probesDir = path.join(HARNESS_DIR, "probes")
-        let probeFiles = []
-        try {
-            probeFiles = (await fs.readdir(probesDir))
-                .filter((f) => f.endsWith(".mjs"))
-                .map((f) => `cycle-4/harness/probes/${f}`)
-        } catch {
-            // no probes/ dir
-        }
         if (probeFiles.length === 0) {
             console.log(
                 "[mcp] no probe modules under cycle-4/harness/probes/ — MCP stress is a Lane-C fast-follow; skipping (v1 web-first).",
