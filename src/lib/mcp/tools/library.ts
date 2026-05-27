@@ -26,6 +26,25 @@ import type { HygieneCoverage } from "./reconcile-library"
  * (mimeType + name both present) or a partial-join SongRecord (name only,
  * via fileName) and the predicate degrades gracefully.
  */
+/**
+ * Google-Apps mime predicate. Used by `dedupeLibraryIndex` to demote
+ * Google-Doc/Sheet/Slide/Drawing rows in the per-group canonical-row
+ * picker so that a real-bytes PDF beats a never-rendered Google-Doc
+ * when both share a normalized name (groups-7/9 trap surfaced by Daniel
+ * 2026-05-27 — earlier Google-Doc upload was winning canonical over the
+ * later PDF re-upload, silently marking the renderable bytes
+ * `duplicate`). Narrower than `isNonChartArtifactShape` by design: the
+ * picker only sees rows that survived `archive_nonchart_artifacts` and
+ * the dedupe-status filter — audio/.xlsx/.docx etc. should not appear in
+ * a dedup group at all; we don't want to demote those at the picker
+ * (they'd indicate an upstream bug to surface, not a tiebreak to
+ * silently apply).
+ */
+export function isGoogleAppsMime(mime: string | null | undefined): boolean {
+    if (!mime) return false
+    return mime.toLowerCase().startsWith("application/vnd.google-apps.")
+}
+
 export function isNonChartArtifactShape(rec: {
     mimeType?: string | null
     name?: string | null
@@ -1036,6 +1055,10 @@ interface SimilarityCandidate {
     name: string
     normalizedKey: string
     uploadedAt: string | null
+    // mimeType is captured so the fuzzy-cluster canonical pick can apply
+    // the same Google-Apps demotion as the exact-group sort. See
+    // `dedupeLibraryIndex` per-group sort comment.
+    mimeType: string | null
 }
 function clusterBySimilarity(
     candidates: SimilarityCandidate[],
@@ -1083,6 +1106,38 @@ function clusterBySimilarity(
     return out
 }
 
+/**
+ * Cycle-1 F-019 / F-008 + Cycle-3 MCP-001 — admin-gated library_index
+ * dedupe. Groups library_index rows by normalized name (exact pass) and
+ * optionally by Levenshtein similarity above `forceScore` (fuzzy pass),
+ * picks one canonical per group, and (on `force:true`) marks the rest
+ * `status:"duplicate"` in both `library_index` and any matching
+ * `songs/{id}` mirror.
+ *
+ * Canonical-pick policy (applies identically to exact + fuzzy groups):
+ *   1. Non-Google-Apps mime BEFORE Google-Apps. A file-bytes row
+ *      (PDF/image/MusicXML) wins canonical over a Google-Doc with the
+ *      same normalized name even when the Google-Doc has the earlier
+ *      `uploadedAt`. Closes the groups-7/9 trap where Daniel's
+ *      `dedupe_library({force:true})` would silently mark a renderable
+ *      PDF `duplicate` and keep an un-renderable Google-Doc as the
+ *      survivor. Behavior-preserving for any group containing zero
+ *      Google-Apps rows (the demotion only flips an outcome when a
+ *      mixed-mime group exists).
+ *   2. Earliest `uploadedAt` — null sorts to the end so a
+ *      metadata-stripped scan artifact never beats a real timestamp.
+ *   3. `fileId` ASC tiebreak — fully deterministic.
+ *
+ * Non-chart artifacts (audio / .xlsx / .docx / folders / dotfiles)
+ * should never reach the picker — they are filtered upstream by
+ * `archive_nonchart_artifacts` + list/search hides. The picker
+ * deliberately demotes ONLY Google-Apps (`isGoogleAppsMime`), not all
+ * `isNonChartArtifactShape`-positive rows: if those slip through, the
+ * upstream skip is the bug to fix, not the picker tiebreak.
+ *
+ * Dedup threshold (0.85 strict) and force-override semantics are not
+ * touched by this picker; see `[[feedback_dedup_force_override]]`.
+ */
 export async function dedupeLibraryIndex(
     uid: string,
     args: DedupeLibraryIndexArgs = {},
@@ -1128,10 +1183,16 @@ export async function dedupeLibraryIndex(
 
         // Collect dedupable candidates. Skip rows already marked
         // `duplicate` (idempotence) or `archived` (out of scope).
+        //
+        // mimeType is captured for the per-group canonical-pick sort:
+        // Google-Apps rows (Docs/Sheets/Slides) are demoted vs file-bytes
+        // rows so a later PDF re-upload wins canonical over an earlier
+        // Google-Doc upload (groups-7/9 trap). See `isGoogleAppsMime`.
         interface Candidate {
             fileId: string
             name: string
             uploadedAt: string | null
+            mimeType: string | null
         }
         const candidates: Candidate[] = []
         const filteredByStatus: Record<string, number> = {}
@@ -1158,7 +1219,14 @@ export async function dedupeLibraryIndex(
                     : typeof data.modifiedTime === "string"
                       ? data.modifiedTime
                       : null
-            candidates.push({ fileId: d.id, name: rawName, uploadedAt })
+            const mimeType =
+                typeof data.mimeType === "string" ? data.mimeType : null
+            candidates.push({
+                fileId: d.id,
+                name: rawName,
+                uploadedAt,
+                mimeType,
+            })
         }
 
         // Group by normalized key.
@@ -1183,10 +1251,22 @@ export async function dedupeLibraryIndex(
         const exactGroupedIds = new Set<string>()
         for (const [key, bucket] of groups) {
             if (bucket.length < 2) continue
-            // Deterministic canonical: earliest uploadedAt wins; rows with
-            // null uploadedAt sort to the end (so a metadata-stripped scan
-            // artifact never beats a real timestamp). Tiebreak: fileId asc.
+            // Deterministic canonical pick. Sort priority:
+            //   (a) non-Google-Apps mime BEFORE Google-Apps — a real-bytes
+            //       PDF wins canonical over a Google-Doc with the same
+            //       normalized name (groups-7/9 trap: a Google-Doc upload
+            //       could otherwise out-rank a later PDF re-upload by
+            //       uploadedAt alone and silently mark the renderable
+            //       bytes `duplicate`). Behavior-preserving for groups
+            //       containing zero Google-Apps rows.
+            //   (b) earliest uploadedAt — rows with null uploadedAt sort
+            //       to the end (a metadata-stripped scan artifact never
+            //       beats a real timestamp).
+            //   (c) tiebreak: fileId asc.
             bucket.sort((a, b) => {
+                const aGoogle = isGoogleAppsMime(a.mimeType) ? 1 : 0
+                const bGoogle = isGoogleAppsMime(b.mimeType) ? 1 : 0
+                if (aGoogle !== bGoogle) return aGoogle - bGoogle
                 const aAt = a.uploadedAt ?? "￿"
                 const bAt = b.uploadedAt ?? "￿"
                 if (aAt !== bAt) return aAt.localeCompare(bAt)
@@ -1226,6 +1306,7 @@ export async function dedupeLibraryIndex(
                     name: c.name,
                     normalizedKey: key,
                     uploadedAt: c.uploadedAt,
+                    mimeType: c.mimeType,
                 })
             }
             const fuzzyClusters = clusterBySimilarity(
@@ -1234,7 +1315,14 @@ export async function dedupeLibraryIndex(
             )
             for (const cluster of fuzzyClusters.values()) {
                 if (cluster.length < 2) continue
+                // Same sort priority as the exact-group bucket above:
+                // (a) non-Google-Apps mime first, (b) earliest uploadedAt,
+                // (c) fileId asc. Keeps the canonical-pick policy uniform
+                // between exact-normalize groups and similarity clusters.
                 cluster.sort((a, b) => {
+                    const aGoogle = isGoogleAppsMime(a.mimeType) ? 1 : 0
+                    const bGoogle = isGoogleAppsMime(b.mimeType) ? 1 : 0
+                    if (aGoogle !== bGoogle) return aGoogle - bGoogle
                     const aAt = a.uploadedAt ?? "￿"
                     const bAt = b.uploadedAt ?? "￿"
                     if (aAt !== bAt) return aAt.localeCompare(bAt)
@@ -1259,6 +1347,7 @@ export async function dedupeLibraryIndex(
                         fileId: r.fileId,
                         name: r.name,
                         uploadedAt: r.uploadedAt,
+                        mimeType: r.mimeType,
                     })),
                 )
             }

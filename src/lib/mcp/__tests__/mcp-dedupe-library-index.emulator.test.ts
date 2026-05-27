@@ -440,6 +440,108 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         ])
     })
 
+    it("canonical-picker — mixed-mime group: PDF beats earlier Google-Doc (groups-7/9 fix)", async () => {
+        // Daniel-surfaced trap: a Google-Doc uploaded BEFORE the PDF
+        // re-upload was winning canonical by uploadedAt alone, silently
+        // marking the renderable PDF `duplicate`. Post-fix the
+        // non-Google-Apps row wins regardless of who's earlier.
+        await seedIndex("ana-google", {
+            name: "Ana B_Koach",
+            uploadedAt: "2026-03-01T00:00:00Z",
+            mimeType: "application/vnd.google-apps.document",
+        })
+        await seedIndex("ana-pdf", {
+            name: "Ana B_Koach",
+            uploadedAt: "2026-04-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+
+        expect(r.groupsFound).toBe(1)
+        // Pre-fix would have picked `ana-google` (earlier uploadedAt).
+        expect(r.groups[0].kept.fileId).toBe("ana-pdf")
+        expect(r.groups[0].duplicates.map((d) => d.fileId)).toEqual([
+            "ana-google",
+        ])
+
+        const loser = await db()
+            .collection("library_index")
+            .doc("ana-google")
+            .get()
+        expect(loser.data()?.status).toBe("duplicate")
+        const keep = await db()
+            .collection("library_index")
+            .doc("ana-pdf")
+            .get()
+        expect(keep.data()?.status).toBeUndefined()
+    })
+
+    it("canonical-picker — all-PDF group: uploadedAt asc + fileId asc preserved (regression)", async () => {
+        // Behavior-preserving for any group containing zero Google-Apps
+        // rows — the demotion never triggers, so the existing
+        // uploadedAt-asc-then-fileId-asc sort still picks the winner.
+        await seedIndex("z-late", {
+            name: "Oseh shalom",
+            uploadedAt: "2026-04-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("a-early", {
+            name: "Oseh shalom",
+            uploadedAt: "2026-01-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("m-mid", {
+            name: "Oseh shalom",
+            uploadedAt: "2026-02-15T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+
+        expect(r.groupsFound).toBe(1)
+        expect(r.groups[0].kept.fileId).toBe("a-early") // earliest uploadedAt
+        expect(r.groups[0].duplicates.map((d) => d.fileId)).toEqual([
+            "m-mid",
+            "z-late",
+        ])
+    })
+
+    it("canonical-picker — all-Google-Apps group: degenerate but stable (earliest uploadedAt + fileId asc)", async () => {
+        // Shouldn't occur post-`archive_nonchart_artifacts`, but be
+        // defensive: when every row in a group is a Google-Apps mime
+        // the demotion ties for everyone, so the sort falls through to
+        // uploadedAt asc + fileId asc and stays deterministic.
+        await seedIndex("doc-late", {
+            name: "Hashkivenu",
+            uploadedAt: "2026-04-01T00:00:00Z",
+            mimeType: "application/vnd.google-apps.document",
+        })
+        await seedIndex("doc-early-z", {
+            name: "Hashkivenu",
+            uploadedAt: "2026-01-01T00:00:00Z",
+            mimeType: "application/vnd.google-apps.document",
+        })
+        await seedIndex("doc-early-a", {
+            name: "Hashkivenu",
+            uploadedAt: "2026-01-01T00:00:00Z",
+            mimeType: "application/vnd.google-apps.document",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+
+        expect(r.groupsFound).toBe(1)
+        // Earliest uploadedAt; fileId asc tiebreak between the two early ones.
+        expect(r.groups[0].kept.fileId).toBe("doc-early-a")
+        expect(r.groups[0].duplicates.map((d) => d.fileId)).toEqual([
+            "doc-early-z",
+            "doc-late",
+        ])
+    })
+
     it("post-dedupe, searchLibrary no longer surfaces the loser", async () => {
         // End-to-end: dedupe runs, then search behaves correctly.
         await seedIndex("ana-clean", {

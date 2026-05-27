@@ -1,7 +1,7 @@
 {
-  "version": "7.0.0",
-  "commit": "6a126f189",
-  "branch": "feat/a3-gemini-swap",
-  "buildDate": "5/17/2026",
+  "version": "10.1.0",
+  "commit": "7d0af39e91",
+  "branch": "feat/dedup-canonical-picker-prefer-bytes",
+  "buildDate": "5/27/2026",
   "changelog": []
 }
