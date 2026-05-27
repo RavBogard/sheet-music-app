@@ -1,6 +1,8 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 
-import { mintTestAccount, loginAsTestUser, signInWebSdk, revokeTestAccounts } from './helpers/auth'
+import { mintTestAccount, revokeTestAccounts } from './helpers/auth'
+import { goOffline, goOnline, waitChartCached } from './helpers/gestures'
+import { signInAndGoto } from './helpers/roles'
 import { seedPublishedSetlist, uploadFixtureChart, findCuratedPdf, type SeededSetlist } from './helpers/seed'
 
 /**
@@ -59,48 +61,8 @@ const TEXT_SENTINEL = 'f1-offline-cache-sentinel-line'
 const TEXT_ROW_TITLE = 'Offline Text Chart'
 const PDF_ROW_TITLE = 'Offline PDF Chart'
 
-/** Real-offline: kill http(s) but leave in-memory blob: URLs alone (see docblock). */
-async function goOffline(page: Page) {
-    await page.route(/^https?:\/\//, (r) => r.abort())
-    await page.evaluate(() => {
-        Object.defineProperty(navigator, 'onLine', { configurable: true, value: false })
-        window.dispatchEvent(new Event('offline'))
-    })
-}
-async function goOnline(page: Page) {
-    await page.unroute(/^https?:\/\//)
-    await page.evaluate(() => {
-        Object.defineProperty(navigator, 'onLine', { configurable: true, value: true })
-        window.dispatchEvent(new Event('online'))
-    })
-}
-
-/** Poll the crc-offline IDB store until a specific chart's bytes are present. */
-async function waitChartCached(page: Page, fileId: string, timeout = 120_000) {
-    await expect
-        .poll(
-            async () =>
-                page.evaluate(async (wantId) => {
-                    const db: IDBDatabase = await new Promise((res, rej) => {
-                        const open = indexedDB.open('crc-offline')
-                        open.onsuccess = () => res(open.result)
-                        open.onerror = () => rej(open.error)
-                    })
-                    try {
-                        const keys: string[] = await new Promise((res, rej) => {
-                            const r = db.transaction('files', 'readonly').objectStore('files').getAllKeys()
-                            r.onsuccess = () => res(r.result as string[])
-                            r.onerror = () => rej(r.error)
-                        })
-                        return keys.includes(wantId)
-                    } finally {
-                        db.close()
-                    }
-                }, fileId),
-            { timeout, message: `chart ${fileId} must land in crc-offline IDB` },
-        )
-        .toBe(true)
-}
+// goOffline / goOnline / waitChartCached now live in ./helpers/gestures (DESIGN §D4),
+// shared verbatim with r1-offline-decisive + future stress specs.
 
 test.describe('f1-offline-precache — offline chart availability (portrait 820)', () => {
     test.skip(
@@ -164,9 +126,7 @@ test.describe('f1-offline-precache — offline chart availability (portrait 820)
     })
 
     async function loginAndGoto(context: BrowserContext, page: Page, baseURL: string, path: string) {
-        const { customToken } = await loginAsTestUser(context, baseURL, musicianBearer)
-        await page.goto(path, { waitUntil: 'domcontentloaded' })
-        await signInWebSdk(page, customToken ?? '', { required: false })
+        await signInAndGoto(context, page, baseURL, musicianBearer, path, { webSdk: 'optional' })
     }
 
     async function awaitRow(page: Page, rowText: string) {

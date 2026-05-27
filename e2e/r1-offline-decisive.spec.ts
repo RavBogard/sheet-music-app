@@ -1,4 +1,6 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
+
+import { goOffline } from './helpers/gestures'
 
 /**
  * R1 DECISIVE offline test (coder-3, exec-perform-ux) — settles whether the
@@ -19,13 +21,7 @@ const SETLIST_ID = process.env.DECISIVE_SETLIST_ID ?? 'UnjLqKTtS4lNKQfMY6hB' // 
 const PDF_ROW = process.env.DECISIVE_PDF_ROW ?? 'Fiddley Tune'
 const PDF_FILEID = process.env.DECISIVE_PDF_FILEID ?? '11w4r08HnXYR-eRFzcMIs-ud4k1Ut1jwB'
 
-async function goOffline(page: Page) {
-    await page.route(/^https?:\/\//, (r) => r.abort())
-    await page.evaluate(() => {
-        Object.defineProperty(navigator, 'onLine', { configurable: true, value: false })
-        window.dispatchEvent(new Event('offline'))
-    })
-}
+// goOffline now lives in ./helpers/gestures (DESIGN §D4), shared verbatim.
 
 test('R1 decisive — real setlist: Save-offline reaches saved, fresh chart paints fully offline', async ({
     page,
