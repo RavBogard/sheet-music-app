@@ -36,7 +36,7 @@ describe("recomputeIndexNameFields — F-7 helper", () => {
     })
 
     describe("normalizedName", () => {
-        it("strips to lowercase a-z 0-9 only", () => {
+        it("strips to Unicode letter/number lowercase form", () => {
             expect(
                 recomputeIndexNameFields("Hashkivenu (Klepper-Freelander)", 1)
                     .normalizedName,
@@ -44,10 +44,11 @@ describe("recomputeIndexNameFields — F-7 helper", () => {
         })
 
         it("preserves dedup-bucket parity with PCU's inline compute", () => {
-            // Mirror PCU's exact line (post 2026-05-25 normalizedname-pin):
+            // Mirror PCU's exact lines (Unicode-safe, post f010-unicode-safe-dedup):
             //   const normalizedName = nameLower
             //       .replace(STRIPPABLE_EXTENSION_RE, "")
-            //       .replace(/[^a-z0-9]/g, "")
+            //       .normalize("NFKC")
+            //       .replace(/[^\p{L}\p{N}]/gu, "")
             const cases = [
                 "Ana B'Koach",
                 " Ana  B'Koach",
@@ -62,9 +63,24 @@ describe("recomputeIndexNameFields — F-7 helper", () => {
                 const inline = title
                     .toLowerCase()
                     .replace(STRIPPABLE_EXTENSION_RE, "")
-                    .replace(/[^a-z0-9]/g, "")
+                    .normalize("NFKC")
+                    .replace(/[^\p{L}\p{N}]/gu, "")
                 expect(helper).toBe(inline)
             }
+        })
+
+        it("keeps Hebrew/Arabic chars distinct (Unicode-safe dedup)", () => {
+            // Pre-fix: all three collapsed to "" — false dedup collision.
+            // Post-fix: each retains its Unicode letters as distinct keys.
+            const adon = recomputeIndexNameFields("אדון עולם", 1).normalizedName
+            const amazing = recomputeIndexNameFields("أمزينج جريس", 1).normalizedName
+            const emojiTitle = recomputeIndexNameFields("🎵 Amazing Grace", 1).normalizedName
+            expect(adon).toBe("אדוןעולם")
+            expect(amazing).toBe("أمزينججريس")
+            expect(emojiTitle).toBe("amazinggrace")
+            expect(adon).not.toBe(amazing)
+            expect(adon).not.toBe(emojiTitle)
+            expect(amazing).not.toBe(emojiTitle)
         })
 
         // β — trailing media extension strip (2026-05-25
@@ -222,7 +238,8 @@ describe("recomputeIndexNameFields — F-7 helper", () => {
             const nameLower = title.toLowerCase()
             const normalizedName = nameLower
                 .replace(STRIPPABLE_EXTENSION_RE, "")
-                .replace(/[^a-z0-9]/g, "")
+                .normalize("NFKC")
+                .replace(/[^\p{L}\p{N}]/gu, "")
             const stem = bareStem(title)
             return {
                 nameLower,

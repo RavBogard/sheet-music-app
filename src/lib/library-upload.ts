@@ -448,7 +448,8 @@ export async function processChartUpload(
     // the historical-correct ext-stripped key.
     const normalizedName = nameLower
         .replace(STRIPPABLE_EXTENSION_RE, "")
-        .replace(/[^a-z0-9]/g, "")
+        .normalize("NFKC")
+        .replace(/[^\p{L}\p{N}]/gu, "")
     if (!input.force) {
         stage("dedup-exact:start")
         const exactMatch = await db
@@ -493,7 +494,7 @@ export async function processChartUpload(
             const existingName = doc.data().name as string
             const normalizedExisting =
                 (doc.data().normalizedName as string | undefined) ??
-                existingName.toLowerCase().replace(/[^a-z0-9]/g, "")
+                existingName.toLowerCase().normalize("NFKC").replace(/[^\p{L}\p{N}]/gu, "")
             const distance = levenshteinDistance(
                 normalizedName,
                 normalizedExisting,

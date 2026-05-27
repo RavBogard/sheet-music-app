@@ -78,7 +78,8 @@ export function recomputeIndexNameFields(
     const nameLower = title.toLowerCase()
     const normalizedName = nameLower
         .replace(STRIPPABLE_EXTENSION_RE, "")
-        .replace(/[^a-z0-9]/g, "")
+        .normalize("NFKC")
+        .replace(/[^\p{L}\p{N}]/gu, "")
     const stem = bareStem(title)
     return {
         nameLower,

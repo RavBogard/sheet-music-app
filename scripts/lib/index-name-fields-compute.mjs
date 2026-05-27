@@ -160,7 +160,8 @@ export function recomputeIndexNameFields(title, siblingsInCatalog) {
     // of the canonical TS helper post 2026-05-25 normalizedname-pin lane).
     const normalizedName = nameLower
         .replace(STRIPPABLE_EXTENSION_RE, "")
-        .replace(/[^a-z0-9]/g, "")
+        .normalize("NFKC")
+        .replace(/[^\p{L}\p{N}]/gu, "")
     const stem = bareStem(title)
     return {
         nameLower,
