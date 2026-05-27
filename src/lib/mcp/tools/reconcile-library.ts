@@ -256,8 +256,16 @@ async function loadAdminCandidates(
         // (Drive 404), and unmarking requires explicit operator action
         // (manual re-upload). This is what makes the tool idempotent.
         // `duplicate` rows are also out of scope — handled by dedupe_library.
+        // `archived` rows are intentional soft-deletes (e.g. the dh-20260527a
+        // Class-3 non-chart folders/sheets archived via archive_nonchart_artifacts)
+        // — reconcile must skip them so they vanish from every scan, not just
+        // /library's status-filtered view.
         const status = typeof data.status === "string" ? data.status : "active"
-        if (status === "orphaned" || status === "duplicate") {
+        if (
+            status === "orphaned" ||
+            status === "duplicate" ||
+            status === "archived"
+        ) {
             filteredByStatus[status] = (filteredByStatus[status] ?? 0) + 1
             continue
         }

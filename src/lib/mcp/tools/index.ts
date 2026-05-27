@@ -15,6 +15,7 @@ import { salvageChartBytes } from "./salvage-chart-bytes"
 import { backfillHealMetadata } from "./backfill-heal-metadata"
 import { backfillTrackMimetype } from "./backfill-track-mimetype"
 import { backfillSearchableText } from "./backfill-searchable-text"
+import { archiveNonChartArtifacts } from "./archive-nonchart-artifacts"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
 import { getCorrectionStats } from "./correction-stats"
 import { testDeleteStorageObject } from "./test-delete-storage-object"
@@ -1688,6 +1689,40 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await backfillSearchableText(uidFrom(extra), args)),
+    )
+
+    // library-bulk-archive-nonchart (Tier-1 P2 2026-05-27, data-health dh-20260527a
+    // Class 3): bulk soft-archive the UNAMBIGUOUS non-chart residents of
+    // library_index (Drive folders + Google Sheets). Google Docs are HELD for
+    // per-row triage.
+    server.registerTool(
+        "archive_nonchart_artifacts",
+        {
+            description:
+                "Admin-only bulk soft-archive of the UNAMBIGUOUS non-chart residents of `library_index` (data-health dh-20260527a Class 3). Legacy Drive scans seeded the catalog with rows that are not embeddable charts — Google Drive *folders* (`application/vnd.google-apps.folder`) and Google *Sheets* (`application/vnd.google-apps.spreadsheet`). This flips their `status` to `'archived'` (the same reversible soft-delete as the in-app `/api/library/archive` route: sets `archivedBy`/`archivedAt`, mirrors `songs/{id}.status` ONLY if a songs doc already exists), so they vanish from `list_library` AND from `reconcile_library` scans (this lane also added `archived` to reconcile's status-skip set). ★ NARROW: only folder + sheet mimeTypes are eligible (expect exactly 24 in prod — 23 folders + 1 sheet). Google *Docs* (`application/vnd.google-apps.document`) are NEVER archived — they surface in `heldGoogleDocs` with a HOLD recommendation for per-row triage (some are single-song docs already re-uploaded as PDFs). The guard refuses any fileId whose mimeType is not folder/sheet, even one passed explicitly via `fileIds` — a chart fileId can never be archived. F-05: `dryRun` defaults TRUE — returns the full plan (would-archive set + held docs + alreadyArchived + notMatched) WITHOUT writing. A real run (`dryRun:false`) still requires `force:true` or returns the plan with `refused:true`. Idempotent: eligible rows already at `status:'archived'` are counted in `alreadyArchived` and skipped. Each archived row is read-verified post-commit (`verified` count). Returns `{ok, scanned, toArchive:{count,rows:[{fileId,name,mimeType,kind:'folder'|'sheet'}],truncated}, heldGoogleDocs:{count,rows:[{fileId,name,mimeType,recommendation}],truncated}, alreadyArchived, notMatched:[fileId], dryRun, committed, verified, refused?}`. Refusals (rich): `forbidden_role`, `internal_error`. ★ Single-owner apply per [[feedback_single_owner_destructive_runs]]: dryRun-first, confirm count==24, get Daniel's 'go', then `dryRun:false, force:true`.",
+            inputSchema: {
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true (default), returns the would-archive plan without writing. F-05: dryRun does NOT require force.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Required for real writes. Pair with `dryRun:false`. Omitting it returns the plan with `refused:true` and no writes.",
+                    ),
+                fileIds: z
+                    .array(z.string())
+                    .optional()
+                    .describe(
+                        "Optional — restrict to this explicit fileId set (e.g. the 24 from the dh-20260527a report) instead of scanning the whole catalog. Each id is still mimeType-guarded; missing or non-folder/sheet ids land in `notMatched` and are never archived.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await archiveNonChartArtifacts(uidFrom(extra), args)),
     )
 
     server.registerTool(

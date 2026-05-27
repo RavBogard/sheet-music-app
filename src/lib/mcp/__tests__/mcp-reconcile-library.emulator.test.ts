@@ -519,7 +519,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         expect(r.transient.count).toBe(0)
     })
 
-    it("orphaned and duplicate rows are skipped on every run", async () => {
+    it("orphaned, duplicate, and archived rows are skipped on every run", async () => {
         await seedUser(ADMIN, "admin")
         await seedIndex("already-orphaned", {
             name: "Old Dead.pdf",
@@ -530,6 +530,13 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
             name: "Dupe Loser.pdf",
             mimeType: "application/pdf",
             status: "duplicate",
+        })
+        // dh-20260527a: non-chart folders/sheets soft-archived via
+        // archive_nonchart_artifacts must vanish from reconcile scans too.
+        await seedIndex("already-archived", {
+            name: "Old Folder",
+            mimeType: "application/vnd.google-apps.folder",
+            status: "archived",
         })
 
         const r = await reconcileLibrary(ADMIN, { dryRun: true })
