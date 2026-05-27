@@ -83,11 +83,15 @@ describe("SetlistRow", () => {
         expect(screen.getByText("Morning Service").className).toContain("uppercase")
     })
 
-    it("renders non-song items dimmed", () => {
+    it("renders non-song items de-emphasized via the muted title color", () => {
+        // De-emphasis moved from row opacity-60 (composited the title below WCAG
+        // AA on the light theme — axe color-contrast) to the muted title color.
         const prayer: SetlistTrack = { id: "p1", title: "Opening Prayer", type: "prayer" }
         render(<SetlistRow track={prayer} {...defaultProps} />)
-        const row = screen.getByText("Opening Prayer").closest("div[class]")
-        expect(row?.className).toContain("opacity-60")
+        const title = screen.getByText("Opening Prayer")
+        expect(title.className).toContain("text-muted-foreground")
+        const row = title.closest("div[class]")
+        expect(row?.className).not.toContain("opacity-60")
     })
 
     it("highlights current position with brand background", () => {
@@ -263,8 +267,12 @@ describe("SetlistRow — open-gate (bonded chart opens regardless of track type)
         const onSongTap = vi.fn()
         render(<SetlistRow track={prayer} {...defaultProps} onSongTap={onSongTap} />)
         expect(screen.queryByRole("button")).toBeNull()
-        const row = screen.getByText("Silent Meditation").closest("div[class]")
-        expect(row?.className).toContain("opacity-60")
+        const label = screen.getByText("Silent Meditation")
+        // De-emphasized via the muted title color (not row opacity — see the
+        // "de-emphasized via the muted title color" test above).
+        expect(label.className).toContain("text-muted-foreground")
+        const row = label.closest("div[class]")
+        expect(row?.className).not.toContain("opacity-60")
         fireEvent.click(screen.getByText("Silent Meditation"))
         expect(onSongTap).not.toHaveBeenCalled()
     })

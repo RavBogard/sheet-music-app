@@ -130,7 +130,10 @@ export function SetlistRow({
                     </span>
                 )}
                 {track.notes && (
-                    <span className="text-xs text-amber-300 truncate max-w-[200px] md:max-w-[300px] shrink">
+                    // text-amber-800 in light mode (text-amber-300 fails WCAG AA
+                    // contrast on the light-theme row backgrounds — axe color-
+                    // contrast, ~1.1:1); dark mode keeps the vivid amber-300.
+                    <span className="text-xs text-amber-800 dark:text-amber-300 truncate max-w-[200px] md:max-w-[300px] shrink">
                         {track.notes}
                     </span>
                 )}
@@ -142,7 +145,10 @@ export function SetlistRow({
                 )}
             </div>
             {hasSecondLine && (
-                <p className="text-sm text-blue-400 truncate mt-0.5">
+                // text-blue-700 in light mode (text-blue-400 fails WCAG AA
+                // contrast on the light-theme row backgrounds — axe color-
+                // contrast, 2.18:1); dark mode keeps the lighter blue-400.
+                <p className="text-sm text-blue-700 dark:text-blue-400 truncate mt-0.5">
                     {track.leadMusician || track.performer}
                 </p>
             )}
@@ -163,9 +169,11 @@ export function SetlistRow({
     const rowClasses = cn(
         "flex items-center px-4 py-3 transition-colors",
         isCurrentPosition && "bg-brand/20 border-l-4 border-brand",
-        !isCurrentPosition && isSong && (index % 2 === 0 ? "bg-amber-500/[0.10]" : "bg-brand/[0.12]"),
-        // Passive non-song labels stay dimmed; an openable prayer/reading does NOT.
-        !isSong && !hasFile && "opacity-60"
+        !isCurrentPosition && isSong && (index % 2 === 0 ? "bg-amber-500/[0.10]" : "bg-brand/[0.12]")
+        // Passive non-song labels are de-emphasized via the muted *title color*
+        // (songContent's text-muted-foreground span), NOT row opacity. opacity-60
+        // composited the muted text below WCAG AA on the light theme (axe color-
+        // contrast, 3.59:1). An openable prayer/reading still reads full-prominence.
     )
 
     // Non-interactive rows

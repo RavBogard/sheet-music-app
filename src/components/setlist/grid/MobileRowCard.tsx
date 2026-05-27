@@ -336,6 +336,7 @@ export function MobileRowCard({
                             </a>
                         ) : (
                             <span
+                                role="img"
                                 aria-label="No chart bound"
                                 className="flex-none ml-2"
                             >
