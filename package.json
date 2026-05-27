@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "stress": "node cycle-4/harness/scripts/stress-run.mjs",
     "test:kitchensink": "vitest run --testNamePattern=\"v50-07-04: kitchen-sink\"",
     "test:emulator": "firebase emulators:exec --only firestore,auth \"vitest run --config vitest.emulator.config.ts\"",
     "test:emulator:ci": "firebase emulators:exec --only firestore,auth \"vitest run --config vitest.emulator.config.ts --reporter=verbose\"",

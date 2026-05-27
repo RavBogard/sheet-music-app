@@ -18,6 +18,11 @@
 /playwright-report/
 /playwright/.cache/
 
+# stress-harness run artifacts (REPORT-stress-*.md + playwright JSON + MCP
+# JSONL) — emitted by `npm run stress` per run; the SCHEMA is documented in
+# cycle-4/harness/README.md, the artifacts themselves are never committed.
+/cycle-4/harness/out/
+
 # next.js
 /.next/
 /out/
