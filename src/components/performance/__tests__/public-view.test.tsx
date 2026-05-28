@@ -40,11 +40,22 @@ vi.mock("next/navigation", () => ({
     useParams: () => ({ id: "test-setlist-id" }),
 }))
 
-// Mock auth context
+// Mock auth context. PublicSetlistListing now reads `user`/`loading`/`signIn`
+// to render (or hide) the logged-out Sign-In card. Each test sets the auth
+// state it needs; beforeEach installs a logged-out default.
 const mockUseAuth = vi.fn()
+const mockSignIn = vi.fn()
 vi.mock("@/lib/auth-context", () => ({
     useAuth: () => mockUseAuth(),
     AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}))
+
+// Stub QRSignIn — its real impl spins up polling/countdown timers + fetches
+// /api/auth/qr, which is irrelevant to (and noisy for) the listing's auth-UI
+// contract. It's exercised by its own surface; here we only assert the card
+// wrapper shows/hides correctly.
+vi.mock("@/components/auth/QRSignIn", () => ({
+    QRSignIn: () => <div data-testid="qr-signin">QR</div>,
 }))
 
 // Mock setlist-firebase
@@ -71,6 +82,8 @@ import type { SetlistTrack } from "@/types/models"
 describe("Public View", () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        // Default: logged-out visitor with auth resolved (the common /perform case).
+        mockUseAuth.mockReturnValue({ user: null, loading: false, signIn: mockSignIn })
     })
 
     describe("Public setlist listing page", () => {
@@ -158,7 +171,8 @@ describe("Public View", () => {
             expect(screen.getByText("C")).toBeDefined()
         })
 
-        it("does not show sign-in prompt in public view", async () => {
+        it("shows the Sign-In card (QR + Google) when logged out", async () => {
+            // logged-out is the beforeEach default
             const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
 
             mockSubscribeToPublicSetlists.mockImplementation((callback: (...args: any[]) => any) => {
@@ -168,9 +182,72 @@ describe("Public View", () => {
 
             render(<PublicSetlistListing />)
 
-            // Should NOT contain sign-in related text
-            expect(screen.queryByText(/sign in/i)).toBeNull()
-            expect(screen.queryByText(/log in/i)).toBeNull()
+            // QR + "Sign In with Google" affordance is present for guests, even
+            // when there are no setlists (they still need a path to sign in).
+            expect(screen.getByTestId("qr-signin")).toBeDefined()
+            expect(screen.getByRole("button", { name: /sign in with google/i })).toBeDefined()
+        })
+
+        it("hides the Sign-In card when authed", async () => {
+            mockUseAuth.mockReturnValue({ user: { uid: "u1" }, loading: false, signIn: mockSignIn })
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+
+            mockSubscribeToPublicSetlists.mockImplementation((callback: (...args: any[]) => any) => {
+                callback([], false)
+                return vi.fn()
+            })
+
+            render(<PublicSetlistListing />)
+
+            expect(screen.queryByTestId("qr-signin")).toBeNull()
+            expect(screen.queryByRole("button", { name: /sign in with google/i })).toBeNull()
+        })
+
+        it("does not flash the Sign-In card while auth is still loading", async () => {
+            mockUseAuth.mockReturnValue({ user: null, loading: true, signIn: mockSignIn })
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+
+            mockSubscribeToPublicSetlists.mockImplementation((callback: (...args: any[]) => any) => {
+                callback([], false)
+                return vi.fn()
+            })
+
+            render(<PublicSetlistListing />)
+
+            // !authLoading guard — card is suppressed until auth resolves (CLS guard).
+            expect(screen.queryByTestId("qr-signin")).toBeNull()
+        })
+
+        it("caps the listing at 5 services total, upcoming-first", async () => {
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+
+            // 7 far-future (upcoming) + 2 far-past so the cap, not the date
+            // window, is what trims the list — deterministic regardless of run date.
+            const upcoming = Array.from({ length: 7 }, (_, i) => ({
+                id: `up-${i}`,
+                name: `Upcoming ${i}`,
+                eventDate: `2099-0${(i % 9) + 1}-01T10:00:00Z`,
+                tracks: [],
+                trackCount: 0,
+            }))
+            const past = [
+                { id: "past-1", name: "Past 1", eventDate: "2000-01-01T10:00:00Z", tracks: [], trackCount: 0 },
+                { id: "past-2", name: "Past 2", eventDate: "2000-01-02T10:00:00Z", tracks: [], trackCount: 0 },
+            ]
+
+            mockSubscribeToPublicSetlists.mockImplementation((callback: (...args: any[]) => any) => {
+                callback([...past, ...upcoming], false)
+                return vi.fn()
+            })
+
+            render(<PublicSetlistListing />)
+
+            // Each setlist card is a Link (role=link); the Google button is a
+            // button, the QR stub a div — so links == rendered service rows.
+            expect(screen.getAllByRole("link")).toHaveLength(5)
+            // All 5 should be upcoming (upcoming-prioritized), no past rows.
+            expect(screen.queryByText("Past 1")).toBeNull()
+            expect(screen.queryByText("Past 2")).toBeNull()
         })
     })
 })
