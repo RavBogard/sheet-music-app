@@ -6,12 +6,13 @@ import { env } from "@/env.mjs"
 import { verifySetlistCharts } from "@/lib/mcp/tools/library-verify"
 import { recomputeTrackCount } from "@/lib/setlist-track-count"
 import { captureException, captureMessage } from "@/lib/error-reporting"
+import { isTestUid } from "@/lib/test-isolation"
 
 /**
  * Cycle-7-fixes Lane 3 — chart-bond health cron.
  *
  * Daily Thursday-afternoon-UTC run (`0 15 * * 4` in vercel.json). Enumerates
- * every published setlist with an upcoming eventDate, runs the same chart-
+ * every non-test setlist with an upcoming eventDate, runs the same chart-
  * health probe `verify_setlist_charts` would, and writes a row to
  * `chart_bond_alerts/{alertId}` whenever:
  *
@@ -89,18 +90,33 @@ export async function GET(req: NextRequest) {
         const db = getFirestore()
 
         const nowIso = new Date().toISOString()
-        // Two-step query: fetch published-status setlists, then filter by
-        // eventDate in-process. eventDate is stored as either an ISO string
-        // OR a Firestore Timestamp depending on writer; in-process filtering
-        // avoids the index-shape coupling.
-        const publishedSnap = await db
-            .collection("setlists")
-            .where("publishedAt", "!=", null)
-            .get()
+        // Fetch every setlist; filter test fixtures + eventDate in-process.
+        // `publishedAt != null` was dropped 2026-05-28 under
+        // `[[feedback_err_public_not_gated]]` — the cron now sweeps every
+        // upcoming non-test setlist, not just historically-published ones, so
+        // `publishedAt:null` rows (e.g. Saturday B'nei Mitzvah `cd2010f4`) are
+        // in scope. The test-fixture exclusion happens in-process (mirroring
+        // `splitPublicSetlists`) because Firestore `!=` semantics drop docs
+        // where the field is absent — a server-side `where("isTest","!=",true)`
+        // would silently exclude every legacy setlist predating the cycle-2
+        // SEC-004 always-write convention. eventDate is stored as either an
+        // ISO string OR a Firestore Timestamp depending on writer; in-process
+        // filtering avoids the index-shape coupling either way.
+        const setlistsSnap = await db.collection("setlists").get()
 
         const candidates: { id: string; data: Record<string, unknown> }[] = []
-        for (const doc of publishedSnap.docs) {
+        for (const doc of setlistsSnap.docs) {
             const data = doc.data() as Record<string, unknown>
+            // Test-fixture isolation — both the flag AND the owner-uid shape,
+            // mirroring `splitPublicSetlists` (Cycle-2 SEC-004 + Cycle-7
+            // belt-and-braces).
+            if (data.isTest === true) continue
+            if (
+                typeof data.ownerId === "string" &&
+                isTestUid(data.ownerId)
+            ) {
+                continue
+            }
             const eventDateRaw = data.eventDate
             // Skip past services — chart-bond breakage there is historical,
             // not Friday-night relevant.
@@ -115,8 +131,8 @@ export async function GET(req: NextRequest) {
                       ? eventDateRaw
                       : null
             if (!eventDateIso) {
-                // Undated published setlists — surface them too (Daniel may
-                // want to know which permanent-published items are decaying).
+                // Undated setlists — surface them too (Daniel may want to know
+                // which permanent items are decaying).
                 candidates.push({ id: doc.id, data })
                 continue
             }
