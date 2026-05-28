@@ -39,6 +39,7 @@ export function PublicSetlistListing() {
     const {
         isSupported: isWakeLockSupported,
         isLocked: isWakeLockActive,
+        lastError: wakeLockError,
         requestWakeLock,
         releaseWakeLock,
     } = useWakeLock()
@@ -127,6 +128,7 @@ export function PublicSetlistListing() {
                     isSupported={isWakeLockSupported}
                     onRequest={requestWakeLock}
                     onRelease={releaseWakeLock}
+                    lastError={wakeLockError}
                 />
             </div>
 

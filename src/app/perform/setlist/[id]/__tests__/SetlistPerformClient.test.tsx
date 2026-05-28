@@ -55,8 +55,10 @@ vi.mock('@/hooks/use-wake-lock', () => ({
     useWakeLock: () => ({
         isSupported: true,
         isLocked: false,
+        lastError: null,
         requestWakeLock: vi.fn(),
         releaseWakeLock: vi.fn(),
+        dismissWakeLockError: vi.fn(),
     }),
 }))
 

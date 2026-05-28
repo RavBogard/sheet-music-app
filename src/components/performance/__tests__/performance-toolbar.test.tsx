@@ -214,4 +214,158 @@ describe("PerformanceToolbar", () => {
             screen.queryByRole("button", { name: /keep screen on/i }),
         ).toBeNull()
     })
+
+    // ── M3-001 (cycle-11): wake-lock failure feedback ───────────────────
+    // When the parent threads a `lastError` verdict, the in-chart toggle
+    // MUST surface an inline alert and keep aria-pressed=false even if
+    // the optimistic isActive flag slipped through. The alert is spatially
+    // anchored to the toggle (role="alert"), not a modal/toast.
+    it("M3-001: in-chart wake-lock toggle surfaces inline alert when lastError='hidden'", () => {
+        render(
+            <PerformanceToolbar
+                onHome={mockOnHome}
+                wakeLock={{
+                    isActive: false,
+                    isSupported: true,
+                    onRequest: vi.fn(),
+                    onRelease: vi.fn(),
+                    lastError: "hidden",
+                }}
+            />,
+        )
+
+        // Both breakpoints render their own toggle → both should also render
+        // the failure alert pill.
+        const alerts = screen.getAllByRole("alert")
+        // SongNavigation/ChordEditBar etc may contain other role="alert"; we
+        // only need ≥2 (one per breakpoint tree) of the wake-lock variety.
+        const wakeLockAlerts = alerts.filter(el =>
+            /tab not focused/i.test(el.textContent || ""),
+        )
+        expect(wakeLockAlerts.length).toBeGreaterThanOrEqual(2)
+        for (const a of wakeLockAlerts) {
+            expect(a.textContent).toMatch(/tap chart to retry/i)
+        }
+    })
+
+    it("M3-001: in-chart wake-lock toggle suppresses 'engaged' state when lastError is set", () => {
+        render(
+            <PerformanceToolbar
+                onHome={mockOnHome}
+                wakeLock={{
+                    // The hook keeps isLocked=false on rejection, but the
+                    // toggle must remain non-engaged even if a future caller
+                    // races isActive=true and lastError≠null in the same
+                    // render (belt+braces — see KeepAwakeToggle.engaged).
+                    isActive: true,
+                    isSupported: true,
+                    onRequest: vi.fn(),
+                    onRelease: vi.fn(),
+                    lastError: "denied",
+                }}
+            />,
+        )
+
+        const toggles = screen.getAllByRole("button", { name: /keep screen on/i })
+        expect(toggles.length).toBeGreaterThanOrEqual(2)
+        for (const t of toggles) {
+            expect(t.getAttribute("aria-pressed")).toBe("false")
+        }
+    })
+
+    // ── M3-004 (cycle-11): TRANSPOSE button current-state display ───────
+    // AC3: transpose=0 → label contains "+0"; transpose=+2 from G#m →
+    // label contains "+2" AND the transposed delta.
+    it("M3-004: TRANSPOSE button label includes '+0' when transposition is 0", () => {
+        mockStoreState.transposition = 0
+        mockStoreState.playbackQueue = [
+            { fileId: 'pdf-xyz', type: 'pdf', title: 'Adon Olam' } as any,
+        ]
+        mockStoreState.queueIndex = 0
+
+        render(<PerformanceToolbar onHome={mockOnHome} />)
+        const triggers = screen.getAllByTestId(/transpose-trigger/)
+        expect(triggers.length).toBeGreaterThanOrEqual(2)
+        for (const t of triggers) {
+            // Either "+0" (no key estimated yet) or "<KEY> +0" — both
+            // satisfy the contract that idle state shows "+0".
+            expect(t.textContent).toMatch(/\+0/)
+            expect(t.getAttribute("data-transposed")).toBe("false")
+        }
+
+        mockStoreState.transposition = 0
+        mockStoreState.playbackQueue = []
+        mockStoreState.queueIndex = 0
+    })
+
+    it("M3-004: TRANSPOSE button label includes signed offset and key delta when transposition !== 0", () => {
+        // Seed aiState with chords that estimateKey will resolve to a major
+        // mode so the buttonLabel takes the `transposition !== 0 && detectedKey`
+        // branch. estimateKey treats large bias toward C/G/D as C major; a
+        // minor mode requires lowercase or 'm' suffix.
+        mockStoreState.aiState = {
+            isEnabled: true,
+            pageData: {
+                "1": {
+                    chords: [
+                        { text: "C" }, { text: "G" }, { text: "Am" }, { text: "F" },
+                    ],
+                    error: null,
+                },
+            },
+            scanningPages: [],
+            error: null,
+        } as any
+        mockStoreState.transposition = 2
+        mockStoreState.playbackQueue = [
+            { fileId: 'pdf-xyz', type: 'pdf', title: 'Adon Olam' } as any,
+        ]
+        mockStoreState.queueIndex = 0
+
+        render(<PerformanceToolbar onHome={mockOnHome} />)
+        const triggers = screen.getAllByTestId(/transpose-trigger/)
+        expect(triggers.length).toBeGreaterThanOrEqual(2)
+        for (const t of triggers) {
+            const text = t.textContent || ""
+            // Signed offset present.
+            expect(text).toMatch(/\+2/)
+            // Delta arrow + transposed key present (estimateKey of C/G/Am/F
+            // is "C"; transposeChord("C", 2) = "D" — text contains "→" and
+            // the transposed pitch).
+            expect(text).toMatch(/→/)
+            expect(t.getAttribute("data-transposed")).toBe("true")
+        }
+
+        // Peripheral cue: when transposed, the trigger carries the primary-
+        // tinted accent (bg-primary), separate from the prior brand tint
+        // that lit up just because aiState was enabled.
+        const accentTriggers = triggers.filter(t =>
+            /\bbg-primary\b/.test(t.className),
+        )
+        expect(accentTriggers.length).toBeGreaterThanOrEqual(2)
+
+        // Restore.
+        mockStoreState.aiState = { isEnabled: false, pageData: {}, scanningPages: [], error: null }
+        mockStoreState.transposition = 0
+        mockStoreState.playbackQueue = []
+        mockStoreState.queueIndex = 0
+    })
+
+    it("M3-004: TRANSPOSE button is NOT primary-accented when transposition is 0", () => {
+        mockStoreState.transposition = 0
+        mockStoreState.aiState = { isEnabled: false, pageData: {}, scanningPages: [], error: null }
+        mockStoreState.playbackQueue = [
+            { fileId: 'pdf-xyz', type: 'pdf', title: 'Adon Olam' } as any,
+        ]
+        mockStoreState.queueIndex = 0
+
+        render(<PerformanceToolbar onHome={mockOnHome} />)
+        const triggers = screen.getAllByTestId(/transpose-trigger/)
+        for (const t of triggers) {
+            expect(t.className).not.toMatch(/\bbg-primary\b/)
+        }
+
+        mockStoreState.playbackQueue = []
+        mockStoreState.queueIndex = 0
+    })
 })

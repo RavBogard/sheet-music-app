@@ -12,6 +12,7 @@ import { estimateKey, transposeChord } from "@/lib/music-math"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { SetlistDrawer } from "@/components/performance/SetlistDrawer"
 import { KeepAwakeToggle } from "@/components/performance/KeepAwakeToggle"
+import type { WakeLockError } from "@/hooks/use-wake-lock"
 import { MetronomeControl } from "./MetronomeControl"
 import { SongNavigation } from "./SongNavigation"
 import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
@@ -31,6 +32,11 @@ export interface PerformanceToolbarWakeLock {
     isSupported: boolean
     onRequest: () => void | Promise<void>
     onRelease: () => void | Promise<void>
+    /** M3-001 (cycle-11, 2026-05-28): reactive failure verdict so the
+     *  in-chart KeepAwakeToggle can surface its inline alert pill. Optional
+     *  — older call sites that don't thread it through fall back to the
+     *  prior silent-fail behavior. */
+    lastError?: WakeLockError
 }
 
 interface PerformanceToolbarProps {
@@ -106,16 +112,34 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock
         return aiEstimate ?? musicXmlKey ?? null
     }, [aiState.pageData, musicXmlKey])
 
-    // Transposer button label
+    // Transposer button label.
+    // M3-004 (cycle-11, 2026-05-28): the label now ALWAYS surfaces the
+    // current transposition offset as a signed token (`+0` / `+2` / `-3`)
+    // so a musician can read state from the button without opening the
+    // popover. Prior format showed only the key delta (`G#m → A#m`) which
+    // hid whether the chart was at +0 or still at +2 from a prior song.
+    // Acceptance criteria: transpose=0 → text contains "+0"; transpose=+2
+    // from G#m → text contains "+2" AND the delta.
+    const signedOffset = useMemo(
+        () => `${transposition >= 0 ? "+" : ""}${transposition}`,
+        [transposition],
+    )
     const buttonLabel = useMemo(() => {
         if (aiState.scanningPages.length > 0) return "Scan"
         if (capoFret !== null && capoFret > 0 && detectedKey) return `Capo ${capoFret}`
         if (transposition !== 0 && detectedKey) {
-            return `${detectedKey} → ${transposeChord(detectedKey, transposition)}`
+            return `${detectedKey} → ${transposeChord(detectedKey, transposition)} ${signedOffset}`
         }
-        if (detectedKey) return detectedKey
-        return "Transpose"
-    }, [aiState.scanningPages.length, capoFret, transposition, detectedKey])
+        if (transposition !== 0) return signedOffset
+        if (detectedKey) return `${detectedKey} ${signedOffset}`
+        return signedOffset
+    }, [aiState.scanningPages.length, capoFret, transposition, detectedKey, signedOffset])
+
+    // M3-004 peripheral cue: when the chart is transposed away from +0 the
+    // button gets a stronger primary-tinted pill accent so the band can
+    // read the active-transposition state from peripheral vision (vs the
+    // prior aiState-only highlight which lit up just from opening the menu).
+    const isTransposed = transposition !== 0
 
     // ── Shared sub-components ──
 
@@ -255,12 +279,22 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock
                 <PopoverTrigger asChild>
                     <Button
                         variant="ghost"
+                        data-testid={compact ? "transpose-trigger-mobile" : "transpose-trigger-desktop"}
+                        data-transposed={isTransposed ? "true" : "false"}
                         className={cn(
                             "rounded-xl font-semibold fluid-interaction flex items-center",
                             compact
                                 ? "h-11 px-3 text-xs gap-1.5"
                                 : "h-11 px-4 text-xs font-bold gap-2 min-w-[100px] justify-center",
-                            aiState.isEnabled
+                            // M3-004 peripheral cue priority: an active
+                            // transposition (`+N != 0`) wins over the
+                            // aiState-enabled tint, since transposition
+                            // changes carry musical state the band MUST
+                            // read at a glance. Falls back to the AI-on
+                            // brand tint, then to the idle glass-card.
+                            isTransposed
+                                ? "bg-primary text-primary-foreground border border-primary shadow-lg shadow-primary/30"
+                                : aiState.isEnabled
                                 ? "bg-brand border border-brand/50 text-foreground shadow-lg shadow-brand/20"
                                 : "glass-card text-foreground/80 hover:text-foreground"
                         )}
@@ -302,6 +336,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock
                             isSupported={wakeLock.isSupported}
                             onRequest={wakeLock.onRequest}
                             onRelease={wakeLock.onRelease}
+                            lastError={wakeLock.lastError}
                         />
                     )}
                 </div>
@@ -371,6 +406,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock
                             isSupported={wakeLock.isSupported}
                             onRequest={wakeLock.onRequest}
                             onRelease={wakeLock.onRelease}
+                            lastError={wakeLock.lastError}
                         />
                     )}
 

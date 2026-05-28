@@ -89,6 +89,7 @@ export function SetlistPerformClient({
         rabbi,
         isWakeLockActive,
         isWakeLockSupported,
+        wakeLockError,
         requestWakeLock,
         releaseWakeLock,
     } = useSetlistPerformance(setlistId, {
@@ -227,6 +228,7 @@ export function SetlistPerformClient({
                         isSupported={isWakeLockSupported}
                         onRequest={requestWakeLock}
                         onRelease={releaseWakeLock}
+                        lastError={wakeLockError}
                     />
                     {/* F1: pre-arm the whole setlist for offline use (idle auto-precache
                         runs on mount; this CTA force-caches with progress). Shown to
@@ -303,6 +305,7 @@ export function SetlistPerformClient({
                         isSupported: isWakeLockSupported,
                         onRequest: requestWakeLock,
                         onRelease: releaseWakeLock,
+                        lastError: wakeLockError,
                     }}
                 />
             )}

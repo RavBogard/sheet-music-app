@@ -30,6 +30,10 @@ interface UseSetlistPerformanceReturn {
     defaultTransposition: number
     isWakeLockActive: boolean
     isWakeLockSupported: boolean
+    /** M3-001 (cycle-11, 2026-05-28): reactive verdict for the most recent
+     *  `requestWakeLock()` attempt — drives the inline failure alert in
+     *  `KeepAwakeToggle`. */
+    wakeLockError: import("@/hooks/use-wake-lock").WakeLockError
     requestWakeLock: () => Promise<void>
     releaseWakeLock: () => Promise<void>
     isLeader: boolean
@@ -213,6 +217,7 @@ export function useSetlistPerformance(
     const {
         isSupported: isWakeLockSupported,
         isLocked: isWakeLockActive,
+        lastError: wakeLockError,
         requestWakeLock,
         releaseWakeLock,
     } = useWakeLock()
@@ -230,6 +235,7 @@ export function useSetlistPerformance(
         defaultTransposition,
         isWakeLockActive,
         isWakeLockSupported,
+        wakeLockError,
         requestWakeLock,
         releaseWakeLock,
         isLeader,

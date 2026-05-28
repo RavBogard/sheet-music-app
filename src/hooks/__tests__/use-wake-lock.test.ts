@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 // Mock logger
@@ -138,6 +138,113 @@ describe('useWakeLock', () => {
     })
 
     expect(result.current.isLocked).toBe(false)
+  })
+
+  // M3-001 (cycle-11, 2026-05-28): the prior path swallowed NotAllowedError
+  // to a debug log, leaving KeepAwakeToggle to optimistically flip its
+  // visual state while the underlying lock never engaged (Yizkor-class
+  // silent failure). The hook now surfaces a reactive `lastError` verdict
+  // so the toggle can render an inline alert + suppress the engaged state.
+  describe('M3-001 — lastError reactive failure verdict', () => {
+    function setDocumentVisibility(state: 'visible' | 'hidden') {
+      Object.defineProperty(document, 'visibilityState', {
+        writable: true,
+        configurable: true,
+        value: state,
+      })
+    }
+
+    afterEach(() => {
+      setDocumentVisibility('visible')
+    })
+
+    it('lastError starts null', async () => {
+      const { result } = renderHook(() => useWakeLock())
+      await act(async () => {})
+      expect(result.current.lastError).toBeNull()
+    })
+
+    // AC1: handler called while visibilityState==='hidden' → aria-pressed
+    // stays false (verified via KeepAwakeToggle test) + lastError='hidden'.
+    it('sets lastError="hidden" when the document is hidden at request time', async () => {
+      setDocumentVisibility('hidden')
+      const notAllowed = new DOMException('Not allowed', 'NotAllowedError')
+      requestSpy.mockRejectedValue(notAllowed)
+
+      const { result } = renderHook(() => useWakeLock())
+      await act(async () => {
+        await result.current.requestWakeLock()
+      })
+
+      expect(result.current.isLocked).toBe(false)
+      expect(result.current.lastError).toBe('hidden')
+    })
+
+    it('sets lastError="denied" on NotAllowedError when the document is visible', async () => {
+      setDocumentVisibility('visible')
+      const notAllowed = new DOMException('Not allowed', 'NotAllowedError')
+      requestSpy.mockRejectedValue(notAllowed)
+
+      const { result } = renderHook(() => useWakeLock())
+      await act(async () => {
+        await result.current.requestWakeLock()
+      })
+
+      expect(result.current.lastError).toBe('denied')
+    })
+
+    // AC2: a successful acquire flips aria-pressed true (engaged) and
+    // clears any stale lastError.
+    it('clears lastError on a subsequent successful acquire', async () => {
+      // First attempt fails ('denied').
+      const notAllowed = new DOMException('Not allowed', 'NotAllowedError')
+      requestSpy.mockRejectedValueOnce(notAllowed)
+
+      const { result } = renderHook(() => useWakeLock())
+      await act(async () => {
+        await result.current.requestWakeLock()
+      })
+      expect(result.current.lastError).toBe('denied')
+
+      // Second attempt succeeds (default spy resolves a sentinel).
+      await act(async () => {
+        await result.current.requestWakeLock()
+      })
+      expect(result.current.lastError).toBeNull()
+      expect(result.current.isLocked).toBe(true)
+    })
+
+    it('clears lastError on releaseWakeLock()', async () => {
+      const notAllowed = new DOMException('Not allowed', 'NotAllowedError')
+      requestSpy.mockRejectedValue(notAllowed)
+
+      const { result } = renderHook(() => useWakeLock())
+      await act(async () => {
+        await result.current.requestWakeLock()
+      })
+      expect(result.current.lastError).toBe('denied')
+
+      await act(async () => {
+        await result.current.releaseWakeLock()
+      })
+      expect(result.current.lastError).toBeNull()
+    })
+
+    it('dismissWakeLockError clears the verdict explicitly', async () => {
+      const notAllowed = new DOMException('Not allowed', 'NotAllowedError')
+      requestSpy.mockRejectedValue(notAllowed)
+
+      const { result } = renderHook(() => useWakeLock())
+      await act(async () => {
+        await result.current.requestWakeLock()
+      })
+      expect(result.current.lastError).toBe('denied')
+
+      act(() => {
+        result.current.dismissWakeLockError()
+      })
+      expect(result.current.lastError).toBeNull()
+    })
   })
 
   it('registers visibilitychange listener for reacquisition', async () => {

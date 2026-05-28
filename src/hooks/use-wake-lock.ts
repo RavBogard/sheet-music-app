@@ -47,10 +47,31 @@ function exposeSentinelForProbe(sentinel: WakeLockSentinel | null): void {
  * iPads / browsers without the API surface a disabled toggle with a tooltip
  * rather than a silent no-op.
  */
+/**
+ * Reactive failure verdict surfaced from `acquireLock` so the toggle UI can
+ * tell the band WHY a tap didn't engage the lock (M3-001, 2026-05-28). The
+ * prior swallow-to-debug path produced the Yizkor-class silent failure:
+ * `KeepAwakeToggle` flipped its visual state optimistically while the
+ * underlying `wakeLock.request('screen')` rejected, leaving Daniel staring
+ * at a "Screen on" pill that wasn't actually holding a lock.
+ *
+ * - `'hidden'` — request rejected because the document is currently hidden
+ *   (`document.visibilityState === 'hidden'`). The musician likely tapped
+ *   the toggle from the home-screen icon or with the chart backgrounded;
+ *   the fix is "tap the chart to re-focus and retry".
+ * - `'denied'` — `NotAllowedError` from a non-hidden context: no transient
+ *   user-activation (mount-effect call) or system restriction (low battery,
+ *   power-saver). The fix is "tap the toggle again from the gesture".
+ * - `null` — no error or last attempt succeeded. UI clears the alert.
+ */
+export type WakeLockError = 'hidden' | 'denied' | null
+
 export function useWakeLock() {
     const [isSupported, setIsSupported] = useState(false)
     const [isLocked, setIsLocked] = useState(false)
     const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null)
+    // M3-001 reactive failure verdict — see WakeLockError docstring above.
+    const [lastError, setLastError] = useState<WakeLockError>(null)
     // Track whether we *should* be locked (survives sentinel releases on
     // backgrounding so visibilitychange can re-acquire automatically).
     const shouldLockRef = useRef(false)
@@ -73,10 +94,17 @@ export function useWakeLock() {
             logger.warn("Wake Lock API not supported")
             return
         }
+        // M3-001: a hidden document rejects `wakeLock.request('screen')`
+        // synchronously with NotAllowedError. Classify BEFORE the try so the
+        // verdict isn't ambiguous with the "no gesture" path below.
+        const hiddenAtRequest =
+            typeof document !== "undefined" &&
+            document.visibilityState === "hidden"
         try {
             const lock = await navigator.wakeLock.request("screen")
             setWakeLock(lock)
             setIsLocked(true)
+            setLastError(null)
             exposeSentinelForProbe(lock)
             logger.info("Wake Lock active")
 
@@ -89,12 +117,18 @@ export function useWakeLock() {
         } catch (err: unknown) {
             const name = (err as { name?: string } | null)?.name
             // NotAllowedError surfaces when the call wasn't user-activated
-            // (mount effect, programmatic re-request after long background).
-            // Surface it as a non-fatal debug — the toggle stays visibly off
-            // and the user can re-tap to retry.
+            // (mount effect, programmatic re-request after long background)
+            // OR the document is currently hidden. Surface a reactive verdict
+            // so the toggle can show the band WHY the lock didn't engage
+            // (M3-001 — replaces the prior silent debug-log path).
             if (name === "NotAllowedError") {
-                logger.debug("Wake lock request denied (no user gesture or background tab)")
+                const verdict: WakeLockError = hiddenAtRequest ? "hidden" : "denied"
+                setLastError(verdict)
+                logger.debug(
+                    `Wake lock request denied (${verdict === "hidden" ? "document hidden" : "no user gesture"})`,
+                )
             } else {
+                setLastError("denied")
                 logger.error("Failed to acquire Wake Lock:", err)
             }
         }
@@ -107,6 +141,9 @@ export function useWakeLock() {
 
     const releaseWakeLock = useCallback(async () => {
         shouldLockRef.current = false
+        // User-initiated release clears any prior failure verdict so the
+        // alert pill doesn't linger on the next acquire attempt (M3-001).
+        setLastError(null)
         if (wakeLock) {
             try {
                 await wakeLock.release()
@@ -160,5 +197,19 @@ export function useWakeLock() {
         return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
     }, [acquireLock])
 
-    return { isSupported, isLocked, requestWakeLock, releaseWakeLock }
+    // M3-001: explicit dismiss helper so the toggle can clear its inline
+    // alert pill on the next user interaction (e.g. tap-to-retry) without
+    // racing the request flow's own setLastError.
+    const dismissWakeLockError = useCallback(() => {
+        setLastError(null)
+    }, [])
+
+    return {
+        isSupported,
+        isLocked,
+        lastError,
+        requestWakeLock,
+        releaseWakeLock,
+        dismissWakeLockError,
+    }
 }
