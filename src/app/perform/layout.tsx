@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { AuthedQueryProvider } from "@/components/authed-query-provider"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
+import { registerPerformShellSW } from "@/components/performance/perform-shell-sw-register"
 import { primeOfflineWorker } from "@/lib/pdf-worker-offline"
 
 /**
@@ -134,6 +135,24 @@ function PdfWorkerPreload() {
     return null
 }
 
+/**
+ * Register the perform-shell service worker on /perform/* mount.
+ *
+ * Fire-and-forget; the helper is idempotent (sessionStorage one-shot per
+ * tab) and never throws. Lives as a sibling island next to <PdfWorkerPreload/>
+ * so registration kicks in alongside the other perform-route bootstraps.
+ *
+ * See docs/superpowers/specs/2026-05-28-perform-shell-sw-design.md for the
+ * F-C12-R2-009 design rationale + cycle-9 recovery-loop constraints this
+ * helper deliberately avoids.
+ */
+function PerformShellSWBootstrap() {
+    useEffect(() => {
+        void registerPerformShellSW()
+    }, [])
+    return null
+}
+
 export default function PerformLayout({
     children,
 }: {
@@ -150,6 +169,7 @@ export default function PerformLayout({
         <AuthedQueryProvider>
             <main id="main-content" className="min-h-screen">
                 <PdfWorkerPreload />
+                <PerformShellSWBootstrap />
                 <PerformanceOfflineIndicator />
                 {children}
             </main>
