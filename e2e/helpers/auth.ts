@@ -246,3 +246,55 @@ export async function revokeTestAccounts(
 ): Promise<void> {
     for (const uid of uids) await revokeTestAccount(request, baseURL, adminBearer, uid)
 }
+
+/**
+ * Mint an ADMIN test session via the secret-gated `/api/auth/admin-test-session`
+ * endpoint (Daniel-ratified 2026-05-27). This is the ONLY path to an admin
+ * browser session — `create_test_account` deliberately can't mint admin
+ * (priv-esc guard). The endpoint provisions a fresh `test-admin-<hex>` user
+ * (claims role:admin + admin_test:true, ~1h TTL, audit row), sets the
+ * `__session` cookie on the BrowserContext jar (so the next `page.goto` is
+ * authed as admin), and returns the paired MCP bearer + customToken.
+ *
+ * The `secret` is the harness's copy of `MCP_ADMIN_TEST_SESSION_SECRET`; the
+ * caller is responsible for skipping when it's unset (the endpoint also
+ * returns 503 if the server side isn't configured).
+ *
+ * The minted `test-admin-*` uid is in the test- namespace, so the standard
+ * `revokeTestAccount` (admin bearer) cascade-revokes it on teardown — NEVER
+ * `cleanup_all_test_data`, per `[[feedback_sandbox_test_isolation]]`.
+ */
+export async function mintAdminTestSession(
+    context: BrowserContext,
+    baseURL: string,
+    secret: string,
+    opts: { ttlSec?: number } = {},
+): Promise<{
+    uid: string
+    role: 'admin'
+    token: string
+    customToken: string | null
+}> {
+    const res = await context.request.post(`${baseURL}/api/auth/admin-test-session`, {
+        headers: { 'x-admin-test-secret': secret },
+        data: opts.ttlSec ? { ttlSec: opts.ttlSec } : {},
+    })
+    if (!res.ok()) {
+        const body = await res.text().catch(() => '')
+        throw new Error(
+            `mintAdminTestSession failed: ${res.status()} ${res.statusText()}\n${body.slice(0, 400)}`,
+        )
+    }
+    const data = (await res.json()) as {
+        uid: string
+        role?: string
+        token: string
+        customToken?: string | null
+    }
+    return {
+        uid: data.uid,
+        role: 'admin',
+        token: data.token,
+        customToken: data.customToken ?? null,
+    }
+}

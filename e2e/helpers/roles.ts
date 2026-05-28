@@ -1,6 +1,12 @@
 import { test as base, type BrowserContext, type Page } from '@playwright/test'
 
-import { mintTestAccount, loginAsTestUser, signInWebSdk, revokeTestAccounts } from './auth'
+import {
+    mintTestAccount,
+    loginAsTestUser,
+    signInWebSdk,
+    revokeTestAccounts,
+    mintAdminTestSession,
+} from './auth'
 
 /**
  * Role-gate fixture + sign-in convenience for the e2e suite (DESIGN §D3).
@@ -22,12 +28,26 @@ import { mintTestAccount, loginAsTestUser, signInWebSdk, revokeTestAccounts } fr
  *
  * `admin` is intentionally NOT a `TestRole`. `create_test_account`'s `TEST_ROLE`
  * enum (`src/lib/mcp/tools/test-tokens.ts`) deliberately excludes `admin` as a
- * privilege-escalation guard — there is no path from a test bearer to a
- * `test-admin-*` uid. Specs needing an admin browser session remain blocked on
- * the QUESTION filed in `library-review-flow.spec.ts` (extend test-tokens behind
- * a stronger gate, or add a one-shot admin-test-session surface).
+ * privilege-escalation guard — there is no path from a TEST BEARER to a
+ * `test-admin-*` uid, and that guard STAYS. Admin sessions instead come from
+ * the separate secret-gated `/api/auth/admin-test-session` endpoint
+ * (Daniel-ratified 2026-05-27): `roleGate.as('admin')` routes through it,
+ * gated on `MCP_ADMIN_TEST_SESSION_SECRET` being present in the harness env.
+ * When the secret is absent, `as('admin')` throws a clear skip-prompting
+ * error — callers gate the admin row on the secret (see `role-gate-matrix`).
  */
 export type TestRole = 'band_leader' | 'musician' | 'member'
+
+/** Roles `roleGate.as` can request: the three mintable TestRoles + admin via
+ *  the secret-gated endpoint. Kept distinct from `TestRole` so the
+ *  create_test_account path's type stays admin-free. */
+export type MatrixRole = TestRole | 'admin'
+
+/** The harness's copy of the admin-test-session secret; '' when unset. */
+const ADMIN_TEST_SECRET = process.env.MCP_ADMIN_TEST_SESSION_SECRET ?? ''
+
+/** True iff `roleGate.as('admin')` can mint (secret present in harness env). */
+export const adminTestSessionAvailable = ADMIN_TEST_SECRET !== ''
 
 export interface RoleSession {
     uid: string
@@ -45,19 +65,23 @@ export interface RoleGate {
     /** The admin/band_leader bearer the fixture mints with (`MCP_BEARER`); '' if unset. */
     readonly adminBearer: string
     /**
-     * Mint a fresh `test-<role>-*` account, set its `__session` cookie on the
-     * browser context, and return the session (incl. customToken). Does NOT
-     * navigate or wake the Web SDK — pair with `signInWebSdk` after a `goto`,
-     * or use {@link RoleGate.gotoAs}.
+     * Mint a fresh `test-<role>-*` account (or, for `'admin'`, a
+     * `test-admin-*` session via the secret-gated endpoint), set its
+     * `__session` cookie on the browser context, and return the session
+     * (incl. customToken). Does NOT navigate or wake the Web SDK — pair with
+     * `signInWebSdk` after a `goto`, or use {@link RoleGate.gotoAs}.
+     *
+     * `as('admin')` requires `MCP_ADMIN_TEST_SESSION_SECRET` in the harness
+     * env; it throws otherwise. Gate the call on {@link adminTestSessionAvailable}.
      */
-    as(role: TestRole, opts?: { label?: string; ttlSec?: number }): Promise<RoleSession>
+    as(role: MatrixRole, opts?: { label?: string; ttlSec?: number }): Promise<RoleSession>
     /**
      * `as(role)` → `page.goto(path)` → `signInWebSdk`. `webSdk` defaults to
      * `'required'`; pass `'optional'` to degrade to cookie-only when the target
      * build lacks `NEXT_PUBLIC_PROBE_HARNESS_AUTH=1`, or `false` to skip it.
      */
     gotoAs(
-        role: TestRole,
+        role: MatrixRole,
         path: string,
         opts?: { webSdk?: WebSdkMode; label?: string; ttlSec?: number },
     ): Promise<RoleSession>
@@ -93,6 +117,29 @@ export const test = base.extend<{ roleGate: RoleGate }>({
 
         const as: RoleGate['as'] = async (role, opts = {}) => {
             if (!baseURL) throw new Error('roleGate.as: PLAYWRIGHT_BASE_URL must be set')
+
+            // ── admin → secret-gated endpoint (NOT create_test_account) ──
+            if (role === 'admin') {
+                if (!ADMIN_TEST_SECRET) {
+                    throw new Error(
+                        "roleGate.as('admin'): MCP_ADMIN_TEST_SESSION_SECRET is not set in the harness env. " +
+                            'Admin sessions come from the secret-gated /api/auth/admin-test-session endpoint; ' +
+                            'gate this call on `adminTestSessionAvailable`.',
+                    )
+                }
+                const admin = await mintAdminTestSession(context, baseURL, ADMIN_TEST_SECRET, {
+                    ttlSec: opts.ttlSec,
+                })
+                createdUids.push(admin.uid)
+                return {
+                    uid: admin.uid,
+                    role: admin.role,
+                    bearer: admin.token,
+                    customToken: admin.customToken,
+                }
+            }
+
+            // ── non-admin roles → create_test_account + test-session ────
             if (!adminBearer) {
                 throw new Error(
                     'roleGate.as: MCP_BEARER (admin/band_leader bearer) required to mint a test account',

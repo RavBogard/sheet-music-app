@@ -62,6 +62,14 @@ export const env = createEnv({
         // which the legacy /api/cron/enrich path reads via src/lib/gemini.ts;
         // the two surfaces are intentionally disjoint.
         GEMINI_API_KEY: z.string().optional(),
+        // Harness-only admin test-session gate (Daniel-ratified 2026-05-27).
+        // The /api/auth/admin-test-session endpoint mints a short-lived
+        // admin session ONLY when this secret is presented in the
+        // x-admin-test-secret header. Optional everywhere — the endpoint is
+        // dormant (503) until Daniel sets it in Vercel prod. Deliberately
+        // NOT prodRequired: an unset value disables the surface, which is
+        // the safe default. Never reaches the MCP tool registry surface.
+        MCP_ADMIN_TEST_SESSION_SECRET: z.string().optional(),
     },
     client: {
         NEXT_PUBLIC_FIREBASE_API_KEY: z.string().min(1, "Firebase API key is required"),
@@ -107,6 +115,7 @@ export const env = createEnv({
         DAVID_DRIVE_DROP_FOLDER_ID: process.env.DAVID_DRIVE_DROP_FOLDER_ID,
         CRC_BACKUP_DRIVE_FOLDER_ID: process.env.CRC_BACKUP_DRIVE_FOLDER_ID,
         GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+        MCP_ADMIN_TEST_SESSION_SECRET: process.env.MCP_ADMIN_TEST_SESSION_SECRET,
     },
     skipValidation: !!process.env.SKIP_ENV_VALIDATION,
     emptyStringAsUndefined: true,

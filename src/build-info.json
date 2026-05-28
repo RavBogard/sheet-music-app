@@ -1,7 +1,7 @@
 {
   "version": "10.1.0",
-  "commit": "7d0af39e91",
-  "branch": "feat/dedup-canonical-picker-prefer-bytes",
+  "commit": "fb9a137b4c",
+  "branch": "feat/admin-test-session",
   "buildDate": "5/27/2026",
   "changelog": []
 }
