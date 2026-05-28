@@ -272,19 +272,28 @@ export async function backfillTrackMimetype(
             }
         }
 
-        // ─── real run without force → plan + refused:true, still no writes ────
+        // ─── real run without force → rich force_required envelope, no writes ─
+        // FU-1: carries the dry-run plan in `dryRunPlan` so the caller can
+        // inspect what would change without re-running. Still no writes —
+        // aligns this F-05 tool with the canonical refusal shape used by
+        // backfill_library_index / dedupe_library / library-review.
         if (!force) {
-            return {
-                ok: true,
-                scannedTracks,
-                bondedTracks,
-                alreadyHealthy,
-                heal: rowReport(healRows),
-                skipped: rowReport(skippedRows),
-                dryRun: false,
-                committed: 0,
-                refused: true,
-            }
+            return richError(
+                "force_required",
+                "backfill_track_mimetype requires force:true to commit.",
+                {
+                    dryRunPlan: {
+                        scannedTracks,
+                        bondedTracks,
+                        alreadyHealthy,
+                        heal: rowReport(healRows),
+                        skipped: rowReport(skippedRows),
+                        dryRun: false,
+                        committed: 0,
+                    },
+                },
+                "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
+            )
         }
 
         // ─── force run: batched merge-set of mimeType + version bump ──────────

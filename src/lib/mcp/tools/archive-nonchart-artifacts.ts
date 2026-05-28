@@ -257,20 +257,28 @@ export async function archiveNonChartArtifacts(
             }
         }
 
-        // ── real run without force → plan + refused:true, still no writes ─────
+        // ── real run without force → rich force_required envelope, no writes ──
+        // FU-1: carries the would-archive plan in `dryRunPlan` so the caller
+        // can inspect the set before committing. Still no writes — aligns with
+        // backfill_library_index / dedupe_library / library-review.
         if (!force) {
-            return {
-                ok: true,
-                scanned,
-                toArchive: rowReport(archiveRows),
-                heldGoogleDocs: rowReport(heldDocs),
-                alreadyArchived,
-                notMatched,
-                dryRun: false,
-                committed: 0,
-                verified: 0,
-                refused: true,
-            }
+            return richError(
+                "force_required",
+                "archive_nonchart_artifacts requires force:true to commit.",
+                {
+                    dryRunPlan: {
+                        scanned,
+                        toArchive: rowReport(archiveRows),
+                        heldGoogleDocs: rowReport(heldDocs),
+                        alreadyArchived,
+                        notMatched,
+                        dryRun: false,
+                        committed: 0,
+                        verified: 0,
+                    },
+                },
+                "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
+            )
         }
 
         // ── force run: batched status flip, mirroring /api/library/archive ────

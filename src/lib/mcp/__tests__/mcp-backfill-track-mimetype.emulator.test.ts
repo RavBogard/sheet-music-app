@@ -176,16 +176,24 @@ describe("MCP backfill_track_mimetype — cowork #2/#7 (emulator)", () => {
         expect(plain.forceWithoutCommit).toBeUndefined()
     })
 
-    it("refuses a real run without force — returns plan with refused:true, no writes", async () => {
+    it("refuses a real run without force — returns rich force_required envelope with the plan, no writes", async () => {
         await seedTrack("t-heal", { setlistId: "s1", fileId: "upload-text" })
         await seedIndex("upload-text", { mimeType: "text/plain" })
 
         const r = await backfillTrackMimetype(ADMIN, { dryRun: false })
-        if (!r.ok) throw new Error("expected ok:true")
-        expect(r.refused).toBe(true)
-        expect(r.dryRun).toBe(false)
-        expect(r.committed).toBe(0)
-        expect(r.heal.count).toBe(1)
+        // FU-1: force-gate now returns the rich force_required envelope (ok:false,
+        // error.machine_code) carrying the dry-run plan in `dryRunPlan`, instead
+        // of {ok:true, refused:true}.
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+        })
+        const plan = (r as {
+            dryRunPlan?: { dryRun?: boolean; committed?: number; heal?: { count?: number } }
+        }).dryRunPlan
+        expect(plan?.dryRun).toBe(false)
+        expect(plan?.committed).toBe(0)
+        expect(plan?.heal?.count).toBe(1)
 
         const heal = (await db().collection("tracks").doc("t-heal").get()).data() ?? {}
         expect(heal.mimeType).toBeUndefined()

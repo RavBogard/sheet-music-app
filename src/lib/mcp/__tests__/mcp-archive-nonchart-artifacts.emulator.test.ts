@@ -144,14 +144,20 @@ describe("MCP archive_nonchart_artifacts — dh-20260527a Class 3 (emulator)", (
         expect(r.heldGoogleDocs.count).toBe(1)
     })
 
-    it("real run without force → refused:true, no writes (F-05)", async () => {
+    it("real run without force → rich force_required envelope, no writes (F-05)", async () => {
         await seedIndex("f1", { name: "Old Folder", mimeType: FOLDER })
-        const r = asResult(
-            await archiveNonChartArtifacts(ADMIN, { dryRun: false }),
-        )
-        expect(r.refused).toBe(true)
-        expect(r.committed).toBe(0)
-        expect(r.toArchive.count).toBe(1)
+        // FU-1: force-gate now returns the rich force_required envelope (ok:false)
+        // carrying the would-archive plan in `dryRunPlan`, instead of {ok:true, refused:true}.
+        const raw = await archiveNonChartArtifacts(ADMIN, { dryRun: false })
+        expect(raw).toMatchObject({
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+        })
+        const plan = (raw as {
+            dryRunPlan?: { committed?: number; toArchive?: { count?: number } }
+        }).dryRunPlan
+        expect(plan?.committed).toBe(0)
+        expect(plan?.toArchive?.count).toBe(1)
         const after = await db().collection("library_index").doc("f1").get()
         expect(after.data()?.status).toBeUndefined()
     })

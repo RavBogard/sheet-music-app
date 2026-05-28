@@ -304,7 +304,7 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
         expect(rowAfter.data()?.source).toBeUndefined()
     })
 
-    it("real-run without force returns refused:true with no writes", async () => {
+    it("real-run without force returns rich force_required envelope with no writes", async () => {
         await seedUser(ADMIN, "admin")
         await seedIndex("upload-1", {
             name: "Ana B_Koach.pdf",
@@ -323,9 +323,14 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
             sourceUrl: "https://example.com/ana.pdf",
             dryRun: false,
         })
-        if (!("ok" in r) || r.ok !== true) throw new Error("expected ok:true")
-        expect(r.refused).toBe(true)
-        expect(r.dryRun).toBe(false)
+        // FU-1: force-gate now returns the rich force_required envelope (ok:false,
+        // error.machine_code) carrying the resolved-source plan in `dryRunPlan`,
+        // instead of {ok:true, refused:true}.
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+        })
+        expect((r as { dryRunPlan?: { dryRun?: boolean } }).dryRunPlan?.dryRun).toBe(false)
 
         // No Storage / Firestore writes.
         expect(storageState.uploaded.size).toBe(0)

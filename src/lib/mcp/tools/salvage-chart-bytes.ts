@@ -378,23 +378,27 @@ export async function salvageChartBytes(
         }
 
         if (!force) {
-            // Real-run without force — F-05 refusal. Uses the legacy
-            // `{ok:true, refused:true}` shape for consistency with sibling
-            // hygiene tools (reconcile_library / backfill_library_index /
-            // backfill_setlist_test_flag). The cycle3-envelope agent's
-            // REG-003 sweep migrates this to the rich `force_required`
-            // envelope across all F-05 tools in one pass.
-            return {
-                ok: true,
-                fileId,
-                rowName,
-                source: resolved.source,
-                mimeType: resolved.mimeType,
-                sizeBytes: resolved.buffer.byteLength,
-                storagePath,
-                dryRun: false,
-                refused: true,
-            }
+            // Real-run without force — FU-1: rich `force_required` envelope
+            // carrying the resolved-source plan in `dryRunPlan`, still no
+            // writes. Completes the REG-003 sweep this F-05 tool's prior
+            // comment flagged as pending; aligns with reconcile_library /
+            // backfill_library_index / dedupe_library / library-review.
+            return richError(
+                "force_required",
+                "salvage_chart_bytes requires force:true to commit the heal.",
+                {
+                    dryRunPlan: {
+                        fileId,
+                        rowName,
+                        source: resolved.source,
+                        mimeType: resolved.mimeType,
+                        sizeBytes: resolved.buffer.byteLength,
+                        storagePath,
+                        dryRun: false,
+                    },
+                },
+                "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
+            )
         }
 
         // ─── HEAL via the shared atomic guard ([[feedback_upload_atomicity]]) ─
