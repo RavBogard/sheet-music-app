@@ -637,4 +637,59 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
             error: { machine_code: "forbidden_role", message: expect.stringMatching(/admin or band leader/i) },
         })
     })
+
+    it("C11M1-001: commit_staged_changes denormalizes songCount across mixed add/remove/update_type proposals", async () => {
+        // The drift workhorse: Daniel's weekly Claude-Desktop flow batches
+        // dozens of edits through propose→commit. Pre-fix `commit_staged_changes`
+        // wrote trackCount but left songCount frozen at whatever the prior
+        // writer wrote. Now it must recompute songCount from post-commit state
+        // (existing rows' types ± any patch.type flip + new rows' payload.type).
+        const setlistId = await newSetlist()
+        // Seed 3 songs + 1 header → trackCount 4, songCount 3.
+        const songA = await addOne(setlistId, "Song A") // song
+        const headerB = (await addTrackToSetlist(ADMIN, {
+            setlistId,
+            title: "Header B",
+            type: "header",
+        })) as { trackId: string }
+        await addOne(setlistId, "Song C") // song
+        const songD = await addOne(setlistId, "Song D") // song
+
+        // Sanity check seed counts.
+        const seed = (
+            await db().collection("setlists").doc(setlistId).get()
+        ).data() as Record<string, unknown>
+        expect(seed.trackCount).toBe(4)
+        expect(seed.songCount).toBe(3)
+
+        // Stage a multi-action batch: add 2 songs + 1 reading, remove songA,
+        // flip headerB → song (via type patch). Post-commit:
+        //   tracks = (songC, songD, headerB→song, addSong1, addSong2, addReading) = 6
+        //   songs = songC + songD + headerB-now-song + addSong1 + addSong2 = 5
+        //   readings = addReading = 1
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                { action: "add", title: "Added Song 1", type: "song" },
+                { action: "add", title: "Added Song 2", type: "song" },
+                { action: "add", title: "Added Reading", type: "reading" },
+                { action: "remove", trackId: songA },
+                { action: "update", trackId: headerB.trackId, type: "song" },
+            ],
+        })) as StageRecord
+
+        const commit = (await commitStagedChanges(ADMIN, {
+            stageId: stage.id,
+        })) as { ok: true; appliedCount: number }
+        expect(commit.ok).toBe(true)
+
+        const after = (
+            await db().collection("setlists").doc(setlistId).get()
+        ).data() as Record<string, unknown>
+        expect(after.trackCount).toBe(6)
+        expect(after.songCount).toBe(5)
+        // songD survived untouched (defensive — guards against off-by-one
+        // collateral on adjacent rows).
+        void songD
+    })
 })

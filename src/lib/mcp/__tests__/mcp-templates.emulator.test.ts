@@ -421,6 +421,12 @@ describe("MCP templates CRUD (emulator)", () => {
         expect(setlistDoc.eventDate).toBeInstanceOf(Timestamp)
         expect(setlistDoc.version).toBe(1)
         expect(setlistDoc.fileIds).toEqual(["song-hashkiveinu"])
+        // C11M1-001: songCount denormalized on the cloned setlist. Template
+        // has 2 song-type rows + 1 header → songCount: 2. Without this every
+        // weekly clone-from-template landed with a missing songCount
+        // (Daniel's "Randy Shabbat morning" path).
+        expect(setlistDoc.trackCount).toBe(3)
+        expect(setlistDoc.songCount).toBe(2)
 
         const tracks = await tracksOf(result.setlistId)
         expect(tracks).toHaveLength(3)

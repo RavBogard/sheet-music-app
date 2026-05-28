@@ -12,6 +12,7 @@ import {
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { isTestSetlist } from "@/types/models"
+import { isSongType } from "@/lib/setlist-track-count"
 import { auditBondedRows, detectOccasionTokens } from "./chart-bond-audit"
 
 /**
@@ -210,12 +211,22 @@ export async function cloneSetlist(
     // Build the new setlist parent doc. ownerId + version + lastModifiedAt
     // reset on a clone — the clone is a fresh resource, not a continuation
     // of the source's history.
+    // C11M1-001: songCount (song-type subset, rendered on /perform landing)
+    // must be denormalized on every setlist write — `setlists/{id}.songCount`
+    // was previously absent on cloned setlists, leaving the landing card stuck
+    // at "0 songs" until the in-app client-side reconciler ran (which never
+    // runs for setlists authored end-to-end through Claude Desktop, the
+    // primary authoring surface per [[user_mcp_is_primary_author_workflow]]).
+    const sourceSongCount = sourceTracks.filter((t) =>
+        isSongType((t.data as { type?: unknown }).type),
+    ).length
     const setlistPayload: Record<string, unknown> = {
         id: newSetlistId,
         name: newName,
         date: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
         trackCount: sourceTracks.length,
+        songCount: sourceSongCount,
         hydrated: true,
         ownerId: uid,
         ownerName,

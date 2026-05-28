@@ -11,6 +11,7 @@ import {
     richError,
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
+import { isSongType } from "@/lib/setlist-track-count"
 
 /**
  * Cycle-6 Lane 2 — setlist-template CRUD pack.
@@ -762,12 +763,20 @@ export async function cloneSetlistFromTemplate(
     const newSetlistId = crypto.randomUUID()
     const copyServiceNotes = args.copyServiceNotes !== false
 
+    // C11M1-001: denormalize songCount on the new setlist — same rule as
+    // clone_setlist + every server-tracks-write mutation. Templates store
+    // tracks inline; payload.type defaults to "song" downstream so isSongType
+    // on the source row (which may be undefined → song) is the correct count.
+    const templateSongCount = templateTracks.filter((t) =>
+        isSongType((t as Record<string, unknown>).type),
+    ).length
     const setlistPayload: Record<string, unknown> = {
         id: newSetlistId,
         name: args.newName.trim(),
         date: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
         trackCount: templateTracks.length,
+        songCount: templateSongCount,
         hydrated: true,
         ownerId: uid,
         ownerName,

@@ -74,6 +74,11 @@ describe('setlist-write (real Firestore emulator)', () => {
         expect(s.ownerId).toBe('uid-1')
         expect(s.ownerName).toBe('Rabbi Daniel')
         expect(s.trackCount).toBe(3)
+        // C11M1-001: songCount denormalized at creation. 2 song-type rows
+        // (Adon Olam + Hineh Mah Tov), 1 header → songCount: 2. Without this
+        // CSV/doc imports landed with a missing songCount, leaving the
+        // public /perform landing card stuck at "0 songs · 3 items".
+        expect(s.songCount).toBe(2)
         expect(s.hydrated).toBe(true)
         expect(s.templateType).toBe('shabbat_morning')
         expect(s.rabbi).toBe('Rabbi Daniel')

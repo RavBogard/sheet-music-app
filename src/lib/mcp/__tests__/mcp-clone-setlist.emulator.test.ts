@@ -349,4 +349,23 @@ describe("MCP clone_setlist (emulator)", () => {
             },
         })
     })
+
+    it("C11M1-001: denormalizes songCount on the cloned setlist (song-type subset, not total tracks)", async () => {
+        // buildSource creates 2 songs + 1 header (3 tracks total, 2 songs).
+        // The /perform landing renders `setlist.songCount ?? 0`; without this
+        // denorm a cloned setlist showed "0 songs · 3 items" until the in-app
+        // client-side hydrator first opened it. Critical for MCP-authored
+        // weekly clones — the primary surface per
+        // [[user_mcp_is_primary_author_workflow]].
+        const sourceId = await buildSource()
+        const result = (await cloneSetlist(ADMIN, {
+            sourceSetlistId: sourceId,
+        })) as { ok: true; setlistId: string }
+        expect(result.ok).toBe(true)
+        const cloneDoc = (
+            await db().collection("setlists").doc(result.setlistId).get()
+        ).data() as Record<string, unknown>
+        expect(cloneDoc.trackCount).toBe(3)
+        expect(cloneDoc.songCount).toBe(2)
+    })
 })

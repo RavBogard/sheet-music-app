@@ -19,6 +19,7 @@ import {
     staleVersionEnvelope,
     type StaleVersionEnvelope,
 } from "@/lib/mcp/error-envelopes"
+import { isSongType } from "@/lib/setlist-track-count"
 import { isTestSetlist, type Setlist } from "@/types/models"
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -119,12 +120,20 @@ export async function createSetlistServerSide(
     // Parent doc carries denormalization markers only — top-level tracks/{id}
     // rows are seeded below. FieldValue.serverTimestamp() produces a proper
     // Firestore Timestamp so the first editor edit round-trips cleanly.
+    // C11M1-001: denormalize songCount alongside trackCount on every parent
+    // write. ServerSetlistTrackInput's `type` is `'song' | 'header'`, but
+    // older CSV/import callers may omit it — isSongType treats undefined as
+    // song, matching the rule used across the codebase. Critical for CSV
+    // import (`/api/setlists/import/execute`) so freshly-imported setlists
+    // land with the correct landing-card song count, not "0 songs · N items".
+    const seedSongCount = input.tracks.filter((t) => isSongType(t.type)).length
     const setlistPayload: Record<string, unknown> = {
         id: setlistId,
         name: input.name,
         date: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
         trackCount: input.tracks.length,
+        songCount: seedSongCount,
         hydrated: true,
         ownerId: input.ownerId,
         ownerName: input.ownerName,
