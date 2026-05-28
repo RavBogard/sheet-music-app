@@ -1353,9 +1353,10 @@ export async function dedupeLibraryIndex(
             }
         }
 
-        // F-05 refusal: real run without `force: true` returns the plan
-        // with refused:true and no writes. Mirrors reconcile_library /
-        // backfill_library_index / backfill_setlist_test_flag.
+        // F-05 refusal: real run without `force: true` returns the rich
+        // force_required envelope (FU-1) carrying the plan in `dryRunPlan`,
+        // no writes. Mirrors reconcile_library / backfill_library_index /
+        // backfill_setlist_test_flag / library-review (REG-003 canonical shape).
         const coverage: HygieneCoverage = {
             total: snap.docs.length,
             eligible: candidates.length,
@@ -1368,18 +1369,24 @@ export async function dedupeLibraryIndex(
         }
         const threshold = similarityThreshold ?? 0.85
         if (!dryRun && !force) {
-            return {
-                scanned: candidates.length,
-                groupsFound: dupeGroups.length,
-                wouldMark: losers.length,
-                committed: 0,
-                songsMirrored: 0,
-                groups: dupeGroups,
-                dryRun: false,
-                refused: true,
-                threshold,
-                coverage,
-            }
+            return richError(
+                "force_required",
+                "dedupe_library requires force:true to commit.",
+                {
+                    dryRunPlan: {
+                        scanned: candidates.length,
+                        groupsFound: dupeGroups.length,
+                        wouldMark: losers.length,
+                        committed: 0,
+                        songsMirrored: 0,
+                        groups: dupeGroups,
+                        dryRun: false,
+                        threshold,
+                        coverage,
+                    },
+                },
+                "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
+            )
         }
 
         let songsMirrored = 0

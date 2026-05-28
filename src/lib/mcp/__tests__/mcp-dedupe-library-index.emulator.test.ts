@@ -339,7 +339,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         ])
     })
 
-    it("MCP-001 — real-run without force returns refused:true and writes nothing", async () => {
+    it("MCP-001 — real-run without force returns the rich force_required envelope and writes nothing", async () => {
         await seedIndex("ana-clean", {
             name: "Ana B_Koach.pdf",
             uploadedAt: "2024-01-01T00:00:00Z",
@@ -350,14 +350,28 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         })
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: false })
-        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
-        expect(r.refused).toBe(true)
-        expect(r.dryRun).toBe(false)
-        expect(r.groupsFound).toBe(1) // plan still surfaces
+        // FU-1: force-gate now returns the rich force_required envelope (ok:false,
+        // error.machine_code) carrying the dedupe plan in `dryRunPlan`, instead of
+        // {refused:true} on the success shape.
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+        })
+        const plan = (r as {
+            dryRunPlan?: {
+                dryRun?: boolean
+                groupsFound?: number
+                wouldMark?: number
+                committed?: number
+                songsMirrored?: number
+            }
+        }).dryRunPlan
+        expect(plan?.dryRun).toBe(false)
+        expect(plan?.groupsFound).toBe(1) // plan still surfaces
         // F-005: refused real-run surfaces the plan in wouldMark, commits nothing.
-        expect(r.wouldMark).toBe(1)
-        expect(r.committed).toBe(0)
-        expect(r.songsMirrored).toBe(0)
+        expect(plan?.wouldMark).toBe(1)
+        expect(plan?.committed).toBe(0)
+        expect(plan?.songsMirrored).toBe(0)
 
         // No writes happened — the loser is still unmarked.
         const loser = await db()
