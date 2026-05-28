@@ -1,6 +1,8 @@
 import { PublicSetlistListing } from "@/components/performance/PublicSetlistListing"
+import { selectVisiblePublicSetlists } from "@/components/performance/public-setlist-order"
 import { getAllSetlists } from "@/lib/server-setlists"
-import type { Setlist } from "@/types/api"
+import type { Setlist as ApiSetlist } from "@/types/api"
+import type { Setlist as FirebaseSetlist } from "@/lib/setlist-firebase"
 
 // C5D-007: /perform is the public gig-discovery landing surface and is
 // explicitly indexable. Root layout's noindex applies to the authed
@@ -36,6 +38,17 @@ export default async function PerformPage() {
     // boundary. The Setlist type's `FirestoreDate` union accepts ISO
     // strings, so the client component reads them via the same `toDate`
     // helper without a shape change.
-    const initialSetlists = (await getAllSetlists({ limit: 50 })) as unknown as Setlist[]
+    //
+    // Cycle-12 F-C12-001: filter + cap MUST run here at the SSR boundary
+    // (not just inside `PublicSetlistListing`'s useMemo). Otherwise the
+    // RSC wire payload ships every row of the raw 50-row fetch to every
+    // anonymous client — including `isTest:true` fixture clones, full
+    // hydrated `tracks[]` trees, `ownerName`/`ownerId` strings, and
+    // band-member emails — even though the rendered DOM correctly hides
+    // them. `selectVisiblePublicSetlists` is the same shared primitive
+    // the client useMemo invokes; running it here keeps wire bytes
+    // byte-identical to the DOM-allowed slice.
+    const raw = (await getAllSetlists({ limit: 50 })) as unknown as FirebaseSetlist[]
+    const initialSetlists = selectVisiblePublicSetlists(raw) as unknown as ApiSetlist[]
     return <PublicSetlistListing initialSetlists={initialSetlists} />
 }

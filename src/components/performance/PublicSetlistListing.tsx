@@ -12,10 +12,7 @@ import { Button } from "@/components/ui/button"
 import { QRSignIn } from "@/components/auth/QRSignIn"
 import { PublicSetlistSkeleton } from "./PublicSetlistSkeleton"
 import { KeepAwakeToggle } from "./KeepAwakeToggle"
-import { splitPublicSetlists } from "./public-setlist-order"
-
-/** Cap the public landing to at most this many service rows (upcoming first). */
-const MAX_PUBLIC_SERVICES = 5
+import { MAX_PUBLIC_SERVICES, splitPublicSetlists } from "./public-setlist-order"
 
 interface PublicSetlistListingProps {
     /**

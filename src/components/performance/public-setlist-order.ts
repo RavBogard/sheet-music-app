@@ -2,6 +2,16 @@ import { toDate } from "@/lib/firestore-helpers"
 import { isTestUid } from "@/lib/test-isolation"
 import type { Setlist } from "@/lib/setlist-firebase"
 
+/**
+ * Cap the public landing to at most this many service rows (upcoming first).
+ * Single source of truth — consumed by SSR (`src/app/perform/page.tsx`) and
+ * client useMemo (`PublicSetlistListing.tsx`). Defined here (alongside the
+ * shared filter) so the wire-layer cap can't drift from the DOM-layer cap.
+ * Cycle-12 F-C12-001 fix: the cap MUST run at the SSR boundary before the
+ * prop crosses RSC, not only inside the client useMemo.
+ */
+export const MAX_PUBLIC_SERVICES = 5
+
 export interface SplitSetlists {
     /** eventDate >= today (00:00 local), soonest first — today counts as upcoming. */
     upcoming: Setlist[]
@@ -46,4 +56,29 @@ export function splitPublicSetlists(setlists: Setlist[], now: Date = new Date())
     dated.sort((a, b) => getDate(b)!.getTime() - getDate(a)!.getTime())
 
     return { upcoming, past: [...dated, ...undated] }
+}
+
+/**
+ * Cycle-12 F-C12-001: SSR-boundary helper that produces the exact flat slice
+ * that should cross the RSC wire to `<PublicSetlistListing>`. Combines
+ * `splitPublicSetlists` (drops `isTest:true` + test-uid + date-window split)
+ * with the `MAX_PUBLIC_SERVICES` cap (upcoming first, past fills the
+ * remainder) — the same shape `PublicSetlistListing`'s useMemo derives
+ * client-side for the rendered cards. Calling this in the RSC keeps the
+ * wire bytes byte-identical to what the DOM is allowed to expose, closing
+ * the prior leak where the unfiltered 50-row fetch shipped to the browser
+ * (with isTest fixtures, full track trees, ownerName/ownerId, and band
+ * member emails) and the client useMemo culled it only at render time.
+ *
+ * Order: [...cappedUpcoming, ...cappedPast]. `now` is injectable for
+ * deterministic tests; defaults to current time.
+ */
+export function selectVisiblePublicSetlists(
+    setlists: Setlist[],
+    now: Date = new Date(),
+): Setlist[] {
+    const { upcoming, past } = splitPublicSetlists(setlists, now)
+    const cappedUpcoming = upcoming.slice(0, MAX_PUBLIC_SERVICES)
+    const remaining = Math.max(0, MAX_PUBLIC_SERVICES - cappedUpcoming.length)
+    return [...cappedUpcoming, ...past.slice(0, remaining)]
 }
