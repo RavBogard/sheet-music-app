@@ -20,7 +20,7 @@
  * ship in the initial setlist-page bundle. It lazy-loads on first song tap.
  */
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { Loader2, ArrowLeft, Music, Users, Pencil, Printer } from "lucide-react"
@@ -57,12 +57,22 @@ export interface SetlistPerformClientProps {
     setlistId: string
     initialSetlist: Setlist | null
     initialTracks: SetlistTrack[]
+    /**
+     * c11-fix-perform-track-position-in-url (M3-009): when the page is
+     * entered via `/perform/setlist/<id>/track/<trackId>`, seed
+     * `activeSongIndex` to that track on first render so reload /
+     * bookmark / PWA app-resume lands on the right song instead of the
+     * list. Unknown trackId → falls back to bare-path behavior (no
+     * overlay).
+     */
+    initialTrackId?: string | null
 }
 
 export function SetlistPerformClient({
     setlistId,
     initialSetlist,
     initialTracks,
+    initialTrackId,
 }: SetlistPerformClientProps) {
     const {
         tracks,
@@ -85,8 +95,40 @@ export function SetlistPerformClient({
         initial: initialSetlist ? { setlist: initialSetlist, tracks: initialTracks } : null,
     })
 
-    const [activeSongIndex, setActiveSongIndex] = useState<number | null>(null)
+    const [activeSongIndex, setActiveSongIndex] = useState<number | null>(() => {
+        if (!initialTrackId) return null
+        const idx = initialTracks.findIndex((t) => t.id === initialTrackId)
+        return idx >= 0 ? idx : null
+    })
     const [showPrintModal, setShowPrintModal] = useState(false)
+
+    // c11-fix-perform-track-position-in-url (M3-009): mirror `activeSongIndex`
+    // into the URL via `window.history.replaceState` so an iPad refresh /
+    // wifi-blip / PWA background-resume lands on the same song. We use
+    // `replaceState` (not `pushState` and not `router.replace`) deliberately:
+    // (1) Next.js App Router would re-run the server component on
+    // `router.replace`, throwing away client state we want to preserve;
+    // (2) every track tap shouldn't add a back-button entry — back should
+    // exit the setlist, not walk through every song. Reload via the browser
+    // re-enters either `/track/[trackId]/page.tsx` (URL has the track) or
+    // the bare `[id]/page.tsx` (no track) — both go through the same SSR
+    // fetch and seed `activeSongIndex` accordingly.
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        const basePath = `/perform/setlist/${setlistId}`
+        let desiredPath = basePath
+        if (activeSongIndex !== null) {
+            const track = tracks[activeSongIndex]
+            if (track?.id) {
+                desiredPath = `${basePath}/track/${encodeURIComponent(track.id)}`
+            }
+        }
+        const currentPath = window.location.pathname
+        if (currentPath !== desiredPath) {
+            window.history.replaceState(null, "", desiredPath + window.location.search + window.location.hash)
+        }
+    }, [activeSongIndex, setlistId, tracks])
+
     const { isMusician, isBandLeader, isAdmin } = useAuth()
     const canPrint = isMusician || isBandLeader || isAdmin
 

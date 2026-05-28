@@ -141,6 +141,79 @@ describe('SetlistPerformClient — SSR contract (UNAUTH-009)', () => {
         expect(screen.getByText(/3 songs/)).toBeTruthy()
     })
 
+    it('c11-fix-perform-track-position-in-url: bare path (no initialTrackId) does NOT touch window.history', () => {
+        const replaceSpy = vi.spyOn(window.history, 'replaceState')
+        try {
+            // Start with the bare-path URL so the URL-sync effect sees
+            // currentPath === desiredPath and no-ops.
+            window.history.replaceState(null, '', `/perform/setlist/${SETLIST_ID}`)
+            replaceSpy.mockClear()
+
+            render(
+                <SetlistPerformClient
+                    setlistId={SETLIST_ID}
+                    initialSetlist={initialSetlist}
+                    initialTracks={initialTracks}
+                />,
+            )
+
+            expect(replaceSpy).not.toHaveBeenCalled()
+        } finally {
+            replaceSpy.mockRestore()
+        }
+    })
+
+    it('c11-fix-perform-track-position-in-url: initialTrackId for a known track rewrites the URL to the sub-route', () => {
+        // Start at the bare path; the URL-sync effect should rewrite to
+        // /perform/setlist/<id>/track/t2 on mount.
+        window.history.replaceState(null, '', `/perform/setlist/${SETLIST_ID}`)
+
+        render(
+            <SetlistPerformClient
+                setlistId={SETLIST_ID}
+                initialSetlist={initialSetlist}
+                initialTracks={initialTracks}
+                initialTrackId="t2"
+            />,
+        )
+
+        expect(window.location.pathname).toBe(`/perform/setlist/${SETLIST_ID}/track/t2`)
+    })
+
+    it('c11-fix-perform-track-position-in-url: unknown initialTrackId falls back to bare path (no overlay)', () => {
+        // Start at a stale sub-route; an unknown trackId seeds null and
+        // the URL-sync effect rewrites back to the bare path.
+        window.history.replaceState(null, '', `/perform/setlist/${SETLIST_ID}/track/does-not-exist`)
+
+        render(
+            <SetlistPerformClient
+                setlistId={SETLIST_ID}
+                initialSetlist={initialSetlist}
+                initialTracks={initialTracks}
+                initialTrackId="does-not-exist"
+            />,
+        )
+
+        expect(window.location.pathname).toBe(`/perform/setlist/${SETLIST_ID}`)
+    })
+
+    it('c11-fix-perform-track-position-in-url: preserves search + hash when rewriting', () => {
+        window.history.replaceState(null, '', `/perform/setlist/${SETLIST_ID}?foo=bar#sec`)
+
+        render(
+            <SetlistPerformClient
+                setlistId={SETLIST_ID}
+                initialSetlist={initialSetlist}
+                initialTracks={initialTracks}
+                initialTrackId="t1"
+            />,
+        )
+
+        expect(window.location.pathname).toBe(`/perform/setlist/${SETLIST_ID}/track/t1`)
+        expect(window.location.search).toBe('?foo=bar')
+        expect(window.location.hash).toBe('#sec')
+    })
+
     it('falls back to loading state when no initial props (Admin SDK unavailable / dev mode)', () => {
         render(
             <SetlistPerformClient

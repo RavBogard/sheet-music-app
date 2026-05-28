@@ -24,42 +24,14 @@
  * Setlist contents on /perform/setlist/<id> are public by design — see
  * [[feedback_setlist_public_policy]]. Anyone with the URL can fetch the
  * track list. No auth gate at this layer.
+ *
+ * c11-fix-perform-track-position-in-url (M3-009): the active-track sub-route
+ * `track/[trackId]/page.tsx` shares this page's fetch via `initial-frame.ts`
+ * so a reload at `/perform/setlist/<id>/track/<trackId>` lands on the right
+ * song instead of dropping the musician at song 1.
  */
-
-import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { serializeSetlist } from "@/lib/server-auth"
-import { getTracksForSetlist } from "@/lib/server-tracks"
-import { logger } from "@/lib/logger"
-import type { Setlist, SetlistTrack } from "@/types/models"
 import { SetlistPerformClient } from "./SetlistPerformClient"
-
-async function fetchInitialFrame(setlistId: string): Promise<{
-    setlist: Setlist | null
-    tracks: SetlistTrack[]
-}> {
-    try {
-        const adminAvailable = initAdmin()
-        if (!adminAvailable) {
-            return { setlist: null, tracks: [] }
-        }
-        const db = getFirestore()
-        const snap = await db.collection("setlists").doc(setlistId).get()
-        if (!snap.exists) {
-            // Not-found surfaces through the client's existing error path
-            // once the Firestore subscription returns the same not-found
-            // state — same UX as the legacy client-only behavior.
-            return { setlist: null, tracks: [] }
-        }
-        const data = snap.data() as Record<string, unknown>
-        const serialized = serializeSetlist(snap.id, data) as unknown as Setlist
-        const tracksRaw = await getTracksForSetlist(db, setlistId, serialized as unknown as Record<string, unknown>)
-        const tracks = tracksRaw as unknown as SetlistTrack[]
-        return { setlist: serialized, tracks }
-    } catch (err) {
-        logger.warn(`[/perform/setlist/${setlistId}] SSR fetch failed; falling back to client-only:`, err)
-        return { setlist: null, tracks: [] }
-    }
-}
+import { fetchInitialFrame } from "./initial-frame"
 
 export default async function SetlistPerformPage({
     params,
