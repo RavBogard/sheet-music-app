@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import { SetlistTrack } from "@/types/models"
-import { PerformanceToolbar } from "./PerformanceToolbar"
+import { PerformanceToolbar, type PerformanceToolbarWakeLock } from "./PerformanceToolbar"
 import { TempoFlash } from "./TempoFlash"
 import { useMusicStore, QueueItem } from "@/lib/store"
 import { useLibraryStore } from "@/lib/library-store"
@@ -63,6 +63,11 @@ export interface PDFOverlayProps {
     /** Parent setlist id — required for `isLeader` gesture to mount (insert
      *  writes need it). */
     setlistId?: string
+    /** Wake-lock controls from the parent Perform surface, threaded to the
+     *  toolbar so "Keep screen on" is reachable from inside the chart overlay
+     *  (C10I1-003). Optional — the standalone /perform/[fileId] route has no
+     *  setlist-performance hook and renders without it. */
+    wakeLock?: PerformanceToolbarWakeLock
 }
 
 /**
@@ -85,6 +90,7 @@ export function PDFOverlay({
     isPublicView,
     isLeader = false,
     setlistId: setlistIdProp,
+    wakeLock,
 }: PDFOverlayProps) {
     const setQueue = useMusicStore(s => s.setQueue)
     const queueIndex = useMusicStore(s => s.queueIndex)
@@ -401,6 +407,7 @@ export function PDFOverlay({
                 onHome={onClose}
                 onMenuOpenChange={setMenuOpen}
                 onPrint={() => setShowPrintModal(true)}
+                wakeLock={wakeLock}
             />
 
             {showPrintModal && (

@@ -102,7 +102,7 @@ export function DesktopHeader(props: AppNavigationProps) {
         <header className="fixed top-0 left-0 right-0 h-16 z-50 hidden md:flex items-center justify-between px-4 lg:px-6 material-thick border-b border-brand/10 overflow-x-clip">
             {/* Logo + Nav */}
             <div className="flex items-center gap-8">
-                <Link href="/" className="flex items-center gap-3 group">
+                <Link href="/" className="flex items-center gap-3 group min-h-11">
                     <img src="/logo.jpg" alt="Central Reform Congregation logo" className="w-8 h-8 rounded-full border border-border transition-opacity group-hover:opacity-80" />
                     <span className="font-display font-bold text-lg text-foreground group-hover:text-brand transition-colors">{congregation.shortName}</span>
                 </Link>
@@ -113,7 +113,10 @@ export function DesktopHeader(props: AppNavigationProps) {
                         return (
                             <Link key={link.href} href={link.href}
                                 className={cn(
-                                    "px-4 py-1.5 rounded-full text-sm font-medium transition-all fluid-interaction",
+                                    // C10I1-004: inline-flex + min-h-11 raises the
+                                    // nav anchors from 32px to the ≥44px HIG floor
+                                    // for thumb-friendly iPad taps (was px-4 py-1.5).
+                                    "inline-flex items-center min-h-11 px-4 rounded-full text-sm font-medium transition-all fluid-interaction",
                                     isActive ? "bg-brand/15 text-foreground shadow-[0_0_10px_oklch(0.50_0.20_275/0.2)] border border-brand/20" : "text-muted-foreground hover:text-brand hover:bg-brand/5"
                                 )}>
                                 {link.label}

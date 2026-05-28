@@ -256,6 +256,12 @@ export function SetlistPerformClient({
                     isPublicView={isPublicView}
                     isLeader={isLeader}
                     setlistId={setlistId}
+                    wakeLock={{
+                        isActive: isWakeLockActive,
+                        isSupported: isWakeLockSupported,
+                        onRequest: requestWakeLock,
+                        onRelease: releaseWakeLock,
+                    }}
                 />
             )}
 

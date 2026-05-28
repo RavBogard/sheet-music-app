@@ -11,6 +11,7 @@ import { ChordEditBar } from "../music/ChordEditBar"
 import { estimateKey, transposeChord } from "@/lib/music-math"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { SetlistDrawer } from "@/components/performance/SetlistDrawer"
+import { KeepAwakeToggle } from "@/components/performance/KeepAwakeToggle"
 import { MetronomeControl } from "./MetronomeControl"
 import { SongNavigation } from "./SongNavigation"
 import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
@@ -18,13 +19,28 @@ import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
 import { cn } from "@/lib/utils"
 
+/** Wake-lock controls threaded from the parent Perform surface so the
+ *  in-chart toolbar can arm "Keep screen on" without exiting back to the
+ *  setlist header (C10I1-003 — a deep-linked chart entry left the band with
+ *  no reachable wake-lock toggle: the header KeepAwakeToggle is z-stacked
+ *  behind this fullscreen overlay. This is the Yizkor screen-timeout
+ *  regression class — see use-wake-lock.ts). Sharing the parent's state
+ *  keeps the in-chart toggle in sync with the header one. */
+export interface PerformanceToolbarWakeLock {
+    isActive: boolean
+    isSupported: boolean
+    onRequest: () => void | Promise<void>
+    onRelease: () => void | Promise<void>
+}
+
 interface PerformanceToolbarProps {
     onHome: () => void
     onMenuOpenChange?: (open: boolean) => void
     onPrint?: () => void
+    wakeLock?: PerformanceToolbarWakeLock
 }
 
-export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: PerformanceToolbarProps) {
+export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock }: PerformanceToolbarProps) {
     const {
         aiState, setAiEnabled, capoFret, transposition, zoom, setZoom, musicXmlKey
     } = useMusicStore()
@@ -107,19 +123,22 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
 
     const zoomControls = (compact = false) => (
         <div className={cn(
-            "flex items-center bg-muted/50 border border-border/10 rounded-xl p-1 gap-1",
-            compact ? "h-12" : "h-11"
+            // C10I1-001: container holds the ≥44px (h-11) zoom buttons + p-1 on
+            // both branches now, so h-12 unified (was h-11 non-compact → clipped
+            // the bumped buttons).
+            "flex items-center bg-muted/50 border border-border/10 rounded-xl p-1 gap-1 h-12"
         )}>
             <Button
                 variant="ghost" size="icon"
                 onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
                 className={cn(
-                    "text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg",
-                    compact ? "h-11 w-11" : "h-10 w-10"
+                    // C10I1-001: ≥44px (h-11 w-11) on all viewports — was h-10
+                    // (40px) on the non-compact/desktop+iPad-landscape branch.
+                    "text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg h-11 w-11"
                 )}
                 aria-label="Zoom out"
             >
-                <ZoomOut className={compact ? "h-5 w-5" : "h-4 w-4"} />
+                <ZoomOut className="h-5 w-5" />
             </Button>
             <span className={cn(
                 "font-medium text-foreground text-center flex items-center justify-center",
@@ -132,12 +151,12 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                 variant="ghost" size="icon"
                 onClick={() => setZoom(Math.min(2.0, zoom + 0.1))}
                 className={cn(
-                    "text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg",
-                    compact ? "h-11 w-11" : "h-10 w-10"
+                    // C10I1-001: ≥44px (h-11 w-11) on all viewports.
+                    "text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg h-11 w-11"
                 )}
                 aria-label="Zoom in"
             >
-                <ZoomIn className={compact ? "h-5 w-5" : "h-4 w-4"} />
+                <ZoomIn className="h-5 w-5" />
             </Button>
         </div>
     )
@@ -155,7 +174,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
             <PopoverTrigger asChild>
                 <Button variant="ghost" className={cn(
                     "rounded-xl fluid-interaction glass-card text-foreground/80 hover:text-foreground flex items-center justify-center",
-                    compact ? "h-11 w-11 md:w-auto md:px-3 overflow-hidden text-xs font-semibold gap-1.5" : "h-10 px-4 text-xs font-bold gap-2 group"
+                    compact ? "h-11 w-11 md:w-auto md:px-3 overflow-hidden text-xs font-semibold gap-1.5" : "h-11 px-4 text-xs font-bold gap-2 group"
                 )} aria-label="Monitor mix">
                     <Speaker className={compact ? "h-4 w-4 md:h-3.5 md:w-3.5 shrink-0" : "h-3.5 w-3.5 shrink-0"} />
                     <span className="hidden md:inline">{compact ? "Monitor" : "MONITOR"}</span>
@@ -212,7 +231,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                         "rounded-xl font-semibold flex items-center select-none",
                         compact
                             ? "h-11 px-3 text-xs gap-1.5"
-                            : "h-10 px-4 text-xs font-bold gap-2 min-w-[100px] justify-center",
+                            : "h-11 px-4 text-xs font-bold gap-2 min-w-[100px] justify-center",
                         "glass-card text-foreground/80 opacity-50 cursor-not-allowed",
                         "hover:bg-transparent hover:text-foreground/80",
                     )}
@@ -240,7 +259,7 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                             "rounded-xl font-semibold fluid-interaction flex items-center",
                             compact
                                 ? "h-11 px-3 text-xs gap-1.5"
-                                : "h-10 px-4 text-xs font-bold gap-2 min-w-[100px] justify-center",
+                                : "h-11 px-4 text-xs font-bold gap-2 min-w-[100px] justify-center",
                             aiState.isEnabled
                                 ? "bg-brand border border-brand/50 text-foreground shadow-lg shadow-brand/20"
                                 : "glass-card text-foreground/80 hover:text-foreground"
@@ -274,6 +293,17 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
                     <MetronomeControl />
                     {transposerPopover(transposerOpenMobile, setTransposerOpenMobile, 'transposer', true, 'top')}
                     {monitorPopover('tools', monitorOpenMobile, setMonitorOpenMobile, true)}
+                    {/* C10I1-003: in-chart "Keep screen on" — reachable on the
+                        iPad-portrait two-row toolbar (the header toggle is
+                        z-stacked behind this overlay on a deep-linked entry). */}
+                    {wakeLock && (
+                        <KeepAwakeToggle
+                            isActive={wakeLock.isActive}
+                            isSupported={wakeLock.isSupported}
+                            onRequest={wakeLock.onRequest}
+                            onRelease={wakeLock.onRelease}
+                        />
+                    )}
                 </div>
 
                 {/* Row 2 (bottom): Home | Song Navigation (flex-center, never covered) | Setlist */}
@@ -330,6 +360,19 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint }: Perfor
 
                 {/* RIGHT: Tools + Transposer */}
                 <div className="flex items-center justify-end gap-3 shrink-0">
+
+                    {/* C10I1-003: in-chart "Keep screen on" so a deep-linked
+                        chart entry (iPad landscape ≥ lg) can arm the wake-lock
+                        without exiting to the setlist header. Shares the
+                        parent's wake-lock state. */}
+                    {wakeLock && (
+                        <KeepAwakeToggle
+                            isActive={wakeLock.isActive}
+                            isSupported={wakeLock.isSupported}
+                            onRequest={wakeLock.onRequest}
+                            onRelease={wakeLock.onRelease}
+                        />
+                    )}
 
                     {/* Monitor Mix popover */}
                     {monitorPopover('tools-desktop', monitorOpenDesktop, setMonitorOpenDesktop, false)}

@@ -170,4 +170,48 @@ describe("PerformanceToolbar", () => {
         mockStoreState.playbackQueue = []
         mockStoreState.queueIndex = 0
     })
+
+    // C10I1-001: every mid-service toolbar control must meet the iOS HIG 44px
+    // touch-target floor. jsdom can't measure layout, so we guard the class
+    // contract instead: the non-compact (desktop / iPad-landscape) branch used
+    // to render zoom/monitor/transpose at h-10 (40px). After the fix nothing in
+    // the toolbar should carry an `h-10` token, and the zoom buttons are h-11.
+    it("C10I1-001: no toolbar control renders at the 40px (h-10) size", () => {
+        const { container } = render(<PerformanceToolbar onHome={mockOnHome} />)
+        const buttons = Array.from(container.querySelectorAll("button"))
+        expect(buttons.length).toBeGreaterThan(0)
+        for (const b of buttons) {
+            expect(b.className).not.toMatch(/(^|\s)h-10(\s|$)/)
+        }
+        for (const z of screen.getAllByLabelText(/zoom (in|out)/i)) {
+            expect(z.className).toMatch(/(^|\s)h-11(\s|$)/)
+        }
+    })
+
+    // C10I1-003: a deep-linked chart entry lands the band in the fullscreen
+    // overlay where the header KeepAwakeToggle is z-stacked behind the chart.
+    // The toolbar must surface its own wake-lock toggle when the parent threads
+    // the controls in — reachable on BOTH the mobile (two-row) and desktop trees.
+    it("C10I1-003: surfaces an in-chart Keep-screen-on toggle when wakeLock is provided + arms on tap", () => {
+        const onRequest = vi.fn()
+        const onRelease = vi.fn()
+        render(
+            <PerformanceToolbar
+                onHome={mockOnHome}
+                wakeLock={{ isActive: false, isSupported: true, onRequest, onRelease }}
+            />,
+        )
+        const toggles = screen.getAllByRole("button", { name: /keep screen on/i })
+        // One per breakpoint tree (mobile two-row + desktop single-row).
+        expect(toggles.length).toBeGreaterThanOrEqual(2)
+        fireEvent.click(toggles[0])
+        expect(onRequest).toHaveBeenCalled()
+    })
+
+    it("C10I1-003: renders NO wake-lock toggle when wakeLock prop is absent (standalone /perform/[fileId])", () => {
+        render(<PerformanceToolbar onHome={mockOnHome} />)
+        expect(
+            screen.queryByRole("button", { name: /keep screen on/i }),
+        ).toBeNull()
+    })
 })
