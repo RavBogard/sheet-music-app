@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { Music, Calendar } from "lucide-react"
+import { Music, Calendar, UserCircle } from "lucide-react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { useAuth } from "@/lib/auth-context"
 import { useWakeLock } from "@/hooks/use-wake-lock"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { QRSignIn } from "@/components/auth/QRSignIn"
 import { PublicSetlistSkeleton } from "./PublicSetlistSkeleton"
@@ -16,18 +17,41 @@ import { splitPublicSetlists } from "./public-setlist-order"
 /** Cap the public landing to at most this many service rows (upcoming first). */
 const MAX_PUBLIC_SERVICES = 5
 
+interface PublicSetlistListingProps {
+    /**
+     * C11 F-M2-006 — server-side prefetched setlist slice. Seeded by
+     * `/perform/page.tsx` so fresh tablets get real cards on first
+     * paint instead of the skeleton-then-cards swap. The client
+     * Firestore subscription takes over on mount for live updates.
+     * Same shape as `subscribeToAllSetlists` emits (filtering happens
+     * downstream in `splitPublicSetlists`, NOT here — see file header).
+     */
+    initialSetlists?: Setlist[]
+}
+
 /**
  * Public setlist listing -- renders public setlists for visitors landing on
  * /perform. Logged-out visitors get a Sign-In card (QR + Google) pinned to the
  * top so the congregation/band has an obvious path to sign in; authed users see
- * just the listing. The list is capped at MAX_PUBLIC_SERVICES rows total,
- * upcoming-prioritized. Auth is resolved CLIENT-side (the /perform page stays a
- * static edge-cached server component that never reads cookies/headers).
- * Used by /perform page as the landing page for community members.
+ * a small avatar pill upper-right (links to settings) so the auth-state
+ * context-shift between landing and per-setlist authed nav isn't invisible.
+ * The list is capped at MAX_PUBLIC_SERVICES rows total, upcoming-prioritized.
+ * Auth is resolved CLIENT-side (the /perform page stays an ISR-cached server
+ * component that never reads cookies/headers — `revalidate=60`).
+ *
+ * C11 amend: filtering MUST mirror `splitPublicSetlists` exactly (isTest:false
+ * + test-uid + eventDate window). Per Daniel directive 2026-05-28 (kill
+ * `publishedAt` as a gating concept) + "err public, not gated" invariant, this
+ * surface intentionally has NO publishedAt filter. A musician seeing an
+ * irrelevant setlist is mild confusion; a musician missing the one they're
+ * meant to play is service-block. Always pick mild-confusion.
  */
-export function PublicSetlistListing() {
-    const [setlists, setSetlists] = useState<Setlist[]>([])
-    const [loading, setLoading] = useState(true)
+export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingProps = {}) {
+    // SSR seed: when `initialSetlists` arrives we render cards immediately
+    // (no `loading:true` flash). The client subscription still wires up on
+    // mount and replaces this slice with the live Firestore feed.
+    const [setlists, setSetlists] = useState<Setlist[]>(initialSetlists ?? [])
+    const [loading, setLoading] = useState(initialSetlists === undefined)
     // Auth surfaced CLIENT-side only (matches DashboardClient's hook usage).
     // `loading` is aliased to authLoading to disambiguate from the setlist
     // subscription `loading` above. The card renders only once auth resolves
@@ -130,6 +154,28 @@ export function PublicSetlistListing() {
                     onRelease={releaseWakeLock}
                     lastError={wakeLockError}
                 />
+                {/* C11 M3-012 — auth-state indicator. Signed-in viewers get an
+                    avatar pill linking to settings so the context-shift to the
+                    authed app (visible the moment they tap into a setlist) isn't
+                    invisible on the landing. Logged-out viewers get the QR/Google
+                    Sign-In card below — adding a pill here too would duplicate
+                    that affordance (AC3 "Sign-in pill OR existing QR card, not
+                    both"). Gated on `!authLoading` to avoid flash-then-yank CLS,
+                    matching the QR card's guard. */}
+                {user && !authLoading && (
+                    <Link
+                        href="/settings"
+                        aria-label={`Signed in as ${user.displayName || user.email || "musician"} — open settings`}
+                        className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                        <Avatar className="h-9 w-9 border border-border">
+                            <AvatarImage src={user.photoURL ?? undefined} alt="" />
+                            <AvatarFallback>
+                                <UserCircle className="w-5 h-5" />
+                            </AvatarFallback>
+                        </Avatar>
+                    </Link>
+                )}
             </div>
 
             {/* Logged-out sign-in: QR (scan-with-phone) + Google. Pinned to the

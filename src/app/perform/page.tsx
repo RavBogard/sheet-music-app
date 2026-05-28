@@ -1,7 +1,6 @@
-import { Suspense } from "react"
-
 import { PublicSetlistListing } from "@/components/performance/PublicSetlistListing"
-import { PublicSetlistSkeleton } from "@/components/performance/PublicSetlistSkeleton"
+import { getAllSetlists } from "@/lib/server-setlists"
+import type { Setlist } from "@/types/api"
 
 // C5D-007: /perform is the public gig-discovery landing surface and is
 // explicitly indexable. Root layout's noindex applies to the authed
@@ -12,31 +11,31 @@ export const metadata = {
     robots: { index: true, follow: true },
 }
 
-/**
- * /perform — Public setlist landing page.
- *
- * Non-signed-in visitors see a list of public setlists they can browse
- * and tap into. Authed users see the same listing (the per-setlist
- * perform UI lives under `/perform/setlist/<id>`, not here).
- *
- * Cycle-3.5 P2-005 — converted from `"use client"` shim to an async
- * server component so the SSR can paint a card-shaped skeleton (rather
- * than a centered spinner) before the client subscription resolves.
- *
- * Daniel-ratified 2026-05-18T20:15Z opted for "Skeleton during
- * hydration. Keeps edge cache" — so this page intentionally does NOT
- * call `cookies()` / `headers()` (which would force dynamic rendering
- * and lose the static edge cache). Both authed + unauth visitors see
- * the same byte-identical skeleton SSR; the client component
- * hydrates and replaces it once Firestore returns. No CLS because
- * `PublicSetlistListing`'s `loading: true` branch ALSO renders the
- * same skeleton, so the pre-hydration, hydrating, and "subscription in
- * flight" frames all share dimensions.
- */
-export default function PerformPage() {
-    return (
-        <Suspense fallback={<PublicSetlistSkeleton />}>
-            <PublicSetlistListing />
-        </Suspense>
-    )
+// C11 F-M2-006 + C11M1-002 — SSR-prefetch the public setlist list. The
+// page WAS a static export that painted a card-shaped skeleton then
+// hydrated the listing via Firestore on the client (Daniel-ratified
+// 2026-05-18T20:15Z "Skeleton during hydration. Keeps edge cache").
+// On flaky sanctuary connections that left fresh tablets with an empty
+// list for 1-3s. The dispatch swaps the skeleton for real cards by
+// fetching server-side via getAllSetlists (the same date-desc/50-cap
+// shape the client subscription uses) and seeding the client listing
+// with `initialSetlists`. The client listener still takes over on mount
+// for live updates.
+//
+// ISR revalidate keeps the edge-cache contract intact — the page is
+// statically rendered and re-generated at most once per minute, so a
+// new setlist appears on /perform within ~60s of publish without any
+// per-request server work. We still do NOT call `cookies()` / `headers()`
+// here, so auth-state-divergent renders never enter the cache (auth UI
+// is resolved client-side in PublicSetlistListing via `useAuth`).
+export const revalidate = 60
+
+export default async function PerformPage() {
+    // getAllSetlists returns serializeSetlist-normalized rows (Firestore
+    // Timestamps → ISO strings) — JSON-safe across the RSC → client
+    // boundary. The Setlist type's `FirestoreDate` union accepts ISO
+    // strings, so the client component reads them via the same `toDate`
+    // helper without a shape change.
+    const initialSetlists = (await getAllSetlists({ limit: 50 })) as unknown as Setlist[]
+    return <PublicSetlistListing initialSetlists={initialSetlists} />
 }

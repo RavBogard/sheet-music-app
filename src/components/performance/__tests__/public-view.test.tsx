@@ -189,7 +189,11 @@ describe("Public View", () => {
         })
 
         it("hides the Sign-In card when authed", async () => {
-            mockUseAuth.mockReturnValue({ user: { uid: "u1" }, loading: false, signIn: mockSignIn })
+            mockUseAuth.mockReturnValue({
+                user: { uid: "u1", displayName: "Aviva", email: "aviva@example.com", photoURL: null },
+                loading: false,
+                signIn: mockSignIn,
+            })
             const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
 
             mockSubscribeToPublicSetlists.mockImplementation((callback: (...args: any[]) => any) => {
@@ -201,6 +205,46 @@ describe("Public View", () => {
 
             expect(screen.queryByTestId("qr-signin")).toBeNull()
             expect(screen.queryByRole("button", { name: /sign in with google/i })).toBeNull()
+        })
+
+        // C11 M3-012 — signed-in users get an avatar pill upper-right linking
+        // to /settings so the auth-state context-shift isn't invisible when
+        // they tap into a setlist and the admin nav suddenly appears.
+        it("shows the signed-in avatar pill linking to settings when authed", async () => {
+            mockUseAuth.mockReturnValue({
+                user: { uid: "u1", displayName: "Aviva", email: "aviva@example.com", photoURL: null },
+                loading: false,
+                signIn: mockSignIn,
+            })
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+
+            mockSubscribeToPublicSetlists.mockImplementation((callback: (...args: any[]) => any) => {
+                callback([], false)
+                return vi.fn()
+            })
+
+            render(<PublicSetlistListing />)
+
+            const pill = screen.getByRole("link", { name: /signed in as aviva/i })
+            expect(pill.getAttribute("href")).toBe("/settings")
+        })
+
+        // C11 AC3 — logged-out viewers see the QR card OR a Sign-in pill, not
+        // both. The QR card is the auth affordance for guests; no pill should
+        // appear in the header to duplicate it.
+        it("does not show an avatar/sign-in pill when logged out (QR card is the indicator)", async () => {
+            // logged-out is the beforeEach default
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+
+            mockSubscribeToPublicSetlists.mockImplementation((callback: (...args: any[]) => any) => {
+                callback([], false)
+                return vi.fn()
+            })
+
+            render(<PublicSetlistListing />)
+
+            expect(screen.queryByRole("link", { name: /signed in as/i })).toBeNull()
+            expect(screen.getByTestId("qr-signin")).toBeDefined()
         })
 
         it("does not flash the Sign-In card while auth is still loading", async () => {
@@ -216,6 +260,107 @@ describe("Public View", () => {
 
             // !authLoading guard — card is suppressed until auth resolves (CLS guard).
             expect(screen.queryByTestId("qr-signin")).toBeNull()
+        })
+
+        // C11 F-M2-006 — SSR prefetch seeds the listing so fresh tablets get
+        // real cards on first paint instead of the skeleton-then-cards swap.
+        // When `initialSetlists` is supplied the listing must render cards
+        // synchronously (no `loading:true` skeleton) BEFORE the client
+        // subscription resolves.
+        it("renders SSR-prefetched cards immediately when initialSetlists is provided (no skeleton flash)", async () => {
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+
+            // Client subscription is intentionally not invoked synchronously —
+            // the SSR slice must paint before the listener fires.
+            mockSubscribeToPublicSetlists.mockImplementation(() => vi.fn())
+
+            render(
+                <PublicSetlistListing
+                    initialSetlists={[
+                        {
+                            id: "ssr-1",
+                            name: "Erev Shabbat (SSR)",
+                            eventDate: "2099-01-02T18:00:00Z",
+                            trackCount: 12,
+                            songCount: 11,
+                        } as any,
+                    ]}
+                />,
+            )
+
+            // Card content from the SSR slice — would be absent if we'd
+            // rendered the skeleton instead.
+            expect(screen.getByText("Erev Shabbat (SSR)")).toBeDefined()
+            const link = screen.getByRole("link", { name: /Erev Shabbat \(SSR\)/i })
+            expect(link.getAttribute("href")).toBe("/perform/setlist/ssr-1")
+        })
+
+        // C11 AMENDMENT-001 + AMENDMENT-002 — Daniel ratified 2026-05-28T~15:50Z
+        // that `publishedAt` is NOT a gating concept; every setlist is public
+        // the moment it exists. The SSR-prefetch must mirror the existing
+        // client filter EXACTLY (isTest:false + test-uid + eventDate window),
+        // with NO publishedAt filter introduced. Acceptance test models
+        // Saturday's `cd2010f4` (`publishedAt:null`, `isTest:false`): if any
+        // future change re-introduces a publishedAt gate, this row vanishes
+        // and the test fails.
+        it("renders a publishedAt:null setlist (no publishedAt gate regression)", async () => {
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+            mockSubscribeToPublicSetlists.mockImplementation(() => vi.fn())
+
+            render(
+                <PublicSetlistListing
+                    initialSetlists={[
+                        {
+                            id: "cd2010f4-saturday-bnei-mitzvah",
+                            name: "Saturday B'nei Mitzvah",
+                            eventDate: "2099-01-04T10:00:00Z",
+                            // publishedAt intentionally absent — matches prod shape.
+                            isTest: false,
+                            trackCount: 16,
+                            songCount: 14,
+                        } as any,
+                    ]}
+                />,
+            )
+
+            expect(screen.getByText("Saturday B'nei Mitzvah")).toBeDefined()
+            const link = screen.getByRole("link", { name: /Saturday B'nei Mitzvah/i })
+            expect(link.getAttribute("href")).toBe("/perform/setlist/cd2010f4-saturday-bnei-mitzvah")
+        })
+
+        // C11 — sandbox filter (`isTest:true`) still active in the SSR path —
+        // err-public invariant doesn't extend to test fixtures, which Daniel
+        // confirmed as a standing rule. The split helper already enforces
+        // this; this test pins the contract on the SSR-seeded path.
+        it("filters isTest:true rows out of the SSR-prefetched slice (sandbox isolation)", async () => {
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+            mockSubscribeToPublicSetlists.mockImplementation(() => vi.fn())
+
+            render(
+                <PublicSetlistListing
+                    initialSetlists={[
+                        {
+                            id: "real-1",
+                            name: "Real Service",
+                            eventDate: "2099-01-02T18:00:00Z",
+                            isTest: false,
+                            trackCount: 8,
+                            songCount: 8,
+                        } as any,
+                        {
+                            id: "test-1",
+                            name: "[CYCLE11- probe sandbox setlist",
+                            eventDate: "2099-01-03T18:00:00Z",
+                            isTest: true,
+                            trackCount: 1,
+                            songCount: 1,
+                        } as any,
+                    ]}
+                />,
+            )
+
+            expect(screen.getByText("Real Service")).toBeDefined()
+            expect(screen.queryByText(/CYCLE11- probe sandbox setlist/)).toBeNull()
         })
 
         it("caps the listing at 5 services total, upcoming-first", async () => {
