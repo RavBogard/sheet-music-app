@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger"
 import { hasBrowserFetchMetadata } from "@/lib/drive-file-auth"
 import { httpError, redactInProduction } from "@/lib/http/error-envelope"
 import { selectUnauthHint } from "@/lib/http/caller-context"
+import { verifyBearer } from "@/lib/mcp/auth"
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -48,7 +49,15 @@ export const GET = createApiHandler(async (ctx) => {
     if (limited) return limited
 
     const fileId = ctx.params?.fileId
-    const isTrusted = !!ctx.auth || hasBrowserFetchMetadata(ctx.req)
+    // Auth: Firebase ID token (ctx.auth), in-app fetch metadata, OR MCP
+    // `crl_live_` bearer. The MCP path was added 2026-05-28 per the
+    // err-public-not-gated invariant — a musician's bandmate sharing a
+    // chart link via Claude can curl it with their MCP bearer.
+    let isTrusted = !!ctx.auth || hasBrowserFetchMetadata(ctx.req)
+    if (!isTrusted && ctx.req.headers.get("authorization")?.toLowerCase().startsWith("bearer ")) {
+        const bearer = await verifyBearer(ctx.req)
+        if ("uid" in bearer) isTrusted = true
+    }
     const origin = getAllowedOrigin(ctx.req)
 
     try {
@@ -119,10 +128,13 @@ export const GET = createApiHandler(async (ctx) => {
                 { fileId },
                 // Cycle-5 C5B-006 — bearer-savvy hint only for bearer / in-app
                 // callers; a bare HTTP probe sees a generic prompt without
-                // the Bearer-header how-to.
+                // the Bearer-header how-to. Cycle-11 c11-fix-relax-gates:
+                // both Firebase ID tokens AND MCP `crl_live_` bearers are
+                // accepted, surface both in the hint so a Claude/MCP caller
+                // doesn't think they need to mint a Firebase ID token.
                 selectUnauthHint(
                     ctx.req,
-                    "Send `Authorization: Bearer <token>`, or call from the in-app fetch surface where Sec-Fetch-Site / Sec-Fetch-Dest headers identify the request.",
+                    "Send `Authorization: Bearer <token>` — either a Firebase ID token (signed-in user) or a `crl_live_…` MCP bearer. Or call from the in-app fetch surface where Sec-Fetch-Site / Sec-Fetch-Dest headers identify the request.",
                 ),
                 { "Access-Control-Allow-Origin": origin },
             )

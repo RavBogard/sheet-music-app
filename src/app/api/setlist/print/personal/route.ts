@@ -6,6 +6,8 @@ import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { MusicianProfile, SetlistTrack } from "@/types/models"
 import { getTracksForSetlist } from "@/lib/server-tracks"
+import { verifyBearer } from "@/lib/mcp/auth"
+import { httpError } from "@/lib/http/error-envelope"
 
 export const maxDuration = 120
 
@@ -25,6 +27,28 @@ export const GET = createApiHandler(
             return NextResponse.json({ error: 'setlistId parameter required' }, { status: 400 })
         }
 
+        // Auth: Firebase ID token (browser/in-app) OR MCP `crl_live_` bearer
+        // (Claude / autonomous agent). MCP path added 2026-05-28 per the
+        // err-public-not-gated invariant (decisions.md 2026-05-28T~16:00Z)
+        // — bearer-holders are musicians/leaders/autonomous-agents; give
+        // them the print. No owner-only or role-only gating: any valid
+        // bearer can pull any setlist's personal packet keyed by their
+        // own musicianProfile.
+        let callerUid: string | null = ctx.auth?.uid ?? null
+        if (!callerUid) {
+            const bearer = await verifyBearer(ctx.req)
+            if ("uid" in bearer) callerUid = bearer.uid
+        }
+        if (!callerUid) {
+            return httpError(
+                401,
+                "unauthenticated",
+                "Authentication required for personal print packet.",
+                { setlistId },
+                "Send `Authorization: Bearer <token>` — either a Firebase ID token (signed-in user) or a `crl_live_…` MCP bearer.",
+            )
+        }
+
         const db = getFirestore()
 
         // Load setlist
@@ -34,15 +58,8 @@ export const GET = createApiHandler(
         }
         const setlist = setlistDoc.data()!
 
-        // Verify access: owner or band leader (v4.0: all setlists are accessible to members)
-        // Access is already enforced by Firestore rules (isMember), but double-check for API safety
-        if (setlist.ownerId !== ctx.auth.uid && !ctx.auth.isBandLeader && !ctx.auth.isAdmin) {
-            // Still allow — all members can read all setlists in v4.0
-            // This check is kept as a no-op placeholder for future role-based restrictions
-        }
-
         // Load user profile for musician preferences
-        const userDoc = await db.collection('users').doc(ctx.auth.uid).get()
+        const userDoc = await db.collection('users').doc(callerUid).get()
         const profile: MusicianProfile = userDoc.data()?.musicianProfile || {}
         const userName = userDoc.data()?.displayName || userDoc.data()?.email || 'Musician'
 
@@ -89,5 +106,7 @@ export const GET = createApiHandler(
                 'Content-Disposition': `attachment; filename="${filename}"`,
             },
         })
-    }
+    },
+    // requireAuth:false → we manually resolve Firebase OR MCP bearer above.
+    { requireAuth: false }
 )

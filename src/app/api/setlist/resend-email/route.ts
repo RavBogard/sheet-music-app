@@ -64,13 +64,12 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Must be published
-        if (!setlist.isPublic && !setlist.publishedAt) {
-            return NextResponse.json(
-                { error: 'Setlist is not published' },
-                { status: 400 }
-            )
-        }
+        // 2026-05-28: publishedAt-as-gate killed per Daniel's
+        // err-public-not-gated binding invariant (decisions.md
+        // 2026-05-28T~15:50Z + ~16:00Z). The owner/leader resend flow no
+        // longer requires a publishedAt stamp — if a musician/leader
+        // wants to email the band about a setlist, the only relevant
+        // gate is "are you the owner/band-leader/admin?" (checked above).
 
         // Build email recipient list (same logic as publish route)
         const musicians: Array<{ uid?: string; name: string; email: string }> = Array.isArray(setlist.musicians) ? setlist.musicians : []

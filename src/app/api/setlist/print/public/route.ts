@@ -43,10 +43,13 @@ export async function GET(request: NextRequest) {
 
         const setlist = setlistDoc.data()!
 
-        // Security: only published setlists can be downloaded without auth
-        if (!setlist.publishedAt) {
-            return NextResponse.json({ error: 'Setlist is not published' }, { status: 403 })
-        }
+        // 2026-05-28: publishedAt-as-gate concept killed per Daniel's
+        // err-public-not-gated binding invariant (decisions.md
+        // 2026-05-28T~15:50Z + ~16:00Z). Every setlist is intentionally
+        // public the moment it exists; the publishedAt field remains as
+        // vestigial metadata (read for display elsewhere) but no longer
+        // gates access. A musician sharing a public-link with a guest
+        // before "publishing" should still be able to download it.
 
         // v60-04-02: hydration-aware read via shared helper. For hydrated
         // setlists, the embedded setlist.tracks[] is stale (engine writes
