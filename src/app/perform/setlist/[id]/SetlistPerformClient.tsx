@@ -99,7 +99,31 @@ export function SetlistPerformClient({
     const [activeSongIndex, setActiveSongIndex] = useState<number | null>(() => {
         if (!initialTrackId) return null
         const idx = initialTracks.findIndex((t) => t.id === initialTrackId)
-        return idx >= 0 ? idx : null
+        if (idx < 0) return null
+        // c12-fix-section-divider-url-behavior (F-C12-R2-010, decision (b)):
+        // section-divider rows (`type === 'header' | 'section'`) are labels,
+        // not chart destinations. Bookmarking `/track/<sectionId>` falls back
+        // to the bare path `/perform/setlist/<id>` — the URL-sync effect below
+        // sees `activeSongIndex === null` and `replaceState`s to the bare path.
+        // Without this gate the seed would be a section index, PDFOverlay would
+        // mount, its queue would filter to `type === 'song'`, queueStart would
+        // resolve to -1 → Math.max(0,-1) = 0, then the queue→setlist sync
+        // effect at PDFOverlay.tsx:148-162 would fire `onNavigate(0)` and the
+        // URL would silently rewrite to track-0 (deterministic; cycle-12
+        // run-2 F-C12-R2-010 saw all 4 section bookmarks rewrite to "Fiddley
+        // Tune"). Treating `'header' | 'section'` matches the canonical
+        // `isSectionRow` check in `SetlistGrid.tsx:168` (both values appear in
+        // the wild — TrackType union uses 'header'; TypeCell picker writes
+        // 'section').
+        const t = initialTracks[idx]
+        // Cast through `string` because the SetlistGrid editor's TypeCell
+        // picker writes `'section'` for the "Section header" option (see
+        // `TypeCell.tsx:42` + `SetlistGrid.tsx:168`'s `isSectionRow`), while
+        // the canonical `TrackType` union in `types/models.ts:34` only lists
+        // `'header'`. Both literals appear in real setlist data.
+        const tt = t.type as string | undefined
+        if (tt === "header" || tt === "section") return null
+        return idx
     })
     const [showPrintModal, setShowPrintModal] = useState(false)
 

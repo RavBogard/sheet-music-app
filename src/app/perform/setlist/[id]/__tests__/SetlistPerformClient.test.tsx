@@ -99,6 +99,11 @@ const initialTracks: SetlistTrack[] = [
     { id: 't2', title: 'Dodi Li', key: 'Am', fileId: 'upload-2' },
     { id: 'h1', title: 'Maariv', type: 'header' },
     { id: 't3', title: 'Ana B\'Koach', key: 'C', fileId: 'upload-3' },
+    // c12-fix-section-divider-url-behavior fixture: the SetlistGrid TypeCell
+    // picker writes `'section'` for "Section header"; canonical TrackType
+    // union uses `'header'`. Both appear in real setlist data. Cast through
+    // `Partial<SetlistTrack>` to bypass the union literal narrowing.
+    ({ id: 'sec1', title: 'Torah Service', type: 'section' } as unknown) as SetlistTrack,
 ]
 
 describe('SetlistPerformClient — SSR contract (UNAUTH-009)', () => {
@@ -197,6 +202,47 @@ describe('SetlistPerformClient — SSR contract (UNAUTH-009)', () => {
         )
 
         expect(window.location.pathname).toBe(`/perform/setlist/${SETLIST_ID}`)
+    })
+
+    it('c12-fix-section-divider-url-behavior (F-C12-R2-010): type="header" section bookmark falls back to bare path', () => {
+        // Decision (b): section dividers are labels, not chart destinations.
+        // Bookmarking `/track/<sectionId>` rewrites to bare path so the URL
+        // doesn't silently drift to track-0 via the PDFOverlay queue cascade
+        // (queueStart=-1 → Math.max(0,-1)=0 → onNavigate(0)).
+        window.history.replaceState(null, '', `/perform/setlist/${SETLIST_ID}/track/h1`)
+
+        render(
+            <SetlistPerformClient
+                setlistId={SETLIST_ID}
+                initialSetlist={initialSetlist}
+                initialTracks={initialTracks}
+                initialTrackId="h1"
+            />,
+        )
+
+        expect(window.location.pathname).toBe(`/perform/setlist/${SETLIST_ID}`)
+        // The Maariv header label still renders in the setlist body — section
+        // is visible as a label, just not a chart destination.
+        expect(screen.getByText('Maariv')).toBeTruthy()
+    })
+
+    it('c12-fix-section-divider-url-behavior (F-C12-R2-010): type="section" section bookmark falls back to bare path', () => {
+        // Same as the type:"header" case above but exercises the legacy
+        // TypeCell picker's `'section'` literal — both appear in real data
+        // per `SetlistGrid.tsx:168` `isSectionRow`.
+        window.history.replaceState(null, '', `/perform/setlist/${SETLIST_ID}/track/sec1`)
+
+        render(
+            <SetlistPerformClient
+                setlistId={SETLIST_ID}
+                initialSetlist={initialSetlist}
+                initialTracks={initialTracks}
+                initialTrackId="sec1"
+            />,
+        )
+
+        expect(window.location.pathname).toBe(`/perform/setlist/${SETLIST_ID}`)
+        expect(screen.getByText('Torah Service')).toBeTruthy()
     })
 
     it('c11-fix-perform-track-position-in-url: preserves search + hash when rewriting', () => {
