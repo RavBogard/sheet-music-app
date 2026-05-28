@@ -1022,9 +1022,12 @@ describe("MCP chart-upload tools (emulator)", () => {
             })
 
             const refused = await deleteChart(ADMIN, { fileId })
+            // C10I2-005: chart_in_use is a Conflict (409), not a server fault
+            // (500). The errorCode override on the richError details maps the
+            // envelope's error.code to 409.
             expect(refused).toMatchObject({
                 ok: false,
-                error: { machine_code: "chart_in_use" },
+                error: { machine_code: "chart_in_use", code: 409 },
                 boundTracks: 1,
                 liveSetlistIds: ["set-1"],
                 danglingTracksIgnored: 0,

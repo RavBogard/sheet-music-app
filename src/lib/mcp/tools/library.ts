@@ -1002,13 +1002,37 @@ export interface DedupeLibraryIndexResult {
     coverage: HygieneCoverage
 }
 
-function dedupeNormalize(s: string): string {
+/**
+ * Exact-grouping key for `dedupe_library`. Distinct from f010's persisted
+ * `normalizedName` (`recompute-index-name-fields.ts`) BY DESIGN:
+ *
+ *  - NFKD + combining-mark strip **folds accents** (`Café → cafe`), so an
+ *    accented re-upload dedupes against its unaccented twin. f010 uses NFKC
+ *    and keeps accents (it feeds the persisted field + fuzzy Levenshtein,
+ *    where folding is undesirable).
+ *  - Separators collapse to a single space and word-spaces are KEPT, so the
+ *    optional Levenshtein pass (`nameSimilarity`) scores on word-aware text.
+ *    f010 strips spaces entirely.
+ *
+ * C10I2-001: the char-class keeps **Unicode** letters/numbers (`\p{L}\p{N}`),
+ * not ASCII-only (`a-z0-9`). The prior ASCII-only class erased every
+ * Hebrew/Arabic/CJK letter, so two distinct native-script titles sharing a
+ * Latin substring (e.g. `"c10 אדון עולם"` and `"c10 אבינו מלכנו"`) both
+ * collapsed to `"c10"` and were falsely grouped as duplicates. Keeping the
+ * Unicode classes makes native scripts survive as distinct keys. This is
+ * behavior-preserving for the all-Latin catalog: `a-z0-9` ⊂ `\p{L}\p{N}`,
+ * and accent folding is unaffected (combining marks are stripped at the
+ * NFKD step above, before this regex). Emoji/punctuation-only titles still
+ * normalize to `""` (symbols are `\p{S}`, not `\p{L}`/`\p{N}`) and remain
+ * safely excluded from grouping by the empty-key guard.
+ */
+export function dedupeNormalize(s: string): string {
     return s
         .normalize("NFKD")
         .replace(/[̀-ͯ]/g, "")
         .toLowerCase()
         .replace(/[_\s\-]+/g, " ")
-        .replace(/[^a-z0-9 ]/g, "")
+        .replace(/[^\p{L}\p{N} ]/gu, "")
         .trim()
 }
 

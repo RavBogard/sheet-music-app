@@ -339,6 +339,39 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         ])
     })
 
+    it("C10I2-001 — distinct native-script titles sharing a Latin substring are NOT falsely grouped", async () => {
+        // Pre-fix the ASCII-only key erased the Hebrew, collapsing both to
+        // "c10" → a false dupe group that would have marked one distinct song
+        // `status:'duplicate'`. Post-fix the Unicode key keeps them distinct.
+        await seedIndex("heb-a", { name: "c10 אדון עולם" })
+        await seedIndex("heb-b", { name: "c10 אבינו מלכנו" })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+        expect(r.scanned).toBe(2)
+        expect(r.groupsFound).toBe(0)
+        expect(r.wouldMark).toBe(0)
+        expect(r.committed).toBe(0)
+    })
+
+    it("C10I2-001 — genuinely duplicate native-script titles DO still group", async () => {
+        await seedIndex("heb-dup-1", {
+            name: "אדון עולם",
+            uploadedAt: "2024-01-01T00:00:00Z",
+        })
+        await seedIndex("heb-dup-2", {
+            name: "אדון עולם",
+            uploadedAt: "2024-02-01T00:00:00Z",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+        expect(r.groupsFound).toBe(1)
+        expect(r.groups[0].normalizedName).toBe("אדון עולם")
+        expect(r.groups[0].kept.fileId).toBe("heb-dup-1") // earliest uploadedAt
+        expect(r.wouldMark).toBe(1)
+    })
+
     it("MCP-001 — real-run without force returns the rich force_required envelope and writes nothing", async () => {
         await seedIndex("ana-clean", {
             name: "Ana B_Koach.pdf",

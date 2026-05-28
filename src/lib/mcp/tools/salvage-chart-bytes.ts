@@ -342,6 +342,24 @@ export async function salvageChartBytes(
         const driveFileId =
             typeof rowData.driveFileId === "string" ? rowData.driveFileId : null
 
+        // C10I2-002: force-gate fires BEFORE source resolution. A missing
+        // `force` on a real run is the caller's primary, always-knowable
+        // error — surface it as `force_required` (409) before attempting (and
+        // possibly failing) the source fetch, so a source-less orphan returns
+        // 409 force_required rather than a misleading 422 no_source, and a
+        // non-committing call never hits the network. Matches the universal
+        // force-gate-first ordering of backfill_track_mimetype /
+        // archive_nonchart_artifacts. dryRun still resolves below to surface
+        // the full resolved-source plan.
+        if (!dryRun && !force) {
+            return richError(
+                "force_required",
+                "salvage_chart_bytes requires force:true to commit the heal.",
+                { fileId, rowName },
+                "Re-call with `force: true` to commit, or `dryRun: true` to preview the resolved source + byte size without committing.",
+            )
+        }
+
         // Resolve source bytes. sourceUrl wins; fall back to Drive; else
         // surface no_source_available so the caller knows what to do.
         let resolved: ResolvedSource | null = null
@@ -377,29 +395,9 @@ export async function salvageChartBytes(
             }
         }
 
-        if (!force) {
-            // Real-run without force — FU-1: rich `force_required` envelope
-            // carrying the resolved-source plan in `dryRunPlan`, still no
-            // writes. Completes the REG-003 sweep this F-05 tool's prior
-            // comment flagged as pending; aligns with reconcile_library /
-            // backfill_library_index / dedupe_library / library-review.
-            return richError(
-                "force_required",
-                "salvage_chart_bytes requires force:true to commit the heal.",
-                {
-                    dryRunPlan: {
-                        fileId,
-                        rowName,
-                        source: resolved.source,
-                        mimeType: resolved.mimeType,
-                        sizeBytes: resolved.buffer.byteLength,
-                        storagePath,
-                        dryRun: false,
-                    },
-                },
-                "Re-call with `force: true` to commit, or `dryRun: true` to inspect without committing.",
-            )
-        }
+        // C10I2-002: the real-run-without-force path is gated above, before
+        // source resolution — by here `force` is guaranteed true on a real
+        // run, so the heal proceeds directly.
 
         // ─── HEAL via the shared atomic guard ([[feedback_upload_atomicity]]) ─
         const healed = await healChartBytes(

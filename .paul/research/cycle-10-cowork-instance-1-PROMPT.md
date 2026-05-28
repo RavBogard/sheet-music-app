@@ -105,7 +105,7 @@ This is the layer the harness can't score. Open the real deployed surface at iPa
 grade **PASS / FRICTION / BROKEN** and capture a screenshot for any non-PASS.
 
 1. **Public `/perform` landing** (`src/app/perform/page.tsx` → `PublicSetlistListing`;
-   `public-setlist-order.ts` `splitPublicSetlists` orders upcoming soonest-first, then past):
+   `src/components/performance/public-setlist-order.ts` `splitPublicSetlists` orders upcoming soonest-first, then past):
    - Is the **upcoming service obvious and above the fold** on an 820×1180 portrait screen? (e.g.
      tonight's Kabbalat Shabbat above tomorrow's — `splitPublicSetlists` already orders this;
      confirm it *reads* that way, not just that the data is sorted.)
@@ -126,7 +126,7 @@ grade **PASS / FRICTION / BROKEN** and capture a screenshot for any non-PASS.
    - **Wake-lock** (`KeepAwakeToggle.tsx` + `use-wake-lock.ts`): is the keep-awake toggle
      discoverable? (The band needs the screen to stay on through a service.)
    - **Page-turn / navigation gesture** (`live-director-gesture`): reliable, no accidental triggers?
-3. **MusicXML render + transpose** (`SmartScoreViewer.tsx`, `resolveViewerKind.ts`,
+3. **MusicXML render + transpose** (`src/components/music/SmartScoreViewer.tsx`, `src/components/performance/resolveViewerKind.ts`,
    `TransposerMenu`): if a setlist has a MusicXML chart (the STRATEGIC format,
    `[[project_musicxml_goal]]`), does it **render legibly on iPad** and **transpose cleanly** (key
    change reflows, no clipping)? Is there a PDF-only fallback silently masking a broken MusicXML

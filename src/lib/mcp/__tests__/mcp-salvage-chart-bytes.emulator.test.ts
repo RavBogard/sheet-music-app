@@ -323,14 +323,16 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
             sourceUrl: "https://example.com/ana.pdf",
             dryRun: false,
         })
-        // FU-1: force-gate now returns the rich force_required envelope (ok:false,
-        // error.machine_code) carrying the resolved-source plan in `dryRunPlan`,
-        // instead of {ok:true, refused:true}.
+        // C10I2-002: the force-gate now fires BEFORE source resolution, so a
+        // real-run without force returns force_required (409) carrying the row
+        // identity — NOT a resolved-source `dryRunPlan` (use dryRun:true for
+        // that). The source fetch is never attempted.
         expect(r).toMatchObject({
             ok: false,
             error: { machine_code: "force_required", code: 409 },
         })
-        expect((r as { dryRunPlan?: { dryRun?: boolean } }).dryRunPlan?.dryRun).toBe(false)
+        expect((r as { dryRunPlan?: unknown }).dryRunPlan).toBeUndefined()
+        expect((r as { fileId?: string }).fileId).toBe("upload-1")
 
         // No Storage / Firestore writes.
         expect(storageState.uploaded.size).toBe(0)
@@ -339,6 +341,29 @@ describe("MCP salvage_chart_bytes — DATA-001 cycle-3 (emulator)", () => {
             .doc("upload-1")
             .get()
         expect(rowAfter.data()?.salvagedAt).toBeUndefined()
+    })
+
+    it("C10I2-002 — real-run without force AND no source returns force_required (409), not no_source (422)", async () => {
+        // The defect: source resolution (no_source 422) used to fire before the
+        // force-gate, masking the caller's primary fixable error. With the gate
+        // hoisted above resolution, force omission is reported first — and the
+        // no-source row is never even probed.
+        await seedUser(ADMIN, "admin")
+        await seedIndex("upload-nosrc", {
+            name: "Orphan Without Drive.pdf",
+            status: "active",
+            // no driveFileId, and the call passes no sourceUrl
+        })
+
+        const r = await salvageChartBytes(ADMIN, {
+            fileId: "upload-nosrc",
+            dryRun: false,
+        })
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "force_required", code: 409 },
+        })
+        expect(storageState.uploaded.size).toBe(0)
     })
 
     it("force-run HEAL: bytes land at EXISTING fileId, curation preserved, bonds intact", async () => {

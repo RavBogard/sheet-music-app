@@ -762,6 +762,11 @@ export async function deleteChart(
                     boundTracks: liveTracks.length,
                     liveSetlistIds: [...liveSetlistIds],
                     danglingTracksIgnored,
+                    // C10I2-005: a live bond is a state Conflict, not a server
+                    // fault — 409, not the 500 the unmapped machine_code would
+                    // otherwise default to. Mirrors the duplicate-on-import 409
+                    // above + matches REST semantics for the caller.
+                    errorCode: 409,
                 },
                 "Remove the tracks first via remove_track, then retry delete_chart.",
             )
