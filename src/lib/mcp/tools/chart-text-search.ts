@@ -8,11 +8,10 @@ import {
 import { loadUploader } from "./uploader-roles"
 
 /**
- * `search_chart_text` — F4 Tier-1 (Option A+ ratify 2026-05-26) +
- * F4 Tier-2 `f4-lyric-search-persistence-mod` (2026-05-26).
+ * `search_chart_text` — F4 Tier-1 (Option A+ ratify 2026-05-26).
  *
  * Substring search across the PERSISTED text surfaces of the chart
- * library. Four scopes:
+ * library. Two scopes:
  *
  *  - `metadata` (default): `library_index/{id}.{title, nameLower}` plus
  *    `aiSuggestion.{suggested_title, suggested_lead, suggested_tags,
@@ -22,15 +21,7 @@ import { loadUploader } from "./uploader-roles"
  *    `chords[].text` / `chords[].originalText`. Enables "find every
  *    chart that uses Bm7b5 somewhere" — a surface Daniel + David don't
  *    have today.
- *  - `lyrics`: substring scan on `library_index/{id}.searchableText` —
- *    the lowercased + whitespace-normalized chart body extracted at PCU
- *    write time (PDF via pdfjs, TXT verbatim, MusicXML via the
- *    `<lyric><text>` walker). Lets Daniel find a chart by remembered
- *    lyric text ("the chart with 'hineh ma tov'"). Rows without
- *    `searchableText` (image/audio/skipped/failed at extraction, or
- *    pre-backfill historical rows) skip cleanly. `backfill_searchable_text`
- *    heals historical rows.
- *  - `all`: union of all three.
+ *  - `all`: union of both.
  *
  * This tool also closes the silent-broken `/api/library/search-content`
  * HTTP endpoint — that route attempted the same `collectionGroup`
@@ -56,7 +47,7 @@ export const MAX_LIMIT = 100
 /** Snippet context window: ±N characters around the match. */
 export const SNIPPET_PADDING = 40
 
-export type SearchScope = "metadata" | "chords" | "lyrics" | "all"
+export type SearchScope = "metadata" | "chords" | "all"
 
 export interface SearchChartTextArgs {
     query: string
@@ -79,7 +70,6 @@ export interface SearchChartTextMatch {
         | "aiSuggestion.suggested_tags"
         | "aiSuggestion.concerns"
         | "chordData"
-        | "searchableText"
     /** 1-indexed page number — populated only for `chordData` matches. */
     page?: number
     /** ±SNIPPET_PADDING chars around the match. Present when includeSnippets !== false. */
@@ -144,18 +134,13 @@ export async function searchChartText(
     let scanCapped = false
     let limitTruncated = false
 
-    // ─── metadata + lyrics scopes (shared library_index scan) ───────
+    // ─── metadata scope (library_index scan) ────────────────────────
     //
-    // Both scopes scan the same `library_index` collection — metadata
-    // matches against title/nameLower/aiSuggestion.* fields; lyrics
-    // matches against the `searchableText` body persisted at PCU write
-    // time by the f4-lyric-search-persistence-mod lane. Unified into ONE
-    // loop so the `all` scope doesn't pay for two full collection
-    // scans, and so a chart matched in metadata isn't re-scanned for
-    // lyrics (priority order: title > nameLower > aiSug > searchableText).
+    // Scans the `library_index` collection — matches against
+    // title/nameLower/aiSuggestion.* fields (priority order:
+    // title > nameLower > aiSug).
     const includeMetadata = scope === "metadata" || scope === "all"
-    const includeLyrics = scope === "lyrics" || scope === "all"
-    if (includeMetadata || includeLyrics) {
+    if (includeMetadata) {
         try {
             const snap = await db
                 .collection("library_index")
@@ -203,16 +188,6 @@ export async function searchChartText(
                             aiSug.concerns,
                         )
                     }
-                }
-                if (includeLyrics) {
-                    // searchableText is already lowercase + normalized at
-                    // write time, so the indexOf below sees a clean haystack
-                    // (no per-call toLowerCase() needed on the field).
-                    pushString(
-                        candidates,
-                        "searchableText",
-                        data.searchableText,
-                    )
                 }
                 for (const c of candidates) {
                     const idx = c.text.toLowerCase().indexOf(needle)

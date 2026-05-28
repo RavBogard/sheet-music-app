@@ -14,7 +14,6 @@ import { reconcileLibrary } from "./reconcile-library"
 import { salvageChartBytes } from "./salvage-chart-bytes"
 import { backfillHealMetadata } from "./backfill-heal-metadata"
 import { backfillTrackMimetype } from "./backfill-track-mimetype"
-import { backfillSearchableText } from "./backfill-searchable-text"
 import { archiveNonChartArtifacts } from "./archive-nonchart-artifacts"
 import { getAiConfig, setAiAutoApply, setAiThreshold } from "./ai-config"
 import { getCorrectionStats } from "./correction-stats"
@@ -504,19 +503,17 @@ export function registerReadTools(server: McpServer): void {
             jsonResult(await getCongregationContext(uidFrom(extra), args)),
     )
 
-    // F4 (2026-05-26): Tier-1 + Tier-2 full-text search across PERSISTED
-    // chart-text surfaces. Four scopes — metadata (title + nameLower +
+    // F4 (2026-05-26): Tier-1 full-text search across PERSISTED
+    // chart-text surfaces. Two scopes — metadata (title + nameLower +
     // aiSuggestion.{suggested_title, suggested_lead, suggested_tags,
     // concerns}), chords (collectionGroup('chordData') on chords[].text),
-    // lyrics (library_index/{id}.searchableText, persisted at PCU write
-    // time by the f4-lyric-search-persistence-mod lane), and all (union).
-    // Replaces the silent-broken `/api/library/search-content` endpoint
-    // (deleted in F4-A).
+    // and all (union). Replaces the silent-broken
+    // `/api/library/search-content` endpoint (deleted in F4-A).
     server.registerTool(
         "search_chart_text",
         {
             description:
-                "Search inside the PERSISTED text content of charts in the library — useful when title alone doesn't surface the chart, e.g. you remember David annotated Rabbi Daniel as the lead, or that the AI flagged a concern, or the chart uses a `Bm7b5`, or a specific lyric line. Four scopes: `metadata` (default — searches `library_index/{id}.{title, nameLower}` + `aiSuggestion.{suggested_title, suggested_lead, suggested_tags, concerns}`); `chords` (searches the per-page chord-symbol cache at `chordData/page_<n>.chords[].text`/`.originalText` — finds charts by chord progression, e.g. query 'Bm7b5'); `lyrics` (searches the lowercased + whitespace-normalized chart body persisted to `library_index/{id}.searchableText` at upload time — finds charts by remembered lyric text, e.g. query 'hineh ma tov'; PDF text via pdfjs, TXT verbatim, MusicXML via `<lyric><text>` walker; image/audio rows have no searchableText and are skipped; pre-backfill historical rows skip cleanly until `backfill_searchable_text` heals them); `all` (union of all three). Returns `{ok, scope, query, results:[{chartId, title, field, page?, snippet?, matchPosition}], totalScanned, capped}`. Substring scan is case-insensitive; results limited to top `limit` (default 20, max 100); the underlying Firestore scan is capped at 1000 docs per scope. `capped: true` means more matches likely exist beyond what's returned — narrow the query or widen `limit`. Role gate: admin or band_leader only (full-text search is an authoring surface). Use `search_library` for the role-ungated title+key+bpm search the wider band has access to.",
+                "Search inside the PERSISTED text content of charts in the library — useful when title alone doesn't surface the chart, e.g. you remember David annotated Rabbi Daniel as the lead, or that the AI flagged a concern, or the chart uses a `Bm7b5`. Two scopes: `metadata` (default — searches `library_index/{id}.{title, nameLower}` + `aiSuggestion.{suggested_title, suggested_lead, suggested_tags, concerns}`); `chords` (searches the per-page chord-symbol cache at `chordData/page_<n>.chords[].text`/`.originalText` — finds charts by chord progression, e.g. query 'Bm7b5'); `all` (union of both). Returns `{ok, scope, query, results:[{chartId, title, field, page?, snippet?, matchPosition}], totalScanned, capped}`. Substring scan is case-insensitive; results limited to top `limit` (default 20, max 100); the underlying Firestore scan is capped at 1000 docs per scope. `capped: true` means more matches likely exist beyond what's returned — narrow the query or widen `limit`. Role gate: admin or band_leader only (full-text search is an authoring surface). Use `search_library` for the role-ungated title+key+bpm search the wider band has access to.",
             inputSchema: {
                 query: z
                     .string()
@@ -540,10 +537,10 @@ export function registerReadTools(server: McpServer): void {
                         "When true (default), each result carries a `snippet` field with ±40 characters of context around the match. Pass false to omit snippets (smaller payload).",
                     ),
                 scope: z
-                    .enum(["metadata", "chords", "lyrics", "all"])
+                    .enum(["metadata", "chords", "all"])
                     .optional()
                     .describe(
-                        "Search scope. 'metadata' (default) — library_index titles + aiSuggestion fields. 'chords' — per-page chord-symbol cache (find by chord progression). 'lyrics' — persisted chart body (find by lyric text). 'all' — union.",
+                        "Search scope. 'metadata' (default) — library_index titles + aiSuggestion fields. 'chords' — per-page chord-symbol cache (find by chord progression). 'all' — union.",
                     ),
             },
         },
@@ -1648,54 +1645,6 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await backfillTrackMimetype(uidFrom(extra), args)),
-    )
-
-    // f4-lyric-search-persistence-mod (Tier 2 2026-05-26): Admin-only backfill
-    // for `library_index/{id}.searchableText` — heal pre-lane historical rows
-    // (~625 in prod) so `search_chart_text({scope:"lyrics"})` covers them too.
-    server.registerTool(
-        "backfill_searchable_text",
-        {
-            description:
-                "Admin-only persistence-shape backfill — heal historical `library_index/{id}` rows that lack `searchableText` (the lowercased + whitespace-normalized chart body persisted at PCU write time by the f4-lyric-search-persistence-mod lane; powers `search_chart_text({scope:'lyrics'})`). For each candidate row, reads the chart's Storage bytes via the admin SDK, runs the SAME extractor PCU uses (PDF via pdfjs, TXT verbatim, MusicXML via the `<lyric><text>` walker; image/audio rows skip), then on `dryRun:false`+`force:true` writes `searchableText` plus a `searchableTextBackfilledAt` audit-trail timestamp. F-05: `dryRun` defaults TRUE — returns the full plan + per-row preview without writing. A real run (`dryRun:false`) still requires `force:true` or returns the plan with `refused:true`. Idempotent: rows already carrying non-empty `searchableText` are skipped with `reason:'already_populated'` unless `overwrite:true` is also passed. Default `limit:100`; max 500 per call (caller paginates by re-invoking). `fileIds:[]` targets a specific set instead of scanning. Returns `{ok, scanned, candidates, heal:{count, rows:[{fileId,title,storagePath,format,chars,truncated}], truncated}, skipped:{count, rows:[{fileId,title,reason,detail?}], truncated}, errors:{...}, dryRun, committed, refused?}`. Skip taxonomy: `already_populated` (idempotency); `no_storage_url` / `storage_missing` / `storage_download_failed` (Storage path); `extraction_skipped_image|audio|no_text|unsupported`. Untargeted scans filter to `status:'active'` rows; targeted `fileIds[]` runs include any status (explicit caller intent). ★ Single-owner run pattern per [[feedback_single_owner_destructive_runs]]: dryRun-first, surface the report, get Daniel's explicit 'go', then run apply in `limit`-d batches.",
-            inputSchema: {
-                dryRun: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "When true (default), returns the per-row would-change plan without writing. F-05 standing rule: dryRun does NOT require force.",
-                    ),
-                force: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and no writes — even after `dryRun: false` is set.",
-                    ),
-                limit: z
-                    .number()
-                    .int()
-                    .positive()
-                    .max(500)
-                    .optional()
-                    .describe(
-                        "Max rows processed per call. Default 100; max 500. Caller paginates by re-invoking after a successful batch.",
-                    ),
-                fileIds: z
-                    .array(z.string())
-                    .optional()
-                    .describe(
-                        "Optional — target a specific row set instead of scanning for missing-searchableText. Useful for targeted re-runs after an extractor improvement. Subject to the same MAX_LIMIT (500) cap.",
-                    ),
-                overwrite: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "When true together with `force:true`, re-extract + overwrite rows that already carry a non-empty `searchableText`. Default false — a second run skips already-populated rows for idempotency.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(await backfillSearchableText(uidFrom(extra), args)),
     )
 
     // library-bulk-archive-nonchart (Tier-1 P2 2026-05-27, data-health dh-20260527a

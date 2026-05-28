@@ -38,12 +38,6 @@ import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
 // `mcp/tools/library-upload.ts` (which already imports `applySongMetadata`),
 // not this module.
 import { applySongMetadata } from "@/lib/mcp/tools/song-metadata"
-// f4-lyric-search-persistence-mod (Tier 2 2026-05-26): synchronous text
-// extraction from the conversion-finalized buffer. Field lands on the
-// existing indexEntry batch.set — atomic-guard preserved without a new
-// mutation surface. Graceful-degrade on extraction failure: warn-log,
-// omit field, chart still ships.
-import { extractSearchableText } from "@/lib/library/searchable-text"
 
 /**
  * Shared library-upload pipeline. The single server-side codepath that:
@@ -597,38 +591,6 @@ export async function processChartUpload(
     const siblingsInCatalog = existingSiblings.length + 1
     stage("specificity:computed", { stem, siblingsInCatalog })
 
-    // f4-lyric-search-persistence-mod: extract searchableText from the
-    // conversion-finalized buffer. Sync extraction so the field rides on
-    // the existing indexEntry batch.set (atomic-guard preserved). PDF +
-    // TXT via the shared `extract-document.ts` extractor; MusicXML via a
-    // small `<lyric><text>` regex walker; image/audio rows skip; failures
-    // graceful-degrade (warn-log + field omitted; chart still ships). The
-    // backfill_searchable_text MCP tool heals rows that skipped or failed.
-    stage("searchable-text:start", { contentType })
-    const searchable = await extractSearchableText({
-        buffer,
-        contentType,
-        fileName,
-    })
-    let searchableText: string | undefined
-    if (!searchable.ok) {
-        logger.warn(
-            `[Upload ${traceId}] searchableText extraction failed (non-fatal): ${searchable.reason}`,
-        )
-        stage("searchable-text:failed", { reason: searchable.reason })
-    } else if (searchable.text === null) {
-        stage("searchable-text:skipped", {
-            reason: searchable.skipReason ?? "unknown",
-        })
-    } else {
-        searchableText = searchable.text
-        stage("searchable-text:ok", {
-            format: searchable.format,
-            chars: searchable.text.length,
-            truncated: searchable.truncated,
-        })
-    }
-
     const indexEntry: Record<string, unknown> = {
         name: title,
         nameLower,
@@ -661,12 +623,6 @@ export async function processChartUpload(
     if (input.tags && input.tags.length > 0) indexEntry.tags = input.tags
     if (originalStorageUrl) indexEntry.originalStorageUrl = originalStorageUrl
     if (sourceFormat) indexEntry.sourceFormat = sourceFormat
-    // f4-lyric-search-persistence-mod: searchableText only present when
-    // extraction yielded usable normalized text. Omitted (not empty string)
-    // for image/audio/skipped/failed rows — matches the optional-field
-    // pattern above and keeps the doc small. backfill_searchable_text
-    // heals later if needed.
-    if (searchableText) indexEntry.searchableText = searchableText
     if (input.driveMetadata) {
         indexEntry.driveFileId = input.driveMetadata.driveFileId
         if (input.driveMetadata.modifiedTime) {
