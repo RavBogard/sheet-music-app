@@ -79,3 +79,11 @@ public/workbox-*.js.map
 certs/
 bridge/release/
 .env*.local
+
+# per-developer LLM-tool noise (the shared GSD/PAUL/CARL framework files in
+# .claude/.gemini/.codex/.opencode stay TRACKED — only local state is ignored):
+# per-developer local settings overrides, lint scratch output, and Python
+# bytecode caches under the ui-ux-pro-max skill.
+**/settings.local.json
+**/*_output.txt
+**/__pycache__/
