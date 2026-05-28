@@ -303,7 +303,33 @@ describe("MCP setlist write tools (emulator)", () => {
 
         const tracks = await tracksOf(id)
         expect(tracks.map((t) => t.title)).toEqual(["Song A", "Song B"])
-        expect((await db().collection("setlists").doc(id).get()).data()!.trackCount).toBe(2)
+        const after = (await db().collection("setlists").doc(id).get()).data()!
+        expect(after.trackCount).toBe(2)
+        // C10I1-002: songCount tracks the song-type subset and must bump on
+        // every MCP-authored add (the bug: stale "0 songs" on the public landing).
+        expect(after.songCount).toBe(2)
+    })
+
+    it("C10I1-002 — songCount counts only song-type rows, fresh on every mutation", async () => {
+        const id = await newSetlist()
+        // 3 songs + 2 non-song structural rows interleaved.
+        await addTrackToSetlist(ADMIN, { setlistId: id, title: "— Opening —", type: "header" })
+        await addTrackToSetlist(ADMIN, { setlistId: id, title: "Song A" }) // default type → song
+        await addTrackToSetlist(ADMIN, { setlistId: id, title: "Barechu", type: "prayer" })
+        await addTrackToSetlist(ADMIN, { setlistId: id, title: "Song B", type: "song" })
+        const songC = (await addTrackToSetlist(ADMIN, { setlistId: id, title: "Song C" })) as {
+            trackId: string
+        }
+
+        let doc = (await db().collection("setlists").doc(id).get()).data()!
+        expect(doc.trackCount).toBe(5)
+        expect(doc.songCount).toBe(3)
+
+        // Removing a song decrements songCount; removing a non-song leaves it.
+        await removeSetlistTrack(ADMIN, { setlistId: id, trackId: songC.trackId })
+        doc = (await db().collection("setlists").doc(id).get()).data()!
+        expect(doc.trackCount).toBe(4)
+        expect(doc.songCount).toBe(2)
     })
 
     it("add_track_to_setlist inserts at a position, shifting later rows down", async () => {

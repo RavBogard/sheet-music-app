@@ -955,6 +955,10 @@ export interface RecomputeSetlistTrackCountResult {
     setlistId: string
     declared: number
     actual: number
+    /** Declared `songCount` (song-type subset, shown on the public landing). */
+    declaredSongs: number
+    /** Actual song-type track count recomputed from the subcollection. */
+    actualSongs: number
     drifted: boolean
     written: boolean
 }
@@ -1017,6 +1021,8 @@ export async function recomputeSetlistTrackCount(
         setlistId: result.setlistId,
         declared: result.declared,
         actual: result.actual,
+        declaredSongs: result.declaredSongs,
+        actualSongs: result.actualSongs,
         drifted: result.drifted,
         written: result.written,
     }

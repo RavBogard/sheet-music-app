@@ -1,6 +1,7 @@
 import crypto from "crypto"
 import { FieldValue } from "firebase-admin/firestore"
 import { getTracksForSetlist } from "@/lib/server-tracks"
+import { isSongType } from "@/lib/setlist-track-count"
 import { logger } from "@/lib/logger"
 import {
     forbiddenRoleEnvelope,
@@ -220,8 +221,15 @@ export async function addTrack(
         }
     }
 
+    // C10I1-002: keep the song-type subset counter (`songCount`, rendered on
+    // the public /perform landing) fresh on every add. Authoritative from the
+    // in-scope sibling set — no extra read.
+    const existingSongs = existing.filter((t) =>
+        isSongType((t as { type?: unknown }).type),
+    ).length
     const setlistPatch: Record<string, unknown> = {
         trackCount: existing.length + 1,
+        songCount: existingSongs + (isSongType(input.type) ? 1 : 0),
         updatedAt: FieldValue.serverTimestamp(),
         ...versionBumpFields(), // W-04 Plan 01: setlist mutation → bump
     }
@@ -575,6 +583,14 @@ export async function updateTrack(
         (newFileId !== undefined && newFileId !== oldFileId) ||
         (wantsUnbond && oldFileId !== undefined)
 
+    // C10I1-002: `type` is an UPDATABLE_FIELD, so an update can flip a row's
+    // song-ness and shift the parent's `songCount`. Only recompute (and take
+    // the extra sibling read) when the new type actually crosses the
+    // song/non-song boundary relative to the current row.
+    const wantsSongCountRecompute =
+        patch.type !== undefined &&
+        isSongType(patch.type) !== isSongType(peekData.type)
+
     // Stage B (inside tx): re-read track for version gating + existence
     // (atomic with the writes below). Also read sibling tracks via the
     // tx's get(query) if we need them for in-place reorder or fileIds
@@ -645,8 +661,9 @@ export async function updateTrack(
             id: string
             order: number
             fileId?: string
+            type?: unknown
         }> | null = null
-        if (wantsMove || wantsFileIdsRebuild) {
+        if (wantsMove || wantsFileIdsRebuild || wantsSongCountRecompute) {
             const sibSnap = await tx.get(
                 db.collection("tracks").where("setlistId", "==", setlistId),
             )
@@ -659,6 +676,7 @@ export async function updateTrack(
                         typeof data.fileId === "string"
                             ? (data.fileId as string)
                             : undefined,
+                    type: data.type,
                 }
             })
             allTracks.sort((a, b) => a.order - b.order)
@@ -724,6 +742,14 @@ export async function updateTrack(
                 }
             }
             setlistPatch.fileIds = [...canonical]
+        }
+
+        // C10I1-002: recompute the song-type subset counter from post-patch
+        // state when this update flips the target row's song-ness.
+        if (wantsSongCountRecompute && allTracks) {
+            setlistPatch.songCount = allTracks.filter((t) =>
+                isSongType(t.id === trackId ? patch.type : t.type),
+            ).length
         }
 
         tx.update(setlistRef, setlistPatch)
@@ -1215,6 +1241,27 @@ export async function bulkUpdateTracks(
                 }
                 setlistPatch.fileIds = [...canonical]
             }
+            // C10I1-002: if any patch changes a track's `type`, recompute the
+            // song-type subset counter (`songCount`) from post-patch state.
+            // `type` IS an UPDATABLE_FIELD so a bulk edit can flip song-ness.
+            const anyTypeChange = patches.some(
+                (p) => p.patch.type !== undefined,
+            )
+            if (anyTypeChange) {
+                const patchedType = new Map<string, unknown>()
+                for (const p of patches) {
+                    if (p.patch.type !== undefined)
+                        patchedType.set(p.trackId, p.patch.type)
+                }
+                setlistPatch.songCount = existing.filter((t) => {
+                    const tRec = t as Record<string, unknown>
+                    const id = tRec.id as string
+                    const effectiveType = patchedType.has(id)
+                        ? patchedType.get(id)
+                        : tRec.type
+                    return isSongType(effectiveType)
+                }).length
+            }
             tx.update(db.collection("setlists").doc(setlistId), setlistPatch)
             return { kind: "ok" }
         })
@@ -1568,13 +1615,21 @@ export async function bulkAddTracks(
             }
         }
         const newFileIds = new Set<string>()
+        let insertSongCount = 0
         for (const p of planned) {
             if (p.kind !== "ok") continue
             batch.set(db.collection("tracks").doc(p.trackId), p.payload)
             if (p.fileId) newFileIds.add(p.fileId)
+            // C10I1-002: count song-type inserts for the songCount denorm.
+            // payload.type defaults to "song" (undefined) — isSongType matches.
+            if (isSongType((p.payload as { type?: unknown }).type)) insertSongCount++
         }
+        const existingSongs = existing.filter((t) =>
+            isSongType((t as { type?: unknown }).type),
+        ).length
         const setlistPatch: Record<string, unknown> = {
             trackCount: existing.length + insertCount,
+            songCount: existingSongs + insertSongCount,
             updatedAt: FieldValue.serverTimestamp(),
             ...versionBumpFields(), // W-04 Plan 01
         }
@@ -1720,6 +1775,7 @@ export async function removeTrack(
                     typeof data.fileId === "string"
                         ? (data.fileId as string)
                         : undefined,
+                type: data.type,
             }
         })
         existing.sort((a, b) => a.order - b.order)
@@ -1738,6 +1794,8 @@ export async function removeTrack(
         })
         const setlistPatch: Record<string, unknown> = {
             trackCount: remaining.length,
+            // C10I1-002: recompute song-type subset from the surviving rows.
+            songCount: remaining.filter((t) => isSongType(t.type)).length,
             updatedAt: FieldValue.serverTimestamp(),
             ...versionBumpFields(),
         }
