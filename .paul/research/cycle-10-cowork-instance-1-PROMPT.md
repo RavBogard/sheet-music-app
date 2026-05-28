@@ -1,244 +1,247 @@
-# Cycle-10 Cowork — Instance 1: MCP post-fix verification + Cat-M
+# Cycle-10 Cowork — Instance 1: Real-usability iPad sweep (PRIMARY)
 
-> **Drafted 2026-05-27 against deployed surface at origin/master `97c294c621`** (FU-1 + R-search
-> deltas re-checked at `fb9a137b4c`) — every tool name + Zod param + source path below verified
-> via `git show origin/master:<path>` / `git ls-tree origin/master` per
-> `[[feedback_cowork_prompt_verify_before_write]]`. Read `cycle-10-cowork-PARENT.md` ONCE first.
-> Full deployed-surface map: `.paul/research/cowork-stress-test-2026-05-26/MCP-INVENTORY.md`.
+> **Drafted 2026-05-28 against deployed surface at origin/master `3155fb2881`** — every route +
+> component + spec + flag below verified via `git ls-tree` / `git cat-file -p` / direct worktree
+> read per `[[feedback_cowork_prompt_verify_before_write]]`. Read `cycle-10-cowork-PARENT.md` ONCE
+> first (north-star, auth/META-003 policy, harness map, severity calibration, ship policy).
 >
-> **Verify-before-write checklist applied:** (1) 9 fix-touched tools confirmed in source ✓
-> (2) every regression-PROBE param cross-checked against deployed source ✓ (3) fix SHAs
-> mapped from `git log` ✓ (4) memory rules tagged proposal-shape vs deployment-shape ✓
-> (5) SHA-bound claims tied to `97c294c621`/`fb9a137b4c` ✓
+> **Verify-before-write checklist applied:** (1) all 17 harness e2e specs confirmed present in
+> `e2e/` ✓ (2) `ipad-webkit`+`ipad-webkit-landscape` projects confirmed `playwright.config.ts:37,44`
+> ✓ (3) Perform components (`PerformanceToolbar`, `KeepAwakeToggle`, `SmartScoreViewer`,
+> `resolveViewerKind`, `PublicSetlistListing`, `public-setlist-order`) confirmed on disk ✓
+> (4) gig-packet print routes confirmed `src/app/api/setlist/print/**` ✓ (5) coder-1
+> `perform-public-auth-and-cap` confirmed NOT merged (branch only) → PENDING ✓ (6) admin-test-session
+> secret gate confirmed `route.ts:80` + `env.mjs:72/118` ✓
 
 ---
 
 ## You are cowork-Claude (cycle-10, instance 1)
 
-Single-thread cowork-Claude session. Your job is **post-fix verification** of the 2026-05-27
-MCP fix wave on the deployed server at `https://www.centralreform.live/api/mcp`, plus first
-exercise of the new Cat-M harness probes. ~75 minutes real wall-clock (per
-`[[feedback_cowork_real_harness]]` — NOT a walk-away). **Your default outcome is a clean
-all-HELD regression table with zero findings** — you are confirming fixes, not hunting new
-bugs. Depth of evidence on each regression PROBE > breadth.
+Single-thread cowork-Claude session, **~75 minutes real wall-clock** (per
+`[[feedback_cowork_real_harness]]` — NOT a walk-away; CFC + chrome.debugger DOES NOT WORK). Your
+job is a **real-usability, iPad-first sweep** of the deployed consumer surface at
+`https://www.centralreform.live`. You are answering Daniel's question: **"how do users ACTUALLY
+interact with this; what breaks in real use; iPad 11" 820×1180 WebKit first."**
+
+You are NOT just checking spec pass/fail — you are grading **real-user friction**: tap-target
+failures, layout breakage at iPad viewport, confusing affordances, unclear state mid-song. The band
+holds **6× standard 11" iPads** Saturday (`[[project_band_ipad_hardware]]`); Perform mode must be
+bulletproof there.
+
+**Your two layers (PARENT §0):**
+1. **Deterministic iPad load** — drive `npm run stress` (the in-sandbox Playwright `ipad-webkit`
+   harness) across the usability categories; triage the emitted REPORT.
+2. **Qualitative judgment pass** — your own eyes on the **PUBLIC `/perform` surface** (no auth
+   needed — the cleanest target given META-003) + the harness-documented gaps (Cat-G ergonomics,
+   Cat-N monitor UI) + the §4 named verification targets.
 
 ### Setup
 
-1. **Endpoint:** `https://www.centralreform.live/api/mcp`
-2. **Bearer:** Daniel pastes a root admin bearer (`crl_live_...`) at start. Authorization
-   header on every JSON-RPC call. Never write the raw value into any file under
-   `sheet-music-app/`.
-3. **Instance id / uidPrefix:** `c10i1` (lowercase, ≤6 chars). **Mandatory** — every
-   `create_test_account({role, uidPrefix:"c10i1"})`. ★ **Cleanup-side param is `prefix`, not
-   `uidPrefix`** — same value, different name (verified at `97c294c621`).
-4. **Boot pre-flight (HARD-BLOCK → BLOCKER supervisor + stop on any failure):**
-   - `tools/list` → confirm these 9 fix-touched tools present: `upload_chart`, `get_song`,
-     `add_track_to_setlist`, `get_setlist`, `dedupe_library`, `salvage_chart_bytes`,
-     `backfill_track_mimetype`, `archive_nonchart_artifacts`, `update_song`.
-   - `create_test_account({uidPrefix:"c10i1", role:"musician"})` sanity mint →
-     `cleanup_all_test_data({prefix:"c10i1"})` sanity sweep (confirm the param asymmetry).
-
-### Envelope-shape contract — ★ CRITICAL ★
-
-MCP validation surfaces as `result.isError:true` with prose in `content[].text`. It does
-**NOT** surface as JSON-RPC `error.code:-32602` (memory `[[feedback_mcp_validation_shape]]`).
-Any finding that quotes `-32602` for an input-validation refusal is misreading the response —
-re-check. "expect refuse-envelope" everywhere below = the `isError:true` shape.
+1. **Base URL:** `https://www.centralreform.live`
+2. **Auth (PARENT §2):** the **public `/perform` landing needs NO auth** — that's your core
+   judgment target. For authed Perform paths: the harness's authed specs read an admin bearer as
+   `MCP_BEARER` (Daniel pastes it at start, sourced via `node scripts/supervisor-prod-bearer.mjs`)
+   and self-skip without it. A cowork-Claude *authed* pass requires Daniel to have set
+   `MCP_ADMIN_TEST_SESSION_SECRET` in prod (the `/api/auth/admin-test-session` escape hatch); if it's
+   unset, stay on the public surface and note "authed pass degraded — secret unset" in the HANDOFF.
+   **Never write a raw bearer/secret into any file under `sheet-music-app/`** — redact as
+   `***redacted***`.
+3. **uidPrefix:** `c10i1` for any test account you mint. ★ Create-side param `uidPrefix`,
+   cleanup-side param `prefix` (same value). NEVER `cleanup_all_test_data` without `prefix`.
+4. **Boot pre-flight (HARD-BLOCK → BLOCKER supervisor + stop):**
+   - `npm run stress -- --dry-run` → the plan resolves (`ipad-webkit` + `ipad-webkit-landscape`
+     projects, the usability categories).
+   - `GET /perform` → 200, paints the `PublicSetlistListing` skeleton then a card list.
+   - `cycle-4/harness/out/` is writable.
 
 ### Out of scope (hard boundaries)
 
-- ⛔ **NO live X32 monitor writes** unless `get_bridge_health` → `x32Connected:true` AND Daniel
-  confirms the desk is intentionally on. Probe `set_send_level`/`set_send_mute`/`set_bus_fader`/
-  `set_matrix_fader`/`set_matrix_mute` at the validation-envelope layer only (bad params →
-  refuse-envelope). Do NOT push faders.
-- ⛔ **NO destructive writes against real setlists/library entries.** All writes go through
-  `c10i1`-fixtures you created or `dryRun:true`.
-- ⛔ **NO `publish_setlist` to real recipients** (gate-probe via fixtures + dryRun only).
-- ⛔ **NO config-doc writes** (`config/monitor`, `config/storageBackup`, `config/bridgeHealth`).
-- ⛔ **NO source modification.** Research-only. No worktree, no branch, no commit.
-- ⛔ **F-002 lyric-search is DROPPED from scope** — Daniel killed the feature 2026-05-27. Do
-  NOT probe `search_chart_text({scope:'lyrics'})` as a feature. (Part 3 has the one allowed
-  retained-scope check.)
+- ⛔ **No source modification, no worktree, no branch, no commit, no ship.** Observe/report only.
+- ⛔ **OBSERVE/REPORT-ONLY pre-service** (PARENT §7.1) — you produce a findings report; you do NOT
+  fix. Saturday 2026-05-30 is the B'nei Mitzvah; no risky ships before it.
+- ⛔ **No live X32 monitor writes.** Cat-N (monitor UI) is **visual/affordance shape ONLY** — render
+  + legibility, never push a fader. Monitors are **wedges**, not IEM (`[[feedback_terminology]]`).
+- ⛔ **No destructive writes against real setlists/library.** Any fixture goes through `c10i1`-prefix
+  + cleaned up; never `publish_setlist` to real recipients.
+- ⛔ **F-002 lyric-search is DROPPED** (feature removed `3155fb2881`). Do not probe it.
+- ⛔ **Do not probe** `bridge/**`, repo-root `mcp/`, `SetlistGrid.tsx`.
 
 ---
 
-## Part 1 — Regression PROBEs (the core; ~45 min)
+## Part 1 — Deterministic iPad load via the harness (~25 min)
 
-For each row in PARENT §4, run the PROBE and record HELD / REGRESSED / N-A in your HANDOFF's
-lead regression table. **A HELD probe produces NO finding** — only a REGRESSED one does. Run
-in this order (cheap → setup-heavy):
+Run the iPad stress matrix and triage the REPORT. This is the spec-pass/fail + FINDING-annotation
+layer (PARENT §3).
 
-### Group A — envelope-honesty probes (no fixtures; ~10 min)
-
-1. **R-F001 (isError):** call any tool with a bad arg, e.g.
-   `update_track({setlistId:"nope", trackId:"nope", patch:{}})`. Confirm `result.isError:true`
-   + prose, NOT `-32602`. → HELD unless swallowed/wrong-shape.
-2. **R-F005 (dedupe honesty):** `dedupe_library({dryRun:true})`. Confirm the report carries
-   `wouldMark:N` + `committed:0` (NOT the legacy `duplicatesMarked`). Then `dedupe_library({})`
-   (no dryRun, no force) → refuse-envelope, still `committed:0`. → HELD.
-   **Note:** `dedupe_library`'s force-gate refusal is the FU-1 HELD case (still plain
-   `refused:true`, not the rich `force_required` envelope). If you see `refused:true` here
-   that's a known-open INFO, NOT a regression — see R-force below for the migrated tools.
-3. **R-F007 (salvage prose):** `salvage_chart_bytes({})` (refuse) + `salvage_chart_bytes({fileId:"ghost"})`.
-   Confirm the refusal prose names NO `library_index/{id}` internal Firestore path. → HELD.
-4. **R-F008 (backfill force honesty):** `backfill_track_mimetype({force:true})` (NO
-   `dryRun:false`). Confirm it reports `forceWithoutCommit:true` and writes 0 rows. → HELD.
-5. **R-force (FU-1 Part A `force_required`, `fb9a137b4c`):** trigger a real-run refusal on each
-   migrated tool — `backfill_track_mimetype({dryRun:false})`, `salvage_chart_bytes({fileId:"<c10i1 fixture>", dryRun:false})`,
-   `archive_nonchart_artifacts({dryRun:false})` — all WITHOUT `force`. Confirm each returns the
-   rich `{ok:false, error:{machine_code:"force_required", code:409}}` (surfaces `isError:true`)
-   carrying a `dryRunPlan`, NOT the legacy `{ok:true,refused:true}`. → HELD unless legacy shape
-   / missing plan / 500.
-6. **R-F015 (input sanitize):** after Group C setup, `update_track({setlistId, trackId, patch:{notes:"a bc"}})`
-   with embedded control/null bytes. Confirm stripped cleanly — no 500, no stack trace, no
-   silent corruption of surrounding text. → HELD.
-
-### Group B — dedupe canonical picker (dryRun-only; ~5 min)
-
-7. **R-dedup (canonical picker, `d4c441f8fb`):** `dedupe_library({dryRun:true})` and inspect the
-   per-group canonical picks. For any group containing BOTH a real-bytes PDF and a Google-Apps
-   row (`application/vnd.google-apps.*`), confirm the **PDF is picked canonical** and the
-   Google-Doc demoted (the `isGoogleAppsMime` demotion; Lane probe found 13 such groups, all
-   PDF-canonical). If no mixed group exists, mark N-A. → HELD / N-A.
-   ⛔ Do NOT run a real (non-dryRun) dedupe — Daniel's single-owner groups-7/9 step.
-
-### Group C — chart upload round-trip (fixtures; ~15 min)
-
-8. `upload_chart({title:"c10i1-stress-1", fileBase64:"<tiny valid PDF base64>", mimeType:"application/pdf", key:"G", bpm:84})`.
-   Capture the returned `fileId`.
-9. **R-F016 (dual-read write):** `get_song({id:fileId})` → confirm `defaults.key:"G"` +
-   `defaults.bpm:84` present (the fix routes `upload_chart` key/bpm through `applySongMetadata`
-   into `songs/{id}.defaults`, not just `library_index`). Original bug returned null. → HELD.
-10. Cross-read coherence (`[[project_catalog_dual_read_surfaces]]`): `list_library({q:"c10i1-stress-1"})`
-    + `search_library({query:"c10i1-stress-1"})` → both agree on key/bpm with `get_song`.
-    Divergence = finding.
-11. **R-F017 (bond bpm denorm):** `create_setlist({title:"c10i1-stress-setlist", isTest:true})`,
-    then `add_track_to_setlist({setlistId, songId:fileId})`. `get_setlist({setlistId})` →
-    confirm the track row carries BOTH `key:"G"` AND `bpm:84` (the F-017 fix added `bpm` to
-    `ResolvedTrackBond`). → HELD unless bpm (or key) missing.
-
-### Group D — unicode + bulk-archive (fixtures; ~10 min)
-
-12. **R-F010 (Unicode dedup, `d2c4936197`):** upload three fixtures with non-Latin titles:
-    `c10i1 אדון עולם`, `c10i1 أمزينج جريس`, `c10i1 🎵🎶`. After each, `get_song` round-trips the
-    title verbatim (no mojibake) AND `dedupe_library({dryRun:true})` does NOT fuzzy-collide them
-    with each other or with `c10i1-stress-1` (the NFKC + `/[^\p{L}\p{N}]/gu` normalize → distinct
-    `normalizedName`). → HELD unless any two collide.
-13. **R-arch (bulk soft-archive idempotence, `5c0674ab9a`):** `archive_nonchart_artifacts({dryRun:true})`
-    twice. Confirm the candidate set is identical across the two calls (idempotent) and a
-    known-archived row does NOT reappear in `reconcile_library({dryRun:true})`'s scan (reconcile
-    skips `archived` status). → HELD unless non-idempotent or archived rows leak. ⛔ dryRun-only.
-
----
-
-## Part 2 — Cat-M harness probe baseline (~10 min)
-
-Run the Lane-C MCP probes once and fold the result into your HANDOFF:
+```bash
+# usability-focused categories on both iPad orientations
+npm run stress -- \
+  --projects=ipad-webkit,ipad-webkit-landscape \
+  --categories=A,B,C,D,E,H,J,K,L,S \
+  --bearer="<admin bearer if Daniel pasted one; omit to let authed specs self-skip>" \
+  --run-id=c10i1-ipad
 ```
-npm run stress -- --surface=mcp --bearer="<your admin bearer>" --run-id=c10i1-mcp
-```
-This runs `cycle-4/harness/probes/*.mjs` (`server-tools-list`, `get-bridge-health`,
-`list-setlists`, `role-gate-musician-refusal`) → emits `REPORT-stress-c10i1-mcp.md` in
-`cycle-4/harness/out/`. Copy that REPORT into your artifacts dir. The role-gate probe mints
-`test-musician-*` under uidPrefix `stress-c7` and revokes by uid — distinct from your `c10i1`.
-Any probe finding here is a Cat-M finding; a clean run = 4 probes executed, 0 findings (Lane-C
-baseline: 109 tools, bridge v10.0.6, 20 setlists, musician refusal envelope confirmed).
+
+- This drives the existing iPad specs: cold-start (`perform-ipad`), Perform + bonded-render
+  (`perform-ipad-deep`, `perform-ipad-real-setlists`, `perform-flow`, `ipad-stuck-spinner-probe`),
+  live-director gesture (`live-director-gesture`), library (`library-ipad`, `library-review-flow`),
+  setlist-edit + chart-bind + gig-packet (`chart-bind-ipad`, `chart-bind-picker`, `gig-packet-print`,
+  `f023-live-rename`), offline (`perform-ipad-offline`, `r1-offline-decisive`,
+  `perform-ipad-pwa-fresh-install`), axe (`axe-stress`), QR onboarding (`onboarding-qr-ipad`),
+  large-setlist (`stress-ipad`), smoke (`smoke`).
+- **Copy `cycle-4/harness/out/REPORT-stress-c10i1-ipad.md`** into your artifacts dir.
+- Every failed/timed-out test + every `FINDING`-annotated pass becomes a finding. Fold them into
+  your scorecard. A clean pass = a probe executed, not a finding.
+- **(If `--categories=F` / authoring is wanted)** it needs a bearer + the `STRESS-TEST-*` scratch
+  flow; it's not core to the consumer-usability question — run it only if the bearer is present and
+  time allows.
 
 ---
 
-## Part 3 — search_chart_text retained-scopes + FU-1 known-opens (document only, ~5 min)
+## Part 2 — Qualitative judgment pass on the PUBLIC `/perform` surface (~25 min)
 
-**R-search [PENDING coder-4 drop-lyric-search lane]:** if the `drop-lyric-search` lane has
-landed by the time you run (check `tools/list` / the deployed `chart-text-search.ts` scope
-enum), verify the RETAINED scopes still work:
-- `search_chart_text({query:"<c10i1-stress-1>", scope:"metadata"})` → returns the fixture.
-- `search_chart_text({query:"<a chord token>", scope:"chords"})` → returns results (or a clean
-  empty, no 500).
-- `search_chart_text({query:"x", scope:"lyrics"})` → expect a CLEAN refuse-envelope (the scope
-  was removed), NOT a 500. → HELD unless a retained scope broke or `lyrics` 500s.
-If the drop lane has NOT landed yet, mark R-search N-A and note "drop-lyric-search not on master
-at run SHA".
+This is the layer the harness can't score. Open the real deployed surface at iPad viewport
+(820×1180, WebKit) and use it like a band member would. **No auth needed.** For each area below,
+grade **PASS / FRICTION / BROKEN** and capture a screenshot for any non-PASS.
 
-**FU-1 known-opens (INFO only, do NOT re-litigate):** the `dedupe_library` force-gate is HELD
-(still `refused:true`) and FU-1 Part B (HTTP-500→4xx reclass; F-014/F-010-code-2) is BLOCKED on
-finding-source. If you incidentally hit either, record ONE INFO row each citing the FU-1 queue.
+1. **Public `/perform` landing** (`src/app/perform/page.tsx` → `PublicSetlistListing`;
+   `public-setlist-order.ts` `splitPublicSetlists` orders upcoming soonest-first, then past):
+   - Is the **upcoming service obvious and above the fold** on an 820×1180 portrait screen? (e.g.
+     tonight's Kabbalat Shabbat above tomorrow's — `splitPublicSetlists` already orders this;
+     confirm it *reads* that way, not just that the data is sorted.)
+   - **Skeleton → content with NO layout shift (CLS)?** The page is edge-cached and SSRs a
+     card-shaped skeleton (intentional, Daniel-ratified 2026-05-18); confirm the hydration swap is
+     seamless.
+   - **Tap target on each setlist card ≥44×44px?** Easy to tap the right service without mis-hitting
+     a neighbor?
+   - **Empty-state legible** if no upcoming services?
+2. **Perform mode** — tap into a public setlist's perform view (`/perform/setlist/<id>`):
+   - Does the **first chart load on first tap** (no stuck spinner — the `ipad-stuck-spinner-probe`
+     class of bug)?
+   - **Toolbar legibility + state** (`PerformanceToolbar.tsx`: TransposerMenu / MetronomeControl /
+     Zoom / Printer / AI): is the transpose state clear enough that a player won't play the wrong
+     key? Is the metronome obviously on/off? Zoom controls reachable?
+   - **Annotation** (the full toolbar's annotate affordance, `PDFOverlay.tsx:71`): usable with a
+     finger? Does it survive a page turn?
+   - **Wake-lock** (`KeepAwakeToggle.tsx` + `use-wake-lock.ts`): is the keep-awake toggle
+     discoverable? (The band needs the screen to stay on through a service.)
+   - **Page-turn / navigation gesture** (`live-director-gesture`): reliable, no accidental triggers?
+3. **MusicXML render + transpose** (`SmartScoreViewer.tsx`, `resolveViewerKind.ts`,
+   `TransposerMenu`): if a setlist has a MusicXML chart (the STRATEGIC format,
+   `[[project_musicxml_goal]]`), does it **render legibly on iPad** and **transpose cleanly** (key
+   change reflows, no clipping)? Is there a PDF-only fallback silently masking a broken MusicXML
+   render?
+4. **Gig-packet print** (`src/app/api/setlist/print/{public,personal,prepare}/route.ts`): from iPad
+   Safari, is the print output usable + layout intact?
+
+---
+
+## Part 3 — Gap-coverage rim + named verification targets (~20 min)
+
+### Cat-G — iPad touch-target ergonomics (PARENT §5)
+Audit the Perform + landing surfaces for: tap-target sizes (≥44×44px Apple HIG floor), thumb-reach
+zones (controls reachable in a two-handed iPad grip), spacing between adjacent controls (mis-tap
+risk), and gesture conflicts (page-turn vs annotation vs scroll). Report friction **even where the
+harness spec passes** — this is the judgment the spec can't make.
+
+### Cat-N — monitor surface UI-shape (PARENT §5)
+**Visual/affordance shape ONLY — no X32 writes.** Open `/monitor`: does the panel render on iPad?
+Are fader strips + bus-assignment affordances legible? Is the bus5 master-mute survivor state
+visually coherent? (Auth-gated — needs a band member with monitor access; if you can't authenticate,
+mark N-A and note it.)
+
+### Sign-in flows (Cat-K)
+- **QR scan-with-phone** (`src/components/auth/QRSignIn.tsx`, `/api/auth/qr/route.ts`): walk the QR
+  onboarding end-to-end on a touch device — scan, approve, land authed. Friction-free for a band
+  member onboarding a fresh iPad?
+- **Google sign-in** (`LoginClient.tsx`): completes cleanly on iPad Safari?
+
+### ★ Named target — coder-1 `perform-public-auth-and-cap` `[LANDED at 6e043a4ce5]`
+This lane is **LIVE on master** (landed while this PROMPT was authored). `PublicSetlistListing.tsx`
+now imports `QRSignIn`, pins a logged-out Sign-In card (QR + Google) to the top, caps the listing at
+`MAX_PUBLIC_SERVICES = 5` (`upcoming.slice(0,5)` + past fills remainder, upcoming-first), and gates
+on `useAuth()` **client-side** with a `!authLoading` CLS guard. **Exercise it hard on iPad — it's a
+PRIMARY target:**
+- **logged-out** (`/perform` with no session): the **QR + Sign-In card** is pinned top, obvious, QR
+  scannable with a phone; **authed** (signed-in band member): card gone, just the listing.
+- **≤5 rows total**, upcoming service(s) first.
+- **no CLS**: watch the auth resolve — the card must NOT flash then yank (the `!authLoading` guard).
+  Grade this carefully; a flash-yank on a cold iPad load is a HIGH usability finding.
+- **edge cache intact**: SSR skeleton paints identically for authed + unauth (page still avoids
+  `cookies()`).
+(Re-confirm the SHA at run time with `git log -1 origin/master`; note any later delta to the cap/card.)
 
 ---
 
 ## Cleanup (end-of-run, ~5 min) — MANDATORY before HANDOFF-COMPLETE
 
+If you minted any test account / fixture:
 ```
-1. delete_chart({fileId}) for EACH upload (c10i1-stress-1 + the 3 unicode fixtures)
-2. delete_setlist({setlistId:"<c10i1 fixture>", force:true})
-3. cleanup_all_test_data({prefix:"c10i1"})   // ← prefix, NOT uidPrefix
-4. Verify zero residual:
-   - list_test_accounts() → none matching c10i1
-   - search_library({query:"c10i1"}) → empty
-   - list_setlists({limit:50}) → no c10i1 fixtures
+1. delete_chart / delete_setlist({force:true}) for any fixture you created
+2. cleanup_all_test_data({prefix:"c10i1"})   // ← prefix, NOT uidPrefix
+3. Verify zero residual: list_test_accounts() → none matching c10i1; search_library({query:"c10i1"}) → empty
 ```
-If prefix-scoped cleanup partially fails, capture the envelope + list orphans by
-fileId/setlistId/uid under "Manual cleanup needed". Daniel sweeps.
+(If your run was purely read-only on the public surface, note "read-only, no fixtures" and skip.) If
+prefix-scoped cleanup partially fails, list orphans under "Manual cleanup needed"; Daniel sweeps.
 
 ---
 
 ## Report format
 
-Write to `.paul/research/cycle-10-cowork-instance-1-HANDOFF.md`. **Lead with the regression
-table**, then any new findings.
+Write to `.paul/research/cycle-10-cowork-instance-1-HANDOFF.md`. **Lead with the usability
+scorecard**, then findings.
 
 ```markdown
-# Cycle-10 Cowork Instance-1 HANDOFF — MCP post-fix verification
+# Cycle-10 Cowork Instance-1 HANDOFF — Real-usability iPad sweep
 
-**Run date:** 2026-05-3?T<hh:mm>Z
-**Bearer role:** admin (Daniel-pasted root) — crl_live_***redacted***
-**Master SHA at run:** <from a deployed probe or git log>
-**Cleanup state:** [clean / partial — list orphans]
+**Run date:** 2026-05-2?T<hh:mm>Z
+**Viewport:** 820×1180 portrait (ipad-webkit) + 1180×820 landscape
+**Auth:** public-surface (no auth) [+ authed via admin-test-session if secret set]
+**Master SHA at run:** <git log / deployed probe>
+**Harness REPORT:** cycle-10-cowork-instance-1-artifacts/REPORT-stress-c10i1-ipad.md
+**Cleanup state:** [read-only / clean / partial — list orphans]
 
-## Regression verdict: [ALL HELD / N REGRESSED]
+## Usability verdict: [CLEAN / N-FRICTION / N-BROKEN]
 
-| PROBE | Fix | Verdict | Evidence (envelope excerpt / repro) |
-|-------|-----|---------|-------------------------------------|
-| R-F001 | isError propagation | HELD/REGRESSED/N-A | … |
-| R-F005 | dedupe wouldMark/committed | … | … |
-| R-F007 | salvage prose | … | … |
-| R-F008 | backfill forceWithoutCommit | … | … |
-| R-force | FU-1 force_required (3 tools) | … | … |
-| R-F010 | Unicode dedup | … | … |
-| R-F015 | input sanitize | … | … |
-| R-F016 | dual-read write | … | … |
-| R-F017 | bond bpm denorm | … | … |
-| R-arch | bulk-archive idempotence | … | … |
-| R-dedup | canonical picker | … | … |
-| R-search | retained scopes post-drop | … | … |
-| Cat-M | harness probe baseline | … | 4 probes / N findings |
+| Area | Verdict | Evidence (screenshot / spec / repro) |
+|------|---------|--------------------------------------|
+| Public /perform landing | PASS/FRICTION/BROKEN/N-A | … |
+| Perform mode (load + toolbar + annotate + wake-lock + gesture) | … | … |
+| Chart bind picker | … | … |
+| MusicXML render + transpose | … | … |
+| Gig-packet print | … | … |
+| Offline behavior | … | … |
+| Sign-in (QR + Google) | … | … |
+| a11y (axe) | … | … |
+| Cat-G touch-target ergonomics | … | … |
+| Cat-N monitor UI-shape | … | … |
+| perform-public-auth-and-cap [PENDING] | LANDED+verified / N-A | … |
 
 ## Summary
-- Probes executed: <n>
+- Harness: <p> passed / <f> failed / <s> skipped (categories A,B,C,D,E,H,J,K,L,S)
 - Findings: <n> (BLOCKER:<n> / HIGH:<n> / MED:<n> / LOW:<n> / INFO:<n>)
-- Charts uploaded: <n> / deleted: <n> · Test accounts: <n> / swept: <n>
+- Screenshots captured: <n>
 
-## Findings  (only for REGRESSED probes + genuinely new issues; FU-1 known-opens = INFO)
+## Findings   (only FRICTION/BROKEN areas + genuine new issues)
 ### C10I1-001 — <title>
-- **SUT:** <tool>
-- **Severity:** BLOCKER|HIGH|MED|LOW|INFO
-- **Repro:** <exact JSON-RPC call + bearer role>
-- **Expected:** <what the fix predicted>
-- **Actual:** <envelope verbatim; redact any bearer>
+- **Surface:** <route / component / spec>
+- **Severity:** BLOCKER|HIGH|MED|LOW|INFO   (usability calibration — PARENT §6)
+- **Viewport:** 820×1180 portrait | landscape
+- **Repro:** <exact steps a band member would take>
+- **Expected (usable):** <what a friction-free experience looks like>
+- **Actual:** <what happened; attach screenshot path>
 - **Hypothesis:** <suspected source location, or "unclear">
+- **Ship-class:** SAFE-NOW (trivial copy/contrast) | HOLD-POST-SERVICE (touches render/data/auth)
 
-## Repros  (prod-SHA-stamped transcripts for every load-bearing finding)
+## Repros / screenshots
+(reference cycle-10-cowork-instance-1-artifacts/<file>.png per finding)
 
-## Manual cleanup needed  (only if a fixture was created-but-not-deleted)
+## Manual cleanup needed   (only if a fixture was created-but-not-deleted)
 ```
 
-**Severity calibration** (same as 5/26): BLOCKER = data loss / role bypass / prod-write from
-unprivileged role / 500+stack / atomic-guard orphan. HIGH = silent corruption / dual-read
-divergence / missing refuse-gate / envelope leaks internal path. MED = envelope shape
-inconsistency / misleading dryRun report / wrong-tier rate-limit. LOW = unclear prose / stale
-schema desc. INFO = the FU-1 known-opens + non-bug observations.
-
 Finally: ACK + HANDOFF-COMPLETE to `.coord/inbox/supervisor.md` signed
-`from cycle-10-cowork-instance-1`, citing the regression verdict + findings count +
-load-bearing IDs.
+`from cycle-10-cowork-instance-1`, citing the usability verdict + findings count + load-bearing IDs.
+**Tag each finding's ship-class** so the supervisor knows what can ship safe-now vs what HOLDs until
+post-service (PARENT §7.1).
 
 Go.
