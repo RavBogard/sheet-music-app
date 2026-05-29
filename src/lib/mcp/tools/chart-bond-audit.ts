@@ -164,6 +164,51 @@ export async function auditBondedRows(
     return { rows, mismatchCount: rows.filter((r) => r.mismatch).length }
 }
 
+/**
+ * FU-c12-4 — a single cloned row flagged as a likely title/filename mismatch,
+ * carried on a clone response so the caller can target a `swap_chart` /
+ * `review_chart_bonds` follow-up by `position` or `trackId` WITHOUT re-fetching
+ * the clone + re-deriving the mismatch. `chartFileName` + `overlapScore` ARE the
+ * structured "why" (lower overlap = worse). `mismatch:true` is implicit (every
+ * entry is a flagged row), so it's dropped from the shape.
+ */
+export interface BondReviewRow {
+    /** 0-based `order` of the row in the CLONED setlist (targets swap_chart/update_track). */
+    position: number
+    /** Fresh trackId in the CLONE (NOT the source id) — target follow-ups here. */
+    trackId: string
+    title: string
+    fileId: string
+    /** `library_index/{fileId}.name`, or null when the row has no catalog entry. */
+    chartFileName: string | null
+    /** 0..1 Jaccard token overlap between title and chart filename (lower = worse). */
+    overlapScore: number
+}
+
+/**
+ * Project a {@link ChartBondAuditSummary} down to just the mismatched rows,
+ * enriched with each row's `position` (0-based `order`) in the cloned setlist.
+ * Shared by `clone_setlist` and `clone_setlist_from_template` so the projection
+ * lives in one place. `positionByTrackId` maps each CLONE-side trackId → order;
+ * a trackId absent from the map resolves to -1 (defensive — shouldn't happen
+ * since the map is built from the same newTrackIds the audit ran over).
+ */
+export function toBondReviewRows(
+    audit: ChartBondAuditSummary,
+    positionByTrackId: Map<string, number>,
+): BondReviewRow[] {
+    return audit.rows
+        .filter((r) => r.mismatch)
+        .map((r) => ({
+            position: positionByTrackId.get(r.trackId) ?? -1,
+            trackId: r.trackId,
+            title: r.title,
+            fileId: r.fileId,
+            chartFileName: r.chartFileName,
+            overlapScore: r.overlapScore,
+        }))
+}
+
 // ─── occasion-token detection (clone staleMetadataCandidates) ────────────────
 
 /**

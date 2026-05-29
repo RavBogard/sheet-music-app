@@ -12,6 +12,11 @@ import {
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { isSongType } from "@/lib/setlist-track-count"
+import {
+    auditBondedRows,
+    toBondReviewRows,
+    type BondReviewRow,
+} from "./chart-bond-audit"
 
 /**
  * Cycle-6 Lane 2 — setlist-template CRUD pack.
@@ -715,6 +720,23 @@ export interface CloneSetlistFromTemplateResult {
     ownerId: string
     ownerName: string
     version: 1
+    /**
+     * FU-c12-4 — parity with `clone_setlist`. Template bonds (`fileId`/`fileName`)
+     * are copied verbatim, so a stale template bond propagates into the new
+     * setlist silently. Number of cloned rows whose song title diverges from the
+     * bonded chart filename. Non-blocking; 0 when no bonded row looks mismatched
+     * (or the audit read failed — fail-soft). Run `review_chart_bonds` post-clone
+     * to walk the flagged rows.
+     */
+    bondReviewCount: number
+    /**
+     * FU-c12-4 — the rows behind {@link bondReviewCount}
+     * (`bondReviewRows.length === bondReviewCount`). Each entry carries the
+     * clone-side `position` + fresh `trackId` so the caller can target a
+     * `swap_chart` / `review_chart_bonds` follow-up directly. Empty array when no
+     * mismatch.
+     */
+    bondReviewRows: BondReviewRow[]
 }
 
 export async function cloneSetlistFromTemplate(
@@ -826,8 +848,10 @@ export async function cloneSetlistFromTemplate(
     batch.set(db.collection("setlists").doc(newSetlistId), setlistPayload)
 
     const nowIso = new Date().toISOString()
+    const newTrackIds: string[] = []
     templateTracks.forEach((src, i) => {
         const newTrackId = crypto.randomUUID()
+        newTrackIds.push(newTrackId)
         const payload: Record<string, unknown> = {
             id: newTrackId,
             setlistId: newSetlistId,
@@ -852,6 +876,40 @@ export async function cloneSetlistFromTemplate(
         copiedFileIds: canonicalFileIds.size,
     })
 
+    // FU-c12-4 — parity with clone_setlist: advisory bond review computed AFTER
+    // the commit so a failed audit never blocks the clone write (fail-soft).
+    // Template bonds are copied verbatim, so a stale template bond propagates
+    // into the new setlist silently — flag any cloned row whose title diverges
+    // from its bonded chart filename.
+    let bondReviewCount = 0
+    let bondReviewRows: BondReviewRow[] = []
+    try {
+        const bonded = templateTracks
+            .map((src, i) => {
+                const row = src as Record<string, unknown>
+                return {
+                    trackId: newTrackIds[i],
+                    title: typeof row.title === "string" ? row.title : "",
+                    fileId: typeof row.fileId === "string" ? row.fileId : "",
+                }
+            })
+            .filter((b) => b.fileId)
+        const audit = await auditBondedRows(db, bonded)
+        bondReviewCount = audit.mismatchCount
+        // newTrackIds[i] is the clone row at `order: i`, so the index IS the
+        // position the caller targets in the new setlist.
+        const positionByTrackId = new Map(newTrackIds.map((id, i) => [id, i]))
+        bondReviewRows = toBondReviewRows(audit, positionByTrackId)
+    } catch (err) {
+        logger.warn(
+            "[mcp] clone_setlist_from_template bond audit failed (fail-soft)",
+            {
+                newSetlistId,
+                err: err instanceof Error ? err.message : String(err),
+            },
+        )
+    }
+
     return {
         ok: true,
         setlistId: newSetlistId,
@@ -860,5 +918,7 @@ export async function cloneSetlistFromTemplate(
         ownerId: uid,
         ownerName,
         version: 1,
+        bondReviewCount,
+        bondReviewRows,
     }
 }

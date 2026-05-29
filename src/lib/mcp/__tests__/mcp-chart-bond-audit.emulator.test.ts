@@ -4,6 +4,7 @@ import { getFirestore } from "firebase-admin/firestore"
 
 import { reviewChartBonds } from "../tools/chart-bond-audit"
 import { cloneSetlist } from "../tools/clone-setlist"
+import { createTemplate, cloneSetlistFromTemplate } from "../tools/templates"
 
 /**
  * setlist-fixes Lane B (Bug 1 + Bug 4 + UX-7) — emulator coverage.
@@ -44,7 +45,7 @@ describe("MCP review_chart_bonds + clone audit (emulator)", () => {
     })
 
     beforeEach(async () => {
-        for (const col of ["setlists", "tracks", "library_index"]) {
+        for (const col of ["setlists", "tracks", "library_index", "setlistTemplates"]) {
             const snap = await db().collection(col).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
@@ -206,6 +207,14 @@ describe("MCP review_chart_bonds + clone audit (emulator)", () => {
             trackCount: number
             version: 1
             bondReviewCount: number
+            bondReviewRows: Array<{
+                position: number
+                trackId: string
+                title: string
+                fileId: string
+                chartFileName: string | null
+                overlapScore: number
+            }>
             staleMetadataCandidates: {
                 rows: Array<{ title: string; matchedTokens: string[] }>
                 nameFlagged: boolean
@@ -221,6 +230,20 @@ describe("MCP review_chart_bonds + clone audit (emulator)", () => {
 
         // New advisory reports.
         expect(res.bondReviewCount).toBe(1) // the Barchu→Ahava row
+
+        // FU-c12-4: bondReviewRows exposes the row behind the count. Length
+        // mirrors bondReviewCount; the entry carries the clone-side position +
+        // a FRESH trackId (not the source's "src-t1") so the caller can target
+        // a swap_chart / review_chart_bonds follow-up directly.
+        expect(res.bondReviewRows).toHaveLength(1)
+        const flagged = res.bondReviewRows[0]
+        expect(flagged.position).toBe(0) // Barchu is order 0 in the clone
+        expect(flagged.title).toBe("Barchu")
+        expect(flagged.fileId).toBe("ahava-file")
+        expect(flagged.chartFileName).toBe("Ahava Raba.pdf")
+        expect(flagged.overlapScore).toBeLessThan(0.34) // below mismatch threshold
+        expect(flagged.trackId).not.toBe("src-t1") // fresh clone-side id
+        expect(flagged.trackId).toBeTruthy()
 
         const stale = res.staleMetadataCandidates
         // Default clone name "Copy of Shabbat Morning — Parashat Emor" + the
@@ -254,6 +277,7 @@ describe("MCP review_chart_bonds + clone audit (emulator)", () => {
             sourceSetlistId: "clean-src",
         })) as {
             bondReviewCount: number
+            bondReviewRows: unknown[]
             staleMetadataCandidates: {
                 rows: unknown[]
                 nameFlagged: boolean
@@ -261,8 +285,78 @@ describe("MCP review_chart_bonds + clone audit (emulator)", () => {
             }
         }
         expect(res.bondReviewCount).toBe(0)
+        // FU-c12-4: empty array when count is 0 (length === count invariant).
+        expect(res.bondReviewRows).toEqual([])
         expect(res.staleMetadataCandidates.rows).toHaveLength(0)
         expect(res.staleMetadataCandidates.nameFlagged).toBe(false)
         expect(res.staleMetadataCandidates.serviceNotesFlagged).toBe(false)
+    })
+
+    it("FU-c12-4: clone_setlist_from_template surfaces bondReviewCount + bondReviewRows (parity)", async () => {
+        await seedLibrary()
+        // Template with a wrong bond (Barchu→Ahava.pdf at order 0) + a clean
+        // bond (Hineh Ma Tov→Hineh_Ma_Tov_Lev.pdf at order 1). Template tracks
+        // are embedded inline (setlistTemplates/{id}.tracks), unlike a setlist's
+        // top-level tracks collection.
+        const created = (await createTemplate(ADMIN, {
+            name: "Shabbat Morning Template",
+            templateType: "shabbat-morning",
+            tracks: [
+                { type: "song", title: "Barchu", fileId: "ahava-file" },
+                { type: "song", title: "Hineh Ma Tov", fileId: "hineh-file" },
+            ],
+        })) as { ok: true; templateId: string }
+        expect(created.ok).toBe(true)
+
+        const res = (await cloneSetlistFromTemplate(ADMIN, {
+            templateId: created.templateId,
+            newName: "Shabbat — May 30",
+        })) as {
+            ok: true
+            setlistId: string
+            trackCount: number
+            version: 1
+            bondReviewCount: number
+            bondReviewRows: Array<{
+                position: number
+                trackId: string
+                title: string
+                fileId: string
+                chartFileName: string | null
+                overlapScore: number
+            }>
+        }
+
+        expect(res.ok).toBe(true)
+        expect(res.trackCount).toBe(2)
+        expect(res.version).toBe(1)
+
+        // Only the Barchu→Ahava row is flagged; the clean Hineh bond is not.
+        expect(res.bondReviewCount).toBe(1)
+        expect(res.bondReviewRows).toHaveLength(1)
+        const flagged = res.bondReviewRows[0]
+        expect(flagged.position).toBe(0)
+        expect(flagged.title).toBe("Barchu")
+        expect(flagged.fileId).toBe("ahava-file")
+        expect(flagged.chartFileName).toBe("Ahava Raba.pdf")
+        expect(flagged.overlapScore).toBeLessThan(0.34)
+        expect(flagged.trackId).toBeTruthy()
+    })
+
+    it("FU-c12-4: clone_setlist_from_template of a clean template reports zero bond review", async () => {
+        await seedLibrary()
+        const created = (await createTemplate(ADMIN, {
+            name: "Clean Template",
+            tracks: [
+                { type: "song", title: "Hineh Ma Tov", fileId: "hineh-file" },
+            ],
+        })) as { ok: true; templateId: string }
+
+        const res = (await cloneSetlistFromTemplate(ADMIN, {
+            templateId: created.templateId,
+            newName: "Clean Clone",
+        })) as { bondReviewCount: number; bondReviewRows: unknown[] }
+        expect(res.bondReviewCount).toBe(0)
+        expect(res.bondReviewRows).toEqual([])
     })
 })

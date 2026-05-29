@@ -13,7 +13,12 @@ import {
 } from "@/lib/mcp/error-envelopes"
 import { isTestSetlist } from "@/types/models"
 import { isSongType } from "@/lib/setlist-track-count"
-import { auditBondedRows, detectOccasionTokens } from "./chart-bond-audit"
+import {
+    auditBondedRows,
+    detectOccasionTokens,
+    toBondReviewRows,
+    type BondReviewRow,
+} from "./chart-bond-audit"
 
 /**
  * GAP-002 (cycle-2) — clone an existing setlist into a brand new one.
@@ -122,6 +127,15 @@ export interface CloneSetlistResult {
      * bonded row looks mismatched (or the audit read failed — fail-soft).
      */
     bondReviewCount: number
+    /**
+     * FU-c12-4 — the rows behind {@link bondReviewCount}. One entry per cloned
+     * row flagged as a likely title/filename mismatch, so
+     * `bondReviewRows.length === bondReviewCount`. Empty array when no mismatch
+     * (or the audit read failed — fail-soft). Each entry carries the clone-side
+     * `position` + fresh `trackId` so the caller can target a `swap_chart` /
+     * `review_chart_bonds` follow-up directly without re-fetching the clone.
+     */
+    bondReviewRows: BondReviewRow[]
     /**
      * setlist-fixes Lane B (Bug 4 / UX-7) — advisory list of metadata that may
      * be stale from the source's occasion (parsha/holiday/date tokens in track
@@ -350,6 +364,7 @@ export async function cloneSetlist(
     )
 
     let bondReviewCount = 0
+    let bondReviewRows: BondReviewRow[] = []
     try {
         const bondedRows = sourceTracks
             .map((src, i) => ({
@@ -360,6 +375,10 @@ export async function cloneSetlist(
             .filter((b) => b.fileId)
         const audit = await auditBondedRows(db, bondedRows)
         bondReviewCount = audit.mismatchCount
+        // newTrackIds[i] is the clone row at `order: i` (see batch loop above),
+        // so the index IS the position the caller targets in the new setlist.
+        const positionByTrackId = new Map(newTrackIds.map((id, i) => [id, i]))
+        bondReviewRows = toBondReviewRows(audit, positionByTrackId)
     } catch (err) {
         logger.warn("[mcp] clone_setlist bond audit failed (fail-soft)", {
             newSetlistId,
@@ -391,6 +410,7 @@ export async function cloneSetlist(
         ownerName,
         version: 1,
         bondReviewCount,
+        bondReviewRows,
         staleMetadataCandidates: {
             rows: staleRows,
             nameFlagged: nameTokens.length > 0,
