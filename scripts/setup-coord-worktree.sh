@@ -13,6 +13,10 @@
 #   bash scripts/setup-coord-worktree.sh 6 feat/foo ../sheet-music-app-foo origin/master
 #
 # Effects (all idempotent — safe to re-run):
+#   0. Deepens a shallow parent .git via `git fetch --unshallow origin`
+#      (or `rm .git/shallow` + deep fetch fallback) so worktrees inherit
+#      complete history. Fails loud if the repo cannot be deepened.
+#      See scripts/lib/unshallow-current-repo.sh for rationale.
 #   1. Enables `extensions.worktreeConfig=true` on the shared .git (if not already).
 #   2. Sets `core.hooksPath=scripts/git-hooks` on the shared .git ONLY IF unset
 #      (warns + leaves alone if a different value is present).
@@ -71,6 +75,17 @@ cd "$REPO_ROOT"
 
 echo "[setup-coord-worktree] N=${N} branch=${BRANCH} path=${WT_PATH} base=${BASE_REF}"
 echo "[setup-coord-worktree] operating on repo: ${REPO_ROOT}"
+
+# Step 0: shallow-clone defense. Worktrees share the parent .git/; a shallow
+# parent makes `git show --stat`, `git log -- <path>`, `merge-base --is-ancestor`,
+# `rev-parse <sha>^` LIE at the boundary. Fix BEFORE git worktree add.
+# Idempotent — no-ops if the parent is already non-shallow.
+# shellcheck source=lib/unshallow-current-repo.sh
+. "$SCRIPT_DIR/lib/unshallow-current-repo.sh"
+if ! unshallow_current_repo "setup-coord-worktree"; then
+  echo "[setup-coord-worktree] aborting before worktree add — parent .git is shallow and could not be deepened." >&2
+  exit 3
+fi
 
 # Step 1: enable extensions.worktreeConfig on shared .git (idempotent).
 current_ext="$(git config --get extensions.worktreeConfig || true)"
