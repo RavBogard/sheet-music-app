@@ -3,4 +3,7 @@
 # /usr/bin/env bash^M`). Targets the per-worktree-git-identity-enforcement
 # scripts; broader normalization not needed.
 scripts/setup-coord-worktree.sh text eol=lf
+scripts/setup-cowork-worktree.sh text eol=lf
+scripts/test-setup-cowork-worktree.sh text eol=lf
+scripts/lib/cowork-warm-worktree.sh text eol=lf
 scripts/git-hooks/** text eol=lf
