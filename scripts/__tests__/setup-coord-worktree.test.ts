@@ -16,6 +16,11 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, "..", "..");
 const SETUP_SCRIPT = resolve(REPO_ROOT, "scripts", "setup-coord-worktree.sh");
 const HOOK_SCRIPT = resolve(REPO_ROOT, "scripts", "git-hooks", "pre-commit");
+// setup-coord-worktree.sh sources scripts/lib/unshallow-current-repo.sh at
+// runtime (Step 0 shallow-clone defense). The tempdir harness must mirror
+// that file too or the script aborts under `set -euo pipefail` before it
+// reaches any of the behavior under test.
+const LIB_SCRIPT = resolve(REPO_ROOT, "scripts", "lib", "unshallow-current-repo.sh");
 
 type RunResult = { code: number | null; stdout: string; stderr: string };
 
@@ -40,11 +45,13 @@ function makeFreshRepo() {
     writeFileSync(join(tmp, "README.md"), "# test repo\n");
     expect(git(tmp, "add", "README.md").code).toBe(0);
     expect(git(tmp, "commit", "-q", "-m", "init").code).toBe(0);
-    // Drop a copy of the setup script + hook into the repo so the script's
-    // self-references resolve at <repo>/scripts/...
+    // Drop a copy of the setup script + hook + sourced lib into the repo so
+    // the script's self-references resolve at <repo>/scripts/...
     mkdirSync(join(tmp, "scripts", "git-hooks"), { recursive: true });
+    mkdirSync(join(tmp, "scripts", "lib"), { recursive: true });
     writeFileSync(join(tmp, "scripts", "setup-coord-worktree.sh"), readFileSync(SETUP_SCRIPT));
     writeFileSync(join(tmp, "scripts", "git-hooks", "pre-commit"), readFileSync(HOOK_SCRIPT));
+    writeFileSync(join(tmp, "scripts", "lib", "unshallow-current-repo.sh"), readFileSync(LIB_SCRIPT));
     return tmp;
 }
 
