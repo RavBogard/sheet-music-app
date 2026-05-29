@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render, screen } from "@testing-library/react"
 
 // Mock firebase modules before any component imports
@@ -393,6 +393,88 @@ describe("Public View", () => {
             // All 5 should be upcoming (upcoming-prioritized), no past rows.
             expect(screen.queryByText("Past 1")).toBeNull()
             expect(screen.queryByText("Past 2")).toBeNull()
+        })
+    })
+
+    // FU-c12-3 — the public /perform landing's wake-lock affordance (the
+    // "Keep screen on" KeepAwakeToggle + its `useWakeLock` hook) is gated to
+    // SIGNED-IN viewers via <KeepAwakeControl/>. Anonymous visitors + crawlers
+    // never mount the hook, so the anon landing structurally never touches the
+    // WakeLock API. The request itself was already gesture-gated (it never
+    // fired on mount) — these tests lock BOTH properties so a regression that
+    // re-mounts the hook for anon, or auto-fires a request, fails loud.
+    describe("wake-lock affordance gating (FU-c12-3)", () => {
+        let requestSpy: ReturnType<typeof vi.fn>
+
+        beforeEach(() => {
+            // Fire the subscription callback with an empty list so `loading`
+            // resolves to false and the header (where the toggle lives) renders
+            // past the skeleton branch.
+            mockSubscribeToPublicSetlists.mockImplementation((cb: (...args: any[]) => any) => {
+                cb([], false)
+                return vi.fn()
+            })
+            requestSpy = vi.fn(async () => ({
+                released: false,
+                type: "screen" as const,
+                release: vi.fn(async () => {}),
+                addEventListener: vi.fn(),
+                removeEventListener: vi.fn(),
+            }))
+            Object.defineProperty(navigator, "wakeLock", {
+                value: { request: requestSpy },
+                configurable: true,
+                writable: true,
+            })
+        })
+
+        afterEach(() => {
+            // Remove the stub so it can't leak into sibling describes whose
+            // capability detection reads `navigator.wakeLock`.
+            delete (navigator as unknown as { wakeLock?: unknown }).wakeLock
+        })
+
+        it("does NOT mount the keep-awake toggle for anonymous visitors", async () => {
+            // logged-out is the beforeEach default
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+            render(<PublicSetlistListing />)
+
+            expect(screen.queryByRole("button", { name: /keep screen on/i })).toBeNull()
+        })
+
+        it("mounts the keep-awake toggle for signed-in viewers", async () => {
+            mockUseAuth.mockReturnValue({
+                user: { uid: "u1", displayName: "Aviva", email: "aviva@example.com", photoURL: null },
+                loading: false,
+                signIn: mockSignIn,
+            })
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+            render(<PublicSetlistListing />)
+
+            expect(screen.getByRole("button", { name: /keep screen on/i })).toBeDefined()
+        })
+
+        it("issues ZERO navigator.wakeLock.request calls when viewed anonymously (AC1)", async () => {
+            // logged-out is the beforeEach default
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+            render(<PublicSetlistListing />)
+
+            expect(requestSpy).not.toHaveBeenCalled()
+        })
+
+        it("issues ZERO navigator.wakeLock.request calls on signed-in mount (request stays gesture-gated, never auto-fired)", async () => {
+            mockUseAuth.mockReturnValue({
+                user: { uid: "u1", displayName: "Aviva", email: "aviva@example.com", photoURL: null },
+                loading: false,
+                signIn: mockSignIn,
+            })
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+            render(<PublicSetlistListing />)
+
+            // The toggle is mounted (signed-in) but the request only fires from
+            // the tap handler — never on mount. Confirms the dispatch's "auto-
+            // requests on landing" premise is not the case even for authed.
+            expect(requestSpy).not.toHaveBeenCalled()
         })
     })
 })

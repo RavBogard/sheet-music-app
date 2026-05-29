@@ -6,12 +6,11 @@ import { Music, Calendar, UserCircle } from "lucide-react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { useAuth } from "@/lib/auth-context"
-import { useWakeLock } from "@/hooks/use-wake-lock"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { QRSignIn } from "@/components/auth/QRSignIn"
 import { PublicSetlistSkeleton } from "./PublicSetlistSkeleton"
-import { KeepAwakeToggle } from "./KeepAwakeToggle"
+import { KeepAwakeControl } from "./KeepAwakeControl"
 import { MAX_PUBLIC_SERVICES, splitPublicSetlists } from "./public-setlist-order"
 
 interface PublicSetlistListingProps {
@@ -54,16 +53,6 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
     // subscription `loading` above. The card renders only once auth resolves
     // (`!authLoading`) so we never flash it then yank it (CLS guard).
     const { user, loading: authLoading, signIn } = useAuth()
-    // ipad-wake-lock-fix: belt+braces — Daniel sometimes leaves the picker
-    // visible during a service for quick song-pick. Same gesture-gated
-    // wake-lock affordance as the setlist detail page header.
-    const {
-        isSupported: isWakeLockSupported,
-        isLocked: isWakeLockActive,
-        lastError: wakeLockError,
-        requestWakeLock,
-        releaseWakeLock,
-    } = useWakeLock()
 
     useEffect(() => {
         const service = createSetlistService(null, null)
@@ -144,13 +133,17 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                     <h1 className="text-xl font-bold">CRC Music</h1>
                     <p className="text-sm text-muted-foreground">Public setlists</p>
                 </div>
-                <KeepAwakeToggle
-                    isActive={isWakeLockActive}
-                    isSupported={isWakeLockSupported}
-                    onRequest={requestWakeLock}
-                    onRelease={releaseWakeLock}
-                    lastError={wakeLockError}
-                />
+                {/* FU-c12-3 — the wake-lock toggle (and its `useWakeLock` hook)
+                    only mount for SIGNED-IN viewers via <KeepAwakeControl/>.
+                    The affordance exists for the band-leader who leaves the
+                    picker open during a service for quick song-pick; anonymous
+                    visitors + crawlers have no use for it and previously got an
+                    idle `visibilitychange` listener + a purposeless "Keep
+                    screen on" button. Gating to authed viewers keeps the leader
+                    workflow while making "the anon landing never touches the
+                    WakeLock API" structural. (Request was already gesture-gated,
+                    so this is hygiene, not an auto-request bugfix.) */}
+                {user && !authLoading && <KeepAwakeControl />}
                 {/* C11 M3-012 — auth-state indicator. Signed-in viewers get an
                     avatar pill linking to settings so the context-shift to the
                     authed app (visible the moment they tap into a setlist) isn't
