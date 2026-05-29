@@ -1,5 +1,5 @@
 import crypto from "crypto"
-import { FieldValue, Timestamp } from "firebase-admin/firestore"
+import { FieldValue } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import {
     assertEditor,
@@ -13,6 +13,7 @@ import {
 } from "@/lib/mcp/error-envelopes"
 import { isTestSetlist } from "@/types/models"
 import { isSongType } from "@/lib/setlist-track-count"
+import { parseEventDate as toTimestamp } from "@/lib/parse-event-date"
 import {
     auditBondedRows,
     detectOccasionTokens,
@@ -38,21 +39,6 @@ import {
  * rate-limit bypass applies per [[feedback_admin_rate_limit_bypass]].
  */
 
-const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
-
-/**
- * Coerce a Date / ISO string into a Firestore Timestamp the same way the
- * shared setlist-write module does. Date-only strings anchor at LOCAL NOON
- * to dodge UTC-vs-local-day drift (cowork CF1 §3.4).
- */
-function toTimestamp(value: Date | string): Timestamp {
-    if (typeof value === "string" && DATE_ONLY_RE.test(value)) {
-        const [y, m, d] = value.split("-").map(Number)
-        return Timestamp.fromDate(new Date(y, m - 1, d, 12, 0, 0, 0))
-    }
-    return Timestamp.fromDate(value instanceof Date ? value : new Date(value))
-}
-
 /** Best-effort display name for ownerName denormalization (mirrors setlist-write.ts). */
 async function ownerNameFor(
     db: FirebaseFirestore.Firestore,
@@ -74,9 +60,20 @@ export interface CloneSetlistArgs {
     /** Name for the new setlist. Default: "Copy of <source.name>". */
     newName?: string
     /**
-     * ISO date for the new event. Default: omitted entirely (no eventDate
-     * on the clone — the rabbi typically sets the new date as part of the
+     * Date for the new event. Default: omitted entirely (no eventDate on
+     * the clone — the rabbi typically sets the new date as part of the
      * tweak step). Pass `null` explicitly to be explicit about no-date.
+     *
+     * Accepted shapes:
+     *   - `"YYYY-MM-DD"` (date-only, recommended for whole-day services) —
+     *     anchored at noon America/Chicago.
+     *   - `"YYYY-MM-DDTHH:MM"` / `"YYYY-MM-DDTHH:MM:SS"` (naive datetime) —
+     *     interpreted as America/Chicago wall-clock (the CRC service locale).
+     *   - `"YYYY-MM-DDTHH:MM:SS-05:00"` (CDT) / `"-06:00"` (CST) — explicit
+     *     offset, honored verbatim.
+     *   - `"YYYY-MM-DDTHH:MM:SS.sssZ"` (UTC zero) — honored VERBATIM as 0Z.
+     *     Avoid for CRC services unless you genuinely mean UTC midnight; a
+     *     10am Saturday service is `"2026-05-30T10:00"`, NOT `"…T10:00:00Z"`.
      */
     newEventDate?: string | null
     /**

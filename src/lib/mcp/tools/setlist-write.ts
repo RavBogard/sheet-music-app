@@ -82,6 +82,16 @@ async function ownerNameFor(
 
 export interface CreateSetlistArgs {
     name: string
+    /**
+     * Date for the new service. eventDate is a wall-clock-LOCAL concept
+     * (America/Chicago). Accepted shapes:
+     *   - `"YYYY-MM-DD"` (date-only — recommended) → noon America/Chicago.
+     *   - `"YYYY-MM-DDTHH:MM"` (naive datetime) → that wall clock in
+     *     America/Chicago (DST-aware).
+     *   - `"...-05:00"` / `"...-06:00"` (explicit offset) → honored.
+     *   - `"...Z"` (UTC zero) → honored verbatim — AVOID for CRC services;
+     *     a 10am Saturday is `"2026-05-30T10:00"`, NOT `"...T10:00:00Z"`.
+     */
     eventDate?: string
     serviceType?: string
     rabbi?: string
@@ -149,6 +159,12 @@ export async function createSetlist(
 export interface UpdateSetlistArgs {
     id: string
     name?: string
+    /**
+     * Replacement eventDate (wall-clock-LOCAL America/Chicago). See
+     * `create_setlist`'s eventDate for accepted shapes. To recover a legacy
+     * row whose stored eventDate was a UTC-zero trap, edit with the naive
+     * wall-clock form: `update_setlist({id, eventDate: "2026-05-30T10:00"})`.
+     */
     eventDate?: string
     serviceType?: string
     rabbi?: string

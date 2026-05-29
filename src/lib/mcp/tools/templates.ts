@@ -1,5 +1,5 @@
 import crypto from "crypto"
-import { FieldValue, Timestamp } from "firebase-admin/firestore"
+import { FieldValue } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import {
     assertEditor,
@@ -11,6 +11,7 @@ import {
     richError,
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
+import { parseEventDate as toTimestamp } from "@/lib/parse-event-date"
 import { isSongType } from "@/lib/setlist-track-count"
 import {
     auditBondedRows,
@@ -48,7 +49,6 @@ import {
 type DB = FirebaseFirestore.Firestore
 
 const COLLECTION = "setlistTemplates"
-const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
 
 /** Track-row fields safe to copy verbatim from template → real setlist. */
 const COPYABLE_TRACK_FIELDS = [
@@ -77,14 +77,6 @@ export interface TemplateTrack {
     songId?: string | null
     fileId?: string | null
     fileName?: string | null
-}
-
-function toTimestamp(value: string): Timestamp {
-    if (DATE_ONLY_RE.test(value)) {
-        const [y, m, d] = value.split("-").map(Number)
-        return Timestamp.fromDate(new Date(y, m - 1, d, 12, 0, 0, 0))
-    }
-    return Timestamp.fromDate(new Date(value))
 }
 
 async function ownerNameFor(db: DB, uid: string): Promise<string> {
@@ -708,6 +700,13 @@ export async function createTemplateFromSetlist(
 export interface CloneSetlistFromTemplateArgs {
     templateId: string
     newName: string
+    /**
+     * Date for the new event. See `clone_setlist`'s `newEventDate` for the
+     * accepted string shapes — `parseEventDate` handles both date-only
+     * (`"2026-05-30"` → noon America/Chicago) and naive datetimes
+     * (`"2026-05-30T10:00"` → 10am America/Chicago = 15:00Z in May).
+     * Avoid `"...Z"` for CRC services unless you genuinely mean UTC zero.
+     */
     newEventDate?: string | null
     copyServiceNotes?: boolean
 }

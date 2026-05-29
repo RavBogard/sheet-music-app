@@ -131,11 +131,14 @@ describe('setlist-write (real Firestore emulator)', () => {
         })
     })
 
-    it('§3.4: date-only eventDate string ("2026-05-22") stores as local noon, NOT UTC midnight', async () => {
-        // Cowork CF1 UAT regression. Previously `new Date("2026-05-22")` parsed
-        // as UTC midnight; in CDT (UTC-5) that renders as Thursday May 21.
-        // The toTimestamp helper now coerces date-only strings to local noon
-        // so the calendar day round-trips correctly across timezones.
+    it('§3.4: date-only eventDate string ("2026-05-22") stores as noon America/Chicago', async () => {
+        // Cycle-12 FU-c12-2 (refines CF1 UAT §3.4): `new Date("2026-05-22")`
+        // parses as UTC midnight per ECMAScript spec → renders as Thursday
+        // May 21 in CDT. The previous helper anchored at noon-JS-runtime-TZ
+        // (UTC on Vercel → 7am Chicago, masking-but-not-fixing the issue);
+        // parseEventDate now anchors at noon America/Chicago explicitly so
+        // the calendar day is correct regardless of the runtime TZ AND the
+        // stored time-of-day is the actual project-locale wall-clock noon.
         const result = await createSetlistServerSide({
             name: 'Friday Night',
             ownerId: 'uid-tz',
@@ -148,14 +151,27 @@ describe('setlist-write (real Firestore emulator)', () => {
             await db.collection('setlists').doc(result.setlistId).get()
         ).data()!
         const stored: { toDate(): Date } = s.eventDate
-        const d = stored.toDate()
-        // The CALENDAR day must be May 22 in local time (toLocaleDateString
-        // uses local), regardless of timezone the test runs in.
-        expect(d.getFullYear()).toBe(2026)
-        expect(d.getMonth()).toBe(4) // May is month index 4
-        expect(d.getDate()).toBe(22)
-        // Time-of-day is noon — far from any DST boundary.
-        expect(d.getHours()).toBe(12)
+        // May 22 noon America/Chicago = 17:00 UTC (CDT, UTC-5).
+        expect(stored.toDate().toISOString()).toBe('2026-05-22T17:00:00.000Z')
+    })
+
+    it('FU-c12-2: naive datetime eventDate stores as that wall-clock in America/Chicago', async () => {
+        // cd2010f4-class regression. Previously `new Date("2026-05-30T10:00")`
+        // on Vercel UTC parsed as 10am UTC → 5am Chicago — Saturday's 10am
+        // service would surface as 5am in the iCal feed. parseEventDate now
+        // interprets naive datetimes as America/Chicago wall-clock.
+        const result = await createSetlistServerSide({
+            name: 'Saturday Morning',
+            ownerId: 'uid-tz-2',
+            ownerName: 'Date Tester',
+            eventDate: '2026-05-30T10:00',
+            tracks: [{ type: 'song', title: 'Single Track' }],
+        })
+        const s = (
+            await db.collection('setlists').doc(result.setlistId).get()
+        ).data()!
+        const stored: { toDate(): Date } = s.eventDate
+        expect(stored.toDate().toISOString()).toBe('2026-05-30T15:00:00.000Z')
     })
 
     it('AC-2: updateSetlistServerSide patches metadata; leaves tracks / trackCount / ownerId untouched', async () => {
