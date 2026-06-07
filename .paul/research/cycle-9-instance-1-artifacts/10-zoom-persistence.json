@@ -1,0 +1,15 @@
+{
+  "probe": "C9I1-010 — zoom persistence",
+  "url_sequence": [
+    "https://www.centralreform.live/perform/1TeiP5BlGnlP9ogYXO9yFL25J1Tz5k_RX",
+    "https://www.centralreform.live/perform/setlist/Ikl0sS4XcZil0Z04viAu (click dodi li)",
+    "(click Next song)"
+  ],
+  "observations": [
+    {"step": "instant double-click zoom in", "zoomBefore": "100", "zoomAfter": "100", "interpretation": "React state had not re-rendered yet — was a false negative"},
+    {"step": "single zoom in + 500ms wait", "result": "120%"},
+    {"step": "navigate into setlist (click dodi li from /perform/setlist/<id>)", "songOf": "SONG 1 OF 12", "pct": "120", "verdict": "zoom persisted across navigation"},
+    {"step": "click Next song", "songOf": "SONG 2 OF 12", "verdict": "song-to-song nav works"}
+  ],
+  "verdict": "Toolbar state persistence holds. Initial 100→100 read was a render-tick artifact, not a bug."
+}

@@ -1,0 +1,12 @@
+--- query: Lechu Nranina ---
+  matches: 0
+--- query: Lechu N'rann'na ---
+  matches: 0
+--- query: L'chu Nranena ---
+  matches: 0
+--- query: Lechu Neranena ---
+  matches: 0
+--- query: Lekhu Neranena ---
+  matches: 0
+--- query: Lechu Neranenah ---
+  matches: 0

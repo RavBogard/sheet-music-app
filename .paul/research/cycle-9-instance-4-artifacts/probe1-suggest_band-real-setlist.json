@@ -1,0 +1,30 @@
+{
+    "_note": "Captured from suggest_band MCP call against real production setlist Ikl0sS4XcZil0Z04viAu at SHA db208948f. This is the post-fix verification for C8I2-002 / C7I1-004.",
+    "request": {
+        "tool": "suggest_band",
+        "setlistId": "Ikl0sS4XcZil0Z04viAu"
+    },
+    "response": {
+        "ok": true,
+        "rabbiGuidance": null,
+        "coverageGap": ["acoustic_guitar", "electric_bass", "hand_drums", "piano", "voice"],
+        "suggestions": [
+            { "uid": "6PXdZ6W1MqY6NCO1QqCexfRZj3Q2", "name": "Michael Koppelman", "email": "michael@centralreform.org", "phone": null, "instrumentKey": "voice", "instrumentLabel": "Voice / Vocal", "schedulingTier": "regular", "score": 27, "reasons": ["Fills missing Voice / Vocal slot"] },
+            { "uid": "6gpjgStnu7UMh3m5dTSDeb3haui1", "name": "Blake Mickens", "email": "blake.mickens614@gmail.com", "phone": null, "instrumentKey": "electric_bass", "instrumentLabel": "Electric Bass", "schedulingTier": "regular", "score": 27, "reasons": ["Fills missing Electric Bass slot"] },
+            { "uid": "93Xn3DbS0bSNb8zmfzLyfOMX1A13", "name": "Daniel Bogard", "email": "daniel@centralreform.org", "phone": "3142660620", "instrumentKey": "acoustic_guitar", "instrumentLabel": "Acoustic Guitar", "schedulingTier": "regular", "score": 27, "reasons": ["Fills missing Acoustic Guitar slot"] },
+            { "uid": "DINwaB8627YefB3IOUpEIXtUezl1", "name": "Drew Brodsky", "email": "brodskydrew@gmail.com", "phone": "3148079820", "instrumentKey": "hand_drums", "instrumentLabel": "Hand Drums / Percussion", "schedulingTier": "regular", "score": 27, "reasons": ["Fills missing Hand Drums / Percussion slot"] },
+            { "uid": "lsZI14nIKVNzDNuLWKI9JHTHWBh2", "name": "Jake Weisman", "email": "jakeweismanmusic@gmail.com", "phone": null, "instrumentKey": "acoustic_guitar", "instrumentLabel": "Acoustic Guitar", "schedulingTier": "regular", "score": 27, "reasons": ["Fills missing Acoustic Guitar slot"] },
+            { "uid": "qIcEDdpHa5gr3cQVcGduPWyTxvQ2", "name": "Daniel Bogard", "email": "dsbogard@gmail.com", "phone": null, "instrumentKey": "acoustic_guitar", "instrumentLabel": "Acoustic Guitar", "schedulingTier": "regular", "score": 27, "reasons": ["Fills missing Acoustic Guitar slot"] },
+            { "uid": "7hMUGg0ezue1OLxvVx1FlokCnyZ2", "name": "ben reece", "email": "benjamminreece@gmail.com", "phone": null, "instrumentKey": "bb_tenor_sax", "instrumentLabel": "Bb Tenor Sax", "schedulingTier": "regular", "score": 17, "reasons": [] },
+            { "uid": "Bj2I6WmFLbMymFYfo89yOGpOPrG3", "name": "Itai Forte", "email": "itai@forte.co.il", "phone": null, "instrumentKey": "Guitar", "instrumentLabel": null, "schedulingTier": "regular", "score": 17, "reasons": [] },
+            { "uid": "a8NIMPeiska4iyMQrv8d5ELcRKr2", "name": "Myles Pollack", "email": "myles.pollack@gmail.com", "phone": null, "instrumentKey": "Drums", "instrumentLabel": null, "schedulingTier": "regular", "score": 17, "reasons": [] },
+            { "uid": "v0SOmze731gtYO9QYuzJdgMwedi1", "name": "Becky Nelson-Zoole", "email": "becky@centralreform.org", "phone": "3145781441", "instrumentKey": "other", "instrumentLabel": "Other", "schedulingTier": "regular", "score": 17, "reasons": [] }
+        ]
+    },
+    "observations": [
+        "no 500 / FAILED_PRECONDITION — C8I2-002 / C7I1-004 fix landed",
+        "rabbiGuidance:null because the setlist has no `rabbi` field set",
+        "top 6 candidates all score 27 (each fills a unique missing slot) — no plays-recently differentiator engaged (C9I4-003)",
+        "Itai Forte + Myles Pollack score 17 with empty reasons[] because their instrument is free-text ('Guitar', 'Drums') not a slug — they don't count toward REQUIRED_INSTRUMENTS coverage (C9I4-004)"
+    ]
+}

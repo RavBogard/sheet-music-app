@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "scanned": 262,
+  "alreadyHealthy": 231,
+  "driveMirror": { "count": 0, "rows": [], "truncated": false },
+  "orphan": { "count": 0, "rows": [], "truncated": false },
+  "transient": {
+    "count": 2,
+    "rows": [
+      {
+        "fileId": "17TDzffOQT4ohO2p7yQCudUTYbj1tRg28",
+        "name": "Tu Bishvat.pdf",
+        "error": "library_index mimeType is application/vnd.google-apps.shortcut — re-bond to the shortcut target's fileId."
+      },
+      {
+        "fileId": "1jgs72zwhfEvqsqeeCFMw8Th7Zsk0mVJj",
+        "name": "Lechu Goldman.pdf",
+        "error": "library_index mimeType is application/vnd.google-apps.shortcut — re-bond to the shortcut target's fileId."
+      }
+    ],
+    "truncated": false
+  },
+  "skippedNonChart": { "count": 29, "rows": "see-server-response (29 drive_folder + hidden_dotfile rows; abridged in artifact)", "truncated": false },
+  "coverage": {
+    "total": 568,
+    "eligible": 262,
+    "scanned": 262,
+    "filteredOut": { "byStatus": { "orphaned": 297, "duplicate": 9 }, "byCollection": {}, "byOther": {} }
+  },
+  "dryRun": true,
+  "committed": 0,
+  "interpretation": "C8I2-005 re-verified at SHA db208948f. transient bucket still misclassifies the 2 google-apps.shortcut rows; needsRebond bucket still not introduced. Error message now reads 're-bond to the shortcut target's fileId' — improved operator guidance — but routing unchanged. library_index has 297 status:'orphaned' rows already filtered out at scan; only 262 active rows entered the reconcile pass and 231 of those are healthy."
+}

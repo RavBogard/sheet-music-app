@@ -1,0 +1,3 @@
+
+{"result":{"content":[{"type":"text","text":"{\n  \"ok\": true,\n  \"track\": {\n    \"id\": \"f910b3b5-4833-48ac-bf4b-c23d69a1cadd\",\n    \"setlistId\": \"841df759-0dba-4b50-958d-f17cfb2894e1\",\n    \"order\": 2,\n    \"type\": \"song\",\n    \"fileName\": \"Od Yishama (Carlebach).pdf\",\n    \"lastModifiedAt\": \"2026-05-19T15:32:25.623Z\",\n    \"title\": \"Od Yishama (Carlebach)\",\n    \"songId\": \"f34bf3e8-f306-4945-b212-e2dab83b7b8d\",\n    \"version\": 2,\n    \"fileId\": \"f34bf3e8-f306-4945-b212-e2dab83b7b8d\",\n    \"updatedAt\": \"2026-05-19T15:32:25.647Z\"\n  }\n}"}]},"jsonrpc":"2.0","id":22}
+

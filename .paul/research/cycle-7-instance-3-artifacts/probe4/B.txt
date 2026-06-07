@@ -1,0 +1,3 @@
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"no_bonded_songs\",\n    \"message\": \"Setlist must have at least one song row with a bonded chart before publishing.\"\n  },\n  \"setlistId\": \"3f428f9c-df9c-470e-a507-a67df9530fd8\",\n  \"trackCount\": 2,\n  \"hint\": \"Add tracks via add_track_to_setlist / bulk_add_tracks first.\"\n}"}]},"jsonrpc":"2.0","id":42}
+

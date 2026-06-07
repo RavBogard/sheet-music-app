@@ -1,0 +1,3 @@
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 409,\n    \"machine_code\": \"stale_version\",\n    \"message\": \"Track was modified by another writer (current version 2, you saw 1).\"\n  },\n  \"currentVersion\": 2,\n  \"lastSeenVersion\": 1,\n  \"setlist\": {\n    \"lastModifiedBy\": \"test-c7i3a-band_leader-6416a258\",\n    \"lastModifiedAt\": \"2026-05-19T16:24:07.836Z\"\n  },\n  \"hint\": \"Call get_setlist to refresh state and retry.\"\n}"}]},"jsonrpc":"2.0","id":21}
+

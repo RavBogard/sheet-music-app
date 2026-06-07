@@ -1,0 +1,29 @@
+=== dump aiEnrichmentRetryQueue ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"collection\": \"aiEnrichmentRetryQueue\",\n  \"docCount\": 0,\n  \"estimatedBytes\": 0,\n  \"oldestTimestamp\": null,\n  \"newestTimestamp\": null,\n  \"truncated\": false,\n  \"scannedAt\": \"2026-05-19T15:34:59.957Z\",\n  \"sinceFilter\": null\n}"}]},"jsonrpc":"2.0","id":50}
+
+
+=== dump aiCorrectionStats ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"collection\": \"aiCorrectionStats\",\n  \"docCount\": 0,\n  \"estimatedBytes\": 0,\n  \"oldestTimestamp\": null,\n  \"newestTimestamp\": null,\n  \"truncated\": false,\n  \"scannedAt\": \"2026-05-19T15:35:00.375Z\",\n  \"sinceFilter\": null\n}"}]},"jsonrpc":"2.0","id":50}
+
+
+=== dump aiConfig ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"collection\": \"aiConfig\",\n  \"docCount\": 1,\n  \"estimatedBytes\": 120,\n  \"oldestTimestamp\": null,\n  \"newestTimestamp\": null,\n  \"truncated\": false,\n  \"scannedAt\": \"2026-05-19T15:35:00.814Z\",\n  \"sinceFilter\": null\n}"}]},"jsonrpc":"2.0","id":50}
+
+
+=== get_correction_stats ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"ok\": true,\n  \"onDemand\": true,\n  \"snapshotMissing\": true,\n  \"computedAt\": \"2026-05-19T15:35:01.435Z\",\n  \"since\": null,\n  \"until\": null,\n  \"truncated\": false,\n  \"totalSignals\": 0,\n  \"actionDistribution\": {\n    \"accept\": 0,\n    \"reject\": 0,\n    \"edit\": 0,\n    \"retry\": 0,\n    \"dismiss\": 0\n  },\n  \"confidenceDistributionByAction\": {\n    \"accept\": {\n      \"count\": 0,\n      \"mean\": null,\n      \"p50\": null,\n      \"p90\": null\n    },\n    \"reject\": {\n      \"count\": 0,\n      \"mean\": null,\n      \"p50\": null,\n      \"p90\": null\n    },\n    \"edit\": {\n      \"count\": 0,\n      \"mean\": null,\n      \"p50\": null,\n      \"p90\": null\n    },\n    \"retry\": {\n      \"count\": 0,\n      \"mean\": null,\n      \"p50\": null,\n      \"p90\": null\n    },\n    \"dismiss\": {\n      \"count\": 0,\n      \"mean\": null,\n      \"p50\": null,\n      \"p90\": null\n    }\n  },\n  \"collectionMismatchAcceptanceRate\": {\n    \"flaggedTotal\": 0,\n    \"acceptedCount\": 0,\n    \"rate\": null\n  },\n  \"editFieldFrequency\": {},\n  \"rejectionTriggerAttribution\": {}\n}"}]},"jsonrpc":"2.0","id":51}
+
+
+=== get_ai_config ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"ok\": true,\n  \"autoApplyEnabled\": false,\n  \"threshold\": 0.7,\n  \"subscriberActive\": true,\n  \"provider\": \"gemini\"\n}"}]},"jsonrpc":"2.0","id":52}
+
+
+=== list_review_queue ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"ok\": true,\n  \"kind\": \"all\",\n  \"status\": \"all\",\n  \"aiReview\": [],\n  \"aiFailed\": [],\n  \"importFailures\": [],\n  \"counts\": {\n    \"aiReview\": 0,\n    \"aiFailed\": 0,\n    \"importFailures\": 0,\n    \"total\": 0\n  },\n  \"config\": {\n    \"autoApplyEnabled\": false,\n    \"threshold\": 0.7,\n    \"aiProviderConfigured\": true\n  },\n  \"truncated\": false\n}"}]},"jsonrpc":"2.0","id":53}
+

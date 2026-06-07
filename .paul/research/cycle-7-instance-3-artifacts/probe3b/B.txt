@@ -1,0 +1,3 @@
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"ok\": true,\n  \"setlistId\": \"bb927fd0-7f4a-4e0e-8453-e033bf34d869\",\n  \"sourceTemplateId\": \"044e79fb-8565-48e3-b935-af3a749dab90\",\n  \"trackCount\": 2,\n  \"ownerId\": \"test-c7i3b-band_leader-0359d4f3\",\n  \"ownerName\": \"[TEST] band_leader cycle7-i3-agent-B\",\n  \"version\": 1\n}"}]},"jsonrpc":"2.0","id":132}
+

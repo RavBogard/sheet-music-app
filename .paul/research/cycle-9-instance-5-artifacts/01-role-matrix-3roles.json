@@ -1,0 +1,1457 @@
+[
+  {
+    "role": "band_leader",
+    "tier": "READ",
+    "tool": "list_setlists",
+    "args": {
+      "limit": 3
+    },
+    "http": "200",
+    "class": "OK",
+    "code": "raw",
+    "brief": "[   {     \"id\": \"b12a5221-111a-4ffa-b408-350cdbd28190\",     \"name\": \"Eitan Shabbat Morning 2/21\",     \"date\": \"2026-02-2",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "[\n  {\n    \"id\": \"b12a5221-111a-4ffa-b408-350cdbd28190\",\n    \"name\": \"Eitan Shabbat Morning 2/21\",\n    \"date\": \"2026-02-20T19:44:46.077Z\",\n    \"eventDate\": \"2026-02-21T12:00:00.000-06:00\",\n    \"trackCount\": 0,\n    \"publishedAt\": null,\n    \"version\": 3\n  },\n  {\n    \"id\": \"NWPBba50fltX6pNcyOVK\",\n    \"name\": \"5/15 -- Shir Shabbat\",\n    \"date\": \"2026-05-20T19:53:47.014Z\",\n    \"eventDate\": \"2026-05-15T19:53:47.014Z\",\n    \"trackCount\": 21,\n    \"publishedAt\": null,\n    \"songCount\": 15,\n    \"version\": 1\n  },\n  {\n    \"id\": \"69be5383-a5b0-4470-aa40-2995c1938616\",\n    \"name\": \"c9i2-CLONE-emor-weekly-flow-test\",\n    \"date\": \"2026-05-19T23:34:54.174Z\",\n    \"eventDate\": \"2030-01-04T12:00:00.000Z\",\n    \"trackCount\": 31,\n    \"publishedAt\": null,\n    \"version\": 7\n  }\n]"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "READ",
+    "tool": "list_setlists",
+    "args": {
+      "limit": 3
+    },
+    "http": "200",
+    "class": "OK",
+    "code": "raw",
+    "brief": "[   {     \"id\": \"b12a5221-111a-4ffa-b408-350cdbd28190\",     \"name\": \"Eitan Shabbat Morning 2/21\",     \"date\": \"2026-02-2",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "[\n  {\n    \"id\": \"b12a5221-111a-4ffa-b408-350cdbd28190\",\n    \"name\": \"Eitan Shabbat Morning 2/21\",\n    \"date\": \"2026-02-20T19:44:46.077Z\",\n    \"eventDate\": \"2026-02-21T12:00:00.000-06:00\",\n    \"trackCount\": 0,\n    \"publishedAt\": null,\n    \"version\": 3\n  },\n  {\n    \"id\": \"NWPBba50fltX6pNcyOVK\",\n    \"name\": \"5/15 -- Shir Shabbat\",\n    \"date\": \"2026-05-20T19:53:47.014Z\",\n    \"eventDate\": \"2026-05-15T19:53:47.014Z\",\n    \"trackCount\": 21,\n    \"publishedAt\": null,\n    \"songCount\": 15,\n    \"version\": 1\n  },\n  {\n    \"id\": \"69be5383-a5b0-4470-aa40-2995c1938616\",\n    \"name\": \"c9i2-CLONE-emor-weekly-flow-test\",\n    \"date\": \"2026-05-19T23:34:54.174Z\",\n    \"eventDate\": \"2030-01-04T12:00:00.000Z\",\n    \"trackCount\": 31,\n    \"publishedAt\": null,\n    \"version\": 7\n  }\n]"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "member",
+    "tier": "READ",
+    "tool": "list_setlists",
+    "args": {
+      "limit": 3
+    },
+    "http": "200",
+    "class": "OK",
+    "code": "raw",
+    "brief": "[   {     \"id\": \"b12a5221-111a-4ffa-b408-350cdbd28190\",     \"name\": \"Eitan Shabbat Morning 2/21\",     \"date\": \"2026-02-2",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "[\n  {\n    \"id\": \"b12a5221-111a-4ffa-b408-350cdbd28190\",\n    \"name\": \"Eitan Shabbat Morning 2/21\",\n    \"date\": \"2026-02-20T19:44:46.077Z\",\n    \"eventDate\": \"2026-02-21T12:00:00.000-06:00\",\n    \"trackCount\": 0,\n    \"publishedAt\": null,\n    \"version\": 3\n  },\n  {\n    \"id\": \"NWPBba50fltX6pNcyOVK\",\n    \"name\": \"5/15 -- Shir Shabbat\",\n    \"date\": \"2026-05-20T19:53:47.014Z\",\n    \"eventDate\": \"2026-05-15T19:53:47.014Z\",\n    \"trackCount\": 21,\n    \"publishedAt\": null,\n    \"songCount\": 15,\n    \"version\": 1\n  },\n  {\n    \"id\": \"69be5383-a5b0-4470-aa40-2995c1938616\",\n    \"name\": \"c9i2-CLONE-emor-weekly-flow-test\",\n    \"date\": \"2026-05-19T23:34:54.174Z\",\n    \"eventDate\": \"2030-01-04T12:00:00.000Z\",\n    \"trackCount\": 31,\n    \"publishedAt\": null,\n    \"version\": 7\n  }\n]"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "READ",
+    "tool": "search_library",
+    "args": {
+      "q": "shalom",
+      "limit": 3
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 search_library: query: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"search_library\",\n  \"issues\": [\n    {\n      \"path\": \"query\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 search_library: query: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"search_library\",\n  \"issues\": [\n    {\n      \"path\": \"query\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "READ",
+    "tool": "search_library",
+    "args": {
+      "q": "shalom",
+      "limit": 3
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 search_library: query: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"search_library\",\n  \"issues\": [\n    {\n      \"path\": \"query\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 search_library: query: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"search_library\",\n  \"issues\": [\n    {\n      \"path\": \"query\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "member",
+    "tier": "READ",
+    "tool": "search_library",
+    "args": {
+      "q": "shalom",
+      "limit": 3
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 search_library: query: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"search_library\",\n  \"issues\": [\n    {\n      \"path\": \"query\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 search_library: query: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"search_library\",\n  \"issues\": [\n    {\n      \"path\": \"query\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "READ",
+    "tool": "list_musicians",
+    "args": {},
+    "http": "200",
+    "class": "OK",
+    "code": "ok=true",
+    "brief": "",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": true,\n  \"musicians\": [\n    {\n      \"uid\": \"v0SOmze731gtYO9QYuzJdgMwedi1\",\n      \"displayName\": \"Becky Nelson-Zoole\",\n      \"email\": \"becky@centralreform.org\",\n      \"role\": \"musician\",\n      \"instrument\": \"other\",\n      \"instrumentLabel\": \"Other\",\n      \"schedulingTier\": \"regular\",\n      \"phone\": \"3145781441\",\n      \"notificationPreferences\": {\n        \"email\": true,\n        \"sms\": true,\n        \"push\": true\n      }\n    },\n    {\n      \"uid\": \"7hMUGg0ezue1OLxvVx1FlokCnyZ2\",\n      \"displayName\": \"ben reece\",\n      \"email\": \"benjamminreece@gmail.com\",\n      \"role\": \"musician\",\n      \"instrument\": \"bb_tenor_sax\",\n      \"instrumentLabel\": \"Bb Tenor Sax\",\n      \"schedulingTier\": \"regular\",\n      \"phone\": null,\n      \"notificationPreferences\": {\n        \"email\": true,\n        \"sms\": false,\n        \"push\": true\n      }\n    },\n    {\n      \"uid\": \"6gpjgStnu7UMh3m5dTSDeb3haui1\",\n      \"displayName\": \"Blake Mickens\",\n      \"email\": \"blake.mickens614@gmail.com\",\n      \"role\": \"musician\",\n      \"instrument\": \"electric_bass\",\n      \"instrumentLabel\": \"Electric Bass\",\n      \"schedulingTier\": \"regular\",\n      \"phone\": null,\n      \"notificationPreferences\": {\n        \"email\": true,\n        \"sms\": false,\n        \"push\": true\n      }\n    },\n    {\n      \"uid\": \"93Xn3DbS0bSNb8zmfzLyfOMX1A13\",\n      \"displayName\": \"Daniel Bogard\",\n      \"email\": \"daniel@centralreform.org\",\n      \"role\": \"admin\",\n      \"instrument\": \"acoustic_guitar\",\n      \"instrumentLabel\": \"Acoustic Guitar\",\n      \"schedulingTier\": \"regular\",\n      \"phone\": \"3142660620\",\n      \"notificationPreferences\": {\n        \"email\": true,\n        \"sms\": true,\n        \"push\": true\n      }\n    },\n    {\n      \"uid\": \"qIcEDdpHa5gr3cQVcGduPWyTxvQ2\",\n      \"displayName\": \"Daniel Bogard\",\n      \"email\": \"dsbogard@gmail.com\",\n      \"role\": \"musician\",\n      \"instrument\": \"acoustic_guitar\",\n      \"instrumentLabel\": \"Acoustic Guitar\",\n      \"schedulingTier\": \"regular\",\n      \"phone\": null,\n      \"notificationPreferences\": {\n        \"email\": true,\n        \"sms\": false,\n        \"push\": true\n      }\n    },\n    {\n      \"uid\": \"DINwaB8627YefB3IOUpEIXtUezl1\",\n      \"displayName\": \"Drew Brodsky\",\n      \"email\": \"brodskydrew@gmail.com\",\n      \"role\": \"admin\",\n      \"instrument\": \"hand_drums\",\n      \"instrumentLabel\": \"Hand Drums / Percussion\",\n      \"schedulingTier\": \"regular\",\n      \"phone\": \"3148079820\",\n      \"notificationPreferences\": {\n        \"email\": true,\n        \"sms\": false,\n        \"push\": true\n      }\n    },\n    {\n      \"uid\": \"Bj2I6WmFLbMymFYfo89yOGpOPrG3\",\n      \"displayName\": \"Itai Forte\",\n      \"email\": \"itai@forte.co.il\",\n      \"role\": \"musician\",\n      \"instrument\": \"Guitar\",\n      \"instrumentLabel\": null,\n      \"schedulingTier\": \"regular\",\n      \"phone\": null,\n      \"notificationPreferences\": {\n        \"email\": true,\n        \"sms\": false,\n        \"push\": true\n      }\n    },\n    {\n      \"uid\": \"lsZI14nIKVNzDNuLWKI9JHTHWBh2\",\n      \"displayName\": \"Jake Weisman\",\n      \"email\": \"jakeweismanmusic@gmail.com\",\n      \"role\": \"musician\",\n      \"instrument\": \"acoustic_guitar\",\n      \"instrumentLabel\": \"Acoustic Guitar\",\n      \"schedulingTier\": \"regular\",\n      \"phone\": null,\n      \"notificationPreferences\": {\n        \"email\": true,\n        \"sms\": false,\n        \"push\": true\n      }\n    },\n    {\n      \"uid\": \"6PXdZ6W1MqY6NCO1QqCexfRZj3Q2\",\n      \"displayName\": \"Michael Koppelman\",\n      \"email\": \"michael@centralreform.org\",\n      \"role\": \"admin\",\n      \"instrument\": \"voice\",\n      \"instrumentLabel\": \"Voice / Vocal\",\n      \"schedulingTier\": \"regular\",\n      \"phone\": null,\n      \"notificationPreferences\": {\n        \"email\": true,\n        \"sms\": false,\n        \"push\": true\n      }\n    },\n    {\n      \"uid\": \"a8NIMPeiska4iyMQrv8d5ELcRKr2\",\n      \"displayName\": \"Myles Pollack\",\n      \"email\": \"myles.pollack@gmail.com\",\n      \"role\": \"musician\",\n      \"instrument\": \"Drums\",\n      \"instrumentLabel\": null,\n      \"schedulingTier\": \"regular\",\n      \"phone\": null,\n      \"notificationPreferences\": {\n        \"email\": true,\n        \"sms\": false,\n        \"push\": true\n      }\n    }\n  ],\n  \"count\": 10\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "READ",
+    "tool": "list_musicians",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 MCP write tools require an admin or band leader account.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"MCP write tools require an admin or band leader account.\"\n  },\n  \"callerRole\": \"musician\",\n  \"requiredRoles\": [\n    \"admin\",\n    \"band_leader\"\n  ],\n  \"hint\": \"Ask an admin to elevate your account to admin or band_leader, or use the read-only tools.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "member",
+    "tier": "READ",
+    "tool": "list_musicians",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 MCP write tools require an admin or band leader account.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"MCP write tools require an admin or band leader account.\"\n  },\n  \"callerRole\": \"member\",\n  \"requiredRoles\": [\n    \"admin\",\n    \"band_leader\"\n  ],\n  \"hint\": \"Ask an admin to elevate your account to admin or band_leader, or use the read-only tools.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "READ",
+    "tool": "list_library",
+    "args": {
+      "limit": 3
+    },
+    "http": "200",
+    "class": "OK",
+    "code": "raw",
+    "brief": "{   \"rows\": [     {       \"fileId\": \"1OUhfx4EW3ZAtuh-ZPnHxTF4-wGOJdBFy\",       \"name\": \" Ana B_Koach.pdf\",       \"collec",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"rows\": [\n    {\n      \"fileId\": \"1OUhfx4EW3ZAtuh-ZPnHxTF4-wGOJdBFy\",\n      \"name\": \" Ana B_Koach.pdf\",\n      \"collection\": null,\n      \"mimeType\": \"application/pdf\",\n      \"fileSize\": null,\n      \"uploadedAt\": \"2025-11-14T18:10:38.000Z\",\n      \"uploadedBy\": null,\n      \"key\": null,\n      \"bpm\": null,\n      \"tags\": [],\n      \"status\": \"active\",\n      \"enrichmentStatus\": null,\n      \"enrichmentConfidence\": null,\n      \"aiSuggestion\": null,\n      \"retryQueued\": false\n    },\n    {\n      \"fileId\": \"upload-823b20aa-c36f-4163-aab7-a1487a7526f0\",\n      \"name\": \"Achot ketana\",\n      \"collection\": \"core\",\n      \"mimeType\": \"application/pdf\",\n      \"fileSize\": 46844,\n      \"uploadedAt\": \"2026-05-16T13:02:15.343Z\",\n      \"uploadedBy\": \"HTks9a8YRiVCQ5lVipUJcBsWjnB3\",\n      \"key\": null,\n      \"bpm\": null,\n      \"tags\": [\n        \"HH\",\n        \"Lead Sheet\"\n      ],\n      \"status\": \"active\",\n      \"enrichmentStatus\": null,\n      \"enrichmentConfidence\": null,\n      \"aiSuggestion\": null,\n      \"retryQueued\": false\n    },\n    {\n      \"fileId\": \"11vAgPi9J45X2b_MLc9SuqnNbKr_U2ePZ\",\n      \"name\": \"Adio kerida.pdf\",\n      \"collection\": null,\n      \"mimeType\": \"application/pdf\",\n      \"fileSize\": null,\n      \"uploadedAt\": \"2025-04-16T21:26:28.000Z\",\n      \"uploadedBy\": null,\n      \"key\": null,\n      \"bpm\": null,\n      \"tags\": [],\n      \"status\": \"active\",\n      \"enrichmentStatus\": null,\n      \"enrichmentConfidence\": null,\n      \"aiSuggestion\": null,\n      \"retryQueued\": false\n    }\n  ],\n  \"total\": 164,\n  \"offset\": 0,\n  \"limit\": 3,\n  \"coverage\": {\n    \"total\": 568,\n    \"eligible\": 467,\n    \"scanned\": 164,\n    \"filteredOut\": {\n      \"byStatus\": {\n        \"orphaned\": 295,\n        \"duplicate\": 8\n      },\n      \"byCollection\": {},\n      \"byOther\": {\n        \"non_chart\": 101\n      }\n    }\n  }\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "READ",
+    "tool": "list_library",
+    "args": {
+      "limit": 3
+    },
+    "http": "200",
+    "class": "OK",
+    "code": "raw",
+    "brief": "{   \"rows\": [     {       \"fileId\": \"1OUhfx4EW3ZAtuh-ZPnHxTF4-wGOJdBFy\",       \"name\": \" Ana B_Koach.pdf\",       \"collec",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"rows\": [\n    {\n      \"fileId\": \"1OUhfx4EW3ZAtuh-ZPnHxTF4-wGOJdBFy\",\n      \"name\": \" Ana B_Koach.pdf\",\n      \"collection\": null,\n      \"mimeType\": \"application/pdf\",\n      \"fileSize\": null,\n      \"uploadedAt\": \"2025-11-14T18:10:38.000Z\",\n      \"uploadedBy\": null,\n      \"key\": null,\n      \"bpm\": null,\n      \"tags\": [],\n      \"status\": \"active\",\n      \"enrichmentStatus\": null,\n      \"enrichmentConfidence\": null,\n      \"aiSuggestion\": null,\n      \"retryQueued\": false\n    },\n    {\n      \"fileId\": \"upload-823b20aa-c36f-4163-aab7-a1487a7526f0\",\n      \"name\": \"Achot ketana\",\n      \"collection\": \"core\",\n      \"mimeType\": \"application/pdf\",\n      \"fileSize\": 46844,\n      \"uploadedAt\": \"2026-05-16T13:02:15.343Z\",\n      \"uploadedBy\": \"HTks9a8YRiVCQ5lVipUJcBsWjnB3\",\n      \"key\": null,\n      \"bpm\": null,\n      \"tags\": [\n        \"HH\",\n        \"Lead Sheet\"\n      ],\n      \"status\": \"active\",\n      \"enrichmentStatus\": null,\n      \"enrichmentConfidence\": null,\n      \"aiSuggestion\": null,\n      \"retryQueued\": false\n    },\n    {\n      \"fileId\": \"11vAgPi9J45X2b_MLc9SuqnNbKr_U2ePZ\",\n      \"name\": \"Adio kerida.pdf\",\n      \"collection\": null,\n      \"mimeType\": \"application/pdf\",\n      \"fileSize\": null,\n      \"uploadedAt\": \"2025-04-16T21:26:28.000Z\",\n      \"uploadedBy\": null,\n      \"key\": null,\n      \"bpm\": null,\n      \"tags\": [],\n      \"status\": \"active\",\n      \"enrichmentStatus\": null,\n      \"enrichmentConfidence\": null,\n      \"aiSuggestion\": null,\n      \"retryQueued\": false\n    }\n  ],\n  \"total\": 164,\n  \"offset\": 0,\n  \"limit\": 3,\n  \"coverage\": {\n    \"total\": 568,\n    \"eligible\": 467,\n    \"scanned\": 164,\n    \"filteredOut\": {\n      \"byStatus\": {\n        \"orphaned\": 295,\n        \"duplicate\": 8\n      },\n      \"byCollection\": {},\n      \"byOther\": {\n        \"non_chart\": 101\n      }\n    }\n  }\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "member",
+    "tier": "READ",
+    "tool": "list_library",
+    "args": {
+      "limit": 3
+    },
+    "http": "200",
+    "class": "OK",
+    "code": "raw",
+    "brief": "{   \"rows\": [     {       \"fileId\": \"1OUhfx4EW3ZAtuh-ZPnHxTF4-wGOJdBFy\",       \"name\": \" Ana B_Koach.pdf\",       \"collec",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"rows\": [\n    {\n      \"fileId\": \"1OUhfx4EW3ZAtuh-ZPnHxTF4-wGOJdBFy\",\n      \"name\": \" Ana B_Koach.pdf\",\n      \"collection\": null,\n      \"mimeType\": \"application/pdf\",\n      \"fileSize\": null,\n      \"uploadedAt\": \"2025-11-14T18:10:38.000Z\",\n      \"uploadedBy\": null,\n      \"key\": null,\n      \"bpm\": null,\n      \"tags\": [],\n      \"status\": \"active\",\n      \"enrichmentStatus\": null,\n      \"enrichmentConfidence\": null,\n      \"aiSuggestion\": null,\n      \"retryQueued\": false\n    },\n    {\n      \"fileId\": \"upload-823b20aa-c36f-4163-aab7-a1487a7526f0\",\n      \"name\": \"Achot ketana\",\n      \"collection\": \"core\",\n      \"mimeType\": \"application/pdf\",\n      \"fileSize\": 46844,\n      \"uploadedAt\": \"2026-05-16T13:02:15.343Z\",\n      \"uploadedBy\": \"HTks9a8YRiVCQ5lVipUJcBsWjnB3\",\n      \"key\": null,\n      \"bpm\": null,\n      \"tags\": [\n        \"HH\",\n        \"Lead Sheet\"\n      ],\n      \"status\": \"active\",\n      \"enrichmentStatus\": null,\n      \"enrichmentConfidence\": null,\n      \"aiSuggestion\": null,\n      \"retryQueued\": false\n    },\n    {\n      \"fileId\": \"11vAgPi9J45X2b_MLc9SuqnNbKr_U2ePZ\",\n      \"name\": \"Adio kerida.pdf\",\n      \"collection\": null,\n      \"mimeType\": \"application/pdf\",\n      \"fileSize\": null,\n      \"uploadedAt\": \"2025-04-16T21:26:28.000Z\",\n      \"uploadedBy\": null,\n      \"key\": null,\n      \"bpm\": null,\n      \"tags\": [],\n      \"status\": \"active\",\n      \"enrichmentStatus\": null,\n      \"enrichmentConfidence\": null,\n      \"aiSuggestion\": null,\n      \"retryQueued\": false\n    }\n  ],\n  \"total\": 164,\n  \"offset\": 0,\n  \"limit\": 3,\n  \"coverage\": {\n    \"total\": 568,\n    \"eligible\": 467,\n    \"scanned\": 164,\n    \"filteredOut\": {\n      \"byStatus\": {\n        \"orphaned\": 295,\n        \"duplicate\": 8\n      },\n      \"byCollection\": {},\n      \"byOther\": {\n        \"non_chart\": 101\n      }\n    }\n  }\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "READR",
+    "tool": "list_test_accounts",
+    "args": {},
+    "http": "200",
+    "class": "OK",
+    "code": "raw",
+    "brief": "{   \"accounts\": [     {       \"uid\": \"test-c9i5-member-a09050cd\",       \"role\": \"member\",       \"soundEngineer\": false, ",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"accounts\": [\n    {\n      \"uid\": \"test-c9i5-member-a09050cd\",\n      \"role\": \"member\",\n      \"soundEngineer\": false,\n      \"label\": \"cycle-9 sweep i5 role-matrix\",\n      \"displayName\": \"[TEST] member cycle-9 sweep i5 role-matrix\",\n      \"provisionedBy\": \"93Xn3DbS0bSNb8zmfzLyfOMX1A13\",\n      \"createdAt\": \"2026-05-19T23:34:16.411Z\",\n      \"ttlExpiresAt\": \"2026-05-20T01:34:15.623Z\",\n      \"revokedAt\": null,\n      \"expired\": false\n    },\n    {\n      \"uid\": \"test-c9i5-musician-9ca50401\",\n      \"role\": \"musician\",\n      \"soundEngineer\": false,\n      \"label\": \"cycle-9 sweep i5 role-matrix\",\n      \"displayName\": \"[TEST] musician cycle-9 sweep i5 role-matrix\",\n      \"provisionedBy\": \"93Xn3DbS0bSNb8zmfzLyfOMX1A13\",\n      \"createdAt\": \"2026-05-19T23:34:12.668Z\",\n      \"ttlExpiresAt\": \"2026-05-20T01:34:11.773Z\",\n      \"revokedAt\": null,\n      \"expired\": false\n    },\n    {\n      \"uid\": \"test-c9i5-band_leader-8e818c64\",\n      \"role\": \"band_leader\",\n      \"soundEngineer\": false,\n      \"label\": \"cycle-9 sweep i5 role-matrix\",\n      \"displayName\": \"[TEST] band_leader cycle-9 sweep i5 role-matrix\",\n      \"provisionedBy\": \"93Xn3DbS0bSNb8zmfzLyfOMX1A13\",\n      \"createdAt\": \"2026-05-19T23:34:08.986Z\",\n      \"ttlExpiresAt\": \"2026-05-20T01:34:08.170Z\",\n      \"revokedAt\": null,\n      \"expired\": false\n    },\n    {\n      \"uid\": \"test-c9i1-musician-37e14609\",\n      \"role\": \"musician\",\n      \"soundEngineer\": false,\n      \"label\": \"cycle-9 sweep i1 band-perform\",\n      \"displayName\": \"[TEST] musician cycle-9 sweep i1 band-perform\",\n      \"provisionedBy\": \"93Xn3DbS0bSNb8zmfzLyfOMX1A13\",\n      \"createdAt\": \"2026-05-19T23:33:32.940Z\",\n      \"ttlExpiresAt\": \"2026-05-20T01:33:31.856Z\",\n      \"revokedAt\": null,\n      \"expired\": false\n    }\n  ]\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "READR",
+    "tool": "list_test_accounts",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden",
+    "brief": "403 list_test_accounts requires admin or band_leader role.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden\",\n    \"message\": \"list_test_accounts requires admin or band_leader role.\"\n  },\n  \"context\": {\n    \"callerRole\": \"musician\"\n  }\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "member",
+    "tier": "READR",
+    "tool": "list_test_accounts",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden",
+    "brief": "403 list_test_accounts requires admin or band_leader role.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden\",\n    \"message\": \"list_test_accounts requires admin or band_leader role.\"\n  },\n  \"context\": {\n    \"callerRole\": \"member\"\n  }\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "READR",
+    "tool": "list_minted_bearers",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 list_minted_bearers requires admin role.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"list_minted_bearers requires admin role.\"\n  },\n  \"callerRole\": \"band_leader\",\n  \"requiredRoles\": [\n    \"admin\"\n  ],\n  \"hint\": \"Sign in as admin or use a root admin bearer.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "READR",
+    "tool": "list_minted_bearers",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 list_minted_bearers requires admin role.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"list_minted_bearers requires admin role.\"\n  },\n  \"callerRole\": \"musician\",\n  \"requiredRoles\": [\n    \"admin\"\n  ],\n  \"hint\": \"Sign in as admin or use a root admin bearer.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "member",
+    "tier": "READR",
+    "tool": "list_minted_bearers",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 list_minted_bearers requires admin role.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"list_minted_bearers requires admin role.\"\n  },\n  \"callerRole\": \"member\",\n  \"requiredRoles\": [\n    \"admin\"\n  ],\n  \"hint\": \"Sign in as admin or use a root admin bearer.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "READR",
+    "tool": "get_ai_config",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 AI config tools require an admin account.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"AI config tools require an admin account.\"\n  },\n  \"callerRole\": \"band_leader\",\n  \"requiredRoles\": [\n    \"admin\"\n  ],\n  \"hint\": \"Ask an admin to elevate your account, or use the read-only tools.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "READR",
+    "tool": "get_ai_config",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 AI config tools require an admin account.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"AI config tools require an admin account.\"\n  },\n  \"callerRole\": \"musician\",\n  \"requiredRoles\": [\n    \"admin\"\n  ],\n  \"hint\": \"Ask an admin to elevate your account, or use the read-only tools.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "member",
+    "tier": "READR",
+    "tool": "get_ai_config",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 AI config tools require an admin account.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"AI config tools require an admin account.\"\n  },\n  \"callerRole\": \"member\",\n  \"requiredRoles\": [\n    \"admin\"\n  ],\n  \"hint\": \"Ask an admin to elevate your account, or use the read-only tools.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "READR",
+    "tool": "get_correction_stats",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 get_correction_stats requires an admin account.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"get_correction_stats requires an admin account.\"\n  },\n  \"callerRole\": \"band_leader\",\n  \"requiredRoles\": [\n    \"admin\"\n  ],\n  \"hint\": \"Ask an admin to elevate your account; correction signals contain per-uid review attribution.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "READR",
+    "tool": "get_correction_stats",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 get_correction_stats requires an admin account.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"get_correction_stats requires an admin account.\"\n  },\n  \"callerRole\": \"musician\",\n  \"requiredRoles\": [\n    \"admin\"\n  ],\n  \"hint\": \"Ask an admin to elevate your account; correction signals contain per-uid review attribution.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "member",
+    "tier": "READR",
+    "tool": "get_correction_stats",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 get_correction_stats requires an admin account.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"get_correction_stats requires an admin account.\"\n  },\n  \"callerRole\": \"member\",\n  \"requiredRoles\": [\n    \"admin\"\n  ],\n  \"hint\": \"Ask an admin to elevate your account; correction signals contain per-uid review attribution.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "WRITE",
+    "tool": "create_setlist",
+    "args": {
+      "name": "c9i5-PROBE-band_leader",
+      "eventDate": "2026-07-01T00:00:00.000Z",
+      "serviceType": "shabbat_morning"
+    },
+    "http": "200",
+    "class": "OK",
+    "code": "raw",
+    "brief": "{   \"setlistId\": \"8756d9bf-881c-4d1b-a7fa-055c699a91f2\",   \"trackCount\": 0,   \"ownerId\": \"test-c9i5-band_leader-8e818c64",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"setlistId\": \"8756d9bf-881c-4d1b-a7fa-055c699a91f2\",\n  \"trackCount\": 0,\n  \"ownerId\": \"test-c9i5-band_leader-8e818c64\",\n  \"ownerName\": \"[TEST] band_leader cycle-9 sweep i5 role-matrix\",\n  \"version\": 1\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "WRITE",
+    "tool": "create_setlist",
+    "args": {
+      "name": "c9i5-PROBE-musician",
+      "eventDate": "2026-07-01T00:00:00.000Z",
+      "serviceType": "shabbat_morning"
+    },
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 MCP write tools require an admin or band leader account.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"MCP write tools require an admin or band leader account.\"\n  },\n  \"callerRole\": \"musician\",\n  \"requiredRoles\": [\n    \"admin\",\n    \"band_leader\"\n  ],\n  \"hint\": \"Ask an admin to elevate your account to admin or band_leader, or use the read-only tools.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "member",
+    "tier": "WRITE",
+    "tool": "create_setlist",
+    "args": {
+      "name": "c9i5-PROBE-member",
+      "eventDate": "2026-07-01T00:00:00.000Z",
+      "serviceType": "shabbat_morning"
+    },
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 MCP write tools require an admin or band leader account.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"MCP write tools require an admin or band leader account.\"\n  },\n  \"callerRole\": \"member\",\n  \"requiredRoles\": [\n    \"admin\",\n    \"band_leader\"\n  ],\n  \"hint\": \"Ask an admin to elevate your account to admin or band_leader, or use the read-only tools.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "WRITE",
+    "tool": "update_setlist",
+    "args": {
+      "setlistId": "c9i5-DOES-NOT-EXIST",
+      "patch": {
+        "name": "x"
+      }
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 update_setlist: id: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"update_setlist\",\n  \"issues\": [\n    {\n      \"path\": \"id\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-cal",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 update_setlist: id: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"update_setlist\",\n  \"issues\": [\n    {\n      \"path\": \"id\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "WRITE",
+    "tool": "update_setlist",
+    "args": {
+      "setlistId": "c9i5-DOES-NOT-EXIST",
+      "patch": {
+        "name": "x"
+      }
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 update_setlist: id: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"update_setlist\",\n  \"issues\": [\n    {\n      \"path\": \"id\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-cal",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 update_setlist: id: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"update_setlist\",\n  \"issues\": [\n    {\n      \"path\": \"id\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "member",
+    "tier": "WRITE",
+    "tool": "update_setlist",
+    "args": {
+      "setlistId": "c9i5-DOES-NOT-EXIST",
+      "patch": {
+        "name": "x"
+      }
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 update_setlist: id: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"update_setlist\",\n  \"issues\": [\n    {\n      \"path\": \"id\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-cal",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 update_setlist: id: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"update_setlist\",\n  \"issues\": [\n    {\n      \"path\": \"id\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "WRITE",
+    "tool": "publish_setlist",
+    "args": {
+      "setlistId": "c9i5-DOES-NOT-EXIST"
+    },
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "setlist_not_found",
+    "brief": "404 Setlist 'c9i5-DOES-NOT-EXIST' was not found.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 404,\n    \"machine_code\": \"setlist_not_found\",\n    \"message\": \"Setlist 'c9i5-DOES-NOT-EXIST' was not found.\"\n  },\n  \"setlistId\": \"c9i5-DOES-NOT-EXIST\",\n  \"hint\": \"Verify the id via list_setlists.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "WRITE",
+    "tool": "publish_setlist",
+    "args": {
+      "setlistId": "c9i5-DOES-NOT-EXIST"
+    },
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 MCP write tools require an admin or band leader account.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"MCP write tools require an admin or band leader account.\"\n  },\n  \"callerRole\": \"musician\",\n  \"requiredRoles\": [\n    \"admin\",\n    \"band_leader\"\n  ],\n  \"hint\": \"Ask an admin to elevate your account to admin or band_leader, or use the read-only tools.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "member",
+    "tier": "WRITE",
+    "tool": "publish_setlist",
+    "args": {
+      "setlistId": "c9i5-DOES-NOT-EXIST"
+    },
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 MCP write tools require an admin or band leader account.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"MCP write tools require an admin or band leader account.\"\n  },\n  \"callerRole\": \"member\",\n  \"requiredRoles\": [\n    \"admin\",\n    \"band_leader\"\n  ],\n  \"hint\": \"Ask an admin to elevate your account to admin or band_leader, or use the read-only tools.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "WRITE",
+    "tool": "delete_setlist",
+    "args": {
+      "setlistId": "c9i5-DOES-NOT-EXIST"
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 delete_setlist: id: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"delete_setlist\",\n  \"issues\": [\n    {\n      \"path\": \"id\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-cal",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 delete_setlist: id: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"delete_setlist\",\n  \"issues\": [\n    {\n      \"path\": \"id\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "WRITE",
+    "tool": "delete_setlist",
+    "args": {
+      "setlistId": "c9i5-DOES-NOT-EXIST"
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 delete_setlist: id: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"delete_setlist\",\n  \"issues\": [\n    {\n      \"path\": \"id\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-cal",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 delete_setlist: id: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"delete_setlist\",\n  \"issues\": [\n    {\n      \"path\": \"id\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "member",
+    "tier": "WRITE",
+    "tool": "delete_setlist",
+    "args": {
+      "setlistId": "c9i5-DOES-NOT-EXIST"
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 delete_setlist: id: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"delete_setlist\",\n  \"issues\": [\n    {\n      \"path\": \"id\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-cal",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 delete_setlist: id: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"delete_setlist\",\n  \"issues\": [\n    {\n      \"path\": \"id\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "ADMIN",
+    "tool": "mint_admin_bearer",
+    "args": {
+      "purpose": "c9i5 role-matrix probe \u2014 will be refused even for admin (429)",
+      "ttlSec": 3600
+    },
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 mint_admin_bearer requires admin role.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"mint_admin_bearer requires admin role.\"\n  },\n  \"callerRole\": \"band_leader\",\n  \"requiredRoles\": [\n    \"admin\"\n  ],\n  \"hint\": \"Only an admin can mint admin bearers. Ask Daniel/David, or use a root admin bearer.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "ADMIN",
+    "tool": "mint_admin_bearer",
+    "args": {
+      "purpose": "c9i5 role-matrix probe \u2014 will be refused even for admin (429)",
+      "ttlSec": 3600
+    },
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 mint_admin_bearer requires admin role.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"mint_admin_bearer requires admin role.\"\n  },\n  \"callerRole\": \"musician\",\n  \"requiredRoles\": [\n    \"admin\"\n  ],\n  \"hint\": \"Only an admin can mint admin bearers. Ask Daniel/David, or use a root admin bearer.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "member",
+    "tier": "ADMIN",
+    "tool": "mint_admin_bearer",
+    "args": {
+      "purpose": "c9i5 role-matrix probe \u2014 will be refused even for admin (429)",
+      "ttlSec": 3600
+    },
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "forbidden_role",
+    "brief": "403 mint_admin_bearer requires admin role.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"forbidden_role\",\n    \"message\": \"mint_admin_bearer requires admin role.\"\n  },\n  \"callerRole\": \"member\",\n  \"requiredRoles\": [\n    \"admin\"\n  ],\n  \"hint\": \"Only an admin can mint admin bearers. Ask Daniel/David, or use a root admin bearer.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "ADMIN",
+    "tool": "cleanup_all_test_data",
+    "args": {
+      "prefix": "c9i5-NEVER-MATCHES"
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 cleanup_all_test_data: prefix: Invalid string: must match pattern /^[a-z0-9](?:[a-z0-9]|-(?!-)){0,30}[a-z0-9]$|^[a-z0-9]$/\"\n  },\n  \"toolName\": \"cleanup_all_test_data\",\n  \"issues\": [\n    {\n      \"path\": \"prefix\",\n      \"message\": \"Invalid string: must match pattern /^[a-z0-9](?",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 cleanup_all_test_data: prefix: Invalid string: must match pattern /^[a-z0-9](?:[a-z0-9]|-(?!-)){0,30}[a-z0-9]$|^[a-z0-9]$/\"\n  },\n  \"toolName\": \"cleanup_all_test_data\",\n  \"issues\": [\n    {\n      \"path\": \"prefix\",\n      \"message\": \"Invalid string: must match pattern /^[a-z0-9](?:[a-z0-9]|-(?!-)){0,30}[a-z0-9]$|^[a-z0-9]$/\",\n      \"code\": \"invalid_format\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "ADMIN",
+    "tool": "cleanup_all_test_data",
+    "args": {
+      "prefix": "c9i5-NEVER-MATCHES"
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 cleanup_all_test_data: prefix: Invalid string: must match pattern /^[a-z0-9](?:[a-z0-9]|-(?!-)){0,30}[a-z0-9]$|^[a-z0-9]$/\"\n  },\n  \"toolName\": \"cleanup_all_test_data\",\n  \"issues\": [\n    {\n      \"path\": \"prefix\",\n      \"message\": \"Invalid string: must match pattern /^[a-z0-9](?",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 cleanup_all_test_data: prefix: Invalid string: must match pattern /^[a-z0-9](?:[a-z0-9]|-(?!-)){0,30}[a-z0-9]$|^[a-z0-9]$/\"\n  },\n  \"toolName\": \"cleanup_all_test_data\",\n  \"issues\": [\n    {\n      \"path\": \"prefix\",\n      \"message\": \"Invalid string: must match pattern /^[a-z0-9](?:[a-z0-9]|-(?!-)){0,30}[a-z0-9]$|^[a-z0-9]$/\",\n      \"code\": \"invalid_format\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "member",
+    "tier": "ADMIN",
+    "tool": "cleanup_all_test_data",
+    "args": {
+      "prefix": "c9i5-NEVER-MATCHES"
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 cleanup_all_test_data: prefix: Invalid string: must match pattern /^[a-z0-9](?:[a-z0-9]|-(?!-)){0,30}[a-z0-9]$|^[a-z0-9]$/\"\n  },\n  \"toolName\": \"cleanup_all_test_data\",\n  \"issues\": [\n    {\n      \"path\": \"prefix\",\n      \"message\": \"Invalid string: must match pattern /^[a-z0-9](?",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 cleanup_all_test_data: prefix: Invalid string: must match pattern /^[a-z0-9](?:[a-z0-9]|-(?!-)){0,30}[a-z0-9]$|^[a-z0-9]$/\"\n  },\n  \"toolName\": \"cleanup_all_test_data\",\n  \"issues\": [\n    {\n      \"path\": \"prefix\",\n      \"message\": \"Invalid string: must match pattern /^[a-z0-9](?:[a-z0-9]|-(?!-)){0,30}[a-z0-9]$|^[a-z0-9]$/\",\n      \"code\": \"invalid_format\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "ADMIN",
+    "tool": "set_ai_threshold",
+    "args": {
+      "threshold": 0.85
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 set_ai_threshold: value: Invalid input: expected number, received undefined\"\n  },\n  \"toolName\": \"set_ai_threshold\",\n  \"issues\": [\n    {\n      \"path\": \"value\",\n      \"message\": \"Invalid input: expected number, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 set_ai_threshold: value: Invalid input: expected number, received undefined\"\n  },\n  \"toolName\": \"set_ai_threshold\",\n  \"issues\": [\n    {\n      \"path\": \"value\",\n      \"message\": \"Invalid input: expected number, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "ADMIN",
+    "tool": "set_ai_threshold",
+    "args": {
+      "threshold": 0.85
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 set_ai_threshold: value: Invalid input: expected number, received undefined\"\n  },\n  \"toolName\": \"set_ai_threshold\",\n  \"issues\": [\n    {\n      \"path\": \"value\",\n      \"message\": \"Invalid input: expected number, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 set_ai_threshold: value: Invalid input: expected number, received undefined\"\n  },\n  \"toolName\": \"set_ai_threshold\",\n  \"issues\": [\n    {\n      \"path\": \"value\",\n      \"message\": \"Invalid input: expected number, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "member",
+    "tier": "ADMIN",
+    "tool": "set_ai_threshold",
+    "args": {
+      "threshold": 0.85
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 set_ai_threshold: value: Invalid input: expected number, received undefined\"\n  },\n  \"toolName\": \"set_ai_threshold\",\n  \"issues\": [\n    {\n      \"path\": \"value\",\n      \"message\": \"Invalid input: expected number, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 set_ai_threshold: value: Invalid input: expected number, received undefined\"\n  },\n  \"toolName\": \"set_ai_threshold\",\n  \"issues\": [\n    {\n      \"path\": \"value\",\n      \"message\": \"Invalid input: expected number, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "ADMIN",
+    "tool": "dedupe_library",
+    "args": {},
+    "http": "200",
+    "class": "OK",
+    "code": "raw",
+    "brief": "{   \"scanned\": 534,   \"groupsFound\": 1,   \"duplicatesMarked\": 1,   \"songsMirrored\": 0,   \"groups\": [     {       \"normal",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"scanned\": 534,\n  \"groupsFound\": 1,\n  \"duplicatesMarked\": 1,\n  \"songsMirrored\": 0,\n  \"groups\": [\n    {\n      \"normalizedName\": \"matir asurim b minor\",\n      \"kept\": {\n        \"fileId\": \"upload-a06055c4-c67b-4f7c-8d1b-de4cc0082915\",\n        \"name\": \"Matir Asurim B minor\",\n        \"uploadedAt\": \"2026-03-14T03:03:09.351Z\"\n      },\n      \"duplicates\": [\n        {\n          \"fileId\": \"upload-5bb53870-999f-43fa-aa2d-06a9c253f572\",\n          \"name\": \"Matir Asurim B minor\",\n          \"uploadedAt\": \"2026-03-14T04:09:07.252Z\"\n        }\n      ]\n    }\n  ],\n  \"dryRun\": false,\n  \"refused\": true,\n  \"threshold\": 0.85,\n  \"coverage\": {\n    \"total\": 568,\n    \"eligible\": 534,\n    \"scanned\": 534,\n    \"filteredOut\": {\n      \"byStatus\": {\n        \"archived\": 21,\n        \"duplicate\": 9\n      },\n      \"byCollection\": {},\n      \"byOther\": {\n        \"empty_name\": 4\n      }\n    }\n  }\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "ADMIN",
+    "tool": "dedupe_library",
+    "args": {},
+    "http": "200",
+    "class": "OK",
+    "code": "raw",
+    "brief": "{   \"scanned\": 534,   \"groupsFound\": 1,   \"duplicatesMarked\": 1,   \"songsMirrored\": 0,   \"groups\": [     {       \"normal",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"scanned\": 534,\n  \"groupsFound\": 1,\n  \"duplicatesMarked\": 1,\n  \"songsMirrored\": 0,\n  \"groups\": [\n    {\n      \"normalizedName\": \"matir asurim b minor\",\n      \"kept\": {\n        \"fileId\": \"upload-a06055c4-c67b-4f7c-8d1b-de4cc0082915\",\n        \"name\": \"Matir Asurim B minor\",\n        \"uploadedAt\": \"2026-03-14T03:03:09.351Z\"\n      },\n      \"duplicates\": [\n        {\n          \"fileId\": \"upload-5bb53870-999f-43fa-aa2d-06a9c253f572\",\n          \"name\": \"Matir Asurim B minor\",\n          \"uploadedAt\": \"2026-03-14T04:09:07.252Z\"\n        }\n      ]\n    }\n  ],\n  \"dryRun\": false,\n  \"refused\": true,\n  \"threshold\": 0.85,\n  \"coverage\": {\n    \"total\": 568,\n    \"eligible\": 534,\n    \"scanned\": 534,\n    \"filteredOut\": {\n      \"byStatus\": {\n        \"archived\": 21,\n        \"duplicate\": 9\n      },\n      \"byCollection\": {},\n      \"byOther\": {\n        \"empty_name\": 4\n      }\n    }\n  }\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "member",
+    "tier": "ADMIN",
+    "tool": "dedupe_library",
+    "args": {},
+    "http": "200",
+    "class": "OK",
+    "code": "raw",
+    "brief": "{   \"scanned\": 534,   \"groupsFound\": 1,   \"duplicatesMarked\": 1,   \"songsMirrored\": 0,   \"groups\": [     {       \"normal",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"scanned\": 534,\n  \"groupsFound\": 1,\n  \"duplicatesMarked\": 1,\n  \"songsMirrored\": 0,\n  \"groups\": [\n    {\n      \"normalizedName\": \"matir asurim b minor\",\n      \"kept\": {\n        \"fileId\": \"upload-a06055c4-c67b-4f7c-8d1b-de4cc0082915\",\n        \"name\": \"Matir Asurim B minor\",\n        \"uploadedAt\": \"2026-03-14T03:03:09.351Z\"\n      },\n      \"duplicates\": [\n        {\n          \"fileId\": \"upload-5bb53870-999f-43fa-aa2d-06a9c253f572\",\n          \"name\": \"Matir Asurim B minor\",\n          \"uploadedAt\": \"2026-03-14T04:09:07.252Z\"\n        }\n      ]\n    }\n  ],\n  \"dryRun\": false,\n  \"refused\": true,\n  \"threshold\": 0.85,\n  \"coverage\": {\n    \"total\": 568,\n    \"eligible\": 534,\n    \"scanned\": 534,\n    \"filteredOut\": {\n      \"byStatus\": {\n        \"archived\": 21,\n        \"duplicate\": 9\n      },\n      \"byCollection\": {},\n      \"byOther\": {\n        \"empty_name\": 4\n      }\n    }\n  }\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "MON",
+    "tool": "list_monitor_buses",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "monitor_access_denied",
+    "brief": "403 You don't have monitor access \u2014 ask an admin to assign you a bus.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"monitor_access_denied\",\n    \"message\": \"You don't have monitor access \u2014 ask an admin to assign you a bus.\"\n  },\n  \"callerRole\": \"band_leader\",\n  \"soundEngineer\": false,\n  \"hint\": \"Ask Rabbi Daniel or an admin to assign you a personal IEM bus.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "MON",
+    "tool": "list_monitor_buses",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "monitor_access_denied",
+    "brief": "403 You don't have monitor access \u2014 ask an admin to assign you a bus.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"monitor_access_denied\",\n    \"message\": \"You don't have monitor access \u2014 ask an admin to assign you a bus.\"\n  },\n  \"callerRole\": \"musician\",\n  \"soundEngineer\": false,\n  \"hint\": \"Ask Rabbi Daniel or an admin to assign you a personal IEM bus.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "member",
+    "tier": "MON",
+    "tool": "list_monitor_buses",
+    "args": {},
+    "http": "200",
+    "class": "BIZ_ERR",
+    "code": "monitor_access_denied",
+    "brief": "403 You don't have monitor access \u2014 ask an admin to assign you a bus.",
+    "body": {
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 403,\n    \"machine_code\": \"monitor_access_denied\",\n    \"message\": \"You don't have monitor access \u2014 ask an admin to assign you a bus.\"\n  },\n  \"callerRole\": \"member\",\n  \"soundEngineer\": false,\n  \"hint\": \"Ask Rabbi Daniel or an admin to assign you a personal IEM bus.\"\n}"
+          }
+        ]
+      },
+      "jsonrpc": "2.0",
+      "id": 1
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "MON",
+    "tool": "set_bus_fader",
+    "args": {
+      "busIndex": 0,
+      "value": 0
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 set_bus_fader: busIndex: Too small: expected number to be >=1; level: Invalid input: expected number, received undefined\"\n  },\n  \"toolName\": \"set_bus_fader\",\n  \"issues\": [\n    {\n      \"path\": \"busIndex\",\n      \"message\": \"Too small: expected number to be >=1\",\n      \"code\": \"t",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 set_bus_fader: busIndex: Too small: expected number to be >=1; level: Invalid input: expected number, received undefined\"\n  },\n  \"toolName\": \"set_bus_fader\",\n  \"issues\": [\n    {\n      \"path\": \"busIndex\",\n      \"message\": \"Too small: expected number to be >=1\",\n      \"code\": \"too_small\"\n    },\n    {\n      \"path\": \"level\",\n      \"message\": \"Invalid input: expected number, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "MON",
+    "tool": "set_bus_fader",
+    "args": {
+      "busIndex": 0,
+      "value": 0
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 set_bus_fader: busIndex: Too small: expected number to be >=1; level: Invalid input: expected number, received undefined\"\n  },\n  \"toolName\": \"set_bus_fader\",\n  \"issues\": [\n    {\n      \"path\": \"busIndex\",\n      \"message\": \"Too small: expected number to be >=1\",\n      \"code\": \"t",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 set_bus_fader: busIndex: Too small: expected number to be >=1; level: Invalid input: expected number, received undefined\"\n  },\n  \"toolName\": \"set_bus_fader\",\n  \"issues\": [\n    {\n      \"path\": \"busIndex\",\n      \"message\": \"Too small: expected number to be >=1\",\n      \"code\": \"too_small\"\n    },\n    {\n      \"path\": \"level\",\n      \"message\": \"Invalid input: expected number, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "member",
+    "tier": "MON",
+    "tool": "set_bus_fader",
+    "args": {
+      "busIndex": 0,
+      "value": 0
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 set_bus_fader: busIndex: Too small: expected number to be >=1; level: Invalid input: expected number, received undefined\"\n  },\n  \"toolName\": \"set_bus_fader\",\n  \"issues\": [\n    {\n      \"path\": \"busIndex\",\n      \"message\": \"Too small: expected number to be >=1\",\n      \"code\": \"t",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 set_bus_fader: busIndex: Too small: expected number to be >=1; level: Invalid input: expected number, received undefined\"\n  },\n  \"toolName\": \"set_bus_fader\",\n  \"issues\": [\n    {\n      \"path\": \"busIndex\",\n      \"message\": \"Too small: expected number to be >=1\",\n      \"code\": \"too_small\"\n    },\n    {\n      \"path\": \"level\",\n      \"message\": \"Invalid input: expected number, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "ROST",
+    "tool": "assign_musician",
+    "args": {
+      "musicianUid": "c9i5-NOPE",
+      "setlistId": "c9i5-NOPE",
+      "role": "piano"
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 assign_musician: uid: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"assign_musician\",\n  \"issues\": [\n    {\n      \"path\": \"uid\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 assign_musician: uid: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"assign_musician\",\n  \"issues\": [\n    {\n      \"path\": \"uid\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "ROST",
+    "tool": "assign_musician",
+    "args": {
+      "musicianUid": "c9i5-NOPE",
+      "setlistId": "c9i5-NOPE",
+      "role": "piano"
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 assign_musician: uid: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"assign_musician\",\n  \"issues\": [\n    {\n      \"path\": \"uid\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 assign_musician: uid: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"assign_musician\",\n  \"issues\": [\n    {\n      \"path\": \"uid\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "member",
+    "tier": "ROST",
+    "tool": "assign_musician",
+    "args": {
+      "musicianUid": "c9i5-NOPE",
+      "setlistId": "c9i5-NOPE",
+      "role": "piano"
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 assign_musician: uid: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"assign_musician\",\n  \"issues\": [\n    {\n      \"path\": \"uid\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 assign_musician: uid: Invalid input: expected string, received undefined\"\n  },\n  \"toolName\": \"assign_musician\",\n  \"issues\": [\n    {\n      \"path\": \"uid\",\n      \"message\": \"Invalid input: expected string, received undefined\",\n      \"code\": \"invalid_type\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "band_leader",
+    "tier": "ROST",
+    "tool": "respond_to_assignment",
+    "args": {
+      "assignmentId": "c9i5-NOPE",
+      "response": "accept"
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 respond_to_assignment: status: Invalid option: expected one of \\\"confirmed\\\"|\\\"declined\\\"\"\n  },\n  \"toolName\": \"respond_to_assignment\",\n  \"issues\": [\n    {\n      \"path\": \"status\",\n      \"message\": \"Invalid option: expected one of \\\"confirmed\\\"|\\\"declined\\\"\",\n      \"code\": \"inva",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 respond_to_assignment: status: Invalid option: expected one of \\\"confirmed\\\"|\\\"declined\\\"\"\n  },\n  \"toolName\": \"respond_to_assignment\",\n  \"issues\": [\n    {\n      \"path\": \"status\",\n      \"message\": \"Invalid option: expected one of \\\"confirmed\\\"|\\\"declined\\\"\",\n      \"code\": \"invalid_value\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "musician",
+    "tier": "ROST",
+    "tool": "respond_to_assignment",
+    "args": {
+      "assignmentId": "c9i5-NOPE",
+      "response": "accept"
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 respond_to_assignment: status: Invalid option: expected one of \\\"confirmed\\\"|\\\"declined\\\"\"\n  },\n  \"toolName\": \"respond_to_assignment\",\n  \"issues\": [\n    {\n      \"path\": \"status\",\n      \"message\": \"Invalid option: expected one of \\\"confirmed\\\"|\\\"declined\\\"\",\n      \"code\": \"inva",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 respond_to_assignment: status: Invalid option: expected one of \\\"confirmed\\\"|\\\"declined\\\"\"\n  },\n  \"toolName\": \"respond_to_assignment\",\n  \"issues\": [\n    {\n      \"path\": \"status\",\n      \"message\": \"Invalid option: expected one of \\\"confirmed\\\"|\\\"declined\\\"\",\n      \"code\": \"invalid_value\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  },
+  {
+    "role": "member",
+    "tier": "ROST",
+    "tool": "respond_to_assignment",
+    "args": {
+      "assignmentId": "c9i5-NOPE",
+      "response": "accept"
+    },
+    "http": "200",
+    "class": "ZOD_ERR",
+    "code": "isError",
+    "brief": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 respond_to_assignment: status: Invalid option: expected one of \\\"confirmed\\\"|\\\"declined\\\"\"\n  },\n  \"toolName\": \"respond_to_assignment\",\n  \"issues\": [\n    {\n      \"path\": \"status\",\n      \"message\": \"Invalid option: expected one of \\\"confirmed\\\"|\\\"declined\\\"\",\n      \"code\": \"inva",
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"validation_error\",\n    \"message\": \"Invalid arguments \u2014 respond_to_assignment: status: Invalid option: expected one of \\\"confirmed\\\"|\\\"declined\\\"\"\n  },\n  \"toolName\": \"respond_to_assignment\",\n  \"issues\": [\n    {\n      \"path\": \"status\",\n      \"message\": \"Invalid option: expected one of \\\"confirmed\\\"|\\\"declined\\\"\",\n      \"code\": \"invalid_value\"\n    }\n  ],\n  \"hint\": \"Re-call the tool with corrected arguments (see issues[]).\"\n}"
+          }
+        ],
+        "isError": true
+      }
+    }
+  }
+]

@@ -1,0 +1,45 @@
+=== setlists ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"collection\": \"setlists\",\n  \"docCount\": 45,\n  \"estimatedBytes\": 148782,\n  \"oldestTimestamp\": null,\n  \"newestTimestamp\": null,\n  \"truncated\": false,\n  \"scannedAt\": \"2026-05-19T15:31:01.431Z\",\n  \"sinceFilter\": null\n}"}]},"jsonrpc":"2.0","id":11}
+
+
+=== tracks ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"collection\": \"tracks\",\n  \"docCount\": 576,\n  \"estimatedBytes\": 222584,\n  \"oldestTimestamp\": null,\n  \"newestTimestamp\": null,\n  \"truncated\": false,\n  \"scannedAt\": \"2026-05-19T15:31:02.137Z\",\n  \"sinceFilter\": null\n}"}]},"jsonrpc":"2.0","id":12}
+
+
+=== library_index ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"collection\": \"library_index\",\n  \"docCount\": 568,\n  \"estimatedBytes\": 307496,\n  \"oldestTimestamp\": null,\n  \"newestTimestamp\": null,\n  \"truncated\": false,\n  \"scannedAt\": \"2026-05-19T15:31:02.682Z\",\n  \"sinceFilter\": null\n}"}]},"jsonrpc":"2.0","id":13}
+
+
+=== setlistTemplates ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"collection\": \"setlistTemplates\",\n  \"docCount\": 0,\n  \"estimatedBytes\": 0,\n  \"oldestTimestamp\": null,\n  \"newestTimestamp\": null,\n  \"truncated\": false,\n  \"scannedAt\": \"2026-05-19T15:31:03.099Z\",\n  \"sinceFilter\": null\n}"}]},"jsonrpc":"2.0","id":14}
+
+
+=== users ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"collection\": \"users\",\n  \"docCount\": 20,\n  \"estimatedBytes\": 13617,\n  \"oldestTimestamp\": null,\n  \"newestTimestamp\": null,\n  \"truncated\": false,\n  \"scannedAt\": \"2026-05-19T15:31:03.554Z\",\n  \"sinceFilter\": null\n}"}]},"jsonrpc":"2.0","id":15}
+
+
+=== scheduling_assignments ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"collection\": \"scheduling_assignments\",\n  \"docCount\": 0,\n  \"estimatedBytes\": 0,\n  \"oldestTimestamp\": null,\n  \"newestTimestamp\": null,\n  \"truncated\": false,\n  \"scannedAt\": \"2026-05-19T15:31:03.963Z\",\n  \"sinceFilter\": null\n}"}]},"jsonrpc":"2.0","id":16}
+
+
+=== aiEnrichmentCache ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"collection\": \"aiEnrichmentCache\",\n  \"docCount\": 0,\n  \"estimatedBytes\": 0,\n  \"oldestTimestamp\": null,\n  \"newestTimestamp\": null,\n  \"truncated\": false,\n  \"scannedAt\": \"2026-05-19T15:31:04.514Z\",\n  \"sinceFilter\": null\n}"}]},"jsonrpc":"2.0","id":17}
+
+
+=== aiCorrectionSignals ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"collection\": \"aiCorrectionSignals\",\n  \"docCount\": 0,\n  \"estimatedBytes\": 0,\n  \"oldestTimestamp\": null,\n  \"newestTimestamp\": null,\n  \"truncated\": false,\n  \"scannedAt\": \"2026-05-19T15:31:05.015Z\",\n  \"sinceFilter\": null\n}"}]},"jsonrpc":"2.0","id":18}
+
+
+=== webVitalsObservations ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"collection\": \"webVitalsObservations\",\n  \"docCount\": 261,\n  \"estimatedBytes\": 110027,\n  \"oldestTimestamp\": \"2026-05-18T00:41:58.884Z\",\n  \"newestTimestamp\": \"2026-05-18T23:43:16.440Z\",\n  \"truncated\": false,\n  \"scannedAt\": \"2026-05-19T15:31:05.556Z\",\n  \"sinceFilter\": null\n}"}]},"jsonrpc":"2.0","id":19}
+
+

@@ -1,0 +1,3 @@
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"ok\": true,\n  \"trackId\": \"9a7a26d7-b0ce-4920-b452-311b6196a9f3\",\n  \"order\": 1,\n  \"track\": {\n    \"id\": \"9a7a26d7-b0ce-4920-b452-311b6196a9f3\",\n    \"setlistId\": \"3f428f9c-df9c-470e-a507-a67df9530fd8\",\n    \"order\": 1,\n    \"type\": \"song\",\n    \"title\": \"Adon Olam\",\n    \"version\": 1,\n    \"lastModifiedAt\": \"2026-05-19T16:23:30.757Z\",\n    \"updatedAt\": {\n      \"_seconds\": 1779207810,\n      \"_nanoseconds\": 805000000\n    }\n  }\n}"}]},"jsonrpc":"2.0","id":2}
+

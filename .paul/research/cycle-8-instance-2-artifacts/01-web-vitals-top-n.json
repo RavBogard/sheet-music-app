@@ -1,0 +1,20 @@
+// get_web_vitals_summary({sinceDays:7}) — top-N path
+// captured 2026-05-19T22:28:52Z; deployed SHA per master-tip = edb24a47c
+{
+  "ok": true,
+  "sinceDays": 7,
+  "since": "2026-05-12T22:28:52.507Z",
+  "sampleCount": 367,
+  "truncated": false,
+  "routes": [
+    { "surface": "/perform/setlist/[id]", "sampleCount": 87, "metrics": { "LCP": {"p75": 2692, "sampleCount": 11}, "CLS": {"p75": 0, "sampleCount": 4}, "INP": {"p75": null, "sampleCount": 0}, "FCP": {"p75": 724, "sampleCount": 37}, "TTFB": {"p75": 195, "sampleCount": 35} }},
+    { "surface": "/",                       "sampleCount": 59, "metrics": { "LCP": {"p75": 3338.8, "sampleCount": 12}, "CLS": {"p75": 0.02, "sampleCount": 5}, "INP": {"p75": 248, "sampleCount": 1}, "FCP": {"p75": 1948, "sampleCount": 20}, "TTFB": {"p75": 219.8, "sampleCount": 21} }},
+    { "surface": "/login",                  "sampleCount": 55, "metrics": { "LCP": {"p75": 328, "sampleCount": 4}, "CLS": {"p75": 0, "sampleCount": 7}, "INP": {"p75": null, "sampleCount": 0}, "FCP": {"p75": 560, "sampleCount": 22}, "TTFB": {"p75": 172.1, "sampleCount": 22} }},
+    { "surface": "/perform",                "sampleCount": 45, "metrics": { "LCP": {"p75": 752, "sampleCount": 5}, "CLS": {"p75": 0, "sampleCount": 5}, "INP": {"p75": null, "sampleCount": 0}, "FCP": {"p75": 424, "sampleCount": 18}, "TTFB": {"p75": 191.8, "sampleCount": 17} }},
+    { "surface": "/setlists",               "sampleCount": 34, "metrics": { "LCP": {"p75": 1468, "sampleCount": 8}, "CLS": {"p75": 0.02, "sampleCount": 9}, "INP": {"p75": 112, "sampleCount": 1}, "FCP": {"p75": 1096, "sampleCount": 8}, "TTFB": {"p75": 109.9, "sampleCount": 8} }}
+  ]
+}
+// Notes:
+// - Envelope shape matches spec exactly. Sort order is descending by surface.sampleCount (87,59,55,45,34) → top-5 ✓.
+// - Per-route surface.sampleCount equals sum of per-metric sampleCounts (87 = 11+4+0+37+35; 59 = 12+5+1+20+21; ...) ✓.
+// - sampleCount=367 > sum-of-top-5 (280) → 87 samples live in routes ranked 6+; topRoutes default 5 truncates them out (not the `truncated` flag, which only fires on maxDocs cap). ✓.

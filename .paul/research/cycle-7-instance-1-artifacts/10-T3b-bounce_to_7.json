@@ -1,0 +1,3 @@
+
+{"result":{"content":[{"type":"text","text":"{\n  \"ok\": true,\n  \"track\": {\n    \"id\": \"9d6b8d6a-21eb-49f5-b2d4-753f837903c4\",\n    \"setlistId\": \"841df759-0dba-4b50-958d-f17cfb2894e1\",\n    \"type\": \"song\",\n    \"title\": \"Halleluyah\",\n    \"lastModifiedAt\": \"2026-05-19T15:32:57.516Z\",\n    \"version\": 3,\n    \"order\": 7,\n    \"updatedAt\": \"2026-05-19T15:32:57.548Z\"\n  }\n}"}]},"jsonrpc":"2.0","id":31}
+

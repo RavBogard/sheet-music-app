@@ -1,0 +1,21 @@
+// list_setlists({sort:"recent_event", limit:10}) — captured 2026-05-19T22:34Z
+// Used to find candidate setlists for §2.3 cross-check + §3 sample
+// NOTE every row has publishedAt:null — the chart-bond cron's
+// where("publishedAt","!=",null) filter would survey ZERO docs.
+
+[
+  { "id": "Ikl0sS4XcZil0Z04viAu", "name": "Shir Shabbat —  — May 13",         "eventDate": "2026-05-13T19:53:47.014Z", "trackCount": 18, "publishedAt": null, "version": 1 },
+  { "id": "vJqQL6jbpTwVVbv1Oahy", "name": "Mother's Day",                       "eventDate": "2026-05-10T05:00:00.000Z", "trackCount": 2,  "publishedAt": null, "version": 3 },
+  { "id": "zyJGXUdIG80fLHaifJ7o", "name": "Bnei Mitzvah Morning",              "eventDate": "2026-05-09T05:00:00.000Z", "trackCount": 19, "publishedAt": null, "version": 1 },
+  { "id": "QQSsAK2XY4dc8k5sFXIa", "name": "Confirmation Shabbat",              "eventDate": "2026-05-08T05:00:00.000Z", "trackCount": 0,  "publishedAt": null, "version": 1 },
+  { "id": "UnjLqKTtS4lNKQfMY6hB", "name": "Shabbat Morning — Parashat Emor — May 2",            "eventDate": "2026-05-02T13:58:56.932Z", "trackCount": 45, "publishedAt": null, "version": 1 },
+  { "id": "uBkulVkN8K7idSapCJjq", "name": "Shabbat Morning — Parashat Achrei Mot-Kedoshim — April 25", "eventDate": "2026-04-25T12:00:00.000-06:00", "trackCount": 27, "publishedAt": null, "version": 1 },
+  { "id": "tIJ5DlvkeeN1CWAUTUM2", "name": "Seui",                              "eventDate": "2026-04-20T12:00:00.000-06:00", "trackCount": 16, "publishedAt": null, "version": 1 },
+  { "id": "IvowaTdXwZI7qu9U9QXc", "name": "Shabbat Morning — Parashat Tazria-Metzora — April 18", "eventDate": "2026-04-18T12:00:00.000-06:00", "trackCount": 45, "publishedAt": null, "version": 1 },
+  { "id": "fgxquthWA9IQ4UF2fZWw", "name": "Shabbat Morning — April 11",        "eventDate": "2026-04-11T12:00:00.000-06:00", "trackCount": 44, "publishedAt": null, "version": 1 },
+  { "id": "9bmwUMJzgIQgNRIe81jv", "name": "Shabbat Morning — April 4",         "eventDate": "2026-04-04T12:00:00.000-06:00", "trackCount": 38, "publishedAt": null, "version": 1 }
+]
+
+// Also list_setlists({from:"2026-05-19", sort:"recent_event"}): []
+// No upcoming-event setlists at all → cron would survey 0 candidates even
+// without the publishedAt filter.

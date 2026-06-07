@@ -1,0 +1,94 @@
+{
+    "_note": "Direct curl calls to /api/mcp with the three c9i4 test bearers — verifying the MCP monitor-control auth gate. Raw bearer values were used via env-var injection only and are not present in this file.",
+    "calls": [
+        {
+            "caller": "test-c9i4-musician-dc88f728 (musician, no bus, no SE)",
+            "tool": "set_bus_fader",
+            "args": { "busIndex": 4, "level": 0.5 },
+            "response": {
+                "ok": false,
+                "error": { "code": 403, "machine_code": "monitor_access_denied", "message": "You don't have monitor access — ask an admin to assign you a bus." },
+                "callerRole": "musician",
+                "soundEngineer": false,
+                "hint": "Ask Rabbi Daniel or an admin to assign you a personal IEM bus."
+            },
+            "verdict": "PASS — correct rich envelope, correct gate."
+        },
+        {
+            "caller": "test-c9i4-musician-dc88f728 (musician, no bus)",
+            "tool": "get_mix",
+            "args": {},
+            "response": {
+                "ok": false,
+                "error": { "code": 403, "machine_code": "monitor_access_denied", "message": "You don't have monitor access — ask an admin to assign you a bus." },
+                "callerRole": "musician",
+                "soundEngineer": false
+            },
+            "verdict": "PASS"
+        },
+        {
+            "caller": "test-c9i4-musician-dc88f728 (musician, no bus)",
+            "tool": "get_matrix",
+            "args": {},
+            "response": {
+                "ok": false,
+                "error": { "code": 403, "machine_code": "monitor_access_denied", "message": "You don't have monitor access — ask an admin to assign you a bus." },
+                "callerRole": "musician",
+                "soundEngineer": false
+            },
+            "verdict": "PASS"
+        },
+        {
+            "caller": "test-c9i4-musician-13a08f0b (musician + soundEngineer=true, no bus)",
+            "tool": "get_mix",
+            "args": {},
+            "response": {
+                "ok": false,
+                "error": { "code": 500, "machine_code": "monitor_no_bus_assigned", "message": "No bus specified and you don't own any bus." },
+                "yourAssignedBuses": [],
+                "hint": "Pass a busIndex or ask an admin to assign one to you."
+            },
+            "verdict": "FAIL (LOW) — C9I4-007. HTTP code should be 400 (omitted required-given-context arg), not 500."
+        },
+        {
+            "caller": "test-c9i4-musician-13a08f0b (musician + SE)",
+            "tool": "get_matrix",
+            "args": {},
+            "response": { "matrices": [] },
+            "verdict": "PASS — SE access to matrix surface (correct), but empty result. X32 either has no matrices configured or bridge state is stale (lastSeenIso is 72h old — see C9I4-006)."
+        },
+        {
+            "caller": "test-c9i4-band_leader-459591bc (band_leader, no bus, no SE)",
+            "tool": "get_mix",
+            "args": {},
+            "response": {
+                "ok": false,
+                "error": { "code": 403, "machine_code": "monitor_access_denied", "message": "You don't have monitor access — ask an admin to assign you a bus." },
+                "callerRole": "band_leader",
+                "soundEngineer": false
+            },
+            "verdict": "PASS — band_leader role is NOT inherently in the monitor gate (use-monitor-access.ts:76: `isAdmin || isSoundEngineer || hasBusAssigned`)."
+        }
+    ],
+    "auxiliary": {
+        "list_monitor_buses_admin": {
+            "buses": [
+                { "index": 1, "name": "MON 1 Inst", "assignedTo": [] },
+                { "index": 2, "name": "MON 2 Bass", "assignedTo": [] },
+                { "index": 3, "name": "vox wedge", "assignedTo": [{ "uid": "93Xn3DbS0bSNb8zmfzLyfOMX1A13", "userName": "Daniel Bogard" }] },
+                { "index": 4, "name": "Andrea Wedge", "assignedTo": [{ "uid": "HTks9a8YRiVCQ5lVipUJcBsWjnB3", "userName": "David Lazaroff" }] },
+                { "index": 5, "name": "rabbi wedge", "assignedTo": [] }
+            ],
+            "matrices": [],
+            "myAssignedBuses": [3],
+            "isPrivileged": true,
+            "bridge": {
+                "status": "online",
+                "x32Connected": true,
+                "lastSeenIso": "2026-05-16T23:20:37.048Z",
+                "clients": 0
+            },
+            "_observation": "C9I4-006 — bridge.status='online' + x32Connected=true while lastSeenIso is ~72h stale at probe time (2026-05-19T23:38Z). Documented 'stale-true' pattern confirmed in production."
+        }
+    }
+}

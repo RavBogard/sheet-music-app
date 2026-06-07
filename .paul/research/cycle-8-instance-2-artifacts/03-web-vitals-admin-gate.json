@@ -1,0 +1,30 @@
+// get_web_vitals_summary admin-gate probe
+// captured 2026-05-19T22:32Z; prod /api/mcp at deployed SHA edb24a47c
+// Caller: musician bearer minted via create_test_account({role:"musician", uidPrefix:"c8i2"})
+//   uid: test-c8i2-musician-477155d4
+//   tokenId: DXXEhNWTiL5ETTrY4FWP
+//   raw bearer NOT recorded here (security) — cleaned up via cleanup_all_test_data at HANDOFF.
+
+// REQUEST
+// POST https://www.centralreform.live/api/mcp
+// Authorization: Bearer crl_live_<musician>
+// {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_web_vitals_summary","arguments":{"sinceDays":7}}}
+
+// RESPONSE (SSE)
+{
+  "ok": false,
+  "error": {
+    "code": 403,
+    "machine_code": "forbidden",
+    "message": "get_web_vitals_summary requires admin role."
+  },
+  "callerRole": "musician",
+  "hint": "Sign in as admin or ask one to read the field-data summary for you."
+}
+
+// Notes:
+// - Role-gate fires correctly (musician → 403, no data leakage).
+// - machine_code is `forbidden`, NOT `forbidden_role` as the C8I2 prompt §1.4 phrased.
+//   Bearer-mint lane (ship `edb24a47c`) uses `forbidden_role`; web-vitals tool uses `forbidden`.
+//   Inconsistent role-denial machine_code naming across MCP tools.
+//   → LOW finding (cosmetic; behavior + security correct).

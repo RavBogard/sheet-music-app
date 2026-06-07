@@ -1,0 +1,40 @@
+{
+    "_note": "Multiple calls to list_musicians_on_date — every single date with a real setlist returned matchedSetlists:[]. Evidence for C9I4-001 (legacy ISO-string eventDate rows are invisible to the date matcher). The reproducer is admin-bearer + any production date.",
+    "calls": [
+        {
+            "args": { "eventDate": "2026-05-22", "templateType": "friday_night" },
+            "_context": "upcoming Friday — no setlist created yet — empty is expected",
+            "response": { "ok": true, "eventDate": "2026-05-22", "matchedSetlists": [], "grouped": { "pending": [], "confirmed": [], "declined": [], "cancelled": [] }, "total": 0 }
+        },
+        {
+            "args": { "eventDate": "2026-05-23", "templateType": "shabbat_morning" },
+            "_context": "upcoming Shabbat morning — no setlist created yet — empty is expected",
+            "response": { "ok": true, "eventDate": "2026-05-23", "matchedSetlists": [], "grouped": { "pending": [], "confirmed": [], "declined": [], "cancelled": [] }, "total": 0 }
+        },
+        {
+            "args": { "eventDate": "2026-05-13" },
+            "_context": "Shir Shabbat May 13 setlist EXISTS (Ikl0sS4XcZil0Z04viAu) — expected matchedSetlists to include it",
+            "response": { "ok": true, "eventDate": "2026-05-13", "matchedSetlists": [], "grouped": { "pending": [], "confirmed": [], "declined": [], "cancelled": [] }, "total": 0 },
+            "BUG": "C9I4-001 — setlist returned by list_setlists at that exact eventDate is invisible here"
+        },
+        {
+            "args": { "eventDate": "2026-04-18" },
+            "_context": "Shabbat Morning — Tazria-Metzora exists for this date (IvowaTdXwZI7qu9U9QXc, 45 tracks)",
+            "response": { "ok": true, "eventDate": "2026-04-18", "matchedSetlists": [], "grouped": { "pending": [], "confirmed": [], "declined": [], "cancelled": [] }, "total": 0 },
+            "BUG": "C9I4-001 — same"
+        },
+        {
+            "args": { "eventDate": "2026-04-25" },
+            "_context": "Shabbat Morning — Achrei Mot-Kedoshim exists for this date (uBkulVkN8K7idSapCJjq, 27 tracks)",
+            "response": { "ok": true, "eventDate": "2026-04-25", "matchedSetlists": [], "grouped": { "pending": [], "confirmed": [], "declined": [], "cancelled": [] }, "total": 0 },
+            "BUG": "C9I4-001 — same"
+        },
+        {
+            "args": { "eventDate": "2026-05-13T19:53:47.014Z" },
+            "_context": "tried passing the EXACT ISO eventDate of the May 13 setlist as the query — still empty",
+            "response": { "ok": true, "eventDate": "2026-05-13T19:53:47.014Z", "matchedSetlists": [], "grouped": { "pending": [], "confirmed": [], "declined": [], "cancelled": [] }, "total": 0 },
+            "BUG": "C9I4-001 — full-ISO input doesn't fix it either"
+        }
+    ],
+    "root_cause": "origin/master:src/lib/mcp/tools/roster.ts:402-415 — implementation queries `where('eventDate','>=',Timestamp.fromDate(...))` only; the in-code comment acknowledges 'legacy rows may store the string ISO ... can be matched via a follow-up grep if needed'. That follow-up was never implemented. All sampled setlists in list_setlists return eventDate as ISO string, suggesting they're stored as strings (not Timestamps) in Firestore."
+}

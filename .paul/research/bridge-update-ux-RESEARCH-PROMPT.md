@@ -1,0 +1,25 @@
+# Lane: bridge-update-ux-research (coder-1) — fix the bridge update/cred/version pain, properly
+
+**Tier 0 — READ-ONLY research.** Output = `.paul/research/bridge-update-ux-FINDINGS.md`. NO bridge/ writes, NO release. The FIX is a SEPARATE follow-on lane (also coder-1, Tier 2, Daniel-gated, outward-facing) that implements the ratified design as a future bridge release — **NOT now** (v10.0.2 isn't even installed yet; don't stack releases).
+
+**Owner:** coder-1 (bridge single-owner). Do this after / alongside the v10.0.2-landing verify (read-only, no conflict).
+
+## The three pains Daniel reported (2026-05-22) — root-cause each, then propose the fix
+
+1. **Auto-update is unreliable.** The electron-updater tray auto-update "stalls" (the 5/21 SmartScreen/relaunch class), so Daniel **manually downloads the installer and runs it every time.** Root-cause WHY auto-update doesn't complete on the studio Windows box (code-signing/SmartScreen reputation? `autoInstallOnAppQuit` never triggering because the app rarely quits? relaunch blocked? NSIS elevation prompt?). Propose a RELIABLE update path — options to weigh: better/EV signing or SmartScreen handling; an explicit in-app **"Check for update / Download / Install & Restart" button with visible progress** (electron-updater's manual API: `checkForUpdates`/`downloadUpdate`/`quitAndInstall`) instead of silent auto; a "restart to apply" prompt. Recommend the lowest-friction reliable design.
+
+2. **Credentials don't survive an update.** Daniel **STILL has to copy/paste `service-account-key.json` on every update** — DESPITE v10.0.1's durable-cred work (userData read+write + exeDir fallback + startup self-migrate, `bridge/src/main.ts`). **★ Root-cause why durable-cred isn't holding** — verify against the ACTUAL deployed bridge (currently v10.0.1) + the code: is the self-migrate firing? Is the read order actually hitting `userData/service-account-key.json` (`%APPDATA%\<app>\`)? Does the NSIS installer change the install dir or app name (so userData path or exeDir shifts)? Is Daniel installing in a way that bypasses it (fresh install to a new path)? Then propose a **bulletproof cred model** so an update can NEVER lose the key — e.g. confirm/repair the userData-first path, OR the deferred **CRIT-003 bridge-secret** design (server-minted `BRIDGE_SECRET`/scoped SA, no JSON on disk — Daniel deferred it 2026-05-14 as "not important," but this pain may re-open it), OR fix the broken **setup-code re-credential** flow (app issues 10-char codes, bridge UI accepted ~6 — `bridge/ui/index.html` maxlength was bumped to 10 in v10.0.1; verify it actually works end-to-end now as the clean re-cred path). Cross-ref [[project_bridge_update_ops]], [[project_bridge_release_build]], the deferred CRIT-003.
+
+3. **Version is not visible.** "The bridge should tell you immediately what version it is when you look at it." Today the running version is only really legible remotely (`config/monitor.bridge.version`); the local bridge window/tray doesn't surface it clearly (and there was a hardcoded `2.0.0` version-sentinel bug historically). Propose surfacing the **live running version prominently in the bridge UI** (window title / header / tray tooltip) — sourced from `app.getVersion()` (the real running binary version, NOT a hardcoded constant) — plus ideally an update-status line ("up to date" / "update available: X" / "downloading…").
+
+## Required reading (verify @ origin/master + the deployed v10.0.1 reality)
+- `bridge/src/main.ts` (cred discovery + update wiring: `autoUpdater`/electron-updater, `autoDownload`/`autoInstallOnAppQuit`, `checkForUpdates`), `bridge/ui/index.html` (setup-code UI + where version would show), `bridge/package.json` + the electron-builder config (NSIS settings, signing, `publish`), `bridge/src/config.ts`.
+- `.paul/research/bridge-update-helper-steps.md` (current manual workaround Daniel follows) + the prior FINDINGS `.paul/research/bridge-setup-code-mismatch-FINDINGS.md`.
+- Memory: [[project_bridge_update_ops]], [[project_bridge_release_build]], [[project_bridge_state_freshness_diagnostic]]; the 5/21 outage history in SUPERVISOR.md.
+- The live bridge state (`config/monitor.bridge` via Firebase MCP read-only) for the deployed version + behavior.
+
+## Deliverable — `bridge-update-ux-FINDINGS.md`
+For each of the 3 pains: root cause (with file:line + the deployed evidence), the recommended fix, and the trade-offs of alternatives. End with a **phased, Daniel-gated implementation plan** for the FIX lane (what the next bridge release changes; what's a signing/console step; sequencing AFTER v10.0.2 is confirmed installed) + the open questions only Daniel can answer (e.g. EV cert for SmartScreen? adopt CRIT-003 bridge-secret vs keep JSON-on-disk?).
+
+## Definition of done
+FINDINGS written; every claim verified against bridge source + the deployed v10.0.1; a clear recommended way forward; SHIP-NOTICE → inbox/supervisor.md (Tier 0, research → supervisor). **NO bridge/ changes, NO release.** Sign `from coder-1`.

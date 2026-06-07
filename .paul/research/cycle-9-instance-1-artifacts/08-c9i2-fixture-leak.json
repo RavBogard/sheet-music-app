@@ -1,0 +1,11 @@
+{
+  "probe": "C9I1-008 — sibling instance fixture leak into /perform listing",
+  "url": "https://www.centralreform.live/perform",
+  "method": "Claude in Chrome + javascript_tool querySelectorAll",
+  "observation": {
+    "dom_text_matched": "c9i2-CLONE-emor-weekly-flow-testFri, Jan 4, 20300 songs",
+    "interpretation": "A sibling cowork instance (cycle-9 instance 2, weekly-authoring axis) minted a test setlist that did NOT carry isTest:true OR was authored before the filter applied. It's appearing in the public /perform listing."
+  },
+  "ownership": "cycle-9 instance 2 owns prefix c9i2 — supervisor to triage on consolidated cleanup. Not axis-1 to fix.",
+  "note": "MCP create_setlist tool docs say isTest defaults false; the underlying writer falls back to a name/owner heuristic. The 'c9i2-CLONE-' prefix did NOT trigger the heuristic. May warrant a hardening item on the writer-side heuristic."
+}

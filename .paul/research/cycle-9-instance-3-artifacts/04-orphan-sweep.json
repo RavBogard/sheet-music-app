@@ -1,0 +1,13 @@
+{
+  "tool": "sweep_orphan_test_data",
+  "args": { "dryRun": true },
+  "result": {
+    "ok": true,
+    "dryRun": true,
+    "scanned": { "setlists": 45, "setlistTemplates": 0 },
+    "swept": { "setlists": 0, "setlistTemplates": 0, "tracks": 0 },
+    "orphans": [],
+    "orphansTruncated": false
+  },
+  "interpretation": "Zero orphan setlists/templates at SHA db208948f. The [[project_orphan_baseline]] reference of ~24 was for setlist orphans (test users w/o user record); current is 0 — cleanup is healthy. The 297 status:'orphaned' library_index rows are a DIFFERENT 'orphan' axis (chart files whose Drive originals 404'd) — those are tracked via reconcile_library, see 02-reconcile-library-dryRun.json."
+}

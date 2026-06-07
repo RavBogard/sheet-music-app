@@ -1,0 +1,15 @@
+=== list_templates ===
+event: message
+data: {"result":{"content":[{"type":"text","text":"{\n  \"ok\": true,\n  \"templates\": [\n    {\n      \"templateId\": \"d059ce84-03a3-4d00-8b34-5c836336b098\",\n      \"name\": \"c7i1-Shabbat morning quick variant\",\n      \"templateType\": \"shabbat-morning\",\n      \"trackCount\": 8,\n      \"ownerId\": \"test-c7i1-band_leader-db04aebb\",\n      \"ownerName\": \"[TEST] band_leader\",\n      \"updatedAt\": \"2026-05-19T15:35:08.126Z\",\n      \"version\": 1\n    },\n    {\n      \"templateId\": \"fb3d9b08-dc6c-486e-a882-db4248ece36d\",\n      \"name\": \"c7i1-Randys-Shabbat-Morning-Usual\",\n      \"templateType\": \"shabbat-morning\",\n      \"trackCount\": 8,\n      \"ownerId\": \"test-c7i1-band_leader-db04aebb\",\n      \"ownerName\": \"[TEST] band_leader\",\n      \"updatedAt\": \"2026-05-19T15:31:04.722Z\",\n      \"version\": 1\n    }\n  ],\n  \"total\": 2\n}"}]},"jsonrpc":"2.0","id":70}
+
+
+=== /api/version ===
+{"sha":"59b25c87a4cd52bd0d1a2826398595ce7eec3c80","builtAt":"5/18/2026","version":"7.0.0"}
+=== /api/admin/web-vitals/summary (try) ===
+{"ok":false,"error":{"code":404,"machine_code":"route_not_found","message":"No handler at GET /api/admin/web-vitals/summary."},"path":"/api/admin/web-vitals/summary","method":"GET","hint":"Check the path against your MCP/HTTP route table. /api/* paths must hit a registered handler — see /api/health, /api/version, /api/auth/test-session, /api/admin/library-review/{queue,accept,reject,edit,retry,dismiss}, /api/drive/file/[fileId], /api/cron/{drive-sync,ai-enrich-retry,aggregate-corrections,sync}, /api/mcp/oauth/*. Brand-new API routes need a route.ts under src/app/api/<path>/."}
+HTTP=404
+
+=== /api/admin/webvitals (try alt) ===
+{"ok":false,"error":{"code":404,"machine_code":"route_not_found","message":"No handler at GET /api/admin/webvitals."},"path":"/api/admin/webvitals","method":"GET","hint":"Check the path against your MCP/HTTP route table. /api/* paths must hit a registered handler — see /api/health, /api/version, /api/auth/test-session, /api/admin/library-review/{queue,accept,reject,edit,retry,dismiss}, /api/drive/file/[fileId], /api/cron/{drive-sync,ai-enrich-retry,aggregate-corrections,sync}, /api/mcp/oauth/*. Brand-new API routes need a route.ts under src/app/api/<path>/."}
+HTTP=404
+
