@@ -1,18 +1,33 @@
 # Roadmap: sheet-music-app (CentralReform.live)
 
-> **⚠️ 2026-05-15 AUTHORING-MODEL PIVOT — do NOT auto-pick the "next milestone" from the v70-08 AUDIT carry-forwards below.**
->
-> The active primary workstream is now the MCP server (`feat/mcp-server` → master). Daniel authors via Claude + MCP, not via the in-app UI. The browser app is the band/consumer surface only. Carry-forward items from the v70-08 AUDIT that target the in-app upload UI / library admin are LOW priority unless they ALSO hit the band's iPad consumer flow.
->
-> If a fresh session runs `/paul:discuss-milestone` or `/paul:progress`: the next milestone direction is "MCP-authoring completeness" not "v7.1 v70-08 carry-forwards". The remaining MCP gaps (in order): `generate_gig_packet` (CF2-C) → `publish_setlist` / `notify_band` → `list_library`. See `project_mcp_status.md` auto-memory for current state.
+> **♻️ 2026-06-07 PAUL RE-BASELINE.** PAUL went dormant at the v7.0 close (2026-05-14). The 439 commits since then ran through the bongo `.coord/` parallel-agent system (supervisor/auditor/coder cowork cycles), NOT the PAUL loop. This roadmap now records that work as the **v7.1 Production Hardening** milestone (below). The 2026-05-15 MCP-first authoring pivot still holds: Daniel authors via Claude + MCP; the browser app is the band/consumer surface only.
 
 ## Current Milestone
 
-**Awaiting next milestone.** Run `/paul:discuss-milestone` (or `/paul:milestone`) to define scope.
+**🚧 v7.1 — Production Hardening & MCP Authoring Surface** (ACTIVE). PAUL-tracking label; `package.json` still `7.0.0`.
 
-PENDING-UAT carry-forward: `.paul/UAT-PENDING.md` accumulates v7.0 human-verify checkpoints — Daniel verifies against the deployed build over the upcoming worship cycle (Fri PM + Sat AM). Failures route to in-phase follow-up plans per the v51-04 codified pattern.
+Make the app bulletproof for band onboarding (6× 11" iPads, Perform mode) and complete the MCP authoring surface (Daniel's primary author flow). Executed via the cowork stress-test cycle cadence — autonomous run → multi-axis report → parallel fix wave → repeat — tracked in `.coord/`. **Cycles 1–12 landed; cycle-13 in flight.** Full detail: `.paul/MILESTONES.md` § v7.1 entry.
 
-Prior milestone: **v7.0 — Document-Driven Setlist Creation** ✅ COMPLETE 2026-05-14. Archived snapshot: `.paul/milestones/v7.0-ROADMAP.md`. Detailed accomplishments + decisions: `.paul/MILESTONES.md` § v7.0 entry. Master HEAD `f3f86c41` (2 commits ahead of origin pending `git push origin master`).
+| Phase (cycle) | Focus | Status |
+|---------------|-------|--------|
+| MCP waves 1–6 + CF1/2/3 | MCP server buildout → 108 live tools | ✅ Landed |
+| Cycles 1–5 | Broad bug/feature/security/usability sweeps + envelope hygiene + dedup + a11y | ✅ Landed |
+| Cycles 6–7 | Bond hygiene + data integrity + catalog dual-read close + backfills | ✅ Landed |
+| Cycles 8–10 | iPad-WebKit + usability-first reframe (offline, wake-lock, precache, tap targets) | ✅ Landed |
+| bridge v10.x | studio-bridge releases + admin housekeeping tools | ✅ Landed |
+| Cycle 11 | Musician-shadow / sanctuary-conditions stress (SSR prefetch, err-public relax) | ✅ Landed |
+| Cycle 12 | Saturday-readiness hybrid PROMPT (SSR boundary, shell-cache SW) | ✅ Landed |
+| Cycle 13 | 4-axis parallel cowork-stress: leader-broadcast · MCP-authoring · real-WebKit · bond-hygiene | 🚧 IN FLIGHT (Phase 2 design → Phase 3 Daniel-run → Phase 4 fix wave) |
+
+**State sync at re-baseline:** master tip `467e788ed5` (local) / `ad16769505` (origin, +1) — local pull due. cwd parked on stale `fix/b1-error-envelope-sweep` (321 behind) — switch to master before work.
+
+PENDING-UAT carry-forward: `.paul/UAT-PENDING.md`. Daniel verifies against the deployed build over the worship cycle; failures route to follow-up per the v51-04 pattern.
+
+---
+
+## ✅ v7.0 — Document-Driven Setlist Creation (COMPLETE 2026-05-14)
+
+Archived snapshot: `.paul/milestones/v7.0-ROADMAP.md`. Detail + decisions: `.paul/MILESTONES.md` § v7.0. Closed at master HEAD `f3f86c41`.
 
 Daniel feeds any service-outline document (the May 15th Shir Shabbat .docx is the canary) and the system produces a complete setlist with charts bound, recordings linked, and gaps surfaced via a structured form. Major-version bump justified by NEW data domain (recordings) + NEW production input modality (doc-driven creation) + NEW chart-rendering modality (image charts).
 

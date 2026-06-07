@@ -38,6 +38,61 @@ Completed milestone log for this project.
 
 ---
 
+## 🚧 v7.1 Production Hardening & MCP Authoring Surface
+
+**Status:** ACTIVE (cycles 1–12 landed; cycle-13 in flight). PAUL re-baselined 2026-06-07 to capture this campaign — the work ran outside the PAUL loop via the bongo `.coord/` parallel-agent system (supervisor / auditor / coder roles), so this entry is reconstructed from git history (`f3f86c41..master`) + `.coord/` charters rather than from PLAN/SUMMARY dirs.
+
+**Span:** 2026-05-14 (v7.0 close `65dd9724f8`) → ongoing. **439 commits** on `master` since v7.0.
+**Master tip at re-baseline:** `467e788ed5` (local) / `ad16769505` (origin, +1 ahead — local pull due).
+**App version:** still `7.0.0` in `package.json` — "v7.1" is a PAUL-tracking label for the hardening campaign, not a released semver bump.
+
+### What this milestone is
+
+A sustained production-hardening campaign to make the app "bulletproof and easy" for band onboarding (6× 11" iPads, Perform mode). Two intertwined threads:
+
+1. **MCP authoring surface** (the 2026-05-15 authoring-model pivot — Daniel authors via Claude Desktop + MCP, not the in-app UI). Grew from the v7.0 `setlist-write.ts` module to **108 live MCP tools** via stress-fix waves 1–6, the CF1/CF2/CF3 tool families, and per-cycle additions.
+2. **Cowork stress-test cycles 1–13** — the established cadence (`project_cowork_sweep_cycle`): autonomous cowork run → multi-axis findings report → parallel-agent fix wave → repeat.
+
+### Cycle arc (phases, in PAUL terms)
+
+| Cycle | Theme | Representative work |
+|-------|-------|---------------------|
+| MCP waves 1–6 + CF1/2/3 | MCP server buildout | stress-fix waves, monitor-control tools, chart-ingestion (upload/scrape/save), `update_track`/`bulk_update_tracks`, `download_chart`/`generate_gig_packet`, `import_chart_from_drive`, chunked-upload, `list_library`/`list_setlists`/`publish_setlist` |
+| 1–5 | Broad bug/feature/security/usability sweeps | rich error-envelope hygiene, dedup (Unicode-safe normalizedName), orphan marking, `verify_setlist_charts`, force-gate `force_required` migration, a11y/WCAG AA contrast |
+| 6–7 | Bond hygiene + data integrity | bond audits, divergence detail, catalog dual-read close (key/bpm → `songs.defaults`), driveFileId/library_index backfills (271/281/350/241 rows) |
+| 8–10 | iPad-WebKit + usability-first reframe | offline-IDB self-resolve (TextScoreViewer/AudioViewer blob-url fix), wake-lock, idle precache, ≥44px tap targets, songCount denormalization, delete_chart 409 |
+| bridge v10.x | studio-bridge releases | v10.0.6/10.0.7, tray health color, periodic self-test + update banner, X32 virtual-adapter rejection, admin housekeeping MCP tools |
+| 11 | Musician-shadow / sanctuary-conditions stress | SSR-prefetch public landing, active-track-in-URL persistence, TRANSPOSE state display, err-public gate relaxation |
+| 12 | Saturday-readiness hybrid one-PROMPT | `splitPublicSetlists` SSR boundary, narrow `/perform/*` shell-cache SW, section-bookmark fallback, run-1/run-2 REPORTs |
+| 13 | 4-axis parallel cowork-stress design (**IN FLIGHT**) | leader-broadcast (A3) · MCP-authoring round-trip · real-WebKit re-verify · bond-hygiene + picker UX. Phase 2 design → Phase 3 Daniel-run → Phase 4 fix wave. |
+
+### Cross-cutting hardening
+
+- **PDF serverless:** pdfjs-dist v5 DOMMatrix module-load break fixed — text-only → `unpdf`, positional → hand-rolled DOMMatrix polyfill (`feedback_pdfjs_serverless_engine_choice`).
+- **MusicXML:** capo panel + detected-key header + leader match-button + transpose-jank fixes (scroll-restore, adaptive debounce).
+- **Storage backup:** dormant-tick heartbeat, tickStale/missing-aged alarms, per-row time-budget, Drive error capture.
+- **Ops/observability:** `/api/health` + `/api/version`, App Router `sitemap.xml`, admin-consistency cron `*/15`, `/api/auth/test-session` for autonomous browser audits.
+- **Test/harness:** in-sandbox Playwright stress harness (`cycle-4/harness/`), parallel-load flake-baseline consolidation, `tsc --noEmit` driven to 0 errors, login-bundle per-route regression guards.
+
+### Key decisions (reconstructed — full detail in auto-memory + `.coord/shared/decisions.md`)
+
+- **MCP-first authoring pivot** (2026-05-15) — `user_mcp_is_primary_author_workflow`. Browser app is the band/consumer surface only.
+- **`err-public` invariant** (BINDING 2026-05-28) — never gate data from musicians/performers; mild confusion ≪ service-block.
+- **No-Saturday framing** (BINDING 2026-05-28) — stop scoping triage around service gates; paper fallback is implicit.
+- **Always-proceed / no decision-blocks** (BINDING 2026-05-28) — agents proceed autonomously on in-scope work.
+- **Strict dedup** at 0.85 + `force: true` override; `dryRun` is observability (returns full report, no `force`).
+- **Bongo `.coord/` is the execution substrate** — supervisor/auditor/coder roles; ≤5 concurrent coder ceiling; cowork runs are Daniel-run (coders only author PROMPT.md).
+
+### Open at re-baseline
+
+- **cycle-13 in flight** — 4 design lanes (13a/b/c/d) → Daniel-run cowork → Phase-4 fix wave.
+- **Local master behind origin by 1 commit** — `git checkout master && git pull` before next work.
+- **cwd parked on stale `fix/b1-error-envelope-sweep`** (321 behind master) — switch to master.
+- **`package.json` unbumped at 7.0.0** — decide whether to formalize a semver bump at milestone close.
+- **v7.0 fold-forward backlog** (below) — largely superseded by the iPad/MCP cycle work; re-triage what's still live.
+
+---
+
 ## ✅ v7.0 Document-Driven Setlist Creation
 
 **Completed:** 2026-05-14

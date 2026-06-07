@@ -1,0 +1,25 @@
+{
+  "name": "sheet-music-app",
+  "version": "7.1.0",
+  "milestone": {
+    "name": "v7.1 Production Hardening & MCP Authoring Surface",
+    "version": "7.1.0",
+    "status": "in_progress"
+  },
+  "phase": {
+    "number": 13,
+    "name": "Cycle 13 — 4-axis cowork-stress design",
+    "status": "in_progress"
+  },
+  "loop": {
+    "plan": null,
+    "position": "IDLE"
+  },
+  "timestamps": {
+    "created_at": "2026-06-07T00:00:00Z",
+    "updated_at": "2026-06-07T00:00:00Z"
+  },
+  "satellite": {
+    "groom": true
+  }
+}
