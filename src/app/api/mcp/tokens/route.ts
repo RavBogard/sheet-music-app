@@ -3,6 +3,7 @@ import { z } from "zod"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { createMcpToken, listMcpTokens } from "@/lib/mcp/tokens"
+import { getPrimaryOrgForMinting } from "@/lib/org/membership"
 
 /**
  * MCP token management — a user's own `crl_live_` tokens for connecting Claude
@@ -29,7 +30,11 @@ export const POST = createApiHandler(
         const limited = await checkRateLimit(ctx.req, "api")
         if (limited) return limited
 
-        const { id, rawToken } = await createMcpToken(ctx.auth.uid, ctx.body!.label)
+        // v11-02b: stamp the token with the minting user's tenant (from their
+        // orgIds claim, default crc) so a non-CRC member self-mints a correctly
+        // org-scoped bearer instead of a crc-defaulted one.
+        const orgId = await getPrimaryOrgForMinting(ctx.auth.uid)
+        const { id, rawToken } = await createMcpToken(ctx.auth.uid, ctx.body!.label, orgId)
         return NextResponse.json({ id, token: rawToken })
     },
     { schema: createSchema },

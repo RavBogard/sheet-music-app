@@ -3,6 +3,7 @@ import { initAdmin } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { createMcpToken } from "@/lib/mcp/tokens"
 import { consumeAuthCode, getClient, verifyPkceS256 } from "@/lib/mcp/oauth"
+import { getPrimaryOrgForMinting } from "@/lib/org/membership"
 import { logger } from "@/lib/logger"
 
 /**
@@ -95,7 +96,11 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const client = await getClient(clientId)
     const label = `Claude OAuth — ${client?.clientName ?? clientId}`
-    const { id, rawToken } = await createMcpToken(authCode.uid, label)
+    // v11-02b: stamp the OAuth-minted bearer with the user's tenant (from their
+    // orgIds claim, default crc) so Claude Desktop's login flow yields a
+    // correctly org-scoped token — David lands in brotherslazaroff, not crc.
+    const orgId = await getPrimaryOrgForMinting(authCode.uid)
+    const { id, rawToken } = await createMcpToken(authCode.uid, label, orgId)
     logger.info("[mcp-oauth] access token issued", { clientId, uid: authCode.uid, tokenId: id })
 
     return NextResponse.json(

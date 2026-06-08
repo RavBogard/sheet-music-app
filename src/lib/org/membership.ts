@@ -45,3 +45,21 @@ export async function getUserOrgIds(uid: string): Promise<OrgId[]> {
         return [DEFAULT_ORG_ID]
     }
 }
+
+/**
+ * v11-02b: the org a self-service MCP token should be stamped with for `uid`.
+ * Resolves the minting user's tenant from their `orgIds` custom claim so the
+ * in-app token route + the OAuth token route mint correctly-scoped bearers
+ * (caller org is read FROM the token doc at verify time — v11-02-01 — so the
+ * org MUST be stamped at mint). Defaults crc for claimless CRC users; never
+ * throws (getUserOrgIds is crc-safe).
+ *
+ * MULTI-ORG CAVEAT: today every member belongs to exactly one non-default org
+ * (David → brotherslazaroff). If `orgIds` ever holds multiple, the FIRST is
+ * used for a self-mint — revisit with an explicit org-pick param when multi-org
+ * membership becomes real.
+ */
+export async function getPrimaryOrgForMinting(uid: string): Promise<OrgId> {
+    const orgs = await getUserOrgIds(uid)
+    return orgs[0] ?? DEFAULT_ORG_ID
+}

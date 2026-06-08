@@ -12,9 +12,9 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **v11.0 Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08 via /paul:milestone)
-Phase: **v11-02 MCP org-scoping ✅ COMPLETE (4/4 plans, 2026-06-08)** → next: **v11-03 Domain + branding** (NOT STARTED — ready to plan).
-Plan: none active. Ready to PLAN v11-03 (brotherslazaroff.live host routing + BL branding + synagogue→band vocab trim; **/ui-ux-pro-max BLOCKING** per the autonomy directive's UI-phase gate).
-Status: **v11-02 PHASE COMPLETE + transitioned.** Brothers Lazaroff is the first LIVE second tenant — David's BL bearer + orgIds claim issued, feat(v11-02) deployed to prod, live e2e 12/12 (full tenant isolation, CRC unaffected). Ready to plan v11-03.
+Phase: **v11-02b Org-aware token minting (INSERTED before v11-03)** — v11-02 ✅ COMPLETE. v11-02b closes the self-service-mint-defaults-crc gap Daniel surfaced (so tenant members onboard via plain login, no manual token).
+Plan: **v11-02b-01 created, ready for APPLY** (`.paul/phases/v11-02b-org-aware-minting/v11-02b-01-PLAN.md`) — thread `getPrimaryOrgForMinting(uid)` into the 2 self-service mint routes (`/api/mcp/tokens` + `/api/mcp/oauth/token`); tests + deploy. Daniel decision 2026-06-08: "fix it now (small slice)."
+Status: v11-02b-01 PLAN created (2 tasks, autonomous, prod deploy). Reusing existing `getUserOrgIds` (v11-01-01). After v11-02b: PLAN v11-03 (Domain + branding, /ui-ux-pro-max BLOCKING).
 Last activity: 2026-06-08 — v11-02-04 LOOP COMPLETE + phase transition. Issued David's `brotherslazaroff` bearer (tokenId 93JMXhT1OspFsWDMmb9V) + merged `orgIds` claim (role preserved); shipped feat(v11-02) `c7da31ac2a` + test(v11-02) `779eab0a54` to prod; Vercel READY; live e2e probe 12/12 on www.centralreform.live/api/mcp. PROJECT/ROADMAP evolved (v11-02 ✅).
 
 Parallel track: **v7.1 Production Hardening** remains ACTIVE via the bongo `.coord/` system (cycle-13 in flight) — independent of the PAUL loop, which now tracks v11.0. App is at `10.1.0` (package.json).
@@ -37,7 +37,7 @@ Progress:
 v11.0 runs through the standard PAUL loop:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v11-02 PHASE COMPLETE — next: PLAN v11-03]  (01 ✓✓✓ · 02 ✓✓✓ · 03 ✓✓✓ · 04 ✓✓✓)
+  ✓        ○        ○     [v11-02b-01 PLAN created — next: APPLY]   (v11-02 ✓ all 4 plans · v11-03 after v11-02b)
 ```
 v11-02 plan decomposition (COMPLETE — all 4 vertical slices LOOP COMPLETE):
 - **v11-02-01** ✅ LOOP COMPLETE — caller-org resolution foundation: orgId stamped at all 4 mcpTokens mint sites + verifyBearer returns orgId (default crc) + route plumbs to AuthInfo.extra + `orgFrom(extra)` seam + prod token backfill (117 stamped). Behavior-neutral. SUMMARY at `.paul/phases/v11-02-mcp-org-scoping/v11-02-01-SUMMARY.md`.
