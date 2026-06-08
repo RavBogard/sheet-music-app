@@ -2,6 +2,8 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { hashToken } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * MCP bearer-token verifier.
@@ -30,6 +32,13 @@ export interface VerifiedBearer {
     tokenId: string
     /** Parent token doc id for minted children; null for root + test tokens. */
     parentTokenId: string | null
+    /**
+     * v11-02-01: the tenant this bearer acts in. Resolved from the token doc's
+     * `orgId` field; an absent field defaults to DEFAULT_ORG_ID ("crc") — the
+     * same backward-compat contract v11-01 used for claims, so every existing
+     * (unstamped) prod bearer keeps acting as CRC unchanged.
+     */
+    orgId: OrgId
 }
 
 function unauthorized(): Response {
@@ -129,5 +138,9 @@ export async function verifyBearer(req: Request): Promise<VerifiedBearer | Respo
         .update({ lastUsedAt: FieldValue.serverTimestamp() })
         .catch(() => logger.warn("[mcp] lastUsedAt update failed", { tokenId: doc.id }))
 
-    return { uid: data.uid as string, tokenId: doc.id, parentTokenId }
+    // v11-02-01: resolve the bearer's tenant from the token doc, default crc.
+    const orgId: OrgId =
+        typeof data.orgId === "string" && data.orgId ? data.orgId : DEFAULT_ORG_ID
+
+    return { uid: data.uid as string, tokenId: doc.id, parentTokenId, orgId }
 }

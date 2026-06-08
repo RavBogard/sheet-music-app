@@ -4,6 +4,8 @@ import { getTracksForSetlist } from "@/lib/server-tracks"
 import { isSongType } from "@/lib/setlist-track-count"
 import { logger } from "@/lib/logger"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
+import { rowOrg } from "@/lib/mcp/org-context"
 import {
     forbiddenRoleEnvelope,
     readLastModifiedAt,
@@ -131,6 +133,12 @@ export async function loadEditableSetlist(
     db: DB,
     setlistId: string,
     uid: string,
+    // v11-02-03: optional caller org, default crc so existing tests + internal
+    // callers stay correct; the MCP route passes the explicit caller org. This
+    // single chokepoint org-scopes every by-id setlist write tool that loads
+    // through it (update_setlist / add_track / update_track / swap_chart /
+    // bulk_update / bulk_add / reorder / remove).
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<LoadedSetlist | RichErrorEnvelope> {
     const editor = await assertEditor(db, uid)
     if (!editor.ok) return editor
@@ -142,7 +150,20 @@ export async function loadEditableSetlist(
             { setlistId },
             "Verify the id via list_setlists.",
         )
-    return { ok: true, data: snap.data() as Record<string, unknown> }
+    const data = snap.data() as Record<string, unknown>
+    // v11-02-03: cross-tenant write wall. A caller may not load another org's
+    // setlist for editing — return the SAME setlist_not_found envelope as the
+    // absent-doc branch (mirror v11-02-02 read decision #3: never leak that the
+    // id exists in another tenant). Admin-SDK writes bypass Firestore rules, so
+    // this app-layer check is the only control.
+    if (rowOrg(data.orgId) !== org)
+        return richError(
+            "setlist_not_found",
+            `Setlist '${setlistId}' was not found.`,
+            { setlistId },
+            "Verify the id via list_setlists.",
+        )
+    return { ok: true, data }
 }
 
 export interface AddTrackInput {

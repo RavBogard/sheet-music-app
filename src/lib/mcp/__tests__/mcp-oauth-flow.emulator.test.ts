@@ -140,6 +140,8 @@ describe("MCP OAuth flow (emulator)", () => {
             uid: "rabbi-daniel",
             tokenId: expect.any(String),
             parentTokenId: null,
+            // v11-02-01: createMcpToken stamps orgId; OAuth tokens default crc.
+            orgId: "crc",
         })
     })
 })

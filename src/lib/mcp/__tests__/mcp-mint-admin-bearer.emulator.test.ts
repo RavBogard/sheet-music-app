@@ -46,7 +46,8 @@ describe("MCP mint_admin_bearer (emulator)", () => {
     }
 
     function rootCaller(tokenId: string, uid = ADMIN_UID) {
-        return { uid, tokenId, parentTokenId: null as string | null }
+        // v11-02-01: callers now carry orgId; root admin acts as crc here.
+        return { uid, tokenId, parentTokenId: null as string | null, orgId: "crc" }
     }
 
     beforeAll(() => {
@@ -116,7 +117,7 @@ describe("MCP mint_admin_bearer (emulator)", () => {
     // 3. Role gate — non-admin (musician AND band_leader) → forbidden_role.
     it("non-admin caller is refused with forbidden_role", async () => {
         const musician = await mintAdminBearerCore(
-            { uid: MUSICIAN_UID, tokenId: "tok-musician", parentTokenId: null },
+            { uid: MUSICIAN_UID, tokenId: "tok-musician", parentTokenId: null, orgId: "crc" },
             { purpose: "should not mint" },
         )
         expect(musician.ok).toBe(false)
@@ -126,7 +127,7 @@ describe("MCP mint_admin_bearer (emulator)", () => {
         }
 
         const leader = await mintAdminBearerCore(
-            { uid: LEADER_UID, tokenId: "tok-leader", parentTokenId: null },
+            { uid: LEADER_UID, tokenId: "tok-leader", parentTokenId: null, orgId: "crc" },
             { purpose: "band_leader should not mint either" },
         )
         expect(leader.ok).toBe(false)
@@ -136,7 +137,7 @@ describe("MCP mint_admin_bearer (emulator)", () => {
     // 4. Root gate — a minted child calling mint → non_root_bearer_cannot_mint.
     it("a minted child cannot mint (depth capped at 1)", async () => {
         const result = await mintAdminBearerCore(
-            { uid: ADMIN_UID, tokenId: "child-token", parentTokenId: "some-root" },
+            { uid: ADMIN_UID, tokenId: "child-token", parentTokenId: "some-root", orgId: "crc" },
             { purpose: "child trying to mint a grandchild" },
         )
         expect(result.ok).toBe(false)

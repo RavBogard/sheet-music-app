@@ -5,6 +5,9 @@ import { getChartHealth } from "@/lib/file-fetcher"
 import { logger } from "@/lib/logger"
 import { bareStem } from "@/lib/mcp/title-specificity"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
+import { rowOrg } from "@/lib/mcp/org-context"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import {
     EMPTY_ENRICHMENT_PROJECTION,
     loadEnrichmentProjection,
@@ -343,6 +346,7 @@ function normalizeForSearch(s: string): string {
 export async function searchLibrary(
     _uid: string,
     args: SearchLibraryArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<SongRecord[]> {
     const [all, w02Map] = await Promise.all([getAllSongs(), loadLibraryW02Map()])
     const q = normalizeForSearch(args.query)
@@ -352,6 +356,8 @@ export async function searchLibrary(
     // Filter pass — same predicate as before, then join W-02 fields.
     const matches: SongRecord[] = all
         .filter((s) => {
+            // v11-02-02: tenant isolation — only the caller's org's songs.
+            if (rowOrg(s.orgId) !== org) return false
             if (s.status === "archived") return false
             // Cycle-1 F-019: `duplicate` is the status applied by the
             // dedupe_library_index pass to losing rows of a dupe group.
@@ -515,9 +521,13 @@ export interface GetSongArgs {
 export async function getSong(
     _uid: string,
     args: GetSongArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<SongRecord | null> {
     const song = await getSongById(args.id)
     if (!song) return null
+    // v11-02-02: cross-tenant hard wall — return not-found for another org's
+    // song rather than leak its metadata.
+    if (rowOrg(song.orgId) !== org) return null
     // Cycle-3 AI-001: project enrichment fields off the matching library_index
     // row so single-song reads carry the same AI state the bulk read tools
     // surface. Fail-soft — a library_index miss returns an empty projection
@@ -777,6 +787,7 @@ function attachSiblingCounts(entries: LibraryIndexEntry[]): void {
 export async function listLibrary(
     _uid: string,
     args: ListLibraryArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<ListLibraryResult | RichErrorEnvelope> {
     const limit =
         args.limit && args.limit > 0
@@ -802,9 +813,10 @@ export async function listLibrary(
                 return new Set<string>()
             }),
         ])
-        const all = snap.docs.map((d) =>
-            toLibraryEntry(d.id, d.data(), retryIds.has(d.id)),
-        )
+        const all = snap.docs
+            // v11-02-02: tenant isolation — only the caller's org's library rows.
+            .filter((d) => rowOrg(d.data().orgId) === org)
+            .map((d) => toLibraryEntry(d.id, d.data(), retryIds.has(d.id)))
         attachSiblingCounts(all)
 
         // Cycle-3 DATA-002 — capture each filter pass's filteredOut so the

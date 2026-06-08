@@ -13,6 +13,7 @@ import { generateRawToken, hashToken } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
 import { liftLegacyErrorEnvelope } from "@/lib/mcp/errors"
 import { isTestUid } from "@/lib/test-isolation"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 /**
  * MCP test-identity provisioning.
@@ -255,6 +256,8 @@ export async function provisionTestAccount(
         label: args.label ?? `Test ${args.role}`,
         kind: "test",
         testUid: uid,
+        // v11-02-01: role test accounts act as crc (the tenant they stress today).
+        orgId: DEFAULT_ORG_ID,
         provisionedBy: callerUid,
         ttlExpiresAt: Timestamp.fromMillis(expiresAtMs),
         createdAt: FieldValue.serverTimestamp(),

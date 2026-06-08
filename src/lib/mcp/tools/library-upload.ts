@@ -28,6 +28,9 @@ import {
     rateLimitEnvelope,
 } from "./uploader-roles"
 import { applySongMetadata } from "./song-metadata"
+import { rowOrg, stampOrg } from "@/lib/mcp/org-context"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * MCP chart-ingestion tools — three ways to add a chart to the library, all
@@ -94,6 +97,7 @@ export interface UploadChartArgs {
 export async function uploadChart(
     uid: string,
     args: UploadChartArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
     | { ok: true; fileId: string; title: string; collection: LibraryCollection }
     | RichErrorEnvelope
@@ -178,6 +182,10 @@ export async function uploadChart(
             { tool: "upload_chart" },
             "Inspect the message; if dedup-related, retry with force: true.",
         )
+    // v11-02-03: tag the new chart with the caller's org so the v11-02-02 read
+    // tools isolate it. Confined to the MCP wrapper (processChartUpload stays
+    // default-crc for the HTTP route + Drive-sync cron).
+    await stampOrg(db, result.fileId, org)
     return {
         ok: true,
         fileId: result.fileId,
@@ -446,6 +454,7 @@ function predictedExtensionFor(mimeType: string, fallbackName: string): string {
 export async function importChartFromDrive(
     uid: string,
     args: ImportChartFromDriveArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
     | { ok: true; fileId: string; title: string; collection: LibraryCollection }
     | ImportChartFromDriveDryRunResult
@@ -623,6 +632,9 @@ export async function importChartFromDrive(
             "Inspect the message; if dedup-related, retry with force: true.",
         )
     }
+    // v11-02-03: tag the new chart with the caller's org (MCP-confined; the
+    // dryRun branch above writes nothing, so no stamp there).
+    await stampOrg(db, result.fileId, org)
     return {
         ok: true,
         fileId: result.fileId,
@@ -654,6 +666,7 @@ export interface DeleteChartArgs {
 export async function deleteChart(
     uid: string,
     args: DeleteChartArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<{ ok: true; deletedTracks: number } | RichErrorEnvelope> {
     if (!args.fileId?.trim())
         return richError(
@@ -683,6 +696,18 @@ export async function deleteChart(
             "Verify the fileId via list_library / search_library.",
         )
     const indexData = indexSnap.data() as Record<string, unknown>
+
+    // v11-02-03: cross-tenant write wall — deny deleting another org's chart.
+    // Return chart_not_found (not forbidden) BEFORE the uploader/curated checks
+    // so a cross-tenant caller never learns the chart exists or who uploaded it.
+    if (rowOrg(indexData.orgId) !== org) {
+        return richError(
+            "chart_not_found",
+            `Chart '${args.fileId}' was not found in library_index.`,
+            { fileId: args.fileId },
+            "Verify the fileId via list_library / search_library.",
+        )
+    }
 
     if (roles.role !== "admin" && indexData.uploadedBy !== uid) {
         return forbiddenRoleEnvelope({
@@ -961,6 +986,7 @@ export interface SaveScrapedChartArgs {
 export async function saveScrapedChart(
     uid: string,
     args: SaveScrapedChartArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
     | { ok: true; fileId: string; title: string; collection: LibraryCollection }
     | RichErrorEnvelope
@@ -1017,6 +1043,10 @@ export async function saveScrapedChart(
             "Inspect the message; if dedup-related, retry with force: true.",
         )
 
+    // v11-02-03: tag the new chart with the caller's org BEFORE the metadata
+    // mirror below, so the applySongMetadata call (passed the same org) matches.
+    await stampOrg(db, result.fileId, org)
+
     // Cowork #3 — mirror key/bpm/leadMusician onto BOTH catalog surfaces so a
     // scraped chart's metadata "sticks" everywhere: songs/{id}.defaults (read by
     // get_song / search_library / bond resolution) AND library_index (read by
@@ -1034,7 +1064,7 @@ export async function saveScrapedChart(
                 key: args.key,
                 bpm: args.bpm,
                 leadMusician: args.leadMusician,
-            })
+            }, { org })
         } catch (err) {
             logger.warn(
                 `[save_scraped_chart] metadata mirror failed for ${result.fileId} (non-fatal): ${

@@ -14,6 +14,9 @@ import {
 import { isTestSetlist } from "@/types/models"
 import { isSongType } from "@/lib/setlist-track-count"
 import { parseEventDate as toTimestamp } from "@/lib/parse-event-date"
+import { rowOrg } from "@/lib/mcp/org-context"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import {
     auditBondedRows,
     detectOccasionTokens,
@@ -159,6 +162,7 @@ const COPYABLE_TRACK_FIELDS = [
 export async function cloneSetlist(
     uid: string,
     args: CloneSetlistArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<CloneSetlistResult | RichErrorEnvelope> {
     if (!args.sourceSetlistId?.trim()) {
         return richError(
@@ -197,6 +201,18 @@ export async function cloneSetlist(
     }
     const sourceData = sourceSnap.data() as Record<string, unknown>
 
+    // v11-02-03: cross-tenant wall — a caller may not clone another org's
+    // setlist. Return setlist_not_found (not 403) so we don't leak that the
+    // source id exists in another tenant (mirror v11-02-02 read decision #3).
+    if (rowOrg(sourceData.orgId) !== org) {
+        return richError(
+            "setlist_not_found",
+            `Source setlist '${args.sourceSetlistId}' was not found.`,
+            { sourceSetlistId: args.sourceSetlistId },
+            "Verify the id via list_setlists.",
+        )
+    }
+
     const sourceTracksSnap = await db
         .collection("tracks")
         .where("setlistId", "==", args.sourceSetlistId)
@@ -234,6 +250,11 @@ export async function cloneSetlist(
     const setlistPayload: Record<string, unknown> = {
         id: newSetlistId,
         name: newName,
+        // v11-02-03: stamp the caller's org on the clone. clone_setlist bypasses
+        // createSetlistServerSide (raw batch.set) and previously stamped NO
+        // orgId — a BL clone would default to crc on read, leaking it into CRC's
+        // listings. Parent + every track (below) carry the same caller org.
+        orgId: org,
         date: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
         trackCount: sourceTracks.length,
@@ -325,6 +346,7 @@ export async function cloneSetlist(
         const payload: Record<string, unknown> = {
             id: newTrackId,
             setlistId: newSetlistId,
+            orgId: org, // v11-02-03: same tenant as the cloned parent setlist
             order: i,
             version: 1,
             lastModifiedAt: nowIso,

@@ -128,6 +128,11 @@ import { updateSong } from "./song-metadata"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 export { registerMintAdminBearerTools } from "./mint-admin-bearer"
+// v11-02-01: the caller-org resolution seam. v11-02-02 read tools consume it to
+// scope reads by tenant; re-exported so tools resolve org from the same import
+// site they use for uid. Imported locally too (a bare re-export isn't in-scope).
+import { orgFrom } from "@/lib/mcp/org-context"
+export { orgFrom }
 
 /**
  * Validate that an `eventDate` string is parseable as a date. Previously the
@@ -334,7 +339,8 @@ export function registerReadTools(server: McpServer): void {
                     ),
             },
         },
-        async (args, extra) => jsonResult(await listSetlists(uidFrom(extra), args)),
+        async (args, extra) =>
+            jsonResult(await listSetlists(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -347,7 +353,7 @@ export function registerReadTools(server: McpServer): void {
             },
         },
         async (args, extra) => {
-            const setlist = await getSetlist(uidFrom(extra), args)
+            const setlist = await getSetlist(uidFrom(extra), args, orgFrom(extra))
             if (!setlist)
                 return jsonResult(
                     richError(
@@ -403,7 +409,8 @@ export function registerReadTools(server: McpServer): void {
                     ),
             },
         },
-        async (args, extra) => jsonResult(await searchLibrary(uidFrom(extra), args)),
+        async (args, extra) =>
+            jsonResult(await searchLibrary(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -416,7 +423,7 @@ export function registerReadTools(server: McpServer): void {
             },
         },
         async (args, extra) => {
-            const song = await getSong(uidFrom(extra), args)
+            const song = await getSong(uidFrom(extra), args, orgFrom(extra))
             if (!song)
                 return jsonResult(
                     richError(
@@ -473,7 +480,7 @@ export function registerReadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await listLibrary(uidFrom(extra), args)),
+            jsonResult(await listLibrary(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -545,7 +552,7 @@ export function registerReadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await searchChartText(uidFrom(extra), args)),
+            jsonResult(await searchChartText(uidFrom(extra), args, orgFrom(extra))),
     )
 }
 
@@ -573,7 +580,7 @@ export function registerWriteTools(server: McpServer): void {
                     ),
             },
         },
-        async (args, extra) => jsonResult(await createSetlist(uidFrom(extra), args)),
+        async (args, extra) => jsonResult(await createSetlist(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -606,7 +613,7 @@ export function registerWriteTools(server: McpServer): void {
                     ),
             },
         },
-        async (args, extra) => jsonResult(await cloneSetlist(uidFrom(extra), args)),
+        async (args, extra) => jsonResult(await cloneSetlist(uidFrom(extra), args, orgFrom(extra))),
     )
 
     // ─── Setlist templates (cycle-6 Lane 2) ──────────────────────────────
@@ -795,7 +802,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await cloneSetlistFromTemplate(uidFrom(extra), args)),
+            jsonResult(await cloneSetlistFromTemplate(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -848,7 +855,7 @@ export function registerWriteTools(server: McpServer): void {
                 ),
             },
         },
-        async (args, extra) => jsonResult(await updateSetlist(uidFrom(extra), args)),
+        async (args, extra) => jsonResult(await updateSetlist(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -900,7 +907,7 @@ export function registerWriteTools(server: McpServer): void {
                     ),
             },
         },
-        async (args, extra) => jsonResult(await addTrackToSetlist(uidFrom(extra), args)),
+        async (args, extra) => jsonResult(await addTrackToSetlist(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -978,7 +985,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await bulkAddSetlistTracks(uidFrom(extra), args)),
+            jsonResult(await bulkAddSetlistTracks(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -996,7 +1003,7 @@ export function registerWriteTools(server: McpServer): void {
                 ),
             },
         },
-        async (args, extra) => jsonResult(await reorderSetlist(uidFrom(extra), args)),
+        async (args, extra) => jsonResult(await reorderSetlist(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -1012,7 +1019,7 @@ export function registerWriteTools(server: McpServer): void {
                 ),
             },
         },
-        async (args, extra) => jsonResult(await removeSetlistTrack(uidFrom(extra), args)),
+        async (args, extra) => jsonResult(await removeSetlistTrack(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -1027,7 +1034,7 @@ export function registerWriteTools(server: McpServer): void {
                 ),
             },
         },
-        async (args, extra) => jsonResult(await deleteSetlist(uidFrom(extra), args)),
+        async (args, extra) => jsonResult(await deleteSetlist(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -1040,7 +1047,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await recomputeSetlistTrackCount(uidFrom(extra), args)),
+            jsonResult(await recomputeSetlistTrackCount(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -1063,7 +1070,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await updateSetlistTrack(uidFrom(extra), args)),
+            jsonResult(await updateSetlistTrack(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -1089,7 +1096,7 @@ export function registerWriteTools(server: McpServer): void {
                     ),
             },
         },
-        async (args, extra) => jsonResult(await swapChart(uidFrom(extra), args)),
+        async (args, extra) => jsonResult(await swapChart(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -1119,7 +1126,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await bulkUpdateSetlistTracks(uidFrom(extra), args)),
+            jsonResult(await bulkUpdateSetlistTracks(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2453,7 +2460,7 @@ export function registerChartUploadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await uploadChart(uidFrom(extra), args)),
+            jsonResult(await uploadChart(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2505,7 +2512,7 @@ export function registerChartUploadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await importChartFromDrive(uidFrom(extra), args)),
+            jsonResult(await importChartFromDrive(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2655,7 +2662,7 @@ export function registerChartUploadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await saveScrapedChart(uidFrom(extra), args)),
+            jsonResult(await saveScrapedChart(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2688,7 +2695,7 @@ export function registerChartUploadTools(server: McpServer): void {
                     ),
             },
         },
-        async (args, extra) => jsonResult(await updateSong(uidFrom(extra), args)),
+        async (args, extra) => jsonResult(await updateSong(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2706,7 +2713,7 @@ export function registerChartUploadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await deleteChart(uidFrom(extra), args)),
+            jsonResult(await deleteChart(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

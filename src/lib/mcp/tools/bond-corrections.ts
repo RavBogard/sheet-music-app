@@ -5,6 +5,7 @@ import { assertEditor } from "@/lib/mcp/server-tracks-write"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
 import { searchLibrary } from "./library"
+import { rowOrg } from "@/lib/mcp/org-context"
 import type { SongRecord } from "@/lib/mcp/server-songs"
 
 /**
@@ -211,6 +212,11 @@ export async function reviewFlaggedBonds(
             "Verify the id via list_setlists.",
         )
     const contextKey = readContextKey(setlistSnap.data() as Record<string, unknown>)
+    // v11-02-02: scope the alternatives search to the setlist's tenant so a
+    // BL setlist never surfaces CRC chart alternatives (and vice-versa).
+    const setlistOrg = rowOrg(
+        (setlistSnap.data() as Record<string, unknown>).orgId,
+    )
 
     const flagsSnap = await db
         .collection("bond_flags")
@@ -253,11 +259,15 @@ export async function reviewFlaggedBonds(
         let alternatives: FlaggedBondRow["alternatives"] = []
         if (title) {
             try {
-                const results = (await searchLibrary(uid, {
-                    query: title,
-                    limit: ALTERNATIVES_PER_FLAG + 1,
-                    contextKey,
-                })) as SongRecord[]
+                const results = (await searchLibrary(
+                    uid,
+                    {
+                        query: title,
+                        limit: ALTERNATIVES_PER_FLAG + 1,
+                        contextKey,
+                    },
+                    setlistOrg,
+                )) as SongRecord[]
                 alternatives = results
                     .filter((r) => r.id !== currentSongId)
                     .slice(0, ALTERNATIVES_PER_FLAG)

@@ -2,6 +2,9 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
+import { rowOrg } from "@/lib/mcp/org-context"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import {
     loadUploader,
     isUploadAllowed,
@@ -54,6 +57,13 @@ export interface ApplySongMetadataResult {
     before: { key: string | null; bpm: number | null; leadMusician: string | null }
     /** Resolved values after applying the patch. */
     after: { key: string | null; bpm: number | null; leadMusician: string | null }
+    /**
+     * v11-02-03: true when `opts.org` was supplied and the existing chart
+     * belongs to a DIFFERENT tenant — no write happened. Callers map this to a
+     * not-found envelope (don't leak cross-tenant existence). Absent/false on
+     * same-tenant or org-less calls.
+     */
+    tenantMismatch?: boolean
 }
 
 function pickStr(v: unknown): string | null {
@@ -74,7 +84,11 @@ export async function applySongMetadata(
     db: FirebaseFirestore.Firestore,
     fileId: string,
     patch: SongMetadataPatch,
-    opts: { dryRun?: boolean } = {},
+    // v11-02-03: `org` is the caller's tenant. When supplied, a chart owned by a
+    // different org is treated as not-found (tenantMismatch:true, no write).
+    // Omit (default) for internal/same-caller paths (e.g. save_scraped_chart's
+    // post-create mirror) — behavior is then exactly as before.
+    opts: { dryRun?: boolean; org?: OrgId } = {},
 ): Promise<ApplySongMetadataResult> {
     const [songSnap, indexSnap] = await Promise.all([
         db.collection("songs").doc(fileId).get(),
@@ -104,6 +118,27 @@ export async function applySongMetadata(
             patch.leadMusician !== undefined
                 ? patch.leadMusician
                 : before.leadMusician,
+    }
+
+    // v11-02-03: cross-tenant write wall. When the caller's org is supplied and
+    // the chart exists, deny (no write) if it belongs to another tenant — prefer
+    // the library_index orgId, fall back to songs. Returned as tenantMismatch so
+    // the caller surfaces a not-found (never reveal the chart exists).
+    if (opts.org !== undefined && existed) {
+        const docOrg = indexSnap.exists
+            ? rowOrg(indexData.orgId)
+            : rowOrg(songData.orgId)
+        if (docOrg !== opts.org) {
+            return {
+                existed: true,
+                tenantMismatch: true,
+                fieldsChanged: [],
+                songWritten: false,
+                indexWritten: false,
+                before,
+                after,
+            }
+        }
     }
 
     const willWriteSong = songSnap.exists && fieldsChanged.length > 0
@@ -195,6 +230,7 @@ export interface UpdateSongArgs {
 export async function updateSong(
     uid: string,
     args: UpdateSongArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
     | {
           ok: true
@@ -240,9 +276,12 @@ export async function updateSong(
         db,
         id,
         { key: args.key, bpm: args.bpm },
-        { dryRun: args.dryRun },
+        { dryRun: args.dryRun, org },
     )
-    if (!result.existed)
+    // v11-02-03: tenantMismatch (cross-tenant chart) is surfaced as not-found —
+    // identical envelope to a genuinely-absent chart, so we never leak that the
+    // id exists in another tenant.
+    if (!result.existed || result.tenantMismatch)
         return richError(
             "song_not_found",
             `No library entry or song found for id '${id}'.`,

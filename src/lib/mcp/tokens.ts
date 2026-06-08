@@ -2,6 +2,8 @@ import { getFirestore } from "@/lib/firebase-admin"
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { randomBytes, createHash } from "crypto"
 import { logger } from "@/lib/logger"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * MCP token storage. Per-user bearer tokens that let Claude (Desktop / web /
@@ -35,10 +37,15 @@ export function hashToken(raw: string): string {
 /**
  * Create a new MCP token for `uid`. Returns the doc id and the raw token.
  * The raw token is the caller's only chance to see it — it is not stored.
+ *
+ * v11-02-01: `orgId` stamps the tenant this bearer acts in (default crc —
+ * trailing-optional so the existing /api/mcp/tokens route stays a 2-arg call).
+ * David's brotherslazaroff bearer is minted via a dedicated path in v11-02-04.
  */
 export async function createMcpToken(
     uid: string,
     label: string,
+    orgId: OrgId = DEFAULT_ORG_ID,
 ): Promise<{ id: string; rawToken: string }> {
     const db = getFirestore()
     const rawToken = generateRawToken()
@@ -46,11 +53,12 @@ export async function createMcpToken(
         tokenHash: hashToken(rawToken),
         uid,
         label,
+        orgId,
         createdAt: FieldValue.serverTimestamp(),
         lastUsedAt: null,
         revokedAt: null,
     })
-    logger.info("[mcp] token created", { tokenId: ref.id, uid })
+    logger.info("[mcp] token created", { tokenId: ref.id, uid, orgId })
     return { id: ref.id, rawToken }
 }
 

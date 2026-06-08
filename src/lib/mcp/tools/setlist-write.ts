@@ -31,6 +31,9 @@ import {
 } from "@/lib/mcp/error-envelopes"
 import { getSongById, resolveTrackBondDefaults } from "@/lib/mcp/server-songs"
 import { getChartHealth } from "@/lib/file-fetcher"
+import { rowOrg } from "@/lib/mcp/org-context"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * MCP write tools (Phase 4b). Plain async functions wrapping the shared
@@ -107,6 +110,7 @@ export interface CreateSetlistArgs {
 export async function createSetlist(
     uid: string,
     args: CreateSetlistArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
     | {
           setlistId: string
@@ -134,6 +138,9 @@ export async function createSetlist(
         name: args.name,
         ownerId: uid,
         ownerName,
+        // v11-02-03: stamp the CALLER's org (v11-01-02 added the optional
+        // orgId field, defaulting crc; this passes the bearer's org).
+        orgId: org,
         eventDate: args.eventDate,
         serviceType: args.serviceType as SetlistMetadataPatch["serviceType"],
         rabbi: args.rabbi,
@@ -176,6 +183,7 @@ export interface UpdateSetlistArgs {
 export async function updateSetlist(
     uid: string,
     args: UpdateSetlistArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
     | {
           ok: true
@@ -194,7 +202,7 @@ export async function updateSetlist(
     initAdmin()
     const db = getFirestore()
 
-    const loaded = await loadEditableSetlist(db, args.id, uid)
+    const loaded = await loadEditableSetlist(db, args.id, uid, org)
     if (!loaded.ok) return loaded
 
     const patch: SetlistMetadataPatch = {}
@@ -334,11 +342,12 @@ async function readLibraryMimeType(
 export async function addTrackToSetlist(
     uid: string,
     args: AddTrackArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<AddTrackToSetlistOk | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
 
-    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid, org)
     if (!loaded.ok) return loaded
 
     const type = args.type ?? "song"
@@ -470,13 +479,14 @@ export interface UpdateTrackArgs {
 export async function updateSetlistTrack(
     uid: string,
     args: UpdateTrackArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
     { ok: true; track: Record<string, unknown> } | RichErrorEnvelope | ToolEnvelopeError
 > {
     initAdmin()
     const db = getFirestore()
 
-    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid, org)
     if (!loaded.ok) return loaded
 
     // F-01 (2026-05-16 bugstomp): pre-validate songId before writing. Without
@@ -556,6 +566,7 @@ export interface SwapChartArgs {
 export async function swapChart(
     uid: string,
     args: SwapChartArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
     | { ok: true; track: Record<string, unknown> }
     | RichErrorEnvelope
@@ -587,7 +598,7 @@ export async function swapChart(
     initAdmin()
     const db = getFirestore()
 
-    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid, org)
     if (!loaded.ok) return loaded
 
     // Look up the new song up front so we can build the full patch.
@@ -656,6 +667,7 @@ export interface BulkUpdateTracksArgs {
 export async function bulkUpdateSetlistTracks(
     uid: string,
     args: BulkUpdateTracksArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
     | {
           ok: true
@@ -674,7 +686,7 @@ export async function bulkUpdateSetlistTracks(
     initAdmin()
     const db = getFirestore()
 
-    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid, org)
     if (!loaded.ok) return loaded
 
     const result = await bulkUpdateTracks(
@@ -725,6 +737,7 @@ export interface BulkAddTracksArgs {
 export async function bulkAddSetlistTracks(
     uid: string,
     args: BulkAddTracksArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
     | {
           ok: true
@@ -745,7 +758,7 @@ export async function bulkAddSetlistTracks(
     initAdmin()
     const db = getFirestore()
 
-    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid, org)
     if (!loaded.ok) return loaded
 
     const result = await bulkAddTracks(
@@ -807,11 +820,12 @@ export interface ReorderSetlistArgs {
 export async function reorderSetlist(
     uid: string,
     args: ReorderSetlistArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<{ ok: true } | RichErrorEnvelope | ToolEnvelopeError> {
     initAdmin()
     const db = getFirestore()
 
-    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid, org)
     if (!loaded.ok) return loaded
 
     const result = await reorderTracks(
@@ -842,11 +856,12 @@ export interface RemoveTrackArgs {
 export async function removeSetlistTrack(
     uid: string,
     args: RemoveTrackArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<{ ok: true } | RichErrorEnvelope | ToolEnvelopeError> {
     initAdmin()
     const db = getFirestore()
 
-    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid, org)
     if (!loaded.ok) return loaded
 
     const result = await removeTrack(
@@ -884,6 +899,7 @@ export interface DeleteSetlistArgs {
 export async function deleteSetlist(
     uid: string,
     args: DeleteSetlistArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
     { ok: true; tracksDeleted: number } | RichErrorEnvelope | ToolEnvelopeError
 > {
@@ -914,6 +930,22 @@ export async function deleteSetlist(
             }
         }
         const setlistData = setlistSnap.data() as Record<string, unknown>
+        // v11-02-03: cross-tenant write wall — a caller may not delete another
+        // org's setlist. Return setlist_not_found (not forbidden) BEFORE the
+        // owner check so a cross-tenant caller never learns the doc exists or
+        // who owns it. (delete_setlist doesn't use loadEditableSetlist — it owns
+        // this transaction — so the guard is replicated here.)
+        if (rowOrg(setlistData.orgId) !== org) {
+            return {
+                ok: false,
+                envelope: richError(
+                    "setlist_not_found",
+                    `Setlist '${args.id}' was not found.`,
+                    { setlistId: args.id },
+                    "Verify the id via list_setlists.",
+                ),
+            }
+        }
         const ownerId = setlistData.ownerId
         if (role !== "admin" && ownerId !== uid) {
             return {
@@ -995,6 +1027,7 @@ export interface RecomputeSetlistTrackCountResult {
 export async function recomputeSetlistTrackCount(
     uid: string,
     args: RecomputeSetlistTrackCountArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<RecomputeSetlistTrackCountResult | RichErrorEnvelope> {
     if (!args.setlistId?.trim())
         return richError(
@@ -1019,6 +1052,16 @@ export async function recomputeSetlistTrackCount(
     const setlistRef = db.collection("setlists").doc(args.setlistId.trim())
     const snap = await setlistRef.get()
     if (!snap.exists) {
+        return richError(
+            "setlist_not_found",
+            `Setlist '${args.setlistId}' was not found.`,
+            { setlistId: args.setlistId },
+            "Verify the id via list_setlists.",
+        )
+    }
+    // v11-02-03: cross-tenant write wall — recompute mutates the setlist doc by
+    // id, so deny when it belongs to another org (not-found, no existence leak).
+    if (rowOrg(snap.data()?.orgId) !== org) {
         return richError(
             "setlist_not_found",
             `Setlist '${args.setlistId}' was not found.`,

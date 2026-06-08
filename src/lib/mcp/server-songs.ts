@@ -13,6 +13,10 @@ import type { EnrichmentOutput } from "@/lib/library/ai-enrichment"
 export interface SongRecord {
     id: string
     title: string
+    /** v11-02-02: tenant this song belongs to (from songs/{id}.orgId; backfilled
+     *  to "crc" in v11-01-03). Additive — non-MCP callers ignore it. MCP read
+     *  tools filter on it; absent/empty is treated as the default org ("crc"). */
+    orgId?: string
     /** Raw catalog title — the chart filename incl. extension (e.g.
      *  "Oseh Shalom.pdf"). Cached onto setlist tracks as `fileName`. */
     fileName?: string
@@ -115,6 +119,8 @@ function toSongRecord(id: string, data: Record<string, unknown>): SongRecord {
     }
 
     const rec: SongRecord = { id, title: cleanTitle(data.title) }
+    // v11-02-02: surface the tenant so MCP read tools can filter by it.
+    if (typeof data.orgId === "string" && data.orgId) rec.orgId = data.orgId
     if (typeof data.title === "string" && data.title.trim()) {
         rec.fileName = data.title
     }

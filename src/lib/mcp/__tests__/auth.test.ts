@@ -81,8 +81,39 @@ describe("verifyBearer", () => {
     it("returns the uid and stamps lastUsedAt for a valid token", async () => {
         mockGet.mockResolvedValue(snapshotOf([{ uid: "user-42", revokedAt: null }]))
         const res = await verifyBearer(makeReq("crl_live_validtoken"))
-        expect(res).toEqual({ uid: "user-42", tokenId: "tok1", parentTokenId: null })
+        // v11-02-01: orgId now part of the verified bearer; default crc.
+        expect(res).toEqual({
+            uid: "user-42",
+            tokenId: "tok1",
+            parentTokenId: null,
+            orgId: "crc",
+        })
         expect(mockUpdate).toHaveBeenCalledWith({ lastUsedAt: "SERVER_TS" })
+    })
+
+    // ─── v11-02-01: org resolution from the token doc ───────────────────────
+    it("AC-1: a token doc with no orgId field resolves to crc (backward-compat)", async () => {
+        mockGet.mockResolvedValue(snapshotOf([{ uid: "crc-user", revokedAt: null }]))
+        const res = await verifyBearer(makeReq("crl_live_legacy"))
+        expect((res as { orgId: string }).orgId).toBe("crc")
+    })
+
+    it("AC-2: a token doc stamped orgId resolves to that org", async () => {
+        mockGet.mockResolvedValue(
+            snapshotOf([
+                { uid: "david", revokedAt: null, orgId: "brotherslazaroff" },
+            ]),
+        )
+        const res = await verifyBearer(makeReq("crl_live_bl"))
+        expect((res as { orgId: string }).orgId).toBe("brotherslazaroff")
+    })
+
+    it("AC-1 edge: an empty-string orgId field falls back to crc", async () => {
+        mockGet.mockResolvedValue(
+            snapshotOf([{ uid: "u1", revokedAt: null, orgId: "" }]),
+        )
+        const res = await verifyBearer(makeReq("crl_live_empty"))
+        expect((res as { orgId: string }).orgId).toBe("crc")
     })
 
     it("500 when the Admin SDK is unavailable", async () => {

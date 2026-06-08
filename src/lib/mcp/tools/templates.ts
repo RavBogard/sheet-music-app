@@ -13,6 +13,8 @@ import {
 } from "@/lib/mcp/error-envelopes"
 import { parseEventDate as toTimestamp } from "@/lib/parse-event-date"
 import { isSongType } from "@/lib/setlist-track-count"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import {
     auditBondedRows,
     toBondReviewRows,
@@ -741,6 +743,7 @@ export interface CloneSetlistFromTemplateResult {
 export async function cloneSetlistFromTemplate(
     uid: string,
     args: CloneSetlistFromTemplateArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<CloneSetlistFromTemplateResult | RichErrorEnvelope> {
     if (!args?.templateId?.trim()) {
         return richError(
@@ -794,6 +797,11 @@ export async function cloneSetlistFromTemplate(
     const setlistPayload: Record<string, unknown> = {
         id: newSetlistId,
         name: args.newName.trim(),
+        // v11-02-03: stamp the caller's org on the setlist created from a
+        // template. Like clone_setlist, this raw-batch writer previously stamped
+        // no orgId — a BL template-clone would default to crc and leak into CRC's
+        // listings. (Template READ scoping stays deferred — see plan boundaries.)
+        orgId: org,
         date: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
         trackCount: templateTracks.length,
@@ -854,6 +862,7 @@ export async function cloneSetlistFromTemplate(
         const payload: Record<string, unknown> = {
             id: newTrackId,
             setlistId: newSetlistId,
+            orgId: org, // v11-02-03: same tenant as the created parent setlist
             order: i,
             version: 1,
             lastModifiedAt: nowIso,

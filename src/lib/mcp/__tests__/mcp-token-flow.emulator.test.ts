@@ -49,6 +49,8 @@ describe("MCP token flow (emulator)", () => {
             uid: "user-1",
             tokenId: expect.any(String),
             parentTokenId: null,
+            // v11-02-01: createMcpToken stamps orgId; default crc.
+            orgId: "crc",
         })
     })
 
@@ -77,6 +79,8 @@ describe("MCP token flow (emulator)", () => {
             uid: "user-1",
             tokenId: expect.any(String),
             parentTokenId: null,
+            // v11-02-01: createMcpToken stamps orgId; default crc.
+            orgId: "crc",
         })
 
         expect(await revokeMcpToken("user-1", id)).toBe(true)

@@ -4,6 +4,8 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { generateRawToken, hashToken } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import {
     richError,
     liftLegacyErrorEnvelope,
@@ -95,6 +97,8 @@ export interface MintAdminBearerCaller {
     uid: string
     tokenId: string
     parentTokenId: string | null
+    /** v11-02-01: tenant the minting root bearer acts in; the child inherits it. */
+    orgId: OrgId
 }
 
 export interface MintAdminBearerArgs {
@@ -201,6 +205,8 @@ export async function mintAdminBearerCore(
         tokenHash: hashToken(rawToken),
         uid: caller.uid,
         parentTokenId: caller.tokenId,
+        // v11-02-01: minted children act in the same tenant as their root.
+        orgId: caller.orgId,
         purpose,
         mintedByUid: caller.uid,
         mintedAt: FieldValue.serverTimestamp(),
@@ -418,7 +424,9 @@ function tokenIdentityFrom(extra: AuthExtra): MintAdminBearerCaller {
     }
     const parentTokenId =
         typeof e.parentTokenId === "string" && e.parentTokenId ? e.parentTokenId : null
-    return { uid, tokenId, parentTokenId }
+    const orgId: OrgId =
+        typeof e.orgId === "string" && e.orgId ? e.orgId : DEFAULT_ORG_ID
+    return { uid, tokenId, parentTokenId, orgId }
 }
 
 function jsonResult(data: unknown) {

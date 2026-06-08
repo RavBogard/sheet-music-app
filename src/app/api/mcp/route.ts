@@ -98,11 +98,15 @@ async function verifyToken(
         // tokenId + parentTokenId are forwarded so admin-only tools
         // (mint_admin_bearer) can enforce root-only minting from the
         // caller's token identity. uid is the only field every other
-        // tool reads.
+        // tool reads today; orgId (v11-02-01) is forwarded so read/write
+        // tools can resolve the caller's tenant via orgFrom(extra) —
+        // currently always "crc" (behavior-neutral) until v11-02-02/03
+        // consume it for read filtering + write stamping.
         extra: {
             uid: result.uid,
             tokenId: result.tokenId,
             parentTokenId: result.parentTokenId,
+            orgId: result.orgId,
         },
     }
 }

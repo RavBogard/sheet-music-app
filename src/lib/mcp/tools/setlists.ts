@@ -3,6 +3,9 @@ import { getAllSetlists, MAX_SETLIST_FETCH } from "@/lib/server-setlists"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { serializeSetlist } from "@/lib/server-auth"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
+import { rowOrg } from "@/lib/mcp/org-context"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * MCP read tools for setlists. Plain async functions wrapping the existing
@@ -60,6 +63,9 @@ function isoOf(v: unknown): string | null {
 export async function listSetlists(
     _uid: string,
     args: ListSetlistsArgs,
+    // v11-02-02: org defaults to crc so existing CRC-data tests + internal
+    // callers stay correct; the MCP route always passes the explicit caller org.
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<SetlistSummary[] | RichErrorEnvelope> {
     // G-14: previously bad `from`/`to` silently produced NaN and skipped
     // filtering, which made `list_setlists({from: "not-a-date"})` look like a
@@ -105,6 +111,10 @@ export async function listSetlists(
     const to = args.to ? Date.parse(args.to) : NaN
 
     return all
+        // v11-02-02: tenant isolation — only the caller's org's setlists.
+        // Filtered BEFORE the date window + page slice so paging counts only
+        // in-tenant rows.
+        .filter((s) => rowOrg((s as Record<string, unknown>).orgId) === org)
         .filter((s) => {
             const row = s as Record<string, unknown>
             const iso = isoOf(row.eventDate) ?? isoOf(row.date)
@@ -135,13 +145,22 @@ export interface GetSetlistArgs {
     id: string
 }
 
-export async function getSetlist(_uid: string, args: GetSetlistArgs) {
+export async function getSetlist(
+    _uid: string,
+    args: GetSetlistArgs,
+    org: OrgId = DEFAULT_ORG_ID,
+) {
     initAdmin()
     const db = getFirestore()
     const doc = await db.collection("setlists").doc(args.id).get()
     if (!doc.exists) return null
 
     const data = doc.data() as Record<string, unknown>
+    // v11-02-02: cross-tenant hard wall — a caller may not read another org's
+    // setlist by id. Return null (→ setlist_not_found) rather than 403 so we
+    // never leak the doc's existence across tenants.
+    if (rowOrg(data.orgId) !== org) return null
+
     const setlist = serializeSetlist(doc.id, data)
     const tracks = await getTracksForSetlist(db, args.id, data)
 

@@ -147,6 +147,8 @@ describe("MCP test tokens (emulator)", () => {
             uid: result.uid,
             tokenId: expect.any(String),
             parentTokenId: null,
+            // v11-02-01: provisionTestAccount stamps orgId; test tokens default crc.
+            orgId: "crc",
         })
 
         // Firebase Auth user exists, disabled
@@ -213,6 +215,8 @@ describe("MCP test tokens (emulator)", () => {
             uid: result.uid,
             tokenId: expect.any(String),
             parentTokenId: null,
+            // v11-02-01: provisionTestAccount stamps orgId; test tokens default crc.
+            orgId: "crc",
         })
 
         // Force expiry by writing ttlExpiresAt to the past on the bearer doc.

@@ -4,6 +4,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { initAdmin, getFirestore, getAuth } from "@/lib/firebase-admin"
 import { generateRawToken, hashToken } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 /**
  * Admin-test-session provisioning core (Daniel-ratified 2026-05-27,
@@ -157,6 +158,8 @@ export async function provisionAdminTestSession(
         label: `Admin test session${labelPart}`,
         kind: "admin_test",
         testUid: uid,
+        // v11-02-01: admin-test sessions act as crc (the only tenant they test today).
+        orgId: DEFAULT_ORG_ID,
         [ADMIN_TEST_CLAIM]: true,
         provisionedBy: "admin-test-session-endpoint",
         ttlExpiresAt: Timestamp.fromMillis(expiresAtMs),

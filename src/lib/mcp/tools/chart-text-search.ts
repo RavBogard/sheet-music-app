@@ -5,6 +5,9 @@ import {
     forbiddenRoleEnvelope,
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
+import { rowOrg } from "@/lib/mcp/org-context"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import { loadUploader } from "./uploader-roles"
 
 /**
@@ -96,6 +99,7 @@ export interface SearchChartTextResult {
 export async function searchChartText(
     uid: string,
     args: SearchChartTextArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<SearchChartTextResult | RichErrorEnvelope> {
     const query = (args.query ?? "").trim()
     if (!query) {
@@ -155,6 +159,8 @@ export async function searchChartText(
                     break
                 }
                 const data = doc.data() as Record<string, unknown>
+                // v11-02-02: tenant isolation — skip other orgs' charts.
+                if (rowOrg(data.orgId) !== org) continue
                 const title = resolveTitle(data, doc.id)
                 const candidates: Array<{
                     field: SearchChartTextMatch["field"]
@@ -292,18 +298,20 @@ export async function searchChartText(
                 )
                 const docs = await db.getAll(...refs)
                 const titleByFileId = new Map<string, string>()
+                // v11-02-02: capture each parent chart's tenant so cross-tenant
+                // chord matches are dropped (the chordData doc itself carries no
+                // orgId — the parent library_index row does).
+                const orgByFileId = new Map<string, string>()
                 for (const d of docs) {
                     if (!d.exists) continue
-                    titleByFileId.set(
-                        d.id,
-                        resolveTitle(
-                            d.data() as Record<string, unknown>,
-                            d.id,
-                        ),
-                    )
+                    const pdata = d.data() as Record<string, unknown>
+                    titleByFileId.set(d.id, resolveTitle(pdata, d.id))
+                    orgByFileId.set(d.id, rowOrg(pdata.orgId))
                 }
                 for (const c of candidates) {
                     if (matches.has(c.fileId)) continue
+                    // v11-02-02: tenant isolation — only the caller's org.
+                    if (orgByFileId.get(c.fileId) !== org) continue
                     if (matches.size >= limit) {
                         limitTruncated = true
                         break
