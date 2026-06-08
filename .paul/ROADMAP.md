@@ -13,7 +13,7 @@ Turn the single-tenant CRC app into a multi-tenant platform whose first second t
 |-------|------|-------|--------|-----------|
 | v11-01 | Tenant foundation (orgId + rules + CRC backfill) | 4/4 ✅ | ✅ Complete | 2026-06-08 |
 | v11-02 | MCP org-scoping (org-scoped auth + thread orgId through tools) | 4/4 ✅ | ✅ Complete | 2026-06-08 |
-| v11-02b | Org-aware token minting (self-service tenant onboarding) | TBD | 🚧 Planning | - |
+| v11-02b | Org-aware token minting (self-service tenant onboarding) | 1/1 ✅ | ✅ Complete | 2026-06-08 |
 | v11-03 | brotherslazaroff.live domain + branding + vocab trim | TBD | Not started | - |
 | v11-04 | BL consumer surface (perform/print) + David onboarding + e2e UAT | TBD | Not started | - |
 | v11-05 | Cross-tenant isolation security audit (close gate) | TBD | Not started | - |
@@ -37,6 +37,7 @@ Decomposed into 4 vertical-slice plans (complex phase; autonomous milestone auto
 ### Phase v11-02b: Org-aware token minting (self-service tenant onboarding)
 Focus: close the gap Daniel surfaced 2026-06-08 — the self-service mint paths (`/api/mcp/tokens` + `/api/mcp/oauth/token`) both call `createMcpToken(uid, label)` with no org arg, so they hard-default the token's `orgId` to **crc**. A non-CRC member (e.g. David) who self-mints or runs Claude Desktop's OAuth flow would get a crc-stamped token and land in CRC's tenant. Fix: derive the token's org from the minting user's `orgIds` custom claim (default crc when absent) so tenant members onboard self-service via plain login — identical to how Daniel connects, no manual raw-token handoff. v11-02-04's manual bearer for David keeps working; this removes the workaround for future members.
 **Decision (Daniel 2026-06-08):** Fix it now (small slice) — chosen over deferring to v11-04 or keeping the manual mint. Scope: an `orgFromClaim(uid)` resolver + thread into the 2 self-service mint sites + tests + deploy. (mint_admin_bearer already inherits caller org; test-token mint stays default crc.)
+- **v11-02b-01** ✅ LOOP COMPLETE (2026-06-08) — `getPrimaryOrgForMinting(uid)` (reuses v11-01-01's getUserOrgIds; first-of, default crc) threaded into `/api/mcp/tokens` + `/api/mcp/oauth/token`; admin/test mints untouched. unit 9/9 + emulator 3/3 (claim→resolver→mint→doc→verifyBearer); tsc clean; Vercel prod build READY (feat(v11-02b) `2db15f36d9`); prod-verify getUserOrgIds(DavidUid)===["brotherslazaroff"]. David (+ future members) self-onboard via plain login → BL-scoped token, no raw-token handoff. SUMMARY in phase dir.
 
 ### Phase v11-03: Domain + branding
 Focus: host→tenant resolution on the shared deployment for `brotherslazaroff.live`; Brothers Lazaroff branding (band chrome, not synagogue); genericized vocab (gig / venue / set, not service / sanctuary / rabbi); trim synagogue-specific UI (service type, rabbi field). /ui-ux-pro-max BLOCKING.

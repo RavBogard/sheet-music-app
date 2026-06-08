@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **v11.0 Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08 via /paul:milestone)
-Phase: **v11-02b Org-aware token minting (INSERTED before v11-03)** — v11-02 ✅ COMPLETE. v11-02b closes the self-service-mint-defaults-crc gap Daniel surfaced (so tenant members onboard via plain login, no manual token).
-Plan: **v11-02b-01 created, ready for APPLY** (`.paul/phases/v11-02b-org-aware-minting/v11-02b-01-PLAN.md`) — thread `getPrimaryOrgForMinting(uid)` into the 2 self-service mint routes (`/api/mcp/tokens` + `/api/mcp/oauth/token`); tests + deploy. Daniel decision 2026-06-08: "fix it now (small slice)."
-Status: v11-02b-01 PLAN created (2 tasks, autonomous, prod deploy). Reusing existing `getUserOrgIds` (v11-01-01). After v11-02b: PLAN v11-03 (Domain + branding, /ui-ux-pro-max BLOCKING).
-Last activity: 2026-06-08 — v11-02-04 LOOP COMPLETE + phase transition. Issued David's `brotherslazaroff` bearer (tokenId 93JMXhT1OspFsWDMmb9V) + merged `orgIds` claim (role preserved); shipped feat(v11-02) `c7da31ac2a` + test(v11-02) `779eab0a54` to prod; Vercel READY; live e2e probe 12/12 on www.centralreform.live/api/mcp. PROJECT/ROADMAP evolved (v11-02 ✅).
+Phase: **v11-02b Org-aware token minting ✅ COMPLETE (1/1, 2026-06-08)** → next: **v11-03 Domain + branding** (NOT STARTED — ready to plan). v11-02 ✅ + v11-02b ✅.
+Plan: none active. Ready to PLAN v11-03 (brotherslazaroff.live host→tenant routing + BL branding + synagogue→band vocab trim; **/ui-ux-pro-max BLOCKING**).
+Status: **v11-02b COMPLETE + transitioned.** Self-service MCP minting is now org-aware — tenant members onboard via plain login → correctly org-scoped bearer (no manual handoff); CRC unchanged. Ready to plan v11-03.
+Last activity: 2026-06-08 — v11-02b-01 LOOP COMPLETE + transition. `getPrimaryOrgForMinting(uid)` threaded into both self-service mint routes; unit 9/9 + emulator 3/3; feat(v11-02b) `2db15f36d9` deployed (Vercel READY); prod-verify David→brotherslazaroff. (Earlier today: v11-02 phase complete + David's bearer/claim + live e2e 12/12.)
 
 Parallel track: **v7.1 Production Hardening** remains ACTIVE via the bongo `.coord/` system (cycle-13 in flight) — independent of the PAUL loop, which now tracks v11.0. App is at `10.1.0` (package.json).
 
@@ -30,14 +30,15 @@ Progress:
 - v11-01 phase commit pushed earlier; v11-02 now pushed. **Next phase (v11-03) starts clean from origin/master.**
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer workflow — `git pull` before starting next session (other boxes may push v7.1).
-- **The .paul/ transition bookkeeping (this UNIFY: SUMMARYs, STATE, PROJECT, ROADMAP, paul.json) is committed separately as `docs(v11-02)` — see below.**
+- **v11-02b commit:** `2db15f36d9` feat(v11-02b) — org-aware self-service token minting (deployed, Vercel READY). Phase-close bookkeeping → `docs(v11-02b)`.
+- origin/master in sync; **v11-03 starts clean from origin/master** (`git pull` first — multi-computer).
 
 ## Loop Position
 
 v11.0 runs through the standard PAUL loop:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [v11-02b-01 PLAN created — next: APPLY]   (v11-02 ✓ all 4 plans · v11-03 after v11-02b)
+  ✓        ✓        ✓     [v11-02b COMPLETE — next: PLAN v11-03]   (v11-02 ✓ all 4 · v11-02b ✓)
 ```
 v11-02 plan decomposition (COMPLETE — all 4 vertical slices LOOP COMPLETE):
 - **v11-02-01** ✅ LOOP COMPLETE — caller-org resolution foundation: orgId stamped at all 4 mcpTokens mint sites + verifyBearer returns orgId (default crc) + route plumbs to AuthInfo.extra + `orgFrom(extra)` seam + prod token backfill (117 stamped). Behavior-neutral. SUMMARY at `.paul/phases/v11-02-mcp-org-scoping/v11-02-01-SUMMARY.md`.
@@ -73,16 +74,16 @@ The v7.1 hardening campaign continues separately via the bongo `.coord/` cowork 
 
 ## Session Continuity
 
-Last session: 2026-06-08 — v11-02 PHASE COMPLETE (all 4 plans + transition). v11-02-04 issued David's BL bearer + claim, shipped feat(v11-02) to prod, live e2e 12/12. Brothers Lazaroff is the first live second tenant. v11.0 at 2/5 phases.
-Stopped at: v11-02 closed + transitioned to v11-03. feat(v11-02) `c7da31ac2a` + test `779eab0a54` pushed; origin/master in sync. UNIFY bookkeeping committed as docs(v11-02).
-Next action: /paul:plan v11-03 — brotherslazaroff.live host→tenant routing + Brothers Lazaroff branding (band chrome, not synagogue) + synagogue→band vocab trim (gig/venue/set, not service/sanctuary/rabbi; trim service-type + rabbi UI). **/ui-ux-pro-max BLOCKING** (UI phase). `git pull` first (multi-computer).
-Resume file: .paul/phases/v11-02-mcp-org-scoping/v11-02-04-SUMMARY.md
+Last session: 2026-06-08 — BIG session. v11-02 PHASE COMPLETE (4 plans: caller-org seam + read isolation + write wall + David's live bearer/claim + e2e 12/12) AND v11-02b (org-aware self-service minting) both shipped to prod. Brothers Lazaroff is the first live second tenant; onboarding is now self-serve. v11.0 at 2/5 numbered phases (+v11-02b insert).
+Stopped at: v11-02b closed + transitioned. Commits: feat(v11-02) `c7da31ac2a` · test(v11-02) `779eab0a54` · docs(v11-02) `243a8a98b8` · feat(v11-02b) `2db15f36d9` (+ docs(v11-02b) pending in this UNIFY). origin/master in sync.
+Next action: /paul:plan v11-03 — brotherslazaroff.live host→tenant routing + Brothers Lazaroff branding (band chrome, not synagogue) + synagogue→band vocab trim (gig/venue/set, not service/sanctuary/rabbi; trim service-type + rabbi UI). **/ui-ux-pro-max BLOCKING** (UI phase). `git pull` first. Daniel flagged branding/vocab as his taste calls — consider /paul:discuss-phase v11-03 to pin direction before planning.
+Resume file: .paul/phases/v11-02b-org-aware-minting/v11-02b-01-SUMMARY.md
 Resume context:
-- v11-02 done: MCP tenant wall live + proven (caller-org seam orgFrom/rowOrg/stampOrg in src/lib/mcp/org-context.ts; reads + writes both isolated; David's bearer + claim issued).
-- Canonical prod MCP endpoint: **https://www.centralreform.live/api/mcp** (apex 307-redirects to www; curl -L drops the auth header — hit www directly). Reusable e2e probe at scripts/e2e-bl-tenant-probe.mjs (DAVID_BEARER + CRC_BEARER env) — useful for the v11-05 isolation audit.
+- v11-02 + v11-02b done: MCP tenant wall live + proven (caller-org seam orgFrom/rowOrg/stampOrg in src/lib/mcp/org-context.ts; reads + writes isolated); self-service minting org-aware (getPrimaryOrgForMinting in src/lib/org/membership.ts). David's bearer + claim issued; he can self-onboard.
+- Canonical prod MCP endpoint: **https://www.centralreform.live/api/mcp** (apex 307→www; curl -L drops the auth header — hit www directly). Reusable e2e probe at scripts/e2e-bl-tenant-probe.mjs (DAVID_BEARER + CRC_BEARER env) — for the v11-05 isolation audit.
 - DEFERRED to v11-04 (still cross-tenant): templates READ/LIST scoping, roster/musicians, congregation, service-personnel — read+write.
-- UAT-PENDING: Daniel securely hands David the raw bearer (tokenId 93JMXhT1OspFsWDMmb9V; revoke+re-mint if lost) + David's UX confirmation. Server-side isolation already proven.
-- Prod-script auth on this box: firebase-CLI-token → temp ADC (Blockers/Concerns note). issue-bl-bearer.mjs + supervisor-prod-bearer.mjs both use it.
+- UAT-PENDING: David's UX confirmation (self-onboard via login OR the manual bearer tokenId 93JMXhT1OspFsWDMmb9V). Server-side isolation proven.
+- Local `next build` fails on `/api/cron/aggregate-corrections` (missing CRON_SECRET in .env.local — Vercel-injected) — NOT a code issue; rely on the Vercel build with env. Prod-script auth: firebase-CLI-token → temp ADC.
 
 ---
 *STATE.md — digest, not archive. Target <100 lines.*
