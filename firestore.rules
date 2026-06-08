@@ -26,6 +26,37 @@ service cloud.firestore {
       return isAdmin() || request.auth.token.role == 'band_leader';
     }
 
+    // v11-01-04 multi-tenant org scoping ───────────────────────────────────
+    // The caller's tenant memberships, mirroring getOrgIdsFromClaims
+    // (src/lib/org/membership.ts): a missing/empty `orgIds` claim → ['crc'].
+    // Every existing CRC user carries NO orgIds claim and MUST keep crc access.
+    // NOTE: use `.get('orgIds', [])` — a bare `request.auth.token.orgIds` THROWS
+    // ("Property orgIds is undefined") for the claimless CRC users, which would
+    // deny every CRC write (lock-out). `.get` returns the default instead.
+    function callerOrgs() {
+      return request.auth.token.get('orgIds', []) is list
+          && request.auth.token.get('orgIds', []).size() > 0
+        ? request.auth.token.get('orgIds', [])
+        : ['crc'];
+    }
+    // WRITE-ISOLATION (not write-requirement): a write may only set orgId to a
+    // tenant the caller belongs to. orgId-ABSENT writes are allowed (back-compat
+    // — in-app client write paths don't stamp orgId), so this never locks out
+    // CRC. Admins are exempt.
+    function orgCreateOk() {
+      return !('orgId' in request.resource.data)
+        || request.resource.data.orgId in callerOrgs()
+        || isAdmin();
+    }
+    // orgId is immutable across tenants on update (admins exempt). A write that
+    // omits orgId, or targets a legacy doc with no orgId, is allowed.
+    function orgUpdateOk() {
+      return !('orgId' in request.resource.data)
+        || !('orgId' in resource.data)
+        || request.resource.data.orgId == resource.data.orgId
+        || isAdmin();
+    }
+
     // Musician: Band member — appears in picker, receives emails, performs
     function isMusician() {
       return isBandLeader() || request.auth.token.role == 'musician';
@@ -86,13 +117,16 @@ service cloud.firestore {
       allow read: if true;
 
       // 2. CREATE: Any signed-in user, must set ownerId to self
+      //    v11-01-04: + org-scope (orgId, if set, must be the caller's tenant).
       allow create: if isSignedIn()
-                    && request.resource.data.ownerId == request.auth.uid;
+                    && request.resource.data.ownerId == request.auth.uid
+                    && orgCreateOk();
 
       // 3. UPDATE: Owner, Band Leader, or Admin; ownerId is immutable
-      //    except by admins (v4.4 SEC-008).
+      //    except by admins (v4.4 SEC-008). v11-01-04: + orgId immutable across tenants.
       allow update: if (isOwner(resource) || isBandLeader() || isAdmin())
-                    && (isAdmin() || request.resource.data.ownerId == resource.data.ownerId);
+                    && (isAdmin() || request.resource.data.ownerId == resource.data.ownerId)
+                    && orgUpdateOk();
 
       // 4. DELETE: Owner, Band Leader, or Admin
       allow delete: if isOwner(resource) || isBandLeader() || isAdmin();
@@ -116,8 +150,9 @@ service cloud.firestore {
     // reported "No tracks yet" on incognito perform view.
     match /tracks/{trackId} {
       allow read: if true;
-      allow create: if isSignedIn() && (isBandLeader() || isAdmin());
-      allow update: if isSignedIn() && (isBandLeader() || isAdmin());
+      // v11-01-04: + org-scope write isolation (read stays public for /perform).
+      allow create: if isSignedIn() && (isBandLeader() || isAdmin()) && orgCreateOk();
+      allow update: if isSignedIn() && (isBandLeader() || isAdmin()) && orgUpdateOk();
       allow delete: if isSignedIn() && (isBandLeader() || isAdmin());
     }
 
@@ -129,8 +164,9 @@ service cloud.firestore {
     // reason — sticky-memory writes were also being rejected silently.
     match /songs/{songId} {
       allow read: if isMember();
-      allow create: if isSignedIn() && (isBandLeader() || isAdmin());
-      allow update: if isSignedIn() && (isBandLeader() || isAdmin());
+      // v11-01-04: + org-scope write isolation.
+      allow create: if isSignedIn() && (isBandLeader() || isAdmin()) && orgCreateOk();
+      allow update: if isSignedIn() && (isBandLeader() || isAdmin()) && orgUpdateOk();
       allow delete: if isSignedIn() && (isBandLeader() || isAdmin());
     }
 
@@ -141,9 +177,20 @@ service cloud.firestore {
     // Mirrors the songs/{songId} permission shape.
     match /recordings/{recordingId} {
       allow read: if isMember();
-      allow create: if isSignedIn() && (isBandLeader() || isAdmin());
-      allow update: if isSignedIn() && (isBandLeader() || isAdmin());
+      // v11-01-04: + org-scope write isolation.
+      allow create: if isSignedIn() && (isBandLeader() || isAdmin()) && orgCreateOk();
+      allow update: if isSignedIn() && (isBandLeader() || isAdmin()) && orgUpdateOk();
       allow delete: if isSignedIn() && (isBandLeader() || isAdmin());
+    }
+
+    // ORGS Collection (v11-01 multi-tenant registry)
+    // One doc per tenant/band — { id, name, domain, createdAt }. Seeded by the
+    // v11-01-03 backfill via the Admin SDK. Read is public (non-sensitive
+    // metadata used for host→org routing in v11-03; err-public). Writes are
+    // server-only (Admin SDK bypasses these rules).
+    match /orgs/{orgId} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // TASKS Collection

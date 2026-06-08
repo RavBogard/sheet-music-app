@@ -4,7 +4,58 @@
 
 ## Current Milestone
 
-**🚧 v7.1 — Production Hardening & MCP Authoring Surface** (ACTIVE). PAUL-tracking label; `package.json` still `7.0.0`.
+**🚧 v11.0 — Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08)
+Status: 🚧 In Progress · Phases: 1 of 5 complete (v11-01 ✅ 2026-06-08)
+
+Turn the single-tenant CRC app into a multi-tenant platform whose first second tenant is **Brothers Lazaroff** — give David Lazaroff (CRC band_leader since 2026-05-15) his own org-scoped library + setlists, authored via Claude + MCP, viewed/printed on `brotherslazaroff.live`. Multi-tenant within the SAME app + Firebase (`crcmusiccharts`); CRC data backfilled to a default org, behavior-neutral. Trimmed to David's MCP-author → view/print-packet flow. App is at `10.1.0`; the multi-tenant architectural shift + new production domain justify the v11.0 bump. Decisions locked at `/paul:discuss-milestone` 2026-06-08; full detail in `.paul/MILESTONES.md` § v11.0.
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| v11-01 | Tenant foundation (orgId + rules + CRC backfill) | 4/4 ✅ | ✅ Complete | 2026-06-08 |
+| v11-02 | MCP org-scoping (org-scoped auth + thread orgId through tools) | TBD | Not started | - |
+| v11-03 | brotherslazaroff.live domain + branding + vocab trim | TBD | Not started | - |
+| v11-04 | BL consumer surface (perform/print) + David onboarding + e2e UAT | TBD | Not started | - |
+| v11-05 | Cross-tenant isolation security audit (close gate) | TBD | Not started | - |
+
+### Phase v11-01: Tenant foundation
+Focus: `orgId` on songs / library_index / setlists / tracks / recordings; tenant-resolution helper; backfill all existing CRC data with the default org (behavior-neutral); airtight Firestore rules + `@firebase/rules-unit-testing` emulator coverage. The spine — every later phase depends on it.
+Plans (sequence corrected for safe migration — code/data must precede strict-rules deploy or CRC writes lock out):
+- **v11-01-01** ✅ Org model + tenant registry + membership claims (`src/lib/org/`; optional orgId on types; orgIds claim). 3/3 ACs PASS.
+- **v11-01-02** ✅ Write-path orgId stamping — all 5 server create sites stamp orgId (default crc); tracks inherit parent setlist's org. tsc clean; orgid-stamping emulator suite green.
+- **v11-01-03** ✅ CRC backfill — stamped orgId="crc" on 2105 existing prod docs (setlists/tracks/songs/recordings/library_index) + seeded orgs/{crc,brotherslazaroff}; idempotent dry-run→--apply, verified wouldStamp:0 re-run.
+- **v11-01-04** ✅ Org-scoped Firestore rules (write-isolation, reads unchanged/err-public) + 42 emulator rules tests (caught+fixed a CRC lock-out bug) + deployed `firebase deploy --only firestore:rules` to prod.
+
+### Phase v11-02: MCP org-scoping
+Focus: org-scoped MCP auth/bearer; resolve caller org per tool call; thread `orgId` through the library + setlist read/write MCP tools (~108 live); issue David's Brothers Lazaroff bearer. Largest surface in the milestone.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11-03: Domain + branding
+Focus: host→tenant resolution on the shared deployment for `brotherslazaroff.live`; Brothers Lazaroff branding (band chrome, not synagogue); genericized vocab (gig / venue / set, not service / sanctuary / rabbi); trim synagogue-specific UI (service type, rabbi field). /ui-ux-pro-max BLOCKING.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11-04: BL consumer surface + onboarding
+Focus: perform-view + gig-packet print scoped to the BL org; David's BL org membership + empty library seed; end-to-end UAT (David authors via MCP → views/prints a gig packet on brotherslazaroff.live). /ui-ux-pro-max BLOCKING.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11-05: Cross-tenant isolation security audit (close gate)
+Focus: adversarial check for Firestore rules leakage, MCP org-scope escape, and host-spoof tenant confusion. Blocks milestone close (extends the project's end-of-milestone best-practice-audit constraint).
+Plans: TBD (defined during /paul:plan)
+
+Constraints (locked at /paul:discuss-milestone 2026-06-08):
+1. Multi-tenant, single app, single Firebase (`crcmusiccharts`) — NOT a separate deploy/project.
+2. BL gets a fully separate library + setlists partition; CRC data backfilled to a default org, behavior-neutral (no CRC regression).
+3. Cross-tenant isolation is security-critical — airtight rules, emulator-backed; a mis-tagged backfill row or unscoped MCP tool is a data-leak class bug.
+4. `err-public` holds WITHIN a tenant (never gate musicians from their own band's data); hard wall ACROSS tenants.
+5. Trimmed scope — David's flow only (MCP author + perform-view + gig-packet print); synagogue features dropped/genericized for BL, not ported.
+6. Dedicated domain `brotherslazaroff.live` (already owned) → host-based tenant, same deployment.
+7. End-of-milestone best-practice audit BLOCKS close (Phase v11-05).
+8. /ui-ux-pro-max BLOCKING for UI phases (v11-03, v11-04); emulator coverage for data-layer/rules phases; HFG discipline; Friday/Shabbat deploy cadence respected; MCP-first authoring pivot still holds.
+
+---
+
+## Previously Active — Hardening Campaign (runs via `.coord/`, not the PAUL loop)
+
+**🚧 v7.1 — Production Hardening & MCP Authoring Surface** (ACTIVE via `.coord/`). PAUL-tracking label; `package.json` is at `10.1.0`.
 
 Make the app bulletproof for band onboarding (6× 11" iPads, Perform mode) and complete the MCP authoring surface (Daniel's primary author flow). Executed via the cowork stress-test cycle cadence — autonomous run → multi-axis report → parallel fix wave → repeat — tracked in `.coord/`. **Cycles 1–12 landed; cycle-13 in flight.** Full detail: `.paul/MILESTONES.md` § v7.1 entry.
 

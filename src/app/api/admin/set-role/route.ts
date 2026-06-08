@@ -3,11 +3,16 @@ import { getAuth, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
+import { isKnownOrg } from "@/lib/org/registry"
 import { z } from "zod"
 
 const setRoleSchema = z.object({
     targetUserId: z.string().min(1),
-    newRole: z.enum(['admin', 'band_leader', 'musician', 'member', 'pending'])
+    newRole: z.enum(['admin', 'band_leader', 'musician', 'member', 'pending']),
+    // v11-01: optional org-membership envelope. When present, written into the
+    // user's custom claims alongside `role`. When absent, existing orgIds claim
+    // (if any) is preserved via the existingClaims spread below.
+    orgIds: z.array(z.string().min(1)).optional()
 })
 
 export const POST = createApiHandler(
@@ -15,7 +20,15 @@ export const POST = createApiHandler(
         const limited = await checkRateLimit(ctx.req, 'api')
         if (limited) return limited
 
-        const { targetUserId, newRole } = ctx.body!
+        const { targetUserId, newRole, orgIds } = ctx.body!
+
+        // v11-01: reject unknown org ids before any write (Firestore role + claims).
+        if (orgIds && orgIds.some((o) => !isKnownOrg(o))) {
+            return NextResponse.json(
+                { error: `Unknown orgId in ${JSON.stringify(orgIds)}` },
+                { status: 400 }
+            )
+        }
 
         const fbAuth = getAuth()
         const { FieldValue } = await import('firebase-admin/firestore')
@@ -51,7 +64,11 @@ export const POST = createApiHandler(
         // Update Auth custom claims (external service, after Firestore transaction succeeds)
         let claimsUpdated = true
         try {
-            await fbAuth.setCustomUserClaims(targetUserId, { ...existingClaims, role: newRole })
+            // Spread existingClaims first so we never drop other claims (e.g. a
+            // prior orgIds when the caller omits it). orgIds is written only when supplied.
+            const nextClaims: Record<string, unknown> = { ...existingClaims, role: newRole }
+            if (orgIds) nextClaims.orgIds = orgIds
+            await fbAuth.setCustomUserClaims(targetUserId, nextClaims)
         } catch (e) {
             logger.error("[Set Role] Auth claims update failed after Firestore commit:", e)
             claimsUpdated = false

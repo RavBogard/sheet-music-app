@@ -19,6 +19,7 @@ import {
     staleVersionEnvelope,
     type StaleVersionEnvelope,
 } from "@/lib/mcp/error-envelopes"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { parseEventDate as toTimestamp } from "@/lib/parse-event-date"
 import { isSongType } from "@/lib/setlist-track-count"
 import { isTestSetlist, type Setlist } from "@/types/models"
@@ -56,6 +57,13 @@ export interface CreateSetlistInput {
      * falls back to the heuristic — the default path stays unchanged.
      */
     isTest?: boolean
+    /**
+     * v11-01-02: tenant scope for this setlist AND every seeded track. Optional
+     * — existing callers omit it and get DEFAULT_ORG_ID ("crc"), so CRC
+     * behavior is unchanged. Phase v11-02 wires MCP callers to pass the
+     * bearer's org; this plan only adds the param + default.
+     */
+    orgId?: string
 }
 
 export interface CreateSetlistResult {
@@ -112,8 +120,12 @@ export async function createSetlistServerSide(
     // import (`/api/setlists/import/execute`) so freshly-imported setlists
     // land with the correct landing-card song count, not "0 songs · N items".
     const seedSongCount = input.tracks.filter((t) => isSongType(t.type)).length
+    // v11-01-02: resolve the tenant once — the parent setlist AND every seeded
+    // track carry the SAME orgId so a track can never mismatch its setlist.
+    const orgId = input.orgId ?? DEFAULT_ORG_ID
     const setlistPayload: Record<string, unknown> = {
         id: setlistId,
+        orgId,
         name: input.name,
         date: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -166,6 +178,7 @@ export async function createSetlistServerSide(
         const trackPayload: Record<string, unknown> = {
             id: trackId,
             setlistId,
+            orgId, // v11-01-02: same tenant as the parent setlist
             order: i,
             type: t.type ?? 'song',
             title: t.title,

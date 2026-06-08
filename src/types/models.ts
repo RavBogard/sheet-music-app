@@ -35,6 +35,8 @@ export type TrackType = 'song' | 'header' | 'reading' | 'prayer' | 'transition' 
 
 export interface SetlistTrack {
     id: string
+    /** v11-01: tenant scope (optional until v11-01-03 backfill; rules-enforced in v11-01-02). */
+    orgId?: string
     title: string
     fileId?: string // Linked Google Drive File ID (PDF/MusicXML)
     fileName?: string // Cached File Name
@@ -68,6 +70,10 @@ export interface SetlistMusician {
 
 export interface Setlist {
     id: string
+    /** v11-01: tenant scope. Optional until the v11-01-03 backfill stamps
+     *  existing CRC docs with orgId='crc'; required-ness is enforced by
+     *  Firestore rules (v11-01-02), not the type, to stay backward compatible. */
+    orgId?: string
     name: string
     date: FirestoreDate
     eventDate?: FirestoreDate
@@ -147,6 +153,8 @@ export function isTestSetlist(args: {
  *  standalone (uploaded before a song link is known) or song-linked. */
 export interface Recording {
     id: string
+    /** v11-01: tenant scope (optional until v11-01-03 backfill; rules-enforced in v11-01-02). */
+    orgId?: string
     songId?: string          // optional FK → songs/{id}
     title: string
     fileName?: string        // original uploaded filename

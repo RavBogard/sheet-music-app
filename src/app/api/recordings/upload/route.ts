@@ -6,6 +6,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { uploadRecordingToStorage } from "@/lib/firebase-storage"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 // Max recording size: 25MB (matches the library upload cap).
 const MAX_FILE_SIZE = 25 * 1024 * 1024
@@ -101,6 +102,9 @@ export const POST = createApiHandler(async (ctx) => {
     // FirestoreDate accepts string (same convention as library/upload).
     const recordingDoc = {
         id: recordingId,
+        // v11-01-02: stamp tenant scope. Defaults to DEFAULT_ORG_ID ("crc");
+        // Phase v11-02 wires the caller's org from the bearer/session.
+        orgId: DEFAULT_ORG_ID,
         songId,
         title,
         fileName: file.name,

@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { isSongType } from "@/lib/setlist-track-count"
 import { logger } from "@/lib/logger"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import {
     forbiddenRoleEnvelope,
     readLastModifiedAt,
@@ -58,6 +59,18 @@ const initialVersionFields = (): Record<string, unknown> => ({
  */
 
 type DB = FirebaseFirestore.Firestore
+
+/**
+ * v11-01-02: read a setlist's tenant scope. A track ALWAYS inherits its parent
+ * setlist's orgId — never a caller param — so a track can never mismatch its
+ * setlist's tenant. Falls back to DEFAULT_ORG_ID ("crc") for legacy
+ * (pre-backfill) setlists that carry no orgId field yet.
+ */
+async function readParentOrgId(db: DB, setlistId: string): Promise<string> {
+    const snap = await db.collection("setlists").doc(setlistId).get()
+    const orgId = snap.data()?.orgId
+    return typeof orgId === "string" && orgId ? orgId : DEFAULT_ORG_ID
+}
 
 export interface LoadedSetlist {
     ok: true
@@ -172,6 +185,8 @@ export async function addTrack(
     input: AddTrackInput,
 ): Promise<{ trackId: string; order: number }> {
     const existing = await getTracksForSetlist(db, input.setlistId, {})
+    // v11-01-02: the new track inherits the parent setlist's tenant scope.
+    const orgId = await readParentOrgId(db, input.setlistId)
     const insertAt =
         input.position === undefined ||
         input.position < 0 ||
@@ -192,6 +207,7 @@ export async function addTrack(
     const payload: Record<string, unknown> = {
         id: trackId,
         setlistId: input.setlistId,
+        orgId, // v11-01-02: inherited from the parent setlist
         order: insertAt,
         type: input.type,
         title: sanitizeFreeformString(input.title),
@@ -1481,6 +1497,8 @@ export async function bulkAddTracks(
     const dryRun = options.dryRun ?? false
 
     const existing = await getTracksForSetlist(db, setlistId, {})
+    // v11-01-02: every inserted track inherits the parent setlist's tenant.
+    const orgId = await readParentOrgId(db, setlistId)
     const anchor =
         options.position === undefined ||
         options.position < 0 ||
@@ -1546,6 +1564,7 @@ export async function bulkAddTracks(
         const payload: Record<string, unknown> = {
             id: trackId,
             setlistId,
+            orgId, // v11-01-02: inherited from the parent setlist
             order,
             type,
             title,

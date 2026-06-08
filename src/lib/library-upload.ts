@@ -38,6 +38,7 @@ import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
 // `mcp/tools/library-upload.ts` (which already imports `applySongMetadata`),
 // not this module.
 import { applySongMetadata } from "@/lib/mcp/tools/song-metadata"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 /**
  * Shared library-upload pipeline. The single server-side codepath that:
@@ -127,6 +128,13 @@ export interface ProcessChartUploadInput {
         bpm?: number
         leadMusician?: string
     }
+    /**
+     * v11-01-02: tenant scope stamped on BOTH the library_index/{id} and
+     * songs/{id} docs this upload writes. Optional — existing callers omit it
+     * and get DEFAULT_ORG_ID ("crc"), so CRC behavior is unchanged. Phase
+     * v11-02 wires MCP callers to pass the bearer's org.
+     */
+    orgId?: string
 }
 
 export interface ProcessChartUploadOk {
@@ -591,8 +599,11 @@ export async function processChartUpload(
     const siblingsInCatalog = existingSiblings.length + 1
     stage("specificity:computed", { stem, siblingsInCatalog })
 
+    // v11-01-02: tenant scope for the catalog dual-write (library_index + songs).
+    const orgId = input.orgId ?? DEFAULT_ORG_ID
     const indexEntry: Record<string, unknown> = {
         name: title,
+        orgId,
         nameLower,
         normalizedName,
         stem,
@@ -644,6 +655,7 @@ export async function processChartUpload(
             db.collection("songs").doc(fileId),
             {
                 title,
+                orgId, // v11-01-02: same tenant as the library_index row
                 normalizedTitle: title.toLowerCase(),
                 status: "active",
                 updatedAt: Date.now(),
