@@ -25,8 +25,8 @@ Progress:
 
 ## Git State
 
-- **cwd branch:** `master`, EVEN with `origin/master` (verified live 2026-06-08; the prior "stale fix/b1 / +1 behind" note was itself stale). Pull before starting on another machine.
-- Working tree carries the in-flight v11-01-01 changes (src/lib/org/, models.ts, set-role, .paul/) — not yet committed.
+- **cwd branch:** `master`, EVEN with `origin/master` at `a2ea9713ad` (v11-01 phase commit, pushed 2026-06-08). Pull before starting on another machine.
+- v11-01 work is committed + pushed (the prior "uncommitted in-flight" note is resolved).
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer workflow — always `git pull` before starting.
 
@@ -68,8 +68,13 @@ The v7.1 hardening campaign continues separately via the bongo `.coord/` cowork 
 
 Last session: 2026-06-08 — Completed ENTIRE phase v11-01 in one autonomous session (4 plans): org model + write-path orgId stamping + 2105-doc prod backfill + org-scoped rules deployed. Phase commit + push to prod master done. Multi-tenant foundation is live.
 Stopped at: v11-01 phase complete + committed/pushed. Milestone v11.0 at 1/5 phases.
-Next action: PLAN v11-02 — MCP org-scoping (org-scoped bearer auth; resolve caller org per tool call; thread orgId through the ~108 library+setlist MCP tools; issue David's brotherslazaroff bearer). Largest surface in the milestone.
-Resume file: .paul/ROADMAP.md
+Next action: PLAN v11-02 — MCP org-scoping (org-scoped bearer auth; resolve caller org per tool call; thread orgId through the ~108 library+setlist MCP tools; issue David's brotherslazaroff bearer). Largest surface in the milestone — recommended fresh session.
+Resume file: .paul/HANDOFF-2026-06-08.md
+Resume context:
+- v11-01 (tenant foundation) fully shipped + pushed to prod master a2ea9713ad; milestone 1/5.
+- Rules enforce cross-tenant WRITE isolation (deployed); reads stay public (err-public) — cross-tenant read filtering deferred to v11-03 host routing.
+- Org claim model: missing orgIds claim → ['crc']; v11-02 issues David's explicit brotherslazaroff claim.
+- Prod-script auth on this box: firebase-CLI-token → temp ADC (see Blockers/Concerns note); firebase deploy uses CLI directly.
 
 ---
 *STATE.md — digest, not archive. Target <100 lines.*
