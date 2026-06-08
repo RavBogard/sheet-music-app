@@ -152,3 +152,7 @@ Check (as an editor — admin/band_leader — in a real browser on the deployed 
 - [ ] Add a row (pick song / free-text). Reload → count reflects the new total (no deflation). MCP recompute → `drifted: false`.
 - [ ] Duplicate a row + paste rows → count stays correct. MCP recompute → `drifted: false`.
 - [ ] Bulk-delete several rows → count stays correct. MCP recompute → `drifted: false`.
+
+## v11-02-04 — send David his Brothers Lazaroff bearer (2026-06-08)
+- [ ] **Daniel: securely send David his BL MCP bearer token** (minted 2026-06-08, tokenId `93JMXhT1OspFsWDMmb9V`, raw printed once during the issue-bl-bearer.mjs --apply run; NOT recoverable — if lost, revoke + re-mint). Use a secure channel (not email/chat in the clear). Pair it with `docs/onboarding-brotherslazaroff.md`.
+- [ ] David adds it to Claude Desktop (see onboarding doc) and confirms he can author a BL setlist + sees only BL data. (Tenant isolation already proven server-side e2e on prod — this is the human UX confirmation.)
