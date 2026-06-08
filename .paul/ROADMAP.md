@@ -5,14 +5,14 @@
 ## Current Milestone
 
 **🚧 v11.0 — Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08)
-Status: 🚧 In Progress · Phases: 1 of 5 complete (v11-01 ✅ 2026-06-08)
+Status: 🚧 In Progress · Phases: 2 of 5 complete (v11-01 ✅, v11-02 ✅ 2026-06-08) — Brothers Lazaroff is LIVE (David's MCP tenant proven e2e on prod)
 
 Turn the single-tenant CRC app into a multi-tenant platform whose first second tenant is **Brothers Lazaroff** — give David Lazaroff (CRC band_leader since 2026-05-15) his own org-scoped library + setlists, authored via Claude + MCP, viewed/printed on `brotherslazaroff.live`. Multi-tenant within the SAME app + Firebase (`crcmusiccharts`); CRC data backfilled to a default org, behavior-neutral. Trimmed to David's MCP-author → view/print-packet flow. App is at `10.1.0`; the multi-tenant architectural shift + new production domain justify the v11.0 bump. Decisions locked at `/paul:discuss-milestone` 2026-06-08; full detail in `.paul/MILESTONES.md` § v11.0.
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v11-01 | Tenant foundation (orgId + rules + CRC backfill) | 4/4 ✅ | ✅ Complete | 2026-06-08 |
-| v11-02 | MCP org-scoping (org-scoped auth + thread orgId through tools) | 4 (2/4) | 🚧 In Progress | - |
+| v11-02 | MCP org-scoping (org-scoped auth + thread orgId through tools) | 4/4 ✅ | ✅ Complete | 2026-06-08 |
 | v11-03 | brotherslazaroff.live domain + branding + vocab trim | TBD | Not started | - |
 | v11-04 | BL consumer surface (perform/print) + David onboarding + e2e UAT | TBD | Not started | - |
 | v11-05 | Cross-tenant isolation security audit (close gate) | TBD | Not started | - |

@@ -12,37 +12,38 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **v11.0 Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08 via /paul:milestone)
-Phase: **v11-02 MCP org-scoping (IN PROGRESS — 3/4 plans)** — v11-01 ✅; v11-02-01 ✅; v11-02-02 ✅; v11-02-03 LOOP COMPLETE ✅.
-Plan: **v11-02-04 created, ready for APPLY** (`.paul/phases/v11-02-mcp-org-scoping/v11-02-04-PLAN.md`) — issue David's BL bearer + merged orgIds claim, ship feat(v11-02) to prod, live tenant-isolation e2e. LAST plan in v11-02. Decisions baked: David=existing band_leader account (resolve+confirm uid); executor=this box (Daniel-authorized "you run it"). Phase commit FOLDED INTO APPLY Task 2 (deploy must precede the live e2e), not the UNIFY transition.
-Status: v11-02-04 PLAN created (3 tasks, autonomous, prod deploy + prod credential writes). Ready for APPLY.
-Last activity: 2026-06-08 — v11-02-03 LOOP COMPLETE. loadEditableSetlist org chokepoint (8 setlist tools) + delete/recompute/clone/clone-from-template/update_song/delete_chart guards + create-stamp on create/clone/template + stampOrg on 3 chart-create tools; 18 index write sites threaded orgFrom(extra); new org-scope-writes.emulator.test.ts (8/8). Decision baked: not-found wall (NOT cross_tenant_denied). NOT committed (phase commit at v11-02 transition after v11-02-04).
+Phase: **v11-02 MCP org-scoping ✅ COMPLETE (4/4 plans, 2026-06-08)** → next: **v11-03 Domain + branding** (NOT STARTED — ready to plan).
+Plan: none active. Ready to PLAN v11-03 (brotherslazaroff.live host routing + BL branding + synagogue→band vocab trim; **/ui-ux-pro-max BLOCKING** per the autonomy directive's UI-phase gate).
+Status: **v11-02 PHASE COMPLETE + transitioned.** Brothers Lazaroff is the first LIVE second tenant — David's BL bearer + orgIds claim issued, feat(v11-02) deployed to prod, live e2e 12/12 (full tenant isolation, CRC unaffected). Ready to plan v11-03.
+Last activity: 2026-06-08 — v11-02-04 LOOP COMPLETE + phase transition. Issued David's `brotherslazaroff` bearer (tokenId 93JMXhT1OspFsWDMmb9V) + merged `orgIds` claim (role preserved); shipped feat(v11-02) `c7da31ac2a` + test(v11-02) `779eab0a54` to prod; Vercel READY; live e2e probe 12/12 on www.centralreform.live/api/mcp. PROJECT/ROADMAP evolved (v11-02 ✅).
 
 Parallel track: **v7.1 Production Hardening** remains ACTIVE via the bongo `.coord/` system (cycle-13 in flight) — independent of the PAUL loop, which now tracks v11.0. App is at `10.1.0` (package.json).
 
 Progress:
-- v11.0: [███░░░░░░░] ~33% — 1 of 5 phases done (v11-01 ✅) + v11-02 at 3/4 plans (write wall closed)
+- v11.0: [████░░░░░░] ~45% — 2 of 5 phases done (v11-01 ✅, v11-02 ✅); BL live as first second tenant
 - v7.1 (via .coord/): ~cycles 1–12 landed; cycle-13 in flight
 
 ## Git State
 
-- **cwd branch:** `master`, **AHEAD of `origin/master` by 1** — local `wip(v11-02): paused at 2/4` commit (v11-02-01 + v11-02-02, NOT pushed; `git log -1` for the hash). origin/master tip is the v7.1 `.coord/` line (was `8feb47afff` at session start).
-- **WIP checkpoint, not the phase commit.** At v11-02 transition (after v11-02-04), squash/amend the wip commit into the single `feat(v11-02)` commit, then push `origin master`.
-- v11-01 phase commit already pushed earlier.
+- **cwd branch:** `master`, **IN SYNC with `origin/master`** (pushed 2026-06-08). The WIP commit was collapsed (soft-reset to origin/master) into the single phase commit.
+- **v11-02 phase commit:** `c7da31ac2a` feat(v11-02) — caller-org resolution + read/write tenant isolation (all of v11-02-01/02/03/04 source). Follow-up `779eab0a54` test(v11-02) — e2e probe + onboarding doc. Both pushed to `origin master` → Vercel prod deploy READY.
+- v11-01 phase commit pushed earlier; v11-02 now pushed. **Next phase (v11-03) starts clean from origin/master.**
 - Production branch is `master`; push `origin master` (NOT `master:main`).
-- Multi-computer workflow — `git pull` before starting; this WIP commit is local to this box.
+- Multi-computer workflow — `git pull` before starting next session (other boxes may push v7.1).
+- **The .paul/ transition bookkeeping (this UNIFY: SUMMARYs, STATE, PROJECT, ROADMAP, paul.json) is committed separately as `docs(v11-02)` — see below.**
 
 ## Loop Position
 
 v11.0 runs through the standard PAUL loop:
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [v11-02-04 PLAN created — next: APPLY (last in phase; deploy folds in)]  (01 ✓✓✓ · 02 ✓✓✓ · 03 ✓✓✓)
+  ✓        ✓        ✓     [v11-02 PHASE COMPLETE — next: PLAN v11-03]  (01 ✓✓✓ · 02 ✓✓✓ · 03 ✓✓✓ · 04 ✓✓✓)
 ```
-v11-02 plan decomposition (complex phase — 4 vertical slices, autonomous milestone auto-proceeds plan→plan):
+v11-02 plan decomposition (COMPLETE — all 4 vertical slices LOOP COMPLETE):
 - **v11-02-01** ✅ LOOP COMPLETE — caller-org resolution foundation: orgId stamped at all 4 mcpTokens mint sites + verifyBearer returns orgId (default crc) + route plumbs to AuthInfo.extra + `orgFrom(extra)` seam + prod token backfill (117 stamped). Behavior-neutral. SUMMARY at `.paul/phases/v11-02-mcp-org-scoping/v11-02-01-SUMMARY.md`.
 - **v11-02-02** ✅ LOOP COMPLETE — MCP READS org-scoped (6 tools): list/search filter to callerOrg; get_setlist/get_song → not-found cross-tenant wall; search_chart_text metadata+chords (parent-org drop); SongRecord.orgId surfaced; bond-corrections threaded to setlist org. emulator 7/7; full suite 3272/0. Templates/roster/congregation DEFERRED. SUMMARY in phase dir.
 - **v11-02-03** ✅ LOOP COMPLETE — org-scope MCP WRITES. Cross-tenant deny via loadEditableSetlist chokepoint (8 tools) + delete/recompute/clone/clone-from-template/update_song/delete_chart guards; caller-org create-stamp on create/clone/template + stampOrg on the 3 chart-create tools; not-found wall (no cross_tenant_denied). emulator 8/8; no regression. SUMMARY in phase dir.
-- **v11-02-04** TBD (LAST plan in v11-02) — issue David's brotherslazaroff bearer + orgIds claim + onboarding doc + live e2e verification. At its UNIFY: phase transition → squash WIP into `feat(v11-02)` + push origin master.
+- **v11-02-04** ✅ LOOP COMPLETE — issued David's `brotherslazaroff` bearer (tokenId 93JMXhT1OspFsWDMmb9V, orgId on the token doc) + `orgIds:['brotherslazaroff']` claim by MERGE (role preserved) on his existing band_leader account (uid HTks9a8…); shipped feat(v11-02) `c7da31ac2a` to prod (Vercel READY); live e2e probe 12/12 on www.centralreform.live/api/mcp (BL reads/creates BL-only, cannot touch CRC, CRC unaffected). `scripts/issue-bl-bearer.mjs` + `scripts/e2e-bl-tenant-probe.mjs` + `docs/onboarding-brotherslazaroff.md` shipped. SUMMARY in phase dir.
 The v7.1 hardening campaign continues separately via the bongo `.coord/` cowork cadence (COWORK RUN ──▶ MULTI-AXIS REPORT ──▶ PARALLEL FIX WAVE ──▶ repeat); the two run in parallel.
 
 ## Execution Substrate (bongo .coord/)
@@ -72,15 +73,16 @@ The v7.1 hardening campaign continues separately via the bongo `.coord/` cowork 
 
 ## Session Continuity
 
-Last session: 2026-06-08 — v11-02-03 full PLAN→APPLY→UNIFY (org-scope MCP WRITES). v11-02-01/02 also full loops (caller-org foundation + 117-token backfill; 6 read tools isolated). Phase v11-02 at 3/4 — MCP tenant wall now complete on BOTH read + write paths.
-Stopped at: v11-02-03 LOOP COMPLETE. v11-02-01/02/03 work all uncommitted/WIP-local (v01+02 in WIP commit `4333c15454`; 03 staged in working tree) — squash into feat(v11-02) at phase transition (after v11-02-04).
-Next action: /paul:plan v11-02-04 — issue David's `brotherslazaroff` bearer (mint sites stamp orgId per v11-02-01) + `orgIds:['brotherslazaroff']` claim + onboarding doc + live e2e (David authors a BL setlist via MCP, lists only BL, cannot see/mutate CRC). This is the LAST plan in v11-02; its UNIFY runs the phase transition (squash WIP → `feat(v11-02)`, push origin master).
-Resume file: .paul/phases/v11-02-mcp-org-scoping/v11-02-03-SUMMARY.md
+Last session: 2026-06-08 — v11-02 PHASE COMPLETE (all 4 plans + transition). v11-02-04 issued David's BL bearer + claim, shipped feat(v11-02) to prod, live e2e 12/12. Brothers Lazaroff is the first live second tenant. v11.0 at 2/5 phases.
+Stopped at: v11-02 closed + transitioned to v11-03. feat(v11-02) `c7da31ac2a` + test `779eab0a54` pushed; origin/master in sync. UNIFY bookkeeping committed as docs(v11-02).
+Next action: /paul:plan v11-03 — brotherslazaroff.live host→tenant routing + Brothers Lazaroff branding (band chrome, not synagogue) + synagogue→band vocab trim (gig/venue/set, not service/sanctuary/rabbi; trim service-type + rabbi UI). **/ui-ux-pro-max BLOCKING** (UI phase). `git pull` first (multi-computer).
+Resume file: .paul/phases/v11-02-mcp-org-scoping/v11-02-04-SUMMARY.md
 Resume context:
-- Seam: orgFrom(extra)+rowOrg(orgId)+stampOrg(db,fileId,org) in src/lib/mcp/org-context.ts. Reads (02) + writes (03) both done.
-- Write wall: loadEditableSetlist(db,id,uid,org) is THE setlist-write chokepoint; per-tool guards on delete/recompute/clone/clone-from-template/update_song/delete_chart; creates stamp caller org. Not-found wall (no cross_tenant_denied).
-- DEFERRED to v11-04 (still cross-tenant): templates READ/LIST scoping, roster/musicians, congregation, service-personnel — read+write. (v11-02-03 stamps only the setlist cloned OUT of a template.)
-- Prod-script auth on this box: firebase-CLI-token → temp ADC (Blockers/Concerns note). v11-02-04 needs this for the bearer-mint/claim prod write.
+- v11-02 done: MCP tenant wall live + proven (caller-org seam orgFrom/rowOrg/stampOrg in src/lib/mcp/org-context.ts; reads + writes both isolated; David's bearer + claim issued).
+- Canonical prod MCP endpoint: **https://www.centralreform.live/api/mcp** (apex 307-redirects to www; curl -L drops the auth header — hit www directly). Reusable e2e probe at scripts/e2e-bl-tenant-probe.mjs (DAVID_BEARER + CRC_BEARER env) — useful for the v11-05 isolation audit.
+- DEFERRED to v11-04 (still cross-tenant): templates READ/LIST scoping, roster/musicians, congregation, service-personnel — read+write.
+- UAT-PENDING: Daniel securely hands David the raw bearer (tokenId 93JMXhT1OspFsWDMmb9V; revoke+re-mint if lost) + David's UX confirmation. Server-side isolation already proven.
+- Prod-script auth on this box: firebase-CLI-token → temp ADC (Blockers/Concerns note). issue-bl-bearer.mjs + supervisor-prod-bearer.mjs both use it.
 
 ---
 *STATE.md — digest, not archive. Target <100 lines.*
