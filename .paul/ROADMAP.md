@@ -4,11 +4,48 @@
 
 ## Current Milestone
 
+**🚧 v11.1 — Brothers Lazaroff Post-Launch Fixes** (In Progress · opened 2026-06-09)
+Status: 🚧 In Progress · Phases: 0 of 4 complete
+Focus: Make the second tenant's *lived experience* correct (branding, vocab, library clutter) and give multi-org leaders a real authoring path. Four evidence-backed live-tenant issues surfaced after the brotherslazaroff.live launch — v11.0 proved server-side + MCP isolation (probe 19/19); v11.1 fixes the consumer-facing seams + the multi-org authoring workflow the isolation audit didn't cover.
+**Tenancy model (locked `/paul:discuss-milestone` 2026-06-09):** consumers (musicians + members) are NOT per-org-gated — anyone can use either site, and the **landing-page host** determines the experience (branding/setlists/library); band leaders have explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle, governing authoring. (v7.1 Production Hardening continues separately via the bongo `.coord/` cowork cadence — independent of the PAUL loop.)
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| v11.1-01 | Org-aware authed branding (nav wordmark + logo) [P0] | TBD | Not started | - |
+| v11.1-02 | Multi-org membership toggle + MCP authoring [P0] | 02-01 planned (authoring) · 02-02 TBD (admin UI) | 🚧 Planning | - |
+| v11.1-03 | Library generic-tab visibility (host-filter + Shared + All-sites) [P1] | TBD | Not started | - |
+| v11.1-04 | broslaz liturgical vocab sweep [P1] | TBD | Not started | - |
+
+### Phase v11.1-01: Org-aware authed branding [P0]
+Focus: On brotherslazaroff.live the authenticated top-nav still shows the "CRC Music" wordmark + CRC `/logo.jpg` despite the correct navy theme (public `/perform` wordmark was fixed in v11-04-02; the authed nav was never made org-aware). Make `src/components/nav/DesktopHeader.tsx` (`:106-107`) + `MobileHeader.tsx` (`:34-41`) resolve wordmark + logo from the host org (getOrgBranding / useOrg / congregation — the `config/congregation__brotherslazaroff` doc is already correct: name "Brothers Lazaroff", `logoUrl:""`). Decide the per-org logo asset story (broslaz `logoUrl` empty → text wordmark or a broslaz asset). CRC byte-identical. /ui-ux-pro-max BLOCKING.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.1-02: Multi-org membership + authoring [P0 — critical path]
+Focus: Unblock multi-org authoring. (A) NEW admin UI toggle to set a band leader's org membership — CRC / broslaz / both — writing the `orgIds` claim (replaces hand-run scripts like `fix-david-orgids-claim`). (B) Resolve which org a "both" leader's **hostless** MCP-authored setlist lands in (the live bug: Daniel's setlist landed `orgId:'crc'` because `getPrimaryOrgForMinting`→`orgIds[0]` + MCP forbids a caller org selector per v11-06-02). Options at plan time: (a) org-switcher minting a per-org bearer; (b) MCP accepts an org selector **validated strictly against the caller's own `orgIds`** (scoped exception — single-org callers keep the v11-06-02 lock, no cross-`orgIds` selection); (c) interim second broslaz MCP connection. Preserve the v11-06-02 isolation invariant.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.1-03: Library generic-tab visibility [P1]
+Focus: The in-app generic Library tab shows BOTH tenants' charts — the pool is shared and the HTTP/SSR read paths were never org-scoped (only MCP was). **Display-only de-clutter, NOT a security wall** (only admins/leaders add/edit; err-public holds). Host-filter the unscoped reads — `src/app/api/library/list/route.ts`, `getServerLibrary()` + `getServerLibraryLean()` (`src/lib/server-library.ts`), recordings subscribe (`src/lib/recordings/recordings-client.ts`). Generic tab shows `orgId === host org` OR a NEW **Shared** flag (admin-set; legacy/unstamped default crc → drop off broslaz). Admin-only **"All sites" toggle** reveals the full pool for authoring. broslaz gets org-neutral tab labels ("Charts / Uploads / Audio"); CRC byte-identical ("CRC Charts / Shireinu"). /ui-ux-pro-max BLOCKING.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.1-04: broslaz liturgical vocab sweep [P1]
+Focus: broslaz still shows synagogue vocab — "Plan Service" / "Plan Show", "Upcoming Services" (screenshot-confirmed); the v11-05-05 vocab pass missed these labels. Extend the org vocab layer (`label(org,key)` / vocab.ts) to cover the remaining liturgical strings for broslaz; audit for other remnants (dashboard section headers, creation flow). CRC byte-identical. May fold into v11.1-03's UI pass if planning prefers.
+Plans: TBD (defined during /paul:plan)
+
+Constraints (locked at /paul:discuss-milestone 2026-06-09):
+1. **No local dev** — push to prod/Vercel; but broslaz IS a live tenant, so consumer-visible regressions matter.
+2. **CRC byte-identical** across every phase (assert vocab/branding CRC bases unchanged — the v11-05 pattern).
+3. **Quality floor (non-negotiable):** tsc clean + tests green + AC proof every task; `SKIP_ENV_VALIDATION=1 npx next build` before declaring any phase touching shared lib/client modules deployable (bundle-boundary lesson — tsc+vitest miss client/server import breaks); emulator-backed rules tests where rules change; /ui-ux-pro-max BLOCKING on UI phases (01, 03, 04).
+4. **err-public invariant** — library filtering is display-only; never gate chart access/data from musicians/leaders or via direct link.
+5. **MCP isolation invariant (v11-06-02)** — single-org callers cannot pass an org selector; the multi-org authoring exception validates strictly against the caller's own `orgIds`.
+6. **Autonomy posture (carried forward from v11.0):** run autonomously — waive PAUL approval/continuation gates, auto-commit + push per phase to prod `master`, bake decisions into PLANs, deploys/backfills as AUTO tasks (single-owner = executor). STOP only for product ambiguity, an unresolvable quality-gate failure, or a discovered cross-tenant leak / CRC lock-out.
+
+---
+
+## Previous Milestone (archived — full record in `.paul/MILESTONES.md` § v11.0)
+
 **✅ v11.0 — Brothers Lazaroff Multi-Tenant** (COMPLETE 2026-06-09)
 Status: ✅ Complete · Phases: 6 of 6 (v11-01..06 ✅) — Brothers Lazaroff is LIVE + FULLY tenant-isolated (reads+writes+all v11-05 collections: templates/roster/assignments/congregation + in-app create orgId-stamp + band vocab); brotherslazaroff.live own branding/metadata + working sign-in. **v11-06 close-gate audit: GO** — rules-layer + MCP-escape + host-spoof all closed; live prod probe BL-isolated + CRC-intact; AUDIT.md sign-off at `.paul/phases/v11-06-isolation-audit/AUDIT.md`. Archived: `.paul/milestones/v11.0-ROADMAP.md` + MILESTONES.md § v11.0.
-
-## Next Milestone
-Run `/paul:discuss-milestone` or `/paul:milestone` to define. (v7.1 Production Hardening continues separately via the bongo `.coord/` cowork cadence — independent of the PAUL loop.)
 
 Turn the single-tenant CRC app into a multi-tenant platform whose first second tenant is **Brothers Lazaroff** — give David Lazaroff (CRC band_leader since 2026-05-15) his own org-scoped library + setlists, authored via Claude + MCP, viewed/printed on `brotherslazaroff.live`. Multi-tenant within the SAME app + Firebase (`crcmusiccharts`); CRC data backfilled to a default org, behavior-neutral. Trimmed to David's MCP-author → view/print-packet flow. App is at `10.1.0`; the multi-tenant architectural shift + new production domain justify the v11.0 bump. Decisions locked at `/paul:discuss-milestone` 2026-06-08; full detail in `.paul/MILESTONES.md` § v11.0.
 

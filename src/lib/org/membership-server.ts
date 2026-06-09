@@ -31,19 +31,34 @@ export async function getUserOrgIds(uid: string): Promise<OrgId[]> {
 }
 
 /**
- * v11-02b: the org a self-service MCP token should be stamped with for `uid`.
- * Resolves the minting user's tenant from their `orgIds` custom claim so the
- * in-app token route + the OAuth token route mint correctly-scoped bearers
- * (caller org is read FROM the token doc at verify time — v11-02-01 — so the
- * org MUST be stamped at mint). Defaults crc for claimless CRC users; never
- * throws (getUserOrgIds is crc-safe).
+ * v11.1-02-01: the org a leader's MCP bearer should be stamped with, given the
+ * tenant DOMAIN they connected Claude Desktop through. `requestedOrg` is the
+ * proxy-resolved `x-org-id` (the host's org); the bearer is pinned to it ONLY
+ * when the caller is actually a member (validated against their `orgIds` claim),
+ * otherwise it falls back to their primary org (`orgs[0]`, default crc).
  *
- * MULTI-ORG CAVEAT: today every member belongs to exactly one non-default org
- * (David → brotherslazaroff). If `orgIds` ever holds multiple, the FIRST is
- * used for a self-mint — revisit with an explicit org-pick param when multi-org
- * membership becomes real.
+ * This is the multi-org authoring seam (Daniel decision 2026-06-09): authoring
+ * org = connection domain. It pins org at MINT time from the host, NOT from any
+ * tool/request-body arg, so the v11-06-02 no-arg-injection invariant is fully
+ * preserved. A leader can NEVER mint for an org outside their membership — a
+ * crc-only user connecting on the broslaz host still mints crc (no escalation).
+ * Never throws (getUserOrgIds is crc-safe).
+ */
+export async function resolveMintOrg(
+    uid: string,
+    requestedOrg: OrgId | null | undefined,
+): Promise<OrgId> {
+    const orgs = await getUserOrgIds(uid)
+    if (requestedOrg && orgs.includes(requestedOrg)) return requestedOrg
+    return orgs[0] ?? DEFAULT_ORG_ID
+}
+
+/**
+ * v11-02b: the org a self-service MCP token defaults to for `uid` when no host
+ * org is in play — the minting user's PRIMARY org from their `orgIds` claim
+ * (first element; default crc). Equivalent to `resolveMintOrg(uid, null)`. Kept
+ * as a named helper for callers that have no host context.
  */
 export async function getPrimaryOrgForMinting(uid: string): Promise<OrgId> {
-    const orgs = await getUserOrgIds(uid)
-    return orgs[0] ?? DEFAULT_ORG_ID
+    return resolveMintOrg(uid, null)
 }

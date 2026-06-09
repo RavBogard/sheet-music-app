@@ -3,7 +3,8 @@ import { initAdmin } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { createMcpToken } from "@/lib/mcp/tokens"
 import { consumeAuthCode, getClient, verifyPkceS256 } from "@/lib/mcp/oauth"
-import { getPrimaryOrgForMinting } from "@/lib/org/membership-server"
+import { resolveMintOrg } from "@/lib/org/membership-server"
+import { coerceOrgId } from "@/lib/org/registry"
 import { logger } from "@/lib/logger"
 
 /**
@@ -96,10 +97,15 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const client = await getClient(clientId)
     const label = `Claude OAuth — ${client?.clientName ?? clientId}`
-    // v11-02b: stamp the OAuth-minted bearer with the user's tenant (from their
-    // orgIds claim, default crc) so Claude Desktop's login flow yields a
-    // correctly org-scoped token — David lands in brotherslazaroff, not crc.
-    const orgId = await getPrimaryOrgForMinting(authCode.uid)
+    // v11.1-02-01: stamp the OAuth-minted bearer with the tenant the user
+    // CONNECTED THROUGH — the Edge-resolved `x-org-id` for this request's host
+    // (brotherslazaroff.live → brotherslazaroff; www.centralreform.live → crc),
+    // validated against the user's orgIds membership. A multi-org leader gets a
+    // broslaz bearer by connecting Claude Desktop to the broslaz MCP URL; a
+    // user not in the host's org falls back to their primary org (no escalation).
+    // Host org, not a request arg → v11-06-02 no-arg-injection invariant intact.
+    const hostOrg = coerceOrgId(req.headers.get("x-org-id"))
+    const orgId = await resolveMintOrg(authCode.uid, hostOrg)
     const { id, rawToken } = await createMcpToken(authCode.uid, label, orgId)
     logger.info("[mcp-oauth] access token issued", { clientId, uid: authCode.uid, tokenId: id })
 

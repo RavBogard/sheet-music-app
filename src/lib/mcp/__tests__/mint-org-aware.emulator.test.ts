@@ -5,7 +5,7 @@ import { getAuth } from "firebase-admin/auth"
 
 import { createMcpToken } from "../tokens"
 import { verifyBearer } from "../auth"
-import { getPrimaryOrgForMinting } from "@/lib/org/membership-server"
+import { getPrimaryOrgForMinting, resolveMintOrg } from "@/lib/org/membership-server"
 
 /**
  * v11-02b — org-aware self-service token minting, end-to-end against the Auth +
@@ -24,6 +24,9 @@ describe("MCP org-aware minting (emulator)", () => {
     let app: App
     const BL_UID = "david-bl"
     const CRC_UID = "rabbi-crc"
+    // v11.1-02-01: a multi-org leader (Daniel) belongs to BOTH tenants. orgIds
+    // order = primary first (crc). The host he connects through decides the org.
+    const MULTI_UID = "daniel-multi"
 
     function bearerReq(token: string): Request {
         return new Request("http://localhost/api/mcp", {
@@ -46,12 +49,19 @@ describe("MCP org-aware minting (emulator)", () => {
         })
         await auth.createUser({ uid: CRC_UID })
         await auth.setCustomUserClaims(CRC_UID, { role: "band_leader" })
+        // Multi-org leader: member of crc (primary) AND brotherslazaroff.
+        await auth.createUser({ uid: MULTI_UID })
+        await auth.setCustomUserClaims(MULTI_UID, {
+            role: "band_leader",
+            orgIds: ["crc", "brotherslazaroff"],
+        })
     })
 
     afterAll(async () => {
         const auth = getAuth(app)
         await auth.deleteUser(BL_UID).catch(() => {})
         await auth.deleteUser(CRC_UID).catch(() => {})
+        await auth.deleteUser(MULTI_UID).catch(() => {})
         await deleteApp(app)
     })
 
@@ -89,5 +99,51 @@ describe("MCP org-aware minting (emulator)", () => {
 
         const verified = await verifyBearer(bearerReq(rawToken))
         expect(verified).toMatchObject({ uid: CRC_UID, orgId: "crc" })
+    })
+
+    // ── v11.1-02-01: host-derived authoring org (authoring org = connection domain) ──
+
+    it("v11.1-02-01 AC-1: multi-org leader on the broslaz host mints brotherslazaroff", async () => {
+        // requestedOrg = the proxy-resolved x-org-id for brotherslazaroff.live
+        expect(await resolveMintOrg(MULTI_UID, "brotherslazaroff")).toBe("brotherslazaroff")
+    })
+
+    it("v11.1-02-01 AC-3: multi-org leader on the crc host (or no host) mints crc", async () => {
+        expect(await resolveMintOrg(MULTI_UID, "crc")).toBe("crc")
+        // coerceOrgId(null/unknown) → crc; a member of crc → crc (primary)
+        expect(await resolveMintOrg(MULTI_UID, null)).toBe("crc")
+    })
+
+    it("v11.1-02-01 AC-2: a crc-only user on the broslaz host CANNOT mint broslaz (no escalation)", async () => {
+        // Host org is brotherslazaroff but the user is not a member → fall back
+        // to their primary org. Never mints for an org outside membership.
+        expect(await resolveMintOrg(CRC_UID, "brotherslazaroff")).toBe("crc")
+    })
+
+    it("v11.1-02-01 AC-2: a broslaz-only user on the crc host still mints broslaz (their only org)", async () => {
+        // Not a member of crc → host org rejected → fallback primary = broslaz.
+        expect(await resolveMintOrg(BL_UID, "crc")).toBe("brotherslazaroff")
+    })
+
+    it("v11.1-02-01 AC-1 end-to-end: broslaz-host mint → token doc orgId=brotherslazaroff → verifyBearer", async () => {
+        const org = await resolveMintOrg(MULTI_UID, "brotherslazaroff")
+        const { id, rawToken } = await createMcpToken(MULTI_UID, "Claude OAuth — broslaz", org)
+
+        const doc = await getFirestore(app).collection("mcpTokens").doc(id).get()
+        expect(doc.data()?.orgId).toBe("brotherslazaroff")
+
+        const verified = await verifyBearer(bearerReq(rawToken))
+        expect(verified).toMatchObject({ uid: MULTI_UID, orgId: "brotherslazaroff" })
+    })
+
+    it("v11.1-02-01 AC-3 end-to-end: crc-host mint for the same leader → token doc orgId=crc", async () => {
+        const org = await resolveMintOrg(MULTI_UID, "crc")
+        const { id, rawToken } = await createMcpToken(MULTI_UID, "Claude OAuth — crc", org)
+
+        const doc = await getFirestore(app).collection("mcpTokens").doc(id).get()
+        expect(doc.data()?.orgId).toBe("crc")
+
+        const verified = await verifyBearer(bearerReq(rawToken))
+        expect(verified).toMatchObject({ uid: MULTI_UID, orgId: "crc" })
     })
 })
