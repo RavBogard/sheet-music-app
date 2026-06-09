@@ -78,6 +78,7 @@ The v7.1 hardening campaign continues separately via the bongo `.coord/` cowork 
 
 ### Blockers/Concerns
 - None active. (v11-01-03 prod backfill RAN + verified 2026-06-08 — see below.)
+- **RESOLVED 2026-06-09 (prod-config, no code): BL Google sign-in was broken** — `brotherslazaroff.live`/`www.` weren't in Firebase Auth → Authorized domains, so signInWithPopup threw `auth/unauthorized-domain` (proven live via Playwright). Fixed by adding both via new `scripts/add-auth-domains.mjs` (Identity Toolkit admin API, firebase-CLI-token auth). Re-verified live: sign-in now reaches Google OAuth. **REUSABLE GOTCHA: every new tenant host must be added to authorizedDomains** (project-wide config) or web sign-in silently fails. authorizedDomains now: localhost, crcmusiccharts.firebaseapp.com, crcmusiccharts.web.app, sheet-music-app.vercel.app, centralreform.live, brotherslazaroff.live, www.brotherslazaroff.live.
 - **Prod-script auth note (reusable):** this box has NO Firebase Admin SA creds in `.env.local` and no gcloud. Admin-SDK prod scripts authenticate by converting the firebase CLI login's refresh token (`~/.config/configstore/firebase-tools.json` → `tokens.refresh_token`) into a temp `authorized_user` ADC json (with the public firebase-tools OAuth client_id/secret) and pointing `GOOGLE_APPLICATION_CREDENTIALS` at it; delete the temp file after. `firebase deploy` (rules/indexes — v11-01-04) uses the CLI directly, so it needs no ADC. The runner now supports cert(.env.local) OR applicationDefault(GOOGLE_APPLICATION_CREDENTIALS).
 
 ## Session Continuity

@@ -117,3 +117,4 @@ So the order is: **(this doc) DNS now → v11-03 host routing + branding → BL 
 - [ ] Squarespace → add `CNAME www → cname.vercel-dns.com`
 - [ ] Wait for Vercel to go green + auto-issue TLS
 - [ ] Verify `https://www.brotherslazaroff.live` loads and apex redirects
+- [x] **Add the new domain to Firebase Auth → Authorized domains** (done 2026-06-09): `node scripts/add-auth-domains.mjs brotherslazaroff.live www.brotherslazaroff.live`. REQUIRED once per new tenant host — without it Google sign-in fails with `auth/unauthorized-domain` (the popup throws before opening, so the button appears to do nothing). Console alt: Authentication → Settings → Authorized domains.
