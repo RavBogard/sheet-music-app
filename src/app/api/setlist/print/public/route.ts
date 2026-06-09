@@ -5,6 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { SetlistTrack } from "@/types/models"
 import { getTracksForSetlist } from "@/lib/server-tracks"
+import { rowOrg } from "@/lib/org/membership"
 
 export const maxDuration = 120
 
@@ -59,6 +60,8 @@ export async function GET(request: NextRequest) {
         const printReq: PrintRequest = {
             title: setlist.name || 'Setlist',
             date: setlist.eventDate?.toDate?.()?.toISOString?.() || setlist.date || '',
+            // v11-05-04: per-org print footer from the setlist's tenant.
+            org: rowOrg(setlist.orgId),
             tracks: tracks.map(t => ({
                 title: t.title,
                 key: t.key || '',

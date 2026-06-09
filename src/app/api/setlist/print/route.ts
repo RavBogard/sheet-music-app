@@ -3,6 +3,7 @@ import { generatePrintPdf, PrintRequest } from "@/lib/print-pipeline"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import { coerceOrgId } from "@/lib/org/registry"
 import { z } from "zod"
 
 export const maxDuration = 120
@@ -20,6 +21,10 @@ export const POST = createApiHandler(
         if (limited) return limited
 
         const body = ctx.body! as unknown as PrintRequest
+        // v11-05-04: per-org print footer. The gig-packet POST has no setlist to
+        // read orgId from; the host is authoritative — override any client-sent
+        // org with the proxy's resolved x-org-id (crc default → bare doc).
+        body.org = coerceOrgId(ctx.req.headers.get("x-org-id"))
 
         const result = await generatePrintPdf(body)
         const filename = `${(body.title || 'Gig_Packet').replace(/[^a-z0-9]/gi, '_')}.pdf`

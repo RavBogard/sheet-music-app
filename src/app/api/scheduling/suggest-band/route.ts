@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { rankMusicians, REQUIRED_INSTRUMENTS, type MusicianCandidate } from "@/lib/musician-suggestions"
-import { coerceOrgId } from "@/lib/org/registry"
+import { coerceOrgId, congregationDocId } from "@/lib/org/registry"
 import { rowOrgIds, rowOrg } from "@/lib/org/membership"
 
 const RECENT_WINDOW = 10
@@ -48,7 +48,8 @@ export const GET = createApiHandler(
                     .orderBy('assignedAt', 'desc')
                     .limit(RECENT_WINDOW * 20) // Over-fetch to get per-musician window
                     .get(),
-                db.collection('config').doc('congregation').get(),
+                // v11-05-04: congregation read scoped per-org (crc = bare doc).
+                db.collection('config').doc(congregationDocId(org)).get(),
             ])
 
             // Resolve rabbi profile from congregation config

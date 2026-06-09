@@ -12,6 +12,7 @@ import { onAuthStateChanged } from "firebase/auth"
 import { logger } from "@/lib/logger"
 import type { RabbiProfile } from "@/types/models"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
+import { coerceOrgId, congregationDocId } from "@/lib/org/registry"
 
 export interface CongregationConfig {
     name: string
@@ -92,8 +93,14 @@ export const useCongregationStore = create<CongregationStore>()(
                     const myGen = ++attachGen
                     const { doc, onSnapshot } = await import("firebase/firestore")
                     if (myGen !== attachGen || firestoreUnsub) return // detach fired or already attached
+                    // v11-05-04: subscribe to the HOST org's congregation doc.
+                    // <html data-org> is set server-side before hydration
+                    // (v11-03-01), so it's stable at attach time — no React
+                    // context / OrgProvider ordering risk. crc host (data-org="crc"
+                    // or absent → coerceOrgId default) keeps the bare doc id.
+                    const org = coerceOrgId(document.documentElement.dataset.org)
                     firestoreUnsub = subscribeWithDb((db) => onSnapshot(
-                        doc(db, "config", "congregation"),
+                        doc(db, "config", congregationDocId(org)),
                         (snap) => {
                             if (snap.exists()) {
                                 const updated = { ...DEFAULT_CONFIG, ...snap.data() as Partial<CongregationConfig> }

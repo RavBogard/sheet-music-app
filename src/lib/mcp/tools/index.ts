@@ -507,7 +507,7 @@ export function registerReadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await getCongregationContext(uidFrom(extra), args)),
+            jsonResult(await getCongregationContext(uidFrom(extra), args, orgFrom(extra))),
     )
 
     // F4 (2026-05-26): Tier-1 full-text search across PERSISTED

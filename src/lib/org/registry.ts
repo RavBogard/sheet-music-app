@@ -49,6 +49,17 @@ export function coerceOrgId(value: string | null | undefined): OrgId {
 }
 
 /**
+ * v11-05-04: resolve the Firestore doc id for an org's `config/congregation`
+ * singleton. CRC keeps the BARE `congregation` doc id (ZERO migration,
+ * byte-identical to pre-multi-tenant); every other org is NAMESPACED as
+ * `congregation__{orgId}`. Mirrors v11-05-01's liturgical-key namespacing
+ * (bare CRC key = no backfill). Pure — no Firestore.
+ */
+export function congregationDocId(org: OrgId): string {
+    return org === DEFAULT_ORG_ID ? "congregation" : `congregation__${org}`
+}
+
+/**
  * Normalize a request host to an org id. Lowercases, strips any `:port` and a
  * leading `www.`, then matches against each org's `domain`. Unknown / undefined /
  * localhost / *.vercel.app fall through to DEFAULT_ORG_ID.

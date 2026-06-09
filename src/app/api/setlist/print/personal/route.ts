@@ -8,6 +8,7 @@ import { MusicianProfile, SetlistTrack } from "@/types/models"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { verifyBearer } from "@/lib/mcp/auth"
 import { httpError } from "@/lib/http/error-envelope"
+import { rowOrg } from "@/lib/org/membership"
 
 export const maxDuration = 120
 
@@ -72,6 +73,8 @@ export const GET = createApiHandler(
             title: setlist.name || 'Setlist',
             date: setlist.eventDate?.toDate?.()?.toISOString?.() || setlist.date || '',
             musicianName: userName,
+            // v11-05-04: per-org print footer from the setlist's tenant.
+            org: rowOrg(setlist.orgId),
             tracks: tracks.map(t => ({
                 title: t.title,
                 key: t.key || '',

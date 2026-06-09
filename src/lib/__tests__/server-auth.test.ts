@@ -54,6 +54,7 @@ vi.mock('@/lib/logger', () => ({
 // ── Import after mocks ──
 
 import { getServerUser, serializeSetlist, getServerCongregationConfig } from '@/lib/server-auth'
+import { congregationDocId } from '@/lib/org/registry'
 
 // ── Tests ──
 
@@ -271,5 +272,43 @@ describe('getServerCongregationConfig', () => {
 
         const config = await getServerCongregationConfig()
         expect(config).toBeNull()
+    })
+
+    // v11-05-04: per-org doc-id resolution.
+    it('reads the bare config/congregation doc for crc (default arg, byte-identical)', async () => {
+        const { getFirestore } = await import('firebase-admin/firestore')
+        const docSpy = vi.fn(() => ({
+            get: vi.fn(async () => ({ exists: true, data: () => ({ name: 'CRC' }) })),
+        }))
+        vi.mocked(getFirestore).mockReturnValueOnce({
+            collection: vi.fn(() => ({ doc: docSpy })),
+        } as never)
+
+        await getServerCongregationConfig() // default org = crc
+        expect(docSpy).toHaveBeenCalledWith('congregation')
+    })
+
+    it('reads the namespaced doc for a non-crc org', async () => {
+        const { getFirestore } = await import('firebase-admin/firestore')
+        const docSpy = vi.fn(() => ({
+            get: vi.fn(async () => ({ exists: true, data: () => ({ name: 'Brothers Lazaroff' }) })),
+        }))
+        vi.mocked(getFirestore).mockReturnValueOnce({
+            collection: vi.fn(() => ({ doc: docSpy })),
+        } as never)
+
+        const config = await getServerCongregationConfig('brotherslazaroff')
+        expect(docSpy).toHaveBeenCalledWith('congregation__brotherslazaroff')
+        expect(config).toEqual({ name: 'Brothers Lazaroff' })
+    })
+})
+
+describe('congregationDocId', () => {
+    it('returns the bare doc id for crc (zero migration)', () => {
+        expect(congregationDocId('crc')).toBe('congregation')
+    })
+
+    it('namespaces non-crc orgs', () => {
+        expect(congregationDocId('brotherslazaroff')).toBe('congregation__brotherslazaroff')
     })
 })

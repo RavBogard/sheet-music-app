@@ -5,6 +5,8 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { getServerCongregationConfig } from "@/lib/server-auth"
 import { getAllSetlists } from "@/lib/server-setlists"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * F3 — `get_congregation_context` MCP read tool.
@@ -181,6 +183,9 @@ export async function getCongregationContext(
     // setlist data is public-by-design so the uid is intentionally unused.
     uid: string,
     args: GetCongregationContextArgs = {},
+    // v11-05-04: caller org (orgFrom(extra) at the registration site). Scopes
+    // the congregation read to the caller's per-org doc; crc reads the bare doc.
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<GetCongregationContextResult | RichErrorEnvelope> {
     void uid
 
@@ -196,8 +201,15 @@ export async function getCongregationContext(
         // returns the raw doc data (or null on absent/unreachable);
         // getAllSetlists is the shared SSR/list_setlists helper — no duplicated
         // query logic.
+        // v11-05-04 scopes the CONGREGATION doc per-org (above). leadHistory's
+        // getAllSetlists has a v11-04-03 opt-in `org` filter, but it's an EQUALITY
+        // filter (not crc-safe for unbackfilled docs) and wiring it live makes
+        // this the first live caller — a setlist-read behavior change out of this
+        // slice's scope. Setlist names are public-by-design ([[feedback_setlist_public_policy]]),
+        // so cross-tenant leadHistory is a UX nit, not a leak. DEFERRED to the
+        // v11-06 isolation audit (which sweeps exactly these setlist reads).
         const [configRaw, setlists] = await Promise.all([
-            getServerCongregationConfig(),
+            getServerCongregationConfig(org),
             getAllSetlists({ limit: historyLimit, orderBy }),
         ])
 

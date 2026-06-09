@@ -3,6 +3,8 @@ import { initAdmin } from "@/lib/firebase-admin"
 import { getAuth } from "firebase-admin/auth"
 import { getFirestore } from "firebase-admin/firestore"
 import { logger } from "@/lib/logger"
+import { congregationDocId, DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 const COOKIE_NAME = "__session"
 
@@ -92,14 +94,19 @@ export function serializeSetlist(id: string, data: any) {
 }
 
 /**
- * Fetch congregation config server-side.
- * Falls back to defaults if Firestore is unreachable.
+ * Fetch congregation config server-side for a given org.
+ * Falls back to defaults if Firestore is unreachable or the per-org doc is absent.
+ *
+ * v11-05-04: org-scoped via congregationDocId — crc reads the BARE
+ * `config/congregation` doc (byte-identical to pre-multi-tenant), other orgs
+ * read `config/congregation__{org}`. A missing per-org doc returns null →
+ * callers degrade to their defaults (no throw, no CRC data leak).
  */
-export async function getServerCongregationConfig() {
+export async function getServerCongregationConfig(org: OrgId = DEFAULT_ORG_ID) {
     try {
         initAdmin()
         const db = getFirestore()
-        const snap = await db.collection("config").doc("congregation").get()
+        const snap = await db.collection("config").doc(congregationDocId(org)).get()
         if (!snap.exists) return null
         return snap.data()
     } catch {

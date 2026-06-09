@@ -23,7 +23,7 @@ import {
     respondToAssignmentService,
     findActiveAssignment,
 } from "@/lib/scheduling/assignment-service"
-import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { DEFAULT_ORG_ID, congregationDocId } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { rowOrgIds, rowOrg } from "@/lib/org/membership"
 
@@ -801,15 +801,15 @@ export async function suggestBand(
                 .where("role", "in", ["musician", "band_leader", "admin"])
                 .get(),
             // v11-05-03: play-count read scoped to caller org in-memory below
-            // (rowOrg on each doc). config/congregation read stays cross-tenant
-            // until v11-05-04 (congregation per-org refactor).
+            // (rowOrg on each doc).
             db
                 .collection("scheduling_assignments")
                 .where("status", "==", "confirmed")
                 .orderBy("assignedAt", "desc")
                 .limit(RECENT_WINDOW * 20)
                 .get(),
-            db.collection("config").doc("congregation").get(),
+            // v11-05-04: congregation read scoped per-org (crc = bare doc).
+            db.collection("config").doc(congregationDocId(org)).get(),
         ])
 
         const congData = configSnap.data()
