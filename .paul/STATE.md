@@ -20,7 +20,7 @@ Last activity: 2026-06-08 — v11-03 phase complete (3 plans) + transitioned. Th
 Parallel track: **v7.1 Production Hardening** remains ACTIVE via the bongo `.coord/` system (cycle-13 in flight) — independent of the PAUL loop, which now tracks v11.0. App is at `10.1.0` (package.json).
 
 Progress:
-- v11.0: [████░░░░░░] ~45% — 2 of 5 phases done (v11-01 ✅, v11-02 ✅); BL live as first second tenant
+- v11.0: [██████░░░░] ~60% — 3 of 5 phases done (v11-01 ✅, v11-02 ✅, v11-03 ✅; +v11-02b); BL live + branded on brotherslazaroff.live
 - v7.1 (via .coord/): ~cycles 1–12 landed; cycle-13 in flight
 
 ## Git State
@@ -80,11 +80,11 @@ The v7.1 hardening campaign continues separately via the bongo `.coord/` cowork 
 
 ## Session Continuity
 
-Last session: 2026-06-08 (cont.) — `/paul:resume` with a domain-config task. Wrote `docs/brotherslazaroff-domain-setup.md` (Vercel domain-add + Squarespace A `@`→76.76.21.21 / CNAME `www`→cname.vercel-dns.com; mirrors CRC apex→www). Then `/paul:discuss-phase v11-03` → CONTEXT.md (taste calls locked; scraped real BL brand off brotherslazaroff.com). Then `/paul:plan v11-03` → v11-03-01-PLAN.md (org-context foundation).
+Last session: 2026-06-08 — full v11-03 phase end-to-end + paused. `/paul:resume` → wrote `docs/brotherslazaroff-domain-setup.md` → `/paul:discuss-phase` (CONTEXT.md, BL brand scraped) → planned+applied+unified all 3 plans (01 org-context · 02 navy branding · 03 vocab/trim) → phase transition (commit+push) → Daniel completed DNS → **live-verified on brotherslazaroff.live** → caught+fixed the `coerceOrgId` org-id-vs-domain bug (`fix(v11-03)`) → re-verified live. Git strategy: master (prod), tree clean, in sync.
 Stopped at: v11-03 PHASE COMPLETE + transitioned + LIVE-VERIFIED. Commits `feat(v11-03)` `e51d352036` + hotfix `fix(v11-03)` `30bc6c7483`, both pushed to origin master, both Vercel prod READY. DNS done by Daniel; brotherslazaroff.live serves BL chrome (verified). Working tree clean.
 Next action: /paul:plan v11-04 — BL consumer surface (perform-view + gig-packet print scoped to BL org) + David's BL membership + empty-library seed + e2e UAT. **Fold in the v11-03-03 + v11-02 deferrals: org-scope templates/roster/congregation/service-personnel (read+write) + de-synagogue the CreationWizard/perform/display vocab (now unblocked by congregation scoping).** /ui-ux-pro-max BLOCKING. `git pull` first (multi-computer).
 DNS ACTION (Daniel, anytime): complete `docs/brotherslazaroff-domain-setup.md` (Vercel domain-add + Squarespace A `@`→76.76.21.21 / CNAME `www`→cname.vercel-dns.com) so brotherslazaroff.live serves the (now-deployed) BL chrome.
-Resume file: .paul/phases/v11-03-domain-branding/v11-03-03-SUMMARY.md (+ CONTEXT.md)
+Resume file: .paul/HANDOFF-2026-06-08.md (full pause context; + v11-03 SUMMARYs + CONTEXT.md)
 Resume context:
 - **v11-03 taste calls (Daniel 2026-06-08, in CONTEXT.md):** dark+photographic BL chrome · pull brand from brotherslazaroff.com (navy accent + live-performance photos, rendered on dark canvas — note their *site* is light/navy, app chrome is dark) · per-tenant conditional vocab/UI (CRC literally unchanged).
 - **Foundation seam:** `src/proxy.ts` forwards `x-org-id` (mirror of existing `x-nonce`); `resolveOrgIdByDomain` in `src/lib/org/registry.ts` already maps brotherslazaroff.live→brotherslazaroff (strips www.). New client `src/lib/org/org-context.tsx` (`OrgProvider`/`useOrg`); `<html data-org>` is the CSS hook for 02.
