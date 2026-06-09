@@ -5,7 +5,7 @@
 ## Current Milestone
 
 **🚧 v11.0 — Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08)
-Status: 🚧 In Progress · Phases: 3 of 6 complete (v11-01 ✅, v11-02 ✅, v11-03 ✅ 2026-06-08) — Brothers Lazaroff is LIVE (David's MCP tenant proven e2e on prod); brotherslazaroff.live host-routing + navy dark branding + edit-surface vocab trim shipped
+Status: 🚧 In Progress · Phases: 4 of 6 complete (v11-01 ✅, v11-02 ✅, v11-03 ✅, v11-04 ✅ 2026-06-09) — Brothers Lazaroff is LIVE + tenant-isolated reads; brotherslazaroff.live has own branding/metadata + BL-only public(/perform)+authed(/setlists) setlist reads + working sign-in. Remaining: v11-05 collection scoping, v11-06 isolation audit.
 
 Turn the single-tenant CRC app into a multi-tenant platform whose first second tenant is **Brothers Lazaroff** — give David Lazaroff (CRC band_leader since 2026-05-15) his own org-scoped library + setlists, authored via Claude + MCP, viewed/printed on `brotherslazaroff.live`. Multi-tenant within the SAME app + Firebase (`crcmusiccharts`); CRC data backfilled to a default org, behavior-neutral. Trimmed to David's MCP-author → view/print-packet flow. App is at `10.1.0`; the multi-tenant architectural shift + new production domain justify the v11.0 bump. Decisions locked at `/paul:discuss-milestone` 2026-06-08; full detail in `.paul/MILESTONES.md` § v11.0.
 
@@ -15,7 +15,7 @@ Turn the single-tenant CRC app into a multi-tenant platform whose first second t
 | v11-02 | MCP org-scoping (org-scoped auth + thread orgId through tools) | 4/4 ✅ | ✅ Complete | 2026-06-08 |
 | v11-02b | Org-aware token minting (self-service tenant onboarding) | 1/1 ✅ | ✅ Complete | 2026-06-08 |
 | v11-03 | brotherslazaroff.live domain + branding + vocab trim | 3/3 ✅ | ✅ Complete | 2026-06-08 |
-| v11-04 | BL consumer surface (perform/print) + David onboarding + e2e UAT | 1/3 | 🚧 In progress (01 ✅ web-read scoping) | - |
+| v11-04 | BL consumer surface (perform/print) + David onboarding + e2e UAT | 3/3 ✅ | ✅ Complete | 2026-06-09 |
 | v11-05 | Cross-tenant collection scoping (templates/roster/congregation/personnel R+W) + CreationWizard vocab | TBD | Not started | - |
 | v11-06 | Cross-tenant isolation security audit (close gate) | TBD | Not started | - |
 
@@ -48,12 +48,15 @@ Plans (3 vertical — all ✅ LOOP COMPLETE 2026-06-08):
 - **v11-03-02** ✅ BL branding — scoped `[data-org="brotherslazaroff"]` navy dark CSS-var block (hue 252) + `forcedTheme=dark` + `getOrgBranding()` + org-aware login hero/wordmark. CRC indigo+amber untouched.
 - **v11-03-03** ✅ Vocab + UI trim — `label(org,key)` + `hidesLiturgicalFields()`; SetlistMetaEditSheet hides service-type + rabbi for BL, band vocab. CRC unchanged. (CreationWizard/perform/cards vocab DEFERRED to v11-04 — depends on org-scoping congregation+templates.)
 
-### Phase v11-04: BL consumer surface + onboarding
+### Phase v11-04: BL consumer surface + onboarding ✅ Complete (2026-06-09)
 Focus: perform-view + gig-packet print scoped to the BL org; display-card vocab via the static `label(org,key)` helper (no collection-scoping dependency); David's BL org membership + empty library seed; end-to-end UAT (David authors via MCP → views/prints a gig packet on brotherslazaroff.live). /ui-ux-pro-max BLOCKING. (CreationWizard vocab stays deferred to v11-05 — it depends on org-scoped congregation/templates data.)
-Plans: TBD (defined during /paul:plan)
+Plans (3 vertical — all ✅ LOOP COMPLETE + SHIPPED + LIVE-VERIFIED 2026-06-08/09):
+- **v11-04-01** ✅ Public web-read org scoping — `getAllSetlists` opt-in `org` filter + client `subscribeToAllSetlists` org arg + `/perform` made per-host dynamic (dropped shared path-keyed ISR) + `(orgId,date)` index + 5 regression tests. Live: BL /perform shows zero CRC setlists; CRC unchanged. (`feat(v11-04-01)` `c606992756`.) Also fixed BL Google sign-in (`auth/unauthorized-domain` → added BL hosts to Firebase authorizedDomains via scripts/add-auth-domains.mjs).
+- **v11-04-02** ✅ Org-aware consumer branding/metadata — data-driven `branding.ts` metadata fields (CRC byte-identical) → root `generateMetadata()` + per-org manifest + org-aware `/perform` wordmark/aria-label + de-synagogued listing title (vocab `publicListingTitle`). Live: BL /perform tab title + "Brothers Lazaroff" wordmark; CRC byte-identical. (`feat(v11-04-02)` `f50060e387`.)
+- **v11-04-03** ✅ Authed-dashboard read scoping — opt-in `org` on `getSetlistsPage`/`getUpcoming`/`getRecent`; both `getSetlistsPage` callers thread `x-org-id`; the 4 client `subscribeToAllSetlists` callers pass `useOrg()`. Live: BL /api/setlists/page `items:[]`, CRC unchanged. (`feat(v11-04-03)` `6b1ba7f189`.) DEFERRED→v11-05: in-app CreationWizard setlist-create orgId stamping. Authed-dashboard UX confirm → UAT-PENDING.
 
 ### Phase v11-05: Cross-tenant collection scoping + CreationWizard vocab
-Focus: close the v11-02 / v11-03-03 deferrals — org-scope the still-cross-tenant collections (templates read/list, roster/musicians [`users`, `scheduling_assignments`, `musician_availability`], congregation, service-personnel) for READ + WRITE; then de-synagogue the now-unblocked CreationWizard vocab. Data-isolation work, closer in nature to v11-02 (emulator-backed). Split out of v11-04 (Daniel 2026-06-08) so the BL consumer surface ships first.
+Focus: close the v11-02 / v11-03-03 / v11-04-03 deferrals — org-scope the still-cross-tenant collections (templates read/list, roster/musicians [`users`, `scheduling_assignments`, `musician_availability`], congregation, service-personnel) for READ + WRITE; the **in-app CreationWizard setlist-create orgId stamp** (v11-04-03 flagged: an in-app-created setlist currently carries no orgId → would be invisible in the org-scoped dashboard; MCP create already stamps); then de-synagogue the now-unblocked CreationWizard vocab. Data-isolation work, closer in nature to v11-02 (emulator-backed). Split out of v11-04 (Daniel 2026-06-08) so the BL consumer surface ships first.
 Plans: TBD (defined during /paul:plan)
 
 ### Phase v11-06: Cross-tenant isolation security audit (close gate)
