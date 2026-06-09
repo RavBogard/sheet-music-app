@@ -86,8 +86,8 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-02 — PHASE COMPLETE 2026-06
 Last session: 2026-06-09 — /paul:resume (v11.0 was complete) → Daniel surfaced 4 post-launch issues on brotherslazaroff.live → triaged each against deployed code (Explore agents) + prod Firestore (firebase MCP): confirmed branding leak, library leak, and the missing-setlist root cause (orgId:'crc'); DELETED the throwaway setlist `bd3b549c` (verified gone) per Daniel; locked the two-tier tenancy model → /paul:discuss-milestone → /paul:milestone created v11.1 (4 phases).
 Stopped at: **Phase v11.1-02 COMPLETE + transitioned** (both plans shipped; PROJECT.md evolved; ROADMAP phase→complete). Multi-org authoring path is live: admin grants `orgIds` membership in /manage → leader authors per-tenant via that tenant's MCP URL.
 Next action: **`/paul:plan` for v11.1-01 (Org-aware authed branding, P0)** — make DesktopHeader/MobileHeader wordmark+logo resolve from the host org (broslaz still shows "CRC Music" + /logo.jpg on its authed nav); broslaz congregation doc already correct; CRC byte-identical; **/ui-ux-pro-max BLOCKING**. Then v11.1-03 (library visibility, P1) + v11.1-04 (vocab, P1).
-Resume file: .paul/ROADMAP.md (v11.1 Current Milestone section).
-Git strategy: master (prod), in sync with origin/master. `git pull` first next session (multi-computer); push `origin master`.
+Resume file: **.paul/HANDOFF-2026-06-09-v11.1-02-complete.md** (full session-6 handoff) → next is `/paul:plan` v11.1-01. Milestone reference: .paul/ROADMAP.md.
+Git strategy: master (prod), in sync with origin/master (tip `648c0a3278`). `git pull` first next session (multi-computer); push `origin master`.
 Standing UAT-PENDING (non-blocking): Daniel — connect Claude Desktop to `https://www.brotherslazaroff.live/api/mcp` + author a test setlist; admin — set a leader's Band access in /manage → People.
 
 ---
