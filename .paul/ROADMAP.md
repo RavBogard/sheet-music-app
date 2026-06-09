@@ -5,7 +5,7 @@
 ## Current Milestone
 
 **🚧 v11.0 — Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08)
-Status: 🚧 In Progress · Phases: 4 of 6 complete (v11-01 ✅, v11-02 ✅, v11-03 ✅, v11-04 ✅ 2026-06-09) — Brothers Lazaroff is LIVE + tenant-isolated reads; brotherslazaroff.live has own branding/metadata + BL-only public(/perform)+authed(/setlists) setlist reads + working sign-in. Remaining: v11-05 collection scoping, v11-06 isolation audit.
+Status: 🚧 In Progress · Phases: 5 of 6 complete (v11-01..05 ✅ 2026-06-09) — Brothers Lazaroff is LIVE + FULLY tenant-isolated (reads+writes+all v11-05 collections: templates/roster/assignments/congregation + in-app create orgId-stamp + band vocab); brotherslazaroff.live own branding/metadata + working sign-in. Remaining: v11-06 cross-tenant isolation security audit (close gate).
 
 Turn the single-tenant CRC app into a multi-tenant platform whose first second tenant is **Brothers Lazaroff** — give David Lazaroff (CRC band_leader since 2026-05-15) his own org-scoped library + setlists, authored via Claude + MCP, viewed/printed on `brotherslazaroff.live`. Multi-tenant within the SAME app + Firebase (`crcmusiccharts`); CRC data backfilled to a default org, behavior-neutral. Trimmed to David's MCP-author → view/print-packet flow. App is at `10.1.0`; the multi-tenant architectural shift + new production domain justify the v11.0 bump. Decisions locked at `/paul:discuss-milestone` 2026-06-08; full detail in `.paul/MILESTONES.md` § v11.0.
 
@@ -16,7 +16,7 @@ Turn the single-tenant CRC app into a multi-tenant platform whose first second t
 | v11-02b | Org-aware token minting (self-service tenant onboarding) | 1/1 ✅ | ✅ Complete | 2026-06-08 |
 | v11-03 | brotherslazaroff.live domain + branding + vocab trim | 3/3 ✅ | ✅ Complete | 2026-06-08 |
 | v11-04 | BL consumer surface (perform/print) + David onboarding + e2e UAT | 3/3 ✅ | ✅ Complete | 2026-06-09 |
-| v11-05 | Cross-tenant collection scoping (templates/roster/congregation/personnel R+W) + CreationWizard vocab | 5/5 | 🚧 Code-complete (deploy gate pending) | 2026-06-09 |
+| v11-05 | Cross-tenant collection scoping (templates/roster/congregation/personnel R+W) + CreationWizard vocab | 5/5 ✅ | ✅ Complete (SHIPPED + live-verified, `f3448a8395`) | 2026-06-09 |
 | v11-06 | Cross-tenant isolation security audit (close gate) | TBD | Not started | - |
 
 ### Phase v11-01: Tenant foundation
