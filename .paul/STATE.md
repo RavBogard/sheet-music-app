@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **v11.1 Brothers Lazaroff Post-Launch Fixes — 🚧 IN PROGRESS (opened 2026-06-09).** 4 phases, 0 complete.
-Phase: **v11.1-02 (Multi-org membership + authoring) — PLANNING.** Started with the authoring slice (critical path; Daniel declined the manual stopgap → build the real fix first). 01-branding deferred to after.
-Plan: **v11.1-02-01 created, awaiting APPLY** — host-derived authoring bearer (Build B). `.paul/phases/v11.1-02-multiorg-authoring/v11.1-02-01-PLAN.md`. Standard, autonomous, 3 tasks.
-Status: **PLAN created, ready for APPLY.** Tree clean, in sync with origin/master (tip `02a6bcb27c`, tag `v11.0.0`). package.json 11.0.0.
-Last activity: 2026-06-09 — /paul:resume → triaged 4 live-tenant issues → /paul:discuss-milestone → /paul:milestone (v11.1) → traced minting/OAuth surface → **Daniel decisions: authoring org = connection domain (validated ∈ orgIds, preserves v11-06-02); no manual stopgap** → wrote v11.1-02-01 PLAN.
+Phase: **v11.1-02 (Multi-org membership + authoring) — IN PROGRESS (1 of 2 plans done).** 02-01 authoring slice ✅ LOOP COMPLETE; **02-02 (admin org-membership toggle UI) = next, needs PLAN.**
+Plan: **v11.1-02-01 ✅ LOOP COMPLETE** — host-derived authoring bearer (Build B). SUMMARY: `.paul/phases/v11.1-02-multiorg-authoring/v11.1-02-01-SUMMARY.md`.
+Status: **v11.1-02-01 SHIPPED — pushed (`20d1adef33`), Vercel auto-deploy in flight; UAT queued.** Canonical broslaz MCP URL verified: `https://www.brotherslazaroff.live/api/mcp` (www direct; apex 308-redirects). package.json 11.0.0.
+Last activity: 2026-06-09 — APPLY v11.1-02-01: host-derived authoring org (`resolveMintOrg`); both mint paths read host `x-org-id` validated ∈ orgIds. emulator 9/9 + arg-injection invariant green + suite 3323/0 + next build clean. Committed `941e6856d1`; UAT queued.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -45,8 +45,8 @@ Last activity: 2026-06-09 — /paul:resume → triaged 4 live-tenant issues → 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-02-01 — PLAN created, awaiting APPLY]
-  ✓        ○        ○
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-02-01 — LOOP COMPLETE 2026-06-09; v11.1-02-02 next]
+  ✓        ✓        ✓
 ```
 
 ## Execution Substrate (bongo .coord/)
@@ -83,9 +83,9 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-02-01 — PLAN created, await
 ## Session Continuity
 
 Last session: 2026-06-09 — /paul:resume (v11.0 was complete) → Daniel surfaced 4 post-launch issues on brotherslazaroff.live → triaged each against deployed code (Explore agents) + prod Firestore (firebase MCP): confirmed branding leak, library leak, and the missing-setlist root cause (orgId:'crc'); DELETED the throwaway setlist `bd3b549c` (verified gone) per Daniel; locked the two-tier tenancy model → /paul:discuss-milestone → /paul:milestone created v11.1 (4 phases).
-Stopped at: **v11.1-02-01 PLAN created (host-derived authoring bearer), awaiting APPLY.** Phase order: authoring (02) first per Daniel; branding (01) + library (03) + vocab (04) follow.
-Next action: **`/paul:apply .paul/phases/v11.1-02-multiorg-authoring/v11.1-02-01-PLAN.md`** (autonomous, 3 tasks). Then plan v11.1-02-02 (admin org-membership toggle UI — /ui-ux-pro-max BLOCKING).
-Resume file: .paul/phases/v11.1-02-multiorg-authoring/v11.1-02-01-PLAN.md.
+Stopped at: **v11.1-02-01 LOOP COMPLETE + SHIPPED** (host-derived authoring; broslaz MCP URL `https://www.brotherslazaroff.live/api/mcp`). Daniel's UAT (connect Claude Desktop to broslaz URL, author a test setlist) queued in UAT-PENDING — non-blocking.
+Next action: **`/paul:plan` for v11.1-02-02** (admin org-membership toggle UI — set a leader's `orgIds` CRC/broslaz/both over the existing `/api/admin/set-role` orgIds support; **/ui-ux-pro-max BLOCKING**; no admin UI exists yet — a `/settings` route exists as a reference). Then phases 01/03/04.
+Resume file: .paul/phases/v11.1-02-multiorg-authoring/v11.1-02-01-SUMMARY.md.
 Git strategy: master (prod), in sync with origin/master (tip `02a6bcb27c`). `git pull` first next session (multi-computer); push `origin master`.
 
 ---

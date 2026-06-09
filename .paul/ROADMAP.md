@@ -12,7 +12,7 @@ Focus: Make the second tenant's *lived experience* correct (branding, vocab, lib
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v11.1-01 | Org-aware authed branding (nav wordmark + logo) [P0] | TBD | Not started | - |
-| v11.1-02 | Multi-org membership toggle + MCP authoring [P0] | 02-01 planned (authoring) · 02-02 TBD (admin UI) | 🚧 Planning | - |
+| v11.1-02 | Multi-org membership toggle + MCP authoring [P0] | 02-01 ✅ (authoring, shipped) · 02-02 TBD (admin UI) | 🚧 In progress (1/2) | - |
 | v11.1-03 | Library generic-tab visibility (host-filter + Shared + All-sites) [P1] | TBD | Not started | - |
 | v11.1-04 | broslaz liturgical vocab sweep [P1] | TBD | Not started | - |
 
