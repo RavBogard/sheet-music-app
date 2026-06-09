@@ -38,7 +38,7 @@ Last activity: 2026-06-09 (session 7) — /paul:complete-milestone v11.1: MILEST
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `4490abe53c` — v11.1-04 phase commit pushed; Vercel auto-deploy). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`, in sync with `origin/master` (tip `29d9a96878` — v11.1 release/close commit; Vercel auto-deploy). **tag `v11.1.0`** on the v11.1 close (pushed). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
