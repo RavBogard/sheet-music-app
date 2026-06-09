@@ -36,6 +36,45 @@ Completed milestone log for this project.
 | v6.0 Tracks Single-Source-of-Truth | 2026-05-13 | ~2 days (2026-05-12 → 2026-05-13) | 12 phases LOOP COMPLETE (10 original + 2 emergent close-gates v60-11/v60-12), 24 plans, 25 commits (PENDING-UAT at close — 5th consecutive use of v51-04 codified pattern; HFG counter 0/3 held throughout via emulator coverage) |
 | v7.0 Document-Driven Setlist Creation | 2026-05-14 | ~1.5 days (2026-05-13 milestone open → 2026-05-14 close) | 9 phases LOOP COMPLETE (8 roadmap + v70-09 out-of-sequence polish), 16 plans, 2 bundled phase commits at master HEAD (v70-07 `4668e2a8` + v70-08 `f3f86c41`); PENDING-UAT at close (6th consecutive v51-04 use); HFG counter 0/3 held; constraint 12 satisfied (end-of-milestone audit ran, 9 P1s remediated in-phase) |
 | v11.0 Brothers Lazaroff Multi-Tenant | 2026-06-09 | ~2 days (2026-06-08 → 2026-06-09) | 7 phases (v11-01..06 + v11-02b), 23 plans; 2nd live tenant brotherslazaroff.live fully tenant-isolated; close-gate AUDIT.md GO; live prod probe 19/19; tip `2a8441d6e5` |
+| v11.1 Brothers Lazaroff Post-Launch Fixes | 2026-06-09 | ~1 session | 4 phases, 5 plans; broslaz reads as a band across the authed surface (branding/library/vocab) + multi-org authoring path; CRC byte-identical; tag `v11.1.0`; tip `4490abe53c` |
+
+---
+
+## ✅ v11.1 Brothers Lazaroff Post-Launch Fixes
+
+**Completed:** 2026-06-09 · **Duration:** ~1 session (4 PAUL loops back-to-back)
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 4 (v11.1-01, 02, 03, 04) |
+| Plans | 5 |
+| Files changed | ~20 (nav, library read paths, org vocab/branding, admin set-role, + tests) |
+| Version | 11.0.0 → **11.1.0** (tag `v11.1.0`) |
+
+### Key Accomplishments
+
+- **Brothers Lazaroff now reads as a band across the entire authenticated surface** — own wordmark + navy "BL" monogram (nav), own charts only (library tab + bind-picker + header search), band-voice headers ("Upcoming Shows" / "Create New Set" / "Set Matrix"). CRC byte-identical throughout.
+- **Multi-org authoring path is real:** host-derived MCP bearer (org stamped from the connection domain's `x-org-id`, validated ∈ caller's orgIds) + an admin tri-state "Band access" toggle in `/manage → People` writing `orgIds` to claim + doc.
+- **Library host-isolation at the fetch layer** — `getServerLibrary(orgId)` + `/api/library/list` rowOrg filter, so tab + picker + search all inherit it from one point; admin "All sites" escape hatch; display-only (direct chart access never gated — err-public).
+- v11-06-02 no-arg-injection MCP isolation invariant preserved throughout; full quality floor held every phase (tsc clean · suite 3339/0 · `next build` clean · /ui-ux-pro-max on UI phases).
+
+### Key Decisions
+
+- **Authoring org = the tenant domain the leader connects Claude Desktop to** (pinned at mint by host `x-org-id`, not a tool arg) — preserves the v11-06-02 invariant.
+- **Empty `logoUrl` → brand-colored initials monogram** (auto-upgrades to `<img>` if an asset is ever set) rather than shipping a BL image now.
+- **Library: Shared flag DEFERRED** (libraries disjoint today); filter scope = tab + authoring + search with an admin All-sites toggle.
+- **Vocab: SERVICE_TYPE_LABELS table DEFERRED** (gated-away for broslaz via `hidesLiturgicalFields` — not a live remnant).
+
+### Deferred (carried forward)
+
+- recordings-collection org-scoping (`/api/recordings/upload` hardcodes `orgId:crc` → fix the stamp, then host-filter the per-song subscribe).
+- SERVICE_TYPE_LABELS → vocab-driven table (only if a non-synagogue tenant needs service-type categories).
+
+### UAT
+
+- MCP authoring connection verified working live (Daniel, 2026-06-09). Remaining hands-on UAT (nav/library/dashboard visual confirmation on the live tenant + CRC-unchanged) folded into normal use — non-blocking.
 
 ---
 

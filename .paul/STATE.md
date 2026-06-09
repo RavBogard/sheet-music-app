@@ -11,11 +11,11 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Milestone: **v11.1 Brothers Lazaroff Post-Launch Fixes — ✅ CONTENT COMPLETE 4/4 (2026-06-09).** All phases shipped to prod (v11.1-01 ✅ · v11.1-02 ✅ · v11.1-03 ✅ · v11.1-04 ✅). Awaiting `/paul:complete-milestone` (after live-tenant UAT).
-Phase: **v11.1-04 (broslaz liturgical vocab, P1 — FINAL) — ✅ COMPLETE + transitioned 2026-06-09 (1/1 plan).** Milestone content done.
-Plan: **v11.1-04-01 LOOP COMPLETE + committed.** vocab.ts +3 keys + SetlistDashboard/SetlistMatrixView headers via label(useOrg()). SUMMARY in phase dir.
-Status: **v11.1 CONTENT COMPLETE — next action `/paul:complete-milestone` (Daniel-gated on live-tenant UAT).** On `master`, pushed to origin. package.json 11.0.0.
-Last activity: 2026-06-09 (session 7) — v11.1-04-01 APPLY+UNIFY+transition (vocab remnants; dashboard/matrix headers→vocab layer; /ui-ux-pro-max; tsc clean · suite 3339/0 · next build clean) → phase commit + push. v11.1 4/4.
+Milestone: **v11.1 Brothers Lazaroff Post-Launch Fixes — ✅ COMPLETE 2026-06-09 (tag `v11.1.0`).** 4/4 phases shipped + archived. No milestone active.
+Phase: **None active.** Awaiting next milestone.
+Plan: **None.** Loop idle.
+Status: **v11.1 milestone CLOSED — archived (MILESTONES.md § v11.1 + `.paul/milestones/v11.1-ROADMAP.md`), package.json 11.1.0, tag `v11.1.0`. Ready for `/paul:discuss-milestone` or `/paul:milestone`.** On `master`, pushed to origin.
+Last activity: 2026-06-09 (session 7) — /paul:complete-milestone v11.1: MILESTONES entry + archive, PROJECT.md evolved, ROADMAP collapsed, version→11.1.0, tag v11.1.0.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -45,8 +45,8 @@ Last activity: 2026-06-09 (session 7) — v11.1-04-01 APPLY+UNIFY+transition (vo
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-04 (final) — LOOP COMPLETE + transitioned 2026-06-09; v11.1 CONTENT COMPLETE 4/4]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.1 milestone COMPLETE 2026-06-09 — loop idle, ready for next milestone]
+  ○        ○        ○
 ```
 
 ## Execution Substrate (bongo .coord/)
@@ -86,9 +86,9 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-04 (final) — LOOP COMPLETE 
 ## Session Continuity
 
 Last session: 2026-06-09 (session 7) — /paul:resume → shipped ALL of v11.1 (3 phases this turn: v11.1-01 branding + v11.1-03 library host-isolation + v11.1-04 vocab; v11.1-02 was already done) end-to-end (plan→apply→unify→transition→commit→push each). Every phase: full quality floor (tsc clean · suite 3339/0 · next build clean · /ui-ux-pro-max), CRC byte-identical, autonomous per directive. v11.1 CONTENT COMPLETE 4/4.
-Stopped at: **v11.1 milestone CONTENT COMPLETE (4/4 phases shipped to prod).** Loop idle.
-Next action: **`/paul:complete-milestone`** to archive v11.1 — Daniel-gated: run the standing UAT-PENDING checklist on the live tenant first (broslaz nav/library/dashboard/MCP-authoring + CRC-unchanged), then close. (Milestone close may include a version bump decision — package.json still 11.0.0.)
-Resume file: **.paul/phases/v11.1-04-vocab-remnants/v11.1-04-01-SUMMARY.md**. Milestone reference: .paul/ROADMAP.md.
+Stopped at: **v11.1 milestone COMPLETE + archived (tag `v11.1.0`).** MCP authoring connection verified live. Loop idle, no milestone active.
+Next action: **`/paul:discuss-milestone`** (explore next scope) or **`/paul:milestone`** (create directly). Backlog to consider: recordings-collection org-scoping (+ upload orgId stamp), SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage. v7.1 hardening continues via `.coord/` independently.
+Resume file: **.paul/MILESTONES.md** (§ v11.1). Milestone reference: .paul/ROADMAP.md.
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Standing UAT-PENDING (v11.1 close gate, live tenant): broslaz authed nav ("Brothers Lazaroff" + BL monogram, desktop + iPad-WebKit); /library (broslaz-only charts in tab + add-songs picker + header search; admin "All sites" reveals full pool); dashboard ("Upcoming Shows"/"Create New Set") + matrix ("Set Matrix"); MCP authoring (Claude Desktop → `https://www.brotherslazaroff.live/api/mcp` → author test setlist → lands broslaz); admin sets a leader's Band access in /manage → People; CRC unchanged throughout.
 
