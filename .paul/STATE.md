@@ -96,7 +96,7 @@ The v7.1 hardening campaign continues separately via the bongo `.coord/` cowork 
 Last session: 2026-06-09 (cont.) — v11-05-01 (templates) + v11-05-02 (roster/users) BOTH full loops, committed local, unpushed. 2 decisions baked: deploy=batch-at-close; roster=multi-org via doc.orgIds (mirrored from claims).
 Stopped at: v11-05-02 LOOP COMPLETE (2 of 5). Both committed local, NOT pushed.
 Next action: **/paul:plan v11-05-03** (scheduling_assignments: org from each assignment's already-org-stamped setlist; scope subscribeToAllUpcomingAssignments [scheduling-firebase.ts:80], suggestBand play-count read [roster.ts], history/suggest/remind/cron routes; stamp orgId on assignment create in assignment-service.ts). Then 04 (congregation singleton refactor) → 05 (creation-wizard+vocab, /ui-ux-pro-max BLOCKING) → phase-close scripts+push → **v11-06** isolation audit.
-Resume file: .paul/phases/v11-05-collection-scoping/v11-05-02-SUMMARY.md (+ 01-SUMMARY + CONTEXT). HANDOFF-2026-06-09.md valid for milestone gotchas.
+Resume file: **.paul/HANDOFF-2026-06-09.md** (refreshed session-2 pause — full resume context) → then v11-05-0{1,2}-SUMMARY + CONTEXT. PAUSED at context-limit 2026-06-09.
 Git strategy: master (prod), tree clean, in sync with origin/master. Everything this session committed+pushed.
 Resume context:
 - **v11-03 taste calls (Daniel 2026-06-08, in CONTEXT.md):** dark+photographic BL chrome · pull brand from brotherslazaroff.com (navy accent + live-performance photos, rendered on dark canvas — note their *site* is light/navy, app chrome is dark) · per-tenant conditional vocab/UI (CRC literally unchanged).
