@@ -39,6 +39,14 @@ export type OrgBranding = {
      * to the prior hardcode in DesktopHeader/MobileHeader.
      */
     logoUrl: string
+    /**
+     * v11.1-05: horizontal brand wordmark (lockup) image. When non-empty, the
+     * authed nav + the login hero render THIS image in place of the
+     * monogram-circle + short-name text (a real wordmark already says the name,
+     * so the circle+text lockup is redundant). CRC keeps "" → monogram+text path
+     * unchanged (byte-identical).
+     */
+    wordmarkUrl: string
     /** Per-tenant web manifest path served from `public/`. */
     manifestPath: string
     /** metadataBase origin for absolute og/canonical URLs. */
@@ -57,6 +65,7 @@ const BRANDING: Record<OrgId, OrgBranding> = {
         ogTitle: "Central Reform Congregation — Music",
         themeColor: "#0e0d18",
         logoUrl: "/logo.jpg",
+        wordmarkUrl: "",
         manifestPath: "/manifest.json",
         // Preserve the prior CRC env override exactly (NEXT_PUBLIC_BASE_URL is
         // inlined at build; unset → centralreform.live). Other tenants pin their
@@ -72,12 +81,17 @@ const BRANDING: Record<OrgId, OrgBranding> = {
         metaTitleTemplate: "%s | Brothers Lazaroff",
         metaDescription: "Songs & setlists for the band",
         ogTitle: "Brothers Lazaroff",
-        // Deep cool-navy ≈ the dark canvas oklch(0.12 0.02 255); distinct from
-        // CRC's indigo #0e0d18.
-        themeColor: "#0a0e1a",
-        // Empty → nav renders a navy "BL" monogram (Daniel 2026-06-09); no
-        // shipped asset. Set a path here the day a real BL logo exists.
+        // v11.1-05: dark teal-black ≈ the band's own background asset (#002020,
+        // sampled from brotherslazaroff.com) + the new teal canvas
+        // oklch(0.16 0.028 198); distinct from CRC's indigo #0e0d18.
+        themeColor: "#04201f",
+        // Empty → OrgLogo renders the "BL" monogram (used anywhere the wordmark
+        // path isn't wired). The authed nav + login now prefer `wordmarkUrl`.
         logoUrl: "",
+        // v11.1-05: the band's real white-and-blue slab wordmark (sourced from
+        // brotherslazaroff.com), optimized to public/. Renders as a horizontal
+        // lockup in the nav + login hero.
+        wordmarkUrl: "/brands/brotherslazaroff/wordmark.png",
         manifestPath: "/manifest-brotherslazaroff.json",
         baseUrl: "https://brotherslazaroff.live",
     },

@@ -19,6 +19,9 @@ export interface AppNavigationProps {
     // congregation store syncs). Resolved from x-org-id in (main)/layout.tsx.
     serverOrgShortName?: string
     serverLogoUrl?: string
+    // v11.1-05: optional horizontal brand wordmark. When set, the nav renders
+    // this lockup image instead of the OrgLogo monogram + short-name text.
+    serverWordmarkUrl?: string
 }
 
 export function AppNavigation(props: AppNavigationProps) {
@@ -29,7 +32,7 @@ export function AppNavigation(props: AppNavigationProps) {
         <div className="z-40 w-full relative print:hidden">
             <GlobalAlertBanner />
             <DesktopHeader {...props} />
-            <MobileHeader serverOrgShortName={props.serverOrgShortName} serverLogoUrl={props.serverLogoUrl} />
+            <MobileHeader serverOrgShortName={props.serverOrgShortName} serverLogoUrl={props.serverLogoUrl} serverWordmarkUrl={props.serverWordmarkUrl} />
             <MobileTabBar {...props} />
         </div>
     )

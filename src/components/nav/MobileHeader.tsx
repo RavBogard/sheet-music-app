@@ -12,11 +12,14 @@ import { OrgLogo } from "@/components/nav/OrgLogo"
 export function MobileHeader({
     serverOrgShortName,
     serverLogoUrl,
+    serverWordmarkUrl,
 }: {
     // v11.1-01: server-resolved host-org branding (from (main)/layout.tsx) so the
     // mobile nav is host-correct on first paint; congregation store is the fallback.
     serverOrgShortName?: string
     serverLogoUrl?: string
+    // v11.1-05: when set, render this wordmark lockup instead of monogram+text.
+    serverWordmarkUrl?: string
 } = {}) {
     const congregation = useCongregation()
     const [drawerOpen, setDrawerOpen] = useState(false)
@@ -38,16 +41,27 @@ export function MobileHeader({
                     <Menu className={cn("w-6 h-6", drawerOpen && "stroke-[2.5px]")} />
                 </Button>
 
-                {/* Center: Logo + Name */}
+                {/* Center: Logo + Name (v11.1-05: real wordmark image replaces it when set) */}
                 <Link href="/" className="flex items-center gap-2 group">
-                    <OrgLogo
-                        logoUrl={serverLogoUrl ?? congregation.logoUrl}
-                        shortName={serverOrgShortName ?? congregation.shortName}
-                        sizeClass="w-7 h-7"
-                    />
-                    <span className="font-display font-bold text-sm text-foreground">
-                        {serverOrgShortName ?? congregation.shortName}
-                    </span>
+                    {serverWordmarkUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- small static brand asset
+                        <img
+                            src={serverWordmarkUrl}
+                            alt={serverOrgShortName ?? congregation.shortName}
+                            className="h-6 w-auto"
+                        />
+                    ) : (
+                        <>
+                            <OrgLogo
+                                logoUrl={serverLogoUrl ?? congregation.logoUrl}
+                                shortName={serverOrgShortName ?? congregation.shortName}
+                                sizeClass="w-7 h-7"
+                            />
+                            <span className="font-display font-bold text-sm text-foreground">
+                                {serverOrgShortName ?? congregation.shortName}
+                            </span>
+                        </>
+                    )}
                 </Link>
 
                 {/* Right: spacer for symmetry */}

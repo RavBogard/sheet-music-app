@@ -32,6 +32,7 @@ export default async function MainLayout({
                     serverIsAuthed={!!user}
                     serverOrgShortName={branding.shortName}
                     serverLogoUrl={branding.logoUrl}
+                    serverWordmarkUrl={branding.wordmarkUrl}
                 />
                 {/*
                     Padding Handling:

@@ -21,6 +21,9 @@ describe("getOrgBranding", () => {
     it("exposes the authed-nav logoUrl per org (crc keeps /logo.jpg, broslaz empty → monogram)", () => {
         expect(getOrgBranding("crc").logoUrl).toBe("/logo.jpg")
         expect(getOrgBranding("brotherslazaroff").logoUrl).toBe("")
+        // v11.1-05: broslaz ships a real wordmark lockup; crc has none (monogram+text path).
+        expect(getOrgBranding("crc").wordmarkUrl).toBe("")
+        expect(getOrgBranding("brotherslazaroff").wordmarkUrl).toBe("/brands/brotherslazaroff/wordmark.png")
         // unknown tenant falls back to CRC branding → CRC logo.
         expect(getOrgBranding("unknown-tenant").logoUrl).toBe("/logo.jpg")
     })

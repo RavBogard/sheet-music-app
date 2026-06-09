@@ -28,7 +28,7 @@ export default async function LoginPage() {
     // compliance never regress per tenant.
     const orgId = coerceOrgId((await headers()).get("x-org-id"))
     if (orgId === "brotherslazaroff") {
-        const { shortName, tagline } = getOrgBranding(orgId)
+        const { shortName, tagline, wordmarkUrl } = getOrgBranding(orgId)
         return (
             <div className="min-h-screen bl-hero flex flex-col items-center justify-center p-4 relative overflow-hidden">
                 {/* Navy ambient glow over the photographic hero */}
@@ -39,9 +39,21 @@ export default async function LoginPage() {
 
                 <main id="main-content" className="w-full max-w-sm space-y-8 text-center relative z-10">
                     <div className="flex flex-col items-center gap-3">
-                        <h1 className="font-display uppercase font-bold tracking-tight text-foreground text-4xl sm:text-5xl leading-[0.95] drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
-                            {shortName}
-                        </h1>
+                        {/* v11.1-05: the band's real wordmark replaces the plain text title. */}
+                        {wordmarkUrl ? (
+                            <h1 className="drop-shadow-[0_2px_16px_rgba(0,0,0,0.6)]">
+                                {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset on the SSR'd login skeleton */}
+                                <img
+                                    src={wordmarkUrl}
+                                    alt={shortName}
+                                    className="w-full max-w-[20rem] h-auto"
+                                />
+                            </h1>
+                        ) : (
+                            <h1 className="font-display uppercase font-bold tracking-tight text-foreground text-4xl sm:text-5xl leading-[0.95] drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
+                                {shortName}
+                            </h1>
+                        )}
                         <p className="text-muted-foreground text-sm">
                             {tagline}
                         </p>

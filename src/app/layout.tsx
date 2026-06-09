@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins, Righteous, Geist_Mono } from "next/font/google";
+import { Poppins, Righteous, Geist_Mono, Zilla_Slab } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
@@ -27,6 +27,16 @@ const righteous = Righteous({
   weight: "400",
   variable: "--font-display",
   subsets: ["latin"],
+});
+
+// v11.1-05: vintage slab face for Brothers Lazaroff headings (echoes their
+// Western-slab wordmark). `preload: false` + the variable applied ONLY on the
+// broslaz <body> (see RootLayout) means CRC never downloads or preloads it.
+const zillaSlab = Zilla_Slab({
+  weight: ["500", "600", "700"],
+  variable: "--font-bl-display",
+  subsets: ["latin"],
+  preload: false,
 });
 
 // v11-04-02: per-tenant head metadata. Reads the Edge-resolved `x-org-id`
@@ -113,7 +123,7 @@ export default async function RootLayout({
         <link rel="preconnect" href={`https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}`} />
       </head>
       <body
-        className={`${poppins.variable} ${geistMono.variable} ${righteous.variable} antialiased`}
+        className={`${poppins.variable} ${geistMono.variable} ${righteous.variable}${orgId === "brotherslazaroff" ? ` ${zillaSlab.variable}` : ""} antialiased`}
       >
         <a
           href="#main-content"

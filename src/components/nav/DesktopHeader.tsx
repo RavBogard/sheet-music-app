@@ -104,9 +104,21 @@ export function DesktopHeader(props: AppNavigationProps) {
             {/* Logo + Nav */}
             <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-3 group min-h-11">
-                    {/* v11.1-01: server-resolved host-org branding first (flash-free); congregation store is the live-update fallback. */}
-                    <OrgLogo logoUrl={props.serverLogoUrl ?? congregation.logoUrl} shortName={props.serverOrgShortName ?? congregation.shortName} sizeClass="w-8 h-8" />
-                    <span className="font-display font-bold text-lg text-foreground group-hover:text-brand transition-colors">{props.serverOrgShortName ?? congregation.shortName}</span>
+                    {/* v11.1-01: server-resolved host-org branding first (flash-free); congregation store is the live-update fallback.
+                        v11.1-05: a real wordmark image (broslaz) replaces the monogram+text lockup. */}
+                    {props.serverWordmarkUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- small static brand asset; parity with the prior nav <img>
+                        <img
+                            src={props.serverWordmarkUrl}
+                            alt={props.serverOrgShortName ?? congregation.shortName}
+                            className="h-7 w-auto transition-opacity group-hover:opacity-80"
+                        />
+                    ) : (
+                        <>
+                            <OrgLogo logoUrl={props.serverLogoUrl ?? congregation.logoUrl} shortName={props.serverOrgShortName ?? congregation.shortName} sizeClass="w-8 h-8" />
+                            <span className="font-display font-bold text-lg text-foreground group-hover:text-brand transition-colors">{props.serverOrgShortName ?? congregation.shortName}</span>
+                        </>
+                    )}
                 </Link>
 
                 <nav className="flex items-center gap-1">

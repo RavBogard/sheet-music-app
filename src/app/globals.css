@@ -206,50 +206,66 @@
    [data-theme="v2"] override precedent below.
    ───────────────────────────────────────────────────────────────── */
 [data-org="brotherslazaroff"] {
-  /* Navy brand accent — replaces CRC's vivid indigo. */
-  --brand: oklch(0.60 0.17 252);
-  --brand-foreground: oklch(0.98 0 0);
-  --ring: oklch(0.60 0.15 252 / 0.5);
+  /* v11.1-05: teal/cyan brand accent sampled from the band's own wordmark
+     (#43B7CE) — replaces the generic navy. CRC's indigo is untouched. */
+  --brand: oklch(0.70 0.11 210);
+  --brand-foreground: oklch(0.99 0.01 200);
+  --ring: oklch(0.70 0.11 210 / 0.5);
+  /* The login hero composites this performance photo UNDER the bl-hero gradient
+     (see @utility bl-hero). Sourced from brotherslazaroff.com (Joe's Cafe). */
+  --bl-hero-image: url('/brands/brotherslazaroff/hero.jpg');
 }
 
 .dark[data-org="brotherslazaroff"] {
-  /* Deep cool-navy near-black canvas (vs CRC indigo-black). */
-  --background: oklch(0.12 0.02 255);
-  --foreground: oklch(0.97 0.005 250);
+  /* v11.1-05: deep TEAL near-black canvas (hue ~198), matching the band's own
+     #002020 background asset — replaces the prior cool-navy (hue ~255). */
+  --background: oklch(0.16 0.028 198);
+  --foreground: oklch(0.97 0.012 200);
 
-  --card: oklch(0.17 0.025 255 / 0.5);
-  --card-foreground: oklch(0.97 0.005 250);
+  --card: oklch(0.20 0.03 198 / 0.5);
+  --card-foreground: oklch(0.97 0.012 200);
 
-  --popover: oklch(0.17 0.03 255 / 0.78);
-  --popover-foreground: oklch(0.97 0.005 250);
+  --popover: oklch(0.20 0.035 198 / 0.80);
+  --popover-foreground: oklch(0.97 0.012 200);
 
-  --primary: oklch(0.97 0.005 250);
-  --primary-foreground: oklch(0.12 0.02 255);
+  --primary: oklch(0.97 0.012 200);
+  --primary-foreground: oklch(0.16 0.028 198);
 
-  --secondary: oklch(0.45 0.16 252 / 0.4);
-  --secondary-foreground: oklch(0.90 0.01 250);
+  --secondary: oklch(0.48 0.10 210 / 0.4);
+  --secondary-foreground: oklch(0.92 0.02 200);
 
-  --muted: oklch(0.21 0.025 255 / 0.5);
-  --muted-foreground: oklch(0.72 0.015 252);
+  --muted: oklch(0.24 0.03 198 / 0.5);
+  --muted-foreground: oklch(0.74 0.025 205);
 
-  --accent: oklch(0.24 0.04 255);
-  --accent-foreground: oklch(0.97 0.005 250);
+  --accent: oklch(0.27 0.05 200);
+  --accent-foreground: oklch(0.97 0.012 200);
 
-  --brand: oklch(0.64 0.18 252);
-  --brand-foreground: oklch(0.98 0 0);
+  --brand: oklch(0.72 0.115 210);
+  --brand-foreground: oklch(0.99 0.01 200);
 
-  --border: oklch(0.30 0.03 255 / 0.45);
-  --input: oklch(0.30 0.03 255 / 0.55);
-  --ring: oklch(0.60 0.16 252 / 0.5);
+  --border: oklch(0.33 0.035 200 / 0.45);
+  --input: oklch(0.33 0.035 200 / 0.55);
+  --ring: oklch(0.70 0.11 210 / 0.5);
 
-  --sidebar: oklch(0.14 0.02 255 / 0.85);
-  --sidebar-foreground: oklch(0.97 0.005 250);
-  --sidebar-primary: oklch(0.97 0.005 250);
-  --sidebar-primary-foreground: oklch(0.12 0.02 255);
-  --sidebar-accent: oklch(0.24 0.04 255);
-  --sidebar-accent-foreground: oklch(0.97 0.005 250);
-  --sidebar-border: oklch(0.30 0.03 255 / 0.35);
-  --sidebar-ring: oklch(0.60 0.16 252 / 0.45);
+  --sidebar: oklch(0.18 0.028 198 / 0.85);
+  --sidebar-foreground: oklch(0.97 0.012 200);
+  --sidebar-primary: oklch(0.97 0.012 200);
+  --sidebar-primary-foreground: oklch(0.16 0.028 198);
+  --sidebar-accent: oklch(0.27 0.05 200);
+  --sidebar-accent-foreground: oklch(0.97 0.012 200);
+  --sidebar-border: oklch(0.33 0.035 200 / 0.35);
+  --sidebar-ring: oklch(0.70 0.11 210 / 0.45);
+}
+
+/* v11.1-05: broslaz headings echo the vintage slab wordmark. Zilla Slab is
+   loaded (preload-free) only when data-org="brotherslazaroff" (root layout
+   appends its font variable for that org). Set directly on the heading
+   utilities/elements (not via --font-display, which next/font pins on <body>),
+   and left UNLAYERED so it beats the layered `.font-display` utility. CRC,
+   lacking the attribute, is unaffected. */
+[data-org="brotherslazaroff"] :is(h1, h2, h3),
+[data-org="brotherslazaroff"] :is(.font-display, .text-title, .text-title-large) {
+  font-family: var(--font-bl-display), var(--font-display), var(--font-sans), serif;
 }
 
 @layer base {
@@ -637,17 +653,18 @@
   background-color: var(--v2-surface);
 }
 
-/* v11-03-02 — Brothers Lazaroff login hero. Dark "stage-light" navy
-   gradient treatment. `--bl-hero-image` is an optional slot: drop a real
-   live-performance photo (e.g. set it to url('/brands/brotherslazaroff/hero.jpg'))
-   and it composites UNDER the gradient as cover/center. Defaults to `none`
-   so there is no broken image if absent. */
+/* v11-03-02 / v11.1-05 — Brothers Lazaroff login hero. Dark teal "stage-light"
+   gradient (hues retuned navy→teal ~205 to match the new palette) composited
+   OVER the band's live-performance photo (`--bl-hero-image`, set in the
+   [data-org="brotherslazaroff"] block). Opacities are tuned to let the photo
+   read through at top/center while darkening the bottom so the glass card +
+   wordmark keep ≥4.5:1 contrast. Defaults to `none` if the var is unset. */
 @utility bl-hero {
-  background-color: oklch(0.10 0.02 255);
+  background-color: oklch(0.12 0.025 200);
   background-image:
-    radial-gradient(120% 80% at 50% -10%, oklch(0.30 0.10 252 / 0.55) 0%, transparent 60%),
-    radial-gradient(90% 70% at 85% 110%, oklch(0.22 0.09 250 / 0.45) 0%, transparent 55%),
-    linear-gradient(180deg, oklch(0.10 0.02 255 / 0.30) 0%, oklch(0.09 0.02 255 / 0.85) 100%),
+    radial-gradient(120% 80% at 50% -10%, oklch(0.32 0.10 205 / 0.40) 0%, transparent 60%),
+    radial-gradient(90% 70% at 85% 110%, oklch(0.24 0.09 200 / 0.35) 0%, transparent 55%),
+    linear-gradient(180deg, oklch(0.10 0.02 200 / 0.45) 0%, oklch(0.09 0.02 200 / 0.88) 100%),
     var(--bl-hero-image, none);
   background-size: cover, cover, cover, cover;
   background-position: center;
