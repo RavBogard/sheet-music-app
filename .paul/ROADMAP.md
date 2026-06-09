@@ -5,7 +5,7 @@
 ## Current Milestone
 
 **🚧 v11.0 — Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08)
-Status: 🚧 In Progress · Phases: 3 of 5 complete (v11-01 ✅, v11-02 ✅, v11-03 ✅ 2026-06-08) — Brothers Lazaroff is LIVE (David's MCP tenant proven e2e on prod); brotherslazaroff.live host-routing + navy dark branding + edit-surface vocab trim shipped
+Status: 🚧 In Progress · Phases: 3 of 6 complete (v11-01 ✅, v11-02 ✅, v11-03 ✅ 2026-06-08) — Brothers Lazaroff is LIVE (David's MCP tenant proven e2e on prod); brotherslazaroff.live host-routing + navy dark branding + edit-surface vocab trim shipped
 
 Turn the single-tenant CRC app into a multi-tenant platform whose first second tenant is **Brothers Lazaroff** — give David Lazaroff (CRC band_leader since 2026-05-15) his own org-scoped library + setlists, authored via Claude + MCP, viewed/printed on `brotherslazaroff.live`. Multi-tenant within the SAME app + Firebase (`crcmusiccharts`); CRC data backfilled to a default org, behavior-neutral. Trimmed to David's MCP-author → view/print-packet flow. App is at `10.1.0`; the multi-tenant architectural shift + new production domain justify the v11.0 bump. Decisions locked at `/paul:discuss-milestone` 2026-06-08; full detail in `.paul/MILESTONES.md` § v11.0.
 
@@ -15,8 +15,9 @@ Turn the single-tenant CRC app into a multi-tenant platform whose first second t
 | v11-02 | MCP org-scoping (org-scoped auth + thread orgId through tools) | 4/4 ✅ | ✅ Complete | 2026-06-08 |
 | v11-02b | Org-aware token minting (self-service tenant onboarding) | 1/1 ✅ | ✅ Complete | 2026-06-08 |
 | v11-03 | brotherslazaroff.live domain + branding + vocab trim | 3/3 ✅ | ✅ Complete | 2026-06-08 |
-| v11-04 | BL consumer surface (perform/print) + David onboarding + e2e UAT | TBD | Not started | - |
-| v11-05 | Cross-tenant isolation security audit (close gate) | TBD | Not started | - |
+| v11-04 | BL consumer surface (perform/print) + David onboarding + e2e UAT | 1/3 | 🚧 In progress (01 ✅ web-read scoping) | - |
+| v11-05 | Cross-tenant collection scoping (templates/roster/congregation/personnel R+W) + CreationWizard vocab | TBD | Not started | - |
+| v11-06 | Cross-tenant isolation security audit (close gate) | TBD | Not started | - |
 
 ### Phase v11-01: Tenant foundation
 Focus: `orgId` on songs / library_index / setlists / tracks / recordings; tenant-resolution helper; backfill all existing CRC data with the default org (behavior-neutral); airtight Firestore rules + `@firebase/rules-unit-testing` emulator coverage. The spine — every later phase depends on it.
@@ -48,10 +49,14 @@ Plans (3 vertical — all ✅ LOOP COMPLETE 2026-06-08):
 - **v11-03-03** ✅ Vocab + UI trim — `label(org,key)` + `hidesLiturgicalFields()`; SetlistMetaEditSheet hides service-type + rabbi for BL, band vocab. CRC unchanged. (CreationWizard/perform/cards vocab DEFERRED to v11-04 — depends on org-scoping congregation+templates.)
 
 ### Phase v11-04: BL consumer surface + onboarding
-Focus: perform-view + gig-packet print scoped to the BL org; David's BL org membership + empty library seed; end-to-end UAT (David authors via MCP → views/prints a gig packet on brotherslazaroff.live). /ui-ux-pro-max BLOCKING.
+Focus: perform-view + gig-packet print scoped to the BL org; display-card vocab via the static `label(org,key)` helper (no collection-scoping dependency); David's BL org membership + empty library seed; end-to-end UAT (David authors via MCP → views/prints a gig packet on brotherslazaroff.live). /ui-ux-pro-max BLOCKING. (CreationWizard vocab stays deferred to v11-05 — it depends on org-scoped congregation/templates data.)
 Plans: TBD (defined during /paul:plan)
 
-### Phase v11-05: Cross-tenant isolation security audit (close gate)
+### Phase v11-05: Cross-tenant collection scoping + CreationWizard vocab
+Focus: close the v11-02 / v11-03-03 deferrals — org-scope the still-cross-tenant collections (templates read/list, roster/musicians [`users`, `scheduling_assignments`, `musician_availability`], congregation, service-personnel) for READ + WRITE; then de-synagogue the now-unblocked CreationWizard vocab. Data-isolation work, closer in nature to v11-02 (emulator-backed). Split out of v11-04 (Daniel 2026-06-08) so the BL consumer surface ships first.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11-06: Cross-tenant isolation security audit (close gate)
 Focus: adversarial check for Firestore rules leakage, MCP org-scope escape, and host-spoof tenant confusion. Blocks milestone close (extends the project's end-of-milestone best-practice-audit constraint).
 Plans: TBD (defined during /paul:plan)
 
@@ -62,7 +67,7 @@ Constraints (locked at /paul:discuss-milestone 2026-06-08):
 4. `err-public` holds WITHIN a tenant (never gate musicians from their own band's data); hard wall ACROSS tenants.
 5. Trimmed scope — David's flow only (MCP author + perform-view + gig-packet print); synagogue features dropped/genericized for BL, not ported.
 6. Dedicated domain `brotherslazaroff.live` (already owned) → host-based tenant, same deployment.
-7. End-of-milestone best-practice audit BLOCKS close (Phase v11-05).
+7. End-of-milestone best-practice audit BLOCKS close (Phase v11-06).
 8. /ui-ux-pro-max BLOCKING for UI phases (v11-03, v11-04); emulator coverage for data-layer/rules phases; HFG discipline; Friday/Shabbat deploy cadence respected; MCP-first authoring pivot still holds.
 
 ---

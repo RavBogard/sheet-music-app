@@ -37,6 +37,15 @@ vi.mock("@/lib/auth-context", () => ({
     useAuth: () => ({ user: null, loading: false, signIn: vi.fn() }),
 }))
 
+// v11-04-01: the page now reads the Edge-resolved `x-org-id` header to scope the
+// SSR fetch per tenant. Mock `next/headers` so PerformPage can run outside a real
+// request scope; default the probe org to crc (the regression assertions below
+// are org-agnostic — they exercise the wire-slice filter, not tenant routing).
+let mockOrgHeader: string | null = "crc"
+vi.mock("next/headers", () => ({
+    headers: async () => new Headers(mockOrgHeader ? { "x-org-id": mockOrgHeader } : {}),
+}))
+
 // `isTestUid` is the test-uid-prefix detector that splitPublicSetlists relies on
 // for the belt-and-braces filter (Cycle-2 SEC-004 + Cycle-7). Don't mock it
 // here — the real implementation is what we want to exercise.
@@ -188,5 +197,14 @@ describe("perform/page.tsx — F-C12-001 SSR wire-bytes regression", () => {
         const { default: PerformPage } = await import("@/app/perform/page")
         const element = (await PerformPage()) as { props: { initialSetlists: unknown[] } }
         expect(element.props.initialSetlists).toEqual([])
+    })
+
+    it("v11-04-01: scopes the SSR fetch to the host's tenant (passes the coerced org)", async () => {
+        mockOrgHeader = "brotherslazaroff"
+        getAllSetlistsMock.mockResolvedValue([])
+        const { default: PerformPage } = await import("@/app/perform/page")
+        await PerformPage()
+        expect(getAllSetlistsMock).toHaveBeenCalledWith({ limit: 50, org: "brotherslazaroff" })
+        mockOrgHeader = "crc" // restore default for any later cases
     })
 })

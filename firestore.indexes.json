@@ -29,6 +29,20 @@
       ]
     },
     {
+      "collectionGroup": "setlists",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "orgId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "bridge-setup-codes",
       "queryScope": "COLLECTION",
       "fields": [

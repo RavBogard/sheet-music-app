@@ -20,6 +20,7 @@ import {
     deleteField,
     type DocumentReference,
 } from "firebase/firestore";
+import type { OrgId } from "@/lib/org/types";
 
 /** Thrown when a write precondition (expectedUpdatedAt) doesn't match the remote doc. */
 export class StaleWriteError extends Error {
@@ -284,15 +285,19 @@ export function createSetlistService(userId: string | null, userName?: string | 
             }
         },
 
-        // Subscribe to ALL setlists (v4.0: no private/public distinction)
-        subscribeToAllSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void) {
+        // Subscribe to setlists. v11-04-01: tenant scoping is OPT-IN via `org` —
+        // when an OrgId is passed (the public /perform listing always passes the
+        // current tenant from `useOrg()`), the live query is restricted with
+        // `where('orgId','==',org)` so a tenant's surface never shows another
+        // tenant's setlists after hydration. When omitted (authed dashboard /
+        // drawer / add-to-setlist callers, pending org-wiring in v11-04-03), the
+        // query stays cross-tenant — behavior-identical to before this change.
+        subscribeToAllSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void, org?: OrgId) {
             return subscribeWithDb((db) => {
                 const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
-                const q = query(
-                    collectionRef,
-                    orderBy("date", "desc"),
-                    limit(50)
-                );
+                const q = org
+                    ? query(collectionRef, where("orgId", "==", org), orderBy("date", "desc"), limit(50))
+                    : query(collectionRef, orderBy("date", "desc"), limit(50));
 
                 return onSnapshot(q, {
                     next: (snapshot) => {

@@ -251,3 +251,38 @@ describe('getAllSetlists', () => {
         expect(result.map((s) => s.id)).toEqual(['b', 'a', 'undated'])
     })
 })
+
+describe('getAllSetlists — v11-04-01 tenant scoping (cross-tenant non-leak)', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        mockShouldThrow = false
+        mockSnapshotDocs = [
+            makeDoc('bl1', { name: 'BL gig', orgId: 'brotherslazaroff' }),
+        ]
+    })
+
+    it("applies .where('orgId','==',org) when an org is passed (default `date` ordering)", async () => {
+        await getAllSetlists({ org: 'brotherslazaroff' })
+        expect(mockWhere).toHaveBeenCalledWith('orgId', '==', 'brotherslazaroff')
+        expect(mockOrderBy).toHaveBeenCalledWith('date', 'desc')
+    })
+
+    it("applies the orgId where on the eventDate branch too", async () => {
+        await getAllSetlists({ org: 'crc', orderBy: 'eventDate' })
+        expect(mockWhere).toHaveBeenCalledWith('orgId', '==', 'crc')
+        // eventDate branch still fetches by the type-consistent `date` field
+        expect(mockOrderBy).toHaveBeenCalledWith('date', 'desc')
+    })
+
+    it("does NOT filter by orgId when no org is passed (preserves the MCP broad-fetch + rowOrg-filter contract)", async () => {
+        await getAllSetlists()
+        expect(mockWhere).not.toHaveBeenCalledWith('orgId', '==', expect.anything())
+    })
+
+    it("scopes each tenant to its own query independently", async () => {
+        await getAllSetlists({ org: 'crc' })
+        await getAllSetlists({ org: 'brotherslazaroff' })
+        expect(mockWhere).toHaveBeenCalledWith('orgId', '==', 'crc')
+        expect(mockWhere).toHaveBeenCalledWith('orgId', '==', 'brotherslazaroff')
+    })
+})

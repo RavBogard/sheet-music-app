@@ -12,15 +12,15 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **v11.0 Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08 via /paul:milestone)
-Phase: **v11-03 Domain + branding ✅ COMPLETE (3/3, 2026-06-08)** → next: **v11-04 BL consumer surface + onboarding** (NOT STARTED — ready to plan). v11-01 ✅ · v11-02 ✅ · v11-02b ✅ · v11-03 ✅.
-Plan: none active. Ready to PLAN v11-04 (perform-view + gig-packet print scoped to BL org; David's BL membership + empty-library seed; e2e UAT; **+ fold in the deferred cross-tenant collections: templates/roster/congregation/personnel read+write scoping, and the deferred vocab/CreationWizard de-synagogue-ing**). /ui-ux-pro-max BLOCKING.
+Phase: **v11-03 Domain + branding ✅ COMPLETE (3/3, 2026-06-08)** → next: **v11-04 BL consumer surface + onboarding** (NOT STARTED — ready to plan). v11-01 ✅ · v11-02 ✅ · v11-02b ✅ · v11-03 ✅. **Milestone is now 6 numbered phases** (Daniel SPLIT 2026-06-08: the cross-tenant collection scoping carved out of v11-04 into a new v11-05; isolation audit renumbered v11-05→v11-06).
+Plan: **v11-04-01 CREATED (awaiting APPLY)** — org-scope the public web setlist READ paths (the LIVE cross-tenant bug Daniel caught: brotherslazaroff.live/perform shows CRC's setlists). Scopes both the SSR admin fetch (`getAllSetlists`+per-host-dynamic `/perform`) AND the client Firestore subscription (`subscribeToAllSetlists`+`useOrg`), adds (orgId,date) index, regression test. Decomposition (v11-04): **01** web-read scoping (this) · **02** org-aware consumer branding/metadata (PublicSetlistListing "CRC Music" wordmark + root `generateMetadata` + manifest + perform title vocab — UI, /ui-ux-pro-max BLOCKING) · **03** David onboarding + empty-library + e2e UAT. **DEFERRED to v11-05:** templates/roster/congregation/service-personnel R+W + CreationWizard vocab. **OPS (Daniel):** apex `brotherslazaroff.live` still on Squarespace — point apex A `@`→76.76.21.21 in Vercel/Squarespace.
 Status: **v11-03 COMPLETE + committed + pushed to prod.** brotherslazaroff.live host-routing + navy dark+photographic branding + edit-surface vocab/field-trim all shipped; CRC provably unchanged. Phase commit `feat(v11-03)` pushed to origin master (Vercel prod auto-deploy). **BL chrome visible once Daniel completes DNS (`docs/brotherslazaroff-domain-setup.md`) + cert.**
 Last activity: 2026-06-08 — v11-03 phase complete (3 plans) + transitioned. This session: domain doc → discuss → 01 org-context → 02 branding → 03 vocab/trim → phase commit+push. Full unit 3290/0; tsc clean; eslint 0 err.
 
 Parallel track: **v7.1 Production Hardening** remains ACTIVE via the bongo `.coord/` system (cycle-13 in flight) — independent of the PAUL loop, which now tracks v11.0. App is at `10.1.0` (package.json).
 
 Progress:
-- v11.0: [██████░░░░] ~60% — 3 of 5 phases done (v11-01 ✅, v11-02 ✅, v11-03 ✅; +v11-02b); BL live + branded on brotherslazaroff.live
+- v11.0: [█████░░░░░] ~50% — 3 of 6 phases done (v11-01 ✅, v11-02 ✅, v11-03 ✅; +v11-02b); BL live + branded on brotherslazaroff.live (denominator grew 5→6 after the v11-04 split)
 - v7.1 (via .coord/): ~cycles 1–12 landed; cycle-13 in flight
 
 ## Git State
@@ -37,9 +37,11 @@ Progress:
 
 v11.0 runs through the standard PAUL loop:
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11-03 PHASE COMPLETE — next: PLAN v11-04]
-  ✓        ✓        ✓     (v11-02 ✓ · v11-02b ✓ · v11-03 ✓ all 3)
+PLAN ──▶ APPLY ──▶ UNIFY        [v11-04-01 LOOP COMPLETE — next: PLAN v11-04-02]
+  ✓        ✓        ✓     (v11-04-01: 5/5 tasks; tsc clean · 3297/0 · eslint 0; index deployed; SUMMARY written)
 ```
+v11-04 plans: **01 ✅ LOOP COMPLETE** (public /perform reads org-scoped — SSR + client subscription; per-host dynamic; opt-in org filter preserves MCP contract) · 02 ⏳ org-aware branding/metadata (NEXT) · 03 ⏳ onboarding + authed-read scoping + e2e UAT.
+**v11-04 LIVE FINDINGS (2026-06-08, prod probe + Daniel screenshot):** brotherslazaroff.live www routing+navy chrome CORRECT, but consumer surface leaks CRC: (1) `getAllSetlists` unscoped → `/perform` shows CRC setlists [→ v11-04-01], (2) `PublicSetlistListing` hardcodes "CRC Music" wordmark [→ v11-04-02], (3) root-layout static metadata = "Central Reform Congregation" tab title [→ v11-04-02], (4) apex on Squarespace "Coming Soon" [→ OPS/Daniel]. CONTEXT.md has full detail. Note: /perform was ISR `revalidate=60` path-keyed (shared across both hosts) → v11-04-01 makes it per-host dynamic.
 v11-03 (✅ COMPLETE — 3 vertical plans, phase commit `feat(v11-03)` pushed to prod):
 - **v11-03-01** ✅ org-context foundation: proxy `x-org-id` → `<html data-org>` + `OrgProvider`/`useOrg` (defaults crc outside provider). No visual change.
 - **v11-03-02** ✅ BL navy dark+photographic chrome: scoped `[data-org="brotherslazaroff"]`+`.dark[data-org=...]` CSS-var block (hue 252 vs CRC 275), `forcedTheme=dark`, `getOrgBranding()`, org-aware login hero/wordmark. CRC untouched.
@@ -82,7 +84,7 @@ The v7.1 hardening campaign continues separately via the bongo `.coord/` cowork 
 
 Last session: 2026-06-08 — full v11-03 phase end-to-end + paused. `/paul:resume` → wrote `docs/brotherslazaroff-domain-setup.md` → `/paul:discuss-phase` (CONTEXT.md, BL brand scraped) → planned+applied+unified all 3 plans (01 org-context · 02 navy branding · 03 vocab/trim) → phase transition (commit+push) → Daniel completed DNS → **live-verified on brotherslazaroff.live** → caught+fixed the `coerceOrgId` org-id-vs-domain bug (`fix(v11-03)`) → re-verified live. Git strategy: master (prod), tree clean, in sync.
 Stopped at: v11-03 PHASE COMPLETE + transitioned + LIVE-VERIFIED. Commits `feat(v11-03)` `e51d352036` + hotfix `fix(v11-03)` `30bc6c7483`, both pushed to origin master, both Vercel prod READY. DNS done by Daniel; brotherslazaroff.live serves BL chrome (verified). Working tree clean.
-Next action: /paul:plan v11-04 — BL consumer surface (perform-view + gig-packet print scoped to BL org) + David's BL membership + empty-library seed + e2e UAT. **Fold in the v11-03-03 + v11-02 deferrals: org-scope templates/roster/congregation/service-personnel (read+write) + de-synagogue the CreationWizard/perform/display vocab (now unblocked by congregation scoping).** /ui-ux-pro-max BLOCKING. `git pull` first (multi-computer).
+Next action: /paul:discuss-phase v11-04 (then /paul:plan) — BL consumer surface (perform-view + gig-packet print scoped to BL org) + display-card vocab via static `label()` + David's BL membership + empty-library seed + e2e UAT. /ui-ux-pro-max BLOCKING. `git pull` done (already up to date). **The v11-02/v11-03-03 cross-tenant collection deferrals are NO LONGER in v11-04 — they moved to the new v11-05** (templates/roster/congregation/service-personnel read+write + CreationWizard vocab).
 DNS ACTION (Daniel, anytime): complete `docs/brotherslazaroff-domain-setup.md` (Vercel domain-add + Squarespace A `@`→76.76.21.21 / CNAME `www`→cname.vercel-dns.com) so brotherslazaroff.live serves the (now-deployed) BL chrome.
 Resume file: .paul/HANDOFF-2026-06-08.md (full pause context; + v11-03 SUMMARYs + CONTEXT.md)
 Resume context:

@@ -6,6 +6,7 @@ import { Music, Calendar, UserCircle } from "lucide-react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { useAuth } from "@/lib/auth-context"
+import { useOrg } from "@/lib/org/org-context"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { QRSignIn } from "@/components/auth/QRSignIn"
@@ -53,15 +54,20 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
     // subscription `loading` above. The card renders only once auth resolves
     // (`!authLoading`) so we never flash it then yank it (CLS guard).
     const { user, loading: authLoading, signIn } = useAuth()
+    // v11-04-01: scope the live subscription to the current tenant so
+    // brotherslazaroff.live never shows CRC setlists after hydration. `useOrg`
+    // reads the org the Edge proxy resolved from the host (<html data-org>),
+    // defaulting to crc outside a provider.
+    const org = useOrg()
 
     useEffect(() => {
         const service = createSetlistService(null, null)
         const unsub = service.subscribeToAllSetlists((data) => {
             setSetlists(data)
             setLoading(false)
-        })
+        }, undefined, org)
         return () => unsub()
-    }, [])
+    }, [org])
 
     // Split into UPCOMING (eventDate >= today@00:00, soonest first) and PAST
     // (most-recent first; undated trailing), mirroring the authed /setlists

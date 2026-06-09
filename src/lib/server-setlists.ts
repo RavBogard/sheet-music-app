@@ -2,6 +2,7 @@ import { initAdmin } from "@/lib/firebase-admin"
 import { getFirestore } from "firebase-admin/firestore"
 import { logger } from "@/lib/logger"
 import { serializeSetlist } from "@/lib/server-auth"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * `eventDate` is stored with MIXED Firestore types across the `setlists`
@@ -111,7 +112,7 @@ export const MAX_SETLIST_FETCH = 200
 export type AllSetlistsOrderBy = "date" | "eventDate"
 
 export async function getAllSetlists(
-    opts: { limit?: number; orderBy?: AllSetlistsOrderBy } = {},
+    opts: { limit?: number; orderBy?: AllSetlistsOrderBy; org?: OrgId } = {},
 ) {
     try {
         initAdmin()
@@ -122,6 +123,17 @@ export async function getAllSetlists(
                 ? Math.min(opts.limit, MAX_SETLIST_FETCH)
                 : 50
         const orderBy: AllSetlistsOrderBy = opts.orderBy ?? "date"
+
+        // v11-04-01 tenant scoping: `org` is OPT-IN. When provided (the public
+        // web read paths always pass a coerced OrgId), restrict the query to that
+        // tenant via `.where('orgId','==',org)`. When ABSENT, the query stays
+        // cross-tenant — preserving the MCP `list_setlists` contract, which fetches
+        // broad here then filters by `rowOrg` itself (src/lib/mcp/tools/setlists.ts).
+        // The (orgId,date) composite index backs the where+orderBy pair.
+        const base = (): FirebaseFirestore.Query => {
+            const c = db.collection("setlists")
+            return opts.org ? c.where("orgId", "==", opts.org) : c
+        }
 
         if (orderBy === "eventDate") {
             // Mixed-type hazard (VERIFY-1 2026-05-23): a direct
@@ -135,8 +147,7 @@ export async function getAllSetlists(
             // Rows with no parseable eventDate sort last. Robust until the
             // collection exceeds MAX_SETLIST_FETCH (heal-eventdate-types.mjs
             // removes the underlying type drift).
-            const snap = await db
-                .collection("setlists")
+            const snap = await base()
                 .orderBy("date", "desc")
                 .limit(MAX_SETLIST_FETCH)
                 .get()
@@ -153,8 +164,7 @@ export async function getAllSetlists(
             return rows.slice(0, limit)
         }
 
-        const snap = await db
-            .collection("setlists")
+        const snap = await base()
             .orderBy(orderBy, "desc")
             .limit(limit)
             .get()

@@ -1,6 +1,8 @@
+import { headers } from "next/headers"
 import { PublicSetlistListing } from "@/components/performance/PublicSetlistListing"
 import { selectVisiblePublicSetlists } from "@/components/performance/public-setlist-order"
 import { getAllSetlists } from "@/lib/server-setlists"
+import { coerceOrgId } from "@/lib/org/registry"
 import type { Setlist as ApiSetlist } from "@/types/api"
 import type { Setlist as FirebaseSetlist } from "@/lib/setlist-firebase"
 
@@ -24,13 +26,15 @@ export const metadata = {
 // with `initialSetlists`. The client listener still takes over on mount
 // for live updates.
 //
-// ISR revalidate keeps the edge-cache contract intact — the page is
-// statically rendered and re-generated at most once per minute, so a
-// new setlist appears on /perform within ~60s of publish without any
-// per-request server work. We still do NOT call `cookies()` / `headers()`
-// here, so auth-state-divergent renders never enter the cache (auth UI
-// is resolved client-side in PublicSetlistListing via `useAuth`).
-export const revalidate = 60
+// v11-04-01: /perform is now PER-HOST DYNAMIC. Multi-tenant correctness forces
+// this — the prior ISR `revalidate=60` cache is keyed by PATH only and shared
+// across BOTH centralreform.live and brotherslazaroff.live, so a single cached
+// render cannot serve each tenant its own setlists (brotherslazaroff.live was
+// showing CRC's setlists). We read the Edge-resolved `x-org-id` header to scope
+// the SSR fetch per tenant, which opts the route out of static ISR. The
+// per-request cost is one Firestore query; auth UI is still resolved client-side
+// in PublicSetlistListing via `useAuth`, so no cookie read happens here.
+export const dynamic = "force-dynamic"
 
 export default async function PerformPage() {
     // getAllSetlists returns serializeSetlist-normalized rows (Firestore
@@ -48,7 +52,8 @@ export default async function PerformPage() {
     // them. `selectVisiblePublicSetlists` is the same shared primitive
     // the client useMemo invokes; running it here keeps wire bytes
     // byte-identical to the DOM-allowed slice.
-    const raw = (await getAllSetlists({ limit: 50 })) as unknown as FirebaseSetlist[]
+    const org = coerceOrgId((await headers()).get("x-org-id"))
+    const raw = (await getAllSetlists({ limit: 50, org })) as unknown as FirebaseSetlist[]
     const initialSetlists = selectVisiblePublicSetlists(raw) as unknown as ApiSetlist[]
     return <PublicSetlistListing initialSetlists={initialSetlists} />
 }
