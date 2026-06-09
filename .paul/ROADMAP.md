@@ -5,7 +5,7 @@
 ## Current Milestone
 
 **🚧 v11.1 — Brothers Lazaroff Post-Launch Fixes** (In Progress · opened 2026-06-09)
-Status: 🚧 In Progress · Phases: 3 of 4 complete (v11.1-01 ✅ · v11.1-02 ✅ · v11.1-03 ✅)
+Status: ✅ Content complete · Phases: 4 of 4 complete (v11.1-01 ✅ · v11.1-02 ✅ · v11.1-03 ✅ · v11.1-04 ✅) — awaiting `/paul:complete-milestone` (standing UAT-PENDING on the live tenant)
 Focus: Make the second tenant's *lived experience* correct (branding, vocab, library clutter) and give multi-org leaders a real authoring path. Four evidence-backed live-tenant issues surfaced after the brotherslazaroff.live launch — v11.0 proved server-side + MCP isolation (probe 19/19); v11.1 fixes the consumer-facing seams + the multi-org authoring workflow the isolation audit didn't cover.
 **Tenancy model (locked `/paul:discuss-milestone` 2026-06-09):** consumers (musicians + members) are NOT per-org-gated — anyone can use either site, and the **landing-page host** determines the experience (branding/setlists/library); band leaders have explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle, governing authoring. (v7.1 Production Hardening continues separately via the bongo `.coord/` cowork cadence — independent of the PAUL loop.)
 
@@ -14,7 +14,7 @@ Focus: Make the second tenant's *lived experience* correct (branding, vocab, lib
 | v11.1-01 | Org-aware authed branding (nav wordmark + logo) [P0] | 01-01 ✅ | ✅ Complete | 2026-06-09 |
 | v11.1-02 | Multi-org membership toggle + MCP authoring [P0] | 02-01 ✅ (authoring) · 02-02 ✅ (admin UI) | ✅ Complete | 2026-06-09 |
 | v11.1-03 | Library generic-tab visibility (host-filter + All-sites; Shared deferred) [P1] | 03-01 ✅ | ✅ Complete | 2026-06-09 |
-| v11.1-04 | broslaz liturgical vocab sweep [P1] | TBD | Not started | - |
+| v11.1-04 | broslaz liturgical vocab sweep [P1] | 04-01 ✅ | ✅ Complete | 2026-06-09 |
 
 ### Phase v11.1-01: Org-aware authed branding [P0]
 Focus: On brotherslazaroff.live the authenticated top-nav still shows the "CRC Music" wordmark + CRC `/logo.jpg` despite the correct navy theme (public `/perform` wordmark was fixed in v11-04-02; the authed nav was never made org-aware). Make `src/components/nav/DesktopHeader.tsx` (`:106-107`) + `MobileHeader.tsx` (`:34-41`) resolve wordmark + logo from the host org (getOrgBranding / useOrg / congregation — the `config/congregation__brotherslazaroff` doc is already correct: name "Brothers Lazaroff", `logoUrl:""`). Decide the per-org logo asset story (broslaz `logoUrl` empty → text wordmark or a broslaz asset). CRC byte-identical. /ui-ux-pro-max BLOCKING.
@@ -32,7 +32,8 @@ Plans: **03-01** ✅ LOOP COMPLETE (`v11.1-03-01-PLAN.md` + SUMMARY, 3 tasks).
 
 ### Phase v11.1-04: broslaz liturgical vocab sweep [P1]
 Focus: broslaz still shows synagogue vocab — "Plan Service" / "Plan Show", "Upcoming Services" (screenshot-confirmed); the v11-05-05 vocab pass missed these labels. Extend the org vocab layer (`label(org,key)` / vocab.ts) to cover the remaining liturgical strings for broslaz; audit for other remnants (dashboard section headers, creation flow). CRC byte-identical. May fold into v11.1-03's UI pass if planning prefers.
-Plans: TBD (defined during /paul:plan)
+**✅ SHIPPED 2026-06-09 (1 plan).** Audit found "Plan Service" already vocab'd (v11-05-05); the live remnants were hardcoded dashboard headers + matrix title that bypassed `label()`. Added 3 vocab keys (`upcomingSection`/`createNewSetlistHeading`/`matrixTitle`, crc base byte-identical + broslaz "Upcoming Shows"/"Create New Set"/"Set Matrix") and routed `SetlistDashboard` (:134,:144) + `SetlistMatrixView` (:65) through `label(useOrg(),key)`. **DEFERRED:** SERVICE_TYPE_LABELS vocab-table refactor (gated-away for broslaz via `hidesLiturgicalFields`). tsc clean · suite 3339/0 · next build clean.
+Plans: **04-01** ✅ LOOP COMPLETE (`v11.1-04-01-PLAN.md` + SUMMARY, 3 tasks).
 
 Constraints (locked at /paul:discuss-milestone 2026-06-09):
 1. **No local dev** — push to prod/Vercel; but broslaz IS a live tenant, so consumer-visible regressions matter.

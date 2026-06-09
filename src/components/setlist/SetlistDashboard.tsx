@@ -16,6 +16,8 @@ import { ImporterModal } from "./importer/ImporterModal"
 import { SetlistToolbar } from "./SetlistToolbar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { useCongregation } from "@/lib/congregation-store"
+import { useOrg } from "@/lib/org/org-context"
+import { label as orgLabel } from "@/lib/org/vocab"
 import { useSetlistDashboard, type UseSetlistDashboardProps } from "@/hooks/use-setlist-dashboard"
 import { canEditSetlist } from "@/lib/setlist-permissions"
 import { CreationWizard } from "./wizard/CreationWizard"
@@ -29,6 +31,7 @@ const UnifiedCalendar = dynamic(
 
 export function SetlistDashboard(props: UseSetlistDashboardProps) {
     const congregation = useCongregation()
+    const org = useOrg()
     const [showWizard, setShowWizard] = useState(false)
     const [wizardPrefilledDate, setWizardPrefilledDate] = useState<Date | null>(null)
     const openWizardForDate = useCallback((date: Date) => {
@@ -131,7 +134,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                         <Plus className="w-8 h-8 text-white" />
                                                     </div>
                                                     <div className="z-10 mt-2">
-                                                        <h3 className="text-xl font-bold text-foreground">Create New Setlist</h3>
+                                                        <h3 className="text-xl font-bold text-foreground">{orgLabel(org, 'createNewSetlistHeading')}</h3>
                                                         <p className="text-sm text-muted-foreground mt-1">Start fresh or build from a template</p>
                                                     </div>
                                                 </div>
@@ -141,7 +144,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                         {hasUpcoming && (
                                             <section>
                                                 <div className="flex justify-between items-center px-2 mb-4">
-                                                    <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Upcoming Services</h4>
+                                                    <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{orgLabel(org, 'upcomingSection')}</h4>
                                                 </div>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     {upcoming.map(setlist => (

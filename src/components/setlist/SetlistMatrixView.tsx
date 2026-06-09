@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
+import { useOrg } from "@/lib/org/org-context"
+import { label as orgLabel } from "@/lib/org/vocab"
 import { Loader2 } from "lucide-react"
 
 interface MatrixColumn {
@@ -29,6 +31,7 @@ interface MatrixData {
 
 export function SetlistMatrixView() {
     const { user } = useAuth()
+    const org = useOrg()
     const [matrixData, setMatrixData] = useState<MatrixData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -62,7 +65,7 @@ export function SetlistMatrixView() {
     return (
         <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold tracking-tight">Liturgical Matrix</h2>
+                <h2 className="text-2xl font-bold tracking-tight">{orgLabel(org, 'matrixTitle')}</h2>
                 <select 
                     value={type} 
                     onChange={(e) => setType(e.target.value as any)}

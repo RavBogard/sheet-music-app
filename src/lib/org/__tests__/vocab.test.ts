@@ -31,6 +31,10 @@ describe("label", () => {
         ["wizardNamePlaceholder", "e.g., Shabbat Morning, Friday Night...", "e.g., Friday night set"],
         ["pastSection", "Past services", "Past shows"],
         ["planPlaceholder", "Plan Service", "Plan Show"],
+        // v11.1-04: dashboard headers + matrix title.
+        ["upcomingSection", "Upcoming Services", "Upcoming Shows"],
+        ["createNewSetlistHeading", "Create New Setlist", "Create New Set"],
+        ["matrixTitle", "Liturgical Matrix", "Set Matrix"],
     ]
     it("CRC base strings are byte-identical to the current hardcoded UI", () => {
         for (const [key, crc] of V11_05_05_KEYS) {

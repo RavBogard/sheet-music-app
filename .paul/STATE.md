@@ -11,11 +11,11 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Milestone: **v11.1 Brothers Lazaroff Post-Launch Fixes — 🚧 IN PROGRESS (opened 2026-06-09).** 4 phases, **3 complete (v11.1-01 ✅ · v11.1-02 ✅ · v11.1-03 ✅).**
-Phase: **v11.1-03 (Library generic-tab visibility, P1) — ✅ COMPLETE + transitioned 2026-06-09 (1/1 plan).** Next phase = **v11.1-04 (broslaz liturgical vocab sweep, P1) — needs PLAN (LAST v11.1 phase).**
-Plan: **v11.1-03-01 LOOP COMPLETE + committed.** Host-isolate library_index chart reads at the fetch/SSR layer (getServerLibrary(orgId) + /api/library/list rowOrg filter + admin allSites opt-out) → tab+bind-picker+header-search all follow; org-neutral broslaz tab labels + admin All-sites toggle. SUMMARY in phase dir.
-Status: **Phase v11.1-03 transitioned (PROJECT.md evolved, ROADMAP phase→complete 3/4). Ready to plan v11.1-04 (final phase).** On `master`, pushed to origin. package.json 11.0.0.
-Last activity: 2026-06-09 (session 7) — v11.1-03-01 APPLY+UNIFY+transition (library host-isolation; org-neutral labels + admin All-sites toggle; /ui-ux-pro-max; tsc clean · suite 3339/0 · next build clean) → phase commit + push.
+Milestone: **v11.1 Brothers Lazaroff Post-Launch Fixes — ✅ CONTENT COMPLETE 4/4 (2026-06-09).** All phases shipped to prod (v11.1-01 ✅ · v11.1-02 ✅ · v11.1-03 ✅ · v11.1-04 ✅). Awaiting `/paul:complete-milestone` (after live-tenant UAT).
+Phase: **v11.1-04 (broslaz liturgical vocab, P1 — FINAL) — ✅ COMPLETE + transitioned 2026-06-09 (1/1 plan).** Milestone content done.
+Plan: **v11.1-04-01 LOOP COMPLETE + committed.** vocab.ts +3 keys + SetlistDashboard/SetlistMatrixView headers via label(useOrg()). SUMMARY in phase dir.
+Status: **v11.1 CONTENT COMPLETE — next action `/paul:complete-milestone` (Daniel-gated on live-tenant UAT).** On `master`, pushed to origin. package.json 11.0.0.
+Last activity: 2026-06-09 (session 7) — v11.1-04-01 APPLY+UNIFY+transition (vocab remnants; dashboard/matrix headers→vocab layer; /ui-ux-pro-max; tsc clean · suite 3339/0 · next build clean) → phase commit + push. v11.1 4/4.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -45,7 +45,7 @@ Last activity: 2026-06-09 (session 7) — v11.1-03-01 APPLY+UNIFY+transition (li
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-03 — LOOP COMPLETE + transitioned 2026-06-09; next phase v11.1-04 (final)]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-04 (final) — LOOP COMPLETE + transitioned 2026-06-09; v11.1 CONTENT COMPLETE 4/4]
   ✓        ✓        ✓
 ```
 
@@ -65,6 +65,7 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-03 — LOOP COMPLETE + transi
 - **v11.1-02-02 (2026-06-09):** admin org-membership set via the `/manage` People list (tri-state Band-access control, admin-only, band_leader/admin rows); `/api/admin/set-role` now writes `orgIds` to BOTH the Auth claim and the user doc (claim+doc lockstep) so People-list display + roster filtering (v11-05-02 rowOrgIds) reflect changes immediately. Control scoped to the authoring tier per Daniel (consumers stay host-derived).
 
 ### Deferred Issues
+- **SERVICE_TYPE_LABELS vocab-table (v11.1-04 defer, 2026-06-09):** Shabbat Morning/Friday Night/Erev Shabbat/Rosh Hashanah labels hardcoded in SetlistCards/CreationWizard/SetlistMetaEditSheet/interview-defaults + SetlistMatrixView `<option>`s. Gated-away for broslaz (selector hidden via `hidesLiturgicalFields`) → NOT a live remnant. Convert to a vocab-driven table only if a non-synagogue tenant needs service-type categories.
 - **recordings-collection org-scoping (v11.1-03 defer, 2026-06-09):** `subscribeRecordingsForSong` (RecordingBindPopover) is songId-only (no org filter) AND `/api/recordings/upload:107` hardcodes `orgId: DEFAULT_ORG_ID` → host-filtering the subscribe now would hide ALL recordings on broslaz. Fix: stamp the upload from host x-org-id, THEN host-filter the subscribe. Small follow-up; distinct from the Library-tab chart clutter (library_index audio rows ARE covered by v11.1-03).
 - v11-06 residuals (low-risk, in AUDIT.md): setlistTemplates app-only; scheduling_history orgId-absent rows; users claim-based (no orgId field).
 - v7.0 fold-forward backlog (`MILESTONES.md` § v7.0) — re-triage what's still live.
@@ -84,12 +85,12 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-03 — LOOP COMPLETE + transi
 
 ## Session Continuity
 
-Last session: 2026-06-09 (session 7) — /paul:resume → shipped v11.1-01 (org-aware authed branding) AND v11.1-03 (library host-isolation) end-to-end (plan→apply→unify→transition→commit→push each). v11.1-03: getServerLibrary(orgId)+/api/library/list rowOrg filter + admin All-sites toggle + org-neutral broslaz labels; Shared flag + recordings-collection scoping DEFERRED (Daniel). 3 tasks E/Q PASS; tsc clean · suite 3339/0 · next build clean.
-Stopped at: **Phase v11.1-03 COMPLETE + transitioned. 3/4 v11.1 phases done.** Only v11.1-04 (vocab) remains.
-Next action: **`/paul:plan` for v11.1-04 (broslaz liturgical vocab sweep, P1 — FINAL v11.1 phase)** — extend the org vocab layer (`label(org,key)`/vocab.ts) to cover "Plan Service/Show" + "Upcoming Services" + audit dashboard/creation-flow remnants for broslaz; CRC byte-identical; /ui-ux-pro-max BLOCKING. Closing it completes v11.1 → /paul:complete-milestone.
-Resume file: **.paul/phases/v11.1-03-library-visibility/v11.1-03-01-SUMMARY.md**. Milestone reference: .paul/ROADMAP.md.
+Last session: 2026-06-09 (session 7) — /paul:resume → shipped ALL of v11.1 (3 phases this turn: v11.1-01 branding + v11.1-03 library host-isolation + v11.1-04 vocab; v11.1-02 was already done) end-to-end (plan→apply→unify→transition→commit→push each). Every phase: full quality floor (tsc clean · suite 3339/0 · next build clean · /ui-ux-pro-max), CRC byte-identical, autonomous per directive. v11.1 CONTENT COMPLETE 4/4.
+Stopped at: **v11.1 milestone CONTENT COMPLETE (4/4 phases shipped to prod).** Loop idle.
+Next action: **`/paul:complete-milestone`** to archive v11.1 — Daniel-gated: run the standing UAT-PENDING checklist on the live tenant first (broslaz nav/library/dashboard/MCP-authoring + CRC-unchanged), then close. (Milestone close may include a version bump decision — package.json still 11.0.0.)
+Resume file: **.paul/phases/v11.1-04-vocab-remnants/v11.1-04-01-SUMMARY.md**. Milestone reference: .paul/ROADMAP.md.
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
-Standing UAT-PENDING (non-blocking): Daniel — connect Claude Desktop to `https://www.brotherslazaroff.live/api/mcp` + author a test setlist; admin — set a leader's Band access in /manage → People.
+Standing UAT-PENDING (v11.1 close gate, live tenant): broslaz authed nav ("Brothers Lazaroff" + BL monogram, desktop + iPad-WebKit); /library (broslaz-only charts in tab + add-songs picker + header search; admin "All sites" reveals full pool); dashboard ("Upcoming Shows"/"Create New Set") + matrix ("Set Matrix"); MCP authoring (Claude Desktop → `https://www.brotherslazaroff.live/api/mcp` → author test setlist → lands broslaz); admin sets a leader's Band access in /manage → People; CRC unchanged throughout.
 
 ---
 *STATE.md — digest, not archive. Target <100 lines.*

@@ -32,6 +32,10 @@ export type VocabKey =
     | "wizardNamePlaceholder"
     | "pastSection"
     | "planPlaceholder"
+    // v11.1-04: dashboard section headers + matrix title (were hardcoded, bypassing this layer).
+    | "upcomingSection"
+    | "createNewSetlistHeading"
+    | "matrixTitle"
 
 const BASE: Record<VocabKey, string> = {
     setlist: "setlist",
@@ -50,6 +54,10 @@ const BASE: Record<VocabKey, string> = {
     wizardNamePlaceholder: "e.g., Shabbat Morning, Friday Night...",
     pastSection: "Past services",
     planPlaceholder: "Plan Service",
+    // v11.1-04: CRC base = the current hardcoded header strings (byte-identical).
+    upcomingSection: "Upcoming Services",
+    createNewSetlistHeading: "Create New Setlist",
+    matrixTitle: "Liturgical Matrix",
 }
 
 const OVERRIDES: Partial<Record<OrgId, Partial<Record<VocabKey, string>>>> = {
@@ -66,6 +74,10 @@ const OVERRIDES: Partial<Record<OrgId, Partial<Record<VocabKey, string>>>> = {
         wizardNamePlaceholder: "e.g., Friday night set",
         pastSection: "Past shows",
         planPlaceholder: "Plan Show",
+        // v11.1-04: band voice for the dashboard headers + matrix title.
+        upcomingSection: "Upcoming Shows",
+        createNewSetlistHeading: "Create New Set",
+        matrixTitle: "Set Matrix",
     },
 }
 
