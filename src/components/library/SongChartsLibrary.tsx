@@ -22,6 +22,8 @@ import { useLibraryStore } from "@/lib/library-store"
 import { logger } from "@/lib/logger"
 import { useLibrary } from "@/hooks/use-library"
 import { DriveFile } from "@/types/models"
+import type { OrgId } from "@/lib/org/types"
+import { cn } from "@/lib/utils"
 import { LibraryFilters, applyLibraryFilters, createEmptyFilters, LibraryFilterState } from "@/components/library/LibraryFilters"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
@@ -105,9 +107,12 @@ interface SongChartsLibraryProps {
     onBack?: () => void
     onSelectFile?: (file: DriveFile) => void
     initialLibrary?: DriveFile[]
+    // v11.1-03: the landing-page host org (server-resolved). Drives org-neutral
+    // tab labels for non-crc tenants. Defaults to crc → CRC byte-identical.
+    org?: OrgId
 }
 
-export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }: SongChartsLibraryProps) {
+export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], org = "crc" }: SongChartsLibraryProps) {
     const router = useRouter()
     const { setFile } = useMusicStore()
 
@@ -155,10 +160,16 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
 
     // Automatically load the library on mount if needed
     const [tab, setTab] = useState<LibraryTab>("core")
-    
+
+    // v11.1-03: admin-only "All sites" escape hatch. Off → the library is
+    // host-org filtered (server-side); on → the full cross-tenant pool is
+    // fetched for authoring/binding. Re-fetch re-hydrates the shared store, so
+    // the bind-picker + header search follow automatically.
+    const [allSites, setAllSites] = useState(false)
+
     // We fetch ALL files now instead of just the active collection,
     // so that the tab counts in the UI are always accurate.
-    const { refetch: loadLibrary, isLoading: queryLoading, error: queryError } = useLibrary(false, "all")
+    const { refetch: loadLibrary, isLoading: queryLoading, error: queryError } = useLibrary(false, "all", allSites)
     const loading = filtering || queryLoading
     const error = queryError ? queryError.message : null
 
@@ -357,8 +368,13 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                 >
                     {(
                         [
-                            { value: 'core' as const, label: `CRC Charts (${allFilteredCore.length})`, icon: null },
-                            { value: 'supplemental' as const, label: `Shireinu (${allFilteredSupplemental.length})`, icon: null },
+                            // v11.1-03: org-neutral labels for non-crc tenants. CRC keeps
+                            // "CRC Charts" + the "Shireinu" (supplemental) tab byte-identical;
+                            // broslaz shows "Charts" and omits the CRC-specific Shireinu tab.
+                            { value: 'core' as const, label: `${org === 'crc' ? 'CRC Charts' : 'Charts'} (${allFilteredCore.length})`, icon: null },
+                            ...(org === 'crc'
+                                ? [{ value: 'supplemental' as const, label: `Shireinu (${allFilteredSupplemental.length})`, icon: null }]
+                                : []),
                             { value: 'uploads' as const, label: `Uploads (${allFilteredUploads.length})`, icon: null },
                             ...(hasAudio
                                 ? [{ value: 'audio' as const, label: `Audio (${audioFiles.length})`, icon: <Music className="w-3.5 h-3.5" /> }]
@@ -381,6 +397,26 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [] }:
                         )
                     })}
                 </div>
+
+                {/* v11.1-03: admin-only "All sites" escape hatch — reveals the
+                    full cross-tenant chart pool for authoring/binding. Off by
+                    default (the library is host-org filtered). */}
+                {isAdmin && (
+                    <div className="mt-2 flex items-center justify-center">
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked={allSites}
+                            aria-label="Show charts from all sites"
+                            onClick={() => setAllSites(v => !v)}
+                            className="inline-flex items-center gap-2 min-h-11 rounded-full px-4 py-2 text-xs font-medium border cursor-pointer transition-colors data-[state=on]:bg-brand/15 data-[state=on]:text-foreground data-[state=on]:border-brand/30 data-[state=on]:ring-1 data-[state=on]:ring-brand/30 data-[state=off]:bg-muted/50 data-[state=off]:text-muted-foreground data-[state=off]:border-border data-[state=off]:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                            data-state={allSites ? 'on' : 'off'}
+                        >
+                            <span className={cn("inline-block w-2 h-2 rounded-full", allSites ? "bg-brand" : "bg-muted-foreground/40")} />
+                            All sites{allSites ? " · on" : ""}
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* File List */}

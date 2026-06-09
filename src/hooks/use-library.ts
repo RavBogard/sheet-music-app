@@ -12,7 +12,7 @@ import { listenForCacheInvalidation } from "@/lib/library-cache"
  * 
  * If force=true, bypasses the browser cache.
  */
-async function fetchLibrary(force = false, collection = 'all'): Promise<{ files: DriveFile[], lastModified: string }> {
+async function fetchLibrary(force = false, collection = 'all', allSites = false): Promise<{ files: DriveFile[], lastModified: string }> {
     const user = auth?.currentUser
     const headers: HeadersInit = {}
     if (user) {
@@ -20,7 +20,10 @@ async function fetchLibrary(force = false, collection = 'all'): Promise<{ files:
         headers['Authorization'] = `Bearer ${token}`
     }
 
-    const endpoint = `/api/library/list?all=true&collection=${collection}${force ? `&t=${Date.now()}` : '&v=2'}`
+    // v11.1-03: allSites is the admin "All sites" escape hatch — the route only
+    // honors it for admins, so passing it from a non-admin is a harmless no-op.
+    const allSitesParam = allSites ? '&allSites=true' : ''
+    const endpoint = `/api/library/list?all=true&collection=${collection}${allSitesParam}${force ? `&t=${Date.now()}` : '&v=2'}`
     const options: RequestInit = { headers }
     if (force) {
         options.cache = 'no-store'
@@ -38,14 +41,15 @@ async function fetchLibrary(force = false, collection = 'all'): Promise<{ files:
  * React Query natively handles the caching, invalidation, and background
  * refetching, completely replacing the bespoke IDB caching layer.
  */
-export function useLibrary(force = false, collection = 'all') {
+export function useLibrary(force = false, collection = 'all', allSites = false) {
     const { user } = useAuth()
 
     const queryInfo = useQuery({
         // Increment the cache key version (v2) to force an immediate bust of the
-        // old empty 'all' cache for all clients.
-        queryKey: ['library', 'v2', collection, force, !!user],
-        queryFn: () => fetchLibrary(force, collection),
+        // old empty 'all' cache for all clients. allSites is part of the key so
+        // toggling the admin "All sites" view re-fetches (v11.1-03).
+        queryKey: ['library', 'v2', collection, force, !!user, allSites],
+        queryFn: () => fetchLibrary(force, collection, allSites),
         staleTime: 1000 * 60 * 60 * 24, // Consider data fresh for 24 hours (sync handles updates)
         enabled: !!user, // Wait for auth to initialize reactively
     })

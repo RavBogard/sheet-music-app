@@ -5,7 +5,7 @@
 ## Current Milestone
 
 **🚧 v11.1 — Brothers Lazaroff Post-Launch Fixes** (In Progress · opened 2026-06-09)
-Status: 🚧 In Progress · Phases: 2 of 4 complete (v11.1-01 ✅ · v11.1-02 ✅)
+Status: 🚧 In Progress · Phases: 3 of 4 complete (v11.1-01 ✅ · v11.1-02 ✅ · v11.1-03 ✅)
 Focus: Make the second tenant's *lived experience* correct (branding, vocab, library clutter) and give multi-org leaders a real authoring path. Four evidence-backed live-tenant issues surfaced after the brotherslazaroff.live launch — v11.0 proved server-side + MCP isolation (probe 19/19); v11.1 fixes the consumer-facing seams + the multi-org authoring workflow the isolation audit didn't cover.
 **Tenancy model (locked `/paul:discuss-milestone` 2026-06-09):** consumers (musicians + members) are NOT per-org-gated — anyone can use either site, and the **landing-page host** determines the experience (branding/setlists/library); band leaders have explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle, governing authoring. (v7.1 Production Hardening continues separately via the bongo `.coord/` cowork cadence — independent of the PAUL loop.)
 
@@ -13,7 +13,7 @@ Focus: Make the second tenant's *lived experience* correct (branding, vocab, lib
 |-------|------|-------|--------|-----------|
 | v11.1-01 | Org-aware authed branding (nav wordmark + logo) [P0] | 01-01 ✅ | ✅ Complete | 2026-06-09 |
 | v11.1-02 | Multi-org membership toggle + MCP authoring [P0] | 02-01 ✅ (authoring) · 02-02 ✅ (admin UI) | ✅ Complete | 2026-06-09 |
-| v11.1-03 | Library generic-tab visibility (host-filter + Shared + All-sites) [P1] | TBD | Not started | - |
+| v11.1-03 | Library generic-tab visibility (host-filter + All-sites; Shared deferred) [P1] | 03-01 ✅ | ✅ Complete | 2026-06-09 |
 | v11.1-04 | broslaz liturgical vocab sweep [P1] | TBD | Not started | - |
 
 ### Phase v11.1-01: Org-aware authed branding [P0]
@@ -27,7 +27,8 @@ Plans: TBD (defined during /paul:plan)
 
 ### Phase v11.1-03: Library generic-tab visibility [P1]
 Focus: The in-app generic Library tab shows BOTH tenants' charts — the pool is shared and the HTTP/SSR read paths were never org-scoped (only MCP was). **Display-only de-clutter, NOT a security wall** (only admins/leaders add/edit; err-public holds). Host-filter the unscoped reads — `src/app/api/library/list/route.ts`, `getServerLibrary()` + `getServerLibraryLean()` (`src/lib/server-library.ts`), recordings subscribe (`src/lib/recordings/recordings-client.ts`). Generic tab shows `orgId === host org` OR a NEW **Shared** flag (admin-set; legacy/unstamped default crc → drop off broslaz). Admin-only **"All sites" toggle** reveals the full pool for authoring. broslaz gets org-neutral tab labels ("Charts / Uploads / Audio"); CRC byte-identical ("CRC Charts / Shireinu"). /ui-ux-pro-max BLOCKING.
-Plans: TBD (defined during /paul:plan)
+**✅ SHIPPED 2026-06-09 (1 plan).** Host-filter applied at the fetch/SSR layer (`getServerLibrary(orgId)` + `/api/library/list` default host-org filter via `rowOrg`), so the shared `useLibraryStore` propagates isolation to the Library tab + bind-picker + header search from one point. Admin-only **"All sites"** toggle (gated by `getServerUser().isAdmin`) reveals the full pool. Org-neutral tab labels for broslaz; CRC byte-identical. **DECISIONS (Daniel):** Shared flag DEFERRED (libraries disjoint today); **recordings-collection scoping DEFERRED** (separate per-song surface + `/api/recordings/upload` hardcodes orgId=crc → fix stamp first). Display-only; serving routes untouched (err-public). tsc clean · suite 3339/0 · next build clean.
+Plans: **03-01** ✅ LOOP COMPLETE (`v11.1-03-01-PLAN.md` + SUMMARY, 3 tasks).
 
 ### Phase v11.1-04: broslaz liturgical vocab sweep [P1]
 Focus: broslaz still shows synagogue vocab — "Plan Service" / "Plan Show", "Upcoming Services" (screenshot-confirmed); the v11-05-05 vocab pass missed these labels. Extend the org vocab layer (`label(org,key)` / vocab.ts) to cover the remaining liturgical strings for broslaz; audit for other remnants (dashboard section headers, creation flow). CRC byte-identical. May fold into v11.1-03's UI pass if planning prefers.

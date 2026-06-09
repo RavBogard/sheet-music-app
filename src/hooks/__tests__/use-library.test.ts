@@ -94,7 +94,7 @@ describe('useLibrary', () => {
 
     expect(mockUseQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['library', 'v2', 'all', true, true],
+        queryKey: ['library', 'v2', 'all', true, true, false],
       })
     )
   })

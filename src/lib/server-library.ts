@@ -1,6 +1,8 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { z } from "zod"
+import type { OrgId } from "@/lib/org/types"
+import { rowOrg } from "@/lib/org/membership" // pure helper (firebase-admin-free)
 
 const LibraryFileSchema = z.object({
     id: z.string(),
@@ -19,11 +21,13 @@ export type LibraryFile = z.infer<typeof LibraryFileSchema>
 // doc-import session skip the full scan, short enough that a freshly-uploaded
 // chart surfaces quickly.
 const LEAN_CACHE_TTL_MS = 60_000
-let leanCache: { files: LibraryFile[]; expiresAt: number } | null = null
+// v11.1-03: cache keyed by org scope ("all" when unfiltered) so a crc-scoped and
+// a broslaz-scoped resolve don't poison each other.
+const leanCache = new Map<string, { files: LibraryFile[]; expiresAt: number }>()
 
 /** Test helper — clears the lean-library cache so tests stay deterministic. */
 export function __resetServerLibraryCache(): void {
-    leanCache = null
+    leanCache.clear()
 }
 
 /**
@@ -36,9 +40,11 @@ export function __resetServerLibraryCache(): void {
  * `parents` is filled with `[]` (it has a schema default). Never throws — an
  * internal failure returns `[]` (an empty library is usable, not a failure).
  */
-export async function getServerLibraryLean(): Promise<LibraryFile[]> {
-    if (leanCache && Date.now() < leanCache.expiresAt) {
-        return leanCache.files
+export async function getServerLibraryLean(orgId?: OrgId): Promise<LibraryFile[]> {
+    const cacheKey = orgId ?? "all"
+    const cached = leanCache.get(cacheKey)
+    if (cached && Date.now() < cached.expiresAt) {
+        return cached.files
     }
     try {
         initAdmin()
@@ -51,7 +57,8 @@ export async function getServerLibraryLean(): Promise<LibraryFile[]> {
         while (true) {
             let query = db.collection('library_index')
                 .orderBy('name')
-                .select('name', 'mimeType')
+                // v11.1-03: project orgId too so we can host-filter when scoped.
+                .select('name', 'mimeType', 'orgId')
                 .limit(limit)
 
             if (lastVisible) {
@@ -65,6 +72,8 @@ export async function getServerLibraryLean(): Promise<LibraryFile[]> {
 
             snapshot.docs.forEach(doc => {
                 const data = doc.data()
+                // v11.1-03: host-org filter (display-only) when an org is passed.
+                if (orgId && rowOrg(data.orgId) !== orgId) return
                 // Minimal inline guard — the full LibraryFileSchema parse is
                 // unnecessary for two projected fields.
                 if (
@@ -90,7 +99,7 @@ export async function getServerLibraryLean(): Promise<LibraryFile[]> {
             }
         }
 
-        leanCache = { files, expiresAt: Date.now() + LEAN_CACHE_TTL_MS }
+        leanCache.set(cacheKey, { files, expiresAt: Date.now() + LEAN_CACHE_TTL_MS })
         return files
     } catch (error) {
         logger.error("Lean server library fetch failed:", error)
@@ -101,7 +110,7 @@ export async function getServerLibraryLean(): Promise<LibraryFile[]> {
 /**
  * Fetch the entire library index server-side.
  */
-export async function getServerLibrary() {
+export async function getServerLibrary(orgId?: OrgId) {
     try {
         initAdmin()
         const db = getFirestore()
@@ -127,6 +136,9 @@ export async function getServerLibrary() {
 
             snapshot.docs.forEach(doc => {
                 const data = doc.data()
+                // v11.1-03: host-org filter (display-only) when an org is passed.
+                // Unfiltered when omitted → existing callers byte-identical.
+                if (orgId && rowOrg(data.orgId) !== orgId) return
                 if (data.lastSyncedAt && data.lastSyncedAt > maxModified) {
                     maxModified = data.lastSyncedAt
                 }

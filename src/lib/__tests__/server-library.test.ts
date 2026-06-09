@@ -14,6 +14,7 @@ const mockStartAfter = vi.fn()
 const queryChain: Record<string, unknown> = {
     orderBy: vi.fn(() => queryChain),
     limit: vi.fn(() => queryChain),
+    select: vi.fn(() => queryChain),
     startAfter: vi.fn((...args: unknown[]) => {
         mockStartAfter(...args)
         return queryChain
@@ -42,7 +43,7 @@ vi.mock('@/lib/logger', () => ({
 
 // ── Import after mocks ──
 
-import { getServerLibrary } from '@/lib/server-library'
+import { getServerLibrary, getServerLibraryLean, __resetServerLibraryCache } from '@/lib/server-library'
 import { logger } from '@/lib/logger'
 
 // ── Helpers ──
@@ -162,5 +163,67 @@ describe('getServerLibrary', () => {
         const result = await getServerLibrary()
 
         expect(result.files).toEqual([])
+    })
+
+    // v11.1-03: host-org display filter.
+    describe('orgId host-filter', () => {
+        beforeEach(() => __resetServerLibraryCache())
+
+        it('returns all rows when no orgId is passed (byte-identical to prior behavior)', async () => {
+            pages = [[
+                makeLibDoc('crc-1', { orgId: 'crc' }),
+                makeLibDoc('bl-1', { orgId: 'brotherslazaroff' }),
+                makeLibDoc('legacy', {}), // no orgId
+            ], []]
+
+            const result = await getServerLibrary()
+            expect(result.files.map(f => f.id).sort()).toEqual(['bl-1', 'crc-1', 'legacy'])
+        })
+
+        it('filters to crc (legacy/unstamped rows count as crc)', async () => {
+            pages = [[
+                makeLibDoc('crc-1', { orgId: 'crc' }),
+                makeLibDoc('bl-1', { orgId: 'brotherslazaroff' }),
+                makeLibDoc('legacy', {}), // rowOrg(undefined) === 'crc'
+            ], []]
+
+            const result = await getServerLibrary('crc')
+            expect(result.files.map(f => f.id).sort()).toEqual(['crc-1', 'legacy'])
+        })
+
+        it('filters to brotherslazaroff (drops crc + legacy rows)', async () => {
+            pages = [[
+                makeLibDoc('crc-1', { orgId: 'crc' }),
+                makeLibDoc('bl-1', { orgId: 'brotherslazaroff' }),
+                makeLibDoc('bl-2', { orgId: 'brotherslazaroff' }),
+                makeLibDoc('legacy', {}),
+            ], []]
+
+            const result = await getServerLibrary('brotherslazaroff')
+            expect(result.files.map(f => f.id).sort()).toEqual(['bl-1', 'bl-2'])
+        })
+    })
+
+    describe('getServerLibraryLean orgId host-filter + per-org cache', () => {
+        beforeEach(() => __resetServerLibraryCache())
+
+        it('scopes lean results by org and caches per-org (no cross-poisoning)', async () => {
+            pages = [[
+                makeLibDoc('crc-1', { orgId: 'crc' }),
+                makeLibDoc('bl-1', { orgId: 'brotherslazaroff' }),
+            ], []]
+
+            const crc = await getServerLibraryLean('crc')
+            expect(crc.map(f => f.id)).toEqual(['crc-1'])
+
+            // Different org key → fresh scan (not served from the crc cache entry).
+            pageIndex = 0
+            pages = [[
+                makeLibDoc('crc-1', { orgId: 'crc' }),
+                makeLibDoc('bl-1', { orgId: 'brotherslazaroff' }),
+            ], []]
+            const bl = await getServerLibraryLean('brotherslazaroff')
+            expect(bl.map(f => f.id)).toEqual(['bl-1'])
+        })
     })
 })

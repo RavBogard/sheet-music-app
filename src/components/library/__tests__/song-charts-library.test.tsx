@@ -31,9 +31,11 @@ vi.mock("@/lib/store", () => ({
     FileType: {},
 }))
 
-// Mock auth
+// Mock auth (mutable isAdmin so the v11.1-03 admin-only "All sites" toggle can
+// be tested for both roles; defaults to admin to preserve existing tests).
+const authState = vi.hoisted(() => ({ isAdmin: true }))
 vi.mock("@/lib/auth-context", () => ({
-    useAuth: () => ({ isAdmin: true, isBandLeader: true, profile: {}, canUpload: true }),
+    useAuth: () => ({ isAdmin: authState.isAdmin, isBandLeader: true, profile: {}, canUpload: true }),
 }))
 
 // Mock congregation
@@ -193,6 +195,7 @@ describe("SongChartsLibrary", () => {
         mockDisplayedFiles = [chartFile1, chartFile2]
         mockAllFiles = [chartFile1, chartFile2]
         mockInitialized = true
+        authState.isAdmin = true
     })
 
     // ── Rendering ──
@@ -335,6 +338,31 @@ describe("SongChartsLibrary", () => {
     it("hydrates store with initialLibrary on mount", () => {
         render(<SongChartsLibrary initialLibrary={[chartFile1]} />)
         expect(mockHydrate).toHaveBeenCalledWith([chartFile1])
+    })
+
+    // ── v11.1-03: org-aware tab labels + admin All-sites toggle ──
+
+    it("crc (default) renders the CRC Charts + Shireinu tab labels (byte-identical)", () => {
+        render(<SongChartsLibrary org="crc" />)
+        expect(screen.getByText(/CRC Charts \(\d+\)/)).toBeDefined()
+        expect(screen.getByText(/Shireinu \(\d+\)/)).toBeDefined()
+    })
+
+    it("broslaz renders org-neutral 'Charts' and omits the CRC-specific Shireinu tab", () => {
+        render(<SongChartsLibrary org="brotherslazaroff" />)
+        expect(screen.getByText(/^Charts \(\d+\)/)).toBeDefined()
+        expect(screen.queryByText(/CRC Charts/)).toBeNull()
+        expect(screen.queryByText(/Shireinu/)).toBeNull()
+    })
+
+    it("shows the admin-only 'All sites' toggle for admins, hides it for non-admins", () => {
+        const { unmount } = render(<SongChartsLibrary org="brotherslazaroff" />)
+        expect(screen.getByRole("switch", { name: /all sites/i })).toBeDefined()
+        unmount()
+
+        authState.isAdmin = false
+        render(<SongChartsLibrary org="brotherslazaroff" />)
+        expect(screen.queryByRole("switch", { name: /all sites/i })).toBeNull()
     })
 })
 

@@ -3,6 +3,9 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { httpError } from "@/lib/http/error-envelope"
+import { coerceOrgId } from "@/lib/org/registry"
+import { rowOrg } from "@/lib/org/membership"
+import { getServerUser } from "@/lib/server-auth"
 
 /**
  * Library List API — Optimized with pagination + ETag caching
@@ -27,6 +30,15 @@ export const GET = createApiHandler(
         const statusFilter = url.searchParams.get("status") // 'archived' to show only archived
         const collectionFilter = url.searchParams.get("collection") // 'supplemental' or 'core'
         const limitParam = Math.min(parseInt(url.searchParams.get("limit") || "200"), 500)
+
+        // v11.1-03: host-org display filter. Default = the landing-page org
+        // (x-org-id, Edge-resolved). An `allSites=true` opt-out is honored ONLY
+        // for admins (full cross-tenant pool for authoring/binding). Display-only:
+        // the file-serving routes are untouched, so direct access is never gated.
+        const hostOrg = coerceOrgId(ctx.req.headers.get("x-org-id"))
+        const wantsAllSites = url.searchParams.get("allSites") === "true"
+        const su = wantsAllSites ? await getServerUser().catch(() => null) : null
+        const allSites = wantsAllSites && !!su?.isAdmin
 
         if (!initAdmin()) {
             // Cycle-5 C5C-002 — rich envelope (was flat
@@ -76,13 +88,17 @@ export const GET = createApiHandler(
         const files = snapshot.docs
             .filter(doc => {
                 const data = doc.data()
+                // v11.1-03: host-org isolation (display-only) unless an admin
+                // opted into All-sites. Mirrors the MCP rowOrg filter pattern.
+                if (!allSites && rowOrg(data.orgId) !== hostOrg) return false
+
                 const status = data.status
                 if (statusFilter === 'archived' && status !== 'archived') return false
                 if (statusFilter !== 'archived' && status === 'archived') return false
-                
+
                 const col = data.collection || 'core'
                 if (collectionFilter && collectionFilter !== 'all' && col !== collectionFilter) return false
-                
+
                 return true
             })
             .map(doc => {

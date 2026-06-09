@@ -1,5 +1,7 @@
+import { headers } from "next/headers"
 import { getServerUser } from "@/lib/server-auth"
 import { getServerLibrary } from "@/lib/server-library"
+import { coerceOrgId } from "@/lib/org/registry"
 import { SongChartsLibrary } from "@/components/library/SongChartsLibrary"
 
 export default async function LibraryPage() {
@@ -28,7 +30,11 @@ export default async function LibraryPage() {
         )
     }
 
-    const { files } = await getServerLibrary()
+    // v11.1-03: host-isolate the library to the landing-page org (display-only;
+    // direct chart access is never gated). CRC pool is 100% crc-stamped → no-op
+    // for centralreform.live.
+    const orgId = coerceOrgId((await headers()).get("x-org-id"))
+    const { files } = await getServerLibrary(orgId)
 
-    return <SongChartsLibrary initialLibrary={files as any} />
+    return <SongChartsLibrary initialLibrary={files as any} org={orgId} />
 }
