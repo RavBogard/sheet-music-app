@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
     resolveOrgIdByDomain,
+    coerceOrgId,
     getOrg,
     isKnownOrg,
     DEFAULT_ORG_ID,
@@ -30,6 +31,24 @@ describe("resolveOrgIdByDomain", () => {
         expect(resolveOrgIdByDomain(undefined)).toBe(DEFAULT_ORG_ID)
         expect(resolveOrgIdByDomain("localhost:3000")).toBe(DEFAULT_ORG_ID)
         expect(resolveOrgIdByDomain("sheet-music-app.vercel.app")).toBe(DEFAULT_ORG_ID)
+    })
+})
+
+describe("coerceOrgId (x-org-id header value → OrgId)", () => {
+    // Regression: the proxy puts a RESOLVED org id on x-org-id. The server
+    // render must validate it as an org id — NOT pass it through
+    // resolveOrgIdByDomain (which matches domains and would return crc for the
+    // org id "brotherslazaroff"). This was the v11-03-01 live bug.
+    it("passes through a known org id", () => {
+        expect(coerceOrgId("brotherslazaroff")).toBe("brotherslazaroff")
+        expect(coerceOrgId("crc")).toBe("crc")
+    })
+    it("falls back to crc for unknown / missing values", () => {
+        expect(coerceOrgId("brotherslazaroff.live")).toBe(DEFAULT_ORG_ID) // a DOMAIN is not an org id
+        expect(coerceOrgId("nope")).toBe(DEFAULT_ORG_ID)
+        expect(coerceOrgId(null)).toBe(DEFAULT_ORG_ID)
+        expect(coerceOrgId(undefined)).toBe(DEFAULT_ORG_ID)
+        expect(coerceOrgId("")).toBe(DEFAULT_ORG_ID)
     })
 })
 

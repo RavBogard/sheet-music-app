@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
 import { OrgProvider } from "@/lib/org/org-context"
-import { resolveOrgIdByDomain } from "@/lib/org/registry"
+import { coerceOrgId } from "@/lib/org/registry"
 import { getOrgBranding } from "@/lib/org/branding"
 import { ClientProviders } from "@/components/client-providers"
 import { ErrorBoundary } from "@/components/error-boundary"
@@ -85,7 +85,10 @@ export default async function RootLayout({
   // makes it total + typed (any missing/unknown value → DEFAULT_ORG_ID "crc"),
   // so `orgId` is always a valid OrgId. `data-org` is the CSS hook for
   // BL branding (v11-03-02); OrgProvider exposes it to client components.
-  const orgId = resolveOrgIdByDomain(headersList.get("x-org-id"));
+  // x-org-id carries the org id already resolved at the Edge (src/proxy.ts).
+  // coerceOrgId validates it (unknown/missing → crc); do NOT pass it through
+  // resolveOrgIdByDomain, which expects a host, not an org id.
+  const orgId = coerceOrgId(headersList.get("x-org-id"));
   // v11-03-02: Brothers Lazaroff is a dark+photographic band identity → force
   // dark so the `.dark[data-org="brotherslazaroff"]` navy tokens always apply.
   // CRC's forceDark is false → undefined → next-themes system behavior unchanged.

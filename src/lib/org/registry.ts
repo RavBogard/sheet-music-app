@@ -34,6 +34,21 @@ export function isKnownOrg(orgId: string): boolean {
 }
 
 /**
+ * Coerce a raw `x-org-id` header value (an ALREADY-RESOLVED org id set by the
+ * Edge proxy, e.g. "brotherslazaroff") into a typed OrgId, falling back to
+ * DEFAULT_ORG_ID for missing/unknown values.
+ *
+ * NOTE: this is NOT resolveOrgIdByDomain — that one maps a *host* like
+ * "www.brotherslazaroff.live" to an org. The proxy already did that and put the
+ * org *id* on the header; the server render just needs to validate it. Passing
+ * an org id through resolveOrgIdByDomain returns crc (no domain match), which
+ * was the v11-03-01 bug.
+ */
+export function coerceOrgId(value: string | null | undefined): OrgId {
+    return value && isKnownOrg(value) ? (value as OrgId) : DEFAULT_ORG_ID
+}
+
+/**
  * Normalize a request host to an org id. Lowercases, strips any `:port` and a
  * leading `www.`, then matches against each org's `domain`. Unknown / undefined /
  * localhost / *.vercel.app fall through to DEFAULT_ORG_ID.
