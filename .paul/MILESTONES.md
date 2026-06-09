@@ -35,6 +35,39 @@ Completed milestone log for this project.
 | v5.4 Hotfix + Harness Fidelity | 2026-05-12 | ~4 days (2026-05-08 → 2026-05-12) | 2 phases shipped + 1 partial (3 deferred fold-forward to v6.0), 4 plans + 8 P0 patches + 2 cleanups, ~18 commits (PENDING-UAT at close — Daniel-loop discipline; HFG counter 1/3 carried into v6.0) |
 | v6.0 Tracks Single-Source-of-Truth | 2026-05-13 | ~2 days (2026-05-12 → 2026-05-13) | 12 phases LOOP COMPLETE (10 original + 2 emergent close-gates v60-11/v60-12), 24 plans, 25 commits (PENDING-UAT at close — 5th consecutive use of v51-04 codified pattern; HFG counter 0/3 held throughout via emulator coverage) |
 | v7.0 Document-Driven Setlist Creation | 2026-05-14 | ~1.5 days (2026-05-13 milestone open → 2026-05-14 close) | 9 phases LOOP COMPLETE (8 roadmap + v70-09 out-of-sequence polish), 16 plans, 2 bundled phase commits at master HEAD (v70-07 `4668e2a8` + v70-08 `f3f86c41`); PENDING-UAT at close (6th consecutive v51-04 use); HFG counter 0/3 held; constraint 12 satisfied (end-of-milestone audit ran, 9 P1s remediated in-phase) |
+| v11.0 Brothers Lazaroff Multi-Tenant | 2026-06-09 | ~2 days (2026-06-08 → 2026-06-09) | 7 phases (v11-01..06 + v11-02b), 23 plans; 2nd live tenant brotherslazaroff.live fully tenant-isolated; close-gate AUDIT.md GO; live prod probe 19/19; tip `2a8441d6e5` |
+
+---
+
+## ✅ v11.0 Brothers Lazaroff Multi-Tenant
+
+**Completed:** 2026-06-09 · **Duration:** ~2 days (2026-06-08 → 2026-06-09)
+
+Turned the single-tenant CRC app into a multi-tenant platform whose first second tenant is **Brothers Lazaroff** (David Lazaroff), live on `brotherslazaroff.live` — own org-scoped library + setlists + roster + congregation branding, authored via Claude + MCP, within the SAME app + Firebase (`crcmusiccharts`). CRC data backfilled to a default `crc` org, behavior-neutral.
+
+### Stats
+| Metric | Value |
+|--------|-------|
+| Phases | 7 (v11-01, 02, 02b, 03, 04, 05, 06) |
+| Plans | 23 |
+| Close | AUDIT.md verdict GO; live prod probe 19/19; tip `2a8441d6e5` |
+
+### Phases
+- **v11-01** Tenant foundation — `orgId` on songs/library_index/setlists/tracks/recordings; tenant registry; CRC backfill (2105 docs); org-scoped Firestore rules (write-isolation, no lock-out) + emulator coverage.
+- **v11-02** MCP org-scoping — caller org from the bearer token doc → `orgFrom(extra)`; reads + writes tenant-walled (not-found wall, no existence leak); David's BL bearer + claim issued; live e2e 12/12.
+- **v11-02b** Org-aware self-service token minting (`getPrimaryOrgForMinting`).
+- **v11-03** `brotherslazaroff.live` domain + navy/dark branding + de-synagogued vocab (CRC byte-identical).
+- **v11-04** BL consumer surface (perform/print) + org-aware metadata/wordmark + authed-dashboard read scoping.
+- **v11-05** Cross-tenant collection scoping (templates / roster `users` + `scheduling_assignments` / congregation per-org doc / service-personnel) R+W + in-app setlist-create orgId stamp + CreationWizard vocab.
+- **v11-06** Cross-tenant isolation security audit (close gate) — three adversarial axes ALL closed: Firestore-rules leakage (scheduling_assignments/_history hardened via `orgReadOk`; per-org congregation branding wildcard; rules deployed), MCP org-scope escape (no-arg-injection invariant CI-locked), host-spoof (`verifyBearer` bearer-authoritative, ignores spoofed `x-org-id`). leadHistory tenant-scoped. Live prod probe **19/19**; `AUDIT.md` verdict **GO**.
+
+### Key Decisions
+- Caller org sourced from the MCP bearer token doc, NOT the auth claim or any request header (un-spoofable).
+- Write-isolation over write-requirement in rules (client paths omit orgId → hard-require would lock out CRC).
+- `err-public` holds WITHIN a tenant; hard wall ACROSS tenants. Setlist names public-by-design (leadHistory scoping was UX, not security).
+- Per-org congregation via doc-id namespacing (`config/congregation__{org}`; crc = bare doc, zero migration).
+- Residuals accepted (defense-in-depth, low risk): setlistTemplates app-only (no client read path); scheduling_history orgId-absent rows; users claim-based (no orgId field). See `.paul/phases/v11-06-isolation-audit/AUDIT.md`.
+- Ran fully autonomously per Daniel's v11.0 autonomy directive (auto-commit/push per phase, deploys/probes as AUTO tasks; quality floor held).
 
 ---
 
