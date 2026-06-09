@@ -11,11 +11,11 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Milestone: **v11.1 Brothers Lazaroff Post-Launch Fixes — 🚧 IN PROGRESS (opened 2026-06-09).** 4 phases, 0 complete.
-Phase: **v11.1-02 (Multi-org membership + authoring) — IN PROGRESS (1 of 2 plans done).** 02-01 authoring slice ✅ LOOP COMPLETE; **02-02 (admin org-membership toggle UI) = next, needs PLAN.**
-Plan: **v11.1-02-01 ✅ LOOP COMPLETE** — host-derived authoring bearer (Build B). SUMMARY: `.paul/phases/v11.1-02-multiorg-authoring/v11.1-02-01-SUMMARY.md`.
-Status: **v11.1-02-01 SHIPPED — pushed (`20d1adef33`), Vercel auto-deploy in flight; UAT queued.** Canonical broslaz MCP URL verified: `https://www.brotherslazaroff.live/api/mcp` (www direct; apex 308-redirects). package.json 11.0.0.
-Last activity: 2026-06-09 — APPLY v11.1-02-01: host-derived authoring org (`resolveMintOrg`); both mint paths read host `x-org-id` validated ∈ orgIds. emulator 9/9 + arg-injection invariant green + suite 3323/0 + next build clean. Committed `941e6856d1`; UAT queued.
+Milestone: **v11.1 Brothers Lazaroff Post-Launch Fixes — 🚧 IN PROGRESS (opened 2026-06-09).** 4 phases, **1 complete (v11.1-02 ✅).**
+Phase: **v11.1-02 (Multi-org membership + authoring) — ✅ COMPLETE 2026-06-09 (2/2 plans).** Next phase = **v11.1-01 (Org-aware authed branding, P0) — needs PLAN.**
+Plan: **v11.1-02 both plans LOOP COMPLETE + SHIPPED.** 02-01 host-derived authoring bearer (`941e6856d1`); 02-02 admin org-membership toggle (`d466160601`). SUMMARYs in the phase dir.
+Status: **Phase v11.1-02 transitioned (PROJECT.md evolved, ROADMAP phase→complete). Ready to plan v11.1-01.** On `master`, in sync with origin (tip after phase commit). package.json 11.0.0.
+Last activity: 2026-06-09 — v11.1-02-02 APPLY+UNIFY (admin org-membership toggle; orgIds→claim+doc lockstep; /ui-ux-pro-max; unit 4/4; suite 3327/0; next build clean) → phase transition.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -38,14 +38,14 @@ Last activity: 2026-06-09 — APPLY v11.1-02-01: host-derived authoring org (`re
 
 ## Git State
 
-- **cwd branch:** `master`, IN SYNC with `origin/master` (tip `02a6bcb27c`; tag `v11.0.0` pushed). Tree clean at milestone open.
+- **cwd branch:** `master`, in sync with `origin/master`. v11.1-02 shipped: `941e6856d1` (02-01) + `8d345c2a59` (02-02 + UAT) + the phase-transition commit. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-02-01 — LOOP COMPLETE 2026-06-09; v11.1-02-02 next]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-02 — PHASE COMPLETE 2026-06-09; next phase v11.1-01]
   ✓        ✓        ✓
 ```
 
@@ -61,7 +61,8 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-02-01 — LOOP COMPLETE 2026-
 - `err-public` invariant (2026-05-28): never gate data from musicians/performers (holds WITHIN a tenant; hard wall ACROSS tenants).
 - Always-proceed / no decision-blocks (2026-05-28): agents proceed autonomously on in-scope work.
 - **v11.x AUTONOMY directive (2026-06-08, carried into v11.1):** run autonomously — waive PAUL approval/continuation gates; auto-commit + push per phase to prod `master`; bake decisions into PLANs; Firebase deploys + backfills as AUTO tasks (single-owner = executor). **QUALITY FLOOR HELD (non-negotiable):** tsc clean + tests green + AC proof every task; `SKIP_ENV_VALIDATION=1 npx next build` before declaring any shared-lib/client phase deployable; emulator-backed rules tests where rules change; /ui-ux-pro-max BLOCKING on UI phases (01/03/04); backfills get dry-run + idempotency marker + rollback. **STOP only for:** product ambiguity, an unresolvable quality-gate failure, or a discovered cross-tenant LEAK / CRC lock-out. See [[feedback_v11_autonomous_milestone]].
-- **v11.1 authoring-org call RESOLVED (Daniel 2026-06-09):** authoring org = the **tenant domain the leader connects Claude Desktop to** (mint paths read the proxy's `x-org-id`, validated ∈ caller's `orgIds`, else primary-org fallback). Pins at mint time, NOT a tool arg → v11-06-02 invariant fully preserved. No manual stopgap (Daniel declined). Implemented in v11.1-02-01.
+- **v11.1 authoring-org call RESOLVED (Daniel 2026-06-09):** authoring org = the **tenant domain the leader connects Claude Desktop to** (mint paths read the proxy's `x-org-id`, validated ∈ caller's `orgIds`, else primary-org fallback). Pins at mint time, NOT a tool arg → v11-06-02 invariant fully preserved. No manual stopgap (Daniel declined). Shipped v11.1-02-01. Canonical broslaz MCP URL: `https://www.brotherslazaroff.live/api/mcp` (www direct; apex 308-redirects).
+- **v11.1-02-02 (2026-06-09):** admin org-membership set via the `/manage` People list (tri-state Band-access control, admin-only, band_leader/admin rows); `/api/admin/set-role` now writes `orgIds` to BOTH the Auth claim and the user doc (claim+doc lockstep) so People-list display + roster filtering (v11-05-02 rowOrgIds) reflect changes immediately. Control scoped to the authoring tier per Daniel (consumers stay host-derived).
 
 ### Deferred Issues
 - v11-06 residuals (low-risk, in AUDIT.md): setlistTemplates app-only; scheduling_history orgId-absent rows; users claim-based (no orgId field).
@@ -83,10 +84,11 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-02-01 — LOOP COMPLETE 2026-
 ## Session Continuity
 
 Last session: 2026-06-09 — /paul:resume (v11.0 was complete) → Daniel surfaced 4 post-launch issues on brotherslazaroff.live → triaged each against deployed code (Explore agents) + prod Firestore (firebase MCP): confirmed branding leak, library leak, and the missing-setlist root cause (orgId:'crc'); DELETED the throwaway setlist `bd3b549c` (verified gone) per Daniel; locked the two-tier tenancy model → /paul:discuss-milestone → /paul:milestone created v11.1 (4 phases).
-Stopped at: **v11.1-02-01 LOOP COMPLETE + SHIPPED** (host-derived authoring; broslaz MCP URL `https://www.brotherslazaroff.live/api/mcp`). Daniel's UAT (connect Claude Desktop to broslaz URL, author a test setlist) queued in UAT-PENDING — non-blocking.
-Next action: **`/paul:plan` for v11.1-02-02** (admin org-membership toggle UI — set a leader's `orgIds` CRC/broslaz/both over the existing `/api/admin/set-role` orgIds support; **/ui-ux-pro-max BLOCKING**; no admin UI exists yet — a `/settings` route exists as a reference). Then phases 01/03/04.
-Resume file: .paul/phases/v11.1-02-multiorg-authoring/v11.1-02-01-SUMMARY.md.
-Git strategy: master (prod), in sync with origin/master (tip `02a6bcb27c`). `git pull` first next session (multi-computer); push `origin master`.
+Stopped at: **Phase v11.1-02 COMPLETE + transitioned** (both plans shipped; PROJECT.md evolved; ROADMAP phase→complete). Multi-org authoring path is live: admin grants `orgIds` membership in /manage → leader authors per-tenant via that tenant's MCP URL.
+Next action: **`/paul:plan` for v11.1-01 (Org-aware authed branding, P0)** — make DesktopHeader/MobileHeader wordmark+logo resolve from the host org (broslaz still shows "CRC Music" + /logo.jpg on its authed nav); broslaz congregation doc already correct; CRC byte-identical; **/ui-ux-pro-max BLOCKING**. Then v11.1-03 (library visibility, P1) + v11.1-04 (vocab, P1).
+Resume file: .paul/ROADMAP.md (v11.1 Current Milestone section).
+Git strategy: master (prod), in sync with origin/master. `git pull` first next session (multi-computer); push `origin master`.
+Standing UAT-PENDING (non-blocking): Daniel — connect Claude Desktop to `https://www.brotherslazaroff.live/api/mcp` + author a test setlist; admin — set a leader's Band access in /manage → People.
 
 ---
 *STATE.md — digest, not archive. Target <100 lines.*

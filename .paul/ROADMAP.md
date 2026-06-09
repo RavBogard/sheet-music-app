@@ -5,14 +5,14 @@
 ## Current Milestone
 
 **🚧 v11.1 — Brothers Lazaroff Post-Launch Fixes** (In Progress · opened 2026-06-09)
-Status: 🚧 In Progress · Phases: 0 of 4 complete
+Status: 🚧 In Progress · Phases: 1 of 4 complete (v11.1-02 ✅)
 Focus: Make the second tenant's *lived experience* correct (branding, vocab, library clutter) and give multi-org leaders a real authoring path. Four evidence-backed live-tenant issues surfaced after the brotherslazaroff.live launch — v11.0 proved server-side + MCP isolation (probe 19/19); v11.1 fixes the consumer-facing seams + the multi-org authoring workflow the isolation audit didn't cover.
 **Tenancy model (locked `/paul:discuss-milestone` 2026-06-09):** consumers (musicians + members) are NOT per-org-gated — anyone can use either site, and the **landing-page host** determines the experience (branding/setlists/library); band leaders have explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle, governing authoring. (v7.1 Production Hardening continues separately via the bongo `.coord/` cowork cadence — independent of the PAUL loop.)
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v11.1-01 | Org-aware authed branding (nav wordmark + logo) [P0] | TBD | Not started | - |
-| v11.1-02 | Multi-org membership toggle + MCP authoring [P0] | 02-01 ✅ (authoring, shipped) · 02-02 TBD (admin UI) | 🚧 In progress (1/2) | - |
+| v11.1-02 | Multi-org membership toggle + MCP authoring [P0] | 02-01 ✅ (authoring) · 02-02 ✅ (admin UI) | ✅ Complete | 2026-06-09 |
 | v11.1-03 | Library generic-tab visibility (host-filter + Shared + All-sites) [P1] | TBD | Not started | - |
 | v11.1-04 | broslaz liturgical vocab sweep [P1] | TBD | Not started | - |
 

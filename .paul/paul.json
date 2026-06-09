@@ -7,9 +7,9 @@
     "status": "in_progress"
   },
   "phase": {
-    "number": 2,
-    "name": "v11.1-02 multi-org membership + authoring",
-    "status": "in_progress"
+    "number": 1,
+    "name": "v11.1-01 org-aware authed branding",
+    "status": "not_started"
   },
   "loop": {
     "plan": null,
@@ -17,7 +17,7 @@
   },
   "timestamps": {
     "created_at": "2026-06-07T00:00:00Z",
-    "updated_at": "2026-06-09T19:30:00Z"
+    "updated_at": "2026-06-09T20:00:00Z"
   },
   "satellite": {
     "groom": true
