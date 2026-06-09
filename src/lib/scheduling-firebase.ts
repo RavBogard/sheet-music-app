@@ -12,6 +12,8 @@ import {
 } from 'firebase/firestore'
 import type { SchedulingAssignment } from '@/types/models'
 import { logger } from '@/lib/logger'
+import { rowOrg } from '@/lib/org/membership'
+import type { OrgId } from '@/lib/org/types'
 
 // ── Scheduling Assignments ──
 
@@ -72,8 +74,15 @@ export function subscribeToSetlistAssignments(
 
 /**
  * Get all assignments for upcoming services (band leader view).
+ *
+ * v11-05-03: org-scoped. The Web SDK query can't filter on the denormalized
+ * `orgId` without a composite index (status-in + orderBy already), so we filter
+ * membership IN-MEMORY in the snapshot mapper (rowOrg: missing → 'crc') — the
+ * same CRC-safe-by-default pattern as the server roster reads. Pass the caller's
+ * org from `useOrg()`; defaults to crc for any legacy caller.
  */
 export function subscribeToAllUpcomingAssignments(
+    org: OrgId,
     callback: (assignments: SchedulingAssignment[]) => void
 ): () => void {
     return subscribeWithDb((db) => {
@@ -84,10 +93,9 @@ export function subscribeToAllUpcomingAssignments(
         )
 
         return onSnapshot(q, (snap) => {
-            const assignments = snap.docs.map(d => ({
-                id: d.id,
-                ...d.data(),
-            } as SchedulingAssignment))
+            const assignments = snap.docs
+                .map(d => ({ id: d.id, ...d.data() } as SchedulingAssignment))
+                .filter(a => rowOrg(a.orgId) === org)
             callback(assignments)
         }, (err) => {
             logger.warn('[Scheduling] Subscribe to all assignments failed:', err)

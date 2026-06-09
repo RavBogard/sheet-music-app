@@ -25,7 +25,7 @@ import {
 } from "@/lib/scheduling/assignment-service"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
-import { rowOrgIds } from "@/lib/org/membership"
+import { rowOrgIds, rowOrg } from "@/lib/org/membership"
 
 /**
  * v11-05-02: roster-list reads keep the existing `where('role','in',...)` query
@@ -406,6 +406,7 @@ function summarizeAssignment(
 export async function listMusiciansOnDate(
     callerUid: string,
     args: ListMusiciansOnDateArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<ListMusiciansOnDateResult | RichErrorEnvelope> {
     if (!args?.eventDate || typeof args.eventDate !== "string") {
         return richError(
@@ -461,6 +462,10 @@ export async function listMusiciansOnDate(
         const matchedSetlists: ListMusiciansOnDateResult["matchedSetlists"] = []
         for (const d of setlistDocs.values()) {
             const data = d.data()
+            // v11-05-03: org-scope at the setlist seam — the assignments query
+            // below is keyed by these setlist ids, so dropping cross-tenant
+            // setlists here walls their assignments too. rowOrg: missing → 'crc'.
+            if (rowOrg(data.orgId) !== org) continue
             if (
                 args.templateType &&
                 data.templateType !== args.templateType
@@ -552,6 +557,7 @@ export interface ListPendingAssignmentsResult {
 export async function listPendingAssignments(
     callerUid: string,
     args: ListPendingAssignmentsArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<ListPendingAssignmentsResult | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
@@ -566,9 +572,11 @@ export async function listPendingAssignments(
             q = q.where("musicianUid", "==", args.uid)
         }
         const snap = await q.get()
-        const assignments = snap.docs.map((d) =>
-            summarizeAssignment(d.id, d.data()),
-        )
+        const assignments = snap.docs
+            // v11-05-03: org-scope in-memory (rowOrg: missing → 'crc') — this is
+            // the cross-tenant read (status-only, no setlist scope).
+            .filter((d) => rowOrg(d.data().orgId) === org)
+            .map((d) => summarizeAssignment(d.id, d.data()))
         // Stable order: by setlistName then musicianName.
         assignments.sort((a, b) => {
             const s = a.setlistName.localeCompare(
@@ -787,12 +795,14 @@ export async function suggestBand(
             : []
 
         const [usersSnap, recentSnap, configSnap] = await Promise.all([
-            // v11-05-02: roster scoped to caller org (membership filtered in-memory
-            // below). NOTE: the scheduling_assignments play-count read is scoped in v11-05-03.
+            // v11-05-02: roster scoped to caller org (membership filtered in-memory below).
             db
                 .collection("users")
                 .where("role", "in", ["musician", "band_leader", "admin"])
                 .get(),
+            // v11-05-03: play-count read scoped to caller org in-memory below
+            // (rowOrg on each doc). config/congregation read stays cross-tenant
+            // until v11-05-04 (congregation per-org refactor).
             db
                 .collection("scheduling_assignments")
                 .where("status", "==", "confirmed")
@@ -822,6 +832,8 @@ export async function suggestBand(
 
         const playCountMap = new Map<string, number>()
         recentSnap.docs.forEach((d) => {
+            // v11-05-03: only count this org's confirmed assignments.
+            if (rowOrg(d.data().orgId) !== org) return
             const uid = d.data().musicianUid as string | undefined
             if (!uid) return
             playCountMap.set(
@@ -831,6 +843,8 @@ export async function suggestBand(
         })
         const totalRecentServices = new Set(
             recentSnap.docs
+                // v11-05-03: window counts only this org's recent services.
+                .filter((d) => rowOrg(d.data().orgId) === org)
                 .map((d) => d.data().setlistId)
                 .filter((x): x is string => typeof x === "string"),
         ).size

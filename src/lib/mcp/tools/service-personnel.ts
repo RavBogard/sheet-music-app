@@ -8,6 +8,9 @@ import {
     richError,
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
+import { rowOrg } from "@/lib/org/membership"
 
 /**
  * Cycle-5 C5C-014 — unified "who's playing & leading this week" pivot.
@@ -134,6 +137,7 @@ function isoOfTimestampOrString(value: unknown): string | null {
 async function fetchSetlistsByDate(
     db: DB,
     eventDate: string,
+    org: OrgId,
 ): Promise<{ ok: true; setlists: MatchedSetlist[] } | { ok: false; envelope: RichErrorEnvelope }> {
     const bounds = dayBoundsUtc(eventDate)
     if (!bounds) {
@@ -155,23 +159,32 @@ async function fetchSetlistsByDate(
         .where("eventDate", ">=", startTs)
         .where("eventDate", "<", endTs)
         .get()
-    const setlists: MatchedSetlist[] = snap.docs.map((d) => {
-        const data = d.data()
-        return {
-            id: d.id,
-            name: typeof data.name === "string" ? data.name : "",
-            eventDate: isoOfTimestampOrString(data.eventDate),
-        }
-    })
+    const setlists: MatchedSetlist[] = snap.docs
+        // v11-05-03: org-scope at the setlist seam — assignments are read by
+        // these setlist ids below, so dropping cross-tenant setlists walls
+        // their personnel too. rowOrg: missing → 'crc'.
+        .filter((d) => rowOrg(d.data().orgId) === org)
+        .map((d) => {
+            const data = d.data()
+            return {
+                id: d.id,
+                name: typeof data.name === "string" ? data.name : "",
+                eventDate: isoOfTimestampOrString(data.eventDate),
+            }
+        })
     return { ok: true, setlists }
 }
 
 async function fetchSetlistById(
     db: DB,
     setlistId: string,
+    org: OrgId,
 ): Promise<{ ok: true; setlist: MatchedSetlist | null } | { ok: false; envelope: RichErrorEnvelope }> {
     const snap = await db.collection("setlists").doc(setlistId).get()
-    if (!snap.exists) {
+    // v11-05-03: cross-tenant wall — a setlist in another org reads as
+    // not-found (mirrors the v11-02 get_setlist pattern; no cross_tenant_denied
+    // leak). rowOrg: missing → 'crc'.
+    if (!snap.exists || rowOrg(snap.data()?.orgId) !== org) {
         return {
             ok: false,
             envelope: richError(
@@ -196,6 +209,7 @@ async function fetchSetlistById(
 export async function listServicePersonnel(
     callerUid: string,
     args: ListServicePersonnelArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<ListServicePersonnelResult | RichErrorEnvelope> {
     const hasSetlistId =
         typeof args?.setlistId === "string" && args.setlistId.trim().length > 0
@@ -218,11 +232,11 @@ export async function listServicePersonnel(
     // 1. Resolve matched setlists.
     let matchedSetlists: MatchedSetlist[]
     if (hasSetlistId) {
-        const r = await fetchSetlistById(db, args.setlistId!.trim())
+        const r = await fetchSetlistById(db, args.setlistId!.trim(), org)
         if (!r.ok) return r.envelope
         matchedSetlists = r.setlist ? [r.setlist] : []
     } else {
-        const r = await fetchSetlistsByDate(db, args.eventDate!.trim())
+        const r = await fetchSetlistsByDate(db, args.eventDate!.trim(), org)
         if (!r.ok) return r.envelope
         matchedSetlists = r.setlists
     }

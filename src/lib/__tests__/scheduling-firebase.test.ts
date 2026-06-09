@@ -168,7 +168,7 @@ describe('subscribeToSetlistAssignments', () => {
 describe('subscribeToAllUpcomingAssignments', () => {
     it('calls query with correct where/orderBy args', () => {
         const cb = vi.fn()
-        subscribeToAllUpcomingAssignments(cb)
+        subscribeToAllUpcomingAssignments('crc', cb)
 
         expect(mockCollection).toHaveBeenCalledWith(expect.anything(), 'scheduling_assignments')
         expect(mockWhere).toHaveBeenCalledWith('status', 'in', ['pending', 'confirmed'])
@@ -177,7 +177,7 @@ describe('subscribeToAllUpcomingAssignments', () => {
 
     it('maps snapshot docs to assignment array', () => {
         const cb = vi.fn()
-        subscribeToAllUpcomingAssignments(cb)
+        subscribeToAllUpcomingAssignments('crc', cb)
 
         capturedOnNext(makeSnapDocs([
             { id: 'a1', data: { status: 'pending' } },
@@ -192,10 +192,25 @@ describe('subscribeToAllUpcomingAssignments', () => {
 
     it('calls callback with [] on error', () => {
         const cb = vi.fn()
-        subscribeToAllUpcomingAssignments(cb)
+        subscribeToAllUpcomingAssignments('crc', cb)
 
         capturedOnError!(new Error('fail'))
         expect(cb).toHaveBeenCalledWith([])
+    })
+
+    it('v11-05-03: filters snapshot docs to the caller org (missing orgId → crc)', () => {
+        const cb = vi.fn()
+        subscribeToAllUpcomingAssignments('brotherslazaroff', cb)
+
+        capturedOnNext(makeSnapDocs([
+            { id: 'bl', data: { status: 'pending', orgId: 'brotherslazaroff' } },
+            { id: 'crc-stamped', data: { status: 'confirmed', orgId: 'crc' } },
+            { id: 'legacy', data: { status: 'pending' } }, // missing → crc, excluded for BL
+        ]))
+
+        expect(cb).toHaveBeenCalledWith([
+            expect.objectContaining({ id: 'bl' }),
+        ])
     })
 })
 

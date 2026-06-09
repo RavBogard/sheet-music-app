@@ -2844,7 +2844,7 @@ export function registerRosterTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await listMusiciansOnDate(uidFrom(extra), args)),
+            jsonResult(await listMusiciansOnDate(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2870,7 +2870,7 @@ export function registerRosterTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await listServicePersonnel(uidFrom(extra), args)),
+            jsonResult(await listServicePersonnel(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2888,7 +2888,7 @@ export function registerRosterTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await listPendingAssignments(uidFrom(extra), args)),
+            jsonResult(await listPendingAssignments(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

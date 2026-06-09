@@ -10,6 +10,7 @@ import {
     sendSchedulingCancellationSMS,
 } from "@/lib/sms"
 import { sendPushToUsers } from "@/lib/push-send"
+import { rowOrg } from "@/lib/org/membership"
 
 /**
  * Shared scheduling service module.
@@ -193,7 +194,14 @@ export async function assignMusiciansService(
                 const newAssignmentRef = db
                     .collection("scheduling_assignments")
                     .doc()
+                // v11-05-03: denormalize the parent setlist's tenant onto the
+                // assignment so the cross-tenant roster reads can scope by orgId
+                // without a setlist join. Read from the in-tx setlist snapshot so
+                // the stamp is transactionally consistent with the musicians[]
+                // rebuild below; missing/unstamped setlist → 'crc' (rowOrg).
+                const assignmentOrg = rowOrg(setlistSnap.data()?.orgId)
                 const assignmentData = {
+                    orgId: assignmentOrg,
                     setlistId: args.setlistId,
                     setlistName: args.setlistName,
                     eventDate: args.eventDate || null,

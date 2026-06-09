@@ -11,11 +11,17 @@ vi.mock('@/lib/auth-context', () => ({
   useAuth: () => mockUseAuth(),
 }))
 
+// v11-05-03: useCalendarData now reads useOrg() to org-scope the planning subscription.
+vi.mock('@/lib/org/org-context', () => ({
+  useOrg: () => 'crc',
+}))
+
 const mockSubscribeToMyAssignments = vi.fn((_uid: string, cb: (data: unknown[]) => void) => {
   cb([])
   return vi.fn() // unsub
 })
-const mockSubscribeToAllUpcoming = vi.fn((cb: (data: unknown[]) => void) => {
+// v11-05-03: signature is now (org, cb).
+const mockSubscribeToAllUpcoming = vi.fn((_org: string, cb: (data: unknown[]) => void) => {
   cb([])
   return vi.fn()
 })
@@ -23,8 +29,8 @@ const mockSubscribeToAllUpcoming = vi.fn((cb: (data: unknown[]) => void) => {
 vi.mock('@/lib/scheduling-firebase', () => ({
   subscribeToMyAssignments: (uid: string, cb: (d: unknown[]) => void) =>
     mockSubscribeToMyAssignments(uid, cb),
-  subscribeToAllUpcomingAssignments: (cb: (d: unknown[]) => void) =>
-    mockSubscribeToAllUpcoming(cb),
+  subscribeToAllUpcomingAssignments: (org: string, cb: (d: unknown[]) => void) =>
+    mockSubscribeToAllUpcoming(org, cb),
 }))
 
 vi.mock('@/lib/firestore-helpers', () => ({
@@ -71,7 +77,7 @@ describe('useCalendarData', () => {
     })
 
     renderHook(() => useCalendarData('planning', []))
-    expect(mockSubscribeToAllUpcoming).toHaveBeenCalled()
+    expect(mockSubscribeToAllUpcoming).toHaveBeenCalledWith('crc', expect.any(Function))
     expect(mockSubscribeToMyAssignments).not.toHaveBeenCalled()
   })
 

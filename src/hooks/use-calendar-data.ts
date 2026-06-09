@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/lib/auth-context"
+import { useOrg } from "@/lib/org/org-context"
 import {
     subscribeToMyAssignments,
     subscribeToAllUpcomingAssignments,
@@ -39,6 +40,7 @@ export function useCalendarData(
     setlists: Setlist[],
 ): UseCalendarDataReturn {
     const { user, isBandLeader } = useAuth()
+    const orgId = useOrg()
 
     const [assignments, setAssignments] = useState<SchedulingAssignment[]>([])
     const [loading, setLoading] = useState(true)
@@ -49,8 +51,10 @@ export function useCalendarData(
 
         setLoading(true)
 
+        // v11-05-03: planning view (all upcoming) is org-scoped; my-assignments
+        // is musicianUid-scoped and inherits (a member's own cross-org history).
         const unsub = (mode === 'planning' && isBandLeader)
-            ? subscribeToAllUpcomingAssignments((data) => {
+            ? subscribeToAllUpcomingAssignments(orgId, (data) => {
                 setAssignments(data)
                 setLoading(false)
             })
@@ -60,7 +64,7 @@ export function useCalendarData(
             })
 
         return unsub
-    }, [user, mode, isBandLeader])
+    }, [user, mode, isBandLeader, orgId])
 
     // ── Build day map ──
     const dayMap = useMemo(() => {

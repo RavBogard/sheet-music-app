@@ -5,6 +5,7 @@ import { CalendarDays, ChevronLeft, LayoutGrid, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/lib/auth-context"
+import { useOrg } from "@/lib/org/org-context"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { subscribeToAllUpcomingAssignments, subscribeToUpcomingSetlists } from "@/lib/scheduling-firebase"
@@ -17,6 +18,7 @@ type ViewMode = 'services' | 'calendar'
 export default function SchedulePage() {
     const router = useRouter()
     const { user, isBandLeader } = useAuth()
+    const orgId = useOrg()
     const [viewMode, setViewMode] = useState<ViewMode>('services')
     const [mineOnly, setMineOnly] = useState(false)
     const [assignments, setAssignments] = useState<SchedulingAssignment[]>([])
@@ -37,7 +39,7 @@ export default function SchedulePage() {
         setLoadingAssignments(true)
         setLoadingSetlists(true)
 
-        const unsubAssignments = subscribeToAllUpcomingAssignments((data) => {
+        const unsubAssignments = subscribeToAllUpcomingAssignments(orgId, (data) => {
             setAssignments(data)
             setLoadingAssignments(false)
         })
@@ -51,7 +53,7 @@ export default function SchedulePage() {
             unsubAssignments()
             unsubSetlists()
         }
-    }, [user, viewMode])
+    }, [user, viewMode, orgId])
 
     // Group assignments by setlist
     const groupedBySetlist = useMemo(() => {

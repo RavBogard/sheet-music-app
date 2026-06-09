@@ -7,6 +7,8 @@ import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingReminderSMS } from "@/lib/sms"
 import { BASE_URL } from "@/lib/constants"
 import { formatEventDate } from "@/lib/firestore-helpers"
+import { coerceOrgId } from "@/lib/org/registry"
+import { rowOrg } from "@/lib/org/membership"
 
 const remindSchema = z.object({
     setlistId: z.string().min(1),
@@ -23,6 +25,10 @@ export const POST = createApiHandler(
         const baseUrl = BASE_URL
 
         const setlistId = ctx.body?.setlistId
+        // v11-05-03: scope reminders to the caller host org (rowOrg: missing →
+        // 'crc'). Applied to BOTH branches — even the setlistId branch is walled
+        // so a cross-org setlistId can't trigger another tenant's reminders.
+        const org = coerceOrgId(ctx.req.headers.get('x-org-id'))
 
         // Get pending assignments
         let query: FirebaseFirestore.Query = db.collection('scheduling_assignments')
@@ -43,7 +49,9 @@ export const POST = createApiHandler(
             setlistName: string
             instrument: string | undefined
         }
-        const pending: PendingAssignment[] = snap.docs.map(d => ({ id: d.id, ...d.data() }) as PendingAssignment)
+        const pending: PendingAssignment[] = snap.docs
+            .filter(d => rowOrg(d.data().orgId) === org)
+            .map(d => ({ id: d.id, ...d.data() }) as PendingAssignment)
 
         // If no setlistId, filter to assignments within the next 48 hours
         const filtered = setlistId

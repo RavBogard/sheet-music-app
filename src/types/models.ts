@@ -216,6 +216,10 @@ export type AssignmentStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled
 /** A musician's scheduling assignment for a specific setlist/service */
 export interface SchedulingAssignment {
     id: string
+    /** v11-05-03: tenant scope, denormalized from the parent setlist's orgId at
+     *  create. Optional until the backfill stamps legacy rows; reads default a
+     *  missing value to 'crc' via rowOrg (CRC-safe without backfill). */
+    orgId?: string
     setlistId: string
     setlistName: string           // Denormalized
     eventDate: FirestoreDate | null

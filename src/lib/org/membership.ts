@@ -45,6 +45,19 @@ export function rowOrgIds(raw: unknown): OrgId[] {
 }
 
 /**
+ * v11-05-03: normalize a SINGLE-org doc's `orgId` field (e.g. a
+ * scheduling_assignment, denormalized from its parent setlist) to a typed OrgId.
+ * Absent/empty/non-string → DEFAULT_ORG_ID ('crc'), the same CRC-safety default
+ * as rowOrgIds — so a legacy assignment with no orgId still scopes to crc and
+ * reads need no backfill to keep CRC intact. Pure + client-safe (no firebase
+ * import). Parallel to the server-only `rowOrg` in src/lib/mcp/org-context.ts;
+ * this one is importable from client + route + MCP code alike.
+ */
+export function rowOrg(raw: unknown): OrgId {
+    return typeof raw === "string" && raw.length > 0 ? (raw as OrgId) : DEFAULT_ORG_ID
+}
+
+/**
  * v11-05-02: order-insensitive set equality for two orgId lists. Used by the
  * sync-claims seam to decide whether `users/{uid}.orgIds` has drifted from the
  * claim before writing (stay idempotent — no write when already in sync).

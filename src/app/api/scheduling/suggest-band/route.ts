@@ -5,7 +5,7 @@ import { createApiHandler } from "@/lib/api-wrapper"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { rankMusicians, REQUIRED_INSTRUMENTS, type MusicianCandidate } from "@/lib/musician-suggestions"
 import { coerceOrgId } from "@/lib/org/registry"
-import { rowOrgIds } from "@/lib/org/membership"
+import { rowOrgIds, rowOrg } from "@/lib/org/membership"
 
 const RECENT_WINDOW = 10
 
@@ -61,15 +61,21 @@ export const GET = createApiHandler(
                 ) ?? null)
                 : null
 
+            // v11-05-03: scope the play-count read to the caller org (rowOrg:
+            // missing → 'crc') so a BL window never counts CRC services.
+            const recentOrgDocs = recentAssignmentsSnap.docs.filter(
+                d => rowOrg(d.data().orgId) === org
+            )
+
             // Build play frequency map
             const playCountMap = new Map<string, number>()
-            recentAssignmentsSnap.docs.forEach(d => {
+            recentOrgDocs.forEach(d => {
                 const uid = d.data().musicianUid
                 playCountMap.set(uid, Math.min((playCountMap.get(uid) ?? 0) + 1, RECENT_WINDOW))
             })
 
             const totalRecentServices = new Set(
-                recentAssignmentsSnap.docs.map(d => d.data().setlistId)
+                recentOrgDocs.map(d => d.data().setlistId)
             ).size
             const windowSize = Math.min(totalRecentServices, RECENT_WINDOW)
 

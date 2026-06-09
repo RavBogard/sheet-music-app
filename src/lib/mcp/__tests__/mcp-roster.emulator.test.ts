@@ -145,6 +145,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             templateType?: string
             rabbi?: string
             assignedUids?: string[]
+            orgId?: string
         } = {},
     ) {
         const payload: Record<string, unknown> = {
@@ -152,6 +153,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             ownerId: ADMIN,
             trackCount: 0,
         }
+        if (opts.orgId) payload.orgId = opts.orgId
         if (opts.eventDate) {
             payload.eventDate = Timestamp.fromDate(
                 new Date(`${opts.eventDate}T00:00:00.000Z`),
@@ -175,6 +177,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             autoConfirmed?: boolean
             setlistName?: string
             assignedBy?: string
+            orgId?: string
         },
     ) {
         await db()
@@ -193,6 +196,8 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
                 assignedBy: opts.assignedBy ?? ADMIN,
                 assignedAt: Timestamp.now(),
                 notifiedVia: [],
+                // v11-05-03: omit when undefined to model legacy unstamped rows.
+                ...(opts.orgId ? { orgId: opts.orgId } : {}),
             })
     }
 
@@ -325,6 +330,75 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
         expect(crc).toContain(MUSICIAN)
         const bl = await listUids(ADMIN, "brotherslazaroff")
         expect(bl).not.toContain(MUSICIAN)
+    })
+
+    // ─── v11-05-03: scheduling_assignments org-scoping (single orgId, rowOrg) ──
+
+    it("assign_musician: stamps the new assignment's orgId from its parent setlist (AC-1)", async () => {
+        await seedSetlist("sl-bl", { eventDate: EVENT_DATE_ISO, orgId: "brotherslazaroff" })
+        const r = await assignMusician(ADMIN, {
+            setlistId: "sl-bl",
+            uid: MUSICIAN,
+            dryRun: false,
+            force: true,
+        })
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        const snap = await db()
+            .collection("scheduling_assignments")
+            .where("setlistId", "==", "sl-bl")
+            .get()
+        expect(snap.size).toBe(1)
+        expect(snap.docs[0].data().orgId).toBe("brotherslazaroff")
+    })
+
+    it("assign_musician: an unstamped/legacy setlist yields orgId='crc' (AC-1 default)", async () => {
+        await seedSetlist("sl-legacy", { eventDate: EVENT_DATE_ISO }) // no orgId
+        const r = await assignMusician(ADMIN, {
+            setlistId: "sl-legacy",
+            uid: MUSICIAN,
+            dryRun: false,
+            force: true,
+        })
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        const snap = await db()
+            .collection("scheduling_assignments")
+            .where("setlistId", "==", "sl-legacy")
+            .get()
+        expect(snap.docs[0].data().orgId).toBe("crc")
+    })
+
+    it("list_pending_assignments: scoped to caller org; legacy unstamped row defaults to crc (AC-2)", async () => {
+        await seedAssignment("p-crc", { setlistId: "sl-crc", musicianUid: MUSICIAN, status: "pending", orgId: "crc" })
+        await seedAssignment("p-bl", { setlistId: "sl-bl", musicianUid: OTHER_MUSICIAN, status: "pending", orgId: "brotherslazaroff" })
+        await seedAssignment("p-legacy", { setlistId: "sl-x", musicianUid: ADMIN, status: "pending" }) // no orgId → crc
+
+        const crc = await listPendingAssignments(ADMIN, {}, "crc")
+        if (!("ok" in crc) || !crc.ok) throw new Error("expected ok=true")
+        const crcIds = crc.assignments.map((a) => a.musicianUid).sort()
+        expect(crcIds).toEqual([ADMIN, MUSICIAN].sort())
+        expect(crcIds).not.toContain(OTHER_MUSICIAN)
+
+        const bl = await listPendingAssignments(ADMIN, {}, "brotherslazaroff")
+        if (!("ok" in bl) || !bl.ok) throw new Error("expected ok=true")
+        expect(bl.assignments.map((a) => a.musicianUid)).toEqual([OTHER_MUSICIAN])
+    })
+
+    it("list_musicians_on_date: matched setlists + their assignments are org-scoped (AC-2)", async () => {
+        await seedSetlist("sl-crc", { eventDate: EVENT_DATE_ISO, orgId: "crc" })
+        await seedSetlist("sl-bl", { eventDate: EVENT_DATE_ISO, orgId: "brotherslazaroff" })
+        await seedAssignment("a-crc", { setlistId: "sl-crc", musicianUid: MUSICIAN, status: "confirmed", orgId: "crc" })
+        await seedAssignment("a-bl", { setlistId: "sl-bl", musicianUid: OTHER_MUSICIAN, status: "confirmed", orgId: "brotherslazaroff" })
+
+        const bl = await listMusiciansOnDate(ADMIN, { eventDate: EVENT_DATE_ISO }, "brotherslazaroff")
+        if (!("ok" in bl) || !bl.ok) throw new Error("expected ok=true")
+        expect(bl.matchedSetlists.map((s) => s.id)).toEqual(["sl-bl"])
+        const blUids = [...bl.grouped.confirmed].map((a) => a.musicianUid)
+        expect(blUids).toEqual([OTHER_MUSICIAN])
+
+        const crc = await listMusiciansOnDate(ADMIN, { eventDate: EVENT_DATE_ISO }, "crc")
+        if (!("ok" in crc) || !crc.ok) throw new Error("expected ok=true")
+        expect(crc.matchedSetlists.map((s) => s.id)).toEqual(["sl-crc"])
+        expect([...crc.grouped.confirmed].map((a) => a.musicianUid)).toEqual([MUSICIAN])
     })
 
     // ─── get_musician_profile ───────────────────────────────────────────────
