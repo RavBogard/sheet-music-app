@@ -15,6 +15,7 @@ import { parseEventDate as toTimestamp } from "@/lib/parse-event-date"
 import { isSongType } from "@/lib/setlist-track-count"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
+import { rowOrg } from "@/lib/mcp/org-context"
 import {
     auditBondedRows,
     toBondReviewRows,
@@ -173,6 +174,7 @@ export interface ListTemplatesResult {
 export async function listTemplates(
     uid: string,
     args: ListTemplatesArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<ListTemplatesResult | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
@@ -183,7 +185,12 @@ export async function listTemplates(
     const limit = await rateLimitGate(db, uid)
     if (limit) return limit
 
-    let query: FirebaseFirestore.Query = db.collection(COLLECTION)
+    // v11-05-01: tenant wall — only this caller's org sees its templates.
+    // Equality-only filters (no orderBy here; sort is in-memory below) need no
+    // composite index. Legacy docs without orgId are backfilled to "crc".
+    let query: FirebaseFirestore.Query = db
+        .collection(COLLECTION)
+        .where("orgId", "==", org)
     if (typeof args.templateType === "string" && args.templateType.trim()) {
         query = query.where("templateType", "==", args.templateType.trim())
     }
@@ -232,6 +239,7 @@ export interface GetTemplateResult {
 export async function getTemplate(
     uid: string,
     templateId: string,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<GetTemplateResult | RichErrorEnvelope> {
     if (!templateId?.trim()) {
         return richError(
@@ -258,6 +266,16 @@ export async function getTemplate(
         )
     }
     const data = snap.data() as Record<string, unknown>
+    // v11-05-01: cross-tenant access returns the SAME not-found error (no
+    // cross_tenant_denied — never leak the existence of another org's template).
+    if (rowOrg(data.orgId) !== org) {
+        return richError(
+            "template_not_found",
+            `Template '${templateId}' was not found.`,
+            { templateId },
+            "Verify the id via list_templates.",
+        )
+    }
     const tracks = Array.isArray(data.tracks)
         ? (data.tracks as Record<string, unknown>[]).map((t) => {
               const row: TemplateTrack = {}
@@ -311,6 +329,7 @@ export interface CreateTemplateResult {
 export async function createTemplate(
     uid: string,
     args: CreateTemplateArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<CreateTemplateResult | RichErrorEnvelope> {
     if (typeof args?.name !== "string" || !args.name.trim()) {
         return richError(
@@ -336,6 +355,8 @@ export async function createTemplate(
     const payload: Record<string, unknown> = {
         id: templateId,
         name: args.name.trim(),
+        // v11-05-01: stamp the caller's org so list/get/update/delete isolate it.
+        orgId: org,
         ownerId: uid,
         ownerName,
         tracks,
@@ -439,6 +460,7 @@ function patchHasChange(
 export async function updateTemplate(
     uid: string,
     args: UpdateTemplateArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<UpdateTemplateResult | RichErrorEnvelope> {
     if (!args?.templateId?.trim()) {
         return richError(
@@ -474,6 +496,15 @@ export async function updateTemplate(
         )
     }
     const existing = snap.data() as Record<string, unknown>
+    // v11-05-01: cross-tenant update is walled as not-found (no leak, no mutation).
+    if (rowOrg(existing.orgId) !== org) {
+        return richError(
+            "template_not_found",
+            `Template '${args.templateId}' was not found.`,
+            { templateId: args.templateId },
+            "Verify the id via list_templates.",
+        )
+    }
     const existingVersion =
         typeof existing.version === "number" ? existing.version : 1
 
@@ -530,6 +561,7 @@ export interface DeleteTemplateResult {
 export async function deleteTemplate(
     uid: string,
     templateId: string,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<DeleteTemplateResult | RichErrorEnvelope> {
     if (!templateId?.trim()) {
         return richError(
@@ -550,6 +582,12 @@ export async function deleteTemplate(
     const snap = await ref.get()
     if (!snap.exists) {
         // Idempotent — already-gone is a successful no-op for the caller.
+        return { ok: true, templateId, deleted: false }
+    }
+    // v11-05-01: cross-tenant delete is walled as the SAME idempotent no-op
+    // (no cross_tenant_denied — never reveal another org's template exists).
+    const existing = snap.data() as Record<string, unknown>
+    if (rowOrg(existing.orgId) !== org) {
         return { ok: true, templateId, deleted: false }
     }
     await ref.delete()
@@ -591,6 +629,7 @@ export interface CreateTemplateFromSetlistResult {
 export async function createTemplateFromSetlist(
     uid: string,
     args: CreateTemplateFromSetlistArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<CreateTemplateFromSetlistResult | RichErrorEnvelope> {
     if (!args?.setlistId?.trim()) {
         return richError(
@@ -626,6 +665,17 @@ export async function createTemplateFromSetlist(
         )
     }
     const setlist = setlistSnap.data() as Record<string, unknown>
+    // v11-05-01: a caller may only template-ify a setlist in their own org —
+    // cross-tenant source is walled as the SAME setlist_not_found (no leak of
+    // another org's setlist contents into a template).
+    if (rowOrg(setlist.orgId) !== org) {
+        return richError(
+            "setlist_not_found",
+            `Setlist '${args.setlistId}' was not found.`,
+            { setlistId: args.setlistId },
+            "Verify the id via list_setlists.",
+        )
+    }
 
     const tracksSnap = await db
         .collection("tracks")
@@ -647,6 +697,9 @@ export async function createTemplateFromSetlist(
     const payload: Record<string, unknown> = {
         id: templateId,
         name: args.name.trim(),
+        // v11-05-01: stamp caller org (the source setlist is already same-org —
+        // walled above) so the new template is tenant-isolated.
+        orgId: org,
         ownerId: uid,
         ownerName,
         tracks,
@@ -779,6 +832,16 @@ export async function cloneSetlistFromTemplate(
         )
     }
     const template = templateSnap.data() as Record<string, unknown>
+    // v11-05-01: close the read-scoping deferral noted at the setlist-stamp below —
+    // a caller may only clone a template in their own org (same not-found wall).
+    if (rowOrg(template.orgId) !== org) {
+        return richError(
+            "template_not_found",
+            `Template '${args.templateId}' was not found.`,
+            { templateId: args.templateId },
+            "Verify the id via list_templates.",
+        )
+    }
     const templateTracks = Array.isArray(template.tracks)
         ? (template.tracks as Record<string, unknown>[])
         : []
@@ -800,7 +863,7 @@ export async function cloneSetlistFromTemplate(
         // v11-02-03: stamp the caller's org on the setlist created from a
         // template. Like clone_setlist, this raw-batch writer previously stamped
         // no orgId — a BL template-clone would default to crc and leak into CRC's
-        // listings. (Template READ scoping stays deferred — see plan boundaries.)
+        // listings. (v11-05-01: the template READ is now org-walled above.)
         orgId: org,
         date: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),

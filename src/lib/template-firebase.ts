@@ -14,8 +14,46 @@ import {
 import { getDb, subscribeWithDb } from "./firebase"
 import type { TemplateSlot } from "./liturgical-templates"
 import { logger } from "@/lib/logger"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
+import { useOrg } from "@/lib/org/org-context"
 
 const COLLECTION = "templates"
+
+/**
+ * v11-05-01: tenant-namespace a liturgical template doc-id. Doc-ids ARE the
+ * liturgical-type keys (e.g. "shabbat_morning"), so two orgs would collide on the
+ * same key. CRC keeps the BARE key (zero migration — no CRC lockout); every other
+ * org is isolated under `${org}__${key}`. The "__" separator is the marker the
+ * CRC-side snapshot filter uses to exclude other tenants' docs.
+ */
+export function keyFor(org: OrgId, key: string): string {
+    return org === DEFAULT_ORG_ID ? key : `${org}__${key}`
+}
+
+/**
+ * v11-05-01: pure selector for the org-scoped override map — extracted from
+ * `useCustomTemplates` so the tenant-isolation logic is unit-testable without
+ * React. CRC (default org) sees only BARE-key docs (any "${other}__key" doc is
+ * another tenant's and is excluded); a non-CRC org sees only its own
+ * "${org}__key" docs, with the prefix stripped back to the bare liturgical key.
+ */
+export function selectOrgOverrides(
+    org: OrgId,
+    docs: Array<{ id: string; slots?: TemplateSlot[] | null }>,
+): Record<string, TemplateSlot[]> {
+    const result: Record<string, TemplateSlot[]> = {}
+    const prefix = `${org}__`
+    for (const d of docs) {
+        if (!d.slots) continue
+        if (org === DEFAULT_ORG_ID) {
+            if (!d.id.includes("__")) result[d.id] = d.slots
+        } else if (d.id.startsWith(prefix)) {
+            result[d.id.slice(prefix.length)] = d.slots
+        }
+    }
+    return result
+}
 
 export interface CustomTemplateDoc {
     slots: TemplateSlot[]
@@ -27,9 +65,12 @@ export interface CustomTemplateDoc {
  * Fetch a single custom template override from Firebase.
  * Returns null if no override exists (use hardcoded default).
  */
-export async function getCustomTemplate(key: string): Promise<TemplateSlot[] | null> {
+export async function getCustomTemplate(
+    key: string,
+    org: OrgId = DEFAULT_ORG_ID,
+): Promise<TemplateSlot[] | null> {
     const db = await getDb()
-    const snap = await getDoc(doc(db, COLLECTION, key))
+    const snap = await getDoc(doc(db, COLLECTION, keyFor(org, key)))
     if (!snap.exists()) return null
     return (snap.data() as CustomTemplateDoc).slots
 }
@@ -48,11 +89,13 @@ export async function saveCustomTemplate(
     key: string,
     slots: TemplateSlot[],
     userId: string,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<void> {
     const db = await getDb()
     const cleanSlots = slots.map(s => stripUndefined({ ...s }))
-    await setDoc(doc(db, COLLECTION, key), {
+    await setDoc(doc(db, COLLECTION, keyFor(org, key)), {
         slots: cleanSlots,
+        orgId: org,
         updatedAt: Timestamp.now(),
         updatedBy: userId,
     })
@@ -61,9 +104,12 @@ export async function saveCustomTemplate(
 /**
  * Delete a custom template override, reverting to hardcoded default.
  */
-export async function deleteCustomTemplate(key: string): Promise<void> {
+export async function deleteCustomTemplate(
+    key: string,
+    org: OrgId = DEFAULT_ORG_ID,
+): Promise<void> {
     const db = await getDb()
-    await deleteDoc(doc(db, COLLECTION, key))
+    await deleteDoc(doc(db, COLLECTION, keyFor(org, key)))
 }
 
 /**
@@ -76,13 +122,14 @@ export async function syncTemplateSlot(
     slotIndex: number,
     updates: Partial<TemplateSlot>,
     userId: string,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<void> {
-    const slots = await getCustomTemplate(templateType)
+    const slots = await getCustomTemplate(templateType, org)
     if (!slots) return // No custom template — don't auto-create
     if (slotIndex < 0 || slotIndex >= slots.length) return
 
     slots[slotIndex] = { ...slots[slotIndex], ...updates }
-    await saveCustomTemplate(templateType, slots, userId)
+    await saveCustomTemplate(templateType, slots, userId, org)
 }
 
 /**
@@ -93,6 +140,9 @@ export function useCustomTemplates(): {
     overrides: Record<string, TemplateSlot[]>
     loading: boolean
 } {
+    // v11-05-01: scope overrides to the active tenant. Outside an OrgProvider
+    // useOrg() defaults to crc (v11-03-01), so server/test paths are unchanged.
+    const org = useOrg()
     const [overrides, setOverrides] = useState<Record<string, TemplateSlot[]>>({})
     const [loading, setLoading] = useState(true)
 
@@ -100,12 +150,11 @@ export function useCustomTemplates(): {
         const unsub = subscribeWithDb((db) => onSnapshot(
             collection(db, COLLECTION),
             (snap) => {
-                const result: Record<string, TemplateSlot[]> = {}
-                snap.forEach((d) => {
-                    const data = d.data() as CustomTemplateDoc
-                    if (data.slots) result[d.id] = data.slots
-                })
-                setOverrides(result)
+                const docs = snap.docs.map((d) => ({
+                    id: d.id,
+                    slots: (d.data() as CustomTemplateDoc).slots,
+                }))
+                setOverrides(selectOrgOverrides(org, docs))
                 setLoading(false)
             },
             (err) => {
@@ -116,7 +165,7 @@ export function useCustomTemplates(): {
             },
         ))
         return unsub
-    }, [])
+    }, [org])
 
     return { overrides, loading }
 }

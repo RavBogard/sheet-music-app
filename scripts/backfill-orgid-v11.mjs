@@ -78,12 +78,16 @@ const ORGS = [
     { id: "crc", name: "Central Reform Congregation", domain: "centralreform.live" },
     { id: "brotherslazaroff", name: "Brothers Lazaroff", domain: "brotherslazaroff.live" },
 ]
+// v11-05-01 added "setlistTemplates" (re-running is safe: the 5 v11-01-03
+// collections re-scan as all-already-stamped → 0 writes, only legacy templates
+// get stamped). Keep in lockstep with src/lib/org/backfill-orgid.ts.
 const TENANT_COLLECTIONS = [
     "setlists",
     "tracks",
     "library_index",
     "songs",
     "recordings",
+    "setlistTemplates",
 ]
 const WRITE_BATCH_MAX = 400
 

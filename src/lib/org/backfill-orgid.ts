@@ -33,13 +33,20 @@ import { DEFAULT_ORG_ID, ORGS } from "@/lib/org/registry"
 
 type DB = FirebaseFirestore.Firestore
 
-/** The five collections that carry tenant-scoped docs. */
+/**
+ * The collections that carry tenant-scoped docs.
+ * v11-05-01 added "setlistTemplates" (templates are MCP-authored, orgId-stamped on
+ * create; legacy templates need the same backbill as setlists/songs did). The
+ * client `templates` liturgical-override collection is NOT here — it is org-isolated
+ * by doc-id namespacing with CRC on the bare key, so it needs no orgId backfill.
+ */
 export const TENANT_COLLECTIONS = [
     "setlists",
     "tracks",
     "library_index",
     "songs",
     "recordings",
+    "setlistTemplates",
 ] as const
 
 export type TenantCollection = (typeof TENANT_COLLECTIONS)[number]

@@ -648,7 +648,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await listTemplates(uidFrom(extra), args)),
+            jsonResult(await listTemplates(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -664,7 +664,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await getTemplate(uidFrom(extra), args.templateId)),
+            jsonResult(await getTemplate(uidFrom(extra), args.templateId, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -712,7 +712,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await createTemplate(uidFrom(extra), args)),
+            jsonResult(await createTemplate(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -753,7 +753,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await updateTemplate(uidFrom(extra), args)),
+            jsonResult(await updateTemplate(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -769,7 +769,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await deleteTemplate(uidFrom(extra), args.templateId)),
+            jsonResult(await deleteTemplate(uidFrom(extra), args.templateId, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -835,7 +835,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await createTemplateFromSetlist(uidFrom(extra), args)),
+            jsonResult(await createTemplateFromSetlist(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

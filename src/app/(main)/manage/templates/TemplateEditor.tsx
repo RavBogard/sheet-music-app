@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/lib/auth-context"
+import { useOrg } from "@/lib/org/org-context"
 import { saveCustomTemplate, deleteCustomTemplate } from "@/lib/template-firebase"
 import { TEMPLATE_LABELS, type TemplateSlot } from "@/lib/liturgical-templates"
 import type { TrackType, DriveFile } from "@/types/models"
@@ -34,6 +35,7 @@ interface TemplateEditorProps {
 
 export function TemplateEditor({ templateKey, defaultSlots, customSlots, importedSlots, onImportConsumed }: TemplateEditorProps) {
     const { user } = useAuth()
+    const org = useOrg()
     const [slots, setSlots] = useState<TemplateSlot[]>([])
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
     const [saving, setSaving] = useState(false)
@@ -108,7 +110,7 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
         if (!user) return
         setSaving(true)
         try {
-            await saveCustomTemplate(templateKey, slots, user.uid)
+            await saveCustomTemplate(templateKey, slots, user.uid, org)
             setDirty(false)
             toast.success(`Template "${TEMPLATE_LABELS[templateKey]?.label ?? templateKey}" saved`)
         } catch (err) {
@@ -122,7 +124,7 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
         if (!confirm("Reset to default? This will delete your customizations.")) return
         setSaving(true)
         try {
-            await deleteCustomTemplate(templateKey)
+            await deleteCustomTemplate(templateKey, org)
             setSlots(defaultSlots)
             setDirty(false)
             toast.success("Reset to default template")
