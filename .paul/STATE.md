@@ -14,8 +14,8 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 Milestone: **v11.0 Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08 via /paul:milestone)
 Phase: **v11-06 ✅ COMPLETE (close gate, 3/3) — v11.0 MILESTONE COMPLETE (6/6 phases) 2026-06-09.** v11-01..06 ✅. Next: `/paul:complete-milestone` (archival bookkeeping).
 Plan: **v11-06 ALL 3 LOOP COMPLETE.** **01 ✅** Rules-layer (leadHistory scope + adversarial rules isolation; scheduling_assignments/_history hardened + per-org congregation wildcard; rules DEPLOYED) · **02 ✅** MCP escape + host-spoof (verifyBearer header-immune + no-arg-injection invariant LOCKED) · **03 ✅** Live prod probe (claim-free throwaway bearer + extended e2e probe across v11-05 collections; 18/19, 1=deploy-pending leadHistory closing on push) + `AUDIT.md` VERDICT **GO**.
-Status: **v11-06 phase commit + the 2 prior local commits being PUSHED to prod (phase transition). Then post-deploy probe re-confirm + /paul:complete-milestone.** No /ui-ux-pro-max (no frontend UI in this phase).
-Last activity: 2026-06-09 — APPLY+UNIFY v11-06-03 (live prod probe 18/19 BL-isolated+CRC-intact; AUDIT.md GO) → phase transition (push + complete-milestone).
+Status: **v11-06 PHASE TRANSITION DONE — pushed to prod (`2a8441d6e5`), Vercel deployed, post-deploy live probe 19/19 (leadHistory closed live).** Next: `/paul:complete-milestone` (v11.0 archival bookkeeping). No /ui-ux-pro-max.
+Last activity: 2026-06-09 — v11-06-03 LOOP COMPLETE + phase transition: pushed v11-06 (3 commits) → Vercel → re-probe **19/19** → AUDIT.md GO confirmed live. v11.0 6/6 COMPLETE.
 
 Parallel track: **v7.1 Production Hardening** remains ACTIVE via the bongo `.coord/` system (cycle-13 in flight) — independent of the PAUL loop, which now tracks v11.0. App is at `10.1.0` (package.json).
 
@@ -30,8 +30,7 @@ Progress:
 - v11-01 phase commit pushed earlier; v11-02 now pushed. **Next phase (v11-03) starts clean from origin/master.**
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer workflow — `git pull` before starting next session (other boxes may push v7.1).
-- **v11-02b commit:** `2db15f36d9` feat(v11-02b) — org-aware self-service token minting (deployed, Vercel READY). Phase-close bookkeeping → `docs(v11-02b)`.
-- origin/master in sync; **v11-03 starts clean from origin/master** (`git pull` first — multi-computer).
+- **v11-06 phase pushed + deployed:** `99d625c492` feat(v11-06-01) + `666a4b60d5` test(v11-06-02) + `5e16e28a98` feat(v11-06) phase-close + `2a8441d6e5` docs(v11-06) AUDIT 19/19. **origin/master in sync (tip `2a8441d6e5`); Vercel deployed; firestore.rules deployed.** v11.0 milestone COMPLETE.
 
 ## Loop Position
 
@@ -120,8 +119,8 @@ The v7.1 hardening campaign continues separately via the bongo `.coord/` cowork 
 ## Session Continuity
 
 Last session: 2026-06-09 (cont.) — /paul:resume → /paul:plan v11-06 → **APPLY+UNIFY v11-06-01 LOOP COMPLETE** (rules-layer axis). leadHistory tenant-scoped; adversarial rules audit across the 4 v11-05 collections; HARDENED scheduling_assignments + scheduling_history (orgReadOk) + FIXED per-org congregation branding (guarded /config/{doc} wildcard, was deny-by-default for BL); firestore.rules DEPLOYED to crcmusiccharts. Full emulator 71/71 files 934/934; non-emulator 3321/0. Committed LOCAL `99d625c492` (NOT pushed). Fixed 3 pre-existing stale emulator tests (verified via stash). v11-05 remains SHIPPED; code NOT pushed yet (phase-close pushes at v11-06-03).
-Stopped at: **v11-06-03 PLAN created — ready for APPLY. v11-06 at 2 of 3 plans done.** Milestone at 5 of 6 phases (v11-06 close gate in flight).
-Next action: **/paul:apply v11-06-03** (autonomy → auto-proceed) — the FINAL close-gate slice: (1) extend `scripts/e2e-bl-tenant-probe.mjs` to live-verify the v11-05 collections (templates/users/assignments/congregation) BL-isolated + CRC-intact against prod (needs DAVID_BEARER + CRC_BEARER — Daniel-supplied or fall back to the documented manual bearer; if creds unavailable, the probe is authored + the live run becomes a UAT-PENDING item, NOT a blocker); (2) author `.paul/phases/v11-06-isolation-audit/AUDIT.md` — the close-gate sign-off folding in v11-06-01's per-collection enforcement table + v11-06-02's host-spoof/arg-injection CLOSED findings + the residual-risk register. Then PHASE TRANSITION: push the whole v11-06 phase (the 2 local commits + 03) to origin master → /paul:complete-milestone. Quality floor: emulator + non-emulator stay green; rules already deployed.
+Stopped at: **v11.0 MILESTONE COMPLETE (6/6) — v11-06 close gate shipped + live-verified (probe 19/19, AUDIT.md GO).** origin/master in sync (`2a8441d6e5`), Vercel deployed.
+Next action: **/paul:complete-milestone** (v11.0 archival bookkeeping — archive ROADMAP snapshot, MILESTONES.md entry, PROJECT.md evolution). After that, no active PAUL milestone; v7.1 hardening continues separately via `.coord/`. (Optional follow-up: David UX confirmation on brotherslazaroff.live remains the standing UAT-PENDING item.)
 v11-05-03 plan grounding (verified vs deployed code 2026-06-09): create path = assignMusiciansService (one site, HTTP+MCP both delegate) reads setlist in-tx → stamp orgId. Cross-tenant reads to scope: client subscribeToAllUpcomingAssignments (scheduling-firebase.ts:76); web suggest-band:46 (playcount/window) + history:30 (assignments analytics + scheduling_history:18) + remind:28 (no-setlistId branch only); MCP listPendingAssignments(563) + list_musicians_on_date(449, scope matchedSetlists) + suggestBand recentSnap(797) + list_service_personnel(sibling). INHERIT (no change): suggest route(setlistId), calendar-feed(uid), suggestMusicians assignments(setlistId), new-song-detector(uid), cron/scheduling-reminder(ALL-tenant by design — reminders to musicians, no caller leak), fan-outs(profile/setlist rename+delete). Single orgId via new rowOrg helper in membership.ts.
 Resume file: **.paul/HANDOFF-2026-06-09.md** (session 4 — v11-05 SHIPPED, paused at milestone 5/6). → next is /paul:plan v11-06 (isolation audit).
 Git strategy: master (prod), **IN SYNC with origin/master** (pushed through `f3448a8395` 2026-06-09; all of v11-05 + build-fix live, Vercel READY). `git pull` first next session (multi-computer).
