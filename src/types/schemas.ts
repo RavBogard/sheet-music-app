@@ -49,6 +49,9 @@ export const userProfileSchema = z.object({
     lastLoginAt: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),
     claimsUpdatedAt: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),
     musicianProfile: musicianProfileSchema.nullish().catch(undefined).transform(v => v || undefined),
+    // v11.1-02-02: org membership (mirror of the Auth orgIds claim). Absent/empty
+    // → undefined; the People list applies rowOrgIds for the default-['crc'] view.
+    orgIds: z.array(z.string()).nullish().catch(undefined).transform(v => (Array.isArray(v) && v.length ? v : undefined)),
 }).passthrough()
 
 // --- Setlist Schema ---

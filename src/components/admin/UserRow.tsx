@@ -31,6 +31,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
+import { rowOrgIds } from "@/lib/org/membership"
 
 const ROLE_HIERARCHY: Record<string, number> = {
     pending: 0,
@@ -39,6 +40,33 @@ const ROLE_HIERARCHY: Record<string, number> = {
     band_leader: 3,
     leader: 3, // backward compat
     admin: 4,
+}
+
+// v11.1-02-02: org-membership (the AUTHORING tier). Tri-state over the two
+// tenants — CRC only / Brothers Lazaroff only / Both — mapped to the orgIds
+// claim+doc via /api/admin/set-role. Consumers (musicians/members) are
+// host-derived and are not gated here.
+const MEMBERSHIP_TO_ORGIDS: Record<string, string[]> = {
+    crc: ["crc"],
+    bl: ["brotherslazaroff"],
+    both: ["crc", "brotherslazaroff"],
+}
+const MEMBERSHIP_OPTION_LABELS: Record<string, string> = {
+    crc: "CRC only",
+    bl: "Brothers Lazaroff only",
+    both: "Both",
+}
+const MEMBERSHIP_BADGE_LABELS: Record<string, string> = {
+    crc: "CRC",
+    bl: "BL",
+    both: "CRC + BL",
+}
+function membershipFromOrgIds(orgIds: string[]): "crc" | "bl" | "both" {
+    const hasBl = orgIds.includes("brotherslazaroff")
+    const hasCrc = orgIds.includes("crc")
+    if (hasBl && hasCrc) return "both"
+    if (hasBl) return "bl"
+    return "crc"
 }
 
 
@@ -56,6 +84,8 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
     const [deleteLoading, setDeleteLoading] = useState(false)
     const [confirmDelete, setConfirmDelete] = useState(false)
     const [pendingRole, setPendingRole] = useState<string | null>(null)
+    const [pendingMembership, setPendingMembership] = useState<string | null>(null)
+    const [membershipLoading, setMembershipLoading] = useState(false)
 
     // v44-06 UX-011: if the parent refreshes and the user's role has changed
     // (either via this confirmation succeeding or an out-of-band update),
@@ -64,6 +94,13 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
     useEffect(() => {
         setPendingRole(null)
     }, [user.role])
+
+    // v11.1-02-02: clear a stale membership confirmation once the doc's orgIds
+    // change lands (the select then reflects the latest props). Dep on the
+    // joined string so a new array identity per snapshot doesn't loop.
+    useEffect(() => {
+        setPendingMembership(null)
+    }, [rowOrgIds(user.orgIds).join(",")])
 
     const currentLevel = ROLE_HIERARCHY[currentUserRole] ?? 0
     const isCurrentAdmin = currentUserRole === 'admin'
@@ -173,6 +210,35 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
     const assignableRoles = (['pending', 'member', 'musician', 'band_leader', 'admin'] as const)
         .filter(r => ROLE_HIERARCHY[r] <= currentLevel)
 
+    // v11.1-02-02: org-membership control — admin-only, shown on the authoring
+    // tier (band_leader/admin rows). Self is allowed (an admin may set their own
+    // 'both'); all three options are non-empty so there's no lockout.
+    const isLeaderTier = effectiveRole === 'band_leader' || effectiveRole === 'admin'
+    const showOrgMembership = isCurrentAdmin && isLeaderTier
+    const membershipValue = membershipFromOrgIds(rowOrgIds(user.orgIds))
+
+    const requestMembershipChange = (next: string) => {
+        if (next === membershipValue) return
+        setPendingMembership(next)
+    }
+
+    const confirmMembershipChange = async () => {
+        if (!pendingMembership) return
+        const next = pendingMembership
+        setPendingMembership(null)
+        setMembershipLoading(true)
+        try {
+            // Pass the CURRENT role unchanged (set-role requires newRole) + the new orgIds.
+            await updateUserRole(user.uid, effectiveRole, MEMBERSHIP_TO_ORGIDS[next])
+            toast.success(`${user.displayName}: band access → ${MEMBERSHIP_OPTION_LABELS[next]}`)
+        } catch (e) {
+            logger.error(e)
+            toast.error(`Couldn't update band access: ${formatError(e)}`)
+        } finally {
+            setMembershipLoading(false)
+        }
+    }
+
     return (
         <>
         <div className={cn("flex flex-wrap items-center gap-3 px-4 py-3 bg-card transition-colors hover:bg-muted/50", isSelected && "bg-brand/5 hover:bg-brand/10")}>
@@ -210,6 +276,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                     {effectiveRole === 'member' && !isPending && <Badge variant="default" className="bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30 text-[10px] h-5 px-1.5">Member</Badge>}
                     {user.soundEngineer && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[10px] h-5 px-1.5">🎧 Sound</Badge>}
                     {isPending && <Badge variant="destructive" className="bg-amber-500/20 text-amber-500 border-amber-500/50 text-[10px] h-5 px-1.5">Pending</Badge>}
+                    {isLeaderTier && <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-border text-muted-foreground" title="Band access (org membership)">{MEMBERSHIP_BADGE_LABELS[membershipValue]}</Badge>}
 
                     <span className="text-[10px] text-muted-foreground/50 truncate max-w-[100px]" title={user.createdAt ? toDate(user.createdAt)?.toLocaleString() : ""}>
                         {user.createdAt ? formatDistanceToNow(toDate(user.createdAt) || new Date(), { addSuffix: true }) : ""}
@@ -258,6 +325,27 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                         </Button>
                     )}
 
+                    {/* Org membership (admin-only, leaders) */}
+                    {showOrgMembership && (
+                        <Select
+                            disabled={membershipLoading}
+                            value={membershipValue}
+                            onValueChange={requestMembershipChange}
+                        >
+                            <SelectTrigger
+                                className="w-[150px] bg-background border-border h-11 text-xs font-medium"
+                                aria-label={`Band access for ${user.displayName || user.email || 'user'}`}
+                            >
+                                <SelectValue placeholder="Band access" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="crc" className="text-xs">CRC only</SelectItem>
+                                <SelectItem value="bl" className="text-xs">Brothers Lazaroff only</SelectItem>
+                                <SelectItem value="both" className="text-xs">Both</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    )}
+
                     {/* Role selector */}
                     {!isSelf ? (
                         <Select
@@ -293,6 +381,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                     {effectiveRole === 'member' && !isPending && <Badge variant="default" className="bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30 text-[9px] h-4 px-1.5">Member</Badge>}
                     {user.soundEngineer && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[9px] h-4 px-1.5">🎧 Sound</Badge>}
                     {isPending && <Badge variant="destructive" className="bg-amber-500/20 text-amber-500 border-amber-500/50 text-[9px] h-4 px-1.5">Pending</Badge>}
+                    {isLeaderTier && <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-border text-muted-foreground" title="Band access (org membership)">{MEMBERSHIP_BADGE_LABELS[membershipValue]}</Badge>}
                 </div>
 
                 <div className="flex items-center gap-1">
@@ -336,6 +425,26 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                         </Button>
                     )}
 
+                    {showOrgMembership && (
+                        <Select
+                            disabled={membershipLoading}
+                            value={membershipValue}
+                            onValueChange={requestMembershipChange}
+                        >
+                            <SelectTrigger
+                                className="w-[120px] bg-background border-border h-11 text-[10px]"
+                                aria-label={`Band access for ${user.displayName || user.email || 'user'}`}
+                            >
+                                <SelectValue placeholder="Access" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="crc" className="text-xs">CRC only</SelectItem>
+                                <SelectItem value="bl" className="text-xs">Brothers Lazaroff only</SelectItem>
+                                <SelectItem value="both" className="text-xs">Both</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    )}
+
                     {!isSelf && (
                         <Select
                             disabled={loading}
@@ -370,6 +479,22 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={confirmRoleChange}>Change Role</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        {/* v11.1-02-02: Org-membership change confirmation */}
+        <AlertDialog open={!!pendingMembership} onOpenChange={(open) => { if (!open) setPendingMembership(null) }}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Change band access?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Set {user.displayName}&apos;s band access to {MEMBERSHIP_OPTION_LABELS[pendingMembership || ''] || pendingMembership}? This controls which band(s) they can author setlists &amp; charts for.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={confirmMembershipChange}>Update access</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

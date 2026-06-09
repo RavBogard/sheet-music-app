@@ -42,9 +42,14 @@ export const POST = createApiHandler(
         await db.runTransaction(async (txn) => {
             const userRef = db.collection("users").doc(targetUserId)
 
-            // Update user role
+            // Update user role. v11.1-02-02: also mirror orgIds onto the doc when
+            // supplied (the claim write below already includes it) so the People
+            // list + roster filtering (v11-05-02 rowOrgIds) see membership changes
+            // immediately and doc/claim stay in lockstep. Omitted → doc orgIds
+            // preserved (mirrors the claim's spread-preserve semantics).
             txn.update(userRef, {
                 role: newRole,
+                ...(orgIds ? { orgIds } : {}),
                 claimsUpdatedAt: FieldValue.serverTimestamp(),
             })
 

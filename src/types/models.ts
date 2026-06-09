@@ -181,6 +181,10 @@ export interface UserProfile {
     lastLoginAt?: FirestoreDate
     claimsUpdatedAt?: FirestoreDate
     musicianProfile?: MusicianProfile
+    // v11.1-02-02: org membership mirrored from the Auth `orgIds` claim onto the
+    // user doc (by /api/admin/set-role) for the People-list display + roster
+    // filtering (v11-05-02 rowOrgIds). Absent → default ['crc'] via rowOrgIds.
+    orgIds?: string[]
 }
 
 /**

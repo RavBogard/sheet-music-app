@@ -125,20 +125,22 @@ export function subscribeToAllUsers(callback: (users: UserProfile[]) => void, on
  * Update a user's role (Admin only)
  * Calls the Secure API to set Custom Claims.
  */
-export async function updateUserRole(targetUid: string, newRole: UserRole) {
+export async function updateUserRole(targetUid: string, newRole: UserRole, orgIds?: string[]) {
     const user = auth.currentUser
     if (!user) throw new Error("Not authenticated")
 
     const token = await user.getIdToken()
 
-    // Call the API
+    // Call the API. v11.1-02-02: optional orgIds sets the target's org membership
+    // (CRC/broslaz/both) alongside the role — set-role requires newRole, so the
+    // membership control passes the user's CURRENT role unchanged + the new orgIds.
     const res = await fetch("/api/admin/set-role", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ targetUserId: targetUid, newRole })
+        body: JSON.stringify({ targetUserId: targetUid, newRole, ...(orgIds ? { orgIds } : {}) })
     })
 
     if (!res.ok) {
