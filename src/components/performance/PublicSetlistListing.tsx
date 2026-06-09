@@ -8,6 +8,7 @@ import { toDate } from "@/lib/firestore-helpers"
 import { useAuth } from "@/lib/auth-context"
 import { useOrg } from "@/lib/org/org-context"
 import { getOrgBranding } from "@/lib/org/branding"
+import { label } from "@/lib/org/vocab"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { QRSignIn } from "@/components/auth/QRSignIn"
@@ -225,7 +226,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                     {past.length > 0 && (
                         <section className="flex flex-col gap-3 mt-5">
                             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground px-1">
-                                Past services
+                                {label(org, 'pastSection')}
                             </h2>
                             <div className="flex flex-col gap-3">
                                 {past.map(renderCard)}

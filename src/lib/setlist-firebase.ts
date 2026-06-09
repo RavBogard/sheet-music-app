@@ -21,6 +21,21 @@ import {
     type DocumentReference,
 } from "firebase/firestore";
 import type { OrgId } from "@/lib/org/types";
+import { coerceOrgId } from "@/lib/org/registry";
+import { rowOrg } from "@/lib/org/membership";
+
+/**
+ * v11-05-05: in-app setlist creates stamp the HOST org so the new doc is visible
+ * under the v11-04 `where('orgId','==',org)` dashboard reads. Mirrors the
+ * v11-05-04 congregation-store client pattern (`<html data-org>` is set
+ * server-side before hydration). SSR-guarded; crc default keeps CRC unchanged.
+ * MCP create stamps the caller org separately (setlist-write.ts).
+ */
+function hostOrgId(): OrgId {
+    return coerceOrgId(
+        typeof document !== "undefined" ? document.documentElement.dataset.org : undefined,
+    )
+}
 
 /** Thrown when a write precondition (expectedUpdatedAt) doesn't match the remote doc. */
 export class StaleWriteError extends Error {
@@ -200,6 +215,9 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     hydrated: true,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
+                    // v11-05-05: host-org default; an explicit additionalData.orgId
+                    // wins via the spread below (the in-app wizard passes none).
+                    orgId: hostOrgId(),
                     ...stripUndefined(additionalData as Record<string, unknown>)
                 });
                 await seedTopLevelTracks(docRef.id, tracks)
@@ -333,6 +351,9 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     hydrated: true,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
+                    // v11-05-05: a duplicate inherits the SOURCE setlist's tenant
+                    // (rowOrg: missing → 'crc', matching the v11-01-03 backfill).
+                    orgId: rowOrg(setlistData.orgId),
                     copiedFrom: sourceSetlistId
                 }) as Record<string, unknown>
                 const db = await getDb()
@@ -478,6 +499,9 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     musicians: source.musicians || [],
                     assignedUids: (source.musicians || []).map(m => m.uid).filter(Boolean),
                     ...(source.rabbi ? { rabbi: source.rabbi } : {}),
+                    // v11-05-05: a clone inherits the SOURCE setlist's tenant
+                    // (rowOrg: missing → 'crc', matching the v11-01-03 backfill).
+                    orgId: rowOrg(source.orgId),
                     clonedFrom: source.id,
                 }) as Record<string, unknown>
                 const db = await getDb()

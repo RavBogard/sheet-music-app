@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Setlist } from "@/lib/setlist-firebase"
 import { isFileCached } from "@/lib/cache-utils"
 import { getServiceContext, type ServiceType } from "@/lib/liturgical-calendar"
+import { useOrg } from "@/lib/org/org-context"
+import { label as orgLabel, hidesLiturgicalFields } from "@/lib/org/vocab"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -59,6 +61,7 @@ export interface UpcomingCardProps {
 
 export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDownload, isDownloading, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onSaveAsDefault, onDelete, canDelete, canDuplicate, isAdmin }: UpcomingCardProps) {
     const isLoading = navigatingTo === setlist.id
+    const org = useOrg() // v11-05-05: gate the liturgical "Save as Default" affordance for band tenants
     const [offlineStatus, setOfflineStatus] = useState<'checking' | 'full' | 'partial' | 'none'>('checking')
 
     useEffect(() => {
@@ -194,7 +197,9 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                                     isAdmin &&
                                     !!onSaveAsDefault &&
                                     !!inferred &&
-                                    PHASE_1_DEFAULT_TYPES.includes(inferred)
+                                    PHASE_1_DEFAULT_TYPES.includes(inferred) &&
+                                    // v11-05-05: liturgical service-type affordance is CRC-only.
+                                    !hidesLiturgicalFields(org)
                                 const label = inferred ? SERVICE_TYPE_LABELS[inferred] : null
                                 if (!canSaveAsDefault || !label || !inferred) return null
                                 return (
@@ -240,6 +245,7 @@ export interface PastCardProps {
 
 export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onSaveAsDefault, onDelete, canDelete, canDuplicate, isAdmin }: PastCardProps) {
     const isLoading = navigatingTo === setlist.id
+    const org = useOrg() // v11-05-05: gate the liturgical "Save as Default" affordance for band tenants
 
     return (
         // C4-003: see UpcomingSetlistCard above for the rationale; mirror the
@@ -330,7 +336,9 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
                                     isAdmin &&
                                     !!onSaveAsDefault &&
                                     !!inferred &&
-                                    PHASE_1_DEFAULT_TYPES.includes(inferred)
+                                    PHASE_1_DEFAULT_TYPES.includes(inferred) &&
+                                    // v11-05-05: liturgical service-type affordance is CRC-only.
+                                    !hidesLiturgicalFields(org)
                                 const label = inferred ? SERVICE_TYPE_LABELS[inferred] : null
                                 if (!canSaveAsDefault || !label || !inferred) return null
                                 return (
@@ -365,6 +373,7 @@ interface PlaceholderCardProps {
 }
 
 export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
+    const org = useOrg()
     return (
         <div
             role="button"
@@ -378,7 +387,7 @@ export function PlaceholderCard({ date, onCreate }: PlaceholderCardProps) {
             
             <div className="flex-1 min-w-0">
                 <h5 className="text-lg font-semibold text-muted-foreground group-hover:text-foreground transition-colors truncate tracking-tight">
-                    Plan Service
+                    {orgLabel(org, 'planPlaceholder')}
                 </h5>
                 <div className="flex items-center gap-3 mt-1 flex-wrap">
                     <span className="text-xs text-muted-foreground flex items-center gap-1">

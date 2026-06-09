@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const hoisted = vi.hoisted(() => {
     class MockTimestamp {
@@ -205,6 +205,50 @@ describe('createSetlistService', () => {
 
             const data = mockAddDoc.mock.calls[0][1]
             expect(data.templateType).toBe('rosh_hashanah')
+        })
+    })
+
+    // v11-05-05: every in-app setlist create stamps orgId so the doc is visible
+    // under the v11-04 where('orgId','==',org) dashboard reads.
+    describe('orgId stamping (v11-05-05)', () => {
+        afterEach(() => {
+            delete (document.documentElement.dataset as Record<string, string>).org
+        })
+
+        it('createSetlist stamps the host org (data-org) by default', async () => {
+            document.documentElement.dataset.org = 'brotherslazaroff'
+            await service.createSetlist('BL Set', [])
+            expect(mockAddDoc.mock.calls[0][1].orgId).toBe('brotherslazaroff')
+        })
+
+        it('createSetlist: explicit additionalData.orgId wins over the host', async () => {
+            document.documentElement.dataset.org = 'brotherslazaroff'
+            await service.createSetlist('Override', [], { orgId: 'crc' } as never)
+            expect(mockAddDoc.mock.calls[0][1].orgId).toBe('crc')
+        })
+
+        it('createSetlist defaults to crc when no data-org is set', async () => {
+            await service.createSetlist('CRC Set', [])
+            expect(mockAddDoc.mock.calls[0][1].orgId).toBe('crc')
+        })
+
+        it('cloneForNextWeek inherits the source setlist orgId', async () => {
+            mockFetchTracks.mockResolvedValue([] as never)
+            document.documentElement.dataset.org = 'crc' // host is crc; clone must still inherit source
+            await service.cloneForNextWeek({
+                id: 'src-bl', name: 'BL Show', ownerId: 'user123',
+                orgId: 'brotherslazaroff',
+            } as never)
+            expect(mockAddDoc.mock.calls[0][1].orgId).toBe('brotherslazaroff')
+        })
+
+        it('duplicateSetlist inherits the source setlist orgId', async () => {
+            mockFetchTracks.mockResolvedValue([] as never)
+            await service.duplicateSetlist('src-bl', {
+                id: 'src-bl', name: 'BL Show', ownerId: 'user123',
+                orgId: 'brotherslazaroff',
+            } as never)
+            expect(mockAddDoc.mock.calls[0][1].orgId).toBe('brotherslazaroff')
         })
     })
 

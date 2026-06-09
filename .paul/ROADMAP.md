@@ -16,7 +16,7 @@ Turn the single-tenant CRC app into a multi-tenant platform whose first second t
 | v11-02b | Org-aware token minting (self-service tenant onboarding) | 1/1 ✅ | ✅ Complete | 2026-06-08 |
 | v11-03 | brotherslazaroff.live domain + branding + vocab trim | 3/3 ✅ | ✅ Complete | 2026-06-08 |
 | v11-04 | BL consumer surface (perform/print) + David onboarding + e2e UAT | 3/3 ✅ | ✅ Complete | 2026-06-09 |
-| v11-05 | Cross-tenant collection scoping (templates/roster/congregation/personnel R+W) + CreationWizard vocab | TBD | Not started | - |
+| v11-05 | Cross-tenant collection scoping (templates/roster/congregation/personnel R+W) + CreationWizard vocab | 5/5 | 🚧 Code-complete (deploy gate pending) | 2026-06-09 |
 | v11-06 | Cross-tenant isolation security audit (close gate) | TBD | Not started | - |
 
 ### Phase v11-01: Tenant foundation

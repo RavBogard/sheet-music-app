@@ -15,6 +15,8 @@ import { useCreationWizard } from "@/hooks/use-creation-wizard"
 import { TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 import { toDate } from "@/lib/firestore-helpers"
 import type { ServiceType } from "@/lib/liturgical-calendar"
+import { useOrg } from "@/lib/org/org-context"
+import { label, hidesLiturgicalFields } from "@/lib/org/vocab"
 
 interface CreationWizardProps {
     open: boolean
@@ -62,6 +64,9 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
 
     const congregation = useCongregation()
     const rabbiProfiles = congregation?.scheduling?.rabbiProfiles ?? []
+    // v11-05-05: band tenants (BL) get band vocab + no liturgical framing.
+    const org = useOrg()
+    const hideLiturgical = hidesLiturgicalFields(org)
 
     const regularTemplates = wizard.templateKeys.filter(k => TEMPLATE_LABELS[k]?.category === 'regular')
     const holidayTemplates = wizard.templateKeys.filter(k => TEMPLATE_LABELS[k]?.category === 'holiday')
@@ -75,7 +80,9 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
     const serviceLabel = inferredType ? SERVICE_TYPE_LABELS[inferredType] : null
     // 'regular' weekday picks aren't a meaningful Clone target; suppress the
     // strip entirely so the user falls through to template/scratch.
-    const offerStripVisible = !!wizard.eventDate && !!serviceLabel && inferredType !== 'regular'
+    // v11-05-05: the offer strip is liturgical (SERVICE_TYPE_LABELS, e.g. "Erev
+    // Shabbat") — hide it for band tenants; they create via date + name + template.
+    const offerStripVisible = !!wizard.eventDate && !!serviceLabel && inferredType !== 'regular' && !hideLiturgical
     const cloneSourceDate = wizard.cloneSource
         ? toDate(wizard.cloneSource.eventDate ?? wizard.cloneSource.date)
         : null
@@ -87,7 +94,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
         <Dialog open={open} onOpenChange={(v) => !wizard.creating && onOpenChange(v)}>
             <DialogContent className="bg-card border-border text-foreground sm:max-w-md p-0">
                 <div className="px-6 pt-6 pb-2">
-                    <h2 className="text-xl font-bold mb-1">New Setlist</h2>
+                    <h2 className="text-xl font-bold mb-1">{label(org, 'newSetlist')}</h2>
                     <p className="text-sm text-muted-foreground">
                         Pick a date — we&rsquo;ll offer to clone last week&rsquo;s service, use a template, or start fresh.
                     </p>
@@ -218,7 +225,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                                     <SelectValue placeholder="Start from blank" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value={BLANK}>Blank setlist</SelectItem>
+                                    <SelectItem value={BLANK}>{label(org, 'blankSetlist')}</SelectItem>
                                     {regularTemplates.length > 0 && (
                                         <SelectGroup>
                                             <SelectLabel>Regular services</SelectLabel>
@@ -257,14 +264,14 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                                         wizard.create()
                                     }
                                 }}
-                                placeholder="e.g., Shabbat Morning, Friday Night..."
+                                placeholder={label(org, 'wizardNamePlaceholder')}
                                 className="text-base h-11 bg-background/50 border-border"
                             />
                         </div>
                     )}
 
-                    {/* Rabbi (only when congregation has a list) */}
-                    {rabbiProfiles.length > 0 && (
+                    {/* Rabbi (only when congregation has a list; hidden for non-synagogue tenants) */}
+                    {rabbiProfiles.length > 0 && !hideLiturgical && (
                         <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-medium text-muted-foreground">Rabbi (optional)</label>
                             <Select value={wizard.rabbi} onValueChange={wizard.setRabbi}>
@@ -293,9 +300,9 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                         {wizard.creating ? (
                             <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</>
                         ) : wizard.mode === 'clone' && wizard.cloneSource ? (
-                            <><Copy className="h-4 w-4" /> Clone Setlist</>
+                            <><Copy className="h-4 w-4" /> {label(org, 'cloneSetlistAction')}</>
                         ) : (
-                            <><Check className="h-4 w-4" /> Create Setlist</>
+                            <><Check className="h-4 w-4" /> {label(org, 'createSetlistAction')}</>
                         )}
                     </Button>
                 </div>

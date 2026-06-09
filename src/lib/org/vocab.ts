@@ -24,6 +24,14 @@ export type VocabKey =
     | "editSetlistDetails"
     | "namePlaceholder"
     | "publicListingTitle"
+    // v11-05-05: CreationWizard / public listing / display-card vocab.
+    | "newSetlist"
+    | "blankSetlist"
+    | "cloneSetlistAction"
+    | "createSetlistAction"
+    | "wizardNamePlaceholder"
+    | "pastSection"
+    | "planPlaceholder"
 
 const BASE: Record<VocabKey, string> = {
     setlist: "setlist",
@@ -32,6 +40,16 @@ const BASE: Record<VocabKey, string> = {
     // v11-04-02: the public /perform <title>. CRC keeps the prior
     // synagogue-flavored wording byte-identical.
     publicListingTitle: "Upcoming Services & Setlists",
+    // v11-05-05: CRC base = the CURRENT hardcoded strings (byte-identical).
+    newSetlist: "New Setlist",
+    blankSetlist: "Blank setlist",
+    cloneSetlistAction: "Clone Setlist",
+    createSetlistAction: "Create Setlist",
+    // CRC base = the wizard's CURRENT placeholder verbatim (NOT the edit-sheet's
+    // shorter namePlaceholder) — keeps the wizard CRC render byte-identical.
+    wizardNamePlaceholder: "e.g., Shabbat Morning, Friday Night...",
+    pastSection: "Past services",
+    planPlaceholder: "Plan Service",
 }
 
 const OVERRIDES: Partial<Record<OrgId, Partial<Record<VocabKey, string>>>> = {
@@ -40,6 +58,14 @@ const OVERRIDES: Partial<Record<OrgId, Partial<Record<VocabKey, string>>>> = {
         editSetlistDetails: "Edit set details",
         namePlaceholder: "e.g., Friday night set",
         publicListingTitle: "Upcoming Shows & Sets",
+        // v11-05-05: band voice, consistent with the v11-03-03 "set"/"Shows" voice.
+        newSetlist: "New Set",
+        blankSetlist: "Blank set",
+        cloneSetlistAction: "Clone Set",
+        createSetlistAction: "Create Set",
+        wizardNamePlaceholder: "e.g., Friday night set",
+        pastSection: "Past shows",
+        planPlaceholder: "Plan Show",
     },
 }
 

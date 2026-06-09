@@ -21,4 +21,25 @@ describe("label", () => {
         expect(label("crc", "editSetlistDetails")).toBe("Edit setlist details")
         expect(label("crc", "namePlaceholder")).toBe("e.g., Shabbat Morning")
     })
+
+    // v11-05-05: CreationWizard / public listing / display-card keys.
+    const V11_05_05_KEYS: Array<[Parameters<typeof label>[1], string, string]> = [
+        ["newSetlist", "New Setlist", "New Set"],
+        ["blankSetlist", "Blank setlist", "Blank set"],
+        ["cloneSetlistAction", "Clone Setlist", "Clone Set"],
+        ["createSetlistAction", "Create Setlist", "Create Set"],
+        ["wizardNamePlaceholder", "e.g., Shabbat Morning, Friday Night...", "e.g., Friday night set"],
+        ["pastSection", "Past services", "Past shows"],
+        ["planPlaceholder", "Plan Service", "Plan Show"],
+    ]
+    it("CRC base strings are byte-identical to the current hardcoded UI", () => {
+        for (const [key, crc] of V11_05_05_KEYS) {
+            expect(label("crc", key)).toBe(crc)
+        }
+    })
+    it("Brothers Lazaroff gets the band-voice override", () => {
+        for (const [key, , bl] of V11_05_05_KEYS) {
+            expect(label("brotherslazaroff", key)).toBe(bl)
+        }
+    })
 })
