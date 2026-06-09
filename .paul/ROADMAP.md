@@ -4,8 +4,8 @@
 
 ## Current Milestone
 
-**🚧 v11.0 — Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08)
-Status: 🚧 In Progress · Phases: 5 of 6 complete (v11-01..05 ✅ 2026-06-09) — Brothers Lazaroff is LIVE + FULLY tenant-isolated (reads+writes+all v11-05 collections: templates/roster/assignments/congregation + in-app create orgId-stamp + band vocab); brotherslazaroff.live own branding/metadata + working sign-in. Remaining: v11-06 cross-tenant isolation security audit (close gate).
+**✅ v11.0 — Brothers Lazaroff Multi-Tenant** (COMPLETE 2026-06-09)
+Status: ✅ Complete · Phases: 6 of 6 (v11-01..06 ✅) — Brothers Lazaroff is LIVE + FULLY tenant-isolated (reads+writes+all v11-05 collections: templates/roster/assignments/congregation + in-app create orgId-stamp + band vocab); brotherslazaroff.live own branding/metadata + working sign-in. **v11-06 close-gate audit: GO** — rules-layer + MCP-escape + host-spoof all closed; live prod probe BL-isolated + CRC-intact; AUDIT.md sign-off at `.paul/phases/v11-06-isolation-audit/AUDIT.md`.
 
 Turn the single-tenant CRC app into a multi-tenant platform whose first second tenant is **Brothers Lazaroff** — give David Lazaroff (CRC band_leader since 2026-05-15) his own org-scoped library + setlists, authored via Claude + MCP, viewed/printed on `brotherslazaroff.live`. Multi-tenant within the SAME app + Firebase (`crcmusiccharts`); CRC data backfilled to a default org, behavior-neutral. Trimmed to David's MCP-author → view/print-packet flow. App is at `10.1.0`; the multi-tenant architectural shift + new production domain justify the v11.0 bump. Decisions locked at `/paul:discuss-milestone` 2026-06-08; full detail in `.paul/MILESTONES.md` § v11.0.
 
@@ -17,7 +17,7 @@ Turn the single-tenant CRC app into a multi-tenant platform whose first second t
 | v11-03 | brotherslazaroff.live domain + branding + vocab trim | 3/3 ✅ | ✅ Complete | 2026-06-08 |
 | v11-04 | BL consumer surface (perform/print) + David onboarding + e2e UAT | 3/3 ✅ | ✅ Complete | 2026-06-09 |
 | v11-05 | Cross-tenant collection scoping (templates/roster/congregation/personnel R+W) + CreationWizard vocab | 5/5 ✅ | ✅ Complete (SHIPPED + live-verified, `f3448a8395`) | 2026-06-09 |
-| v11-06 | Cross-tenant isolation security audit (close gate) | 0/3 (01 planned) | 🚧 Planning | - |
+| v11-06 | Cross-tenant isolation security audit (close gate) | 3/3 ✅ | ✅ Complete (AUDIT.md verdict GO; live prod probe) | 2026-06-09 |
 
 ### Phase v11-01: Tenant foundation
 Focus: `orgId` on songs / library_index / setlists / tracks / recordings; tenant-resolution helper; backfill all existing CRC data with the default org (behavior-neutral); airtight Firestore rules + `@firebase/rules-unit-testing` emulator coverage. The spine — every later phase depends on it.

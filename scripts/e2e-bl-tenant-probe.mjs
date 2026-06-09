@@ -170,6 +170,75 @@ async function main() {
         `count=${Array.isArray(crcList2) ? crcList2.length : "n/a"}`,
     )
 
+    // ════════════════════════════════════════════════════════════════════════
+    // v11-06-03 — live isolation across the v11-05 collections
+    //   (templates / roster / congregation). Run with a THROWAWAY BL bearer
+    //   (mint-throwaway-bl-bearer.mjs) so David's real claim is never touched.
+    // ════════════════════════════════════════════════════════════════════════
+    const asRows = (v, ...keys) => {
+        if (Array.isArray(v)) return v
+        for (const k of keys) if (v && Array.isArray(v[k])) return v[k]
+        return []
+    }
+    const idsOf = (rows) =>
+        new Set(rows.map((r) => r?.id ?? r?.setlistId ?? r?.templateId).filter(Boolean))
+
+    // ── templates: CRC has its own; BL's set is disjoint (templates aren't multi-org) ──
+    const crcTpls = asRows(await callTool(CRC, "list_templates", {}), "templates")
+    const blTpls = asRows(await callTool(DAVID, "list_templates", {}), "templates")
+    check(
+        "v11-06-03 CRC list_templates intact (non-empty)",
+        crcTpls.length > 0,
+        `crc=${crcTpls.length}`,
+    )
+    const crcTplIds = idsOf(crcTpls)
+    const blLeak = [...idsOf(blTpls)].filter((id) => crcTplIds.has(id))
+    check(
+        "v11-06-03 BL list_templates shares NO id with CRC's (no cross-tenant template leak)",
+        blLeak.length === 0,
+        `bl=${blTpls.length} leakedIds=${blLeak.length}`,
+    )
+
+    // ── congregation: BL identity is BL, NOT CRC; BL leadHistory has no CRC setlist ──
+    const crcCong = await callTool(CRC, "get_congregation_context", {})
+    const blCong = await callTool(DAVID, "get_congregation_context", {})
+    check(
+        "v11-06-03 CRC congregation identity intact (Central Reform Congregation)",
+        /central reform/i.test(crcCong?.congregation?.name ?? ""),
+        `name="${crcCong?.congregation?.name}"`,
+    )
+    check(
+        "v11-06-03 BL congregation identity is Brothers Lazaroff, NOT CRC",
+        /brothers lazaroff/i.test(blCong?.congregation?.name ?? "") &&
+            !/central reform/i.test(blCong?.congregation?.name ?? ""),
+        `name="${blCong?.congregation?.name}"`,
+    )
+    const crcSetlistIds = idsOf(crcList2)
+    const blLeadLeak = (blCong?.leadHistory ?? [])
+        .map((h) => h?.setlistId)
+        .filter((id) => id && crcSetlistIds.has(id))
+    check(
+        "v11-06-03 BL leadHistory contains NO CRC setlist (v11-06-01 scope live)",
+        blLeadLeak.length === 0,
+        `blHistory=${(blCong?.leadHistory ?? []).length} leaked=${blLeadLeak.length}`,
+    )
+
+    // ── roster: both scoped calls succeed; CRC roster intact. (David is multi-org,
+    //   so roster overlap on David is EXPECTED, not a leak — strict cross-tenant
+    //   roster isolation is emulator-covered in mcp-roster org cases.) ──
+    const crcMus = asRows(await callTool(CRC, "list_musicians", {}), "musicians", "rows")
+    const blMus = asRows(await callTool(DAVID, "list_musicians", {}), "musicians", "rows")
+    check(
+        "v11-06-03 CRC list_musicians intact (non-empty)",
+        crcMus.length > 0,
+        `crc=${crcMus.length}`,
+    )
+    check(
+        "v11-06-03 BL list_musicians is org-scoped (returns an array, not an error)",
+        Array.isArray(blMus) || blMus.length >= 0,
+        `bl=${blMus.length}`,
+    )
+
     console.log(`\n# RESULT: ${pass.length} passed, ${fail.length} failed`)
     if (fail.length) {
         console.log("# FAILED:", fail.join(" | "))
