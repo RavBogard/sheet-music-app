@@ -38,7 +38,7 @@ Last activity: 2026-06-09 (session 7) — v11.1-04-01 APPLY+UNIFY+transition (vo
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `3d7471679e` — v11.1-03 phase commit pushed; Vercel auto-deploy). v11.1-01 `72f1cdb66e`; v11.1-02 `941e6856d1`+`8d345c2a59`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`, in sync with `origin/master` (tip `4490abe53c` — v11.1-04 phase commit pushed; Vercel auto-deploy). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
