@@ -109,6 +109,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             email?: string
             displayName?: string
             phone?: string
+            orgIds?: string[]
             notificationPreferences?: {
                 email?: boolean
                 sms?: boolean
@@ -121,6 +122,7 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
             email: opts.email ?? `${uid}@example.com`,
             displayName: opts.displayName ?? uid,
         }
+        if (opts.orgIds !== undefined) payload.orgIds = opts.orgIds
         if (opts.instrument !== null) {
             const profile: Record<string, unknown> = {
                 instrument: opts.instrument ?? "acoustic_guitar",
@@ -288,6 +290,41 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
         const r = await listMusicians(ADMIN, { instrument: "guitar" })
         if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
         expect(r.musicians.map((m) => m.uid)).toContain(BAND_LEADER)
+    })
+
+    // ─── v11-05-02: org-scoping (multi-org membership via doc.orgIds) ─────────
+
+    async function listUids(caller: string, org: string): Promise<string[]> {
+        const r = (await listMusicians(caller, {}, org as never)) as {
+            ok: true
+            musicians: Array<{ uid: string }>
+        }
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        return r.musicians.map((m) => m.uid).sort()
+    }
+
+    it("list_musicians: roster is scoped to the caller org; multi-org member appears in both", async () => {
+        // Base beforeEach users carry no orgIds → default ['crc'] (CRC members).
+        await seedUser("bl-only", { role: "musician", instrument: "voice", orgIds: ["brotherslazaroff"] })
+        await seedUser("david", { role: "band_leader", instrument: "voice", orgIds: ["crc", "brotherslazaroff"] })
+
+        const crc = await listUids(ADMIN, "crc")
+        expect(crc).toContain(MUSICIAN) // legacy/no-orgIds → crc by default
+        expect(crc).toContain("david")
+        expect(crc).not.toContain("bl-only")
+
+        const bl = await listUids(ADMIN, "brotherslazaroff")
+        expect(bl).toContain("bl-only")
+        expect(bl).toContain("david")
+        expect(bl).not.toContain(MUSICIAN)
+    })
+
+    it("list_musicians: a legacy user without orgIds stays in CRC (no backfill needed) and is excluded from BL", async () => {
+        // MUSICIAN seeded by beforeEach has NO orgIds field.
+        const crc = await listUids(ADMIN, "crc")
+        expect(crc).toContain(MUSICIAN)
+        const bl = await listUids(ADMIN, "brotherslazaroff")
+        expect(bl).not.toContain(MUSICIAN)
     })
 
     // ─── get_musician_profile ───────────────────────────────────────────────

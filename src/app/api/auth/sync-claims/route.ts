@@ -3,6 +3,7 @@ import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import { getOrgIdsFromClaims, orgIdsEqual } from "@/lib/org/membership"
 
 /**
  * v4.3 Phase 9 — Self-service role-claim sync.
@@ -50,35 +51,56 @@ export const POST = createApiHandler(
             | string
             | undefined
 
-        // No Firestore role, or 'pending' — don't touch the claim.
-        // Admin-initiated role changes are the only path to set one.
-        if (!profileRole || profileRole === "pending") {
-            const body: SyncResponse = {
-                synced: false,
-                role: profileRole ?? null,
-                reason: "no_profile_role",
-            }
-            return NextResponse.json(body)
-        }
+        // v11-05-02: mirror the orgIds CLAIM onto users/{uid}.orgIds so roster
+        // queries can filter by `where('orgIds','array-contains',org)`. Claims are
+        // the source of truth; getOrgIdsFromClaims defaults a claimless user to
+        // ['crc'] (the CRC-safety invariant). This runs alongside the role sync
+        // and is independent of it — a user whose role is in sync may still need
+        // an orgIds mirror (e.g. right after an onboarding claim grant).
+        const claimOrgIds = getOrgIdsFromClaims(
+            authUser.customClaims as Record<string, unknown> | undefined,
+        )
+        const docOrgIds = userSnap.data()?.orgIds
+        const orgIdsDrift = !orgIdsEqual(
+            Array.isArray(docOrgIds) ? (docOrgIds as string[]) : undefined,
+            claimOrgIds,
+        )
 
-        // Already in sync — no writes.
-        if (profileRole === claimRole) {
+        // Role is settable only from a real (non-pending) Firestore role that
+        // differs from the claim. Admin-initiated changes are the only path to
+        // set a role; we never downgrade a 'pending'/absent role here.
+        const roleSyncable =
+            !!profileRole && profileRole !== "pending" && profileRole !== claimRole
+
+        // Nothing to write: role in sync (or unsettable) AND orgIds in sync.
+        if (!roleSyncable && !orgIdsDrift) {
+            if (!profileRole || profileRole === "pending") {
+                const body: SyncResponse = {
+                    synced: false,
+                    role: profileRole ?? null,
+                    reason: "no_profile_role",
+                }
+                return NextResponse.json(body)
+            }
             const body: SyncResponse = { synced: false, role: profileRole, reason: "already_synced" }
             return NextResponse.json(body)
         }
 
-        // Drift — write the claim, spreading any existing (soundEngineer etc.)
-        // so we don't clobber unrelated claims.
+        // Write — spread existing claims (soundEngineer etc.) so role sync never
+        // clobbers them; mirror orgIds onto the doc only when it has drifted.
         const { FieldValue } = await import("firebase-admin/firestore")
+        const docUpdate: Record<string, unknown> = {
+            claimsUpdatedAt: FieldValue.serverTimestamp(),
+        }
+        if (orgIdsDrift) docUpdate.orgIds = claimOrgIds
         try {
-            await auth.setCustomUserClaims(uid, {
-                ...(authUser.customClaims ?? {}),
-                role: profileRole,
-            })
-            await db
-                .collection("users")
-                .doc(uid)
-                .update({ claimsUpdatedAt: FieldValue.serverTimestamp() })
+            if (roleSyncable) {
+                await auth.setCustomUserClaims(uid, {
+                    ...(authUser.customClaims ?? {}),
+                    role: profileRole,
+                })
+            }
+            await db.collection("users").doc(uid).update(docUpdate)
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e)
             logger.error(`[sync-claims] uid=${uid} write failed: ${msg}`)
@@ -86,10 +108,12 @@ export const POST = createApiHandler(
         }
 
         logger.info(
-            `[sync-claims] uid=${uid} ${claimRole ?? "none"} → ${profileRole}`,
+            `[sync-claims] uid=${uid} role ${claimRole ?? "none"} → ${roleSyncable ? profileRole : "(unchanged)"}; orgIds ${orgIdsDrift ? `[${claimOrgIds.join(",")}]` : "(in sync)"}`,
         )
 
-        const body: SyncResponse = { synced: true, role: profileRole }
+        const body: SyncResponse = roleSyncable
+            ? { synced: true, role: profileRole! }
+            : { synced: false, role: profileRole ?? null, reason: "orgids_synced" }
         return NextResponse.json(body)
     },
     { requireAuth: true },

@@ -4,6 +4,8 @@ import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { rankMusicians, REQUIRED_INSTRUMENTS, type MusicianCandidate } from "@/lib/musician-suggestions"
+import { coerceOrgId } from "@/lib/org/registry"
+import { rowOrgIds } from "@/lib/org/membership"
 
 const RECENT_WINDOW = 10
 
@@ -21,6 +23,10 @@ const RECENT_WINDOW = 10
 export const GET = createApiHandler(
     async (ctx) => {
         const db = getFirestore()
+        // v11-05-02: resolve the host org (proxy sets x-org-id on every route);
+        // coerceOrgId validates an already-resolved org id (NOT a host) — see the
+        // v11-03 coerceOrgId hotfix lesson. Roster is scoped to this org.
+        const org = coerceOrgId(ctx.req.headers.get("x-org-id"))
         const url = new URL(ctx.req.url)
         const setlistId = url.searchParams.get('setlistId')
         const rabbiName = url.searchParams.get('rabbiName')
@@ -67,8 +73,11 @@ export const GET = createApiHandler(
             ).size
             const windowSize = Math.min(totalRecentServices, RECENT_WINDOW)
 
+            // v11-05-02: org membership filtered in-memory (rowOrgIds: missing → ['crc']).
+            const rosterDocs = usersSnap.docs.filter(d => rowOrgIds(d.data().orgIds).includes(org))
+
             // Build candidates
-            const candidates: MusicianCandidate[] = usersSnap.docs.map(d => {
+            const candidates: MusicianCandidate[] = rosterDocs.map(d => {
                 const data = d.data()
                 const instrumentKey = data.musicianProfile?.instrument ?? null
                 return {
@@ -87,7 +96,7 @@ export const GET = createApiHandler(
             })
 
             // Get currently selected instruments for coverage gap calculation
-            const selectedInstruments = usersSnap.docs
+            const selectedInstruments = rosterDocs
                 .filter(d => selectedUids.includes(d.id))
                 .map(d => d.data().musicianProfile?.instrument)
                 .filter(Boolean) as string[]

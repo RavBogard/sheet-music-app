@@ -30,6 +30,37 @@ export function userInOrg(
 }
 
 /**
+ * v11-05-02: normalize a user DOC's `orgIds` field to a membership list. An
+ * absent/empty/malformed `orgIds` → [DEFAULT_ORG_ID] ('crc') — the same CRC-safety
+ * default as getOrgIdsFromClaims, so a legacy CRC user doc with no orgIds still
+ * belongs to crc (roster filtering needs no doc backfill to keep CRC intact).
+ * Parallel to `rowOrg` for single-org docs.
+ */
+export function rowOrgIds(raw: unknown): OrgId[] {
+    if (Array.isArray(raw)) {
+        const ids = raw.filter((v): v is string => typeof v === "string" && v.length > 0)
+        if (ids.length > 0) return ids
+    }
+    return [DEFAULT_ORG_ID]
+}
+
+/**
+ * v11-05-02: order-insensitive set equality for two orgId lists. Used by the
+ * sync-claims seam to decide whether `users/{uid}.orgIds` has drifted from the
+ * claim before writing (stay idempotent — no write when already in sync).
+ */
+export function orgIdsEqual(
+    a: readonly string[] | null | undefined,
+    b: readonly string[] | null | undefined,
+): boolean {
+    const setA = new Set(a ?? [])
+    const setB = new Set(b ?? [])
+    if (setA.size !== setB.size) return false
+    for (const v of setA) if (!setB.has(v)) return false
+    return true
+}
+
+/**
  * Server-side: resolve a user's org memberships from their Auth custom claims.
  * Never throws on a missing user — returns [DEFAULT_ORG_ID] and warns. Firebase
  * Admin is lazy-imported so this module stays import-safe in pure unit tests.

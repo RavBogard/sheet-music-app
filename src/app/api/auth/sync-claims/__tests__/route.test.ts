@@ -95,22 +95,23 @@ describe("POST /api/auth/sync-claims — Phase 9 drift repair", () => {
         expect(updateSpy).not.toHaveBeenCalled()
     })
 
-    it("syncs when profile='musician' and claim is missing", async () => {
+    it("syncs when profile='musician' and claim is missing (also mirrors orgIds=['crc'])", async () => {
         mockAuth("u-1")
-        profileData = { role: "musician" }
+        profileData = { role: "musician" } // no orgIds on doc yet
         existingClaims = undefined
         const res = await POST(req())
         expect(res.status).toBe(200)
         const json = await res.json()
         expect(json).toEqual({ synced: true, role: "musician" })
         expect(setCustomUserClaimsSpy).toHaveBeenCalledWith("u-1", { role: "musician" })
-        expect(updateSpy).toHaveBeenCalledWith({ claimsUpdatedAt: "SERVER_TS" })
+        // v11-05-02: a claimless doc gets orgIds=['crc'] mirrored alongside the role sync.
+        expect(updateSpy).toHaveBeenCalledWith({ claimsUpdatedAt: "SERVER_TS", orgIds: ["crc"] })
     })
 
-    it("no-op when profile and claim already match", async () => {
+    it("no-op when role AND orgIds already match", async () => {
         mockAuth("u-1")
-        profileData = { role: "musician" }
-        existingClaims = { role: "musician" }
+        profileData = { role: "musician", orgIds: ["crc"] }
+        existingClaims = { role: "musician" } // claimless orgIds → ['crc'], doc already ['crc']
         const res = await POST(req())
         expect(res.status).toBe(200)
         const json = await res.json()
@@ -118,6 +119,22 @@ describe("POST /api/auth/sync-claims — Phase 9 drift repair", () => {
         expect(json.role).toBe("musician")
         expect(setCustomUserClaimsSpy).not.toHaveBeenCalled()
         expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    it("v11-05-02: mirrors a multi-org orgIds claim onto the doc without touching role", async () => {
+        mockAuth("u-1")
+        profileData = { role: "band_leader", orgIds: ["crc"] } // role in sync, orgIds stale
+        existingClaims = { role: "band_leader", orgIds: ["crc", "brotherslazaroff"] }
+        const res = await POST(req())
+        expect(res.status).toBe(200)
+        const json = await res.json()
+        expect(json.synced).toBe(false)
+        // role claim untouched (already in sync); only orgIds mirrored.
+        expect(setCustomUserClaimsSpy).not.toHaveBeenCalled()
+        expect(updateSpy).toHaveBeenCalledWith({
+            claimsUpdatedAt: "SERVER_TS",
+            orgIds: ["crc", "brotherslazaroff"],
+        })
     })
 
     it("does not touch claim when profile role is 'pending'", async () => {

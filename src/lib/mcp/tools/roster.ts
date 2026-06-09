@@ -23,6 +23,18 @@ import {
     respondToAssignmentService,
     findActiveAssignment,
 } from "@/lib/scheduling/assignment-service"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
+import { rowOrgIds } from "@/lib/org/membership"
+
+/**
+ * v11-05-02: roster-list reads keep the existing `where('role','in',...)` query
+ * and filter org membership IN-MEMORY via the doc's `orgIds` (rowOrgIds: missing
+ * → ['crc'], the CRC-safety default). A legacy CRC user with no orgIds therefore
+ * stays in CRC's roster with NO backfill — the backfill only tags BL members. We
+ * filter in-memory (not `array-contains` in the query) to avoid a per-doc-stamp
+ * hard dependency and any index/emulator fragility; rosters are small.
+ */
 
 /**
  * Cycle-3 c1 — roster + scheduling MCP tools.
@@ -195,6 +207,7 @@ export interface ListMusiciansResult {
 export async function listMusicians(
     uid: string,
     args: ListMusiciansArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<ListMusiciansResult | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
@@ -212,6 +225,8 @@ export async function listMusicians(
 
         const rows: MusicianRow[] = []
         for (const d of snap.docs) {
+            // v11-05-02: tenant wall — only members of the caller's org.
+            if (!rowOrgIds(d.data().orgIds).includes(org)) continue
             const row = buildMusicianRow(d.id, d.data())
             if (!row) continue
             if (filterTier && row.schedulingTier !== filterTier) continue
@@ -605,6 +620,7 @@ export interface SuggestMusiciansResult {
 export async function suggestMusicians(
     callerUid: string,
     args: SuggestMusiciansArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<SuggestMusiciansResult | RichErrorEnvelope> {
     if (!args?.setlistId || typeof args.setlistId !== "string") {
         return richError(
@@ -639,6 +655,8 @@ export async function suggestMusicians(
             .get()
         const musicians: MusicianRow[] = []
         for (const d of usersSnap.docs) {
+            // v11-05-02: only members of the caller's org.
+            if (!rowOrgIds(d.data().orgIds).includes(org)) continue
             const row = buildMusicianRow(d.id, d.data())
             if (row) musicians.push(row)
         }
@@ -731,6 +749,7 @@ const RECENT_WINDOW = 10
 export async function suggestBand(
     callerUid: string,
     args: SuggestBandArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<SuggestBandResult | RichErrorEnvelope> {
     if (!args?.setlistId || typeof args.setlistId !== "string") {
         return richError(
@@ -768,6 +787,8 @@ export async function suggestBand(
             : []
 
         const [usersSnap, recentSnap, configSnap] = await Promise.all([
+            // v11-05-02: roster scoped to caller org (membership filtered in-memory
+            // below). NOTE: the scheduling_assignments play-count read is scoped in v11-05-03.
             db
                 .collection("users")
                 .where("role", "in", ["musician", "band_leader", "admin"])
@@ -818,6 +839,8 @@ export async function suggestBand(
         const candidates: MusicianCandidate[] = []
         const selectedInstrumentKeys: string[] = []
         for (const d of usersSnap.docs) {
+            // v11-05-02: only members of the caller's org.
+            if (!rowOrgIds(d.data().orgIds).includes(org)) continue
             const row = buildMusicianRow(d.id, d.data())
             if (!row) continue
             candidates.push({

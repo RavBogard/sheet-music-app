@@ -13,9 +13,9 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 Milestone: **v11.0 Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08 via /paul:milestone)
 Phase: **v11-05 cross-tenant collection scoping — PLANNING (2026-06-09)**. v11-01 ✅ · v11-02 ✅ · v11-02b ✅ · v11-03 ✅ · v11-04 ✅ COMPLETE (3/3). **6 numbered phases** (Daniel SPLIT 2026-06-08).
-Plan: **v11-05-01 (Templates) ✅ LOOP COMPLETE (1 of 4)** — SUMMARY written; committed LOCAL (push gated on the setlistTemplates backfill, see DEPLOY GATE below). **v11-05 slice map (4 vertical plans, baked decisions: per-collection slices · audit+backfill before each filter flip · vocab in-scope):** **01** Templates (setlistTemplates MCP filter+not-found-wall+create-stamp + `templates` liturgical doc-id namespacing, CRC bare-key = no migration) · **02** Roster (`users` + `scheduling_assignments`; `musician_availability` is DEAD/no-code; service-personnel is a read-join → inherits) · **03** Congregation (singleton `config/congregation` doc → per-org refactor, architectural) · **04** in-app CreationWizard setlist-create orgId stamp + de-synagogue CreationWizard/perform/display-card vocab (UI → /ui-ux-pro-max BLOCKING).
-Status: **v11-05-01 (Templates) ✅ LOOP COMPLETE — committed local, push GATED on backfill.** setlistTemplates org-scoped (list filter + not-found walls on get/update/delete/clone + source-setlist wall + create-stamp); `templates` liturgical overrides namespaced per org (CRC bare-key = no migration); setlistTemplates added to backfill TENANT_COLLECTIONS (TS + prod runner). SUMMARY in phase dir.
-Last activity: 2026-06-09 — /paul:resume → /paul:discuss v11-05 → inventory → /paul:plan v11-05 → /paul:apply v11-05-01: implemented + QUALIFIED (tsc 0; full suite 3310/0; eslint 0; new mcp-templates-org emulator 7/7; backfill emulator 5/5; template-firebase unit 6/6). All 5 ACs proven.
+Plan: **v11-05-01 ✅ · v11-05-02 (Roster/users) ✅ LOOP COMPLETE — both committed local. Next: PLAN v11-05-03 (scheduling_assignments).** **v11-05 slice map (RENUMBERED — roster split into users + assignments; baked decisions: per-collection slices · backfill-before-filter-flip · vocab in-scope · MULTI-ORG membership via orgIds[] on user docs+claim, array-contains):** **01 ✅** Templates · **02** Roster `users` (orgIds[] mirror at sync-claims + array-contains filter on list_musicians/suggest_band/suggest-band route; backfill + David claim→['crc','brotherslazaroff']) · **03** `scheduling_assignments` (org from setlist; scope subscribeToAllUpcomingAssignments/suggestBand/history) · **04** Congregation singleton `config/congregation` → per-org refactor · **05** CreationWizard setlist-create orgId stamp + de-synagogue vocab (UI → /ui-ux-pro-max BLOCKING). (`musician_availability` DEAD; service-personnel = read-join → inherits.)
+Status: **v11-05-02 (Roster/users) ✅ LOOP COMPLETE — committed local.** users roster org-scoped (in-memory membership filter, multi-org, CRC-safe-by-default); orgIds claim mirrored to user doc at sync-claims; backfill + David-claim scripts deferred to phase close. v11-05-01 ✅ also local.
+Last activity: 2026-06-09 — applied+qualified v11-05-02 (tsc 0; full suite 3311/0; eslint 0; mcp-roster emulator 46/46 incl. 2 org cases; sync-claims+membership unit 16/16). DEVIATION: in-memory org filter (vs array-contains) — CRC-safe without backfill; emulator tests relocated to the proven mcp-roster harness. Committed local e166be2928 (01) + this (02).
 
 Parallel track: **v7.1 Production Hardening** remains ACTIVE via the bongo `.coord/` system (cycle-13 in flight) — independent of the PAUL loop, which now tracks v11.0. App is at `10.1.0` (package.json).
 
@@ -37,10 +37,13 @@ Progress:
 
 v11.0 runs through the standard PAUL loop:
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11-05-01 LOOP COMPLETE (1/4) — next: PLAN v11-05-02]
-  ✓        ✓        ✓     (Templates scoped + SUMMARY; committed LOCAL, push GATED on backfill)
+PLAN ──▶ APPLY ──▶ UNIFY        [v11-05-01 ✅ · v11-05-02 ✅ (both committed local) — next: PLAN v11-05-03]
+  ✓        ✓        ✓     (2 of 5 slices loop-complete; push batched at phase close)
 ```
-⚠️ **DEPLOY GATE (v11-05-01):** the new `list_templates` `.where("orgId","==",org)` filter means the 3 existing prod CRC templates (Randy Shabbat / B'nai Mitzvah / Shir Shabbat — no orgId yet) would DISAPPEAR from CRC's list once deployed. The `setlistTemplates` backfill (`node scripts/backfill-orgid-v11.mjs --apply`, dry-run first) MUST run before this push deploys. Committed locally, **NOT pushed** — push is batched at phase close with the backfill, OR run the backfill now then push. (Decision-2: backfill before filter flip.)
+⚠️ **PHASE-CLOSE DEPLOY GATE (batch — Daniel chose batch-at-close 2026-06-09):** run scripts (dry-run→inspect→--apply) THEN push the phase. Items:
+  - **v11-05-01 (HARD gate):** `node scripts/backfill-orgid-v11.mjs --apply` — the `list_templates` equality filter `where('orgId','==',org)` makes the 3 CRC templates vanish unless stamped FIRST.
+  - **v11-05-02 (SOFT — CRC-safe-by-default):** roster filter is in-memory w/ missing-orgIds→['crc'], so CRC is safe with NO backfill. But to make BL's roster correct: `node scripts/backfill-user-orgids.mjs --apply` (tag BL members) + `node scripts/fix-david-orgids-claim.mjs --apply` (David → ['crc','brotherslazaroff']).
+Everything committed LOCAL, **NOT pushed**.
 **v11-05 COLLECTION INVENTORY (verified 2026-06-09, Explore agent — drives the slices; trust over memory):**
 - **Templates = 2 collections:** `setlistTemplates` (MCP/admin, has `ownerId` not `orgId`; reads 186/251/467/550/771, writes 353/506/555/675 in `src/lib/mcp/tools/templates.ts`) + `templates` (client liturgical slot overrides, doc-id=liturgical key, full-collection onSnapshot in `src/lib/template-firebase.ts`).
 - **Roster:** `users` (27+ reads; cross-tenant `listMusicians` roster.ts:206 + `/api/scheduling/suggest-band`:37) · `scheduling_assignments` (cross-tenant `subscribeToAllUpcomingAssignments` scheduling-firebase.ts:80 + `suggestBand` roster.ts:776) · `musician_availability` = **DEAD** (only test-cleanup refs, no active code). User doc has `musicianProfile` but **no orgId / no orgIds[]** — membership shape lives on the auth claim (`orgIds:[]`), NOT the user doc; v11-05-02 must decide the roster filter source.
@@ -90,10 +93,10 @@ The v7.1 hardening campaign continues separately via the bongo `.coord/` cowork 
 
 ## Session Continuity
 
-Last session: 2026-06-09 (cont.) — full v11-05-01 loop: /paul:discuss → inventory → /paul:plan → /paul:apply (QUALIFIED: tsc 0, suite 3310/0, eslint 0, emulator 7/7+5/5, unit 6/6) → /paul:unify (SUMMARY). Committed LOCAL only.
-Stopped at: v11-05-01 LOOP COMPLETE (1/4). Committed locally, NOT pushed (push gated on the setlistTemplates prod backfill — see DEPLOY GATE in Loop Position).
-Next action: **/paul:plan v11-05-02** (Roster: `users` + `scheduling_assignments` org-scoping; decide the filter source — multi-org membership lives on the auth CLAIM `orgIds[]`, not the user doc). Backfill+push for 05-01 (and 02/03) batched at phase close OR run `node scripts/backfill-orgid-v11.mjs` dry-run→--apply now then push. Then 03 (congregation singleton refactor) → 04 (creation-wizard stamp + vocab, /ui-ux-pro-max BLOCKING) → phase close → **v11-06** isolation audit.
-Resume file: .paul/phases/v11-05-collection-scoping/v11-05-01-SUMMARY.md (+ CONTEXT.md for slice rationale). HANDOFF-2026-06-09.md valid for milestone gotchas.
+Last session: 2026-06-09 (cont.) — v11-05-01 (templates) + v11-05-02 (roster/users) BOTH full loops, committed local, unpushed. 2 decisions baked: deploy=batch-at-close; roster=multi-org via doc.orgIds (mirrored from claims).
+Stopped at: v11-05-02 LOOP COMPLETE (2 of 5). Both committed local, NOT pushed.
+Next action: **/paul:plan v11-05-03** (scheduling_assignments: org from each assignment's already-org-stamped setlist; scope subscribeToAllUpcomingAssignments [scheduling-firebase.ts:80], suggestBand play-count read [roster.ts], history/suggest/remind/cron routes; stamp orgId on assignment create in assignment-service.ts). Then 04 (congregation singleton refactor) → 05 (creation-wizard+vocab, /ui-ux-pro-max BLOCKING) → phase-close scripts+push → **v11-06** isolation audit.
+Resume file: .paul/phases/v11-05-collection-scoping/v11-05-02-SUMMARY.md (+ 01-SUMMARY + CONTEXT). HANDOFF-2026-06-09.md valid for milestone gotchas.
 Git strategy: master (prod), tree clean, in sync with origin/master. Everything this session committed+pushed.
 Resume context:
 - **v11-03 taste calls (Daniel 2026-06-08, in CONTEXT.md):** dark+photographic BL chrome · pull brand from brotherslazaroff.com (navy accent + live-performance photos, rendered on dark canvas — note their *site* is light/navy, app chrome is dark) · per-tenant conditional vocab/UI (CRC literally unchanged).
