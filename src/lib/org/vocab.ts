@@ -19,12 +19,19 @@ export function hidesLiturgicalFields(orgId: OrgId): boolean {
     return orgId === "brotherslazaroff"
 }
 
-export type VocabKey = "setlist" | "editSetlistDetails" | "namePlaceholder"
+export type VocabKey =
+    | "setlist"
+    | "editSetlistDetails"
+    | "namePlaceholder"
+    | "publicListingTitle"
 
 const BASE: Record<VocabKey, string> = {
     setlist: "setlist",
     editSetlistDetails: "Edit setlist details",
     namePlaceholder: "e.g., Shabbat Morning",
+    // v11-04-02: the public /perform <title>. CRC keeps the prior
+    // synagogue-flavored wording byte-identical.
+    publicListingTitle: "Upcoming Services & Setlists",
 }
 
 const OVERRIDES: Partial<Record<OrgId, Partial<Record<VocabKey, string>>>> = {
@@ -32,6 +39,7 @@ const OVERRIDES: Partial<Record<OrgId, Partial<Record<VocabKey, string>>>> = {
         setlist: "set",
         editSetlistDetails: "Edit set details",
         namePlaceholder: "e.g., Friday night set",
+        publicListingTitle: "Upcoming Shows & Sets",
     },
 }
 

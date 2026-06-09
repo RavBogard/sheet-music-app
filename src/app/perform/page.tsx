@@ -3,6 +3,7 @@ import { PublicSetlistListing } from "@/components/performance/PublicSetlistList
 import { selectVisiblePublicSetlists } from "@/components/performance/public-setlist-order"
 import { getAllSetlists } from "@/lib/server-setlists"
 import { coerceOrgId } from "@/lib/org/registry"
+import { label } from "@/lib/org/vocab"
 import type { Setlist as ApiSetlist } from "@/types/api"
 import type { Setlist as FirebaseSetlist } from "@/lib/setlist-firebase"
 
@@ -10,9 +11,18 @@ import type { Setlist as FirebaseSetlist } from "@/lib/setlist-firebase"
 // explicitly indexable. Root layout's noindex applies to the authed
 // app; this override exempts the public landing so it can be reached
 // via search (and matches the sitemap entry + robots.txt allow).
-export const metadata = {
-    title: "Upcoming Services & Setlists",
-    robots: { index: true, follow: true },
+//
+// v11-04-02: the title is now org-aware (band tenants get a de-synagogued
+// "Upcoming Shows & Sets" via the vocab helper; CRC keeps "Upcoming Services &
+// Setlists" byte-identical). Reads the same Edge-resolved `x-org-id` the page
+// body uses to scope the fetch. The `index:true` override is PRESERVED — this
+// public landing must stay crawlable.
+export async function generateMetadata() {
+    const org = coerceOrgId((await headers()).get("x-org-id"))
+    return {
+        title: label(org, "publicListingTitle"),
+        robots: { index: true, follow: true },
+    }
 }
 
 // C11 F-M2-006 + C11M1-002 — SSR-prefetch the public setlist list. The

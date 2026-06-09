@@ -29,35 +29,45 @@ const righteous = Righteous({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://centralreform.live'),
-  title: {
-    template: "%s | CRC Music",
-    default: "CRC Music | Digital Sheet Library",
-  },
-  description: "Digital Sheet Music Library for Central Reform Congregation",
-  robots: {
-    index: false,
-    follow: false
-  },
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "CRC Music",
-  },
-  openGraph: {
-    type: 'website',
-    siteName: 'CRC Music',
-    title: 'Central Reform Congregation — Music',
-    description: 'Digital Sheet Music Library for Central Reform Congregation',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'CRC Music',
-    description: 'Digital Sheet Music Library for Central Reform Congregation',
-  },
-};
+// v11-04-02: per-tenant head metadata. Reads the Edge-resolved `x-org-id`
+// header (same seam the layout body uses for <html data-org>/forceDark) and
+// pulls every string from getOrgBranding so brotherslazaroff.live no longer
+// renders "Central Reform Congregation — Music" / "CRC Music". CRC output is
+// byte-identical to the prior static `metadata` const (the branding.ts CRC
+// entry mirrors these strings exactly; covered by branding.test.ts).
+export async function generateMetadata(): Promise<Metadata> {
+  const orgId = coerceOrgId((await headers()).get("x-org-id"));
+  const b = getOrgBranding(orgId);
+  return {
+    metadataBase: new URL(b.baseUrl),
+    title: {
+      template: b.metaTitleTemplate,
+      default: b.metaTitleDefault,
+    },
+    description: b.metaDescription,
+    robots: {
+      index: false,
+      follow: false
+    },
+    manifest: b.manifestPath,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: b.shortName,
+    },
+    openGraph: {
+      type: 'website',
+      siteName: b.shortName,
+      title: b.ogTitle,
+      description: b.metaDescription,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: b.shortName,
+      description: b.metaDescription,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [

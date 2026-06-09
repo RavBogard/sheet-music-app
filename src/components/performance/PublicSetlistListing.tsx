@@ -7,6 +7,7 @@ import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { useAuth } from "@/lib/auth-context"
 import { useOrg } from "@/lib/org/org-context"
+import { getOrgBranding } from "@/lib/org/branding"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { QRSignIn } from "@/components/auth/QRSignIn"
@@ -59,6 +60,10 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
     // reads the org the Edge proxy resolved from the host (<html data-org>),
     // defaulting to crc outside a provider.
     const org = useOrg()
+    // v11-04-02: the wordmark + sign-in aria-label read the tenant's shortName
+    // ("Brothers Lazaroff" on BL, "CRC Music" on CRC) so the public landing no
+    // longer hardcodes "CRC Music". Same org seam the subscription scope uses.
+    const orgName = getOrgBranding(org).shortName
 
     useEffect(() => {
         const service = createSetlistService(null, null)
@@ -136,7 +141,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
             <div className="flex items-center gap-3 mb-2">
                 <Music className="h-6 w-6 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
-                    <h1 className="text-xl font-bold">CRC Music</h1>
+                    <h1 className="text-xl font-bold">{orgName}</h1>
                     <p className="text-sm text-muted-foreground">Public setlists</p>
                 </div>
                 {/* FU-c12-3 — the wake-lock toggle (and its `useWakeLock` hook)
@@ -182,7 +187,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                 card — the listing is unchanged for them. */}
             {!user && !authLoading && (
                 <section
-                    aria-label="Sign in to CRC Music"
+                    aria-label={`Sign in to ${orgName}`}
                     className="bg-card rounded-2xl p-5 text-center space-y-4 border border-border"
                 >
                     <QRSignIn />
