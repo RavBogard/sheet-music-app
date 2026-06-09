@@ -189,3 +189,20 @@ Check:
 - [ ] It appears on `brotherslazaroff.live` /perform + the authed dashboard, with orgId='brotherslazaroff'.
 - [ ] It does NOT appear on centralreform.live (CRC) /perform or dashboard.
 - [ ] Your CRC connection still authors crc setlists unchanged.
+
+---
+
+## ⏳ v11.1-02-02 — Admin org-membership toggle
+
+**Deployed commit:** `d466160601` (pushed to origin master 2026-06-09; Vercel auto-deploy)
+
+What was built: a "Band access" control (CRC only / Brothers Lazaroff only / Both)
+on band_leader/admin rows in /manage → People, admin-only, with a membership
+badge. Setting it writes orgIds to both the Auth claim and the user doc.
+
+Check:
+- [ ] In /manage → People, a band_leader (e.g. David) row shows a "Band access" select + a membership badge (CRC / BL / CRC + BL). Musician/member rows do NOT.
+- [ ] As a non-admin band_leader, the Band access control is NOT visible.
+- [ ] Set David to "Both" → confirm dialog → on reload the badge shows "CRC + BL" and persists.
+- [ ] (with 02-01) David can then author for the granted tenant via that tenant's MCP URL.
+- [ ] A user whose membership you don't touch is unchanged (CRC users still default to CRC).
