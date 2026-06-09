@@ -3,7 +3,7 @@ import { z } from "zod"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { createMcpToken, listMcpTokens } from "@/lib/mcp/tokens"
-import { getPrimaryOrgForMinting } from "@/lib/org/membership"
+import { getPrimaryOrgForMinting } from "@/lib/org/membership-server"
 
 /**
  * MCP token management — a user's own `crl_live_` tokens for connecting Claude

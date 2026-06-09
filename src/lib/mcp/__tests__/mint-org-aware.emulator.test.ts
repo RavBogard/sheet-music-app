@@ -5,7 +5,7 @@ import { getAuth } from "firebase-admin/auth"
 
 import { createMcpToken } from "../tokens"
 import { verifyBearer } from "../auth"
-import { getPrimaryOrgForMinting } from "@/lib/org/membership"
+import { getPrimaryOrgForMinting } from "@/lib/org/membership-server"
 
 /**
  * v11-02b — org-aware self-service token minting, end-to-end against the Auth +

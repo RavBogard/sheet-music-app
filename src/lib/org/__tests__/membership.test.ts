@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import {
     getOrgIdsFromClaims,
     userInOrg,
-    getPrimaryOrgForMinting,
 } from "@/lib/org/membership"
+import { getPrimaryOrgForMinting } from "@/lib/org/membership-server"
 
 // v11-02b: getPrimaryOrgForMinting → getUserOrgIds lazy-imports firebase-admin.
 // Mock it so the unit test drives the resolver deterministically without the

@@ -3,7 +3,7 @@ import { initAdmin } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { createMcpToken } from "@/lib/mcp/tokens"
 import { consumeAuthCode, getClient, verifyPkceS256 } from "@/lib/mcp/oauth"
-import { getPrimaryOrgForMinting } from "@/lib/org/membership"
+import { getPrimaryOrgForMinting } from "@/lib/org/membership-server"
 import { logger } from "@/lib/logger"
 
 /**
