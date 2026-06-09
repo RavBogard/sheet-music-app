@@ -56,6 +56,17 @@ service cloud.firestore {
         || request.resource.data.orgId == resource.data.orgId
         || isAdmin();
     }
+    // v11-06-01 READ-ISOLATION: a tenant-scoped read is allowed only when the
+    // doc's orgId names a tenant the caller belongs to. orgId-ABSENT docs are
+    // allowed (back-compat / pre-stamp legacy rows → crc-safe; never locks out
+    // CRC, whose claimless leaders default to ['crc']). Admins exempt. Used to
+    // wall band_leader CLIENT reads that the app layer also filters (defense in
+    // depth — the rules wall survives an app-filter bypass).
+    function orgReadOk(res) {
+      return isAdmin()
+        || !('orgId' in res.data)
+        || res.data.orgId in callerOrgs();
+    }
 
     // Musician: Band member — appears in picker, receives emails, performs
     function isMusician() {
@@ -247,6 +258,21 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // v11-06-01: PER-ORG CONGREGATION docs — config/congregation__{org} (the
+    // bare `congregation` doc is crc, matched above). The client congregation
+    // store onSnapshots config/congregation__{org}; without a rule these
+    // namespaced docs were DENY-by-default, breaking per-tenant branding reads.
+    // Same posture as the bare doc: public-read by design (any signed-in user),
+    // Admin-SDK-only writes. The regex guard limits this wildcard strictly to
+    // congregation docs so the other config docs (admins/monitor/featured/
+    // defaults — admins is intentionally write:false) are UNAFFECTED.
+    match /config/{congregationDoc} {
+      allow read: if isSignedIn()
+                  && congregationDoc.matches('congregation__[a-z0-9-]+');
+      allow write: if isAdmin()
+                   && congregationDoc.matches('congregation__[a-z0-9-]+');
+    }
+
     // ADMIN BOOTSTRAP CONFIG (super-admin UIDs for isAdmin() fallback)
     // Seeded via Firebase Admin SDK or console. isAdmin() reads this doc.
     // Write locked to Admin SDK only — this doc is read by isAdmin() itself,
@@ -387,9 +413,15 @@ service cloud.firestore {
     }
 
     // SCHEDULING ASSIGNMENTS — server writes via Admin SDK, musicians read own
+    // v11-06-01: a musician always reads their OWN assignment (their own data,
+    // any tenant). A band_leader's cross-tenant read is walled by orgReadOk —
+    // the client subscribeToAllUpcomingAssignments path is leader-facing, so a
+    // foreign-tenant leader must not see another tenant's schedule. orgId-absent
+    // (legacy) rows stay readable → crc-safe, no lock-out.
     match /scheduling_assignments/{assignmentId} {
       allow read: if isSignedIn()
-                  && (resource.data.musicianUid == request.auth.uid || isBandLeader());
+                  && (resource.data.musicianUid == request.auth.uid
+                      || (isBandLeader() && orgReadOk(resource)));
       allow write: if false; // Server-only via Admin SDK
     }
 
@@ -404,8 +436,11 @@ service cloud.firestore {
     }
 
     // SCHEDULING HISTORY (analytics, append-only via Admin SDK)
+    // v11-06-01: band_leader read walled by orgReadOk (cross-tenant analytics
+    // isolation). orgId-absent rows stay readable → crc-safe; once history
+    // writes stamp orgId, cross-tenant history reads are fully walled too.
     match /scheduling_history/{entryId} {
-      allow read: if isBandLeader();
+      allow read: if isBandLeader() && orgReadOk(resource);
       allow write: if false; // Server-only via Admin SDK
     }
 

@@ -201,16 +201,14 @@ export async function getCongregationContext(
         // returns the raw doc data (or null on absent/unreachable);
         // getAllSetlists is the shared SSR/list_setlists helper — no duplicated
         // query logic.
-        // v11-05-04 scopes the CONGREGATION doc per-org (above). leadHistory's
-        // getAllSetlists has a v11-04-03 opt-in `org` filter, but it's an EQUALITY
-        // filter (not crc-safe for unbackfilled docs) and wiring it live makes
-        // this the first live caller — a setlist-read behavior change out of this
-        // slice's scope. Setlist names are public-by-design ([[feedback_setlist_public_policy]]),
-        // so cross-tenant leadHistory is a UX nit, not a leak. DEFERRED to the
-        // v11-06 isolation audit (which sweeps exactly these setlist reads).
+        // v11-06-01 closes the v11-05-04 deferral: leadHistory now passes the
+        // caller `org` so the history is tenant-scoped (a BL author sees BL
+        // services, not CRC's). Crc-safe — v11-01-03's backfill stamped every CRC
+        // setlist with orgId='crc' and the (orgId,date) composite index backs the
+        // equality-filter + orderBy pair (see getAllSetlists, server-setlists.ts).
         const [configRaw, setlists] = await Promise.all([
             getServerCongregationConfig(org),
-            getAllSetlists({ limit: historyLimit, orderBy }),
+            getAllSetlists({ limit: historyLimit, orderBy, org }),
         ])
 
         const config = (configRaw as Record<string, unknown> | null) ?? null

@@ -17,7 +17,7 @@ Turn the single-tenant CRC app into a multi-tenant platform whose first second t
 | v11-03 | brotherslazaroff.live domain + branding + vocab trim | 3/3 ✅ | ✅ Complete | 2026-06-08 |
 | v11-04 | BL consumer surface (perform/print) + David onboarding + e2e UAT | 3/3 ✅ | ✅ Complete | 2026-06-09 |
 | v11-05 | Cross-tenant collection scoping (templates/roster/congregation/personnel R+W) + CreationWizard vocab | 5/5 ✅ | ✅ Complete (SHIPPED + live-verified, `f3448a8395`) | 2026-06-09 |
-| v11-06 | Cross-tenant isolation security audit (close gate) | TBD | Not started | - |
+| v11-06 | Cross-tenant isolation security audit (close gate) | 0/3 (01 planned) | 🚧 Planning | - |
 
 ### Phase v11-01: Tenant foundation
 Focus: `orgId` on songs / library_index / setlists / tracks / recordings; tenant-resolution helper; backfill all existing CRC data with the default org (behavior-neutral); airtight Firestore rules + `@firebase/rules-unit-testing` emulator coverage. The spine — every later phase depends on it.

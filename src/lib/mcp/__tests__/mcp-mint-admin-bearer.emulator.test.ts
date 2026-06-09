@@ -108,6 +108,9 @@ describe("MCP mint_admin_bearer (emulator)", () => {
             uid: ADMIN_UID,
             tokenId: result.tokenId,
             parentTokenId: root.tokenId,
+            // v11-02-01 added orgId to verifyBearer's return; a minted token with
+            // no orgId field defaults to DEFAULT_ORG_ID ("crc").
+            orgId: "crc",
         })
         // uid inheritance: the child shares the admin uid, so users/{uid}.role
         // === admin makes it an admin bearer.
@@ -226,6 +229,7 @@ describe("MCP mint_admin_bearer (emulator)", () => {
             uid: ADMIN_UID,
             tokenId: minted.tokenId,
             parentTokenId: root.tokenId,
+            orgId: "crc", // v11-02-01: verifyBearer now returns orgId (default crc)
         })
 
         // Daniel revokes the ROOT (simulated via /settings/mcp soft-delete).

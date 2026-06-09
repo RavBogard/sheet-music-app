@@ -146,8 +146,12 @@ describe("MCP write org-scoping (emulator)", () => {
             .doc("c-crc")
             .set({ title: "CRC Chart.pdf", orgId: CRC, defaults: { key: "C" } })
 
-        // A BL template — cloneSetlistFromTemplate stamps the NEW setlist BL
-        // regardless of template org (template read-scoping is deferred).
+        // A BL template — cloneSetlistFromTemplate stamps the NEW setlist BL.
+        // v11-05-01 org-scoped setlistTemplates reads, so the template must
+        // carry orgId=BL to be visible to (and clonable by) a BL caller. (Prior
+        // to v11-05-01 template read-scoping was deferred and this seed omitted
+        // orgId; the v11-06-01 close-gate audit re-ran the full emulator suite
+        // and updated this lagging fixture.)
         await db()
             .collection("setlistTemplates")
             .doc("tpl")
@@ -156,6 +160,7 @@ describe("MCP write org-scoping (emulator)", () => {
                 templateType: "gig",
                 ownerId: ADMIN,
                 version: 1,
+                orgId: BL,
                 tracks: [{ type: "song", title: "Tmpl song", key: "G" }],
             })
     }

@@ -222,4 +222,166 @@ describe("v11-01-04 firestore.rules org-scope", () => {
             adminCtx().collection("orgs").doc("crc").update({ name: "Hacked" }),
         )
     })
+
+    // ════════════════════════════════════════════════════════════════════════
+    // v11-06-01 — adversarial cross-tenant isolation across the v11-05
+    // collections (the close-gate rules audit). Proves the RULES-LAYER wall for
+    // every collection a client can read directly; characterizes the ones that
+    // are application-only scoped (no client read path / no orgId field).
+    // ════════════════════════════════════════════════════════════════════════
+    describe("v11-06-01 cross-tenant isolation — v11-05 collections", () => {
+        // A plain musician (reads only their OWN scheduling assignment).
+        function crcMusician() {
+            return testEnv
+                .authenticatedContext("crc-musician", { role: "musician" })
+                .firestore()
+        }
+
+        beforeEach(async () => {
+            await testEnv.withSecurityRulesDisabled(async (ctx) => {
+                const db = ctx.firestore()
+                // scheduling_assignments: crc, bl, and a legacy orgId-absent row.
+                await db.collection("scheduling_assignments").doc("asg-crc").set({
+                    musicianUid: "crc-musician",
+                    setlistId: "sl-crc",
+                    orgId: "crc",
+                })
+                await db.collection("scheduling_assignments").doc("asg-bl").set({
+                    musicianUid: "bl-musician",
+                    setlistId: "sl-bl",
+                    orgId: "brotherslazaroff",
+                })
+                await db.collection("scheduling_assignments").doc("asg-legacy").set({
+                    musicianUid: "crc-musician",
+                    setlistId: "sl-legacy",
+                    // no orgId — pre-stamp legacy row (crc-safe path)
+                })
+                // scheduling_history
+                await db.collection("scheduling_history").doc("hist-crc").set({
+                    setlistId: "sl-crc",
+                    orgId: "crc",
+                })
+                await db.collection("scheduling_history").doc("hist-bl").set({
+                    setlistId: "sl-bl",
+                    orgId: "brotherslazaroff",
+                })
+                // config/congregation (crc bare) + per-org namespaced (bl)
+                await db.collection("config").doc("congregation").set({
+                    name: "Central Reform Congregation",
+                })
+                await db.collection("config").doc("congregation__brotherslazaroff").set({
+                    name: "Brothers Lazaroff",
+                })
+                // users — note: NO orgId field (membership is claim-based, v11-05-02)
+                await db.collection("users").doc("crc-musician").set({
+                    musicianProfile: { name: "Randy", instrument: "piano" },
+                })
+                // setlistTemplates — orgId-stamped (v11-05-01 backfill)
+                await db.collection("setlistTemplates").doc("tpl-crc").set({
+                    name: "Randy Shabbat morning",
+                    ownerId: "crc-leader",
+                    orgId: "crc",
+                })
+            })
+        })
+
+        // ── scheduling_assignments: RULES-LAYER walled (client-readable path) ──
+
+        it("a musician reads their OWN assignment (any tenant, own data)", async () => {
+            await assertSucceeds(
+                crcMusician().collection("scheduling_assignments").doc("asg-crc").get(),
+            )
+        })
+
+        it("LEAK WALLED: a BL leader CANNOT read a CRC assignment", async () => {
+            await assertFails(
+                blLeader().collection("scheduling_assignments").doc("asg-crc").get(),
+            )
+        })
+
+        it("a BL leader CAN read a BL assignment (own tenant)", async () => {
+            await assertSucceeds(
+                blLeader().collection("scheduling_assignments").doc("asg-bl").get(),
+            )
+        })
+
+        it("crc-safe: claimless CRC leader reads crc + legacy(no-orgId) assignments, NOT bl", async () => {
+            await assertSucceeds(
+                crcLeader().collection("scheduling_assignments").doc("asg-crc").get(),
+            )
+            await assertSucceeds(
+                crcLeader().collection("scheduling_assignments").doc("asg-legacy").get(),
+            )
+            await assertFails(
+                crcLeader().collection("scheduling_assignments").doc("asg-bl").get(),
+            )
+        })
+
+        // ── scheduling_history: RULES-LAYER walled ──
+
+        it("LEAK WALLED: a BL leader CANNOT read CRC scheduling_history; CAN read BL", async () => {
+            await assertFails(
+                blLeader().collection("scheduling_history").doc("hist-crc").get(),
+            )
+            await assertSucceeds(
+                blLeader().collection("scheduling_history").doc("hist-bl").get(),
+            )
+        })
+
+        // ── config/congregation: per-org branding readable; writes admin-only ──
+
+        it("per-org congregation branding is client-readable (bare crc AND namespaced bl)", async () => {
+            await assertSucceeds(
+                crcLeader().collection("config").doc("congregation").get(),
+            )
+            // The fix: without the guarded wildcard this was deny-by-default.
+            await assertSucceeds(
+                blLeader().collection("config").doc("congregation__brotherslazaroff").get(),
+            )
+        })
+
+        it("congregation writes are Admin-SDK-only: a band_leader CANNOT write either tenant's doc", async () => {
+            await assertFails(
+                crcLeader().collection("config").doc("congregation").set({ name: "Hacked" }),
+            )
+            await assertFails(
+                blLeader()
+                    .collection("config")
+                    .doc("congregation__brotherslazaroff")
+                    .set({ name: "Hacked" }),
+            )
+        })
+
+        it("the guarded wildcard does NOT expose config/admins to non-fallback writes (admins stays write:false)", async () => {
+            await assertFails(
+                adminCtx().collection("config").doc("admins").set({ uids: ["evil"] }),
+            )
+        })
+
+        // ── CHARACTERIZATION: application-only scoped (recorded in the audit) ──
+        // These collections are NOT org-walled at the rules layer. That is
+        // ACCEPTED because the application layer scopes them and there is no
+        // cross-tenant CLIENT exposure:
+        //  - users: the user doc carries NO orgId (membership is the auth claim,
+        //    v11-05-02); rules cannot field-scope. The leader musician-picker is
+        //    server-side (admin SDK) + in-memory claim filter.
+        //  - setlistTemplates: band_leader/admin only; an MCP/admin-SDK authoring
+        //    surface with NO client read/write path (server reads bypass rules).
+        // Residual recommendation (v11-06-03 AUDIT.md): add orgReadOk to
+        // setlistTemplates for defense-in-depth once/if a client read path lands.
+
+        it("CHARACTERIZE: users is application-only scoped (band_leader rule read is cross-tenant by the picker design)", async () => {
+            // Documents the current rules behavior — a leader CAN read any user
+            // doc (no orgId field to scope). Isolation is enforced app-side.
+            await assertSucceeds(
+                blLeader().collection("users").doc("crc-musician").get(),
+            )
+        })
+
+        it("CHARACTERIZE: setlistTemplates is application-only scoped (no client read path; rules gate on role, not org)", async () => {
+            await assertSucceeds(
+                blLeader().collection("setlistTemplates").doc("tpl-crc").get(),
+            )
+        })
+    })
 })

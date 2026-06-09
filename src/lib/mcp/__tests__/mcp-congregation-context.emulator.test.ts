@@ -82,6 +82,10 @@ describe("MCP get_congregation_context (emulator)", () => {
             musicians?: { name: string; instrument?: string }[]
             trackCount?: number
             songCount?: number
+            // v11-06-01: prod reality — every CRC setlist was orgId-stamped by the
+            // v11-01-03 backfill; getCongregationContext now scopes leadHistory by
+            // the caller org via getAllSetlists's `.where('orgId','==',org)`.
+            orgId?: string
         },
     ) {
         const payload: Record<string, unknown> = {
@@ -90,6 +94,7 @@ describe("MCP get_congregation_context (emulator)", () => {
             eventDate: opts.eventDate,
             date: Timestamp.fromDate(opts.date),
             trackCount: opts.trackCount ?? 0,
+            orgId: opts.orgId ?? "crc",
         }
         if (opts.templateType) payload.templateType = opts.templateType
         if (opts.rabbi) payload.rabbi = opts.rabbi
@@ -265,8 +270,9 @@ describe("MCP get_congregation_context (emulator)", () => {
         expect(r.congregation.usingDefaults).toBe(false)
         // A band has no rabbis — BL doc carries no rabbiProfiles.
         expect(r.congregation.rabbis).toEqual([])
-        // NOTE: leadHistory org-scoping is DEFERRED to v11-06 (setlist reads are
-        // public-by-design; getAllSetlists org filter has a backfill dependency).
+        // v11-06-01: leadHistory is now org-scoped (see the cross-tenant test
+        // below). No BL setlists seeded here, so leadHistory is empty.
+        expect(r.historyCount).toBe(0)
     })
 
     it("reads the bare CRC doc for a crc caller (byte-identical to default arg)", async () => {
@@ -291,5 +297,56 @@ describe("MCP get_congregation_context (emulator)", () => {
         // Missing per-org doc → usingDefaults, NOT the CRC doc's data.
         expect(r.congregation.usingDefaults).toBe(true)
         expect(r.congregation.rabbis).toEqual([]) // did not read CRC's rabbiProfiles
+    })
+
+    // ── v11-06-01: leadHistory is tenant-scoped (close gate — closes the
+    //    v11-05-04 deferral). getCongregationContext passes the caller org to
+    //    getAllSetlists, so a BL author sees BL services, not CRC's. ──
+
+    it("leadHistory is org-scoped: a BL caller sees only BL services", async () => {
+        await seedConfig()
+        await seedBLConfig()
+        await seedThreeServices() // three crc services (orgId defaults to 'crc')
+        await seedSetlist("bl-svc", {
+            name: "Brothers Lazaroff — Off Broadway",
+            eventDate: "2026-06-07",
+            date: new Date("2026-05-23T00:00:00Z"),
+            musicians: [{ name: "David Lazaroff", instrument: "electric_guitar" }],
+            trackCount: 11,
+            orgId: "brotherslazaroff",
+        })
+
+        const r = await getCongregationContext(ANY_UID, {}, "brotherslazaroff")
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        // ONLY the BL service — the three crc services do not leak in.
+        expect(r.leadHistory.map((h) => h.setlistId)).toEqual(["bl-svc"])
+        expect(r.historyCount).toBe(1)
+    })
+
+    it("leadHistory is org-scoped: a CRC caller sees only CRC services (BL invisible)", async () => {
+        await seedConfig()
+        await seedBLConfig()
+        await seedThreeServices() // three crc services
+        await seedSetlist("bl-svc", {
+            name: "Brothers Lazaroff — Off Broadway",
+            eventDate: "2026-06-07",
+            date: new Date("2026-05-23T00:00:00Z"),
+            trackCount: 11,
+            orgId: "brotherslazaroff",
+        })
+
+        // Explicit crc and default-arg crc both exclude the BL service.
+        const explicit = await getCongregationContext(ANY_UID, {}, "crc")
+        const defaulted = await getCongregationContext(ANY_UID, {})
+        if (!("ok" in explicit) || !explicit.ok) throw new Error("expected ok=true")
+        if (!("ok" in defaulted) || !defaulted.ok) throw new Error("expected ok=true")
+        expect(explicit.historyCount).toBe(3)
+        expect(explicit.leadHistory.map((h) => h.setlistId)).toEqual([
+            "svc-new",
+            "svc-mid",
+            "svc-old",
+        ])
+        expect(explicit.leadHistory.some((h) => h.setlistId === "bl-svc")).toBe(false)
+        expect(defaulted.historyCount).toBe(3)
     })
 })
