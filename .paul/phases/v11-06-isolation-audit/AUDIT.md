@@ -79,9 +79,12 @@ UX correctness, not secrecy — so a BL author transiently seeing CRC service *n
 history is a UX nit, not a cross-tenant data leak. The fix is emulator-proven (mcp-congregation-context 11/11).
 **Post-deploy re-run confirmation appended below.**
 
-### Post-deploy re-run
-<!-- Appended by the v11-06 phase transition after the push lands on Vercel. -->
-(pending phase push + Vercel READY → expect 19/19)
+### Post-deploy re-run — ✅ 19/19
+After the v11-06 phase push (`5e16e28a98`) deployed to Vercel, the live probe was re-run with a fresh
+claim-free throwaway BL bearer + CRC bearer: **19/19 PASS**, including
+`v11-06-03 BL leadHistory contains NO CRC setlist — blHistory=0 leaked=0`. The deploy-pending leadHistory
+item is now CLOSED live; BL congregation-context leadHistory is fully tenant-scoped in production. Throwaway
+bearer revoked; David's claim verified intact. **All 19 live isolation assertions pass — clean.**
 
 ---
 
