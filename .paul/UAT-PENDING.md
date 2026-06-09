@@ -166,3 +166,26 @@ Check (as an editor — admin/band_leader — in a real browser on the deployed 
 - [ ] Confirm "Load more" (if reachable) and the live updates carry no CRC rows.
 - [ ] **Sign in on centralreform.live** and open `/setlists` → confirm CRC's dashboard is UNCHANGED (all CRC setlists present, same order) — no CRC lock-out / regression.
 - [ ] (Onboarding) David creates his first BL setlist **via MCP** (which stamps orgId, v11-02-03) → confirm it appears in his BL dashboard. NOTE/DEFERRED: in-app CreationWizard setlist-create orgId stamping is NOT in v11-04-03 (read scoping only) — an in-app-created BL setlist lacking orgId would not appear in the scoped dashboard. Tracked for v11-05 write-scoping.
+
+---
+
+## ⏳ v11.1-02-01 — Multi-org authoring via broslaz MCP URL
+
+**Deployed commit:** `941e6856d1` (pushed to origin master 2026-06-09; Vercel auto-deploy)
+
+What was built: MCP bearers now pin to the tenant DOMAIN you connect Claude
+Desktop through (host-derived `x-org-id` → `resolveMintOrg`, validated against
+your `orgIds`). Connecting to the broslaz MCP URL mints a `brotherslazaroff`
+bearer; your existing CRC connection stays crc. Verified: routing (www reaches
+the endpoint; apex 308-redirects), OAuth discovery is host-relative to
+www.brotherslazaroff.live, emulator 9/9, v11-06-02 invariant intact.
+
+**Canonical broslaz MCP URL:** `https://www.brotherslazaroff.live/api/mcp`
+(use the `www.` host directly — the apex 308-redirects and can drop the auth header).
+
+Check:
+- [ ] In Claude Desktop, add a SECOND MCP connection pointed at `https://www.brotherslazaroff.live/api/mcp` (keep the existing CRC one). Complete the OAuth login (plain Google sign-in).
+- [ ] Through that broslaz connection, author a test setlist (create_setlist + a few tracks).
+- [ ] It appears on `brotherslazaroff.live` /perform + the authed dashboard, with orgId='brotherslazaroff'.
+- [ ] It does NOT appear on centralreform.live (CRC) /perform or dashboard.
+- [ ] Your CRC connection still authors crc setlists unchanged.
