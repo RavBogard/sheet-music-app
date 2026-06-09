@@ -3,6 +3,9 @@ import { Poppins, Righteous, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
+import { OrgProvider } from "@/lib/org/org-context"
+import { resolveOrgIdByDomain } from "@/lib/org/registry"
+import { getOrgBranding } from "@/lib/org/branding"
 import { ClientProviders } from "@/components/client-providers"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { Toaster } from "sonner"
@@ -75,9 +78,20 @@ export default async function RootLayout({
   // C5D-003: read the per-request CSP nonce set by `src/proxy.ts` and
   // forward it to next-themes' inline FOUC-prevention script so it
   // satisfies the `'nonce-XXX' 'strict-dynamic'` script-src directive.
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const headersList = await headers();
+  const nonce = headersList.get("x-nonce") ?? undefined;
+  // v11-03-01: org resolved at the Edge (src/proxy.ts) and forwarded via
+  // `x-org-id`. Passing the header value back through resolveOrgIdByDomain
+  // makes it total + typed (any missing/unknown value → DEFAULT_ORG_ID "crc"),
+  // so `orgId` is always a valid OrgId. `data-org` is the CSS hook for
+  // BL branding (v11-03-02); OrgProvider exposes it to client components.
+  const orgId = resolveOrgIdByDomain(headersList.get("x-org-id"));
+  // v11-03-02: Brothers Lazaroff is a dark+photographic band identity → force
+  // dark so the `.dark[data-org="brotherslazaroff"]` navy tokens always apply.
+  // CRC's forceDark is false → undefined → next-themes system behavior unchanged.
+  const { forceDark } = getOrgBranding(orgId);
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-org={orgId} suppressHydrationWarning>
       <head>
         {/* Preconnect to auth domains — eliminates DNS+TLS handshake delay on sign-in */}
         <link rel="preconnect" href="https://accounts.google.com" />
@@ -95,22 +109,25 @@ export default async function RootLayout({
           Skip to main content
         </a>
         <div className="bg-noise" />
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-          nonce={nonce}
-        >
-          <ErrorBoundary>
-            <ClientProviders>
-              {children}
-            </ClientProviders>
-            <Toaster richColors position="top-center" theme="system" />
-            <LiveRegion />
-            <WebVitalsReporter />
-          </ErrorBoundary>
-        </ThemeProvider>
+        <OrgProvider orgId={orgId}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+            forcedTheme={forceDark ? "dark" : undefined}
+            nonce={nonce}
+          >
+            <ErrorBoundary>
+              <ClientProviders>
+                {children}
+              </ClientProviders>
+              <Toaster richColors position="top-center" theme="system" />
+              <LiveRegion />
+              <WebVitalsReporter />
+            </ErrorBoundary>
+          </ThemeProvider>
+        </OrgProvider>
       </body>
     </html>
   );

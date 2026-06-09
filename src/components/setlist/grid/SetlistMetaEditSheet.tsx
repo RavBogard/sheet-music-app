@@ -33,6 +33,8 @@ import {
 import { toDate } from '@/lib/firestore-helpers'
 import type { EditDescriptor } from '@/lib/local/types'
 import { applyEdit as defaultApplyEdit } from '@/lib/local/write'
+import { useOrg } from '@/lib/org/org-context'
+import { hidesLiturgicalFields, label } from '@/lib/org/vocab'
 import { cn } from '@/lib/utils'
 import type { Setlist } from '@/types/models'
 
@@ -92,6 +94,13 @@ export function SetlistMetaEditSheet({
     applyEdit = defaultApplyEdit,
 }: SetlistMetaEditSheetProps) {
     const initialDate = toDate(initial.eventDate ?? null)
+
+    // v11-03-03: non-synagogue tenants (Brothers Lazaroff) hide the
+    // service-type + rabbi fields and use band vocab. Hidden fields keep their
+    // state seeded from `initial`, so the save handler's per-field diff never
+    // enqueues a spurious templateType/rabbi patch.
+    const org = useOrg()
+    const hideLiturgical = hidesLiturgicalFields(org)
 
     const [name, setName] = useState(initial.name)
     const [eventDate, setEventDate] = useState<Date | undefined>(
@@ -172,7 +181,7 @@ export function SetlistMetaEditSheet({
                 className="flex flex-col gap-0 w-full sm:max-w-md"
             >
                 <SheetHeader>
-                    <SheetTitle>Edit setlist details</SheetTitle>
+                    <SheetTitle>{label(org, 'editSetlistDetails')}</SheetTitle>
                 </SheetHeader>
 
                 <div className="flex flex-col gap-5 py-6 flex-1">
@@ -185,7 +194,7 @@ export function SetlistMetaEditSheet({
                             id="setlist-meta-name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="e.g., Shabbat Morning"
+                            placeholder={label(org, 'namePlaceholder')}
                             className="h-11 text-base bg-background/50 border-border"
                         />
                     </div>
@@ -226,53 +235,59 @@ export function SetlistMetaEditSheet({
                         </Popover>
                     </div>
 
-                    {/* Service type */}
-                    <div className="flex flex-col gap-1.5">
-                        <Label htmlFor="setlist-meta-service" variant="setlist">
-                            Service type
-                        </Label>
-                        <Select
-                            value={serviceType ?? NO_SERVICE_TYPE}
-                            onValueChange={(v) =>
-                                setServiceType(
-                                    v === NO_SERVICE_TYPE
-                                        ? undefined
-                                        : (v as ServiceType),
-                                )
-                            }
-                        >
-                            <SelectTrigger
-                                id="setlist-meta-service"
-                                className="h-11 bg-background/50"
-                            >
-                                <SelectValue placeholder="Select a service type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={NO_SERVICE_TYPE}>
-                                    None
-                                </SelectItem>
-                                {SERVICE_TYPE_ORDER.map((t) => (
-                                    <SelectItem key={t} value={t}>
-                                        {SERVICE_TYPE_LABELS[t]}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    {/* Service type + Rabbi — synagogue-only; hidden for
+                        non-synagogue tenants (e.g. Brothers Lazaroff). */}
+                    {!hideLiturgical && (
+                        <>
+                            {/* Service type */}
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor="setlist-meta-service" variant="setlist">
+                                    Service type
+                                </Label>
+                                <Select
+                                    value={serviceType ?? NO_SERVICE_TYPE}
+                                    onValueChange={(v) =>
+                                        setServiceType(
+                                            v === NO_SERVICE_TYPE
+                                                ? undefined
+                                                : (v as ServiceType),
+                                        )
+                                    }
+                                >
+                                    <SelectTrigger
+                                        id="setlist-meta-service"
+                                        className="h-11 bg-background/50"
+                                    >
+                                        <SelectValue placeholder="Select a service type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value={NO_SERVICE_TYPE}>
+                                            None
+                                        </SelectItem>
+                                        {SERVICE_TYPE_ORDER.map((t) => (
+                                            <SelectItem key={t} value={t}>
+                                                {SERVICE_TYPE_LABELS[t]}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                    {/* Rabbi */}
-                    <div className="flex flex-col gap-1.5">
-                        <Label htmlFor="setlist-meta-rabbi" variant="setlist">
-                            Rabbi
-                        </Label>
-                        <Input
-                            id="setlist-meta-rabbi"
-                            value={rabbi}
-                            onChange={(e) => setRabbi(e.target.value)}
-                            placeholder="Who's leading this service"
-                            className="h-11 text-base bg-background/50 border-border"
-                        />
-                    </div>
+                            {/* Rabbi */}
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor="setlist-meta-rabbi" variant="setlist">
+                                    Rabbi
+                                </Label>
+                                <Input
+                                    id="setlist-meta-rabbi"
+                                    value={rabbi}
+                                    onChange={(e) => setRabbi(e.target.value)}
+                                    placeholder="Who's leading this service"
+                                    className="h-11 text-base bg-background/50 border-border"
+                                />
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 <SheetFooter className="gap-2 border-t border-border/50 pt-4">

@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **v11.0 Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08 via /paul:milestone)
-Phase: **v11-02b Org-aware token minting ✅ COMPLETE (1/1, 2026-06-08)** → next: **v11-03 Domain + branding** (NOT STARTED — ready to plan). v11-02 ✅ + v11-02b ✅.
-Plan: none active. Ready to PLAN v11-03 (brotherslazaroff.live host→tenant routing + BL branding + synagogue→band vocab trim; **/ui-ux-pro-max BLOCKING**).
-Status: **v11-02b COMPLETE + transitioned.** Self-service MCP minting is now org-aware — tenant members onboard via plain login → correctly org-scoped bearer (no manual handoff); CRC unchanged. Ready to plan v11-03.
-Last activity: 2026-06-08 — v11-02b-01 LOOP COMPLETE + transition. `getPrimaryOrgForMinting(uid)` threaded into both self-service mint routes; unit 9/9 + emulator 3/3; feat(v11-02b) `2db15f36d9` deployed (Vercel READY); prod-verify David→brotherslazaroff. (Earlier today: v11-02 phase complete + David's bearer/claim + live e2e 12/12.)
+Phase: **v11-03 Domain + branding ✅ COMPLETE (3/3, 2026-06-08)** → next: **v11-04 BL consumer surface + onboarding** (NOT STARTED — ready to plan). v11-01 ✅ · v11-02 ✅ · v11-02b ✅ · v11-03 ✅.
+Plan: none active. Ready to PLAN v11-04 (perform-view + gig-packet print scoped to BL org; David's BL membership + empty-library seed; e2e UAT; **+ fold in the deferred cross-tenant collections: templates/roster/congregation/personnel read+write scoping, and the deferred vocab/CreationWizard de-synagogue-ing**). /ui-ux-pro-max BLOCKING.
+Status: **v11-03 COMPLETE + committed + pushed to prod.** brotherslazaroff.live host-routing + navy dark+photographic branding + edit-surface vocab/field-trim all shipped; CRC provably unchanged. Phase commit `feat(v11-03)` pushed to origin master (Vercel prod auto-deploy). **BL chrome visible once Daniel completes DNS (`docs/brotherslazaroff-domain-setup.md`) + cert.**
+Last activity: 2026-06-08 — v11-03 phase complete (3 plans) + transitioned. This session: domain doc → discuss → 01 org-context → 02 branding → 03 vocab/trim → phase commit+push. Full unit 3290/0; tsc clean; eslint 0 err.
 
 Parallel track: **v7.1 Production Hardening** remains ACTIVE via the bongo `.coord/` system (cycle-13 in flight) — independent of the PAUL loop, which now tracks v11.0. App is at `10.1.0` (package.json).
 
@@ -37,9 +37,14 @@ Progress:
 
 v11.0 runs through the standard PAUL loop:
 ```
-PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [v11-02b COMPLETE — next: PLAN v11-03]   (v11-02 ✓ all 4 · v11-02b ✓)
+PLAN ──▶ APPLY ──▶ UNIFY        [v11-03 PHASE COMPLETE — next: PLAN v11-04]
+  ✓        ✓        ✓     (v11-02 ✓ · v11-02b ✓ · v11-03 ✓ all 3)
 ```
+v11-03 (✅ COMPLETE — 3 vertical plans, phase commit `feat(v11-03)` pushed to prod):
+- **v11-03-01** ✅ org-context foundation: proxy `x-org-id` → `<html data-org>` + `OrgProvider`/`useOrg` (defaults crc outside provider). No visual change.
+- **v11-03-02** ✅ BL navy dark+photographic chrome: scoped `[data-org="brotherslazaroff"]`+`.dark[data-org=...]` CSS-var block (hue 252 vs CRC 275), `forcedTheme=dark`, `getOrgBranding()`, org-aware login hero/wordmark. CRC untouched.
+- **v11-03-03** ✅ vocab + UI trim: `label(org,key)` + `hidesLiturgicalFields()`; SetlistMetaEditSheet hides service-type+rabbi for BL, band vocab. CRC unchanged. **DEFERRED to v11-04:** CreationWizard/perform/display-card vocab (needs org-scoped congregation+templates).
+Final gate: tsc clean; full unit 3290/0; eslint 0 err.
 v11-02 plan decomposition (COMPLETE — all 4 vertical slices LOOP COMPLETE):
 - **v11-02-01** ✅ LOOP COMPLETE — caller-org resolution foundation: orgId stamped at all 4 mcpTokens mint sites + verifyBearer returns orgId (default crc) + route plumbs to AuthInfo.extra + `orgFrom(extra)` seam + prod token backfill (117 stamped). Behavior-neutral. SUMMARY at `.paul/phases/v11-02-mcp-org-scoping/v11-02-01-SUMMARY.md`.
 - **v11-02-02** ✅ LOOP COMPLETE — MCP READS org-scoped (6 tools): list/search filter to callerOrg; get_setlist/get_song → not-found cross-tenant wall; search_chart_text metadata+chords (parent-org drop); SongRecord.orgId surfaced; bond-corrections threaded to setlist org. emulator 7/7; full suite 3272/0. Templates/roster/congregation DEFERRED. SUMMARY in phase dir.
@@ -74,11 +79,15 @@ The v7.1 hardening campaign continues separately via the bongo `.coord/` cowork 
 
 ## Session Continuity
 
-Last session: 2026-06-08 — BIG session. v11-02 PHASE COMPLETE (4 plans: caller-org seam + read isolation + write wall + David's live bearer/claim + e2e 12/12) AND v11-02b (org-aware self-service minting) both shipped to prod. Brothers Lazaroff is the first live second tenant; onboarding is now self-serve. v11.0 at 2/5 numbered phases (+v11-02b insert).
-Stopped at: v11-02b closed + transitioned. Commits: feat(v11-02) `c7da31ac2a` · test(v11-02) `779eab0a54` · docs(v11-02) `243a8a98b8` · feat(v11-02b) `2db15f36d9` (+ docs(v11-02b) pending in this UNIFY). origin/master in sync.
-Next action: /paul:plan v11-03 — brotherslazaroff.live host→tenant routing + Brothers Lazaroff branding (band chrome, not synagogue) + synagogue→band vocab trim (gig/venue/set, not service/sanctuary/rabbi; trim service-type + rabbi UI). **/ui-ux-pro-max BLOCKING** (UI phase). `git pull` first. Daniel flagged branding/vocab as his taste calls — consider /paul:discuss-phase v11-03 to pin direction before planning.
-Resume file: .paul/HANDOFF-2026-06-08.md (full context; SUMMARY at .paul/phases/v11-02b-org-aware-minting/v11-02b-01-SUMMARY.md)
+Last session: 2026-06-08 (cont.) — `/paul:resume` with a domain-config task. Wrote `docs/brotherslazaroff-domain-setup.md` (Vercel domain-add + Squarespace A `@`→76.76.21.21 / CNAME `www`→cname.vercel-dns.com; mirrors CRC apex→www). Then `/paul:discuss-phase v11-03` → CONTEXT.md (taste calls locked; scraped real BL brand off brotherslazaroff.com). Then `/paul:plan v11-03` → v11-03-01-PLAN.md (org-context foundation).
+Stopped at: v11-03 PHASE COMPLETE + transitioned. Phase commit `feat(v11-03)` pushed to origin master (Vercel prod auto-deploy in flight — verify READY). Working tree clean post-commit.
+Next action: /paul:plan v11-04 — BL consumer surface (perform-view + gig-packet print scoped to BL org) + David's BL membership + empty-library seed + e2e UAT. **Fold in the v11-03-03 + v11-02 deferrals: org-scope templates/roster/congregation/service-personnel (read+write) + de-synagogue the CreationWizard/perform/display vocab (now unblocked by congregation scoping).** /ui-ux-pro-max BLOCKING. `git pull` first (multi-computer).
+DNS ACTION (Daniel, anytime): complete `docs/brotherslazaroff-domain-setup.md` (Vercel domain-add + Squarespace A `@`→76.76.21.21 / CNAME `www`→cname.vercel-dns.com) so brotherslazaroff.live serves the (now-deployed) BL chrome.
+Resume file: .paul/phases/v11-03-domain-branding/v11-03-03-SUMMARY.md (+ CONTEXT.md)
 Resume context:
+- **v11-03 taste calls (Daniel 2026-06-08, in CONTEXT.md):** dark+photographic BL chrome · pull brand from brotherslazaroff.com (navy accent + live-performance photos, rendered on dark canvas — note their *site* is light/navy, app chrome is dark) · per-tenant conditional vocab/UI (CRC literally unchanged).
+- **Foundation seam:** `src/proxy.ts` forwards `x-org-id` (mirror of existing `x-nonce`); `resolveOrgIdByDomain` in `src/lib/org/registry.ts` already maps brotherslazaroff.live→brotherslazaroff (strips www.). New client `src/lib/org/org-context.tsx` (`OrgProvider`/`useOrg`); `<html data-org>` is the CSS hook for 02.
+- DNS: separate ops doc `docs/brotherslazaroff-domain-setup.md` — Daniel does the Vercel + Squarespace clicks.
 - v11-02 + v11-02b done: MCP tenant wall live + proven (caller-org seam orgFrom/rowOrg/stampOrg in src/lib/mcp/org-context.ts; reads + writes isolated); self-service minting org-aware (getPrimaryOrgForMinting in src/lib/org/membership.ts). David's bearer + claim issued; he can self-onboard.
 - Canonical prod MCP endpoint: **https://www.centralreform.live/api/mcp** (apex 307→www; curl -L drops the auth header — hit www directly). Reusable e2e probe at scripts/e2e-bl-tenant-probe.mjs (DAVID_BEARER + CRC_BEARER env) — for the v11-05 isolation audit.
 - DEFERRED to v11-04 (still cross-tenant): templates READ/LIST scoping, roster/musicians, congregation, service-personnel — read+write.

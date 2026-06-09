@@ -36,6 +36,8 @@ vi.mock('sonner', () => ({
 }))
 
 import { SetlistMetaEditSheet } from '../SetlistMetaEditSheet'
+import { OrgProvider } from '@/lib/org/org-context'
+import type { OrgId } from '@/lib/org/types'
 
 // A fixed event date so format() assertions are deterministic.
 const EVENT_DATE_MS = new Date('2026-05-16T12:00:00Z').getTime()
@@ -46,24 +48,29 @@ function renderSheet(
         initial?: Partial<Parameters<typeof SetlistMetaEditSheet>[0]['initial']>
         applyEdit?: ReturnType<typeof vi.fn>
         onOpenChange?: ReturnType<typeof vi.fn>
+        org?: OrgId
     } = {},
 ) {
     const applyEdit = over.applyEdit ?? vi.fn().mockResolvedValue(undefined)
     const onOpenChange = over.onOpenChange ?? vi.fn()
     render(
-        <SetlistMetaEditSheet
-            setlistId="setlist-1"
-            open
-            onOpenChange={onOpenChange}
-            initial={{
-                name: 'Shabbat Morning',
-                eventDate: EVENT_DATE_MS,
-                rabbi: 'Rabbi Daniel',
-                templateType: 'shabbat_morning',
-                ...over.initial,
-            }}
-            applyEdit={applyEdit}
-        />,
+        // The sheet calls useOrg() (v11-03-03) — default crc keeps the
+        // synagogue fields visible so the existing AC tests are unchanged.
+        <OrgProvider orgId={over.org ?? 'crc'}>
+            <SetlistMetaEditSheet
+                setlistId="setlist-1"
+                open
+                onOpenChange={onOpenChange}
+                initial={{
+                    name: 'Shabbat Morning',
+                    eventDate: EVENT_DATE_MS,
+                    rabbi: 'Rabbi Daniel',
+                    templateType: 'shabbat_morning',
+                    ...over.initial,
+                }}
+                applyEdit={applyEdit}
+            />
+        </OrgProvider>,
     )
     return { applyEdit, onOpenChange }
 }
@@ -158,5 +165,23 @@ describe('SetlistMetaEditSheet', () => {
 
         expect(applyEdit).not.toHaveBeenCalled()
         expect(onOpenChange).toHaveBeenCalledWith(false)
+    })
+
+    // v11-03-03: org-aware vocab + synagogue-field trim.
+    it('CRC shows the Service-type + Rabbi fields and synagogue vocab', () => {
+        renderSheet({ org: 'crc' })
+        expect(screen.getByText('Edit setlist details')).toBeInTheDocument()
+        expect(screen.getByText('Service type')).toBeInTheDocument()
+        expect(screen.getByLabelText('Rabbi')).toBeInTheDocument()
+    })
+
+    it('Brothers Lazaroff hides the Service-type + Rabbi fields and uses band vocab', () => {
+        renderSheet({ org: 'brotherslazaroff' })
+        expect(screen.getByText('Edit set details')).toBeInTheDocument()
+        expect(screen.queryByText('Edit setlist details')).not.toBeInTheDocument()
+        expect(screen.queryByText('Service type')).not.toBeInTheDocument()
+        expect(screen.queryByLabelText('Rabbi')).not.toBeInTheDocument()
+        // Name field stays.
+        expect(screen.getByLabelText('Name')).toBeInTheDocument()
     })
 })

@@ -195,6 +195,63 @@
   --sidebar-border: oklch(0.30 0.03 270 / 0.35);
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   v11-03-02 — Brothers Lazaroff tenant theme, scoped under
+   [data-org="brotherslazaroff"] (set on <html> by src/app/layout.tsx
+   from the Edge `x-org-id` header). BL is forced dark (forcedTheme), so
+   the dark canvas tokens live under `.dark[data-org="brotherslazaroff"]`
+   — higher specificity than `.dark`, placed after it to win on equal
+   specificity too. Navy hue ~252/255 (true blue), distinct from CRC's
+   indigo ~275. CRC (:root / .dark) is untouched. Mirrors the
+   [data-theme="v2"] override precedent below.
+   ───────────────────────────────────────────────────────────────── */
+[data-org="brotherslazaroff"] {
+  /* Navy brand accent — replaces CRC's vivid indigo. */
+  --brand: oklch(0.60 0.17 252);
+  --brand-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.60 0.15 252 / 0.5);
+}
+
+.dark[data-org="brotherslazaroff"] {
+  /* Deep cool-navy near-black canvas (vs CRC indigo-black). */
+  --background: oklch(0.12 0.02 255);
+  --foreground: oklch(0.97 0.005 250);
+
+  --card: oklch(0.17 0.025 255 / 0.5);
+  --card-foreground: oklch(0.97 0.005 250);
+
+  --popover: oklch(0.17 0.03 255 / 0.78);
+  --popover-foreground: oklch(0.97 0.005 250);
+
+  --primary: oklch(0.97 0.005 250);
+  --primary-foreground: oklch(0.12 0.02 255);
+
+  --secondary: oklch(0.45 0.16 252 / 0.4);
+  --secondary-foreground: oklch(0.90 0.01 250);
+
+  --muted: oklch(0.21 0.025 255 / 0.5);
+  --muted-foreground: oklch(0.72 0.015 252);
+
+  --accent: oklch(0.24 0.04 255);
+  --accent-foreground: oklch(0.97 0.005 250);
+
+  --brand: oklch(0.64 0.18 252);
+  --brand-foreground: oklch(0.98 0 0);
+
+  --border: oklch(0.30 0.03 255 / 0.45);
+  --input: oklch(0.30 0.03 255 / 0.55);
+  --ring: oklch(0.60 0.16 252 / 0.5);
+
+  --sidebar: oklch(0.14 0.02 255 / 0.85);
+  --sidebar-foreground: oklch(0.97 0.005 250);
+  --sidebar-primary: oklch(0.97 0.005 250);
+  --sidebar-primary-foreground: oklch(0.12 0.02 255);
+  --sidebar-accent: oklch(0.24 0.04 255);
+  --sidebar-accent-foreground: oklch(0.97 0.005 250);
+  --sidebar-border: oklch(0.30 0.03 255 / 0.35);
+  --sidebar-ring: oklch(0.60 0.16 252 / 0.45);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -578,4 +635,21 @@
 
 @utility v2-surface {
   background-color: var(--v2-surface);
+}
+
+/* v11-03-02 — Brothers Lazaroff login hero. Dark "stage-light" navy
+   gradient treatment. `--bl-hero-image` is an optional slot: drop a real
+   live-performance photo (e.g. set it to url('/brands/brotherslazaroff/hero.jpg'))
+   and it composites UNDER the gradient as cover/center. Defaults to `none`
+   so there is no broken image if absent. */
+@utility bl-hero {
+  background-color: oklch(0.10 0.02 255);
+  background-image:
+    radial-gradient(120% 80% at 50% -10%, oklch(0.30 0.10 252 / 0.55) 0%, transparent 60%),
+    radial-gradient(90% 70% at 85% 110%, oklch(0.22 0.09 250 / 0.45) 0%, transparent 55%),
+    linear-gradient(180deg, oklch(0.10 0.02 255 / 0.30) 0%, oklch(0.09 0.02 255 / 0.85) 100%),
+    var(--bl-hero-image, none);
+  background-size: cover, cover, cover, cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }

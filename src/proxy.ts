@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { SESSION_ROLE_COOKIE, verifyRoleCookie } from '@/lib/session-role'
 import { httpError } from '@/lib/http/error-envelope'
+import { resolveOrgIdByDomain } from '@/lib/org/registry'
 
 // Base64Url decode for Edge Runtime without Buffer
 function decodeJwtPayload(token: string) {
@@ -137,6 +138,17 @@ export async function proxy(request: NextRequest) {
     const cspHeader = buildCsp(nonce)
     const requestHeaders = new Headers(request.headers)
     requestHeaders.set('x-nonce', nonce)
+
+    // v11-03-01: resolve the request host to a tenant org at the Edge and
+    // forward it as `x-org-id` (same RSC-readable request-header seam as the
+    // nonce above). `resolveOrgIdByDomain` is pure (no Firestore) → Edge-safe,
+    // strips a leading `www.`, and falls back to the default org (crc) for
+    // centralreform.live / localhost / *.vercel.app / unknown hosts. The
+    // unconditional `.set()` overwrites any client-supplied `x-org-id` copied
+    // by `new Headers(request.headers)` — the Edge is the authoritative source.
+    // Placed before every passthrough/rewrite return so all routes carry it.
+    const orgId = resolveOrgIdByDomain(request.headers.get('host') ?? request.nextUrl.hostname)
+    requestHeaders.set('x-org-id', orgId)
 
     const isPublicRoute =
         publicExactRoutes.includes(pathname) ||

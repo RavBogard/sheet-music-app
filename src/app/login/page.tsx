@@ -1,5 +1,8 @@
+import { headers } from "next/headers"
 import { getServerCongregationConfig } from "@/lib/server-auth"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
+import { resolveOrgIdByDomain } from "@/lib/org/registry"
+import { getOrgBranding } from "@/lib/org/branding"
 import LoginClient from "./LoginClient"
 
 /**
@@ -18,6 +21,62 @@ import LoginClient from "./LoginClient"
  * inside LoginClient — page.tsx stays the static skeleton.
  */
 export default async function LoginPage() {
+    // v11-03-02: Brothers Lazaroff tenant gets a dark photographic band hero +
+    // wordmark instead of the synagogue congregation chrome. The CRC/default
+    // branch below is unchanged (getServerCongregationConfig path). LoginClient,
+    // the legal nav, and noscript are kept identical so auth + GDPR/SMS
+    // compliance never regress per tenant.
+    const orgId = resolveOrgIdByDomain((await headers()).get("x-org-id"))
+    if (orgId === "brotherslazaroff") {
+        const { shortName, tagline } = getOrgBranding(orgId)
+        return (
+            <div className="min-h-screen bl-hero flex flex-col items-center justify-center p-4 relative overflow-hidden">
+                {/* Navy ambient glow over the photographic hero */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+                    <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-brand/[0.10] blur-3xl" />
+                    <div className="absolute bottom-[-15%] right-[-10%] w-[55%] h-[55%] rounded-full bg-brand/[0.08] blur-3xl" />
+                </div>
+
+                <main id="main-content" className="w-full max-w-sm space-y-8 text-center relative z-10">
+                    <div className="flex flex-col items-center gap-3">
+                        <h1 className="font-display uppercase font-bold tracking-tight text-foreground text-4xl sm:text-5xl leading-[0.95] drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
+                            {shortName}
+                        </h1>
+                        <p className="text-muted-foreground text-sm">
+                            {tagline}
+                        </p>
+                    </div>
+
+                    <div className="glass-card rounded-2xl p-6 space-y-5">
+                        <LoginClient />
+
+                        <noscript>
+                            <p className="text-xs text-destructive">
+                                Sign-in requires JavaScript. Please enable it in your browser settings to continue.
+                            </p>
+                        </noscript>
+
+                        <p className="text-xs text-muted-foreground">
+                            Only authorized accounts can access the full library.
+                        </p>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground">
+                        {shortName} &middot; St. Louis, MO
+                    </p>
+
+                    <nav aria-label="Legal" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <a href="/privacy" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Privacy</a>
+                        <a href="/terms" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Terms</a>
+                        <a href="/sms-consent" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">SMS Consent</a>
+                        <a href="/changelog" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Changelog</a>
+                        <a href="/accessibility" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Accessibility</a>
+                    </nav>
+                </main>
+            </div>
+        )
+    }
+
     const config = await getServerCongregationConfig().catch(() => null)
     const shortName = (config?.shortName as string | undefined) || DEFAULT_SHORT_NAME
     const fullName = (config?.name as string | undefined) || "Central Reform Congregation"

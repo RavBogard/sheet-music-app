@@ -5,7 +5,7 @@
 ## Current Milestone
 
 **🚧 v11.0 — Brothers Lazaroff Multi-Tenant** (ACTIVE — created 2026-06-08)
-Status: 🚧 In Progress · Phases: 2 of 5 complete (v11-01 ✅, v11-02 ✅ 2026-06-08) — Brothers Lazaroff is LIVE (David's MCP tenant proven e2e on prod)
+Status: 🚧 In Progress · Phases: 3 of 5 complete (v11-01 ✅, v11-02 ✅, v11-03 ✅ 2026-06-08) — Brothers Lazaroff is LIVE (David's MCP tenant proven e2e on prod); brotherslazaroff.live host-routing + navy dark branding + edit-surface vocab trim shipped
 
 Turn the single-tenant CRC app into a multi-tenant platform whose first second tenant is **Brothers Lazaroff** — give David Lazaroff (CRC band_leader since 2026-05-15) his own org-scoped library + setlists, authored via Claude + MCP, viewed/printed on `brotherslazaroff.live`. Multi-tenant within the SAME app + Firebase (`crcmusiccharts`); CRC data backfilled to a default org, behavior-neutral. Trimmed to David's MCP-author → view/print-packet flow. App is at `10.1.0`; the multi-tenant architectural shift + new production domain justify the v11.0 bump. Decisions locked at `/paul:discuss-milestone` 2026-06-08; full detail in `.paul/MILESTONES.md` § v11.0.
 
@@ -14,7 +14,7 @@ Turn the single-tenant CRC app into a multi-tenant platform whose first second t
 | v11-01 | Tenant foundation (orgId + rules + CRC backfill) | 4/4 ✅ | ✅ Complete | 2026-06-08 |
 | v11-02 | MCP org-scoping (org-scoped auth + thread orgId through tools) | 4/4 ✅ | ✅ Complete | 2026-06-08 |
 | v11-02b | Org-aware token minting (self-service tenant onboarding) | 1/1 ✅ | ✅ Complete | 2026-06-08 |
-| v11-03 | brotherslazaroff.live domain + branding + vocab trim | TBD | Not started | - |
+| v11-03 | brotherslazaroff.live domain + branding + vocab trim | 3/3 ✅ | ✅ Complete | 2026-06-08 |
 | v11-04 | BL consumer surface (perform/print) + David onboarding + e2e UAT | TBD | Not started | - |
 | v11-05 | Cross-tenant isolation security audit (close gate) | TBD | Not started | - |
 
@@ -39,9 +39,13 @@ Focus: close the gap Daniel surfaced 2026-06-08 — the self-service mint paths 
 **Decision (Daniel 2026-06-08):** Fix it now (small slice) — chosen over deferring to v11-04 or keeping the manual mint. Scope: an `orgFromClaim(uid)` resolver + thread into the 2 self-service mint sites + tests + deploy. (mint_admin_bearer already inherits caller org; test-token mint stays default crc.)
 - **v11-02b-01** ✅ LOOP COMPLETE (2026-06-08) — `getPrimaryOrgForMinting(uid)` (reuses v11-01-01's getUserOrgIds; first-of, default crc) threaded into `/api/mcp/tokens` + `/api/mcp/oauth/token`; admin/test mints untouched. unit 9/9 + emulator 3/3 (claim→resolver→mint→doc→verifyBearer); tsc clean; Vercel prod build READY (feat(v11-02b) `2db15f36d9`); prod-verify getUserOrgIds(DavidUid)===["brotherslazaroff"]. David (+ future members) self-onboard via plain login → BL-scoped token, no raw-token handoff. SUMMARY in phase dir.
 
-### Phase v11-03: Domain + branding
+### Phase v11-03: Domain + branding ✅ Complete (2026-06-08)
 Focus: host→tenant resolution on the shared deployment for `brotherslazaroff.live`; Brothers Lazaroff branding (band chrome, not synagogue); genericized vocab (gig / venue / set, not service / sanctuary / rabbi); trim synagogue-specific UI (service type, rabbi field). /ui-ux-pro-max BLOCKING.
-Plans: TBD (defined during /paul:plan)
+Discussion: CONTEXT.md (taste calls locked — dark+photographic · brand pulled from brotherslazaroff.com [navy + live photos on dark canvas] · per-tenant conditional vocab/UI, CRC untouched). DNS handled by `docs/brotherslazaroff-domain-setup.md` (Vercel domain-add + Squarespace A/CNAME).
+Plans (3 vertical — all ✅ LOOP COMPLETE 2026-06-08):
+- **v11-03-01** ✅ Org-context foundation — Edge `resolveOrgIdByDomain(host)` → `x-org-id` header → `<html data-org>` + client `OrgProvider`/`useOrg` (defaults crc outside provider). No visual change.
+- **v11-03-02** ✅ BL branding — scoped `[data-org="brotherslazaroff"]` navy dark CSS-var block (hue 252) + `forcedTheme=dark` + `getOrgBranding()` + org-aware login hero/wordmark. CRC indigo+amber untouched.
+- **v11-03-03** ✅ Vocab + UI trim — `label(org,key)` + `hidesLiturgicalFields()`; SetlistMetaEditSheet hides service-type + rabbi for BL, band vocab. CRC unchanged. (CreationWizard/perform/cards vocab DEFERRED to v11-04 — depends on org-scoping congregation+templates.)
 
 ### Phase v11-04: BL consumer surface + onboarding
 Focus: perform-view + gig-packet print scoped to the BL org; David's BL org membership + empty library seed; end-to-end UAT (David authors via MCP → views/prints a gig packet on brotherslazaroff.live). /ui-ux-pro-max BLOCKING.
