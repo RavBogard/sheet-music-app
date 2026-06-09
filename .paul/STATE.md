@@ -15,7 +15,7 @@ Milestone: **v11.1 Brothers Lazaroff Post-Launch Fixes — ✅ COMPLETE 2026-06-
 Phase: **None active.** Awaiting next milestone.
 Plan: **None.** Loop idle.
 Status: **v11.1 milestone CLOSED — archived (MILESTONES.md § v11.1 + `.paul/milestones/v11.1-ROADMAP.md`), package.json 11.1.0, tag `v11.1.0`. Ready for `/paul:discuss-milestone` or `/paul:milestone`.** On `master`, pushed to origin.
-Last activity: 2026-06-09 (session 7) — /paul:complete-milestone v11.1: MILESTONES entry + archive, PROJECT.md evolved, ROADMAP collapsed, version→11.1.0, tag v11.1.0.
+Last activity: 2026-06-09 (session 8) — post-close broslaz fixes: (1) diagnosed "setlist not displaying" = MCP bearer org pinned at mint time + Daniel was crc-only (not a broslaz bug); (2) fixed `/manage` People-list invisibility (Daniel's pre-convention user doc lacked `createdAt` → `orderBy("createdAt")` dropped him → backfilled); (3) Daniel self-granted broslaz via toggle (claim+doc verified `["crc","brotherslazaroff"]`); (4) deleted 2 test setlists +10 tracks; (5) shipped v11.1-05 authentic broslaz branding (`10c04099e1`).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -38,7 +38,7 @@ Last activity: 2026-06-09 (session 7) — /paul:complete-milestone v11.1: MILEST
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `29d9a96878` — v11.1 release/close commit; Vercel auto-deploy). **tag `v11.1.0`** on the v11.1 close (pushed). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`, in sync with `origin/master` (tip `10c04099e1` — v11.1-05 broslaz branding, session 8; Vercel auto-deploy). **tag `v11.1.0`** on the v11.1 close (pushed; `29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
@@ -85,10 +85,12 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.1 milestone COMPLETE 2026-06-09
 
 ## Session Continuity
 
-Last session: 2026-06-09 (session 7) — /paul:resume → shipped ALL of v11.1 (3 phases this turn: v11.1-01 branding + v11.1-03 library host-isolation + v11.1-04 vocab; v11.1-02 was already done) end-to-end (plan→apply→unify→transition→commit→push each). Every phase: full quality floor (tsc clean · suite 3339/0 · next build clean · /ui-ux-pro-max), CRC byte-identical, autonomous per directive. v11.1 CONTENT COMPLETE 4/4.
-Stopped at: **v11.1 milestone COMPLETE + archived (tag `v11.1.0`).** MCP authoring connection verified live. Loop idle, no milestone active.
-Next action: **`/paul:discuss-milestone`** (explore next scope) or **`/paul:milestone`** (create directly). Backlog to consider: recordings-collection org-scoping (+ upload orgId stamp), SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage. v7.1 hardening continues via `.coord/` independently.
-Resume file: **.paul/HANDOFF-2026-06-09-v11.1-complete.md** (session-7 handoff). Milestone record: .paul/MILESTONES.md § v11.1; reference: .paul/ROADMAP.md.
+Last session: 2026-06-09 (session 8) — /paul:resume on a "broslaz setlist not displaying" report → diagnosed it as the MCP **mint-time org-pinning** model (bearer bakes orgId at mint; Daniel was crc-only so setlists landed crc — not a bug), fixed the `/manage` People-list `createdAt`-orderBy invisibility (backfilled Daniel's doc), confirmed his self-grant to `["crc","brotherslazaroff"]`, deleted 2 test setlists, and shipped **v11.1-05 authentic broslaz branding** (real wordmark + teal/cyan palette + live hero + Zilla-Slab headings; `10c04099e1`; tsc/tests/build green; CRC byte-identical; via /ui-ux-pro-max).
+Stopped at: **v11.1 milestone still COMPLETE/idle.** v11.1-05 branding shipped + pushed (Vercel deploying). Loop idle, no milestone active.
+**OPEN ACTION ON DANIEL:** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp` to re-mint a broslaz-pinned bearer (existing token is crc-pinned from before his membership grant; authoring lands crc until he reconnects).
+Next action: **`/paul:discuss-milestone`** or **`/paul:milestone`**. Optional branding polish offered (BL PWA app icon; broslaz nav active-glow still hardcoded indigo). Backlog: recordings-collection org-scoping (+ upload orgId stamp), SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage. v7.1 hardening continues via `.coord/`.
+Resume file: **.paul/HANDOFF-2026-06-09-broslaz-branding.md** (session-8 handoff; supersedes the v11.1-complete one). Milestone record: .paul/MILESTONES.md § v11.1; reference: .paul/ROADMAP.md.
+Reusable lesson (session 8): MCP authoring org is pinned into the bearer at MINT time (`oauth/token/route.ts` → `resolveMintOrg` → `createMcpToken`), NOT re-resolved per request — a claim change requires a RECONNECT to take effect. And Firestore `orderBy(field)` silently drops docs missing that field (the People-list bug).
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Standing UAT-PENDING (v11.1 close gate, live tenant): broslaz authed nav ("Brothers Lazaroff" + BL monogram, desktop + iPad-WebKit); /library (broslaz-only charts in tab + add-songs picker + header search; admin "All sites" reveals full pool); dashboard ("Upcoming Shows"/"Create New Set") + matrix ("Set Matrix"); MCP authoring (Claude Desktop → `https://www.brotherslazaroff.live/api/mcp` → author test setlist → lands broslaz); admin sets a leader's Band access in /manage → People; CRC unchanged throughout.
 
