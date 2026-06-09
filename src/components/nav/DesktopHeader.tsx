@@ -21,6 +21,7 @@ import {
 import { useRouter } from "next/navigation"
 import { DriveFile } from "@/types/models"
 import { NotificationBell } from "@/components/nav/NotificationBell"
+import { OrgLogo } from "@/components/nav/OrgLogo"
 
 import { AppNavigationProps } from "./AppNavigation"
 
@@ -103,8 +104,9 @@ export function DesktopHeader(props: AppNavigationProps) {
             {/* Logo + Nav */}
             <div className="flex items-center gap-8">
                 <Link href="/" className="flex items-center gap-3 group min-h-11">
-                    <img src="/logo.jpg" alt="Central Reform Congregation logo" className="w-8 h-8 rounded-full border border-border transition-opacity group-hover:opacity-80" />
-                    <span className="font-display font-bold text-lg text-foreground group-hover:text-brand transition-colors">{congregation.shortName}</span>
+                    {/* v11.1-01: server-resolved host-org branding first (flash-free); congregation store is the live-update fallback. */}
+                    <OrgLogo logoUrl={props.serverLogoUrl ?? congregation.logoUrl} shortName={props.serverOrgShortName ?? congregation.shortName} sizeClass="w-8 h-8" />
+                    <span className="font-display font-bold text-lg text-foreground group-hover:text-brand transition-colors">{props.serverOrgShortName ?? congregation.shortName}</span>
                 </Link>
 
                 <nav className="flex items-center gap-1">

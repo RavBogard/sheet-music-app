@@ -32,6 +32,13 @@ export type OrgBranding = {
     ogTitle: string
     /** Web-manifest theme/background color (hex; manifests don't take oklch). */
     themeColor: string
+    /**
+     * v11.1-01: authed-nav logo source. A non-empty path renders an <img>;
+     * an empty string signals the nav to render a brand-colored initials
+     * monogram instead (no shipped asset). CRC keeps "/logo.jpg" — byte-identical
+     * to the prior hardcode in DesktopHeader/MobileHeader.
+     */
+    logoUrl: string
     /** Per-tenant web manifest path served from `public/`. */
     manifestPath: string
     /** metadataBase origin for absolute og/canonical URLs. */
@@ -49,6 +56,7 @@ const BRANDING: Record<OrgId, OrgBranding> = {
         metaDescription: "Digital Sheet Music Library for Central Reform Congregation",
         ogTitle: "Central Reform Congregation — Music",
         themeColor: "#0e0d18",
+        logoUrl: "/logo.jpg",
         manifestPath: "/manifest.json",
         // Preserve the prior CRC env override exactly (NEXT_PUBLIC_BASE_URL is
         // inlined at build; unset → centralreform.live). Other tenants pin their
@@ -67,6 +75,9 @@ const BRANDING: Record<OrgId, OrgBranding> = {
         // Deep cool-navy ≈ the dark canvas oklch(0.12 0.02 255); distinct from
         // CRC's indigo #0e0d18.
         themeColor: "#0a0e1a",
+        // Empty → nav renders a navy "BL" monogram (Daniel 2026-06-09); no
+        // shipped asset. Set a path here the day a real BL logo exists.
+        logoUrl: "",
         manifestPath: "/manifest-brotherslazaroff.json",
         baseUrl: "https://brotherslazaroff.live",
     },

@@ -7,8 +7,17 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useCongregation } from "@/lib/congregation-store"
 import { MobileMenuDrawer } from "@/components/nav/MobileMenuDrawer"
+import { OrgLogo } from "@/components/nav/OrgLogo"
 
-export function MobileHeader() {
+export function MobileHeader({
+    serverOrgShortName,
+    serverLogoUrl,
+}: {
+    // v11.1-01: server-resolved host-org branding (from (main)/layout.tsx) so the
+    // mobile nav is host-correct on first paint; congregation store is the fallback.
+    serverOrgShortName?: string
+    serverLogoUrl?: string
+} = {}) {
     const congregation = useCongregation()
     const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -31,13 +40,13 @@ export function MobileHeader() {
 
                 {/* Center: Logo + Name */}
                 <Link href="/" className="flex items-center gap-2 group">
-                    <img
-                        src="/logo.jpg"
-                        alt="Logo"
-                        className="w-7 h-7 rounded-full border border-border transition-opacity group-hover:opacity-80"
+                    <OrgLogo
+                        logoUrl={serverLogoUrl ?? congregation.logoUrl}
+                        shortName={serverOrgShortName ?? congregation.shortName}
+                        sizeClass="w-7 h-7"
                     />
                     <span className="font-display font-bold text-sm text-foreground">
-                        {congregation.shortName}
+                        {serverOrgShortName ?? congregation.shortName}
                     </span>
                 </Link>
 

@@ -5,20 +5,21 @@
 ## Current Milestone
 
 **🚧 v11.1 — Brothers Lazaroff Post-Launch Fixes** (In Progress · opened 2026-06-09)
-Status: 🚧 In Progress · Phases: 1 of 4 complete (v11.1-02 ✅)
+Status: 🚧 In Progress · Phases: 2 of 4 complete (v11.1-01 ✅ · v11.1-02 ✅)
 Focus: Make the second tenant's *lived experience* correct (branding, vocab, library clutter) and give multi-org leaders a real authoring path. Four evidence-backed live-tenant issues surfaced after the brotherslazaroff.live launch — v11.0 proved server-side + MCP isolation (probe 19/19); v11.1 fixes the consumer-facing seams + the multi-org authoring workflow the isolation audit didn't cover.
 **Tenancy model (locked `/paul:discuss-milestone` 2026-06-09):** consumers (musicians + members) are NOT per-org-gated — anyone can use either site, and the **landing-page host** determines the experience (branding/setlists/library); band leaders have explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle, governing authoring. (v7.1 Production Hardening continues separately via the bongo `.coord/` cowork cadence — independent of the PAUL loop.)
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| v11.1-01 | Org-aware authed branding (nav wordmark + logo) [P0] | TBD | Not started | - |
+| v11.1-01 | Org-aware authed branding (nav wordmark + logo) [P0] | 01-01 ✅ | ✅ Complete | 2026-06-09 |
 | v11.1-02 | Multi-org membership toggle + MCP authoring [P0] | 02-01 ✅ (authoring) · 02-02 ✅ (admin UI) | ✅ Complete | 2026-06-09 |
 | v11.1-03 | Library generic-tab visibility (host-filter + Shared + All-sites) [P1] | TBD | Not started | - |
 | v11.1-04 | broslaz liturgical vocab sweep [P1] | TBD | Not started | - |
 
 ### Phase v11.1-01: Org-aware authed branding [P0]
 Focus: On brotherslazaroff.live the authenticated top-nav still shows the "CRC Music" wordmark + CRC `/logo.jpg` despite the correct navy theme (public `/perform` wordmark was fixed in v11-04-02; the authed nav was never made org-aware). Make `src/components/nav/DesktopHeader.tsx` (`:106-107`) + `MobileHeader.tsx` (`:34-41`) resolve wordmark + logo from the host org (getOrgBranding / useOrg / congregation — the `config/congregation__brotherslazaroff` doc is already correct: name "Brothers Lazaroff", `logoUrl:""`). Decide the per-org logo asset story (broslaz `logoUrl` empty → text wordmark or a broslaz asset). CRC byte-identical. /ui-ux-pro-max BLOCKING.
-Plans: TBD (defined during /paul:plan)
+**Logo decision (Daniel 2026-06-09):** empty `logoUrl` → circular **initials monogram** ("BL"), code/theme-only, auto-upgrades to `<img>` when a `logoUrl` is ever set. **✅ SHIPPED 2026-06-09:** added `logoUrl` to `getOrgBranding` (crc `/logo.jpg`, broslaz `""`); `(main)/layout.tsx` resolves host org from `x-org-id` → passes `serverOrgShortName`+`serverLogoUrl` through `AppNavigation` to both headers (flash-free SSR); new `OrgLogo` (img when logoUrl set, else navy `bg-brand`/`text-brand-foreground` "BL" monogram). Congregation store kept as live-update fallback. CRC byte-identical (1 invisible a11y micro-improvement: mobile alt "Logo"→"Central Reform Congregation logo"). Gates: tsc clean · suite 3332/0 · `next build` clean.
+Plans: **01-01** ✅ LOOP COMPLETE (`v11.1-01-01-PLAN.md` + SUMMARY, 3 tasks).
 
 ### Phase v11.1-02: Multi-org membership + authoring [P0 — critical path]
 Focus: Unblock multi-org authoring. (A) NEW admin UI toggle to set a band leader's org membership — CRC / broslaz / both — writing the `orgIds` claim (replaces hand-run scripts like `fix-david-orgids-claim`). (B) Resolve which org a "both" leader's **hostless** MCP-authored setlist lands in (the live bug: Daniel's setlist landed `orgId:'crc'` because `getPrimaryOrgForMinting`→`orgIds[0]` + MCP forbids a caller org selector per v11-06-02). Options at plan time: (a) org-switcher minting a per-org bearer; (b) MCP accepts an org selector **validated strictly against the caller's own `orgIds`** (scoped exception — single-org callers keep the v11-06-02 lock, no cross-`orgIds` selection); (c) interim second broslaz MCP connection. Preserve the v11-06-02 isolation invariant.

@@ -11,11 +11,11 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Milestone: **v11.1 Brothers Lazaroff Post-Launch Fixes — 🚧 IN PROGRESS (opened 2026-06-09).** 4 phases, **1 complete (v11.1-02 ✅).**
-Phase: **v11.1-02 (Multi-org membership + authoring) — ✅ COMPLETE 2026-06-09 (2/2 plans).** Next phase = **v11.1-01 (Org-aware authed branding, P0) — needs PLAN.**
-Plan: **v11.1-02 both plans LOOP COMPLETE + SHIPPED.** 02-01 host-derived authoring bearer (`941e6856d1`); 02-02 admin org-membership toggle (`d466160601`). SUMMARYs in the phase dir.
-Status: **Phase v11.1-02 transitioned (PROJECT.md evolved, ROADMAP phase→complete). Ready to plan v11.1-01.** On `master`, in sync with origin (tip after phase commit). package.json 11.0.0.
-Last activity: 2026-06-09 — v11.1-02-02 APPLY+UNIFY (admin org-membership toggle; orgIds→claim+doc lockstep; /ui-ux-pro-max; unit 4/4; suite 3327/0; next build clean) → phase transition.
+Milestone: **v11.1 Brothers Lazaroff Post-Launch Fixes — 🚧 IN PROGRESS (opened 2026-06-09).** 4 phases, **2 complete (v11.1-01 ✅ · v11.1-02 ✅).**
+Phase: **v11.1-01 (Org-aware authed branding, P0) — ✅ COMPLETE + transitioned 2026-06-09 (1/1 plan).** Next phase = **v11.1-03 (Library generic-tab visibility, P1) — needs PLAN.**
+Plan: **v11.1-01-01 LOOP COMPLETE + committed.** Added `logoUrl` to getOrgBranding (crc /logo.jpg, broslaz ""); (main) layout resolves host org from x-org-id → serverOrgShortName+serverLogoUrl to both nav headers; new `OrgLogo` (img-or-navy-BL-monogram). CRC byte-identical. SUMMARY in phase dir.
+Status: **Phase v11.1-01 transitioned (PROJECT.md evolved, ROADMAP phase→complete). Ready to plan v11.1-03.** On `master`, pushed to origin. package.json 11.0.0.
+Last activity: 2026-06-09 (session 7) — v11.1-01-01 APPLY+UNIFY+transition (org-aware authed branding; OrgLogo img-or-monogram; /ui-ux-pro-max; tsc clean · suite 3332/0 · next build clean) → phase commit + push.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -45,7 +45,7 @@ Last activity: 2026-06-09 — v11.1-02-02 APPLY+UNIFY (admin org-membership togg
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-02 — PHASE COMPLETE 2026-06-09; next phase v11.1-01]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-01 — LOOP COMPLETE + transitioned 2026-06-09; next phase v11.1-03]
   ✓        ✓        ✓
 ```
 
@@ -83,11 +83,11 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.1-02 — PHASE COMPLETE 2026-06
 
 ## Session Continuity
 
-Last session: 2026-06-09 — /paul:resume (v11.0 was complete) → Daniel surfaced 4 post-launch issues on brotherslazaroff.live → triaged each against deployed code (Explore agents) + prod Firestore (firebase MCP): confirmed branding leak, library leak, and the missing-setlist root cause (orgId:'crc'); DELETED the throwaway setlist `bd3b549c` (verified gone) per Daniel; locked the two-tier tenancy model → /paul:discuss-milestone → /paul:milestone created v11.1 (4 phases).
-Stopped at: **Phase v11.1-02 COMPLETE + transitioned** (both plans shipped; PROJECT.md evolved; ROADMAP phase→complete). Multi-org authoring path is live: admin grants `orgIds` membership in /manage → leader authors per-tenant via that tenant's MCP URL.
-Next action: **`/paul:plan` for v11.1-01 (Org-aware authed branding, P0)** — make DesktopHeader/MobileHeader wordmark+logo resolve from the host org (broslaz still shows "CRC Music" + /logo.jpg on its authed nav); broslaz congregation doc already correct; CRC byte-identical; **/ui-ux-pro-max BLOCKING**. Then v11.1-03 (library visibility, P1) + v11.1-04 (vocab, P1).
-Resume file: **.paul/HANDOFF-2026-06-09-v11.1-02-complete.md** (full session-6 handoff) → next is `/paul:plan` v11.1-01. Milestone reference: .paul/ROADMAP.md.
-Git strategy: master (prod), in sync with origin/master (tip `648c0a3278`). `git pull` first next session (multi-computer); push `origin master`.
+Last session: 2026-06-09 (session 7) — /paul:resume (v11.1-02 complete) → /paul:plan + /paul:apply + /paul:unify v11.1-01 (org-aware authed branding): added getOrgBranding.logoUrl, host-org resolution in (main) layout, OrgLogo (img-or-monogram), wired both nav headers; monogram-fallback logo decision locked (Daniel). 3 tasks E/Q PASS; tsc clean · suite 3332/0 · next build clean. Phase transitioned + committed + pushed.
+Stopped at: **Phase v11.1-01 COMPLETE + transitioned.** broslaz authed nav now self-branded (BL monogram); CRC byte-identical. 2/4 v11.1 phases done.
+Next action: **`/paul:plan` for v11.1-03 (Library generic-tab visibility, P1)** — host-filter the 4 unscoped reads (`/api/library/list`, getServerLibrary/getServerLibraryLean, recordings subscribe) + Shared flag + admin All-sites toggle + org-neutral broslaz tab labels; display-only (err-public holds); /ui-ux-pro-max BLOCKING. Then v11.1-04 (vocab, P1; may fold into 03's UI pass).
+Resume file: **.paul/phases/v11.1-01-authed-branding/v11.1-01-01-SUMMARY.md**. Milestone reference: .paul/ROADMAP.md.
+Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Standing UAT-PENDING (non-blocking): Daniel — connect Claude Desktop to `https://www.brotherslazaroff.live/api/mcp` + author a test setlist; admin — set a leader's Band access in /manage → People.
 
 ---

@@ -15,6 +15,16 @@ describe("getOrgBranding", () => {
         expect(b.shortName).toBe("CRC Music")
     })
 
+    // v11.1-01: authed-nav logo source. CRC keeps "/logo.jpg" (byte-identical
+    // to the prior DesktopHeader/MobileHeader hardcode); broslaz is empty so the
+    // nav renders the brand-colored "BL" monogram.
+    it("exposes the authed-nav logoUrl per org (crc keeps /logo.jpg, broslaz empty → monogram)", () => {
+        expect(getOrgBranding("crc").logoUrl).toBe("/logo.jpg")
+        expect(getOrgBranding("brotherslazaroff").logoUrl).toBe("")
+        // unknown tenant falls back to CRC branding → CRC logo.
+        expect(getOrgBranding("unknown-tenant").logoUrl).toBe("/logo.jpg")
+    })
+
     it("falls back to CRC branding for an unknown org id", () => {
         const b = getOrgBranding("unknown-tenant")
         expect(b.shortName).toBe("CRC Music")

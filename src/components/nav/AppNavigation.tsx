@@ -14,6 +14,11 @@ export interface AppNavigationProps {
     // public routes (e.g. /changelog under (main)) routes Setlists →
     // /perform without an authed-link FOUC.
     serverIsAuthed?: boolean
+    // v11.1-01: server-resolved host-org branding so the authed nav wordmark +
+    // logo are correct on first paint (no CRC-default flash before the
+    // congregation store syncs). Resolved from x-org-id in (main)/layout.tsx.
+    serverOrgShortName?: string
+    serverLogoUrl?: string
 }
 
 export function AppNavigation(props: AppNavigationProps) {
@@ -24,7 +29,7 @@ export function AppNavigation(props: AppNavigationProps) {
         <div className="z-40 w-full relative print:hidden">
             <GlobalAlertBanner />
             <DesktopHeader {...props} />
-            <MobileHeader />
+            <MobileHeader serverOrgShortName={props.serverOrgShortName} serverLogoUrl={props.serverLogoUrl} />
             <MobileTabBar {...props} />
         </div>
     )
