@@ -2,6 +2,7 @@
 
 import { useMusicStore, QueueItem } from "@/lib/store"
 import { useAuth } from "@/lib/auth-context"
+import { useOrg } from "@/lib/org/org-context"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
 import { Button } from "@/components/ui/button"
@@ -102,6 +103,8 @@ export function SetlistDrawer() {
     const router = useRouter()
     const { playbackQueue, queueIndex, setQueue } = useMusicStore()
     const { user } = useAuth()
+    // v11-04-03: scope the public-picker subscription to the host's tenant.
+    const org = useOrg()
     const [open, setOpen] = useState(false)
     const [publicSetlists, setPublicSetlists] = useState<Setlist[]>([])
     const [loading, setLoading] = useState(false)
@@ -210,11 +213,12 @@ export function SetlistDrawer() {
                 (err) => {
                     logger.error("Failed to load public setlists", err)
                     setLoading(false)
-                }
+                },
+                org,
             )
             return () => unsubscribe()
         }
-    }, [open, showPublicPicker, user?.uid, user?.displayName])
+    }, [open, showPublicPicker, user?.uid, user?.displayName, org])
 
     const handleSelectSetlist = async (setlist: Setlist) => {
         // v60-06-05: read tracks from Dexie (canonical) with embedded-array

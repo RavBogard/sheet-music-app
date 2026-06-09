@@ -35,7 +35,7 @@ function eventInstant(row: { eventDate?: unknown }): number | null {
  * were silently omitted. Fetch by the type-consistent `date` field and
  * compute the upcoming window in memory so both representations count.
  */
-export async function getUpcomingSetlists() {
+export async function getUpcomingSetlists(opts: { org?: OrgId } = {}) {
     try {
         initAdmin()
         const db = getFirestore()
@@ -44,8 +44,15 @@ export async function getUpcomingSetlists() {
         startOfToday.setHours(0, 0, 0, 0)
         const cutoff = startOfToday.getTime()
 
-        const snap = await db
-            .collection("setlists")
+        // v11-04-03: opt-in tenant scoping (mirrors getAllSetlists). With `org`,
+        // restrict to that tenant via the deployed (orgId,date) index; without,
+        // behavior is unchanged. No live caller passes org today (re-exported as
+        // getUpcomingPublicSetlists) — added for parity/defense.
+        const col = db.collection("setlists")
+        const scoped: FirebaseFirestore.Query = opts.org
+            ? col.where("orgId", "==", opts.org)
+            : col
+        const snap = await scoped
             .orderBy("date", "desc")
             .limit(MAX_SETLIST_FETCH)
             .get()
@@ -69,13 +76,17 @@ export async function getUpcomingSetlists() {
 /**
  * Fetch recent setlists (for users with no upcoming events).
  */
-export async function getRecentSetlists() {
+export async function getRecentSetlists(opts: { org?: OrgId } = {}) {
     try {
         initAdmin()
         const db = getFirestore()
 
-        const snap = await db
-            .collection("setlists")
+        // v11-04-03: opt-in tenant scoping (see getUpcomingSetlists).
+        const col = db.collection("setlists")
+        const scoped: FirebaseFirestore.Query = opts.org
+            ? col.where("orgId", "==", opts.org)
+            : col
+        const snap = await scoped
             .orderBy("date", "desc")
             .limit(5)
             .get()
@@ -204,6 +215,7 @@ export interface SetlistsPage {
 export async function getSetlistsPage(opts: {
     cursor?: string | null
     pageSize?: number
+    org?: OrgId
 } = {}): Promise<SetlistsPage> {
     try {
         initAdmin()
@@ -214,8 +226,16 @@ export async function getSetlistsPage(opts: {
                 ? Math.min(opts.pageSize, MAX_SETLIST_FETCH)
                 : 50
 
-        let q = db
-            .collection("setlists")
+        // v11-04-03: opt-in tenant scoping for the authed /setlists dashboard.
+        // With `org` (the SSR page + /api/setlists/page route pass the host's
+        // coerced org), restrict to that tenant — the where+orderBy+startAfter
+        // chain is backed by the deployed (orgId,date) index. Without org, the
+        // query stays cross-tenant (unchanged contract for any no-org caller).
+        const col = db.collection("setlists")
+        const scoped: FirebaseFirestore.Query = opts.org
+            ? col.where("orgId", "==", opts.org)
+            : col
+        let q = scoped
             .orderBy("date", "desc")
             .limit(pageSize + 1) // +1 sentinel so we know if a next page exists
 

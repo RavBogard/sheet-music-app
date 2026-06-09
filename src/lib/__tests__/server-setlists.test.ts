@@ -58,6 +58,7 @@ import {
     getUpcomingSetlists,
     getRecentSetlists,
     getAllSetlists,
+    getSetlistsPage,
     getUpcomingPublicSetlists,
     getRecentPublicSetlists,
     getPersonalSetlists,
@@ -284,5 +285,40 @@ describe('getAllSetlists — v11-04-01 tenant scoping (cross-tenant non-leak)', 
         await getAllSetlists({ org: 'brotherslazaroff' })
         expect(mockWhere).toHaveBeenCalledWith('orgId', '==', 'crc')
         expect(mockWhere).toHaveBeenCalledWith('orgId', '==', 'brotherslazaroff')
+    })
+})
+
+describe('authed read paths — v11-04-03 tenant scoping (getSetlistsPage / getUpcoming / getRecent)', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        mockShouldThrow = false
+        mockSnapshotDocs = [
+            makeDoc('bl1', { name: 'BL gig', orgId: 'brotherslazaroff', date: '2026-06-01T00:00:00Z' }),
+        ]
+    })
+
+    it("getSetlistsPage applies .where('orgId','==',org) when org is passed", async () => {
+        await getSetlistsPage({ org: 'brotherslazaroff', pageSize: 50 })
+        expect(mockWhere).toHaveBeenCalledWith('orgId', '==', 'brotherslazaroff')
+        expect(mockOrderBy).toHaveBeenCalledWith('date', 'desc')
+    })
+
+    it("getSetlistsPage does NOT filter by orgId when no org is passed (preserves cross-tenant contract)", async () => {
+        await getSetlistsPage({ pageSize: 50 })
+        expect(mockWhere).not.toHaveBeenCalledWith('orgId', '==', expect.anything())
+    })
+
+    it("getUpcomingSetlists / getRecentSetlists apply the orgId where when org is passed", async () => {
+        await getUpcomingSetlists({ org: 'crc' })
+        expect(mockWhere).toHaveBeenCalledWith('orgId', '==', 'crc')
+        vi.clearAllMocks()
+        await getRecentSetlists({ org: 'brotherslazaroff' })
+        expect(mockWhere).toHaveBeenCalledWith('orgId', '==', 'brotherslazaroff')
+    })
+
+    it("getUpcomingSetlists / getRecentSetlists stay cross-tenant with no org (unchanged contract)", async () => {
+        await getUpcomingSetlists()
+        await getRecentSetlists()
+        expect(mockWhere).not.toHaveBeenCalledWith('orgId', '==', expect.anything())
     })
 })

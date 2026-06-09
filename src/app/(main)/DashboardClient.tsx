@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
+import { useOrg } from "@/lib/org/org-context"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { getContextualGreeting, Greeting } from "@/lib/greeting"
 import { toDate } from "@/lib/firestore-helpers"
@@ -94,6 +95,10 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
     const setlistService = useMemo(() => {
         return createSetlistService(user?.uid || null, user?.displayName || null)
     }, [user?.uid, user?.displayName])
+
+    // v11-04-03: scope the live dashboard subscription to the host's tenant so a
+    // signed-in BL user never sees CRC setlists (mirrors PublicSetlistListing).
+    const org = useOrg()
 
     const filterUpcoming = useMemo(() => {
         return (setlists: Setlist[]) => {
@@ -199,10 +204,11 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                 setSubscriptionError(msg)
                 setSetlistsLoaded(true)
             },
+            org,
         )
 
         return () => unsub()
-    }, [setlistService, filterUpcoming])
+    }, [setlistService, filterUpcoming, org])
 
     // Content is ready once setlists have loaded.
     const setlistsReady = setlistsLoaded

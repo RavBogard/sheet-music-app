@@ -159,3 +159,10 @@ Check (as an editor — admin/band_leader — in a real browser on the deployed 
 
 ## v11-02b — David can now self-onboard (2026-06-08)
 - [ ] David adds the MCP server in Claude Desktop and **logs in** (OAuth flow) → he now receives a `brotherslazaroff`-scoped bearer automatically (no manual token needed; the mint paths derive org from his orgIds claim). His existing manual bearer (tokenId `93JMXhT1OspFsWDMmb9V`) also still works. Confirm he sees only Brothers Lazaroff data. (Supersedes the manual-handoff step above — either path works.)
+
+## v11-04-03 — authed-dashboard tenant scoping + David's empty-library onboarding (2026-06-09)
+**Deployed commit:** `feat(v11-04-03)` (pushed origin master 2026-06-09; Vercel prod). Authed `/setlists` dashboard reads are now org-scoped (getSetlistsPage SSR + /api/setlists/page + the 4 client subscriptions pass the host org). Server-side proven by unit tests; the items below are the live human/authed-session confirmation (no-local-dev → prod is the only place the host→org seam shows; same lesson as the v11-03 coerceOrgId hotfix).
+- [ ] **Sign in on brotherslazaroff.live** (David, or any account with `orgIds:['brotherslazaroff']`) and open `/setlists`. Confirm the dashboard shows ONLY Brothers Lazaroff setlists — currently that's the **empty-library state** (BL has no setlists yet), NOT any CRC service. Confirm the empty state reads as intentional (not a stuck spinner / error).
+- [ ] Confirm "Load more" (if reachable) and the live updates carry no CRC rows.
+- [ ] **Sign in on centralreform.live** and open `/setlists` → confirm CRC's dashboard is UNCHANGED (all CRC setlists present, same order) — no CRC lock-out / regression.
+- [ ] (Onboarding) David creates his first BL setlist **via MCP** (which stamps orgId, v11-02-03) → confirm it appears in his BL dashboard. NOTE/DEFERRED: in-app CreationWizard setlist-create orgId stamping is NOT in v11-04-03 (read scoping only) — an in-app-created BL setlist lacking orgId would not appear in the scoped dashboard. Tracked for v11-05 write-scoping.

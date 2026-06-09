@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { Timestamp } from "firebase/firestore"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/auth-context"
+import { useOrg } from "@/lib/org/org-context"
 import { applyEdit } from "@/lib/local/write"
 import { createSetlistService } from "@/lib/setlist-firebase"
 import type { DriveFile, Setlist, SetlistTrack } from "@/types/models"
@@ -66,14 +67,21 @@ export function useAddToSetlist() {
     [user?.uid, user?.displayName]
   )
 
+  // v11-04-03: scope the subscription to the host's tenant.
+  const org = useOrg()
+
   // Subscribe to all setlists (v4.0: single unified list)
   useEffect(() => {
-    const unsub = setlistService.subscribeToAllSetlists((setlists) => {
-      setAllSetlists(setlists)
-      setLoaded(true)
-    })
+    const unsub = setlistService.subscribeToAllSetlists(
+      (setlists) => {
+        setAllSetlists(setlists)
+        setLoaded(true)
+      },
+      undefined,
+      org,
+    )
     return () => unsub()
-  }, [setlistService])
+  }, [setlistService, org])
 
   const loading = !loaded
 

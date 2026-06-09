@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { SERVICE_TYPE_LABELS } from "@/components/setlist/SetlistCards"
 import { useAuth } from "@/lib/auth-context"
+import { useOrg } from "@/lib/org/org-context"
 import { apiFetch } from "@/lib/api-client"
 import { useOffline } from "@/hooks/use-offline"
 import { fetchTracksForSetlistClient } from "@/lib/client-tracks"
@@ -50,6 +51,8 @@ export function useSetlistDashboard({
 }: UseSetlistDashboardProps) {
     const router = useRouter()
     const { user: authUser, signIn, isMember: authIsMember, isBandLeader: authIsBandLeader, isAdmin: authIsAdmin } = useAuth()
+    // v11-04-03: scope the dashboard subscription to the host's tenant.
+    const org = useOrg()
 
     // Use server-provided values for initial render to prevent hydration flashes
     const isMember = authIsMember || serverIsMember
@@ -140,10 +143,11 @@ export function useSetlistDashboard({
                 logger.error("Setlist subscription error:", err)
                 setError("Failed to load setlists. Please check your connection.")
                 setLoading(false)
-            }
+            },
+            org,
         )
         return () => unsubscribe()
-    }, [setlistService, authUser?.uid])
+    }, [setlistService, authUser?.uid, org])
 
     // Load library in background
     useLibrary()

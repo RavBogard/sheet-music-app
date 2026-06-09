@@ -4,6 +4,7 @@ import { getSetlistsPage } from "@/lib/server-setlists"
 import { httpError } from "@/lib/http/error-envelope"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import { coerceOrgId } from "@/lib/org/registry"
 
 /**
  * Cycle-3.5 P2-004 — cursor-paginated `setlists` page endpoint.
@@ -41,7 +42,11 @@ export async function GET(req: NextRequest) {
             )
         }
 
-        const page = await getSetlistsPage({ cursor, pageSize })
+        // v11-04-03: scope "Load more" to the host's tenant. The Edge proxy sets
+        // x-org-id on every matched route incl. /api (proxy.ts), so the paginated
+        // browse matches the SSR-prefetched first page's tenant.
+        const org = coerceOrgId(req.headers.get("x-org-id"))
+        const page = await getSetlistsPage({ cursor, pageSize, org })
         return NextResponse.json(page)
     } catch (error: unknown) {
         logger.warn("[setlists/page] fetch failed:", error)
