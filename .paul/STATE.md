@@ -12,7 +12,7 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.2 MCP Stress-Test Fixes — OPEN 2026-06-09.** 5 phases scoped from the Brothers Lazaroff stress-test report (BL tenant only; CRC untouched). 0/5 complete. (v11.1 ✅ COMPLETE, tag `v11.1.0`, archived.)
-Phase: **v11.2-03 MCP error contract [P1/P2]** — 🚧 in progress, 1 of 2 plans done. **03-01 BUG-2 ✅ LOOP COMPLETE + shipped `<sha>`; 03-02 BUG-3 next.** (v11.2-01 ✅ `6920d61668` · v11.2-02 ✅ `6079d4e3cf`.) Milestone v11.2: 2 of 5 phases done.
+Phase: **v11.2-03 MCP error contract [P1/P2]** — 🚧 in progress, 1 of 2 plans done. **03-01 BUG-2 ✅ LOOP COMPLETE + shipped `54cd7ba3bc`; 03-02 BUG-3 next.** (v11.2-01 ✅ `6920d61668` · v11.2-02 ✅ `6079d4e3cf`.) Milestone v11.2: 2 of 5 phases done.
 Plan: **None active.** Loop idle — ready for next PLAN (v11.2-03-02, BUG-3 bulk per-row envelope).
 Status: **v11.2-03-01 (BUG-2) SHIPPED + committed + pushed to `master`.** Deterministic client errors now correct: add_track unknown songId→404, reorder bad ids→400, upload dedup→409, genuine fault→500. Shared `uploadFailureEnvelope` de-drifts all 4 upload tools. Gates: tsc clean · unit 12/12 · emulator mcp-chart-upload 55/55 · next build clean. CRC byte-identical.
 Last activity: 2026-06-09 (session 9) — `/paul:resume` consumed the BL stress-test report (9 findings) → `/paul:milestone` created **v11.2 MCP Stress-Test Fixes**: v11.2-01 BUG-1 propose/commit resolver [P0] · v11.2-02 BUG-9 publish-audience verify [P1] · v11.2-03 BUG-2/3 error contract · v11.2-04 BUG-4/5 hygiene · v11.2-05 BUG-6/7/8 P3 polish. Phase order = the report's suggested fix order.
@@ -41,7 +41,7 @@ Last activity: 2026-06-09 (session 9) — `/paul:resume` consumed the BL stress-
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `6079d4e3cf` — **v11.2-02 BUG-9 publish-audience org-scope**, session 9; Vercel auto-deploy). v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf`. **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`, in sync with `origin/master` (tip `54cd7ba3bc` — **v11.2-03-01 BUG-2 error-contract status codes**, session 10; Vercel auto-deploy). v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc`. **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
