@@ -721,6 +721,53 @@ export async function cleanupAllTestDataCore(
         }
     }
 
+    // v11.2-04-02 (BUG-5): owner-independent isTest flag-sweep.
+    //
+    // The owner-cascade above only removes data OWNED by a `test-*` uid. A
+    // setlist authored under a REAL admin uid but stamped `isTest:true`
+    // (explicit override at create_setlist, or the [TEST/CYCLE/CF] name
+    // heuristic) is invisible to that cascade and lingers in prod (BL
+    // stress-test 2026-06-09). Sweep it by flag here.
+    //
+    // FULL-SWEEP MODE ONLY: when a `prefix` was supplied this is a
+    // parallel-cowork isolation call — a global flag-sweep would cross-delete
+    // a sibling instance's fixtures, breaking the uidPrefix contract
+    // (feedback_sandbox_test_isolation). So gate on `fullPrefix === null`.
+    //
+    // No dedup needed: this query runs AFTER the owner-cascade, so any
+    // test-owned isTest setlist is already deleted and won't reappear here —
+    // only real-owner flag-true rows remain. Deletes use the admin SDK
+    // directly (no caller-role dependency), so the caller-last ordering and
+    // the self-inclusion path (caller is a test bearer) stay correct.
+    if (fullPrefix === null) {
+        const flagSnap = await db
+            .collection("setlists")
+            .where("isTest", "==", true)
+            .get()
+        let flagSetlists = 0
+        let flagTracks = 0
+        for (const doc of flagSnap.docs) {
+            try {
+                const trackSnap = await db
+                    .collection("tracks")
+                    .where("setlistId", "==", doc.id)
+                    .get()
+                const bw = db.bulkWriter()
+                for (const t of trackSnap.docs) bw.delete(t.ref)
+                await bw.close()
+                flagTracks += trackSnap.size
+                await doc.ref.delete()
+                flagSetlists++
+            } catch (err) {
+                failures.push(
+                    `setlist:${doc.id}: ${err instanceof Error ? err.message : String(err)}`,
+                )
+            }
+        }
+        if (flagSetlists > 0) aggregate["setlists.isTest"] = flagSetlists
+        if (flagTracks > 0) aggregate["tracks.isTest"] = flagTracks
+    }
+
     breadcrumb("cleanup", { callerUid, removed, failures: failures.length, aggregate })
     return { removed, failures, aggregate }
 }

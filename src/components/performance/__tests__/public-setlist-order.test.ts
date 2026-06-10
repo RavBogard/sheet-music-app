@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { splitPublicSetlists } from "../public-setlist-order"
+import { splitPublicSetlists, isNonTestSetlist } from "../public-setlist-order"
 import type { Setlist } from "@/lib/setlist-firebase"
 
 // Minimal Setlist builder for ordering tests. Local-time event strings (no `Z`)
@@ -46,5 +46,22 @@ describe("splitPublicSetlists", () => {
             return [...upcoming, ...past].map((s) => s.id)
         })()
         expect(allIds).toEqual(["real"])
+    })
+})
+
+describe("isNonTestSetlist (shared /perform + dashboard predicate, BUG-5)", () => {
+    it("returns false for an explicit isTest:true row", () => {
+        expect(isNonTestSetlist({ isTest: true, ownerId: "real-admin" })).toBe(false)
+    })
+
+    it("returns false for a test-uid-owned row (legacy isTest:undefined)", () => {
+        expect(isNonTestSetlist({ ownerId: "test-probe-1" })).toBe(false)
+        expect(isNonTestSetlist({ ownerId: "c7i1-band_leader-abc" })).toBe(false)
+    })
+
+    it("returns true for a real setlist (isTest:false or absent, real owner)", () => {
+        expect(isNonTestSetlist({ isTest: false, ownerId: "real-admin" })).toBe(true)
+        expect(isNonTestSetlist({ ownerId: "real-admin" })).toBe(true)
+        expect(isNonTestSetlist({ ownerId: null })).toBe(true)
     })
 })

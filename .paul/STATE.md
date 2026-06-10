@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.2 MCP Stress-Test Fixes — OPEN 2026-06-09.** 5 phases scoped from the Brothers Lazaroff stress-test report (BL tenant only; CRC untouched). 0/5 complete. (v11.1 ✅ COMPLETE, tag `v11.1.0`, archived.)
-Phase: **v11.2-04 publish + test-data hygiene [P2]** — 🚧 in progress, 1 of 2 plans done. **04-01 BUG-4 ✅ LOOP COMPLETE + shipped; 04-02 BUG-5 next.** (v11.2-01 ✅ · 02 ✅ · 03 ✅.) Milestone v11.2: 3 of 5 phases done.
-Plan: **None active.** Loop idle — ready for next PLAN (v11.2-04-02, BUG-5: `cleanup_all_test_data` sweep owner-real `isTest` setlists + `(main)` dashboard `isTest` filter decision; self-inclusion regression-test rule applies).
-Status: **v11.2-04-01 (BUG-4) SHIPPED + committed + pushed to `master`.** preview_publish surfaces `unbondedSongCount`/`unbondedSongs[]` (isSongType && !fileId && !songId) + escalates recommendation to `review_first`; hard_block precedence preserved. Gates: tsc clean · emulator mcp-w01-preview-and-bonds **14/14** · next build clean. CRC byte-identical (additive fields). DISCOVERY: an ALL-unbonded setlist is already refused by publish's `no_bonded_songs` (400) gate (even on dryRun) — BUG-4 only matters for MIXED setlists where bonded songs mask blank ones.
-Last activity: 2026-06-11 (session 11) — `/paul:apply` + `/paul:unify` v11.2-04-01 (BUG-4); per-plan loop closed (phase 04 stays open for 04-02). Committed + pushed to `master`.
+Phase: **v11.2-04 publish + test-data hygiene [P2]** — ✅ COMPLETE 2026-06-11 (both plans LOOP COMPLETE + shipped). (v11.2-01 ✅ · 02 ✅ · 03 ✅ · 04 ✅.) **Next: v11.2-05 P3 polish (BUG-6/7/8) — the LAST phase.** Milestone v11.2: 4 of 5 phases done.
+Plan: **None active.** Loop idle — ready for next PLAN (v11.2-05-01, P3 polish: BUG-6 "CRC MUSIC" authed-header brand leak on broslaz · BUG-7 text/plain chord-over-lyric fragmentation · BUG-8 ISO timestamp serialization at MCP boundary; CRC byte-identical constraint applies to BUG-6/BUG-8).
+Status: **v11.2-04 SHIPPED + committed + pushed to `master`.** BUG-4 (04-01, prior session): preview_publish flags unbonded song rows. BUG-5 (04-02, this session): `cleanupAllTestDataCore` owner-independent `isTest` setlist flag-sweep (full-sweep-mode only, prefix-isolation preserved) + shared `isNonTestSetlist` predicate hides isTest setlists from the authed dashboard (reused from /perform). library_index flag-sweep DROPPED (verified: isTest is Setlist-only). Gates: tsc clean · emulator mcp-test-tokens **28/28** · perf suite 23/23 (public-view parity) · next build clean.
+Last activity: 2026-06-11 (session 12) — `/paul:unify` v11.2-04-02 (BUG-5) → phase v11.2-04 transition (ROADMAP ✅, PROJECT deferred to milestone close per 01-03 pattern, commit + push).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -48,7 +48,7 @@ Last activity: 2026-06-11 (session 11) — `/paul:apply` + `/paul:unify` v11.2-0
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-04-01 (BUG-4) LOOP COMPLETE — phase 04 open, next plan 04-02 (BUG-5)]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-04-02 (BUG-5) LOOP COMPLETE — phase 04 ✅, next phase 05]
   ✓        ✓        ✓
 ```
 

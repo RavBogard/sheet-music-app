@@ -14,6 +14,7 @@ import { QRSignIn } from "@/components/auth/QRSignIn"
 import { NextServiceCard } from "@/components/home/NextServiceCard"
 import { CompactSetlistRow } from "@/components/dashboard"
 import { OnboardingCard } from "@/components/dashboard/OnboardingCard"
+import { isNonTestSetlist } from "@/components/performance/public-setlist-order"
 import { cn } from "@/lib/utils"
 import { formatError } from "@/lib/format-error"
 
@@ -183,14 +184,19 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
         console.info(`[Dashboard] subscribing — authUid=${authUser?.uid ?? 'null'} serverUid=${serverUid ?? 'null'} effectiveUid=${effectiveUid ?? 'null'}`)
         const unsub = setlistService.subscribeToAllSetlists(
             (setlists, fromCache) => {
-                const upcoming = filterUpcoming(setlists)
+                // v11.2-04-02 (BUG-5): drop isTest fixtures at the data boundary
+                // so they never reach Upcoming/recent/past — mirrors the
+                // /perform filter (isNonTestSetlist) for surface parity. The
+                // diag count below stays on the RAW fetch (subscription health).
+                const visible = setlists.filter(isNonTestSetlist)
+                const upcoming = filterUpcoming(visible)
                 setUpcomingSetlistsState(upcoming.slice(0, 5))
-                const recent = setlists
+                const recent = visible
                     .filter(s => s.eventDate)
                     .sort((a, b) => (toDate(b.eventDate)?.getTime() || 0) - (toDate(a.eventDate)?.getTime() || 0))
                     .slice(0, 5)
                 setRecentSetlists(recent)
-                setAllSetlists(setlists)
+                setAllSetlists(visible)
                 setSetlistsLoaded(true)
                 setSubscriptionError(null)
                 setDiagInfo({ count: setlists.length, fromCache, firedAt: new Date().toLocaleTimeString() })

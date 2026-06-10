@@ -9,7 +9,7 @@
 ## Active Milestone
 
 **🚧 v11.2 — MCP Stress-Test Fixes** (OPEN 2026-06-09)
-Status: 🚧 In Progress · Phases: 3 of 5 (v11.2-01 ✅ · v11.2-02 ✅ · v11.2-03 ✅) · Source: Brothers Lazaroff MCP + Perform **stress-test report** (2026-06-09; BL tenant only, CRC untouched, all test data cleaned — tenant verified empty post-run).
+Status: 🚧 In Progress · Phases: 4 of 5 (v11.2-01 ✅ · v11.2-02 ✅ · v11.2-03 ✅ · v11.2-04 ✅) · Source: Brothers Lazaroff MCP + Perform **stress-test report** (2026-06-09; BL tenant only, CRC untouched, all test data cleaned — tenant verified empty post-run).
 Focus: Close the 9 findings from the BL stress test. Headline is **BUG-1 (P0)** — `propose_setlist_changes` 404s on MCP-created (UUID-id) setlists, so the server-`instructions`-mandated **stage → surface confidence → confirm → commit** authoring policy is non-functional for every MCP-authored setlist. Plus a **verify-first cross-tenant publish-audience risk (BUG-9)**, agent-facing error-contract correctness (BUG-2/BUG-3), publish + test-data hygiene (BUG-4/BUG-5), and P3 polish (BUG-6 brand leak / BUG-7 chord-over-lyric renderer / BUG-8 timestamp serialization). Phase order follows the report's suggested fix order (P0 → verify → contract → P2 → P3).
 
 | Phase | Name | Plans | Status | Completed |
@@ -17,7 +17,7 @@ Focus: Close the 9 findings from the BL stress test. Headline is **BUG-1 (P0)** 
 | v11.2-01 | propose/commit resolver fix — BUG-1 [P0] | 01-01 ✅ | ✅ Complete | 2026-06-09 |
 | v11.2-02 | publish-audience org scoping — BUG-9 [P1 · VERIFY-FIRST] | 01-01 ✅ | ✅ Complete | 2026-06-09 |
 | v11.2-03 | MCP error contract — BUG-2 + BUG-3 [P1/P2] | 01 (BUG-2) ✅ · 02 (BUG-3) ✅ | ✅ Complete | 2026-06-11 |
-| v11.2-04 | publish + test-data hygiene — BUG-4 + BUG-5 [P2] | TBD | Not started | - |
+| v11.2-04 | publish + test-data hygiene — BUG-4 + BUG-5 [P2] | 01 (BUG-4) ✅ · 02 (BUG-5) ✅ | ✅ Complete | 2026-06-11 |
 | v11.2-05 | P3 polish — BUG-6 + BUG-7 + BUG-8 [P3] | TBD | Not started | - |
 
 ### Phase v11.2-01: propose/commit resolver fix [P0 — critical path]
@@ -41,7 +41,9 @@ Plans:
 
 ### Phase v11.2-04: publish + test-data hygiene [P2]
 Focus: **BUG-4:** `preview_publish` is blind to `type:"song"` rows with no chart bond (`fileId/songId=null`) — they render blank in Perform yet preview returns `recommendation:"publish", flaggedBonds:0` (`verify_setlist_charts` already catches them as `unbonded`). Make `preview_publish` count unbonded song rows and emit `recommendation:"review_first"` / an `unbondedSongCount` warning, distinguishing intentionally chart-less rows (header/reading/prayer/transition/note). **BUG-5:** `isTest:true` setlists created under a real admin uid are (a) never swept by `cleanup_all_test_data` (it only cascades `test-*`-owned data via `mcpTestUsers` + Auth `test-*`) and (b) shown on the authed `(main)` dashboard (correctly hidden from `/perform`). Either extend `cleanup_all_test_data` to also sweep `setlists`/`library_index` where `isTest==true` independent of owner (same admin/band_leader gate) OR document the manual-delete requirement; and decide whether the `(main)` dashboard should reuse the `/perform` `isTest!=true` filter. (Self-inclusion regression-test rule applies — [[feedback_self_inclusion_test_fixtures]].)
-Plans: TBD (defined during /paul:plan)
+Plans: 01 (BUG-4) ✅ · 02 (BUG-5) ✅
+
+**Phase v11.2-04 ✅ COMPLETE 2026-06-11** — BUG-4: `preview_publish` flags unbonded `type:song` rows (`review_first`). BUG-5: `cleanup_all_test_data` gained an owner-independent `setlists where isTest==true` flag-sweep (full-sweep-mode only, prefix-isolation preserved) + the authed `(main)` dashboard now hides isTest setlists via a shared `isNonTestSetlist` predicate reused from `/perform`. **Scope correction:** the `library_index` flag-sweep in the original phase text was DROPPED — `isTest` is a Setlist-only field (charts/songs are owner-cascaded), so there is no flag to sweep on `library_index`. Gates: tsc clean · emulator mcp-test-tokens 28/28 · perf suite 23/23 · next build clean.
 
 ### Phase v11.2-05: P3 polish [P3]
 Focus: **BUG-6:** authed `(main)` dashboard header renders "CRC MUSIC" on brotherslazaroff.live (`/perform` correctly shows "Brothers Lazaroff"). Source the `(main)` header brand from `congregation.shortName` (same source `/perform` uses); grep the "CRC MUSIC" literal. **NOTE:** v11.1-01 made DesktopHeader/MobileHeader wordmark+logo org-aware (SSR `x-org-id` → OrgLogo) — verify whether BUG-6 is a *different* hardcoded surface or a regression introduced by v11.1-05 branding before changing. **BUG-7:** Perform `text/plain` chord-over-lyric renderer fragments the lyric word (interleaves lyric fragments with chord tokens — "Hallelujah" → "Hall"/"eluj"/"ah"); fix the chord-positioning splitter at the `/perform/[fileId]` renderer + add a chord-line-over-lyric snapshot test (honors the scraper's "preserve monospaced alignment" contract). **BUG-8:** normalize ALL timestamps to ISO at the MCP serialization boundary — `add_track_to_setlist`/`update_track` return `updatedAt` as a raw Firestore `{_seconds,_nanoseconds}` while `lastModifiedAt`/`get_setlist` are ISO — via a single `serializeTimestamps()` pass on tool responses.

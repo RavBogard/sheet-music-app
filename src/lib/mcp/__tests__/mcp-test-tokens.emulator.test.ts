@@ -584,6 +584,93 @@ describe("MCP test tokens (emulator)", () => {
         await expect(getAuth().getUser(siblingB.uid)).resolves.toBeTruthy()
     })
 
+    // ── v11.2-04-02 (BUG-5): owner-independent isTest flag-sweep ─────────────
+
+    it("cleanup_all_test_data sweeps isTest:true setlists owned by a REAL uid + their tracks (BUG-5)", async () => {
+        // The BUG-5 case: a setlist authored under a real admin uid (NOT a
+        // test-* uid, no mcpTestUsers index doc) but stamped isTest:true. The
+        // owner-cascade can't see it; the flag-sweep must.
+        await db().collection("setlists").doc("sl-flag").set({
+            ownerId: ADMIN_UID,
+            name: "Rehearsal scratch",
+            isTest: true,
+        })
+        for (const tid of ["ft-1", "ft-2"]) {
+            await db().collection("tracks").doc(tid).set({
+                setlistId: "sl-flag",
+                title: tid,
+            })
+        }
+        // A genuine, non-test setlist under the same real owner MUST survive.
+        await db().collection("setlists").doc("sl-keep").set({
+            ownerId: ADMIN_UID,
+            name: "Real Friday Service",
+            isTest: false,
+        })
+
+        const result = await cleanupAllTestDataCore(ADMIN_UID)
+        if ("error" in result) throw new Error("cleanup failed: " + result.error)
+        expect(result.failures).toEqual([])
+        expect(result.aggregate["setlists.isTest"]).toBe(1)
+        expect(result.aggregate["tracks.isTest"]).toBe(2)
+
+        expect((await db().collection("setlists").doc("sl-flag").get()).exists).toBe(false)
+        for (const tid of ["ft-1", "ft-2"]) {
+            expect((await db().collection("tracks").doc(tid).get()).exists).toBe(false)
+        }
+        // Real (isTest:false) setlist untouched.
+        expect((await db().collection("setlists").doc("sl-keep").get()).exists).toBe(true)
+    })
+
+    it("cleanup_all_test_data with prefix does NOT run the flag-sweep (sibling isolation, BUG-5)", async () => {
+        // A prefixed (parallel-cowork) sweep must stay scoped to its own
+        // namespace — a global isTest flag-sweep would cross-delete a sibling
+        // instance's fixtures. feedback_sandbox_test_isolation.
+        const a = await provisionTestAccount(ADMIN_UID, {
+            role: "musician",
+            uidPrefix: "isox",
+        })
+        if ("error" in a) throw new Error("mint failed: " + a.error)
+        await db().collection("setlists").doc("sl-flag").set({
+            ownerId: ADMIN_UID,
+            name: "Rehearsal scratch",
+            isTest: true,
+        })
+
+        const result = await cleanupAllTestDataCore(ADMIN_UID, { prefix: "isox" })
+        if ("error" in result) throw new Error("cleanup failed: " + result.error)
+        expect(result.failures).toEqual([])
+        // Flag-sweep did NOT run → no isTest aggregate key, setlist survives.
+        expect(result.aggregate["setlists.isTest"]).toBeUndefined()
+        expect((await db().collection("setlists").doc("sl-flag").get()).exists).toBe(true)
+    })
+
+    it("cleanup from a test bearer ALSO sweeps a flag-only isTest setlist with no failures (BUG-5 self-inclusion)", async () => {
+        // Caller is themselves a test bearer in the full sweep AND a flag-only
+        // real-owner setlist is present. Both must go; the flag-sweep's direct
+        // admin deletes don't depend on the (now-deleted) caller user doc, so
+        // the caller-last invariant + self-inclusion path stay correct.
+        // feedback_self_inclusion_test_fixtures.
+        const driver = await provisionTestAccount(ADMIN_UID, {
+            role: "band_leader",
+            label: "flagdriver",
+        })
+        if ("error" in driver) throw new Error("driver mint failed")
+        await db().collection("setlists").doc("sl-flag").set({
+            ownerId: ADMIN_UID,
+            name: "Rehearsal scratch",
+            isTest: true,
+        })
+
+        const result = await cleanupAllTestDataCore(driver.uid)
+        if ("error" in result) throw new Error("cleanup failed entirely")
+        expect(result.failures).toEqual([])
+        expect(result.removed).toBe(1) // the driver test user itself
+        expect(result.aggregate["setlists.isTest"]).toBe(1)
+        expect((await db().collection("setlists").doc("sl-flag").get()).exists).toBe(false)
+        await expect(getAuth().getUser(driver.uid)).rejects.toThrow()
+    })
+
     // ── Cycle-7 Lane 1: Convergence C cascade extension ──────────────────────
 
     it("revoke cascades to setlistTemplates owned by the test uid (C7I3-007)", async () => {

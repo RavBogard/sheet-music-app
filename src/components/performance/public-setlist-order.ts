@@ -12,6 +12,22 @@ import type { Setlist } from "@/lib/setlist-firebase"
  */
 export const MAX_PUBLIC_SERVICES = 5
 
+/**
+ * The single non-test visibility predicate: a setlist is shown to humans only
+ * when it is NOT a test fixture. Drops explicit `isTest:true` rows AND
+ * test-uid-owned rows (covers legacy `isTest:undefined` docs that a `test-*`
+ * owner still marks as test). Shared by the public /perform listing
+ * (`splitPublicSetlists` below) and the authed `(main)` dashboard
+ * (`DashboardClient.tsx`) so the two surfaces can never drift — v11.2-04-02
+ * (BUG-5). Structural param keeps it decoupled from each caller's Setlist type.
+ */
+export function isNonTestSetlist(s: {
+    isTest?: boolean
+    ownerId?: string | null
+}): boolean {
+    return s.isTest !== true && !isTestUid(s.ownerId)
+}
+
 export interface SplitSetlists {
     /** eventDate >= today (00:00 local), soonest first — today counts as upcoming. */
     upcoming: Setlist[]
@@ -37,7 +53,7 @@ export function splitPublicSetlists(setlists: Setlist[], now: Date = new Date())
 
     const getDate = (s: Setlist) => (s.eventDate ? toDate(s.eventDate) : null)
 
-    const visible = setlists.filter((s) => s.isTest !== true && !isTestUid(s.ownerId))
+    const visible = setlists.filter(isNonTestSetlist)
 
     const upcoming = visible
         .filter((s) => {
