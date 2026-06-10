@@ -17,6 +17,9 @@ import {
 } from "@/lib/mcp/error-envelopes"
 import { getChartHealth } from "@/lib/file-fetcher"
 import { isTestUid } from "@/lib/test-isolation"
+import { rowOrg, rowOrgIds } from "@/lib/org/membership"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
 
 /**
@@ -203,6 +206,13 @@ async function resolveDefaultRecipients(
     db: FirebaseFirestore.Firestore,
     callerUid: string,
     audience: "band" | "all",
+    // v11.2-02 (BUG-9): only members of the setlist's org. Mirrors the
+    // v11-05-02 roster pattern (roster.ts:229) — keep the role query, filter
+    // membership in-memory via rowOrgIds (missing orgIds → ['crc'], the
+    // CRC-safety default, so legacy CRC users stay in CRC's audience with no
+    // backfill). Without this the default audience was the ENTIRE users
+    // collection → a BL publish notified CRC's roster (the report's BUG-9).
+    orgScope: OrgId,
 ): Promise<ResolvedRecipient[]> {
     const roles =
         audience === "all"
@@ -221,6 +231,8 @@ async function resolveDefaultRecipients(
         // explicit `recipients` never fans out to autonomous-run test
         // accounts. Explicit `recipients: [...]` still allows test targets.
         if (isTestUserRow(doc.id, data)) continue
+        // v11.2-02 (BUG-9): tenant wall — only the setlist's org's members.
+        if (!rowOrgIds(data.orgIds).includes(orgScope)) continue
         const email = typeof data.email === "string" ? data.email : null
         const name =
             (typeof data.displayName === "string" && data.displayName) ||
@@ -253,6 +265,11 @@ async function resolveOverrideRecipients(
     db: FirebaseFirestore.Firestore,
     callerUid: string,
     overrides: RecipientPayload[],
+    // v11.2-02 (BUG-9) defense-in-depth: drop uid-bearing override entries
+    // whose resolved doc's orgIds exclude the setlist's org. Email-only
+    // entries (no uid) pass through — operator-explicit, same posture as the
+    // isTestUid email passthrough.
+    orgScope: OrgId,
 ): Promise<ResolvedRecipient[]> {
     const resolved: ResolvedRecipient[] = []
     const uidLookups = overrides.filter((r) => r.uid).map((r) => r.uid!)
@@ -270,6 +287,10 @@ async function resolveOverrideRecipients(
     for (const r of overrides) {
         if (r.uid === callerUid) continue
         const data = r.uid ? userDataByUid.get(r.uid) : undefined
+        // v11.2-02 (BUG-9): drop a uid-bearing entry that is not a member of
+        // the setlist's org (rowOrgIds default ['crc'] for an unresolved/legacy
+        // doc). Email-only entries (no uid) bypass — operator-explicit.
+        if (r.uid && !rowOrgIds(data?.orgIds).includes(orgScope)) continue
         const email =
             r.email ?? (typeof data?.email === "string" ? (data.email as string) : null)
         const name =
@@ -307,6 +328,11 @@ async function resolveOverrideRecipients(
 export async function publishSetlist(
     callerUid: string,
     args: PublishSetlistArgs,
+    // v11.2-02 (BUG-9): caller's resolved org. Used for the caller-org wall
+    // (a caller may not publish/preview another tenant's setlist) and, post-
+    // wall, as the recipient scope. Defaults crc so internal callers + the
+    // emulator suite stay behavior-neutral; the MCP route passes orgFrom(extra).
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<PublishSetlistResult | RichErrorEnvelope | StaleVersionEnvelope> {
     if (!args.setlistId?.trim())
         return richError(
@@ -346,6 +372,22 @@ export async function publishSetlist(
             "Verify the id via list_setlists.",
         )
     const setlist = setlistSnap.data() as Record<string, unknown>
+
+    // v11.2-02 (BUG-9): caller-org wall. A caller may not publish (or preview,
+    // since previewPublish routes through here with dryRun) a setlist in
+    // another org — return the SAME setlist_not_found envelope as the absent
+    // branch (no existence leak, no audience enumeration), mirroring
+    // loadEditableSetlist's v11-02-03 check + the v11.2-01 commit wall. Applies
+    // to dryRun too: tenant isolation is NOT an observability gate. setlistOrg
+    // is then the authoritative recipient scope below.
+    const setlistOrg = rowOrg(setlist.orgId)
+    if (setlistOrg !== org)
+        return richError(
+            "setlist_not_found",
+            `Setlist '${args.setlistId}' was not found.`,
+            { setlistId: args.setlistId },
+            "Verify the id via list_setlists.",
+        )
 
     // Cycle-7 Lane 1 — Convergence A (closes C7I1-008 + C7I3-002 +
     // Instance-5 headline). Real-publish (NOT dryRun) refuses on two
@@ -533,6 +575,7 @@ export async function publishSetlist(
             db,
             callerUid,
             args.audience ?? "band",
+            setlistOrg,
         )
     } else if (args.recipients.length === 0) {
         // Operator-explicit "no recipients" — honor it; don't auto-derive.
@@ -561,6 +604,7 @@ export async function publishSetlist(
             db,
             callerUid,
             args.recipients,
+            setlistOrg,
         )
         // Cycle-7 Lane 1 — defense-in-depth on the override path: drop any
         // resolved recipient whose uid matches `isTestUid`. The Gate-1 +

@@ -1185,7 +1185,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await publishSetlist(uidFrom(extra), args)),
+            jsonResult(await publishSetlist(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -1368,7 +1368,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await previewPublish(uidFrom(extra), args)),
+            jsonResult(await previewPublish(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

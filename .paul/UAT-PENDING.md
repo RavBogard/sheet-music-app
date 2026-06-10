@@ -213,3 +213,8 @@ Check:
   2. `propose_setlist_changes({setlistId, proposals:[{action:"add",type:"header",title:"Set 2"}]})` → expect `ok` + a `stageId` (NOT 404 setlist_not_found)
   3. `commit_staged_changes({stageId})` → expect the rows landed; then `delete_setlist` to clean up
   - Emulator proves correctness; this confirms it end-to-end on the live tenant.
+
+## v11.2-02 publish-audience org scoping (BUG-9) — added 2026-06-09
+- **Live BL confirmation (dryRun-only, SAFE — no real send)**, after BL connector reconnect:
+  - `preview_publish({setlistId:<a BL setlist>})` → `audience.count` should equal the BL roster size, NOT 17 (CRC). Recipients should contain only BL-org members.
+  - Emulator already proves correctness; this is live confirmation. Do NOT run a real `publish_setlist` to test.

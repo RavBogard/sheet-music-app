@@ -1,6 +1,8 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { publishSetlist, type PublishSetlistResult } from "./setlist-publish"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * W-01 Task 3 — preview_publish wrapper.
@@ -106,6 +108,11 @@ export interface PreviewPublishResult {
 export async function previewPublish(
     callerUid: string,
     args: PreviewPublishArgs,
+    // v11.2-02 (BUG-9): forwarded to publishSetlist's dryRun so the previewed
+    // audience is org-scoped + the caller-org wall applies to preview too (a
+    // cross-tenant preview returns setlist_not_found rather than enumerating
+    // another org's roster). Defaults crc; the MCP route passes orgFrom(extra).
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<PreviewPublishResult | RichErrorEnvelope> {
     if (!args.setlistId?.trim())
         return richError(
@@ -122,11 +129,15 @@ export async function previewPublish(
     // and recipient resolution. Per F-05 (2026-05-16 bugstomp), dryRun is
     // observability — it never refuses on the chart-health gate, so this
     // tool always gets a populated envelope back.
-    const dry = await publishSetlist(callerUid, {
-        setlistId: args.setlistId,
-        audience: args.audience,
-        dryRun: true,
-    })
+    const dry = await publishSetlist(
+        callerUid,
+        {
+            setlistId: args.setlistId,
+            audience: args.audience,
+            dryRun: true,
+        },
+        org,
+    )
     if (!("ok" in dry) || dry.ok !== true) {
         // dry is already a RichErrorEnvelope (or StaleVersionEnvelope which
         // we don't trigger here since we don't pass lastSeenVersion).

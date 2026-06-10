@@ -12,9 +12,9 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.2 MCP Stress-Test Fixes — OPEN 2026-06-09.** 5 phases scoped from the Brothers Lazaroff stress-test report (BL tenant only; CRC untouched). 0/5 complete. (v11.1 ✅ COMPLETE, tag `v11.1.0`, archived.)
-Phase: **v11.2-01 propose/commit resolver fix [P0] — ✅ COMPLETE 2026-06-09 (1/1 plan, loop closed).** Milestone v11.2: 1 of 5 phases done.
-Plan: **None active.** Loop idle — ready for next PLAN (v11.2-02).
-Status: **v11.2-01 SHIPPED + committed + pushed to `master`** (Vercel auto-deploy). Threaded `orgFrom(extra)` into `proposeSetlistChanges` + `commitStagedChanges` (propose→`loadEditableSetlist(…,org)`; commit→new in-tx `rowOrg!==org` setlist_not_found wall). Gates: tsc clean · emulator 20/20 (4 new + 16 W-01 regression) · `next build` clean. CRC byte-identical. LIVE retest → UAT-PENDING (needs Daniel BL-connector reconnect).
+Phase: **v11.2-02 publish-audience org scoping [P1] — ✅ COMPLETE 2026-06-09 (1/1 plan, loop closed).** Milestone v11.2: 2 of 5 phases done.
+Plan: **None active.** Loop idle — ready for next PLAN (v11.2-03).
+Status: **v11.2-02 SHIPPED + committed + pushed to `master`** (Vercel auto-deploy). BUG-9 cross-tenant leak CLOSED: publish/preview org-scoped (caller `org` threaded, caller-org wall, recipients filtered to the setlist's org via `rowOrgIds(...).includes(setlistOrg)`). Gates: tsc clean · emulator 25/25 (4 new + 21 regression) · `next build` clean. CRC byte-identical; no real publish triggered. Optional live dryRun confirm → UAT-PENDING.
 Last activity: 2026-06-09 (session 9) — `/paul:resume` consumed the BL stress-test report (9 findings) → `/paul:milestone` created **v11.2 MCP Stress-Test Fixes**: v11.2-01 BUG-1 propose/commit resolver [P0] · v11.2-02 BUG-9 publish-audience verify [P1] · v11.2-03 BUG-2/3 error contract · v11.2-04 BUG-4/5 hygiene · v11.2-05 BUG-6/7/8 P3 polish. Phase order = the report's suggested fix order.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
@@ -48,7 +48,7 @@ Last activity: 2026-06-09 (session 9) — `/paul:resume` consumed the BL stress-
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-01 loop COMPLETE 2026-06-09 — ready for next PLAN (v11.2-02)]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-02 loop COMPLETE 2026-06-09 — ready for next PLAN (v11.2-03)]
   ✓        ✓        ✓
 ```
 
@@ -89,10 +89,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-01 loop COMPLETE 2026-06-09 �
 ## Session Continuity
 
 Last session: 2026-06-09 (session 9) — `/paul:resume` with the **Brothers Lazaroff MCP + Perform stress-test report** (9 findings) as the handoff → reconciled against the idle v11.1-complete loop → `/paul:milestone` created **v11.2 MCP Stress-Test Fixes** (5 phases, constraints locked, phase dirs + ROADMAP/MILESTONES/paul.json/STATE updated). No code touched yet.
-Stopped at: **v11.2-01 loop CLOSED + shipped to `master`.** Next: `/paul:plan` for **v11.2-02** (BUG-9 publish-audience org scoping — VERIFY-FIRST; STOP-gate before any real publish).
-**OPEN ACTION ON DANIEL (live retest of v11.2-01):** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp` to re-mint a broslaz-pinned bearer, then run the UAT-PENDING BUG-1 retest (create→propose→commit on BL). Emulator already proves the fix; this is end-to-end confirmation. Existing token is crc-pinned.
-Next action: **`/paul:plan`** (Phase v11.2-02 — BUG-9 publish-audience verify). Then 03 → 04 → 05 in order.
-Resume file: **.paul/phases/v11.2-01-propose-commit-resolver/v11.2-01-01-SUMMARY.md** (just-closed loop). Milestone specs: .paul/ROADMAP.md § Active Milestone. Source: BL stress-test report (2026-06-09).
+Stopped at: **v11.2-02 loop CLOSED + shipped to `master`.** Next: `/paul:plan` for **v11.2-03** (BUG-2 + BUG-3 MCP error contract — HTTP status correctness + bulk error-envelope consistency). Then 04 → 05.
+**OPEN ACTION ON DANIEL (live retests, both dryRun/safe-or-emulator-proven):** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp`, then run the UAT-PENDING items: (1) v11.2-01 BUG-1 create→propose→commit on BL; (2) v11.2-02 `preview_publish` on a BL setlist shows BL roster size not 17. Both already emulator-proven. Existing token is crc-pinned.
+Next action: **`/paul:plan`** (Phase v11.2-03 — BUG-2/3 error contract). Then 04 → 05 in order.
+Resume file: **.paul/phases/v11.2-02-publish-audience-org-scope/v11.2-02-01-SUMMARY.md** (just-closed loop). Milestone specs: .paul/ROADMAP.md § Active Milestone. Source: BL stress-test report (2026-06-09).
 Reusable lesson (session 8): MCP authoring org is pinned into the bearer at MINT time (`oauth/token/route.ts` → `resolveMintOrg` → `createMcpToken`), NOT re-resolved per request — a claim change requires a RECONNECT to take effect. And Firestore `orderBy(field)` silently drops docs missing that field (the People-list bug).
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Standing UAT-PENDING (v11.1 close gate, live tenant): broslaz authed nav ("Brothers Lazaroff" + BL monogram, desktop + iPad-WebKit); /library (broslaz-only charts in tab + add-songs picker + header search; admin "All sites" reveals full pool); dashboard ("Upcoming Shows"/"Create New Set") + matrix ("Set Matrix"); MCP authoring (Claude Desktop → `https://www.brotherslazaroff.live/api/mcp` → author test setlist → lands broslaz); admin sets a leader's Band access in /manage → People; CRC unchanged throughout.

@@ -737,4 +737,117 @@ describe("MCP publish_setlist (emulator)", () => {
         // Test-uid filtered; only LEADER remains.
         expect(r.recipients.map((x) => x.uid).sort()).toEqual([LEADER].sort())
     })
+
+    // ─── v11.2-02 (BUG-9): org-scoped publish audience ────────────────────
+    //
+    // Before this fix resolveDefaultRecipients queried the ENTIRE users
+    // collection, so a Brothers Lazaroff publish derived CRC's roster (the
+    // report's audience.count:17). These lock in: default audience scoped to
+    // the setlist's org, the caller-org wall, uid-override org-filtering, and
+    // that the crc default path is unchanged. dryRun throughout — no dispatch.
+    describe("v11.2-02 — org-scoped publish audience (BUG-9)", () => {
+        const BL = "brotherslazaroff"
+        const BL_MUSICIAN = "bl-musician"
+
+        async function seedBlPublishable(setlistId: string): Promise<void> {
+            await seedSetlist(setlistId, { orgId: BL, name: "BL Show" })
+            await seedTrack("blt1", setlistId, 0, {
+                type: "song",
+                title: "BL Song",
+                fileId: "upload-blsong",
+            })
+        }
+
+        it("AC-1: default audience is scoped to the setlist's org (BL setlist → only BL members)", async () => {
+            // Baseline beforeEach users (LEADER/MUSICIAN_1/2/NONLEADER) carry no
+            // orgIds → default crc; only this user is a BL member.
+            await seedUser(BL_MUSICIAN, {
+                role: "musician",
+                email: "blmusician@example.com",
+                displayName: "BL Player",
+                orgIds: [BL],
+            })
+            const id = "set-bl-pub"
+            await seedBlPublishable(id)
+
+            const r = await publishSetlist(
+                ADMIN,
+                { setlistId: id, dryRun: true },
+                BL,
+            )
+            expect("ok" in r && r.ok).toBe(true)
+            if (!("ok" in r) || !r.ok) return
+            const uids = r.recipients.map((x) => x.uid)
+            expect(uids).toEqual([BL_MUSICIAN]) // ONLY the BL member
+            expect(uids).not.toContain(LEADER) // crc-default users excluded
+            expect(uids).not.toContain(MUSICIAN_1)
+            // dryRun → zero dispatch on any channel.
+            expect(mockEmailAllMembers).not.toHaveBeenCalled()
+            expect(mockSendPushToUsers).not.toHaveBeenCalled()
+            expect(mockSendSMS).not.toHaveBeenCalled()
+        })
+
+        it("AC-2: a cross-tenant caller cannot publish/preview another org's setlist", async () => {
+            const id = "set-bl-wall"
+            await seedBlPublishable(id)
+            const r = await publishSetlist(
+                ADMIN,
+                { setlistId: id, dryRun: true },
+                "crc",
+            )
+            expect("ok" in r && (r as { ok?: boolean }).ok).not.toBe(true)
+            expect(
+                (r as { error?: { machine_code?: string } }).error?.machine_code,
+            ).toBe("setlist_not_found")
+            expect(mockEmailAllMembers).not.toHaveBeenCalled()
+        })
+
+        it("AC-3: uid-override recipients are org-filtered; email-only passes; dryRun no dispatch", async () => {
+            await seedUser(BL_MUSICIAN, {
+                role: "musician",
+                email: "blmusician@example.com",
+                displayName: "BL Player",
+                orgIds: [BL],
+            })
+            const id = "set-bl-override"
+            await seedBlPublishable(id)
+            const r = await publishSetlist(
+                ADMIN,
+                {
+                    setlistId: id,
+                    dryRun: true,
+                    recipients: [
+                        { uid: MUSICIAN_1 }, // crc → dropped
+                        { uid: BL_MUSICIAN }, // BL → kept
+                        { email: "guest@external.com" }, // email-only → kept
+                    ],
+                },
+                BL,
+            )
+            expect("ok" in r && r.ok).toBe(true)
+            if (!("ok" in r) || !r.ok) return
+            const uids = r.recipients.map((x) => x.uid).filter(Boolean)
+            expect(uids).toContain(BL_MUSICIAN)
+            expect(uids).not.toContain(MUSICIAN_1)
+            expect(r.recipients.map((x) => x.email)).toContain(
+                "guest@external.com",
+            )
+            expect(mockEmailAllMembers).not.toHaveBeenCalled()
+        })
+
+        it("AC-4 control: a crc setlist still resolves crc members (default path intact)", async () => {
+            const id = "set-crc-control"
+            await seedPublishableSetlist(id) // seedSetlist default → no orgId → crc
+            const r = await publishSetlist(
+                ADMIN,
+                { setlistId: id, dryRun: true },
+                "crc",
+            )
+            expect("ok" in r && r.ok).toBe(true)
+            if (!("ok" in r) || !r.ok) return
+            expect(r.recipients.map((x) => x.uid).sort()).toEqual(
+                [LEADER, MUSICIAN_1, MUSICIAN_2, NONLEADER].sort(),
+            )
+        })
+    })
 })
