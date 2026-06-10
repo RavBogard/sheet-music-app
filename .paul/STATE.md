@@ -92,7 +92,7 @@ Last session: 2026-06-11 (session 11) — closed v11.2-03 (BUG-2+3) then v11.2-0
 Stopped at: **v11.2-04-01 (BUG-4) LOOP COMPLETE. Phase v11.2-04 open — next plan 04-02 (BUG-5).** Milestone v11.2: 3/5 phases done (04 in progress, 1 of 2 plans).
 **OPEN ACTION ON DANIEL (live retests, both dryRun/safe-or-emulator-proven):** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp`, then run the UAT-PENDING items: (1) v11.2-01 BUG-1 create→propose→commit on BL; (2) v11.2-02 `preview_publish` on a BL setlist shows BL roster size not 17. Both already emulator-proven. Existing token is crc-pinned.
 Next action: **`/paul:plan`** (Phase v11.2-04 plan 02 — BUG-5 `cleanup_all_test_data` + dashboard isTest). Then phase-04 transition → 05 in order.
-Resume file: **.paul/ROADMAP.md § Active Milestone** (v11.2-04 phase spec). Source: BL stress-test report (2026-06-09).
+Resume file: **.paul/HANDOFF-2026-06-11.md** (session-11 pause handoff — full context + BUG-5 implementation notes). Milestone specs: .paul/ROADMAP.md § Active Milestone. Source: BL stress-test report (2026-06-09).
 Resume context:
 - v11.2: 3/5 phases done + 04-01 (BUG-4) shipped; phase 04 open for plan 04-02 (BUG-5).
 - v11.2-04-02 target (BUG-5): `cleanup_all_test_data` only cascades `test-*`-owned data — extend it to also sweep `setlists`/`library_index` where `isTest==true` independent of owner (same admin/band_leader gate) OR document manual-delete; AND decide whether the authed `(main)` dashboard should reuse the `/perform` `isTest!=true` filter. **Self-inclusion regression-test rule applies ([[feedback_self_inclusion_test_fixtures]]).**
