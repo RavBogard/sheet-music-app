@@ -3,6 +3,8 @@ import { publishSetlist, type PublishSetlistResult } from "./setlist-publish"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
+import { getTracksForSetlist } from "@/lib/server-tracks"
+import { isSongType } from "@/lib/setlist-track-count"
 
 /**
  * W-01 Task 3 — preview_publish wrapper.
@@ -21,9 +23,17 @@ import type { OrgId } from "@/lib/org/types"
  *   - `flaggedBonds`    — open `bond_flags` docs awaiting batch review
  *                         (Task 4 collection). The agent should walk them
  *                         via `review_flagged_bonds` before publishing.
+ *   - `unbondedSongCount`/`unbondedSongs` — v11.2-04 (BUG-4): song-type rows
+ *                         (isSongType) with NO chart bond (fileId AND songId
+ *                         both null). These render blank in Perform but are
+ *                         invisible to `chartHealth` (which only probes BONDED
+ *                         rows), so the preview gate was reporting "publish"
+ *                         for a setlist with blank song rows. Non-song rows
+ *                         (header/reading/prayer/transition/note) are
+ *                         intentionally chart-less and NOT counted.
  *   - `recommendation`  — derived gate:
- *                         "hard_block"   any chart status is "missing"
- *                         "review_first" flaggedBonds > 0
+ *                         "hard_block"   any chart status is "missing"/"shortcut_unresolved"
+ *                         "review_first" flaggedBonds > 0 OR unbondedSongCount > 0
  *                         "publish"      otherwise (clean)
  *
  * Recommendation is advisory only — the operator still has to call
@@ -102,6 +112,14 @@ export interface PreviewPublishResult {
         }>
     }
     flaggedBonds: number
+    /**
+     * v11.2-04 (BUG-4): song-type rows with no chart bond (fileId AND songId
+     * both null) — they render blank in Perform. Counted so the recommendation
+     * gate can flag them for review; chartHealth can't see them (it only probes
+     * bonded rows).
+     */
+    unbondedSongCount: number
+    unbondedSongs: Array<{ trackId: string; title: string }>
     recommendation: "publish" | "review_first" | "hard_block"
 }
 
@@ -158,6 +176,29 @@ export async function previewPublish(
     const previousSnapshot = readPublishedSnapshot(setlist)
     const snapshotDiff = diffSnapshots(previousSnapshot, published.snapshot)
 
+    // ── v11.2-04 (BUG-4): unbonded song rows. A song-type row (isSongType:
+    // undefined or "song") with NO chart bond (fileId AND songId both null)
+    // renders blank in Perform, but chartHealth only probes BONDED rows so the
+    // gate never sees it. Reuse the same track load verify_setlist_charts uses.
+    // Intentional non-song rows (header/reading/prayer/transition/note) are
+    // chart-less by design and excluded.
+    const tracks = await getTracksForSetlist(db, args.setlistId, setlist ?? {})
+    const unbondedSongs = tracks
+        .filter((t) => {
+            const row = t as { type?: unknown; fileId?: unknown; songId?: unknown }
+            const hasFileId = typeof row.fileId === "string" && row.fileId.length > 0
+            const hasSongId = typeof row.songId === "string" && row.songId.length > 0
+            return isSongType(row.type) && !hasFileId && !hasSongId
+        })
+        .map((t) => {
+            const row = t as { id?: unknown; title?: unknown }
+            return {
+                trackId: typeof row.id === "string" ? row.id : "",
+                title: typeof row.title === "string" ? row.title : "",
+            }
+        })
+    const unbondedSongCount = unbondedSongs.length
+
     // ── Audience role breakdown. The dryRun envelope carries `recipients`
     // (with uid + name + email + smsEligible) but NOT the role. Look up
     // the role per uid from users/{uid} so the agent can say "23 band
@@ -176,11 +217,14 @@ export async function previewPublish(
     // aggregate counts directly post-F-006, so we just pass them through.
     // BUG-002: shortcut_unresolved is also a hard_block — gig packet drops
     // those rows so publishing means the band sees a broken chart.
+    // v11.2-04 (BUG-4): unbonded song rows escalate to review_first (they're
+    // publishable but the operator should bond or remove them first); hard_block
+    // (missing/shortcut) still takes precedence.
     const recommendation: PreviewPublishResult["recommendation"] =
         published.chartHealth.missingCount > 0 ||
         published.chartHealth.shortcutUnresolvedCount > 0
             ? "hard_block"
-            : flaggedBonds > 0
+            : flaggedBonds > 0 || unbondedSongCount > 0
               ? "review_first"
               : "publish"
 
@@ -205,6 +249,8 @@ export async function previewPublish(
         },
         snapshotDiff,
         flaggedBonds,
+        unbondedSongCount,
+        unbondedSongs,
         recommendation,
     }
 }

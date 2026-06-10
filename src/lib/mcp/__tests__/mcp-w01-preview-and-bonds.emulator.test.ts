@@ -305,6 +305,78 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
         expect(removedIds).toContain("song-gone")
     })
 
+    // ─── v11.2-04 (BUG-4): unbonded song rows ───────────────────────────────
+
+    it("BUG-4: unbonded song row alongside a bonded song → review_first + surfaced", async () => {
+        // The realistic BUG-4 case: a clean bonded song masks a blank song row.
+        // (An ALL-unbonded setlist is already refused by publish's no_bonded_songs
+        // gate, so it never reaches the preview recommendation.)
+        const setlistId = await newSetlist()
+        await addBondedTrack(setlistId, "Oseh Shalom", "song-oseh")
+        __charts["song-oseh"] = "ok"
+        const blank = (await addTrackToSetlist(ADMIN, {
+            setlistId,
+            title: "Blank Song",
+            type: "song",
+        })) as { trackId: string }
+
+        const r = (await previewPublish(ADMIN, { setlistId })) as unknown as {
+            unbondedSongCount: number
+            unbondedSongs: Array<{ trackId: string; title: string }>
+            recommendation: string
+        }
+        expect(r.unbondedSongCount).toBe(1)
+        expect(r.unbondedSongs).toEqual([
+            expect.objectContaining({
+                trackId: blank.trackId,
+                title: "Blank Song",
+            }),
+        ])
+        expect(r.recommendation).toBe("review_first")
+    })
+
+    it("BUG-4: chart-less NON-song rows are not flagged; clean bonded stays 'publish'", async () => {
+        const setlistId = await newSetlist({ templateType: "shabbat-morning" })
+        await addBondedTrack(setlistId, "Oseh Shalom", "song-oseh")
+        __charts["song-oseh"] = "ok"
+        // Intentionally chart-less, non-song rows — must NOT count as unbonded.
+        await addTrackToSetlist(ADMIN, {
+            setlistId,
+            title: "Silent Reflection",
+            type: "reading",
+        })
+        await addTrackToSetlist(ADMIN, {
+            setlistId,
+            title: "— Set Break —",
+            type: "header",
+        })
+
+        const r = (await previewPublish(ADMIN, { setlistId })) as unknown as {
+            unbondedSongCount: number
+            recommendation: string
+        }
+        expect(r.unbondedSongCount).toBe(0)
+        expect(r.recommendation).toBe("publish")
+    })
+
+    it("BUG-4: missing-chart hard_block takes precedence over unbonded-song review_first", async () => {
+        const setlistId = await newSetlist()
+        await addBondedTrack(setlistId, "Hashkivenu", "song-broken")
+        __charts["song-broken"] = "missing"
+        await addTrackToSetlist(ADMIN, {
+            setlistId,
+            title: "Blank Song",
+            type: "song",
+        })
+
+        const r = (await previewPublish(ADMIN, { setlistId })) as unknown as {
+            unbondedSongCount: number
+            recommendation: string
+        }
+        expect(r.unbondedSongCount).toBe(1) // still counted + surfaced
+        expect(r.recommendation).toBe("hard_block") // missing-chart precedence
+    })
+
     // ─── AC-6: flag → review round-trip ─────────────────────────────────────
 
     it("AC-6: flag_bond writes the doc and review_flagged_bonds joins with current track + alternatives", async () => {
