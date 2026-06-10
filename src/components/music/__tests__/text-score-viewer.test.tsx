@@ -167,6 +167,38 @@ describe('TextScoreViewer (ipad-text-viewer-fetch-fix — IDB-first source resol
         expect(container.querySelectorAll('script').length).toBe(0)
     })
 
+    it('wrap mode: a lyric word with chords above it stays within ONE non-breaking group (BUG-7)', async () => {
+        // innerWidth < 768 auto-enables wrap mode — the context where the prior
+        // splitter let flex-wrap break a single word across lines
+        // ("Hallelujah" → "Halleluja"/"h  amen"). Two chords sit mid-word.
+        Object.defineProperty(window, 'innerWidth', { writable: true, value: 375 })
+        stubOfflineIdb(() => Promise.resolve(null))
+        mockFetchText('G        D\nHallelujah  amen')
+
+        const { container } = render(<TextScoreViewer fileId="upload-bug7" />)
+        await waitFor(() => expect(container.querySelector('.flex-wrap')).toBeTruthy())
+        await flushPromises()
+
+        // Word-grouping is active in wrap mode: scope to the chart body so the
+        // fixed control-bar buttons (also inline-flex) don't pollute the query.
+        const chart = container.querySelector('.font-mono')
+        expect(chart).toBeTruthy()
+        const groups = Array.from(chart!.querySelectorAll('.inline-flex'))
+        expect(groups.length).toBeGreaterThan(0)
+
+        // Reconstruct each group's lyric row (2nd child of each .flex-col column).
+        const groupLyric = (g: Element) =>
+            Array.from(g.querySelectorAll(':scope > .flex-col'))
+                .map(col => col.children[1]?.textContent ?? '')
+                .join('')
+
+        // The whole word lives inside a SINGLE non-breaking group — never split
+        // across two wrappable groups (the regression). Concatenating only the
+        // lyric rows of one group yields the intact "Hallelujah".
+        const someGroupHasWholeWord = groups.some(g => groupLyric(g).includes('Hallelujah'))
+        expect(someGroupHasWholeWord).toBe(true)
+    })
+
     it('empty fileId: surfaces a clean error without firing fetch or IDB', async () => {
         // Defensive — PDFOverlay guards `track.fileId &&` so we should not
         // normally mount with "" but if we do, don't go fetching

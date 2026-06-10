@@ -15,6 +15,7 @@ import { NextServiceCard } from "@/components/home/NextServiceCard"
 import { CompactSetlistRow } from "@/components/dashboard"
 import { OnboardingCard } from "@/components/dashboard/OnboardingCard"
 import { isNonTestSetlist } from "@/components/performance/public-setlist-order"
+import { OrgLogo } from "@/components/nav/OrgLogo"
 import { cn } from "@/lib/utils"
 import { formatError } from "@/lib/format-error"
 
@@ -30,17 +31,25 @@ export interface DashboardServerProps {
     serverGreeting: Greeting | null
     /** Congregation short name from server (avoids waiting for Firestore) */
     serverShortName: string | null
+    /** v11.2-05-01 (BUG-6): host-resolved org logo (getOrgBranding.logoUrl).
+     *  "" → render the brand monogram (broslaz); "/logo.jpg" → CRC img. */
+    serverLogoUrl?: string | null
     serverIsMember?: boolean
     serverIsBandLeader?: boolean
     serverIsAdmin?: boolean
     serverUid?: string | null
 }
 
-export default function DashboardClient({ serverGreeting, serverShortName, serverIsMember = false, serverIsBandLeader = false, serverIsAdmin = false, serverUid = null }: DashboardServerProps) {
+export default function DashboardClient({ serverGreeting, serverShortName, serverLogoUrl = null, serverIsMember = false, serverIsBandLeader = false, serverIsAdmin = false, serverUid = null }: DashboardServerProps) {
     const router = useRouter()
     const { user: authUser, profile, cachedUser, signIn, isMember: authIsMember, isBandLeader, loading: authLoading } = useAuth()
     const congregation = useCongregation()
-    
+
+    // v11.2-05-01 (BUG-6): host-resolved hero brand. Server value wins (flash-free,
+    // host-correct on broslaz); congregation store is the live-update fallback.
+    const heroShortName = serverShortName || congregation.shortName || DEFAULT_SHORT_NAME
+    const heroLogoUrl = serverLogoUrl ?? congregation.logoUrl ?? ""
+
     const isMember = authIsMember || serverIsMember
     const effectiveUid = authUser?.uid || serverUid
     const user = authUser || (serverUid ? { uid: serverUid, displayName: null } as any : null)
@@ -269,17 +278,28 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
             <div className={`bg-gradient-to-b ${atmosphereClasses} px-4 md:px-6 pt-4 pb-6`}>
                 <div className="max-w-2xl mx-auto w-full">
 
-                    {/* Branding */}
+                    {/* Branding — v11.2-05-01 (BUG-6): host-resolved (flash-free,
+                        server-first), so broslaz shows its own brand instead of the
+                        CRC "/logo.jpg" + "CRC MUSIC" lockup. Server value wins (same
+                        precedence as the nav header); the congregation store is the
+                        live-update fallback. CRC stays byte-identical: serverLogoUrl
+                        "/logo.jpg" → the same <img className="border-brand/20"> +
+                        alt "CRC Music". Empty logoUrl (broslaz) → OrgLogo "BL" monogram. */}
                     <div className="flex items-center gap-2.5 mb-5">
-                        <img
-                            src="/logo.jpg"
-                            alt={congregation.shortName}
-                            width={32}
-                            height={32}
-                            className="w-8 h-8 rounded-full border border-brand/20"
-                        />
+                        {heroLogoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- tiny static brand asset; parity with the prior hero <img>
+                            <img
+                                src={heroLogoUrl}
+                                alt={heroShortName}
+                                width={32}
+                                height={32}
+                                className="w-8 h-8 rounded-full border border-brand/20"
+                            />
+                        ) : (
+                            <OrgLogo logoUrl="" shortName={heroShortName} sizeClass="w-8 h-8" />
+                        )}
                         <span className="text-xs font-semibold text-brand/70 tracking-wider uppercase">
-                            {congregation.shortName}
+                            {heroShortName}
                         </span>
                     </div>
 
@@ -386,7 +406,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                         role={profile?.role}
                         isMember={isMember}
                         profile={profile}
-                        congregationShortName={congregation.shortName}
+                        congregationShortName={heroShortName}
                         userId={user.uid}
                         staggerClass={stagger(2)}
                     />

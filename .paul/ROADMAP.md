@@ -18,7 +18,7 @@ Focus: Close the 9 findings from the BL stress test. Headline is **BUG-1 (P0)** 
 | v11.2-02 | publish-audience org scoping — BUG-9 [P1 · VERIFY-FIRST] | 01-01 ✅ | ✅ Complete | 2026-06-09 |
 | v11.2-03 | MCP error contract — BUG-2 + BUG-3 [P1/P2] | 01 (BUG-2) ✅ · 02 (BUG-3) ✅ | ✅ Complete | 2026-06-11 |
 | v11.2-04 | publish + test-data hygiene — BUG-4 + BUG-5 [P2] | 01 (BUG-4) ✅ · 02 (BUG-5) ✅ | ✅ Complete | 2026-06-11 |
-| v11.2-05 | P3 polish — BUG-6 + BUG-7 + BUG-8 [P3] | TBD | Not started | - |
+| v11.2-05 | P3 polish — BUG-6 + BUG-7 + BUG-8 [P3] | 01 (BUG-6+7) ✅ · 02 (BUG-8) ⧖ | 🚧 In Progress | - |
 
 ### Phase v11.2-01: propose/commit resolver fix [P0 — critical path]
 Focus: `propose_setlist_changes` returns `404 setlist_not_found` for setlists created/cloned via the MCP (UUID ids minted by `create_setlist`/`clone_setlist`), even though `get_setlist`/`update_setlist`/`add_track_to_setlist`/`bulk_add_tracks`/`update_track`/`preview_publish`/`verify_setlist_charts`/`generate_gig_packet`/`clone_setlist`/`delete_setlist` all resolve the same id (reproduced twice, deterministic). This breaks the server-mandated stage→confirm→commit safety workflow for ALL MCP-authored setlists; `commit_staged_changes` is downstream and equally unreachable. Suspected cause: `propose_setlist_changes` (audit `commit_staged_changes` too) uses a divergent resolution path (a `where()` query / wrong subcollection / Firestore-auto-id assumption) instead of the shared `getSetlistById(docId)` resolver. Fix: point both tools at the shared resolver; grep for divergent setlist lookups and consolidate to ONE resolver so id-shape can never split tool behavior again. Integration test: `create_setlist` → `propose_setlist_changes` against the returned id → assert `ok && stageId` → `commit_staged_changes` → assert rows landed. Preserve the v11-06-02 org-scope not-found wall (`loadEditableSetlist` chokepoint).
@@ -47,7 +47,7 @@ Plans: 01 (BUG-4) ✅ · 02 (BUG-5) ✅
 
 ### Phase v11.2-05: P3 polish [P3]
 Focus: **BUG-6:** authed `(main)` dashboard header renders "CRC MUSIC" on brotherslazaroff.live (`/perform` correctly shows "Brothers Lazaroff"). Source the `(main)` header brand from `congregation.shortName` (same source `/perform` uses); grep the "CRC MUSIC" literal. **NOTE:** v11.1-01 made DesktopHeader/MobileHeader wordmark+logo org-aware (SSR `x-org-id` → OrgLogo) — verify whether BUG-6 is a *different* hardcoded surface or a regression introduced by v11.1-05 branding before changing. **BUG-7:** Perform `text/plain` chord-over-lyric renderer fragments the lyric word (interleaves lyric fragments with chord tokens — "Hallelujah" → "Hall"/"eluj"/"ah"); fix the chord-positioning splitter at the `/perform/[fileId]` renderer + add a chord-line-over-lyric snapshot test (honors the scraper's "preserve monospaced alignment" contract). **BUG-8:** normalize ALL timestamps to ISO at the MCP serialization boundary — `add_track_to_setlist`/`update_track` return `updatedAt` as a raw Firestore `{_seconds,_nanoseconds}` while `lastModifiedAt`/`get_setlist` are ISO — via a single `serializeTimestamps()` pass on tool responses.
-Plans: TBD (defined during /paul:plan)
+Plans: **01 (BUG-6 + BUG-7) — frontend renders, /ui-ux-pro-max gated** 🚧 · **02 (BUG-8) — MCP timestamp serialization** ⧖ (split by subsystem: keep the MCP-server fix out from behind a UI gate).
 
 Constraints (locked at /paul:milestone 2026-06-09):
 1. **No local dev** — push to prod/Vercel. CRC + broslaz are BOTH live tenants; consumer-visible regressions matter.

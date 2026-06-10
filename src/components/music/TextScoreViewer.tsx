@@ -184,8 +184,31 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
         return chunks
     }
 
+    // v11.2-05-01 (BUG-7): group chord/lyric chunks into WORD-ATOMIC units so
+    // flex-wrap never breaks a single lyric word across lines (the prior bug:
+    // chords over "Hallelujah" split it into "Hall"/"eluj"/"ah"). A break is
+    // allowed only AFTER a chunk whose lyric ends at a word boundary (trailing
+    // whitespace) or is empty; otherwise the word continues into the next chunk
+    // and the two stay in the same non-breaking group. Fit mode is unaffected —
+    // it renders chunks directly in a flex-nowrap row (alignment preserved).
+    type Chunk = { chord: string; lyric: string; isChord: boolean }
+    const groupChunksIntoWords = (chunks: Chunk[]): Chunk[][] => {
+        const groups: Chunk[][] = []
+        let current: Chunk[] = []
+        for (const chunk of chunks) {
+            current.push(chunk)
+            const endsAtWordBoundary = chunk.lyric.length === 0 || /\s$/.test(chunk.lyric)
+            if (endsAtWordBoundary) {
+                groups.push(current)
+                current = []
+            }
+        }
+        if (current.length) groups.push(current)
+        return groups
+    }
+
     // Group lines
-    type LineGroup = 
+    type LineGroup =
         | { type: 'chord-lyric', id: number, chunks: { chord: string, lyric: string, isChord: boolean }[] }
         | { type: 'text-only', id: number, content: React.ReactNode, textLength: number }
 
@@ -271,17 +294,36 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                                 return group.content;
                             }
                             
-                            // Render Chord-Lyric chunks
+                            // Render Chord-Lyric chunks. One stacked column per
+                            // chunk: chord row above, lyric row below.
+                            const renderChunkCol = (chunk: Chunk, idx: number) => (
+                                <div key={idx} className="flex flex-col">
+                                    <div className={`whitespace-pre h-[1.5em] ${chunk.isChord ? 'text-brand font-bold' : ''}`}>
+                                        {chunk.chord}
+                                    </div>
+                                    <div className="whitespace-pre min-h-[1.5em]">
+                                        {chunk.lyric}
+                                    </div>
+                                </div>
+                            )
+
+                            // Fit mode: single non-wrapping row — alignment preserved
+                            // exactly as before (byte-identical to the prior render).
+                            if (!wrapMode) {
+                                return (
+                                    <div key={group.id} className="flex flex-nowrap w-max mb-1">
+                                        {group.chunks.map(renderChunkCol)}
+                                    </div>
+                                )
+                            }
+
+                            // Wrap mode: the row wraps BETWEEN word units, never
+                            // inside one — each word group is a non-breaking inline-flex.
                             return (
-                                <div key={group.id} className={`flex ${wrapMode ? 'flex-wrap' : 'flex-nowrap w-max'} mb-1`}>
-                                    {group.chunks.map((chunk, idx) => (
-                                        <div key={idx} className="flex flex-col">
-                                            <div className={`whitespace-pre h-[1.5em] ${chunk.isChord ? 'text-brand font-bold' : ''}`}>
-                                                {chunk.chord}
-                                            </div>
-                                            <div className="whitespace-pre min-h-[1.5em]">
-                                                {chunk.lyric}
-                                            </div>
+                                <div key={group.id} className="flex flex-wrap mb-1">
+                                    {groupChunksIntoWords(group.chunks).map((wordChunks, wi) => (
+                                        <div key={wi} className="inline-flex flex-nowrap">
+                                            {wordChunks.map(renderChunkCol)}
                                         </div>
                                     ))}
                                 </div>
