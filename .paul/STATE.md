@@ -11,11 +11,11 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Milestone: **🚧 v11.2 MCP Stress-Test Fixes — CONTENT-COMPLETE 5/5 (2026-06-11), awaiting `/paul:complete-milestone`.** All 9 stress-test bugs fixed (BL tenant; CRC byte-identical throughout). 5 phases scoped from the Brothers Lazaroff stress-test report. (v11.1 ✅ COMPLETE, tag `v11.1.0`, archived.)
-Phase: **v11.2-05 P3 polish (BUG-6/7/8) — ✅ COMPLETE 2026-06-11** (both plans LOOP COMPLETE + shipped). (v11.2-01 ✅ · 02 ✅ · 03 ✅ · 04 ✅ · 05 ✅.) **Milestone v11.2: 5 of 5 phases done.**
-Plan: **None active.** Loop idle. **NEXT: `/paul:complete-milestone`** — tag `v11.2.0`, full PROJECT.md v11.2 writeup, archive ROADMAP, bump package.json. Then open the next milestone or return to v7.1 `.coord/` hardening.
-Status: **v11.2-05 SHIPPED + committed + pushed to `master`.** BUG-6 host-resolved dashboard hero (broslaz brand, CRC byte-identical) + BUG-7 word-atomic chord wrap + BUG-8 `serializeTimestamps()` boundary pass (all MCP timestamps ISO). Gates across the phase: tsc · text-score-viewer 9/9 · serialize-timestamps 10/10 · next build clean.
-Last activity: 2026-06-11 (session 12) — `/paul:unify` v11.2-05-02 (BUG-8) → phase v11.2-05 transition (ROADMAP ✅, milestone content-complete 5/5, commit + push). PROJECT.md v11.2 writeup deferred to `/paul:complete-milestone`.
+Milestone: **✅ v11.2 MCP Stress-Test Fixes — COMPLETE 2026-06-11 (5/5, tag `v11.2.0`, `package.json` `11.2.0`, archived `.paul/milestones/v11.2.0-ROADMAP.md`).** All 9 Brothers Lazaroff stress-test bugs fixed; CRC byte-identical throughout. **No PAUL milestone active — awaiting next.** (v11.1 ✅ tag `v11.1.0`; v11.0 ✅ tag `v11.0.0`.)
+Phase: **None active.**
+Plan: **None active.** Loop idle (milestone complete).
+Status: **v11.2 closed + tagged + pushed.** Next: `/paul:discuss-milestone` (or `/paul:milestone`) to scope the next milestone, OR resume v7.1 `.coord/` hardening (cycle-13, independent of the PAUL loop). Standing UAT-PENDING (non-blocking, live/safe): BL-connector reconnect → BUG-1 + BUG-9 retests.
+Last activity: 2026-06-11 (session 12) — `/paul:complete-milestone` v11.2 (MILESTONES entry + PROJECT.md evolved + ROADMAP archived + package.json 11.2.0 + tag `v11.2.0`).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -41,15 +41,15 @@ Last activity: 2026-06-11 (session 12) — `/paul:unify` v11.2-05-02 (BUG-8) →
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `06f2db3176` — **v11.2-05-01 BUG-6 + BUG-7**, session 12; Vercel auto-deploy). v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176`. **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`, in sync with `origin/master` (tip `f27ae7bc5f` — **v11.2-05 phase complete: BUG-8**, session 12; Vercel auto-deploy). v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-05-02 (BUG-8) LOOP COMPLETE — phase 05 ✅, milestone 5/5 → /paul:complete-milestone]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [Milestone v11.2 COMPLETE — no loop active; ready for next milestone]
+  ○        ○        ○
 ```
 
 ## Execution Substrate (bongo .coord/)
@@ -88,15 +88,14 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-05-02 (BUG-8) LOOP COMPLETE �
 
 ## Session Continuity
 
-Last session: 2026-06-11 (session 12) — closed v11.2-04-02 (BUG-5) + phase v11.2-04 transition; PLAN→APPLY→UNIFY→commit→push to `master` (`52a3dea57d`). All gates green.
-Stopped at: **Phase v11.2-04 ✅ COMPLETE. Milestone v11.2: 4/5 phases done — only v11.2-05 (P3 polish, the LAST phase) remains.**
-**OPEN ACTION ON DANIEL (live retests, both dryRun/safe-or-emulator-proven):** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp`, then run the UAT-PENDING items: (1) v11.2-01 BUG-1 create→propose→commit on BL; (2) v11.2-02 `preview_publish` on a BL setlist shows BL roster size not 17. Both already emulator-proven. Existing token is crc-pinned.
-Next action: **`/paul:plan`** (Phase v11.2-05 — BUG-6/7/8 P3 polish). It's the milestone's last phase → on close, `/paul:complete-milestone` (tag `v11.2.0`, full PROJECT.md v11.2 writeup).
-Resume file: **.paul/ROADMAP.md § Active Milestone** (v11.2-05 phase spec). Source: BL stress-test report (2026-06-09).
+Last session: 2026-06-11 (session 12) — closed all of v11.2-04 (BUG-4/5) + v11.2-05 (BUG-6/7/8); each PLAN→APPLY→UNIFY→commit→push to `master`. Milestone v11.2 content-complete 5/5. All gates green throughout.
+Stopped at: **Milestone v11.2 ✅ COMPLETE + tagged `v11.2.0` (all 9 BL stress-test bugs fixed). No PAUL milestone active.**
+**OPEN ACTION ON DANIEL (live retests, all safe/dryRun or emulator-proven):** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp`, then run UAT-PENDING: (1) BUG-1 create→propose→commit on BL; (2) BUG-9 `preview_publish` on a BL setlist shows BL roster size not 17. Both emulator-proven; existing token is crc-pinned. (Independent of milestone close.)
+Next action: **`/paul:discuss-milestone`** (or `/paul:milestone`) to scope the next milestone — OR resume v7.1 `.coord/` hardening (cycle-13, independent of the PAUL loop). No blocking work.
+Resume file: **.paul/MILESTONES.md** (v11.2 entry) + `.paul/milestones/v11.2.0-ROADMAP.md` (archive). Source: BL stress-test report (2026-06-09).
 Resume context:
-- v11.2: 4/5 phases done; only v11.2-05 (P3 polish) remains.
-- v11.2-05 targets: BUG-6 "CRC MUSIC" authed-header brand leak on broslaz · BUG-7 text/plain chord-over-lyric fragmentation · BUG-8 ISO timestamp serialization at MCP boundary. CRC byte-identical constraint applies to BUG-6/BUG-8; /ui-ux-pro-max gates any UI-visible render change (BUG-6/BUG-7).
-- v11.2-04 done: BUG-4 preview_publish unbonded flag; BUG-5 cleanup isTest flag-sweep + dashboard isTest filter (shared isNonTestSetlist). library_index flag-sweep dropped (no field — verified).
+- v11.2 content-complete 5/5: BUG-1 resolver · BUG-9 publish-audience org scope · BUG-2/3 error contract · BUG-4 preview_publish unbonded flag · BUG-5 cleanup isTest sweep + dashboard filter · BUG-6 host-resolved dashboard hero · BUG-7 word-atomic chord wrap · BUG-8 serializeTimestamps boundary. CRC byte-identical throughout.
+- `/paul:complete-milestone` is the only remaining PAUL step; tag v11.2.0 + PROJECT.md writeup happen there.
 - Daniel paces with "go" per PAUL step; autonomy posture binding (auto-commit+push per plan to master).
 - Open on Daniel: BL connector reconnect → run UAT-PENDING BUG-1 + BUG-9 live retests (safe/dryRun).
 Reusable lesson (session 8): MCP authoring org is pinned into the bearer at MINT time (`oauth/token/route.ts` → `resolveMintOrg` → `createMcpToken`), NOT re-resolved per request — a claim change requires a RECONNECT to take effect. And Firestore `orderBy(field)` silently drops docs missing that field (the People-list bug).

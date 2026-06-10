@@ -37,7 +37,47 @@ Completed milestone log for this project.
 | v7.0 Document-Driven Setlist Creation | 2026-05-14 | ~1.5 days (2026-05-13 milestone open → 2026-05-14 close) | 9 phases LOOP COMPLETE (8 roadmap + v70-09 out-of-sequence polish), 16 plans, 2 bundled phase commits at master HEAD (v70-07 `4668e2a8` + v70-08 `f3f86c41`); PENDING-UAT at close (6th consecutive v51-04 use); HFG counter 0/3 held; constraint 12 satisfied (end-of-milestone audit ran, 9 P1s remediated in-phase) |
 | v11.0 Brothers Lazaroff Multi-Tenant | 2026-06-09 | ~2 days (2026-06-08 → 2026-06-09) | 7 phases (v11-01..06 + v11-02b), 23 plans; 2nd live tenant brotherslazaroff.live fully tenant-isolated; close-gate AUDIT.md GO; live prod probe 19/19; tip `2a8441d6e5` |
 | v11.1 Brothers Lazaroff Post-Launch Fixes | 2026-06-09 | ~1 session | 4 phases, 5 plans; broslaz reads as a band across the authed surface (branding/library/vocab) + multi-org authoring path; CRC byte-identical; tag `v11.1.0`; tip `4490abe53c` |
+| v11.2 MCP Stress-Test Fixes | 2026-06-11 | ~1 session | 5 phases, 8 plans; all 9 Brothers Lazaroff MCP/Perform stress-test bugs fixed (resolver 404, publish-audience org scope, error contract, publish/test-data hygiene, P3 polish); CRC byte-identical; tag `v11.2.0`; tip `f27ae7bc5f` |
 | v11.2 MCP Stress-Test Fixes | 🚧 OPEN 2026-06-09 | — | 5 phases (TBD plans); closing the 9 BL stress-test findings (BUG-1 P0 propose/commit resolver · BUG-9 P1 publish-audience verify · BUG-2/3 error contract · BUG-4/5 hygiene · BUG-6/7/8 P3); source report 2026-06-09 (BL tenant) |
+
+---
+
+## ✅ v11.2 MCP Stress-Test Fixes
+
+**Completed:** 2026-06-11 · **Duration:** ~1 session (8 PAUL loops back-to-back)
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 5 (v11.2-01, 02, 03, 04, 05) |
+| Plans | 8 |
+| Files changed | ~14 (MCP setlist-write/test-tokens/tools-index + new serialize-timestamps, dashboard page/hero, TextScoreViewer, public-setlist-order, + tests) |
+| Version | 11.1.0 → **11.2.0** (tag `v11.2.0`) |
+
+### Key Accomplishments
+
+- **All 9 findings from the Brothers Lazaroff MCP + Perform stress-test (2026-06-09) closed**, BL tenant only, **CRC byte-identical throughout**.
+- **MCP authoring path repaired + hardened:** BUG-1 stage→confirm→commit 404 fixed via the shared `getSetlistById` resolver; BUG-9 publish-audience now org-scoped (no cross-tenant roster leak); BUG-2/3 error contract made deterministic (correct HTTP-class codes + uniform single/bulk `RichErrorBody`); BUG-8 a single `serializeTimestamps()` boundary pass in `jsonResult` renders every tool's timestamps ISO (no raw `{_seconds,_nanoseconds}`).
+- **Publish + test-data hygiene:** BUG-4 `preview_publish` flags unbonded `type:song` rows (`review_first`); BUG-5 `cleanup_all_test_data` sweeps owner-real `isTest` setlists (full-sweep mode, prefix-isolation preserved) + the authed dashboard hides isTest setlists via a shared `isNonTestSetlist` predicate reused from `/perform`.
+- **broslaz consumer/authoring polish:** BUG-6 the authed dashboard hero host-resolves its brand (no "CRC MUSIC" leak); BUG-7 the Perform text-chart renderer keeps lyric words intact (word-atomic wrap grouping).
+- Full quality floor held every loop: tsc clean · emulator/unit suites green (mcp-setlist-write 78/78 · mcp-test-tokens 28/28 · serialize-timestamps 10/10 · text-score-viewer 9/9 · public-view parity) · `SKIP_ENV_VALIDATION=1 next build` clean.
+
+### Key Decisions
+
+- **BUG-5 scope correction:** `isTest` is a Setlist-only field (verified vs deployed code) — the ROADMAP's "sweep library_index" was dropped as unimplementable (charts/songs are owner-cascaded; no flag exists).
+- **Phase v11.2-05 split by subsystem:** BUG-6+7 (frontend, /ui-ux-pro-max gated) as plan 01; BUG-8 (MCP server) as plan 02 — kept the server fix out from behind a UI gate.
+- **BUG-8 single-boundary pass** over per-tool patching: one `serializeTimestamps()` chokepoint in `jsonResult`, idempotent over the already-ISO paths (`update_track`'s `normalizeTrackEcho`).
+- **BUG-5/BUG-6 reuse existing seams:** the dashboard hero mirrors the v11.1-01 `coerceOrgId(x-org-id)`→`getOrgBranding` nav pattern; the dashboard isTest filter reuses `/perform`'s predicate — no new abstractions.
+
+### Deferred (carried forward)
+
+- `library_index`/`songs` lacks an `isTest` flag — a real-owner "test" chart has no marker (revisit only if a chart-level flag is ever introduced).
+- Standing UAT-PENDING (live, safe/dryRun, emulator-proven): BL connector reconnect → BUG-1 create→propose→commit + BUG-9 `preview_publish` roster-size retests.
+
+### UAT
+
+- All fixes emulator/unit-proven; live BL-connector retests for BUG-1 + BUG-9 are non-blocking (Daniel, at convenience).
 
 ---
 
