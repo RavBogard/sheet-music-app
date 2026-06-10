@@ -46,6 +46,7 @@ import {
 } from "./setlist-write"
 import { cloneSetlist } from "./clone-setlist"
 import { isErrorEnvelope } from "./result-iserror"
+import { serializeTimestamps } from "../serialize-timestamps"
 import {
     listTemplates,
     getTemplate,
@@ -290,11 +291,15 @@ function jsonResult(data: unknown) {
     // Zod failures already set isError via the SDK remap; ok:false runtime
     // rejections must too. Decision extracted to ./result-iserror for testing.
     const isErrorResult = isErrorEnvelope(normalized)
+    // v11.2-05-02 (BUG-8): normalize every Firestore timestamp to ISO at this
+    // single boundary so no tool leaks a raw {_seconds,_nanoseconds}. isError is
+    // computed from the un-mutated envelope above; the pass is idempotent over
+    // already-ISO values, so error envelopes are unaffected in shape.
     return {
         content: [
             {
                 type: "text" as const,
-                text: JSON.stringify(normalized, null, 2),
+                text: JSON.stringify(serializeTimestamps(normalized), null, 2),
             },
         ],
         ...(isErrorResult ? { isError: true as const } : {}),

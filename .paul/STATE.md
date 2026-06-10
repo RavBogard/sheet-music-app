@@ -11,11 +11,11 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Milestone: **🚧 v11.2 MCP Stress-Test Fixes — OPEN 2026-06-09.** 5 phases scoped from the Brothers Lazaroff stress-test report (BL tenant only; CRC untouched). **4/5 complete** (only v11.2-05 P3 polish remains). (v11.1 ✅ COMPLETE, tag `v11.1.0`, archived.)
-Phase: **v11.2-05 P3 polish (BUG-6/7/8) — the LAST phase** — 🚧 in progress (planning). (v11.2-01 ✅ · 02 ✅ · 03 ✅ · 04 ✅.) Milestone v11.2: 4 of 5 phases done.
-Plan: **v11.2-05-01 (BUG-6 + BUG-7) ✅ LOOP COMPLETE + shipped (`<sha>`).** Next: **v11.2-05-02 (BUG-8) — MCP timestamp serialization** (the phase's LAST plan → transition + `/paul:complete-milestone` on its close). BUG-8: `add_track_to_setlist`/`update_track` return `updatedAt` as raw Firestore `{_seconds,_nanoseconds}` while sibling fields are ISO; normalize via a single `serializeTimestamps()` pass on tool responses. CRC byte-identical (envelope shape).
-Status: **v11.2-05-01 SHIPPED + committed + pushed to `master`.** BUG-6: dashboard hero (+ OnboardingCard) host-resolve brand server-first (`coerceOrgId(x-org-id)`→`getOrgBranding`, mirrors v11.1-01 nav) → broslaz shows BL monogram + "BROTHERS LAZAROFF", CRC byte-identical. BUG-7: `TextScoreViewer` wrap-mode chunks grouped word-atomic (`groupChunksIntoWords`) so a lyric word never fragments; fit mode unchanged. Gates: tsc clean · text-score-viewer **9/9** (new BUG-7 case) · next build clean.
-Last activity: 2026-06-11 (session 12) — `/paul:unify` v11.2-05-01 (BUG-6 + BUG-7); per-plan commit + push to `master`.
+Milestone: **🚧 v11.2 MCP Stress-Test Fixes — CONTENT-COMPLETE 5/5 (2026-06-11), awaiting `/paul:complete-milestone`.** All 9 stress-test bugs fixed (BL tenant; CRC byte-identical throughout). 5 phases scoped from the Brothers Lazaroff stress-test report. (v11.1 ✅ COMPLETE, tag `v11.1.0`, archived.)
+Phase: **v11.2-05 P3 polish (BUG-6/7/8) — ✅ COMPLETE 2026-06-11** (both plans LOOP COMPLETE + shipped). (v11.2-01 ✅ · 02 ✅ · 03 ✅ · 04 ✅ · 05 ✅.) **Milestone v11.2: 5 of 5 phases done.**
+Plan: **None active.** Loop idle. **NEXT: `/paul:complete-milestone`** — tag `v11.2.0`, full PROJECT.md v11.2 writeup, archive ROADMAP, bump package.json. Then open the next milestone or return to v7.1 `.coord/` hardening.
+Status: **v11.2-05 SHIPPED + committed + pushed to `master`.** BUG-6 host-resolved dashboard hero (broslaz brand, CRC byte-identical) + BUG-7 word-atomic chord wrap + BUG-8 `serializeTimestamps()` boundary pass (all MCP timestamps ISO). Gates across the phase: tsc · text-score-viewer 9/9 · serialize-timestamps 10/10 · next build clean.
+Last activity: 2026-06-11 (session 12) — `/paul:unify` v11.2-05-02 (BUG-8) → phase v11.2-05 transition (ROADMAP ✅, milestone content-complete 5/5, commit + push). PROJECT.md v11.2 writeup deferred to `/paul:complete-milestone`.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -41,14 +41,14 @@ Last activity: 2026-06-11 (session 12) — `/paul:unify` v11.2-05-01 (BUG-6 + BU
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `52a3dea57d` — **v11.2-04 phase complete: BUG-4 + BUG-5**, session 12; Vercel auto-deploy). v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d`. **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`, in sync with `origin/master` (tip `06f2db3176` — **v11.2-05-01 BUG-6 + BUG-7**, session 12; Vercel auto-deploy). v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176`. **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-05-01 (BUG-6 + BUG-7) LOOP COMPLETE — phase 05 open, next plan 05-02 (BUG-8)]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-05-02 (BUG-8) LOOP COMPLETE — phase 05 ✅, milestone 5/5 → /paul:complete-milestone]
   ✓        ✓        ✓
 ```
 
