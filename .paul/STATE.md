@@ -88,11 +88,16 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-03-01 (BUG-2) loop COMPLETE �
 
 ## Session Continuity
 
-Last session: 2026-06-09 (session 9) — `/paul:resume` with the **Brothers Lazaroff MCP + Perform stress-test report** (9 findings) as the handoff → reconciled against the idle v11.1-complete loop → `/paul:milestone` created **v11.2 MCP Stress-Test Fixes** (5 phases, constraints locked, phase dirs + ROADMAP/MILESTONES/paul.json/STATE updated). No code touched yet.
-Stopped at: **v11.2-03-01 (BUG-2) loop CLOSED + shipped.** Next: `/paul:plan` for **v11.2-03-02** (BUG-3 — `bulk_add_tracks` per-row bare-string `error` → `{code,machine_code,message}` envelope; `BulkAddResult.error` shape change in `server-tracks-write.ts` `bulkAddTracks` + assertion updates). Then 04 → 05.
+Last session: 2026-06-10 (session 10) — shipped v11.2 phases 01 (BUG-1) → 02 (BUG-9) → 03-01 (BUG-2), each PLAN→APPLY→UNIFY→commit→push. Paused after v11.2-03-01 closed. **⏸ PAUSED — see `.paul/HANDOFF-2026-06-10.md`.**
+Stopped at: **v11.2-03-01 (BUG-2) loop CLOSED + shipped; session paused.** Next: `/paul:plan` for **v11.2-03-02** (BUG-3 — `bulk_add_tracks` per-row bare-string `error` → `{code,machine_code,message}` envelope; `BulkAddResult.error` shape change in `server-tracks-write.ts` `bulkAddTracks` ~:1452/:1536-1639 + assertion updates in `mcp-setlist-write.emulator.test.ts`). Then 04 → 05.
 **OPEN ACTION ON DANIEL (live retests, both dryRun/safe-or-emulator-proven):** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp`, then run the UAT-PENDING items: (1) v11.2-01 BUG-1 create→propose→commit on BL; (2) v11.2-02 `preview_publish` on a BL setlist shows BL roster size not 17. Both already emulator-proven. Existing token is crc-pinned.
 Next action: **`/paul:plan`** (Phase v11.2-03 — BUG-2/3 error contract). Then 04 → 05 in order.
-Resume file: **.paul/phases/v11.2-02-publish-audience-org-scope/v11.2-02-01-SUMMARY.md** (just-closed loop). Milestone specs: .paul/ROADMAP.md § Active Milestone. Source: BL stress-test report (2026-06-09).
+Resume file: **.paul/HANDOFF-2026-06-10.md** (session-10 pause handoff — full context + BUG-3 implementation notes). Milestone specs: .paul/ROADMAP.md § Active Milestone. Source: BL stress-test report (2026-06-09).
+Resume context:
+- v11.2: 2/5 phases done + 03-01 shipped; phase 03 open for plan 03-02 (BUG-3 bulk per-row envelope).
+- BUG-3 target: `BulkAddResult.error` string → `{code,machine_code,message}` in `server-tracks-write.ts`; per-row `song_not_found` now resolves 404 (03-01 map add).
+- Daniel paces with "go" per PAUL step; autonomy posture binding (auto-commit+push per plan to master).
+- Open on Daniel: BL connector reconnect → run UAT-PENDING BUG-1 + BUG-9 live retests (safe/dryRun).
 Reusable lesson (session 8): MCP authoring org is pinned into the bearer at MINT time (`oauth/token/route.ts` → `resolveMintOrg` → `createMcpToken`), NOT re-resolved per request — a claim change requires a RECONNECT to take effect. And Firestore `orderBy(field)` silently drops docs missing that field (the People-list bug).
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Standing UAT-PENDING (v11.1 close gate, live tenant): broslaz authed nav ("Brothers Lazaroff" + BL monogram, desktop + iPad-WebKit); /library (broslaz-only charts in tab + add-songs picker + header search; admin "All sites" reveals full pool); dashboard ("Upcoming Shows"/"Create New Set") + matrix ("Set Matrix"); MCP authoring (Claude Desktop → `https://www.brotherslazaroff.live/api/mcp` → author test setlist → lands broslaz); admin sets a leader's Band access in /manage → People; CRC unchanged throughout.
