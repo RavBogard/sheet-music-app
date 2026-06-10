@@ -8,6 +8,7 @@ import {
     processChartUpload,
     type LibraryCollection,
 } from "@/lib/library-upload"
+import { uploadFailureEnvelope } from "./library-upload"
 import {
     forbiddenRoleEnvelope,
     richError,
@@ -502,12 +503,12 @@ export async function finalizeChartUpload(
             failedAt: FieldValue.serverTimestamp(),
             failureReason: result.error,
         })
-        return richError(
-            "upload_failed",
-            result.error,
-            { tool: "finalize_chart_upload", uploadSessionId: args.uploadSessionId },
-            "Inspect the message; if dedup-related, retry with force: true.",
-        )
+        // v11.2-03 (BUG-2): shared upload-failure mapping (dedup→409, status
+        // passthrough) instead of a blanket upload_failed (500).
+        return uploadFailureEnvelope(result, {
+            tool: "finalize_chart_upload",
+            uploadSessionId: args.uploadSessionId,
+        })
     }
 
     await sessionRef.update({

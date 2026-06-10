@@ -57,6 +57,7 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     no_bonded_songs: 400,
     no_valid_recipients: 400,
     no_charts: 400,
+    reorder_failed: 400, // v11.2-03 (BUG-2): caller-supplied bad/incomplete orderedTrackIds set
     no_changes: 400,
     empty_file: 400,
     empty_patch: 400,
@@ -83,6 +84,8 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     not_found: 404,
     setlist_not_found: 404,
     track_not_found: 404,
+    song_not_found: 404, // v11.2-03 (BUG-2): add_track/update_track/swap_chart/update_song unknown songId
+
     file_not_found: 404,
     row_not_found: 404,
     chart_not_found: 404,

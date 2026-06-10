@@ -12,9 +12,9 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.2 MCP Stress-Test Fixes — OPEN 2026-06-09.** 5 phases scoped from the Brothers Lazaroff stress-test report (BL tenant only; CRC untouched). 0/5 complete. (v11.1 ✅ COMPLETE, tag `v11.1.0`, archived.)
-Phase: **v11.2-02 publish-audience org scoping [P1] — ✅ COMPLETE 2026-06-09 (1/1 plan, loop closed).** Milestone v11.2: 2 of 5 phases done.
-Plan: **None active.** Loop idle — ready for next PLAN (v11.2-03).
-Status: **v11.2-02 SHIPPED + committed + pushed to `master`** (Vercel auto-deploy). BUG-9 cross-tenant leak CLOSED: publish/preview org-scoped (caller `org` threaded, caller-org wall, recipients filtered to the setlist's org via `rowOrgIds(...).includes(setlistOrg)`). Gates: tsc clean · emulator 25/25 (4 new + 21 regression) · `next build` clean. CRC byte-identical; no real publish triggered. Optional live dryRun confirm → UAT-PENDING.
+Phase: **v11.2-03 MCP error contract [P1/P2]** — 🚧 in progress, 1 of 2 plans done. **03-01 BUG-2 ✅ LOOP COMPLETE + shipped `<sha>`; 03-02 BUG-3 next.** (v11.2-01 ✅ `6920d61668` · v11.2-02 ✅ `6079d4e3cf`.) Milestone v11.2: 2 of 5 phases done.
+Plan: **None active.** Loop idle — ready for next PLAN (v11.2-03-02, BUG-3 bulk per-row envelope).
+Status: **v11.2-03-01 (BUG-2) SHIPPED + committed + pushed to `master`.** Deterministic client errors now correct: add_track unknown songId→404, reorder bad ids→400, upload dedup→409, genuine fault→500. Shared `uploadFailureEnvelope` de-drifts all 4 upload tools. Gates: tsc clean · unit 12/12 · emulator mcp-chart-upload 55/55 · next build clean. CRC byte-identical.
 Last activity: 2026-06-09 (session 9) — `/paul:resume` consumed the BL stress-test report (9 findings) → `/paul:milestone` created **v11.2 MCP Stress-Test Fixes**: v11.2-01 BUG-1 propose/commit resolver [P0] · v11.2-02 BUG-9 publish-audience verify [P1] · v11.2-03 BUG-2/3 error contract · v11.2-04 BUG-4/5 hygiene · v11.2-05 BUG-6/7/8 P3 polish. Phase order = the report's suggested fix order.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
@@ -48,7 +48,7 @@ Last activity: 2026-06-09 (session 9) — `/paul:resume` consumed the BL stress-
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-02 loop COMPLETE 2026-06-09 — ready for next PLAN (v11.2-03)]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-03-01 (BUG-2) loop COMPLETE — phase open, next plan 03-02 (BUG-3)]
   ✓        ✓        ✓
 ```
 
@@ -89,7 +89,7 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-02 loop COMPLETE 2026-06-09 �
 ## Session Continuity
 
 Last session: 2026-06-09 (session 9) — `/paul:resume` with the **Brothers Lazaroff MCP + Perform stress-test report** (9 findings) as the handoff → reconciled against the idle v11.1-complete loop → `/paul:milestone` created **v11.2 MCP Stress-Test Fixes** (5 phases, constraints locked, phase dirs + ROADMAP/MILESTONES/paul.json/STATE updated). No code touched yet.
-Stopped at: **v11.2-02 loop CLOSED + shipped to `master`.** Next: `/paul:plan` for **v11.2-03** (BUG-2 + BUG-3 MCP error contract — HTTP status correctness + bulk error-envelope consistency). Then 04 → 05.
+Stopped at: **v11.2-03-01 (BUG-2) loop CLOSED + shipped.** Next: `/paul:plan` for **v11.2-03-02** (BUG-3 — `bulk_add_tracks` per-row bare-string `error` → `{code,machine_code,message}` envelope; `BulkAddResult.error` shape change in `server-tracks-write.ts` `bulkAddTracks` + assertion updates). Then 04 → 05.
 **OPEN ACTION ON DANIEL (live retests, both dryRun/safe-or-emulator-proven):** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp`, then run the UAT-PENDING items: (1) v11.2-01 BUG-1 create→propose→commit on BL; (2) v11.2-02 `preview_publish` on a BL setlist shows BL roster size not 17. Both already emulator-proven. Existing token is crc-pinned.
 Next action: **`/paul:plan`** (Phase v11.2-03 — BUG-2/3 error contract). Then 04 → 05 in order.
 Resume file: **.paul/phases/v11.2-02-publish-audience-org-scope/v11.2-02-01-SUMMARY.md** (just-closed loop). Milestone specs: .paul/ROADMAP.md § Active Milestone. Source: BL stress-test report (2026-06-09).

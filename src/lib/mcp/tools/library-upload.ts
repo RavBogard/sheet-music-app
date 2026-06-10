@@ -4,6 +4,7 @@ import {
     processChartUpload,
     musicMimeFromFileName,
     type LibraryCollection,
+    type ProcessChartUploadError,
 } from "@/lib/library-upload"
 import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
 import { scrapeChart } from "@/lib/chart-scrape"
@@ -31,6 +32,41 @@ import { applySongMetadata } from "./song-metadata"
 import { rowOrg, stampOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
+
+/**
+ * v11.2-03 (BUG-2): map a `processChartUpload` failure to the right HTTP
+ * status instead of a blanket `upload_failed` (500). `processChartUpload`
+ * already computes the correct `status` (400/409/422/500) + a `code`
+ * discriminant; the lagging wrappers (upload_chart / save_scraped_chart /
+ * finalize_chart_upload) were throwing both away. This consolidates the
+ * dedup→409 `duplicate_detected_in_library` + status-passthrough pattern
+ * that `import_chart_from_drive` already used, so all 4 upload tools share
+ * one envelope contract. `extras` carries the per-tool fields (tool name,
+ * ids); errorCode flows from the upload result's own status.
+ */
+export function uploadFailureEnvelope(
+    result: Pick<ProcessChartUploadError, "code" | "status" | "error">,
+    extras: Record<string, unknown>,
+): RichErrorEnvelope {
+    if (result.code === "duplicate_exact" || result.code === "duplicate_similar") {
+        return richError(
+            "duplicate_detected_in_library",
+            result.error,
+            {
+                ...extras,
+                matchKind: result.code === "duplicate_exact" ? "exact" : "similar",
+                errorCode: 409,
+            },
+            "If this is a legitimate variant (different key, arrangement, composer suffix), retry with force: true. Otherwise rename before re-uploading.",
+        )
+    }
+    return richError(
+        "upload_failed",
+        result.error,
+        { ...extras, errorCode: result.status ?? 500 },
+        "Inspect the message; if dedup-related, retry with force: true.",
+    )
+}
 
 /**
  * MCP chart-ingestion tools — three ways to add a chart to the library, all
@@ -176,12 +212,7 @@ export async function uploadChart(
     })
 
     if (!result.ok)
-        return richError(
-            "upload_failed",
-            result.error,
-            { tool: "upload_chart" },
-            "Inspect the message; if dedup-related, retry with force: true.",
-        )
+        return uploadFailureEnvelope(result, { tool: "upload_chart" })
     // v11-02-03: tag the new chart with the caller's org so the v11-02-02 read
     // tools isolate it. Confined to the MCP wrapper (processChartUpload stays
     // default-crc for the HTTP route + Drive-sync cron).
@@ -605,32 +636,13 @@ export async function importChartFromDrive(
 
     if (!result.ok) {
         // Cycle-5 C5C-009 — surface dedup-class failures as 409
-        // `duplicate_detected_in_library` so callers can distinguish a
-        // legitimate-variant escape-hatch case (resolve with force:true)
-        // from a real upload failure.
-        if (result.code === "duplicate_exact" || result.code === "duplicate_similar") {
-            return richError(
-                "duplicate_detected_in_library",
-                result.error,
-                {
-                    tool: "import_chart_from_drive",
-                    driveFileId,
-                    matchKind: result.code === "duplicate_exact" ? "exact" : "similar",
-                    errorCode: 409,
-                },
-                "If this is a legitimate variant (different key, arrangement, composer suffix), retry with force: true. Otherwise rename the file in Drive before re-importing.",
-            )
-        }
-        return richError(
-            "upload_failed",
-            result.error,
-            {
-                tool: "import_chart_from_drive",
-                driveFileId,
-                errorCode: result.status ?? 500,
-            },
-            "Inspect the message; if dedup-related, retry with force: true.",
-        )
+        // `duplicate_detected_in_library` (force:true escape hatch) vs a real
+        // upload failure. v11.2-03 (BUG-2): now via the shared helper so all 4
+        // upload tools carry one contract.
+        return uploadFailureEnvelope(result, {
+            tool: "import_chart_from_drive",
+            driveFileId,
+        })
     }
     // v11-02-03: tag the new chart with the caller's org (MCP-confined; the
     // dryRun branch above writes nothing, so no stamp there).
@@ -1036,12 +1048,7 @@ export async function saveScrapedChart(
     })
 
     if (!result.ok)
-        return richError(
-            "upload_failed",
-            result.error,
-            { tool: "save_scraped_chart" },
-            "Inspect the message; if dedup-related, retry with force: true.",
-        )
+        return uploadFailureEnvelope(result, { tool: "save_scraped_chart" })
 
     // v11-02-03: tag the new chart with the caller's org BEFORE the metadata
     // mirror below, so the applySongMetadata call (passed the same org) matches.
