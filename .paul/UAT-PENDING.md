@@ -206,3 +206,10 @@ Check:
 - [ ] Set David to "Both" → confirm dialog → on reload the badge shows "CRC + BL" and persists.
 - [ ] (with 02-01) David can then author for the granted tenant via that tenant's MCP URL.
 - [ ] A user whose membership you don't touch is unchanged (CRC users still default to CRC).
+
+## v11.2-01 propose/commit org-scope (BUG-1) — added 2026-06-09
+- **Live BL retest** (needs Daniel to reconnect Claude Desktop BL connector to https://www.brotherslazaroff.live/api/mcp first, to mint a BL-pinned bearer):
+  1. `create_setlist({name:"BUG-1 retest", isTest:true})` on the BL connector → note the returned setlistId
+  2. `propose_setlist_changes({setlistId, proposals:[{action:"add",type:"header",title:"Set 2"}]})` → expect `ok` + a `stageId` (NOT 404 setlist_not_found)
+  3. `commit_staged_changes({stageId})` → expect the rows landed; then `delete_setlist` to clean up
+  - Emulator proves correctness; this confirms it end-to-end on the live tenant.

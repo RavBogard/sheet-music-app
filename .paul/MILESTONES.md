@@ -37,6 +37,7 @@ Completed milestone log for this project.
 | v7.0 Document-Driven Setlist Creation | 2026-05-14 | ~1.5 days (2026-05-13 milestone open → 2026-05-14 close) | 9 phases LOOP COMPLETE (8 roadmap + v70-09 out-of-sequence polish), 16 plans, 2 bundled phase commits at master HEAD (v70-07 `4668e2a8` + v70-08 `f3f86c41`); PENDING-UAT at close (6th consecutive v51-04 use); HFG counter 0/3 held; constraint 12 satisfied (end-of-milestone audit ran, 9 P1s remediated in-phase) |
 | v11.0 Brothers Lazaroff Multi-Tenant | 2026-06-09 | ~2 days (2026-06-08 → 2026-06-09) | 7 phases (v11-01..06 + v11-02b), 23 plans; 2nd live tenant brotherslazaroff.live fully tenant-isolated; close-gate AUDIT.md GO; live prod probe 19/19; tip `2a8441d6e5` |
 | v11.1 Brothers Lazaroff Post-Launch Fixes | 2026-06-09 | ~1 session | 4 phases, 5 plans; broslaz reads as a band across the authed surface (branding/library/vocab) + multi-org authoring path; CRC byte-identical; tag `v11.1.0`; tip `4490abe53c` |
+| v11.2 MCP Stress-Test Fixes | 🚧 OPEN 2026-06-09 | — | 5 phases (TBD plans); closing the 9 BL stress-test findings (BUG-1 P0 propose/commit resolver · BUG-9 P1 publish-audience verify · BUG-2/3 error contract · BUG-4/5 hygiene · BUG-6/7/8 P3); source report 2026-06-09 (BL tenant) |
 
 ---
 

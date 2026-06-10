@@ -692,4 +692,129 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
         // collateral on adjacent rows).
         void songD
     })
+
+    // ─── v11.2-01 (BUG-1): org-scoped propose/commit ──────────────────────
+    //
+    // Before this fix, propose_setlist_changes + commit_staged_changes did NOT
+    // thread the caller's org, so loadEditableSetlist's v11-02-03 wall defaulted
+    // to crc and any brotherslazaroff setlist 404'd `setlist_not_found` even
+    // though every sibling write tool resolved it fine. These lock in: the BL
+    // happy path works, and the cross-tenant wall holds on BOTH tools with no
+    // existence leak / no mutation.
+    describe("v11.2-01 — org-scoped propose/commit (BUG-1)", () => {
+        const BL = "brotherslazaroff"
+
+        async function newBlSetlist(): Promise<string> {
+            const r = (await createSetlist(ADMIN, { name: "BL W-01" }, BL)) as {
+                setlistId: string
+            }
+            return r.setlistId
+        }
+
+        it("AC-1: BL caller can stage changes on a BL setlist", async () => {
+            const setlistId = await newBlSetlist()
+            const res = (await proposeSetlistChanges(
+                ADMIN,
+                {
+                    setlistId,
+                    proposals: [{ action: "add", type: "song", title: "BL Song" }],
+                },
+                BL,
+            )) as StageRecord
+            expect(res.stageId).toBeTruthy()
+            expect((res as unknown as { error?: unknown }).error).toBeUndefined()
+            const stageSnap = await db()
+                .collection("proposal_stages")
+                .doc(res.stageId)
+                .get()
+            expect(stageSnap.exists).toBe(true)
+        })
+
+        it("AC-2: BL caller can commit the staged batch onto the BL setlist", async () => {
+            const setlistId = await newBlSetlist()
+            const stage = (await proposeSetlistChanges(
+                ADMIN,
+                {
+                    setlistId,
+                    proposals: [{ action: "add", type: "song", title: "BL Song" }],
+                },
+                BL,
+            )) as StageRecord
+            const commit = (await commitStagedChanges(
+                ADMIN,
+                { stageId: stage.stageId },
+                BL,
+            )) as { ok: true; addedTrackIds: string[] }
+            expect(commit.ok).toBe(true)
+            expect(commit.addedTrackIds).toHaveLength(1)
+            // Stage deleted (one-shot).
+            expect(
+                (
+                    await db()
+                        .collection("proposal_stages")
+                        .doc(stage.stageId)
+                        .get()
+                ).exists,
+            ).toBe(false)
+            // New track landed on the BL setlist.
+            const tracks = await db()
+                .collection("tracks")
+                .where("setlistId", "==", setlistId)
+                .get()
+            expect(tracks.docs.map((d) => d.data().title)).toContain("BL Song")
+        })
+
+        it("AC-3: a crc caller cannot stage against a BL setlist (no existence leak)", async () => {
+            const setlistId = await newBlSetlist()
+            const res = (await proposeSetlistChanges(
+                ADMIN,
+                {
+                    setlistId,
+                    proposals: [{ action: "add", type: "song", title: "x" }],
+                },
+                "crc",
+            )) as { error?: { machine_code?: string } }
+            expect(res.error?.machine_code).toBe("setlist_not_found")
+            // No stage was created.
+            const stages = await db().collection("proposal_stages").get()
+            expect(stages.empty).toBe(true)
+        })
+
+        it("AC-3: a crc caller cannot commit a stage whose setlist is BL-owned", async () => {
+            const setlistId = await newBlSetlist()
+            const stage = (await proposeSetlistChanges(
+                ADMIN,
+                {
+                    setlistId,
+                    proposals: [{ action: "add", type: "song", title: "BL Song" }],
+                },
+                BL,
+            )) as StageRecord
+            const before = (
+                await db().collection("setlists").doc(setlistId).get()
+            ).data() as Record<string, unknown>
+
+            const res = (await commitStagedChanges(
+                ADMIN,
+                { stageId: stage.stageId },
+                "crc",
+            )) as { error?: { machine_code?: string } }
+            expect(res.error?.machine_code).toBe("setlist_not_found")
+
+            // BL setlist untouched (version + trackCount unchanged); stage NOT deleted.
+            const after = (
+                await db().collection("setlists").doc(setlistId).get()
+            ).data() as Record<string, unknown>
+            expect(after.version).toBe(before.version)
+            expect(after.trackCount).toBe(before.trackCount)
+            expect(
+                (
+                    await db()
+                        .collection("proposal_stages")
+                        .doc(stage.stageId)
+                        .get()
+                ).exists,
+            ).toBe(true)
+        })
+    })
 })

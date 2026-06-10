@@ -11,24 +11,27 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Milestone: **v11.1 Brothers Lazaroff Post-Launch Fixes — ✅ COMPLETE 2026-06-09 (tag `v11.1.0`).** 4/4 phases shipped + archived. No milestone active.
-Phase: **None active.** Awaiting next milestone.
-Plan: **None.** Loop idle.
-Status: **v11.1 milestone CLOSED — archived (MILESTONES.md § v11.1 + `.paul/milestones/v11.1-ROADMAP.md`), package.json 11.1.0, tag `v11.1.0`. Ready for `/paul:discuss-milestone` or `/paul:milestone`.** On `master`, pushed to origin.
-Last activity: 2026-06-09 (session 8) — post-close broslaz fixes: (1) diagnosed "setlist not displaying" = MCP bearer org pinned at mint time + Daniel was crc-only (not a broslaz bug); (2) fixed `/manage` People-list invisibility (Daniel's pre-convention user doc lacked `createdAt` → `orderBy("createdAt")` dropped him → backfilled); (3) Daniel self-granted broslaz via toggle (claim+doc verified `["crc","brotherslazaroff"]`); (4) deleted 2 test setlists +10 tracks; (5) shipped v11.1-05 authentic broslaz branding (`10c04099e1`).
+Milestone: **🚧 v11.2 MCP Stress-Test Fixes — OPEN 2026-06-09.** 5 phases scoped from the Brothers Lazaroff stress-test report (BL tenant only; CRC untouched). 0/5 complete. (v11.1 ✅ COMPLETE, tag `v11.1.0`, archived.)
+Phase: **v11.2-01 propose/commit resolver fix [P0] — ✅ COMPLETE 2026-06-09 (1/1 plan, loop closed).** Milestone v11.2: 1 of 5 phases done.
+Plan: **None active.** Loop idle — ready for next PLAN (v11.2-02).
+Status: **v11.2-01 SHIPPED + committed + pushed to `master`** (Vercel auto-deploy). Threaded `orgFrom(extra)` into `proposeSetlistChanges` + `commitStagedChanges` (propose→`loadEditableSetlist(…,org)`; commit→new in-tx `rowOrg!==org` setlist_not_found wall). Gates: tsc clean · emulator 20/20 (4 new + 16 W-01 regression) · `next build` clean. CRC byte-identical. LIVE retest → UAT-PENDING (needs Daniel BL-connector reconnect).
+Last activity: 2026-06-09 (session 9) — `/paul:resume` consumed the BL stress-test report (9 findings) → `/paul:milestone` created **v11.2 MCP Stress-Test Fixes**: v11.2-01 BUG-1 propose/commit resolver [P0] · v11.2-02 BUG-9 publish-audience verify [P1] · v11.2-03 BUG-2/3 error contract · v11.2-04 BUG-4/5 hygiene · v11.2-05 BUG-6/7/8 P3 polish. Phase order = the report's suggested fix order.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
 - **Band leaders:** explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle (today hand-set via scripts). The **authoring** tier.
 
-## Milestone Phases (v11.1)
+## Milestone Phases (v11.2 — ACTIVE)
 
 | Phase | Focus | Priority |
 |-------|-------|----------|
-| v11.1-01 | Org-aware authed branding — DesktopHeader/MobileHeader wordmark+logo org-aware (hardcode `/logo.jpg` + CRC congregation today); CRC byte-identical | P0 |
-| v11.1-02 | Multi-org membership toggle (orgIds CRC/broslaz/both) + MCP authoring target-org for "both" leaders (preserve v11-06-02 single-org lock) | P0 — critical path (unblocks Daniel's broslaz authoring) |
-| v11.1-03 | Library generic-tab visibility — host-filter 4 unscoped reads + Shared flag + admin All-sites toggle + org-neutral broslaz tab labels; display-only | P1 |
-| v11.1-04 | broslaz liturgical vocab sweep ("Plan Service/Show", "Upcoming Services"); CRC byte-identical | P1 |
+| v11.2-01 | **BUG-1** `propose_setlist_changes`/`commit_staged_changes` 404 on MCP UUID-id setlists → consolidate to the shared `getSetlistById` resolver; restores stage→confirm→commit | P0 — critical path |
+| v11.2-02 | **BUG-9** publish-audience org scoping — VERIFY FIRST whether `publish_setlist` recipient query filters on `orgId` (BL preview showed CRC roster size 17); add filter if absent. Side-effectful → STOP-gate before any real publish | P1 — verify-first |
+| v11.2-03 | **BUG-2 + BUG-3** MCP error contract — deterministic client errors as 500 (→404/400/409) + bulk per-row bare-string errors → structured `{machine_code}` envelope | P1/P2 |
+| v11.2-04 | **BUG-4 + BUG-5** publish/test-data hygiene — `preview_publish` flag unbonded `type:song` rows + `cleanup_all_test_data` sweep owner-real `isTest` setlists + dashboard `isTest` filter | P2 |
+| v11.2-05 | **BUG-6 + BUG-7 + BUG-8** P3 polish — "CRC MUSIC" authed-header brand leak on broslaz · text/plain chord-over-lyric fragmentation · ISO timestamp serialization at MCP boundary | P3 |
+
+(v11.1 phases — all ✅ COMPLETE 2026-06-09 — archived to `.paul/milestones/v11.1-ROADMAP.md` + MILESTONES.md § v11.1.)
 
 **Root-cause evidence (traced this session, deployed code + prod Firestore):**
 - **Branding:** `src/components/nav/DesktopHeader.tsx:106-107` + `MobileHeader.tsx:34-41` hardcode `/logo.jpg` + "Central Reform Congregation" alt; wordmark resolves to CRC/default congregation, not host org. broslaz congregation doc IS correct.
@@ -45,8 +48,8 @@ Last activity: 2026-06-09 (session 8) — post-close broslaz fixes: (1) diagnose
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.1 milestone COMPLETE 2026-06-09 — loop idle, ready for next milestone]
-  ○        ○        ○
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-01 loop COMPLETE 2026-06-09 — ready for next PLAN (v11.2-02)]
+  ✓        ✓        ✓
 ```
 
 ## Execution Substrate (bongo .coord/)
@@ -85,11 +88,11 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.1 milestone COMPLETE 2026-06-09
 
 ## Session Continuity
 
-Last session: 2026-06-09 (session 8) — /paul:resume on a "broslaz setlist not displaying" report → diagnosed it as the MCP **mint-time org-pinning** model (bearer bakes orgId at mint; Daniel was crc-only so setlists landed crc — not a bug), fixed the `/manage` People-list `createdAt`-orderBy invisibility (backfilled Daniel's doc), confirmed his self-grant to `["crc","brotherslazaroff"]`, deleted 2 test setlists, and shipped **v11.1-05 authentic broslaz branding** (real wordmark + teal/cyan palette + live hero + Zilla-Slab headings; `10c04099e1`; tsc/tests/build green; CRC byte-identical; via /ui-ux-pro-max).
-Stopped at: **v11.1 milestone still COMPLETE/idle.** v11.1-05 branding shipped + pushed (Vercel deploying). Loop idle, no milestone active.
-**OPEN ACTION ON DANIEL:** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp` to re-mint a broslaz-pinned bearer (existing token is crc-pinned from before his membership grant; authoring lands crc until he reconnects).
-Next action: **`/paul:discuss-milestone`** or **`/paul:milestone`**. Optional branding polish offered (BL PWA app icon; broslaz nav active-glow still hardcoded indigo). Backlog: recordings-collection org-scoping (+ upload orgId stamp), SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage. v7.1 hardening continues via `.coord/`.
-Resume file: **.paul/HANDOFF-2026-06-09-broslaz-branding.md** (session-8 handoff; supersedes the v11.1-complete one). Milestone record: .paul/MILESTONES.md § v11.1; reference: .paul/ROADMAP.md.
+Last session: 2026-06-09 (session 9) — `/paul:resume` with the **Brothers Lazaroff MCP + Perform stress-test report** (9 findings) as the handoff → reconciled against the idle v11.1-complete loop → `/paul:milestone` created **v11.2 MCP Stress-Test Fixes** (5 phases, constraints locked, phase dirs + ROADMAP/MILESTONES/paul.json/STATE updated). No code touched yet.
+Stopped at: **v11.2-01 loop CLOSED + shipped to `master`.** Next: `/paul:plan` for **v11.2-02** (BUG-9 publish-audience org scoping — VERIFY-FIRST; STOP-gate before any real publish).
+**OPEN ACTION ON DANIEL (live retest of v11.2-01):** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp` to re-mint a broslaz-pinned bearer, then run the UAT-PENDING BUG-1 retest (create→propose→commit on BL). Emulator already proves the fix; this is end-to-end confirmation. Existing token is crc-pinned.
+Next action: **`/paul:plan`** (Phase v11.2-02 — BUG-9 publish-audience verify). Then 03 → 04 → 05 in order.
+Resume file: **.paul/phases/v11.2-01-propose-commit-resolver/v11.2-01-01-SUMMARY.md** (just-closed loop). Milestone specs: .paul/ROADMAP.md § Active Milestone. Source: BL stress-test report (2026-06-09).
 Reusable lesson (session 8): MCP authoring org is pinned into the bearer at MINT time (`oauth/token/route.ts` → `resolveMintOrg` → `createMcpToken`), NOT re-resolved per request — a claim change requires a RECONNECT to take effect. And Firestore `orderBy(field)` silently drops docs missing that field (the People-list bug).
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Standing UAT-PENDING (v11.1 close gate, live tenant): broslaz authed nav ("Brothers Lazaroff" + BL monogram, desktop + iPad-WebKit); /library (broslaz-only charts in tab + add-songs picker + header search; admin "All sites" reveals full pool); dashboard ("Upcoming Shows"/"Create New Set") + matrix ("Set Matrix"); MCP authoring (Claude Desktop → `https://www.brotherslazaroff.live/api/mcp` → author test setlist → lands broslaz); admin sets a leader's Band access in /manage → People; CRC unchanged throughout.

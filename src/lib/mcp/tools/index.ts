@@ -1328,7 +1328,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await proposeSetlistChanges(uidFrom(extra), args)),
+            jsonResult(await proposeSetlistChanges(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -1349,7 +1349,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await commitStagedChanges(uidFrom(extra), args)),
+            jsonResult(await commitStagedChanges(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

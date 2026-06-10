@@ -5,6 +5,9 @@ import {
     assertEditor,
     loadEditableSetlist,
 } from "@/lib/mcp/server-tracks-write"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
+import { rowOrg } from "@/lib/mcp/org-context"
 import {
     readLastModifiedAt,
     readVersion,
@@ -141,6 +144,13 @@ export interface CommitArgs {
 export async function proposeSetlistChanges(
     uid: string,
     args: ProposeArgs,
+    // v11.2-01 (BUG-1): thread the caller's resolved org so the v11-02-03
+    // cross-tenant wall in loadEditableSetlist scopes to the RIGHT tenant.
+    // Defaults to crc so internal callers + the W-01 emulator suite stay
+    // behavior-neutral. The MCP route passes orgFrom(extra). Without this,
+    // org defaulted to crc and every non-CRC (e.g. brotherslazaroff) setlist
+    // 404'd `setlist_not_found` — the deterministic BUG-1 repro.
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<StageRecord | RichErrorEnvelope> {
     if (!args.setlistId?.trim())
         return richError("invalid_argument", "setlistId must be a non-empty string.", {
@@ -166,7 +176,7 @@ export async function proposeSetlistChanges(
     initAdmin()
     const db = getFirestore()
 
-    const loaded = await loadEditableSetlist(db, args.setlistId, uid)
+    const loaded = await loadEditableSetlist(db, args.setlistId, uid, org)
     if (!loaded.ok) return loaded
     const setlistData = loaded.data
     const setlistVersionAtStage = readVersion(setlistData)
@@ -255,6 +265,11 @@ export interface CommitResult {
 export async function commitStagedChanges(
     uid: string,
     args: CommitArgs,
+    // v11.2-01 (BUG-1): caller's resolved org. Enforced inside the tx against
+    // the target setlist's orgId so a cross-tenant commit is indistinguishable
+    // from a deleted setlist (no existence leak) — mirrors loadEditableSetlist's
+    // v11-02-03 wall. Defaults crc for internal callers / W-01 emulator suite.
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<CommitResult | RichErrorEnvelope | StaleVersionEnvelope> {
     if (!args.stageId?.trim())
         return richError("invalid_argument", "stageId must be a non-empty string.", {
@@ -341,6 +356,23 @@ export async function commitStagedChanges(
             }
         }
         const setlistData = setlistSnap.data() as Record<string, unknown>
+
+        // v11.2-01 (BUG-1): cross-tenant commit wall. A caller may not commit a
+        // stage against another org's setlist — return the SAME setlist_not_found
+        // envelope as the absent-doc branch (no existence leak), mirroring
+        // loadEditableSetlist's v11-02-03 check. Admin-SDK writes bypass Firestore
+        // rules, so this app-layer check is the only control.
+        if (rowOrg(setlistData.orgId) !== org) {
+            return {
+                kind: "error",
+                envelope: richError(
+                    "setlist_not_found",
+                    `Setlist '${stage.setlistId}' was not found.`,
+                    { setlistId: stage.setlistId },
+                    "Verify the id via list_setlists.",
+                ),
+            }
+        }
 
         // W-04 setlist-level optimistic-concurrency gate. Use caller's
         // lastSeenVersion if supplied; otherwise fall back to the version
