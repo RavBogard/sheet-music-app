@@ -88,19 +88,16 @@ PLAN ──▶ APPLY ──▶ UNIFY        [loginable-test-accounts: both plans
 
 ## Session Continuity
 
-Last session: 2026-06-10 — `/paul:plan` for the standalone **loginable-test-accounts** phase. Verified deployed code (test-tokens.ts, QR auth route + approver page, session route, auth-context/LoginClient, CASCADE_FIELDS). Surfaced that consumer login is Google+QR only (no email/password) → asked Daniel; both decisions captured + baked into Plans 01/02.
-Stopped at: **Plans 01 + 02 written; STATE/ROADMAP updated. Ready for `/paul:apply .paul/phases/loginable-test-accounts/01-PLAN.md`.**
-**OPEN ACTION ON DANIEL (live retests, all safe/dryRun or emulator-proven):** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp`, then run UAT-PENDING: (1) BUG-1 create→propose→commit on BL; (2) BUG-9 `preview_publish` on a BL setlist shows BL roster size not 17. Both emulator-proven; existing token is crc-pinned. (Independent of milestone close.)
-Next action: **`/paul:discuss-milestone`** to scope the next milestone — OR resume v7.1 `.coord/` hardening (cycle-13). No blocking PAUL work. (loginable-test-accounts phase done; UAT-PENDING items are live/safe deployed-surface checks.)
-Resume file: **.paul/phases/loginable-test-accounts/** (01/02 PLAN + SUMMARY). Also `.paul/MILESTONES.md` (v11.2 entry) + `.paul/milestones/v11.2.0-ROADMAP.md` (archive). Source: BL stress-test report (2026-06-09).
+Last session: 2026-06-10 — `/paul:plan` → `/paul:apply` for the standalone **loginable-test-accounts** phase. Verified deployed code (test-tokens.ts, QR auth route + approver page, session route, auth-context/LoginClient, CASCADE_FIELDS); surfaced that consumer login is Google+QR only (no email/password) → Daniel chose the QR-custom-token URL path + cron-disable+revoke TTL. Executed both plans, all gates green, committed + pushed `1eca4b4b6a`.
+Stopped at: **loginable-test-accounts phase ✅ COMPLETE + pushed to `master`. Working tree clean. No active loop.**
+Next action: **`/paul:discuss-milestone`** to scope the next milestone — OR the stress-test browser run can now proceed (this tooling unblocks it) — OR resume v7.1 `.coord/` hardening (cycle-13). No blocking PAUL work.
+Resume file: **.paul/HANDOFF-2026-06-10-loginable-test-accounts.md** (this pause). Phase artifacts in `.paul/phases/loginable-test-accounts/` (01/02 PLAN + SUMMARY); source `.paul/research/TOOLING-BRIEF-test-account-login.md`.
 Resume context:
-- v11.2 content-complete 5/5: BUG-1 resolver · BUG-9 publish-audience org scope · BUG-2/3 error contract · BUG-4 preview_publish unbonded flag · BUG-5 cleanup isTest sweep + dashboard filter · BUG-6 host-resolved dashboard hero · BUG-7 word-atomic chord wrap · BUG-8 serializeTimestamps boundary. CRC byte-identical throughout.
-- `/paul:complete-milestone` is the only remaining PAUL step; tag v11.2.0 + PROJECT.md writeup happen there.
+- `create_test_account({loginable:true})` → enabled account (no password) + one-time `/test-login?code=` URL (pre-approved single-use qr-sessions custom-token doc); TTL enforced by hourly `disable-expired-test-accounts` cron (disable + `revokeRefreshTokens`) + session-mint rejection. Default path byte-identical.
+- QR PUT-approval is hard-coupled to physical-device handoff (mints for the approver's own uid) → reused only the qr-sessions store + GET-consume; public `/login` + `/qr/[code]` untouched.
 - Daniel paces with "go" per PAUL step; autonomy posture binding (auto-commit+push per plan to master).
-- Open on Daniel: BL connector reconnect → run UAT-PENDING BUG-1 + BUG-9 live retests (safe/dryRun).
-Reusable lesson (session 8): MCP authoring org is pinned into the bearer at MINT time (`oauth/token/route.ts` → `resolveMintOrg` → `createMcpToken`), NOT re-resolved per request — a claim change requires a RECONNECT to take effect. And Firestore `orderBy(field)` silently drops docs missing that field (the People-list bug).
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
-Standing UAT-PENDING (v11.1 close gate, live tenant): broslaz authed nav ("Brothers Lazaroff" + BL monogram, desktop + iPad-WebKit); /library (broslaz-only charts in tab + add-songs picker + header search; admin "All sites" reveals full pool); dashboard ("Upcoming Shows"/"Create New Set") + matrix ("Set Matrix"); MCP authoring (Claude Desktop → `https://www.brotherslazaroff.live/api/mcp` → author test setlist → lands broslaz); admin sets a leader's Band access in /manage → People; CRC unchanged throughout.
+**Open UAT-PENDING (live/safe, `.paul/UAT-PENDING.md`):** THIS phase — browser persona sign-in via a minted `loginUrl` + re-open-fails (single-use) + AC-2 expired-account session-mint rejection + admin-loginable-refused. EARLIER (unchanged) — v11.2 BL-connector reconnect → BUG-1 create→propose→commit + BUG-9 `preview_publish` BL roster size; v11.1 broslaz authed-surface checklist (nav/library/dashboard/matrix/MCP-authoring/admin-membership, CRC unchanged).
 
 ---
 *STATE.md — digest, not archive. Target <100 lines.*
