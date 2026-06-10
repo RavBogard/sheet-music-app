@@ -41,7 +41,7 @@ Last activity: 2026-06-09 (session 9) — `/paul:resume` consumed the BL stress-
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `10c04099e1` — v11.1-05 broslaz branding, session 8; Vercel auto-deploy). **tag `v11.1.0`** on the v11.1 close (pushed; `29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`, in sync with `origin/master` (tip `6920d61668` — **v11.2-01 BUG-1 propose/commit org-scope**, session 9; Vercel auto-deploy). v11.2 phase commits: 01 `6920d61668`. **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
