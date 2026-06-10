@@ -92,7 +92,7 @@ Last session: 2026-06-11 (session 12) — closed all of v11.2-04 (BUG-4/5) + v11
 Stopped at: **Milestone v11.2 ✅ COMPLETE + tagged `v11.2.0` (all 9 BL stress-test bugs fixed). No PAUL milestone active.**
 **OPEN ACTION ON DANIEL (live retests, all safe/dryRun or emulator-proven):** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp`, then run UAT-PENDING: (1) BUG-1 create→propose→commit on BL; (2) BUG-9 `preview_publish` on a BL setlist shows BL roster size not 17. Both emulator-proven; existing token is crc-pinned. (Independent of milestone close.)
 Next action: **`/paul:discuss-milestone`** (or `/paul:milestone`) to scope the next milestone — OR resume v7.1 `.coord/` hardening (cycle-13, independent of the PAUL loop). No blocking work.
-Resume file: **.paul/MILESTONES.md** (v11.2 entry) + `.paul/milestones/v11.2.0-ROADMAP.md` (archive). Source: BL stress-test report (2026-06-09).
+Resume file: **.paul/HANDOFF-2026-06-11-v11.2-complete.md** (session-12 pause). Also `.paul/MILESTONES.md` (v11.2 entry) + `.paul/milestones/v11.2.0-ROADMAP.md` (archive). Source: BL stress-test report (2026-06-09).
 Resume context:
 - v11.2 content-complete 5/5: BUG-1 resolver · BUG-9 publish-audience org scope · BUG-2/3 error contract · BUG-4 preview_publish unbonded flag · BUG-5 cleanup isTest sweep + dashboard filter · BUG-6 host-resolved dashboard hero · BUG-7 word-atomic chord wrap · BUG-8 serializeTimestamps boundary. CRC byte-identical throughout.
 - `/paul:complete-milestone` is the only remaining PAUL step; tag v11.2.0 + PROJECT.md writeup happen there.
