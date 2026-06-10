@@ -11,7 +11,7 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Milestone: **🚧 v11.2 MCP Stress-Test Fixes — OPEN 2026-06-09.** 5 phases scoped from the Brothers Lazaroff stress-test report (BL tenant only; CRC untouched). 0/5 complete. (v11.1 ✅ COMPLETE, tag `v11.1.0`, archived.)
+Milestone: **🚧 v11.2 MCP Stress-Test Fixes — OPEN 2026-06-09.** 5 phases scoped from the Brothers Lazaroff stress-test report (BL tenant only; CRC untouched). **4/5 complete** (only v11.2-05 P3 polish remains). (v11.1 ✅ COMPLETE, tag `v11.1.0`, archived.)
 Phase: **v11.2-04 publish + test-data hygiene [P2]** — ✅ COMPLETE 2026-06-11 (both plans LOOP COMPLETE + shipped). (v11.2-01 ✅ · 02 ✅ · 03 ✅ · 04 ✅.) **Next: v11.2-05 P3 polish (BUG-6/7/8) — the LAST phase.** Milestone v11.2: 4 of 5 phases done.
 Plan: **None active.** Loop idle — ready for next PLAN (v11.2-05-01, P3 polish: BUG-6 "CRC MUSIC" authed-header brand leak on broslaz · BUG-7 text/plain chord-over-lyric fragmentation · BUG-8 ISO timestamp serialization at MCP boundary; CRC byte-identical constraint applies to BUG-6/BUG-8).
 Status: **v11.2-04 SHIPPED + committed + pushed to `master`.** BUG-4 (04-01, prior session): preview_publish flags unbonded song rows. BUG-5 (04-02, this session): `cleanupAllTestDataCore` owner-independent `isTest` setlist flag-sweep (full-sweep-mode only, prefix-isolation preserved) + shared `isNonTestSetlist` predicate hides isTest setlists from the authed dashboard (reused from /perform). library_index flag-sweep DROPPED (verified: isTest is Setlist-only). Gates: tsc clean · emulator mcp-test-tokens **28/28** · perf suite 23/23 (public-view parity) · next build clean.
@@ -41,7 +41,7 @@ Last activity: 2026-06-11 (session 12) — `/paul:unify` v11.2-04-02 (BUG-5) →
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `90774a7e76` — **v11.2-04-01 BUG-4 preview_publish unbonded-song flag**, session 11; Vercel auto-deploy). v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76`. **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`, in sync with `origin/master` (tip `52a3dea57d` — **v11.2-04 phase complete: BUG-4 + BUG-5**, session 12; Vercel auto-deploy). v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d`. **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
@@ -88,15 +88,15 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-04-02 (BUG-5) LOOP COMPLETE �
 
 ## Session Continuity
 
-Last session: 2026-06-11 (session 11) — closed v11.2-03 (BUG-2+3) then v11.2-04-01 (BUG-4); each PLAN→APPLY→UNIFY→commit→push to `master`. All gates green.
-Stopped at: **v11.2-04-01 (BUG-4) LOOP COMPLETE. Phase v11.2-04 open — next plan 04-02 (BUG-5).** Milestone v11.2: 3/5 phases done (04 in progress, 1 of 2 plans).
+Last session: 2026-06-11 (session 12) — closed v11.2-04-02 (BUG-5) + phase v11.2-04 transition; PLAN→APPLY→UNIFY→commit→push to `master` (`52a3dea57d`). All gates green.
+Stopped at: **Phase v11.2-04 ✅ COMPLETE. Milestone v11.2: 4/5 phases done — only v11.2-05 (P3 polish, the LAST phase) remains.**
 **OPEN ACTION ON DANIEL (live retests, both dryRun/safe-or-emulator-proven):** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp`, then run the UAT-PENDING items: (1) v11.2-01 BUG-1 create→propose→commit on BL; (2) v11.2-02 `preview_publish` on a BL setlist shows BL roster size not 17. Both already emulator-proven. Existing token is crc-pinned.
-Next action: **`/paul:plan`** (Phase v11.2-04 plan 02 — BUG-5 `cleanup_all_test_data` + dashboard isTest). Then phase-04 transition → 05 in order.
-Resume file: **.paul/HANDOFF-2026-06-11.md** (session-11 pause handoff — full context + BUG-5 implementation notes). Milestone specs: .paul/ROADMAP.md § Active Milestone. Source: BL stress-test report (2026-06-09).
+Next action: **`/paul:plan`** (Phase v11.2-05 — BUG-6/7/8 P3 polish). It's the milestone's last phase → on close, `/paul:complete-milestone` (tag `v11.2.0`, full PROJECT.md v11.2 writeup).
+Resume file: **.paul/ROADMAP.md § Active Milestone** (v11.2-05 phase spec). Source: BL stress-test report (2026-06-09).
 Resume context:
-- v11.2: 3/5 phases done + 04-01 (BUG-4) shipped; phase 04 open for plan 04-02 (BUG-5).
-- v11.2-04-02 target (BUG-5): `cleanup_all_test_data` only cascades `test-*`-owned data — extend it to also sweep `setlists`/`library_index` where `isTest==true` independent of owner (same admin/band_leader gate) OR document manual-delete; AND decide whether the authed `(main)` dashboard should reuse the `/perform` `isTest!=true` filter. **Self-inclusion regression-test rule applies ([[feedback_self_inclusion_test_fixtures]]).**
-- BUG-4 done: preview_publish flags unbonded song rows (review_first). all-unbonded already caught by `no_bonded_songs`.
+- v11.2: 4/5 phases done; only v11.2-05 (P3 polish) remains.
+- v11.2-05 targets: BUG-6 "CRC MUSIC" authed-header brand leak on broslaz · BUG-7 text/plain chord-over-lyric fragmentation · BUG-8 ISO timestamp serialization at MCP boundary. CRC byte-identical constraint applies to BUG-6/BUG-8; /ui-ux-pro-max gates any UI-visible render change (BUG-6/BUG-7).
+- v11.2-04 done: BUG-4 preview_publish unbonded flag; BUG-5 cleanup isTest flag-sweep + dashboard isTest filter (shared isNonTestSetlist). library_index flag-sweep dropped (no field — verified).
 - Daniel paces with "go" per PAUL step; autonomy posture binding (auto-commit+push per plan to master).
 - Open on Daniel: BL connector reconnect → run UAT-PENDING BUG-1 + BUG-9 live retests (safe/dryRun).
 Reusable lesson (session 8): MCP authoring org is pinned into the bearer at MINT time (`oauth/token/route.ts` → `resolveMintOrg` → `createMcpToken`), NOT re-resolved per request — a claim change requires a RECONNECT to take effect. And Firestore `orderBy(field)` silently drops docs missing that field (the People-list bug).
