@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getAuth } from "firebase-admin/auth"
 import { checkRateLimit } from "@/lib/rate-limit"
+import { isTestUid } from "@/lib/test-isolation"
 import { logger } from "@/lib/logger"
 import {
     SESSION_ROLE_COOKIE,
@@ -48,6 +49,22 @@ export async function POST(req: NextRequest) {
         const issuedAt = decoded.iat * 1000
         if (Date.now() - issuedAt > 5 * 60 * 1000) {
             return NextResponse.json({ error: "Token too old" }, { status: 401 })
+        }
+
+        // loginable-test-accounts: refuse to mint a session for an expired
+        // loginable test account (immediate cutoff for the gap before the hourly
+        // disable-expired-test-accounts cron runs). Gated behind isTestUid so a
+        // normal user's login incurs NO extra Firestore read.
+        if (isTestUid(decoded.uid)) {
+            const snap = await getFirestore().collection("users").doc(decoded.uid).get()
+            const data = snap.data()
+            const ttlMs =
+                typeof data?.ttlExpiresAt?.toMillis === "function"
+                    ? data.ttlExpiresAt.toMillis()
+                    : null
+            if (data?.loginable === true && ttlMs !== null && ttlMs <= Date.now()) {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+            }
         }
 
         // Mint a session cookie

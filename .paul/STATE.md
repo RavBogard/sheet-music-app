@@ -11,11 +11,11 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Milestone: **✅ v11.2 MCP Stress-Test Fixes — COMPLETE 2026-06-11 (5/5, tag `v11.2.0`, `package.json` `11.2.0`, archived `.paul/milestones/v11.2.0-ROADMAP.md`).** All 9 Brothers Lazaroff stress-test bugs fixed; CRC byte-identical throughout. **No PAUL milestone active — awaiting next.** (v11.1 ✅ tag `v11.1.0`; v11.0 ✅ tag `v11.0.0`.)
-Phase: **None active.**
-Plan: **None active.** Loop idle (milestone complete).
-Status: **v11.2 closed + tagged + pushed.** Next: `/paul:discuss-milestone` (or `/paul:milestone`) to scope the next milestone, OR resume v7.1 `.coord/` hardening (cycle-13, independent of the PAUL loop). Standing UAT-PENDING (non-blocking, live/safe): BL-connector reconnect → BUG-1 + BUG-9 retests.
-Last activity: 2026-06-11 (session 12) — `/paul:complete-milestone` v11.2 (MILESTONES entry + PROJECT.md evolved + ROADMAP archived + package.json 11.2.0 + tag `v11.2.0`).
+Milestone: **None active** (v11.2 ✅ COMPLETE 2026-06-11, tag `v11.2.0`). Running a **standalone phase** off the stress-test report's INCOMPLETE item 3.
+Phase: **loginable-test-accounts** (standalone — stress-test browser-run enablement) — ✅ COMPLETE 2026-06-10 (2/2 plans, both LOOP COMPLETE).
+Plan: **01 ✅** (`create_test_account({loginable})` enabled-account + one-time QR-custom-token login URL + `/test-login` consume route + qr-sessions cascade) · **02 ✅** (hourly `/api/cron/disable-expired-test-accounts` disable + `revokeRefreshTokens` + `/api/auth/session` expired-loginable rejection + checkRevoked audit confirmed clean).
+Status: **Phase content-complete; committed + pushed to `master`.** Gates green every loop: tsc clean · emulator `mcp-test-tokens` 34/34 · `SKIP_ENV_VALIDATION=1 next build` clean (`/test-login` + cron route registered). UAT-PENDING (live/safe): browser persona sign-in end-to-end + AC-2 session-mint rejection deployed-surface check.
+Last activity: 2026-06-10 — `/paul:apply` executed both plans; `/paul:plan` had created them after verifying deployed test-tokens/QR/session/auth code. Both Daniel decisions (2026-06-10) baked in: login = one-time custom-token URL via the QR mechanism (QR PUT-approval confirmed hard-coupled to device handoff → `/test-login`, no static secret); TTL = cron disable + `revokeRefreshTokens` + session-mint check + `verifySessionCookie(cookie,true)`.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -48,8 +48,8 @@ Last activity: 2026-06-11 (session 12) — `/paul:complete-milestone` v11.2 (MIL
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [Milestone v11.2 COMPLETE — no loop active; ready for next milestone]
-  ○        ○        ○
+PLAN ──▶ APPLY ──▶ UNIFY        [loginable-test-accounts: both plans LOOP COMPLETE]
+  ✓        ✓        ✓
 ```
 
 ## Execution Substrate (bongo .coord/)
@@ -88,11 +88,11 @@ PLAN ──▶ APPLY ──▶ UNIFY        [Milestone v11.2 COMPLETE — no loo
 
 ## Session Continuity
 
-Last session: 2026-06-11 (session 12) — closed all of v11.2-04 (BUG-4/5) + v11.2-05 (BUG-6/7/8); each PLAN→APPLY→UNIFY→commit→push to `master`. Milestone v11.2 content-complete 5/5. All gates green throughout.
-Stopped at: **Milestone v11.2 ✅ COMPLETE + tagged `v11.2.0` (all 9 BL stress-test bugs fixed). No PAUL milestone active.**
+Last session: 2026-06-10 — `/paul:plan` for the standalone **loginable-test-accounts** phase. Verified deployed code (test-tokens.ts, QR auth route + approver page, session route, auth-context/LoginClient, CASCADE_FIELDS). Surfaced that consumer login is Google+QR only (no email/password) → asked Daniel; both decisions captured + baked into Plans 01/02.
+Stopped at: **Plans 01 + 02 written; STATE/ROADMAP updated. Ready for `/paul:apply .paul/phases/loginable-test-accounts/01-PLAN.md`.**
 **OPEN ACTION ON DANIEL (live retests, all safe/dryRun or emulator-proven):** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp`, then run UAT-PENDING: (1) BUG-1 create→propose→commit on BL; (2) BUG-9 `preview_publish` on a BL setlist shows BL roster size not 17. Both emulator-proven; existing token is crc-pinned. (Independent of milestone close.)
-Next action: **`/paul:discuss-milestone`** (or `/paul:milestone`) to scope the next milestone — OR resume v7.1 `.coord/` hardening (cycle-13, independent of the PAUL loop). No blocking work.
-Resume file: **.paul/HANDOFF-2026-06-11-v11.2-complete.md** (session-12 pause). Also `.paul/MILESTONES.md` (v11.2 entry) + `.paul/milestones/v11.2.0-ROADMAP.md` (archive). Source: BL stress-test report (2026-06-09).
+Next action: **`/paul:discuss-milestone`** to scope the next milestone — OR resume v7.1 `.coord/` hardening (cycle-13). No blocking PAUL work. (loginable-test-accounts phase done; UAT-PENDING items are live/safe deployed-surface checks.)
+Resume file: **.paul/phases/loginable-test-accounts/** (01/02 PLAN + SUMMARY). Also `.paul/MILESTONES.md` (v11.2 entry) + `.paul/milestones/v11.2.0-ROADMAP.md` (archive). Source: BL stress-test report (2026-06-09).
 Resume context:
 - v11.2 content-complete 5/5: BUG-1 resolver · BUG-9 publish-audience org scope · BUG-2/3 error contract · BUG-4 preview_publish unbonded flag · BUG-5 cleanup isTest sweep + dashboard filter · BUG-6 host-resolved dashboard hero · BUG-7 word-atomic chord wrap · BUG-8 serializeTimestamps boundary. CRC byte-identical throughout.
 - `/paul:complete-milestone` is the only remaining PAUL step; tag v11.2.0 + PROJECT.md writeup happen there.

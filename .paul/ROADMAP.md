@@ -6,6 +6,17 @@
 
 **None scoped past v11.2.** Open backlog: recordings-collection org-scoping (+ `/api/recordings/upload` orgId stamp), SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage (`.paul/MILESTONES.md` § v7.0). v7.1 Production Hardening continues independently via the bongo `.coord/` cadence.
 
+## Standalone Phase — loginable-test-accounts (✅ COMPLETE 2026-06-10, 2/2 plans)
+
+Off the stress-test report's INCOMPLETE item 3 (`.paul/research/TOOLING-BRIEF-test-account-login.md`). Gave `create_test_account` an opt-in `loginable:true` so the Playwright stress harness can do real browser persona sign-in (real Web SDK auth state for client Firestore probes) — previously every test account was `disabled:true`. Standalone (no milestone); quality floor held every loop (tsc · emulator mcp-test-tokens 34/34 · `next build`).
+- **Plan 01 ✅** — `loginable` mint (enabled account, NO password) + one-time **custom-token login URL** on the existing QR mechanism (pre-approved single-use `qr-sessions` doc, high-entropy code) + headless `/test-login?code=` consume route (`signInWithCustomToken`→`syncSessionCookie`) + `qr-sessions` added to the revoke/cleanup cascade. /ui-ux-pro-max satisfied. Default path byte-identical.
+- **Plan 02 ✅** (depends_on 01) — browser-session **TTL enforcement**: hourly `/api/cron/disable-expired-test-accounts` (disable + `revokeRefreshTokens`) + `/api/auth/session` mint rejection for expired loginable accounts (isTestUid-gated, no normal-user cost) + checkRevoked audit (server-auth + drive-file-auth already `verifySessionCookie(cookie,true)`; no change). Exposure bounded to ~2h.
+
+**UAT-PENDING (live/safe):** browser persona sign-in end-to-end + AC-2 session-mint rejection deployed-surface check (`.paul/UAT-PENDING.md`).
+
+**Decisions (Daniel 2026-06-10):** (1) Login path — one-time custom-token URL via the QR custom-token store, NOT a static secret; the QR PUT-approval path is confirmed hard-coupled to physical-device handoff (mints a token for the *approver's own uid*), so we reuse only the `qr-sessions` store + the GET-consume endpoint and add a `/test-login` route; public `/login` + `/qr/[code]` untouched. (2) TTL — cron disable + `revokeRefreshTokens` (kill outstanding ID tokens within ≤1h) + session-mint check + checkRevoked (client Firestore authorizes via ID token, not the session cookie, so disable+revoke is the only real cutoff).
+**Verified-first:** library_index/songs uploads already cascade-clean via `CASCADE_FIELDS` (`uploadedBy` + best-effort Storage) — no gap widened. Login is Google+QR only today (no email/password form), which is why the custom-token URL was chosen over a password form.
+
 ## Active Milestone
 
 **✅ v11.2 — MCP Stress-Test Fixes** (COMPLETE 2026-06-11 · tag `v11.2.0` · tip `f27ae7bc5f`; archived `.paul/milestones/v11.2.0-ROADMAP.md`)

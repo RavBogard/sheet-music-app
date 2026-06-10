@@ -218,3 +218,24 @@ Check:
 - **Live BL confirmation (dryRun-only, SAFE — no real send)**, after BL connector reconnect:
   - `preview_publish({setlistId:<a BL setlist>})` → `audience.count` should equal the BL roster size, NOT 17 (CRC). Recipients should contain only BL-org members.
   - Emulator already proves correctness; this is live confirmation. Do NOT run a real `publish_setlist` to test.
+
+---
+
+## ⏳ loginable-test-accounts — browser persona sign-in (Plan 01 AC-1 + Plan 02 AC-2)
+
+**Deployed commit:** (this phase commit; pushed to origin master — Vercel auto-deploy)
+
+What was built: `create_test_account({ role, loginable: true })` returns a one-time
+`loginUrl` (`/test-login?code=…`). Opening it signs the browser in as the persona
+via the existing QR custom-token path → real Firebase Web SDK auth + the normal
+app session cookie. TTL enforced by the hourly `/api/cron/disable-expired-test-accounts`
+cron (disable + refresh-revoke) + a session-mint rejection for expired accounts.
+
+Verify on the deployed build (safe — test-namespaced, isTest):
+1. Via MCP, `create_test_account({ role:"musician", loginable:true })`; open the
+   returned `loginUrl` in a fresh browser/Playwright context → lands signed-in as
+   the musician, consumer access works, client-side Firestore reads succeed.
+2. Re-open the SAME `loginUrl` → fails cleanly (single-use; consumed/410).
+3. After `revoke_test_account` (or letting the cron run on an expired one), attempt
+   sign-in / an existing session → fails cleanly (AC-2 / AC-4).
+4. `create_test_account({ role:"admin", loginable:true })` → refused (AC-3).

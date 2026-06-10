@@ -17,6 +17,7 @@ import {
     revokeTestAccountCore,
     cleanupAllTestDataCore,
     sweepOrphanTestDataCore,
+    disableExpiredLoginableAccounts,
 } from "../tools/test-tokens"
 import { verifyBearer } from "../auth"
 import { checkUserRateLimit } from "@/lib/rate-limit"
@@ -80,6 +81,7 @@ describe("MCP test tokens (emulator)", () => {
             "bond_corrections",
             "scheduling_assignments",
             "musician_availability",
+            "qr-sessions",
         ]
         await Promise.all(
             collections.map(async (c) => {
@@ -669,6 +671,146 @@ describe("MCP test tokens (emulator)", () => {
         expect(result.aggregate["setlists.isTest"]).toBe(1)
         expect((await db().collection("setlists").doc("sl-flag").get()).exists).toBe(false)
         await expect(getAuth().getUser(driver.uid)).rejects.toThrow()
+    })
+
+    // ── loginable-test-accounts Plan 01: opt-in browser login ────────────────
+
+    it("loginable:true mints an ENABLED account + a pre-approved login link", async () => {
+        const result = await provisionTestAccount(ADMIN_UID, {
+            role: "musician",
+            loginable: true,
+        })
+        if ("error" in result) throw new Error("mint failed: " + result.error)
+
+        // Result surfaces the flag + a one-time login URL.
+        expect(result.loginable).toBe(true)
+        expect(result.loginUrl).toMatch(/^\/test-login\?code=.+/)
+
+        // Auth user is ENABLED (default mints disabled:true) + role claim set.
+        const authUser = await getAuth().getUser(result.uid)
+        expect(authUser.disabled).toBe(false)
+        expect(authUser.customClaims).toMatchObject({ role: "musician" })
+
+        // Both index docs carry loginable:true.
+        const userSnap = await db().collection("users").doc(result.uid).get()
+        expect(userSnap.data()?.loginable).toBe(true)
+        const idxSnap = await db().collection("mcpTestUsers").doc(result.uid).get()
+        expect(idxSnap.data()?.loginable).toBe(true)
+
+        // A pre-approved, single-use qr-session login doc exists for this uid.
+        const code = new URLSearchParams(result.loginUrl!.split("?")[1]).get("code")!
+        const qrSnap = await db().collection("qr-sessions").doc(code).get()
+        expect(qrSnap.exists).toBe(true)
+        const qr = qrSnap.data()!
+        expect(qr.status).toBe("approved")
+        expect(typeof qr.customToken).toBe("string")
+        expect(qr.customToken.length).toBeGreaterThan(0)
+        expect(qr.testUid).toBe(result.uid)
+        expect(qr.expiresAt).toBeGreaterThan(Date.now())
+    })
+
+    it("default (loginable omitted) keeps disabled:true with NO login link (regression)", async () => {
+        const result = await provisionTestAccount(ADMIN_UID, { role: "musician" })
+        if ("error" in result) throw new Error("mint failed: " + result.error)
+
+        expect(result.loginable).toBe(false)
+        expect(result.loginUrl).toBeUndefined()
+
+        const authUser = await getAuth().getUser(result.uid)
+        expect(authUser.disabled).toBe(true)
+
+        // No qr-session login doc written for a non-loginable account.
+        const qr = await db()
+            .collection("qr-sessions")
+            .where("testUid", "==", result.uid)
+            .get()
+        expect(qr.size).toBe(0)
+    })
+
+    it("role=admin + loginable:true is still refused (no enabled admin login)", async () => {
+        const result = await provisionTestAccount(ADMIN_UID, {
+            role: "admin" as unknown as "musician",
+            loginable: true,
+        })
+        expect("error" in result).toBe(true)
+        if ("error" in result) {
+            expect(result.error).toBe("admin_test_user_refused")
+        }
+        // No qr-session leaked for the refused mint.
+        const qr = await db().collection("qr-sessions").get()
+        expect(qr.size).toBe(0)
+    })
+
+    it("revoke sweeps the loginable account's qr-session login doc (AC-4)", async () => {
+        const minted = await provisionTestAccount(ADMIN_UID, {
+            role: "musician",
+            loginable: true,
+        })
+        if ("error" in minted) throw new Error("mint failed")
+        const code = new URLSearchParams(minted.loginUrl!.split("?")[1]).get("code")!
+        // Sanity: the login doc exists pre-revoke.
+        expect((await db().collection("qr-sessions").doc(code).get()).exists).toBe(true)
+
+        const revoked = await revokeTestAccountCore(ADMIN_UID, minted.uid)
+        if ("error" in revoked) throw new Error("revoke failed")
+        expect(revoked.cascaded["qr-sessions"]).toBeGreaterThanOrEqual(1)
+        expect((await db().collection("qr-sessions").doc(code).get()).exists).toBe(false)
+    })
+
+    // ── loginable-test-accounts Plan 02: TTL cutoff (cron) ───────────────────
+
+    it("disable-expired cron disables + refresh-revokes ONLY expired loginable accounts (Plan 02 AC-1)", async () => {
+        // Expired loginable account.
+        const expiredAcct = await provisionTestAccount(ADMIN_UID, {
+            role: "musician",
+            loginable: true,
+        })
+        if ("error" in expiredAcct) throw new Error("mint failed")
+        // The cron reads mcpTestUsers.ttlExpiresAt — force it into the past.
+        await db()
+            .collection("mcpTestUsers")
+            .doc(expiredAcct.uid)
+            .update({ ttlExpiresAt: Timestamp.fromMillis(Date.now() - 1000) })
+
+        // Live loginable account (still within TTL) — must stay enabled.
+        const liveAcct = await provisionTestAccount(ADMIN_UID, {
+            role: "musician",
+            loginable: true,
+        })
+        if ("error" in liveAcct) throw new Error("mint failed")
+
+        // Non-loginable account (disabled:true at mint) — not in the cron query.
+        const nonLogin = await provisionTestAccount(ADMIN_UID, { role: "member" })
+        if ("error" in nonLogin) throw new Error("mint failed")
+
+        const result = await disableExpiredLoginableAccounts(Date.now())
+        expect(result.failures).toEqual([])
+        expect(result.expired).toBe(1)
+        expect(result.disabled).toBe(1)
+        expect(result.revoked).toBe(1)
+
+        // Expired account: disabled + refresh tokens revoked (tokensValidAfterTime set).
+        const expiredUser = await getAuth().getUser(expiredAcct.uid)
+        expect(expiredUser.disabled).toBe(true)
+        expect(expiredUser.tokensValidAfterTime).toBeTruthy()
+
+        // Live loginable account stays enabled (untouched).
+        expect((await getAuth().getUser(liveAcct.uid)).disabled).toBe(false)
+        // Non-loginable was already disabled at mint and not re-touched.
+        expect((await getAuth().getUser(nonLogin.uid)).disabled).toBe(true)
+    })
+
+    it("disable-expired cron is a no-op when no loginable account is expired", async () => {
+        const live = await provisionTestAccount(ADMIN_UID, {
+            role: "musician",
+            loginable: true,
+        })
+        if ("error" in live) throw new Error("mint failed")
+
+        const result = await disableExpiredLoginableAccounts(Date.now())
+        expect(result.expired).toBe(0)
+        expect(result.disabled).toBe(0)
+        expect((await getAuth().getUser(live.uid)).disabled).toBe(false)
     })
 
     // ── Cycle-7 Lane 1: Convergence C cascade extension ──────────────────────

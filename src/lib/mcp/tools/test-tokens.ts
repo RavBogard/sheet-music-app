@@ -25,7 +25,7 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
  * `mcpTestUsers/{uid}`. The point is autonomous role-boundary stress testing
  * by cowork without Daniel hand-provisioning fixtures in the Firebase console.
  *
- * - `create_test_account({role, soundEngineer?, label?, ttlSec?})`
+ * - `create_test_account({role, soundEngineer?, label?, ttlSec?, loginable?})`
  * - `list_test_accounts({role?, includeExpired?})`
  * - `revoke_test_account({uid})` — cascades to owned data (see CASCADE_FIELDS)
  * - `cleanup_all_test_data()` — sweeps every test-namespaced user
@@ -45,6 +45,7 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 const MCP_TOKENS = "mcpTokens"
 const MCP_TEST_USERS = "mcpTestUsers"
 const USERS = "users"
+const QR_SESSIONS = "qr-sessions"
 const TEST_UID_PREFIX = "test-"
 const TEST_DISPLAY_PREFIX = "[TEST]"
 const TEST_EMAIL_DOMAIN = "test.centralreform.live"
@@ -132,6 +133,7 @@ export interface CreateTestAccountArgs {
     label?: string
     ttlSec?: number
     uidPrefix?: string
+    loginable?: boolean
 }
 
 export interface CreateTestAccountResult {
@@ -142,6 +144,9 @@ export interface CreateTestAccountResult {
     tokenId: string
     expiresAt: string
     displayName: string
+    loginable: boolean
+    /** One-time, single-use browser login link. Present only when loginable. */
+    loginUrl?: string
 }
 
 /**
@@ -207,21 +212,27 @@ export async function provisionTestAccount(
     const displayName = `${TEST_DISPLAY_PREFIX} ${args.role}${labelPart}`
     const email = `${uid}@${TEST_EMAIL_DOMAIN}`
     const soundEngineer = args.soundEngineer === true
+    // Loginable accounts are created ENABLED so a browser/harness can sign in
+    // as the persona (default stays disabled:true → MCP-bearer path only).
+    const loginable = args.loginable === true
 
     const auth = getAuth()
     const db = getFirestore()
     const now = Date.now()
     const expiresAtMs = now + ttlSec * 1000
 
-    // 1. Create Firebase Auth user, `disabled: true` so the UI can never
-    // sign them in. Custom claims propagate through firestore.rules + the
-    // request-handlers that read decoded.role.
+    // 1. Create Firebase Auth user. Default `disabled: true` so the UI can
+    // never sign them in; `loginable` flips this to `disabled: false` so a
+    // browser/harness can sign in via the one-time login link minted below.
+    // No password is set — login is custom-token only (the Email/Password
+    // provider is never relied upon, so no new auth surface). Custom claims
+    // propagate through firestore.rules + the handlers that read decoded.role.
     try {
         await auth.createUser({
             uid,
             displayName,
             email,
-            disabled: true,
+            disabled: !loginable,
         })
     } catch (err) {
         logger.error("[mcp-test-token] createUser failed", { uid, err })
@@ -243,6 +254,7 @@ export async function provisionTestAccount(
         displayName,
         email,
         isTestUser: true,
+        loginable,
         provisionedBy: callerUid,
         createdAt: FieldValue.serverTimestamp(),
         ttlExpiresAt: Timestamp.fromMillis(expiresAtMs),
@@ -270,6 +282,7 @@ export async function provisionTestAccount(
         uid,
         role: args.role,
         soundEngineer,
+        loginable,
         label: args.label ?? null,
         displayName,
         mcpTokenId: tokenRef.id,
@@ -279,10 +292,39 @@ export async function provisionTestAccount(
         revokedAt: null,
     })
 
+    // 5. Loginable accounts: mint a one-time, single-use browser login link
+    // built on the existing QR custom-token mechanism. The QR PUT-approval path
+    // mints a custom token for the APPROVER's OWN uid and requires a second
+    // already-signed-in device (hard-coupled to physical-device handoff), so we
+    // write a PRE-APPROVED qr-sessions doc directly with the admin SDK. The
+    // existing `GET /api/auth/qr?code=` path then consumes (and deletes) it,
+    // handing the harness a custom token → real Web SDK auth → the normal
+    // /api/auth/session cookie. Disabled (default) accounts get no link.
+    let loginUrl: string | undefined
+    if (loginable) {
+        const customToken = await auth.createCustomToken(uid)
+        // High-entropy code (NOT the QR 6-char code) — this link grants a session.
+        const loginCode = randomBytes(24).toString("base64url")
+        await db.collection(QR_SESSIONS).doc(loginCode).set({
+            status: "approved",
+            customToken,
+            testUid: uid,
+            userName: displayName,
+            userPhoto: null,
+            createdAt: now,
+            // 5-min single-use login link. Once consumed, the resulting session
+            // + refresh token carry the account TTL (enforced by the
+            // disable-expired-test-accounts cron, not this link's expiry).
+            expiresAt: now + 5 * 60 * 1000,
+        })
+        loginUrl = `/test-login?code=${loginCode}`
+    }
+
     breadcrumb("mint", {
         uid,
         role: args.role,
         soundEngineer,
+        loginable,
         provisionedBy: callerUid,
         ttlSec,
     })
@@ -301,6 +343,8 @@ export async function provisionTestAccount(
         tokenId: tokenRef.id,
         expiresAt: new Date(expiresAtMs).toISOString(),
         displayName,
+        loginable,
+        ...(loginUrl ? { loginUrl } : {}),
     }
 }
 
@@ -396,6 +440,9 @@ const CASCADE_FIELDS: Array<{ collection: string; field: string; storage?: boole
     { collection: "scheduling_assignments", field: "musicianUid" },
     { collection: "musician_availability", field: "musicianUid" },
     { collection: "setlistTemplates", field: "ownerId" },
+    // Loginable login-links (un-consumed). Consumed links auto-delete on GET;
+    // this sweeps any that were never opened. Field stamped at mint (step 5).
+    { collection: "qr-sessions", field: "testUid" },
 ]
 
 export interface RevokeTestAccountResult {
@@ -412,6 +459,7 @@ export interface RevokeTestAccountResult {
         scheduling_assignments: number
         musician_availability: number
         setlistTemplates: number
+        "qr-sessions": number
         mcpTokens: number
         storageDeleted: number
         storageFailed: number
@@ -603,6 +651,7 @@ async function revokeTestAccountUnchecked(
             scheduling_assignments: cascaded.scheduling_assignments ?? 0,
             musician_availability: cascaded.musician_availability ?? 0,
             setlistTemplates: cascaded.setlistTemplates ?? 0,
+            "qr-sessions": cascaded["qr-sessions"] ?? 0,
             mcpTokens: cascaded.mcpTokens ?? 0,
             storageDeleted: storage.deleted,
             storageFailed: storage.failed,
@@ -978,6 +1027,89 @@ export async function sweepOrphanTestDataCore(
     }
 }
 
+// ─── TTL cutoff for browser-loginable accounts ──────────────────────────────
+
+export interface DisableExpiredResult {
+    scanned: number
+    expired: number
+    disabled: number
+    revoked: number
+    failures: string[]
+}
+
+/**
+ * Disable + refresh-revoke loginable test accounts whose TTL has passed.
+ *
+ * `verifyBearer` enforces the TTL for the MCP bearer, but a `loginable` account
+ * signs in via the BROWSER (Firebase session + ID token), which never touches
+ * verifyBearer. Client-side Firestore reads authorize via the ID token (not the
+ * app session cookie), so the only real cutoff is disabling the Auth user AND
+ * revoking refresh tokens: outstanding ID tokens then die within their ≤1h
+ * lifetime, and `verifySessionCookie(cookie, true)` (checkRevoked) rejects any
+ * live session on its next request.
+ *
+ * This is the TTL *cutoff*, NOT a data sweep — hard-delete stays with
+ * revoke_test_account / cleanup_all_test_data. Idempotent: re-disabling an
+ * already-disabled account is a harmless no-op. Called by the hourly
+ * `/api/cron/disable-expired-test-accounts` route (exported for direct testing).
+ */
+export async function disableExpiredLoginableAccounts(
+    now: number = Date.now(),
+): Promise<DisableExpiredResult> {
+    initAdmin()
+    const db = getFirestore()
+    const auth = getAuth()
+
+    // Only loginable accounts can hold a live browser session; non-loginable
+    // ones are already disabled:true at mint, so the cron never touches them.
+    const snap = await db
+        .collection(MCP_TEST_USERS)
+        .where("loginable", "==", true)
+        .get()
+
+    const failures: string[] = []
+    let expired = 0
+    let disabled = 0
+    let revoked = 0
+    for (const doc of snap.docs) {
+        const ttl = doc.data().ttlExpiresAt
+        const ttlMs = ttl instanceof Timestamp ? ttl.toMillis() : null
+        if (ttlMs === null || ttlMs > now) continue // still within TTL
+        expired++
+        const uid = doc.id
+        try {
+            await auth.updateUser(uid, { disabled: true })
+            disabled++
+            // Kill outstanding Web SDK ID tokens — they expire within ≤1h and
+            // cannot refresh once revoked.
+            await auth.revokeRefreshTokens(uid)
+            revoked++
+        } catch (err) {
+            failures.push(
+                `${uid}: ${err instanceof Error ? err.message : String(err)}`,
+            )
+        }
+    }
+
+    breadcrumb("cleanup", {
+        op: "disable_expired_loginable",
+        scanned: snap.size,
+        expired,
+        disabled,
+        revoked,
+        failures: failures.length,
+    })
+    logger.info("[mcp-test-token] disable-expired-loginable", {
+        scanned: snap.size,
+        expired,
+        disabled,
+        revoked,
+        failures: failures.length,
+    })
+
+    return { scanned: snap.size, expired, disabled, revoked, failures }
+}
+
 // ─── MCP tool registration ──────────────────────────────────────────────────
 
 type AuthExtra = { authInfo?: { extra?: Record<string, unknown> } }
@@ -1025,6 +1157,12 @@ export const createTestAccountSchema = {
         .describe(
             "Optional per-instance uid namespace. When set the minted uid is `test-<uidPrefix>-<role>-<8-hex>` instead of `test-<role>-<8-hex>`. Pair with cleanup_all_test_data({prefix}) so parallel cowork instances don't cascade-delete each other. Lowercase alphanumeric + single hyphens, 1-32 chars.",
         ),
+    loginable: z
+        .boolean()
+        .optional()
+        .describe(
+            "Opt-in browser sign-in. When true, the account is provisioned ENABLED (disabled:false) and the result includes a one-time `loginUrl` — a 5-min, single-use custom-token link (`/test-login?code=…`) that signs a browser/harness in as this persona with real Firebase Web SDK auth + the normal app session cookie. Default (omitted) keeps disabled:true (UI cannot sign in; MCP-bearer path only). role='admin' is still refused. The loginUrl is shown ONCE.",
+        ),
 }
 
 export function registerTestTokenTools(server: McpServer): void {
@@ -1032,7 +1170,7 @@ export function registerTestTokenTools(server: McpServer): void {
         "create_test_account",
         {
             description:
-                "Provision a headless Firebase Auth test user + matching MCP bearer token for autonomous role-boundary stress testing. The test uid is `test-<role>-<8-hex>` (or `test-<uidPrefix>-<role>-<8-hex>` when `uidPrefix` is set); the Auth user is created with `disabled: true` so the UI cannot sign them in (the MCP bearer path is unaffected). Returns `{uid, token, expiresAt, ...}`; the raw token is shown ONCE — store it, the hash is the only thing persisted. Admin + band_leader may call. role='admin' is REFUSED — use a real Firebase admin account for admin actions. **Bearer lifetime is the FLOOR of these three:** (1) `ttlSec` (default 4h, max 24h) — after expiry verifyBearer rejects via the `ttlExpiresAt in past` path; (2) explicit `revoke_test_account({uid})` — token doc is deleted immediately; (3) any `cleanup_all_test_data({prefix})` whose prefix matches this uid's `uidPrefix` — token doc is deleted as part of the cascade sweep. The advertised `expiresAt` is the (1) upper bound only, NOT a guaranteed minimum — a sibling tool call that sweeps the prefix will invalidate the bearer before its `expiresAt`. The minted token honors the standard rate limiter at the bearer's role tier (musician/member tokens are NOT bypass-listed).",
+                "Provision a headless Firebase Auth test user + matching MCP bearer token for autonomous role-boundary stress testing. The test uid is `test-<role>-<8-hex>` (or `test-<uidPrefix>-<role>-<8-hex>` when `uidPrefix` is set); the Auth user is created with `disabled: true` so the UI cannot sign them in (the MCP bearer path is unaffected). Returns `{uid, token, expiresAt, ...}`; the raw token is shown ONCE — store it, the hash is the only thing persisted. Admin + band_leader may call. role='admin' is REFUSED — use a real Firebase admin account for admin actions. **Bearer lifetime is the FLOOR of these three:** (1) `ttlSec` (default 4h, max 24h) — after expiry verifyBearer rejects via the `ttlExpiresAt in past` path; (2) explicit `revoke_test_account({uid})` — token doc is deleted immediately; (3) any `cleanup_all_test_data({prefix})` whose prefix matches this uid's `uidPrefix` — token doc is deleted as part of the cascade sweep. The advertised `expiresAt` is the (1) upper bound only, NOT a guaranteed minimum — a sibling tool call that sweeps the prefix will invalidate the bearer before its `expiresAt`. The minted token honors the standard rate limiter at the bearer's role tier (musician/member tokens are NOT bypass-listed). **`loginable: true`** additionally provisions the account ENABLED and returns a one-time `loginUrl` (a 5-min, single-use custom-token link at `/test-login?code=…`) so a browser/Playwright harness can sign in as this persona with real Firebase Web SDK auth + the normal app session — required for client-side data probes. Default (omitted) keeps `disabled:true` (no UI login). A loginable account's browser-session TTL is enforced out-of-band by the `disable-expired-test-accounts` cron (disable + refresh-token revoke).",
             inputSchema: createTestAccountSchema,
         },
         async (args, extra) => {
