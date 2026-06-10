@@ -1851,16 +1851,27 @@ describe("MCP setlist write tools (emulator)", () => {
             })) as {
                 ok: true
                 committed: boolean
-                results: Array<{ ok: boolean; error?: string }>
+                results: Array<{
+                    ok: boolean
+                    error?: { code: number; machine_code: string; message: string }
+                }>
             }
             expect(r.committed).toBe(false)
             expect(r.results[0]).toMatchObject({ ok: false })
+            // v11.2-03-02 (BUG-3): per-row error is now structured {code, machine_code, message}
             expect(r.results[1]).toMatchObject({
                 ok: false,
-                error: expect.stringContaining("ghost-song-id"),
+                error: expect.objectContaining({
+                    machine_code: "song_not_found",
+                    code: 404,
+                    message: expect.stringContaining("ghost-song-id"),
+                }),
             })
             expect(r.results[2]).toMatchObject({ ok: false })
-            expect(r.results[0].error).toContain("Rolled back")
+            // collateral rows in an atomic rollback carry batch_rolled_back (409)
+            expect(r.results[0].error?.machine_code).toBe("batch_rolled_back")
+            expect(r.results[0].error?.code).toBe(409)
+            expect(r.results[0].error?.message).toContain("Rolled back")
             expect(await tracksOf(id)).toHaveLength(0)
         })
 
@@ -1946,12 +1957,18 @@ describe("MCP setlist write tools (emulator)", () => {
             })) as {
                 ok: true
                 committed: boolean
-                results: Array<{ ok: boolean; error?: string }>
+                results: Array<{
+                    ok: boolean
+                    error?: { code: number; machine_code: string; message: string }
+                }>
             }
             expect(r.committed).toBe(true)
             expect(r.results[0].ok).toBe(true)
             expect(r.results[1].ok).toBe(false)
-            expect(r.results[1].error).toContain("title is required")
+            // v11.2-03-02 (BUG-3): structured per-row error
+            expect(r.results[1].error?.machine_code).toBe("title_required")
+            expect(r.results[1].error?.code).toBe(400)
+            expect(r.results[1].error?.message).toContain("title is required")
         })
 
         it("members are denied bulk_add_tracks", async () => {

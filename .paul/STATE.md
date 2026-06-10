@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.2 MCP Stress-Test Fixes — OPEN 2026-06-09.** 5 phases scoped from the Brothers Lazaroff stress-test report (BL tenant only; CRC untouched). 0/5 complete. (v11.1 ✅ COMPLETE, tag `v11.1.0`, archived.)
-Phase: **v11.2-03 MCP error contract [P1/P2]** — 🚧 in progress, 1 of 2 plans done. **03-01 BUG-2 ✅ LOOP COMPLETE + shipped `54cd7ba3bc`; 03-02 BUG-3 next.** (v11.2-01 ✅ `6920d61668` · v11.2-02 ✅ `6079d4e3cf`.) Milestone v11.2: 2 of 5 phases done.
-Plan: **None active.** Loop idle — ready for next PLAN (v11.2-03-02, BUG-3 bulk per-row envelope).
-Status: **v11.2-03-01 (BUG-2) SHIPPED + committed + pushed to `master`.** Deterministic client errors now correct: add_track unknown songId→404, reorder bad ids→400, upload dedup→409, genuine fault→500. Shared `uploadFailureEnvelope` de-drifts all 4 upload tools. Gates: tsc clean · unit 12/12 · emulator mcp-chart-upload 55/55 · next build clean. CRC byte-identical.
-Last activity: 2026-06-09 (session 9) — `/paul:resume` consumed the BL stress-test report (9 findings) → `/paul:milestone` created **v11.2 MCP Stress-Test Fixes**: v11.2-01 BUG-1 propose/commit resolver [P0] · v11.2-02 BUG-9 publish-audience verify [P1] · v11.2-03 BUG-2/3 error contract · v11.2-04 BUG-4/5 hygiene · v11.2-05 BUG-6/7/8 P3 polish. Phase order = the report's suggested fix order.
+Phase: **v11.2-03 MCP error contract [P1/P2] — ✅ COMPLETE 2026-06-11** (both plans shipped: 03-01 BUG-2 `54cd7ba3bc` + 03-02 BUG-3). **Next phase: v11.2-04 (BUG-4/5 publish + test-data hygiene) — not started.** (v11.2-01 ✅ `6920d61668` · v11.2-02 ✅ `6079d4e3cf`.) Milestone v11.2: **3 of 5 phases done.**
+Plan: **None active.** Loop idle — ready for next PLAN (v11.2-04, BUG-4 preview_publish unbonded-song flag + BUG-5 isTest cleanup/dashboard).
+Status: **v11.2-03-02 (BUG-3) LOOP COMPLETE → phase v11.2-03 closed.** bulk_add_tracks per-row errors now structured `RichErrorBody {code,machine_code,message}` (parity with single-row tools): song_not_found→404 · title_required→400 · batch_rolled_back→409 · server_error→500. ERROR_CODE_MAP += title_required:400 (also corrects single add_track) + batch_rolled_back:409. Gates: tsc clean · unit 12/12 · emulator mcp-setlist-write **78/78** · next build clean. CRC byte-identical. bulk_update_tracks per-row strings left as-is (scoped out).
+Last activity: 2026-06-11 (session 11) — `/paul:apply` + `/paul:unify` v11.2-03-02 (BUG-3); phase v11.2-03 transition complete (ROADMAP marked ✅, SUMMARY written). Committed + pushed to `master`.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -48,7 +48,7 @@ Last activity: 2026-06-09 (session 9) — `/paul:resume` consumed the BL stress-
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-03-01 (BUG-2) loop COMPLETE — phase open, next plan 03-02 (BUG-3)]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-03-02 (BUG-3) LOOP COMPLETE — phase v11.2-03 closed; ready to PLAN v11.2-04]
   ✓        ✓        ✓
 ```
 
@@ -88,14 +88,14 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.2-03-01 (BUG-2) loop COMPLETE �
 
 ## Session Continuity
 
-Last session: 2026-06-10 (session 10) — shipped v11.2 phases 01 (BUG-1) → 02 (BUG-9) → 03-01 (BUG-2), each PLAN→APPLY→UNIFY→commit→push. Paused after v11.2-03-01 closed. **⏸ PAUSED — see `.paul/HANDOFF-2026-06-10.md`.**
-Stopped at: **v11.2-03-01 (BUG-2) loop CLOSED + shipped; session paused.** Next: `/paul:plan` for **v11.2-03-02** (BUG-3 — `bulk_add_tracks` per-row bare-string `error` → `{code,machine_code,message}` envelope; `BulkAddResult.error` shape change in `server-tracks-write.ts` `bulkAddTracks` ~:1452/:1536-1639 + assertion updates in `mcp-setlist-write.emulator.test.ts`). Then 04 → 05.
+Last session: 2026-06-11 (session 11) — `/paul:resume` → `/paul:plan` → `/paul:apply` → `/paul:unify` for **v11.2-03-02 (BUG-3)**; phase v11.2-03 closed (both plans shipped). All gates green; committed + pushed to `master`.
+Stopped at: **Phase v11.2-03 ✅ COMPLETE. Ready to plan v11.2-04 (BUG-4/5 publish + test-data hygiene).** Milestone v11.2: 3/5 phases done.
 **OPEN ACTION ON DANIEL (live retests, both dryRun/safe-or-emulator-proven):** reconnect Claude Desktop BL connector to `https://www.brotherslazaroff.live/api/mcp`, then run the UAT-PENDING items: (1) v11.2-01 BUG-1 create→propose→commit on BL; (2) v11.2-02 `preview_publish` on a BL setlist shows BL roster size not 17. Both already emulator-proven. Existing token is crc-pinned.
-Next action: **`/paul:plan`** (Phase v11.2-03 — BUG-2/3 error contract). Then 04 → 05 in order.
-Resume file: **.paul/HANDOFF-2026-06-10.md** (session-10 pause handoff — full context + BUG-3 implementation notes). Milestone specs: .paul/ROADMAP.md § Active Milestone. Source: BL stress-test report (2026-06-09).
+Next action: **`/paul:plan`** (Phase v11.2-04 — BUG-4 preview_publish unbonded-song flag + BUG-5 isTest cleanup/dashboard). Then 05 in order.
+Resume file: **.paul/ROADMAP.md § Active Milestone** (v11.2-04 phase spec). Source: BL stress-test report (2026-06-09).
 Resume context:
-- v11.2: 2/5 phases done + 03-01 shipped; phase 03 open for plan 03-02 (BUG-3 bulk per-row envelope).
-- BUG-3 target: `BulkAddResult.error` string → `{code,machine_code,message}` in `server-tracks-write.ts`; per-row `song_not_found` now resolves 404 (03-01 map add).
+- v11.2: 3/5 phases done (01 BUG-1, 02 BUG-9, 03 BUG-2+BUG-3). Phase 03 (error contract) COMPLETE.
+- v11.2-04 target: BUG-4 `preview_publish` count unbonded `type:song` rows → `review_first`/`unbondedSongCount`; BUG-5 `cleanup_all_test_data` sweep owner-real `isTest` setlists + `(main)` dashboard `isTest` filter decision. Self-inclusion regression-test rule applies ([[feedback_self_inclusion_test_fixtures]]).
 - Daniel paces with "go" per PAUL step; autonomy posture binding (auto-commit+push per plan to master).
 - Open on Daniel: BL connector reconnect → run UAT-PENDING BUG-1 + BUG-9 live retests (safe/dryRun).
 Reusable lesson (session 8): MCP authoring org is pinned into the bearer at MINT time (`oauth/token/route.ts` → `resolveMintOrg` → `createMcpToken`), NOT re-resolved per request — a claim change requires a RECONNECT to take effect. And Firestore `orderBy(field)` silently drops docs missing that field (the People-list bug).

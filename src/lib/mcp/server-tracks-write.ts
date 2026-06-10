@@ -7,6 +7,7 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { rowOrg } from "@/lib/mcp/org-context"
 import {
+    codeFor,
     forbiddenRoleEnvelope,
     readLastModifiedAt,
     readVersion,
@@ -14,6 +15,7 @@ import {
     staleVersionEnvelope,
     trackNotFoundEnvelope,
     type ForbiddenRoleEnvelope,
+    type RichErrorBody,
     type RichErrorEnvelope,
     type WriteRejection,
 } from "@/lib/mcp/error-envelopes"
@@ -1452,7 +1454,12 @@ export interface BulkAddTracksOptions {
 export interface BulkAddResult {
     index: number
     ok: boolean
-    error?: string
+    /**
+     * v11.2-03-02 (BUG-3): structured per-row error for shape parity with the
+     * single-row tools. `{code, machine_code, message}` — code derived via
+     * `codeFor(machine_code)` so ERROR_CODE_MAP stays the single source of truth.
+     */
+    error?: RichErrorBody
     trackId?: string
     order?: number
 }
@@ -1530,7 +1537,7 @@ export async function bulkAddTracks(
     // Pre-resolve song lookups so the atomic batch has no async surprises.
     const planned: Array<
         | { kind: "ok"; index: number; trackId: string; payload: Record<string, unknown>; order: number; fileId?: string }
-        | { kind: "invalid"; index: number; error: string }
+        | { kind: "invalid"; index: number; machine_code: string; message: string }
     > = []
 
     for (let i = 0; i < rows.length; i++) {
@@ -1549,7 +1556,8 @@ export async function bulkAddTracks(
                 planned.push({
                     kind: "invalid",
                     index: i,
-                    error: "songId resolver not provided",
+                    machine_code: "server_error",
+                    message: "songId resolver not provided",
                 })
                 continue
             }
@@ -1558,7 +1566,8 @@ export async function bulkAddTracks(
                 planned.push({
                     kind: "invalid",
                     index: i,
-                    error: `Song ${row.songId} not found`,
+                    machine_code: "song_not_found",
+                    message: `Song ${row.songId} not found`,
                 })
                 continue
             }
@@ -1574,7 +1583,8 @@ export async function bulkAddTracks(
             planned.push({
                 kind: "invalid",
                 index: i,
-                error: "title is required (or pass a songId to derive it)",
+                machine_code: "title_required",
+                message: "title is required (or pass a songId to derive it)",
             })
             continue
         }
@@ -1616,12 +1626,24 @@ export async function bulkAddTracks(
     if (mode === "atomic" && anyInvalid) {
         const results: BulkAddResult[] = planned.map((p) =>
             p.kind === "invalid"
-                ? { index: p.index, ok: false, error: p.error }
+                ? {
+                      index: p.index,
+                      ok: false,
+                      error: {
+                          code: codeFor(p.machine_code),
+                          machine_code: p.machine_code,
+                          message: p.message,
+                      },
+                  }
                 : {
                       index: p.index,
                       ok: false,
-                      error:
-                          "Rolled back: another row in the atomic batch failed pre-validation",
+                      error: {
+                          code: codeFor("batch_rolled_back"),
+                          machine_code: "batch_rolled_back",
+                          message:
+                              "Rolled back: another row in the atomic batch failed pre-validation",
+                      },
                   },
         )
         logger.info("[mcp] bulk track add — atomic rollback", {
@@ -1634,7 +1656,15 @@ export async function bulkAddTracks(
 
     const results: BulkAddResult[] = planned.map((p) =>
         p.kind === "invalid"
-            ? { index: p.index, ok: false, error: p.error }
+            ? {
+                  index: p.index,
+                  ok: false,
+                  error: {
+                      code: codeFor(p.machine_code),
+                      machine_code: p.machine_code,
+                      message: p.message,
+                  },
+              }
             : { index: p.index, ok: true, trackId: p.trackId, order: p.order },
     )
 
@@ -1713,7 +1743,11 @@ export async function bulkAddTracks(
                 results[i] = {
                     index: p.index,
                     ok: false,
-                    error: err instanceof Error ? err.message : String(err),
+                    error: {
+                        code: codeFor("server_error"),
+                        machine_code: "server_error",
+                        message: err instanceof Error ? err.message : String(err),
+                    },
                 }
             }
         }

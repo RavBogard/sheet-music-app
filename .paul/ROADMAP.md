@@ -9,14 +9,14 @@
 ## Active Milestone
 
 **🚧 v11.2 — MCP Stress-Test Fixes** (OPEN 2026-06-09)
-Status: 🚧 In Progress · Phases: 2 of 5 (v11.2-01 ✅ · v11.2-02 ✅) · Source: Brothers Lazaroff MCP + Perform **stress-test report** (2026-06-09; BL tenant only, CRC untouched, all test data cleaned — tenant verified empty post-run).
+Status: 🚧 In Progress · Phases: 3 of 5 (v11.2-01 ✅ · v11.2-02 ✅ · v11.2-03 ✅) · Source: Brothers Lazaroff MCP + Perform **stress-test report** (2026-06-09; BL tenant only, CRC untouched, all test data cleaned — tenant verified empty post-run).
 Focus: Close the 9 findings from the BL stress test. Headline is **BUG-1 (P0)** — `propose_setlist_changes` 404s on MCP-created (UUID-id) setlists, so the server-`instructions`-mandated **stage → surface confidence → confirm → commit** authoring policy is non-functional for every MCP-authored setlist. Plus a **verify-first cross-tenant publish-audience risk (BUG-9)**, agent-facing error-contract correctness (BUG-2/BUG-3), publish + test-data hygiene (BUG-4/BUG-5), and P3 polish (BUG-6 brand leak / BUG-7 chord-over-lyric renderer / BUG-8 timestamp serialization). Phase order follows the report's suggested fix order (P0 → verify → contract → P2 → P3).
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v11.2-01 | propose/commit resolver fix — BUG-1 [P0] | 01-01 ✅ | ✅ Complete | 2026-06-09 |
 | v11.2-02 | publish-audience org scoping — BUG-9 [P1 · VERIFY-FIRST] | 01-01 ✅ | ✅ Complete | 2026-06-09 |
-| v11.2-03 | MCP error contract — BUG-2 + BUG-3 [P1/P2] | 01 (BUG-2, planning) · 02 (BUG-3, pending) | 🚧 Planning | - |
+| v11.2-03 | MCP error contract — BUG-2 + BUG-3 [P1/P2] | 01 (BUG-2) ✅ · 02 (BUG-3) ✅ | ✅ Complete | 2026-06-11 |
 | v11.2-04 | publish + test-data hygiene — BUG-4 + BUG-5 [P2] | TBD | Not started | - |
 | v11.2-05 | P3 polish — BUG-6 + BUG-7 + BUG-8 [P3] | TBD | Not started | - |
 
@@ -35,7 +35,9 @@ Focus: Two agent-facing error-contract defects. **BUG-2 (P1):** deterministic cl
 **SPLIT into 2 plans (verified vs deployed):** `richError` code = `ERROR_CODE_MAP[machine_code] ?? 500`; `song_not_found`/`reorder_failed` absent → 500; upload wrappers flatten `processChartUpload`'s discriminated `result.error` enum into blanket `upload_failed`→500. BUG-3 needs a `BulkAddResult.error` shape change (server-tracks-write.ts `bulkAddTracks`) with test fan-out — separable from BUG-2's status mapping.
 Plans:
 - **01** ✅ LOOP COMPLETE (`v11.2-03-01-PLAN.md` + SUMMARY, BUG-2). ERROR_CODE_MAP += song_not_found:404/reorder_failed:400; shared `uploadFailureEnvelope` maps `processChartUpload` code/status (dedup→409, fault→500) across all 4 upload tools (DEVIATION: reused existing `duplicate_detected_in_library`+`result.status` vs new codes). tsc clean · unit 12/12 · emulator mcp-chart-upload 55/55 · next build clean.
-- **02** ⬜ pending (BUG-3: structure `BulkAddResult.error` as `{code,machine_code,message}` in `bulkAddTracks` + update assertions).
+- **02** ✅ LOOP COMPLETE (`v11.2-03-02-PLAN.md` + SUMMARY, BUG-3). `BulkAddResult.error` string→`RichErrorBody {code,machine_code,message}` at 4 sites (3 pre-validation + 1 best-effort `addTrack` catch — the 4th surfaced by tsc, mapped to server_error:500). ERROR_CODE_MAP += title_required:400 (also corrects single add_track) + batch_rolled_back:409. Per-row codes: song_not_found(404)/title_required(400)/batch_rolled_back(409)/server_error(500). bulk_update_tracks per-row shape left as strings (out of scope). tsc clean · unit 12/12 · emulator mcp-setlist-write 78/78 · next build clean. CRC byte-identical.
+
+**Phase v11.2-03 ✅ COMPLETE 2026-06-11** — both BUG-2 + BUG-3 shipped; MCP error contract now deterministic (correct HTTP-class codes) and uniform (single + bulk per-row errors share the RichErrorBody shape).
 
 ### Phase v11.2-04: publish + test-data hygiene [P2]
 Focus: **BUG-4:** `preview_publish` is blind to `type:"song"` rows with no chart bond (`fileId/songId=null`) — they render blank in Perform yet preview returns `recommendation:"publish", flaggedBonds:0` (`verify_setlist_charts` already catches them as `unbonded`). Make `preview_publish` count unbonded song rows and emit `recommendation:"review_first"` / an `unbondedSongCount` warning, distinguishing intentionally chart-less rows (header/reading/prayer/transition/note). **BUG-5:** `isTest:true` setlists created under a real admin uid are (a) never swept by `cleanup_all_test_data` (it only cascades `test-*`-owned data via `mcpTestUsers` + Auth `test-*`) and (b) shown on the authed `(main)` dashboard (correctly hidden from `/perform`). Either extend `cleanup_all_test_data` to also sweep `setlists`/`library_index` where `isTest==true` independent of owner (same admin/band_leader gate) OR document the manual-delete requirement; and decide whether the `(main)` dashboard should reuse the `/perform` `isTest!=true` filter. (Self-inclusion regression-test rule applies — [[feedback_self_inclusion_test_fixtures]].)

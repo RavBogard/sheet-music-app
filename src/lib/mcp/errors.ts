@@ -58,6 +58,7 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     no_valid_recipients: 400,
     no_charts: 400,
     reorder_failed: 400, // v11.2-03 (BUG-2): caller-supplied bad/incomplete orderedTrackIds set
+    title_required: 400, // v11.2-03-02 (BUG-3): bulk/single add row has neither title nor resolvable songId
     no_changes: 400,
     empty_file: 400,
     empty_patch: 400,
@@ -100,6 +101,7 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     already_exists: 409,
     force_required: 409,
     already_bonded: 409,
+    batch_rolled_back: 409, // v11.2-03-02 (BUG-3): atomic-batch collateral — a sibling row failed pre-validation
 
     // 422 — request is structurally valid but logically rejected
     unprocessable: 422,
