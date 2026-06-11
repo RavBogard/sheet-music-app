@@ -68,6 +68,12 @@ const publicExactRoutes = [
     '/sms-consent',
     '/changelog',
     '/accessibility',
+    // /test-login — headless test-account sign-in harness. Pre-auth like /login
+    // and /qr: it consumes a single-use `?code` and signs in via Firebase custom
+    // token; the capability is the code, not the path. EXACT match (not a prefix)
+    // so `/test-login-*` siblings stay gated. Without this, an unauth visit 307s
+    // to /login before the page can read ?code. (BUG-9, run-2 §BUG-9.)
+    '/test-login',
 ]
 
 // Prefix-match public routes — these serve public/unauthenticated content

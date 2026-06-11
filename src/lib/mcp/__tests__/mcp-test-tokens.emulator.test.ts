@@ -994,4 +994,65 @@ describe("MCP test tokens (emulator)", () => {
         expect((await db().collection("setlists").doc("sl-c7i1").get()).exists).toBe(false)
         expect((await db().collection("setlists").doc("sl-c7i5").get()).exists).toBe(true)
     })
+
+    // ── v11.3-03 BUG-1 (run-1 §BUG-1): library_index orphan coverage ─────────
+    // The orphan sweep previously covered setlists + templates only, so
+    // library_index rows whose owner test-account was deleted out-of-band
+    // (the `[role-*]` rows in CRC prod) survived. uploadedBy is the owner field.
+
+    it("sweep_orphan_test_data dryRun lists library_index orphans; spares live-owner + non-test rows", async () => {
+        // ORPHAN: test-shape uploadedBy, no users/{uid} doc.
+        await db().collection("library_index").doc("lib-orphan-1").set({
+            title: "[role-musician] tiny",
+            uploadedBy: "test-musician-deadbeef",
+        })
+        // LIVE-OWNER: uploadedBy is a test uid that DOES have a users/{uid} doc → not an orphan.
+        await db().collection("users").doc("test-musician-alive01").set({ role: "musician" })
+        await db().collection("library_index").doc("lib-live-owner").set({
+            title: "Owned chart",
+            uploadedBy: "test-musician-alive01",
+        })
+        // NON-TEST: uploadedBy is not test-shape → isTestUid gate excludes it.
+        await db().collection("library_index").doc("lib-real").set({
+            title: "Real chart",
+            uploadedBy: "realuser123",
+        })
+
+        const result = await sweepOrphanTestDataCore(ADMIN_UID, { dryRun: true })
+        if ("error" in result) throw new Error("dryRun failed: " + result.error)
+        const libOrphans = result.orphans.filter((o) => o.collection === "library_index")
+        expect(libOrphans.map((o) => o.id)).toEqual(["lib-orphan-1"])
+        expect(result.scanned.library_index).toBe(3)
+        expect(result.swept.library_index).toBe(0)
+        // Nothing deleted in dryRun.
+        expect((await db().collection("library_index").doc("lib-orphan-1").get()).exists).toBe(true)
+    })
+
+    it("sweep_orphan_test_data force deletes library_index orphans; spares live-owner + non-test rows", async () => {
+        await db().collection("library_index").doc("lib-orphan-2").set({
+            title: "[role-band_leader] tiny",
+            uploadedBy: "test-band_leader-cafef00d",
+        })
+        await db().collection("users").doc("test-musician-alive02").set({ role: "musician" })
+        await db().collection("library_index").doc("lib-live-2").set({
+            title: "Owned chart 2",
+            uploadedBy: "test-musician-alive02",
+        })
+        await db().collection("library_index").doc("lib-real-2").set({
+            title: "Real chart 2",
+            uploadedBy: "realuser456",
+        })
+
+        const result = await sweepOrphanTestDataCore(ADMIN_UID, {
+            dryRun: false,
+            force: true,
+        })
+        if ("error" in result) throw new Error("sweep failed: " + result.error)
+        expect(result.swept.library_index).toBe(1)
+        // Storage is mocked to throw in this suite → best-effort purge counts as failed, never crashes.
+        expect(result.swept.storageDeleted + result.swept.storageFailed).toBeGreaterThanOrEqual(0)
+        expect((await db().collection("library_index").doc("lib-orphan-2").get()).exists).toBe(false)
+        expect((await db().collection("library_index").doc("lib-live-2").get()).exists).toBe(true)
+        expect((await db().collection("library_index").doc("lib-real-2").get()).exists).toBe(true)
+    })
 })

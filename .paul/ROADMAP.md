@@ -27,7 +27,7 @@ Focus: Close the post-stress-test findings the oracle confirms are real. Two **P
 |-------|------|-------|--------|-----------|
 | v11.3-01 | Anon access correctness — BUG-5 + BUG-4 [P1] | 01 (BUG-5) ✅ · 02 (BUG-4) ✅ | ✅ Complete | 2026-06-10 |
 | v11.3-02 | Agent chart-upload path [P1] | 01 (Drive convert) ✅ · 02 (chunked inline) ✅ | ✅ Complete | 2026-06-11 |
-| v11.3-03 | Harness & hygiene — BUG-9 + BUG-7 + BUG-1 [P2] | TBD | Not started | - |
+| v11.3-03 | Harness & hygiene — BUG-9 + BUG-7 + BUG-1 [P2] | 01 (BUG-9+7) ✅ · 02 (BUG-1) ✅ | ✅ Complete | 2026-06-10 |
 | v11.3-04 | /perform performance — BUG-2 [P2] | TBD | Not started | - |
 | v11.3-05 | P3 polish — BUG-6 + F-6 [P3] | TBD | Not started | - |
 
@@ -49,7 +49,7 @@ Focus: Three low-risk correctness fixes; no consumer-facing impact but they brok
 - **BUG-9:** `/test-login` missing from `proxy.ts` `publicPrefixes` → 307 to /login before code consumption (root cause code-confirmed, run 2 §BUG-9). Fix + regression test.
 - **BUG-7:** `GET /api/auth/qr?code=<malformed-with-/>` → 500; must be 4xx (v11.2 error contract).
 - **BUG-1** (run 1): orphaned `[role-*] tiny` rows in CRC `library_index`. **VERIFY FIRST:** whether `revoke_test_account`/`cleanup_all_test_data` cascade library uploads of revoked accounts (run 2 swept `library:0`); confirm coverage, then delete the two orphans.
-Plans: TBD (defined during /paul:plan)
+Plans (split — complex, 3 subsystems): **01** (BUG-9 `/test-login`→`publicExactRoutes` + BUG-7 qr GET malformed-`code`→400; route harness/error-contract, autonomous) · **02** (BUG-1 — extend `sweep_orphan_test_data` to `library_index` [coverage gap: it covers setlists/templates only] + emulator test, then prod-delete the two orphans). Finding (Plan 02 input): `CASCADE_FIELDS` already cascades `library_index` by `uploadedBy`; orphans survive only when the owner user-record is absent, which the sweep doesn't reach for `library_index`.
 
 ### Phase v11.3-04: /perform performance [P2]
 Focus: **BUG-2** — p75 LCP 2600 / FCP 3012–3247 / TTFB 1398–1545 ms on the highest-traffic route; **CLS regressed 0.15 → 0.2** between the two runs. **VERIFY FIRST:** cold-load vs steady-state composition; suspect chart-image reflow for the CLS regression. Healthy comparator: /setlists LCP 1.1s / CLS 0.02.

@@ -850,14 +850,18 @@ export interface SweepOrphanTestDataResult {
     scanned: {
         setlists: number
         setlistTemplates: number
+        library_index: number
     }
     swept: {
         setlists: number
         setlistTemplates: number
         tracks: number
+        library_index: number
+        storageDeleted: number
+        storageFailed: number
     }
     orphans: Array<{
-        collection: "setlists" | "setlistTemplates"
+        collection: "setlists" | "setlistTemplates" | "library_index"
         id: string
         ownerId: string
         name: string | null
@@ -918,6 +922,7 @@ export async function sweepOrphanTestDataCore(
     const orphans: SweepOrphanTestDataResult["orphans"] = []
     const orphanSetlistIds: string[] = []
     const orphanTemplateIds: string[] = []
+    const orphanLibraryIds: string[] = []
     let orphansTruncated = false
 
     // Setlists — page through all docs (collection cardinality is small —
@@ -961,11 +966,41 @@ export async function sweepOrphanTestDataCore(
         }
     }
 
+    // library_index — owner field is `uploadedBy` (matches CASCADE_FIELDS revoke
+    // path). BUG-1 (run-1 §BUG-1): rows whose owner test-account was deleted
+    // out-of-band survive cleanup_all_test_data's owner-bonded cascade; this
+    // owner-absent orphan sweep is the path that reaches them.
+    const librarySnap = await db.collection("library_index").get()
+    for (const doc of librarySnap.docs) {
+        const data = doc.data() as Record<string, unknown>
+        const ownerId = typeof data.uploadedBy === "string" ? data.uploadedBy : null
+        if (!(await orphanFilter(ownerId))) continue
+        orphanLibraryIds.push(doc.id)
+        if (orphans.length < MAX_ORPHAN_SAMPLE) {
+            orphans.push({
+                collection: "library_index",
+                id: doc.id,
+                ownerId: ownerId!,
+                name: typeof data.title === "string" ? data.title : null,
+            })
+        } else {
+            orphansTruncated = true
+        }
+    }
+
     const scanned = {
         setlists: setlistsSnap.size,
         setlistTemplates: templatesSnap.size,
+        library_index: librarySnap.size,
     }
-    const swept = { setlists: 0, setlistTemplates: 0, tracks: 0 }
+    const swept = {
+        setlists: 0,
+        setlistTemplates: 0,
+        tracks: 0,
+        library_index: 0,
+        storageDeleted: 0,
+        storageFailed: 0,
+    }
 
     if (wantsWrite) {
         // Delete tracks for orphan setlists first (preserve referential
@@ -998,6 +1033,20 @@ export async function sweepOrphanTestDataCore(
             await bw.close()
             swept.setlistTemplates = orphanTemplateIds.length
         }
+
+        // library_index orphans + best-effort Storage bytes (doc id == fileId,
+        // same assumption as the revoke path's storage:true cascade).
+        if (orphanLibraryIds.length > 0) {
+            const bw = db.bulkWriter()
+            for (const lid of orphanLibraryIds) {
+                bw.delete(db.collection("library_index").doc(lid))
+            }
+            await bw.close()
+            swept.library_index = orphanLibraryIds.length
+            const storage = await bestEffortStorageDelete(orphanLibraryIds)
+            swept.storageDeleted = storage.deleted
+            swept.storageFailed = storage.failed
+        }
     }
 
     breadcrumb("cleanup", {
@@ -1006,7 +1055,7 @@ export async function sweepOrphanTestDataCore(
         dryRun,
         scanned,
         swept,
-        orphanCount: orphanSetlistIds.length + orphanTemplateIds.length,
+        orphanCount: orphanSetlistIds.length + orphanTemplateIds.length + orphanLibraryIds.length,
         uidPattern: args.uidPattern ?? null,
     })
     logger.info("[mcp-test-token] sweep_orphan_test_data", {
@@ -1014,7 +1063,7 @@ export async function sweepOrphanTestDataCore(
         dryRun,
         scanned,
         swept,
-        orphanCount: orphanSetlistIds.length + orphanTemplateIds.length,
+        orphanCount: orphanSetlistIds.length + orphanTemplateIds.length + orphanLibraryIds.length,
     })
 
     return {
@@ -1222,7 +1271,7 @@ export function registerTestTokenTools(server: McpServer): void {
         "sweep_orphan_test_data",
         {
             description:
-                "Cycle-7 Lane 1 / Convergence C — admin-only sweep for orphan setlists + setlistTemplates whose owner uid matches `isTestUid` (test-*, c<N>i<N>-*, cf<N>-*) AND whose owner user-record is already absent from `users/`. These rows survive `cleanup_all_test_data` cascades when the user-record was deleted out-of-band (failed mid-revoke, console-deleted, sibling-instance cleanup that didn't carry the prefix, etc.). Defaults `dryRun:true`; pass `dryRun:false, force:true` for real deletes (F-05 standing rule). Cascade includes dependent `tracks` for orphan setlists. Optional `uidPattern` substring narrows the sweep to one cycle/instance (e.g. 'c7i1'). Returns `{scanned, swept, orphans[]}`; orphans[] is capped at 500 with `orphansTruncated:true` past that.",
+                "Cycle-7 Lane 1 / Convergence C — admin-only sweep for orphan setlists + setlistTemplates + library_index rows whose owner uid matches `isTestUid` (test-*, c<N>i<N>-*, cf<N>-*) AND whose owner user-record is already absent from `users/`. (setlists/templates key off `ownerId`; library_index off `uploadedBy`.) These rows survive `cleanup_all_test_data` cascades when the user-record was deleted out-of-band (failed mid-revoke, console-deleted, sibling-instance cleanup that didn't carry the prefix, etc.). v11.3-03 (run-1 §BUG-1) added library_index coverage — orphan library uploads are deleted with a best-effort Storage-bytes purge. Defaults `dryRun:true`; pass `dryRun:false, force:true` for real deletes (F-05 standing rule). Cascade includes dependent `tracks` for orphan setlists. Optional `uidPattern` substring narrows the sweep to one cycle/instance (e.g. 'c7i1'). Returns `{scanned, swept, orphans[]}`; orphans[] is capped at 500 with `orphansTruncated:true` past that.",
             inputSchema: {
                 uidPattern: z
                     .string()

@@ -7,15 +7,15 @@
 See: .paul/PROJECT.md (updated 2026-06-07)
 
 **Core value:** The band gets the right charts + recordings on their iPads each week, and Daniel authors setlists conversationally via Claude + MCP. Now MULTI-TENANT (2nd live tenant: Brothers Lazaroff on brotherslazaroff.live).
-**Current focus:** v11.3 Worthiness & Access — close the post-stress-test anon-read / agent-upload / hygiene / perf / polish findings (oracle `docs/ACCESS-POLICY.md` v0.3). Phase v11.3-01 (anon access correctness) ✅ shipped; next is v11.3-02 (agent chart-upload). (v7.1 hardening continues in parallel via `.coord/`.)
+**Current focus:** v11.3 Worthiness & Access — close the post-stress-test anon-read / agent-upload / hygiene / perf / polish findings (oracle `docs/ACCESS-POLICY.md` v0.3). Phases v11.3-01 (anon access), v11.3-02 (agent chart-upload), v11.3-03 (harness & hygiene) ✅ shipped; next is v11.3-04 (/perform performance — BUG-2). (v7.1 hardening continues in parallel via `.coord/`.)
 
 ## Current Position
 
 Milestone: **🚧 v11.3 — Worthiness & Access** (OPEN 2026-06-10; 5 phases, plans TBD). Created via `/paul:milestone` from `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md`. Oracle: `docs/ACCESS-POLICY.md` **v0.3**. (v11.2 ✅ COMPLETE 2026-06-11, tag `v11.2.0`; standalone loginable-test-accounts phase ✅ COMPLETE 2026-06-10.)
-Phase: **v11.3-03 Harness & hygiene** (P2) — Not started. (v11.3-02 ✅ COMPLETE 2/2 2026-06-11; v11.3-01 ✅ 2026-06-10.)
-Plan: None active. Next: `/paul:plan` for v11.3-03 (BUG-9 + BUG-7 + BUG-1).
-Status: **Phase v11.3-02 ✅ COMPLETE — committed + pushed to `master`.** 2/2 plans LOOP COMPLETE; phase commit `feat(v11.3-02): agent chart-upload path` (Plan 01 Drive-convert + Plan 02 chunked-inline). All gates green; CRC byte-identical. Ready to plan v11.3-03.
-Last activity: 2026-06-11 — `/paul:unify` v11.3-02-02 + phase-close transition: SUMMARY written, PROJECT/ROADMAP evolved, phase committed + pushed (Vercel auto-deploy).
+Phase: **v11.3-04 /perform performance** (P2) — Not started. (v11.3-03 ✅ COMPLETE 2/2 2026-06-10; v11.3-02 ✅; v11.3-01 ✅. 3/5 phases done.)
+Plan: **None active.** Next: `/paul:plan` for v11.3-04 (BUG-2 — p75 LCP 2600/FCP ~3100/TTFB ~1450ms + CLS 0.15→0.2; VERIFY-FIRST cold vs steady, suspect chart-image reflow).
+Status: **Phase v11.3-03 ✅ COMPLETE — committed + pushed to `master`.** BUG-9 + BUG-7 + BUG-1 in one `feat(v11.3-03)` commit; gates green; CRC byte-identical. BUG-1 prod was already clean (durable orphan-sweep coverage shipped). Ready to plan v11.3-04.
+Last activity: 2026-06-10 — `/paul:unify` v11.3-03-02 + phase-close transition: SUMMARY written, PROJECT/ROADMAP evolved, phase committed + pushed (Vercel auto-deploy).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -50,7 +50,7 @@ Last activity: 2026-06-11 — `/paul:unify` v11.3-02-02 + phase-close transition
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-02 ✅ phase complete + committed + pushed — ready to PLAN v11.3-03]
+PLAN ──▶ APPLY ──▶ UNIFY        [Phase v11.3-03 ✅ COMPLETE + committed — ready to PLAN v11.3-04]
   ○        ○        ○
 ```
 
@@ -92,10 +92,12 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-02 ✅ phase complete + commi
 
 ## Session Continuity
 
-Last session: 2026-06-11 — **v11.3-02 ✅ COMPLETE** (2 plans: Drive server-side convert + chunked inline upload) → phase-close commit + push to `master`.
-Stopped at: **Phase v11.3-02 closed + shipped.** Ready to plan v11.3-03. Working tree clean after the phase commit (STATE Git-State hash line updated post-commit, will ride the next pause/phase commit per usual lag).
-Next action: **`/paul:plan` for v11.3-03 Harness & hygiene** (P2) — BUG-9 (`/test-login` missing from `proxy.ts` `publicPrefixes` → 307 before code consumption) + BUG-7 (`GET /api/auth/qr?code=<malformed>` → 500, must be 4xx) + BUG-1 (orphan `[role-*]` library_index rows — **VERIFY FIRST** whether `revoke_test_account`/`cleanup_all_test_data` cascade revoked-account uploads, then delete the two orphans). Each fix gets a regression test citing its stress-report cell.
-Resume file: **.paul/HANDOFF-2026-06-11.md** (full context); then `.paul/ROADMAP.md` § Phase v11.3-03. Oracle: `docs/ACCESS-POLICY.md` v0.3. **(PAUSED 2026-06-11 at the v11.3-02 → v11.3-03 boundary.)**
+Last session: 2026-06-10 — `/paul:resume` (reconciled, archived consumed handoff to `.paul/handoffs/archive/HANDOFF-2026-06-11-v11.3-02-complete.md`) → `/paul:plan` v11.3-03-01.
+Stopped at: **Phase v11.3-03 ✅ COMPLETE + committed + pushed to `master`.** 2/2 plans LOOP COMPLETE. Working tree clean after the phase commit. 3/5 v11.3 phases done.
+Next action: **`/paul:plan` for v11.3-04 /perform performance** (BUG-2) — p75 LCP 2600 / FCP ~3100 / TTFB ~1450ms + CLS regressed 0.15→0.2 on the highest-traffic route. **VERIFY-FIRST:** cold-load vs steady-state composition; suspect chart-image reflow for the CLS regression. Healthy comparator: /setlists LCP 1.1s / CLS 0.02. Each fix gets a regression cite.
+**Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.
+Resume file: **.paul/phases/v11.3-03-harness-hygiene/v11.3-03-01-PLAN.md**; ROADMAP § Phase v11.3-03. Oracle: `docs/ACCESS-POLICY.md` v0.3.
+**Plan-02 carry (BUG-1, do NOT lose):** `CASCADE_FIELDS` already cascades `library_index` by `uploadedBy`, and `sweep_orphan_test_data` covers orphan setlists/templates **but NOT library_index** → the two `[role-*]` orphans are owner-record-absent rows the sweep can't reach. Plan 02 = extend the orphan sweep to `library_index` (+ emulator test citing the cell) **then** delete the two prod orphans (prod data op → single-owner executor). VERIFY-FIRST live probe of the two rows before deletion.
 Resume context:
 - Oracle-bound: a finding is a bug only if it contradicts a v0.3 ACCESS-POLICY cell; err-public prime directive holds.
 - Scope walls (ratified): D8 publish/notify → v11.4; BUG-3 (RUM) / BUG-8 (member library) / browser Policy-Q1 closed by policy (no code); F-4 dup setlist + Cowork sandbox proxy out of scope; D2 anon **recordings** is the ⚠️ veto cell — BUG-5 is charts only, don't widen Phase 01 into recordings.

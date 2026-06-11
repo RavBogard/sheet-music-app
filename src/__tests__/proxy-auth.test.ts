@@ -54,6 +54,29 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
         expect(res.headers.get('location')).toBe('http://localhost/login')
     })
 
+    // BUG-9 (run-2 §BUG-9) — /test-login is the headless test-account sign-in
+    // harness; it must be reachable unauth so the page can consume its ?code.
+    // Before the fix the proxy 307'd it to /login before code consumption.
+    it('allows unauthenticated /test-login (so the page can consume ?code)', async () => {
+        const req = makeReq('/test-login')
+        const res = await proxy(req)
+        expect(res.headers.get('location')).toBeNull()
+    })
+
+    it('allows unauthenticated /test-login?code=… (query does not change pathname)', async () => {
+        const req = makeReq('/test-login?code=ABC123')
+        const res = await proxy(req)
+        expect(res.headers.get('location')).toBeNull()
+    })
+
+    // Negative — the allow-list entry is an EXACT match, not a prefix, so a
+    // `/test-login-*` sibling stays gated (no over-broadening of public access).
+    it('still gates a /test-login-* sibling (exact match, not prefix)', async () => {
+        const req = makeReq('/test-login-elsewhere')
+        const res = await proxy(req)
+        expect(res.headers.get('location')).toBe('http://localhost/login')
+    })
+
     // UNAUTH-001 — unauthenticated visitors to `/` land on /perform
     // (public gig-discovery surface) instead of the personalized
     // dashboard. Authed users keep landing on `/` as the dashboard.

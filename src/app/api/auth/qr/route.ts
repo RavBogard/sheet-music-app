@@ -84,6 +84,15 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Missing code" }, { status: 400 })
     }
 
+    // BUG-7 (run-2 §BUG-7): reject malformed codes (e.g. containing '/') with a
+    // 400 BEFORE touching Firestore. A code with '/' makes `.doc(code)` an
+    // invalid (odd-segment) document reference that throws → caught below as a
+    // 500. Caller-supplied bad input must be 4xx per the v11.2 error contract.
+    // Same regex POST/PUT use, so legit generateCode() output still passes.
+    if (!/^[A-Z0-9]{6}$/.test(code)) {
+        return NextResponse.json({ error: "Invalid code format" }, { status: 400 })
+    }
+
     try {
         if (!initAdmin()) {
             return NextResponse.json({ error: "unavailable" }, { status: 503 })
