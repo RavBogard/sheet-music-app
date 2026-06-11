@@ -17,7 +17,7 @@ Focus: Replace today's implicit auto-blast publish/notify with an explicit, lead
 | v11.4-01 | Recipient picker + no-auto-blast (D8 items 1+2) [P0 — safety core] | 01 (MCP no-blast + browser picker) ✅ | ✅ Complete | 2026-06-11 |
 | v11.4-02 | Org-branded comms (D8 item 4) [P1] | 01 (EmailBranding + org-aware emails) ✅ | ✅ Complete | 2026-06-11 |
 | v11.4-03 | Remembered ad-hoc recipients (D8 item 3) [P1] | 01 (MCP contacts: collection + CRUD + preview surfacing) ✅ | ✅ Complete | 2026-06-11 |
-| v11.4-04 | Musician org-membership toggle + default-both backfill (D8 item 5) [P2 — LAST] | 01 (all-roles toggle) ✅ · 02 default-both rollout (TBD) | 🚧 In progress | - |
+| v11.4-04 | Musician org-membership toggle + default-both backfill (D8 item 5) [P2 — LAST] | 01 (all-roles toggle) ✅ · 02 default-both rollout 🚧 planning | 🚧 In progress | - |
 
 ### Phase v11.4-01: Recipient picker + no-auto-blast [P0 — safety core, prerequisite for 04]
 Focus: Replace the implicit `resolveDefaultRecipients` auto-send with explicit recipient selection (D8 items 1+2). Browser `PublishDialog.tsx` gains a recipient picker (default = the publishing org's roster, leader checks/unchecks who receives); MCP `publish_setlist` requires an explicit recipients selection / confirm (`preview_publish` already surfaces the org-scoped audience from v11.2-02). in-app/push/email send ONLY to the selected set. Closes the BUG-9 blast class permanently on both surfaces. Preserve the v11.2-02 org-scope wall + v11-06-02 no-arg-injection invariant. Regression + emulator coverage citing tenancy invariant 3.

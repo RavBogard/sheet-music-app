@@ -13,9 +13,9 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 Milestone: **🚧 v11.4 — Publish & Notify (D8)** (OPEN 2026-06-10; 4 phases, plans TBD). Created via `/paul:discuss-milestone`→`/paul:milestone`. **Spec backbone:** `docs/ACCESS-POLICY.md` §"Publish & notify (D8)" (ratified — implements, not invents; bump oracle → v0.4 when D8 ships). (v11.3 ✅ COMPLETE 2026-06-10 tag `v11.3.0`; v11.2 ✅ 2026-06-11 tag `v11.2.0`.)
 Phase: **v11.4-04 Musician org-membership toggle + default-both backfill** (D8 item 5, LAST) — **Planning** (2 plans: **01 all-roles toggle** [this], 02 default-both rollout [new-account default + backfill]). (v11.4-01/02/03 ✅.)
-Plan: **`v11.4-04-01` ✅ COMPLETE** (toggle; PLAN+SUMMARY in `.paul/phases/v11.4-04-membership-toggle-backfill/`; 2 tasks; no /ui-ux gate). **Shipped:** `UserRow.tsx` Band-access tri-state (CRC/BL/Both) now on ALL non-pending rows (was leader-only); copy generalized; UserRow.test 3/3. Pure UI-gating change (set-role/updateUserRole already role-agnostic). **Plan 02 (NEXT, awaiting plan)** = new-account default-both + the prod backfill script (diagnose/dry-run/apply/rollback, per-user snapshot, claim+doc lockstep) with the **prod `--apply` as a human-action gate** (mass auth-claims write granting cross-tenant authoring). v11.4-03 ✅ (`fb055b4b5d`), 02 (`f03b48db88`), 01 (`80ea721508`).
-Status: **v11.4-04-01 COMPLETE — mid-phase (Plan 02 backfill remains).** Gates green: tsc · UserRow 3/3 · `next build` clean. Admin-only UI; no prod data changed. Live admin check → UAT.
-Last activity: 2026-06-11 — v11.4-04-01 (toggle) PLAN→APPLY→UNIFY (shipped).
+Plan: **`v11.4-04-02` created, awaiting approval** (`.paul/phases/v11.4-04-membership-toggle-backfill/v11.4-04-02-PLAN.md`; **autonomous: false** — has a human-action checkpoint; no /ui-ux gate). **Scope:** (T1) `ensureUserProfile` defaults new docs to `orgIds:['crc','brotherslazaroff']`; (T2) `scripts/v11-4-04-orgids-backfill.mjs` (firebase-CLI refresh-token ADC, mirrors v11-3-03) — diagnose/dry-run/apply/rollback, doc+claim lockstep, idempotent skip-if-both, per-user prior-state snapshot (absent→FieldValue.delete on rollback) + pure-helper unit test; (T3 human-action) Daniel runs the prod `--apply`. v11.4-04-01 ✅ (toggle, `ba826730d7`). v11.4-03 ✅ (`fb055b4b5d`).
+Status: **v11.4-04-02 PLAN created, ready for APPLY.** APPLY builds T1+T2 autonomously (incl. read-only `--diagnose`/dry-run proof) + commits, then STOPS at the T3 human-action gate (single-owner prod apply: mass auth-claims write granting cross-tenant authoring). After apply → UNIFY → `/paul:complete-milestone`.
+Last activity: 2026-06-11 — v11.4-04-01 UNIFY (`ba826730d7`) → `/paul:plan` v11.4-04-02 (backfill) created.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,8 +43,8 @@ Last activity: 2026-06-11 — v11.4-04-01 (toggle) PLAN→APPLY→UNIFY (shipped
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.4-04-01 (toggle) COMPLETE — next: PLAN v11.4-04-02 (default-both rollout + backfill)]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.4-04-02 PLAN created (autonomous:false) — next: APPLY (build T1+T2; STOP at T3 human-action prod apply)]
+  ✓        ○        ○
 ```
 
 ## Execution Substrate (bongo .coord/)
@@ -89,9 +89,9 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.4-04-01 (toggle) COMPLETE — n
 ## Session Continuity
 
 Last session: 2026-06-11 — v11.4-01 (`80ea721508`) → 02 (`f03b48db88`) → 03 (`fb055b4b5d`, MCP contacts, rules deployed) → `/paul:plan` v11.4-04-01 (toggle) created. Backfill scope ratified = everyone incl. leaders.
-Stopped at: **v11.4-04-01 (toggle) COMPLETE; mid-phase.** Awaiting go to plan v11.4-04-02 (the backfill).
-Next action: **`/paul:plan` for v11.4-04-02 (default-both rollout)** — (a) new-account default-both at the user-doc/claim creation seam; (b) prod backfill script `scripts/v11-4-04-orgids-backfill.mjs` (admin-SDK via firebase-CLI refresh-token ADC) modes `--diagnose` / dry-run / `--apply` / `--rollback <snapshot>`, stamping EVERY person `['crc','brotherslazaroff']` on doc + Auth claim (lockstep), writing a per-user prior-orgIds snapshot for exact rollback; idempotent (skip already-both). **Prod `--apply` = checkpoint:human-action (single-owner; mass auth-claims write granting cross-tenant authoring).** After 02 → `/paul:complete-milestone` (oracle → v0.4).
-Resume file: **.paul/phases/v11.4-04-membership-toggle-backfill/v11.4-04-01-SUMMARY.md**.
+Stopped at: **v11.4-04-02 PLAN created, awaiting approval.**
+Next action: **`/paul:apply .paul/phases/v11.4-04-membership-toggle-backfill/v11.4-04-02-PLAN.md`** — builds T1 (ensureUserProfile default-both) + T2 (backfill script + unit test + read-only diagnose/dry-run) autonomously + commits, then STOPS at T3 (Daniel runs `node scripts/v11-4-04-orgids-backfill.mjs --apply --stamp …`). After "applied" → UNIFY → `/paul:complete-milestone` (oracle → v0.4). Rollback: `--rollback scripts/.backfill-snapshots/<file>.json`.
+Resume file: **.paul/HANDOFF-2026-06-11-v11.4-04-02-backfill.md** (full pause context) → then the PLAN `.paul/phases/v11.4-04-membership-toggle-backfill/v11.4-04-02-PLAN.md`. **(PAUSED 2026-06-11 at v11.4-04-02, awaiting APPLY.)**
 **Deferred UAT (RUM):** v11.3-04 field TTFB/FCP — re-run `node scripts/v11-3-04-webvitals-slice.mjs` after ~1–7d traffic vs 1633/3551 baseline; if still high → Vercel infra follow-up (Deferred Issues), not app code.
 **Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.
 Resume file: **.paul/HANDOFF-2026-06-10-v11.3-03-complete.md** (full context); then ROADMAP § Phase v11.3-04. Oracle: `docs/ACCESS-POLICY.md` v0.3. **(PAUSED 2026-06-10 at the v11.3-03 → v11.3-04 phase boundary.)**
