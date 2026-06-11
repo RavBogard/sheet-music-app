@@ -7,15 +7,15 @@
 See: .paul/PROJECT.md (updated 2026-06-07)
 
 **Core value:** The band gets the right charts + recordings on their iPads each week, and Daniel authors setlists conversationally via Claude + MCP. Now MULTI-TENANT (2nd live tenant: Brothers Lazaroff on brotherslazaroff.live).
-**Current focus:** v11.3 Worthiness & Access — close the post-stress-test anon-read / agent-upload / hygiene / perf / polish findings (oracle `docs/ACCESS-POLICY.md` v0.3). Phases v11.3-01 (anon access), v11.3-02 (agent chart-upload), v11.3-03 (harness & hygiene) ✅ shipped; next is v11.3-04 (/perform performance — BUG-2). (v7.1 hardening continues in parallel via `.coord/`.)
+**Current focus:** **v11.3 Worthiness & Access ✅ COMPLETE 5/5 (2026-06-10, tag `v11.3.0`)** — all post-stress-test anon-read / agent-upload / hygiene / perf / polish findings closed (oracle `docs/ACCESS-POLICY.md` v0.3). **Awaiting next milestone (v11.4 = Publish & Notify / D8)** — run `/paul:milestone`. (v7.1 hardening continues in parallel via `.coord/`.)
 
 ## Current Position
 
 Milestone: **🚧 v11.3 — Worthiness & Access** (OPEN 2026-06-10; 5 phases, plans TBD). Created via `/paul:milestone` from `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md`. Oracle: `docs/ACCESS-POLICY.md` **v0.3**. (v11.2 ✅ COMPLETE 2026-06-11, tag `v11.2.0`; standalone loginable-test-accounts phase ✅ COMPLETE 2026-06-10.)
 Phase: **v11.3-05 P3 polish** (P3) — **✅ COMPLETE 1/1 2026-06-10.** **v11.3 ALL 5 PHASES DONE (5/5 content-complete)** — v11.3-04 ✅ · v11.3-03 ✅ · v11.3-02 ✅ · v11.3-01 ✅.
 Plan: **None active** (v11.3-05-01 ✅ LOOP COMPLETE — SUMMARY written). BUG-6 = proxy matcher excludes org-suffixed manifests (`manifest(?:-[a-z0-9-]+)?\.json`); F-6 = new `telemetry` rate-limit tier (300/min) on `/api/auth/qr`+`/api/web-vitals`. Server-side only; QRSignIn.tsx untouched.
-Status: **v11.3 CONTENT COMPLETE 5/5 — phase v11.3-05 committed (`feat(v11.3-05)`) + pushed to `master`.** Next: **`/paul:complete-milestone`** (tag `v11.3.0`, bump `package.json`, archive ROADMAP → `.paul/milestones/`, MILESTONES.md entry). Then v11.4 = Publish & Notify (D8). Quality floor held all phases.
-Last activity: 2026-06-10 — `/paul:unify` v11.3-05-01 + phase-close transition: SUMMARY written, PROJECT/ROADMAP/paul.json evolved, phase committed + pushed to `master`.
+Status: **🎉 v11.3 MILESTONE COMPLETE 5/5 (tag `v11.3.0`, `package.json` 11.3.0).** ROADMAP archived → `.paul/milestones/v11.3.0-ROADMAP.md`; MILESTONES.md § v11.3 written; PROJECT.md evolved. **Awaiting next milestone — run `/paul:milestone` for v11.4 (Publish & Notify / D8).** Quality floor held all 5 phases; CRC byte-identical throughout.
+Last activity: 2026-06-10 — `/paul:complete-milestone`: v11.3 closed (5 phases, 10 plans), tagged `v11.3.0`, version bumped, archived + logged, release commit pushed to `master`.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,15 +43,15 @@ Last activity: 2026-06-10 — `/paul:unify` v11.3-05-01 + phase-close transition
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `c0b0ab3367` — **v11.3-04 phase complete: /perform performance** [VERIFY-FIRST · CLS QR-card slot reserve · TTFB Suspense-stream]; pushed `558c34e2d6..c0b0ab3367` 2026-06-10; Vercel auto-deploy). Prior: v11.3-03 `4fe1748318` · v11.3-02 `89f4af7fd2` · v11.3-01 `bc8f935aa2` · v11.2 `f27ae7bc5f`. v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`, in sync with `origin/master` (tip `3258d792b3` — **v11.3-05 phase complete: P3 polish** [BUG-6 proxy matcher → org-suffixed PWA manifests · F-6 `telemetry` rate-limit tier]; pushed `92e809401d..3258d792b3` 2026-06-10; Vercel auto-deploy). Prior: v11.3-04 `c0b0ab3367` · v11.3-03 `4fe1748318` · v11.3-02 `89f4af7fd2` · v11.3-01 `bc8f935aa2` · v11.2 `f27ae7bc5f`. v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-05-01 ✅ LOOP COMPLETE → PHASE COMPLETE → v11.3 5/5 — next: /paul:complete-milestone]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [🎉 v11.3 MILESTONE COMPLETE (tag v11.3.0) — awaiting next milestone: /paul:milestone]
+  ○        ○        ○
 ```
 
 ## Execution Substrate (bongo .coord/)

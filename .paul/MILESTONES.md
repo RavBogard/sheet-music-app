@@ -38,7 +38,45 @@ Completed milestone log for this project.
 | v11.0 Brothers Lazaroff Multi-Tenant | 2026-06-09 | ~2 days (2026-06-08 → 2026-06-09) | 7 phases (v11-01..06 + v11-02b), 23 plans; 2nd live tenant brotherslazaroff.live fully tenant-isolated; close-gate AUDIT.md GO; live prod probe 19/19; tip `2a8441d6e5` |
 | v11.1 Brothers Lazaroff Post-Launch Fixes | 2026-06-09 | ~1 session | 4 phases, 5 plans; broslaz reads as a band across the authed surface (branding/library/vocab) + multi-org authoring path; CRC byte-identical; tag `v11.1.0`; tip `4490abe53c` |
 | v11.2 MCP Stress-Test Fixes | 2026-06-11 | ~1 session | 5 phases, 8 plans; all 9 Brothers Lazaroff MCP/Perform stress-test bugs fixed (resolver 404, publish-audience org scope, error contract, publish/test-data hygiene, P3 polish); CRC byte-identical; tag `v11.2.0`; tip `f27ae7bc5f` |
-| v11.3 Worthiness & Access | 🚧 OPEN 2026-06-10 | — | 5 phases (TBD plans); post-stress-test anon-read + agent-upload + hygiene/perf/polish fixes. P1: anon Storage-chart deep-link 401 (BUG-5) + anon transpose path (BUG-4, D-Q2); P1 agent chart-upload (docx/Gdocs→PDF); P2 BUG-9/7/1 hygiene; P2 BUG-2 /perform perf + CLS regression; P3 BUG-6/F-6. Oracle: `docs/ACCESS-POLICY.md` v0.3. Brief: `MILESTONE-BRIEF-2026-06-10-worthiness-access.md` |
+| v11.3 Worthiness & Access | 2026-06-10 | ~1 session | 5 phases, 10 plans; all post-stress-test findings the oracle confirmed closed (anon chart deep-link + transpose, agent docx/Gdocs→PDF upload + chunked inline, harness/QR/orphan hygiene, /perform CLS 0.187→0.000 + TTFB stream, broslaz PWA manifest + NAT rate-limit). Oracle `docs/ACCESS-POLICY.md` v0.3; err-public held; CRC byte-identical throughout; tag `v11.3.0` |
+
+---
+
+## ✅ v11.3 Worthiness & Access
+
+**Completed:** 2026-06-10
+**Duration:** ~1 session (opened 2026-06-10)
+**Tag:** `v11.3.0` · **Oracle:** `docs/ACCESS-POLICY.md` v0.3
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 5 |
+| Plans | 10 (01:2 · 02:2 · 03:2 · 04:3 · 05:1) |
+| CRC impact | byte-identical on every shared surface |
+
+### Key Accomplishments
+
+- **v11.3-01 Anon access correctness (BUG-5 + BUG-4, P1 prime-directive):** `/api/library/file/[id]` reworked into a public chart proxy (anon `upload-*` + `db-*`); anon transpose path opened (`chord-cache` GET/POST + `transposer/scan` POST) with an anon-only `ai` rate-limit. err-public violations closed; authed transpose unregressed. Verify-first re-graded BUG-5 P1→P2.
+- **v11.3-02 Agent chart-upload (P1, David's report):** `import_chart_from_drive` converts Google-native Docs + uploaded Office (`.docx` etc.) → PDF server-side; inline chunked `begin/append/commit_chunked_chart_upload` for proxy-blocked (Cowork) sources. Org-stamped on commit.
+- **v11.3-03 Harness & hygiene (BUG-9 + BUG-7 + BUG-1, P2):** `/test-login` made public-exact in `proxy.ts`; `GET /api/auth/qr` malformed-code 500→400 before Firestore; `sweep_orphan_test_data` now sweeps orphan `library_index` rows + Storage bytes.
+- **v11.3-04 /perform performance (BUG-2, P2, VERIFY-FIRST):** characterization reversed the hypothesis (chart-image reflow refuted; the listing was the regression). CLS fix = reserve the anon QR-card slot during `authLoading` → **field/synthetic CLS 0.187→0.000** (verified live @ 820×1180). TTFB fix = Suspense-stream the listing off the first-byte path. Decision: stream not cache (tenant-key leak risk).
+- **v11.3-05 P3 polish (BUG-6 + F-6, P3):** `proxy.ts` matcher widened to org-suffixed PWA manifests (`manifest(?:-[a-z0-9-]+)?\.json`) → broslaz PWA install works; new generous IP-keyed `telemetry` rate-limit tier (300/min) for the NAT-shared QR + web-vitals endpoints → cold-load 429s gone (also protects the v11.3-04 deferred RUM probe).
+
+### Key Decisions
+
+- **Oracle-bound triage:** a finding is a bug only if it contradicts a `docs/ACCESS-POLICY.md` v0.3 cell; err-public prime directive held within a tenant (hard wall across tenants).
+- **Verify-first on P1/P2 perf + access claims** — built field-RUM + synthetic probes before fixing; reversed the BUG-2 hypothesis and re-graded BUG-5.
+- **F-6 fixed via rate-limit tier, not client backoff** — `sendBeacon` can't read 429; the tier fix is root-cause and protects the cold-cohort RUM beacons.
+- **Scope walls held:** D8 publish/notify → v11.4; BUG-3/BUG-8/Policy-Q1 closed by policy (no code); F-4 + Cowork sandbox proxy out; D2 anon recordings stayed the ⚠️ veto cell (charts only).
+- Ran fully autonomously per the v11.x autonomy directive; quality floor held every loop (tsc · vitest/emulator suites · `SKIP_ENV_VALIDATION=1 next build`); /ui-ux-pro-max BLOCKING on UI-touching phases (v11.3-05 was server-side → not triggered).
+
+### Deferred (carried forward)
+
+- `/perform` cold-start TTFB residual → Vercel infra lever (fluid-compute/region), gated on the post-deploy RUM slice re-run, NOT app churn.
+- `finalize_chart_upload` (signed-URL path) org-stamp gap; recordings-collection org-scoping; SERVICE_TYPE_LABELS vocab-table.
+- Live UAT (non-blocking, `.paul/UAT-PENDING.md`): anon chart/transpose render; agent Gdoc/.docx + chunked upload; broslaz PWA install + cold-load no-429.
 
 ---
 
