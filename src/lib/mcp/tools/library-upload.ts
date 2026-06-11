@@ -8,7 +8,7 @@ import {
 } from "@/lib/library-upload"
 import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
 import { scrapeChart } from "@/lib/chart-scrape"
-import { DriveClient } from "@/lib/google-drive"
+import { DriveClient, driveSourceIsConvertible } from "@/lib/google-drive"
 import { safelyDeleteLibraryObject } from "@/lib/library/safely-delete-library-object"
 import {
     forbiddenRoleEnvelope,
@@ -540,13 +540,21 @@ export async function importChartFromDrive(
             "Open the folder in Drive, pick a chart PDF (or other supported file) inside, and pass that file's id (the segment after /file/d/ in the URL).",
         )
     }
-    if (driveMime.startsWith("application/vnd.google-apps.")) {
+    // v11.3-02-01 (BUG-cowork-chart-upload-2026-06-10): classify whether this
+    // source is server-side convertible to PDF. 'export' = native Google doc
+    // (files.export); 'copy' = uploaded Office file (.docx etc, convert-on-
+    // copy); null = not convertible. Folders are already handled above.
+    const conversion = driveSourceIsConvertible(driveMime)
+    // A native Google type we CAN'T export to PDF (Forms, Sites, Maps, …):
+    // keep the explicit export-first refusal. Convertible native docs fall
+    // through to the conversion path below instead.
+    if (conversion === null && driveMime.startsWith("application/vnd.google-apps.")) {
         return richError(
             "unsupported_drive_native_type",
             `Drive file ${driveFileId} is a native Google ${driveMime.replace(
                 "application/vnd.google-apps.",
                 "",
-            )} document — export it to PDF in Drive first, then import the exported file.`,
+            )} type that can't be converted to a chart — export it to PDF in Drive first, then import the exported file.`,
             { driveFileId, mimeType: driveMime, errorCode: 400 },
             "In Drive: File → Download → PDF; then import_chart_from_drive on the exported file.",
         )
@@ -556,22 +564,32 @@ export async function importChartFromDrive(
     const title = normalizeChartTitle(
         args.title?.trim() || driveName.replace(/\.[^/.]+$/, ""),
     )
-    // musicxml-health Phase 2: Drive often reports .mxl/.musicxml/.mscz as
-    // application/octet-stream or omits the mime; the old
-    // `driveMime || "application/pdf"` then mis-typed MusicXML as PDF, so it
-    // routed to the PDF viewer in Perform instead of the SmartScoreViewer. When
-    // Drive gave no usable mime AND the file name is a known music extension,
-    // derive the music mime. Real PDFs/images (specific driveMime) unaffected.
+    // Effective mime + filename for the upload pipeline:
+    //  - convertible (export/copy): the bytes WILL be PDF after conversion, so
+    //    type as application/pdf and swap the filename extension to .pdf.
+    //  - otherwise: existing logic. musicxml-health Phase 2: Drive often reports
+    //    .mxl/.musicxml/.mscz as application/octet-stream or omits the mime; the
+    //    old `driveMime || "application/pdf"` then mis-typed MusicXML as PDF, so
+    //    it routed to the PDF viewer in Perform instead of the SmartScoreViewer.
+    //    When Drive gave no usable mime AND the file name is a known music
+    //    extension, derive the music mime. Real PDFs/images (specific driveMime)
+    //    unaffected.
     const mimeType =
-        !driveMime || driveMime === "application/octet-stream"
-            ? (musicMimeFromFileName(driveName) ?? (driveMime || "application/pdf"))
-            : driveMime
+        conversion !== null
+            ? "application/pdf"
+            : !driveMime || driveMime === "application/octet-stream"
+              ? (musicMimeFromFileName(driveName) ?? (driveMime || "application/pdf"))
+              : driveMime
+    const originalFileName =
+        conversion !== null
+            ? `${driveName.replace(/\.[^/.]+$/, "")}.pdf`
+            : driveName
     const predictedCollection: LibraryCollection = args.collection ?? "uploads"
 
     // ─── C5C-008 dryRun branch: probe, don't write ──────────────────────────
     if (args.dryRun === true) {
         const dedup = await probeDedup(db, title)
-        const ext = predictedExtensionFor(mimeType, driveName)
+        const ext = predictedExtensionFor(mimeType, originalFileName)
         const targetStoragePath = `library/upload-<new-uuid>${ext}`
         const wouldRunAi = !!process.env.GEMINI_API_KEY
         return {
@@ -597,10 +615,18 @@ export async function importChartFromDrive(
 
     let buffer: Buffer
     try {
-        const bytes = await drive.getFile(driveFileId)
-        // DriveClient returns arraybuffer (responseType: 'arraybuffer'); Node
-        // sees it as ArrayBuffer or Buffer depending on transport. Normalize.
-        buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes as ArrayBuffer)
+        if (conversion !== null) {
+            // v11.3-02-01: convert server-side to PDF (export for native Google
+            // docs; convert-on-copy for uploaded Office files). The bytes never
+            // round-trip through the agent — Drive egress runs on the server.
+            const bytes = await drive.fetchAsPdf(driveFileId, driveMime)
+            buffer = Buffer.from(bytes)
+        } else {
+            const bytes = await drive.getFile(driveFileId)
+            // DriveClient returns arraybuffer (responseType: 'arraybuffer'); Node
+            // sees it as ArrayBuffer or Buffer depending on transport. Normalize.
+            buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes as ArrayBuffer)
+        }
     } catch (err) {
         logger.warn(
             `[import_chart_from_drive] bytes fetch failed for ${driveFileId}: ${err instanceof Error ? err.message : "Unknown error"}`,
@@ -617,7 +643,7 @@ export async function importChartFromDrive(
 
     const result = await processChartUpload({
         buffer,
-        originalFileName: driveName,
+        originalFileName,
         mimeType,
         title,
         collection: args.collection,

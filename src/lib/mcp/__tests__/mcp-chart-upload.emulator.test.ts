@@ -75,17 +75,26 @@ vi.mock("firebase-admin/storage", () => ({
 }))
 
 // Google Drive stub — import_chart_from_drive calls
-// new DriveClient().getFileMetadata + .getFile. Real Drive requires service-
-// account credentials that the test environment doesn't have, so stand in
-// the network surface with a controllable mock.
+// new DriveClient().getFileMetadata + .getFile + (v11.3-02-01) .fetchAsPdf.
+// Real Drive requires service-account credentials that the test environment
+// doesn't have, so stand in the network surface with a controllable mock.
+// We spread the REAL module so the pure `driveSourceIsConvertible` classifier
+// (which importChartFromDrive now imports) keeps its actual implementation;
+// only the DriveClient class (the network surface) is stubbed.
 const mockDriveGetFileMetadata = vi.fn()
 const mockDriveGetFile = vi.fn()
-vi.mock("@/lib/google-drive", () => ({
-    DriveClient: class {
-        getFileMetadata = mockDriveGetFileMetadata
-        getFile = mockDriveGetFile
-    },
-}))
+const mockDriveFetchAsPdf = vi.fn()
+vi.mock("@/lib/google-drive", async (importActual) => {
+    const actual = await importActual<typeof import("@/lib/google-drive")>()
+    return {
+        ...actual,
+        DriveClient: class {
+            getFileMetadata = mockDriveGetFileMetadata
+            getFile = mockDriveGetFile
+            fetchAsPdf = mockDriveFetchAsPdf
+        },
+    }
+})
 
 import {
     uploadChart,
@@ -94,6 +103,7 @@ import {
     deleteChart,
     importChartFromDrive,
 } from "../tools/library-upload"
+import { driveSourceIsConvertible } from "@/lib/google-drive"
 import { getSongById } from "../server-songs"
 
 /**
@@ -169,6 +179,7 @@ describe("MCP chart-upload tools (emulator)", () => {
         mockStorageBucketFile.mockClear()
         mockDriveGetFileMetadata.mockReset()
         mockDriveGetFile.mockReset()
+        mockDriveFetchAsPdf.mockReset()
 
         for (const col of [
             "library_index",
@@ -1382,19 +1393,70 @@ describe("MCP chart-upload tools (emulator)", () => {
             })
         })
 
-        it("rejects native Google Docs mime types with export hint", async () => {
+        // v11.3-02-01 (BUG-cowork-chart-upload-2026-06-10), AC-1: a native
+        // Google Doc is now exported to PDF server-side (fetchAsPdf), not
+        // rejected. The bytes flow through processChartUpload as application/pdf.
+        it("AC-1: native Google Doc is exported to PDF server-side and imported", async () => {
             mockDriveGetFileMetadata.mockResolvedValue({
-                name: "My Song",
+                name: "Lecha Dodi Lyrics",
                 mimeType: "application/vnd.google-apps.document",
             })
-            const r = await importChartFromDrive(ADMIN, {
+            mockDriveFetchAsPdf.mockResolvedValue(
+                Buffer.from("%PDF-1.4 exported from gdoc").buffer,
+            )
+
+            const r = (await importChartFromDrive(ADMIN, {
                 driveFileId: "gdoc-1",
-            })
-            expect(r).toMatchObject({
-            ok: false,
-            error: { message: expect.stringContaining("export it to PDF") },
-        })
+            })) as { ok: true; fileId: string; title: string }
+            expect(r.ok).toBe(true)
+            expect(r.fileId).toMatch(/^upload-/)
+            expect(r.title).toBe("Lecha Dodi Lyrics")
+
+            // Exported, not raw-downloaded.
+            expect(mockDriveFetchAsPdf).toHaveBeenCalledTimes(1)
+            expect(mockDriveFetchAsPdf).toHaveBeenCalledWith(
+                "gdoc-1",
+                "application/vnd.google-apps.document",
+            )
             expect(mockDriveGetFile).not.toHaveBeenCalled()
+
+            const idx = (
+                await db().collection("library_index").doc(r.fileId).get()
+            ).data()!
+            expect(idx.mimeType).toBe("application/pdf")
+            expect(mockUploadToStorage).toHaveBeenCalledWith(
+                expect.stringMatching(/^upload-/),
+                expect.any(Buffer),
+                "application/pdf",
+            )
+        })
+
+        // v11.3-02-01, AC-2: an uploaded .docx is converted to PDF via Drive
+        // convert-on-copy (fetchAsPdf handles the copy→export→delete internally).
+        it("AC-2: uploaded .docx is converted to PDF (convert-on-copy) and imported", async () => {
+            const DOCX_MIME =
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            mockDriveGetFileMetadata.mockResolvedValue({
+                name: "Queen Jane Approximately.docx",
+                mimeType: DOCX_MIME,
+            })
+            mockDriveFetchAsPdf.mockResolvedValue(
+                Buffer.from("%PDF-1.4 converted from docx").buffer,
+            )
+
+            const r = (await importChartFromDrive(LEADER, {
+                driveFileId: "docx-1",
+            })) as { ok: true; fileId: string; title: string }
+            expect(r.ok).toBe(true)
+            expect(r.title).toBe("Queen Jane Approximately")
+            expect(mockDriveFetchAsPdf).toHaveBeenCalledWith("docx-1", DOCX_MIME)
+            expect(mockDriveGetFile).not.toHaveBeenCalled()
+
+            const idx = (
+                await db().collection("library_index").doc(r.fileId).get()
+            ).data()!
+            expect(idx.mimeType).toBe("application/pdf")
+            expect(idx.name).toBe("Queen Jane Approximately")
         })
 
         it("rejects empty Drive payload", async () => {
@@ -1467,13 +1529,17 @@ describe("MCP chart-upload tools (emulator)", () => {
             expect(mockDriveGetFile).not.toHaveBeenCalled()
         })
 
-        it("C5C-015: Docs/Sheets/Slides keep the export-to-PDF guidance", async () => {
+        // v11.3-02-01, AC-3: a native Google type we CANNOT export to PDF (Form,
+        // Site, Map, …) still refuses with the export-first guidance — only
+        // exportable Docs/Sheets/Slides convert. (Was the C5C-015 Docs case,
+        // which now converts.)
+        it("AC-3: non-convertible native Google type (Form) keeps the export-to-PDF refusal", async () => {
             mockDriveGetFileMetadata.mockResolvedValue({
-                name: "My Song",
-                mimeType: "application/vnd.google-apps.document",
+                name: "Song Request Form",
+                mimeType: "application/vnd.google-apps.form",
             })
             const r = await importChartFromDrive(ADMIN, {
-                driveFileId: "gdoc-2",
+                driveFileId: "gform-1",
             })
             expect(r).toMatchObject({
                 ok: false,
@@ -1483,6 +1549,7 @@ describe("MCP chart-upload tools (emulator)", () => {
                     message: expect.stringContaining("export it to PDF"),
                 },
             })
+            expect(mockDriveFetchAsPdf).not.toHaveBeenCalled()
             expect(mockDriveGetFile).not.toHaveBeenCalled()
         })
 
@@ -1576,6 +1643,69 @@ describe("MCP chart-upload tools (emulator)", () => {
             })
             // Drive never called — auth gate fires first.
             expect(mockDriveGetFileMetadata).not.toHaveBeenCalled()
+        })
+
+        // v11.3-02-01, AC-4: an ordinary binary (PDF) is unregressed — it uses
+        // the raw getFile path, NOT the conversion path. Guards against
+        // accidentally routing binaries through fetchAsPdf.
+        it("AC-4: binary PDF uses getFile, never fetchAsPdf (regression guard)", async () => {
+            mockDriveGetFileMetadata.mockResolvedValue({
+                name: "Hashkivenu.pdf",
+                mimeType: "application/pdf",
+            })
+            mockDriveGetFile.mockResolvedValue(Buffer.from("%PDF-1.4 binary"))
+
+            const r = (await importChartFromDrive(ADMIN, {
+                driveFileId: "bin-pdf-1",
+            })) as { ok: true; fileId: string }
+            expect(r.ok).toBe(true)
+            expect(mockDriveGetFile).toHaveBeenCalledWith("bin-pdf-1")
+            expect(mockDriveFetchAsPdf).not.toHaveBeenCalled()
+        })
+
+        // v11.3-02-01: unit-level classification of the pure helper that drives
+        // the export/copy/raw branch decision.
+        it("driveSourceIsConvertible classifies export / copy / null", () => {
+            expect(
+                driveSourceIsConvertible("application/vnd.google-apps.document"),
+            ).toBe("export")
+            expect(
+                driveSourceIsConvertible(
+                    "application/vnd.google-apps.spreadsheet",
+                ),
+            ).toBe("export")
+            expect(
+                driveSourceIsConvertible(
+                    "application/vnd.google-apps.presentation",
+                ),
+            ).toBe("export")
+            expect(
+                driveSourceIsConvertible(
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ),
+            ).toBe("copy")
+            expect(
+                driveSourceIsConvertible(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ),
+            ).toBe("copy")
+            expect(
+                driveSourceIsConvertible(
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                ),
+            ).toBe("copy")
+            expect(driveSourceIsConvertible("application/msword")).toBe("copy")
+            // Non-convertible: folder, form, ordinary binaries.
+            expect(
+                driveSourceIsConvertible("application/vnd.google-apps.folder"),
+            ).toBeNull()
+            expect(
+                driveSourceIsConvertible("application/vnd.google-apps.form"),
+            ).toBeNull()
+            expect(driveSourceIsConvertible("application/pdf")).toBeNull()
+            expect(driveSourceIsConvertible("image/png")).toBeNull()
+            expect(driveSourceIsConvertible("")).toBeNull()
+            expect(driveSourceIsConvertible(null)).toBeNull()
         })
     })
 })

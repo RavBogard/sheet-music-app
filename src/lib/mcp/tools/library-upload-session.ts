@@ -15,6 +15,9 @@ import {
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { healChartBytes, isAllowedChartMime, ALLOWED_CHART_MIME_PREFIXES } from "@/lib/chart-heal"
+import { stampOrg } from "@/lib/mcp/org-context"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
 
 /**
@@ -131,6 +134,42 @@ function rateLimitEnvelope(reason: string): RichErrorEnvelope {
 const UPLOAD_SESSION_TTL_MS = 10 * 60 * 1000
 const STAGED_BUCKET_PREFIX = "upload-sessions"
 const MAX_SESSION_SIZE_BYTES = 25 * 1024 * 1024
+
+// v11.3-02-02 (BUG-cowork-chart-upload-2026-06-10): chunked inline upload caps.
+// A single base64 tool arg/result is bounded by the agent's ~25K-token limit
+// (~100 KB text). RECOMMENDED keeps a chunk's base64 (~4/3 of binary) under that
+// with headroom; MAX is a hard per-chunk guard. Total is the session cap.
+const MAX_CHUNK_BYTES = 256 * 1024
+const RECOMMENDED_CHUNK_BYTES = 48 * 1024
+
+function chunkObjectPath(sessionId: string, index: number): string {
+    return `${STAGED_BUCKET_PREFIX}/${sessionId}/chunk-${String(index).padStart(6, "0")}`
+}
+
+/**
+ * Strict RFC-4648 base64 decode (mirrors the upload_chart guard): Buffer.from
+ * never throws on bad input — it silently truncates — so format-check first.
+ */
+function decodeBase64Strict(
+    s: string,
+): { ok: true; buffer: Buffer } | { ok: false; reason: string } {
+    const stripped = s.replace(/\s/g, "")
+    if (stripped.length === 0) return { ok: false, reason: "Decoded chunk is empty." }
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(stripped))
+        return {
+            ok: false,
+            reason: "dataBase64 must be standard base64 (RFC 4648). Got non-base64 characters.",
+        }
+    if (stripped.length % 4 !== 0)
+        return {
+            ok: false,
+            reason: "dataBase64 length must be a multiple of 4 (padded with '=').",
+        }
+    const buffer = Buffer.from(stripped, "base64")
+    if (buffer.byteLength === 0)
+        return { ok: false, reason: "Decoded chunk is empty." }
+    return { ok: true, buffer }
+}
 
 function getBucket() {
     const bucketName =
@@ -547,4 +586,458 @@ function deriveFileName(title: string, mimeType: string): string {
                       ? ".xml"
                       : ".txt"
     return `${safe}${ext}`
+}
+
+// ─── chunked inline upload (begin / append / commit) ─────────────────────────
+//
+// v11.3-02-02 (BUG-cowork-chart-upload-2026-06-10): the signed-URL flow
+// (request_chart_upload_url → PUT) is blocked when the agent's environment can't
+// egress to storage.googleapis.com (the Cowork sandbox proxy 403s the CONNECT),
+// and inline upload_chart base64 exceeds the ~25K-token tool surface above ~50 KB.
+// This flow ships the bytes THROUGH MCP tool args in sub-cap slices: begin creates
+// a session, append writes each slice to Storage server-side, commit reassembles
+// in index order and delegates to the SAME finalizeChartUpload pipeline.
+//
+// Rate-limiting note: only begin + commit (via finalize) consume an upload-tier
+// token — NOT each append. Per-chunk metering would exhaust the 10/min cap on any
+// multi-chunk file (a 5 MB chart ≈ 100 chunks). Append re-checks the role gate
+// (revocation mid-flow) but is not separately metered; the operation is already
+// authorized at begin.
+
+export interface BeginChunkedChartUploadArgs {
+    title: string
+    mimeType: string
+    fileName?: string
+    collection?: LibraryCollection
+    key?: string
+    bpm?: number
+    tags?: string[]
+    /** Optional advisory: total chunk count, enforced for exactness at commit. */
+    totalChunks?: number
+}
+
+export interface BeginChunkedChartUploadResult {
+    ok: true
+    uploadSessionId: string
+    status: "awaiting-chunks"
+    expiresAt: string
+    maxChunkBytes: number
+    recommendedChunkBytes: number
+    maxTotalBytes: number
+}
+
+export async function beginChunkedChartUpload(
+    uid: string,
+    args: BeginChunkedChartUploadArgs,
+): Promise<BeginChunkedChartUploadResult | RichErrorEnvelope> {
+    if (!args.title?.trim())
+        return richError("invalid_argument", "title is required.", { field: "title" })
+    if (!args.mimeType?.trim())
+        return richError("invalid_argument", "mimeType is required.", {
+            field: "mimeType",
+        })
+
+    initAdmin()
+    const db = getFirestore()
+
+    const roles = await loadUploader(db, uid)
+    if (!isUploadAllowed(roles)) return uploadForbidden(roles)
+
+    const curatedDenial = curatedCatalogGate(roles, args.collection)
+    if (curatedDenial) return curatedDenial
+
+    const limited = await checkUserRateLimit(uid, "upload", {
+        bypass: isTrustedLeader(roles),
+    })
+    if (limited) return rateLimitEnvelope(limited.error)
+
+    const uploadSessionId = `usess-${crypto.randomUUID()}`
+    const expiresAtMs = Date.now() + UPLOAD_SESSION_TTL_MS
+
+    await db
+        .collection("upload_sessions")
+        .doc(uploadSessionId)
+        .set({
+            ownerUid: uid,
+            title: args.title,
+            mimeType: args.mimeType,
+            fileName: args.fileName ?? null,
+            collection: args.collection ?? null,
+            key: args.key ?? null,
+            bpm: args.bpm ?? null,
+            tags: args.tags ?? [],
+            sizeBytes: null,
+            // finalizeChartUpload reads `stagedPath` — commit assembles the chunks
+            // into this exact path, so finalize downloads the reassembled bytes.
+            stagedPath: stagedPath(uploadSessionId),
+            mode: "chunked",
+            status: "awaiting-chunks",
+            totalChunks: args.totalChunks ?? null,
+            // Per-index decoded byte sizes — keyed map so a retransmitted index
+            // overwrites rather than double-counts toward the total cap.
+            chunkBytes: {},
+            createdAt: FieldValue.serverTimestamp(),
+            expiresAt: new Date(expiresAtMs),
+        })
+
+    return {
+        ok: true,
+        uploadSessionId,
+        status: "awaiting-chunks",
+        expiresAt: new Date(expiresAtMs).toISOString(),
+        maxChunkBytes: MAX_CHUNK_BYTES,
+        recommendedChunkBytes: RECOMMENDED_CHUNK_BYTES,
+        maxTotalBytes: MAX_SESSION_SIZE_BYTES,
+    }
+}
+
+export interface AppendChartUploadChunkArgs {
+    uploadSessionId: string
+    /** 0-based, contiguous. Re-sending the same index overwrites it. */
+    chunkIndex: number
+    /** Base64-encoded slice of the file (standard RFC-4648). */
+    dataBase64: string
+}
+
+export interface AppendChartUploadChunkResult {
+    ok: true
+    chunkIndex: number
+    receivedChunks: number
+    receivedBytes: number
+}
+
+export async function appendChartUploadChunk(
+    uid: string,
+    args: AppendChartUploadChunkArgs,
+): Promise<AppendChartUploadChunkResult | RichErrorEnvelope> {
+    if (!args.uploadSessionId?.trim())
+        return richError("invalid_argument", "uploadSessionId is required.", {
+            field: "uploadSessionId",
+        })
+    if (
+        typeof args.chunkIndex !== "number" ||
+        !Number.isInteger(args.chunkIndex) ||
+        args.chunkIndex < 0
+    )
+        return richError(
+            "invalid_argument",
+            "chunkIndex must be a non-negative integer.",
+            { field: "chunkIndex" },
+        )
+    if (!args.dataBase64)
+        return richError("invalid_argument", "dataBase64 is required.", {
+            field: "dataBase64",
+        })
+
+    initAdmin()
+    const db = getFirestore()
+
+    const sessionRef = db.collection("upload_sessions").doc(args.uploadSessionId)
+    const sessionSnap = await sessionRef.get()
+    if (!sessionSnap.exists)
+        return richError(
+            "upload_session_not_found",
+            `Upload session '${args.uploadSessionId}' was not found.`,
+            { uploadSessionId: args.uploadSessionId },
+            "Begin a new session via begin_chunked_chart_upload.",
+        )
+    const session = sessionSnap.data() as Record<string, unknown>
+
+    if (session.ownerUid !== uid)
+        return richError(
+            "upload_session_owner_mismatch",
+            "Upload session does not belong to caller.",
+            { uploadSessionId: args.uploadSessionId },
+            "Begin a new session under your own bearer token.",
+        )
+    if (session.mode !== "chunked")
+        return richError(
+            "invalid_session_state",
+            "This session is not a chunked-upload session.",
+            { uploadSessionId: args.uploadSessionId },
+            "Use begin_chunked_chart_upload to start a chunked upload.",
+        )
+    if (session.status !== "awaiting-chunks")
+        return richError(
+            "invalid_session_state",
+            `Session is '${String(session.status)}', not accepting chunks.`,
+            { uploadSessionId: args.uploadSessionId },
+            "Begin a new session; a finalized/failed session can't take more chunks.",
+        )
+    const expires = session.expiresAt as { toMillis?: () => number } | undefined
+    if (expires?.toMillis && expires.toMillis() < Date.now())
+        return richError(
+            "upload_session_expired",
+            "Upload session expired.",
+            { uploadSessionId: args.uploadSessionId },
+            "Begin a new session and re-send the chunks.",
+        )
+
+    // Re-check role (revocation mid-flow); NOT separately rate-limited (see note).
+    const roles = await loadUploader(db, uid)
+    if (!isUploadAllowed(roles)) return uploadForbidden(roles)
+
+    const decoded = decodeBase64Strict(args.dataBase64)
+    if (!decoded.ok)
+        return richError("invalid_base64", decoded.reason, {
+            field: "dataBase64",
+            chunkIndex: args.chunkIndex,
+        })
+    if (decoded.buffer.byteLength > MAX_CHUNK_BYTES)
+        return richError(
+            "chunk_too_large",
+            `Chunk ${args.chunkIndex} is ${decoded.buffer.byteLength} bytes; per-chunk cap is ${MAX_CHUNK_BYTES}.`,
+            {
+                uploadSessionId: args.uploadSessionId,
+                chunkIndex: args.chunkIndex,
+                maxChunkBytes: MAX_CHUNK_BYTES,
+            },
+            "Send smaller slices (~48 KB recommended).",
+        )
+
+    // Cumulative cap — recompute from the per-index map so a retransmit of the
+    // same index doesn't double-count. Reject BEFORE writing if over cap.
+    const chunkBytes = {
+        ...((session.chunkBytes as Record<string, number>) ?? {}),
+    }
+    chunkBytes[String(args.chunkIndex)] = decoded.buffer.byteLength
+    const receivedBytes = Object.values(chunkBytes).reduce((a, b) => a + b, 0)
+    if (receivedBytes > MAX_SESSION_SIZE_BYTES)
+        return richError(
+            "size_exceeds_cap",
+            `Cumulative upload would be ${receivedBytes} bytes; session cap is ${MAX_SESSION_SIZE_BYTES}.`,
+            {
+                uploadSessionId: args.uploadSessionId,
+                receivedBytes,
+                maxBytes: MAX_SESSION_SIZE_BYTES,
+            },
+            "Stop appending and split the file, or compress it.",
+        )
+
+    const bucket = getBucket()
+    try {
+        await bucket
+            .file(chunkObjectPath(args.uploadSessionId, args.chunkIndex))
+            .save(decoded.buffer, {
+                contentType: "application/octet-stream",
+                resumable: false,
+            })
+    } catch (err) {
+        return richError(
+            "chunk_store_failed",
+            `Could not store chunk ${args.chunkIndex}: ${err instanceof Error ? err.message : err}`,
+            { uploadSessionId: args.uploadSessionId, chunkIndex: args.chunkIndex },
+            "Retry the append; if it persists the Storage bucket may be misconfigured.",
+        )
+    }
+
+    await sessionRef.update({ chunkBytes, receivedBytes })
+
+    return {
+        ok: true,
+        chunkIndex: args.chunkIndex,
+        receivedChunks: Object.keys(chunkBytes).length,
+        receivedBytes,
+    }
+}
+
+export interface CommitChunkedChartUploadArgs {
+    uploadSessionId: string
+    /** Bypass dedup (exact + fuzzy). Same semantic as upload_chart's force. */
+    force?: boolean
+}
+
+export async function commitChunkedChartUpload(
+    uid: string,
+    args: CommitChunkedChartUploadArgs,
+    org: OrgId = DEFAULT_ORG_ID,
+): Promise<FinalizeChartUploadResult | RichErrorEnvelope> {
+    if (!args.uploadSessionId?.trim())
+        return richError("invalid_argument", "uploadSessionId is required.", {
+            field: "uploadSessionId",
+        })
+
+    initAdmin()
+    const db = getFirestore()
+
+    const sessionRef = db.collection("upload_sessions").doc(args.uploadSessionId)
+    const sessionSnap = await sessionRef.get()
+    if (!sessionSnap.exists)
+        return richError(
+            "upload_session_not_found",
+            `Upload session '${args.uploadSessionId}' was not found.`,
+            { uploadSessionId: args.uploadSessionId },
+            "Begin a new session via begin_chunked_chart_upload.",
+        )
+    const session = sessionSnap.data() as Record<string, unknown>
+
+    if (session.ownerUid !== uid)
+        return richError(
+            "upload_session_owner_mismatch",
+            "Upload session does not belong to caller.",
+            { uploadSessionId: args.uploadSessionId },
+            "Begin a new session under your own bearer token.",
+        )
+    if (session.mode !== "chunked")
+        return richError(
+            "invalid_session_state",
+            "This session is not a chunked-upload session.",
+            { uploadSessionId: args.uploadSessionId },
+            "Use begin_chunked_chart_upload / finalize_chart_upload appropriately.",
+        )
+    if (session.status === "finalized")
+        return richError(
+            "upload_session_already_finalized",
+            "Session already finalized — begin a new chunked upload for a new chart.",
+            { uploadSessionId: args.uploadSessionId },
+            "Begin a fresh session via begin_chunked_chart_upload.",
+        )
+    if (session.status !== "awaiting-chunks")
+        return richError(
+            "invalid_session_state",
+            `Session is '${String(session.status)}', not committable.`,
+            { uploadSessionId: args.uploadSessionId },
+            "Begin a new session.",
+        )
+    const expires = session.expiresAt as { toMillis?: () => number } | undefined
+    if (expires?.toMillis && expires.toMillis() < Date.now())
+        return richError(
+            "upload_session_expired",
+            "Upload session expired.",
+            { uploadSessionId: args.uploadSessionId },
+            "Begin a new session and re-send the chunks.",
+        )
+
+    // Resolve the chunk set from the per-index byte map and require contiguity.
+    const chunkBytes = (session.chunkBytes as Record<string, number>) ?? {}
+    const indices = Object.keys(chunkBytes)
+        .map((k) => Number(k))
+        .sort((a, b) => a - b)
+    if (indices.length === 0)
+        return richError(
+            "no_chunks_uploaded",
+            "No chunks were appended to this session.",
+            { uploadSessionId: args.uploadSessionId },
+            "Append at least one chunk via append_chart_upload_chunk before committing.",
+        )
+    const maxIndex = indices[indices.length - 1]
+    for (let i = 0; i <= maxIndex; i++) {
+        if (!(String(i) in chunkBytes))
+            return richError(
+                "missing_chunk",
+                `Chunk index ${i} is missing (have 0..${maxIndex} minus gaps). Re-append it before committing.`,
+                {
+                    uploadSessionId: args.uploadSessionId,
+                    missingIndex: i,
+                    receivedChunks: indices.length,
+                },
+                "Re-send the missing chunk via append_chart_upload_chunk.",
+            )
+    }
+    if (
+        typeof session.totalChunks === "number" &&
+        indices.length !== session.totalChunks
+    )
+        return richError(
+            "chunk_count_mismatch",
+            `Expected ${session.totalChunks} chunks (declared at begin); have ${indices.length}.`,
+            {
+                uploadSessionId: args.uploadSessionId,
+                expected: session.totalChunks,
+                received: indices.length,
+            },
+            "Append the remaining chunks, or begin a new session without totalChunks.",
+        )
+
+    // Download + concatenate in ascending index order.
+    const bucket = getBucket()
+    const parts: Buffer[] = []
+    for (let i = 0; i <= maxIndex; i++) {
+        const chunkFile = bucket.file(chunkObjectPath(args.uploadSessionId, i))
+        const [chunkExists] = await chunkFile.exists()
+        if (!chunkExists)
+            return richError(
+                "missing_chunk",
+                `Chunk ${i} byte object is missing from staging (expired or swept).`,
+                { uploadSessionId: args.uploadSessionId, missingIndex: i },
+                "Re-append the chunk, or begin a new session.",
+            )
+        try {
+            const [bytes] = await chunkFile.download()
+            parts.push(Buffer.from(bytes))
+        } catch (err) {
+            return richError(
+                "staged_bytes_unreadable",
+                `Could not read chunk ${i}: ${err instanceof Error ? err.message : err}`,
+                { uploadSessionId: args.uploadSessionId, chunkIndex: i },
+                "Retry commit; if it persists begin a fresh session.",
+            )
+        }
+    }
+    const assembled = Buffer.concat(parts)
+    if (assembled.byteLength === 0)
+        return richError(
+            "empty_file",
+            "Reassembled upload is empty.",
+            { uploadSessionId: args.uploadSessionId },
+            "Append the file bytes, then commit.",
+        )
+    if (assembled.byteLength > MAX_SESSION_SIZE_BYTES)
+        return richError(
+            "size_exceeds_cap",
+            `Reassembled upload is ${assembled.byteLength} bytes; cap is ${MAX_SESSION_SIZE_BYTES}.`,
+            {
+                uploadSessionId: args.uploadSessionId,
+                sizeBytes: assembled.byteLength,
+                maxBytes: MAX_SESSION_SIZE_BYTES,
+            },
+            "Split the file or compress it.",
+        )
+
+    // Write the reassembled bytes to the staged `raw` path finalize expects, then
+    // delegate to the shared pipeline (mime validation, conversion, dedup→409,
+    // Storage + library_index + songs write, library_signals broadcast).
+    try {
+        await bucket.file(stagedPath(args.uploadSessionId)).save(assembled, {
+            contentType:
+                typeof session.mimeType === "string"
+                    ? session.mimeType
+                    : "application/octet-stream",
+            resumable: false,
+        })
+    } catch (err) {
+        return richError(
+            "staged_write_failed",
+            `Could not stage the reassembled upload: ${err instanceof Error ? err.message : err}`,
+            { uploadSessionId: args.uploadSessionId },
+            "Retry commit; if it persists the Storage bucket may be misconfigured.",
+        )
+    }
+
+    const result = await finalizeChartUpload(uid, {
+        uploadSessionId: args.uploadSessionId,
+        force: args.force,
+    })
+
+    // Best-effort: drop the chunk byte objects (finalize already cleared `raw`).
+    await Promise.all(
+        Array.from({ length: maxIndex + 1 }, (_, i) =>
+            bucket
+                .file(chunkObjectPath(args.uploadSessionId, i))
+                .delete()
+                .catch(() => undefined),
+        ),
+    )
+
+    if (!("ok" in result) || result.ok !== true) {
+        // finalize already marked the session failed + mapped the error envelope.
+        return result
+    }
+
+    // v11-02-03 parity: org-stamp the new chart. finalizeChartUpload does NOT
+    // stamp (the signed-URL path shares that gap — logged as a deferred issue),
+    // so the chunked commit stamps here from the caller's resolved org.
+    await stampOrg(db, result.fileId, org)
+
+    return result
 }

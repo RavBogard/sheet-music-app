@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.3 — Worthiness & Access** (OPEN 2026-06-10; 5 phases, plans TBD). Created via `/paul:milestone` from `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md`. Oracle: `docs/ACCESS-POLICY.md` **v0.3**. (v11.2 ✅ COMPLETE 2026-06-11, tag `v11.2.0`; standalone loginable-test-accounts phase ✅ COMPLETE 2026-06-10.)
-Phase: **v11.3-01 Anon access correctness ✅ COMPLETE 2026-06-10** (BUG-5 + BUG-4, 2/2 plans, committed + pushed). **Next: v11.3-02 Agent chart-upload path** (P1) — not started.
-Plan: None active (v11.3-01 closed). Next: `/paul:plan` for v11.3-02.
-Status: **Phase v11.3-01 ✅ COMPLETE — committed + pushed to `master`.** Ready to plan Phase v11.3-02 (Agent chart-upload: `import_chart_from_drive` accepts `.docx`/Google Docs → PDF server-side; secondary chunked `upload_chart`).
-Last activity: 2026-06-10 — `/paul:unify` v11.3-01-02 (BUG-4) + phase-closing transition. Both plans LOOP COMPLETE; phase committed `feat(v11.3-01): anon access correctness (BUG-5 + BUG-4)` + pushed to `master` (Vercel auto-deploy). All gates green; CRC byte-identical (trusted/authed path unchanged).
+Phase: **v11.3-03 Harness & hygiene** (P2) — Not started. (v11.3-02 ✅ COMPLETE 2/2 2026-06-11; v11.3-01 ✅ 2026-06-10.)
+Plan: None active. Next: `/paul:plan` for v11.3-03 (BUG-9 + BUG-7 + BUG-1).
+Status: **Phase v11.3-02 ✅ COMPLETE — committed + pushed to `master`.** 2/2 plans LOOP COMPLETE; phase commit `feat(v11.3-02): agent chart-upload path` (Plan 01 Drive-convert + Plan 02 chunked-inline). All gates green; CRC byte-identical. Ready to plan v11.3-03.
+Last activity: 2026-06-11 — `/paul:unify` v11.3-02-02 + phase-close transition: SUMMARY written, PROJECT/ROADMAP evolved, phase committed + pushed (Vercel auto-deploy).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -50,7 +50,7 @@ Last activity: 2026-06-10 — `/paul:unify` v11.3-01-02 (BUG-4) + phase-closing 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-01 ✅ phase complete + committed — ready to PLAN v11.3-02]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-02 ✅ phase complete + committed + pushed — ready to PLAN v11.3-03]
   ○        ○        ○
 ```
 
@@ -67,11 +67,13 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-01 ✅ phase complete + commi
 - Always-proceed / no decision-blocks (2026-05-28): agents proceed autonomously on in-scope work.
 - **v11.x AUTONOMY directive (2026-06-08, carried into v11.1):** run autonomously — waive PAUL approval/continuation gates; auto-commit + push per phase to prod `master`; bake decisions into PLANs; Firebase deploys + backfills as AUTO tasks (single-owner = executor). **QUALITY FLOOR HELD (non-negotiable):** tsc clean + tests green + AC proof every task; `SKIP_ENV_VALIDATION=1 npx next build` before declaring any shared-lib/client phase deployable; emulator-backed rules tests where rules change; /ui-ux-pro-max BLOCKING on UI phases (01/03/04); backfills get dry-run + idempotency marker + rollback. **STOP only for:** product ambiguity, an unresolvable quality-gate failure, or a discovered cross-tenant LEAK / CRC lock-out. See [[feedback_v11_autonomous_milestone]].
 - **v11.1 authoring-org call RESOLVED (Daniel 2026-06-09):** authoring org = the **tenant domain the leader connects Claude Desktop to** (mint paths read the proxy's `x-org-id`, validated ∈ caller's `orgIds`, else primary-org fallback). Pins at mint time, NOT a tool arg → v11-06-02 invariant fully preserved. No manual stopgap (Daniel declined). Shipped v11.1-02-01. Canonical broslaz MCP URL: `https://www.brotherslazaroff.live/api/mcp` (www direct; apex 308-redirects).
+- **v11.3-02 (2026-06-11):** agent chart-upload — `import_chart_from_drive` converts Google Docs (export) + `.docx`/Office (convert-on-copy) → PDF server-side (`DriveClient.fetchAsPdf` + `driveSourceIsConvertible`); inline chunked upload (`begin/append/commit_chunked_chart_upload`) on `upload_sessions`, commit delegates to `finalizeChartUpload` + org-stamps. Append NOT rate-limited (only begin+commit) to survive the 10/min cap on multi-chunk files. Cowork sandbox PUT-proxy out of scope (Anthropic-side).
 - **v11.1-02-02 (2026-06-09):** admin org-membership set via the `/manage` People list (tri-state Band-access control, admin-only, band_leader/admin rows); `/api/admin/set-role` now writes `orgIds` to BOTH the Auth claim and the user doc (claim+doc lockstep) so People-list display + roster filtering (v11-05-02 rowOrgIds) reflect changes immediately. Control scoped to the authoring tier per Daniel (consumers stay host-derived).
 
 ### Deferred Issues
 - **SERVICE_TYPE_LABELS vocab-table (v11.1-04 defer, 2026-06-09):** Shabbat Morning/Friday Night/Erev Shabbat/Rosh Hashanah labels hardcoded in SetlistCards/CreationWizard/SetlistMetaEditSheet/interview-defaults + SetlistMatrixView `<option>`s. Gated-away for broslaz (selector hidden via `hidesLiturgicalFields`) → NOT a live remnant. Convert to a vocab-driven table only if a non-synagogue tenant needs service-type categories.
 - **recordings-collection org-scoping (v11.1-03 defer, 2026-06-09):** `subscribeRecordingsForSong` (RecordingBindPopover) is songId-only (no org filter) AND `/api/recordings/upload:107` hardcodes `orgId: DEFAULT_ORG_ID` → host-filtering the subscribe now would hide ALL recordings on broslaz. Fix: stamp the upload from host x-org-id, THEN host-filter the subscribe. Small follow-up; distinct from the Library-tab chart clutter (library_index audio rows ARE covered by v11.1-03).
+- **finalize_chart_upload (signed-URL path) does not org-stamp (v11.3-02-02 defer, 2026-06-11):** the chunked `commit` stamps its result, but the signed-URL `finalize_chart_upload` flow shares finalize's missing-stamp gap → its uploads land default-org. Small follow-up: add `org` param to `finalizeChartUpload` + pass `orgFrom(extra)` in its handler. Out of scope of v11.3-02 to keep that path byte-stable.
 - v11-06 residuals (low-risk, in AUDIT.md): setlistTemplates app-only; scheduling_history orgId-absent rows; users claim-based (no orgId field).
 - v7.0 fold-forward backlog (`MILESTONES.md` § v7.0) — re-triage what's still live.
 - ROADMAP.md / PROJECT.md / MILESTONES.md carry full historical detail intentionally (archive — collapse, don't delete); only STATE has a hard size target.
@@ -90,10 +92,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-01 ✅ phase complete + commi
 
 ## Session Continuity
 
-Last session: 2026-06-10 — full PAUL arc in one session: `/paul:discuss-milestone` → `/paul:milestone` (created v11.3, 5 phases from the ratified brief) → planned/applied/unified **both plans of Phase v11.3-01** (BUG-5 + BUG-4) → phase-closing transition (commit `bc8f935aa2` + push to `master`). Then **`/paul:pause`**.
-Stopped at: **PAUSED at the v11.3-01 → v11.3-02 phase boundary.** Phase 1 of 5 ✅ shipped to prod. Working tree clean after the pause state-commit.
-Next action: **`/paul:plan`** for **v11.3-02 Agent chart-upload path** (P1, David's report) — `import_chart_from_drive` accepts `.docx` + Google Docs and converts to PDF **server-side** (Drive API export / convert-on-copy; agent passes refs not bytes); secondary chunked inline `upload_chart` (init/append/commit). Out of scope: the Cowork sandbox proxy (Anthropic-side).
-Resume file: **.paul/HANDOFF-2026-06-10.md** (full context). Source brief: `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md`; David's report `.paul/research/BUG-cowork-chart-upload-2026-06-10.md`; oracle `docs/ACCESS-POLICY.md` v0.3.
+Last session: 2026-06-11 — **v11.3-02 ✅ COMPLETE** (2 plans: Drive server-side convert + chunked inline upload) → phase-close commit + push to `master`.
+Stopped at: **Phase v11.3-02 closed + shipped.** Ready to plan v11.3-03. Working tree clean after the phase commit (STATE Git-State hash line updated post-commit, will ride the next pause/phase commit per usual lag).
+Next action: **`/paul:plan` for v11.3-03 Harness & hygiene** (P2) — BUG-9 (`/test-login` missing from `proxy.ts` `publicPrefixes` → 307 before code consumption) + BUG-7 (`GET /api/auth/qr?code=<malformed>` → 500, must be 4xx) + BUG-1 (orphan `[role-*]` library_index rows — **VERIFY FIRST** whether `revoke_test_account`/`cleanup_all_test_data` cascade revoked-account uploads, then delete the two orphans). Each fix gets a regression test citing its stress-report cell.
+Resume file: **.paul/ROADMAP.md** (§ Phase v11.3-03). Oracle: `docs/ACCESS-POLICY.md` v0.3.
 Resume context:
 - Oracle-bound: a finding is a bug only if it contradicts a v0.3 ACCESS-POLICY cell; err-public prime directive holds.
 - Scope walls (ratified): D8 publish/notify → v11.4; BUG-3 (RUM) / BUG-8 (member library) / browser Policy-Q1 closed by policy (no code); F-4 dup setlist + Cowork sandbox proxy out of scope; D2 anon **recordings** is the ⚠️ veto cell — BUG-5 is charts only, don't widen Phase 01 into recordings.

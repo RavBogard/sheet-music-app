@@ -26,7 +26,7 @@ Focus: Close the post-stress-test findings the oracle confirms are real. Two **P
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v11.3-01 | Anon access correctness — BUG-5 + BUG-4 [P1] | 01 (BUG-5) ✅ · 02 (BUG-4) ✅ | ✅ Complete | 2026-06-10 |
-| v11.3-02 | Agent chart-upload path [P1] | TBD | Not started | - |
+| v11.3-02 | Agent chart-upload path [P1] | 01 (Drive convert) ✅ · 02 (chunked inline) ✅ | ✅ Complete | 2026-06-11 |
 | v11.3-03 | Harness & hygiene — BUG-9 + BUG-7 + BUG-1 [P2] | TBD | Not started | - |
 | v11.3-04 | /perform performance — BUG-2 [P2] | TBD | Not started | - |
 | v11.3-05 | P3 polish — BUG-6 + F-6 [P3] | TBD | Not started | - |
@@ -42,7 +42,7 @@ Focus: Give the MCP/agent author a working chart-upload route (David's upload de
 - **Primary:** `import_chart_from_drive` accepts `.docx` + Google Docs and converts to PDF **server-side** (Drive API export / convert-on-copy). Agent passes references, never bytes.
 - **Secondary:** chunked inline `upload_chart` (init/append/commit) for non-Drive sources.
 - **Out of scope:** the Cowork sandbox proxy (Anthropic-side; reported separately).
-Plans: TBD (defined during /paul:plan)
+Plans: **01 (Primary) ✅ LOOP COMPLETE 2026-06-10** — `DriveClient.fetchAsPdf` (Google-native export via existing `exportDoc` + `.docx`/Office convert-on-copy: copy→Google Doc→export PDF→delete temp) routed into `importChartFromDrive`; unconvertible types still refuse cleanly; binary/dryRun paths unregressed. Reuses dedup/org-stamp/rate-limit gates + `processChartUpload` (PDF already allowed). Gates green: tsc · 58/58 emulator (AC-1..AC-4 + `driveSourceIsConvertible` unit, cite David's report) · next build. No new tool args. · **02 (Secondary) ✅ LOOP COMPLETE 2026-06-11** — inline chunked upload `begin_chunked_chart_upload`→`append_chart_upload_chunk`×N→`commit_chunked_chart_upload` on the `upload_sessions` substrate; commit reassembles in index order → delegates to `finalizeChartUpload` → org-stamps (closes finalize's gap for the new path; signed-URL path's same gap deferred). Only begin+commit metered (per-chunk would exhaust 10/min). Gates green: tsc · 20/20 emulator (8 chunked AC, cite David's report) · next build. **Phase ✅ COMPLETE 2026-06-11.** Out of scope: Cowork sandbox proxy (Anthropic-side).
 
 ### Phase v11.3-03: Harness & hygiene [P2]
 Focus: Three low-risk correctness fixes; no consumer-facing impact but they broke stress-run pre-flights / violate the error contract.

@@ -82,6 +82,62 @@ interface DriveFileResult {
     size?: string
 }
 
+/**
+ * v11.3-02-01 (BUG-cowork-chart-upload-2026-06-10) — classify a Drive source
+ * mime by how `fetchAsPdf` should turn it into PDF bytes:
+ *
+ *  - `'export'` — a native Google Workspace doc that Drive can export directly
+ *    to PDF via `files.export` (Docs / Sheets / Slides / Drawings).
+ *  - `'copy'`   — an uploaded Office file (`.docx`/`.xlsx`/`.pptx` + legacy
+ *    msword/ms-excel/ms-powerpoint). `files.export` does NOT work on these, so
+ *    `fetchAsPdf` converts-on-copy (copy → matching Google doc → export PDF →
+ *    delete the temp).
+ *  - `null`     — not server-side-convertible (folders, Forms, ordinary
+ *    binaries like PDF/PNG, etc). Caller handles those on its own path.
+ *
+ * Pure + exported so the MCP wrapper and tests can classify without a Drive
+ * round-trip.
+ */
+const GOOGLE_EXPORTABLE_NATIVE = new Set([
+    "application/vnd.google-apps.document",
+    "application/vnd.google-apps.spreadsheet",
+    "application/vnd.google-apps.presentation",
+    "application/vnd.google-apps.drawing",
+])
+
+const OFFICE_CONVERTIBLE = new Set([
+    // OOXML (modern)
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+    // Legacy binary Office
+    "application/msword", // .doc
+    "application/vnd.ms-excel", // .xls
+    "application/vnd.ms-powerpoint", // .ppt
+])
+
+export function driveSourceIsConvertible(
+    mime: string | null | undefined,
+): "export" | "copy" | null {
+    const m = (mime ?? "").toLowerCase()
+    if (GOOGLE_EXPORTABLE_NATIVE.has(m)) return "export"
+    if (OFFICE_CONVERTIBLE.has(m)) return "copy"
+    return null
+}
+
+/**
+ * Pick the Google-native conversion target for an Office mime during
+ * convert-on-copy. Word→Docs, Excel→Sheets, PowerPoint→Slides; default Docs.
+ */
+function copyTargetMimeFor(sourceMime: string): string {
+    const m = sourceMime.toLowerCase()
+    if (m.includes("spreadsheet") || m === "application/vnd.ms-excel")
+        return "application/vnd.google-apps.spreadsheet"
+    if (m.includes("presentation") || m === "application/vnd.ms-powerpoint")
+        return "application/vnd.google-apps.presentation"
+    return "application/vnd.google-apps.document"
+}
+
 export class DriveClient {
     private drive
 
@@ -432,6 +488,74 @@ export class DriveClient {
         } catch (error: unknown) {
             logger.error(`[Drive] Error exporting doc ${fileId}:`, error instanceof Error ? error.message : "Unknown error")
             throw error
+        }
+    }
+
+    /**
+     * v11.3-02-01 — return PDF bytes for a server-side-convertible Drive
+     * source so `import_chart_from_drive` can accept Google Docs and uploaded
+     * Office files (David's BUG-cowork-chart-upload-2026-06-10 dead-end). Two
+     * branches keyed off `driveSourceIsConvertible(sourceMime)`:
+     *
+     *   - `'export'` (native Google Workspace doc): delegate to `exportDoc`
+     *     (files.export → PDF). No temp file created.
+     *   - `'copy'` (uploaded .docx/.xlsx/.pptx + legacy): convert-on-copy —
+     *     copy the source into a temporary Google doc (Drive performs the
+     *     format conversion on copy), export THAT to PDF, then delete the temp
+     *     in a `finally` (best-effort: a failed temp-delete logs but never
+     *     throws, because the import already has its bytes).
+     *
+     * Throws if called with a mime the classifier returns null for — the
+     * caller is expected to gate on `driveSourceIsConvertible` first.
+     */
+    async fetchAsPdf(fileId: string, sourceMime: string): Promise<ArrayBuffer> {
+        const kind = driveSourceIsConvertible(sourceMime)
+        if (kind === null) {
+            throw new Error(
+                `[Drive] fetchAsPdf called with non-convertible mime '${sourceMime}' for ${fileId}`,
+            )
+        }
+
+        if (kind === "export") {
+            return (await this.exportDoc(fileId, "application/pdf")) as ArrayBuffer
+        }
+
+        // kind === "copy": convert-on-copy through a temporary Google doc.
+        let tempId: string | undefined
+        try {
+            const copied = await withRetry(() =>
+                this.drive.files.copy({
+                    fileId,
+                    requestBody: {
+                        name: `crc-tmp-convert-${fileId}`,
+                        mimeType: copyTargetMimeFor(sourceMime),
+                    },
+                    fields: "id",
+                    supportsAllDrives: true,
+                }),
+            ) as { data: { id?: string } }
+            tempId = copied.data.id
+            if (!tempId) {
+                throw new Error(
+                    `[Drive] convert-on-copy returned no temp id for ${fileId}`,
+                )
+            }
+            return (await this.exportDoc(tempId, "application/pdf")) as ArrayBuffer
+        } finally {
+            if (tempId) {
+                try {
+                    await this.drive.files.delete({
+                        fileId: tempId,
+                        supportsAllDrives: true,
+                    })
+                } catch (delErr: unknown) {
+                    logger.warn(
+                        `[Drive] convert-on-copy temp cleanup failed for ${tempId} (non-fatal): ${
+                            delErr instanceof Error ? delErr.message : delErr
+                        }`,
+                    )
+                }
+            }
         }
     }
 

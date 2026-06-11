@@ -276,3 +276,36 @@ Check (live, non-blocking):
 - [ ] Anon (signed out), open a chart in Perform → tap Transpose → "DETECTED KEY" + chords render (was stuck on "Waiting for scan…").
 - [ ] Anon transpose up/down → notation re-renders with transposed chords.
 - [ ] Authed musician transpose unchanged (no new throttling on normal multi-page scans).
+
+---
+
+## ⏳ v11.3-02-01 — Agent chart-upload: server-side Drive conversion (David's report)
+
+**Status:** code-fixed + 58/58 chart-upload emulator tests (AC-1..AC-4 + classifier unit) + tsc/next-build clean. Committed at phase close (after Plan 02).
+
+What was built: `DriveClient.fetchAsPdf` (export for native Google docs; convert-on-copy for
+`.docx`/`.xlsx`/`.pptx`) + `driveSourceIsConvertible` classifier; `import_chart_from_drive` routes
+convertible Drive types through it → PDF server-side, then the existing `processChartUpload` pipeline.
+Live UAT can't run on this box (no service-account creds for a real Drive convert).
+
+Check (live, non-blocking — once deployed):
+- [ ] Via broslaz/CRC MCP: `import_chart_from_drive` on a **Google Doc** id → imports, library row mimeType `application/pdf`, renders in Perform.
+- [ ] `import_chart_from_drive` on an uploaded **.docx** id (David's "Queen Jane Approximately.docx" case) → imports as PDF (convert-on-copy); no leftover `crc-tmp-convert-*` Google Doc in the service-account Drive.
+- [ ] `import_chart_from_drive` on a **folder** id → `drive_invalid_target`; on a **Google Form** id → `unsupported_drive_native_type` (export-first hint).
+- [ ] Ordinary **PDF** Drive import unchanged (regression).
+
+---
+
+## ⏳ v11.3-02-02 — Chunked inline chart-upload (begin/append/commit)
+
+**Status:** code-complete + 20/20 upload-session emulator tests (8 new chunked AC) + tsc/next-build clean. Committed at phase close.
+
+What was built: `begin_chunked_chart_upload` → `append_chart_upload_chunk` ×N → `commit_chunked_chart_upload`
+on the `upload_sessions` substrate; commit reassembles chunks in order, delegates to `finalizeChartUpload`,
+and org-stamps the result. For non-Drive sources where the signed-URL PUT is proxy-blocked (Cowork) and
+inline base64 exceeds the token cap.
+
+Check (live, non-blocking — once deployed):
+- [ ] Via broslaz/CRC MCP: begin → append a multi-chunk PDF (~48 KB slices) → commit → chart imports, bonds via add_track_to_setlist.
+- [ ] Committed chart's library_index orgId matches the connected tenant (broslaz when via brotherslazaroff.live).
+- [ ] Gap / out-of-order / oversize chunk → clear rich error; force:true bypasses a dedup 409.

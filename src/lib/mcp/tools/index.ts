@@ -97,6 +97,9 @@ import { reviewChartBonds } from "./chart-bond-audit"
 import {
     requestChartUploadUrl,
     finalizeChartUpload,
+    beginChunkedChartUpload,
+    appendChartUploadChunk,
+    commitChunkedChartUpload,
 } from "./library-upload-session"
 import {
     waitForSetlistChange,
@@ -2472,7 +2475,7 @@ export function registerChartUploadTools(server: McpServer): void {
         "import_chart_from_drive",
         {
             description:
-                "Import a chart into the library directly from a Google Drive file id — no base64 round-trip. PREFER THIS over upload_chart when the user already has the file in Drive (linked in a message, viewing it in Drive, or referencing a Drive URL): the MCP request body stays tiny (just the id), which sidesteps the upload payload limits that have caused upload_chart to hang. The same dedup, conversion (MuseScore→MusicXML, HEIC→JPEG), and indexing logic runs as upload_chart. Drive's native doc types (Google Docs / Sheets / Slides) are rejected — export to PDF in Drive first. The Drive id is the segment after /file/d/ in a Drive URL (e.g. 1uj3isd0RJoAYoETx4QFwjQQgwjaO4DTS). Title defaults to the Drive file name minus extension; pass `title` to override.",
+                "Import a chart into the library directly from a Google Drive file id — no base64 round-trip. PREFER THIS over upload_chart when the user already has the file in Drive (linked in a message, viewing it in Drive, or referencing a Drive URL): the MCP request body stays tiny (just the id), which sidesteps the upload payload limits that have caused upload_chart to hang. The same dedup, conversion (MuseScore→MusicXML, HEIC→JPEG), and indexing logic runs as upload_chart. Google Docs/Sheets/Slides AND uploaded Word/Excel/PowerPoint files (.docx/.xlsx/.pptx) are converted to PDF server-side automatically — just pass the id, no manual export needed. Only folders and unsupported binary types are rejected. The Drive id is the segment after /file/d/ in a Drive URL (e.g. 1uj3isd0RJoAYoETx4QFwjQQgwjaO4DTS). Title defaults to the Drive file name minus extension; pass `title` to override.",
             inputSchema: {
                 driveFileId: z
                     .string()
@@ -2599,6 +2602,113 @@ export function registerChartUploadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await finalizeChartUpload(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "begin_chunked_chart_upload",
+        {
+            description:
+                "Step 1 of the INLINE chunked-upload flow (v11.3-02). Use when the chart file is too big for upload_chart's inline base64 (>~50 KB hits the 25K-token tool cap) AND you can't PUT to a signed URL — e.g. inside the Cowork sandbox, whose egress proxy 403s storage.googleapis.com so request_chart_upload_url's PUT fails. This ships the bytes THROUGH the MCP tool args instead: begin returns an uploadSessionId + recommended chunk size; then call append_chart_upload_chunk for each ~48 KB slice (chunkIndex 0..N-1), then commit_chunked_chart_upload. Same role / curated-catalog / rate-limit semantics as upload_chart (only begin + commit are metered, not each append). PREFER import_chart_from_drive when the file is already in Drive — it's one call.",
+            inputSchema: {
+                title: z.string().min(1).describe("Display title for the chart"),
+                mimeType: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "MIME type of the file being uploaded (e.g. 'application/pdf').",
+                    ),
+                fileName: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Optional original filename incl. extension. Derived from title + mimeType if omitted.",
+                    ),
+                collection: collectionSchema,
+                key: z
+                    .string()
+                    .optional()
+                    .describe("Optional musical key (e.g. 'G' or 'Am')"),
+                bpm: z
+                    .number()
+                    .int()
+                    .positive()
+                    .optional()
+                    .describe("Optional tempo in BPM"),
+                tags: z
+                    .array(z.string())
+                    .optional()
+                    .describe("Optional list of tags"),
+                totalChunks: z
+                    .number()
+                    .int()
+                    .positive()
+                    .optional()
+                    .describe(
+                        "Optional advisory: total number of chunks you will send. If provided, commit_chunked_chart_upload rejects unless exactly this many contiguous chunks were appended.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await beginChunkedChartUpload(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "append_chart_upload_chunk",
+        {
+            description:
+                "Step 2 of the inline chunked-upload flow. Send ONE base64-encoded slice of the file. Keep each slice ≤ ~48 KB of binary (~64 KB base64) to stay under the agent's 25K-token tool-result cap; hard per-chunk cap is 256 KB. chunkIndex is 0-based and must be contiguous (0,1,2,…); re-sending the same index overwrites it. Returns receivedChunks + receivedBytes so far. Call commit_chunked_chart_upload once every slice is sent.",
+            inputSchema: {
+                uploadSessionId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Session id from begin_chunked_chart_upload. Expires 10 minutes after begin.",
+                    ),
+                chunkIndex: z
+                    .number()
+                    .int()
+                    .min(0)
+                    .describe("0-based, contiguous chunk index."),
+                dataBase64: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Standard RFC-4648 base64 of this chunk's raw bytes.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await appendChartUploadChunk(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "commit_chunked_chart_upload",
+        {
+            description:
+                "Step 3 of the inline chunked-upload flow. Reassembles the appended chunks in index order and runs them through the normal pipeline (mime validation, MuseScore→MusicXML / HEIC→JPEG conversion, dedup, Storage write, library_index + songs write, library_signals broadcast) — identical to finalize_chart_upload. Returns the new fileId; bond it onto a setlist row via add_track_to_setlist / bulk_add_tracks. Pass force:true to bypass dedup (matches upload_chart's H-3 override). Fails with missing_chunk if any index 0..max is absent.",
+            inputSchema: {
+                uploadSessionId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Session id from begin_chunked_chart_upload. Single-use; expires 10 minutes after begin.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Bypass duplicate detection (exact + fuzzy). Use when the chart is a legitimate variant tripping a 'similar name' error.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await commitChunkedChartUpload(
+                    uidFrom(extra),
+                    args,
+                    orgFrom(extra),
+                ),
+            ),
     )
 
     server.registerTool(

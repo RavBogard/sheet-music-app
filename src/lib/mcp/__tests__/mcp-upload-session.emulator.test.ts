@@ -22,11 +22,27 @@ const mockGetSignedUrl = vi.fn()
 const mockStagedExists = vi.fn()
 const mockStagedDownload = vi.fn()
 const mockStagedDelete = vi.fn().mockResolvedValue(undefined)
-const mockStagedFile = vi.fn(() => ({
+// v11.3-02-02: path-keyed in-memory Storage so the chunked flow's real
+// save→exists→download→delete round-trips faithfully (begin/append/commit write
+// distinct chunk objects + a reassembled `raw`). Paths that were never .save()d
+// fall back to the legacy queued mocks — the signed-URL + heal tests below queue
+// exists/download instead of saving, so they stay unchanged.
+const stagedStore = new Map<string, Buffer>()
+const mockStagedFile = vi.fn((path: string) => ({
     getSignedUrl: mockGetSignedUrl,
-    exists: mockStagedExists,
-    download: mockStagedDownload,
-    delete: mockStagedDelete,
+    save: async (data: Buffer) => {
+        stagedStore.set(path, Buffer.from(data))
+    },
+    exists: async () =>
+        stagedStore.has(path) ? [true] : await mockStagedExists(),
+    download: async () =>
+        stagedStore.has(path)
+            ? [stagedStore.get(path)]
+            : await mockStagedDownload(),
+    delete: async () => {
+        stagedStore.delete(path)
+        return mockStagedDelete()
+    },
 }))
 vi.mock("firebase-admin/storage", () => ({
     getStorage: () => ({ bucket: () => ({ file: mockStagedFile }) }),
@@ -78,6 +94,9 @@ vi.mock("@/lib/firebase-storage", () => ({
 import {
     requestChartUploadUrl,
     finalizeChartUpload,
+    beginChunkedChartUpload,
+    appendChartUploadChunk,
+    commitChunkedChartUpload,
 } from "../tools/library-upload-session"
 import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
 import {
@@ -128,6 +147,7 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         mockStagedDownload.mockReset()
         mockStagedDelete.mockClear()
         mockProcessChartUpload.mockReset()
+        stagedStore.clear()
         __resetLibraryEventHandlersForTesting()
     })
 
@@ -485,5 +505,268 @@ describe("MCP chunked-upload session tools (emulator)", () => {
             error: { message: expect.stringContaining("does not exist") },
         })
         expect(mockProcessChartUpload).not.toHaveBeenCalled()
+    })
+
+    // ─── chunked inline upload (begin/append/commit) ─────────────────────────
+    // v11.3-02-02 — BUG-cowork-chart-upload-2026-06-10 (David's report): the
+    // inline-through-tool-args path for environments where the signed-URL PUT is
+    // blocked (Cowork sandbox egress proxy) and inline base64 exceeds the token cap.
+    describe("chunked inline upload (begin/append/commit)", () => {
+        const b64 = (s: string) => Buffer.from(s).toString("base64")
+
+        it("AC-1: begin → append N chunks → commit reassembles in order and pipes to processChartUpload", async () => {
+            const begin = await beginChunkedChartUpload(ADMIN, {
+                title: "Chunked Chart",
+                mimeType: "application/pdf",
+            })
+            expect("ok" in begin && begin.ok).toBe(true)
+            if (!("ok" in begin) || !begin.ok) return
+            const sid = begin.uploadSessionId
+            expect(begin.status).toBe("awaiting-chunks")
+
+            const parts = ["%PDF-1.4 part-zero ", "middle-part ", "tail-part-END"]
+            for (let i = 0; i < parts.length; i++) {
+                const a = await appendChartUploadChunk(ADMIN, {
+                    uploadSessionId: sid,
+                    chunkIndex: i,
+                    dataBase64: b64(parts[i]),
+                })
+                expect("ok" in a && a.ok).toBe(true)
+                if ("ok" in a && a.ok) expect(a.receivedChunks).toBe(i + 1)
+            }
+            const original = Buffer.concat(parts.map((p) => Buffer.from(p)))
+
+            mockProcessChartUpload.mockResolvedValueOnce({
+                ok: true,
+                fileId: "upload-chunked-1",
+                title: "Chunked Chart",
+                collection: "uploads",
+                mimeType: "application/pdf",
+                storageUrl: "gs://x/library/upload-chunked-1.pdf",
+            })
+
+            const commit = await commitChunkedChartUpload(ADMIN, {
+                uploadSessionId: sid,
+            })
+            expect("ok" in commit && commit.ok).toBe(true)
+            if (!("ok" in commit) || !commit.ok) return
+            expect(commit.fileId).toBe("upload-chunked-1")
+
+            // The reassembled bytes (in index order) reached processChartUpload.
+            expect(mockProcessChartUpload).toHaveBeenCalledTimes(1)
+            const call = mockProcessChartUpload.mock.calls[0][0] as {
+                buffer: Buffer
+                mimeType: string
+            }
+            expect(call.buffer.equals(original)).toBe(true)
+            expect(call.mimeType).toBe("application/pdf")
+
+            const session = (
+                await db().collection("upload_sessions").doc(sid).get()
+            ).data()!
+            expect(session.status).toBe("finalized")
+        })
+
+        it("AC-2: commit org-stamps the new chart row with the caller's resolved org", async () => {
+            const begin = await beginChunkedChartUpload(ADMIN, {
+                title: "BL Chunked Chart",
+                mimeType: "application/pdf",
+            })
+            if (!("ok" in begin) || !begin.ok) throw new Error("begin failed")
+            await appendChartUploadChunk(ADMIN, {
+                uploadSessionId: begin.uploadSessionId,
+                chunkIndex: 0,
+                dataBase64: b64("%PDF-1.4 broslaz bytes"),
+            })
+
+            // Seed the row processChartUpload "would" have written, so stampOrg
+            // (which only updates existing docs) has something to stamp.
+            await db()
+                .collection("library_index")
+                .doc("upload-bl-1")
+                .set({ name: "BL Chunked Chart", status: "active" })
+            await db().collection("songs").doc("upload-bl-1").set({ status: "active" })
+            mockProcessChartUpload.mockResolvedValueOnce({
+                ok: true,
+                fileId: "upload-bl-1",
+                title: "BL Chunked Chart",
+                collection: "uploads",
+                mimeType: "application/pdf",
+                storageUrl: "gs://x/library/upload-bl-1.pdf",
+            })
+
+            const commit = await commitChunkedChartUpload(
+                ADMIN,
+                { uploadSessionId: begin.uploadSessionId },
+                "brotherslazaroff",
+            )
+            expect("ok" in commit && commit.ok).toBe(true)
+
+            const row = (
+                await db().collection("library_index").doc("upload-bl-1").get()
+            ).data()!
+            expect(row.orgId).toBe("brotherslazaroff")
+            const song = (
+                await db().collection("songs").doc("upload-bl-1").get()
+            ).data()!
+            expect(song.orgId).toBe("brotherslazaroff")
+        })
+
+        it("AC-3a: append by a non-owner is rejected (upload_session_owner_mismatch)", async () => {
+            const begin = await beginChunkedChartUpload(ADMIN, {
+                title: "Owned",
+                mimeType: "application/pdf",
+            })
+            if (!("ok" in begin) || !begin.ok) throw new Error("begin failed")
+            const r = await appendChartUploadChunk(MUSICIAN, {
+                uploadSessionId: begin.uploadSessionId,
+                chunkIndex: 0,
+                dataBase64: b64("x"),
+            })
+            expect(r).toMatchObject({
+                ok: false,
+                error: { message: expect.stringContaining("does not belong to caller") },
+            })
+        })
+
+        it("AC-3b: commit with a gap in chunk indices → missing_chunk, no upload", async () => {
+            const begin = await beginChunkedChartUpload(ADMIN, {
+                title: "Gappy",
+                mimeType: "application/pdf",
+            })
+            if (!("ok" in begin) || !begin.ok) throw new Error("begin failed")
+            await appendChartUploadChunk(ADMIN, {
+                uploadSessionId: begin.uploadSessionId,
+                chunkIndex: 0,
+                dataBase64: b64("zero"),
+            })
+            // Skip index 1; append index 2 → gap at 1.
+            await appendChartUploadChunk(ADMIN, {
+                uploadSessionId: begin.uploadSessionId,
+                chunkIndex: 2,
+                dataBase64: b64("two"),
+            })
+            const r = await commitChunkedChartUpload(ADMIN, {
+                uploadSessionId: begin.uploadSessionId,
+            })
+            expect(r).toMatchObject({
+                ok: false,
+                error: { machine_code: "missing_chunk" },
+                missingIndex: 1,
+            })
+            expect(mockProcessChartUpload).not.toHaveBeenCalled()
+        })
+
+        it("AC-3c: a non-base64 chunk is rejected (invalid_base64)", async () => {
+            const begin = await beginChunkedChartUpload(ADMIN, {
+                title: "Bad b64",
+                mimeType: "application/pdf",
+            })
+            if (!("ok" in begin) || !begin.ok) throw new Error("begin failed")
+            const r = await appendChartUploadChunk(ADMIN, {
+                uploadSessionId: begin.uploadSessionId,
+                chunkIndex: 0,
+                dataBase64: "!!! not base64 !!!",
+            })
+            expect(r).toMatchObject({
+                ok: false,
+                error: { machine_code: "invalid_base64" },
+            })
+        })
+
+        it("AC-3d: cumulative size over the 25 MB cap is rejected (size_exceeds_cap)", async () => {
+            const begin = await beginChunkedChartUpload(ADMIN, {
+                title: "Too Big Cumulative",
+                mimeType: "application/pdf",
+            })
+            if (!("ok" in begin) || !begin.ok) throw new Error("begin failed")
+            // Seed the session's per-index byte map to just under the cap, then a
+            // small append should push cumulative over — exercises the cumulative
+            // guard without 100 real 256 KB appends.
+            await db()
+                .collection("upload_sessions")
+                .doc(begin.uploadSessionId)
+                .update({
+                    chunkBytes: { "0": 25 * 1024 * 1024 - 10 },
+                    receivedBytes: 25 * 1024 * 1024 - 10,
+                })
+            const r = await appendChartUploadChunk(ADMIN, {
+                uploadSessionId: begin.uploadSessionId,
+                chunkIndex: 1,
+                dataBase64: b64("this small chunk pushes it over the cap"),
+            })
+            expect(r).toMatchObject({
+                ok: false,
+                error: { machine_code: "size_exceeds_cap" },
+            })
+        })
+
+        it("AC-4 auth: a member-only (non-uploader) role cannot begin a chunked upload", async () => {
+            const r = await beginChunkedChartUpload(NONUPLOADER, {
+                title: "Sneaky",
+                mimeType: "application/pdf",
+            })
+            expect(r).toMatchObject({
+                ok: false,
+                error: { message: expect.stringContaining("Upload permission") },
+            })
+        })
+
+        it("AC-4 dedup: commit surfaces duplicate_detected_in_library (409); force bypasses", async () => {
+            // First commit: processChartUpload reports an exact dedup hit.
+            const begin1 = await beginChunkedChartUpload(ADMIN, {
+                title: "Mi Chamocha",
+                mimeType: "application/pdf",
+            })
+            if (!("ok" in begin1) || !begin1.ok) throw new Error("begin failed")
+            await appendChartUploadChunk(ADMIN, {
+                uploadSessionId: begin1.uploadSessionId,
+                chunkIndex: 0,
+                dataBase64: b64("%PDF dup"),
+            })
+            mockProcessChartUpload.mockResolvedValueOnce({
+                ok: false,
+                code: "duplicate_exact",
+                status: 409,
+                error: "A chart named 'Mi Chamocha' already exists.",
+            })
+            const dup = await commitChunkedChartUpload(ADMIN, {
+                uploadSessionId: begin1.uploadSessionId,
+            })
+            expect(dup).toMatchObject({
+                ok: false,
+                error: { machine_code: "duplicate_detected_in_library", code: 409 },
+                matchKind: "exact",
+            })
+
+            // Second commit with force:true → processChartUpload succeeds.
+            const begin2 = await beginChunkedChartUpload(ADMIN, {
+                title: "Mi Chamocha",
+                mimeType: "application/pdf",
+            })
+            if (!("ok" in begin2) || !begin2.ok) throw new Error("begin failed")
+            await appendChartUploadChunk(ADMIN, {
+                uploadSessionId: begin2.uploadSessionId,
+                chunkIndex: 0,
+                dataBase64: b64("%PDF dup forced"),
+            })
+            mockProcessChartUpload.mockResolvedValueOnce({
+                ok: true,
+                fileId: "upload-forced-chunked",
+                title: "Mi Chamocha",
+                collection: "uploads",
+                mimeType: "application/pdf",
+                storageUrl: "x",
+            })
+            const forced = await commitChunkedChartUpload(ADMIN, {
+                uploadSessionId: begin2.uploadSessionId,
+                force: true,
+            })
+            expect("ok" in forced && forced.ok).toBe(true)
+            const call = mockProcessChartUpload.mock.calls.at(-1)![0] as {
+                force?: boolean
+            }
+            expect(call.force).toBe(true)
+        })
     })
 })
