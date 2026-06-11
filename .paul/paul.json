@@ -7,9 +7,9 @@
     "status": "in_progress"
   },
   "phase": {
-    "number": 2,
-    "name": "v11.3-02 Agent chart-upload path",
-    "status": "in_progress"
+    "number": 3,
+    "name": "v11.3-03 Harness & hygiene",
+    "status": "not_started"
   },
   "loop": {
     "plan": null,

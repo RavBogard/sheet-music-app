@@ -43,7 +43,7 @@ Last activity: 2026-06-11 — `/paul:unify` v11.3-02-02 + phase-close transition
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `bc8f935aa2` — **v11.3-01 phase complete: anon access correctness BUG-5 + BUG-4**; pushed `f51a957769..bc8f935aa2` 2026-06-10; Vercel auto-deploy). Prior v11.2 tip `f27ae7bc5f`. v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`, in sync with `origin/master` (tip `89f4af7fd2` — **v11.3-02 phase complete: agent chart-upload path** [Drive convert + chunked inline]; pushed `da68316dbb..89f4af7fd2` 2026-06-11; Vercel auto-deploy). Prior: v11.3-01 `bc8f935aa2` · v11.2 `f27ae7bc5f`. v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
@@ -95,7 +95,7 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-02 ✅ phase complete + commi
 Last session: 2026-06-11 — **v11.3-02 ✅ COMPLETE** (2 plans: Drive server-side convert + chunked inline upload) → phase-close commit + push to `master`.
 Stopped at: **Phase v11.3-02 closed + shipped.** Ready to plan v11.3-03. Working tree clean after the phase commit (STATE Git-State hash line updated post-commit, will ride the next pause/phase commit per usual lag).
 Next action: **`/paul:plan` for v11.3-03 Harness & hygiene** (P2) — BUG-9 (`/test-login` missing from `proxy.ts` `publicPrefixes` → 307 before code consumption) + BUG-7 (`GET /api/auth/qr?code=<malformed>` → 500, must be 4xx) + BUG-1 (orphan `[role-*]` library_index rows — **VERIFY FIRST** whether `revoke_test_account`/`cleanup_all_test_data` cascade revoked-account uploads, then delete the two orphans). Each fix gets a regression test citing its stress-report cell.
-Resume file: **.paul/ROADMAP.md** (§ Phase v11.3-03). Oracle: `docs/ACCESS-POLICY.md` v0.3.
+Resume file: **.paul/HANDOFF-2026-06-11.md** (full context); then `.paul/ROADMAP.md` § Phase v11.3-03. Oracle: `docs/ACCESS-POLICY.md` v0.3. **(PAUSED 2026-06-11 at the v11.3-02 → v11.3-03 boundary.)**
 Resume context:
 - Oracle-bound: a finding is a bug only if it contradicts a v0.3 ACCESS-POLICY cell; err-public prime directive holds.
 - Scope walls (ratified): D8 publish/notify → v11.4; BUG-3 (RUM) / BUG-8 (member library) / browser Policy-Q1 closed by policy (no code); F-4 dup setlist + Cowork sandbox proxy out of scope; D2 anon **recordings** is the ⚠️ veto cell — BUG-5 is charts only, don't widen Phase 01 into recordings.
