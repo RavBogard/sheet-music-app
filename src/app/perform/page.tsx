@@ -1,5 +1,7 @@
+import { Suspense } from "react"
 import { headers } from "next/headers"
 import { PublicSetlistListing } from "@/components/performance/PublicSetlistListing"
+import { PublicSetlistSkeleton } from "@/components/performance/PublicSetlistSkeleton"
 import { selectVisiblePublicSetlists } from "@/components/performance/public-setlist-order"
 import { getAllSetlists } from "@/lib/server-setlists"
 import { coerceOrgId } from "@/lib/org/registry"
@@ -46,7 +48,30 @@ export async function generateMetadata() {
 // in PublicSetlistListing via `useAuth`, so no cookie read happens here.
 export const dynamic = "force-dynamic"
 
-export default async function PerformPage() {
+// v11.3-04-03 (BUG-2 FIX-2): /perform cold p75 was TTFB 1633ms / FCP 3551ms —
+// the route is `force-dynamic` (per-host x-org-id scoping, v11-04-01) and the
+// page used to `await getAllSetlists` BEFORE returning any markup, so the
+// server couldn't flush a single byte until Firestore resolved → the query sat
+// squarely on the TTFB/FCP critical path. We now flush the shell immediately
+// and stream the listing via <Suspense>: the Firestore round-trip resolves
+// inside the boundary while the skeleton paints first. The query, its `org`
+// scoping, and the `selectVisiblePublicSetlists` wire slice are RELOCATED
+// VERBATIM into the streamed child — no logic change — so v11-04-01 per-tenant
+// correctness and the Cycle-12 F-C12-001 byte-identical payload are preserved.
+// (Honesty bound: synthetic cold TTFB was 214ms vs field 1633ms — the residual
+// is serverless cold-start/geo, an infra lever, not app code. No caching: the
+// query isn't the dominant cost and a cache key risks the v11-04-01 cross-
+// tenant leak.) The fallback is the SAME PublicSetlistSkeleton the client shows
+// during its subscription load, so the streamed-shell visual stays CRC-identical.
+export default function PerformPage() {
+    return (
+        <Suspense fallback={<PublicSetlistSkeleton />}>
+            <PerformListing />
+        </Suspense>
+    )
+}
+
+async function PerformListing() {
     // getAllSetlists returns serializeSetlist-normalized rows (Firestore
     // Timestamps → ISO strings) — JSON-safe across the RSC → client
     // boundary. The Setlist type's `FirestoreDate` union accepts ISO

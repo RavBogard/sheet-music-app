@@ -13,6 +13,23 @@ plan or an emergent phase.
 
 ---
 
+## ⏳ v11.3-04-02 — /perform CLS fix (synthetic, post-deploy)
+
+**Deployed commit:** pending the `feat(v11.3-04)` phase-close commit/push.
+
+What was built: reserved the anon QR sign-in card's slot during `authLoading`
+(for expected-anon, `!cachedUser`) so the Upcoming/Past lists no longer shift
+when the card mounts post-auth-resolve. jsdom can't measure layout, so the
+pixel-level proof is deferred to a deployed synthetic run.
+
+How to verify: once the phase deploys, re-run the characterization § 2 recipe
+(Playwright at 820×1180 iPad WebKit on PROD `/perform`, buffered layout-shift
+observer, cold + warm) and confirm cumulative layout-shift **< 0.1** (was 0.187
+synthetic / 0.200 field p75). Also eyeball: the lists do not visibly jump as the
+sign-in card appears. CRC anon card appearance unchanged.
+
+---
+
 ## ⏳ v70-03-01 — Chart click-through
 
 **Deployed commit:** `62c2b7c` (pushed to origin master 2026-05-14; Vercel auto-deploy triggered)

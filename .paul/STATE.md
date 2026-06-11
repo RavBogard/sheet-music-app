@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.3 — Worthiness & Access** (OPEN 2026-06-10; 5 phases, plans TBD). Created via `/paul:milestone` from `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md`. Oracle: `docs/ACCESS-POLICY.md` **v0.3**. (v11.2 ✅ COMPLETE 2026-06-11, tag `v11.2.0`; standalone loginable-test-accounts phase ✅ COMPLETE 2026-06-10.)
-Phase: **v11.3-04 /perform performance** (P2) — Not started. (v11.3-03 ✅ COMPLETE 2/2 2026-06-10; v11.3-02 ✅; v11.3-01 ✅. 3/5 phases done.)
-Plan: **None active.** Next: `/paul:plan` for v11.3-04 (BUG-2 — p75 LCP 2600/FCP ~3100/TTFB ~1450ms + CLS 0.15→0.2; VERIFY-FIRST cold vs steady, suspect chart-image reflow).
-Status: **Phase v11.3-03 ✅ COMPLETE — committed + pushed to `master`.** BUG-9 + BUG-7 + BUG-1 in one `feat(v11.3-03)` commit; gates green; CRC byte-identical. BUG-1 prod was already clean (durable orphan-sweep coverage shipped). Ready to plan v11.3-04.
-Last activity: 2026-06-10 — `/paul:unify` v11.3-03-02 + phase-close transition: SUMMARY written, PROJECT/ROADMAP evolved, phase committed + pushed (Vercel auto-deploy).
+Phase: **v11.3-05 P3 polish** (P3) — Not started. (v11.3-04 ✅ COMPLETE 3/3 2026-06-10 [01 verify · 02 CLS · 03 stream]; v11.3-03 ✅; v11.3-02 ✅; v11.3-01 ✅. **4/5 phases done.**)
+Plan: **None active.** Next: `/paul:plan` for v11.3-05 (BUG-6 broslaz PWA manifest serves app shell — `proxy.ts` matcher excludes `manifest.json` but not org-suffixed variants; + F-6 cold-load `/api/auth/qr` + `/api/web-vitals` 429 self-heal — rate-limit tuning / client backoff). **F-6 touches the same QR card surface as v11.3-04-02.**
+Status: **v11.3-04 ✅ PHASE COMPLETE — committed + pushed to `master` (Vercel auto-deploy).** `feat(v11.3-04)` covers verify probe+doc · CLS fix · streaming. Quality floor held all 3 loops. **Post-deploy UAT pending** (slice-probe field TTFB/FCP re-run + synthetic CLS<0.1 @ 820×1180). Ready to plan v11.3-05.
+Last activity: 2026-06-10 — `/paul:unify` v11.3-04-03 + phase-close transition: SUMMARY written, PROJECT/ROADMAP/paul.json evolved, phase committed + pushed.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -50,8 +50,8 @@ Last activity: 2026-06-10 — `/paul:unify` v11.3-03-02 + phase-close transition
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [Phase v11.3-03 ✅ COMPLETE + committed — ready to PLAN v11.3-04]
-  ○        ○        ○
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-04 ✅ PHASE COMPLETE (3/3) + committed+pushed — ready to PLAN v11.3-05]
+  ✓        ✓        ✓
 ```
 
 ## Execution Substrate (bongo .coord/)
@@ -74,6 +74,7 @@ PLAN ──▶ APPLY ──▶ UNIFY        [Phase v11.3-03 ✅ COMPLETE + commi
 - **SERVICE_TYPE_LABELS vocab-table (v11.1-04 defer, 2026-06-09):** Shabbat Morning/Friday Night/Erev Shabbat/Rosh Hashanah labels hardcoded in SetlistCards/CreationWizard/SetlistMetaEditSheet/interview-defaults + SetlistMatrixView `<option>`s. Gated-away for broslaz (selector hidden via `hidesLiturgicalFields`) → NOT a live remnant. Convert to a vocab-driven table only if a non-synagogue tenant needs service-type categories.
 - **recordings-collection org-scoping (v11.1-03 defer, 2026-06-09):** `subscribeRecordingsForSong` (RecordingBindPopover) is songId-only (no org filter) AND `/api/recordings/upload:107` hardcodes `orgId: DEFAULT_ORG_ID` → host-filtering the subscribe now would hide ALL recordings on broslaz. Fix: stamp the upload from host x-org-id, THEN host-filter the subscribe. Small follow-up; distinct from the Library-tab chart clutter (library_index audio rows ARE covered by v11.1-03).
 - **finalize_chart_upload (signed-URL path) does not org-stamp (v11.3-02-02 defer, 2026-06-11):** the chunked `commit` stamps its result, but the signed-URL `finalize_chart_upload` flow shares finalize's missing-stamp gap → its uploads land default-org. Small follow-up: add `org` param to `finalizeChartUpload` + pass `orgFrom(extra)` in its handler. Out of scope of v11.3-02 to keep that path byte-stable.
+- **/perform cold-start TTFB residual (v11.3-04-03 defer, 2026-06-10):** streaming took the Firestore query off the first-byte path, but field cold TTFB (1633ms vs synthetic 214ms) is dominated by Vercel serverless cold-start + real-user geo — an INFRA lever, not app code. If the post-deploy slice-probe re-run shows TTFB still high, action a Vercel fluid-compute / keep-warm / region follow-up; do NOT re-churn `/perform` app code.
 - v11-06 residuals (low-risk, in AUDIT.md): setlistTemplates app-only; scheduling_history orgId-absent rows; users claim-based (no orgId field).
 - v7.0 fold-forward backlog (`MILESTONES.md` § v7.0) — re-triage what's still live.
 - ROADMAP.md / PROJECT.md / MILESTONES.md carry full historical detail intentionally (archive — collapse, don't delete); only STATE has a hard size target.
@@ -92,9 +93,9 @@ PLAN ──▶ APPLY ──▶ UNIFY        [Phase v11.3-03 ✅ COMPLETE + commi
 
 ## Session Continuity
 
-Last session: 2026-06-10 — `/paul:resume` → planned+applied+unified BOTH v11.3-03 plans → phase-close (commit `4fe1748318`, pushed) → `/paul:pause`.
-Stopped at: **Phase v11.3-03 ✅ COMPLETE + committed + pushed to `master`.** 2/2 plans LOOP COMPLETE. Working tree clean after the phase commit. 3/5 v11.3 phases done.
-Next action: **`/paul:plan` for v11.3-04 /perform performance** (BUG-2) — p75 LCP 2600 / FCP ~3100 / TTFB ~1450ms + CLS regressed 0.15→0.2 on the highest-traffic route. **VERIFY-FIRST:** cold-load vs steady-state composition; suspect chart-image reflow for the CLS regression. Healthy comparator: /setlists LCP 1.1s / CLS 0.02. Each fix gets a regression cite.
+Last session: 2026-06-10 — `/paul:resume` → v11.3-04 ENTIRE PHASE: 01 verify ✅ · 02 CLS ✅ · 03 stream ✅ → phase-close transition (committed + pushed to master).
+Stopped at: **v11.3-04 ✅ PHASE COMPLETE + deployed.** `feat(v11.3-04)` pushed to `origin master` (Vercel auto-deploy). 4/5 v11.3 phases done. Working tree clean post-commit.
+Next action: **`/paul:plan` for v11.3-05 (P3 polish)** — BUG-6 (broslaz PWA manifest serves app shell; `proxy.ts` matcher) + F-6 (cold-load `/api/auth/qr`+`/api/web-vitals` 429 self-heal; rate-limit/backoff). **F-6 is the same QR-card surface as v11.3-04-02's CLS fix** — coordinate. **First, run the v11.3-04 post-deploy UAT** once Vercel finishes: `node scripts/v11-3-04-webvitals-slice.mjs` (field TTFB/FCP vs 1633/3551 baseline — allow RUM to accumulate) + synthetic CLS<0.1 @ 820×1180 on prod /perform.
 **Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.
 Resume file: **.paul/HANDOFF-2026-06-10-v11.3-03-complete.md** (full context); then ROADMAP § Phase v11.3-04. Oracle: `docs/ACCESS-POLICY.md` v0.3. **(PAUSED 2026-06-10 at the v11.3-03 → v11.3-04 phase boundary.)**
 **v11.3-04 note (BUG-2):** /perform perf regression — p75 LCP 2600/FCP ~3100/TTFB ~1450ms + CLS 0.15→0.2. VERIFY-FIRST characterize cold vs steady (suspect chart-image reflow for CLS) before fixing; comparator /setlists CLS 0.02. UI-touching route → **/ui-ux-pro-max BLOCKING** during APPLY.

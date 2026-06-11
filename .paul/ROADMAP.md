@@ -20,7 +20,7 @@ Off the stress-test report's INCOMPLETE item 3 (`.paul/research/TOOLING-BRIEF-te
 ## Active Milestone
 
 **🚧 v11.3 — Worthiness & Access** (OPEN 2026-06-10 · 5 phases, plans TBD)
-Status: 🚧 In Progress · Phases: 1 of 5 complete (v11.3-01 ✅ 2026-06-10) · **Source:** `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md` (phase grouping + triage ratified by Daniel) · **Oracle:** `docs/ACCESS-POLICY.md` **v0.3** — a finding is a bug only if it contradicts a cell in that matrix · **Reports:** `.paul/research/STRESS-TEST-REPORT-2026-06-10.md` (MCP run 1) + `…-browser.md` (Playwright run 2) + `…/BUG-cowork-chart-upload-2026-06-10.md` (David's upload dead-end).
+Status: 🚧 In Progress · Phases: **4 of 5 complete** (01 ✅ · 02 ✅ · 03 ✅ · 04 ✅ 2026-06-10; v11.3-05 P3 polish remains) · **Source:** `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md` (phase grouping + triage ratified by Daniel) · **Oracle:** `docs/ACCESS-POLICY.md` **v0.3** — a finding is a bug only if it contradicts a cell in that matrix · **Reports:** `.paul/research/STRESS-TEST-REPORT-2026-06-10.md` (MCP run 1) + `…-browser.md` (Playwright run 2) + `…/BUG-cowork-chart-upload-2026-06-10.md` (David's upload dead-end).
 Focus: Close the post-stress-test findings the oracle confirms are real. Two **P1** families lead — anon read-access correctness (err-public prime-directive violations) and the agent chart-upload path (David's report) — then P2 hygiene, P2 /perform performance, and P3 polish. Phase order = the brief's family + severity grouping. CRC + broslaz both live; CRC byte-identical where shared surfaces are touched.
 
 | Phase | Name | Plans | Status | Completed |
@@ -28,7 +28,7 @@ Focus: Close the post-stress-test findings the oracle confirms are real. Two **P
 | v11.3-01 | Anon access correctness — BUG-5 + BUG-4 [P1] | 01 (BUG-5) ✅ · 02 (BUG-4) ✅ | ✅ Complete | 2026-06-10 |
 | v11.3-02 | Agent chart-upload path [P1] | 01 (Drive convert) ✅ · 02 (chunked inline) ✅ | ✅ Complete | 2026-06-11 |
 | v11.3-03 | Harness & hygiene — BUG-9 + BUG-7 + BUG-1 [P2] | 01 (BUG-9+7) ✅ · 02 (BUG-1) ✅ | ✅ Complete | 2026-06-10 |
-| v11.3-04 | /perform performance — BUG-2 [P2] | TBD | Not started | - |
+| v11.3-04 | /perform performance — BUG-2 [P2] | 01 (verify) ✅ · 02 (CLS) ✅ · 03 (TTFB/FCP stream) ✅ | ✅ Complete | 2026-06-10 |
 | v11.3-05 | P3 polish — BUG-6 + F-6 [P3] | TBD | Not started | - |
 
 ### Phase v11.3-01: Anon access correctness [P1 — prime-directive violations]
@@ -51,9 +51,9 @@ Focus: Three low-risk correctness fixes; no consumer-facing impact but they brok
 - **BUG-1** (run 1): orphaned `[role-*] tiny` rows in CRC `library_index`. **VERIFY FIRST:** whether `revoke_test_account`/`cleanup_all_test_data` cascade library uploads of revoked accounts (run 2 swept `library:0`); confirm coverage, then delete the two orphans.
 Plans (split — complex, 3 subsystems): **01** (BUG-9 `/test-login`→`publicExactRoutes` + BUG-7 qr GET malformed-`code`→400; route harness/error-contract, autonomous) · **02** (BUG-1 — extend `sweep_orphan_test_data` to `library_index` [coverage gap: it covers setlists/templates only] + emulator test, then prod-delete the two orphans). Finding (Plan 02 input): `CASCADE_FIELDS` already cascades `library_index` by `uploadedBy`; orphans survive only when the owner user-record is absent, which the sweep doesn't reach for `library_index`.
 
-### Phase v11.3-04: /perform performance [P2]
+### Phase v11.3-04: /perform performance [P2] — ✅ COMPLETE 3/3 (2026-06-10)
 Focus: **BUG-2** — p75 LCP 2600 / FCP 3012–3247 / TTFB 1398–1545 ms on the highest-traffic route; **CLS regressed 0.15 → 0.2** between the two runs. **VERIFY FIRST:** cold-load vs steady-state composition; suspect chart-image reflow for the CLS regression. Healthy comparator: /setlists LCP 1.1s / CLS 0.02.
-Plans: TBD (defined during /paul:plan)
+Plans: **01 verify ✅** (field-RUM slice probe + synthetic iPad capture → characterization; REFUTED chart-image reflow — regression is the `/perform` LISTING, not the viewer) · **02 CLS ✅** (reserve the authLoading-gated QR sign-in-card slot via `cachedUser` hint → lists don't shift) · **03 TTFB/FCP ✅** (Suspense-stream the listing; query relocated-verbatim → v11-04-01 + Cycle-12 preserved; stream-not-cache decision). Post-deploy UAT: slice-probe field re-run + synthetic CLS<0.1. Cold-start TTFB residual → Vercel infra follow-up.
 
 ### Phase v11.3-05: P3 polish [P3]
 Focus:

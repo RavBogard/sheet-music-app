@@ -55,7 +55,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
     // `loading` is aliased to authLoading to disambiguate from the setlist
     // subscription `loading` above. The card renders only once auth resolves
     // (`!authLoading`) so we never flash it then yank it (CLS guard).
-    const { user, loading: authLoading, signIn } = useAuth()
+    const { user, loading: authLoading, signIn, cachedUser } = useAuth()
     // v11-04-01: scope the live subscription to the current tenant so
     // brotherslazaroff.live never shows CRC setlists after hydration. `useOrg`
     // reads the org the Edge proxy resolved from the host (<html data-org>),
@@ -183,10 +183,25 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
             {/* Logged-out sign-in: QR (scan-with-phone) + Google. Pinned to the
                 top so a congregation member sees "scan to sign in" immediately.
                 Markup mirrors DashboardClient's Guest Sign-In card so the two
-                surfaces stay visually identical. Gated on `!authLoading` to
-                avoid flashing then yanking the card (CLS). Authed users see no
-                card — the listing is unchanged for them. */}
-            {!user && !authLoading && (
+                surfaces stay visually identical. Authed users see no card — the
+                listing is unchanged for them.
+
+                v11.3-04-02 (BUG-2 CLS): the card used to mount only on
+                `!user && !authLoading`, i.e. AFTER client auth resolved — which
+                on the public landing (overwhelmingly anonymous) inserted ~380px
+                ABOVE the lists post-paint, shifting Upcoming/Past down (field
+                p75 CLS 0.20 / synthetic 0.187 @ iPad). Fix: reserve the card's
+                slot DURING authLoading whenever we expect an anon visitor
+                (`!cachedUser` — no prior signed-in user persisted in
+                localStorage), so the lists render at their final position
+                immediately and the real card swaps into the reserved space with
+                ZERO shift. Authed returners (`cachedUser` present) skip the
+                reservation → their no-card layout is byte-identical to before
+                (no new collapse-shift). Covers the web-vitals `/perform` CLS
+                cell. The reserved skeleton mirrors the card's exact footprint
+                (QR 160px + divider + h-11 button) so heights match by
+                construction, not a magic pixel value. */}
+            {!user && !authLoading ? (
                 <section
                     aria-label={`Sign in to ${orgName}`}
                     className="bg-card rounded-2xl p-5 text-center space-y-4 border border-border"
@@ -204,7 +219,28 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                         Sign In with Google
                     </Button>
                 </section>
-            )}
+            ) : authLoading && !cachedUser ? (
+                <div
+                    aria-hidden="true"
+                    data-testid="signin-reserve"
+                    className="bg-card rounded-2xl p-5 text-center space-y-4 border border-border"
+                >
+                    {/* QR skeleton — matches QRSignIn's active footprint */}
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="bg-white p-3 rounded-xl shadow-sm">
+                            <div className="h-40 w-40 rounded bg-muted animate-pulse" />
+                        </div>
+                        <div className="h-4 w-40 rounded bg-muted animate-pulse" />
+                        <div className="h-3 w-24 rounded bg-muted animate-pulse" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="h-px flex-1 bg-border" />
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">or</span>
+                        <div className="h-px flex-1 bg-border" />
+                    </div>
+                    <div className="h-11 w-full rounded-xl bg-muted animate-pulse" />
+                </div>
+            ) : null}
 
             {isEmpty ? (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">

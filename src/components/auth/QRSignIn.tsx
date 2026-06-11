@@ -177,7 +177,7 @@ export function QRSignIn() {
 
     if (state === "signing-in" || state === "approved") {
         return (
-            <div className="flex flex-col items-center gap-3 py-4">
+            <div className="flex flex-col items-center justify-center gap-3 py-4 min-h-[15rem]">
                 <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
                     <Loader2 className="h-6 w-6 animate-spin text-success" />
                 </div>
@@ -190,7 +190,7 @@ export function QRSignIn() {
 
     if (state === "error") {
         return (
-            <div className="flex flex-col items-center gap-3 py-4">
+            <div className="flex flex-col items-center justify-center gap-3 py-4 min-h-[15rem]">
                 <p className="text-xs text-muted-foreground">Couldn&apos;t generate QR code</p>
                 <Button
                     variant="link"
@@ -205,7 +205,7 @@ export function QRSignIn() {
     }
 
     return (
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center justify-center gap-4 min-h-[15rem]">
             {/* QR Code — renders instantly from client-generated code */}
             <div className="bg-white p-3 rounded-xl shadow-sm">
                 <QRCodeSVG
