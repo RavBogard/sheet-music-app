@@ -17,7 +17,7 @@ Focus: Replace today's implicit auto-blast publish/notify with an explicit, lead
 | v11.4-01 | Recipient picker + no-auto-blast (D8 items 1+2) [P0 — safety core] | 01 (MCP no-blast + browser picker) ✅ | ✅ Complete | 2026-06-11 |
 | v11.4-02 | Org-branded comms (D8 item 4) [P1] | 01 (EmailBranding + org-aware emails) ✅ | ✅ Complete | 2026-06-11 |
 | v11.4-03 | Remembered ad-hoc recipients (D8 item 3) [P1] | 01 (MCP contacts: collection + CRUD + preview surfacing) ✅ | ✅ Complete | 2026-06-11 |
-| v11.4-04 | Musician org-membership toggle + default-both backfill (D8 item 5) [P2 — LAST] | TBD | Not started | - |
+| v11.4-04 | Musician org-membership toggle + default-both backfill (D8 item 5) [P2 — LAST] | 01 (all-roles toggle) ✅ · 02 default-both rollout (TBD) | 🚧 In progress | - |
 
 ### Phase v11.4-01: Recipient picker + no-auto-blast [P0 — safety core, prerequisite for 04]
 Focus: Replace the implicit `resolveDefaultRecipients` auto-send with explicit recipient selection (D8 items 1+2). Browser `PublishDialog.tsx` gains a recipient picker (default = the publishing org's roster, leader checks/unchecks who receives); MCP `publish_setlist` requires an explicit recipients selection / confirm (`preview_publish` already surfaces the org-scoped audience from v11.2-02). in-app/push/email send ONLY to the selected set. Closes the BUG-9 blast class permanently on both surfaces. Preserve the v11.2-02 org-scope wall + v11-06-02 no-arg-injection invariant. Regression + emulator coverage citing tenancy invariant 3.
@@ -34,7 +34,8 @@ Plans: **01** ✅ COMPLETE (`v11.4-03-01` PLAN+SUMMARY; 3 tasks; no /ui-ux gate)
 
 ### Phase v11.4-04: Musician org-membership toggle + default-both backfill [P2 — LAST, hard-ordered]
 Focus: Admin per-org membership control for musicians (mirror the band-leader tri-state from v11.1-02-02; claim+doc lockstep via `/api/admin/set-role`), **defaults to both orgs**, with a backfill of ALL existing people to both. **MUST ship after v11.4-01** — the picker is what makes default-both safe (else it re-creates the BUG-9 blast). Prod backfill = dry-run + idempotency marker + rollback (autonomy rule).
-Plans: TBD (defined during /paul:plan)
+**SCOPE RATIFIED (Daniel 2026-06-11):** default-both applies to **EVERYONE incl. band_leaders/admins** → grants cross-tenant AUTHORING to all leaders (deliberate; supersedes the v11.1-02-02 "authoring-tier-only / consumers host-derived" framing). `rowOrgIds` default stays `['crc']` (safety net); "both" is explicit data.
+Plans: **01** ✅ COMPLETE (`v11.4-04-01`; 2 tasks) — opened the `UserRow.tsx` Band-access tri-state control from leader-only to ALL non-pending rows (admin-only) + generalized copy + UserRow.test 3/3. Pure UI-gating change (set-role/updateUserRole already role-agnostic); tsc + next build green. **02** (TBD, NEXT) — new-account default-both + prod backfill script (diagnose/dry-run/apply/rollback, per-user snapshot, claim+doc lockstep) with the **prod `--apply` as a human-action gate** (mass auth-claims write; single-owner). After 02 → close v11.4 (oracle → v0.4).
 
 Constraints (locked at /paul:milestone 2026-06-10):
 1. **Sequencing invariant (HARD):** v11.4-04 (item 5 default-both + backfill) must NOT ship before v11.4-01 (items 1–2 picker). Picker first, backfill last — else default-both membership re-creates the v11.2 BUG-9 cross-tenant blast.

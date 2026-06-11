@@ -42,10 +42,14 @@ const ROLE_HIERARCHY: Record<string, number> = {
     admin: 4,
 }
 
-// v11.1-02-02: org-membership (the AUTHORING tier). Tri-state over the two
-// tenants — CRC only / Brothers Lazaroff only / Both — mapped to the orgIds
-// claim+doc via /api/admin/set-role. Consumers (musicians/members) are
-// host-derived and are not gated here.
+// v11.1-02-02: org-membership tri-state over the two tenants — CRC only /
+// Brothers Lazaroff only / Both — mapped to the orgIds claim+doc via
+// /api/admin/set-role.
+// v11.4-04 (Daniel 2026-06-11): membership applies to EVERYONE, not just the
+// authoring tier — leaders' orgIds grant cross-tenant AUTHORING, musicians'/
+// members' orgIds govern publish-audience candidacy + notifications. The
+// control is therefore shown for all non-pending rows (admin-only). This
+// supersedes the earlier "consumers stay host-derived / leaders only" scoping.
 const MEMBERSHIP_TO_ORGIDS: Record<string, string[]> = {
     crc: ["crc"],
     bl: ["brotherslazaroff"],
@@ -210,11 +214,11 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
     const assignableRoles = (['pending', 'member', 'musician', 'band_leader', 'admin'] as const)
         .filter(r => ROLE_HIERARCHY[r] <= currentLevel)
 
-    // v11.1-02-02: org-membership control — admin-only, shown on the authoring
-    // tier (band_leader/admin rows). Self is allowed (an admin may set their own
-    // 'both'); all three options are non-empty so there's no lockout.
+    // v11.4-04: org-membership control — admin-only, shown on EVERY non-pending
+    // row (musician/member/band_leader/admin). Self is allowed (an admin may set
+    // their own 'both'); all three options are non-empty so there's no lockout.
     const isLeaderTier = effectiveRole === 'band_leader' || effectiveRole === 'admin'
-    const showOrgMembership = isCurrentAdmin && isLeaderTier
+    const showOrgMembership = isCurrentAdmin && effectiveRole !== 'pending'
     const membershipValue = membershipFromOrgIds(rowOrgIds(user.orgIds))
 
     const requestMembershipChange = (next: string) => {
@@ -276,7 +280,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                     {effectiveRole === 'member' && !isPending && <Badge variant="default" className="bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30 text-[10px] h-5 px-1.5">Member</Badge>}
                     {user.soundEngineer && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[10px] h-5 px-1.5">🎧 Sound</Badge>}
                     {isPending && <Badge variant="destructive" className="bg-amber-500/20 text-amber-500 border-amber-500/50 text-[10px] h-5 px-1.5">Pending</Badge>}
-                    {isLeaderTier && <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-border text-muted-foreground" title="Band access (org membership)">{MEMBERSHIP_BADGE_LABELS[membershipValue]}</Badge>}
+                    {effectiveRole !== 'pending' && <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-border text-muted-foreground" title="Band access (org membership)">{MEMBERSHIP_BADGE_LABELS[membershipValue]}</Badge>}
 
                     <span className="text-[10px] text-muted-foreground/50 truncate max-w-[100px]" title={user.createdAt ? toDate(user.createdAt)?.toLocaleString() : ""}>
                         {user.createdAt ? formatDistanceToNow(toDate(user.createdAt) || new Date(), { addSuffix: true }) : ""}
@@ -381,7 +385,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                     {effectiveRole === 'member' && !isPending && <Badge variant="default" className="bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30 text-[9px] h-4 px-1.5">Member</Badge>}
                     {user.soundEngineer && <Badge variant="default" className="bg-success/20 text-success border-success/50 text-[9px] h-4 px-1.5">🎧 Sound</Badge>}
                     {isPending && <Badge variant="destructive" className="bg-amber-500/20 text-amber-500 border-amber-500/50 text-[9px] h-4 px-1.5">Pending</Badge>}
-                    {isLeaderTier && <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-border text-muted-foreground" title="Band access (org membership)">{MEMBERSHIP_BADGE_LABELS[membershipValue]}</Badge>}
+                    {effectiveRole !== 'pending' && <Badge variant="outline" className="text-[9px] h-4 px-1.5 border-border text-muted-foreground" title="Band access (org membership)">{MEMBERSHIP_BADGE_LABELS[membershipValue]}</Badge>}
                 </div>
 
                 <div className="flex items-center gap-1">
@@ -489,7 +493,7 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
                 <AlertDialogHeader>
                     <AlertDialogTitle>Change band access?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Set {user.displayName}&apos;s band access to {MEMBERSHIP_OPTION_LABELS[pendingMembership || ''] || pendingMembership}? This controls which band(s) they can author setlists &amp; charts for.
+                        Set {user.displayName}&apos;s band access to {MEMBERSHIP_OPTION_LABELS[pendingMembership || ''] || pendingMembership}? This controls which band(s) they belong to — for leaders, which band(s) they can author setlists &amp; charts for; for musicians, which band(s)&apos; setlists &amp; notifications they&apos;re part of.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

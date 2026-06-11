@@ -353,6 +353,20 @@ Check (live, non-blocking — once deployed):
 
 ---
 
+## ⏳ v11.4-04-01 — All-roles Band-access toggle (D8 item 5) — live admin check
+
+**Status:** code-complete + UserRow.test 3/3 + tsc/next-build clean. Committed at phase-plan close. Admin-only UI; no prod data changed (the toggle only writes when an admin uses it).
+
+What was built: the `/manage` → People "Band access" tri-state (CRC only / Brothers Lazaroff only / Both) now shows on EVERY non-pending row (musicians + members + leaders), not just leaders. Setting it writes orgIds to the user doc + Auth claim (lockstep, existing set-role path).
+
+Check (live, admin on /manage People):
+- [ ] A **musician** row now shows the "Band access" select + a membership badge (CRC / BL / CRC + BL). Previously only leaders did.
+- [ ] Set a test musician to "Both" → confirm → badge reads "CRC + BL" and persists across reload.
+- [ ] A **pending** row shows NO Band-access control; a non-admin viewer sees none either.
+- [ ] (After v11.4-04-02 backfill) every person defaults to "Both"; the toggle can still narrow an individual.
+
+---
+
 ## ⏳ v11.4-03-01 — Remembered ad-hoc recipients (MCP contacts, D8 item 3) — live smoke test
 
 **Status:** code-complete + contacts MCP emulator 6/6 + contacts rules emulator 6/6 + non-emulator MCP 449/449 + tsc/next-build clean. Contacts Firestore rules DEPLOYED to prod. Committed at phase close. Low-risk (no sends — contacts are stored data).
