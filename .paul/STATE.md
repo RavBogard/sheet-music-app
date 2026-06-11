@@ -7,7 +7,7 @@
 See: .paul/PROJECT.md (updated 2026-06-07)
 
 **Core value:** The band gets the right charts + recordings on their iPads each week, and Daniel authors setlists conversationally via Claude + MCP. Now MULTI-TENANT (2nd live tenant: Brothers Lazaroff on brotherslazaroff.live).
-**Current focus:** v11.1 Brothers Lazaroff Post-Launch Fixes — make the 2nd tenant's lived experience correct (branding/vocab/library clutter) + give multi-org leaders a real authoring path. (v7.1 hardening continues in parallel via `.coord/`.)
+**Current focus:** v11.3 Worthiness & Access — close the post-stress-test anon-read / agent-upload / hygiene / perf / polish findings (oracle `docs/ACCESS-POLICY.md` v0.3). Phase v11.3-01 (anon access correctness) ✅ shipped; next is v11.3-02 (agent chart-upload). (v7.1 hardening continues in parallel via `.coord/`.)
 
 ## Current Position
 
@@ -43,7 +43,7 @@ Last activity: 2026-06-10 — `/paul:unify` v11.3-01-02 (BUG-4) + phase-closing 
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `f27ae7bc5f` — **v11.2-05 phase complete: BUG-8**, session 12; Vercel auto-deploy). v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`, in sync with `origin/master` (tip `bc8f935aa2` — **v11.3-01 phase complete: anon access correctness BUG-5 + BUG-4**; pushed `f51a957769..bc8f935aa2` 2026-06-10; Vercel auto-deploy). Prior v11.2 tip `f27ae7bc5f`. v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
@@ -90,10 +90,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-01 ✅ phase complete + commi
 
 ## Session Continuity
 
-Last session: 2026-06-10 — `/paul:discuss-milestone` → `/paul:milestone`. Read the ratified brief (`MILESTONE-BRIEF-2026-06-10-worthiness-access.md`) + oracle (`docs/ACCESS-POLICY.md` v0.3) + the two stress-test reports + David's upload-bug report. Created **v11.3 Worthiness & Access** (5 phases) verbatim from the brief's ratified phase grouping + triage — no re-litigation. Created 5 phase dirs, updated ROADMAP/STATE/MILESTONES/paul.json, consumed MILESTONE-CONTEXT.md.
-Stopped at: **v11.3-01 ✅ PHASE COMPLETE + committed + pushed to `master`.** Phase 1 of 5 in v11.3 done. Working tree: STATE/paul.json git-hash record may trail by one edit (rides into v11.3-02's phase commit).
+Last session: 2026-06-10 — full PAUL arc in one session: `/paul:discuss-milestone` → `/paul:milestone` (created v11.3, 5 phases from the ratified brief) → planned/applied/unified **both plans of Phase v11.3-01** (BUG-5 + BUG-4) → phase-closing transition (commit `bc8f935aa2` + push to `master`). Then **`/paul:pause`**.
+Stopped at: **PAUSED at the v11.3-01 → v11.3-02 phase boundary.** Phase 1 of 5 ✅ shipped to prod. Working tree clean after the pause state-commit.
 Next action: **`/paul:plan`** for **v11.3-02 Agent chart-upload path** (P1, David's report) — `import_chart_from_drive` accepts `.docx` + Google Docs and converts to PDF **server-side** (Drive API export / convert-on-copy; agent passes refs not bytes); secondary chunked inline `upload_chart` (init/append/commit). Out of scope: the Cowork sandbox proxy (Anthropic-side).
-Resume file: **.paul/ROADMAP.md** § Active Milestone (v11.3) / Phase v11.3-02. Source brief: `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md`; David's report `.paul/research/BUG-cowork-chart-upload-2026-06-10.md`; oracle `docs/ACCESS-POLICY.md` v0.3.
+Resume file: **.paul/HANDOFF-2026-06-10.md** (full context). Source brief: `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md`; David's report `.paul/research/BUG-cowork-chart-upload-2026-06-10.md`; oracle `docs/ACCESS-POLICY.md` v0.3.
 Resume context:
 - Oracle-bound: a finding is a bug only if it contradicts a v0.3 ACCESS-POLICY cell; err-public prime directive holds.
 - Scope walls (ratified): D8 publish/notify → v11.4; BUG-3 (RUM) / BUG-8 (member library) / browser Policy-Q1 closed by policy (no code); F-4 dup setlist + Cowork sandbox proxy out of scope; D2 anon **recordings** is the ⚠️ veto cell — BUG-5 is charts only, don't widen Phase 01 into recordings.
