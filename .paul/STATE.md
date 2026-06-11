@@ -43,7 +43,7 @@ Last activity: 2026-06-10 — `/paul:unify` v11.3-03-02 + phase-close transition
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `89f4af7fd2` — **v11.3-02 phase complete: agent chart-upload path** [Drive convert + chunked inline]; pushed `da68316dbb..89f4af7fd2` 2026-06-11; Vercel auto-deploy). Prior: v11.3-01 `bc8f935aa2` · v11.2 `f27ae7bc5f`. v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`, in sync with `origin/master` (tip `4fe1748318` — **v11.3-03 phase complete: harness & hygiene** [BUG-9 /test-login public + BUG-7 qr 4xx + BUG-1 library_index orphan-sweep coverage]; pushed `d940af34a6..4fe1748318` 2026-06-10; Vercel auto-deploy). Prior: v11.3-02 `89f4af7fd2` · v11.3-01 `bc8f935aa2` · v11.2 `f27ae7bc5f`. v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
@@ -92,12 +92,12 @@ PLAN ──▶ APPLY ──▶ UNIFY        [Phase v11.3-03 ✅ COMPLETE + commi
 
 ## Session Continuity
 
-Last session: 2026-06-10 — `/paul:resume` (reconciled, archived consumed handoff to `.paul/handoffs/archive/HANDOFF-2026-06-11-v11.3-02-complete.md`) → `/paul:plan` v11.3-03-01.
+Last session: 2026-06-10 — `/paul:resume` → planned+applied+unified BOTH v11.3-03 plans → phase-close (commit `4fe1748318`, pushed) → `/paul:pause`.
 Stopped at: **Phase v11.3-03 ✅ COMPLETE + committed + pushed to `master`.** 2/2 plans LOOP COMPLETE. Working tree clean after the phase commit. 3/5 v11.3 phases done.
 Next action: **`/paul:plan` for v11.3-04 /perform performance** (BUG-2) — p75 LCP 2600 / FCP ~3100 / TTFB ~1450ms + CLS regressed 0.15→0.2 on the highest-traffic route. **VERIFY-FIRST:** cold-load vs steady-state composition; suspect chart-image reflow for the CLS regression. Healthy comparator: /setlists LCP 1.1s / CLS 0.02. Each fix gets a regression cite.
 **Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.
-Resume file: **.paul/phases/v11.3-03-harness-hygiene/v11.3-03-01-PLAN.md**; ROADMAP § Phase v11.3-03. Oracle: `docs/ACCESS-POLICY.md` v0.3.
-**Plan-02 carry (BUG-1, do NOT lose):** `CASCADE_FIELDS` already cascades `library_index` by `uploadedBy`, and `sweep_orphan_test_data` covers orphan setlists/templates **but NOT library_index** → the two `[role-*]` orphans are owner-record-absent rows the sweep can't reach. Plan 02 = extend the orphan sweep to `library_index` (+ emulator test citing the cell) **then** delete the two prod orphans (prod data op → single-owner executor). VERIFY-FIRST live probe of the two rows before deletion.
+Resume file: **.paul/HANDOFF-2026-06-10-v11.3-03-complete.md** (full context); then ROADMAP § Phase v11.3-04. Oracle: `docs/ACCESS-POLICY.md` v0.3. **(PAUSED 2026-06-10 at the v11.3-03 → v11.3-04 phase boundary.)**
+**v11.3-04 note (BUG-2):** /perform perf regression — p75 LCP 2600/FCP ~3100/TTFB ~1450ms + CLS 0.15→0.2. VERIFY-FIRST characterize cold vs steady (suspect chart-image reflow for CLS) before fixing; comparator /setlists CLS 0.02. UI-touching route → **/ui-ux-pro-max BLOCKING** during APPLY.
 Resume context:
 - Oracle-bound: a finding is a bug only if it contradicts a v0.3 ACCESS-POLICY cell; err-public prime directive holds.
 - Scope walls (ratified): D8 publish/notify → v11.4; BUG-3 (RUM) / BUG-8 (member library) / browser Policy-Q1 closed by policy (no code); F-4 dup setlist + Cowork sandbox proxy out of scope; D2 anon **recordings** is the ⚠️ veto cell — BUG-5 is charts only, don't widen Phase 01 into recordings.
