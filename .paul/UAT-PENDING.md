@@ -26,22 +26,35 @@ layout-shift **0.000** on two consecutive cold loads (was a reproducible 0.187
 pre-deploy / 0.200 field p75). Lists do not move; LCP element = setlist title
 `<h3>` (820ms). Target (<0.1) beaten — shift fully eliminated.
 
-## ⏳ BUG-12 — loginable `/test-login` consume restored (post-deploy)
+## ✅ BUG-12 — loginable `/test-login` consume restored — VERIFIED 2026-06-11
 
 **Deployed commit:** `bab97f6013` (prod `master`; quick-fix `bug12-qr-code-validator`).
 
-What was built: `GET /api/auth/qr` validator widened to admit the 32-char
-base64url test-login code (`create_test_account({loginable:true})`) alongside the
-6-char device-handoff code; BUG-7 malformed/path-char→400-before-Firestore held.
+`GET /api/auth/qr` validator widened to admit the 32-char base64url test-login code
+alongside the 6-char device-handoff code; BUG-7 path-char→400-before-Firestore held.
 
-VERIFY (admin/band_leader MCP bearer + browser): `create_test_account({role:'band_leader', loginable:true})`
-→ open the returned `loginUrl` signed-out → `GET /api/auth/qr?code=<32char>` returns
-`{status:"approved", token}` (200, NOT 400) → persona lands signed in → revoke → URL dead.
-Then re-fire the 4 BUG-12-blocked stress cells (run3-B report §7): BUG-9 e2e
-mint→consume, leader authoring walk (create→add 3→reorder→delete, both hosts —
-default-both means a CRC-minted leader should walk broslaz too), QR single-use
-real-claim → 410-on-reuse + role fidelity, B3 leader-side publish UI. Sweep test
-accounts after (`cleanup_all_test_data({prefix})`). NB broslaz MCP needs re-auth.
+**VERIFIED (admin bearer + real Chromium, 2026-06-11):** minted `loginable:true`
+band_leader → opened `loginUrl` → qr poll **200** → landed signed in ("Good evening,
+[TEST]") → swept → URL dead. All four BUG-12-blocked stress cells re-fired and PASS
+(run3-B report §11): (1) login consume e2e, (2) CRC authoring walk, (3) QR single-use
+real-claim + reuse-404 + role fidelity, (4) B3 no-auto-blast (preview/dryRun only).
+Evidence `r3c-bug12-signed-in-setlists-ipad.png`. CLEANUP VERIFIED.
+
+## ⏳ NEW FINDINGS from the re-fire (triage — run3-B report §11)
+
+- **🐛 BUG-13 (P2) — `generateCode()` can emit <6-char device-QR codes.** route.ts:22
+  `randomBytes(4).toString("base64url").replace(/[^A-Za-z0-9]/g,"")` strips `-`/`_`, so
+  a draw collapses to ≤5 chars (live repro: `"HEBFW"`) which the `^[A-Z0-9]{6}$`
+  validators 400 at PUT-approve + GET-poll → shared-iPad device-QR sign-in
+  **intermittently fails** (self-heals on a fresh code) + leaves an un-sweepable
+  expired `qr-sessions` orphan. Fix: make generateCode always emit 6 `[A-Z0-9]` chars.
+  VERIFY FIRST whether the QR client component's own code generator shares the flaw.
+- **F-8 (P3, harness-only — NOT a leak) — v11.4-04 default-both doesn't reach MCP test
+  accounts.** `provisionTestAccount` skips `orgIds` seeding + crc-pins the bearer, so a
+  CRC-minted test leader authoring on the broslaz host falls back to crc (verified:
+  setlist landed `orgId:crc`). Cross-tenant authoring is unverifiable via the test
+  harness; needs a real both-org leader (David) or an orgIds option on
+  `create_test_account`. (broslaz.live MCP also still needs re-auth.)
 
 ## ⏳ v11.3-05-01 — BUG-6 broslaz PWA manifest (post-deploy)
 
