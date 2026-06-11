@@ -7,50 +7,43 @@
 See: .paul/PROJECT.md (updated 2026-06-07)
 
 **Core value:** The band gets the right charts + recordings on their iPads each week, and Daniel authors setlists conversationally via Claude + MCP. Now MULTI-TENANT (2nd live tenant: Brothers Lazaroff on brotherslazaroff.live).
-**Current focus:** **v11.3 Worthiness & Access ✅ COMPLETE 5/5 (2026-06-10, tag `v11.3.0`)** — all post-stress-test anon-read / agent-upload / hygiene / perf / polish findings closed (oracle `docs/ACCESS-POLICY.md` v0.3). **Awaiting next milestone (v11.4 = Publish & Notify / D8)** — run `/paul:milestone`. (v7.1 hardening continues in parallel via `.coord/`.)
+**Current focus:** **🚧 v11.4 Publish & Notify (D8)** — replace implicit auto-blast publish/notify with an explicit, leader-driven, org-branded recipient picker (browser + MCP), then admin-toggleable musician org-membership (default-both) + backfill. Implements the ratified `docs/ACCESS-POLICY.md` §D8 spec. 4 phases, picker-first / backfill-last (BUG-9 sequencing invariant). (v11.3 ✅ COMPLETE 2026-06-10 tag `v11.3.0`. v7.1 hardening continues in parallel via `.coord/`.)
 
 ## Current Position
 
-Milestone: **🚧 v11.3 — Worthiness & Access** (OPEN 2026-06-10; 5 phases, plans TBD). Created via `/paul:milestone` from `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md`. Oracle: `docs/ACCESS-POLICY.md` **v0.3**. (v11.2 ✅ COMPLETE 2026-06-11, tag `v11.2.0`; standalone loginable-test-accounts phase ✅ COMPLETE 2026-06-10.)
-Phase: **v11.3-05 P3 polish** (P3) — **✅ COMPLETE 1/1 2026-06-10.** **v11.3 ALL 5 PHASES DONE (5/5 content-complete)** — v11.3-04 ✅ · v11.3-03 ✅ · v11.3-02 ✅ · v11.3-01 ✅.
-Plan: **None active** (v11.3-05-01 ✅ LOOP COMPLETE — SUMMARY written). BUG-6 = proxy matcher excludes org-suffixed manifests (`manifest(?:-[a-z0-9-]+)?\.json`); F-6 = new `telemetry` rate-limit tier (300/min) on `/api/auth/qr`+`/api/web-vitals`. Server-side only; QRSignIn.tsx untouched.
-Status: **🎉 v11.3 MILESTONE COMPLETE 5/5 (tag `v11.3.0`, `package.json` 11.3.0).** ROADMAP archived → `.paul/milestones/v11.3.0-ROADMAP.md`; MILESTONES.md § v11.3 written; PROJECT.md evolved. **Awaiting next milestone — run `/paul:milestone` for v11.4 (Publish & Notify / D8).** Quality floor held all 5 phases; CRC byte-identical throughout.
-Last activity: 2026-06-10 — `/paul:complete-milestone`: v11.3 closed (5 phases, 10 plans), tagged `v11.3.0`, version bumped, archived + logged, release commit pushed to `master`.
+Milestone: **🚧 v11.4 — Publish & Notify (D8)** (OPEN 2026-06-10; 4 phases, plans TBD). Created via `/paul:discuss-milestone`→`/paul:milestone`. **Spec backbone:** `docs/ACCESS-POLICY.md` §"Publish & notify (D8)" (ratified — implements, not invents; bump oracle → v0.4 when D8 ships). (v11.3 ✅ COMPLETE 2026-06-10 tag `v11.3.0`; v11.2 ✅ 2026-06-11 tag `v11.2.0`.)
+Phase: **v11.4-01 Recipient picker + no-auto-blast** (P0 safety core) — Not started. (Then 02 org-branded comms · 03 remembered contacts · 04 musician-membership toggle + default-both backfill [LAST, hard-ordered after 01].)
+Plan: **None active.** Next: `/paul:plan` for v11.4-01 — replace implicit `resolveDefaultRecipients` auto-send with an explicit recipient picker (default = org roster, leader chooses) on BOTH `PublishDialog.tsx` AND MCP `publish_setlist`; in-app/push/email send only to the selected set. Closes the BUG-9 blast class permanently.
+Status: **v11.4 milestone scaffolded — 4 phase dirs created, ROADMAP/PROJECT/paul.json updated, MILESTONE-CONTEXT consumed.** Ready to `/paul:plan` v11.4-01. Autonomy posture binding; publish/notify is the canonical STOP-gate (real-people side-effect) → live sends are human-gated UAT, build is autonomous.
+Last activity: 2026-06-10 — `/paul:discuss-milestone` (3 scope decisions: full D8 phased · MCP+browser · channels in-app/push/email) → `/paul:milestone` created v11.4 (4 phases).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
 - **Band leaders:** explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle (today hand-set via scripts). The **authoring** tier.
 
-## Milestone Phases (v11.3 — ACTIVE)
+## Milestone Phases (v11.4 — ACTIVE)
 
 | Phase | Focus | Priority |
 |-------|-------|----------|
-| v11.3-01 | **BUG-5 + BUG-4** Anon access correctness — anon Storage-backed (`upload-*`) chart deep links return 401 (VERIFY-FIRST cold-device) + anon transpose/AI-scan dead-end → anon path for scan + chord-cache with abuse rate-limits (D-Q2). Don't regress authed transpose; don't double-punish F-6 429s | **P1** — prime-directive |
-| v11.3-02 | Agent chart-upload path — `import_chart_from_drive` accepts `.docx` + Google Docs, converts to PDF server-side (refs not bytes); secondary chunked inline `upload_chart`. Cowork sandbox proxy out of scope | **P1** — David's report |
-| v11.3-03 | **BUG-9 + BUG-7 + BUG-1** Harness & hygiene — `/test-login` missing from `proxy.ts` `publicPrefixes` + QR malformed-code 500→4xx + orphan `[role-*]` library_index rows (VERIFY-FIRST revoke/cleanup cascade coverage) | P2 |
-| v11.3-04 | **BUG-2** /perform performance — p75 LCP 2600/FCP ~3100/TTFB ~1450ms + CLS regressed 0.15→0.2 (VERIFY-FIRST cold vs steady; suspect chart-image reflow). Comparator /setlists CLS 0.02 | P2 |
-| v11.3-05 | **BUG-6 + F-6** P3 polish — broslaz PWA manifest serves app shell (proxy matcher) + cold-load `/api/auth/qr`+`/api/web-vitals` 429 self-heal (rate-limit tuning / backoff) | P3 |
+| v11.4-01 | **Recipient picker + no-auto-blast** (D8 items 1+2) — replace implicit `resolveDefaultRecipients` auto-send with explicit recipient selection on `PublishDialog.tsx` + MCP `publish_setlist` (default = org roster, leader chooses); in-app/push/email send only to the selected set. Closes BUG-9 blast class. | **P0** — safety core, prereq for 04 |
+| v11.4-02 | **Org-branded comms** (D8 item 4) — publish + gig-packet emails carry the publishing org's branding (logo/wordmark/from-name) via `getOrgBranding`/`branding.ts`. | P1 |
+| v11.4-03 | **Remembered ad-hoc recipients** (D8 item 3) — picker "add recipient" (name + email/phone) → send + prompt to save as contact. Contacts model TBD (collection vs roster). Depends on 01. | P1 |
+| v11.4-04 | **Musician org-membership toggle + default-both backfill** (D8 item 5) — admin per-org control (mirror band-leader tri-state), default-both, backfill all people (dry-run+idempotency+rollback). **MUST follow 01.** | P2 — LAST |
 
-**Oracle:** `docs/ACCESS-POLICY.md` v0.3 — a finding is a bug only if it contradicts a cell. **Scope walls:** D8 publish/notify → v11.4; BUG-3/BUG-8/Policy-Q1 closed (D7/D4-rev1/D-Q1, no code); F-4 + Cowork proxy out; D2 anon recordings stays the ⚠️ veto cell (BUG-5 is charts only).
+**Spec:** `docs/ACCESS-POLICY.md` §"Publish & notify (D8)" (ratified — implements). **Sequencing invariant (HARD):** 04 after 01 (default-both under auto-notify = BUG-9 blast). **No auto-blast EVER** (all channels incl. SMS). **STOP-gate:** publish/notify = real-people side-effect → live sends are human-gated UAT (dryRun/preview to test). MCP = primary surface (picker covers `publish_setlist`). Channels: in-app/push/email (SMS held). CRC byte-identical.
 
-(v11.2 phases — all ✅ COMPLETE 2026-06-11 — archived to `.paul/milestones/v11.2.0-ROADMAP.md` + MILESTONES.md § v11.2. v11.1 ✅ 2026-06-09 — `.paul/milestones/v11.1-ROADMAP.md`.)
-
-**Root-cause evidence (traced this session, deployed code + prod Firestore):**
-- **Branding:** `src/components/nav/DesktopHeader.tsx:106-107` + `MobileHeader.tsx:34-41` hardcode `/logo.jpg` + "Central Reform Congregation" alt; wordmark resolves to CRC/default congregation, not host org. broslaz congregation doc IS correct.
-- **Authoring:** Daniel's MCP setlist landed `orgId:'crc'` (confirmed in prod, since DELETED at his request — `bd3b549c`, verified gone). Cause: authored via crc-pinned bearer (`getPrimaryOrgForMinting`→`orgIds[0]`='crc'); MCP forbids caller org selector (v11-06-02). Zero broslaz setlists in prod. Dashboard scoping itself works.
-- **Library:** unscoped reads — `src/app/api/library/list/route.ts`, `getServerLibrary`/`getServerLibraryLean` (`src/lib/server-library.ts`), recordings subscribe (`src/lib/recordings/recordings-client.ts`). MCP `list_library`/`search_library` already filter via `rowOrg`.
-- **Vocab:** v11-05-05 vocab pass missed "Plan Service/Show" + "Upcoming Services" for broslaz.
+(v11.3 ✅ COMPLETE 2026-06-10 tag `v11.3.0` — archived `.paul/milestones/v11.3.0-ROADMAP.md` + MILESTONES.md § v11.3. v11.2 ✅ 2026-06-11 tag `v11.2.0`. v11.1 ✅ 2026-06-09.)
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `3258d792b3` — **v11.3-05 phase complete: P3 polish** [BUG-6 proxy matcher → org-suffixed PWA manifests · F-6 `telemetry` rate-limit tier]; pushed `92e809401d..3258d792b3` 2026-06-10; Vercel auto-deploy). Prior: v11.3-04 `c0b0ab3367` · v11.3-03 `4fe1748318` · v11.3-02 `89f4af7fd2` · v11.3-01 `bc8f935aa2` · v11.2 `f27ae7bc5f`. v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`, in sync with `origin/master` (tip `628984639b` — **v11.3 milestone close release** [`chore(release): v11.3.0`; version bump + MILESTONES/PROJECT/ROADMAP evolve + archive]; **annotated tag `v11.3.0` pushed**). Phase commit: v11.3-05 `3258d792b3` (pushed `92e809401d..3258d792b3`). Prior: v11.3-04 `c0b0ab3367` · v11.3-03 `4fe1748318` · v11.3-02 `89f4af7fd2` · v11.3-01 `bc8f935aa2` · v11.2 `f27ae7bc5f`. v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [🎉 v11.3 MILESTONE COMPLETE (tag v11.3.0) — awaiting next milestone: /paul:milestone]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.4 milestone created — ready for first PLAN: /paul:plan v11.4-01]
   ○        ○        ○
 ```
 
@@ -93,10 +86,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [🎉 v11.3 MILESTONE COMPLETE (tag 
 
 ## Session Continuity
 
-Last session: 2026-06-10 — `/paul:resume` → `/paul:plan` → `/paul:apply` → `/paul:unify` the ENTIRE v11.3-05 phase (BUG-6 proxy matcher + F-6 telemetry tier), 2/2 tasks PASS, gates green, committed `feat(v11.3-05)` + pushed to `master`. v11.3 now 5/5 content-complete.
-Stopped at: **v11.3 CONTENT COMPLETE 5/5** — at the milestone boundary. Phase v11.3-05 shipped to prod `master` (Vercel auto-deploy).
-Next action: **`/paul:complete-milestone`** — tag `v11.3.0`, bump `package.json` 11.3.0, archive ROADMAP → `.paul/milestones/v11.3.0-ROADMAP.md`, MILESTONES.md § v11.3 entry, then open v11.4 (Publish & Notify / D8) via `/paul:milestone`.
-Resume file: **.paul/phases/v11.3-05-p3-polish/v11.3-05-01-SUMMARY.md**.
+Last session: 2026-06-10 — full chain: `/paul:resume` → v11.3-05 PLAN→APPLY→UNIFY → `/paul:complete-milestone` (v11.3 closed, tag `v11.3.0`) → `/paul:discuss-milestone` + `/paul:milestone` (v11.4 Publish & Notify created, 4 phases).
+Stopped at: **v11.4 milestone created — ready for first PLAN.** No active plan.
+Next action: **`/paul:plan` for v11.4-01 (Recipient picker + no-auto-blast)** — explicit recipient picker on `PublishDialog.tsx` + MCP `publish_setlist`; in-app/push/email to selected set only; preserve v11.2-02 org-scope + v11-06-02 no-arg-injection. /ui-ux-pro-max BLOCKING (UI phase). Then 02→03→04 (04 LAST, after 01).
+Resume file: **.paul/ROADMAP.md** § Active Milestone v11.4.
 **Deferred UAT (RUM):** v11.3-04 field TTFB/FCP — re-run `node scripts/v11-3-04-webvitals-slice.mjs` after ~1–7d traffic vs 1633/3551 baseline; if still high → Vercel infra follow-up (Deferred Issues), not app code.
 **Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.
 Resume file: **.paul/HANDOFF-2026-06-10-v11.3-03-complete.md** (full context); then ROADMAP § Phase v11.3-04. Oracle: `docs/ACCESS-POLICY.md` v0.3. **(PAUSED 2026-06-10 at the v11.3-03 → v11.3-04 phase boundary.)**

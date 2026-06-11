@@ -4,7 +4,45 @@
 
 ## Next Milestone
 
-**v11.4 Publish & Notify redesign (D8)** — recipient-picker + remembered ad-hoc contacts + org-branded comms + admin-toggleable musician org-membership (default-both) with backfill, per `docs/ACCESS-POLICY.md` §D8. Explicitly deferred OUT of v11.3 by the brief's triage. **Sequencing invariant:** items 1–2 (picker) ship before item 5 (default-both membership backfill), else broslaz publish re-blasts the CRC roster (the v11.2 BUG-9 class). Other open backlog: recordings-collection org-scoping (+ `/api/recordings/upload` orgId stamp), SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage (`.paul/MILESTONES.md` § v7.0). v7.1 Production Hardening continues independently via the bongo `.coord/` cadence.
+**v11.5 (candidate backlog)** — recordings-collection org-scoping (+ `/api/recordings/upload` orgId stamp), `finalize_chart_upload` signed-URL org-stamp gap, SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage (`.paul/MILESTONES.md` § v7.0). v7.1 Production Hardening continues independently via the bongo `.coord/` cadence.
+
+## Active Milestone
+
+**🚧 v11.4 — Publish & Notify (D8)** (OPEN 2026-06-10 · 4 phases, plans TBD)
+Status: 🚧 In Progress · Phases: **0 of 4 complete** · **Spec backbone:** `docs/ACCESS-POLICY.md` §"Publish & notify (D8, ratified 2026-06-10)" — this milestone *implements* the already-ratified D8 decision (bump oracle → v0.4 when it ships; retire the "Until D8 ships, invariant 3 stands as-is" note) · **Context:** derived via `/paul:discuss-milestone` 2026-06-10 (`MILESTONE-CONTEXT.md`, consumed).
+Focus: Replace today's implicit auto-blast publish/notify with an explicit, leader-driven, org-branded recipient model — across BOTH the browser `PublishDialog` AND the MCP `publish_setlist` path (Daniel's primary authoring surface) — so a publish can never again fan out to the wrong people (the v11.2 BUG-9 cross-tenant blast class). Channels governed: in-app + web-push + email; SMS gets no new feature work but must not auto-blast either (picker-fed or held). CRC byte-identical where shared.
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| v11.4-01 | Recipient picker + no-auto-blast (D8 items 1+2) [P0 — safety core] | TBD | Not started | - |
+| v11.4-02 | Org-branded comms (D8 item 4) [P1] | TBD | Not started | - |
+| v11.4-03 | Remembered ad-hoc recipients (D8 item 3) [P1] | TBD | Not started | - |
+| v11.4-04 | Musician org-membership toggle + default-both backfill (D8 item 5) [P2 — LAST] | TBD | Not started | - |
+
+### Phase v11.4-01: Recipient picker + no-auto-blast [P0 — safety core, prerequisite for 04]
+Focus: Replace the implicit `resolveDefaultRecipients` auto-send with explicit recipient selection (D8 items 1+2). Browser `PublishDialog.tsx` gains a recipient picker (default = the publishing org's roster, leader checks/unchecks who receives); MCP `publish_setlist` requires an explicit recipients selection / confirm (`preview_publish` already surfaces the org-scoped audience from v11.2-02). in-app/push/email send ONLY to the selected set. Closes the BUG-9 blast class permanently on both surfaces. Preserve the v11.2-02 org-scope wall + v11-06-02 no-arg-injection invariant. Regression + emulator coverage citing tenancy invariant 3.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.4-02: Org-branded comms [P1]
+Focus: Publish emails + gig-packet emails carry the publishing org's branding (logo/wordmark/from-name/footer), broslaz vs CRC, via the existing `getOrgBranding`/`branding.ts` seam (mirrors v11.1-01 nav-branding pattern). Touches `email-packets`/`resend-email` + email templates + packet PDF header. CRC byte-identical.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.4-03: Remembered ad-hoc recipients [P1]
+Focus: The picker (from 01) gains "add a recipient the system doesn't know" (name + email/phone) → sends this publish + prompts to save them as a contact for next time. Contacts model decided at plan time (new `contacts` collection vs extend roster/people). Depends on v11.4-01.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.4-04: Musician org-membership toggle + default-both backfill [P2 — LAST, hard-ordered]
+Focus: Admin per-org membership control for musicians (mirror the band-leader tri-state from v11.1-02-02; claim+doc lockstep via `/api/admin/set-role`), **defaults to both orgs**, with a backfill of ALL existing people to both. **MUST ship after v11.4-01** — the picker is what makes default-both safe (else it re-creates the BUG-9 blast). Prod backfill = dry-run + idempotency marker + rollback (autonomy rule).
+Plans: TBD (defined during /paul:plan)
+
+Constraints (locked at /paul:milestone 2026-06-10):
+1. **Sequencing invariant (HARD):** v11.4-04 (item 5 default-both + backfill) must NOT ship before v11.4-01 (items 1–2 picker). Picker first, backfill last — else default-both membership re-creates the v11.2 BUG-9 cross-tenant blast.
+2. **No auto-blast EVER (item 1):** applies to every channel including SMS — even out-of-scope channels must be picker-gated or held, never implicit-roster.
+3. **Tenancy invariants hold** (`docs/ACCESS-POLICY.md` §invariants): publish audience org-scoped (inv. 3); CRC byte-identical under broslaz-only changes (inv. 4); `isTest` never in a publish audience (inv. 5).
+4. **MCP = primary surface:** the picker/no-blast contract covers `publish_setlist`, not browser-only. Preserve v11.2-02 org-scope wall + v11-06-02 no-arg-injection invariant.
+5. **Quality floor (non-negotiable):** tsc clean + tests green + AC proof every task; `SKIP_ENV_VALIDATION=1 npx next build` before any shared-lib/client phase is deployable; emulator-backed tests where rules/queries change; **/ui-ux-pro-max BLOCKING on UI-touching phases** (01 picker, 03 contacts UI, 04 toggle UI); v11.4-04 backfill gets dry-run + idempotency marker + rollback.
+6. **Publish/notify = canonical STOP-gate (notifies real people):** building each phase is autonomous + auto-commit/push per phase to `master`; any LIVE publish/send verification stays human-gated UAT (use `dryRun`/preview; never auto-blast a real roster to test). Real-send confirmation → `.paul/UAT-PENDING.md`.
+7. **Autonomy posture (carried v11.0–v11.3):** run autonomously, bake decisions into PLANs, single-owner executor for the backfill. STOP only for product ambiguity, unresolvable quality-gate failure, or a discovered cross-tenant leak / CRC lock-out.
 
 ## Standalone Phase — loginable-test-accounts (✅ COMPLETE 2026-06-10, 2/2 plans)
 
@@ -17,9 +55,9 @@ Off the stress-test report's INCOMPLETE item 3 (`.paul/research/TOOLING-BRIEF-te
 **Decisions (Daniel 2026-06-10):** (1) Login path — one-time custom-token URL via the QR custom-token store, NOT a static secret; the QR PUT-approval path is confirmed hard-coupled to physical-device handoff (mints a token for the *approver's own uid*), so we reuse only the `qr-sessions` store + the GET-consume endpoint and add a `/test-login` route; public `/login` + `/qr/[code]` untouched. (2) TTL — cron disable + `revokeRefreshTokens` (kill outstanding ID tokens within ≤1h) + session-mint check + checkRevoked (client Firestore authorizes via ID token, not the session cookie, so disable+revoke is the only real cutoff).
 **Verified-first:** library_index/songs uploads already cascade-clean via `CASCADE_FIELDS` (`uploadedBy` + best-effort Storage) — no gap widened. Login is Google+QR only today (no email/password form), which is why the custom-token URL was chosen over a password form.
 
-## Active Milestone
+## Previous Milestone (most recent — ✅ COMPLETE)
 
-**🚧 v11.3 — Worthiness & Access** (OPEN 2026-06-10 · 5 phases, plans TBD)
+**✅ v11.3 — Worthiness & Access** (COMPLETE 2026-06-10 · tag `v11.3.0` · 5 phases, 10 plans; archived `.paul/milestones/v11.3.0-ROADMAP.md`)
 Status: 🎉 ✅ MILESTONE COMPLETE (tag `v11.3.0`, 2026-06-10) · Phases: **5 of 5 complete** (01 ✅ · 02 ✅ · 03 ✅ · 04 ✅ · 05 ✅) — archived `.paul/milestones/v11.3.0-ROADMAP.md`; next milestone v11.4 via `/paul:milestone` · **Source:** `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md` (phase grouping + triage ratified by Daniel) · **Oracle:** `docs/ACCESS-POLICY.md` **v0.3** — a finding is a bug only if it contradicts a cell in that matrix · **Reports:** `.paul/research/STRESS-TEST-REPORT-2026-06-10.md` (MCP run 1) + `…-browser.md` (Playwright run 2) + `…/BUG-cowork-chart-upload-2026-06-10.md` (David's upload dead-end).
 Focus: Close the post-stress-test findings the oracle confirms are real. Two **P1** families lead — anon read-access correctness (err-public prime-directive violations) and the agent chart-upload path (David's report) — then P2 hygiene, P2 /perform performance, and P3 polish. Phase order = the brief's family + severity grouping. CRC + broslaz both live; CRC byte-identical where shared surfaces are touched.
 
@@ -70,7 +108,7 @@ Constraints (locked at /paul:milestone 2026-06-10):
 6. **Autonomy posture (carried from v11.0/v11.1/v11.2):** run autonomously — waive PAUL approval/continuation gates, auto-commit + push per phase to prod `master`, bake decisions into PLANs, deploys/backfills as AUTO tasks (single-owner = executor). **STOP only for:** product ambiguity, an unresolvable quality-gate failure, or a discovered cross-tenant LEAK / CRC lock-out.
 7. **Scope walls (ratified triage):** D8 publish/notify redesign → v11.4 (do NOT pull in); BUG-3 (RUM) closed not-a-bug (D7); BUG-8 (member library) + browser Policy Q1 closed via policy (no code); F-4 dup setlist + Cowork sandbox proxy out of scope. D2 anon **recordings** playback stays the ⚠️ veto cell — BUG-5 is charts only; don't widen Phase 01 into recordings.
 
-## Previous Milestone (most recent — ✅ COMPLETE)
+## Earlier Completed Milestones
 
 **✅ v11.2 — MCP Stress-Test Fixes** (COMPLETE 2026-06-11 · tag `v11.2.0` · tip `f27ae7bc5f`; archived `.paul/milestones/v11.2.0-ROADMAP.md`)
 Status: ✅ COMPLETE 5/5 · Phases: 5 of 5 (v11.2-01 ✅ · v11.2-02 ✅ · v11.2-03 ✅ · v11.2-04 ✅ · v11.2-05 ✅) · Source: Brothers Lazaroff MCP + Perform **stress-test report** (2026-06-09; BL tenant only, CRC untouched, all test data cleaned — tenant verified empty post-run). All 9 bugs fixed; CRC byte-identical throughout.
