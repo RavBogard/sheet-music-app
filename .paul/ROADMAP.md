@@ -15,7 +15,7 @@ Focus: Replace today's implicit auto-blast publish/notify with an explicit, lead
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v11.4-01 | Recipient picker + no-auto-blast (D8 items 1+2) [P0 — safety core] | 01 (MCP no-blast + browser picker) ✅ | ✅ Complete | 2026-06-11 |
-| v11.4-02 | Org-branded comms (D8 item 4) [P1] | TBD | Not started | - |
+| v11.4-02 | Org-branded comms (D8 item 4) [P1] | 01 (EmailBranding + org-aware emails) ✅ | ✅ Complete | 2026-06-11 |
 | v11.4-03 | Remembered ad-hoc recipients (D8 item 3) [P1] | TBD | Not started | - |
 | v11.4-04 | Musician org-membership toggle + default-both backfill (D8 item 5) [P2 — LAST] | TBD | Not started | - |
 
@@ -25,7 +25,7 @@ Plans: **01** ✅ COMPLETE (`v11.4-01-01` PLAN+SUMMARY; 3 tasks; /ui-ux-pro-max 
 
 ### Phase v11.4-02: Org-branded comms [P1]
 Focus: Publish emails + gig-packet emails carry the publishing org's branding (logo/wordmark/from-name/footer), broslaz vs CRC, via the existing `getOrgBranding`/`branding.ts` seam (mirrors v11.1-01 nav-branding pattern). Touches `email-packets`/`resend-email` + email templates + packet PDF header. CRC byte-identical.
-Plans: TBD (defined during /paul:plan)
+Plans: **01** ✅ COMPLETE (`v11.4-02-01` PLAN+SUMMARY; 3 tasks; /ui-ux-pro-max applied to Task 1). NEW per-tenant `EmailBranding` registry + `getEmailBranding(org)` in `branding.ts` (separate from browser-chrome `OrgBranding` → CRC byte-identical, since email header #1a1a2e ≠ themeColor #0e0d18). `email.ts` org-aware (from-name/header/footer/wordmark); `getFromEmail(org)` w/ `RESEND_FROM_EMAIL_BROSLAZ` + verified fallback. Branding sourced from the **setlist's** org (`rowOrg(setlist.orgId)`) on all 4 send paths (MCP publish + /publish + /resend-email + /email-packets). Tests: email.test 6/6 + branding.test +3; src/lib 1797/1797; tsc + next build green. **Scope note:** covered publish/gig-packet/resend EMAILS; the printed packet PDF header uses print-pipeline's existing `getOrgBranding` seam (already org-aware) — not re-touched here. 1 UAT item (live BL brand + Resend-domain ops step).
 
 ### Phase v11.4-03: Remembered ad-hoc recipients [P1]
 Focus: The picker (from 01) gains "add a recipient the system doesn't know" (name + email/phone) → sends this publish + prompts to save them as a contact for next time. Contacts model decided at plan time (new `contacts` collection vs extend roster/people). Depends on v11.4-01.

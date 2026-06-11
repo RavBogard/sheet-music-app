@@ -7,6 +7,9 @@
 
 import { Resend } from 'resend'
 import { logger } from '@/lib/logger'
+import { getEmailBranding, getOrgBranding } from '@/lib/org/branding'
+import { DEFAULT_ORG_ID } from '@/lib/org/registry'
+import type { OrgId } from '@/lib/org/types'
 
 let resend: Resend | null = null
 
@@ -22,8 +25,20 @@ function getResend(): Resend | null {
   return resend
 }
 
-function getFromEmail(): string {
-  return process.env.RESEND_FROM_EMAIL || 'noreply@centralreform.live'
+/**
+ * v11.4-02 (D8 item 4): per-org "from" address. CRC is unchanged
+ * (`RESEND_FROM_EMAIL` || the verified centralreform.live sender). Brothers
+ * Lazaroff prefers `RESEND_FROM_EMAIL_BROSLAZ` when set, but FALLS BACK to the
+ * shared verified sender — so sends never break before brotherslazaroff.live
+ * is verified in Resend (verifying it is an ops follow-up; flipping the env is
+ * a zero-code change). Only the display name (from-name) always differs.
+ */
+function getFromEmail(org: OrgId = DEFAULT_ORG_ID): string {
+  const shared = process.env.RESEND_FROM_EMAIL || 'noreply@centralreform.live'
+  if (org === 'brotherslazaroff') {
+    return process.env.RESEND_FROM_EMAIL_BROSLAZ || shared
+  }
+  return shared
 }
 
 interface SetlistEmailParams {
@@ -37,6 +52,8 @@ interface SetlistEmailParams {
   publisherName: string
   note?: string
   subject?: string
+  /** v11.4-02: publishing org → branded from-name/header/footer/wordmark. Default crc (byte-identical). */
+  org?: OrgId
 }
 
 /**
@@ -49,9 +66,11 @@ export async function sendSetlistEmail(params: SetlistEmailParams): Promise<{ ok
 
   try {
     const html = buildSetlistEmailHtml(params)
+    const org = params.org ?? DEFAULT_ORG_ID
+    const fromName = getEmailBranding(org).fromName
 
     const { data, error } = await client.emails.send({
-      from: `CRC Music <${getFromEmail()}>`,
+      from: `${fromName} <${getFromEmail(org)}>`,
       to: params.to,
       subject: params.subject || `🎵 ${params.setlistName} — Setlist Published`,
       html,
@@ -142,7 +161,8 @@ export async function emailAllMembers(
   songs: string[],
   baseUrl: string,
   note?: string,
-  subject?: string
+  subject?: string,
+  org: OrgId = DEFAULT_ORG_ID
 ): Promise<{ sent: number; failed: number; errors: string[]; messageIds: Array<{ email: string; messageId: string }> }> {
   let sent = 0
   let failed = 0
@@ -167,6 +187,7 @@ export async function emailAllMembers(
       publisherName,
       note,
       subject,
+      org,
     })
     if (result.ok) {
       sent++
@@ -186,6 +207,14 @@ export async function emailAllMembers(
  * Build clean HTML email for setlist notification.
  */
 export function buildSetlistEmailHtml(params: SetlistEmailParams): string {
+  const org = params.org ?? DEFAULT_ORG_ID
+  const brand = getEmailBranding(org)
+  // Absolute URL (emails can't use relative paths). Leading "\n      " is part
+  // of the string ONLY when an image exists, so the empty (crc) case yields
+  // byte-identical markup to the prior hardcoded header.
+  const headerImage = brand.headerImagePath
+    ? `\n      <img src="${getOrgBranding(org).baseUrl}${brand.headerImagePath}" height="${brand.headerImageHeightPx}" alt="${escapeHtml(brand.fromName)}" style="display:block;border:0;margin:0 0 8px;">`
+    : ''
   const songList = params.songs.length > 0
     ? params.songs.map((s, i) => `<tr><td style="padding:4px 8px;color:#666;font-size:13px;">${i + 1}.</td><td style="padding:4px 8px;font-size:14px;">${escapeHtml(s)}</td></tr>`).join('')
     : '<tr><td style="padding:8px;color:#999;font-style:italic;">No songs yet</td></tr>'
@@ -196,7 +225,7 @@ export function buildSetlistEmailHtml(params: SetlistEmailParams): string {
 <body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;margin-top:20px;">
   <tr>
-    <td style="background:#1a1a2e;padding:24px 32px;">
+    <td style="background:${brand.headerBg};padding:24px 32px;">${headerImage}
       <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">🎵 ${escapeHtml(params.setlistName)}</h1>
       <p style="margin:4px 0 0;color:#a0a0c0;font-size:14px;">${escapeHtml(params.eventDate)}</p>
     </td>
@@ -230,7 +259,7 @@ export function buildSetlistEmailHtml(params: SetlistEmailParams): string {
   </tr>
   <tr>
     <td style="padding:16px 32px;background:#fafafa;border-top:1px solid #eee;">
-      <p style="margin:0;color:#999;font-size:12px;text-align:center;">CRC Music — Central Reform Congregation</p>
+      <p style="margin:0;color:#999;font-size:12px;text-align:center;">${escapeHtml(brand.footerText)}</p>
     </td>
   </tr>
 </table>

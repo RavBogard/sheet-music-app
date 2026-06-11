@@ -849,6 +849,9 @@ export async function publishSetlist(
                 origin,
                 combinedNote,
                 trimmedSubject,
+                // v11.4-02 (D8 item 4): brand the email by the publishing
+                // tenant (the setlist's org), not a hardcoded CRC default.
+                setlistOrg,
             )
             result.delivery.email.sent = emailResult.sent
             result.delivery.email.failed = emailResult.failed

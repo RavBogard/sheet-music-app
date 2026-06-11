@@ -3,6 +3,7 @@ import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { getFirestore } from "@/lib/firebase-admin"
 import { sendSetlistEmail } from "@/lib/email"
+import { rowOrg } from "@/lib/org/membership"
 import { logger } from "@/lib/logger"
 import { z } from "zod"
 import { getTracksForSetlist } from "@/lib/server-tracks"
@@ -36,6 +37,8 @@ export const POST = createApiHandler(
             return NextResponse.json({ error: 'Setlist not found' }, { status: 404 })
         }
         const setlist = setlistDoc.data()!
+        // v11.4-02 (D8 item 4): brand the packet email by the setlist's org.
+        const org = rowOrg(setlist.orgId)
 
         // Verify auth: must be owner or leader/admin
         const isOwner = setlist.ownerId === ctx.auth.uid
@@ -90,6 +93,7 @@ export const POST = createApiHandler(
                     packetUrl: `${baseUrl}/api/setlist/print/personal?setlistId=${setlistId}`,
                     songs,
                     publisherName: ctx.auth.email || 'A band leader',
+                    org,
                 })
                 if (success) sent++
                 else failed++

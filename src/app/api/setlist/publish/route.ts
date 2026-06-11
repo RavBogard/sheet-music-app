@@ -18,6 +18,7 @@ import { getTracksForSetlist } from '@/lib/server-tracks'
 import { emailAllMembers } from '@/lib/email'
 import { sendPushToUsers } from '@/lib/push-send'
 import { sendSMS } from '@/lib/sms'
+import { rowOrg } from '@/lib/org/membership'
 import { logger } from '@/lib/logger'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
@@ -251,10 +252,12 @@ export const POST = createApiHandler(
         const serviceNotes = setlist.serviceNotes ? String(setlist.serviceNotes).trim() : undefined
         const combinedNote = [publishNote, serviceNotes].filter(Boolean).join('\n\n') || undefined
 
+        // v11.4-02 (D8 item 4): brand the email by the setlist's own org.
+        const org = rowOrg(setlist.orgId)
         const emailPromise = emailRecipients.length > 0
             ? emailAllMembers(
                 emailRecipients, setlistId, setlistName, eventDateStr,
-                publisherName, songNames, origin, combinedNote, publishSubject
+                publisherName, songNames, origin, combinedNote, publishSubject, org
             ).catch(err => {
                 logger.warn('[Publish] Email sending failed:', err)
                 return { sent: 0, failed: 0, errors: [], messageIds: [], error: err instanceof Error ? err.message : String(err) }

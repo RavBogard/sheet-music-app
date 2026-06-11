@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { getOrgBranding } from "@/lib/org/branding"
+import { getOrgBranding, getEmailBranding } from "@/lib/org/branding"
 
 describe("getOrgBranding", () => {
     it("returns the Brothers Lazaroff band chrome (forced dark)", () => {
@@ -60,5 +60,38 @@ describe("getOrgBranding", () => {
         // No leaked CRC / synagogue branding anywhere in BL's metadata.
         const blob = [b.appName, b.metaTitleDefault, b.metaTitleTemplate, b.metaDescription, b.ogTitle].join(" ")
         expect(blob).not.toMatch(/CRC|Central Reform|Congregation/i)
+    })
+})
+
+// v11.4-02 (D8 item 4): per-tenant EMAIL branding. CRC values MUST be
+// byte-identical to the strings hardcoded in email.ts before this phase
+// (from-name "CRC Music", header #1a1a2e, footer string, NO header image) so
+// CRC's emails do not change.
+describe("getEmailBranding", () => {
+    it("CRC email branding is byte-identical to the prior email.ts hardcodes", () => {
+        const e = getEmailBranding("crc")
+        expect(e.fromName).toBe("CRC Music")
+        expect(e.headerBg).toBe("#1a1a2e")
+        expect(e.footerText).toBe("CRC Music — Central Reform Congregation")
+        expect(e.headerImagePath).toBe("") // no image → text-only header (unchanged)
+        expect(e.headerImageHeightPx).toBe(0)
+    })
+
+    it("Brothers Lazaroff email branding carries BL name/header/footer/wordmark", () => {
+        const e = getEmailBranding("brotherslazaroff")
+        expect(e.fromName).toBe("Brothers Lazaroff")
+        expect(e.headerBg).toBe("#04201f")
+        expect(e.footerText).toBe("Brothers Lazaroff")
+        expect(e.headerImagePath).toBe("/brands/brotherslazaroff/wordmark.png")
+        expect(e.headerImageHeightPx).toBeGreaterThan(0)
+        // No leaked CRC / synagogue branding.
+        const blob = [e.fromName, e.footerText].join(" ")
+        expect(blob).not.toMatch(/CRC|Central Reform|Congregation/i)
+    })
+
+    it("falls back to CRC email branding for an unknown org id", () => {
+        const e = getEmailBranding("unknown-tenant")
+        expect(e.fromName).toBe("CRC Music")
+        expect(e.headerImagePath).toBe("")
     })
 })

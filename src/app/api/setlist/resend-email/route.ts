@@ -13,6 +13,7 @@ import { withAuth } from '@/lib/api-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { initAdmin, getFirestore } from '@/lib/firebase-admin'
 import { emailAllMembers } from '@/lib/email'
+import { rowOrg } from '@/lib/org/membership'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
 import { getTracksForSetlist } from '@/lib/server-tracks'
@@ -132,7 +133,9 @@ export async function POST(request: NextRequest) {
             || request.headers.get('referer')?.replace(/\/[^/]*$/, '')
             || 'https://centralreform.live'
 
-        // Send emails
+        // Send emails — v11.4-02 (D8 item 4): brand by the setlist's own org.
+        // note + subject stay defaulted; org is the trailing positional arg.
+        const org = rowOrg(setlist.orgId)
         const result = await emailAllMembers(
             emailRecipients,
             setlistId,
@@ -141,6 +144,9 @@ export async function POST(request: NextRequest) {
             publisherName,
             songNames,
             origin,
+            undefined,
+            undefined,
+            org,
         )
 
         return NextResponse.json({

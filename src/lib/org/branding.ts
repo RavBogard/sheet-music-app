@@ -100,3 +100,50 @@ const BRANDING: Record<OrgId, OrgBranding> = {
 export function getOrgBranding(orgId: OrgId): OrgBranding {
     return BRANDING[orgId] ?? BRANDING.crc
 }
+
+/**
+ * v11.4-02 (D8 item 4): per-tenant branding for the EMAIL surface. Kept
+ * SEPARATE from `OrgBranding` (the browser-chrome seam) on purpose: the
+ * email's CRC values must be BYTE-IDENTICAL to the strings hardcoded in
+ * `email.ts` today, and those differ from the browser theme (e.g. the email
+ * header is `#1a1a2e`, not `OrgBranding.themeColor` `#0e0d18`). A new tenant is
+ * one entry here. Emails need ABSOLUTE image URLs — callers compose
+ * `getOrgBranding(org).baseUrl + headerImagePath` for the header image.
+ */
+export type EmailBranding = {
+    /** Resend "from" display name (`<fromName> <addr@domain>`). */
+    fromName: string
+    /** Header `<td>` background (hex). */
+    headerBg: string
+    /** Centered footer line. */
+    footerText: string
+    /** Wordmark/logo path under `public/`. `''` = no image (header is text-only). */
+    headerImagePath: string
+    /** Rendered `<img height>` for the header image (px). `0` when no image. */
+    headerImageHeightPx: number
+}
+
+const EMAIL_BRANDING: Record<OrgId, EmailBranding> = {
+    // CRC values are byte-identical to the prior hardcodes in email.ts
+    // (from-name "CRC Music", header #1a1a2e, footer string, NO image).
+    crc: {
+        fromName: "CRC Music",
+        headerBg: "#1a1a2e",
+        footerText: "CRC Music — Central Reform Congregation",
+        headerImagePath: "",
+        headerImageHeightPx: 0,
+    },
+    brotherslazaroff: {
+        fromName: "Brothers Lazaroff",
+        // Dark teal-black, matching the band's brand canvas (see OrgBranding).
+        headerBg: "#04201f",
+        footerText: "Brothers Lazaroff",
+        // Reuse the white-and-blue slab wordmark already shipped to public/.
+        headerImagePath: "/brands/brotherslazaroff/wordmark.png",
+        headerImageHeightPx: 28,
+    },
+}
+
+export function getEmailBranding(orgId: OrgId): EmailBranding {
+    return EMAIL_BRANDING[orgId] ?? EMAIL_BRANDING.crc
+}

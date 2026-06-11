@@ -353,6 +353,22 @@ Check (live, non-blocking — once deployed):
 
 ---
 
+## ⏳ v11.4-02-01 — Org-branded comms (D8 item 4) — live brand check + Resend ops step
+
+**Status:** code-complete + email.test 6/6 + branding.test 9/9 + src/lib 1797/1797 + tsc/next-build clean. Committed at phase close. CRC byte-identical (asserted); BL branding follows the setlist's org.
+
+What was built: publish + gig-packet + resend emails brand by the setlist's org — Brothers Lazaroff emails carry the BL from-name, dark-teal header, wordmark image, and "Brothers Lazaroff" footer; CRC unchanged. BL from-ADDRESS falls back to the verified centralreform.live sender unless `RESEND_FROM_EMAIL_BROSLAZ` is set.
+
+**OPS follow-up (enables BL from-address):** verify `brotherslazaroff.live` as a sending domain in Resend (DNS: SPF/DKIM), then set `RESEND_FROM_EMAIL_BROSLAZ=noreply@brotherslazaroff.live` in Vercel prod env. Until then BL emails send from the BL *name* but the CRC-verified *address* (deliverable, just not the BL domain). Non-blocking.
+
+Check (live — a real publish to selected people IS a live send; prefer a TEST setlist / your own address):
+- [ ] Publish (or resend) a **Brothers Lazaroff** setlist to yourself → the email shows "Brothers Lazaroff" as sender name, the BL wordmark in the header (dark teal), and "Brothers Lazaroff" in the footer — NO "CRC Music / Central Reform Congregation" anywhere.
+- [ ] Publish a **CRC** setlist to yourself → the email is unchanged from before (CRC Music header/footer, no regression).
+- [ ] Gig-packet email (`/api/setlist/email-packets`) on a BL setlist → same BL branding.
+- [ ] (After the Resend ops step) BL email "from" address reads `…@brotherslazaroff.live`.
+
+---
+
 ## ⏳ v11.4-01-01 — No-auto-blast publish/notify (D8 items 1+2) — STOP-gate, human-gated
 
 **Status:** code-complete + MCP emulator 29/29 (incl. 4 new D8 cases) + PublishDialog 3/3 + tsc/next-build clean. Committed at phase close. **Live sends were NOT performed during APPLY (publish/notify STOP-gate — emulator + mocked fetch only); these confirm behavior on the deployed surface.**
