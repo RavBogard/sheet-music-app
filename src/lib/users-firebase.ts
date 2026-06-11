@@ -47,6 +47,10 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
             displayName: user.displayName || "Unknown",
             photoURL: user.photoURL ?? undefined,
             role: 'pending',
+            // v11.4-04 default-both: new accounts join both tenants (matches
+            // UserRow's MEMBERSHIP_TO_ORGIDS.both). Membership data only — does
+            // NOT grant cross-tenant READ (that's claim-based via callerOrgs).
+            orgIds: ['crc', 'brotherslazaroff'],
             createdAt: Timestamp.now(),
             lastLoginAt: Timestamp.now()
         }
