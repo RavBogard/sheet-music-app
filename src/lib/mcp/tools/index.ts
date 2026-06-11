@@ -111,6 +111,7 @@ import {
     commitStagedChanges,
 } from "./propose-changes"
 import { previewPublish } from "./preview-publish"
+import { listContacts, createContact, deleteContact } from "./contacts"
 import {
     flagBond,
     reviewFlaggedBonds,
@@ -1377,6 +1378,52 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await previewPublish(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    // ── Contacts (v11.4-03, D8 item 3): remembered ad-hoc recipients ──────────
+    server.registerTool(
+        "list_contacts",
+        {
+            description:
+                "List your saved contacts — remembered ad-hoc recipients (people with no app account, just a name + email/phone) for this org. Use to offer reusable recipients when publishing. To actually send to one, pass it as a `recipients` entry (name + email) on publish_setlist.",
+            inputSchema: {},
+        },
+        async (_args, extra) =>
+            jsonResult(await listContacts(uidFrom(extra), {}, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "create_contact",
+        {
+            description:
+                "Remember an ad-hoc recipient for next time — a person the system has no account for (e.g. a guest musician or a parent). Saves a contact (name + email and/or phone) scoped to your org. Use this after a publish where the leader wanted to email someone who isn't a band member, so you don't have to retype them next week. Deduplicates by email (returns the existing contact instead of a duplicate). Does NOT send anything — to notify a contact, pass it as a `recipients` entry on publish_setlist.",
+            inputSchema: {
+                name: z.string().min(1).describe("Display name, e.g. 'Jane Cohen'"),
+                email: z
+                    .string()
+                    .optional()
+                    .describe("Email address (at least one of email/phone is required)"),
+                phone: z
+                    .string()
+                    .optional()
+                    .describe("Phone number (stored for the future; SMS is not sent yet)"),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await createContact(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "delete_contact",
+        {
+            description:
+                "Delete a saved contact by id (from list_contacts). Scoped to your org — a contact in another tenant returns contact_not_found.",
+            inputSchema: {
+                id: z.string().min(1).describe("Contact id from list_contacts"),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await deleteContact(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

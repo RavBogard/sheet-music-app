@@ -353,6 +353,22 @@ Check (live, non-blocking — once deployed):
 
 ---
 
+## ⏳ v11.4-03-01 — Remembered ad-hoc recipients (MCP contacts, D8 item 3) — live smoke test
+
+**Status:** code-complete + contacts MCP emulator 6/6 + contacts rules emulator 6/6 + non-emulator MCP 449/449 + tsc/next-build clean. Contacts Firestore rules DEPLOYED to prod. Committed at phase close. Low-risk (no sends — contacts are stored data).
+
+What was built: org-scoped `contacts` address book + MCP `list_contacts` / `create_contact` / `delete_contact` (leader-gated, tenant-isolated, email dedupe). `preview_publish` now returns `savedContacts[]`. Sending to a contact reuses the existing `recipients[]` path on `publish_setlist` (no new arg).
+
+Check (live, SAFE — via Claude Desktop MCP; no notifications sent):
+- [ ] `create_contact({name:"Test Guest", email:"you+contacttest@…"})` → returns ok + a contact id; `list_contacts()` includes it.
+- [ ] `create_contact` again with the SAME email → returns the existing contact (`created:false`), no duplicate.
+- [ ] `create_contact({name:"NoHandle"})` (no email/phone) → `invalid_argument`.
+- [ ] `preview_publish({setlistId:<a CRC setlist>})` → `savedContacts[]` includes the test contact.
+- [ ] (Optional, real send) publish with `recipients:[{name:"Test Guest", email:"you+contacttest@…"}]` → that address receives the email (confirms the remember→reuse loop end-to-end).
+- [ ] `delete_contact({id})` → removed from `list_contacts`. On the BL connector, `list_contacts()` does NOT show CRC's contacts (tenant isolation).
+
+---
+
 ## ⏳ v11.4-02-01 — Org-branded comms (D8 item 4) — live brand check + Resend ops step
 
 **Status:** code-complete + email.test 6/6 + branding.test 9/9 + src/lib 1797/1797 + tsc/next-build clean. Committed at phase close. CRC byte-identical (asserted); BL branding follows the setlist's org.

@@ -194,6 +194,19 @@ service cloud.firestore {
       allow delete: if isSignedIn() && (isBandLeader() || isAdmin());
     }
 
+    // CONTACTS Collection (v11.4-03 — D8 item 3)
+    // A leader's address book of remembered ad-hoc recipients (people with NO
+    // account — name + email/phone). NOT member-facing (unlike recordings), so
+    // READ is leader/admin only and org-isolated. Primary write path is the MCP
+    // tools via the Admin SDK (bypasses these rules); the rules are the
+    // defense-in-depth wall for any client path. Org-scoped on every verb.
+    match /contacts/{contactId} {
+      allow read:   if isSignedIn() && isBandLeader() && orgReadOk(resource);
+      allow create: if isSignedIn() && isBandLeader() && orgCreateOk();
+      allow update: if isSignedIn() && isBandLeader() && orgUpdateOk();
+      allow delete: if isSignedIn() && isBandLeader() && orgReadOk(resource);
+    }
+
     // ORGS Collection (v11-01 multi-tenant registry)
     // One doc per tenant/band — { id, name, domain, createdAt }. Seeded by the
     // v11-01-03 backfill via the Admin SDK. Read is public (non-sensitive

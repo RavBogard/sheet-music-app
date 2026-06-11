@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.4 — Publish & Notify (D8)** (OPEN 2026-06-10; 4 phases, plans TBD). Created via `/paul:discuss-milestone`→`/paul:milestone`. **Spec backbone:** `docs/ACCESS-POLICY.md` §"Publish & notify (D8)" (ratified — implements, not invents; bump oracle → v0.4 when D8 ships). (v11.3 ✅ COMPLETE 2026-06-10 tag `v11.3.0`; v11.2 ✅ 2026-06-11 tag `v11.2.0`.)
-Phase: **v11.4-02 Org-branded comms** (D8 item 4) — **✅ COMPLETE (LOOP DONE).** (v11.4-01 ✅. Then 03 remembered contacts · 04 musician-membership toggle + default-both backfill [LAST, after 01 — UNBLOCKED].)
-Plan: **`v11.4-02-01` ✅ COMPLETE** (PLAN+SUMMARY in `.paul/phases/v11.4-02-org-branded-comms/`; 3 tasks; /ui-ux-pro-max applied to Task 1). **Shipped:** publish + gig-packet + resend emails brand by the SETLIST's org (`rowOrg(setlist.orgId)`) via NEW per-tenant `EmailBranding` registry in `branding.ts` (separate from browser-chrome `OrgBranding` → CRC byte-identical). BL = from-name/teal-header/wordmark/footer; from-address env-overridable (`RESEND_FROM_EMAIL_BROSLAZ`) w/ verified-sender fallback. 4 send paths threaded. **v11.4-01 ✅** (commit `80ea721508`).
-Status: **v11.4-02 COMPLETE — at the 02→03 phase boundary.** Gates green: tsc · email.test 6/6 + branding.test 9/9 + `src/lib` 1797/1797 (no regression) · `next build` clean. Live BL brand check + Resend-domain ops step → UAT (STOP-gate); build autonomous (mocked Resend, no real send).
-Last activity: 2026-06-11 — v11.4-02-01 PLAN→APPLY→UNIFY (org-branded comms shipped).
+Phase: **v11.4-03 Remembered ad-hoc recipients** (D8 item 3) — **✅ COMPLETE (LOOP DONE).** (v11.4-01 ✅, v11.4-02 ✅. Then **04 musician-membership toggle + default-both backfill [LAST — the only phase left in v11.4]**.)
+Plan: **`v11.4-03-01` ✅ COMPLETE** (PLAN+SUMMARY in `.paul/phases/v11.4-03-remembered-recipients/`; 3 tasks; no /ui-ux gate — MCP backend). **Shipped (MCP contacts, NOT browser UI):** org-scoped `contacts` collection + leader/admin Firestore rules (tenant-isolated, DEPLOYED to prod) + `list/create/delete_contact` MCP tools (leader-gated, email dedupe, cross-org not_found wall) + `preview_publish.savedContacts[]`. Sending to a contact reuses the existing email-only `recipients[]` path (NO publish-signature change). v11.4-02 ✅ (`f03b48db88`), v11.4-01 ✅ (`80ea721508`).
+Status: **v11.4-03 COMPLETE — at the 03→04 phase boundary.** Gates green: tsc · contacts MCP emulator 6/6 · contacts rules emulator 6/6 · non-emulator MCP 449/449 (no regression) · `next build` clean · rules deployed. Live MCP smoke test → UAT (low-risk, no sends).
+Last activity: 2026-06-11 — v11.4-03-01 PLAN→APPLY→UNIFY (MCP contacts shipped; rules deployed).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,7 +43,7 @@ Last activity: 2026-06-11 — v11.4-02-01 PLAN→APPLY→UNIFY (org-branded comm
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.4-02 COMPLETE — next: PLAN v11.4-03 (remembered ad-hoc recipients) or v11.4-04 (membership backfill, LAST)]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.4-03 COMPLETE — next: PLAN v11.4-04 (musician membership toggle + default-both backfill, LAST phase)]
   ✓        ✓        ✓
 ```
 
@@ -61,6 +61,7 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.4-02 COMPLETE — next: PLAN v1
 - **v11.x AUTONOMY directive (2026-06-08, carried into v11.1):** run autonomously — waive PAUL approval/continuation gates; auto-commit + push per phase to prod `master`; bake decisions into PLANs; Firebase deploys + backfills as AUTO tasks (single-owner = executor). **QUALITY FLOOR HELD (non-negotiable):** tsc clean + tests green + AC proof every task; `SKIP_ENV_VALIDATION=1 npx next build` before declaring any shared-lib/client phase deployable; emulator-backed rules tests where rules change; /ui-ux-pro-max BLOCKING on UI phases (01/03/04); backfills get dry-run + idempotency marker + rollback. **STOP only for:** product ambiguity, an unresolvable quality-gate failure, or a discovered cross-tenant LEAK / CRC lock-out. See [[feedback_v11_autonomous_milestone]].
 - **v11.1 authoring-org call RESOLVED (Daniel 2026-06-09):** authoring org = the **tenant domain the leader connects Claude Desktop to** (mint paths read the proxy's `x-org-id`, validated ∈ caller's `orgIds`, else primary-org fallback). Pins at mint time, NOT a tool arg → v11-06-02 invariant fully preserved. No manual stopgap (Daniel declined). Shipped v11.1-02-01. Canonical broslaz MCP URL: `https://www.brotherslazaroff.live/api/mcp` (www direct; apex 308-redirects).
 - **v11.3-02 (2026-06-11):** agent chart-upload — `import_chart_from_drive` converts Google Docs (export) + `.docx`/Office (convert-on-copy) → PDF server-side (`DriveClient.fetchAsPdf` + `driveSourceIsConvertible`); inline chunked upload (`begin/append/commit_chunked_chart_upload`) on `upload_sessions`, commit delegates to `finalizeChartUpload` + org-stamps. Append NOT rate-limited (only begin+commit) to survive the 10/min cap on multi-chunk files. Cowork sandbox PUT-proxy out of scope (Anthropic-side).
+- **v11.4-03 surface RATIFIED (Daniel 2026-06-11):** "remembered ad-hoc recipients" (D8 item 3) ships as **MCP contacts, NOT browser UI**. Finding that drove it: the browser `PublishDialog` recipient picker is ORPHANED — rendered nowhere in `src` (zero JSX/import refs except its own test; `SetlistGrid` only has a read-only drift banner; git shows it last touched by the v11.4-01 commit, never wired to a page). MCP `publish_setlist` already accepts email-only ad-hoc `recipients[]`, so the gap was persistence/reuse, not sending. → new org-scoped `contacts` collection + MCP CRUD + `preview_publish.savedContacts`. No further PublishDialog investment (browser publish is effectively MCP-only). (Note: v11.4-01's browser AC-4/AC-5 code shipped correct+tested but against this unmounted dialog.)
 - **v11.1-02-02 (2026-06-09):** admin org-membership set via the `/manage` People list (tri-state Band-access control, admin-only, band_leader/admin rows); `/api/admin/set-role` now writes `orgIds` to BOTH the Auth claim and the user doc (claim+doc lockstep) so People-list display + roster filtering (v11-05-02 rowOrgIds) reflect changes immediately. Control scoped to the authoring tier per Daniel (consumers stay host-derived).
 
 ### Deferred Issues
@@ -86,10 +87,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.4-02 COMPLETE — next: PLAN v1
 
 ## Session Continuity
 
-Last session: 2026-06-11 — `/paul:resume` → v11.4-01-01 (D8 1+2, commit `80ea721508`) → v11.4-02-01 PLAN→APPLY→UNIFY (D8 item 4 org-branded comms shipped). Both committed + pushed to `master`.
-Stopped at: **v11.4-02 phase boundary (COMPLETE).** Awaiting go for the next phase.
-Next action: **`/paul:plan` for v11.4-03 (remembered ad-hoc recipients — picker "add recipient" name+email/phone → send + prompt-to-save; contacts model TBD)** OR v11.4-04 (musician membership toggle + default-both backfill, LAST — now unblocked by 01). Daniel's call which P1 first.
-Resume file: **.paul/phases/v11.4-02-org-branded-comms/v11.4-02-01-SUMMARY.md** (what shipped this phase).
+Last session: 2026-06-11 — v11.4-01 (`80ea721508`) → v11.4-02 (`f03b48db88`) → v11.4-03 (MCP contacts; rules deployed). All three phases pushed to `master`. v11.4-04 is the only phase left.
+Stopped at: **v11.4-03 phase boundary (COMPLETE).** Awaiting go for v11.4-04 (the LAST phase).
+Next action: **`/paul:plan` for v11.4-04 (musician org-membership toggle + default-both backfill)** — admin per-org control for musicians (mirror band-leader tri-state from v11.1-02-02, claim+doc lockstep via `/api/admin/set-role`), default-both, backfill ALL people to both. **HARD-ordered after 01 (✅ satisfied — no-auto-blast shipped, so default-both is safe).** Prod backfill = dry-run + idempotency marker + rollback (autonomy rule). After 04 → `/paul:complete-milestone` (bump ACCESS-POLICY oracle → v0.4).
+Resume file: **.paul/phases/v11.4-03-remembered-recipients/v11.4-03-01-SUMMARY.md**.
 **Deferred UAT (RUM):** v11.3-04 field TTFB/FCP — re-run `node scripts/v11-3-04-webvitals-slice.mjs` after ~1–7d traffic vs 1633/3551 baseline; if still high → Vercel infra follow-up (Deferred Issues), not app code.
 **Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.
 Resume file: **.paul/HANDOFF-2026-06-10-v11.3-03-complete.md** (full context); then ROADMAP § Phase v11.3-04. Oracle: `docs/ACCESS-POLICY.md` v0.3. **(PAUSED 2026-06-10 at the v11.3-03 → v11.3-04 phase boundary.)**

@@ -16,7 +16,7 @@ Focus: Replace today's implicit auto-blast publish/notify with an explicit, lead
 |-------|------|-------|--------|-----------|
 | v11.4-01 | Recipient picker + no-auto-blast (D8 items 1+2) [P0 — safety core] | 01 (MCP no-blast + browser picker) ✅ | ✅ Complete | 2026-06-11 |
 | v11.4-02 | Org-branded comms (D8 item 4) [P1] | 01 (EmailBranding + org-aware emails) ✅ | ✅ Complete | 2026-06-11 |
-| v11.4-03 | Remembered ad-hoc recipients (D8 item 3) [P1] | TBD | Not started | - |
+| v11.4-03 | Remembered ad-hoc recipients (D8 item 3) [P1] | 01 (MCP contacts: collection + CRUD + preview surfacing) ✅ | ✅ Complete | 2026-06-11 |
 | v11.4-04 | Musician org-membership toggle + default-both backfill (D8 item 5) [P2 — LAST] | TBD | Not started | - |
 
 ### Phase v11.4-01: Recipient picker + no-auto-blast [P0 — safety core, prerequisite for 04]
@@ -29,7 +29,8 @@ Plans: **01** ✅ COMPLETE (`v11.4-02-01` PLAN+SUMMARY; 3 tasks; /ui-ux-pro-max 
 
 ### Phase v11.4-03: Remembered ad-hoc recipients [P1]
 Focus: The picker (from 01) gains "add a recipient the system doesn't know" (name + email/phone) → sends this publish + prompts to save them as a contact for next time. Contacts model decided at plan time (new `contacts` collection vs extend roster/people). Depends on v11.4-01.
-Plans: TBD (defined during /paul:plan)
+**SURFACE RATIFIED (Daniel 2026-06-11): MCP contacts, NOT browser UI** — the browser `PublishDialog` picker is orphaned (mounted nowhere; verified via grep + git), and MCP `publish_setlist` already accepts ad-hoc email `recipients[]`, so the gap was persistence/reuse not sending. Contacts model = **new org-scoped `contacts` collection** (the recipients are non-account humans → a dedicated collection, not users/roster).
+Plans: **01** ✅ COMPLETE (`v11.4-03-01` PLAN+SUMMARY; 3 tasks; no /ui-ux gate). **T1** `contacts` collection + Firestore rules (leader/admin, org-isolated; DEPLOYED to prod) + 6-case emulator rules test. **T2** `list/create/delete_contact` MCP tools (leader-gated via assertEditor, org-scoped via orgFrom; create validates name + email|phone, dedupes by email in-memory; delete cross-org not_found wall). **T3** `preview_publish.savedContacts[]` (org-scoped, informational — recommendation gate unchanged) + MCP emulator tests (CRUD, org isolation, non-leader denied, preview surfacing). NO publish/preview signature change — agent passes saved contacts as ordinary `recipients[]`. Gates: tsc · contacts emulator 12/12 · non-emulator MCP 449/449 · next build green; rules deployed. 1 UAT (live MCP smoke, no sends).
 
 ### Phase v11.4-04: Musician org-membership toggle + default-both backfill [P2 — LAST, hard-ordered]
 Focus: Admin per-org membership control for musicians (mirror the band-leader tri-state from v11.1-02-02; claim+doc lockstep via `/api/admin/set-role`), **defaults to both orgs**, with a backfill of ALL existing people to both. **MUST ship after v11.4-01** — the picker is what makes default-both safe (else it re-creates the BUG-9 blast). Prod backfill = dry-run + idempotency marker + rollback (autonomy rule).

@@ -68,6 +68,23 @@ export interface SetlistMusician {
     instrument?: string
 }
 
+/**
+ * v11.4-03 (D8 item 3): a remembered ad-hoc recipient — a person the system has
+ * no account for (no uid). A leader's address book, org-scoped. At least one of
+ * email/phone is present (enforced at the MCP create_contact layer). `phone` is
+ * stored for the future; SMS sends are held this milestone.
+ */
+export interface Contact {
+    id: string
+    orgId: string
+    name: string
+    email?: string
+    phone?: string
+    createdBy: string
+    createdAt?: unknown   // Firestore Timestamp (serverTimestamp on write)
+    updatedAt?: unknown
+}
+
 export interface Setlist {
     id: string
     /** v11-01: tenant scope. Optional until the v11-01-03 backfill stamps

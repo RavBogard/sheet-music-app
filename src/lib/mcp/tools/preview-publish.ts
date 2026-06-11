@@ -120,6 +120,19 @@ export interface PreviewPublishResult {
      */
     unbondedSongCount: number
     unbondedSongs: Array<{ trackId: string; title: string }>
+    /**
+     * v11.4-03 (D8 item 3): the org's saved ad-hoc contacts (remembered
+     * recipients with no app account). INFORMATIONAL — surfaced so the agent
+     * can offer them as recipients; does NOT affect the recommendation gate.
+     * To actually notify one, pass it as a `recipients` entry on publish_setlist.
+     * Org-scoped to the caller's tenant. Empty when none saved.
+     */
+    savedContacts: Array<{
+        id: string
+        name: string
+        email: string | null
+        phone: string | null
+    }>
     recommendation: "publish" | "review_first" | "hard_block"
 }
 
@@ -213,6 +226,12 @@ export async function previewPublish(
     // the setlist's flags cheaply.
     const flaggedBonds = await countFlaggedBonds(db, args.setlistId)
 
+    // ── v11.4-03 (D8 item 3): the org's saved ad-hoc contacts, so the agent
+    // can offer them as recipients. Informational only — never affects the
+    // recommendation gate. Org-scoped to the caller's tenant (the same `org`
+    // the caller-org wall already enforced above via publishSetlist).
+    const savedContacts = await loadSavedContacts(db, org)
+
     // ── Recommendation gate. publish_setlist's chartHealth carries the
     // aggregate counts directly post-F-006, so we just pass them through.
     // BUG-002: shortcut_unresolved is also a hard_block — gig packet drops
@@ -251,7 +270,32 @@ export async function previewPublish(
         flaggedBonds,
         unbondedSongCount,
         unbondedSongs,
+        savedContacts,
         recommendation,
+    }
+}
+
+// v11.4-03 (D8 item 3): load the caller-org's saved contacts. Falls back to an
+// empty list if the collection doesn't exist yet (first run before any save).
+async function loadSavedContacts(
+    db: FirebaseFirestore.Firestore,
+    org: OrgId,
+): Promise<PreviewPublishResult["savedContacts"]> {
+    try {
+        const snap = await db.collection("contacts").where("orgId", "==", org).get()
+        return snap.docs
+            .map((doc) => {
+                const d = doc.data() as Record<string, unknown>
+                return {
+                    id: doc.id,
+                    name: typeof d.name === "string" ? d.name : "",
+                    email: typeof d.email === "string" ? d.email : null,
+                    phone: typeof d.phone === "string" ? d.phone : null,
+                }
+            })
+            .sort((a, b) => a.name.localeCompare(b.name))
+    } catch {
+        return []
     }
 }
 
