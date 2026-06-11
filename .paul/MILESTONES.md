@@ -39,6 +39,45 @@ Completed milestone log for this project.
 | v11.1 Brothers Lazaroff Post-Launch Fixes | 2026-06-09 | ~1 session | 4 phases, 5 plans; broslaz reads as a band across the authed surface (branding/library/vocab) + multi-org authoring path; CRC byte-identical; tag `v11.1.0`; tip `4490abe53c` |
 | v11.2 MCP Stress-Test Fixes | 2026-06-11 | ~1 session | 5 phases, 8 plans; all 9 Brothers Lazaroff MCP/Perform stress-test bugs fixed (resolver 404, publish-audience org scope, error contract, publish/test-data hygiene, P3 polish); CRC byte-identical; tag `v11.2.0`; tip `f27ae7bc5f` |
 | v11.3 Worthiness & Access | 2026-06-10 | ~1 session | 5 phases, 10 plans; all post-stress-test findings the oracle confirmed closed (anon chart deep-link + transpose, agent docx/Gdocs→PDF upload + chunked inline, harness/QR/orphan hygiene, /perform CLS 0.187→0.000 + TTFB stream, broslaz PWA manifest + NAT rate-limit). Oracle `docs/ACCESS-POLICY.md` v0.3; err-public held; CRC byte-identical throughout; tag `v11.3.0` |
+| v11.4 Publish & Notify (D8) | 2026-06-11 | ~1 session | 4 phases, 5 plans; D8 shipped — no-auto-blast + explicit recipient model (browser + MCP `publish_setlist` requires `recipients`), org-branded comms, remembered ad-hoc recipients as MCP contacts, musician org membership admin-toggleable + default-both (19/19 backfilled both on doc + Auth claim). Oracle → v0.4; err-public held; CRC byte-identical; tag `v11.4.0` |
+
+---
+
+## ✅ v11.4 Publish & Notify (D8)
+
+**Completed:** 2026-06-11
+**Duration:** ~1 session (opened 2026-06-10, content-complete 2026-06-11)
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 4 (v11.4-01..04) |
+| Plans | 5 (01 · 02 · 03 · 04-01 · 04-02) |
+| Files changed | ~12 (branding/email, MCP publish + contacts tools, PublishDialog, UserRow, users-firebase, backfill script + test) |
+| Tag | `v11.4.0` |
+| Oracle | `docs/ACCESS-POLICY.md` → **v0.4** (D8 shipped) |
+
+### Key Accomplishments
+
+- **No-auto-blast, permanently (v11.4-01):** MCP `publish_setlist` refuses a real publish with undefined `recipients` (`recipients_required`; dryRun/preview still derive the candidate audience); browser `PublishDialog` selection governs all channels (in-app/push/email). Closed the v11.2 BUG-9 cross-tenant blast class on both surfaces.
+- **Org-branded comms (v11.4-02):** publish/gig-packet/resend emails carry the publishing org's branding (BL from-name/header/wordmark/footer) via an `EmailBranding` registry; branding follows the setlist's org; CRC byte-identical.
+- **Remembered ad-hoc recipients (v11.4-03):** org-scoped `contacts` collection + rules (deployed) + `list/create/delete_contact` MCP tools + `preview_publish.savedContacts[]`. Shipped as MCP-not-browser after finding the browser PublishDialog is orphaned (mounted nowhere).
+- **Default-both org membership (v11.4-04):** the `/manage` Band-access tri-state opened to ALL non-pending rows (admin-only); new accounts seed `orgIds:['crc','brotherslazaroff']`; a reversible prod backfill stamped every existing person both on doc + Auth claim (19/19; idempotent; per-user rollback snapshot). One unified team now authors both bands.
+
+### Key Decisions
+
+- **Membership scope = EVERYONE incl. leaders (Daniel 2026-06-11):** default-both grants cross-tenant authoring to all leaders — a deliberate "one unified team authors both bands" call. `rowOrgIds`/`getOrgIdsFromClaims` defaults STAY `['crc']` (CRC-safety net); "both" is explicit data.
+- **v11.4-03 surface = MCP contacts, not browser UI:** the PublishDialog picker is orphaned; MCP already accepts ad-hoc `recipients[]`, so the gap was persistence/reuse.
+- **Backfill executed by agent under explicit Daniel grant:** the T3 single-owner human-action gate was satisfied by Daniel's "permission fully granted"; agent ran the prod `--apply` in-session with output captured + verified.
+- **Pure helpers test admin-free:** firebase-admin imported dynamically inside the migration script's I/O functions so its decision helpers unit-test without admin in the transform graph (reusable pattern).
+
+### UAT-PENDING (live/safe, non-blocking)
+
+- v11.4-01 live publish-with-recipients (STOP-gate: dryRun/preview to test, never auto-blast a real roster).
+- v11.4-02 live BL-branded email + Resend `RESEND_FROM_EMAIL_BROSLAZ` domain ops step.
+- v11.4-03 live MCP contacts smoke (no sends).
+- v11.4-04 default-both shows in `/manage` People ("CRC + BL") + a BL `preview_publish` broadened audience.
 
 ---
 

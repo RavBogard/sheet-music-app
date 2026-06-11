@@ -7,21 +7,21 @@
 See: .paul/PROJECT.md (updated 2026-06-07)
 
 **Core value:** The band gets the right charts + recordings on their iPads each week, and Daniel authors setlists conversationally via Claude + MCP. Now MULTI-TENANT (2nd live tenant: Brothers Lazaroff on brotherslazaroff.live).
-**Current focus:** **🚧 v11.4 Publish & Notify (D8)** — replace implicit auto-blast publish/notify with an explicit, leader-driven, org-branded recipient picker (browser + MCP), then admin-toggleable musician org-membership (default-both) + backfill. Implements the ratified `docs/ACCESS-POLICY.md` §D8 spec. 4 phases, picker-first / backfill-last (BUG-9 sequencing invariant). (v11.3 ✅ COMPLETE 2026-06-10 tag `v11.3.0`. v7.1 hardening continues in parallel via `.coord/`.)
+**Current focus:** **Between milestones.** v11.4 Publish & Notify (D8) ✅ COMPLETE 2026-06-11 (tag `v11.4.0`; oracle → v0.4). Next: `/paul:discuss-milestone` or `/paul:milestone` (candidate backlog: v11.5 — recordings org-scoping, finalize signed-URL org-stamp, SERVICE_TYPE_LABELS vocab, v7.0 fold-forward). v7.1 hardening continues in parallel via `.coord/`.
 
 ## Current Position
 
-Milestone: **🚧 v11.4 — Publish & Notify (D8)** (OPEN 2026-06-10; 4 phases, plans TBD). Created via `/paul:discuss-milestone`→`/paul:milestone`. **Spec backbone:** `docs/ACCESS-POLICY.md` §"Publish & notify (D8)" (ratified — implements, not invents; bump oracle → v0.4 when D8 ships). (v11.3 ✅ COMPLETE 2026-06-10 tag `v11.3.0`; v11.2 ✅ 2026-06-11 tag `v11.2.0`.)
-Phase: **v11.4-04 Musician org-membership toggle + default-both backfill** (D8 item 5, LAST) — **✅ COMPLETE 2/2** (01 toggle `ba826730d7` · 02 default-both rollout `47e83088a1`). **v11.4 now 4/4 CONTENT COMPLETE.**
-Plan: **`v11.4-04-02` ✅ APPLIED + UNIFIED** (`47e83088a1`). T1 `ensureUserProfile` seeds new docs `orgIds:['crc','brotherslazaroff']`; T2 `scripts/v11-4-04-orgids-backfill.mjs` (diagnose/dry-run/apply/rollback, doc+claim lockstep, idempotent, per-user snapshot incl. absent→delete) + 10/10 unit test; **T3 prod `--apply` RUN (Daniel-authorized, agent-executed): scanned=19 changed=15 skipped=4, re-diagnose → 0 remaining (idempotent); snapshot `scripts/.backfill-snapshots/v11-4-04-20260611T193413Z.json` (gitignored).**
-Status: **v11.4 CONTENT COMPLETE 4/4 — ready for `/paul:complete-milestone`** (version bump → 11.4.0 + tag; ACCESS-POLICY oracle → v0.4; retire the "Until D8 ships" note). All 19 users now both-tenant on doc + claim.
-Last activity: 2026-06-11 — v11.4-04-02 APPLY (`47e83088a1`, T1+T2 + prod backfill) → UNIFY (SUMMARY + ROADMAP/STATE). Milestone close pending.
+Milestone: **Awaiting next milestone.** v11.4 — Publish & Notify (D8) ✅ COMPLETE 2026-06-11 (tag `v11.4.0`; `package.json` `11.4.0`; oracle `docs/ACCESS-POLICY.md` → **v0.4**; archived `.paul/milestones/v11.4.0-ROADMAP.md` + MILESTONES.md § v11.4). 4 phases / 5 plans. (v11.3 ✅ tag `v11.3.0`; v11.2 ✅ `v11.2.0`.)
+Phase: None active.
+Plan: None.
+Status: **Milestone v11.4 complete — ready for the next.** All D8 surfaces shipped; all 19 users both-tenant on doc + Auth claim. Run `/paul:discuss-milestone` (or `/paul:milestone`).
+Last activity: 2026-06-11 — `/paul:complete-milestone` v11.4 (version → 11.4.0 + tag `v11.4.0`, oracle → v0.4, PROJECT/ROADMAP/MILESTONES evolved + archived).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
 - **Band leaders:** explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle (today hand-set via scripts). The **authoring** tier.
 
-## Milestone Phases (v11.4 — ACTIVE)
+## Milestone Phases (v11.4 — ✅ COMPLETE, all 4 shipped)
 
 | Phase | Focus | Priority |
 |-------|-------|----------|
@@ -36,15 +36,15 @@ Last activity: 2026-06-11 — v11.4-04-02 APPLY (`47e83088a1`, T1+T2 + prod back
 
 ## Git State
 
-- **cwd branch:** `master`, in sync with `origin/master` (tip `628984639b` — **v11.3 milestone close release** [`chore(release): v11.3.0`; version bump + MILESTONES/PROJECT/ROADMAP evolve + archive]; **annotated tag `v11.3.0` pushed**). Phase commit: v11.3-05 `3258d792b3` (pushed `92e809401d..3258d792b3`). Prior: v11.3-04 `c0b0ab3367` · v11.3-03 `4fe1748318` · v11.3-02 `89f4af7fd2` · v11.3-01 `bc8f935aa2` · v11.2 `f27ae7bc5f`. v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`. **v11.4 milestone close** (`chore(release): v11.4.0`; version → 11.4.0, oracle → v0.4, PROJECT/ROADMAP/MILESTONES evolve + archive; **annotated tag `v11.4.0`**). v11.4 phase commits: 01 `80ea721508` · 02 `f03b48db88` · 03 `fb055b4b5d` · 04-01 `ba826730d7` · 04-02 `47e83088a1` · phase-close `eeb393097b`. Prior: **v11.3 milestone close release** `628984639b` [`chore(release): v11.3.0`; **tag `v11.3.0`**]. Phase commit: v11.3-05 `3258d792b3` (pushed `92e809401d..3258d792b3`). Prior: v11.3-04 `c0b0ab3367` · v11.3-03 `4fe1748318` · v11.3-02 `89f4af7fd2` · v11.3-01 `bc8f935aa2` · v11.2 `f27ae7bc5f`. v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.4-04-02 loop CLOSED; phase v11.4-04 ✅; v11.4 4/4 — next: /paul:complete-milestone]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.4 milestone COMPLETE — between milestones; next: /paul:discuss-milestone]
+  ○        ○        ○
 ```
 
 ## Execution Substrate (bongo .coord/)
@@ -88,10 +88,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.4-04-02 loop CLOSED; phase v11.
 
 ## Session Continuity
 
-Last session: 2026-06-11 — v11.4-01 (`80ea721508`) → 02 (`f03b48db88`) → 03 (`fb055b4b5d`) → 04-01 toggle (`ba826730d7`) → 04-02 APPLY+UNIFY (`47e83088a1`, incl. prod default-both backfill 15/19). v11.4 4/4 CONTENT COMPLETE.
-Stopped at: **v11.4-04-02 loop CLOSED; v11.4 milestone CONTENT COMPLETE 4/4 (LAST phase done).**
-Next action: **`/paul:complete-milestone`** — bump `package.json` → 11.4.0 + annotated tag `v11.4.0` on master; evolve PROJECT.md (D8 validated)/ROADMAP/MILESTONES + archive `.paul/milestones/v11.4.0-ROADMAP.md`; **bump `docs/ACCESS-POLICY.md` oracle → v0.4** (retire the "Until D8 ships, invariant 3 stands as-is" note). This is a milestone-close boundary (release tag) — confirm before tagging.
-Resume file: **.paul/phases/v11.4-04-membership-toggle-backfill/v11.4-04-02-SUMMARY.md** (full close context). **(v11.4-04 closed 2026-06-11; milestone-close pending.)**
+Last session: 2026-06-11 — v11.4 milestone CLOSED via `/paul:complete-milestone`: version → 11.4.0, annotated tag `v11.4.0`, oracle `docs/ACCESS-POLICY.md` → v0.4 (D8 placeholder retired), PROJECT/ROADMAP/MILESTONES evolved + `.paul/milestones/v11.4.0-ROADMAP.md` archived. (v11.4 phase commits 80ea721508→f03b48db88→fb055b4b5d→ba826730d7→47e83088a1; phase-close `eeb393097b`; release commit + tag this session.)
+Stopped at: **v11.4 milestone COMPLETE — between milestones.**
+Next action: **`/paul:discuss-milestone`** (or `/paul:milestone`) to define the next. Candidate backlog: v11.5 — recordings-collection org-scoping (+ `/api/recordings/upload` orgId stamp), `finalize_chart_upload` signed-URL org-stamp gap, SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage. v7.1 hardening continues independently via `.coord/`.
+Resume file: **.paul/ROADMAP.md** (Next Milestone) + MILESTONES.md § v11.4 (close record).
 **Deferred UAT (RUM):** v11.3-04 field TTFB/FCP — re-run `node scripts/v11-3-04-webvitals-slice.mjs` after ~1–7d traffic vs 1633/3551 baseline; if still high → Vercel infra follow-up (Deferred Issues), not app code.
 **Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.
 Resume file: **.paul/HANDOFF-2026-06-10-v11.3-03-complete.md** (full context); then ROADMAP § Phase v11.3-04. Oracle: `docs/ACCESS-POLICY.md` v0.3. **(PAUSED 2026-06-10 at the v11.3-03 → v11.3-04 phase boundary.)**

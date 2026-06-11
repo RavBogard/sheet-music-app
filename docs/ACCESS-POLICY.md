@@ -1,4 +1,4 @@
-# ACCESS-POLICY.md — Who can see/do what (v0.2, 2026-06-10)
+# ACCESS-POLICY.md — Who can see/do what (v0.4, 2026-06-11)
 
 > **Status: RATIFIED by Daniel 2026-06-10** (one cell pending confirmation, marked ⚠️).
 > This is the oracle for all permission/tenancy stress tests. A test finding is a
@@ -92,7 +92,11 @@ Daniel's decision on outbound comms (packets, emails, publish notifications):
 Under today's auto-notify, default-both membership would re-create the v11.2
 BUG-9 blast (broslaz publish → entire CRC roster). Picker first, backfill second.
 
-Until D8 ships, invariant 3 below stands as-is.
+**D8 SHIPPED in v11.4 (2026-06-11).** No auto-blast on any channel; publish/notify
+audience is explicit (leader-chosen, MCP `publish_setlist` requires `recipients`);
+comms are org-branded; ad-hoc recipients are remembered as MCP contacts; musician
+org membership is admin-toggleable and defaulted-both (all existing people backfilled).
+Invariant 3 below now reads as the permanent rule, not a placeholder.
 
 ## Tenancy invariants (always bugs — no exceptions)
 
@@ -116,6 +120,7 @@ Until D8 ships, invariant 3 below stands as-is.
 
 ## Change log
 
+- v0.4 (2026-06-11, D8 shipped via v11.4 Publish & Notify): no-auto-blast + explicit recipient model across browser + MCP (`publish_setlist` requires `recipients`); org-branded comms; remembered ad-hoc recipients as MCP contacts; musician org membership admin-toggleable + default-both with all-people backfill (19/19 stamped both, doc + Auth claim). Retired the "Until D8 ships, invariant 3 stands as-is" placeholder — invariant 3 is now permanent.
 - v0.3 (2026-06-10, post-stress-runs): D-Q1 schedule clarified (public schedule = `/perform` list; `/schedule` = authed assignments — closes browser-run Policy Q1, no bug). D-Q2: anon transpose/AI-scan = OPEN (BUG-4 becomes an anon-path fix with rate-limits, not a UX gate). D4-rev1: library relaxed to member-✅ (BUG-8 closes as policy change, no code). D7 (admin diagnostics global) and D8 (publish/notify redesign) added earlier today.
 - v0.2 (2026-06-10): D1–D6 ratified by Daniel. D2 read-side encoded as implied-yes pending veto. Library gated musician+; schedule public; QR = device-handoff auth; monitor = own-bus-if-assigned.
 - v0.1 (2026-06-10): Initial draft.
