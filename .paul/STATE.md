@@ -14,8 +14,8 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 Milestone: **Awaiting next milestone.** v11.4 — Publish & Notify (D8) ✅ COMPLETE 2026-06-11 (tag `v11.4.0`; `package.json` `11.4.0`; oracle `docs/ACCESS-POLICY.md` → **v0.4**; archived `.paul/milestones/v11.4.0-ROADMAP.md` + MILESTONES.md § v11.4). 4 phases / 5 plans. (v11.3 ✅ tag `v11.3.0`; v11.2 ✅ `v11.2.0`.)
 Phase: None active.
 Plan: None.
-Status: **Milestone v11.4 complete — ready for the next.** All D8 surfaces shipped; all 19 users both-tenant on doc + Auth claim. Run `/paul:discuss-milestone` (or `/paul:milestone`).
-Last activity: 2026-06-11 — `/paul:complete-milestone` v11.4 (version → 11.4.0 + tag `v11.4.0`, oracle → v0.4, PROJECT/ROADMAP/MILESTONES evolved + archived).
+Status: **Milestone v11.4 complete — ready for the next.** All D8 surfaces shipped; all 19 users both-tenant on doc + Auth claim. Run `/paul:discuss-milestone` (or `/paul:milestone`). **Between-milestone quick-fix shipped 2026-06-11: BUG-12** (`.paul/phases/bug12-qr-code-validator/`) — `GET /api/auth/qr` validator widened to admit BOTH the 6-char device-handoff code AND the 32-char base64url test-login code (`create_test_account({loginable:true})`); BUG-7 path-char→400 guarantee held; qr route tests 11/11; deployed to prod `master` (commit `bab97f6013`).
+Last activity: 2026-06-11 — BUG-12 fix (`/api/auth/qr` GET both-shapes validator) committed `bab97f6013`, pushed `master`, Vercel prod deploy. Prior: `/paul:complete-milestone` v11.4.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.

@@ -26,6 +26,23 @@ layout-shift **0.000** on two consecutive cold loads (was a reproducible 0.187
 pre-deploy / 0.200 field p75). Lists do not move; LCP element = setlist title
 `<h3>` (820ms). Target (<0.1) beaten — shift fully eliminated.
 
+## ⏳ BUG-12 — loginable `/test-login` consume restored (post-deploy)
+
+**Deployed commit:** `bab97f6013` (prod `master`; quick-fix `bug12-qr-code-validator`).
+
+What was built: `GET /api/auth/qr` validator widened to admit the 32-char
+base64url test-login code (`create_test_account({loginable:true})`) alongside the
+6-char device-handoff code; BUG-7 malformed/path-char→400-before-Firestore held.
+
+VERIFY (admin/band_leader MCP bearer + browser): `create_test_account({role:'band_leader', loginable:true})`
+→ open the returned `loginUrl` signed-out → `GET /api/auth/qr?code=<32char>` returns
+`{status:"approved", token}` (200, NOT 400) → persona lands signed in → revoke → URL dead.
+Then re-fire the 4 BUG-12-blocked stress cells (run3-B report §7): BUG-9 e2e
+mint→consume, leader authoring walk (create→add 3→reorder→delete, both hosts —
+default-both means a CRC-minted leader should walk broslaz too), QR single-use
+real-claim → 410-on-reuse + role fidelity, B3 leader-side publish UI. Sweep test
+accounts after (`cleanup_all_test_data({prefix})`). NB broslaz MCP needs re-auth.
+
 ## ⏳ v11.3-05-01 — BUG-6 broslaz PWA manifest (post-deploy)
 
 **Will deploy with:** phase commit `feat(v11.3-05)` (pending push).
