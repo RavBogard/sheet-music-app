@@ -13,20 +13,32 @@ plan or an emergent phase.
 
 ---
 
-## ⏳ v11.3-04-02 — /perform CLS fix (synthetic, post-deploy)
+## ✅ v11.3-04-02 — /perform CLS fix (synthetic) — VERIFIED 2026-06-10
 
-**Deployed commit:** pending the `feat(v11.3-04)` phase-close commit/push.
+**Deployed commit:** `c0b0ab3367` (live on prod).
 
 What was built: reserved the anon QR sign-in card's slot during `authLoading`
 (for expected-anon, `!cachedUser`) so the Upcoming/Past lists no longer shift
-when the card mounts post-auth-resolve. jsdom can't measure layout, so the
-pixel-level proof is deferred to a deployed synthetic run.
+when the card mounts post-auth-resolve.
 
-How to verify: once the phase deploys, re-run the characterization § 2 recipe
-(Playwright at 820×1180 iPad WebKit on PROD `/perform`, buffered layout-shift
-observer, cold + warm) and confirm cumulative layout-shift **< 0.1** (was 0.187
-synthetic / 0.200 field p75). Also eyeball: the lists do not visibly jump as the
-sign-in card appears. CRC anon card appearance unchanged.
+**VERIFIED:** Playwright @ 820×1180 on PROD `/perform` post-deploy → cumulative
+layout-shift **0.000** on two consecutive cold loads (was a reproducible 0.187
+pre-deploy / 0.200 field p75). Lists do not move; LCP element = setlist title
+`<h3>` (820ms). Target (<0.1) beaten — shift fully eliminated.
+
+## ⏳ v11.3-04-03 — /perform TTFB/FCP (field, post-deploy RUM)
+
+**Deployed commit:** `c0b0ab3367` (live on prod).
+
+What was built: Suspense-streamed the `/perform` listing so the Firestore query
+is off the first-byte path. Synthetic TTFB is warm-edge (26ms) and can't
+reproduce the field cold-start number — needs real-user RUM to accumulate.
+
+How to verify: after ~1–7 days of traffic, re-run
+`node scripts/v11-3-04-webvitals-slice.mjs` and compare `/perform`
+cold(navigate) **TTFB/FCP** to the 1633/3551 ms baseline. If TTFB stays high,
+it's cold-start-bound → action the Vercel fluid-compute/region follow-up (STATE
+Deferred Issues), NOT more app code.
 
 ---
 
