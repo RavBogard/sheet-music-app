@@ -79,4 +79,60 @@ describe("GET /api/auth/qr — code validation (BUG-7)", () => {
         expect(mockCollection).toHaveBeenCalledWith("qr-sessions")
         expect(mockDoc).toHaveBeenCalledWith("ABC123")
     })
+
+    // BUG-12 (run-3 §BUG-12): create_test_account({loginable:true}) mints a
+    // 32-char base64url code (randomBytes(24).toString("base64url")) into the
+    // SAME qr-sessions collection. The old `^[A-Z0-9]{6}$` gate 400'd it, killing
+    // the /test-login consume. The widened guard must let it reach the lookup.
+
+    // AC-1 — a 32-char base64url test-login code reaches the lookup (the actual
+    // shape from the run-3 report; mixed-case, exactly 32 chars).
+    it("reaches the lookup (404, not 400) for a 32-char base64url test-login code", async () => {
+        const code = "HTeAcKgffxbPycjgFgIQXkSgfuFT7GvP" // 32 chars, mixed-case
+        expect(code).toHaveLength(32)
+        const res = await GET(makeReq(`?code=${code}`))
+        expect(res.status).toBe(404)
+        const body = await res.json()
+        expect(body.error).toBe("Session not found")
+        expect(mockCollection).toHaveBeenCalledWith("qr-sessions")
+        expect(mockDoc).toHaveBeenCalledWith(code)
+    })
+
+    // AC-1 — base64url charset breadth: a 32-char code containing '-' and '_'
+    // (the two non-alnum base64url chars) is admitted.
+    it("reaches the lookup for a 32-char code containing '-' and '_'", async () => {
+        const code = "abcDEF-_12345678901234567890XYza" // 32 chars, has - and _
+        expect(code).toHaveLength(32)
+        const res = await GET(makeReq(`?code=${code}`))
+        expect(res.status).toBe(404)
+        expect(mockDoc).toHaveBeenCalledWith(code)
+    })
+
+    // AC-3 — boundary 400s: lengths/charsets that match NEITHER legitimate shape
+    // must 400 before Firestore. Asserts the validator stays exactly-two-shapes
+    // (not loosened to "anything without '/'").
+    it.each([
+        ["ABC12", "5-char (below 6-char shape)"],
+        ["ABC1234", "7-char (above 6-char shape)"],
+        ["abc123", "6-char but lowercase (device codes are uppercase)"],
+        ["a".repeat(31), "31-char base64url (below 32)"],
+        ["a".repeat(33), "33-char base64url (above 32)"],
+    ])("returns 400 before Firestore for %s — %s", async (code) => {
+        const res = await GET(makeReq(`?code=${code}`))
+        expect(res.status).toBe(400)
+        const body = await res.json()
+        expect(body.error).toBe("Invalid code format")
+        expect(mockCollection).not.toHaveBeenCalled()
+    })
+
+    // AC-3 — a 32-LENGTH code with a '/' inside (path char at the right length)
+    // still 400s before Firestore: the BUG-7 guarantee is length-independent.
+    it("returns 400 before Firestore for a 32-length code containing '/'", async () => {
+        // 30 alnum + '%2F' (decodes to '/') keeps it path-char-bearing.
+        const res = await GET(makeReq(`?code=${"a".repeat(30)}%2Fb`))
+        expect(res.status).toBe(400)
+        const body = await res.json()
+        expect(body.error).toBe("Invalid code format")
+        expect(mockCollection).not.toHaveBeenCalled()
+    })
 })

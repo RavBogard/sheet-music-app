@@ -19,6 +19,18 @@ import { logger } from "@/lib/logger"
 const COLLECTION = "qr-sessions"
 const EXPIRY_MS = 5 * 60 * 1000 // 5 minutes
 
+// The two legitimate code shapes that land in `qr-sessions` (one endpoint, two
+// namespaces). The GET poll consumes BOTH; POST/PUT only ever handle the 6-char
+// device-handoff shape.
+//
+// 6-char device-handoff QR code — `generateCode()` output (uppercase alnum).
+const DEVICE_CODE_RE = /^[A-Z0-9]{6}$/
+// 32-char base64url test-login code minted by create_test_account({loginable:true})
+// (test-tokens.ts: `randomBytes(24).toString("base64url")` → exactly 32 chars).
+// base64url's alphabet is A-Z a-z 0-9 - _ and NEVER contains '/', so admitting
+// it does NOT re-open the BUG-7 '/'-in-doc-id path (the guard below stays intact).
+const TEST_LOGIN_CODE_RE = /^[A-Za-z0-9_-]{32}$/
+
 function generateCode(): string {
     // 6-char alphanumeric, uppercase — easy to read, easy to type as fallback
     return randomBytes(4)
@@ -88,8 +100,14 @@ export async function GET(req: NextRequest) {
     // 400 BEFORE touching Firestore. A code with '/' makes `.doc(code)` an
     // invalid (odd-segment) document reference that throws → caught below as a
     // 500. Caller-supplied bad input must be 4xx per the v11.2 error contract.
-    // Same regex POST/PUT use, so legit generateCode() output still passes.
-    if (!/^[A-Z0-9]{6}$/.test(code)) {
+    //
+    // BUG-12 (run-3 §BUG-12): this GET endpoint serves TWO code namespaces that
+    // share `qr-sessions` — the 6-char device-handoff code AND the 32-char
+    // base64url test-login code minted by create_test_account({loginable:true}).
+    // Admit BOTH legitimate shapes; reject everything else. Both are anchored,
+    // fixed-length, and exclude '/' and '.', so the BUG-7 guarantee holds — a
+    // 31/33-char string, a '/'-bearing code, or `..%2Fetc` all still 400 here.
+    if (!DEVICE_CODE_RE.test(code) && !TEST_LOGIN_CODE_RE.test(code)) {
         return NextResponse.json({ error: "Invalid code format" }, { status: 400 })
     }
 
