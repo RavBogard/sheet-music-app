@@ -28,13 +28,15 @@ import { logger } from "@/lib/logger"
  * fan-out so an MCP-published setlist is operationally identical to a
  * UI-published one.
  *
- * Defaulted recipient model: when no `recipients[]` override is supplied,
- * the tool queries `users` for every account in roles
- * {admin, band_leader, musician} except the caller. The HTTP route takes
- * an explicit musicians[] from the in-app picker UI; MCP has no picker,
- * so we apply a sensible default + let the caller narrow. `member`-only
- * accounts (congregation, not band) are excluded by default to avoid
- * accidental spam.
+ * Recipient model (v11.4-01, D8 item 1): a REAL publish requires an
+ * explicit `recipients[]` — it never fans out to an implicitly-derived
+ * generic roster (that implicit fan-out was the v11.2 BUG-9 blast class).
+ * When `recipients` is undefined, a real publish refuses with
+ * `recipients_required`; only `dryRun`/`preview_publish` auto-derive the
+ * default org-scoped candidate audience (roles {admin, band_leader,
+ * musician}, scoped to the setlist's org, minus the caller) so the caller
+ * can review it and then re-publish with an explicit set. `member`-only
+ * accounts (congregation, not band) are excluded from that candidate set.
  *
  * Notification channels (matches the HTTP route):
  *   - In-app: users/{uid}/notifications/{id} doc per recipient with uid.
@@ -571,6 +573,26 @@ export async function publishSetlist(
     // sending to nobody.
     let recipients: ResolvedRecipient[]
     if (args.recipients === undefined) {
+        // v11.4-01 (D8 item 1 / tenancy invariant 3 = the v11.2 BUG-9 blast
+        // class): a REAL publish must NEVER fan out to an implicitly-derived
+        // generic roster. Refuse and point the caller at preview_publish,
+        // which (via dryRun) still surfaces the default org-scoped candidate
+        // audience for review. dryRun itself stays observable — it falls
+        // through to resolveDefaultRecipients below so the candidate set is
+        // returned WITHOUT sending ([[feedback_dryrun_is_observability]]).
+        // Net: undefined + !dryRun → refuse (AC-1); undefined + dryRun →
+        // auto-derive candidates (AC-2); explicit recipients[] unchanged (AC-3).
+        if (!args.dryRun) {
+            return richError(
+                "recipients_required",
+                "Explicit recipient selection is required — a publish never fans out to a generic roster (D8 item 1). Call preview_publish (or publish_setlist with dryRun:true) to review the default org-scoped audience, then re-call publish_setlist with an explicit recipients[].",
+                {
+                    errorCode: 400,
+                    setlistId: args.setlistId,
+                },
+                "Run preview_publish to see the default org-scoped audience, then pass that set (or a subset) as recipients[] on the real publish.",
+            )
+        }
         recipients = await resolveDefaultRecipients(
             db,
             callerUid,

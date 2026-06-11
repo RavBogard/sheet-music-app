@@ -353,6 +353,25 @@ Check (live, non-blocking — once deployed):
 
 ---
 
+## ⏳ v11.4-01-01 — No-auto-blast publish/notify (D8 items 1+2) — STOP-gate, human-gated
+
+**Status:** code-complete + MCP emulator 29/29 (incl. 4 new D8 cases) + PublishDialog 3/3 + tsc/next-build clean. Committed at phase close. **Live sends were NOT performed during APPLY (publish/notify STOP-gate — emulator + mocked fetch only); these confirm behavior on the deployed surface.**
+
+What was built: MCP `publish_setlist` refuses a REAL publish when `recipients` is undefined (`recipients_required`) — only `preview_publish`/`dryRun` auto-derives the default org audience. The browser `PublishDialog` per-musician toggle now governs ALL channels (in-app + push + email), default all-selected, and disables Publish at zero selection. Closes the v11.2 BUG-9 implicit-blast class on both surfaces.
+
+Check (MCP — SAFE, use dryRun for the preview path; the real-publish refusal sends nothing):
+- [ ] `publish_setlist({setlistId:<a real setlist>})` with NO `recipients` → returns `recipients_required` (no send, no publishedAt change). Then `preview_publish({setlistId})` (or `publish_setlist({…, dryRun:true})`) → returns the default org-scoped candidate audience + recipientCount (writes/sends nothing).
+- [ ] `publish_setlist({setlistId, recipients:[{uid:…}], dryRun:true})` → previews exactly that set. (Only run a REAL `publish_setlist` with explicit recipients if you actually intend to notify those people — that is a live send.)
+
+Check (browser — only the "all selected" path is a real send; verify on a TEST setlist or accept it notifies the selected people):
+- [ ] Open Publish & Notify on a setlist with ≥2 assigned musicians → all rows are selected by default; "N will be notified" reflects the count.
+- [ ] Deselect a musician → they show the deselected (unchecked, dimmed) state; the count drops. (On a real publish they would receive NO in-app notice, NO push, NO email.)
+- [ ] Deselect everyone → the Publish button is disabled ("Select at least one").
+- [ ] iPad (11"): rows are comfortably tappable (≥44px), selected/deselected states are clearly distinguishable (not color-only).
+- [ ] CRC regression: publishing with all musicians left selected behaves exactly as before (everyone assigned notified across channels).
+
+---
+
 ## ⏳ v11.3-02-02 — Chunked inline chart-upload (begin/append/commit)
 
 **Status:** code-complete + 20/20 upload-session emulator tests (8 new chunked AC) + tsc/next-build clean. Committed at phase close.

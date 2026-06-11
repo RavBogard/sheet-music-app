@@ -202,15 +202,25 @@ describe("MCP publish_setlist (emulator)", () => {
         })
         mockSendPushToUsers.mockResolvedValueOnce({ sent: 3, failed: 0 })
 
-        const r = await publishSetlist(ADMIN, { setlistId: id })
+        // v11.4-01 (D8 item 1): a real publish now requires explicit
+        // recipients[]. Pass the set that the pre-v11.4 default audience would
+        // have derived (band roles minus the publisher) so this test continues
+        // to exercise the commit + multi-channel fan-out machinery (unchanged).
+        const r = await publishSetlist(ADMIN, {
+            setlistId: id,
+            recipients: [
+                { uid: LEADER },
+                { uid: MUSICIAN_1 },
+                { uid: MUSICIAN_2 },
+                { uid: NONLEADER },
+            ],
+        })
         expect("ok" in r && r.ok).toBe(true)
         if (!("ok" in r) || !r.ok) return
 
         expect(r.wasAlreadyPublished).toBe(false)
         expect(r.dryRun).toBe(false)
-        // Default audience excludes the publisher (ADMIN) and members. So
-        // LEADER + MUSICIAN_1 + MUSICIAN_2 + NONLEADER are eligible (4 band-
-        // role accounts minus ADMIN himself).
+        // Explicit audience: LEADER + MUSICIAN_1 + MUSICIAN_2 + NONLEADER.
         expect(r.recipientCount).toBe(4)
         const uids = r.recipients.map((x) => x.uid as string).sort()
         expect(uids).toEqual([LEADER, MUSICIAN_1, MUSICIAN_2, NONLEADER].sort())
@@ -290,7 +300,13 @@ describe("MCP publish_setlist (emulator)", () => {
                 publishedSnapshot: [{ title: "Old", key: "", fileId: "x" }],
             })
 
-        const r = await publishSetlist(ADMIN, { setlistId: id })
+        // v11.4-01: explicit recipients required on real publish. MUSICIAN_1
+        // is the SMS-opted-in user — included so the re-publish SMS-skip path
+        // is still exercised.
+        const r = await publishSetlist(ADMIN, {
+            setlistId: id,
+            recipients: [{ uid: MUSICIAN_1 }, { uid: LEADER }],
+        })
         expect("ok" in r && r.ok).toBe(true)
         if (!("ok" in r) || !r.ok) return
 
@@ -472,6 +488,8 @@ describe("MCP publish_setlist (emulator)", () => {
         const r = await publishSetlist(ADMIN, {
             setlistId: id,
             force: true,
+            // v11.4-01: explicit recipients required on real publish.
+            recipients: [{ uid: LEADER }],
         })
         expect("ok" in r && r.ok).toBe(true)
         if (!("ok" in r) || !r.ok) return
@@ -589,7 +607,11 @@ describe("MCP publish_setlist (emulator)", () => {
                   },
         )
 
-        const r = await publishSetlist(ADMIN, { setlistId: id })
+        // v11.4-01: explicit recipients required on real publish.
+        const r = await publishSetlist(ADMIN, {
+            setlistId: id,
+            recipients: [{ uid: LEADER }],
+        })
         expect("ok" in r && r.ok).toBe(true)
         if (!("ok" in r) || !r.ok) return
 
@@ -705,7 +727,11 @@ describe("MCP publish_setlist (emulator)", () => {
             title: "Oseh Shalom",
             fileId: "upload-oseh",
         })
-        const r = await publishSetlist(ADMIN, { setlistId: id })
+        // v11.4-01: explicit recipients required on real publish.
+        const r = await publishSetlist(ADMIN, {
+            setlistId: id,
+            recipients: [{ uid: LEADER }],
+        })
         expect("ok" in r && r.ok).toBe(true)
     })
 
@@ -848,6 +874,129 @@ describe("MCP publish_setlist (emulator)", () => {
             expect(r.recipients.map((x) => x.uid).sort()).toEqual(
                 [LEADER, MUSICIAN_1, MUSICIAN_2, NONLEADER].sort(),
             )
+        })
+    })
+
+    // ─── v11.4-01 (D8 item 1 / tenancy invariant 3 = BUG-9): no implicit blast ─
+    //
+    // A REAL publish must never fan out to an implicitly-derived generic
+    // roster — that implicit fan-out was the v11.2 BUG-9 cross-tenant blast
+    // class. `recipients` undefined on a real publish now refuses with
+    // `recipients_required`; dryRun/preview stays observable (auto-derives the
+    // candidate audience without sending); explicit recipients[] still sends.
+    describe("v11.4-01 — no implicit fan-out on real publish (D8 item 1 / BUG-9)", () => {
+        // getChartHealth carries impl state across tests (beforeEach doesn't
+        // reset it); pin it to "ok" so these health-agnostic cases are
+        // order-independent.
+        beforeEach(() => {
+            mockGetChartHealth.mockReset()
+            mockGetChartHealth.mockResolvedValue({
+                status: "ok",
+                source: "firebase-storage",
+            })
+        })
+
+        it("AC-1: real publish (dryRun absent) with recipients undefined refuses with recipients_required — no write, no dispatch", async () => {
+            const id = "set-d8-noblast"
+            await seedPublishableSetlist(id)
+
+            const r = await publishSetlist(ADMIN, { setlistId: id })
+            expect("ok" in r && r.ok).toBe(false)
+            expect(
+                (r as { error?: { machine_code?: string } }).error?.machine_code,
+            ).toBe("recipients_required")
+
+            // No setlist write — publishedAt/version untouched.
+            const post = (await db().collection("setlists").doc(id).get()).data()!
+            expect(post.publishedAt).toBeFalsy()
+            expect(post.publishedSnapshot).toBeUndefined()
+            expect(post.version).toBeUndefined()
+            // No notification fan-out on any channel. (The guard returns
+            // before the commit phase, so no in-app notification writes occur
+            // either; the no-write + no-dispatch assertions above prove that.
+            // We don't assert on the notifications subcollection because
+            // Firestore doc-delete in beforeEach doesn't clear subcollections,
+            // so it carries writes from earlier explicit-recipient tests.)
+            expect(mockEmailAllMembers).not.toHaveBeenCalled()
+            expect(mockSendPushToUsers).not.toHaveBeenCalled()
+            expect(mockSendSMS).not.toHaveBeenCalled()
+        })
+
+        it("AC-2: dryRun with recipients undefined still surfaces the default org-scoped candidate audience — writes/sends nothing", async () => {
+            const id = "set-d8-preview"
+            await seedPublishableSetlist(id)
+
+            const r = await publishSetlist(ADMIN, { setlistId: id, dryRun: true })
+            expect("ok" in r && r.ok).toBe(true)
+            if (!("ok" in r) || !r.ok) return
+            expect(r.dryRun).toBe(true)
+            // Default band audience (LEADER + MUSICIAN_1 + MUSICIAN_2 + NONLEADER).
+            expect(r.recipientCount).toBe(4)
+            expect(r.recipientCount).toBeGreaterThan(0)
+            // No write, no dispatch.
+            const post = (await db().collection("setlists").doc(id).get()).data()!
+            expect(post.publishedAt).toBeFalsy()
+            expect(mockEmailAllMembers).not.toHaveBeenCalled()
+            expect(mockSendPushToUsers).not.toHaveBeenCalled()
+            expect(mockSendSMS).not.toHaveBeenCalled()
+        })
+
+        it("AC-3: explicit recipients[] on a real publish still sends to exactly those (no-regress)", async () => {
+            const id = "set-d8-explicit"
+            await seedPublishableSetlist(id)
+
+            mockEmailAllMembers.mockResolvedValueOnce({
+                sent: 2,
+                failed: 0,
+                errors: [],
+                messageIds: [],
+            })
+            mockSendPushToUsers.mockResolvedValueOnce({ sent: 1, failed: 0 })
+
+            const r = await publishSetlist(ADMIN, {
+                setlistId: id,
+                recipients: [
+                    { uid: MUSICIAN_1 },
+                    { name: "External Guest", email: "guest@example.com" },
+                ],
+            })
+            expect("ok" in r && r.ok).toBe(true)
+            if (!("ok" in r) || !r.ok) return
+            expect(r.recipientCount).toBe(2)
+
+            // Real publish wrote the setlist.
+            const post = (await db().collection("setlists").doc(id).get()).data()!
+            expect(post.publishedAt).toBeTruthy()
+
+            // Email went to exactly the two explicit recipients.
+            expect(mockEmailAllMembers).toHaveBeenCalledTimes(1)
+            const emailTargets = mockEmailAllMembers.mock.calls[0][0] as Array<{
+                email: string
+            }>
+            expect(emailTargets.map((t) => t.email).sort()).toEqual(
+                ["alex@example.com", "guest@example.com"].sort(),
+            )
+            // In-app + push only to the uid-bearing recipient (MUSICIAN_1).
+            const pushUids = mockSendPushToUsers.mock.calls[0][0] as string[]
+            expect(pushUids).toEqual([MUSICIAN_1])
+        })
+
+        it("AC-3b: explicit recipients: [] (operator-explicit nobody) on a real publish is honored — no send", async () => {
+            const id = "set-d8-empty"
+            await seedPublishableSetlist(id)
+
+            const r = await publishSetlist(ADMIN, {
+                setlistId: id,
+                recipients: [],
+            })
+            expect("ok" in r && r.ok).toBe(true)
+            if (!("ok" in r) || !r.ok) return
+            expect(r.recipientCount).toBe(0)
+            // Still publishes (snapshot write) but sends to nobody.
+            const post = (await db().collection("setlists").doc(id).get()).data()!
+            expect(post.publishedAt).toBeTruthy()
+            expect(mockEmailAllMembers).not.toHaveBeenCalled()
+            expect(mockSendPushToUsers).not.toHaveBeenCalled()
         })
     })
 })

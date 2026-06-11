@@ -14,14 +14,14 @@ Focus: Replace today's implicit auto-blast publish/notify with an explicit, lead
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| v11.4-01 | Recipient picker + no-auto-blast (D8 items 1+2) [P0 — safety core] | TBD | Not started | - |
+| v11.4-01 | Recipient picker + no-auto-blast (D8 items 1+2) [P0 — safety core] | 01 (MCP no-blast + browser picker) ✅ | ✅ Complete | 2026-06-11 |
 | v11.4-02 | Org-branded comms (D8 item 4) [P1] | TBD | Not started | - |
 | v11.4-03 | Remembered ad-hoc recipients (D8 item 3) [P1] | TBD | Not started | - |
 | v11.4-04 | Musician org-membership toggle + default-both backfill (D8 item 5) [P2 — LAST] | TBD | Not started | - |
 
 ### Phase v11.4-01: Recipient picker + no-auto-blast [P0 — safety core, prerequisite for 04]
 Focus: Replace the implicit `resolveDefaultRecipients` auto-send with explicit recipient selection (D8 items 1+2). Browser `PublishDialog.tsx` gains a recipient picker (default = the publishing org's roster, leader checks/unchecks who receives); MCP `publish_setlist` requires an explicit recipients selection / confirm (`preview_publish` already surfaces the org-scoped audience from v11.2-02). in-app/push/email send ONLY to the selected set. Closes the BUG-9 blast class permanently on both surfaces. Preserve the v11.2-02 org-scope wall + v11-06-02 no-arg-injection invariant. Regression + emulator coverage citing tenancy invariant 3.
-Plans: TBD (defined during /paul:plan)
+Plans: **01** ✅ COMPLETE (`v11.4-01-01` PLAN+SUMMARY; 3 tasks; /ui-ux-pro-max applied to Task 2). **T1** MCP `publish_setlist` real publish refuses on undefined recipients (`recipients_required`); dryRun/preview still auto-derives the candidate audience. **T2** `PublishDialog` per-musician toggle now governs ALL channels (in-app+push+email), default all-selected (CRC byte-identical), zero-selected disables Publish; a11y role=checkbox/aria-checked/≥44px. **T3** MCP emulator 29/29 (+4 D8 cases; 5 existing migrated to explicit recipients) + new `PublishDialog.test.tsx` 3/3. Preserved v11.2-02 org-scope wall + v11-06-02 no-arg-injection. Gates: tsc · emulator · components/setlist · next build all green. 1 live-send UAT item (STOP-gate). **Closes BUG-9 implicit-blast on both surfaces; HARD prereq for v11.4-04 satisfied.** Changes Daniel's MCP flow → preview then publish-with-recipients.
 
 ### Phase v11.4-02: Org-branded comms [P1]
 Focus: Publish emails + gig-packet emails carry the publishing org's branding (logo/wordmark/from-name/footer), broslaz vs CRC, via the existing `getOrgBranding`/`branding.ts` seam (mirrors v11.1-01 nav-branding pattern). Touches `email-packets`/`resend-email` + email templates + packet PDF header. CRC byte-identical.

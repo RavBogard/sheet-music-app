@@ -52,7 +52,13 @@ export const POST = createApiHandler(
 
         const { setlistId, musicians: rawMusicians, emailRecipients: rawEmailRecipients, note, subject } = ctx.body!
 
-        // Validate musicians array
+        // Validate musicians array.
+        // v11.4-01 (D8 item 2): `musicians[]` IS the explicit recipient set —
+        // the PublishDialog posts only the leader-selected musicians, which
+        // govern ALL channels (in-app + push below; email via emailRecipients,
+        // a subset of this set). Deselected musicians are absent from this
+        // array entirely, so they receive nothing. The ≥1 guard below means a
+        // publish can never fan out to an empty/implicit audience.
         const musicians: MusicianPayload[] = Array.isArray(rawMusicians) ? rawMusicians : []
         if (musicians.length === 0) {
             return NextResponse.json({ error: 'At least one musician must be assigned' }, { status: 400 })

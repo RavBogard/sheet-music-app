@@ -11,7 +11,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, Check, Mail, Music, AlertTriangle, Users, MailX, RefreshCw } from "lucide-react"
+import { Loader2, Check, Mail, Music, AlertTriangle, Users, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 import { SetlistMusician } from "@/types/models"
@@ -43,25 +43,37 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
     const [result, setResult] = useState<PublishResult | null>(null)
     const [emailError, setEmailError] = useState<string | null>(null)
     const [resending, setResending] = useState(false)
-    // Per-musician email opt-out: set of indices that should NOT receive email
-    const [emailOptOut, setEmailOptOut] = useState<Set<number>>(new Set())
+    // v11.4-01 (D8 item 2): recipient picker. `selected` is the set of
+    // musician indices that will be notified across ALL channels (in-app +
+    // push + email) — not just email. Defaults to ALL assigned musicians so
+    // the common path is unchanged (AC-5); deselecting a musician removes
+    // them from every channel (AC-4).
+    const [selected, setSelected] = useState<Set<number>>(
+        () => new Set(musicians.map((_, i) => i)),
+    )
     const [note, setNote] = useState("")
     const defaultSubject = isPublished
         ? `🔄 ${setlistName} — Setlist Updated`
         : `🎵 ${setlistName} — Setlist Published`
     const [subject, setSubject] = useState(defaultSubject)
 
-    // Sync subject default when dialog opens (useState initializer only runs once)
+    // Sync subject default + reset selection to all-selected when the dialog
+    // opens (useState initializers only run once). Keyed on isOpen only:
+    // musicians are stable for the lifetime of an open dialog, and re-running
+    // on a musicians identity change would wipe the leader's deselections.
     useEffect(() => {
-        if (isOpen) setSubject(defaultSubject)
+        if (isOpen) {
+            setSubject(defaultSubject)
+            setSelected(new Set(musicians.map((_, i) => i)))
+        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen])
 
     const noMusicians = musicians.length === 0
-    const emailCount = musicians.filter((_, i) => !emailOptOut.has(i)).length
+    const selectedCount = selected.size
 
-    const toggleEmail = useCallback((index: number) => {
-        setEmailOptOut(prev => {
+    const toggleSelected = useCallback((index: number) => {
+        setSelected(prev => {
             const next = new Set(prev)
             if (next.has(index)) next.delete(index)
             else next.add(index)
@@ -70,19 +82,23 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
     }, [])
 
     const handlePublish = async () => {
-        if (noMusicians) return
+        if (noMusicians || selectedCount === 0) return
         setPublishing(true)
         try {
-            // Build email recipients list (musicians minus opt-outs)
-            const emailRecipients = musicians
-                .filter((_, i) => !emailOptOut.has(i))
+            // v11.4-01 (D8 item 2): the selected set IS the recipient set for
+            // ALL channels. Post only selected musicians as `musicians`
+            // (governs in-app + push) and the same subset as `emailRecipients`
+            // (governs email). Deselected musicians are excluded entirely →
+            // they receive nothing on any channel.
+            const selectedMusicians = musicians.filter((_, i) => selected.has(i))
+            const emailRecipients = selectedMusicians
                 .map(m => ({ name: m.name, email: m.email, uid: m.uid }))
 
             const response = await apiFetch('/api/setlist/publish', {
                 method: 'POST',
                 body: JSON.stringify({
                     setlistId,
-                    musicians,
+                    musicians: selectedMusicians,
                     emailRecipients,
                     note: note.trim() || undefined,
                     subject: subject.trim() || undefined,
@@ -151,7 +167,7 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
         setResult(null)
         setEmailError(null)
         setResending(false)
-        setEmailOptOut(new Set())
+        setSelected(new Set(musicians.map((_, i) => i)))
         setNote("")
         setSubject(defaultSubject)
         onClose()
@@ -194,36 +210,45 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                                 <div className="space-y-1.5">
                                     <div className="flex items-center gap-2 text-sm">
                                         <Users className="h-4 w-4 text-blue-500 shrink-0" />
-                                        <span className="font-medium">{musicians.length} musician{musicians.length !== 1 ? 's' : ''}</span>
-                                        <span className="text-xs text-muted-foreground ml-auto">
-                                            {emailCount > 0 ? (
-                                                <span className="flex items-center gap-1">
-                                                    <Mail className="h-3 w-3" /> {emailCount} will be emailed
+                                        <span className="font-medium">{musicians.length} musician{musicians.length !== 1 ? 's' : ''} assigned</span>
+                                        <span className="text-xs ml-auto">
+                                            {selectedCount > 0 ? (
+                                                <span className="flex items-center gap-1 text-muted-foreground">
+                                                    <Mail className="h-3 w-3" /> {selectedCount} will be notified
                                                 </span>
                                             ) : (
                                                 <span className="flex items-center gap-1 text-amber-500">
-                                                    <MailX className="h-3 w-3" /> No emails
+                                                    <AlertTriangle className="h-3 w-3" /> No one selected
                                                 </span>
                                             )}
                                         </span>
                                     </div>
+                                    <p className="text-xs text-muted-foreground/70 pl-1">
+                                        Tap a musician to include or exclude them. Selected people get the in-app notice, push, and email; deselected people get nothing.
+                                    </p>
                                     <div className="space-y-0.5 pl-1">
                                         {musicians.map((m, i) => {
-                                            const willEmail = !emailOptOut.has(i)
+                                            const isSelected = selected.has(i)
                                             return (
                                                 <button
                                                     key={i}
-                                                    onClick={() => toggleEmail(i)}
-                                                    className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-lg hover:bg-muted/50 transition-colors text-sm"
+                                                    type="button"
+                                                    role="checkbox"
+                                                    aria-checked={isSelected}
+                                                    aria-label={`Notify ${m.name}`}
+                                                    onClick={() => toggleSelected(i)}
+                                                    className={`flex items-center gap-2 w-full text-left px-2 py-2.5 min-h-[44px] rounded-lg cursor-pointer hover:bg-muted/50 transition-colors text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring ${
+                                                        isSelected ? '' : 'opacity-60'
+                                                    }`}
                                                 >
-                                                    <div className={`h-4 w-4 rounded border shrink-0 flex items-center justify-center transition-colors ${
-                                                        willEmail
+                                                    <div className={`h-5 w-5 rounded border shrink-0 flex items-center justify-center transition-colors ${
+                                                        isSelected
                                                             ? 'bg-primary border-primary'
-                                                            : 'border-muted-foreground/30'
+                                                            : 'border-muted-foreground/40'
                                                     }`}>
-                                                        {willEmail && <Mail className="h-2.5 w-2.5 text-primary-foreground" />}
+                                                        {isSelected && <Check className="h-3.5 w-3.5 text-primary-foreground" />}
                                                     </div>
-                                                    <span className={willEmail ? '' : 'text-muted-foreground'}>{m.name}</span>
+                                                    <span className={isSelected ? '' : 'text-muted-foreground'}>{m.name}</span>
                                                     {m.instrument && (
                                                         <span className="text-xs text-muted-foreground/60">· {m.instrument}</span>
                                                     )}
@@ -282,7 +307,7 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                             <Button variant="outline" onClick={handleClose} disabled={publishing}>
                                 Cancel
                             </Button>
-                            <Button onClick={handlePublish} disabled={publishing || noMusicians}>
+                            <Button onClick={handlePublish} disabled={publishing || noMusicians || selectedCount === 0}>
                                 {publishing ? (
                                     <>
                                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -290,6 +315,8 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                                     </>
                                 ) : noMusicians ? (
                                     'Assign Musicians First'
+                                ) : selectedCount === 0 ? (
+                                    'Select at least one'
                                 ) : isPublished ? (
                                     'Update & Notify'
                                 ) : (

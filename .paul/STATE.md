@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.4 — Publish & Notify (D8)** (OPEN 2026-06-10; 4 phases, plans TBD). Created via `/paul:discuss-milestone`→`/paul:milestone`. **Spec backbone:** `docs/ACCESS-POLICY.md` §"Publish & notify (D8)" (ratified — implements, not invents; bump oracle → v0.4 when D8 ships). (v11.3 ✅ COMPLETE 2026-06-10 tag `v11.3.0`; v11.2 ✅ 2026-06-11 tag `v11.2.0`.)
-Phase: **v11.4-01 Recipient picker + no-auto-blast** (P0 safety core) — Not started. (Then 02 org-branded comms · 03 remembered contacts · 04 musician-membership toggle + default-both backfill [LAST, hard-ordered after 01].)
-Plan: **None active.** Next: `/paul:plan` for v11.4-01 — replace implicit `resolveDefaultRecipients` auto-send with an explicit recipient picker (default = org roster, leader chooses) on BOTH `PublishDialog.tsx` AND MCP `publish_setlist`; in-app/push/email send only to the selected set. Closes the BUG-9 blast class permanently.
-Status: **v11.4 milestone scaffolded — 4 phase dirs created, ROADMAP/PROJECT/paul.json updated, MILESTONE-CONTEXT consumed.** Ready to `/paul:plan` v11.4-01. Autonomy posture binding; publish/notify is the canonical STOP-gate (real-people side-effect) → live sends are human-gated UAT, build is autonomous.
-Last activity: 2026-06-10 — `/paul:discuss-milestone` (3 scope decisions: full D8 phased · MCP+browser · channels in-app/push/email) → `/paul:milestone` created v11.4 (4 phases).
+Phase: **v11.4-01 Recipient picker + no-auto-blast** (P0 safety core) — **✅ COMPLETE (LOOP DONE).** (Then 02 org-branded comms · 03 remembered contacts · 04 musician-membership toggle + default-both backfill [LAST, after 01 — now UNBLOCKED].)
+Plan: **`v11.4-01-01` ✅ COMPLETE** (PLAN+SUMMARY in `.paul/phases/v11.4-01-recipient-picker/`; 3 tasks; /ui-ux-pro-max applied to Task 2). **Shipped:** MCP `publish_setlist` refuses a real publish on undefined `recipients` (`recipients_required`; dryRun/preview still auto-derives the candidate audience); browser `PublishDialog` selection governs ALL channels (in-app+push+email), default all-selected (CRC byte-identical), zero-selected disables Publish. route.ts D8 comment. **Closes the v11.2 BUG-9 implicit-blast class on both surfaces; HARD prereq for v11.4-04 satisfied.** **Changes Daniel's MCP flow:** preview_publish → publish with explicit recipients[].
+Status: **v11.4-01 COMPLETE — at the 01→02 phase boundary.** Gates green: tsc clean · MCP emulator 29/29 (+4 D8 cases; 5 existing migrated to explicit recipients) · PublishDialog 3/3 (new `.tsx` test) · `SKIP_ENV_VALIDATION=1 next build` clean. Live sends NOT performed (publish/notify STOP-gate) → 1 human-gated UAT item appended.
+Last activity: 2026-06-11 — `/paul:resume` (recovered clean from a mid-session machine shutdown — no code lost, only uncommitted planning artifacts) → v11.4-01-01 PLAN→APPLY→UNIFY.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,8 +43,8 @@ Last activity: 2026-06-10 — `/paul:discuss-milestone` (3 scope decisions: full
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.4 milestone created — ready for first PLAN: /paul:plan v11.4-01]
-  ○        ○        ○
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.4-01 COMPLETE — next: PLAN v11.4-02 (org-branded comms)]
+  ✓        ✓        ✓
 ```
 
 ## Execution Substrate (bongo .coord/)
@@ -86,10 +86,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.4 milestone created — ready f
 
 ## Session Continuity
 
-Last session: 2026-06-10 — full chain: `/paul:resume` → v11.3-05 PLAN→APPLY→UNIFY → `/paul:complete-milestone` (v11.3 closed, tag `v11.3.0`) → `/paul:discuss-milestone` + `/paul:milestone` (v11.4 Publish & Notify created, 4 phases).
-Stopped at: **v11.4 milestone created — ready for first PLAN.** No active plan.
-Next action: **`/paul:plan` for v11.4-01 (Recipient picker + no-auto-blast)** — explicit recipient picker on `PublishDialog.tsx` + MCP `publish_setlist`; in-app/push/email to selected set only; preserve v11.2-02 org-scope + v11-06-02 no-arg-injection. /ui-ux-pro-max BLOCKING (UI phase). Then 02→03→04 (04 LAST, after 01).
-Resume file: **.paul/ROADMAP.md** § Active Milestone v11.4.
+Last session: 2026-06-11 — `/paul:resume` (clean recovery from a mid-session machine shutdown: only uncommitted .paul planning artifacts were pending, NO code lost) → v11.4-01-01 PLAN→APPLY→UNIFY (D8 items 1+2 shipped). Committed + pushed to `master`.
+Stopped at: **v11.4-01 phase boundary (COMPLETE).** Awaiting go for v11.4-02.
+Next action: **`/paul:plan` for v11.4-02 (org-branded comms — D8 item 4: publish + gig-packet emails carry the publishing org's branding via `getOrgBranding`/`branding.ts`).** (Or 03 remembered ad-hoc recipients; 04 membership backfill is LAST, now unblocked by 01.)
+Resume file: **.paul/phases/v11.4-01-recipient-picker/v11.4-01-01-SUMMARY.md** (what shipped this phase).
 **Deferred UAT (RUM):** v11.3-04 field TTFB/FCP — re-run `node scripts/v11-3-04-webvitals-slice.mjs` after ~1–7d traffic vs 1633/3551 baseline; if still high → Vercel infra follow-up (Deferred Issues), not app code.
 **Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.
 Resume file: **.paul/HANDOFF-2026-06-10-v11.3-03-complete.md** (full context); then ROADMAP § Phase v11.3-04. Oracle: `docs/ACCESS-POLICY.md` v0.3. **(PAUSED 2026-06-10 at the v11.3-03 → v11.3-04 phase boundary.)**
