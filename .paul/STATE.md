@@ -11,27 +11,29 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Milestone: **None active** (v11.2 ✅ COMPLETE 2026-06-11, tag `v11.2.0`). Running a **standalone phase** off the stress-test report's INCOMPLETE item 3.
-Phase: **loginable-test-accounts** (standalone — stress-test browser-run enablement) — ✅ COMPLETE 2026-06-10 (2/2 plans, both LOOP COMPLETE).
-Plan: **01 ✅** (`create_test_account({loginable})` enabled-account + one-time QR-custom-token login URL + `/test-login` consume route + qr-sessions cascade) · **02 ✅** (hourly `/api/cron/disable-expired-test-accounts` disable + `revokeRefreshTokens` + `/api/auth/session` expired-loginable rejection + checkRevoked audit confirmed clean).
-Status: **Phase content-complete; committed + pushed to `master`.** Gates green every loop: tsc clean · emulator `mcp-test-tokens` 34/34 · `SKIP_ENV_VALIDATION=1 next build` clean (`/test-login` + cron route registered). UAT-PENDING (live/safe): browser persona sign-in end-to-end + AC-2 session-mint rejection deployed-surface check.
-Last activity: 2026-06-10 — `/paul:apply` executed both plans; `/paul:plan` had created them after verifying deployed test-tokens/QR/session/auth code. Both Daniel decisions (2026-06-10) baked in: login = one-time custom-token URL via the QR mechanism (QR PUT-approval confirmed hard-coupled to device handoff → `/test-login`, no static secret); TTL = cron disable + `revokeRefreshTokens` + session-mint check + `verifySessionCookie(cookie,true)`.
+Milestone: **🚧 v11.3 — Worthiness & Access** (OPEN 2026-06-10; 5 phases, plans TBD). Created via `/paul:milestone` from `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md`. Oracle: `docs/ACCESS-POLICY.md` **v0.3**. (v11.2 ✅ COMPLETE 2026-06-11, tag `v11.2.0`; standalone loginable-test-accounts phase ✅ COMPLETE 2026-06-10.)
+Phase: **v11.3-01 Anon access correctness ✅ COMPLETE 2026-06-10** (BUG-5 + BUG-4, 2/2 plans, committed + pushed). **Next: v11.3-02 Agent chart-upload path** (P1) — not started.
+Plan: None active (v11.3-01 closed). Next: `/paul:plan` for v11.3-02.
+Status: **Phase v11.3-01 ✅ COMPLETE — committed + pushed to `master`.** Ready to plan Phase v11.3-02 (Agent chart-upload: `import_chart_from_drive` accepts `.docx`/Google Docs → PDF server-side; secondary chunked `upload_chart`).
+Last activity: 2026-06-10 — `/paul:unify` v11.3-01-02 (BUG-4) + phase-closing transition. Both plans LOOP COMPLETE; phase committed `feat(v11.3-01): anon access correctness (BUG-5 + BUG-4)` + pushed to `master` (Vercel auto-deploy). All gates green; CRC byte-identical (trusted/authed path unchanged).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
 - **Band leaders:** explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle (today hand-set via scripts). The **authoring** tier.
 
-## Milestone Phases (v11.2 — ACTIVE)
+## Milestone Phases (v11.3 — ACTIVE)
 
 | Phase | Focus | Priority |
 |-------|-------|----------|
-| v11.2-01 | **BUG-1** `propose_setlist_changes`/`commit_staged_changes` 404 on MCP UUID-id setlists → consolidate to the shared `getSetlistById` resolver; restores stage→confirm→commit | P0 — critical path |
-| v11.2-02 | **BUG-9** publish-audience org scoping — VERIFY FIRST whether `publish_setlist` recipient query filters on `orgId` (BL preview showed CRC roster size 17); add filter if absent. Side-effectful → STOP-gate before any real publish | P1 — verify-first |
-| v11.2-03 | **BUG-2 + BUG-3** MCP error contract — deterministic client errors as 500 (→404/400/409) + bulk per-row bare-string errors → structured `{machine_code}` envelope | P1/P2 |
-| v11.2-04 | **BUG-4 + BUG-5** publish/test-data hygiene — `preview_publish` flag unbonded `type:song` rows + `cleanup_all_test_data` sweep owner-real `isTest` setlists + dashboard `isTest` filter | P2 |
-| v11.2-05 | **BUG-6 + BUG-7 + BUG-8** P3 polish — "CRC MUSIC" authed-header brand leak on broslaz · text/plain chord-over-lyric fragmentation · ISO timestamp serialization at MCP boundary | P3 |
+| v11.3-01 | **BUG-5 + BUG-4** Anon access correctness — anon Storage-backed (`upload-*`) chart deep links return 401 (VERIFY-FIRST cold-device) + anon transpose/AI-scan dead-end → anon path for scan + chord-cache with abuse rate-limits (D-Q2). Don't regress authed transpose; don't double-punish F-6 429s | **P1** — prime-directive |
+| v11.3-02 | Agent chart-upload path — `import_chart_from_drive` accepts `.docx` + Google Docs, converts to PDF server-side (refs not bytes); secondary chunked inline `upload_chart`. Cowork sandbox proxy out of scope | **P1** — David's report |
+| v11.3-03 | **BUG-9 + BUG-7 + BUG-1** Harness & hygiene — `/test-login` missing from `proxy.ts` `publicPrefixes` + QR malformed-code 500→4xx + orphan `[role-*]` library_index rows (VERIFY-FIRST revoke/cleanup cascade coverage) | P2 |
+| v11.3-04 | **BUG-2** /perform performance — p75 LCP 2600/FCP ~3100/TTFB ~1450ms + CLS regressed 0.15→0.2 (VERIFY-FIRST cold vs steady; suspect chart-image reflow). Comparator /setlists CLS 0.02 | P2 |
+| v11.3-05 | **BUG-6 + F-6** P3 polish — broslaz PWA manifest serves app shell (proxy matcher) + cold-load `/api/auth/qr`+`/api/web-vitals` 429 self-heal (rate-limit tuning / backoff) | P3 |
 
-(v11.1 phases — all ✅ COMPLETE 2026-06-09 — archived to `.paul/milestones/v11.1-ROADMAP.md` + MILESTONES.md § v11.1.)
+**Oracle:** `docs/ACCESS-POLICY.md` v0.3 — a finding is a bug only if it contradicts a cell. **Scope walls:** D8 publish/notify → v11.4; BUG-3/BUG-8/Policy-Q1 closed (D7/D4-rev1/D-Q1, no code); F-4 + Cowork proxy out; D2 anon recordings stays the ⚠️ veto cell (BUG-5 is charts only).
+
+(v11.2 phases — all ✅ COMPLETE 2026-06-11 — archived to `.paul/milestones/v11.2.0-ROADMAP.md` + MILESTONES.md § v11.2. v11.1 ✅ 2026-06-09 — `.paul/milestones/v11.1-ROADMAP.md`.)
 
 **Root-cause evidence (traced this session, deployed code + prod Firestore):**
 - **Branding:** `src/components/nav/DesktopHeader.tsx:106-107` + `MobileHeader.tsx:34-41` hardcode `/logo.jpg` + "Central Reform Congregation" alt; wordmark resolves to CRC/default congregation, not host org. broslaz congregation doc IS correct.
@@ -48,8 +50,8 @@ Last activity: 2026-06-10 — `/paul:apply` executed both plans; `/paul:plan` ha
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [loginable-test-accounts: both plans LOOP COMPLETE]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-01 ✅ phase complete + committed — ready to PLAN v11.3-02]
+  ○        ○        ○
 ```
 
 ## Execution Substrate (bongo .coord/)
@@ -88,14 +90,16 @@ PLAN ──▶ APPLY ──▶ UNIFY        [loginable-test-accounts: both plans
 
 ## Session Continuity
 
-Last session: 2026-06-10 — `/paul:plan` → `/paul:apply` for the standalone **loginable-test-accounts** phase. Verified deployed code (test-tokens.ts, QR auth route + approver page, session route, auth-context/LoginClient, CASCADE_FIELDS); surfaced that consumer login is Google+QR only (no email/password) → Daniel chose the QR-custom-token URL path + cron-disable+revoke TTL. Executed both plans, all gates green, committed + pushed `1eca4b4b6a`.
-Stopped at: **loginable-test-accounts phase ✅ COMPLETE + pushed to `master`. Working tree clean. No active loop.**
-Next action: **`/paul:discuss-milestone`** to scope the next milestone — OR the stress-test browser run can now proceed (this tooling unblocks it) — OR resume v7.1 `.coord/` hardening (cycle-13). No blocking PAUL work.
-Resume file: **.paul/HANDOFF-2026-06-10-loginable-test-accounts.md** (this pause). Phase artifacts in `.paul/phases/loginable-test-accounts/` (01/02 PLAN + SUMMARY); source `.paul/research/TOOLING-BRIEF-test-account-login.md`.
+Last session: 2026-06-10 — `/paul:discuss-milestone` → `/paul:milestone`. Read the ratified brief (`MILESTONE-BRIEF-2026-06-10-worthiness-access.md`) + oracle (`docs/ACCESS-POLICY.md` v0.3) + the two stress-test reports + David's upload-bug report. Created **v11.3 Worthiness & Access** (5 phases) verbatim from the brief's ratified phase grouping + triage — no re-litigation. Created 5 phase dirs, updated ROADMAP/STATE/MILESTONES/paul.json, consumed MILESTONE-CONTEXT.md.
+Stopped at: **v11.3-01 ✅ PHASE COMPLETE + committed + pushed to `master`.** Phase 1 of 5 in v11.3 done. Working tree: STATE/paul.json git-hash record may trail by one edit (rides into v11.3-02's phase commit).
+Next action: **`/paul:plan`** for **v11.3-02 Agent chart-upload path** (P1, David's report) — `import_chart_from_drive` accepts `.docx` + Google Docs and converts to PDF **server-side** (Drive API export / convert-on-copy; agent passes refs not bytes); secondary chunked inline `upload_chart` (init/append/commit). Out of scope: the Cowork sandbox proxy (Anthropic-side).
+Resume file: **.paul/ROADMAP.md** § Active Milestone (v11.3) / Phase v11.3-02. Source brief: `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md`; David's report `.paul/research/BUG-cowork-chart-upload-2026-06-10.md`; oracle `docs/ACCESS-POLICY.md` v0.3.
 Resume context:
-- `create_test_account({loginable:true})` → enabled account (no password) + one-time `/test-login?code=` URL (pre-approved single-use qr-sessions custom-token doc); TTL enforced by hourly `disable-expired-test-accounts` cron (disable + `revokeRefreshTokens`) + session-mint rejection. Default path byte-identical.
-- QR PUT-approval is hard-coupled to physical-device handoff (mints for the approver's own uid) → reused only the qr-sessions store + GET-consume; public `/login` + `/qr/[code]` untouched.
-- Daniel paces with "go" per PAUL step; autonomy posture binding (auto-commit+push per plan to master).
+- Oracle-bound: a finding is a bug only if it contradicts a v0.3 ACCESS-POLICY cell; err-public prime directive holds.
+- Scope walls (ratified): D8 publish/notify → v11.4; BUG-3 (RUM) / BUG-8 (member library) / browser Policy-Q1 closed by policy (no code); F-4 dup setlist + Cowork sandbox proxy out of scope; D2 anon **recordings** is the ⚠️ veto cell — BUG-5 is charts only, don't widen Phase 01 into recordings.
+- Every fixed BUG gets a regression test citing the coverage-table cell it covers (Phase 01 + 03 re-verifiable via the stress prompt's cells).
+- Daniel paces with "go" per PAUL step; autonomy posture binding (auto-commit+push per phase to master; quality floor held; /ui-ux-pro-max blocking on UI-touching phases).
+- Carry-forward UAT (non-blocking, append to UAT-PENDING): anon recordings playback (D2), leader-crc UI authoring wall on broslaz (data ✅), Pass B offline degradation, leader create→reorder→delete in UI, QR single-use e2e — plus existing loginable-test-account items.
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 **Open UAT-PENDING (live/safe, `.paul/UAT-PENDING.md`):** THIS phase — browser persona sign-in via a minted `loginUrl` + re-open-fails (single-use) + AC-2 expired-account session-mint rejection + admin-loginable-refused. EARLIER (unchanged) — v11.2 BL-connector reconnect → BUG-1 create→propose→commit + BUG-9 `preview_publish` BL roster size; v11.1 broslaz authed-surface checklist (nav/library/dashboard/matrix/MCP-authoring/admin-membership, CRC unchanged).
 

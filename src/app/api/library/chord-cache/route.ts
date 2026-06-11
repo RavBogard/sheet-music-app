@@ -74,7 +74,10 @@ export const GET = createApiHandler(
             snapshot.forEach(doc => { pages[doc.id] = doc.data() as PageChordData })
             return NextResponse.json({ cached: Object.keys(pages).length > 0, pages })
         }
-    }
+    },
+    // v11.3-01-02 (BUG-4 / D-Q2): anon may read cached chord positions in Perform
+    // transpose. Read-only, idempotent, err-public. Keeps the `api` rate-limit.
+    { requireAuth: false }
 )
 
 const postSchema = z.object({
@@ -124,7 +127,11 @@ export const POST = createApiHandler(
 
         return NextResponse.json({ success: true, chordsCount: cacheData.chords.length })
     },
-    { schema: postSchema }
+    // v11.3-01-02 (BUG-4 / D-Q2): anon may PERSIST scan results so the next visitor
+    // gets a cache hit and no re-scan — the cost-control half of "rate-limit anon
+    // AI-scan". Benign derived chord-position data keyed by fileId; `chordsVerified`
+    // stays leader-gated (PATCH) and the row is overwritable by re-scan. `api` rate-limit kept.
+    { schema: postSchema, requireAuth: false }
 )
 
 const patchSchema = z.object({

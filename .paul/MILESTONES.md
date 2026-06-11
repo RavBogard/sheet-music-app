@@ -38,7 +38,7 @@ Completed milestone log for this project.
 | v11.0 Brothers Lazaroff Multi-Tenant | 2026-06-09 | ~2 days (2026-06-08 → 2026-06-09) | 7 phases (v11-01..06 + v11-02b), 23 plans; 2nd live tenant brotherslazaroff.live fully tenant-isolated; close-gate AUDIT.md GO; live prod probe 19/19; tip `2a8441d6e5` |
 | v11.1 Brothers Lazaroff Post-Launch Fixes | 2026-06-09 | ~1 session | 4 phases, 5 plans; broslaz reads as a band across the authed surface (branding/library/vocab) + multi-org authoring path; CRC byte-identical; tag `v11.1.0`; tip `4490abe53c` |
 | v11.2 MCP Stress-Test Fixes | 2026-06-11 | ~1 session | 5 phases, 8 plans; all 9 Brothers Lazaroff MCP/Perform stress-test bugs fixed (resolver 404, publish-audience org scope, error contract, publish/test-data hygiene, P3 polish); CRC byte-identical; tag `v11.2.0`; tip `f27ae7bc5f` |
-| v11.2 MCP Stress-Test Fixes | 🚧 OPEN 2026-06-09 | — | 5 phases (TBD plans); closing the 9 BL stress-test findings (BUG-1 P0 propose/commit resolver · BUG-9 P1 publish-audience verify · BUG-2/3 error contract · BUG-4/5 hygiene · BUG-6/7/8 P3); source report 2026-06-09 (BL tenant) |
+| v11.3 Worthiness & Access | 🚧 OPEN 2026-06-10 | — | 5 phases (TBD plans); post-stress-test anon-read + agent-upload + hygiene/perf/polish fixes. P1: anon Storage-chart deep-link 401 (BUG-5) + anon transpose path (BUG-4, D-Q2); P1 agent chart-upload (docx/Gdocs→PDF); P2 BUG-9/7/1 hygiene; P2 BUG-2 /perform perf + CLS regression; P3 BUG-6/F-6. Oracle: `docs/ACCESS-POLICY.md` v0.3. Brief: `MILESTONE-BRIEF-2026-06-10-worthiness-access.md` |
 
 ---
 

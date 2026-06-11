@@ -4,7 +4,7 @@
 
 ## Next Milestone
 
-**None scoped past v11.2.** Open backlog: recordings-collection org-scoping (+ `/api/recordings/upload` orgId stamp), SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage (`.paul/MILESTONES.md` § v7.0). v7.1 Production Hardening continues independently via the bongo `.coord/` cadence.
+**v11.4 Publish & Notify redesign (D8)** — recipient-picker + remembered ad-hoc contacts + org-branded comms + admin-toggleable musician org-membership (default-both) with backfill, per `docs/ACCESS-POLICY.md` §D8. Explicitly deferred OUT of v11.3 by the brief's triage. **Sequencing invariant:** items 1–2 (picker) ship before item 5 (default-both membership backfill), else broslaz publish re-blasts the CRC roster (the v11.2 BUG-9 class). Other open backlog: recordings-collection org-scoping (+ `/api/recordings/upload` orgId stamp), SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage (`.paul/MILESTONES.md` § v7.0). v7.1 Production Hardening continues independently via the bongo `.coord/` cadence.
 
 ## Standalone Phase — loginable-test-accounts (✅ COMPLETE 2026-06-10, 2/2 plans)
 
@@ -18,6 +18,59 @@ Off the stress-test report's INCOMPLETE item 3 (`.paul/research/TOOLING-BRIEF-te
 **Verified-first:** library_index/songs uploads already cascade-clean via `CASCADE_FIELDS` (`uploadedBy` + best-effort Storage) — no gap widened. Login is Google+QR only today (no email/password form), which is why the custom-token URL was chosen over a password form.
 
 ## Active Milestone
+
+**🚧 v11.3 — Worthiness & Access** (OPEN 2026-06-10 · 5 phases, plans TBD)
+Status: 🚧 In Progress · Phases: 1 of 5 complete (v11.3-01 ✅ 2026-06-10) · **Source:** `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md` (phase grouping + triage ratified by Daniel) · **Oracle:** `docs/ACCESS-POLICY.md` **v0.3** — a finding is a bug only if it contradicts a cell in that matrix · **Reports:** `.paul/research/STRESS-TEST-REPORT-2026-06-10.md` (MCP run 1) + `…-browser.md` (Playwright run 2) + `…/BUG-cowork-chart-upload-2026-06-10.md` (David's upload dead-end).
+Focus: Close the post-stress-test findings the oracle confirms are real. Two **P1** families lead — anon read-access correctness (err-public prime-directive violations) and the agent chart-upload path (David's report) — then P2 hygiene, P2 /perform performance, and P3 polish. Phase order = the brief's family + severity grouping. CRC + broslaz both live; CRC byte-identical where shared surfaces are touched.
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| v11.3-01 | Anon access correctness — BUG-5 + BUG-4 [P1] | 01 (BUG-5) ✅ · 02 (BUG-4) ✅ | ✅ Complete | 2026-06-10 |
+| v11.3-02 | Agent chart-upload path [P1] | TBD | Not started | - |
+| v11.3-03 | Harness & hygiene — BUG-9 + BUG-7 + BUG-1 [P2] | TBD | Not started | - |
+| v11.3-04 | /perform performance — BUG-2 [P2] | TBD | Not started | - |
+| v11.3-05 | P3 polish — BUG-6 + F-6 [P3] | TBD | Not started | - |
+
+### Phase v11.3-01: Anon access correctness [P1 — prime-directive violations]
+Focus: Make anon deep-link reads actually work, per the err-public oracle (anon chart-via-deep-link = ✅ implied by D1; anon transpose = ✅ OPEN per D-Q2).
+- **BUG-5** (P2→likely P1): anon `GET /api/library/file/[id]` → 401 `missing_bearer` for Storage-backed (`upload-*`) charts but 200 for Drive-backed. New uploads are Storage-backed → anon deep links to recent charts are dead. **VERIFY FIRST:** cold-device (empty HTTP cache) anon Perform render of an `upload-*` chart — blank ⇒ confirmed P1 (run 2 §BUG-5).
+- **BUG-4** (P2): anon transpose dead-ends ("Waiting for scan…", 401s on `/api/library/chord-cache` + `/api/ai/transposer/scan`). Per **D-Q2** the fix is an **anon path** for scan + chord-cache *with abuse protection* (rate-limit anon AI-scan). Must NOT regress authed transpose; must NOT double-punish against F-6's existing cold-load 429s.
+Plans: **01 (BUG-5) ✅ LOOP COMPLETE** — `/api/library/file/[id]` → public chart proxy mirroring `/api/drive/file` (serves `upload-*` via `fetchFileById`; `db-*` anon-public). Verify-first re-graded BUG-5 → P2 (Perform renders via `/api/drive/file`, anon-OK). · **02 (BUG-4) ✅ LOOP COMPLETE** — chord-cache GET+POST + transposer/scan POST → anon (`requireAuth:false`); scan gets an anon-only `ai` rate-limit (authed unchanged); anon scan results persist. **Phase ✅ COMPLETE 2026-06-10.** Gates green both plans (tsc · 6+7 route tests · next build). No client edits needed. UAT-PENDING: live anon chart open + transpose render (non-blocking).
+
+### Phase v11.3-02: Agent chart-upload path [P1 — David's report]
+Focus: Give the MCP/agent author a working chart-upload route (David's upload dead-end, `BUG-cowork-chart-upload-2026-06-10.md`).
+- **Primary:** `import_chart_from_drive` accepts `.docx` + Google Docs and converts to PDF **server-side** (Drive API export / convert-on-copy). Agent passes references, never bytes.
+- **Secondary:** chunked inline `upload_chart` (init/append/commit) for non-Drive sources.
+- **Out of scope:** the Cowork sandbox proxy (Anthropic-side; reported separately).
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.3-03: Harness & hygiene [P2]
+Focus: Three low-risk correctness fixes; no consumer-facing impact but they broke stress-run pre-flights / violate the error contract.
+- **BUG-9:** `/test-login` missing from `proxy.ts` `publicPrefixes` → 307 to /login before code consumption (root cause code-confirmed, run 2 §BUG-9). Fix + regression test.
+- **BUG-7:** `GET /api/auth/qr?code=<malformed-with-/>` → 500; must be 4xx (v11.2 error contract).
+- **BUG-1** (run 1): orphaned `[role-*] tiny` rows in CRC `library_index`. **VERIFY FIRST:** whether `revoke_test_account`/`cleanup_all_test_data` cascade library uploads of revoked accounts (run 2 swept `library:0`); confirm coverage, then delete the two orphans.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.3-04: /perform performance [P2]
+Focus: **BUG-2** — p75 LCP 2600 / FCP 3012–3247 / TTFB 1398–1545 ms on the highest-traffic route; **CLS regressed 0.15 → 0.2** between the two runs. **VERIFY FIRST:** cold-load vs steady-state composition; suspect chart-image reflow for the CLS regression. Healthy comparator: /setlists LCP 1.1s / CLS 0.02.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.3-05: P3 polish [P3]
+Focus:
+- **BUG-6:** `manifest-brotherslazaroff.json` serves the HTML app shell (PWA install broken on broslaz). Check `proxy.ts` matcher excludes only `manifest.json`, not org-suffixed variants.
+- **F-6:** cold landing fires `/api/auth/qr` POST → 429 then self-heals; `/api/web-vitals` also 429s. Rate-limit tuning or client backoff.
+Plans: TBD (defined during /paul:plan)
+
+Constraints (locked at /paul:milestone 2026-06-10):
+1. **Oracle-bound** — a finding is a bug only if it contradicts a `docs/ACCESS-POLICY.md` **v0.3** cell. err-public prime directive holds (err toward letting someone see a chart; writes/admin stay gated).
+2. **No local dev** — push to prod/Vercel; CRC + broslaz are BOTH live. **CRC byte-identical** where a phase touches shared surfaces.
+3. **Regression coverage mandatory** — every fixed BUG gets a regression test (e2e or named probe). Phase 01 + 03 fixes re-verifiable by re-running the stress prompt's relevant cells; **each test cites the coverage-table cell it covers.**
+4. **Do-not-regress** — authed transpose (Phase 01); don't double-punish anon AI-scan against F-6's 429s; CRC byte-identity (tenancy invariant 4).
+5. **Quality floor (non-negotiable):** tsc clean + tests green + AC proof every task; `SKIP_ENV_VALIDATION=1 npx next build` before declaring any shared-lib/client phase deployable (bundle-boundary lesson); emulator-backed tests where rules/queries change; **/ui-ux-pro-max BLOCKING on any UI-touching phase.**
+6. **Autonomy posture (carried from v11.0/v11.1/v11.2):** run autonomously — waive PAUL approval/continuation gates, auto-commit + push per phase to prod `master`, bake decisions into PLANs, deploys/backfills as AUTO tasks (single-owner = executor). **STOP only for:** product ambiguity, an unresolvable quality-gate failure, or a discovered cross-tenant LEAK / CRC lock-out.
+7. **Scope walls (ratified triage):** D8 publish/notify redesign → v11.4 (do NOT pull in); BUG-3 (RUM) closed not-a-bug (D7); BUG-8 (member library) + browser Policy Q1 closed via policy (no code); F-4 dup setlist + Cowork sandbox proxy out of scope. D2 anon **recordings** playback stays the ⚠️ veto cell — BUG-5 is charts only; don't widen Phase 01 into recordings.
+
+## Previous Milestone (most recent — ✅ COMPLETE)
 
 **✅ v11.2 — MCP Stress-Test Fixes** (COMPLETE 2026-06-11 · tag `v11.2.0` · tip `f27ae7bc5f`; archived `.paul/milestones/v11.2.0-ROADMAP.md`)
 Status: ✅ COMPLETE 5/5 · Phases: 5 of 5 (v11.2-01 ✅ · v11.2-02 ✅ · v11.2-03 ✅ · v11.2-04 ✅ · v11.2-05 ✅) · Source: Brothers Lazaroff MCP + Perform **stress-test report** (2026-06-09; BL tenant only, CRC untouched, all test data cleaned — tenant verified empty post-run). All 9 bugs fixed; CRC byte-identical throughout.
@@ -71,7 +124,7 @@ Constraints (locked at /paul:milestone 2026-06-09):
 6. **Autonomy posture (carried from v11.0/v11.1):** run autonomously — waive PAUL approval/continuation gates, auto-commit + push per phase to prod `master`, bake decisions into PLANs, deploys as AUTO tasks (single-owner = executor). **STOP only for:** product ambiguity, an unresolvable quality-gate failure, or — specifically for v11.2-02 — a CONFIRMED cross-tenant publish leak (surface findings + the proposed filter before any change that could blast real people).
 7. **Source-of-record:** the stress-test report (BL tenant, 2026-06-09) is the phase spec; each bug carries a repro + fix directive there. The report's "What worked correctly" regression anchors must keep passing.
 
-## Previous Milestone (most recent — ✅ COMPLETE)
+## Previous Milestone (✅ COMPLETE)
 
 **✅ v11.1 — Brothers Lazaroff Post-Launch Fixes** (COMPLETE 2026-06-09 · tag `v11.1.0`)
 Status: ✅ Complete · Phases: 4 of 4 (v11.1-01 ✅ · v11.1-02 ✅ · v11.1-03 ✅ · v11.1-04 ✅) · 5 plans · MCP authoring verified live. Archived: `.paul/milestones/v11.1-ROADMAP.md` + MILESTONES.md § v11.1.

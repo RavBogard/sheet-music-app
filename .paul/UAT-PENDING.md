@@ -239,3 +239,40 @@ Verify on the deployed build (safe — test-namespaced, isTest):
 3. After `revoke_test_account` (or letting the cron run on an expired one), attempt
    sign-in / an existing session → fails cleanly (AC-2 / AC-4).
 4. `create_test_account({ role:"admin", loginable:true })` → refused (AC-3).
+
+---
+
+## ⏳ v11.3-01-01 — Anon chart deep-link serving (BUG-5)
+
+**Status:** code-fixed + route-test-proven (6/6) + tsc/next-build clean. Committed per phase close.
+
+What was built: `/api/library/file/[id]` reworked from a default-auth, db-*-only route
+into a public chart proxy mirroring `/api/drive/file/[fileId]` — `requireAuth:false` +
+`isTrusted` (Sec-Fetch / Firebase / `crl_live_` bearer) gate + `chart` rate-limit tier,
+serving `upload-*`/UUID/Drive ids via `fetchFileById` and `db-*` via digitized_charts.
+
+Verify-first finding (corroborated vs prod, 2026-06-10): the Perform-render path uses
+`/api/drive/file` (anon-OK), so the BUG-5 P1 "blank cold-device render" escalation is
+**not** real — anon Perform render succeeds. The genuine user-facing path is **"Open chart
+in new tab"** on legacy `db-*` MusicXML charts (MobileRowCard → parseFileId → this route),
+which 401'd anon pre-fix. BUG-5 is therefore P2 (oracle-contradiction + narrow db-* link).
+
+Check (live, non-blocking):
+- [ ] Anon (signed out), open a setlist with a legacy `db-*` MusicXML chart → tap "Open chart in new tab" → renders (was 401).
+- [ ] Anon cold device (empty HTTP cache), open a setlist with an `upload-*` chart in Perform mode → renders (confirms `/api/drive/file` path; closes INCOMPLETE #1).
+- [ ] Authed musician / in-app: chart open + Perform render unchanged (no regression).
+
+---
+
+## ⏳ v11.3-01-02 — Anon transpose / AI chord-scan (BUG-4)
+
+**Status:** code-fixed + route-tests 7/7 + tsc/next-build clean. Committed at phase close.
+
+What was built: `/api/library/chord-cache` GET+POST and `/api/ai/transposer/scan` POST opened
+to anon (`requireAuth:false`) per D-Q2; scan carries an anon-only `ai`-tier rate-limit (authed
+unchanged). No client edit — `apiFetch` sends anon and the flow proceeds once endpoints 200.
+
+Check (live, non-blocking):
+- [ ] Anon (signed out), open a chart in Perform → tap Transpose → "DETECTED KEY" + chords render (was stuck on "Waiting for scan…").
+- [ ] Anon transpose up/down → notation re-renders with transposed chords.
+- [ ] Authed musician transpose unchanged (no new throttling on normal multi-page scans).

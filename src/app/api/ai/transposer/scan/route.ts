@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI, Schema, SchemaType } from "@google/generative-ai";
 import { createApiHandler } from "@/lib/api-wrapper";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -8,6 +9,14 @@ export const maxDuration = 60;
 
 export const POST = createApiHandler(
     async (ctx) => {
+        // v11.3-01-02 (BUG-4 / D-Q2): anon may run AI chord-scan in Perform transpose,
+        // with abuse protection. Rate-limit ANON callers only (the `ai` tier, 20/min per IP);
+        // authed callers are unchanged (this endpoint had no rate limit before → no regression).
+        if (!ctx.auth) {
+            const limited = await checkRateLimit(ctx.req, 'ai')
+            if (limited) return limited
+        }
+
         if (!apiKey) {
             return NextResponse.json(
                 { error: "GEMINI_API_KEY environment variable is missing" },
@@ -106,5 +115,6 @@ export const POST = createApiHandler(
         }
 
         return NextResponse.json({ chords });
-    }
+    },
+    { requireAuth: false }
 )
