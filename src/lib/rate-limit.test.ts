@@ -93,6 +93,47 @@ describe('rate-limit', () => {
         expect(result?.headers.get('X-RateLimit-Limit')).toBe('600')
     })
 
+    // F-6 (run-2 §F-6) — `/api/auth/qr` (POST/GET/PUT) + `/api/web-vitals` moved
+    // from the 60/min `api` tier to the generous `telemetry` tier (300/min). A
+    // venue's ~6 iPads behind ONE NAT IP fire QR polls (~30/min/device) + ≤5
+    // web-vitals beacons/load → ~216/min combined cold peak on a single shared IP
+    // bucket → 429 on the old `api` tier. Mirrors the `chart`-tier NAT rationale.
+    it('telemetry tier does NOT block a NATed fleet past 60 from one IP (F-6)', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        const ip = '10.0.0.216'
+        // 216 = the computed 6-iPad combined cold peak; the `api` tier would have
+        // 429'd at 61. All must pass on the telemetry tier.
+        for (let i = 0; i < 216; i++) {
+            const result = await checkRateLimit(mockReq(ip), 'telemetry')
+            expect(result).toBeNull()
+        }
+    })
+
+    it('telemetry tier ceiling is a real 300/min (not unlimited) (F-6)', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        const ip = '10.0.0.217'
+        for (let i = 0; i < 300; i++) {
+            const ok = await checkRateLimit(mockReq(ip), 'telemetry')
+            expect(ok).toBeNull()
+        }
+        const result = await checkRateLimit(mockReq(ip), 'telemetry')
+        expect(result).not.toBeNull()
+        expect(result?.status).toBe(429)
+        expect(result?.headers.get('X-RateLimit-Limit')).toBe('300')
+    })
+
+    it('telemetry and api tiers are independent buckets — exhausting one does not 429 the other (F-6 / no-regress)', async () => {
+        const { checkRateLimit } = await import('./rate-limit')
+        const ip = '10.0.0.218'
+        // Exhaust the api tier (60/min) from this IP.
+        for (let i = 0; i < 60; i++) await checkRateLimit(mockReq(ip), 'api')
+        const apiLimited = await checkRateLimit(mockReq(ip), 'api')
+        expect(apiLimited?.status).toBe(429)
+        // Same IP on the telemetry tier is a distinct bucket — still allowed.
+        const telemetryOk = await checkRateLimit(mockReq(ip), 'telemetry')
+        expect(telemetryOk).toBeNull()
+    })
+
     it('returns proper 429 response with headers', async () => {
         const { checkRateLimit } = await import('./rate-limit')
         const ip = '10.0.0.100'

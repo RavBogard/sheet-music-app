@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
-import { proxy } from '@/proxy'
+import { proxy, config } from '@/proxy'
 
 // Mock base64 encoding since we can't easily mock the internal btoa/atob edge functions
 // vitest runs in jsdom which has atob
@@ -257,5 +257,38 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
             }
         }
         expect(lastLocation).toBe('http://localhost/auth-error')
+    })
+
+    // BUG-6 (run-2 §BUG-6) — the broslaz PWA manifest (/manifest-brotherslazaroff.json,
+    // emitted per-org by layout.tsx) was being served the HTML app shell: the
+    // proxy `config.matcher` excluded only `manifest.json`, so the org-suffixed
+    // variant ran the proxy → unauth landing 307'd to /login → PWA install broke.
+    // The fix widens the matcher token to `manifest(?:-[a-z0-9-]+)?\.json`. These
+    // tests assert on the matcher REGEX directly (not proxy() behavior): the
+    // matcher is what decides whether the proxy runs on a path at all, and a path
+    // that does NOT match is served as a static public/ file, bypassing proxy().
+    describe('PWA manifest matcher exclusion (BUG-6)', () => {
+        const matchRe = new RegExp(`^${config.matcher[0]}$`)
+
+        it('excludes /manifest.json (CRC — unchanged) from the proxy matcher', () => {
+            expect(matchRe.test('/manifest.json')).toBe(false)
+        })
+
+        it('excludes /manifest-brotherslazaroff.json (org-suffixed) — the BUG-6 fix', () => {
+            expect(matchRe.test('/manifest-brotherslazaroff.json')).toBe(false)
+        })
+
+        it('excludes a generic future /manifest-<org>.json variant', () => {
+            expect(matchRe.test('/manifest-someotherorg.json')).toBe(false)
+        })
+
+        it.each([
+            '/perform',
+            '/perform/setlist/abc123',
+            '/setlists',
+            '/login',
+        ])('still MATCHES the app route %s (proxy must run)', (path) => {
+            expect(matchRe.test(path)).toBe(true)
+        })
     })
 })

@@ -79,6 +79,7 @@ const limiterConfigs = {
     ai: { max: 20, window: 60 },
     bridgeSetup: { max: 5, window: 60 },
     chart: { max: 600, window: 60 },
+    telemetry: { max: 300, window: 60 },
 } as const
 
 const limiters = {
@@ -105,6 +106,22 @@ const limiters = {
      * staying a real ceiling (not unlimited) so a scraper can't hammer origin.
      */
     chart: createLimiter(600, 60),
+    /**
+     * Telemetry / public-poll burst: 300 req/min — `/api/auth/qr` (POST create
+     * + GET poll + PUT approve) and `/api/web-vitals` (POST beacon). Like the
+     * `chart` tier, the limiter keys by client IP, and a venue's ~6 iPads run
+     * behind ONE NAT, so the whole fleet shares a single IP bucket. The shared
+     * `api` tier (60/min) starved them on a cold landing: each iPad fires a QR
+     * poll every ~2s (≈30/min) plus up to 5 web-vitals beacons (LCP/CLS/INP/
+     * FCP/TTFB) per load → ~36/min/device × 6 ≈ 216/min combined cold peak →
+     * HTTP 429 (F-6). These are cheap, idempotent, TTL-bounded single-doc
+     * writes, so 300/min absorbs the fleet burst with headroom while staying a
+     * real ceiling. Applies equally to CRC + broslaz (both run iPad fleets);
+     * the QR poll also self-backs-off on 429 client-side, so steady state sits
+     * well under the ceiling. Protects the cold-cohort web-vitals beacons the
+     * v11.3-04 deferred TTFB RUM probe depends on.
+     */
+    telemetry: createLimiter(300, 60),
 }
 
 // In-memory fallbacks used when Redis is unavailable (fail-closed)

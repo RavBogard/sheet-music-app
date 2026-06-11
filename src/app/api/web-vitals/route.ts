@@ -46,7 +46,7 @@ export const runtime = "nodejs"
 
 export async function POST(req: NextRequest) {
     try {
-        const limited = await checkRateLimit(req, "api")
+        const limited = await checkRateLimit(req, "telemetry")
         if (limited) return limited
 
         let payload: unknown

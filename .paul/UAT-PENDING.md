@@ -26,6 +26,34 @@ layout-shift **0.000** on two consecutive cold loads (was a reproducible 0.187
 pre-deploy / 0.200 field p75). Lists do not move; LCP element = setlist title
 `<h3>` (820ms). Target (<0.1) beaten — shift fully eliminated.
 
+## ⏳ v11.3-05-01 — BUG-6 broslaz PWA manifest (post-deploy)
+
+**Will deploy with:** phase commit `feat(v11.3-05)` (pending push).
+
+What was built: `proxy.ts` matcher token widened `manifest.json` →
+`manifest(?:-[a-z0-9-]+)?\.json` so the org-suffixed PWA manifest bypasses the
+proxy like the CRC one (was 307→/login HTML shell on unauth landing).
+
+How to verify (live, non-blocking): (1) `curl -sI https://www.brotherslazaroff.live/manifest-brotherslazaroff.json`
+→ expect `200` + `content-type: application/json` (NOT a 307 to /login). (2) On an
+iPad on brotherslazaroff.live, Safari → Share → "Add to Home Screen" installs with
+the broslaz manifest name/icons (PWA install works). (3) Confirm CRC unchanged:
+`curl -sI https://www.centralreform.live/manifest.json` still `200` JSON.
+
+## ⏳ v11.3-05-01 — F-6 cold-load no-429 (post-deploy)
+
+**Will deploy with:** phase commit `feat(v11.3-05)` (pending push).
+
+What was built: new `telemetry` rate-limit tier (300/min, IP-keyed) on
+`/api/auth/qr` (POST/GET/PUT) + `/api/web-vitals`, replacing the shared 60/min
+`api` tier that the 6-iPad NAT fleet exhausted on cold landing.
+
+How to verify (live, non-blocking): cold-load the broslaz (or CRC) landing on
+several iPads behind the venue NAT; confirm `/api/auth/qr` POST + the QR poll +
+`/api/web-vitals` beacons return 2xx (no `429` in the Network tab / no
+"Too many requests"). Bonus: the v11.3-04-03 RUM slice should now capture
+cold-cohort web-vitals beacons that were previously 429-dropped.
+
 ## ⏳ v11.3-04-03 — /perform TTFB/FCP (field, post-deploy RUM)
 
 **Deployed commit:** `c0b0ab3367` (live on prod).

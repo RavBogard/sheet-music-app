@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.3 — Worthiness & Access** (OPEN 2026-06-10; 5 phases, plans TBD). Created via `/paul:milestone` from `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md`. Oracle: `docs/ACCESS-POLICY.md` **v0.3**. (v11.2 ✅ COMPLETE 2026-06-11, tag `v11.2.0`; standalone loginable-test-accounts phase ✅ COMPLETE 2026-06-10.)
-Phase: **v11.3-05 P3 polish** (P3) — Not started. (v11.3-04 ✅ COMPLETE 3/3 2026-06-10 [01 verify · 02 CLS · 03 stream]; v11.3-03 ✅; v11.3-02 ✅; v11.3-01 ✅. **4/5 phases done.**)
-Plan: **None active.** Next: `/paul:plan` for v11.3-05 (BUG-6 broslaz PWA manifest serves app shell — `proxy.ts` matcher excludes `manifest.json` but not org-suffixed variants; + F-6 cold-load `/api/auth/qr` + `/api/web-vitals` 429 self-heal — rate-limit tuning / client backoff). **F-6 touches the same QR card surface as v11.3-04-02.**
-Status: **v11.3-04 ✅ PHASE COMPLETE — shipped to prod `master` (`c0b0ab3367`, live).** `feat(v11.3-04)` covers verify probe+doc · CLS fix · streaming. Quality floor held all 3 loops. **CLS verified on live deploy** (Playwright @ 820×1180 → 0.000 on two cold loads, was 0.187). **Remaining UAT (RUM-deferred):** field TTFB/FCP slice-probe re-run after ~1–7d traffic (cold-start residual → Vercel infra if still high). Ready to plan v11.3-05.
-Last activity: 2026-06-10 — `/paul:unify` v11.3-04-03 + phase-close transition: SUMMARY written, PROJECT/ROADMAP/paul.json evolved, phase committed + pushed.
+Phase: **v11.3-05 P3 polish** (P3) — **✅ COMPLETE 1/1 2026-06-10.** **v11.3 ALL 5 PHASES DONE (5/5 content-complete)** — v11.3-04 ✅ · v11.3-03 ✅ · v11.3-02 ✅ · v11.3-01 ✅.
+Plan: **None active** (v11.3-05-01 ✅ LOOP COMPLETE — SUMMARY written). BUG-6 = proxy matcher excludes org-suffixed manifests (`manifest(?:-[a-z0-9-]+)?\.json`); F-6 = new `telemetry` rate-limit tier (300/min) on `/api/auth/qr`+`/api/web-vitals`. Server-side only; QRSignIn.tsx untouched.
+Status: **v11.3 CONTENT COMPLETE 5/5 — phase v11.3-05 committed (`feat(v11.3-05)`) + pushed to `master`.** Next: **`/paul:complete-milestone`** (tag `v11.3.0`, bump `package.json`, archive ROADMAP → `.paul/milestones/`, MILESTONES.md entry). Then v11.4 = Publish & Notify (D8). Quality floor held all phases.
+Last activity: 2026-06-10 — `/paul:unify` v11.3-05-01 + phase-close transition: SUMMARY written, PROJECT/ROADMAP/paul.json evolved, phase committed + pushed to `master`.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -50,7 +50,7 @@ Last activity: 2026-06-10 — `/paul:unify` v11.3-04-03 + phase-close transition
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-04 ✅ PHASE COMPLETE (3/3) + committed+pushed — ready to PLAN v11.3-05]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-05-01 ✅ LOOP COMPLETE → PHASE COMPLETE → v11.3 5/5 — next: /paul:complete-milestone]
   ✓        ✓        ✓
 ```
 
@@ -93,10 +93,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.3-04 ✅ PHASE COMPLETE (3/3) +
 
 ## Session Continuity
 
-Last session: 2026-06-10 — `/paul:resume` → v11.3-04 ENTIRE PHASE: 01 verify ✅ · 02 CLS ✅ · 03 stream ✅ → phase-close (committed + pushed `c0b0ab3367`) → CLS VERIFIED live (Playwright 820×1180 → 0.000) → `/paul:pause`.
-Stopped at: **v11.3-04 ✅ PHASE COMPLETE + deployed + CLS-verified.** At the v11.3-04 → v11.3-05 boundary. 4/5 v11.3 phases done. Only uncommitted = post-commit STATE/UAT doc edits (Git-State hash + CLS-verified status; ride next commit).
-Next action: **`/paul:plan` for v11.3-05 (P3 polish — the LAST phase)** — BUG-6 (broslaz PWA manifest serves app shell; `src/proxy.ts` matcher excludes `manifest.json` not org-suffixed variants) + F-6 (cold-load `/api/auth/qr`+`/api/web-vitals` 429 self-heal; rate-limit/backoff). **F-6 is the SAME QR-card surface (`QRSignIn.tsx`) as v11.3-04-02's CLS fix — coordinate, don't undo the slot reservation.** Then `/paul:complete-milestone`.
-Resume file: **.paul/HANDOFF-2026-06-10-v11.3-04-complete.md** (full context).
+Last session: 2026-06-10 — `/paul:resume` → `/paul:plan` → `/paul:apply` → `/paul:unify` the ENTIRE v11.3-05 phase (BUG-6 proxy matcher + F-6 telemetry tier), 2/2 tasks PASS, gates green, committed `feat(v11.3-05)` + pushed to `master`. v11.3 now 5/5 content-complete.
+Stopped at: **v11.3 CONTENT COMPLETE 5/5** — at the milestone boundary. Phase v11.3-05 shipped to prod `master` (Vercel auto-deploy).
+Next action: **`/paul:complete-milestone`** — tag `v11.3.0`, bump `package.json` 11.3.0, archive ROADMAP → `.paul/milestones/v11.3.0-ROADMAP.md`, MILESTONES.md § v11.3 entry, then open v11.4 (Publish & Notify / D8) via `/paul:milestone`.
+Resume file: **.paul/phases/v11.3-05-p3-polish/v11.3-05-01-SUMMARY.md**.
 **Deferred UAT (RUM):** v11.3-04 field TTFB/FCP — re-run `node scripts/v11-3-04-webvitals-slice.mjs` after ~1–7d traffic vs 1633/3551 baseline; if still high → Vercel infra follow-up (Deferred Issues), not app code.
 **Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.
 Resume file: **.paul/HANDOFF-2026-06-10-v11.3-03-complete.md** (full context); then ROADMAP § Phase v11.3-04. Oracle: `docs/ACCESS-POLICY.md` v0.3. **(PAUSED 2026-06-10 at the v11.3-03 → v11.3-04 phase boundary.)**

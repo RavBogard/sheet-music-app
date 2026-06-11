@@ -35,7 +35,7 @@ function generateCode(): string {
  */
 export async function POST(req: NextRequest) {
     try {
-        const limited = await checkRateLimit(req, 'api')
+        const limited = await checkRateLimit(req, 'telemetry')
         if (limited) return limited
 
         if (!initAdmin()) {
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
  * Returns { status: 'pending' } or { status: 'approved', token: '...' }
  */
 export async function GET(req: NextRequest) {
-    const limited = await checkRateLimit(req, 'api')
+    const limited = await checkRateLimit(req, 'telemetry')
     if (limited) return limited
 
     const code = req.nextUrl.searchParams.get("code")
@@ -141,7 +141,7 @@ export async function GET(req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
     try {
-        const limited = await checkRateLimit(req, 'api')
+        const limited = await checkRateLimit(req, 'telemetry')
         if (limited) return limited
 
         // Verify phone user's auth

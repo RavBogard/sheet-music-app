@@ -20,7 +20,7 @@ Off the stress-test report's INCOMPLETE item 3 (`.paul/research/TOOLING-BRIEF-te
 ## Active Milestone
 
 **🚧 v11.3 — Worthiness & Access** (OPEN 2026-06-10 · 5 phases, plans TBD)
-Status: 🚧 In Progress · Phases: **4 of 5 complete** (01 ✅ · 02 ✅ · 03 ✅ · 04 ✅ 2026-06-10; v11.3-05 P3 polish remains) · **Source:** `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md` (phase grouping + triage ratified by Daniel) · **Oracle:** `docs/ACCESS-POLICY.md` **v0.3** — a finding is a bug only if it contradicts a cell in that matrix · **Reports:** `.paul/research/STRESS-TEST-REPORT-2026-06-10.md` (MCP run 1) + `…-browser.md` (Playwright run 2) + `…/BUG-cowork-chart-upload-2026-06-10.md` (David's upload dead-end).
+Status: ✅ CONTENT COMPLETE · Phases: **5 of 5 complete** (01 ✅ · 02 ✅ · 03 ✅ · 04 ✅ · 05 ✅ 2026-06-10) — ready for `/paul:complete-milestone` · **Source:** `.paul/research/MILESTONE-BRIEF-2026-06-10-worthiness-access.md` (phase grouping + triage ratified by Daniel) · **Oracle:** `docs/ACCESS-POLICY.md` **v0.3** — a finding is a bug only if it contradicts a cell in that matrix · **Reports:** `.paul/research/STRESS-TEST-REPORT-2026-06-10.md` (MCP run 1) + `…-browser.md` (Playwright run 2) + `…/BUG-cowork-chart-upload-2026-06-10.md` (David's upload dead-end).
 Focus: Close the post-stress-test findings the oracle confirms are real. Two **P1** families lead — anon read-access correctness (err-public prime-directive violations) and the agent chart-upload path (David's report) — then P2 hygiene, P2 /perform performance, and P3 polish. Phase order = the brief's family + severity grouping. CRC + broslaz both live; CRC byte-identical where shared surfaces are touched.
 
 | Phase | Name | Plans | Status | Completed |
@@ -29,7 +29,7 @@ Focus: Close the post-stress-test findings the oracle confirms are real. Two **P
 | v11.3-02 | Agent chart-upload path [P1] | 01 (Drive convert) ✅ · 02 (chunked inline) ✅ | ✅ Complete | 2026-06-11 |
 | v11.3-03 | Harness & hygiene — BUG-9 + BUG-7 + BUG-1 [P2] | 01 (BUG-9+7) ✅ · 02 (BUG-1) ✅ | ✅ Complete | 2026-06-10 |
 | v11.3-04 | /perform performance — BUG-2 [P2] | 01 (verify) ✅ · 02 (CLS) ✅ · 03 (TTFB/FCP stream) ✅ | ✅ Complete | 2026-06-10 |
-| v11.3-05 | P3 polish — BUG-6 + F-6 [P3] | TBD | Not started | - |
+| v11.3-05 | P3 polish — BUG-6 + F-6 [P3] | 01 (BUG-6 + F-6) ✅ | ✅ Complete | 2026-06-10 |
 
 ### Phase v11.3-01: Anon access correctness [P1 — prime-directive violations]
 Focus: Make anon deep-link reads actually work, per the err-public oracle (anon chart-via-deep-link = ✅ implied by D1; anon transpose = ✅ OPEN per D-Q2).
@@ -59,7 +59,7 @@ Plans: **01 verify ✅** (field-RUM slice probe + synthetic iPad capture → cha
 Focus:
 - **BUG-6:** `manifest-brotherslazaroff.json` serves the HTML app shell (PWA install broken on broslaz). Check `proxy.ts` matcher excludes only `manifest.json`, not org-suffixed variants.
 - **F-6:** cold landing fires `/api/auth/qr` POST → 429 then self-heals; `/api/web-vitals` also 429s. Rate-limit tuning or client backoff.
-Plans: TBD (defined during /paul:plan)
+Plans: **01** 🚧 PLAN created (`v11.3-05-01-PLAN.md`; standard, 2 tasks, autonomous) — **Task 1 (BUG-6):** `proxy.ts` matcher token `manifest.json` → `manifest(?:-[a-z0-9-]+)?\.json` so `/manifest-brotherslazaroff.json` (emitted per-org via `layout.tsx`→`branding.ts`) is excluded from the proxy and serves the static JSON instead of the 307→/login shell; regression in `proxy-auth.test.ts`. **Task 2 (F-6):** new IP-keyed `telemetry` rate-limit tier (300/min; NAT-fleet rationale mirroring `chart` — ~6 iPads/one IP, QR-poll ~30/min/device + ≤5 web-vitals beacons ≈ 216/min cold peak) repointed onto `/api/auth/qr` (×3) + `/api/web-vitals`; `api`/`ai`/`chart` tiers unchanged (CRC byte-identical); regression in `rate-limit.test.ts`. **Server-side only → /ui-ux-pro-max NOT triggered; QRSignIn.tsx untouched (preserves v11.3-04-02 CLS slot + its existing 429 backoff).** F-6 fix also protects the v11.3-04 deferred RUM TTFB UAT (stops cold-cohort web-vitals beacons being 429-dropped).
 
 Constraints (locked at /paul:milestone 2026-06-10):
 1. **Oracle-bound** — a finding is a bug only if it contradicts a `docs/ACCESS-POLICY.md` **v0.3** cell. err-public prime directive holds (err toward letting someone see a chart; writes/admin stay gated).

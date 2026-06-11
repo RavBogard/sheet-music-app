@@ -313,8 +313,13 @@ export const config = {
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico, sitemap.xml, robots.txt (metadata files)
-         * - manifest.json, sw.js, workbox-* (PWA configurations)
+         * - manifest.json + org-suffixed variants (manifest-<org>.json), sw.js,
+         *   workbox-* (PWA configurations). Per-org PWA manifests are emitted by
+         *   `layout.tsx` (`manifest: b.manifestPath` → e.g. /manifest-brotherslazaroff.json);
+         *   they are public static files with no secrets, so they must bypass the
+         *   proxy exactly like /manifest.json — otherwise an unauth landing fetch
+         *   307s to /login (the app shell) and PWA install breaks. (BUG-6.)
          */
-        '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|logo.jpg|manifest.json|sw.js|workbox-.*|pdf\\.worker\\..*\\.mjs|.*\\.png$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|logo.jpg|manifest(?:-[a-z0-9-]+)?\\.json|sw.js|workbox-.*|pdf\\.worker\\..*\\.mjs|.*\\.png$).*)',
     ],
 }
