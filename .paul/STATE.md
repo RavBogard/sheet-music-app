@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.4 — Publish & Notify (D8)** (OPEN 2026-06-10; 4 phases, plans TBD). Created via `/paul:discuss-milestone`→`/paul:milestone`. **Spec backbone:** `docs/ACCESS-POLICY.md` §"Publish & notify (D8)" (ratified — implements, not invents; bump oracle → v0.4 when D8 ships). (v11.3 ✅ COMPLETE 2026-06-10 tag `v11.3.0`; v11.2 ✅ 2026-06-11 tag `v11.2.0`.)
-Phase: **v11.4-04 Musician org-membership toggle + default-both backfill** (D8 item 5, LAST) — **Planning** (2 plans: **01 all-roles toggle** [this], 02 default-both rollout [new-account default + backfill]). (v11.4-01/02/03 ✅.)
-Plan: **`v11.4-04-02` created, awaiting approval** (`.paul/phases/v11.4-04-membership-toggle-backfill/v11.4-04-02-PLAN.md`; **autonomous: false** — has a human-action checkpoint; no /ui-ux gate). **Scope:** (T1) `ensureUserProfile` defaults new docs to `orgIds:['crc','brotherslazaroff']`; (T2) `scripts/v11-4-04-orgids-backfill.mjs` (firebase-CLI refresh-token ADC, mirrors v11-3-03) — diagnose/dry-run/apply/rollback, doc+claim lockstep, idempotent skip-if-both, per-user prior-state snapshot (absent→FieldValue.delete on rollback) + pure-helper unit test; (T3 human-action) Daniel runs the prod `--apply`. v11.4-04-01 ✅ (toggle, `ba826730d7`). v11.4-03 ✅ (`fb055b4b5d`).
-Status: **v11.4-04-02 PLAN created, ready for APPLY.** APPLY builds T1+T2 autonomously (incl. read-only `--diagnose`/dry-run proof) + commits, then STOPS at the T3 human-action gate (single-owner prod apply: mass auth-claims write granting cross-tenant authoring). After apply → UNIFY → `/paul:complete-milestone`.
-Last activity: 2026-06-11 — v11.4-04-01 UNIFY (`ba826730d7`) → `/paul:plan` v11.4-04-02 (backfill) created.
+Phase: **v11.4-04 Musician org-membership toggle + default-both backfill** (D8 item 5, LAST) — **✅ COMPLETE 2/2** (01 toggle `ba826730d7` · 02 default-both rollout `47e83088a1`). **v11.4 now 4/4 CONTENT COMPLETE.**
+Plan: **`v11.4-04-02` ✅ APPLIED + UNIFIED** (`47e83088a1`). T1 `ensureUserProfile` seeds new docs `orgIds:['crc','brotherslazaroff']`; T2 `scripts/v11-4-04-orgids-backfill.mjs` (diagnose/dry-run/apply/rollback, doc+claim lockstep, idempotent, per-user snapshot incl. absent→delete) + 10/10 unit test; **T3 prod `--apply` RUN (Daniel-authorized, agent-executed): scanned=19 changed=15 skipped=4, re-diagnose → 0 remaining (idempotent); snapshot `scripts/.backfill-snapshots/v11-4-04-20260611T193413Z.json` (gitignored).**
+Status: **v11.4 CONTENT COMPLETE 4/4 — ready for `/paul:complete-milestone`** (version bump → 11.4.0 + tag; ACCESS-POLICY oracle → v0.4; retire the "Until D8 ships" note). All 19 users now both-tenant on doc + claim.
+Last activity: 2026-06-11 — v11.4-04-02 APPLY (`47e83088a1`, T1+T2 + prod backfill) → UNIFY (SUMMARY + ROADMAP/STATE). Milestone close pending.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,8 +43,8 @@ Last activity: 2026-06-11 — v11.4-04-01 UNIFY (`ba826730d7`) → `/paul:plan` 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.4-04-02 PLAN created (autonomous:false) — next: APPLY (build T1+T2; STOP at T3 human-action prod apply)]
-  ✓        ○        ○
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.4-04-02 loop CLOSED; phase v11.4-04 ✅; v11.4 4/4 — next: /paul:complete-milestone]
+  ✓        ✓        ✓
 ```
 
 ## Execution Substrate (bongo .coord/)
@@ -88,10 +88,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.4-04-02 PLAN created (autonomou
 
 ## Session Continuity
 
-Last session: 2026-06-11 — v11.4-01 (`80ea721508`) → 02 (`f03b48db88`) → 03 (`fb055b4b5d`, MCP contacts, rules deployed) → `/paul:plan` v11.4-04-01 (toggle) created. Backfill scope ratified = everyone incl. leaders.
-Stopped at: **v11.4-04-02 PLAN created, awaiting approval.**
-Next action: **`/paul:apply .paul/phases/v11.4-04-membership-toggle-backfill/v11.4-04-02-PLAN.md`** — builds T1 (ensureUserProfile default-both) + T2 (backfill script + unit test + read-only diagnose/dry-run) autonomously + commits, then STOPS at T3 (Daniel runs `node scripts/v11-4-04-orgids-backfill.mjs --apply --stamp …`). After "applied" → UNIFY → `/paul:complete-milestone` (oracle → v0.4). Rollback: `--rollback scripts/.backfill-snapshots/<file>.json`.
-Resume file: **.paul/HANDOFF-2026-06-11-v11.4-04-02-backfill.md** (full pause context) → then the PLAN `.paul/phases/v11.4-04-membership-toggle-backfill/v11.4-04-02-PLAN.md`. **(PAUSED 2026-06-11 at v11.4-04-02, awaiting APPLY.)**
+Last session: 2026-06-11 — v11.4-01 (`80ea721508`) → 02 (`f03b48db88`) → 03 (`fb055b4b5d`) → 04-01 toggle (`ba826730d7`) → 04-02 APPLY+UNIFY (`47e83088a1`, incl. prod default-both backfill 15/19). v11.4 4/4 CONTENT COMPLETE.
+Stopped at: **v11.4-04-02 loop CLOSED; v11.4 milestone CONTENT COMPLETE 4/4 (LAST phase done).**
+Next action: **`/paul:complete-milestone`** — bump `package.json` → 11.4.0 + annotated tag `v11.4.0` on master; evolve PROJECT.md (D8 validated)/ROADMAP/MILESTONES + archive `.paul/milestones/v11.4.0-ROADMAP.md`; **bump `docs/ACCESS-POLICY.md` oracle → v0.4** (retire the "Until D8 ships, invariant 3 stands as-is" note). This is a milestone-close boundary (release tag) — confirm before tagging.
+Resume file: **.paul/phases/v11.4-04-membership-toggle-backfill/v11.4-04-02-SUMMARY.md** (full close context). **(v11.4-04 closed 2026-06-11; milestone-close pending.)**
 **Deferred UAT (RUM):** v11.3-04 field TTFB/FCP — re-run `node scripts/v11-3-04-webvitals-slice.mjs` after ~1–7d traffic vs 1633/3551 baseline; if still high → Vercel infra follow-up (Deferred Issues), not app code.
 **Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.
 Resume file: **.paul/HANDOFF-2026-06-10-v11.3-03-complete.md** (full context); then ROADMAP § Phase v11.3-04. Oracle: `docs/ACCESS-POLICY.md` v0.3. **(PAUSED 2026-06-10 at the v11.3-03 → v11.3-04 phase boundary.)**

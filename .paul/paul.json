@@ -7,9 +7,9 @@
     "status": "in_progress"
   },
   "phase": {
-    "number": 1,
-    "name": "v11.4-01 Recipient picker + no-auto-blast",
-    "status": "not_started"
+    "number": 4,
+    "name": "v11.4-04 Musician org-membership toggle + default-both backfill",
+    "status": "complete"
   },
   "loop": {
     "plan": null,
@@ -17,7 +17,7 @@
   },
   "timestamps": {
     "created_at": "2026-06-07T00:00:00Z",
-    "updated_at": "2026-06-10T23:45:00Z"
+    "updated_at": "2026-06-11T19:45:00Z"
   },
   "satellite": {
     "groom": true
