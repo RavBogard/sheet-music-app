@@ -7,6 +7,7 @@ import {
     richError,
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
+import { rowOrg } from "@/lib/mcp/org-context"
 import {
     readReviewQueue,
     acceptEnrichment as acceptEnrichmentHelper,
@@ -90,6 +91,37 @@ async function assertAdmin(
         requiredRoles: ["admin"],
         message: "Library-review tools require an admin account.",
         hint: "Ask an admin to elevate your account, or use the read tools that don't require admin.",
+    })
+}
+
+interface EditorGateOk {
+    ok: true
+    db: FirebaseFirestore.Firestore
+    role: string
+}
+
+/**
+ * v11.5-01-03 (H9): `editEnrichment` / `edit_library_entry` is the ONLY in-place
+ * editor of library metadata (tags/title/key/bpm/leadMusician/collection). v11.4-04
+ * made band_leaders the authoring tier, so this gate admits band_leader IN ADDITION
+ * to admin — and returns the caller's `role` so `editEnrichment` can (a) keep
+ * `collection` admin-only and (b) org-scope band_leader writes. The OTHER
+ * review-queue tools stay admin-only via `assertAdmin` (unchanged).
+ */
+async function assertLibraryEditor(
+    uid: string,
+): Promise<EditorGateOk | RichErrorEnvelope> {
+    initAdmin()
+    const db = getFirestore()
+    const role = await readUserRole(db, uid)
+    if (role === "admin" || role === "band_leader") {
+        return { ok: true, db, role }
+    }
+    return forbiddenRoleEnvelope({
+        callerRole: role ?? null,
+        requiredRoles: ["admin", "band_leader"],
+        message: "Editing a library entry requires an admin or band leader account.",
+        hint: "Ask an admin to elevate your account, or use the read-only library tools.",
     })
 }
 
@@ -630,8 +662,9 @@ export interface EditEnrichmentArgs extends WriteCommon {
 export async function editEnrichment(
     uid: string,
     args: EditEnrichmentArgs,
+    org?: string,
 ): Promise<WriteSuccessEnvelope | RichErrorEnvelope> {
-    const gate = await assertAdmin(uid)
+    const gate = await assertLibraryEditor(uid)
     if (!gate.ok) return gate
     const bad = requireRowId(args?.rowId)
     if (bad) return bad
@@ -639,6 +672,39 @@ export async function editEnrichment(
     const edits = (args?.edits ?? {}) as EditPayload
     const editValidation = validateEditPayload(edits)
     if (editValidation) return editValidation
+
+    // v11.5-01-03 (H9): `collection` placement stays admin-only. Band leaders may
+    // edit tags/title/key/bpm/leadMusician, but moving a chart between collections
+    // is a curation-authority decision reserved for admins.
+    if (gate.role !== "admin" && edits.collection !== undefined) {
+        return richError(
+            "forbidden_field",
+            "collection is an admin-only field.",
+            { field: "collection", callerRole: gate.role },
+            "Band leaders may edit tags/title/key/bpm/leadMusician; ask an admin to change a chart's collection.",
+        )
+    }
+
+    // v11.5-01-03 (H9): cross-tenant write wall for non-admin callers. Mirrors
+    // update_song (song-metadata.ts): a band leader may only edit a row in their
+    // own connector org; a row belonging to another tenant is reported as
+    // row_not_found so we never reveal it exists. Admins are unscoped — byte-
+    // identical to the pre-H9 admin-only behavior. Legacy rows with no orgId
+    // resolve via rowOrg(undefined) → DEFAULT_ORG_ID (crc).
+    const orgWall = (
+        data: FirebaseFirestore.DocumentData | undefined,
+    ): RichErrorEnvelope | null => {
+        if (gate.role === "admin" || org === undefined) return null
+        if (rowOrg(data?.orgId) !== org) {
+            return richError(
+                "row_not_found",
+                `library_index row "${args.rowId}" not found.`,
+                { rowId: args.rowId },
+                hintFor("row_not_found"),
+            )
+        }
+        return null
+    }
 
     return runWrite(
         gate.db,
@@ -656,6 +722,8 @@ export async function editEnrichment(
                     hintFor("row_not_found"),
                 )
             }
+            const wall = orgWall(snap.data())
+            if (wall) return wall
             return {
                 ok: true as const,
                 plannedStatus: "human_curated" as const,
@@ -663,6 +731,22 @@ export async function editEnrichment(
             }
         },
         async () => {
+            // Re-check the wall at commit: commit may run without a prior dryRun
+            // in the same request, so the tenancy check must not rely on dryRun.
+            const snap = await gate.db
+                .collection("library_index")
+                .doc(args.rowId)
+                .get()
+            if (!snap.exists) {
+                return richError(
+                    "row_not_found",
+                    `library_index row "${args.rowId}" not found.`,
+                    { rowId: args.rowId },
+                    hintFor("row_not_found"),
+                )
+            }
+            const wall = orgWall(snap.data())
+            if (wall) return wall
             const result = await editEnrichmentHelper(
                 gate.db,
                 args.rowId,

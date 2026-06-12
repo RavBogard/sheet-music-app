@@ -1976,22 +1976,22 @@ export function registerWriteTools(server: McpServer): void {
         "edit_enrichment",
         {
             description:
-                "Admin-only — operator edit of a `library_index` row (cycle-3 a5; also available under the clearer alias `edit_library_entry`). DESPITE THE NAME, this works on ANY library_index row, not just AI-review-queue rows — a row with `enrichmentStatus: null` (never enriched) is editable too. Calls a4's shared `editEnrichment` helper: applies the supplied `edits` payload directly to the doc (including `collection` — the operator override path IS allowed even though the AI's acceptEnrichment is NOT), sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and sets `humanRenamedAt` whenever `title` is changed (so future enrichment runs won't re-rename). Editable fields: title (non-empty), collection (core|supplemental|uploads), key (string), bpm (positive number or null to clear), leadMusician (string), tags (string[]). At least one field required. For just a key/bpm fix that musicians + band leaders (not only admins) can do, use update_song instead. F-05 contract: `dryRun: true` (default) validates the edits payload + checks the row exists, returns `plannedPatch` without writing; real-run without `force: true` refuses. Validation failures surface as `invalid_field` rich envelopes. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
+                "Admin + band-leader — operator edit of a `library_index` row (cycle-3 a5; also available under the clearer alias `edit_library_entry`). DESPITE THE NAME, this works on ANY library_index row, not just AI-review-queue rows — a row with `enrichmentStatus: null` (never enriched) is editable too. Calls a4's shared `editEnrichment` helper: applies the supplied `edits` payload directly to the doc (including `collection` — the operator override path IS allowed even though the AI's acceptEnrichment is NOT), sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and sets `humanRenamedAt` whenever `title` is changed (so future enrichment runs won't re-rename). Editable fields: title (non-empty), collection (core|supplemental|uploads), key (string), bpm (positive number or null to clear), leadMusician (string), tags (string[]). At least one field required. v11.5-01-03 (H9): band leaders may edit tags/title/key/bpm/leadMusician on rows in THEIR OWN tenant (a row in another org returns row_not_found) but cannot change `collection` (admin-only, returns forbidden_field); admins are unscoped. For just a key/bpm fix, update_song also works. F-05 contract: `dryRun: true` (default) validates the edits payload + checks the row exists, returns `plannedPatch` without writing; real-run without `force: true` refuses. Validation failures surface as `invalid_field` rich envelopes. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
             inputSchema: editLibraryEntryInputSchema,
         },
         async (args, extra) =>
-            jsonResult(await editEnrichmentTool(uidFrom(extra), args)),
+            jsonResult(await editEnrichmentTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
         "edit_library_entry",
         {
             description:
-                "Admin-only — operator edit of ANY `library_index` row (clearer-named alias for `edit_enrichment`; identical behavior). Use this to set/correct a chart's title, collection (core|supplemental|uploads), key, bpm, leadMusician, or tags on any library entry — the row does NOT need to be in the AI review queue. Sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and `humanRenamedAt` on a title change. For a key/bpm-only fix that musicians + band leaders can also do, use update_song. F-05 contract: `dryRun: true` (default) returns `plannedPatch` without writing; real run needs `dryRun: false, force: true`. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
+                "Admin + band-leader — operator edit of ANY `library_index` row (clearer-named alias for `edit_enrichment`; identical behavior). Use this to set/correct a chart's title, collection (core|supplemental|uploads), key, bpm, leadMusician, or tags on any library entry — the row does NOT need to be in the AI review queue. Sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and `humanRenamedAt` on a title change. v11.5-01-03 (H9): band leaders may edit tags/title/key/bpm/leadMusician on rows in THEIR OWN tenant (a row in another org returns row_not_found) but cannot change `collection` (admin-only, returns forbidden_field); admins are unscoped. For a key/bpm-only fix, update_song also works. F-05 contract: `dryRun: true` (default) returns `plannedPatch` without writing; real run needs `dryRun: false, force: true`. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
             inputSchema: editLibraryEntryInputSchema,
         },
         async (args, extra) =>
-            jsonResult(await editEnrichmentTool(uidFrom(extra), args)),
+            jsonResult(await editEnrichmentTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
