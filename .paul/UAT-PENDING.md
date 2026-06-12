@@ -13,6 +13,22 @@ plan or an emergent phase.
 
 ---
 
+## ⏳ v11.5-01-03 (H9) — band_leader library-edit (live MCP, David's bearer)
+
+**Deployed commit:** `d7cbb1a4e0` (prod `master` / prod MCP).
+
+Emulator-proven (`edit-library-entry-authz.emulator.test.ts`, 5/5). Live confirm
+on David's **band_leader** bearer pending (NON-BLOCKING) — **do this AFTER reverting
+David admin→band_leader** (he's temp-admin since 2026-06-12 18:35 UTC):
+
+- `edit_library_entry { rowId: <an in-org chart>, edits: { tags: [...] }, dryRun:false, force:true }`
+  → succeeds in place; the chart's existing bond is intact (no delete/re-import).
+- Same on a chart in the OTHER tenant → `row_not_found` (no write, no leak).
+- `edit_library_entry { edits: { collection: "core" } }` as band_leader → `forbidden_field`.
+
+**REVERT REMINDER:** drop David admin→band_leader (orgIds-preserving `/api/admin/set-role`)
+now that the proper band_leader path is live — then run the above on his real role.
+
 ## ⏳ v11.5-01-01 (H4) — Perform-setlist nav branding (live first-paint)
 
 **Deployed commit:** `180c9b666e` (prod `master`).
