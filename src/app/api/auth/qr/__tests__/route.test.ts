@@ -18,7 +18,8 @@ import { NextRequest } from "next/server"
 const mockCheckRateLimit = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => null) // null = not rate-limited
 const mockInitAdmin = vi.fn(() => true)
 const mockGet = vi.fn(async () => ({ exists: false }))
-const mockDoc = vi.fn(() => ({ get: mockGet }))
+const mockSet = vi.fn(async () => undefined)
+const mockDoc = vi.fn(() => ({ get: mockGet, set: mockSet }))
 const mockCollection = vi.fn(() => ({ doc: mockDoc }))
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -37,7 +38,7 @@ vi.mock("@/lib/logger", () => ({
 }))
 
 // Imported AFTER the mocks are registered.
-import { GET } from "../route"
+import { GET, POST, generateCode } from "../route"
 
 const makeReq = (query: string) =>
     new NextRequest(new URL(`http://localhost/api/auth/qr${query}`))
@@ -134,5 +135,53 @@ describe("GET /api/auth/qr — code validation (BUG-7)", () => {
         const body = await res.json()
         expect(body.error).toBe("Invalid code format")
         expect(mockCollection).not.toHaveBeenCalled()
+    })
+})
+
+describe("generateCode — fixed 6-char [A-Z0-9] (BUG-13)", () => {
+    // BUG-13 (run-3 §BUG-13): the old base64url + .replace(/[^A-Za-z0-9]/g,"") could
+    // strip '-'/'_' and emit a <6-char code (live repro "HEBFW") that the
+    // ^[A-Z0-9]{6}$ validators then 400. The fixed loop must always emit 6 [A-Z0-9].
+
+    // AC-1 — distribution: 1000 draws, every one a valid 6-char code.
+    it("emits exactly 6 [A-Z0-9] chars across 1000 draws (no <6, no '-'/'_')", () => {
+        for (let i = 0; i < 1000; i++) {
+            const code = generateCode()
+            expect(code).toHaveLength(6)
+            expect(code).toMatch(/^[A-Z0-9]{6}$/)
+            expect(code).not.toMatch(/[-_]/)
+        }
+    })
+
+    // AC-2 — every generated code passes the device-code guard the route uses
+    // (the same /^[A-Z0-9]{6}$/ in POST line 50, GET DEVICE_CODE_RE, PUT line 177).
+    it("every generated code satisfies the route's device-code validator", () => {
+        for (let i = 0; i < 250; i++) {
+            expect(/^[A-Z0-9]{6}$/.test(generateCode())).toBe(true)
+        }
+    })
+})
+
+describe("POST /api/auth/qr — server-generated code round-trips (BUG-13 AC-2)", () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        mockCheckRateLimit.mockResolvedValue(null)
+        mockInitAdmin.mockReturnValue(true)
+        mockGet.mockResolvedValue({ exists: false })
+        mockSet.mockResolvedValue(undefined)
+    })
+
+    it("POST with no body generates a valid code that GET does NOT 400", async () => {
+        const postReq = new NextRequest(new URL("http://localhost/api/auth/qr"), { method: "POST" })
+        const postRes = await POST(postReq)
+        expect(postRes.status).toBe(200)
+        const { code } = await postRes.json()
+        // The server-generated fallback code is a valid 6-char code...
+        expect(code).toMatch(/^[A-Z0-9]{6}$/)
+        // ...written to qr-sessions/<code>...
+        expect(mockDoc).toHaveBeenCalledWith(code)
+        // ...and NOT self-rejected by the GET format guard (reaches lookup → 404).
+        const getRes = await GET(makeReq(`?code=${code}`))
+        expect(getRes.status).toBe(404)
     })
 })
