@@ -7,25 +7,25 @@
 See: .paul/PROJECT.md (updated 2026-06-07)
 
 **Core value:** The band gets the right charts + recordings on their iPads each week, and Daniel authors setlists conversationally via Claude + MCP. Now MULTI-TENANT (2nd live tenant: Brothers Lazaroff on brotherslazaroff.live).
-**Current focus:** **v11.5 — Bulletproof Performance** 🚧 OPENED 2026-06-11 (5 phases; oracle `docs/ACCESS-POLICY.md` v0.4; brief `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md`, all scope ratified). Doctrine: bulletproof > novel; web app = performance + quick edits. **Plans H4 (`180c9b666e`) + H9 (`d7cbb1a4e0`) ✅ shipped.** Next action: **`/paul:plan` Plan v11.5-01-02 (H5)** — the last plan in phase v11.5-01, then phase transition. v7.1 hardening continues in parallel via `.coord/`.
+**Current focus:** **v11.5 — Bulletproof Performance** 🚧 (5 phases; oracle `docs/ACCESS-POLICY.md` v0.4; brief `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md`). Doctrine: bulletproof > novel; web app = performance + quick edits. **Phase v11.5-01 ✅ COMPLETE 3/3** (H4 `180c9b666e` · H5 `cd97ab21a3` · H9 `d7cbb1a4e0`). Next action: **`/paul:plan` for Phase v11.5-02** (the performance surface — headline). v7.1 hardening continues in parallel via `.coord/`.
 
 ## Current Position
 
 Milestone: **🚧 v11.5 — Bulletproof Performance** (OPENED 2026-06-11; 5 phases; oracle `docs/ACCESS-POLICY.md` **v0.4**; brief `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md`; context `MILESTONE-CONTEXT.md` consumed + deleted). Phase dirs created under `.paul/phases/v11.5-0{1..5}-*`. (v11.4 ✅ tag `v11.4.0`; v11.3 ✅ `v11.3.0`; v11.2 ✅ `v11.2.0`.)
-Phase: **v11.5-01 of 5 — Tenancy + anon correctness (H4 + H5 + H9)** [P0/P1] — **In progress (2 of 3 plans complete).** **01 = H4** ✅ DONE · **02 = H5** (anon chord-cache write 401, server) — **only remaining plan; unplanned** · **03 = H9** (band_leader library-edit lockout) ✅ DONE + shipped.
-Plan: **v11.5-01-03 (H9) ✅ COMPLETE + UNIFIED + shipped** (`d7cbb1a4e0`; SUMMARY `.../v11.5-01-03-SUMMARY.md`). `editEnrichment` gate admin→`assertLibraryEditor` (admin|band_leader) + `forbidden_field` collection guard + cross-tenant `orgWall`→`row_not_found` (admin byte-identical); handlers thread `orgFrom(extra)`; descriptions corrected. tsc 0 · emulator 5/5 · `next build --webpack` clean. **Prior: H4 ✅ `180c9b666e`.** **Next: `/paul:plan` Plan 02 (H5)** = last plan in phase.
-Status: **Plan 03 loop CLOSED. Phase v11.5-01 = 2/3 plans done; only H5 (Plan 02) remains, then phase transition.** NON-BLOCKING live UAT appended (David band_leader: in-place tag edit / cross-tenant not-found / collection refused). **REVERT David admin→band_leader** once live-confirmed.
-Last activity: 2026-06-12 — **`/paul:apply` → `/paul:unify` Plan v11.5-01-03 (H9)**: implemented the gate relaxation + collection guard + cross-tenant orgWall in `editEnrichment`, emulator authz test 5/5, all gates green, SUMMARY written, committed `d7cbb1a4e0`, shipped to master (prod MCP). Daniel pre-bumped David to admin for the June-13 unblock.
+Phase: **v11.5-01 ✅ COMPLETE 3/3 (2026-06-12) — transitioned to v11.5-02 of 5.** Closed: H4 (Perform-nav branding leak) · H5 (anon chord-cache PATCH 401) · H9 (band_leader library-edit + cross-tenant wall). **Next phase: v11.5-02 — The performance surface (headline)** [P1] — H1 (landscape auto-fit + per-chart calibration) + F2 (in-Perform leader-only key change) + H7/F1 (`/perform` cold-open TTFB; root-cause first) + H3 (seekable audio). UAT-heaviest (7-tablet fleet); /ui-ux-pro-max BLOCKING.
+Plan: **None active — ready to plan v11.5-02.** (Phase v11.5-01 SUMMARYs: `.../v11.5-01-0{1,2,3}-SUMMARY.md`.)
+Status: **Phase v11.5-01 transition COMPLETE** (PROJECT/ROADMAP/STATE evolved; phase commit + push). Ready for `/paul:plan` v11.5-02.
+Last activity: 2026-06-12 — **`/paul:apply` → `/paul:unify` Plan v11.5-01-02 (H5) → phase v11.5-01 transition**: shipped H5 (`cd97ab21a3`), wrote SUMMARY, evolved PROJECT/ROADMAP, phase commit, pushed to master.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
 - **Band leaders:** explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle (today hand-set via scripts). The **authoring** tier.
 
-## Milestone Phases (v11.5 — 🚧 OPENED, 0 of 5)
+## Milestone Phases (v11.5 — 🚧 1 of 5 complete)
 
 | Phase | Focus | Priority |
 |-------|-------|----------|
-| v11.5-01 | **Tenancy + anon correctness** — H4 ✅ (Perform-setlist header leak) + H5 (anon chord-cache write 401 → recompute/noise; align D-Q2) + **H9** (band_leader library-edit lockout — relax `editEnrichment` admin gate + org-scope; STOP-gate; field-reported by David). | **P0/P1** |
+| v11.5-01 | ✅ **COMPLETE 3/3 (2026-06-12)** — Tenancy + anon correctness: H4 (Perform-nav leak `180c9b666e`) + H5 (anon chord-cache PATCH `cd97ab21a3`) + H9 (band_leader library-edit + cross-tenant wall `d7cbb1a4e0`). | **P0/P1** |
 | v11.5-02 | **The performance surface (headline)** — H1 (landscape auto-fit + per-chart calibration override) + F2 (in-Perform leader-only shared key change) + H7/F1 (`/perform` cold-open TTFB + "tonight" entry; root-cause TTFB first) + H3 (seekable audio / HTTP Range). UAT-heaviest (7-tablet fleet). | P1 |
 | v11.5-03 | **Photo-of-paper-chart import** (funded L, own phase) — MCP path: photo → deskew/crop/normalize → org-stamped library row (provenance "photo import") → bonded. Image normalization first, NOT OCR. VERIFY-FIRST `scrape_chart_from_url`/`salvage_chart_bytes` reuse. | P1 |
 | v11.5-04 | **Hygiene & harness** — M-11 (`contact_not_found`→404) · M-10 (publish schema doc) · library junk filter (browse + bind-picker) + orphan delete (VERIFY-FIRST cascade) + ingestion guard · H8 (bus-assignment cascade) · F-8 (`create_test_account` orgIds) · M-12 (chunk TTL ~60m) · test `.docx` fixture · BL-tier bearer doc. | P2 |
@@ -44,7 +44,7 @@ Last activity: 2026-06-12 — **`/paul:apply` → `/paul:unify` Plan v11.5-01-03
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-01-03 (H9) loop CLOSED — shipped d7cbb1a4e0. Phase 2 of 3 plans done; H5 (02) remains]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-01 phase COMPLETE 3/3 + transitioned → v11.5-02. Idle, ready to PLAN]
   ✓        ✓        ✓
 ```
 
@@ -70,6 +70,7 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-01-03 (H9) loop CLOSED — sh
 ### Deferred Issues
 - **SERVICE_TYPE_LABELS vocab-table (v11.1-04 defer, 2026-06-09):** Shabbat Morning/Friday Night/Erev Shabbat/Rosh Hashanah labels hardcoded in SetlistCards/CreationWizard/SetlistMetaEditSheet/interview-defaults + SetlistMatrixView `<option>`s. Gated-away for broslaz (selector hidden via `hidesLiturgicalFields`) → NOT a live remnant. Convert to a vocab-driven table only if a non-synagogue tenant needs service-type categories.
 - **recordings-collection org-scoping (v11.1-03 defer, 2026-06-09):** `subscribeRecordingsForSong` (RecordingBindPopover) is songId-only (no org filter) AND `/api/recordings/upload:107` hardcodes `orgId: DEFAULT_ORG_ID` → host-filtering the subscribe now would hide ALL recordings on broslaz. Fix: stamp the upload from host x-org-id, THEN host-filter the subscribe. Small follow-up; distinct from the Library-tab chart clutter (library_index audio rows ARE covered by v11.1-03).
+- **anon chord-cache writes are not org-scoped (v11.5-01-02 defer, 2026-06-12):** the anon `POST` (chordData) + the now-anon `PATCH` (nativeKey/lastUsed*) on `/api/library/chord-cache` write by `fileId` with NO tenancy check → a broslaz-anon write to a CRC chart's `fileId` crosses the tenant wall. Benign derived/display data (overwritable, rate-limited) + matches the pre-existing anon-POST gap, so deferred. Fix: org-scope BOTH writes together (resolve the row's `orgId` vs the host `x-org-id`).
 - **finalize_chart_upload (signed-URL path) does not org-stamp (v11.3-02-02 defer, 2026-06-11):** the chunked `commit` stamps its result, but the signed-URL `finalize_chart_upload` flow shares finalize's missing-stamp gap → its uploads land default-org. Small follow-up: add `org` param to `finalizeChartUpload` + pass `orgFrom(extra)` in its handler. Out of scope of v11.3-02 to keep that path byte-stable.
 - **/perform cold-start TTFB residual (v11.3-04-03 defer, 2026-06-10):** streaming took the Firestore query off the first-byte path, but field cold TTFB (1633ms vs synthetic 214ms) is dominated by Vercel serverless cold-start + real-user geo — an INFRA lever, not app code. If the post-deploy slice-probe re-run shows TTFB still high, action a Vercel fluid-compute / keep-warm / region follow-up; do NOT re-churn `/perform` app code.
 - v11-06 residuals (low-risk, in AUDIT.md): setlistTemplates app-only; scheduling_history orgId-absent rows; users claim-based (no orgId field).
@@ -91,10 +92,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-01-03 (H9) loop CLOSED — sh
 
 ## Session Continuity
 
-Last session: 2026-06-12 — **Shipped H4 (`180c9b666e`) + H9 (`d7cbb1a4e0`); both loops CLOSED.** H9 (band_leader library-edit) surfaced from David's field report, planned as a STOP-gate, approved, applied (gate relaxation + collection guard + cross-tenant orgWall + emulator test 5/5), shipped to prod MCP.
-Stopped at: **Plan v11.5-01-03 (H9) loop CLOSED.** Phase v11.5-01 = 2/3 plans done. **Only H5 (Plan 02) remains** — unplanned — then phase transition.
-Next action: **`/paul:plan` for Plan v11.5-01-02 (H5)** — anon chord-cache write 401 → recompute/noise; server route only (NOT behind a UI gate); align oracle D-Q2. This is the LAST plan in phase v11.5-01 (UNIFY will trigger the phase transition). **Operational (NOT code):** revert David admin→band_leader now that H9 is live (after a quick live-confirm); reminder in UAT-PENDING.
-Resume file: **.paul/HANDOFF-2026-06-12.md** (full pause context — both loops closed; next = plan H5; revert-David reminder). Then SUMMARYs `.../v11.5-01-03-SUMMARY.md` (H9) + `.../v11.5-01-01-SUMMARY.md` (H4).
+Last session: 2026-06-12 — **Completed phase v11.5-01 (3/3): H4 + H9 + H5 all shipped; phase TRANSITIONED → v11.5-02.** H5 = anon chord-cache PATCH opened to anon for benign fields (gate stays on chordsVerified) + rate-limit (`cd97ab21a3`). PROJECT/ROADMAP evolved, phase commit pushed.
+Stopped at: **Phase v11.5-01 complete + transitioned. Idle at the v11.5-01 → v11.5-02 phase boundary.**
+Next action: **`/paul:plan` for Phase v11.5-02 (The performance surface)** — H1 (landscape auto-fit + per-chart calibration) · F2 (in-Perform leader-only key change) · H7/F1 (`/perform` cold-open TTFB — **root-cause TTFB first**) · H3 (seekable audio / HTTP Range). **UAT-heaviest (7-tablet iPad fleet); /ui-ux-pro-max BLOCKING.** Likely needs splitting into multiple plans. **Operational (Daniel's discretion):** revert David admin→band_leader (he said "David is fine").
+Resume file: **.paul/ROADMAP.md** § Phase v11.5-02. Phase v11.5-01 SUMMARYs: `.../v11.5-01-0{1,2,3}-SUMMARY.md`.
 Git strategy: master (prod). Everything committed + pushed through `88dff486a2` (working tree clean of plan work — only unrelated `.coord`/research/design artifacts remain uncommitted). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 **Deferred UAT (RUM):** v11.3-04 field TTFB/FCP — re-run `node scripts/v11-3-04-webvitals-slice.mjs` after ~1–7d traffic vs 1633/3551 baseline; if still high → Vercel infra follow-up (Deferred Issues), not app code.
 **Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.

@@ -29,6 +29,16 @@ David admin→band_leader** (he's temp-admin since 2026-06-12 18:35 UTC):
 **REVERT REMINDER:** drop David admin→band_leader (orgIds-preserving `/api/admin/set-role`)
 now that the proper band_leader path is live — then run the above on his real role.
 
+## ⏳ v11.5-01-02 (H5) — anon chord-cache PATCH (live transpose)
+
+**Deployed commit:** `cd97ab21a3` (prod `master`).
+
+Regression-proven (`chord-cache/route.test.ts`, 9/9). Live confirm (NON-BLOCKING):
+- Anonymous (signed-out) open a chart in Perform and transpose → chords render; the
+  browser console is **free of `/api/library/chord-cache` 401s** (was: saveNativeKey 401).
+- Re-load the same chart anon → native key is a cache hit (no re-detect).
+- Sanity: an anon attempt to set verification still fails; authed transpose unchanged.
+
 ## ⏳ v11.5-01-01 (H4) — Perform-setlist nav branding (live first-paint)
 
 **Deployed commit:** `180c9b666e` (prod `master`).
