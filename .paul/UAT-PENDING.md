@@ -42,13 +42,13 @@ Evidence `r3c-bug12-signed-in-setlists-ipad.png`. CLEANUP VERIFIED.
 
 ## ⏳ NEW FINDINGS from the re-fire (triage — run3-B report §11)
 
-- **🐛 BUG-13 (P2) — `generateCode()` can emit <6-char device-QR codes.** route.ts:22
-  `randomBytes(4).toString("base64url").replace(/[^A-Za-z0-9]/g,"")` strips `-`/`_`, so
-  a draw collapses to ≤5 chars (live repro: `"HEBFW"`) which the `^[A-Z0-9]{6}$`
-  validators 400 at PUT-approve + GET-poll → shared-iPad device-QR sign-in
-  **intermittently fails** (self-heals on a fresh code) + leaves an un-sweepable
-  expired `qr-sessions` orphan. Fix: make generateCode always emit 6 `[A-Z0-9]` chars.
-  VERIFY FIRST whether the QR client component's own code generator shares the flaw.
+- **✅ BUG-13 — FIXED + live-verified 2026-06-11** (`bug13-qr-code-generator`, commit
+  `0fd67114`). Server fallback `generateCode()` now emits a fixed 6-char `[A-Z0-9]` code
+  (moved to sibling `code.ts`). 6/6 live server-fallback POSTs returned valid 6-char codes;
+  qr route tests 14/14 (1000-draw distribution). AC-4: 7 legacy short-code orphans swept
+  from prod `qr-sessions` (collection clean). VERIFY-FIRST resolved: the client
+  `generateClientCode()` was already correct (fixed 6× loop) — real device-QR sign-in
+  was never affected; only the rarely-hit server fallback. No further action.
 - **F-8 (P3, harness-only — NOT a leak) — v11.4-04 default-both doesn't reach MCP test
   accounts.** `provisionTestAccount` skips `orgIds` seeding + crc-pins the bearer, so a
   CRC-minted test leader authoring on the broslaz host falls back to crc (verified:
