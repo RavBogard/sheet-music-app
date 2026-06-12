@@ -3,14 +3,19 @@
  *
  * Per ACCESS-POLICY v0.3 D-Q2 anon transpose reads/persists the chord cache. Pre-fix GET
  * and POST used createApiHandler's DEFAULT auth gate (anon → 401 missing_bearer). Now GET
- * (read) and POST (persist scan results) are requireAuth:false; PATCH (native key /
- * verification) stays role:musician and DELETE stays role:band_leader.
+ * (read) and POST (persist scan results) are requireAuth:false. v11.5-01-02 (H5):
+ * PATCH is now requireAuth:false too, but with a field guard — anon may persist
+ * benign derived/display data (nativeKey forced 'auto', lastUsedKey/lastUsedTransposition),
+ * while chordsVerified/chordsVerifiedBy + a manual native-key provenance require an
+ * authed musician+. DELETE stays role:band_leader.
  *
- * Coverage cell — STRESS-TEST-REPORT-2026-06-10-browser.md §BUG-4 (anon chord-cache GET 401s).
+ * Coverage cells — §BUG-4 (anon chord-cache GET 401s) + §B-10 (anon PATCH 401 / H5).
  */
 
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest"
+import { NextResponse } from "next/server"
 import { makeReq } from "@/__tests__/api-test-helpers"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 const mockVerifyIdToken = vi.fn()
 const mockGet = vi.fn()
@@ -85,15 +90,86 @@ describe("v11.3-01-02 · /api/library/chord-cache · anon read/persist (BUG-4)",
         expect(mockSet).toHaveBeenCalledTimes(1)
     })
 
-    // AC-4: PATCH (metadata/verification) stays gated — anon → 401, not opened
-    it("still gates PATCH for anon (role:musician preserved)", async () => {
+    // ── PATCH field split — v11.5-01-02 (H5 / §B-10) ──────────────────────────
+
+    // AC-1: anon may persist the auto-detected native key (the H5 fix) → 200
+    it("allows anon PATCH of an auto nativeKey → 200, written with source 'auto'", async () => {
         const res = await PATCH(
             makeReq("/api/library/chord-cache", {
                 method: "PATCH",
-                body: { fileId: "upload-x", nativeKey: "D" },
+                body: { fileId: "upload-x", nativeKey: "G", nativeKeySource: "auto" },
+            }),
+        )
+        expect(res.status).toBe(200)
+        expect(mockSet).toHaveBeenCalledTimes(1)
+        const written = mockSet.mock.calls[0][0]
+        expect(written).toMatchObject({ nativeKey: "G", nativeKeySource: "auto" })
+        expect(written).not.toHaveProperty("chordsVerified")
+    })
+
+    // AC-2a: the verification trust flag stays authed-only — anon → 401, no write
+    it("rejects anon PATCH of chordsVerified → 401, no write", async () => {
+        const res = await PATCH(
+            makeReq("/api/library/chord-cache", {
+                method: "PATCH",
+                body: { fileId: "upload-x", chordsVerified: true },
             }),
         )
         expect(res.status).toBe(401)
+        expect(mockSet).not.toHaveBeenCalled()
+    })
+
+    // AC-2b: anon cannot assert 'manual' provenance — coerced to 'auto'
+    it("coerces an anon-supplied nativeKeySource 'manual' to 'auto'", async () => {
+        const res = await PATCH(
+            makeReq("/api/library/chord-cache", {
+                method: "PATCH",
+                body: { fileId: "upload-x", nativeKey: "G", nativeKeySource: "manual" },
+            }),
+        )
+        expect(res.status).toBe(200)
+        expect(mockSet.mock.calls[0][0]).toMatchObject({ nativeKeySource: "auto" })
+    })
+
+    // AC-3: authed musician keeps full PATCH (chordsVerified + manual provenance)
+    it("allows an authed musician to set chordsVerified → 200, written", async () => {
+        mockVerifyIdToken.mockResolvedValue({ uid: "u1", role: "musician", email: "m@test" })
+        const res = await PATCH(
+            makeReq("/api/library/chord-cache", {
+                method: "PATCH",
+                token: "musician-token",
+                body: { fileId: "upload-x", chordsVerified: true, chordsVerifiedBy: "u1" },
+            }),
+        )
+        expect(res.status).toBe(200)
+        expect(mockSet.mock.calls[0][0]).toMatchObject({ chordsVerified: true, chordsVerifiedBy: "u1" })
+    })
+
+    it("honors a manual nativeKeySource for an authed musician", async () => {
+        mockVerifyIdToken.mockResolvedValue({ uid: "u1", role: "musician", email: "m@test" })
+        const res = await PATCH(
+            makeReq("/api/library/chord-cache", {
+                method: "PATCH",
+                token: "musician-token",
+                body: { fileId: "upload-x", nativeKey: "G", nativeKeySource: "manual" },
+            }),
+        )
+        expect(res.status).toBe(200)
+        expect(mockSet.mock.calls[0][0]).toMatchObject({ nativeKeySource: "manual" })
+    })
+
+    // AC-4: the anon write is rate-limited via the shared `api` bucket
+    it("rate-limits anon PATCH via the api bucket (no write)", async () => {
+        vi.mocked(checkRateLimit).mockReturnValueOnce(
+            NextResponse.json({ error: "rate_limited" }, { status: 429 }),
+        )
+        const res = await PATCH(
+            makeReq("/api/library/chord-cache", {
+                method: "PATCH",
+                body: { fileId: "upload-x", nativeKey: "G" },
+            }),
+        )
+        expect(res.status).toBe(429)
         expect(mockSet).not.toHaveBeenCalled()
     })
 })

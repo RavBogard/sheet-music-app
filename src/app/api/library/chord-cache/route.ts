@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getFirestore } from "firebase-admin/firestore"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
+import type { AuthResult } from "@/lib/api-auth"
 import { z } from "zod"
 
 interface ChordPosition {
@@ -146,18 +147,46 @@ const patchSchema = z.object({
 
 /**
  * PATCH /api/library/chord-cache
- * Update library-level metadata (native key, verification)
+ * Update library-level metadata (native key, last-used key, verification).
+ *
+ * v11.5-01-02 (H5 / D-Q2): anon transpose may PERSIST benign derived/display data
+ * so the next visitor gets a cache hit instead of re-detecting — the same anon
+ * stance the GET (read) and POST (persist scan) already take on this route
+ * (v11.3-01-02). The dominant anon caller is `saveNativeKey(fileId, key, 'auto')`
+ * from the transposer; pre-fix it 401'd (`role: 'musician'`) → console noise +
+ * never cached. Now `requireAuth: false` with a field-level guard:
+ *   - anon (any non-musician): may write `nativeKey` (forced `nativeKeySource: 'auto'`),
+ *     `lastUsedKey`, `lastUsedTransposition`.
+ *   - the `chordsVerified` / `chordsVerifiedBy` TRUST flag AND a MANUAL native-key
+ *     provenance require an authed musician+ (`ctx.auth` is null for anon).
+ * `api` rate-limit added (was missing) — shared bucket, no double-punish.
  */
 export const PATCH = createApiHandler(
     async (ctx) => {
+        const limited = await checkRateLimit(ctx.req, 'api')
+        if (limited) return limited
+
         const { fileId, nativeKey, nativeKeySource, chordsVerified, chordsVerifiedBy, lastUsedKey, lastUsedTransposition } = ctx.body!
+
+        // requireAuth:false → ctx.auth is the AuthResult for an authed caller, or null for anon.
+        const auth = ctx.auth as AuthResult | null
+        const trusted = auth?.isMusician === true
+
+        // The verification trust flag stays authed-musician (leader-gated contract).
+        if ((chordsVerified !== undefined || chordsVerifiedBy !== undefined) && !trusted) {
+            return NextResponse.json(
+                { error: "chordsVerified requires a musician account" },
+                { status: 401 }
+            )
+        }
 
         const db = getFirestore()
         const updates: Record<string, unknown> = {}
 
         if (nativeKey !== undefined) {
             updates.nativeKey = nativeKey
-            updates.nativeKeySource = nativeKeySource || 'auto'
+            // Untrusted (anon) callers cannot assert 'manual' provenance — coerce to 'auto'.
+            updates.nativeKeySource = trusted ? (nativeKeySource || 'auto') : 'auto'
         }
         if (chordsVerified !== undefined) {
             updates.chordsVerified = chordsVerified
@@ -174,7 +203,7 @@ export const PATCH = createApiHandler(
 
         return NextResponse.json({ success: true })
     },
-    { role: 'musician', schema: patchSchema }
+    { requireAuth: false, schema: patchSchema }
 )
 
 /**
