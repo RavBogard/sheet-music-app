@@ -15,17 +15,18 @@ Focus: Make the band/consumer web surface bulletproof — fix tenancy/anon corre
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| v11.5-01 | Tenancy + anon correctness — H4 + H5 [P0/P1, smallest first] | 01 (H4 header) 🚧 · 02 (H5 chord-cache) TBD | 🚧 Planning | - |
+| v11.5-01 | Tenancy + anon correctness — H4 + H5 + H9 [P0/P1] | 01 (H4 header) ✅ · 02 (H5 chord-cache) TBD · 03 (H9 band_leader library-edit) TBD | 🚧 In progress | - |
 | v11.5-02 | The performance surface — H1 + F2 + H7/F1 + H3 [P1 · headline] | TBD | Not started | - |
 | v11.5-03 | Photo-of-paper-chart import [P1 · funded L, own phase] | TBD | Not started | - |
 | v11.5-04 | Hygiene & harness — run-3 triage + design findings [P2] | TBD | Not started | - |
 | v11.5-05 | Consumer polish quick wins — design audit [P3] | TBD | Not started | - |
 
 ### Phase v11.5-01: Tenancy + anon correctness [P0/P1 — smallest first]
-Focus: Two correctness leaks on the consumer surface.
-- **H4** — CRC header leaking on broslaz `/perform/setlist/[id]` (hard invariant-1 leak): the shared `DesktopHeader`/`MobileHeader` hardcodes `/logo.jpg` + "CRC Music" instead of `getOrgBranding(orgId)`. **VERIFY FIRST** which layout renders on detail vs list routes. Add a regression cell (stress-prompt). (S)
+Focus: Consumer-surface correctness leaks (H4/H5) + an authoring-tier permission lockout (H9).
+- **H4** ✅ (shipped `180c9b666e`) — CRC header leaking on broslaz `/perform/setlist/[id]`: `perform/setlist/layout.tsx` rendered `<AppNavigation/>` propless → nav fell back to the CRC default. Converted to an async server layout resolving `x-org-id`→`getOrgBranding` (covers detail + `track/[trackId]`; CRC byte-identical). Regression test + stress cell B4. (S)
 - **H5** — anon chord-cache path: anon `GET` works but the cache **write** 401s → recompute every load + console noise (includes run-3 B-10's PATCH 401). Align with D-Q2 (anon transpose open, rate-limited; do not regress authed; do not double-punish against the existing cold-load 429s). (S–M)
-Plans: TBD (defined during /paul:plan)
+- **H9** (field-reported 2026-06-12, David) — **band_leaders are locked out of in-place library-metadata edits.** `edit_library_entry`/`edit_enrichment` (the only editor of tags/title/collection/key/bpm/leadMusician) is `assertAdmin`-gated (`library-review.ts:634`); the only band_leader chart-metadata write is `update_song` (key/bpm). So a band_leader cannot change a chart's **tags** (or title/leadMusician) except by delete-and-re-import — which breaks gig bonds and is impossible for direct-uploads lacking a Drive source. Contradicts the v11.4-04 doctrine (band_leaders = authoring tier). **Fix:** relax the gate to admin-OR-band_leader for a curation-safe subset (**tags, title, key, bpm, leadMusician**; `collection` stays admin-only) **+ add org-scoping** (`row.org ∈ caller orgIds`) — `library-review.ts` has NO tenancy check today, so the relaxation must not open a cross-tenant authoring hole (err-public ACROSS-tenant wall). **STOP-gate** (MCP auth/permission change → `autonomous: false`, approval before APPLY). Immediate field unblock = temp-bump David to admin via `/api/admin/set-role` (orgIds-preserving). (S–M)
+Plans: 01 (H4) ✅ · 02 (H5) · 03 (H9) — 02/03 defined during /paul:plan
 
 ### Phase v11.5-02: The performance surface [P1 — the headline]
 Focus: The Perform reading + in-service editing experience. UAT-heaviest phase (real 7-tablet iPad fleet).
