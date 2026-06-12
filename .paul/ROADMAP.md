@@ -4,11 +4,72 @@
 
 ## Next Milestone
 
-**v11.5 (candidate backlog)** — recordings-collection org-scoping (+ `/api/recordings/upload` orgId stamp), `finalize_chart_upload` signed-URL org-stamp gap, SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage (`.paul/MILESTONES.md` § v7.0). v7.1 Production Hardening continues independently via the bongo `.coord/` cadence.
+**v11.6 (candidate backlog)** — F3 library browse density/filters (thumbnails, composer/recency metadata, search ergonomics); F5 comms design layer (waits on the Antigravity mural/BL mockups); the v11.5-deferred infra adjacents not folded into v11.5-04 (recordings-collection org-scoping + `/api/recordings/upload` orgId stamp, `finalize_chart_upload` signed-URL org-stamp gap, SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage); authed-broslaz design pass + cross-org leader-wall UI check (next stress run). v7.1 Production Hardening continues independently via the bongo `.coord/` cadence.
 
 ## Active Milestone
 
-**None — between milestones.** v11.4 ✅ COMPLETE 2026-06-11 (tag `v11.4.0`; archived `.paul/milestones/v11.4.0-ROADMAP.md`). Run `/paul:discuss-milestone` or `/paul:milestone` to define the next; candidate backlog v11.5 above.
+**🚧 v11.5 — Bulletproof Performance** (OPENED 2026-06-11 · 5 phases · 0 of 5 complete)
+Status: 🚧 In Progress · Phases: **0 of 5** · **Oracle:** `docs/ACCESS-POLICY.md` **v0.4** — a finding is a bug only if it contradicts a cell in that matrix; err-public prime directive holds · **Source brief:** `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md` (all scope ratified by Daniel 2026-06-11; phases 1–5 as written, deferred list stands) · **Context:** derived via `/paul:discuss-milestone` 2026-06-11 (`MILESTONE-CONTEXT.md`, consumed).
+**Doctrine (ratified):** bulletproof > novel. The web app is the band/consumer surface — its job is **performance + quick edits**, not feature breadth. Authoring stays MCP-first. Identity-deepening (mural-led CRC, BL swagger) is a separate Antigravity mockup track, NOT this milestone.
+Focus: Make the band/consumer web surface bulletproof — fix tenancy/anon correctness leaks, nail the Perform reading + in-service editing experience, fund photo-of-paper-chart import, then sweep harness hygiene and consumer polish. CRC + broslaz both live; CRC byte-identical where shared surfaces are touched.
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| v11.5-01 | Tenancy + anon correctness — H4 + H5 [P0/P1, smallest first] | 01 (H4 header) 🚧 · 02 (H5 chord-cache) TBD | 🚧 Planning | - |
+| v11.5-02 | The performance surface — H1 + F2 + H7/F1 + H3 [P1 · headline] | TBD | Not started | - |
+| v11.5-03 | Photo-of-paper-chart import [P1 · funded L, own phase] | TBD | Not started | - |
+| v11.5-04 | Hygiene & harness — run-3 triage + design findings [P2] | TBD | Not started | - |
+| v11.5-05 | Consumer polish quick wins — design audit [P3] | TBD | Not started | - |
+
+### Phase v11.5-01: Tenancy + anon correctness [P0/P1 — smallest first]
+Focus: Two correctness leaks on the consumer surface.
+- **H4** — CRC header leaking on broslaz `/perform/setlist/[id]` (hard invariant-1 leak): the shared `DesktopHeader`/`MobileHeader` hardcodes `/logo.jpg` + "CRC Music" instead of `getOrgBranding(orgId)`. **VERIFY FIRST** which layout renders on detail vs list routes. Add a regression cell (stress-prompt). (S)
+- **H5** — anon chord-cache path: anon `GET` works but the cache **write** 401s → recompute every load + console noise (includes run-3 B-10's PATCH 401). Align with D-Q2 (anon transpose open, rate-limited; do not regress authed; do not double-punish against the existing cold-load 429s). (S–M)
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.5-02: The performance surface [P1 — the headline]
+Focus: The Perform reading + in-service editing experience. UAT-heaviest phase (real 7-tablet iPad fleet).
+- **H1** — landscape auto-fit + per-chart calibration override: auto fit-to-width/height per orientation; a leader-saved per-chart calibration (zoom/crop offset) overrides. Acceptance MUST include the real `.docx`-derived charts (literal-100% render wastes a third of the iPad). UAT across source types (MusicXML, clean PDF, scan, home-typeset). (M–L)
+- **F2** — in-Perform shared key change (leader-only): change the broadcast key (and optionally swap a chart) without exiting Perform; the authoring flow's autosave pattern is the model. Distinguish clearly from per-device transpose. Leaders only; D6-style gating. (M)
+- **H7 + F1** — `/perform` cold-open performance + "tonight" entry: field p75 LCP 2924 / FCP 3551 / TTFB 1632 / CLS 0.13 on the entry route while siblings are green. **Root-cause TTFB first** (server fetch), then the "big obvious tonight" entry treatment (route straight to the most-relevant set from cold open). (M)
+- **H3** — seekable audio: HTTP Range support on the audio endpoint (run-3 B-11; wishlist "audio/recordings awkward"). (S–M)
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.5-03: Photo-of-paper-chart import [P1 — funded L, own phase]
+Focus: New MCP path — a leader photographs a paper chart; the system deskews/crops/normalizes to a stand-readable PDF, creates the library row (org-stamped, provenance "photo import"), and bonds it.
+Plan-phase design questions: ingestion route (Drive-staging the photo is the natural transport — reuses the proven import path), server-side normalize pipeline, where AI assist fits (deskew/contrast vs full OCR — **start with image normalization, NOT text OCR**), and how H1's calibration model applies to photo-sourced charts. **VERIFY FIRST** what `scrape_chart_from_url` / `salvage_chart_bytes` infrastructure is reusable. UAT on the real iPad fleet before close. (L)
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.5-04: Hygiene & harness [P2]
+Focus: Fold of run-3 stress triage + design findings; low-risk correctness + harness/ops.
+- **M-11:** `contact_not_found` → 404 (error contract). (S)
+- **M-10:** `publish_setlist` schema description → D8 contract. (S, doc)
+- **Library hygiene:** delete the two `[role-*] tiny` rows + the ingested `.DS_Store`; **isTest/junk filter on consumer library browse AND the bind-chart picker** (both confirmed showing junk; get a stress-prompt cell); non-chart-file guard at ingestion; verify `delete_chart` for authors; consider `list_setlists({includeDeleted})`. **VERIFY FIRST** cascade coverage before deleting orphans. (M)
+- **H8:** `cleanup_all_test_data` cascade releases monitor-bus assignments (orphaned uid on a real bus observed). (S)
+- **F-8:** `orgIds` option on `create_test_account` (cross-tenant authoring becomes harness-testable). (S)
+- **M-12:** chunked-upload session TTL → ~60 min + tool descriptions document Drive-staging as the primary agent path. (S)
+- Permanent test `.docx` fixture in the app Drive folder (unverified conversion branch from run 3). (S)
+- Band_leader-tier bearer for Daniel's Claude Code MCP config (three runs blocked on member-tier; document the setup). (S, ops)
+- **Fold-opportunistically (planner's call):** the v11.6-deferred recordings org-scoping + `finalize_chart_upload` signed-URL org-stamp adjacents — pull in ONLY if low-cost here; else leave to v11.6.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.5-05: Consumer polish quick wins [P3 — from the design audit]
+Focus: Small consumer-facing polish.
+- **Q3:** branded, QR-aware error copy on both hosts ("This sign-in code expired or was used — ask for a fresh QR"). (S)
+- **Q4:** anon `/setlists` — hide write controls (invariant-6) + suppress junk drafts from the anon archive. (S–M)
+- **Q5:** chart titles never show raw filenames (".pdf"/".docx") on consumer surfaces. (S, data+display)
+- **Q6:** BL subtitle vocab "Public sets", not "Public setlists". (S)
+- **F4:** key badges on broslaz setlist rows (CRC has them; a transposing band needs them more). (S)
+Plans: TBD (defined during /paul:plan)
+
+Constraints (locked at /paul:milestone 2026-06-11):
+1. **Oracle-bound** — a finding is a bug only if it contradicts a `docs/ACCESS-POLICY.md` **v0.4** cell. err-public prime directive holds (err toward letting someone see a chart; writes/admin stay gated).
+2. **No local dev** — push to prod/Vercel; CRC + broslaz are BOTH live. **CRC byte-identical** wherever a phase touches shared surfaces.
+3. **Quality floor (non-negotiable):** tsc clean + tests green + AC proof every task; `SKIP_ENV_VALIDATION=1 npx next build --webpack` before declaring any route-/shared-lib/client phase deployable (route-export + bundle-boundary lessons — `tsc`+`vitest` miss both); emulator-backed tests where rules/queries change; **/ui-ux-pro-max BLOCKING on every UI-touching phase** (01 header, 02 Perform surface, 03 photo-import UI, 05 polish).
+4. **Verification expectations** — every fixed item gets a regression cell or test; **H4 + the library-junk filter get stress-prompt cells**; **H1 / F2 / photo-import get Daniel UAT on the real 7-tablet iPad fleet before milestone close**. Per-executor BUG-ID ranges in any new stress prompts.
+5. **VERIFY-FIRST flags (baked in):** H4 (which layout renders detail vs list), H7 (root-cause TTFB / server-fetch before treatment), photo-import (`scrape_chart_from_url` / `salvage_chart_bytes` reuse), library-hygiene (cascade coverage before deleting orphans).
+6. **Autonomy posture (carried v11.0–v11.4):** run autonomously — waive PAUL approval/continuation gates, auto-commit + push per phase to prod `master`, bake decisions into PLANs, deploys/backfills as AUTO tasks (single-owner = executor). STOP only for product ambiguity, an unresolvable quality-gate failure, or a discovered cross-tenant leak / CRC lock-out.
+7. **Explicit non-goals (deferred — list stands):** H2 foot-pedal page-turns SKIPPED; F3 library density/filters → v11.6; F5 comms design layer → Antigravity track; identity-deepening → Antigravity track; STATE pre-existing candidates (recordings org-scoping, signed-URL org-stamp, SERVICE_TYPE_LABELS, v7.0 fold-forward) stay deferred (fold-opportunistically note in 04 only); authed-broslaz design pass → next stress run.
 
 ## Most Recent Milestone (✅ COMPLETE)
 

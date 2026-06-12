@@ -13,6 +13,21 @@ plan or an emergent phase.
 
 ---
 
+## ⏳ v11.5-01-01 (H4) — Perform-setlist nav branding (live first-paint)
+
+**Deployed commit:** `180c9b666e` (prod `master`).
+
+Regression-proven at server-prop level (`src/app/perform/setlist/__tests__/layout.test.tsx`,
+3/3). Live visual confirm still pending (NON-BLOCKING):
+
+- On a real **broslaz iPad**, open `/perform/setlist/<id>` signed-out on
+  brotherslazaroff.live → top nav shows the BL wordmark/monogram + "Brothers
+  Lazaroff", **never** "CRC Music"/CRC `/logo.jpg`, including first paint (no flash).
+  Repeat on the `/track/<trackId>` sub-route → same BL brand.
+- Repeat on **centralreform.live** `/perform/setlist/<id>` → CRC brand unchanged.
+
+(See stress cell **B4** in `.paul/research/STRESS-TEST-PROMPT-2026-06-RUN3.md`.)
+
 ## ✅ v11.3-04-02 — /perform CLS fix (synthetic) — VERIFIED 2026-06-10
 
 **Deployed commit:** `c0b0ab3367` (live on prod).

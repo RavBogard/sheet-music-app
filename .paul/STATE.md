@@ -7,44 +7,45 @@
 See: .paul/PROJECT.md (updated 2026-06-07)
 
 **Core value:** The band gets the right charts + recordings on their iPads each week, and Daniel authors setlists conversationally via Claude + MCP. Now MULTI-TENANT (2nd live tenant: Brothers Lazaroff on brotherslazaroff.live).
-**Current focus:** **Between milestones.** v11.4 Publish & Notify (D8) ✅ COMPLETE 2026-06-11 (tag `v11.4.0`; oracle → v0.4). Next: `/paul:discuss-milestone` or `/paul:milestone` (candidate backlog: v11.5 — recordings org-scoping, finalize signed-URL org-stamp, SERVICE_TYPE_LABELS vocab, v7.0 fold-forward). v7.1 hardening continues in parallel via `.coord/`.
+**Current focus:** **v11.5 — Bulletproof Performance** 🚧 OPENED 2026-06-11 (5 phases; oracle `docs/ACCESS-POLICY.md` v0.4; brief `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md`, all scope ratified). Doctrine: bulletproof > novel; web app = performance + quick edits. **Plan v11.5-01-01 (H4) ✅ COMPLETE + shipped** (`180c9b666e`). Next action: **`/paul:plan`** for Plan v11.5-01-02 (H5 — anon chord-cache write 401, server route). v7.1 hardening continues in parallel via `.coord/`.
 
 ## Current Position
 
-Milestone: **Awaiting next milestone.** v11.4 — Publish & Notify (D8) ✅ COMPLETE 2026-06-11 (tag `v11.4.0`; `package.json` `11.4.0`; oracle `docs/ACCESS-POLICY.md` → **v0.4**; archived `.paul/milestones/v11.4.0-ROADMAP.md` + MILESTONES.md § v11.4). 4 phases / 5 plans. (v11.3 ✅ tag `v11.3.0`; v11.2 ✅ `v11.2.0`.)
-Phase: None active.
-Plan: None.
-Status: **Milestone v11.4 complete — ready for the next.** All D8 surfaces shipped; all 19 users both-tenant on doc + Auth claim. Run `/paul:discuss-milestone` (or `/paul:milestone`). **Between-milestone quick-fix shipped 2026-06-11: BUG-12** (`.paul/phases/bug12-qr-code-validator/`) — `GET /api/auth/qr` validator widened to admit BOTH the 6-char device-handoff code AND the 32-char base64url test-login code (`create_test_account({loginable:true})`); BUG-7 path-char→400 guarantee held; qr route tests 11/11; deployed to prod `master` (commit `bab97f6013`).
-Last activity: 2026-06-11 — **BUG-13 fix SHIPPED + live-verified** (`.paul/phases/bug13-qr-code-generator/`): server fallback `generateCode()` now emits a fixed 6-char `[A-Z0-9]` code (was a base64url+strip that could yield <6-char codes the validators reject); moved to sibling `code.ts` after the first deploy `e8b22b2` ERRORED on a route.ts non-handler export (see REUSABLE LESSON below); fixed `0fd67114`, prod deploy READY, 6/6 live server-fallback codes valid 6-char; AC-4 swept 7 legacy short-code orphans from prod `qr-sessions` (collection now clean, 1562 docs scanned). qr route tests 14/14. Prior: BUG-12 fix `bab97f6013`; the 4 stress cells re-fired (all PASS, §11; +F-8). Prior: `/paul:complete-milestone` v11.4.
+Milestone: **🚧 v11.5 — Bulletproof Performance** (OPENED 2026-06-11; 5 phases; oracle `docs/ACCESS-POLICY.md` **v0.4**; brief `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md`; context `MILESTONE-CONTEXT.md` consumed + deleted). Phase dirs created under `.paul/phases/v11.5-0{1..5}-*`. (v11.4 ✅ tag `v11.4.0`; v11.3 ✅ `v11.3.0`; v11.2 ✅ `v11.2.0`.)
+Phase: **v11.5-01 of 5 — Tenancy + anon correctness (H4 + H5)** [P0/P1] — **In progress (1 of 2 plans complete).** Split into 2 plans: **01 = H4** (Perform-setlist header branding leak, UI) ✅ DONE · **02 = H5** (anon chord-cache write 401, server) — NEXT — established UI/server split (keep the server fix out from behind the UI gate).
+Plan: **v11.5-01-01 (H4) ✅ COMPLETE + UNIFIED + shipped** (`180c9b666e`; SUMMARY `.../v11.5-01-01-SUMMARY.md`). Shipped: `perform/setlist/layout.tsx` client pass-through → async server layout resolving `x-org-id`→`getOrgBranding`, threading `serverOrgShortName/serverLogoUrl/serverWordmarkUrl` into `<AppNavigation>` (mirrors v11.1-01 `(main)/layout.tsx`; covers detail + `track/[trackId]`; CRC byte-identical). 3/3 vitest (BL/crc/absent) · tsc 0 · `next build --webpack` clean. /ui-ux-pro-max gate satisfied. **Next: Plan v11.5-01-02 (H5).**
+Status: **Plan 01 loop CLOSED (PLAN✓ APPLY✓ UNIFY✓). Ready for `/paul:plan` Plan 02 (H5).** NON-BLOCKING UAT appended (live broslaz-iPad first-paint visual confirm). (Pre-open quick-fixes BUG-12 `bab97f6013` + BUG-13 `0fd67114` SHIPPED + live-verified.)
+Last activity: 2026-06-12 — **`/paul:apply` (resumed from HANDOFF-2026-06-12) → `/paul:unify` Plan v11.5-01-01 (H4)**: finished Task 2 (regression test + B4 stress cell), ran 3 gates green, wrote SUMMARY, committed `180c9b666e` (fix) + docs commit, shipped to master. Phase not yet complete (H5 / Plan 02 pending).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
 - **Band leaders:** explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle (today hand-set via scripts). The **authoring** tier.
 
-## Milestone Phases (v11.4 — ✅ COMPLETE, all 4 shipped)
+## Milestone Phases (v11.5 — 🚧 OPENED, 0 of 5)
 
 | Phase | Focus | Priority |
 |-------|-------|----------|
-| v11.4-01 | **Recipient picker + no-auto-blast** (D8 items 1+2) — replace implicit `resolveDefaultRecipients` auto-send with explicit recipient selection on `PublishDialog.tsx` + MCP `publish_setlist` (default = org roster, leader chooses); in-app/push/email send only to the selected set. Closes BUG-9 blast class. | **P0** — safety core, prereq for 04 |
-| v11.4-02 | **Org-branded comms** (D8 item 4) — publish + gig-packet emails carry the publishing org's branding (logo/wordmark/from-name) via `getOrgBranding`/`branding.ts`. | P1 |
-| v11.4-03 | **Remembered ad-hoc recipients** (D8 item 3) — picker "add recipient" (name + email/phone) → send + prompt to save as contact. Contacts model TBD (collection vs roster). Depends on 01. | P1 |
-| v11.4-04 | **Musician org-membership toggle + default-both backfill** (D8 item 5) — admin per-org control (mirror band-leader tri-state), default-both, backfill all people (dry-run+idempotency+rollback). **MUST follow 01.** | P2 — LAST |
+| v11.5-01 | **Tenancy + anon correctness** — H4 (CRC header leaking on broslaz `/perform/setlist/[id]`; VERIFY-FIRST which layout renders detail vs list) + H5 (anon chord-cache write 401 → recompute/noise; align D-Q2). | **P0/P1** — smallest first |
+| v11.5-02 | **The performance surface (headline)** — H1 (landscape auto-fit + per-chart calibration override) + F2 (in-Perform leader-only shared key change) + H7/F1 (`/perform` cold-open TTFB + "tonight" entry; root-cause TTFB first) + H3 (seekable audio / HTTP Range). UAT-heaviest (7-tablet fleet). | P1 |
+| v11.5-03 | **Photo-of-paper-chart import** (funded L, own phase) — MCP path: photo → deskew/crop/normalize → org-stamped library row (provenance "photo import") → bonded. Image normalization first, NOT OCR. VERIFY-FIRST `scrape_chart_from_url`/`salvage_chart_bytes` reuse. | P1 |
+| v11.5-04 | **Hygiene & harness** — M-11 (`contact_not_found`→404) · M-10 (publish schema doc) · library junk filter (browse + bind-picker) + orphan delete (VERIFY-FIRST cascade) + ingestion guard · H8 (bus-assignment cascade) · F-8 (`create_test_account` orgIds) · M-12 (chunk TTL ~60m) · test `.docx` fixture · BL-tier bearer doc. | P2 |
+| v11.5-05 | **Consumer polish quick wins** — Q3 (QR-aware error copy) · Q4 (anon `/setlists` hide writes + suppress junk drafts) · Q5 (no raw filenames on consumer surfaces) · Q6 ("Public sets" vocab) · F4 (key badges on broslaz rows). | P3 |
 
-**Spec:** `docs/ACCESS-POLICY.md` §"Publish & notify (D8)" (ratified — implements). **Sequencing invariant (HARD):** 04 after 01 (default-both under auto-notify = BUG-9 blast). **No auto-blast EVER** (all channels incl. SMS). **STOP-gate:** publish/notify = real-people side-effect → live sends are human-gated UAT (dryRun/preview to test). MCP = primary surface (picker covers `publish_setlist`). Channels: in-app/push/email (SMS held). CRC byte-identical.
+**Spec:** `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md` (ratified — implements). Oracle `docs/ACCESS-POLICY.md` **v0.4**. **No hard cross-phase ordering** (unlike v11.4's picker-first); phases ordered smallest-first within severity band. **/ui-ux-pro-max BLOCKING** on UI-touching phases (01/02/03/05). **Verify-first** flags: H4 layout, H7 TTFB, photo-import infra reuse, library-cascade. **UAT (7-tablet iPad fleet, before close):** H1 / F2 / photo-import. **Stress-prompt cells:** H4 + library-junk filter. **Deferred (list stands):** H2 page-pedals SKIPPED; F3/F5/identity-deepening + STATE infra-adjacents → v11.6 (04 may fold infra-adjacents opportunistically). CRC byte-identical.
 
-(v11.3 ✅ COMPLETE 2026-06-10 tag `v11.3.0` — archived `.paul/milestones/v11.3.0-ROADMAP.md` + MILESTONES.md § v11.3. v11.2 ✅ 2026-06-11 tag `v11.2.0`. v11.1 ✅ 2026-06-09.)
+(v11.4 ✅ COMPLETE 2026-06-11 tag `v11.4.0` — archived `.paul/milestones/v11.4.0-ROADMAP.md` + MILESTONES.md § v11.4. v11.3 ✅ 2026-06-10 tag `v11.3.0`. v11.2 ✅ 2026-06-11 tag `v11.2.0`. v11.1 ✅ 2026-06-09.)
 
 ## Git State
 
-- **cwd branch:** `master`. **v11.4 milestone close** (`chore(release): v11.4.0`; version → 11.4.0, oracle → v0.4, PROJECT/ROADMAP/MILESTONES evolve + archive; **annotated tag `v11.4.0`**). v11.4 phase commits: 01 `80ea721508` · 02 `f03b48db88` · 03 `fb055b4b5d` · 04-01 `ba826730d7` · 04-02 `47e83088a1` · phase-close `eeb393097b`. Prior: **v11.3 milestone close release** `628984639b` [`chore(release): v11.3.0`; **tag `v11.3.0`**]. Phase commit: v11.3-05 `3258d792b3` (pushed `92e809401d..3258d792b3`). Prior: v11.3-04 `c0b0ab3367` · v11.3-03 `4fe1748318` · v11.3-02 `89f4af7fd2` · v11.3-01 `bc8f935aa2` · v11.2 `f27ae7bc5f`. v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
+- **cwd branch:** `master`. **v11.5-01-01 (H4) shipped:** fix `180c9b666e` (perform/setlist server-branding + test + B4 stress cell) + a `docs(v11.5-01)` commit (plan/SUMMARY/STATE/ROADMAP/paul.json + milestone-open bookkeeping). Pushed to `origin master`. Prior: **v11.4 milestone close** (`chore(release): v11.4.0`; version → 11.4.0, oracle → v0.4, PROJECT/ROADMAP/MILESTONES evolve + archive; **annotated tag `v11.4.0`**). v11.4 phase commits: 01 `80ea721508` · 02 `f03b48db88` · 03 `fb055b4b5d` · 04-01 `ba826730d7` · 04-02 `47e83088a1` · phase-close `eeb393097b`. Prior: **v11.3 milestone close release** `628984639b` [`chore(release): v11.3.0`; **tag `v11.3.0`**]. Phase commit: v11.3-05 `3258d792b3` (pushed `92e809401d..3258d792b3`). Prior: v11.3-04 `c0b0ab3367` · v11.3-03 `4fe1748318` · v11.3-02 `89f4af7fd2` · v11.3-01 `bc8f935aa2` · v11.2 `f27ae7bc5f`. v11.2 phase commits: 01 `6920d61668` · 02 `6079d4e3cf` · 03-01 `54cd7ba3bc` · 03-02 `ebb520164d` · 04-01 `90774a7e76` · 04-02/phase-04 `52a3dea57d` · 05-01 `06f2db3176` · 05-02/phase-05 `f27ae7bc5f`. **tag `v11.2.0`** on the v11.2 close (annotated, on `f27ae7bc5f`). **tag `v11.1.0`** on the v11.1 close (`29d9a96878`). v11.1 phase commits: 01 `72f1cdb66e` · 02 `941e6856d1`+`8d345c2a59` · 03 `3d7471679e` · 04 `4490abe53c`. tag `v11.0.0` on the v11.0 close.
 - Production branch is `master`; push `origin master` (NOT `master:main`).
 - Multi-computer — `git pull` before starting next session.
 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.4 milestone COMPLETE — between milestones; next: /paul:discuss-milestone]
-  ○        ○        ○
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-01-01 (H4) loop CLOSED — shipped 180c9b666e. Next: PLAN Plan 02 (H5)]
+  ✓        ✓        ✓
 ```
 
 ## Execution Substrate (bongo .coord/)
@@ -89,10 +90,11 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.4 milestone COMPLETE — betwee
 
 ## Session Continuity
 
-Last session: 2026-06-11 — v11.4 milestone CLOSED via `/paul:complete-milestone`: version → 11.4.0, annotated tag `v11.4.0`, oracle `docs/ACCESS-POLICY.md` → v0.4 (D8 placeholder retired), PROJECT/ROADMAP/MILESTONES evolved + `.paul/milestones/v11.4.0-ROADMAP.md` archived. (v11.4 phase commits 80ea721508→f03b48db88→fb055b4b5d→ba826730d7→47e83088a1; phase-close `eeb393097b`; release commit + tag this session.)
-Stopped at: **v11.4 milestone COMPLETE — between milestones.**
-Next action: **`/paul:discuss-milestone`** (or `/paul:milestone`) to define the next. Candidate backlog: v11.5 — recordings-collection org-scoping (+ `/api/recordings/upload` orgId stamp), `finalize_chart_upload` signed-URL org-stamp gap, SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage. v7.1 hardening continues independently via `.coord/`.
-Resume file: **.paul/ROADMAP.md** (Next Milestone) + MILESTONES.md § v11.4 (close record).
+Last session: 2026-06-12 — **Resumed from HANDOFF-2026-06-12 → finished + UNIFIED Plan v11.5-01-01 (H4).** Wrote Task 2 (regression test `src/app/perform/setlist/__tests__/layout.test.tsx` + B4 stress cell); 3/3 vitest · tsc 0 · `next build --webpack` clean; SUMMARY written; committed `180c9b666e` + docs commit; pushed to master. Phase v11.5-01 now 1 of 2 plans done.
+Stopped at: **Plan v11.5-01-01 loop CLOSED.** H4 shipped. Next plan in the SAME phase (H5) not yet authored.
+Next action: **`/paul:plan` for Plan v11.5-01-02 (H5)** — anon chord-cache write 401 → recompute/noise; server route only (NOT behind the UI gate); align oracle D-Q2. (Autonomy: chain UNIFY→PLAN within the phase; no phase boundary yet.)
+Resume file: **.paul/phases/v11.5-01-tenancy-anon-correctness/v11.5-01-01-SUMMARY.md** (H4 result). HANDOFF-2026-06-12.md CONSUMED (archive/delete). Then ROADMAP § v11.5-01.
+Git strategy: master (prod). WIP uncommitted at pause (Task 1 layout change + plan/state docs); `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 **Deferred UAT (RUM):** v11.3-04 field TTFB/FCP — re-run `node scripts/v11-3-04-webvitals-slice.mjs` after ~1–7d traffic vs 1633/3551 baseline; if still high → Vercel infra follow-up (Deferred Issues), not app code.
 **Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.
 Resume file: **.paul/HANDOFF-2026-06-10-v11.3-03-complete.md** (full context); then ROADMAP § Phase v11.3-04. Oracle: `docs/ACCESS-POLICY.md` v0.3. **(PAUSED 2026-06-10 at the v11.3-03 → v11.3-04 phase boundary.)**
