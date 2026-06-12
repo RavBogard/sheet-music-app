@@ -38,7 +38,10 @@ vi.mock("@/lib/logger", () => ({
 }))
 
 // Imported AFTER the mocks are registered.
-import { GET, POST, generateCode } from "../route"
+import { GET, POST } from "../route"
+// generateCode lives in the sibling ./code module (route.ts may only export
+// HTTP handlers — see code.ts). Import it directly for the distribution tests.
+import { generateCode } from "../code"
 
 const makeReq = (query: string) =>
     new NextRequest(new URL(`http://localhost/api/auth/qr${query}`))
