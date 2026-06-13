@@ -7,14 +7,14 @@
 See: .paul/PROJECT.md (updated 2026-06-07)
 
 **Core value:** The band gets the right charts + recordings on their iPads each week, and Daniel authors setlists conversationally via Claude + MCP. Now MULTI-TENANT (2nd live tenant: Brothers Lazaroff on brotherslazaroff.live).
-**Current focus:** **v11.5 — Bulletproof Performance** 🚧 (5 phases; oracle `docs/ACCESS-POLICY.md` v0.4; brief `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md`). Doctrine: bulletproof > novel; web app = performance + quick edits. **Phase v11.5-01 ✅ COMPLETE 3/3** (H4 `180c9b666e` · H5 `cd97ab21a3` · H9 `d7cbb1a4e0`). Next action: **`/paul:plan` for Phase v11.5-02** (the performance surface — headline). v7.1 hardening continues in parallel via `.coord/`.
+**Current focus:** **v11.5 — Bulletproof Performance** 🚧 (5 phases; oracle `docs/ACCESS-POLICY.md` v0.4; brief `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md`). Doctrine: bulletproof > novel; web app = performance + quick edits. **Phase v11.5-01 ✅ COMPLETE 3/3.** Now in **Phase v11.5-02 (performance surface)** — Plan 01 (H3 seekable audio) created. Next action: **`/paul:apply` Plan v11.5-02-01** (autonomous). v7.1 hardening continues in parallel via `.coord/`.
 
 ## Current Position
 
 Milestone: **🚧 v11.5 — Bulletproof Performance** (OPENED 2026-06-11; 5 phases; oracle `docs/ACCESS-POLICY.md` **v0.4**; brief `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md`; context `MILESTONE-CONTEXT.md` consumed + deleted). Phase dirs created under `.paul/phases/v11.5-0{1..5}-*`. (v11.4 ✅ tag `v11.4.0`; v11.3 ✅ `v11.3.0`; v11.2 ✅ `v11.2.0`.)
 Phase: **v11.5-01 ✅ COMPLETE 3/3 (2026-06-12) — transitioned to v11.5-02 of 5.** Closed: H4 (Perform-nav branding leak) · H5 (anon chord-cache PATCH 401) · H9 (band_leader library-edit + cross-tenant wall). **Next phase: v11.5-02 — The performance surface (headline)** [P1] — H1 (landscape auto-fit + per-chart calibration) + F2 (in-Perform leader-only key change) + H7/F1 (`/perform` cold-open TTFB; root-cause first) + H3 (seekable audio). UAT-heaviest (7-tablet fleet); /ui-ux-pro-max BLOCKING.
-Plan: **None active — ready to plan v11.5-02.** (Phase v11.5-01 SUMMARYs: `.../v11.5-01-0{1,2,3}-SUMMARY.md`.)
-Status: **Phase v11.5-01 transition COMPLETE** (PROJECT/ROADMAP/STATE evolved; phase commit + push). Ready for `/paul:plan` v11.5-02.
+Plan: **v11.5-02-01 (H3 seekable audio) CREATED — ready for APPLY (autonomous; NOT a STOP-gate).** Phase v11.5-02 split into 4 plans (Daniel picked H3 first): **01 = H3** (audio HTTP Range) · 02 = H7/F1 (TTFB verify-first + "tonight") · 03 = F2 (in-Perform leader key change) · 04 = H1 (landscape auto-fit + per-chart calibration). Plan 01: a pure `byteRangeResponse` helper + wire `/api/drive/file/[fileId]` (AudioViewer's source) + `/api/recordings/file/[id]` → 206/Accept-Ranges/416; no-Range GETs byte-identical; auth gates untouched.
+Status: **PLAN 01 (H3) created, ready for APPLY.** (Recon: both routes stream full body, no Range; AudioViewer plays `/api/drive/file/<id>`.)
 Last activity: 2026-06-12 — **`/paul:apply` → `/paul:unify` Plan v11.5-01-02 (H5) → phase v11.5-01 transition**: shipped H5 (`cd97ab21a3`), wrote SUMMARY, evolved PROJECT/ROADMAP, phase commit, pushed to master.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
@@ -44,8 +44,8 @@ Last activity: 2026-06-12 — **`/paul:apply` → `/paul:unify` Plan v11.5-01-02
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-01 phase COMPLETE 3/3 + transitioned → v11.5-02. Idle, ready to PLAN]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-02-01 (H3 seekable audio) PLAN created — ready for APPLY (autonomous)]
+  ✓        ○        ○
 ```
 
 ## Execution Substrate (bongo .coord/)
@@ -94,9 +94,9 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-01 phase COMPLETE 3/3 + trans
 
 Last session: 2026-06-12 — **Completed phase v11.5-01 (3/3): H4 + H9 + H5 all shipped; phase TRANSITIONED → v11.5-02.** H5 = anon chord-cache PATCH opened to anon for benign fields (gate stays on chordsVerified) + rate-limit (`cd97ab21a3`). PROJECT/ROADMAP evolved, phase commit pushed.
 Stopped at: **Phase v11.5-01 complete + transitioned. Idle at the v11.5-01 → v11.5-02 phase boundary.**
-Next action: **`/paul:plan` for Phase v11.5-02 (The performance surface)** — H1 (landscape auto-fit + per-chart calibration) · F2 (in-Perform leader-only key change) · H7/F1 (`/perform` cold-open TTFB — **root-cause TTFB first**) · H3 (seekable audio / HTTP Range). **UAT-heaviest (7-tablet iPad fleet); /ui-ux-pro-max BLOCKING.** Likely needs splitting into multiple plans. **Operational (Daniel's discretion):** revert David admin→band_leader (he said "David is fine").
-Resume file: **.paul/ROADMAP.md** § Phase v11.5-02. Phase v11.5-01 SUMMARYs: `.../v11.5-01-0{1,2,3}-SUMMARY.md`.
-Git strategy: master (prod). Everything committed + pushed through `88dff486a2` (working tree clean of plan work — only unrelated `.coord`/research/design artifacts remain uncommitted). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
+Next action: **`/paul:apply .paul/phases/v11.5-02-performance-surface/v11.5-02-01-PLAN.md`** (H3 seekable audio — autonomous). Phase v11.5-02 split: **01 H3** (ready) · 02 H7/F1 (TTFB verify-first + "tonight") · 03 F2 (in-Perform leader key change, /ui-ux-pro-max+UAT) · 04 H1 (landscape auto-fit + per-chart calibration, biggest, /ui-ux-pro-max+heaviest UAT). **Operational (Daniel's discretion):** revert David admin→band_leader (he said "David is fine").
+Resume file: **.paul/HANDOFF-2026-06-13.md** (full pause context — Plan v11.5-02-01 ready for APPLY; the 4-plan v11.5-02 split; David-revert note). Then ROADMAP § Phase v11.5-02.
+Git strategy: master (prod). All committed + pushed through the pause commit (Plan 01 + handoff + STATE). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 **Deferred UAT (RUM):** v11.3-04 field TTFB/FCP — re-run `node scripts/v11-3-04-webvitals-slice.mjs` after ~1–7d traffic vs 1633/3551 baseline; if still high → Vercel infra follow-up (Deferred Issues), not app code.
 **Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.
 Resume file: **.paul/HANDOFF-2026-06-10-v11.3-03-complete.md** (full context); then ROADMAP § Phase v11.3-04. Oracle: `docs/ACCESS-POLICY.md` v0.3. **(PAUSED 2026-06-10 at the v11.3-03 → v11.3-04 phase boundary.)**
