@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { splitPublicSetlists, isNonTestSetlist } from "../public-setlist-order"
+import { splitPublicSetlists, isNonTestSetlist, firstUpcomingSetlist } from "../public-setlist-order"
 import type { Setlist } from "@/lib/setlist-firebase"
 
 // Minimal Setlist builder for ordering tests. Local-time event strings (no `Z`)
@@ -46,6 +46,29 @@ describe("splitPublicSetlists", () => {
             return [...upcoming, ...past].map((s) => s.id)
         })()
         expect(allIds).toEqual(["real"])
+    })
+})
+
+describe("firstUpcomingSetlist (F1 'next service' selector, v11.5-02-01)", () => {
+    it("returns the SOONEST upcoming setlist (today wins over tomorrow)", () => {
+        const tonight = sl({ id: "kabbalat-shabbat", eventDate: "2026-05-22T12:00:00" })
+        const tomorrow = sl({ id: "shavuot-yizkor", eventDate: "2026-05-23T12:00:00" })
+        // Pass tomorrow first (buggy DESC order) — selector must still pick today's.
+        expect(firstUpcomingSetlist([tomorrow, tonight], NOW)?.id).toBe("kabbalat-shabbat")
+    })
+
+    it("returns null when there are no upcoming setlists (all past / undated / empty)", () => {
+        const past = sl({ id: "last-week", eventDate: "2026-05-15T12:00:00" })
+        const undated = sl({ id: "undated" })
+        expect(firstUpcomingSetlist([past, undated], NOW)).toBeNull()
+        expect(firstUpcomingSetlist([], NOW)).toBeNull()
+    })
+
+    it("never returns an isTest / test-uid row even if it is dated soonest", () => {
+        const flaggedToday = sl({ id: "probe-today", eventDate: "2026-05-22T09:00:00", isTest: true })
+        const testOwnedToday = sl({ id: "test-today", eventDate: "2026-05-22T08:00:00", ownerId: "test-probe-1" })
+        const realTomorrow = sl({ id: "real", eventDate: "2026-05-23T12:00:00" })
+        expect(firstUpcomingSetlist([flaggedToday, testOwnedToday, realTomorrow], NOW)?.id).toBe("real")
     })
 })
 

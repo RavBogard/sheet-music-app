@@ -516,3 +516,21 @@ On a real iPad (band fleet, WebKit), NON-BLOCKING field confirm:
 - Drag the scrubber to the middle of the track → playback resumes from the seek point
   (was: scrubber inert / restarts from 0:00).
 - Sanity: play-from-start still works; a non-audio chart/PDF still loads normally.
+
+---
+
+## ⏳ v11.5-02-02 (F1) — "next service" CTA on the public /perform index
+
+**Deployed via:** the `feat(v11.5-02-02)` plan commit (prod `master`).
+
+Server-side proven (firstUpcomingSetlist 3/3 + /perform SSR regression 6/6 + `next build --webpack`).
+On a real iPad (band fleet, WebKit), NON-BLOCKING field confirm, per tenant (CRC + broslaz):
+
+- Open the public `/perform` index → a prominent "Next service" CTA appears ABOVE the lists,
+  naming the soonest upcoming setlist + its date; tapping it opens that setlist in one tap.
+- The named setlist is the correct soonest UPCOMING one for THAT host (no cross-tenant bleed).
+- A host with NO upcoming setlist shows the plain list (no CTA).
+- No layout shift on load (CTA is in the first paint).
+
+**Note (separate axis, not this plan):** H7 re-verify flagged `/perform` cold·MOBILE CLS 0.250 (n=8) —
+a future CLS look; and the standing Vercel TTFB infra follow-up (cold-start/geo, not app code).

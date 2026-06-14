@@ -74,6 +74,23 @@ const LEAKED_MEMBER_EMAILS = [
     "engineer.brodsky@gmail.com",
 ]
 
+// v11.3-04-03 streaming refactor: PerformPage now returns
+// `<Suspense fallback={…}><PerformListing/></Suspense>`, so the SSR wire slice
+// (`initialSetlists`) is a prop of the INNER async `PerformListing`, not of
+// PerformPage's top-level element. `PerformListing` isn't exported (page files
+// only export the default + route config), so we reach it through the Suspense
+// element's `children.type` and invoke it to read the slice it builds — the same
+// `selectVisiblePublicSetlists` boundary filter, just relocated into the child.
+type WireRow = { id?: string; isTest?: boolean; ownerId?: string; [k: string]: unknown }
+async function renderInitialSetlists(): Promise<WireRow[]> {
+    const { default: PerformPage } = await import("@/app/perform/page")
+    const tree = PerformPage() as unknown as {
+        props: { children: { type: () => Promise<{ props: { initialSetlists: WireRow[] } }> } }
+    }
+    const listing = await tree.props.children.type()
+    return listing.props.initialSetlists
+}
+
 describe("perform/page.tsx — F-C12-001 SSR wire-bytes regression", () => {
     beforeEach(() => {
         getAllSetlistsMock.mockReset()
@@ -97,9 +114,7 @@ describe("perform/page.tsx — F-C12-001 SSR wire-bytes regression", () => {
             makeRow({ id: "real-4", name: "Shavuot Morning", eventDate: "2026-06-02T10:00:00Z" }),
         ])
 
-        const { default: PerformPage } = await import("@/app/perform/page")
-        const element = (await PerformPage()) as { props: { initialSetlists: Array<{ id: string; isTest?: boolean }> } }
-        const prop = element.props.initialSetlists
+        const prop = await renderInitialSetlists()
 
         expect(prop.some((r) => r.id === c12FixtureId)).toBe(false)
         expect(prop.some((r) => r.isTest === true)).toBe(false)
@@ -120,9 +135,7 @@ describe("perform/page.tsx — F-C12-001 SSR wire-bytes regression", () => {
             makeRow({ id: "real-1", name: "Kabbalat Shabbat", eventDate: "2026-05-29T18:00:00Z" }),
         ])
 
-        const { default: PerformPage } = await import("@/app/perform/page")
-        const element = (await PerformPage()) as { props: { initialSetlists: Array<{ id: string; ownerId?: string }> } }
-        const prop = element.props.initialSetlists
+        const prop = await renderInitialSetlists()
 
         expect(prop.some((r) => r.id === "legacy-test-row")).toBe(false)
         expect(prop.some((r) => (r.ownerId ?? "").startsWith("test-"))).toBe(false)
@@ -140,9 +153,7 @@ describe("perform/page.tsx — F-C12-001 SSR wire-bytes regression", () => {
         )
         getAllSetlistsMock.mockResolvedValue(rows)
 
-        const { default: PerformPage } = await import("@/app/perform/page")
-        const element = (await PerformPage()) as { props: { initialSetlists: unknown[] } }
-        const prop = element.props.initialSetlists
+        const prop = await renderInitialSetlists()
 
         expect(prop.length).toBe(5)
     })
@@ -178,9 +189,7 @@ describe("perform/page.tsx — F-C12-001 SSR wire-bytes regression", () => {
         )
         getAllSetlistsMock.mockResolvedValue([...visible, ...noise])
 
-        const { default: PerformPage } = await import("@/app/perform/page")
-        const element = (await PerformPage()) as { props: { initialSetlists: unknown[] } }
-        const prop = element.props.initialSetlists
+        const prop = await renderInitialSetlists()
         const serialized = JSON.stringify(prop)
 
         expect(prop.length).toBe(5)
@@ -194,16 +203,13 @@ describe("perform/page.tsx — F-C12-001 SSR wire-bytes regression", () => {
 
     it("forwards an empty array when getAllSetlists returns []", async () => {
         getAllSetlistsMock.mockResolvedValue([])
-        const { default: PerformPage } = await import("@/app/perform/page")
-        const element = (await PerformPage()) as { props: { initialSetlists: unknown[] } }
-        expect(element.props.initialSetlists).toEqual([])
+        expect(await renderInitialSetlists()).toEqual([])
     })
 
     it("v11-04-01: scopes the SSR fetch to the host's tenant (passes the coerced org)", async () => {
         mockOrgHeader = "brotherslazaroff"
         getAllSetlistsMock.mockResolvedValue([])
-        const { default: PerformPage } = await import("@/app/perform/page")
-        await PerformPage()
+        await renderInitialSetlists()
         expect(getAllSetlistsMock).toHaveBeenCalledWith({ limit: 50, org: "brotherslazaroff" })
         mockOrgHeader = "crc" // restore default for any later cases
     })

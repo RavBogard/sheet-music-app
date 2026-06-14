@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { Music, Calendar, UserCircle } from "lucide-react"
+import { Music, Calendar, UserCircle, PlayCircle } from "lucide-react"
 import { createSetlistService, Setlist } from "@/lib/setlist-firebase"
 import { toDate } from "@/lib/firestore-helpers"
 import { useAuth } from "@/lib/auth-context"
@@ -249,6 +249,51 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                 </div>
             ) : (
                 <>
+                    {/* F1 (v11.5-02-01): one-tap "next service" entry. The soonest
+                        upcoming setlist (upcoming[0] — equals firstUpcomingSetlist on
+                        the same org-scoped data) gets a prominent primary-action card
+                        ABOVE the lists so the band taps straight into the service
+                        they're about to play instead of scanning the list. Renders in
+                        the SSR first paint (initialSetlists seeds `setlists` → this is
+                        in the post-`loading` markup), so it adds no post-hydration
+                        shift. The same set still appears in the Upcoming list below
+                        (matches the authed dashboard hero+list pattern). */}
+                    {upcoming.length > 0 && (() => {
+                        const next = upcoming[0]
+                        const nextDate = toDate(next.eventDate)
+                        return (
+                            <Link
+                                href={`/perform/setlist/${next.id}`}
+                                aria-label={`Go to next service: ${next.name}`}
+                                className="group block rounded-2xl bg-primary text-primary-foreground p-5 cursor-pointer transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-foreground/15">
+                                        <PlayCircle className="h-6 w-6" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[11px] font-semibold uppercase tracking-widest text-primary-foreground/80">
+                                            Next service
+                                        </p>
+                                        <h2 className="truncate text-lg font-bold leading-tight">{next.name}</h2>
+                                        {nextDate && (
+                                            <p className="mt-0.5 flex items-center gap-1 text-xs text-primary-foreground/80">
+                                                <Calendar className="h-3 w-3" />
+                                                {nextDate.toLocaleDateString(undefined, {
+                                                    weekday: "long",
+                                                    month: "short",
+                                                    day: "numeric",
+                                                })}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <span className="shrink-0 text-sm font-semibold opacity-90 group-hover:opacity-100">
+                                        Perform
+                                    </span>
+                                </div>
+                            </Link>
+                        )
+                    })()}
                     {upcoming.length > 0 && (
                         <section className="flex flex-col gap-3">
                             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground px-1">

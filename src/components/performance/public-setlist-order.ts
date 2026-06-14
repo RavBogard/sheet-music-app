@@ -98,3 +98,14 @@ export function selectVisiblePublicSetlists(
     const remaining = Math.max(0, MAX_PUBLIC_SERVICES - cappedUpcoming.length)
     return [...cappedUpcoming, ...past.slice(0, remaining)]
 }
+
+/**
+ * v11.5-02-01 F1: the single "next service" selector for the public /perform
+ * entry — the SOONEST upcoming setlist (eventDate >= today@00:00), or null when
+ * none. Delegates to `splitPublicSetlists` so it inherits the exact
+ * isTest/test-uid filter + day-boundary semantics (a service TODAY counts as
+ * upcoming and wins). `now` is injectable for deterministic tests.
+ */
+export function firstUpcomingSetlist(setlists: Setlist[], now: Date = new Date()): Setlist | null {
+    return splitPublicSetlists(setlists, now).upcoming[0] ?? null
+}
