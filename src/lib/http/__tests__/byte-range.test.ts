@@ -98,4 +98,37 @@ describe("byteRangeResponse", () => {
         expect(res.status).toBe(206)
         expect(res.headers.get("access-control-allow-origin")).toBe("https://centralreform.live")
     })
+
+    // 2026-06-14 chart-outage postmortem: a public CDN that caches a 206 by URL
+    // replays a truncated slice as a 200 to later clients. Partials MUST be no-store;
+    // only the full 200 keeps the caller's cache policy.
+    it("206 forces Cache-Control: no-store even when the caller passed a public cache header", async () => {
+        const res = byteRangeResponse(BODY, {
+            contentType: "audio/mpeg",
+            rangeHeader: "bytes=0-1",
+            headers: { "Cache-Control": "public, max-age=86400, s-maxage=604800" },
+        })
+        expect(res.status).toBe(206)
+        expect(res.headers.get("cache-control")).toBe("no-store")
+    })
+
+    it("416 forces Cache-Control: no-store", async () => {
+        const res = byteRangeResponse(BODY, {
+            contentType: "audio/mpeg",
+            rangeHeader: "bytes=100-",
+            headers: { "Cache-Control": "public, max-age=86400, s-maxage=604800" },
+        })
+        expect(res.status).toBe(416)
+        expect(res.headers.get("cache-control")).toBe("no-store")
+    })
+
+    it("full 200 (no Range) KEEPS the caller's cache policy (only partials are no-store)", async () => {
+        const res = byteRangeResponse(BODY, {
+            contentType: "audio/mpeg",
+            rangeHeader: null,
+            headers: { "Cache-Control": "public, max-age=86400, s-maxage=604800" },
+        })
+        expect(res.status).toBe(200)
+        expect(res.headers.get("cache-control")).toBe("public, max-age=86400, s-maxage=604800")
+    })
 })

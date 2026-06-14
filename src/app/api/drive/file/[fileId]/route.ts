@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { fetchFileById } from "@/lib/file-fetcher"
@@ -141,19 +141,41 @@ export const GET = createApiHandler(async (ctx) => {
             )
         }
 
-        // H3 (v11.5-02-01): serve through the Range helper so iPad WebKit's
-        // <audio> scrubber can seek. No-Range GETs stay byte-identical (now
-        // also advertising Accept-Ranges); auth/404/502 gates above are
-        // untouched — Range governs only this success path. Backward-safe for
-        // charts/PDFs too (a no-Range client still gets the full 200).
-        return byteRangeResponse(new Uint8Array(result.buffer), {
-            contentType: result.contentType,
-            rangeHeader: ctx.req.headers.get('range'),
-            headers: {
-                'Access-Control-Allow-Origin': origin,
-                'Cache-Control': 'public, max-age=86400, s-maxage=604800',
-                'X-Served-From': result.source,
-            },
+        const baseHeaders = {
+            'Access-Control-Allow-Origin': origin,
+            'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+            'Content-Type': result.contentType,
+            'X-Served-From': result.source,
+        }
+
+        // H3 (v11.5-02-01) — Range support ONLY for audio (iPad <audio> seeking).
+        // v11.5-02 hotfix (2026-06-14): originally H3 advertised Accept-Ranges on
+        // EVERY response from this route, including CHARTS (PDF/image/text). pdf.js,
+        // seeing Accept-Ranges, switched to range-request mode; this route is
+        // public + CDN-cached (s-maxage 7d), so Vercel's edge cached the 206
+        // partials and replayed them as truncated `200`s (a 100-byte body served
+        // as a complete 200) → pdf.js got a truncated "full" PDF → charts failed
+        // to load en masse. Fix: only audio bytes flow through the Range helper;
+        // charts return the original plain 200 with NO Accept-Ranges (exactly
+        // pre-H3), so pdf.js does one clean full GET and the CDN caches the whole
+        // file. (byte-range.ts additionally marks 206/416 no-store so audio
+        // partials can't be CDN-cached either.)
+        const isAudio = (result.contentType || '').toLowerCase().startsWith('audio/')
+        if (isAudio) {
+            return byteRangeResponse(new Uint8Array(result.buffer), {
+                contentType: result.contentType,
+                rangeHeader: ctx.req.headers.get('range'),
+                headers: {
+                    'Access-Control-Allow-Origin': origin,
+                    'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+                    'X-Served-From': result.source,
+                },
+            })
+        }
+
+        return new NextResponse(new Uint8Array(result.buffer), {
+            status: 200,
+            headers: baseHeaders,
         })
     } catch (error) {
         logger.error(`[FileProxy] Unexpected error for ${fileId}:`, error)

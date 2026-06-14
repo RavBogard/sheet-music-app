@@ -101,12 +101,18 @@ export function byteRangeResponse(
 
     const parsed = parseRange(opts.rangeHeader, total)
 
+    // CRITICAL (2026-06-14 chart-outage postmortem): partial responses MUST NOT be
+    // shared-cached. A public CDN (Vercel edge) that caches a 206 by URL — ignoring
+    // the Range header — will replay a truncated slice as a `200` to later clients,
+    // corrupting the payload. Force `no-store` on every 206/416 so partials always
+    // hit origin and stay correct; only the full 200 keeps the caller's cache policy.
     if (parsed.kind === "unsatisfiable") {
         return new NextResponse(null, {
             status: 416,
             headers: {
                 ...baseHeaders,
                 "Content-Range": `bytes */${total}`,
+                "Cache-Control": "no-store",
             },
         })
     }
@@ -120,6 +126,7 @@ export function byteRangeResponse(
                 ...baseHeaders,
                 "Content-Range": `bytes ${start}-${end}/${total}`,
                 "Content-Length": String(chunk.byteLength),
+                "Cache-Control": "no-store",
             },
         })
     }
