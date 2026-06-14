@@ -5,6 +5,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { downloadFromStoragePath } from "@/lib/firebase-storage"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { verifySessionCookieRequest } from "@/lib/drive-file-auth"
+import { byteRangeResponse } from "@/lib/http/byte-range"
 import { logger } from "@/lib/logger"
 
 export const dynamic = 'force-dynamic'
@@ -74,10 +75,13 @@ export const GET = createApiHandler(async (ctx) => {
         )
     }
 
-    return new NextResponse(new Uint8Array(result.data.buffer), {
-        status: 200,
+    // H3 (v11.5-02-01): serve through the Range helper so the native <audio>
+    // scrubber can seek a streamed recording. No-Range GETs are byte-identical
+    // (plus Accept-Ranges); the auth/404/502 gates above are untouched.
+    return byteRangeResponse(new Uint8Array(result.data.buffer), {
+        contentType: (data.mimeType as string) || result.data.contentType,
+        rangeHeader: ctx.req.headers.get('range'),
         headers: {
-            'Content-Type': (data.mimeType as string) || result.data.contentType,
             'Content-Disposition': 'inline',
             'Cache-Control': 'public, max-age=86400, s-maxage=604800',
         },

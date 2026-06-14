@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { fetchFileById } from "@/lib/file-fetcher"
 import { logger } from "@/lib/logger"
 import { hasBrowserFetchMetadata } from "@/lib/drive-file-auth"
 import { httpError, redactInProduction } from "@/lib/http/error-envelope"
+import { byteRangeResponse } from "@/lib/http/byte-range"
 import { selectUnauthHint } from "@/lib/http/caller-context"
 import { verifyBearer } from "@/lib/mcp/auth"
 
@@ -140,14 +141,19 @@ export const GET = createApiHandler(async (ctx) => {
             )
         }
 
-        return new NextResponse(new Uint8Array(result.buffer), {
-            status: 200,
+        // H3 (v11.5-02-01): serve through the Range helper so iPad WebKit's
+        // <audio> scrubber can seek. No-Range GETs stay byte-identical (now
+        // also advertising Accept-Ranges); auth/404/502 gates above are
+        // untouched — Range governs only this success path. Backward-safe for
+        // charts/PDFs too (a no-Range client still gets the full 200).
+        return byteRangeResponse(new Uint8Array(result.buffer), {
+            contentType: result.contentType,
+            rangeHeader: ctx.req.headers.get('range'),
             headers: {
                 'Access-Control-Allow-Origin': origin,
                 'Cache-Control': 'public, max-age=86400, s-maxage=604800',
-                'Content-Type': result.contentType,
                 'X-Served-From': result.source,
-            }
+            },
         })
     } catch (error) {
         logger.error(`[FileProxy] Unexpected error for ${fileId}:`, error)

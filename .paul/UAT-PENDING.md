@@ -502,3 +502,17 @@ Check (live, non-blocking — once deployed):
 - [ ] Via broslaz/CRC MCP: begin → append a multi-chunk PDF (~48 KB slices) → commit → chart imports, bonds via add_track_to_setlist.
 - [ ] Committed chart's library_index orgId matches the connected tenant (broslaz when via brotherslazaroff.live).
 - [ ] Gap / out-of-order / oversize chunk → clear rich error; force:true bypasses a dedup 409.
+
+---
+
+## ⏳ v11.5-02-01 (H3) — seekable audio on iPad (Range support)
+
+**Deployed via:** the `fix(v11.5-02-01)` plan commit (prod `master`).
+
+Server-side proven (helper unit 10/10 + recordings route regression 4/4 + `next build --webpack`).
+On a real iPad (band fleet, WebKit), NON-BLOCKING field confirm:
+
+- Open a track that has an audio recording bonded → Perform → the `<audio>` player.
+- Drag the scrubber to the middle of the track → playback resumes from the seek point
+  (was: scrubber inert / restarts from 0:00).
+- Sanity: play-from-start still works; a non-audio chart/PDF still loads normally.
