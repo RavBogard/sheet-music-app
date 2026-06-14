@@ -534,3 +534,17 @@ On a real iPad (band fleet, WebKit), NON-BLOCKING field confirm, per tenant (CRC
 
 **Note (separate axis, not this plan):** H7 re-verify flagged `/perform` cold·MOBILE CLS 0.250 (n=8) —
 a future CLS look; and the standing Vercel TTFB infra follow-up (cold-start/geo, not app code).
+
+---
+
+## ⏳ v11.5-02-03 (F2) — in-Perform leader key change + chart swap (ALREADY SHIPPED, confirm live)
+
+**Status:** F2 was already delivered (live-director workstream, ratified 2026-05-23). Closed as
+shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iPad fleet:
+
+- As a band_leader/admin on a real iPad: long-press a track row (or the open chart) → the
+  LiveDirector menu appears with **Change key / Swap chart / Insert song**.
+- Change the key → a SECOND device (another iPad/follower) reflects the new key label within a
+  few seconds (no transpose of chords/graphics — label-only by design).
+- Swap the chart → the follower's device shows the new chart.
+- As a plain musician (not leader): long-press does NOTHING (tap still opens the chart) — gate holds.
