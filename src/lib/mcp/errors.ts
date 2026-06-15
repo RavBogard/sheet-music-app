@@ -94,6 +94,7 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     musician_not_found: 404,
     assignment_not_found: 404,
     user_not_found: 404,
+    contact_not_found: 404, // v11.5-04-01 (M-11): missing/cross-org contact is a 404, not the default 500
 
     // 409 — caller's view of the world is out of date OR safety contract requires explicit force
     conflict: 409,

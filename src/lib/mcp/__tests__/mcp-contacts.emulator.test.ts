@@ -154,6 +154,26 @@ describe("MCP contacts (emulator)", () => {
         expect((await db().collection("contacts").doc(crc.contact.id).get()).exists).toBe(false)
     })
 
+    // ─── M-11 (v11.5-04-01): contact_not_found carries HTTP-like code 404 ────
+
+    it("M-11: a missing contact returns contact_not_found with code 404 (not 500)", async () => {
+        // Missing doc in the caller's own org → not_found envelope.
+        const del = await deleteContact(ADMIN, { id: "does-not-exist" }, CRC)
+        expect(del).toMatchObject({
+            ok: false,
+            error: { machine_code: "contact_not_found", code: 404 },
+        })
+        // Cross-org wall: a real other-org id is indistinguishable from missing —
+        // same code, same machine_code, no existence leak.
+        const blOnly = await createContact(ADMIN, { name: "BL Only", email: "bl@x.com" }, BL)
+        if (!("ok" in blOnly) || !blOnly.ok) throw new Error("expected ok")
+        const crossOrg = await deleteContact(ADMIN, { id: blOnly.contact.id }, CRC)
+        expect(crossOrg).toMatchObject({
+            ok: false,
+            error: { machine_code: "contact_not_found", code: 404 },
+        })
+    })
+
     // ─── AC-1: non-leader refused ───────────────────────────────────────────
 
     it("AC-1: a non-leader (musician) is refused on create/list/delete", async () => {

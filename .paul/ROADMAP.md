@@ -4,21 +4,21 @@
 
 ## Next Milestone
 
-**v11.6 (candidate backlog)** — F3 library browse density/filters (thumbnails, composer/recency metadata, search ergonomics); F5 comms design layer (waits on the Antigravity mural/BL mockups); the v11.5-deferred infra adjacents not folded into v11.5-04 (recordings-collection org-scoping + `/api/recordings/upload` orgId stamp, `finalize_chart_upload` signed-URL org-stamp gap, SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage); authed-broslaz design pass + cross-org leader-wall UI check (next stress run). v7.1 Production Hardening continues independently via the bongo `.coord/` cadence.
+**v11.6 (candidate backlog)** — Photo-of-paper-chart import (dropped from v11.5 2026-06-14; recon in § Phase v11.5-03); F3 library browse density/filters (thumbnails, composer/recency metadata, search ergonomics); F5 comms design layer (waits on the Antigravity mural/BL mockups); the v11.5-deferred infra adjacents not folded into v11.5-04 (recordings-collection org-scoping + `/api/recordings/upload` orgId stamp, `finalize_chart_upload` signed-URL org-stamp gap, SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage); authed-broslaz design pass + cross-org leader-wall UI check (next stress run). v7.1 Production Hardening continues independently via the bongo `.coord/` cadence.
 
 ## Active Milestone
 
-**🚧 v11.5 — Bulletproof Performance** (OPENED 2026-06-11 · 5 phases · 2 of 5 complete)
+**🚧 v11.5 — Bulletproof Performance** (OPENED 2026-06-11 · 5 phases planned · **v11.5-03 photo-import DROPPED 2026-06-14** — Daniel reversed the funding call; number RETIRED not renumbered so 04/05 refs stay stable · **2 of 4 active complete**)
 Status: 🚧 In Progress · Phases: **0 of 5** · **Oracle:** `docs/ACCESS-POLICY.md` **v0.4** — a finding is a bug only if it contradicts a cell in that matrix; err-public prime directive holds · **Source brief:** `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md` (all scope ratified by Daniel 2026-06-11; phases 1–5 as written, deferred list stands) · **Context:** derived via `/paul:discuss-milestone` 2026-06-11 (`MILESTONE-CONTEXT.md`, consumed).
 **Doctrine (ratified):** bulletproof > novel. The web app is the band/consumer surface — its job is **performance + quick edits**, not feature breadth. Authoring stays MCP-first. Identity-deepening (mural-led CRC, BL swagger) is a separate Antigravity mockup track, NOT this milestone.
-Focus: Make the band/consumer web surface bulletproof — fix tenancy/anon correctness leaks, nail the Perform reading + in-service editing experience, fund photo-of-paper-chart import, then sweep harness hygiene and consumer polish. CRC + broslaz both live; CRC byte-identical where shared surfaces are touched.
+Focus: Make the band/consumer web surface bulletproof — fix tenancy/anon correctness leaks, nail the Perform reading + in-service editing experience, then sweep harness hygiene and consumer polish. (Photo-of-paper-chart import was scoped then DROPPED 2026-06-14 — moved to v11.6 candidate backlog.) CRC + broslaz both live; CRC byte-identical where shared surfaces are touched.
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v11.5-01 | Tenancy + anon correctness — H4 + H5 + H9 [P0/P1] | 3/3 ✅ — 01 (H4 `180c9b666e`) · 02 (H5 `cd97ab21a3`) · 03 (H9 `d7cbb1a4e0`) | ✅ Complete | 2026-06-12 |
 | v11.5-02 | The performance surface — H1 + F2 + H7/F1 + H3 [P1 · headline] | 4/4 ✅ — 01 (H3 `c687db99ee`) · 02 (H7/F1 `27c93a788b`) · 03 (F2 closed-as-shipped `80086d1f71`) · 04 (H1) | ✅ Complete | 2026-06-14 |
-| v11.5-03 | Photo-of-paper-chart import [P1 · funded L, own phase] | TBD | Not started | - |
-| v11.5-04 | Hygiene & harness — run-3 triage + design findings [P2] | TBD | Not started | - |
+| ~~v11.5-03~~ | ~~Photo-of-paper-chart import~~ — **❌ DROPPED 2026-06-14** (Daniel reversed; → v11.6 backlog. Number retired, not renumbered.) | — | ❌ Dropped | - |
+| v11.5-04 | Hygiene & harness — run-3 triage + design findings [P2] | TBD | 🔵 NEXT | - |
 | v11.5-05 | Consumer polish quick wins — design audit [P3] | TBD | Not started | - |
 
 ### Phase v11.5-01: Tenancy + anon correctness [P0/P1 — smallest first]
@@ -36,10 +36,9 @@ Focus: The Perform reading + in-service editing experience. UAT-heaviest phase (
 - **H3** — seekable audio: HTTP Range support on the audio endpoint (run-3 B-11; wishlist "audio/recordings awkward"). (S–M)
 Plans: 01 (H3) ✅ `c687db99ee` · 02 (H7/F1) ✅ `27c93a788b` (TTFB INFRA-BOUND, not app code; "next service" CTA) · 03 (F2) ✅ closed-as-shipped (live-director long-press, no code) · 04 (H1) ✅ — **Phase COMPLETE 4/4 (2026-06-14).** H1 shipped as **per-device** per-chart zoom (localStorage, Daniel-ratified; NOT shared Firestore) + tappable Fit reset; verified PDF/MusicXML already fit-to-width + reflow on rotate so no viewer churn. Crop deferred; image-chart calibration + standalone `/perform/[fileId]` route out of scope. Next: Phase v11.5-03.
 
-### Phase v11.5-03: Photo-of-paper-chart import [P1 — funded L, own phase] 🔵 NEXT
-Focus: New MCP path — a leader photographs a paper chart; the system deskews/crops/normalizes to a stand-readable PDF, creates the library row (org-stamped, provenance "photo import"), and bonds it.
-Plan-phase design questions: ingestion route (Drive-staging the photo is the natural transport — reuses the proven import path), server-side normalize pipeline, where AI assist fits (deskew/contrast vs full OCR — **start with image normalization, NOT text OCR**), and how H1's calibration model applies to photo-sourced charts. **VERIFY FIRST** what `scrape_chart_from_url` / `salvage_chart_bytes` infrastructure is reusable. UAT on the real iPad fleet before close. (L)
-Plans: TBD (defined during /paul:plan)
+### Phase v11.5-03: Photo-of-paper-chart import — ❌ DROPPED 2026-06-14
+**Status:** DROPPED before any code. Daniel reversed the v11.5 funding call ("I don't want to do the photo import feature. I change my mind") at the v11.5-02→03 boundary, after VERIFY-FIRST recon but before Plan 01 was authored. No repo changes were made. Number RETIRED (04/05 keep their IDs — no renumber).
+**Recon preserved (for v11.6 if revisited):** `processChartUpload` already accepts image MIME (png/jpeg/heic/heif) + auto-converts HEIC→JPEG; chunked upload trio is the multi-MB transport; `pdf-lib` embeds images (print pipeline, no EXIF rotation); `ImageScoreViewer`/`PDFViewer` render; H1 `chartZoom[fileId]` auto-plugs any chart type. MISSING: no `sharp`/`jimp` (zero image-normalization lib), no image→PDF in ingestion, no `"photo-import"` provenance, no photo-tuned MCP tool. MCP route `maxDuration`=60s/128MB (fine for one image). → moved to **v11.6 candidate backlog**.
 
 ### Phase v11.5-04: Hygiene & harness [P2]
 Focus: Fold of run-3 stress triage + design findings; low-risk correctness + harness/ops.
