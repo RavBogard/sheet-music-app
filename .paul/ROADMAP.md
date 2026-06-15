@@ -8,7 +8,7 @@
 
 ## Active Milestone
 
-**🚧 v11.5 — Bulletproof Performance** (OPENED 2026-06-11 · 5 phases · 0 of 5 complete)
+**🚧 v11.5 — Bulletproof Performance** (OPENED 2026-06-11 · 5 phases · 2 of 5 complete)
 Status: 🚧 In Progress · Phases: **0 of 5** · **Oracle:** `docs/ACCESS-POLICY.md` **v0.4** — a finding is a bug only if it contradicts a cell in that matrix; err-public prime directive holds · **Source brief:** `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md` (all scope ratified by Daniel 2026-06-11; phases 1–5 as written, deferred list stands) · **Context:** derived via `/paul:discuss-milestone` 2026-06-11 (`MILESTONE-CONTEXT.md`, consumed).
 **Doctrine (ratified):** bulletproof > novel. The web app is the band/consumer surface — its job is **performance + quick edits**, not feature breadth. Authoring stays MCP-first. Identity-deepening (mural-led CRC, BL swagger) is a separate Antigravity mockup track, NOT this milestone.
 Focus: Make the band/consumer web surface bulletproof — fix tenancy/anon correctness leaks, nail the Perform reading + in-service editing experience, fund photo-of-paper-chart import, then sweep harness hygiene and consumer polish. CRC + broslaz both live; CRC byte-identical where shared surfaces are touched.
@@ -16,7 +16,7 @@ Focus: Make the band/consumer web surface bulletproof — fix tenancy/anon corre
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v11.5-01 | Tenancy + anon correctness — H4 + H5 + H9 [P0/P1] | 3/3 ✅ — 01 (H4 `180c9b666e`) · 02 (H5 `cd97ab21a3`) · 03 (H9 `d7cbb1a4e0`) | ✅ Complete | 2026-06-12 |
-| v11.5-02 | The performance surface — H1 + F2 + H7/F1 + H3 [P1 · headline] | TBD | Not started | - |
+| v11.5-02 | The performance surface — H1 + F2 + H7/F1 + H3 [P1 · headline] | 4/4 ✅ — 01 (H3 `c687db99ee`) · 02 (H7/F1 `27c93a788b`) · 03 (F2 closed-as-shipped `80086d1f71`) · 04 (H1) | ✅ Complete | 2026-06-14 |
 | v11.5-03 | Photo-of-paper-chart import [P1 · funded L, own phase] | TBD | Not started | - |
 | v11.5-04 | Hygiene & harness — run-3 triage + design findings [P2] | TBD | Not started | - |
 | v11.5-05 | Consumer polish quick wins — design audit [P3] | TBD | Not started | - |
@@ -34,9 +34,9 @@ Focus: The Perform reading + in-service editing experience. UAT-heaviest phase (
 - **F2** — in-Perform shared key change (leader-only): change the broadcast key (and optionally swap a chart) without exiting Perform; the authoring flow's autosave pattern is the model. Distinguish clearly from per-device transpose. Leaders only; D6-style gating. (M)
 - **H7 + F1** — `/perform` cold-open performance + "tonight" entry: field p75 LCP 2924 / FCP 3551 / TTFB 1632 / CLS 0.13 on the entry route while siblings are green. **Root-cause TTFB first** (server fetch), then the "big obvious tonight" entry treatment (route straight to the most-relevant set from cold open). (M)
 - **H3** — seekable audio: HTTP Range support on the audio endpoint (run-3 B-11; wishlist "audio/recordings awkward"). (S–M)
-Plans: TBD (defined during /paul:plan)
+Plans: 01 (H3) ✅ `c687db99ee` · 02 (H7/F1) ✅ `27c93a788b` (TTFB INFRA-BOUND, not app code; "next service" CTA) · 03 (F2) ✅ closed-as-shipped (live-director long-press, no code) · 04 (H1) ✅ — **Phase COMPLETE 4/4 (2026-06-14).** H1 shipped as **per-device** per-chart zoom (localStorage, Daniel-ratified; NOT shared Firestore) + tappable Fit reset; verified PDF/MusicXML already fit-to-width + reflow on rotate so no viewer churn. Crop deferred; image-chart calibration + standalone `/perform/[fileId]` route out of scope. Next: Phase v11.5-03.
 
-### Phase v11.5-03: Photo-of-paper-chart import [P1 — funded L, own phase]
+### Phase v11.5-03: Photo-of-paper-chart import [P1 — funded L, own phase] 🔵 NEXT
 Focus: New MCP path — a leader photographs a paper chart; the system deskews/crops/normalizes to a stand-readable PDF, creates the library row (org-stamped, provenance "photo import"), and bonds it.
 Plan-phase design questions: ingestion route (Drive-staging the photo is the natural transport — reuses the proven import path), server-side normalize pipeline, where AI assist fits (deskew/contrast vs full OCR — **start with image normalization, NOT text OCR**), and how H1's calibration model applies to photo-sourced charts. **VERIFY FIRST** what `scrape_chart_from_url` / `salvage_chart_bytes` infrastructure is reusable. UAT on the real iPad fleet before close. (L)
 Plans: TBD (defined during /paul:plan)

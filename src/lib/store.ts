@@ -27,6 +27,18 @@ export interface MusicState {
     transposition: number // 0 = original key, +1 = semitone up
     zoom: number // 1 = 100%
 
+    /**
+     * v11.5-02-04 (H1): per-device, per-chart zoom calibration keyed by chart
+     * `fileId`. The active `zoom` above is RESTORED from this map on every
+     * queue transition (mirrors how `transposition` is restored from
+     * `track.transposition`) and WRITTEN THROUGH by `setZoom`. Persisted to
+     * localStorage (NOT Firestore) — zoom is a per-device viewing preference
+     * (eyesight / screen size) and MUST NOT propagate to other band members'
+     * iPads. Daniel ratified per-device scope 2026-06-14. Unset key → default
+     * 1 = the viewer's auto-fit baseline (PDFViewer full-width / OSMD fitBase).
+     */
+    chartZoom: Record<string, number>
+
     // AI Transposer State
     aiState: {
         isEnabled: boolean
@@ -137,6 +149,7 @@ export const useMusicStore = create<MusicState>()(
             fileUrl: null,
             transposition: 0,
             zoom: 1,
+            chartZoom: {},
             aiXmlContent: null, // Init
 
             playbackQueue: [],
@@ -179,18 +192,29 @@ export const useMusicStore = create<MusicState>()(
                 aiXmlContent: null, // Clear AI content
             }),
             setTransposition: (t: number) => set({ transposition: t }),
-            setZoom: (z: number) => set({ zoom: z }),
+            // setZoom writes through to the active chart's per-device calibration
+            // (chartZoom[fileId]) so the zoom sticks for THIS chart and is restored
+            // on reopen. No current fileId (e.g. the standalone /perform/[fileId]
+            // route, which uses setFile not the queue) → only the live `zoom` moves.
+            setZoom: (z: number) => set((state) => {
+                const fileId = state.playbackQueue[state.queueIndex]?.fileId
+                return fileId
+                    ? { zoom: z, chartZoom: { ...state.chartZoom, [fileId]: z } }
+                    : { zoom: z }
+            }),
 
             setQueue: (items, startIndex = 0, returnPath, setlistId) => {
-                // Apply per-track transposition from the first song
+                // Apply per-track transposition + per-chart zoom from the first song
                 const firstTrack = items[startIndex]
                 const trackTransposition = firstTrack?.transposition ?? 0
+                const trackZoom = firstTrack?.fileId ? (get().chartZoom[firstTrack.fileId] ?? 1) : 1
                 set({
                     playbackQueue: items,
                     queueIndex: startIndex,
                     returnPath: returnPath || null,
                     currentSetlistId: setlistId || null,
                     transposition: trackTransposition,
+                    zoom: trackZoom,
                     // Clear page data when starting a new queue
                     aiState: { ...get().aiState, pageData: {}, scanningPages: [], error: null }
                 })
@@ -203,6 +227,7 @@ export const useMusicStore = create<MusicState>()(
                     set({
                         queueIndex: nextIndex,
                         transposition: nextTrack.transposition ?? 0,
+                        zoom: nextTrack.fileId ? (get().chartZoom[nextTrack.fileId] ?? 1) : 1,
                         isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
                     })
@@ -218,6 +243,7 @@ export const useMusicStore = create<MusicState>()(
                     set({
                         queueIndex: prevIndex,
                         transposition: prevTrack.transposition ?? 0,
+                        zoom: prevTrack.fileId ? (get().chartZoom[prevTrack.fileId] ?? 1) : 1,
                         isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
                     })
@@ -232,6 +258,7 @@ export const useMusicStore = create<MusicState>()(
                     set({
                         queueIndex: index,
                         transposition: track.transposition ?? 0,
+                        zoom: track.fileId ? (get().chartZoom[track.fileId] ?? 1) : 1,
                         isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
                     })
@@ -280,6 +307,7 @@ export const useMusicStore = create<MusicState>()(
                 fileUrl: null,
                 transposition: 0,
                 zoom: 1,
+                chartZoom: {},
                 aiXmlContent: null,
                 isEditingChords: false,
                 pendingEditCount: 0,
@@ -297,7 +325,9 @@ export const useMusicStore = create<MusicState>()(
         {
             name: 'music-storage',
             partialize: (state) => ({
-                zoom: state.zoom,
+                // v11.5-02-04: persist per-chart calibration, NOT the session-global
+                // zoom (superseded — `zoom` is now restored per chart from chartZoom).
+                chartZoom: state.chartZoom,
                 audio: { ...state.audio, isPlaying: false }, // Don't persist playing state
             })
         }

@@ -115,6 +115,25 @@ describe("PerformanceToolbar", () => {
         expect(mockOnHome).toHaveBeenCalled()
     })
 
+    // v11.5-02-04 (H1): the zoom-% readout doubles as a Fit reset — tapping
+    // snaps the current chart back to its auto-fit baseline via setZoom(1)
+    // (which clears this chart's per-device calibration in the store). AC-3.
+    it("v11.5-02-04: Fit control is a labelled ≥44px button that resets zoom to 1", () => {
+        mockStoreState.zoom = 1.4
+        render(<PerformanceToolbar onHome={mockOnHome} />)
+
+        const fitButtons = screen.getAllByRole("button", {
+            name: /fit chart to width/i,
+        })
+        // Rendered in both breakpoint trees (mobile + desktop).
+        expect(fitButtons.length).toBeGreaterThanOrEqual(1)
+        // iOS HIG 44px floor (C10I1-001 contract): h-11.
+        expect(fitButtons[0].className).toMatch(/(^|\s)h-11(\s|$)/)
+
+        fireEvent.click(fitButtons[0])
+        expect(mockSetZoom).toHaveBeenCalledWith(1)
+    })
+
     // v70-01-01 Task 3: image-typed charts disable the transposer trigger
     // (which gates both transpose UI + AI-chord editing inside TransposerMenu).
     // The disabled trigger replaces the Popover wrapper entirely, carries a

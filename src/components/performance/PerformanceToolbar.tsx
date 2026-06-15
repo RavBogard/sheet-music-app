@@ -164,13 +164,23 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock
             >
                 <ZoomOut className="h-5 w-5" />
             </Button>
-            <span className={cn(
-                "font-medium text-foreground text-center flex items-center justify-center",
-                compact ? "text-xs" : "text-xs w-10"
-            )}>
-                <span className="md:hidden text-muted-foreground/30 font-light px-0.5">/</span>
+            {/* v11.5-02-04 (H1): the zoom-% readout doubles as a Fit reset —
+                tapping snaps the current chart back to its auto-fit baseline
+                (setZoom(1), which clears this chart's per-device calibration).
+                ≥44px touch target (h-11/min-w-11) + ghost hover so it reads as
+                tappable without shifting layout. */}
+            <Button
+                variant="ghost"
+                onClick={() => setZoom(1)}
+                aria-label="Fit chart to width (reset zoom to 100%)"
+                title="Fit to width"
+                className={cn(
+                    "font-medium text-foreground text-center flex items-center justify-center cursor-pointer rounded-lg hover:bg-muted hover:text-foreground h-11 min-w-11 px-1 text-xs"
+                )}
+            >
+                <span className="md:hidden text-muted-foreground/40 font-light px-0.5">/</span>
                 <span className="hidden md:inline w-10">{Math.round(zoom * 100)}%</span>
-            </span>
+            </Button>
             <Button
                 variant="ghost" size="icon"
                 onClick={() => setZoom(Math.min(2.0, zoom + 0.1))}

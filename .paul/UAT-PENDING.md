@@ -548,3 +548,10 @@ shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iP
   few seconds (no transpose of chords/graphics — label-only by design).
 - Swap the chart → the follower's device shows the new chart.
 - As a plain musician (not leader): long-press does NOTHING (tap still opens the chart) — gate holds.
+
+## v11.5-02-04 (H1 — per-device per-chart zoom + Fit reset) — 7-tablet iPad fleet, non-blocking
+- 11" iPad (820×1180) portrait: zoom chart A, navigate to B + back → A remembers its zoom, B at baseline; reload page + reopen A → A still remembered (per-device persistence).
+- Rotate to landscape mid-chart → re-fits to the new container AND the calibration multiplier is still applied; rotate back → preserved.
+- Two different iPads (or iPad + phone): zoom on device 1 does NOT change device 2's view (per-device proof — must NOT be shared).
+- PDF chart + MusicXML chart both honor the per-chart zoom; image chart unaffected (expected — native pinch, doesn't read store zoom).
+- Tap the zoom-% / Fit control → chart snaps back to auto-fit baseline (100%).

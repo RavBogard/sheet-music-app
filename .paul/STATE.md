@@ -12,21 +12,21 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.5 — Bulletproof Performance** (OPENED 2026-06-11; 5 phases; oracle `docs/ACCESS-POLICY.md` **v0.4**; brief `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md`; context `MILESTONE-CONTEXT.md` consumed + deleted). Phase dirs created under `.paul/phases/v11.5-0{1..5}-*`. (v11.4 ✅ tag `v11.4.0`; v11.3 ✅ `v11.3.0`; v11.2 ✅ `v11.2.0`.)
-Phase: **v11.5-01 ✅ COMPLETE 3/3 (2026-06-12) — transitioned to v11.5-02 of 5.** Closed: H4 (Perform-nav branding leak) · H5 (anon chord-cache PATCH 401) · H9 (band_leader library-edit + cross-tenant wall). **Next phase: v11.5-02 — The performance surface (headline)** [P1] — H1 (landscape auto-fit + per-chart calibration) + F2 (in-Perform leader-only key change) + H7/F1 (`/perform` cold-open TTFB; root-cause first) + H3 (seekable audio). UAT-heaviest (7-tablet fleet); /ui-ux-pro-max BLOCKING.
-Plan: **v11.5-02 split into 4: 01 = H3 ✅ `c687db99ee` · 02 = H7/F1 ✅ `27c93a788b` · 03 = F2 ✅ CLOSED-as-shipped · 04 = H1 (next, LAST).** Plan 03 (F2): verify-first found F2 (in-Perform leader key change + chart swap, label-only) ALREADY SHIPPED via the live-director long-press menu (`LiveDirectorGesture`/`LiveDirectorMenu`/`changeTrackKey`/`swapTrackChart`), ratified 2026-05-23. Daniel chose close-as-shipped (no code, discoverability polish declined). 29/29 live-director tests green; iPad UAT queued.
-Status: **Plan 03 (F2) CLOSED. Ready to PLAN Plan 04 (H1) — the LAST plan; closing it transitions phase v11.5-02.** (F2 proof: live-director suite 29/29; zero production code change.)
-Last activity: 2026-06-14 (later) — **2nd P0 chart fire RESOLVED: text charts didn't render for the BAND** (musicians/anon/public), only for leaders. Root cause: `resolveViewerKind` needs `track.mimeType` OR a hydrated library_index row; Perform hydrates the library store only for LEADERS, and `bulkAddTracks`/clone never stamped `track.mimeType` → non-leaders defaulted to PDFViewer → text charts failed. **Data heal:** `scripts/v11-5-fix-track-mimetype-global.mjs` (global/idempotent/dry-run-first) stamped 42 tracks / 6 setlists incl. BOTH June-20 Camp Sabra services. **Code fix `d72b978914`:** read-time backfill in `getTracksForSetlist` (bulletproof, all write paths) + `bulkAddTracks` write-time stamp. Verified live anon (David Melech + Shake It Off render). tsc clean / 24 tests / next build exit 0. Pushed master. See [[project_track_mimetype_render_outage]]. (Earlier 2026-06-14: F2 closed as already-shipped.)
+Phase: **v11.5-02 ✅ COMPLETE 4/4 (2026-06-14) — transitioned to v11.5-03 of 5.** Closed: H3 (seekable audio `c687db99ee`) · H7/F1 (TTFB INFRA-BOUND + next-service CTA `27c93a788b`) · F2 (closed-as-shipped, live-director `80086d1f71`) · H1 (per-device per-chart zoom + Fit reset). **Next phase: v11.5-03 — Photo-of-paper-chart import** [P1, funded L] — MCP path: photo → deskew/crop/normalize → org-stamped library row → bonded; image normalization first, NOT OCR; VERIFY-FIRST `scrape_chart_from_url`/`salvage_chart_bytes` reuse; /ui-ux-pro-max BLOCKING; iPad UAT before close.
+Plan: **v11.5-03 not started.** (v11.5-02 plans: 01 H3 ✅ · 02 H7/F1 ✅ · 03 F2 ✅ closed-as-shipped · 04 H1 ✅.)
+Status: **Phase v11.5-02 COMPLETE — ready to PLAN v11.5-03.** H1 (v11.5-02-04) shipped per-device per-chart zoom (`chartZoom[fileId]` in useMusicStore, localStorage, restored on queue transitions like transposition) + tappable Fit reset; Daniel-ratified per-device (NOT shared Firestore). Verified-against-code: PDF/MusicXML already fit-to-width + reflow on rotate → no viewer changes. Gates green (tsc · vitest 22/22 · `next build --webpack` exit 0); /ui-ux-pro-max invoked. Crop + image-chart + standalone-route deferred.
+Last activity: 2026-06-14 (latest) — **Phase v11.5-02 closed.** Plan 04 (H1) applied + unified: store `chartZoom` map + toolbar Fit reset + 5 store tests; phase-close commit `feat(v11.5-02)`. (Earlier 2026-06-14: 2nd P0 chart fire RESOLVED — text charts didn't render for the BAND; data heal `scripts/v11-5-fix-track-mimetype-global.mjs` 42 tracks/6 setlists + code fix `d72b978914`; see [[project_track_mimetype_render_outage]]. FIRE #1 byte-truncation `ba38ad67b2`.)
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
 - **Band leaders:** explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle (today hand-set via scripts). The **authoring** tier.
 
-## Milestone Phases (v11.5 — 🚧 1 of 5 complete)
+## Milestone Phases (v11.5 — 🚧 2 of 5 complete)
 
 | Phase | Focus | Priority |
 |-------|-------|----------|
 | v11.5-01 | ✅ **COMPLETE 3/3 (2026-06-12)** — Tenancy + anon correctness: H4 (Perform-nav leak `180c9b666e`) + H5 (anon chord-cache PATCH `cd97ab21a3`) + H9 (band_leader library-edit + cross-tenant wall `d7cbb1a4e0`). | **P0/P1** |
-| v11.5-02 | **The performance surface (headline)** — H1 (landscape auto-fit + per-chart calibration override) + F2 (in-Perform leader-only shared key change) + H7/F1 (`/perform` cold-open TTFB + "tonight" entry; root-cause TTFB first) + H3 (seekable audio / HTTP Range). UAT-heaviest (7-tablet fleet). | P1 |
+| v11.5-02 | ✅ **COMPLETE 4/4 (2026-06-14)** — Performance surface: H3 seekable audio `c687db99ee` · H7/F1 TTFB INFRA-BOUND + next-service CTA `27c93a788b` · F2 closed-as-shipped (live-director) `80086d1f71` · H1 per-device per-chart zoom + Fit reset. | P1 |
 | v11.5-03 | **Photo-of-paper-chart import** (funded L, own phase) — MCP path: photo → deskew/crop/normalize → org-stamped library row (provenance "photo import") → bonded. Image normalization first, NOT OCR. VERIFY-FIRST `scrape_chart_from_url`/`salvage_chart_bytes` reuse. | P1 |
 | v11.5-04 | **Hygiene & harness** — M-11 (`contact_not_found`→404) · M-10 (publish schema doc) · library junk filter (browse + bind-picker) + orphan delete (VERIFY-FIRST cascade) + ingestion guard · H8 (bus-assignment cascade) · F-8 (`create_test_account` orgIds) · M-12 (chunk TTL ~60m) · test `.docx` fixture · BL-tier bearer doc. | P2 |
 | v11.5-05 | **Consumer polish quick wins** — Q3 (QR-aware error copy) · Q4 (anon `/setlists` hide writes + suppress junk drafts) · Q5 (no raw filenames on consumer surfaces) · Q6 ("Public sets" vocab) · F4 (key badges on broslaz rows). | P3 |
@@ -44,10 +44,10 @@ Last activity: 2026-06-14 (later) — **2nd P0 chart fire RESOLVED: text charts 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-02-03 (F2) ✅ CLOSED as already-shipped. Next: PLAN Plan 04 (H1 — LAST plan of the phase)]
+PLAN ──▶ APPLY ──▶ UNIFY        [Phase v11.5-02 CLOSED (4/4). Loop idle — ready to PLAN v11.5-03.]
   ✓        ✓        ✓
 ```
-(v11.5-02 progress: 3/4 plans — 01 H3 `c687db99ee` ✅ · 02 H7/F1 `27c93a788b` ✅ · 03 F2 ✅ (no-code close) · 04 H1 next/LAST → closes the phase.)
+(v11.5-02 COMPLETE 4/4 — 01 H3 `c687db99ee` · 02 H7/F1 `27c93a788b` · 03 F2 `80086d1f71` (no-code close) · 04 H1 per-device per-chart zoom + Fit reset. Next: `/paul:plan` Phase v11.5-03 Photo-of-paper-chart import.)
 
 ## Execution Substrate (bongo .coord/)
 
@@ -57,6 +57,7 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-02-03 (F2) ✅ CLOSED as alre
 ## Accumulated Context
 
 ### Decisions (binding — full set in auto-memory + `.coord/shared/decisions.md`)
+- **v11.5-02-04 (H1) per-chart zoom = PER-DEVICE (Daniel 2026-06-14):** persisted to localStorage (`chartZoom[fileId]` in useMusicStore), NOT shared via Firestore. Zoom is a per-eyesight/screen-size viewing preference and MUST NOT override another musician's view — deliberately diverges from the recon's "mirror transposition / shared via applyEdit" Option B. No write seam, no rules, no follower-propagation. Also baked: NO viewer changes (PDFViewer/OSMD already fit-to-width + reflow on rotate). Crop + image-chart calibration + standalone `/perform/[fileId]` route deferred.
 - MCP-first authoring pivot (2026-05-15): browser app is the band/consumer surface only.
 - `err-public` invariant (2026-05-28): never gate data from musicians/performers (holds WITHIN a tenant; hard wall ACROSS tenants).
 - Always-proceed / no decision-blocks (2026-05-28): agents proceed autonomously on in-scope work.
@@ -94,9 +95,9 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-02-03 (F2) ✅ CLOSED as alre
 ## Session Continuity
 
 Last session: 2026-06-14 (evening) — **Resolved 2nd P0 chart fire: text charts didn't render for the BAND** (musicians/anon/public), only leaders. Data heal (`scripts/v11-5-fix-track-mimetype-global.mjs`, global/idempotent: 42 tracks/6 setlists incl. both June-20 Camp Sabra services) + code fix `d72b978914` (read-time mimeType backfill in `getTracksForSetlist` + `bulkAddTracks` write-time stamp). Verified live anon; tsc clean / 24 tests / `next build --webpack` exit 0. Pushed master (`d72b978914` + STATE `20990027f4`). See [[project_track_mimetype_render_outage]]. (Earlier same day: FIRE #1 byte-truncation FIXED `ba38ad67b2`; F2 closed as already-shipped.)
-Stopped at: **Both 2026-06-14 chart fires CLOSED; PAUSED mid-PLAN on v11.5-02-04 H1 (recon done, PLAN not written).** v11.5-02 = 3/4 (01 H3 `c687db99ee` ✅ · 02 H7/F1 `27c93a788b` ✅ · 03 F2 `80086d1f71` ✅). No fires open.
-Next action: **resume → write v11.5-02-04 H1 PLAN from the recon note → APPLY → UNIFY → phase transition** (H1 = LAST plan of v11.5-02; UI-touching → /ui-ux-pro-max BLOCKING; iPad UAT before close). **Operational:** revert David admin→band_leader (Daniel's discretion). **Flagged (not actioned):** `/perform` cold·mobile CLS 0.250 + Vercel TTFB infra follow-up.
-Resume file: **.paul/HANDOFF-2026-06-14.md** (both fires + H1 pointer) → then `.paul/research/v11-5-02-04-H1-recon-2026-06-14.md` for the H1 plan. (Prior handoff archived to `.paul/handoffs/archive/HANDOFF-2026-06-13.md`.)
+Stopped at: **Phase v11.5-02 (performance surface) CLOSED 4/4 (2026-06-14).** H1 (Plan 04) applied + unified + phase-transitioned: store `chartZoom` per-device map + toolbar Fit reset + 5 store tests; PROJECT/ROADMAP/STATE evolved; phase-close commit `feat(v11.5-02)`. No fires open.
+Next action: **`/paul:plan` Phase v11.5-03 — Photo-of-paper-chart import** (P1, funded L; image normalization first NOT OCR; VERIFY-FIRST `scrape_chart_from_url`/`salvage_chart_bytes` reuse; /ui-ux-pro-max BLOCKING; iPad UAT before close). **Operational:** revert David admin→band_leader (Daniel's discretion). **Flagged (not actioned):** `/perform` cold·mobile CLS 0.250 + Vercel TTFB infra follow-up.
+Resume file: **.paul/phases/v11.5-02-performance-surface/v11.5-02-04-SUMMARY.md** → then ROADMAP § Phase v11.5-03.
 Git strategy: master (prod). All committed + pushed through the pause commit (Plan 01 + handoff + STATE). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 **Deferred UAT (RUM):** v11.3-04 field TTFB/FCP — re-run `node scripts/v11-3-04-webvitals-slice.mjs` after ~1–7d traffic vs 1633/3551 baseline; if still high → Vercel infra follow-up (Deferred Issues), not app code.
 **Reusable (this phase):** `scripts/v11-3-03-library-orphan-sweep.mjs` (admin-SDK via firebase-CLI refresh-token ADC; `--diagnose` / dry-run / `--apply`) — kept for future test-data hygiene probes. `sweep_orphan_test_data` now covers library_index orphans.
