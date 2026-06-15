@@ -1496,6 +1496,11 @@ export async function bulkAddTracks(
         bpm?: number
         lead?: string
         fileName?: string
+        /** library_index.mimeType — persisted onto the track so Perform's
+         *  viewer routing distinguishes text/image charts from PDFs. Without
+         *  it, extension-less `upload-{uuid}` text charts render as broken PDFs
+         *  for non-leader viewers. [[project_track_mimetype_render_outage]] */
+        mimeType?: string
     } | null>,
 ): Promise<
     | {
@@ -1550,6 +1555,7 @@ export async function bulkAddTracks(
         let leadMusician = row.leadMusician
         let fileId = row.fileId
         let fileName = row.fileName
+        let mimeType: string | undefined
 
         if (row.songId) {
             if (!resolveSongTitle) {
@@ -1577,6 +1583,7 @@ export async function bulkAddTracks(
             leadMusician = leadMusician ?? song.lead
             fileName = fileName ?? song.fileName
             fileId = fileId ?? row.songId
+            mimeType = song.mimeType
         }
 
         if (!title || !title.trim()) {
@@ -1609,6 +1616,7 @@ export async function bulkAddTracks(
         if (row.songId !== undefined) payload.songId = row.songId
         if (fileId !== undefined) payload.fileId = fileId
         if (fileName !== undefined) payload.fileName = fileName
+        if (mimeType !== undefined) payload.mimeType = mimeType
         if (row.notes !== undefined) payload.notes = row.notes
 
         planned.push({

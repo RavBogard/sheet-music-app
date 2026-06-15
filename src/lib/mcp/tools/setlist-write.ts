@@ -779,6 +779,11 @@ export async function bulkAddSetlistTracks(
                 bpm: song.bpm,
                 lead: song.lead,
                 fileName: song.fileName,
+                // Stamp the denormalized mimeType cache at write time so the
+                // bonded track routes to the correct Perform viewer (text/image
+                // charts vs PDF) for non-leader viewers. Mirrors
+                // add_track_to_setlist. [[project_track_mimetype_render_outage]]
+                mimeType: await readLibraryMimeType(db, songId),
             }
         },
     )
