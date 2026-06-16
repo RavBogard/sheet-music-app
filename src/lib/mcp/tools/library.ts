@@ -16,19 +16,13 @@ import {
     type EnrichmentProjection,
 } from "@/lib/library/enrichment-projection"
 import type { HygieneCoverage } from "./reconcile-library"
+// v11.5-04-02: `isNonChartArtifactShape` moved to the firebase-admin-free
+// `@/lib/library/junk-filter` (single source of truth shared with the browser
+// surfaces). Imported here for the existing internal callers + re-exported so
+// reconcile-library and any other importer keep their `from "./library"` path.
+import { isNonChartArtifactShape } from "@/lib/library/junk-filter"
 
-/**
- * Shared "is this row a chart-bytes artifact?" predicate. Used by:
- *  - list_library (to hide non-charts from the default browse)
- *  - search_library (cycle-1 F-007/F-024 — agent searches were returning
- *    `.mp3`, `.xlsx`, and `.DS_Store` rows alongside real charts)
- *  - reconcile_library (cycle-3 BUG-001 — Drive-folder rows were landing
- *    in driveMirror.rows[] and would force-write 0-byte garbage)
- *
- * Accepts a loose shape so callers can pass either a LibraryIndexEntry
- * (mimeType + name both present) or a partial-join SongRecord (name only,
- * via fileName) and the predicate degrades gracefully.
- */
+export { isNonChartArtifactShape }
 /**
  * Google-Apps mime predicate. Used by `dedupeLibraryIndex` to demote
  * Google-Doc/Sheet/Slide/Drawing rows in the per-group canonical-row
@@ -46,51 +40,6 @@ import type { HygieneCoverage } from "./reconcile-library"
 export function isGoogleAppsMime(mime: string | null | undefined): boolean {
     if (!mime) return false
     return mime.toLowerCase().startsWith("application/vnd.google-apps.")
-}
-
-export function isNonChartArtifactShape(rec: {
-    mimeType?: string | null
-    name?: string | null
-}): boolean {
-    const mime = (rec.mimeType ?? "").toLowerCase()
-    if (mime) {
-        if (mime.startsWith("audio/")) return true
-        if (mime.startsWith("application/vnd.google-apps.")) return true
-        if (
-            mime ===
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-            mime ===
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        ) {
-            return true
-        }
-        if (mime === "application/octet-stream") return true
-        if (mime.includes("folder")) return true
-    }
-    const name = rec.name ?? ""
-    if (name.startsWith(".")) return true
-    // Filename-extension backstop for the search_library path where
-    // mimeType isn't always joined (and for songs/* rows whose Drive sync
-    // dropped the mime). Covers the cowork-observed cases (.mp3, .xlsx)
-    // plus close cousins.
-    const ext = name.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1]
-    if (ext) {
-        if (
-            ext === "mp3" ||
-            ext === "m4a" ||
-            ext === "wav" ||
-            ext === "aac" ||
-            ext === "flac" ||
-            ext === "ogg" ||
-            ext === "xlsx" ||
-            ext === "xls" ||
-            ext === "docx" ||
-            ext === "doc"
-        ) {
-            return true
-        }
-    }
-    return false
 }
 
 /**

@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger"
 import { z } from "zod"
 import type { OrgId } from "@/lib/org/types"
 import { rowOrg } from "@/lib/org/membership" // pure helper (firebase-admin-free)
+import { isJunkLibraryRow } from "@/lib/library/junk-filter" // pure (firebase-admin-free)
 
 const LibraryFileSchema = z.object({
     id: z.string(),
@@ -139,6 +140,19 @@ export async function getServerLibrary(orgId?: OrgId) {
                 // v11.1-03: host-org filter (display-only) when an org is passed.
                 // Unfiltered when omitted → existing callers byte-identical.
                 if (orgId && rowOrg(data.orgId) !== orgId) return
+                // v11.5-04-02: hide test/junk rows from the consumer browse
+                // surface (.DS_Store + audio/office artifacts, orphaned/
+                // duplicate/archived cruft, test-uid uploads). Real charts pass.
+                // Skipped BEFORE maxModified so junk can't bump lastModified.
+                if (
+                    isJunkLibraryRow({
+                        name: data.name,
+                        mimeType: data.mimeType,
+                        status: data.status,
+                        uploadedBy: data.uploadedBy,
+                    })
+                )
+                    return
                 if (data.lastSyncedAt && data.lastSyncedAt > maxModified) {
                     maxModified = data.lastSyncedAt
                 }

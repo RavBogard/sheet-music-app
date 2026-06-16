@@ -14,6 +14,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 
 import { getDb } from '@/lib/local/schema'
 import type { LocalSong } from '@/lib/local/types'
+import { isJunkLibraryRow } from '@/lib/library/junk-filter'
 
 import { TouchOrPopover } from './TouchOrPopover'
 
@@ -71,10 +72,18 @@ export function ChartBindPopover({
     // inside the Dexie worker and excludes archived rows from cmdk filter
     // surface, Recent group, and Library group uniformly. Missing-status docs
     // (v54-01-01 bootstrap) pass through as active.
+    // v11.5-04-02: also drop test/junk rows via the shared pure predicate. The
+    // Dexie songs mirror only carries title + status, so this catches .DS_Store
+    // and audio/office-by-name; test-uid rows (no uploadedBy here) are cleared
+    // by deletion, not this filter — browse is the primary, fully-fielded gate.
     const songs = useLiveQuery(
         () =>
             getDb()
-                .songs.filter((s) => s.status !== 'archived')
+                .songs.filter(
+                    (s) =>
+                        s.status !== 'archived' &&
+                        !isJunkLibraryRow({ name: s.title, status: s.status }),
+                )
                 .toArray(),
         [],
         [] as LocalSong[],

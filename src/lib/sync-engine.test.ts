@@ -292,4 +292,33 @@ describe('Sync Engine — Storage Copy Integration', () => {
             'application/pdf'
         )
     })
+
+    it('v11.5-04-02: skips non-chart artifacts at ingestion (.DS_Store, audio) — no row written, counted', async () => {
+        const dsStore = makeDriveFile({
+            id: 'ds',
+            name: '.DS_Store',
+            mimeType: 'application/octet-stream',
+        })
+        const audio = makeDriveFile({ id: 'aud', name: 'demo.mp3', mimeType: 'audio/mpeg' })
+        const chart = makeDriveFile({ id: 'real', name: 'Adon Olam.pdf' })
+        mockListAllFiles.mockResolvedValue([dsStore, audio, chart])
+
+        const { syncLibraryIndex } = await import('./sync-engine')
+        const stats = await syncLibraryIndex()
+
+        // Both artifacts skipped; only the real chart counted as added.
+        expect(stats.skippedNonChart).toBe(2)
+        // Only the real chart is written to library_index (junk never lands).
+        const libWrites = mockBatchOps
+            .filter((o) => o.op === 'set' && o.ref.startsWith('library_index/'))
+            .map((o) => o.ref)
+        expect(libWrites).toEqual(['library_index/real'])
+        // Junk is never copied to Storage either.
+        expect(mockUploadToStorage).toHaveBeenCalledTimes(1)
+        expect(mockUploadToStorage).toHaveBeenCalledWith(
+            'real',
+            expect.any(Buffer),
+            'application/pdf',
+        )
+    })
 })

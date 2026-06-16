@@ -4,6 +4,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { DriveClient } from "@/lib/google-drive"
 import { uploadToStorage } from "@/lib/firebase-storage"
 import { logger } from "@/lib/logger"
+import { isNonChartArtifactShape } from "@/lib/library/junk-filter"
 
 const COPY_DELAY_MS = 200 // Gentle pacing between Storage uploads
 
@@ -55,6 +56,8 @@ export interface SyncStats {
     copyErrors: number
     copyFailedFiles?: string[]
     retriedCopies: number
+    /** v11.5-04-02: Drive files skipped at ingestion as non-chart artifacts. */
+    skippedNonChart: number
     syncRunId?: string
 }
 
@@ -78,6 +81,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
         copyErrors: 0,
         copyFailedFiles: [],
         retriedCopies: 0,
+        skippedNonChart: 0,
     }
 
     const syncErrors: SyncRunRecord['errors'] = []
@@ -132,6 +136,23 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
 
         stats.totalScanned = allFiles.length
 
+        // v11.5-04-02 (library hygiene): drop non-chart artifacts (.DS_Store +
+        // other dotfiles, audio, Office docs, folders) at ingestion so they
+        // never land in library_index or the songs/* mirror (the bind-picker
+        // source) and never get copied to Storage. The HTTP/MCP upload path
+        // already rejects these; Drive sync historically only skipped folders,
+        // which is how the junk rows entered. Folders were previously written
+        // to library_index too — now excluded here uniformly.
+        const ingestFiles = allFiles.filter(
+            (f) => !isNonChartArtifactShape({ name: f.name, mimeType: f.mimeType }),
+        )
+        stats.skippedNonChart = allFiles.length - ingestFiles.length
+        if (stats.skippedNonChart > 0) {
+            logger.info(
+                `[Sync] Skipped ${stats.skippedNonChart} non-chart artifact(s) at ingestion (dotfiles/audio/office/folders).`,
+            )
+        }
+
         // 3. Get existing docs with modifiedTime, storageCopiedAt, storageFailed for change detection
         const existingSnapshot = await db.collection('library_index')
             .select('modifiedTime', 'storageCopiedAt', 'storageFailed').get()
@@ -153,18 +174,18 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
         const isFolder = (mimeType: string) => mimeType === 'application/vnd.google-apps.folder'
 
         // 1. New files (not in existingDocs, not folders)
-        const newFilesCopy = allFiles.filter(f =>
+        const newFilesCopy = ingestFiles.filter(f =>
             !existingDocs.has(f.id) && !isFolder(f.mimeType)
         )
 
         // 2. Failed retries (in existingDocs with storageFailed=true)
-        const failedRetryCopy = allFiles.filter(f => {
+        const failedRetryCopy = ingestFiles.filter(f => {
             const existing = existingDocs.get(f.id)
             return existing?.storageFailed === true && !isFolder(f.mimeType)
         })
 
         // 3. Modified files (modifiedTime changed AND storageCopiedAt exists)
-        const modifiedCopy = allFiles.filter(f => {
+        const modifiedCopy = ingestFiles.filter(f => {
             const existing = existingDocs.get(f.id)
             return existing &&
                 existing.storageCopiedAt &&
@@ -191,7 +212,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
 
         // 4. Pre-detect which files need chord cache purging (modified since last sync)
         const filesToPurge: string[] = []
-        for (const file of allFiles) {
+        for (const file of ingestFiles) {
             const existing = existingDocs.get(file.id)
             if (existing && file.modifiedTime) {
                 if (existing.modifiedTime && existing.modifiedTime !== file.modifiedTime) {
@@ -217,8 +238,8 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
         // 5. Batch Write to Firestore (index metadata) -- no reads inside loop
         const BATCH_SIZE = 450
         const chunks = []
-        for (let i = 0; i < allFiles.length; i += BATCH_SIZE) {
-            chunks.push(allFiles.slice(i, i + BATCH_SIZE))
+        for (let i = 0; i < ingestFiles.length; i += BATCH_SIZE) {
+            chunks.push(ingestFiles.slice(i, i + BATCH_SIZE))
         }
 
         for (const chunk of chunks) {
