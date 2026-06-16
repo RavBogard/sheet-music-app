@@ -94,10 +94,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [Plan v11.5-04-02 CLOSED — loop co
 
 ## Session Continuity
 
-Last session: 2026-06-14 (late) — **PAUSED at the v11.5-02 → v11.5-03 phase boundary.** Resumed from HANDOFF-2026-06-14 and completed the LAST plan of v11.5-02: H1 (Plan 04) PLAN→APPLY→UNIFY→transition in one session — store `chartZoom` per-device map + toolbar Fit reset + 5 store tests (22/22 green, tsc clean, `next build --webpack` exit 0, /ui-ux-pro-max invoked). PROJECT/ROADMAP/STATE/paul.json evolved; commits `fac9db7fd4` (`feat(v11.5-02)`) + `2af81c31d8` (STATE align), pushed. No fires open.
+Last session: 2026-06-16 — **PAUSED mid-phase (v11.5-04 at 2/3).** Resumed from HANDOFF-2026-06-14; DROPPED v11.5-03 photo-import (Daniel reversed → v11.6 backlog, recon preserved in ROADMAP); opened v11.5-04 (3-plan split) and closed Plans 01 + 02: 01 error contracts (M-11 `contact_not_found`→404 + M-10 `publish_setlist` D8 doc) `d3ee8907fc`; 02 library hygiene (pure `junk-filter.ts` + browse/bind-picker filter + Drive-sync ingestion guard) `fa3cfd2a8a`. Gates green each (emulator/unit + `next build --webpack` exit 0; tsc no new errors). STATE-align commits `918dbb8c9c`/`98c39c5c17`. All pushed. No fires open.
 Stopped at: **v11.5-04-02 CLOSED (library hygiene) — loop complete, phase 2/3.** (01 error contracts CLOSED `d3ee8907fc`.)
 Next action: **`/paul:plan` Phase v11.5-04 Plan 03 — harness & ops** (H8 bus-assignment cascade · F-8 `create_test_account` orgIds · M-12 chunk-session TTL ~60m + tool docs · permanent `.docx` test fixture · BL-tier bearer doc · **chord-cache `tsc` fix** · **VERIFY-FIRST prod junk-row deletion** [the 3 known rows, bond-probe first] · **delete_chart-author verify**). LAST plan of v11.5-04 → its UNIFY triggers phase transition. **Operational (Daniel's discretion):** revert David admin→band_leader (H9 shipped). **Flagged (INFRA, not app code):** `/perform` cold·mobile CLS 0.250 + Vercel TTFB keep-warm.
-Resume file: **.paul/phases/v11.5-04-hygiene-harness/v11.5-04-01-PLAN.md** (HANDOFF-2026-06-14-v11.5-02-complete.md consumed + archived to `.paul/handoffs/archive/`).
+Resume file: **.paul/HANDOFF-2026-06-16.md** (full pause context) → then ROADMAP § Phase v11.5-04 + `.paul/phases/v11.5-04-hygiene-harness/v11.5-04-02-SUMMARY.md`.
 Git strategy: master (prod). All committed + pushed. `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context:
 - Oracle-bound: a finding is a bug only if it contradicts a v0.3 ACCESS-POLICY cell; err-public prime directive holds.
