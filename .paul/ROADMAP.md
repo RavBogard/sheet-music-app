@@ -19,7 +19,7 @@ Focus: Make the band/consumer web surface bulletproof — fix tenancy/anon corre
 | v11.5-02 | The performance surface — H1 + F2 + H7/F1 + H3 [P1 · headline] | 4/4 ✅ — 01 (H3 `c687db99ee`) · 02 (H7/F1 `27c93a788b`) · 03 (F2 closed-as-shipped `80086d1f71`) · 04 (H1) | ✅ Complete | 2026-06-14 |
 | ~~v11.5-03~~ | ~~Photo-of-paper-chart import~~ — **❌ DROPPED 2026-06-14** (Daniel reversed; → v11.6 backlog. Number retired, not renumbered.) | — | ❌ Dropped | - |
 | v11.5-04 | Hygiene & harness — run-3 triage + design findings [P2] | 2026-06-16 | ✅ COMPLETE 4/4 | `7bffbca1a3` (03) +ops |
-| v11.5-05 | Consumer polish quick wins — design audit [P3] | TBD | 🔵 NEXT | - |
+| v11.5-05 | Consumer polish quick wins — design audit [P3] | 01 (Q6+Q3) · 02 (Q5+F4) · 03 (Q4) | 🚧 Planning | - |
 
 ### Phase v11.5-01: Tenancy + anon correctness [P0/P1 — smallest first]
 Focus: Consumer-surface correctness leaks (H4/H5) + an authoring-tier permission lockout (H9).
