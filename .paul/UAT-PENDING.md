@@ -559,3 +559,8 @@ shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iP
 ## v11.5-05-01 (Q6 + Q3 — consumer copy/branding) — non-blocking, both hosts
 - Q6: on brotherslazaroff.live `/perform`, the listing subtitle under the band name reads **"Public sets"**; on centralreform.live `/perform` it still reads **"Public setlists"** (unchanged).
 - Q3: open a `/qr/<code>` link for an EXPIRED or ALREADY-USED code on a phone → heading "Sign-in code expired" + body names the tenant ("This CRC Music …" / "This Brothers Lazaroff …"), states "expired or was already used", and instructs to ask for a fresh QR code. Confirm NO hardcoded "CRC"/"iPad" leak on the BL host.
+
+## v11.5-05-02 (Q5 title strip + F4 key resolution) — non-blocking
+- Q5: on a setlist with a chart whose filename leaked (e.g. CRC "Oseh shalom - Nava tehila.pdf", BL "Queen Jane Approximately.docx"), the consumer setlist-detail row title shows NO extension. Both hosts.
+- F4: key badges render on a setlist row whenever the track (or its library_index row) has a key — verify on a CRC setlist that has keys.
+- **F4 AUTHORING FOLLOW-UP (verdict B — Daniel/David action, not code):** the live BL setlist "Tower Grove Farmer's Market" has NO keys anywhere (track + library_index + songs.defaults all null). BL key badges will stay absent until keys are authored on the BL charts via MCP `update_song` / `edit_library_entry`. The read-time resolution will surface them automatically once set. See `.paul/research/v11-5-05-02-f4-bl-key-probe.md`.

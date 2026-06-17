@@ -3,6 +3,7 @@
 import { FileMusic, ChevronRight } from "lucide-react"
 import { SetlistTrack } from "@/types/models"
 import { getTransposedKeyName } from "@/lib/music-math"
+import { displayChartTitle } from "@/lib/format/chart-title"
 import { cn } from "@/lib/utils"
 import type { UseLongPressBag } from "@/hooks/use-long-press"
 
@@ -40,6 +41,11 @@ export function SetlistRow({
 }: SetlistRowProps) {
     const isSong = !track.type || track.type === "song"
     const isHeader = track.type === "header"
+    // v11.5-05-02 (Q5): some write paths (MCP / legacy upload / .docx import)
+    // stored the raw filename — extension and all — as the track title. Strip a
+    // stray chart/doc extension at DISPLAY time on the consumer surface. Headers
+    // are user-typed section labels (not filenames), so they keep `track.title`.
+    const title = displayChartTitle(track.title)
 
     // Compute display key. Precedence mirrors use-musician-transposition:
     // per-track override (track.transposition) wins over the musician's profile
@@ -115,7 +121,7 @@ export function SetlistRow({
         <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2">
                 <span className="font-semibold text-lg text-foreground truncate shrink min-w-0">
-                    {track.title}
+                    {title}
                 </span>
                 {displayKey && (
                     // C5B-015: switched from `bg-brand/15 text-brand` (sub-AA in
@@ -159,11 +165,11 @@ export function SetlistRow({
         // chevron — affordance is shape-based (color-not-alone).
         <div className="flex flex-1 items-center gap-2.5 min-w-0">
             <FileMusic className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-            <span className="text-base text-foreground truncate min-w-0">{track.title}</span>
+            <span className="text-base text-foreground truncate min-w-0">{title}</span>
             <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground ml-auto" aria-hidden="true" />
         </div>
     ) : (
-        <span className="text-sm text-muted-foreground">{track.title}</span>
+        <span className="text-sm text-muted-foreground">{title}</span>
     )
 
     const rowClasses = cn(
@@ -201,7 +207,7 @@ export function SetlistRow({
         <div
             role="button"
             tabIndex={0}
-            aria-label={openableNonSong ? `Open chart: ${track.title}` : undefined}
+            aria-label={openableNonSong ? `Open chart: ${title}` : undefined}
             onClick={composedClick}
             onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {

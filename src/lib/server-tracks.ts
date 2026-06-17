@@ -51,17 +51,27 @@ export async function getTracksForSetlist(
     // row. Zero extra reads in the steady state (every bonded row stamped after
     // backfill_track_mimetype); read-only — data-at-rest is the write paths'
     // job. [[project_track_mimetype_render_outage]] [[project_track_mimetype_gotcha]]
-    await enrichMissingMimeTypes(db, rows)
+    // v11.5-05-02 (F4): the SAME pass also resolves a missing `track.key` from
+    // `library_index/{fileId}.key`. SetlistRow's key badge keys on `track.key`
+    // with NO org gate, and (like mimeType) musicians/anon never hydrate the
+    // leader-only `useLibraryStore`, so the SSR frame is their only source.
+    // Read-only + zero extra reads (same `getAll`). It can only fill a key the
+    // catalog actually has — a chart uploaded without a key anywhere stays
+    // badge-less until one is authored (the live BL gap; see
+    // .paul/research/v11-5-05-02-f4-bl-key-probe.md).
+    await enrichMissingFromLibraryIndex(db, rows)
 
     rows.sort((a, b) => a.order - b.order)
     return rows
 }
 
-/** Mutates `rows` in place: for every bonded row missing a `mimeType`, resolve
- *  it from `library_index/{fileId}` (the same source the live bind paths read).
- *  Bonded = `fileId` or `audioFileId` present. No-op (and no reads) when every
- *  bonded row is already stamped. */
-async function enrichMissingMimeTypes(
+/** Mutates `rows` in place: for every bonded row missing a `mimeType` AND/OR a
+ *  `key`, resolve the missing field(s) from `library_index/{fileId}` (the same
+ *  source the live bind paths read). Bonded = `fileId` or `audioFileId` present.
+ *  No-op (and no reads) when every bonded row already has both. One batched
+ *  `getAll` fills both fields. v11.5-05-02: generalized from the mimeType-only
+ *  `enrichMissingMimeTypes` to also heal `track.key` for the Perform key badge. */
+async function enrichMissingFromLibraryIndex(
     db: FirebaseFirestore.Firestore,
     rows: LocalTrack[],
 ): Promise<void> {
@@ -73,24 +83,40 @@ async function enrichMissingMimeTypes(
                 : ""
         return fileId || audioFileId
     }
-    const needMime = rows.filter((r) => {
-        const mime = typeof r.mimeType === "string" ? r.mimeType.trim() : ""
-        return !mime && bondKey(r) !== ""
-    })
-    if (needMime.length === 0) return
+    const hasMime = (r: LocalTrack): boolean =>
+        typeof r.mimeType === "string" && r.mimeType.trim() !== ""
+    const hasKey = (r: LocalTrack): boolean =>
+        typeof (r as { key?: unknown }).key === "string" &&
+        (r as { key?: string }).key!.trim() !== ""
 
-    const uniqueIds = [...new Set(needMime.map(bondKey))]
+    const need = rows.filter(
+        (r) => bondKey(r) !== "" && (!hasMime(r) || !hasKey(r)),
+    )
+    if (need.length === 0) return
+
+    const uniqueIds = [...new Set(need.map(bondKey))]
     const refs = uniqueIds.map((id) => db.collection("library_index").doc(id))
     const docs = await db.getAll(...refs)
     const mimeById = new Map<string, string>()
+    const keyById = new Map<string, string>()
     docs.forEach((doc, i) => {
-        const m = doc.exists
-            ? (doc.data() as Record<string, unknown> | undefined)?.mimeType
+        const data = doc.exists
+            ? (doc.data() as Record<string, unknown> | undefined)
             : undefined
+        const m = data?.mimeType
         if (typeof m === "string" && m.trim()) mimeById.set(uniqueIds[i], m.trim())
+        const k = data?.key
+        if (typeof k === "string" && k.trim()) keyById.set(uniqueIds[i], k.trim())
     })
-    for (const r of needMime) {
-        const m = mimeById.get(bondKey(r))
-        if (m) (r as { mimeType?: string }).mimeType = m
+    for (const r of need) {
+        const id = bondKey(r)
+        if (!hasMime(r)) {
+            const m = mimeById.get(id)
+            if (m) (r as { mimeType?: string }).mimeType = m
+        }
+        if (!hasKey(r)) {
+            const k = keyById.get(id)
+            if (k) (r as { key?: string }).key = k
+        }
     }
 }
