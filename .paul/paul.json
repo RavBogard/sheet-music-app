@@ -1,15 +1,15 @@
 {
   "name": "sheet-music-app",
-  "version": "11.4.0",
+  "version": "11.5.0",
   "milestone": {
     "name": "v11.5 Bulletproof Performance",
     "version": "11.5.0",
-    "status": "in_progress"
+    "status": "complete"
   },
   "phase": {
     "number": 5,
     "name": "v11.5-05 Consumer polish quick wins",
-    "status": "in_progress"
+    "status": "complete"
   },
   "loop": {
     "plan": null,
@@ -17,7 +17,7 @@
   },
   "timestamps": {
     "created_at": "2026-06-07T00:00:00Z",
-    "updated_at": "2026-06-16T23:00:00Z"
+    "updated_at": "2026-06-16T23:30:00Z"
   },
   "satellite": {
     "groom": true

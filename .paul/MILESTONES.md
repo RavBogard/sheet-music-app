@@ -40,6 +40,41 @@ Completed milestone log for this project.
 | v11.2 MCP Stress-Test Fixes | 2026-06-11 | ~1 session | 5 phases, 8 plans; all 9 Brothers Lazaroff MCP/Perform stress-test bugs fixed (resolver 404, publish-audience org scope, error contract, publish/test-data hygiene, P3 polish); CRC byte-identical; tag `v11.2.0`; tip `f27ae7bc5f` |
 | v11.3 Worthiness & Access | 2026-06-10 | ~1 session | 5 phases, 10 plans; all post-stress-test findings the oracle confirmed closed (anon chart deep-link + transpose, agent docx/Gdocs→PDF upload + chunked inline, harness/QR/orphan hygiene, /perform CLS 0.187→0.000 + TTFB stream, broslaz PWA manifest + NAT rate-limit). Oracle `docs/ACCESS-POLICY.md` v0.3; err-public held; CRC byte-identical throughout; tag `v11.3.0` |
 | v11.4 Publish & Notify (D8) | 2026-06-11 | ~1 session | 4 phases, 5 plans; D8 shipped — no-auto-blast + explicit recipient model (browser + MCP `publish_setlist` requires `recipients`), org-branded comms, remembered ad-hoc recipients as MCP contacts, musician org membership admin-toggleable + default-both (19/19 backfilled both on doc + Auth claim). Oracle → v0.4; err-public held; CRC byte-identical; tag `v11.4.0` |
+| v11.5 Bulletproof Performance | 2026-06-16 | ~5 days | 4 phases (+1 dropped), 14 plans; consumer-surface hardening — tenancy/anon correctness (H4/H5/H9), Perform reading+editing (H3 seekable audio · H1 per-device zoom · F2 live-director · H7 TTFB infra-bound), hygiene & harness (error contracts · library junk filter · monitor-bus cascade), consumer polish (Q6 vocab · Q3 QR copy · Q5 title strip · F4 read-time key resolution · Q4 anon `/setlists` cleanup). Oracle v0.4; err-public held; CRC byte-identical where shared (Q5 extension-strip an intentional CRC fix); tag `v11.5.0` |
+
+---
+
+## ✅ v11.5 Bulletproof Performance
+
+**Completed:** 2026-06-16
+**Duration:** ~5 days (opened 2026-06-11)
+**Tag:** `v11.5.0` · **Oracle:** `docs/ACCESS-POLICY.md` v0.4
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 4 active (01/02/04/05) + v11.5-03 photo-import DROPPED → v11.6 |
+| Plans | 14 (01:3 · 02:4 · 04:4 · 05:3) |
+| CRC impact | byte-identical on shared surfaces, EXCEPT Q5 (intentional CRC extension-strip fix) |
+
+### Key Accomplishments
+
+- **v11.5-01 Tenancy + anon correctness:** H4 Perform-nav tenant leak, H5 anon chord-cache PATCH, H9 band_leader library-edit relaxation + the first cross-tenant wall on `library-review.ts`.
+- **v11.5-02 Performance surface:** H3 seekable (byte-range) audio, H7/F1 TTFB re-verified INFRA-BOUND (app off the hot path) + "next service" CTA, F2 live-director closed-as-shipped, H1 per-device per-chart zoom + Fit reset.
+- **v11.5-04 Hygiene & harness:** M-11/M-10 error contracts, pure `junk-filter` on consumer-browse + bind-picker + Drive-sync ingestion guard, H8 monitor-bus revoke cascade, F-8 `create_test_account` orgIds, M-12 chunked TTL 60m, chord-cache tsc fix (master tsc clean), delete_chart author-verify + prod `.DS_Store` purge.
+- **v11.5-05 Consumer polish:** Q6 org-vocab public-listing subtitle ("Public sets"/BL), Q3 branded QR-aware expired/used copy, Q5 `displayChartTitle()` extension-strip on consumer titles (both tenants), F4 read-time `track.key` resolution from `library_index` (forward-safe), Q4 anon `/setlists` junk filter + hidden write controls.
+
+### Key Decisions
+
+- **H1 per-chart zoom = PER-DEVICE (Daniel 2026-06-14):** localStorage, never shared via Firestore — a viewing preference must not override another musician's view.
+- **F4 verdict (B) — authoring data gap, not code (2026-06-16):** the live BL setlist has NO keys anywhere (track + library_index + songs.defaults all null); the read-time resolution is forward-safe but BL badges need keys authored via `update_song`/`edit_library_entry`. AC reclassified code-satisfied/data-blocked.
+- **Q5 intentionally changes the CRC render:** the stray-extension leak was flagged on CRC too, so the strip is a shared correctness fix — the one deliberate non-byte-identical CRC change this milestone.
+- **Q4 junk filter:** `isNonTestSetlist` unconditional (surface parity); zero-track drafts hidden ANON-only (owner-safe).
+
+### UAT-PENDING (live/safe, non-blocking)
+
+- Per-phase items appended to `.paul/UAT-PENDING.md` (H1 7-tablet zoom, F2 live-director, Q3/Q5/Q6 consumer copy + key badges, Q4 anon `/setlists`). **F4 authoring follow-up:** Daniel/David set keys on the 18 BL charts for badges to appear.
 
 ---
 
