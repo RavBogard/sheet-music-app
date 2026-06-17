@@ -94,10 +94,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-01 loop CLOSED — phase 01 c
 
 ## Session Continuity
 
-Last session: 2026-06-17 — **OPENED v11.6 — Airtight (Weekend Stress & Usability)** via `/paul:discuss-milestone` → `/paul:milestone`. Probed the three upcoming Camp Sabra weekend setlists live (`verify_setlist_charts`): all chart-healthy, none published. Wrote MILESTONE-CONTEXT, scoped 4 phases, evolved ROADMAP/STATE/paul.json, created phase dirs, cleaned up the context handoff. Nothing applied yet — no prod code touched.
-Stopped at: **✅ Phase v11.6-01 COMPLETE — loop closed, committed+pushed. No plan active.**
+Last session: 2026-06-17 — **OPENED v11.6 + drove phase v11.6-01 (Stress sweep & triage) end-to-end to completion.** discuss-milestone → milestone (scoped 4 phases, broad backlog → v11.7) → plan → apply → unify. Built the live Perform sweep harness + ran a 5-surface code audit → 31-finding triaged report; committed `c4f6aba72d`, pushed `origin master`. No prod code (discovery). **PAUSED at the phase-01/02 boundary — handoff written.**
+Stopped at: **✅ Phase v11.6-01 COMPLETE — loop closed, committed+pushed. No plan active. PAUSED (handoff `.paul/HANDOFF-2026-06-17.md`).**
 Next action: **`/paul:plan` for phase v11.6-02 (Perform reading airtight)** driven by the report's WS-NN punch list. Suggested 02 lead-ins: WS-02 (CSP one-line quick win), WS-01 (P0 — confirm live by opening a bonded prayer row on the Juneteenth set, then fix the queue filter), WS-03/04 (text Fit-mode legibility floor + transposed-chord drift). /ui-ux-pro-max BLOCKING on 02.
-Resume file: `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (the triaged punch list) + `.paul/phases/v11.6-01-stress-sweep-triage/v11.6-01-01-SUMMARY.md`.
+Resume file: **`.paul/HANDOFF-2026-06-17.md`** (full self-contained pickup) → then `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (the triaged punch list) + `.paul/phases/v11.6-01-stress-sweep-triage/v11.6-01-01-SUMMARY.md`.
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context:
 - Oracle `docs/ACCESS-POLICY.md` **v0.4**; but **triage bar is widened to usability-AND-access** for this milestone (a real usability defect counts even if it doesn't contradict an access cell). err-public still governs access-shaped findings.
