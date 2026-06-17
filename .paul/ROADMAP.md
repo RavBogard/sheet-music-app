@@ -18,8 +18,8 @@ Focus: Make the band/consumer web surface bulletproof — fix tenancy/anon corre
 | v11.5-01 | Tenancy + anon correctness — H4 + H5 + H9 [P0/P1] | 3/3 ✅ — 01 (H4 `180c9b666e`) · 02 (H5 `cd97ab21a3`) · 03 (H9 `d7cbb1a4e0`) | ✅ Complete | 2026-06-12 |
 | v11.5-02 | The performance surface — H1 + F2 + H7/F1 + H3 [P1 · headline] | 4/4 ✅ — 01 (H3 `c687db99ee`) · 02 (H7/F1 `27c93a788b`) · 03 (F2 closed-as-shipped `80086d1f71`) · 04 (H1) | ✅ Complete | 2026-06-14 |
 | ~~v11.5-03~~ | ~~Photo-of-paper-chart import~~ — **❌ DROPPED 2026-06-14** (Daniel reversed; → v11.6 backlog. Number retired, not renumbered.) | — | ❌ Dropped | - |
-| v11.5-04 | Hygiene & harness — run-3 triage + design findings [P2] | TBD | 🔵 NEXT | - |
-| v11.5-05 | Consumer polish quick wins — design audit [P3] | TBD | Not started | - |
+| v11.5-04 | Hygiene & harness — run-3 triage + design findings [P2] | 2026-06-16 | ✅ COMPLETE 4/4 | `7bffbca1a3` (03) +ops |
+| v11.5-05 | Consumer polish quick wins — design audit [P3] | TBD | 🔵 NEXT | - |
 
 ### Phase v11.5-01: Tenancy + anon correctness [P0/P1 — smallest first]
 Focus: Consumer-surface correctness leaks (H4/H5) + an authoring-tier permission lockout (H9).
@@ -51,7 +51,7 @@ Focus: Fold of run-3 stress triage + design findings; low-risk correctness + har
 - Permanent test `.docx` fixture in the app Drive folder (unverified conversion branch from run 3). (S)
 - Band_leader-tier bearer for Daniel's Claude Code MCP config (three runs blocked on member-tier; document the setup). (S, ops)
 - **Fold-opportunistically (planner's call):** the v11.6-deferred recordings org-scoping + `finalize_chart_upload` signed-URL org-stamp adjacents — pull in ONLY if low-cost here; else leave to v11.6.
-Plans: TBD (defined during /paul:plan)
+Plans: 01 (M-11/M-10 error contracts) ✅ `d3ee8907fc` · 02 (library junk filter: browse + bind-picker + Drive-sync ingestion guard) ✅ `fa3cfd2a8a` · 03 (H8 monitor-bus cascade + F-8 `create_test_account` orgIds + M-12 chunked TTL 60m + Drive-primary docs + chord-cache tsc fix) ✅ `7bffbca1a3` · 04 (delete_chart-author VERIFY + prod junk-row deletion + `.docx` fixture + BL bearer doc) ✅ — **Phase COMPLETE 4/4 (2026-06-16).** VERIFY-FIRST: of the 3 scoped junk rows, only `.DS_Store` remained (deleted; the two `[role-*]` rows were already gone); folder/audio non-chart clutter left to v11.6. `tsc` clean on master (03). M-12 fold-opportunistic adjacents NOT pulled in → stay v11.6. Next: Phase v11.5-05.
 
 ### Phase v11.5-05: Consumer polish quick wins [P3 — from the design audit]
 Focus: Small consumer-facing polish.

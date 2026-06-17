@@ -7,9 +7,9 @@
     "status": "in_progress"
   },
   "phase": {
-    "number": 4,
-    "name": "v11.5-04 Hygiene & harness",
-    "status": "in_progress"
+    "number": 5,
+    "name": "v11.5-05 Consumer polish quick wins",
+    "status": "not_started"
   },
   "loop": {
     "plan": null,
@@ -17,7 +17,7 @@
   },
   "timestamps": {
     "created_at": "2026-06-07T00:00:00Z",
-    "updated_at": "2026-06-16T21:30:00Z"
+    "updated_at": "2026-06-16T22:00:00Z"
   },
   "satellite": {
     "groom": true
