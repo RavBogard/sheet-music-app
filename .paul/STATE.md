@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.6 — Airtight (Weekend Stress & Usability) — OPENED 2026-06-17.** Narrow stress + usability hardening anchored to the three upcoming Camp Sabra weekend sets. Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar = usability-AND-access. Source context consumed: `.paul/MILESTONE-CONTEXT.md`. (v11.5 ✅ `v11.5.0`; v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`.)
-Phase: **🚧 v11.6-02 (Perform reading airtight) — PLANNING.** Complex phase (1 P0 + 8 P1 + 13 P2/P3) decomposed into a SEQUENCE of vertical slices: **Plan 01 = Navigation & hydration (WS-02 CSP / WS-01 P0 bonded-non-song bounce / WS-09 follower-yank)** · Plan 02 = Text-chart reading (WS-03/04/19/20/23/24/25) · Plan 03 = PDF/image+toolbar/drawer nav (WS-05/06/07/08/14–18/22/26–28). (v11.6-01 ✅ COMPLETE 1/4 phases.)
-Plan: **`v11.6-02-01` ✅ CLOSED (loop complete), commit `49dbe460e7` pushed.** WS-01 (P0 bonded-non-song bounce) + WS-09 (follower-yank) + WS-02 (CSP hydration) shipped. Next: **`/paul:plan` for Plan 02 (text-chart reading — WS-03/04/19/20/23/24/25).** Then Plan 03 (PDF/image+toolbar+drawer-nav).
-Status: **Plan v11.6-02-01 CLOSED — phase 02 at 1 of 3 plans. Ready for `/paul:plan` (Plan 02).**
-Last activity: 2026-06-17 — **UNIFIED v11.6-02-01 + committed `49dbe460e7` (pushed `93a91bb5a0..49dbe460e7`, Vercel auto-deploy).** SUMMARY written. Key note: PDFOverlay's VIEWER renders from the `track` prop (real fileId), not the queue item — so widening the queue filter fixed the bounce WITHOUT touching `toQueueItem`'s `flow-N` synthesis (boundary held; `buildPerformQueue` is dead code). Deferred: prefetch can't pre-cache non-song charts (flow-N id) → revisit in phase 03 offline.
+Phase: **🚧 v11.6-02 (Perform reading airtight) — IN PROGRESS.** Complex phase RE-DECOMPOSED into 4 vertical slices (text split P1-core vs nits): **Plan 01 ✅ Nav & hydration (WS-02/01/09)** `49dbe460e7` · **Plan 02 = Text Fit-mode P1 core (WS-03 legibility floor+true-width+scroll / WS-04 transposed-chord alignment / WS-20 touch-targets)** · Plan 03 = Text chord-correctness nits (WS-19 regex / WS-23 preferFlats / WS-24 gap / WS-25 slash-bass) · Plan 04 = PDF/image+toolbar+drawer-nav (WS-05/06/07/08/14–18/22/26–28). (v11.6-01 ✅ COMPLETE 1/4 phases.)
+Plan: **`v11.6-02-02` APPLIED — ready for `/paul:unify`.** 3 tasks DONE+qualified: T1 new pure `text-score-layout.ts` (`maxRenderedLineLength` true chord-lyric width + `fitFontSize` 11px-floor clamp) wired into TextScoreViewer + Fit container `overflow-x-auto` (WS-03); T2 `renderChunkCol(…, widthNeutralChord)` → Fit-mode chord cell `w-0 overflow-visible` so lyric governs column width, wrap mode passes explicit false (WS-04); T3 controls `h-8`→`h-11`/`w-11` + aria-labels on zoom buttons (WS-20). Gates GREEN: 8 layout + 12 viewer tests (XSS/IDB/wrap BUG-7 held), `tsc` 0, `next build --webpack` 0. UAT appended (real-iPad WS-03/04/20).
+Status: **APPLY complete — ready for `/paul:unify`.**
+Last activity: 2026-06-17 — **APPLIED v11.6-02-02.** Width-neutral chord (w-0) scoped to Fit mode only via a `renderChunkCol` param; both call sites use explicit arrows so `.map` can't pass the array as the flag. Pixel legibility/alignment → real-iPad UAT (jsdom has no layout). aria-labels added to icon-only zoom buttons (a11y + testability — minor in-scope add).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,10 +43,10 @@ Last activity: 2026-06-17 — **UNIFIED v11.6-02-01 + committed `49dbe460e7` (pu
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-01 loop CLOSED — phase 02 at 1/3 plans]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-02 — APPLIED, ready for UNIFY]
+  ✓        ✓        ○
 ```
-(v11.6 OPENED 2026-06-17. Phase 01 ✅ COMPLETE. **Phase 02 (Perform reading airtight) IN PROGRESS — Plan 01 (Navigation & hydration: WS-01/WS-09/WS-02) ✅ shipped `49dbe460e7`. Next: `/paul:plan` for Plan 02 (text-chart reading WS-03/04/19/20/23/24/25)**, then Plan 03 (PDF/image+toolbar+drawer-nav).)
+(v11.6 OPENED 2026-06-17. Phase 01 ✅. **Phase 02 IN PROGRESS (1/4 plans done) — Plan 02 (Text Fit-mode P1 core: WS-03/04/20) created. Next: `/paul:apply .paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-02-PLAN.md`.** Then Plan 03 (text nits WS-19/23/24/25) → Plan 04 (PDF/image+toolbar+drawer-nav).)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
@@ -95,9 +95,9 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-01 loop CLOSED — phase 0
 ## Session Continuity
 
 Last session: 2026-06-17 — resumed from HANDOFF-2026-06-17; `git pull` up to date; ran the full PLAN→APPLY→UNIFY loop on **v11.6-02-01 (Navigation & hydration airtight)** — WS-01/WS-09/WS-02 shipped, committed `49dbe460e7`, pushed to `origin master` (Vercel auto-deploy).
-Stopped at: **Plan v11.6-02-01 CLOSED. Phase 02 at 1 of 3 plans.**
-Next action: **`/paul:plan` for Plan 02 (text-chart reading — WS-03 Fit-mode legibility floor / WS-04 transposed-chord alignment / WS-19 chord-line regex / WS-20 touch-targets / WS-23/24/25 enharmonic+gaps+slash-bass).** Highest-leverage surface (the two camp sets are text/plain → `TextScoreViewer`). /ui-ux-pro-max BLOCKING. Then Plan 03 (PDF/image+toolbar+drawer-nav: WS-05/06/07/08/14–18/22/26–28).
-Resume file: **`.paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-01-SUMMARY.md`** → context in `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (the WS-NN punch list).
+Stopped at: **PLAN v11.6-02-02 created, awaiting approval. Phase 02 at 1 of 4 plans (re-sliced).**
+Next action: **`/paul:apply .paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-02-PLAN.md`** (/ui-ux-pro-max already loaded). After close: Plan 03 (text chord-correctness nits WS-19/23/24/25) → Plan 04 (PDF/image+toolbar+drawer-nav WS-05/06/07/08/14–18/22/26–28).
+Resume file: **`.paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-02-PLAN.md`** → context in `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (the WS-NN punch list).
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context:
 - Oracle `docs/ACCESS-POLICY.md` **v0.4**; but **triage bar is widened to usability-AND-access** for this milestone (a real usability defect counts even if it doesn't contradict an access cell). err-public still governs access-shaped findings.

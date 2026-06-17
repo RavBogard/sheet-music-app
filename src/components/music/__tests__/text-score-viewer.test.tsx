@@ -215,3 +215,56 @@ describe('TextScoreViewer (ipad-text-viewer-fetch-fix — IDB-first source resol
         expect(fetchMock).not.toHaveBeenCalled()
     })
 })
+
+describe('TextScoreViewer (v11.6-02-02 — Fit-mode reading airtight WS-03/04/20)', () => {
+    beforeEach(() => {
+        // Desktop width keeps Fit mode engaged (wrap auto-enables < 768).
+        Object.defineProperty(window, 'innerWidth', { writable: true, value: 1024 })
+        stubOfflineIdb(() => Promise.resolve(null))
+    })
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+        vi.restoreAllMocks()
+        vi.resetModules()
+    })
+
+    it('WS-03: the Fit-mode chart container is horizontally scrollable (overflow-x-auto), not clipped', async () => {
+        mockFetchText('C\nHi')
+        const { container } = render(<TextScoreViewer fileId="upload-ws03" />)
+        await waitFor(() => expect(container.querySelector('.font-mono')).toBeTruthy())
+
+        const chart = container.querySelector('.font-mono')!
+        expect(chart.className).toContain('overflow-x-auto')
+        expect(chart.className).not.toContain('overflow-x-hidden')
+    })
+
+    it('WS-04: in Fit mode the chord cell is width-neutral (w-0) so a wide transposed chord cannot drift the line', async () => {
+        // "C" over "Hi" — a chord-lyric pair. The chord row must carry w-0 so
+        // the lyric slice governs the column width.
+        mockFetchText('C\nHi')
+        const { container } = render(<TextScoreViewer fileId="upload-ws04" />)
+        await waitFor(() => expect(screen.queryByText('Hi')).toBeTruthy())
+
+        const chart = container.querySelector('.font-mono')!
+        const widthNeutral = chart.querySelector('.w-0')
+        expect(widthNeutral).toBeTruthy()
+        expect(widthNeutral!.textContent).toBe('C')
+    })
+
+    it('WS-20: control buttons meet the 44px touch floor (h-11) and zoom buttons are labelled', async () => {
+        mockFetchText('C\nHi')
+        render(<TextScoreViewer fileId="upload-ws20" />)
+        await waitFor(() => expect(screen.queryByText('Hi')).toBeTruthy())
+
+        const fitToggle = screen.getByRole('button', { name: /Fit/ })
+        const zoomOut = screen.getByRole('button', { name: 'Zoom out' })
+        const zoomIn = screen.getByRole('button', { name: 'Zoom in' })
+
+        expect(fitToggle.className).toContain('h-11')
+        expect(zoomOut.className).toContain('h-11')
+        expect(zoomOut.className).toContain('w-11')
+        expect(zoomIn.className).toContain('h-11')
+        expect(zoomIn.className).toContain('w-11')
+    })
+})

@@ -574,3 +574,9 @@ shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iP
 - **WS-09:** two devices on the same set, a follower reading mid-set; as leader insert/swap/reorder a row → the follower stays on the chart they were reading, NOT yanked to song 1.
 - **WS-02:** on a real 11" iPad on restrictive/camp wifi (Firestore forced to long-poll), open a setlist → rows hydrate (button count grows past the SSR placeholder) and the browser console shows NO "Refused to load …www.google.com/cleardot.gif" CSP violation.
 - Headless WebKit is lower-fidelity than a real iPad for these (Firestore long-poll flake is WS-02 itself) — real-device confirmation is the authoritative check.
+
+## v11.6-02-02 (Text Fit-mode reading airtight — WS-03/04/20) — real 11" iPad Safari, post-deploy
+- **WS-03 legibility/clip:** open the **Camp Sabra Staff Concert** set (`7c640a8a-358e-48ee-8523-6b8a0eca9d05`, all text/plain) in Fit mode on an 11" iPad portrait. A long chorded line stays readable at music-stand distance (font never sub-~11px) AND the right edge is reachable — either it fits, or the chart scrolls horizontally (no permanently clipped right edge).
+- **WS-04 transposed-chord alignment:** on a text chart, transpose so a chord widens (e.g. C→Db, G→F#m); chords stay over their syllables — no progressive drift across the line.
+- **WS-20 touch targets:** the Fit/Wrap toggle and the zoom −/+ buttons are comfortably tappable (≥44px) and don't obscure the last chart lines.
+- jsdom has no layout engine, so font-floor/alignment are verified by unit + structure tests only — real-device is the authoritative legibility/alignment check.

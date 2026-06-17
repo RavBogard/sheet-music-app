@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useMusicStore } from "@/lib/store"
 import { transposeChord, keyUsesFlats } from "@/lib/music-math"
+import { maxRenderedLineLength, fitFontSize } from "./text-score-layout"
 import { Loader2, WrapText, Maximize2, ZoomIn, ZoomOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -251,33 +252,37 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
         }
     }
 
-    // Calculate max length to scale font-size so it fits in the container without scrolling
-    const maxLineLength = Math.max(...parsedGroups.map(g => g.type === 'text-only' ? g.textLength : 40), 40)
-    // 0.605 is roughly the aspect ratio (width/height) of a typical monospace character
-    const baseFontSizeCalc = `min(15px, calc(100cqi / ${(maxLineLength + 2) * 0.605}))`
-    const fontSizeStyle = wrapMode ? `${14 * zoomLevel}px` : `calc(${baseFontSizeCalc} * ${zoomLevel})`
+    // Fit-mode auto-fit: measure the TRUE widest rendered line (chord-lyric
+    // lines included — not a constant 40, the WS-03 clip bug) and size the
+    // font with a legibility FLOOR (>=11px @ zoom 1.0). When the font bottoms
+    // out at the floor and content still overflows, the `overflow-x-auto`
+    // container below lets the player scroll to the right edge.
+    const maxLineLength = maxRenderedLineLength(parsedGroups)
+    const fontSizeStyle = wrapMode
+        ? `${14 * zoomLevel}px`
+        : fitFontSize({ maxLen: maxLineLength, zoom: zoomLevel, minPx: 11, maxPx: 15 })
 
     return (
         <div className="min-h-full bg-background text-foreground overflow-auto relative">
             {/* Control Bar */}
             <div className="fixed bottom-24 right-4 sm:right-8 z-20 flex gap-2 bg-card border border-border p-1.5 rounded-lg shadow-lg">
-                <Button 
-                    variant={wrapMode ? "default" : "outline"} 
-                    size="sm" 
-                    className={`gap-2 h-8 ${wrapMode ? 'bg-brand text-white hover:bg-brand/90' : ''}`}
+                <Button
+                    variant={wrapMode ? "default" : "outline"}
+                    size="sm"
+                    className={`gap-2 h-11 px-4 ${wrapMode ? 'bg-brand text-white hover:bg-brand/90' : ''}`}
                     onClick={() => setWrapMode(!wrapMode)}
                 >
                     {wrapMode ? <WrapText className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                     {wrapMode ? "Wrap" : "Fit"}
                 </Button>
                 <div className="w-px bg-border my-1" />
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoomLevel(z => Math.max(0.5, z - 0.1))}>
+                <Button variant="outline" size="icon" aria-label="Zoom out" className="h-11 w-11" onClick={() => setZoomLevel(z => Math.max(0.5, z - 0.1))}>
                     <ZoomOut className="h-4 w-4" />
                 </Button>
                 <div className="flex items-center justify-center w-12 text-xs font-medium">
                     {Math.round(zoomLevel * 100)}%
                 </div>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoomLevel(z => Math.min(3.0, z + 0.1))}>
+                <Button variant="outline" size="icon" aria-label="Zoom in" className="h-11 w-11" onClick={() => setZoomLevel(z => Math.min(3.0, z + 0.1))}>
                     <ZoomIn className="h-4 w-4" />
                 </Button>
             </div>
@@ -285,8 +290,8 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
             {/* Chart Container */}
             <div className="max-w-4xl mx-auto bg-card sm:my-8 sm:rounded-xl shadow-sm sm:border border-border min-h-[850px] p-4 sm:p-12">
                 <div className="@container w-full">
-                    <div 
-                        className="font-mono leading-relaxed overflow-x-hidden"
+                    <div
+                        className="font-mono leading-relaxed overflow-x-auto"
                         style={{ fontSize: fontSizeStyle }}
                     >
                         {parsedGroups.map((group) => {
@@ -296,9 +301,19 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                             
                             // Render Chord-Lyric chunks. One stacked column per
                             // chunk: chord row above, lyric row below.
-                            const renderChunkCol = (chunk: Chunk, idx: number) => (
+                            //
+                            // WS-04 (v11.6-02-02): in Fit mode the column width must
+                            // be governed by the LYRIC slice. A transposed chord wider
+                            // than its lyric (C→Db, G→F#m) used to stretch the flex
+                            // column and shove every later column right → cumulative
+                            // chord drift off the syllables. `widthNeutralChord` renders
+                            // the chord row at zero layout width with visible overflow,
+                            // so a wide chord crowds visually but never expands the
+                            // column. Wrap mode passes false (unchanged — its
+                            // word-atomic grouping relies on the chord contributing width).
+                            const renderChunkCol = (chunk: Chunk, idx: number, widthNeutralChord = false) => (
                                 <div key={idx} className="flex flex-col">
-                                    <div className={`whitespace-pre h-[1.5em] ${chunk.isChord ? 'text-brand font-bold' : ''}`}>
+                                    <div className={`whitespace-pre h-[1.5em] ${widthNeutralChord ? 'w-0 overflow-visible' : ''} ${chunk.isChord ? 'text-brand font-bold' : ''}`}>
                                         {chunk.chord}
                                     </div>
                                     <div className="whitespace-pre min-h-[1.5em]">
@@ -307,12 +322,12 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                                 </div>
                             )
 
-                            // Fit mode: single non-wrapping row — alignment preserved
-                            // exactly as before (byte-identical to the prior render).
+                            // Fit mode: single non-wrapping row; lyric-governed columns
+                            // keep alignment stable under transpose (WS-04).
                             if (!wrapMode) {
                                 return (
                                     <div key={group.id} className="flex flex-nowrap w-max mb-1">
-                                        {group.chunks.map(renderChunkCol)}
+                                        {group.chunks.map((chunk, idx) => renderChunkCol(chunk, idx, true))}
                                     </div>
                                 )
                             }
@@ -323,7 +338,7 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                                 <div key={group.id} className="flex flex-wrap mb-1">
                                     {groupChunksIntoWords(group.chunks).map((wordChunks, wi) => (
                                         <div key={wi} className="inline-flex flex-nowrap">
-                                            {wordChunks.map(renderChunkCol)}
+                                            {wordChunks.map((chunk, idx) => renderChunkCol(chunk, idx, false))}
                                         </div>
                                     ))}
                                 </div>
