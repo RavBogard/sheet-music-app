@@ -7,33 +7,32 @@
 See: .paul/PROJECT.md (updated 2026-06-07)
 
 **Core value:** The band gets the right charts + recordings on their iPads each week, and Daniel authors setlists conversationally via Claude + MCP. Now MULTI-TENANT (2nd live tenant: Brothers Lazaroff on brotherslazaroff.live).
-**Current focus:** **v11.5 — Bulletproof Performance ✅ COMPLETE (2026-06-16; tag `v11.5.0`, `package.json` 11.5.0).** 4 active phases (+1 dropped) / 14 plans: tenancy/anon correctness · Perform reading+editing · hygiene/harness · consumer polish. Oracle `docs/ACCESS-POLICY.md` v0.4; err-public held; CRC byte-identical where shared (except the intentional Q5 extension-strip). **Next action: `/paul:discuss-milestone` for v11.6** (photo-import, library browse density, comms design layer, deferred infra adjacents). **F4 BL key badges await authoring** (Daniel/David: `update_song`/`edit_library_entry` on the 18 BL charts — verdict B). v7.1 hardening continues in parallel via `.coord/`.
+**Current focus:** **🚧 v11.6 — Airtight (Weekend Stress & Usability) — OPENED 2026-06-17.** A deliberately NARROW hardening milestone (NOT features): stress the band's entire path against the three real upcoming **Camp Sabra weekend** sets and fix what isn't airtight. 4 phases — 01 stress sweep & triage (discovery; live Playwright + multi-agent code audit; BLOCKS the rest) → 02 Perform reading airtight (text/plain weighted) → 03 off-site flaky-wifi resilience (characterize→decide) → 04 authoring + publish round-trip (live send = STOP-gate). Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar widened to usability-AND-access; err-public + CRC-byte-identical hold. **Next action: `/paul:plan` for Phase v11.6-01.** Broad backlog (photo-import, library density, comms layer) deferred to v11.7. **F4 BL key badges still await authoring** (`update_song`/`edit_library_entry` on the 18 BL charts — verdict B). v7.1 hardening continues in parallel via `.coord/`.
 
 ## Current Position
 
-Milestone: **✅ v11.5 — Bulletproof Performance COMPLETE (OPENED 2026-06-11 · CLOSED 2026-06-16 · tag `v11.5.0`).** Oracle `docs/ACCESS-POLICY.md` v0.4. Archived snapshot `.paul/milestones/v11.5.0-ROADMAP.md`; MILESTONES.md § v11.5. (v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`; v11.2 ✅ `v11.2.0`.)
-Phase: **None active — awaiting v11.6.** v11.5-05 ✅ 3/3 (Plan 01 `dda03624f7` · 02 `bd7d786ec2` · 03 `14ebb2448e`); v11.5-04 ✅ 4/4; v11.5-02 ✅ 4/4; v11.5-01 ✅ 3/3; v11.5-03 DROPPED → v11.6.
-Plan: **None active.** Last closed: v11.5-05-03 (Q4) `14ebb2448e`.
-Status: **v11.5 milestone COMPLETE — ready for `/paul:discuss-milestone` (v11.6).**
-Last activity: 2026-06-16 — **APPLIED Plan v11.5-05-02 (Q5+F4).** Q5: `displayChartTitle()` helper + SetlistRow (strips .pdf/.docx on consumer titles, both tenants). F4: generalized `server-tracks.ts` enrichment to also resolve missing `track.key` from library_index at SSR read time (no org gate on the badge; reaches anon via SSR frame). Live BL probe → verdict (B): BL has no keys anywhere → resolution forward-safe but BL badges need authoring. vitest 17/17 · tsc clean · webpack build exit 0. Earlier: Plan 01 (Q6+Q3) closed `dda03624f7`.
+Milestone: **🚧 v11.6 — Airtight (Weekend Stress & Usability) — OPENED 2026-06-17.** Narrow stress + usability hardening anchored to the three upcoming Camp Sabra weekend sets. Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar = usability-AND-access. Source context consumed: `.paul/MILESTONE-CONTEXT.md`. (v11.5 ✅ `v11.5.0`; v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`.)
+Phase: **✅ v11.6-01 (Stress sweep & triage) COMPLETE 1/1 plan — 1 of 4 phases done.** Loop closed (PLAN→APPLY→UNIFY). DISCOVERY deliverable shipped; unblocks 02/03/04. Phase dirs: `01-stress-sweep-triage` ✅ · `02-perform-reading-airtight` · `03-offsite-resilience` · `04-authoring-publish-roundtrip`.
+Plan: **None active.** Last closed: `v11.6-01-01` (research) — SUMMARY written; no prod code (boundary held). Deliverable: `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (31 findings WS-01..31). Harness: `e2e/v11-6-perform-stress.spec.ts` (re-runnable).
+Status: **Phase v11.6-01 COMPLETE — ready for `/paul:plan` (phase v11.6-02, Perform reading airtight).**
+Last activity: 2026-06-17 — **UNIFIED v11.6-01-01 + closed phase 01.** SUMMARY written, STATE/ROADMAP/paul.json evolved, committed+pushed to `origin master`. **Findings headlines:** offline reading WORKS live (→ phase 03 reframed to verify+close WS-10/WS-12, not re-introduce); WS-01 (P0 suspected — bonded non-song row bounces to song 1, hits Fri Juneteenth); WS-02 (P1 — CSP `img-src` proxy.ts:47 blocks Firestore `cleardot.gif`, rows can fail to hydrate on iPad/long-poll wifi); WS-03/04 text Fit-mode legibility+chord-drift; WS-11 dead in-app notify link.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
 - **Band leaders:** explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle (today hand-set via scripts). The **authoring** tier.
 
-## Milestone Phases (v11.5 — 🚧 3 of 4 active complete; v11.5-03 dropped)
+## Milestone Phases (v11.6 — 🚧 1 of 4 complete)
 
 | Phase | Focus | Priority |
 |-------|-------|----------|
-| v11.5-01 | ✅ **COMPLETE 3/3 (2026-06-12)** — Tenancy + anon correctness: H4 (Perform-nav leak `180c9b666e`) + H5 (anon chord-cache PATCH `cd97ab21a3`) + H9 (band_leader library-edit + cross-tenant wall `d7cbb1a4e0`). | **P0/P1** |
-| v11.5-02 | ✅ **COMPLETE 4/4 (2026-06-14)** — Performance surface: H3 seekable audio `c687db99ee` · H7/F1 TTFB INFRA-BOUND + next-service CTA `27c93a788b` · F2 closed-as-shipped (live-director) `80086d1f71` · H1 per-device per-chart zoom + Fit reset. | P1 |
-| ~~v11.5-03~~ | **❌ DROPPED 2026-06-14** — photo import reversed by Daniel before any code; VERIFY-FIRST recon preserved in ROADMAP § Phase v11.5-03 → v11.6 backlog. | — |
-| v11.5-04 | ✅ **COMPLETE 4/4 (2026-06-16)** — Hygiene & harness: M-11/M-10 error contracts `d3ee8907fc` · library junk filter + Drive-sync ingestion guard `fa3cfd2a8a` · H8 monitor-bus cascade + F-8 orgIds + M-12 chunked-TTL 60m + chord-cache tsc fix `7bffbca1a3` · delete_chart-author verify + prod `.DS_Store` deletion + BL bearer doc. | P2 |
-| v11.5-05 | ✅ **COMPLETE 3/3 (2026-06-16)** — Consumer polish quick wins. Plan 01 `dda03624f7` (Q6 "Public sets" vocab + Q3 branded QR copy) · Plan 02 `bd7d786ec2` (Q5 displayChartTitle strip + F4 server-side key resolution; F4 BL badges need authoring — verdict B) · Plan 03 `14ebb2448e` (Q4 anon `/setlists` junk filter + hide write controls). | P3 |
+| v11.6-01 | ✅ **COMPLETE (2026-06-17)** — Stress sweep & triage: live Playwright (3 sets, iPad-WebKit ±landscape, wifi-drop) + 5-surface code audit → `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (31 findings WS-01..31). No prod code. Offline-works confirmed; P0 WS-01 + P1 WS-02/03/04/05/11 routed to 02–04. | **DISCOVERY (verify-first)** |
+| v11.6-02 | **Perform reading airtight** — fix reading defects, weighted to text/plain chord-chart rendering + transpose/swipe/zoom on iPad-WebKit. /ui-ux-pro-max BLOCKING. | P0/P1 |
+| v11.6-03 | **Off-site resilience (flaky wifi)** — characterize wifi-drop with a set open; decide bounded offline guarantee (revisits PWA-removal for off-site). Likely `checkpoint:decision`. | P1 (characterize→decide) |
+| v11.6-04 | **Authoring + publish round-trip** — finalize 3 sets via MCP (keys/BPM/order/bonds); airtight publish-&-deliver (`publish_setlist`/QR/push). **Live send = STOP-gate** (`autonomous:false`). | P1 |
 
-**Spec:** `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md` (ratified — implements). Oracle `docs/ACCESS-POLICY.md` **v0.4**. **No hard cross-phase ordering** (unlike v11.4's picker-first); phases ordered smallest-first within severity band. **/ui-ux-pro-max BLOCKING** on UI-touching phases (01/02/05). **Verify-first** flags: H4 layout, H7 TTFB, library-cascade. **UAT (7-tablet iPad fleet, before close):** H1 / F2. **Stress-prompt cells:** H4 + library-junk filter. **Deferred (list stands):** H2 page-pedals SKIPPED; F3/F5/identity-deepening + STATE infra-adjacents → v11.6 (04 may fold infra-adjacents opportunistically). CRC byte-identical.
+**Source:** `.paul/MILESTONE-CONTEXT.md` (consumed). Oracle `docs/ACCESS-POLICY.md` **v0.4**; **triage bar widened to usability-AND-access**. **Phase ordering:** 01 discovery is a HARD prerequisite for 02/03/04 (they consume its findings); fixes ordered by surface + severity. **Method:** live Playwright on prod (this Windows box, NOT cowork — cowork can't launch WebKit) + multi-agent code audit; manual Daniel UAT → `.paul/UAT-PENDING.md`, not a primary gate. **/ui-ux-pro-max BLOCKING** on UI-touching phases (02/03). **Anchor fixtures:** the 3 named weekend setlists (all chart-healthy, none published). CRC byte-identical where shared.
 
-(v11.4 ✅ COMPLETE 2026-06-11 tag `v11.4.0` — archived `.paul/milestones/v11.4.0-ROADMAP.md` + MILESTONES.md § v11.4. v11.3 ✅ 2026-06-10 tag `v11.3.0`. v11.2 ✅ 2026-06-11 tag `v11.2.0`. v11.1 ✅ 2026-06-09.)
+(v11.5 ✅ COMPLETE 2026-06-16 tag `v11.5.0` — archived `.paul/milestones/v11.5.0-ROADMAP.md` + MILESTONES.md § v11.5. v11.4 ✅ 2026-06-11 tag `v11.4.0`. v11.3 ✅ 2026-06-10 tag `v11.3.0`. v11.2 ✅ 2026-06-11 tag `v11.2.0`.)
 
 ## Git State
 
@@ -44,12 +43,11 @@ Last activity: 2026-06-16 — **APPLIED Plan v11.5-05-02 (Q5+F4).** Q5: `display
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.5 MILESTONE COMPLETE — ready for next milestone]
-  ○        ○        ○
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-01 loop CLOSED — phase 01 complete (1/4)]
+  ✓        ✓        ✓
 ```
-(v11.5 ✅ COMPLETE tag `v11.5.0`. Phases 01/02/04/05 done, 03 dropped. Next: `/paul:discuss-milestone` for v11.6.)
-(v11.5-04 ✅ COMPLETE 4/4 (2026-06-16): 01 `d3ee8907fc` · 02 `fa3cfd2a8a` · 03 `7bffbca1a3` · 04 ops+docs. Phase-close commit `2c0abcc3b4`. **Next: Phase v11.5-05 — Consumer polish quick wins (Q3/Q4/Q5/Q6/F4).** v11.5 milestone: 3 of 4 active phases done (v11.5-03 dropped); v11.5-05 is the LAST.)
-(v11.5-02 COMPLETE 4/4. v11.5-03 DROPPED → v11.6 backlog. v11.5-04 IN PROGRESS 3/4 — Plan 01 (error contracts) CLOSED `d3ee8907fc` · Plan 02 (library junk filter) CLOSED `fa3cfd2a8a` · **Plan 03 (harness code: H8 cascade + F-8 orgIds + M-12 TTL/docs + chord-cache tsc fix) CLOSED** · Plan 04 (ops+docs STOP-gate: delete_chart-author verify + prod junk-row deletion + .docx fixture + BL-bearer doc) NOT STARTED — its UNIFY closes the phase. NOTE: only 3 PLAN files exist; the file-count transition heuristic was deliberately overridden — Plan 04 is the phase closer.)
+(v11.6 OPENED 2026-06-17. Phase 01 (Stress sweep & triage) ✅ COMPLETE — loop closed, 31-finding report shipped, committed+pushed, no prod code. **Next: `/paul:plan` for phase v11.6-02 (Perform reading airtight)**, driven by the report's WS-NN punch list.)
+(Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
 
@@ -96,18 +94,18 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.5 MILESTONE COMPLETE — ready 
 
 ## Session Continuity
 
-Last session: 2026-06-16 — **DROVE v11.5-05 (the LAST phase) to completion + CLOSED the v11.5 milestone.** Plan 01 (Q6+Q3) `dda03624f7` · Plan 02 (Q5+F4) `bd7d786ec2` · Plan 03 (Q4) `14ebb2448e` · milestone release `43dd8e34b8` + tag `v11.5.0`. All pushed to prod. Quality floor held every plan; /ui-ux-pro-max consulted. PAUSED at a clean milestone boundary — nothing in flight.
-Stopped at: **v11.5 MILESTONE COMPLETE — paused.** No phase/plan active.
-Next action: **`/paul:discuss-milestone` (or `/paul:milestone`) to scope v11.6.** Candidate backlog (ROADMAP § Next Milestone): photo-import (dropped from v11.5), F3 library browse density/filters, F5 comms design layer, deferred infra adjacents (recordings org-scoping, finalize_chart_upload signed-URL org-stamp, SERVICE_TYPE_LABELS vocab, v7.0 fold-forward). **OWNER ACTION (not code) carried out of v11.5: author keys on the 18 BL charts** (`update_song`/`edit_library_entry`) so F4 key badges surface on `/perform` (resolution code is live + forward-safe — verdict B). **Operational:** David STAYS admin (settled). **INFRA (not app code):** `/perform` cold·mobile CLS 0.250 + Vercel TTFB keep-warm.
-Resume file: **.paul/HANDOFF-2026-06-16-v11.5-complete.md** (full milestone-close context) → then ROADMAP § Next Milestone + MILESTONES.md § v11.5.
-Git strategy: master (prod). All committed + pushed. `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
-Resume context:
-- Oracle-bound: a finding is a bug only if it contradicts a v0.3 ACCESS-POLICY cell; err-public prime directive holds.
-- Scope walls (ratified): D8 publish/notify → v11.4; BUG-3 (RUM) / BUG-8 (member library) / browser Policy-Q1 closed by policy (no code); F-4 dup setlist + Cowork sandbox proxy out of scope; D2 anon **recordings** is the ⚠️ veto cell — BUG-5 is charts only, don't widen Phase 01 into recordings.
-- Every fixed BUG gets a regression test citing the coverage-table cell it covers (Phase 01 + 03 re-verifiable via the stress prompt's cells).
-- Daniel paces with "go" per PAUL step; autonomy posture binding (auto-commit+push per phase to master; quality floor held; /ui-ux-pro-max blocking on UI-touching phases).
-- Carry-forward UAT (non-blocking, append to UAT-PENDING): anon recordings playback (D2), leader-crc UI authoring wall on broslaz (data ✅), Pass B offline degradation, leader create→reorder→delete in UI, QR single-use e2e — plus existing loginable-test-account items.
+Last session: 2026-06-17 — **OPENED v11.6 — Airtight (Weekend Stress & Usability)** via `/paul:discuss-milestone` → `/paul:milestone`. Probed the three upcoming Camp Sabra weekend setlists live (`verify_setlist_charts`): all chart-healthy, none published. Wrote MILESTONE-CONTEXT, scoped 4 phases, evolved ROADMAP/STATE/paul.json, created phase dirs, cleaned up the context handoff. Nothing applied yet — no prod code touched.
+Stopped at: **✅ Phase v11.6-01 COMPLETE — loop closed, committed+pushed. No plan active.**
+Next action: **`/paul:plan` for phase v11.6-02 (Perform reading airtight)** driven by the report's WS-NN punch list. Suggested 02 lead-ins: WS-02 (CSP one-line quick win), WS-01 (P0 — confirm live by opening a bonded prayer row on the Juneteenth set, then fix the queue filter), WS-03/04 (text Fit-mode legibility floor + transposed-chord drift). /ui-ux-pro-max BLOCKING on 02.
+Resume file: `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (the triaged punch list) + `.paul/phases/v11.6-01-stress-sweep-triage/v11.6-01-01-SUMMARY.md`.
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
+Resume context:
+- Oracle `docs/ACCESS-POLICY.md` **v0.4**; but **triage bar is widened to usability-AND-access** for this milestone (a real usability defect counts even if it doesn't contradict an access cell). err-public still governs access-shaped findings.
+- **Method:** live Playwright on prod from THIS Windows box + multi-agent code audit. NOT cowork for browser probes (cowork can't launch WebKit). Manual Daniel UAT → `.paul/UAT-PENDING.md`, not a primary gate.
+- **Anchor fixtures:** Shir Shabbat—Juneteenth `a84f8cce-176e-4b5e-9653-4df71db6f5ba` (Fri, all PDF) · Camp Sabra Havdalah `7e005452-7c42-4cdc-b27d-ff0c78b6667b` (Sat, mostly text/plain) · Camp Sabra Staff Concert `7c640a8a-358e-48ee-8523-6b8a0eca9d05` (Sat, all text/plain). Two camp sets are text/plain → `TextScoreViewer`, the highest-leverage usability surface.
+- **Off-site angle:** Camp Sabra may break the "venue has wifi" assumption that justified dropping PWA offline (phase 03 may re-open that decision).
+- Autonomy posture binding (auto-commit+push per phase to master; quality floor held; /ui-ux-pro-max blocking on UI-touching phases). Phase 04 live publish/notify send = STOP-gate. Every fixed item gets a regression cell/test re-runnable by the Phase 01 sweep.
+- **Operational (carry):** David STAYS admin (settled). **F4 BL key badges** still await authoring (18 BL charts). **INFRA (not app code):** `/perform` cold·mobile CLS 0.250 + Vercel TTFB keep-warm.
 **Open UAT-PENDING (live/safe, `.paul/UAT-PENDING.md`):** THIS phase — browser persona sign-in via a minted `loginUrl` + re-open-fails (single-use) + AC-2 expired-account session-mint rejection + admin-loginable-refused. EARLIER (unchanged) — v11.2 BL-connector reconnect → BUG-1 create→propose→commit + BUG-9 `preview_publish` BL roster size; v11.1 broslaz authed-surface checklist (nav/library/dashboard/matrix/MCP-authoring/admin-membership, CRC unchanged).
 
 ---
