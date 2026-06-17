@@ -2655,7 +2655,7 @@ export function registerChartUploadTools(server: McpServer): void {
         "begin_chunked_chart_upload",
         {
             description:
-                "Step 1 of the INLINE chunked-upload flow (v11.3-02). Use when the chart file is too big for upload_chart's inline base64 (>~50 KB hits the 25K-token tool cap) AND you can't PUT to a signed URL — e.g. inside the Cowork sandbox, whose egress proxy 403s storage.googleapis.com so request_chart_upload_url's PUT fails. This ships the bytes THROUGH the MCP tool args instead: begin returns an uploadSessionId + recommended chunk size; then call append_chart_upload_chunk for each ~48 KB slice (chunkIndex 0..N-1), then commit_chunked_chart_upload. Same role / curated-catalog / rate-limit semantics as upload_chart (only begin + commit are metered, not each append). PREFER import_chart_from_drive when the file is already in Drive — it's one call.",
+                "FALLBACK upload path. The PRIMARY agent upload path is import_chart_from_drive — stage the file in the app's Google Drive folder and import it in one call (it also converts Google Docs / .docx / Office formats to PDF server-side). Use this INLINE chunked flow ONLY when Drive staging isn't possible AND the file is too big for upload_chart's inline base64 (>~50 KB hits the 25K-token tool cap) AND you can't PUT to a signed URL — e.g. inside the Cowork sandbox, whose egress proxy 403s storage.googleapis.com so request_chart_upload_url's PUT fails. This ships the bytes THROUGH the MCP tool args: begin returns an uploadSessionId (valid ~60 minutes) + recommended chunk size; then call append_chart_upload_chunk for each ~48 KB slice (chunkIndex 0..N-1), then commit_chunked_chart_upload. Same role / curated-catalog / rate-limit semantics as upload_chart (only begin + commit are metered, not each append).",
             inputSchema: {
                 title: z.string().min(1).describe("Display title for the chart"),
                 mimeType: z
@@ -2709,7 +2709,7 @@ export function registerChartUploadTools(server: McpServer): void {
                     .string()
                     .min(1)
                     .describe(
-                        "Session id from begin_chunked_chart_upload. Expires 10 minutes after begin.",
+                        "Session id from begin_chunked_chart_upload. Expires ~60 minutes after begin.",
                     ),
                 chunkIndex: z
                     .number()
@@ -2738,7 +2738,7 @@ export function registerChartUploadTools(server: McpServer): void {
                     .string()
                     .min(1)
                     .describe(
-                        "Session id from begin_chunked_chart_upload. Single-use; expires 10 minutes after begin.",
+                        "Session id from begin_chunked_chart_upload. Single-use; expires ~60 minutes after begin.",
                     ),
                 force: z
                     .boolean()

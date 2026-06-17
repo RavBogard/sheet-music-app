@@ -567,6 +567,29 @@ describe("MCP chunked-upload session tools (emulator)", () => {
             expect(session.status).toBe("finalized")
         })
 
+        it("M-12: chunked begin session expires ~60 min out (longer than the 10-min signed-URL path)", async () => {
+            const before = Date.now()
+            const begin = await beginChunkedChartUpload(ADMIN, {
+                title: "TTL Chart",
+                mimeType: "application/pdf",
+            })
+            expect("ok" in begin && begin.ok).toBe(true)
+            if (!("ok" in begin) || !begin.ok) return
+            const expMs = new Date(begin.expiresAt).getTime()
+            // Comfortably past the old 10-min bound, within ~61 min of now.
+            expect(expMs).toBeGreaterThan(before + 11 * 60 * 1000)
+            expect(expMs).toBeLessThanOrEqual(before + 61 * 60 * 1000)
+            // Persisted session doc agrees.
+            const session = (
+                await db().collection("upload_sessions").doc(begin.uploadSessionId).get()
+            ).data()!
+            const docExp =
+                typeof session.expiresAt?.toDate === "function"
+                    ? session.expiresAt.toDate().getTime()
+                    : new Date(session.expiresAt).getTime()
+            expect(docExp).toBeGreaterThan(before + 11 * 60 * 1000)
+        })
+
         it("AC-2: commit org-stamps the new chart row with the caller's resolved org", async () => {
             const begin = await beginChunkedChartUpload(ADMIN, {
                 title: "BL Chunked Chart",

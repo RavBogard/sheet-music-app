@@ -82,6 +82,7 @@ describe("MCP test tokens (emulator)", () => {
             "scheduling_assignments",
             "musician_availability",
             "qr-sessions",
+            "config",
         ]
         await Promise.all(
             collections.map(async (c) => {
@@ -1054,5 +1055,127 @@ describe("MCP test tokens (emulator)", () => {
         expect((await db().collection("library_index").doc("lib-orphan-2").get()).exists).toBe(false)
         expect((await db().collection("library_index").doc("lib-live-2").get()).exists).toBe(true)
         expect((await db().collection("library_index").doc("lib-real-2").get()).exists).toBe(true)
+    })
+
+    // ── H8 (v11.5-04-03): monitor-bus assignment cascade ─────────────────────
+    // Bus assignments live in the single config/monitor doc's busAssignments map
+    // (keyed by bus index; each value a BusAssignment{userId,userName} | [] | null),
+    // NOT a uid-keyed collection — so the revoke cascade must walk the map.
+
+    it("revoke releases the test uid's monitor-bus assignments; spares other users + slots", async () => {
+        const minted = await provisionTestAccount(ADMIN_UID, { role: "musician" })
+        if ("error" in minted) throw new Error("mint failed")
+        const uid = minted.uid
+
+        // Bus 1: test uid alongside a real user. Bus 2: real user alone.
+        // Bus 3: test uid alone (will empty → null).
+        await db().collection("config").doc("monitor").set({
+            busAssignments: {
+                "1": [
+                    { userId: uid, userName: "[TEST] musician" },
+                    { userId: "real-user", userName: "Randy" },
+                ],
+                "2": [{ userId: "real-user", userName: "Randy" }],
+                "3": [{ userId: uid, userName: "[TEST] musician" }],
+            },
+        })
+
+        const revoked = await revokeTestAccountCore(ADMIN_UID, uid)
+        if ("error" in revoked) throw new Error("revoke failed")
+        expect(revoked.cascaded.monitorBusAssignments).toBe(2) // bus 1 + bus 3
+
+        const cfg = (await db().collection("config").doc("monitor").get()).data()!
+        const ba = cfg.busAssignments as Record<string, unknown>
+        expect(ba["1"]).toEqual([{ userId: "real-user", userName: "Randy" }]) // test uid dropped
+        expect(ba["2"]).toEqual([{ userId: "real-user", userName: "Randy" }]) // untouched
+        expect(ba["3"]).toBeNull() // emptied → null
+    })
+
+    it("revoke is a no-op on monitor buses when the uid holds no assignment", async () => {
+        const minted = await provisionTestAccount(ADMIN_UID, { role: "musician" })
+        if ("error" in minted) throw new Error("mint failed")
+        await db().collection("config").doc("monitor").set({
+            busAssignments: { "1": [{ userId: "real-user", userName: "Randy" }] },
+        })
+        const revoked = await revokeTestAccountCore(ADMIN_UID, minted.uid)
+        if ("error" in revoked) throw new Error("revoke failed")
+        expect(revoked.cascaded.monitorBusAssignments).toBe(0)
+        const cfg = (await db().collection("config").doc("monitor").get()).data()!
+        expect((cfg.busAssignments as Record<string, unknown>)["1"]).toEqual([
+            { userId: "real-user", userName: "Randy" },
+        ])
+    })
+
+    it("cleanup_all_test_data also releases monitor-bus assignments (via revoke)", async () => {
+        const minted = await provisionTestAccount(ADMIN_UID, { role: "musician" })
+        if ("error" in minted) throw new Error("mint failed")
+        await db().collection("config").doc("monitor").set({
+            busAssignments: {
+                "1": [{ userId: minted.uid, userName: "[TEST] musician" }],
+            },
+        })
+        const result = await cleanupAllTestDataCore(ADMIN_UID)
+        if ("error" in result) throw new Error("cleanup failed")
+        expect(result.aggregate.monitorBusAssignments).toBe(1)
+        const cfg = (await db().collection("config").doc("monitor").get()).data()!
+        expect((cfg.busAssignments as Record<string, unknown>)["1"]).toBeNull()
+    })
+
+    // ── F-8 (v11.5-04-03): orgIds provisioning ───────────────────────────────
+
+    it("create_test_account with orgIds provisions membership on doc + claims + token", async () => {
+        const result = await provisionTestAccount(ADMIN_UID, {
+            role: "band_leader",
+            orgIds: ["brotherslazaroff"],
+        })
+        if ("error" in result) throw new Error("mint failed: " + result.error)
+        expect(result.orgIds).toEqual(["brotherslazaroff"])
+
+        const userSnap = await db().collection("users").doc(result.uid).get()
+        expect(userSnap.data()?.orgIds).toEqual(["brotherslazaroff"])
+
+        const authUser = await getAuth().getUser(result.uid)
+        expect(authUser.customClaims).toMatchObject({
+            role: "band_leader",
+            orgIds: ["brotherslazaroff"],
+        })
+
+        const tokenSnap = await db()
+            .collection("mcpTokens")
+            .where("testUid", "==", result.uid)
+            .get()
+        expect(tokenSnap.docs[0]!.data().orgId).toBe("brotherslazaroff")
+        expect(await verifyBearer(bearerReq(result.token))).toMatchObject({
+            uid: result.uid,
+            orgId: "brotherslazaroff",
+        })
+    })
+
+    it("orgIds omitted is byte-equivalent to crc default (no claim/field; token crc)", async () => {
+        const result = await provisionTestAccount(ADMIN_UID, { role: "musician" })
+        if ("error" in result) throw new Error("mint failed")
+        expect(result.orgIds).toEqual(["crc"])
+
+        const userSnap = await db().collection("users").doc(result.uid).get()
+        expect(userSnap.data()?.orgIds).toBeUndefined() // no field written
+        const authUser = await getAuth().getUser(result.uid)
+        expect(authUser.customClaims?.orgIds).toBeUndefined() // no claim written
+        const tokenSnap = await db()
+            .collection("mcpTokens")
+            .where("testUid", "==", result.uid)
+            .get()
+        expect(tokenSnap.docs[0]!.data().orgId).toBe("crc")
+    })
+
+    it("create_test_account refuses an unknown org id (no Auth user created)", async () => {
+        const result = await provisionTestAccount(ADMIN_UID, {
+            role: "musician",
+            orgIds: ["nonexistent-tenant" as unknown as "crc"],
+        })
+        expect("error" in result).toBe(true)
+        if ("error" in result) expect(result.error).toBe("invalid_org_id")
+        // Validation precedes uid generation + createUser → nothing leaked.
+        const all = await getAuth().listUsers(1000)
+        expect(all.users.filter((u) => u.uid.startsWith("test-musician-")).length).toBe(0)
     })
 })

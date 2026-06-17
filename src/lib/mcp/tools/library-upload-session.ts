@@ -51,10 +51,12 @@ import { logger } from "@/lib/logger"
  * `force?: boolean` on finalize matches the H-3 force-override semantic:
  * bypass dedup when the operator knows the chart is a legitimate variant.
  *
- * Sessions auto-expire after 10 minutes (Storage signed URL also
- * expires). Cleanup of abandoned staged blobs is opportunistic — a stale
- * session doc is just a row; the staged blob deletes on next finalize
- * attempt or via the storage lifecycle policy.
+ * Signed-URL sessions auto-expire after 10 minutes (the Storage signed PUT URL
+ * expires with them — a single PUT needs no more). The chunked inline flow
+ * (begin/append/commit, below) uses a longer 60-minute window since it ships the
+ * bytes through MCP tool args slice-by-slice. Cleanup of abandoned staged blobs
+ * is opportunistic — a stale session doc is just a row; the staged blob deletes
+ * on next finalize attempt or via the storage lifecycle policy.
  *
  * Same auth + curated-catalog gate + trusted-leader rate-limit-bypass
  * semantics as upload_chart / import_chart_from_drive.
@@ -132,6 +134,12 @@ function rateLimitEnvelope(reason: string): RichErrorEnvelope {
 }
 
 const UPLOAD_SESSION_TTL_MS = 10 * 60 * 1000
+// M-12 (v11.5-04-03): the chunked inline flow ships bytes THROUGH MCP tool args
+// in sub-cap slices, so a multi-chunk file (a 5 MB chart ≈ 100 chunks at the
+// agent's pace) needs a far longer window than the single-PUT signed-URL path.
+// 60 min for chunked; the signed-URL path keeps UPLOAD_SESSION_TTL_MS (10 min),
+// bounded anyway by the signed PUT URL's own expiry.
+const CHUNKED_SESSION_TTL_MS = 60 * 60 * 1000
 const STAGED_BUCKET_PREFIX = "upload-sessions"
 const MAX_SESSION_SIZE_BYTES = 25 * 1024 * 1024
 
@@ -652,7 +660,8 @@ export async function beginChunkedChartUpload(
     if (limited) return rateLimitEnvelope(limited.error)
 
     const uploadSessionId = `usess-${crypto.randomUUID()}`
-    const expiresAtMs = Date.now() + UPLOAD_SESSION_TTL_MS
+    // M-12: chunked sessions get the longer 60-min window (see CHUNKED_SESSION_TTL_MS).
+    const expiresAtMs = Date.now() + CHUNKED_SESSION_TTL_MS
 
     await db
         .collection("upload_sessions")

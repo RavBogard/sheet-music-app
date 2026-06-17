@@ -160,7 +160,7 @@ describe("v11.3-01-02 · /api/library/chord-cache · anon read/persist (BUG-4)",
 
     // AC-4: the anon write is rate-limited via the shared `api` bucket
     it("rate-limits anon PATCH via the api bucket (no write)", async () => {
-        vi.mocked(checkRateLimit).mockReturnValueOnce(
+        vi.mocked(checkRateLimit).mockResolvedValueOnce(
             NextResponse.json({ error: "rate_limited" }, { status: 429 }),
         )
         const res = await PATCH(

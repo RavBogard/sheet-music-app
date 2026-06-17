@@ -13,7 +13,8 @@ import { generateRawToken, hashToken } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
 import { liftLegacyErrorEnvelope } from "@/lib/mcp/errors"
 import { isTestUid } from "@/lib/test-isolation"
-import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { DEFAULT_ORG_ID, ORGS, isKnownOrg } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * MCP test-identity provisioning.
@@ -134,6 +135,13 @@ export interface CreateTestAccountArgs {
     ttlSec?: number
     uidPrefix?: string
     loginable?: boolean
+    /**
+     * F-8 (v11.5-04-03): org memberships to provision for the test account.
+     * When set, written to the user doc + Auth claims (`orgIds`) and the bearer
+     * token's `orgId` is pinned to orgIds[0]. Omitted → crc-only, byte-equivalent
+     * to the pre-F-8 behavior (no orgIds claim/field; token orgId = DEFAULT_ORG_ID).
+     */
+    orgIds?: OrgId[]
 }
 
 export interface CreateTestAccountResult {
@@ -145,6 +153,8 @@ export interface CreateTestAccountResult {
     expiresAt: string
     displayName: string
     loginable: boolean
+    /** Org memberships the account was provisioned with (defaults to ['crc']). */
+    orgIds: OrgId[]
     /** One-time, single-use browser login link. Present only when loginable. */
     loginUrl?: string
 }
@@ -205,6 +215,31 @@ export async function provisionTestAccount(
         )
     }
 
+    // F-8: optional org-membership provisioning. `explicitOrgIds` is null when
+    // omitted so the default path stays byte-equivalent to pre-F-8 (no orgIds
+    // claim/field written; token orgId = DEFAULT_ORG_ID). Defense-in-depth: the
+    // Zod enum already bounds the values, but a direct HTTP-endpoint call could
+    // bypass it — refuse unknown orgs here too (mirrors the role guard).
+    const explicitOrgIds: OrgId[] | null =
+        args.orgIds && args.orgIds.length > 0 ? args.orgIds : null
+    if (explicitOrgIds) {
+        for (const o of explicitOrgIds) {
+            if (!isKnownOrg(o)) {
+                return envelope(
+                    "invalid_org_id",
+                    `Unknown org id '${o}'. Refusing to provision a test account for a non-existent tenant.`,
+                    {
+                        requestedOrgIds: args.orgIds,
+                        knownOrgs: Object.keys(ORGS),
+                    },
+                    `Pick from: ${Object.keys(ORGS).join(", ")}.`,
+                )
+            }
+        }
+    }
+    const resolvedOrgIds: OrgId[] = explicitOrgIds ?? [DEFAULT_ORG_ID]
+    const tokenOrgId: OrgId = resolvedOrgIds[0]
+
     const suffix = randomBytes(4).toString("hex")
     const prefixSegment = args.uidPrefix ? `${args.uidPrefix}-` : ""
     const uid = `${TEST_UID_PREFIX}${prefixSegment}${args.role}-${suffix}`
@@ -245,6 +280,9 @@ export async function provisionTestAccount(
     await auth.setCustomUserClaims(uid, {
         role: args.role,
         ...(soundEngineer ? { soundEngineer: true } : {}),
+        // F-8: only stamp orgIds when explicitly requested — getOrgIdsFromClaims
+        // treats a missing claim as [crc], so the omitted path needs no claim.
+        ...(explicitOrgIds ? { orgIds: explicitOrgIds } : {}),
     })
 
     // 2. Firestore user doc — picked up by every gate that reads users/{uid}.
@@ -255,6 +293,9 @@ export async function provisionTestAccount(
         email,
         isTestUser: true,
         loginable,
+        // F-8: claim+doc lockstep (v11.1-02-02). Omitted → no field (rowOrgIds
+        // defaults to [crc]), keeping the default path byte-equivalent.
+        ...(explicitOrgIds ? { orgIds: explicitOrgIds } : {}),
         provisionedBy: callerUid,
         createdAt: FieldValue.serverTimestamp(),
         ttlExpiresAt: Timestamp.fromMillis(expiresAtMs),
@@ -268,8 +309,10 @@ export async function provisionTestAccount(
         label: args.label ?? `Test ${args.role}`,
         kind: "test",
         testUid: uid,
-        // v11-02-01: role test accounts act as crc (the tenant they stress today).
-        orgId: DEFAULT_ORG_ID,
+        // v11-02-01: role test accounts default to crc (the tenant they stress
+        // today). F-8: when orgIds is provided, the bearer's authoring org pins
+        // to the primary (orgIds[0]).
+        orgId: tokenOrgId,
         provisionedBy: callerUid,
         ttlExpiresAt: Timestamp.fromMillis(expiresAtMs),
         createdAt: FieldValue.serverTimestamp(),
@@ -344,6 +387,7 @@ export async function provisionTestAccount(
         expiresAt: new Date(expiresAtMs).toISOString(),
         displayName,
         loginable,
+        orgIds: resolvedOrgIds,
         ...(loginUrl ? { loginUrl } : {}),
     }
 }
@@ -460,6 +504,7 @@ export interface RevokeTestAccountResult {
         musician_availability: number
         setlistTemplates: number
         "qr-sessions": number
+        monitorBusAssignments: number
         mcpTokens: number
         storageDeleted: number
         storageFailed: number
@@ -512,6 +557,66 @@ async function bestEffortStorageDelete(
         }
     }
     return { deleted, failed }
+}
+
+/**
+ * H8 (v11.5-04-03): release the test uid's monitor-bus assignments.
+ *
+ * Bus assignments are NOT a uid-keyed collection — they live in the single
+ * `config/monitor` doc under `busAssignments: Record<busIndexStr,
+ * BusAssignment | BusAssignment[] | null>` (each BusAssignment carries a
+ * `userId`). So the revoke cascade can't reach them via deleteByQuery. Walk the
+ * map, drop entries whose userId === uid, null-out emptied slots (mirrors the
+ * in-app BusAssignmentPanel's null-when-empty), and write back only on change.
+ *
+ * CRC-only (`config/monitor`): test accounts are crc-stamped and broslaz has no
+ * sound desk. Best-effort — a cleanup sweep must never crash on a monitor read.
+ */
+async function releaseMonitorBusAssignments(
+    db: FirebaseFirestore.Firestore,
+    uid: string,
+): Promise<number> {
+    try {
+        const ref = db.collection("config").doc("monitor")
+        const snap = await ref.get()
+        if (!snap.exists) return 0
+        const data = snap.data() as Record<string, unknown>
+        const assignments = data.busAssignments
+        if (!assignments || typeof assignments !== "object") return 0
+
+        const next: Record<string, unknown> = {
+            ...(assignments as Record<string, unknown>),
+        }
+        let removed = 0
+        let changed = false
+        for (const [busIdx, raw] of Object.entries(
+            assignments as Record<string, unknown>,
+        )) {
+            if (raw == null) continue
+            const list = Array.isArray(raw) ? raw : [raw]
+            const kept = list.filter(
+                (a) =>
+                    !(
+                        a &&
+                        typeof a === "object" &&
+                        (a as { userId?: unknown }).userId === uid
+                    ),
+            )
+            if (kept.length === list.length) continue // uid not on this bus
+            removed += list.length - kept.length
+            changed = true
+            next[busIdx] = kept.length === 0 ? null : kept
+        }
+
+        if (changed) await ref.update({ busAssignments: next })
+        return removed
+    } catch (err) {
+        logger.warn("[mcp-test-token] releaseMonitorBusAssignments failed", {
+            uid,
+            err: err instanceof Error ? err.message : String(err),
+        })
+        return 0
+    }
 }
 
 export async function revokeTestAccountCore(
@@ -601,6 +706,10 @@ async function revokeTestAccountUnchecked(
         if (c.storage) storageFileIds = storageFileIds.concat(ids)
     }
 
+    // H8: release the uid's monitor-bus assignments (nested map in config/monitor,
+    // not a uid-keyed collection — see releaseMonitorBusAssignments).
+    cascaded.monitorBusAssignments = await releaseMonitorBusAssignments(db, uid)
+
     // 3. mcpTokens that we minted for this test uid. We use `testUid` so
     // we never touch a real user's tokens by accident.
     const tokenSnap = await db.collection(MCP_TOKENS).where("testUid", "==", uid).get()
@@ -652,6 +761,7 @@ async function revokeTestAccountUnchecked(
             musician_availability: cascaded.musician_availability ?? 0,
             setlistTemplates: cascaded.setlistTemplates ?? 0,
             "qr-sessions": cascaded["qr-sessions"] ?? 0,
+            monitorBusAssignments: cascaded.monitorBusAssignments ?? 0,
             mcpTokens: cascaded.mcpTokens ?? 0,
             storageDeleted: storage.deleted,
             storageFailed: storage.failed,
@@ -1211,6 +1321,13 @@ export const createTestAccountSchema = {
         .optional()
         .describe(
             "Opt-in browser sign-in. When true, the account is provisioned ENABLED (disabled:false) and the result includes a one-time `loginUrl` — a 5-min, single-use custom-token link (`/test-login?code=…`) that signs a browser/harness in as this persona with real Firebase Web SDK auth + the normal app session cookie. Default (omitted) keeps disabled:true (UI cannot sign in; MCP-bearer path only). role='admin' is still refused. The loginUrl is shown ONCE.",
+        ),
+    orgIds: z
+        .array(z.enum(Object.keys(ORGS) as [OrgId, ...OrgId[]]))
+        .min(1)
+        .optional()
+        .describe(
+            `Org memberships to provision (default ['${DEFAULT_ORG_ID}']). Set this to stress a specific tenant's role boundaries — e.g. ['brotherslazaroff'] for a BL-only test account, or ['crc','brotherslazaroff'] for a cross-tenant authoring account. Written to the user doc + Auth claims (orgIds); the bearer token's authoring org pins to orgIds[0]. Known orgs: ${Object.keys(ORGS).join(", ")}. Omit for a crc-only account (byte-equivalent to the prior behavior).`,
         ),
 }
 
