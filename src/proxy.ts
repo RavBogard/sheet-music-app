@@ -44,7 +44,12 @@ function buildCsp(nonce: string): string {
         `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-inline' https://apis.google.com`,
         `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
         `font-src 'self' https://fonts.gstatic.com`,
-        `img-src 'self' data: blob: https://*.googleapis.com https://*.firebasestorage.app https://*.googleusercontent.com`,
+        // `https://www.google.com` is required for Firestore's WebChannel
+        // long-poll transport, which beacons a 1x1 `www.google.com/cleardot.gif`
+        // <img>; blocking it surfaces on WebKit/Safari long-polling networks
+        // (camp/flaky wifi) as Listen-channel errors and setlist rows that
+        // never hydrate. Exact host (not a wildcard) to keep the policy tight. (WS-02)
+        `img-src 'self' data: blob: https://*.googleapis.com https://*.firebasestorage.app https://*.googleusercontent.com https://www.google.com`,
         `connect-src 'self' blob: https://*.googleapis.com https://apis.google.com https://accounts.google.com https://*.googleusercontent.com https://*.firebaseio.com https://*.firebasestorage.app https://firestore.googleapis.com wss://*.firebaseio.com https://generativelanguage.googleapis.com https://*.ingest.sentry.io https://*.sentry.io https://www.hebcal.com`,
         `frame-src 'self' https://accounts.google.com https://*.firebaseapp.com`,
         `worker-src 'self' blob:`,

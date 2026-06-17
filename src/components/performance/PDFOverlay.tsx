@@ -71,6 +71,55 @@ export interface PDFOverlayProps {
 }
 
 /**
+ * A setlist row is queue-navigable iff it has a bound chart, REGARDLESS of
+ * `type`. Prayer/reading rows (`type !== 'song'`) that carry a fileId are
+ * openable charts — `SetlistRow` deliberately makes them tappable — so they
+ * MUST be members of the performance queue. Excluding them (the old
+ * `t.fileId && (!t.type || t.type === 'song')` filter) made `queueStart`
+ * resolve to -1 → `Math.max(0,-1)=0` → the sync effect navigated the musician
+ * to song 1 the instant they tapped a bonded prayer row (WS-01). The queue is
+ * used only for next/prev indexing, prefetch, and TempoFlash — the chart bytes
+ * always render from the `track` prop's real fileId, so a queue item's
+ * synthetic `flow-N` id (toQueueItem, for fileId-less rows) is irrelevant here.
+ */
+const hasChart = (t: SetlistTrack) => !!t.fileId
+
+export interface IndexedTrack {
+    track: SetlistTrack
+    /** Position of this row in the full setlist (NOT the queue). */
+    setlistIndex: number
+}
+
+/**
+ * The performance queue members: every row with a bound chart, paired with its
+ * setlist index. Single source of truth shared by all three queue effects so
+ * they can never diverge on membership again (the WS-01 root cause was three
+ * copies of the same filter).
+ */
+export function performQueueMembers(tracks: SetlistTrack[]): IndexedTrack[] {
+    return tracks
+        .map((track, setlistIndex) => ({ track, setlistIndex }))
+        .filter(({ track }) => hasChart(track))
+}
+
+/**
+ * Resolve the queue start index for a (re)build. Returns the queue position of
+ * the row at `currentIndex`. When that row is absent from the queue — a
+ * live-director insert/swap/reorder removed or replaced the follower's current
+ * row (WS-09) — return the existing `currentQueueIndex` clamped into range
+ * INSTEAD of snapping to 0, so the follower is never yanked off their chart.
+ */
+export function resolveQueueStart(
+    members: IndexedTrack[],
+    currentIndex: number,
+    currentQueueIndex: number,
+): number {
+    const queueStart = members.findIndex(({ setlistIndex }) => setlistIndex === currentIndex)
+    if (queueStart >= 0) return queueStart
+    return Math.min(Math.max(0, currentQueueIndex), Math.max(0, members.length - 1))
+}
+
+/**
  * Full-screen PDF takeover overlay for the performance view.
  *
  * Uses the full PerformanceToolbar (transpose, annotate, zoom, metronome,
@@ -111,27 +160,31 @@ export function PDFOverlay({
     // Map track indices so we can translate between queue and setlist positions
     const trackIds = tracks.map(t => t.fileId || t.title).join(',')
     useEffect(() => {
-        const songTracks = tracks
-            .map((t, i) => ({ track: t, setlistIndex: i }))
-            .filter(({ track: t }) => t.fileId && (!t.type || t.type === "song"))
+        const songTracks = performQueueMembers(tracks)
 
         const queueItems: QueueItem[] = songTracks.map(({ track: t, setlistIndex: i }) =>
             toQueueItem(t, i)
         )
 
-        // Find queue position matching current setlist index
-        const queueStart = songTracks.findIndex(({ setlistIndex }) => setlistIndex === currentIndex)
+        // WS-09: resolveQueueStart preserves the follower's current chart when
+        // a live-director edit removed/replaced their row (queueStart -1)
+        // instead of snapping to song 1. When it returns the unchanged
+        // queueIndex, the queueIndex→setlist sync effect early-returns (no
+        // spurious onNavigate).
+        const safeStart = resolveQueueStart(
+            songTracks,
+            currentIndex,
+            useMusicStore.getState().queueIndex,
+        )
 
-        setQueue(queueItems, Math.max(0, queueStart), undefined, undefined)
+        setQueue(queueItems, safeStart, undefined, undefined)
     // Re-init queue when tracks change (identity-based, not just length)
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [trackIds])
 
     // Sync currentIndex → queueIndex when parent navigates (e.g., from setlist view)
     useEffect(() => {
-        const songTracks = tracks
-            .map((t, i) => ({ track: t, setlistIndex: i }))
-            .filter(({ track: t }) => t.fileId && (!t.type || t.type === "song"))
+        const songTracks = performQueueMembers(tracks)
         const queuePos = songTracks.findIndex(({ setlistIndex }) => setlistIndex === currentIndex)
         if (queuePos >= 0 && queuePos !== queueIndex) {
             useMusicStore.getState().setQueue(
@@ -149,9 +202,7 @@ export function PDFOverlay({
         if (queueIndex === prevQueueIndexRef.current) return
         prevQueueIndexRef.current = queueIndex
 
-        const songTracks = tracks
-            .map((t, i) => ({ track: t, setlistIndex: i }))
-            .filter(({ track: t }) => t.fileId && (!t.type || t.type === "song"))
+        const songTracks = performQueueMembers(tracks)
 
         if (queueIndex >= 0 && queueIndex < songTracks.length) {
             const setlistIndex = songTracks[queueIndex].setlistIndex

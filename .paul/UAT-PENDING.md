@@ -568,3 +568,9 @@ shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iP
 ## v11.5-05-03 (Q4 anon /setlists cleanup) — non-blocking
 - As ANON on CRC `/setlists`: NO test fixtures, NO empty "New Setlist" drafts, and NO per-card Edit button or Download icon (card tap → view + Perform still work).
 - As a signed-in user on `/setlists`: in-progress drafts (incl. zero-track) still visible, and Edit + Download + overflow menu all present.
+
+## v11.6-02-01 (Nav & hydration airtight — WS-01 / WS-09 / WS-02) — real 11" iPad Safari, post-deploy
+- **WS-01 (P0):** open the **Shir Shabbat—Juneteenth** set (`a84f8cce-176e-4b5e-9653-4df71db6f5ba`) in Perform; tap a bonded **prayer/reading** row (Shema / Mi Chamocha / Adonai sfatai) → its OWN chart opens and stays — does NOT flash and bounce to song 1. Next/Prev traverse the prayer rows in setlist order.
+- **WS-09:** two devices on the same set, a follower reading mid-set; as leader insert/swap/reorder a row → the follower stays on the chart they were reading, NOT yanked to song 1.
+- **WS-02:** on a real 11" iPad on restrictive/camp wifi (Firestore forced to long-poll), open a setlist → rows hydrate (button count grows past the SSR placeholder) and the browser console shows NO "Refused to load …www.google.com/cleardot.gif" CSP violation.
+- Headless WebKit is lower-fidelity than a real iPad for these (Firestore long-poll flake is WS-02 itself) — real-device confirmation is the authoritative check.

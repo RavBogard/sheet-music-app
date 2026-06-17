@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.6 — Airtight (Weekend Stress & Usability) — OPENED 2026-06-17.** Narrow stress + usability hardening anchored to the three upcoming Camp Sabra weekend sets. Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar = usability-AND-access. Source context consumed: `.paul/MILESTONE-CONTEXT.md`. (v11.5 ✅ `v11.5.0`; v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`.)
-Phase: **✅ v11.6-01 (Stress sweep & triage) COMPLETE 1/1 plan — 1 of 4 phases done.** Loop closed (PLAN→APPLY→UNIFY). DISCOVERY deliverable shipped; unblocks 02/03/04. Phase dirs: `01-stress-sweep-triage` ✅ · `02-perform-reading-airtight` · `03-offsite-resilience` · `04-authoring-publish-roundtrip`.
-Plan: **None active.** Last closed: `v11.6-01-01` (research) — SUMMARY written; no prod code (boundary held). Deliverable: `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (31 findings WS-01..31). Harness: `e2e/v11-6-perform-stress.spec.ts` (re-runnable).
-Status: **Phase v11.6-01 COMPLETE — ready for `/paul:plan` (phase v11.6-02, Perform reading airtight).**
-Last activity: 2026-06-17 — **UNIFIED v11.6-01-01 + closed phase 01.** SUMMARY written, STATE/ROADMAP/paul.json evolved, committed+pushed to `origin master`. **Findings headlines:** offline reading WORKS live (→ phase 03 reframed to verify+close WS-10/WS-12, not re-introduce); WS-01 (P0 suspected — bonded non-song row bounces to song 1, hits Fri Juneteenth); WS-02 (P1 — CSP `img-src` proxy.ts:47 blocks Firestore `cleardot.gif`, rows can fail to hydrate on iPad/long-poll wifi); WS-03/04 text Fit-mode legibility+chord-drift; WS-11 dead in-app notify link.
+Phase: **🚧 v11.6-02 (Perform reading airtight) — PLANNING.** Complex phase (1 P0 + 8 P1 + 13 P2/P3) decomposed into a SEQUENCE of vertical slices: **Plan 01 = Navigation & hydration (WS-02 CSP / WS-01 P0 bonded-non-song bounce / WS-09 follower-yank)** · Plan 02 = Text-chart reading (WS-03/04/19/20/23/24/25) · Plan 03 = PDF/image+toolbar/drawer nav (WS-05/06/07/08/14–18/22/26–28). (v11.6-01 ✅ COMPLETE 1/4 phases.)
+Plan: **`v11.6-02-01` APPLIED — ready for `/paul:unify`.** 3 tasks all DONE+qualified: (T1) proxy.ts img-src += `https://www.google.com` (WS-02); (T2) PDFOverlay queue via shared `performQueueMembers`/`resolveQueueStart` helpers — includes any fileId-bearing row (WS-01) + non-destructive -1 resolution preserving follower's clamped queueIndex (WS-09); (T3) new `__tests__/pdf-overlay-queue.test.ts` (6 cases). Gates GREEN: 6 new + 22 existing pdf-overlay tests, `tsc --noEmit` exit 0, `next build --webpack` exit 0 (middleware compiled). `autonomous: true`. UAT items appended (real-iPad WS-01/09/02, post-deploy).
+Status: **APPLY complete — ready for `/paul:unify`.**
+Last activity: 2026-06-17 — **APPLIED v11.6-02-01.** Key implementation note: PDFOverlay's VIEWER renders from the `track` prop (real fileId), not the queue item — so widening the queue filter fixes the bounce WITHOUT touching `toQueueItem`'s `flow-N` synthesis (boundary held; `buildPerformQueue` is dead code). Triplicated filter DRY'd into one exported helper.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,10 +43,10 @@ Last activity: 2026-06-17 — **UNIFIED v11.6-01-01 + closed phase 01.** SUMMARY
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-01 loop CLOSED — phase 01 complete (1/4)]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-01 — APPLIED, ready for UNIFY]
+  ✓        ✓        ○
 ```
-(v11.6 OPENED 2026-06-17. Phase 01 (Stress sweep & triage) ✅ COMPLETE — loop closed, 31-finding report shipped, committed+pushed, no prod code. **Next: `/paul:plan` for phase v11.6-02 (Perform reading airtight)**, driven by the report's WS-NN punch list.)
+(v11.6 OPENED 2026-06-17. Phase 01 ✅ COMPLETE. **Phase 02 (Perform reading airtight) PLANNING — Plan 01 (Navigation & hydration) created. Next: `/paul:apply .paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-01-PLAN.md`** after /ui-ux-pro-max load. Then Plans 02 (text) → 03 (PDF/image+toolbar).)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
@@ -94,10 +94,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-01 loop CLOSED — phase 01 c
 
 ## Session Continuity
 
-Last session: 2026-06-17 — **OPENED v11.6 + drove phase v11.6-01 (Stress sweep & triage) end-to-end to completion.** discuss-milestone → milestone (scoped 4 phases, broad backlog → v11.7) → plan → apply → unify. Built the live Perform sweep harness + ran a 5-surface code audit → 31-finding triaged report; committed `c4f6aba72d`, pushed `origin master`. No prod code (discovery). **PAUSED at the phase-01/02 boundary — handoff written.**
-Stopped at: **✅ Phase v11.6-01 COMPLETE — loop closed, committed+pushed. No plan active. PAUSED (handoff `.paul/HANDOFF-2026-06-17.md`).**
-Next action: **`/paul:plan` for phase v11.6-02 (Perform reading airtight)** driven by the report's WS-NN punch list. Suggested 02 lead-ins: WS-02 (CSP one-line quick win), WS-01 (P0 — confirm live by opening a bonded prayer row on the Juneteenth set, then fix the queue filter), WS-03/04 (text Fit-mode legibility floor + transposed-chord drift). /ui-ux-pro-max BLOCKING on 02.
-Resume file: **`.paul/HANDOFF-2026-06-17.md`** (full self-contained pickup) → then `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (the triaged punch list) + `.paul/phases/v11.6-01-stress-sweep-triage/v11.6-01-01-SUMMARY.md`.
+Last session: 2026-06-17 — resumed from HANDOFF-2026-06-17 (archived to `.paul/handoffs/archive/`); `git pull` up to date; **created PLAN v11.6-02-01 (Navigation & hydration airtight)** for phase 02. Grounded the P0 in source before planning.
+Stopped at: **PLAN v11.6-02-01 created, awaiting approval — ready for `/paul:apply`.**
+Next action: load /ui-ux-pro-max (BLOCKING), then **`/paul:apply .paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-01-PLAN.md`**. After this plan closes: Plan 02 (text-chart reading WS-03/04/19/20/23/24/25) → Plan 03 (PDF/image+toolbar+drawer-nav).
+Resume file: **`.paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-01-PLAN.md`** → context in `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (the WS-NN punch list).
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context:
 - Oracle `docs/ACCESS-POLICY.md` **v0.4**; but **triage bar is widened to usability-AND-access** for this milestone (a real usability defect counts even if it doesn't contradict an access cell). err-public still governs access-shaped findings.
