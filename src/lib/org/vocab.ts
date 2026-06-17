@@ -24,6 +24,8 @@ export type VocabKey =
     | "editSetlistDetails"
     | "namePlaceholder"
     | "publicListingTitle"
+    // v11.5-05 (Q6): the public /perform listing subtitle line under the org name.
+    | "publicListingSubtitle"
     // v11-05-05: CreationWizard / public listing / display-card vocab.
     | "newSetlist"
     | "blankSetlist"
@@ -44,6 +46,8 @@ const BASE: Record<VocabKey, string> = {
     // v11-04-02: the public /perform <title>. CRC keeps the prior
     // synagogue-flavored wording byte-identical.
     publicListingTitle: "Upcoming Services & Setlists",
+    // v11.5-05 (Q6): CRC base = the CURRENT hardcoded subtitle verbatim (byte-identical).
+    publicListingSubtitle: "Public setlists",
     // v11-05-05: CRC base = the CURRENT hardcoded strings (byte-identical).
     newSetlist: "New Setlist",
     blankSetlist: "Blank setlist",
@@ -66,6 +70,8 @@ const OVERRIDES: Partial<Record<OrgId, Partial<Record<VocabKey, string>>>> = {
         editSetlistDetails: "Edit set details",
         namePlaceholder: "e.g., Friday night set",
         publicListingTitle: "Upcoming Shows & Sets",
+        // v11.5-05 (Q6): band voice — "Public sets" not "Public setlists".
+        publicListingSubtitle: "Public sets",
         // v11-05-05: band voice, consistent with the v11-03-03 "set"/"Shows" voice.
         newSetlist: "New Set",
         blankSetlist: "Blank set",

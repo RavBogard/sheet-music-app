@@ -13,9 +13,9 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 Milestone: **🚧 v11.5 — Bulletproof Performance** (OPENED 2026-06-11; 5 phases planned, v11.5-03 DROPPED; oracle `docs/ACCESS-POLICY.md` **v0.4**; brief `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md`; context `MILESTONE-CONTEXT.md` consumed + deleted). Phase dirs created under `.paul/phases/v11.5-0{1..5}-*`. (v11.4 ✅ tag `v11.4.0`; v11.3 ✅ `v11.3.0`; v11.2 ✅ `v11.2.0`.)
 Phase: **v11.5-05 (Consumer polish quick wins) — Planning (Plan 01 created).** v11.5-04 ✅ COMPLETE 4/4 (2026-06-16); v11.5-02 ✅ 4/4; v11.5-01 ✅ 3/3; **v11.5-03 photo-import ❌ DROPPED** → v11.6. **/ui-ux-pro-max BLOCKING** (UI phase). LAST v11.5 phase → its close = milestone close. **Phase decomposed into 3 plans (planner verify-first 2026-06-16):** Plan 01 = Q6 ("Public sets" subtitle vocab) + Q3 (branded QR-aware expired/used copy); Plan 02 = Q5 (display-time filename-ext strip on consumer surfaces) + F4 (BL key badges — VERIFY-FIRST: `SetlistRow` shows `displayKey` for ALL orgs w/ NO org gate → F4 root cause is data-missing `track.key` on BL OR a key-resolution gap, NOT a display gate; audit ref `bl-setlist-detail-1180.png`); Plan 03 = Q4 (anon `/setlists` hide writes + suppress junk/test drafts; current `/setlists` has NO junk filter, only `/perform` via `splitPublicSetlists`).
-Plan: **v11.5-05-01 created, awaiting APPLY.** `.paul/phases/v11.5-05-consumer-polish/v11.5-05-01-PLAN.md` (autonomous; Q6+Q3; 2 tasks; /ui-ux-pro-max BLOCKING). (v11.5-04 plans: 01 `d3ee8907fc` · 02 `fa3cfd2a8a` · 03 `7bffbca1a3` · 04 ops+docs; phase-close `2c0abcc3b4`.)
-Status: **PLAN created (v11.5-05-01), ready for APPLY.**
-Last activity: 2026-06-16 — **Resumed at v11.5-05 phase boundary; verify-first mapped all 5 items (Q3/Q4/Q5/Q6/F4) against deployed code (Explore + direct reads of vocab.ts/PublicSetlistListing/SetlistRow/SetlistCards/qr-page/design-audit); decomposed into 3 plans; authored Plan 01 (Q6+Q3).** Earlier (this milestone): closed Phase v11.5-04 (4/4); David confirmed STAYS admin.
+Plan: **v11.5-05-01 APPLIED ✅ (awaiting UNIFY).** `.paul/phases/v11.5-05-consumer-polish/v11.5-05-01-PLAN.md` (autonomous; Q6+Q3; 2 tasks; /ui-ux-pro-max consulted). Both tasks E/Q PASS: vocab 6/6 green · tsc clean · `next build --webpack` exit 0 · grep clean. SUMMARY written. CRC byte-identical. Plans 02 (Q5+F4) + 03 (Q4) not yet authored. (v11.5-04 plans: 01 `d3ee8907fc` · 02 `fa3cfd2a8a` · 03 `7bffbca1a3` · 04 ops+docs; phase-close `2c0abcc3b4`.)
+Status: **APPLY complete (v11.5-05-01), UNIFY pending.**
+Last activity: 2026-06-16 — **APPLIED Plan v11.5-05-01 (Q6+Q3).** Q6: new `publicListingSubtitle` vocab key (BASE "Public setlists" byte-identical, BL "Public sets") + `PublicSetlistListing.tsx:146` consumes `label(org,…)`. Q3: `qr/[code]/page.tsx` expired branch now `useOrg()`+`getOrgBranding().shortName`-branded, reworded "expired or was already used — ask for a fresh QR code on the device you're signing in to" (no CRC/iPad leak on BL). Tests + tsc + webpack build all green. Earlier: resumed at phase boundary; verify-first mapped all 5 items, decomposed into 3 plans, authored Plan 01.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -44,8 +44,8 @@ Last activity: 2026-06-16 — **Resumed at v11.5-05 phase boundary; verify-first
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-05-01 PLAN created, awaiting APPLY]
-  ✓        ○        ○
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-05-01 APPLIED, awaiting UNIFY]
+  ✓        ✓        ○
 ```
 (v11.5-04 ✅ COMPLETE 4/4 (2026-06-16): 01 `d3ee8907fc` · 02 `fa3cfd2a8a` · 03 `7bffbca1a3` · 04 ops+docs. Phase-close commit `2c0abcc3b4`. **Next: Phase v11.5-05 — Consumer polish quick wins (Q3/Q4/Q5/Q6/F4).** v11.5 milestone: 3 of 4 active phases done (v11.5-03 dropped); v11.5-05 is the LAST.)
 (v11.5-02 COMPLETE 4/4. v11.5-03 DROPPED → v11.6 backlog. v11.5-04 IN PROGRESS 3/4 — Plan 01 (error contracts) CLOSED `d3ee8907fc` · Plan 02 (library junk filter) CLOSED `fa3cfd2a8a` · **Plan 03 (harness code: H8 cascade + F-8 orgIds + M-12 TTL/docs + chord-cache tsc fix) CLOSED** · Plan 04 (ops+docs STOP-gate: delete_chart-author verify + prod junk-row deletion + .docx fixture + BL-bearer doc) NOT STARTED — its UNIFY closes the phase. NOTE: only 3 PLAN files exist; the file-count transition heuristic was deliberately overridden — Plan 04 is the phase closer.)
@@ -96,8 +96,8 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.5-05-01 PLAN created, awaiting 
 ## Session Continuity
 
 Last session: 2026-06-16 — **PAUSED mid-PLAN (v11.5-05 in PLAN; Plan 01 authored, awaiting APPLY).** Resumed from the v11.5-04-complete handoff; verify-first mapped all 5 items against deployed code (corrected the audit on F4: `SetlistRow` shows keys for ALL orgs → F4 is data/resolution, NOT a display gate); decomposed v11.5-05 into 3 plans; authored Plan 01 (Q6+Q3). STATE + ROADMAP updated. No commit yet this session unless WIP-committed at pause.
-Stopped at: **Plan v11.5-05-01 created (Q6+Q3), awaiting APPLY.** Phase decomposed into 3 plans (01 Q6+Q3 · 02 Q5+F4 · 03 Q4).
-Next action: **`/paul:apply .paul/phases/v11.5-05-consumer-polish/v11.5-05-01-PLAN.md`** — load /ui-ux-pro-max (BLOCKING) first. After 01 unify → Plan 02 (Q5+F4) → Plan 03 (Q4) → phase close = `/paul:complete-milestone` for v11.5. **Operational:** David STAYS admin (settled — do not re-raise). **Flagged (INFRA, not app code):** `/perform` cold·mobile CLS 0.250 + Vercel TTFB keep-warm. **v11.6 backlog candidate:** library folder/audio non-chart clutter cleanup (observed in Plan 04 probe; consumer-hidden).
+Stopped at: **Plan v11.5-05-01 APPLIED ✅ (Q6+Q3), awaiting UNIFY.** Phase decomposed into 3 plans (01 Q6+Q3 ✅ · 02 Q5+F4 · 03 Q4).
+Next action: **`/paul:unify .paul/phases/v11.5-05-consumer-polish/v11.5-05-01-PLAN.md`** — reconcile (no deviations) + close Plan 01. After unify → author+apply Plan 02 (Q5+F4) → Plan 03 (Q4) → phase close = `/paul:complete-milestone` for v11.5. /ui-ux-pro-max stays loaded (UI phase). **Operational:** David STAYS admin (settled — do not re-raise). **Flagged (INFRA, not app code):** `/perform` cold·mobile CLS 0.250 + Vercel TTFB keep-warm. **v11.6 backlog candidate:** library folder/audio non-chart clutter cleanup (observed in Plan 04 probe; consumer-hidden).
 Resume file: **.paul/HANDOFF-2026-06-16-v11.5-05-01-planned.md** (full pause context: 3-plan decomposition + F4 verify-first finding) → then the Plan 01 file + ROADMAP § Phase v11.5-05.
 Git strategy: master (prod). All committed + pushed. `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context:

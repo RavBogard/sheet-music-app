@@ -143,7 +143,7 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                 <Music className="h-6 w-6 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
                     <h1 className="text-xl font-bold">{orgName}</h1>
-                    <p className="text-sm text-muted-foreground">Public setlists</p>
+                    <p className="text-sm text-muted-foreground">{label(org, 'publicListingSubtitle')}</p>
                 </div>
                 {/* FU-c12-3 — the wake-lock toggle (and its `useWakeLock` hook)
                     only mount for SIGNED-IN viewers via <KeepAwakeControl/>.

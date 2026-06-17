@@ -35,6 +35,8 @@ describe("label", () => {
         ["upcomingSection", "Upcoming Services", "Upcoming Shows"],
         ["createNewSetlistHeading", "Create New Setlist", "Create New Set"],
         ["matrixTitle", "Liturgical Matrix", "Set Matrix"],
+        // v11.5-05 (Q6): public /perform listing subtitle.
+        ["publicListingSubtitle", "Public setlists", "Public sets"],
     ]
     it("CRC base strings are byte-identical to the current hardcoded UI", () => {
         for (const [key, crc] of V11_05_05_KEYS) {

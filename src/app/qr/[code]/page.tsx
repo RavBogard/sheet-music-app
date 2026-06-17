@@ -12,6 +12,8 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { auth } from "@/lib/firebase"
+import { useOrg } from "@/lib/org/org-context"
+import { getOrgBranding } from "@/lib/org/branding"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, Loader2, Monitor, AlertCircle, LogIn } from "lucide-react"
 import { logger } from "@/lib/logger"
@@ -26,6 +28,10 @@ export default function QRApprovePage() {
     const [state, setState] = useState<PageState>("loading")
     const [error, setError] = useState<string | null>(null)
     const [autoApproveAttempted, setAutoApproveAttempted] = useState(false)
+    // v11.5-05 (Q3): host-derived tenant name so the expired/used copy is
+    // branded on both sites (no hardcoded "CRC" leak on the BL host).
+    const org = useOrg()
+    const orgName = getOrgBranding(org).shortName
 
     // Check if the session is still valid
     useEffect(() => {
@@ -104,9 +110,9 @@ export default function QRApprovePage() {
         return (
             <Shell>
                 <AlertCircle className="h-12 w-12 text-amber-500" />
-                <h1 className="text-xl font-bold text-foreground">Session Expired</h1>
+                <h1 className="text-xl font-bold text-foreground">Sign-in code expired</h1>
                 <p className="text-muted-foreground text-sm text-center">
-                    This QR code has expired. Ask for a new one on the iPad.
+                    This {orgName} sign-in code expired or was already used. Ask for a fresh QR code on the device you&rsquo;re signing in to.
                 </p>
             </Shell>
         )

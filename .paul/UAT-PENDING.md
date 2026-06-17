@@ -555,3 +555,7 @@ shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iP
 - Two different iPads (or iPad + phone): zoom on device 1 does NOT change device 2's view (per-device proof — must NOT be shared).
 - PDF chart + MusicXML chart both honor the per-chart zoom; image chart unaffected (expected — native pinch, doesn't read store zoom).
 - Tap the zoom-% / Fit control → chart snaps back to auto-fit baseline (100%).
+
+## v11.5-05-01 (Q6 + Q3 — consumer copy/branding) — non-blocking, both hosts
+- Q6: on brotherslazaroff.live `/perform`, the listing subtitle under the band name reads **"Public sets"**; on centralreform.live `/perform` it still reads **"Public setlists"** (unchanged).
+- Q3: open a `/qr/<code>` link for an EXPIRED or ALREADY-USED code on a phone → heading "Sign-in code expired" + body names the tenant ("This CRC Music …" / "This Brothers Lazaroff …"), states "expired or was already used", and instructs to ask for a fresh QR code. Confirm NO hardcoded "CRC"/"iPad" leak on the BL host.
