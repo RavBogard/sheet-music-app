@@ -7,7 +7,7 @@
 See: .paul/PROJECT.md (updated 2026-06-07)
 
 **Core value:** The band gets the right charts + recordings on their iPads each week, and Daniel authors setlists conversationally via Claude + MCP. Now MULTI-TENANT (2nd live tenant: Brothers Lazaroff on brotherslazaroff.live).
-**Current focus:** **v11.5 — Bulletproof Performance** 🚧 (5 phases; oracle `docs/ACCESS-POLICY.md` v0.4; brief `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md`). Doctrine: bulletproof > novel; web app = performance + quick edits. **Phases v11.5-01 (tenancy + anon correctness) ✅ + v11.5-02 (performance surface) ✅ COMPLETE — 2 of 4 active done (v11.5-03 photo-import DROPPED 2026-06-14 → v11.6 backlog).** v11.5-02 4/4: 01 H3 `c687db99ee` · 02 H7/F1 `27c93a788b` · 03 F2 `80086d1f71` · 04 H1 (per-device per-chart zoom + Fit reset) `fac9db7fd4`. Next action: **`/paul:plan` Phase v11.5-04 (Hygiene & harness — P2; M-11/M-10 error contracts, library junk/orphan filter [VERIFY-FIRST cascade], H8 bus cascade, F-8/M-12 harness, .docx fixture, BL-tier bearer doc)**. v7.1 hardening continues in parallel via `.coord/`.
+**Current focus:** **v11.5 — Bulletproof Performance** 🚧 (5 phases; oracle `docs/ACCESS-POLICY.md` v0.4; brief `.paul/research/MILESTONE-BRIEF-v11.5-bulletproof-performance.md`). Doctrine: bulletproof > novel; web app = performance + quick edits. **Phases v11.5-01 ✅ + v11.5-02 ✅ + v11.5-04 ✅ COMPLETE — 3 of 4 active done (v11.5-03 photo-import DROPPED 2026-06-14 → v11.6 backlog).** Next action: **`/paul:plan` Phase v11.5-05 (Consumer polish quick wins — P3; Q3 QR-aware error copy, Q4 anon `/setlists` hide-writes + suppress junk drafts, Q5 no raw filenames, Q6 "Public sets" vocab, F4 key badges on broslaz; /ui-ux-pro-max BLOCKING).** LAST v11.5 phase → close = milestone close. v7.1 hardening continues in parallel via `.coord/`.
 
 ## Current Position
 
@@ -21,7 +21,7 @@ Last activity: 2026-06-16 — **Closed Phase v11.5-04 (4/4): ran Plan 04 ops+doc
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
 - **Band leaders:** explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle (today hand-set via scripts). The **authoring** tier.
 
-## Milestone Phases (v11.5 — 🚧 2 of 4 active complete; v11.5-03 dropped)
+## Milestone Phases (v11.5 — 🚧 3 of 4 active complete; v11.5-03 dropped)
 
 | Phase | Focus | Priority |
 |-------|-------|----------|
