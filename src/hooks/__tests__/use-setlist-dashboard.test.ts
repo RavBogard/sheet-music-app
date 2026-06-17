@@ -328,6 +328,53 @@ describe('useSetlistDashboard', () => {
     expect(mockPush).toHaveBeenCalledWith('/setlists/new-id')
   })
 
+  describe('v11.5-05-03 (Q4): junk/test visibility filter', () => {
+    it('drops isTest:true and test-uid-owned setlists for an AUTHED viewer', () => {
+      const setlists = [
+        makeSetlist({ id: 'real', name: 'Real Service', trackCount: 3 }),
+        makeSetlist({ id: 'flag', name: 'Test Fixture', isTest: true, trackCount: 3 }),
+        makeSetlist({ id: 'tuid', name: 'Test Owner', ownerId: 'test-abc', trackCount: 3 }),
+      ]
+      const { result } = renderHook(() => useSetlistDashboard({ initialSetlists: setlists }))
+      const ids = result.current.displayedSetlists.map(s => s.id)
+      expect(ids).toEqual(['real'])
+    })
+
+    it('drops isTest + test-uid rows for ANON too', () => {
+      mockUseAuth.mockReturnValue({ user: null, signIn: vi.fn(), isMember: false, isBandLeader: false, isAdmin: false })
+      const setlists = [
+        makeSetlist({ id: 'real', name: 'Real Service', trackCount: 3 }),
+        makeSetlist({ id: 'flag', name: 'Test Fixture', isTest: true, trackCount: 3 }),
+        makeSetlist({ id: 'tuid', name: 'Test Owner', ownerId: 'test-abc', trackCount: 3 }),
+      ]
+      const { result } = renderHook(() => useSetlistDashboard({ initialSetlists: setlists }))
+      const ids = result.current.displayedSetlists.map(s => s.id)
+      expect(ids).toEqual(['real'])
+    })
+
+    it('hides zero-track drafts from ANON but keeps a non-empty row', () => {
+      mockUseAuth.mockReturnValue({ user: null, signIn: vi.fn(), isMember: false, isBandLeader: false, isAdmin: false })
+      const setlists = [
+        makeSetlist({ id: 'real', name: 'Real Service', trackCount: 2 }),
+        makeSetlist({ id: 'draft', name: 'New Setlist', trackCount: 0, fileIds: [] }),
+      ]
+      const { result } = renderHook(() => useSetlistDashboard({ initialSetlists: setlists }))
+      const ids = result.current.displayedSetlists.map(s => s.id)
+      expect(ids).toEqual(['real'])
+    })
+
+    it('KEEPS a zero-track draft for a signed-in user (owners see their drafts)', () => {
+      // default mockUseAuth = signed-in user
+      const setlists = [
+        makeSetlist({ id: 'real', name: 'Real Service', trackCount: 2 }),
+        makeSetlist({ id: 'draft', name: 'New Setlist', trackCount: 0, fileIds: [] }),
+      ]
+      const { result } = renderHook(() => useSetlistDashboard({ initialSetlists: setlists }))
+      const ids = result.current.displayedSetlists.map(s => s.id).sort()
+      expect(ids).toEqual(['draft', 'real'])
+    })
+  })
+
   describe('past ordering', () => {
     it('pastOrNoDate sorts dated-past DESC with null-dated trailing', () => {
       const past1 = makeSetlist({ id: 'past-old', name: 'Old', eventDate: '2026-01-05T12:00:00Z' })

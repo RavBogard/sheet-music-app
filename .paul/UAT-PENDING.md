@@ -564,3 +564,7 @@ shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iP
 - Q5: on a setlist with a chart whose filename leaked (e.g. CRC "Oseh shalom - Nava tehila.pdf", BL "Queen Jane Approximately.docx"), the consumer setlist-detail row title shows NO extension. Both hosts.
 - F4: key badges render on a setlist row whenever the track (or its library_index row) has a key — verify on a CRC setlist that has keys.
 - **F4 AUTHORING FOLLOW-UP (verdict B — Daniel/David action, not code):** the live BL setlist "Tower Grove Farmer's Market" has NO keys anywhere (track + library_index + songs.defaults all null). BL key badges will stay absent until keys are authored on the BL charts via MCP `update_song` / `edit_library_entry`. The read-time resolution will surface them automatically once set. See `.paul/research/v11-5-05-02-f4-bl-key-probe.md`.
+
+## v11.5-05-03 (Q4 anon /setlists cleanup) — non-blocking
+- As ANON on CRC `/setlists`: NO test fixtures, NO empty "New Setlist" drafts, and NO per-card Edit button or Download icon (card tap → view + Perform still work).
+- As a signed-in user on `/setlists`: in-progress drafts (incl. zero-track) still visible, and Edit + Download + overflow menu all present.

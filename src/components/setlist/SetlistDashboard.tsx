@@ -163,6 +163,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                             onDelete={handleDeleteClick}
                                                             canDuplicate={!!user}
                                                             canDelete={canEditSetlist(setlist, { uid: user?.uid, isBandLeader, isAdmin })}
+                                                            canEdit={!!user}
                                                             isAdmin={isAdmin}
                                                         />
                                                     ))}
@@ -195,6 +196,7 @@ export function SetlistDashboard(props: UseSetlistDashboardProps) {
                                                             onDelete={handleDeleteClick}
                                                             canDuplicate={!!user}
                                                             canDelete={canEditSetlist(setlist, { uid: user?.uid, isBandLeader, isAdmin })}
+                                                            canEdit={!!user}
                                                             isAdmin={isAdmin}
                                                         />
                                                     ))}

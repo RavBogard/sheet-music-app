@@ -56,10 +56,13 @@ export interface UpcomingCardProps {
     onDelete: (setlist: Setlist, e: React.MouseEvent) => void
     canDelete: boolean
     canDuplicate: boolean
+    /** v11.5-05-03 (Q4): show the Edit + Download (offline) controls only to
+     *  signed-in users. Anon visitors view via the card tap / Perform. */
+    canEdit: boolean
     isAdmin: boolean
 }
 
-export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDownload, isDownloading, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onSaveAsDefault, onDelete, canDelete, canDuplicate, isAdmin }: UpcomingCardProps) {
+export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDownload, isDownloading, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onSaveAsDefault, onDelete, canDelete, canDuplicate, canEdit, isAdmin }: UpcomingCardProps) {
     const isLoading = navigatingTo === setlist.id
     const org = useOrg() // v11-05-05: gate the liturgical "Save as Default" affordance for band tenants
     const [offlineStatus, setOfflineStatus] = useState<'checking' | 'full' | 'partial' | 'none'>('checking')
@@ -130,29 +133,34 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                 column gets allocated space first. Inline Edit/Download remain
                 on ≥lg viewports where there's room. */}
             <div className="flex items-center gap-2 relative z-10 shrink-0">
-                <Button
-                    variant="outline"
-                    onClick={(e) => { e.stopPropagation(); onEdit(e); }}
-                    className="hidden lg:flex border-brand/20 text-foreground hover:bg-brand hover:text-brand-foreground hover:border-brand rounded-full px-4 h-11"
-                    aria-label={`Edit setlist — ${setlist.name}`}
-                >
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
-                </Button>
+                {canEdit && (
+                    <Button
+                        variant="outline"
+                        onClick={(e) => { e.stopPropagation(); onEdit(e); }}
+                        className="hidden lg:flex border-brand/20 text-foreground hover:bg-brand hover:text-brand-foreground hover:border-brand rounded-full px-4 h-11"
+                        aria-label={`Edit setlist — ${setlist.name}`}
+                    >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                    </Button>
+                )}
 
-                <button
-                    type="button"
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        onDownload(setlist)
-                    }}
-                    className="hidden lg:flex w-11 h-11 hover:bg-white/10 rounded-full items-center justify-center transition-colors cursor-pointer bg-transparent border-0"
-                    aria-label={`Download setlist for offline — ${setlist.name}`}
-                    title="Download for Offline"
-                >
-                    <Download className={`h-5 w-5 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
-                </button>
+                {canEdit && (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onDownload(setlist)
+                        }}
+                        className="hidden lg:flex w-11 h-11 hover:bg-white/10 rounded-full items-center justify-center transition-colors cursor-pointer bg-transparent border-0"
+                        aria-label={`Download setlist for offline — ${setlist.name}`}
+                        title="Download for Offline"
+                    >
+                        <Download className={`h-5 w-5 text-muted-foreground hover:text-foreground ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
+                    </button>
+                )}
 
+                {(canEdit || canDuplicate || canDelete) && (
                 <div className="md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -171,14 +179,18 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                                     Clone for Next Week
                                 </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(e); }} className="lg:hidden">
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Edit Setlist
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDownload(setlist); }} className="lg:hidden">
-                                <Download className={`h-4 w-4 mr-2 ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
-                                Download for Offline
-                            </DropdownMenuItem>
+                            {canEdit && (
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(e); }} className="lg:hidden">
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    Edit Setlist
+                                </DropdownMenuItem>
+                            )}
+                            {canEdit && (
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDownload(setlist); }} className="lg:hidden">
+                                    <Download className={`h-4 w-4 mr-2 ${isDownloading ? 'animate-pulse text-brand' : ''}`} />
+                                    Download for Offline
+                                </DropdownMenuItem>
+                            )}
                             {canDuplicate && (
                                 <DropdownMenuItem onClick={(e) => onDuplicate(setlist, e)}>
                                     <Copy className="h-4 w-4 mr-2" />
@@ -221,6 +233,7 @@ export function UpcomingSetlistCard({ setlist, onPerform, onEdit, navigatingTo, 
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
+                )}
             </div>
         </article>
     )
@@ -240,10 +253,12 @@ export interface PastCardProps {
     onDelete?: (setlist: Setlist, e: React.MouseEvent) => void
     canDelete: boolean
     canDuplicate: boolean
+    /** v11.5-05-03 (Q4): show the inline Edit control only to signed-in users. */
+    canEdit: boolean
     isAdmin: boolean
 }
 
-export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onSaveAsDefault, onDelete, canDelete, canDuplicate, isAdmin }: PastCardProps) {
+export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplicate, onCloneNextWeek, onSaveAsTemplate, onSaveAsDefault, onDelete, canDelete, canDuplicate, canEdit, isAdmin }: PastCardProps) {
     const isLoading = navigatingTo === setlist.id
     const org = useOrg() // v11-05-05: gate the liturgical "Save as Default" affordance for band tenants
 
@@ -292,15 +307,17 @@ export function SetlistCard({ setlist, onPerform, onEdit, navigatingTo, onDuplic
 
             {/* Action Menu */}
             <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity relative z-10">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => { e.stopPropagation(); onEdit(e); }}
-                    aria-label={`Edit setlist — ${setlist.name}`}
-                    className="h-11 w-11 hover:bg-white/10 rounded-full text-muted-foreground hover:text-foreground"
-                >
-                    <Pencil className="h-4 w-4" />
-                </Button>
+                {canEdit && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => { e.stopPropagation(); onEdit(e); }}
+                        aria-label={`Edit setlist — ${setlist.name}`}
+                        className="h-11 w-11 hover:bg-white/10 rounded-full text-muted-foreground hover:text-foreground"
+                    >
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                )}
 
                 {(canDuplicate || canDelete) && (
                     <DropdownMenu>

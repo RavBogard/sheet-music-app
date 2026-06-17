@@ -16,6 +16,13 @@ import { useLibraryStore } from "@/lib/library-store"
 import { useLibrary } from "@/hooks/use-library"
 import { logger } from "@/lib/logger"
 import { toDate as toDateHelper } from "@/lib/firestore-helpers"
+import { isNonTestSetlist } from "@/components/performance/public-setlist-order"
+
+/** v11.5-05-03 (Q4): a real, non-empty setlist has at least one track. Empty
+ *  drafts ("New Setlist"/"testing") are hidden from ANON browsers (owners keep
+ *  them). trackCount is the denormalized count; songCount is the older alias. */
+const hasTracks = (s: Setlist): boolean =>
+    ((s.trackCount ?? (s as { songCount?: number }).songCount ?? 0) as number) > 0
 
 export interface UseSetlistDashboardProps {
     onBack?: () => void
@@ -400,7 +407,12 @@ export function useSetlistDashboard({
     }, [setlists])
 
     const displayedSetlists = useMemo(() => {
-        let filtered = allSetlists
+        // v11.5-05-03 (Q4): drop test fixtures for ALL viewers (parity with
+        // /perform + DashboardClient); additionally hide empty drafts from ANON
+        // (no signed-in user) so the public archive isn't a wall of "New Setlist"
+        // junk — owners still see their own in-progress drafts.
+        const visible = allSetlists.filter(isNonTestSetlist)
+        let filtered = user ? visible : visible.filter(hasTracks)
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase()
             filtered = filtered.filter(s => {
@@ -421,7 +433,7 @@ export function useSetlistDashboard({
             filtered = filtered.filter(s => s.rabbi === rabbiFilter)
         }
         return filtered
-    }, [allSetlists, searchQuery, rabbiFilter])
+    }, [allSetlists, searchQuery, rabbiFilter, user])
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
