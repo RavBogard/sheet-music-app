@@ -13,9 +13,9 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 Milestone: **🚧 v11.6 — Airtight (Weekend Stress & Usability) — OPENED 2026-06-17.** Narrow stress + usability hardening anchored to the three upcoming Camp Sabra weekend sets. Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar = usability-AND-access. Source context consumed: `.paul/MILESTONE-CONTEXT.md`. (v11.5 ✅ `v11.5.0`; v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`.)
 Phase: **✅ v11.6-02 (Perform reading airtight) — COMPLETE 7/7 (2026-06-18, phase tip `6dee681893`).** All 7 plans shipped: 01 nav+hydration `49dbe460e7` (WS-01/02/09) · 02 text Fit-core `34a39fba30` (WS-03/04/20) · 03 slash-bass `8f7f1a5bd7` (WS-25) · 04 PDF render `ea4dcd7ec9` (WS-05/07/16) · 05 reading-controls+fit-page `241e6e04e8` (WS-18/22/26/14) · 06 image-viewer `5f15209a0b` (WS-06/15) · 07 drawer-nav `6dee681893` (WS-08/28). WS-19/23/24→v11.7; WS-17→cycle-13a. **→ Phase v11.6-03 (Off-site resilience), ready to plan.** (v11.6-01 ✅ + 02 ✅ = 2/4 phases.)
-Plan: **`v11.6-03-01` ✅ CREATED, awaiting approval.** Verify-first + decide (NO prod code): Task 1 verifies the 5 residual offline gaps (WS-10/12/13/29/30) against DEPLOYED code + writes `.paul/research/v11-6-03-offline-gap-verify-2026-06-18.md`; Task 2 = **`checkpoint:decision`** close-scope fork (A camp-only WS-12/13 [recommended] · B +WS-10 lone-P1 · C full sweep). `autonomous:false` (the decision gates Plan 02 implementation, where /ui-ux-pro-max is BLOCKING). **Reframed by Phase-01: offline reading WORKS** (SW+IDB cache re-introduced 2026-05-28) → 03 = verify + close narrow gaps, NOT re-introduce.
-Status: **PLAN v11.6-03-01 created — ready for APPLY** (apply runs the verify + surfaces the close-scope decision to Daniel).
-Last activity: 2026-06-18 — **PLANNED v11.6-03-01** (verify 5 offline gaps + close-scope checkpoint:decision). Prior: APPLIED+UNIFIED v11.6-02-07 + phase-02 transition (`6dee681893`).
+Plan: **`v11.6-03-01` ✅ COMPLETE (verify + decide).** Verified the 5 residual offline gaps vs deployed code (`.paul/research/v11-6-03-offline-gap-verify-2026-06-18.md`); **`checkpoint:decision` RESOLVED → C (full sweep)** — fix all of WS-10 (MusicXML IDB-first) / WS-12 (offline snapshot-error blank guard) / WS-13 (hard "all N saved offline" gate) / WS-29 (audio best-effort + accept WebKit blob residual) / WS-30 (widen SW online-session caching). **Reframed by Phase-01: offline reading WORKS** (SW+IDB re-introduced 2026-05-28) → close gaps, NOT re-introduce. Scope C is COMPLEX → decompose into vertical slices: **02 = WS-12 + WS-13 (camp-relevant P2s)** · 03 = WS-10 (MusicXML) · 04 = WS-29/30 (SW/audio edges). /ui-ux-pro-max BLOCKING on the WS-12/13 + any UI.
+Status: **v11.6-03-01 UNIFIED (decision C). Next: PLAN v11.6-03-02 (WS-12 + WS-13).**
+Last activity: 2026-06-18 — **UNIFIED v11.6-03-01 — decision C (full sweep)**. Prior this session: shipped P0 gig-packet text-chart fix (`a48382929a`, prod-verified 16/16); v11.6-02 ✅ + transition.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,10 +43,10 @@ Last activity: 2026-06-18 — **PLANNED v11.6-03-01** (verify 5 offline gaps + c
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-03-01 PLAN created, awaiting approval]
-  ✓        ○        ○
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-03-01 ✅ (verify+decide, decision C); next: PLAN v11.6-03-02]
+  ✓        ✓        ✓
 ```
-(v11.6 OPENED 2026-06-17. **Phase 01 ✅ + Phase 02 ✅ COMPLETE (2/4).** **Phase 03 PLANNING — Plan 01 created (verify 5 offline gaps + close-scope checkpoint:decision; autonomous:false), awaiting `/paul:apply`.** Phase 02 tip `6dee681893`. WS-19/23/24 deferred→v11.7; WS-17→cycle-13a.)
+(v11.6 OPENED 2026-06-17. **Phase 01 ✅ + Phase 02 ✅ (2/4); Phase 03 IN PROGRESS.** v11.6-03-01 verify+decide CLOSED → **decision C (full sweep, all 5 gaps)**; implementation decomposed 02 (WS-12/13) → 03 (WS-10) → 04 (WS-29/30). P0 gig-packet text-chart fix shipped mid-phase (`a48382929a`). WS-19/23/24→v11.7; WS-17→cycle-13a.)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
