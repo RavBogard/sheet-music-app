@@ -593,3 +593,8 @@ shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iP
 - **WS-26 honest Fit control:** the % readout is labelled "Reset zoom to 100%" (no longer "Fit to width"); on a PDF chart a separate fit-mode toggle (icon) sits in the zoom group.
 - **WS-14 fit-page (landscape):** open the **Shir Shabbat—Juneteenth** set (`a84f8cce-...`, all PDF) on iPad **landscape**; a portrait page initially overflows below the fold (fit-width). Tap the fit-mode toggle → the WHOLE page fits within the screen height (no vertical scroll needed to read it); toggle back → fit-width. Default on opening every chart is fit-width.
 - **Harness note (carry to phase 03):** the live sweep showed INTERMITTENT `open-chart` timeouts on text sets in headless WebKit (each set opened in ≥1 orientation; flaky across re-runs) — consistent with the known headless-WebKit + Firestore-streaming lower-fidelity caveat, NOT a product regression. Confirm real-device chart-open reliability on camp wifi.
+
+## v11.6-02-06 (Image viewer — WS-06/15) — real 11" iPad Safari, post-deploy
+- **WS-06 zoom:** open an IMAGE chart in Perform (not in the 3 weekend sets — use any image-typed chart). Tap Zoom-in / Zoom-out → the image actually scales (was inert before); at 100% it's fit-to-screen (object-contain); when zoomed past the screen you can scroll/pan to its edges. Reopen the chart → it remembers the per-device zoom.
+- **WS-15 retry:** force an image-chart load failure (e.g. offline or a broken bond) → an alert with a Retry button (≥44px) appears (not a dead "try refreshing"); tap Retry → it re-attempts and, on success, shows the image.
+- Verified by unit tests (zoom application + retry recovery) in jsdom; CSS `zoom` pan behavior + real image decode are the real-device check.

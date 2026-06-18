@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Loader2, AlertCircle } from "lucide-react"
+import { Loader2, AlertCircle, RefreshCw } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useMusicStore } from "@/lib/store"
 
 interface ImageScoreViewerProps {
     url: string
@@ -10,9 +12,23 @@ interface ImageScoreViewerProps {
 
 export function ImageScoreViewer({ url, alt }: ImageScoreViewerProps) {
     const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading")
+    // WS-15: bump to remount the <img> and re-attempt the load. Remount (NOT a
+    // cache-bust query param) keeps signed Storage URLs valid — their signature
+    // covers the query string, so appending `?_r=` would 403. The browser owns
+    // the request here (unlike PDFViewer, which fetches bytes itself and can
+    // cache-bust safely).
+    const [reloadNonce, setReloadNonce] = useState(0)
+    // WS-06: honor the toolbar/store zoom (restored per-device from chartZoom on
+    // queue transition, exactly like PDF). CSS `zoom` scales the element's LAYOUT
+    // box, so the `overflow-auto` container can scroll/pan a zoomed image to its
+    // edges — `transform: scale()` would not grow the scroll area. Supported on
+    // the target browsers (iPad WebKit + desktop Chrome; Firefox 126+). zoom 1
+    // keeps the current object-contain fit-to-container baseline.
+    const zoom = useMusicStore((s) => s.zoom)
 
     useEffect(() => {
         setStatus("loading")
+        setReloadNonce(0)
     }, [url])
 
     if (!url) {
@@ -24,23 +40,41 @@ export function ImageScoreViewer({ url, alt }: ImageScoreViewerProps) {
     }
 
     return (
-        <div className="relative flex h-full w-full items-center justify-center bg-background">
+        <div className="relative flex h-full w-full items-center justify-center overflow-auto bg-background">
             {status === "loading" && (
                 <div className="absolute inset-0 flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             )}
             {status === "error" && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <div
+                    role="alert"
+                    className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground"
+                >
                     <AlertCircle className="h-8 w-8" aria-hidden="true" />
-                    <p>Image failed to load — try refreshing</p>
+                    <p>Couldn&apos;t load this image.</p>
+                    <Button
+                        variant="secondary"
+                        className="h-11"
+                        onClick={() => {
+                            setStatus("loading")
+                            setReloadNonce((n) => n + 1)
+                        }}
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                        Retry
+                    </Button>
                 </div>
             )}
-            {/* Native <img> renders the chart. Browsers handle pinch-zoom natively
-                on touch devices; mouse-wheel zoom is a polish item for v7.x. */}
+            {/* WS-06: CSS `zoom` scales the image + its layout box (pannable inside
+                the overflow-auto parent); native pinch-zoom still works on touch.
+                WS-15: `key={reloadNonce}` remounts on Retry → the browser
+                re-requests the same url (signature-safe). */}
             <img
+                key={reloadNonce}
                 src={url}
                 alt={alt ?? "Chart"}
+                style={{ zoom }}
                 className={
                     "max-h-full max-w-full object-contain transition-opacity duration-200 motion-reduce:transition-none " +
                     (status === "loaded" ? "opacity-100" : "opacity-0")
