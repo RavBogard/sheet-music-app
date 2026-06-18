@@ -13,9 +13,9 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 Milestone: **🚧 v11.6 — Airtight (Weekend Stress & Usability) — OPENED 2026-06-17.** Narrow stress + usability hardening anchored to the three upcoming Camp Sabra weekend sets. Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar = usability-AND-access. Source context consumed: `.paul/MILESTONE-CONTEXT.md`. (v11.5 ✅ `v11.5.0`; v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`.)
 Phase: **🚧 v11.6-02 (Perform reading airtight) — IN PROGRESS.** Complex phase RE-DECOMPOSED into 4 vertical slices (text split P1-core vs nits): **Plan 01 ✅ Nav & hydration (WS-02/01/09)** `49dbe460e7` · **Plan 02 = Text Fit-mode P1 core (WS-03 legibility floor+true-width+scroll / WS-04 transposed-chord alignment / WS-20 touch-targets)** · Plan 03 = Text chord-correctness nits (WS-19 regex / WS-23 preferFlats / WS-24 gap / WS-25 slash-bass) · Plan 04 = PDF/image+toolbar+drawer-nav (WS-05/06/07/08/14–18/22/26–28). (v11.6-01 ✅ COMPLETE 1/4 phases.)
-Plan: **`v11.6-02-03` ✅ CLOSED (loop complete), commit `8f7f1a5bd7` pushed.** WS-25 slash-bass spells Bb/Eb not A#/D# (in-key context preserved). Next: **`/paul:plan` for Plan 04 (PDF/image+toolbar+drawer-nav — the last phase-02 slice).** WS-19/23/24 deferred→v11.7.
-Status: **Plan v11.6-02-03 CLOSED — phase 02 at 3 of 4 plans. Ready for `/paul:plan` (Plan 04).**
-Last activity: 2026-06-17 — **UNIFIED v11.6-02-03 + committed `8f7f1a5bd7` (pushed `9291c34220..8f7f1a5bd7`, Vercel auto-deploy).** Text-chart work for phase 02 complete (Plans 02+03); only Plan 04 (PDF/image+toolbar+drawer-nav) remains.
+Plan: **`v11.6-02-04` APPLIED — ready for `/paul:unify`.** PDF render reliability: T1 render-stage watchdog (30s → Retry not infinite spinner) + width>0 page guard + "Measuring…" placeholder (WS-05); T2 "Page X of N" indicator via IntersectionObserver, hidden for single-page (WS-07); T3 retry-budget reset on rotate-scale resize (WS-16). Decision logic extracted to pure `pdf-viewer-state.ts` (`shouldStartRenderWatchdog`/`isRotateScaleResize`) — unit-testable apart from jsdom-hostile react-pdf. Gates GREEN: new `pdf-viewer.test.tsx` 12 cases (+83 music dir all pass), `tsc` 0, `next build --webpack` 0. UAT appended (real-iPad render-hang/indicator/rotate). `autonomous: true`. **"Plan 04" RE-SLICED→6-plan phase: 04 PDF-render · 05 toolbar+image · 06 drawer-nav.**
+Status: **APPLY complete — ready for `/paul:unify`.**
+Last activity: 2026-06-17 — **APPLIED v11.6-02-04.** Brittle fake-timer+react-pdf watchdog tests abandoned for pure-helper decision tests (the timer/render wiring is jsdom-hostile; real behavior→UAT). PDFViewer fetch/offline/worker paths untouched (boundary held).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,10 +43,10 @@ Last activity: 2026-06-17 — **UNIFIED v11.6-02-03 + committed `8f7f1a5bd7` (pu
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-03 loop CLOSED — phase 02 at 3/4 plans]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-04 — APPLIED, ready for UNIFY]
+  ✓        ✓        ○
 ```
-(v11.6 OPENED 2026-06-17. Phase 01 ✅. **Phase 02 IN PROGRESS (3/4 done) — Plans 01 `49dbe460e7` / 02 `34a39fba30` / 03 `8f7f1a5bd7` shipped. Next: `/paul:plan` for Plan 04 (PDF/image+toolbar+drawer-nav)** — the final phase-02 slice. WS-19/23/24 deferred→v11.7.)
+(v11.6 OPENED 2026-06-17. Phase 01 ✅. **Phase 02 IN PROGRESS (3 plans shipped, now 6-plan phase) — Plan 04 (PDF render reliability WS-05/07/16) created. Next: `/paul:apply .paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-04-PLAN.md`.** Then Plan 05 (toolbar+image) → Plan 06 (drawer-nav), then phase 02 closes. WS-19/23/24 deferred→v11.7.)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
@@ -96,9 +96,9 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-03 loop CLOSED — phase 0
 ## Session Continuity
 
 Last session: 2026-06-17 — closed THREE full PAUL loops in phase 02: **01 Nav & hydration** `49dbe460e7` + **02 Text Fit-mode reading airtight** `34a39fba30` + **03 WS-25 slash-bass spelling** `8f7f1a5bd7`. All pushed to `origin master` (Vercel auto-deploy).
-Stopped at: **Plan v11.6-02-03 CLOSED. Phase 02 at 3 of 4 plans.**
-Next action: **`/paul:plan` for Plan 04 (PDF/image + toolbar + drawer-nav)** — the LAST phase-02 slice, then phase 02 closes (transition). Findings: WS-05 PDF render-stuck-spinner (no watchdog/Retry) · WS-07 multi-page PDF no page nav · WS-08 drawer→single-chart route kills Next/Prev · WS-22 transpose-unreachable (verify) + WS-06 image zoom inert / WS-14 landscape fit-page / WS-15 image retry / WS-16 retry-budget reset / WS-17 dead current-position / WS-18 zoom-% hidden on iPad / WS-26 fit-to-width / WS-27 DPR / WS-28 SwipeOverlay stale promise. /ui-ux-pro-max BLOCKING. Likely needs sub-slicing (≥12 findings).
-Resume file: **`.paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-03-SUMMARY.md`** → context in `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md`.
+Stopped at: **PLAN v11.6-02-04 created, awaiting approval. Phase 02 now a 6-plan phase (3 shipped).**
+Next action: **`/paul:apply .paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-04-PLAN.md`** (PDF render reliability WS-05/07/16). After close → **Plan 05 (toolbar+image: WS-18 zoom-% iPad / WS-22 transpose reach / WS-06 image zoom / WS-15 image retry / WS-14 landscape fit-page / WS-26 fit-to-width)** → **Plan 06 (drawer-nav+dead-code: WS-08 drawer nav-death P1 / WS-17 dead current-position / WS-28 SwipeOverlay)** → phase-02 close (transition). WS-27 DPR → UAT verify only. /ui-ux-pro-max BLOCKING on all.
+Resume file: **`.paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-04-PLAN.md`** → context in `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md`.
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context:
 - Oracle `docs/ACCESS-POLICY.md` **v0.4**; but **triage bar is widened to usability-AND-access** for this milestone (a real usability defect counts even if it doesn't contradict an access cell). err-public still governs access-shaped findings.

@@ -580,3 +580,9 @@ shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iP
 - **WS-04 transposed-chord alignment:** on a text chart, transpose so a chord widens (e.g. C→Db, G→F#m); chords stay over their syllables — no progressive drift across the line.
 - **WS-20 touch targets:** the Fit/Wrap toggle and the zoom −/+ buttons are comfortably tappable (≥44px) and don't obscure the last chart lines.
 - jsdom has no layout engine, so font-floor/alignment are verified by unit + structure tests only — real-device is the authoritative legibility/alignment check.
+
+## v11.6-02-04 (PDF render reliability — WS-05/07/16) — real 11" iPad Safari, post-deploy
+- **WS-05 render hang:** open a PDF chart (Shir Shabbat—Juneteenth set, all PDF) on iPad; if pdfjs render stalls, after ~30s the viewer shows "Chart took too long to render" + Retry (NOT an endless "Rendering…" spinner). Also: rotate the device DURING a chart load → no permanently-blank page (a brief "Measuring…" then the chart, never a 0-width blank).
+- **WS-07 multi-page:** open a 2+ page PDF chart → a "Page X of N" indicator is visible and updates as you scroll; a single-page chart shows no indicator.
+- **WS-16 rotate recovery:** force a chart into the error/Retry-exhausted state, then rotate the iPad → the Retry affordance returns (fresh budget), no leave-and-re-enter needed.
+- react-pdf does not render in jsdom, so watchdog/indicator/width/retry-reset are unit-tested at the decision+wiring level only — real-device is authoritative for actual pdfjs render behavior + WS-27 DPR sharpness.

@@ -15,6 +15,7 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import { logger } from "@/lib/logger"
 import { getFile } from '@/lib/offline-idb'
 import { desiredWorkerSrc, ensureOfflineWorkerReady } from '@/lib/pdf-worker-offline'
+import { shouldStartRenderWatchdog, isRotateScaleResize } from './pdf-viewer-state'
 
 // Configure PDF.js worker — use local copy from public/ (copied by
 // scripts/copy-pdf-worker.js during postinstall + build). Local worker
@@ -74,6 +75,13 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     const [source, setSource] = useState<{ data: Uint8Array } | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
+    // WS-05: render-stage watchdog — the fetch timeout below only covers the
+    // fetch; once bytes arrive a pdfjs render hang would otherwise spin forever.
+    const [renderTimedOut, setRenderTimedOut] = useState(false)
+    const renderWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const RENDER_WATCHDOG_MS = 30_000
+    // WS-07: which page is in view (for the multi-page indicator).
+    const [currentPage, setCurrentPage] = useState(1)
 
     // Defense-in-depth — react-pdf's barrel set workerSrc to a stub at
     // module load, so we re-assert the correct URL on every render rather
@@ -229,7 +237,33 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     useEffect(() => {
         retryCountRef.current = 0
         setRetryBust(0)
+        setRenderTimedOut(false)
+        setCurrentPage(1)
     }, [url])
+
+    // WS-05 render-stage watchdog: once bytes are in hand (`source` set, not
+    // loading, no error) but the document hasn't reported its page count yet
+    // (`numPages === 0`), give pdfjs a bounded window to render. If it never
+    // calls onDocumentLoadSuccess (the silent "Rendering…" hang), flip to an
+    // error+Retry state instead of spinning forever. Clears the moment the doc
+    // loads or any dep changes (Retry bumps retryBust → fresh window).
+    useEffect(() => {
+        if (renderWatchdogRef.current) {
+            clearTimeout(renderWatchdogRef.current)
+            renderWatchdogRef.current = null
+        }
+        if (shouldStartRenderWatchdog({ hasSource: !!source, loading, hasError: !!error, numPages, renderTimedOut })) {
+            renderWatchdogRef.current = setTimeout(() => {
+                setRenderTimedOut(true)
+            }, RENDER_WATCHDOG_MS)
+        }
+        return () => {
+            if (renderWatchdogRef.current) {
+                clearTimeout(renderWatchdogRef.current)
+                renderWatchdogRef.current = null
+            }
+        }
+    }, [source, loading, error, numPages, renderTimedOut, retryBust])
 
     // Resolve source when URL changes. A 60s timeout covers hung venue networks.
     useEffect(() => {
@@ -257,15 +291,23 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
         if (retryCountRef.current >= MAX_RETRIES) return
         retryCountRef.current++
         resolvedUrlRef.current = null
+        setRenderTimedOut(false)
         // Bumping the bust counter retriggers the effect, which creates a fresh
         // AbortController + timer. Cache-bust param is appended in the effect.
         setRetryBust(retryCountRef.current)
     }
 
-    const exhausted = retryCountRef.current >= MAX_RETRIES && !!error
+    // A failed state is either a fetch/render error OR the render watchdog
+    // tripping. `renderMessage` gives the watchdog its own user-facing copy.
+    const renderMessage = renderTimedOut
+        ? 'The chart took too long to render. Tap Retry.'
+        : null
+    const failed = !!error || renderTimedOut
+    const exhausted = retryCountRef.current >= MAX_RETRIES && failed
 
     // Auto-Resize
     const containerRef = useRef<HTMLDivElement>(null)
+    const lastWidthRef = useRef(0)
 
     useEffect(() => {
         if (!containerRef.current) return
@@ -273,7 +315,18 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
         const observer = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 if (entry.contentRect) {
-                    setWidth(entry.contentRect.width - 4)
+                    const w = entry.contentRect.width - 4
+                    const prev = lastWidthRef.current
+                    // WS-16: a rotate-scale width change (orientation flip, not
+                    // scrollbar jitter) restores a fresh retry budget so a
+                    // chart that exhausted its 3 retries can be re-attempted by
+                    // simply rotating — no leave-and-re-enter required.
+                    if (isRotateScaleResize(prev, w)) {
+                        retryCountRef.current = 0
+                        setRenderTimedOut(false)
+                    }
+                    lastWidthRef.current = w
+                    setWidth(w)
                 }
             }
         })
@@ -282,7 +335,38 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
         return () => observer.disconnect()
     }, [])
 
+    // WS-07: track the in-view page for the multi-page indicator. Observes the
+    // per-page wrappers within the scroll container; the most-visible page wins.
+    // Guarded for jsdom (no IntersectionObserver) — currentPage stays 1 there.
+    useEffect(() => {
+        if (numPages <= 1 || !containerRef.current) return
+        if (typeof IntersectionObserver === 'undefined') return
+        const root = containerRef.current
+        const pageEls = Array.from(root.querySelectorAll<HTMLElement>('[data-pdf-page]'))
+        if (pageEls.length === 0) return
+        const io = new IntersectionObserver(
+            (entries) => {
+                let best: { page: number; ratio: number } | null = null
+                for (const e of entries) {
+                    const page = Number((e.target as HTMLElement).dataset.pdfPage || '0')
+                    if (page && (!best || e.intersectionRatio > best.ratio)) {
+                        best = { page, ratio: e.intersectionRatio }
+                    }
+                }
+                if (best && best.ratio > 0) setCurrentPage(best.page)
+            },
+            { root, threshold: [0.25, 0.5, 0.75] },
+        )
+        pageEls.forEach(el => io.observe(el))
+        return () => io.disconnect()
+    }, [numPages, width])
+
     function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+        if (renderWatchdogRef.current) {
+            clearTimeout(renderWatchdogRef.current)
+            renderWatchdogRef.current = null
+        }
+        setRenderTimedOut(false)
         setNumPages(numPages)
     }
 
@@ -320,13 +404,13 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                         </div>
                     )}
 
-                    {error && !loading && (
+                    {failed && !loading && (
                         <div className="p-10 text-center space-y-3">
                             <p className="font-semibold text-destructive text-lg">
-                                {exhausted ? 'Could not load chart — please try again later' : 'Failed to load PDF'}
+                                {exhausted ? 'Could not load chart — please try again later' : (renderTimedOut ? 'Chart took too long to render' : 'Failed to load PDF')}
                             </p>
                             <p className="text-sm text-muted-foreground max-w-xs mx-auto break-words">
-                                {error}
+                                {error ?? renderMessage}
                             </p>
                             {!exhausted && (
                                 <Button
@@ -345,7 +429,7 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                         </div>
                     )}
 
-                    {source && !loading && (
+                    {source && !loading && !renderTimedOut && (
                         <Document
                             file={source}
                             onLoadSuccess={onDocumentLoadSuccess}
@@ -372,15 +456,34 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                             }
                             className="flex flex-col items-center min-h-screen"
                         >
-                            {Array.from(new Array(numPages), (_, index) => (
-                                <PDFPageWrapper
-                                    key={`page_${index + 1}`}
-                                    pageNumber={index + 1}
-                                    width={width * zoom}
-                                    transposition={transposition}
-                                />
-                            ))}
+                            {/* WS-05: only render pages once the container has a real
+                                width — a transient 0-width (iPad rotate-during-load)
+                                would otherwise paint blank <Page width={0}> pages. */}
+                            {width > 0
+                                ? Array.from(new Array(numPages), (_, index) => (
+                                      <div key={`page_${index + 1}`} data-pdf-page={index + 1}>
+                                          <PDFPageWrapper
+                                              pageNumber={index + 1}
+                                              width={width * zoom}
+                                              transposition={transposition}
+                                          />
+                                      </div>
+                                  ))
+                                : numPages > 0 && (
+                                      <div className="flex flex-col items-center justify-center gap-3 mt-20 text-muted-foreground">
+                                          <Loader2 className="animate-spin h-8 w-8" />
+                                          <p className="text-sm">Measuring…</p>
+                                      </div>
+                                  )}
                         </Document>
+                    )}
+
+                    {/* WS-07: multi-page indicator so page 2+ below the fold is
+                        discoverable. Single-page charts show nothing. */}
+                    {source && !loading && !renderTimedOut && numPages > 1 && width > 0 && (
+                        <div className="pointer-events-none fixed bottom-28 left-1/2 -translate-x-1/2 z-20 rounded-full bg-card/90 border border-border px-3 py-1 text-xs font-medium text-foreground shadow-lg">
+                            Page {currentPage} of {numPages}
+                        </div>
                     )}
                 </div>
             </div>
