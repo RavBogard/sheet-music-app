@@ -162,6 +162,22 @@ describe('transposeChord', () => {
         it('transposes slash chords with accidental bass', () => {
             expect(transposeChord('D/F#', 2)).toBe('E/G#')
         })
+
+        // WS-25 (v11.6-02-03): a sharp-scale root used to force the bass onto
+        // the never-used A#/D# on pitch-classes 10/3. The bass must spell the
+        // conventional Bb/Eb instead, while in-key bass spellings stay put.
+        it('spells the transposed bass Bb/Eb (never A#/D#) regardless of the root scale', () => {
+            // root F+1 → F# (sharp scale); bass A+1 → pc10 must be Bb, not A#
+            expect(transposeChord('F/A', 1)).toBe('F#/Bb')
+            // root F+1 → F# (sharp scale); bass D+1 → pc3 must be Eb, not D#
+            expect(transposeChord('F/D', 1)).toBe('F#/Eb')
+        })
+
+        it('keeps in-key bass spelling (regression lock — NOT A/Db etc.)', () => {
+            expect(transposeChord('G/B', 2)).toBe('A/C#')
+            expect(transposeChord('Am/G', 2)).toBe('Bm/A')
+            expect(transposeChord('D/F#', 2)).toBe('E/G#')
+        })
     })
 
     describe('edge cases', () => {

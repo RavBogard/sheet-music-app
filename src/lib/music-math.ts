@@ -131,7 +131,15 @@ export function transposeChord(chord: string, semitones: number, preferFlats?: b
         if (bassIndex !== -1) {
             let newBassIndex = (bassIndex + semitones) % 12;
             if (newBassIndex < 0) newBassIndex += 12;
-            const newBass = scale[newBassIndex];
+            // WS-25: spell the bass with its OWN flat/sharp decision rather than
+            // blindly reusing the root's `scale`. Passing the root's `useFlats`
+            // as the preferFlats hint keeps the bass in the chord's key context
+            // (so e.g. G/B+2 stays A/C#, not A/Db), while shouldUseFlats's
+            // unconditional 10→Bb / 3→Eb rules still fire — so a sharp-scale
+            // root no longer forces the never-used A#/D# onto the bass
+            // (F/A+1 → F#/Bb, not F#/A#).
+            const bassUseFlats = shouldUseFlats(newBassIndex, normalizedBassAcc, useFlats);
+            const newBass = (bassUseFlats ? FLAT_SCALE : SHARP_SCALE)[newBassIndex];
             processedSuffix = qualityPart + '/' + newBass;
         }
     }

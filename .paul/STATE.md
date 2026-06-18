@@ -13,9 +13,9 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 Milestone: **🚧 v11.6 — Airtight (Weekend Stress & Usability) — OPENED 2026-06-17.** Narrow stress + usability hardening anchored to the three upcoming Camp Sabra weekend sets. Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar = usability-AND-access. Source context consumed: `.paul/MILESTONE-CONTEXT.md`. (v11.5 ✅ `v11.5.0`; v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`.)
 Phase: **🚧 v11.6-02 (Perform reading airtight) — IN PROGRESS.** Complex phase RE-DECOMPOSED into 4 vertical slices (text split P1-core vs nits): **Plan 01 ✅ Nav & hydration (WS-02/01/09)** `49dbe460e7` · **Plan 02 = Text Fit-mode P1 core (WS-03 legibility floor+true-width+scroll / WS-04 transposed-chord alignment / WS-20 touch-targets)** · Plan 03 = Text chord-correctness nits (WS-19 regex / WS-23 preferFlats / WS-24 gap / WS-25 slash-bass) · Plan 04 = PDF/image+toolbar+drawer-nav (WS-05/06/07/08/14–18/22/26–28). (v11.6-01 ✅ COMPLETE 1/4 phases.)
-Plan: **`v11.6-02-02` ✅ CLOSED (loop complete), commit `34a39fba30` pushed.** Text Fit-mode reading airtight: WS-03 (true-width + 11px floor + overflow-x-auto), WS-04 (lyric-governed column → transpose-stable alignment), WS-20 (44px controls + zoom aria-labels). Next: **`/paul:plan` for Plan 03 (text chord-correctness nits — WS-19/23/24/25).** Then Plan 04 (PDF/image+toolbar+drawer-nav).
-Status: **Plan v11.6-02-02 CLOSED — phase 02 at 2 of 4 plans. Ready for `/paul:plan` (Plan 03).**
-Last activity: 2026-06-17 — **UNIFIED v11.6-02-02 + committed `34a39fba30` (pushed `545c960f2b..34a39fba30`, Vercel auto-deploy).** SUMMARY written. Pure `text-score-layout.ts` extracted for Fit-mode math; width-neutral chord scoped to Fit only; real-iPad legibility/alignment → UAT.
+Plan: **`v11.6-02-03` APPLIED — ready for `/paul:unify`.** WS-25 slash-bass: `music-math.ts` slash branch now spells bass via `shouldUseFlats(newBassIndex, normalizedBassAcc, useFlats)` → Bb/Eb forced on pc 10/3, in-key context preserved. Gates GREEN: 47 music-math tests (incl. `F/A`+1→`F#/Bb`, `F/D`+1→`F#/Eb` + regression-locks `G/B`+2→`A/C#`), `tsc` 0, `next build --webpack` 0. Pure deterministic math — no UAT dependency. **WS-19/23/24 deferred→v11.7.** `autonomous: true`.
+Status: **APPLY complete — ready for `/paul:unify`.**
+Last activity: 2026-06-17 — **APPLIED v11.6-02-03 (WS-25).** 1-line fix + 2 new test it-blocks (5 assertions); all 47 music-math cases green, existing slash spellings unchanged.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,10 +43,10 @@ Last activity: 2026-06-17 — **UNIFIED v11.6-02-02 + committed `34a39fba30` (pu
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-02 loop CLOSED — phase 02 at 2/4 plans]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-03 — APPLIED, ready for UNIFY]
+  ✓        ✓        ○
 ```
-(v11.6 OPENED 2026-06-17. Phase 01 ✅. **Phase 02 IN PROGRESS (2/4 plans done) — Plan 01 `49dbe460e7` + Plan 02 `34a39fba30` shipped. Next: `/paul:plan` for Plan 03 (text chord-correctness nits WS-19/23/24/25)**, then Plan 04 (PDF/image+toolbar+drawer-nav).)
+(v11.6 OPENED 2026-06-17. Phase 01 ✅. **Phase 02 IN PROGRESS (2/4 done) — Plan 03 (WS-25 slash-bass spelling) created; WS-19/23/24 deferred→v11.7. Next: `/paul:apply .paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-03-PLAN.md`.** Then Plan 04 (PDF/image+toolbar+drawer-nav).)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
@@ -75,6 +75,7 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-02 loop CLOSED — phase 0
 - **anon chord-cache writes are not org-scoped (v11.5-01-02 defer, 2026-06-12):** the anon `POST` (chordData) + the now-anon `PATCH` (nativeKey/lastUsed*) on `/api/library/chord-cache` write by `fileId` with NO tenancy check → a broslaz-anon write to a CRC chart's `fileId` crosses the tenant wall. Benign derived/display data (overwritable, rate-limited) + matches the pre-existing anon-POST gap, so deferred. Fix: org-scope BOTH writes together (resolve the row's `orgId` vs the host `x-org-id`).
 - **finalize_chart_upload (signed-URL path) does not org-stamp (v11.3-02-02 defer, 2026-06-11):** the chunked `commit` stamps its result, but the signed-URL `finalize_chart_upload` flow shares finalize's missing-stamp gap → its uploads land default-org. Small follow-up: add `org` param to `finalizeChartUpload` + pass `orgFrom(extra)` in its handler. Out of scope of v11.3-02 to keep that path byte-stable.
 - **/perform cold-start TTFB — INFRA follow-up (H7 RE-VERIFIED 2026-06-14, v11.5-02-02 Task 1):** re-ran `v11-3-04-webvitals-slice.mjs --since 7` (1232 obs) → `/perform` cold TTFB **1823–1990ms** p75 (flat vs the ~1633ms baseline, NOT improved). Query is already off the first-byte path (Suspense streaming, v11.3-04-03); no new blocking server fetch → residual is Vercel serverless cold-start + geo. **Verdict: INFRA-BOUND, app code NOT to be re-churned.** ACTIONABLE: Vercel fluid-compute / keep-warm / region follow-up (Daniel/infra). Findings: `.paul/research/v11-5-02-02-ttfb-verify-2026-06-14.md`. **Side-flag (separate axis):** `/perform` cold·MOBILE CLS 0.250 (n=8) — future CLS look, not actioned in v11.5-02-02.
+- **v11.6-02 text-chart nits DEFERRED → v11.7 polish (2026-06-17):** WS-19 (chord-line regex false-positive — "A E" is genuinely valid chords; heuristic tweak risks demoting real sparse chord/intro lines), WS-23 (preferFlats hardwired undefined — an estimateKey-driven preference can MISFIRE and flip spelling on the live camp fixtures; current source-convention default safer), WS-24 (section-gap collapse — NOT reproducible from the parser; needs a concrete sample chart first). WS-25 (slash-bass) was the only unambiguous bug → fixed in Plan v11.6-02-03.
 - v11-06 residuals (low-risk, in AUDIT.md): setlistTemplates app-only; scheduling_history orgId-absent rows; users claim-based (no orgId field).
 - v7.0 fold-forward backlog (`MILESTONES.md` § v7.0) — re-triage what's still live.
 - ROADMAP.md / PROJECT.md / MILESTONES.md carry full historical detail intentionally (archive — collapse, don't delete); only STATE has a hard size target.
@@ -95,9 +96,9 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-02 loop CLOSED — phase 0
 ## Session Continuity
 
 Last session: 2026-06-17 — closed two full PAUL loops in phase 02: **v11.6-02-01 (Nav & hydration)** `49dbe460e7` + **v11.6-02-02 (Text Fit-mode reading airtight)** `34a39fba30`. Both pushed to `origin master` (Vercel auto-deploy).
-Stopped at: **Plan v11.6-02-02 CLOSED. Phase 02 at 2 of 4 plans.**
-Next action: **`/paul:plan` for Plan 03 (text chord-correctness nits — WS-19 chord-line regex / WS-23 preferFlats / WS-24 section-gap collapse / WS-25 slash-bass spelling).** Regression-sensitive (mostly P3) — careful heuristic tuning in TextScoreViewer + music-math.ts. Then Plan 04 (PDF/image+toolbar+drawer-nav: WS-05/06/07/08/14–18/22/26–28). /ui-ux-pro-max BLOCKING.
-Resume file: **`.paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-02-SUMMARY.md`** → context in `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (the WS-NN punch list).
+Stopped at: **PLAN v11.6-02-03 created, awaiting approval. Phase 02 at 2 of 4 plans.**
+Next action: **`/paul:apply .paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-03-PLAN.md`** (WS-25 slash-bass spelling, pure music-math). After close: Plan 04 (PDF/image+toolbar+drawer-nav: WS-05 stuck-spinner / WS-07 multi-page PDF nav / WS-08 drawer nav-death / WS-22 transpose-unreachable + WS-06/14–18/26–28). /ui-ux-pro-max BLOCKING on 04.
+Resume file: **`.paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-03-PLAN.md`** → context in `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md`.
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context:
 - Oracle `docs/ACCESS-POLICY.md` **v0.4**; but **triage bar is widened to usability-AND-access** for this milestone (a real usability defect counts even if it doesn't contradict an access cell). err-public still governs access-shaped findings.
