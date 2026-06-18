@@ -11,7 +11,13 @@ import { Card } from '@/components/ui/card'
 import { logger } from "@/lib/logger"
 
 interface SmartScoreViewerProps {
-    url: string
+    /**
+     * Library fileId — used to read the offline-idb cached blob FIRST and as
+     * the `/api/drive/file/<id>` network fallback path. Mirrors the IDB-first
+     * source resolution of TextScoreViewer / AudioViewer / PDFViewer (no
+     * `fetch(blob:)` round-trip, which iPad WebKit intermittently rejects).
+     */
+    fileId: string
     /**
      * SetlistTrack.id of the row this MusicXML is bound to. When supplied
      * alongside `trackKey`, enables the Q-DETECT-1=C silent heal: if the
@@ -102,15 +108,12 @@ const findScrollableAncestor = (el: HTMLElement | null): HTMLElement | null => {
     return null
 }
 
-export function SmartScoreViewer({ url, trackId, trackKey }: SmartScoreViewerProps) {
+export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewerProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const osmdRef = useRef<OpenSheetMusicDisplay | null>(null)
     const [loading, setLoading] = useState(true)
     const [transposing, setTransposing] = useState(false)
     const [error, setError] = useState<string | null>(null)
-
-    // Offline / Source URL Logic
-    const [sourceUrl, setSourceUrl] = useState<string>(url)
 
     const { transposition, zoom, aiXmlContent, setMusicXmlKey, musicXmlKey } = useMusicStore()
     // Match-button feedback state: 'idle' → 'pending' (write in flight) →
@@ -159,22 +162,6 @@ export function SmartScoreViewer({ url, trackId, trackKey }: SmartScoreViewerPro
     const renderInFlightRef = useRef(false)
     const pendingRenderRef = useRef<{ transposition: number; zoom: number } | null>(null)
 
-    useEffect(() => {
-        let active = true
-        const loadOffline = async () => {
-            if (active) {
-                if (url.startsWith('blob:')) {
-                    setSourceUrl(url)
-                } else {
-                    const bustUrl = url.includes('?') ? `${url}&_v=2` : `${url}?_v=2`
-                    setSourceUrl(bustUrl)
-                }
-            }
-        }
-        loadOffline()
-        return () => { active = false }
-    }, [url])
-
     // Measure the rendered content width and compute the fit-to-width zoom
     // baseline (normalized to user zoom = 1). Returns null when measurement is
     // unavailable (jsdom / pre-render), so callers fall back to no scaling.
@@ -220,19 +207,16 @@ export function SmartScoreViewer({ url, trackId, trackKey }: SmartScoreViewerPro
 
             // S7 (transpose-jank polish, DISCUSSION.md §1.3): MusicXML-aware
             // priority. `SmartScoreViewer` is mounted EXCLUSIVELY for MusicXML
-            // tracks (`PDFOverlay.tsx:330` gates on `isMusicXml`), so when a
-            // `url` prop is supplied it IS the source-of-truth MusicXML. A
-            // non-null `aiXmlContent` at mount time would be stale leftover
-            // from a prior PDF viewer's AI transcription (or the test-only
-            // shortcut path) and MUST NOT override the fresh MusicXML mount.
-            // Pre-fix priority `aiXmlContent || sourceUrl` was a defensive-
-            // housekeeping bug per S7 — flipped to source-first; aiXmlContent
-            // remains the fallback for the (currently unused) inline-XML
-            // injection path.
-            const contentToLoad = sourceUrl || aiXmlContent
-            if (!contentToLoad) return
+            // tracks (PDFOverlay gates on the `musicxml` viewerKind), so the
+            // `fileId` prop IS the source-of-truth MusicXML. A non-null
+            // `aiXmlContent` at mount time would be stale leftover from a prior
+            // PDF viewer's AI transcription (or the test-only shortcut path) and
+            // MUST NOT override the fresh MusicXML mount — so it is ONLY the
+            // source when no fileId is supplied (the currently-unused inline-XML
+            // injection path).
+            if (!fileId && !aiXmlContent) return
 
-            logger.info("OSMD Loading:", sourceUrl ? "Source URL" : "AI Content (xml string)")
+            logger.info("OSMD Loading:", fileId ? "fileId (IDB-first)" : "AI Content (xml string)")
 
             try {
                 readyRef.current = false
@@ -243,23 +227,48 @@ export function SmartScoreViewer({ url, trackId, trackKey }: SmartScoreViewerPro
                 // synchronous OSMD parse/render locks the main thread.
                 await sleep(50)
 
-                let finalContent: string | Blob = contentToLoad
+                let finalContent: string | Blob
 
-                // If contentToLoad is a URL (not an AI XML string), fetch it manually.
-                // OSMD's internal fetcher relies on file extensions (.xml/.mxl) which
-                // our API routes and Blob URLs lack, leading to parse errors.
-                if (typeof contentToLoad === 'string' && (contentToLoad.startsWith('http') || contentToLoad.startsWith('blob:') || contentToLoad.startsWith('/'))) {
-                    const res = await fetch(contentToLoad)
-                    if (!res.ok) throw new Error("Failed to fetch score file from URL")
+                if (fileId) {
+                    // Resolve the score bytes IDB-first (mirrors TextScoreViewer /
+                    // AudioViewer / PDFViewer): read the offline-idb cached blob
+                    // through the Blob API directly — NO fetch(blob:) round-trip,
+                    // the WebKit failure mode fixed for the other viewers
+                    // (webkit-pdf-reload-fix, R1 Finding B). On a cache miss (or if
+                    // offline-idb throws) fall back to the network route. OSMD's
+                    // internal fetcher relies on .xml/.mxl extensions our routes
+                    // lack, so we resolve the bytes ourselves and hand OSMD a
+                    // string (plain MusicXML) or a Blob (compressed .mxl).
+                    let buffer: ArrayBuffer | null = null
+                    try {
+                        const { getFile } = await import("@/lib/offline-idb")
+                        const blob = await getFile(fileId)
+                        if (cancelled) return
+                        if (blob) buffer = await blob.arrayBuffer()
+                    } catch (idbErr) {
+                        // offline-idb failure must never strand the viewer — fall
+                        // through to the network fetch below.
+                        logger.warn("offline-idb read failed; falling back to network", idbErr)
+                    }
+                    if (cancelled) return
 
-                    const buffer = await res.arrayBuffer()
+                    if (!buffer) {
+                        const res = await fetch(`/api/drive/file/${fileId}`)
+                        if (cancelled) return
+                        if (!res.ok) throw new Error("Failed to fetch score file from URL")
+                        buffer = await res.arrayBuffer()
+                    }
+
                     const text = new TextDecoder('utf-8').decode(buffer)
-
                     if (text.trim().startsWith('<?xml') || text.trim().startsWith('<score-partwise') || text.trim().startsWith('<!DOCTYPE')) {
                         finalContent = text
                     } else {
                         finalContent = new Blob([buffer])
                     }
+                } else {
+                    // No fileId → the inline aiXmlContent store string is the
+                    // source (currently-unused XML-injection path; guarded above).
+                    finalContent = aiXmlContent as string
                 }
 
                 if (cancelled) return
@@ -356,7 +365,7 @@ export function SmartScoreViewer({ url, trackId, trackKey }: SmartScoreViewerPro
         // jank the debounce + `appliedRef` dedup are there to avoid. Mirrors the
         // same `eslint-disable` pattern used by PDFOverlay's queue effects.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sourceUrl, aiXmlContent, setMusicXmlKey]) // Re-run if either changes
+    }, [fileId, aiXmlContent, setMusicXmlKey]) // Re-run if the source changes
 
     // Transposition + manual-zoom updates — debounced, with a "working" overlay
     // so a live key change never shows a stale frame mid-render. S1 + S4

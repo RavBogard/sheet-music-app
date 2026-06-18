@@ -13,9 +13,9 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 Milestone: **🚧 v11.6 — Airtight (Weekend Stress & Usability) — OPENED 2026-06-17.** Narrow stress + usability hardening anchored to the three upcoming Camp Sabra weekend sets. Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar = usability-AND-access. Source context consumed: `.paul/MILESTONE-CONTEXT.md`. (v11.5 ✅ `v11.5.0`; v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`.)
 Phase: **✅ v11.6-02 (Perform reading airtight) — COMPLETE 7/7 (2026-06-18, phase tip `6dee681893`).** All 7 plans shipped: 01 nav+hydration `49dbe460e7` (WS-01/02/09) · 02 text Fit-core `34a39fba30` (WS-03/04/20) · 03 slash-bass `8f7f1a5bd7` (WS-25) · 04 PDF render `ea4dcd7ec9` (WS-05/07/16) · 05 reading-controls+fit-page `241e6e04e8` (WS-18/22/26/14) · 06 image-viewer `5f15209a0b` (WS-06/15) · 07 drawer-nav `6dee681893` (WS-08/28). WS-19/23/24→v11.7; WS-17→cycle-13a. **→ Phase v11.6-03 (Off-site resilience), ready to plan.** (v11.6-01 ✅ + 02 ✅ = 2/4 phases.)
-Plan: **`v11.6-03-01` ✅ COMPLETE (verify + decide).** Verified the 5 residual offline gaps vs deployed code (`.paul/research/v11-6-03-offline-gap-verify-2026-06-18.md`); **`checkpoint:decision` RESOLVED → C (full sweep)** — fix all of WS-10 (MusicXML IDB-first) / WS-12 (offline snapshot-error blank guard) / WS-13 (hard "all N saved offline" gate) / WS-29 (audio best-effort + accept WebKit blob residual) / WS-30 (widen SW online-session caching). **Reframed by Phase-01: offline reading WORKS** (SW+IDB re-introduced 2026-05-28) → close gaps, NOT re-introduce. Scope C is COMPLEX → decompose into vertical slices: **02 = WS-12 + WS-13 (camp-relevant P2s)** · 03 = WS-10 (MusicXML) · 04 = WS-29/30 (SW/audio edges). /ui-ux-pro-max BLOCKING on the WS-12/13 + any UI.
-Status: **v11.6-03-02 (WS-12/13) ✅ SHIPPED + UNIFIED (`7ac307812f`). Next: PLAN v11.6-03-03 (WS-10 MusicXML IDB-first).**
-Last activity: 2026-06-18 — **APPLIED + UNIFIED v11.6-03-02** (WS-12 open-set-survives-offline-error + WS-13 "Saved N/N"; `7ac307812f`). Prior this session: decision C; P0 gig-packet fix (`a48382929a`, prod-verified 16/16); v11.6-02 ✅.
+Plan: **`v11.6-03-03` ✅ COMPLETE + UNIFIED (WS-10 MusicXML offline IDB-first).** SmartScoreViewer resolves MusicXML bytes IDB-first by `fileId` (`offline-idb getFile` → Blob API read, no `fetch(blob:)` round-trip) → network-fallback `/api/drive/file/<id>`; PDFOverlay musicxml branch passes `fileId` (Image branch `fileUrl` untouched). XML/.mxl sniff + Q-DETECT-1 key-heal preserved; no visual/UX delta. SUMMARY: `.paul/phases/v11.6-03-offsite-resilience/v11.6-03-03-SUMMARY.md`. **→ Next: PLAN v11.6-03-04 (WS-29/30) — the last slice to close phase 03.** (Prior: 01 ✅ verify+decide → C; 02 ✅ WS-12/13 `7ac307812f`; 03 ✅ WS-10.)
+Status: **v11.6-03-03 SHIPPED ✅. Next: PLAN v11.6-03-04 (WS-29 audio-offline note + WS-30 SW online-session caching window) — closes phase 03.**
+Last activity: 2026-06-18 — **APPLIED + UNIFIED v11.6-03-03** (WS-10 MusicXML offline IDB-first; tsc 0 / smart-score-viewer 32/32 incl. 3 new / `next build --webpack` 0; 6 failing perform/music tests baseline-confirmed PRE-EXISTING). Prior this session: created PLAN 03; resumed; APPLIED + UNIFIED v11.6-03-02 (`7ac307812f`); decision C; P0 gig-packet fix (`a48382929a`, prod-verified 16/16); v11.6-02 ✅.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,10 +43,10 @@ Last activity: 2026-06-18 — **APPLIED + UNIFIED v11.6-03-02** (WS-12 open-set-
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-03-02 ✅ (WS-12/13, `7ac307812f`); next: PLAN v11.6-03-03 (WS-10)]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-03-03 ✅ closed (WS-10); next: PLAN v11.6-03-04 (WS-29/30)]
   ✓        ✓        ✓
 ```
-(v11.6 OPENED 2026-06-17. **Phase 01 ✅ + Phase 02 ✅ (2/4); Phase 03 IN PROGRESS.** Decision C (full sweep). Slices: 01 verify+decide ✅ · **02 WS-12/13 ✅ `7ac307812f`** · 03 WS-10 (MusicXML) next · 04 WS-29/30 (SW/audio edges). P0 gig-packet text-chart fix shipped mid-phase (`a48382929a`). WS-19/23/24→v11.7; WS-17→cycle-13a.)
+(v11.6 OPENED 2026-06-17. **Phase 01 ✅ + Phase 02 ✅ (2/4); Phase 03 IN PROGRESS.** Decision C (full sweep). Slices: 01 verify+decide ✅ · **02 WS-12/13 ✅ `7ac307812f`** · **03 WS-10 ✅** · 04 WS-29/30 (SW/audio edges) next/last. P0 gig-packet text-chart fix shipped mid-phase (`a48382929a`). WS-19/23/24→v11.7; WS-17→cycle-13a.)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
@@ -95,10 +95,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-03-02 ✅ (WS-12/13, `7ac3078
 
 ## Session Continuity
 
-Last session: 2026-06-18 — **APPLIED + UNIFIED v11.6-03-02** (WS-12 open-set-survives-offline-error + WS-13 "Saved N/N"; `7ac307812f`). Earlier same session: decision C (full sweep); P0 gig-packet text-chart fix `a48382929a` (prod-verified 16/16, David can re-print); v11.6-02 ✅ + transition; v11.6-03-01 verify+decide.
-Stopped at: **v11.6-03-02 ✅ shipped. Phase 03 at slices 01+02 done; 03 (WS-10) + 04 (WS-29/30) remain.**
-Next action: **`/paul:plan` for Phase v11.6-03-03 — WS-10**: `SmartScoreViewer.tsx:251-253` does `fetch(contentToLoad)` for the score (not IDB-first like PDF/Text/Audio) → offline MusicXML fails. Rebuild to resolve bytes IDB-first (`offline-idb getFile(fileId)` → Blob) before the network fetch, mirroring AudioViewer. Forward-risk (no MusicXML in the 3 weekend sets) but it's MusicXML — the strategic preferred format. /ui-ux-pro-max if any UI. Then 04 (WS-29 audio note + WS-30 SW reload-window).
-Resume file: **`.paul/HANDOFF-2026-06-18-v11.6-03-02.md`** (full session pickup) → then `.paul/phases/v11.6-03-offsite-resilience/v11.6-03-02-SUMMARY.md` + the offline-gap verify note `.paul/research/v11-6-03-offline-gap-verify-2026-06-18.md` (WS-10 row drives plan 03).
+Last session: 2026-06-18 — **APPLIED + UNIFIED v11.6-03-03** (WS-10 MusicXML offline IDB-first; commit pending below). Earlier same session: created PLAN 03; resumed (HANDOFF-2026-06-18-v11.6-03-02 archived); APPLIED + UNIFIED v11.6-03-02 (`7ac307812f`); decision C (full sweep); P0 gig-packet text-chart fix `a48382929a` (prod-verified 16/16, David can re-print); v11.6-02 ✅ + transition; v11.6-03-01 verify+decide.
+Stopped at: **v11.6-03-03 ✅ shipped (WS-10). Phase 03: slices 01+02+03 done; 04 (WS-29/30) is the last slice.**
+Next action: **`/paul:plan` for v11.6-03-04 — WS-29 + WS-30** (the last phase-03 slice). WS-29: audio offline is already best-effort IDB blob → document/accept the WebKit `blob:`-audio residual (no cheap reliable fix). WS-30: widen the Perform SW (`public/perform-shell-sw.js` networkFirst) online-session caching so a full offline reload is reliable — higher regression risk on a working SW, scope tightly. /ui-ux-pro-max if any UI. Closing 04 → phase-03 transition → phase v11.6-04 (Authoring + publish; **live send = STOP-gate**).
+Resume file: **`.paul/phases/v11.6-03-offsite-resilience/v11.6-03-03-SUMMARY.md`** → context in the offline-gap verify note `.paul/research/v11-6-03-offline-gap-verify-2026-06-18.md` (WS-29/30 rows).
 **Carry (this phase):** the live stress sweep showed INTERMITTENT headless-WebKit `open-chart` timeouts on text sets (NOT a regression — known headless+Firestore-streaming fidelity gap); confirm real-device chart-open on camp wifi in phase 03.
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context:

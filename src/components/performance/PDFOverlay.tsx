@@ -247,9 +247,10 @@ export function PDFOverlay({
     // resolve the cached bytes removes the blob: round-trip and the race entirely.
     const networkUrl = track.fileId ? `/api/drive/file/${track.fileId}` : ""
 
-    // `fileUrl` (a cached-blob object URL, or the network URL on miss) is ONLY for
-    // the non-PDF viewers (SmartScore/Text/Image): they `fetch(url)` / `<img src>`
-    // the URL directly with NO IDB fallback, so the blob: URL is their offline path.
+    // `fileUrl` (a cached-blob object URL, or the network URL on miss) is now ONLY
+    // for ImageScoreViewer (`<img src>` the URL directly, NO IDB fallback — the
+    // blob: URL is its offline path). SmartScore/Text/Audio self-resolve IDB-first
+    // by fileId and no longer ride this pipe (WS-10 / F-1 / audio-viewer-f7).
     // Start EMPTY (not networkUrl): if we seeded with networkUrl, an offline open
     // would fire a doomed network fetch BEFORE the cached blob resolves. The viewers
     // guard on `fileUrl && <Viewer/>`, so "" renders nothing for the one tick until
@@ -366,7 +367,11 @@ export function PDFOverlay({
     const chartSurface = (
         <SectionErrorBoundary key={track.fileId} label="Chart">
             {viewerKind === 'musicxml' ? (
-                fileUrl && <SmartScoreViewer url={fileUrl} trackId={track.id} trackKey={track.key} />
+                // WS-10 (off-site resilience): SmartScoreViewer self-resolves the
+                // source IDB-first by fileId (mirrors Text/Audio), so it reads
+                // offline-cached MusicXML and dodges the WebKit `fetch(blob:)`
+                // race — no longer routed through the `fileUrl` blob: pipe.
+                track.fileId && <SmartScoreViewer fileId={track.fileId} trackId={track.id} trackKey={track.key} />
             ) : viewerKind === 'text' ? (
                 // ipad-text-viewer-fetch-fix (F-1, 2026-05-24): TextScoreViewer
                 // self-resolves the source via offline-idb (mirrors AudioViewer's

@@ -78,6 +78,20 @@ vi.mock('@/lib/live-director', () => ({
     changeTrackKey: mockChangeTrackKey,
 }))
 
+// --- Mock offline-idb (IDB-first source resolution) ---
+// The load effect dynamically imports `@/lib/offline-idb` and reads
+// `getFile(fileId)`. Default: IDB-miss (null) so the network fetch path runs
+// — preserving the pre-fix behavior of the legacy tests. The IDB-first /
+// .mxl arms override `mockGetFile` to return a Blob.
+const { mockGetFile } = vi.hoisted(() => {
+    const mockGetFile = vi.fn<(fileId: string) => Promise<Blob | null>>().mockResolvedValue(null)
+    return { mockGetFile }
+})
+
+vi.mock('@/lib/offline-idb', () => ({
+    getFile: mockGetFile,
+}))
+
 // --- Mock logger ---
 vi.mock('@/lib/logger', () => ({
     logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
@@ -148,13 +162,12 @@ describe('SmartScoreViewer', () => {
         mockAuthValues.isBandLeader = false
         mockAuthValues.isAdmin = false
 
-        // S7 (transpose-jank polish, DISCUSSION.md §1.3): post-fix priority is
-        // `sourceUrl || aiXmlContent` — a `url` prop wins, and the fetch
-        // branch runs. Stub fetch globally so the load path succeeds without
-        // network for tests that previously relied on the `aiXmlContent`
-        // shortcut. The S7 regression test (below) overrides this stub to
-        // assert that `sourceUrl` content lands in `load()`, NOT the stale
-        // `aiXmlContent`.
+        // WS-10: source resolution is IDB-first by `fileId`. Default to an
+        // IDB-miss (getFile → null) so the network fetch path runs — the same
+        // bytes the legacy tests expected. The IDB-hit / .mxl arms override
+        // `mockGetFile`. The fetch stub returns valid MusicXML so the
+        // network-fallback load path succeeds without a real network.
+        mockGetFile.mockResolvedValue(null)
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             arrayBuffer: async () => new TextEncoder().encode(XML).buffer,
@@ -173,7 +186,7 @@ describe('SmartScoreViewer', () => {
         vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('no network in test')))
 
         await act(async () => {
-            render(<SmartScoreViewer url="https://example.com/score.xml" />)
+            render(<SmartScoreViewer fileId="file-score" />)
         })
         await advance(250)
 
@@ -185,10 +198,8 @@ describe('SmartScoreViewer', () => {
     })
 
     it('sets TransposeCalculator before load() is called', async () => {
-        // Drive the in-memory aiXmlContent path: a non-URL XML string skips the
-        // component's fetch(sourceUrl) branch (which would otherwise hit the
-        // network) and calls load() directly, letting us assert TC-before-load.
-        mockStoreValues.aiXmlContent = XML
+        // IDB miss (default) → the network stub returns XML → load() runs after
+        // OSMD init, letting us assert TC-before-load ordering.
 
         const callOrder: string[] = []
         MockTC.mockImplementation(function (this: unknown) {
@@ -200,7 +211,7 @@ describe('SmartScoreViewer', () => {
         })
 
         await act(async () => {
-            render(<SmartScoreViewer url="https://example.com/score.xml" />)
+            render(<SmartScoreViewer fileId="file-score" />)
         })
         await advance(250)
 
@@ -216,7 +227,7 @@ describe('SmartScoreViewer', () => {
 
         let rerender!: (ui: React.ReactElement) => void
         await act(async () => {
-            const result = render(<SmartScoreViewer url="https://example.com/score.xml" />)
+            const result = render(<SmartScoreViewer fileId="file-score" />)
             rerender = result.rerender
         })
         await advance(250) // load + initial fit settle (readyRef true, applied {0,1})
@@ -227,7 +238,7 @@ describe('SmartScoreViewer', () => {
 
         mockStoreValues.transposition = 2
         await act(async () => {
-            rerender(<SmartScoreViewer url="https://example.com/score.xml" />)
+            rerender(<SmartScoreViewer fileId="file-score" />)
         })
         await advance(250) // fire the debounced re-render
 
@@ -241,7 +252,7 @@ describe('SmartScoreViewer', () => {
 
         let rerender!: (ui: React.ReactElement) => void
         await act(async () => {
-            const result = render(<SmartScoreViewer url="https://example.com/score.xml" />)
+            const result = render(<SmartScoreViewer fileId="file-score" />)
             rerender = result.rerender
         })
         await advance(250)
@@ -253,13 +264,13 @@ describe('SmartScoreViewer', () => {
         // window must cancel it, leaving exactly one render after settle.
         mockStoreValues.transposition = 2
         await act(async () => {
-            rerender(<SmartScoreViewer url="https://example.com/score.xml" />)
+            rerender(<SmartScoreViewer fileId="file-score" />)
         })
         await advance(50) // < debounce: first timer still pending
 
         mockStoreValues.transposition = 3
         await act(async () => {
-            rerender(<SmartScoreViewer url="https://example.com/score.xml" />)
+            rerender(<SmartScoreViewer fileId="file-score" />)
         })
         await advance(250) // fire the (single, rescheduled) render
 
@@ -276,7 +287,7 @@ describe('SmartScoreViewer', () => {
         mockStoreValues.aiXmlContent = XML
 
         await act(async () => {
-            render(<SmartScoreViewer url="https://example.com/score.xml" />)
+            render(<SmartScoreViewer fileId="file-score" />)
         })
         await advance(250)
 
@@ -294,21 +305,20 @@ describe('SmartScoreViewer', () => {
         mockStoreValues.aiXmlContent = XML
 
         await act(async () => {
-            render(<SmartScoreViewer url="https://example.com/score.xml" />)
+            render(<SmartScoreViewer fileId="file-score" />)
         })
         await advance(250)
 
         expect(mockSetMusicXmlKey).toHaveBeenCalledWith(expected)
     })
 
-    it('clears musicXmlKey on unmount / sourceUrl change', async () => {
+    it('clears musicXmlKey on unmount / fileId change', async () => {
         mockKeyInstruction.Key = 2 // D major
         mockKeyInstruction.Mode = 0
-        mockStoreValues.aiXmlContent = XML
 
         let unmount!: () => void
         await act(async () => {
-            const result = render(<SmartScoreViewer url="https://example.com/score.xml" />)
+            const result = render(<SmartScoreViewer fileId="file-score" />)
             unmount = result.unmount
         })
         await advance(250)
@@ -326,7 +336,7 @@ describe('SmartScoreViewer', () => {
         // Default auth values: isBandLeader=false, isAdmin=false
 
         await act(async () => {
-            render(<SmartScoreViewer url="https://example.com/score.xml" trackId="track-abc" trackKey="" />)
+            render(<SmartScoreViewer fileId="file-score" trackId="track-abc" trackKey="" />)
         })
         await advance(250)
 
@@ -341,7 +351,7 @@ describe('SmartScoreViewer', () => {
         mockAuthValues.isBandLeader = true
 
         await act(async () => {
-            render(<SmartScoreViewer url="https://example.com/score.xml" trackId="track-abc" trackKey="A" />)
+            render(<SmartScoreViewer fileId="file-score" trackId="track-abc" trackKey="A" />)
         })
         await advance(250)
 
@@ -356,7 +366,7 @@ describe('SmartScoreViewer', () => {
         mockAuthValues.isAdmin = true
 
         await act(async () => {
-            render(<SmartScoreViewer url="https://example.com/score.xml" trackId="track-abc" trackKey="" />)
+            render(<SmartScoreViewer fileId="file-score" trackId="track-abc" trackKey="" />)
         })
         await advance(250)
 
@@ -372,7 +382,7 @@ describe('SmartScoreViewer', () => {
         mockAuthValues.isBandLeader = true
 
         await act(async () => {
-            render(<SmartScoreViewer url="https://example.com/score.xml" trackId="track-abc" trackKey="" />)
+            render(<SmartScoreViewer fileId="file-score" trackId="track-abc" trackKey="" />)
         })
         await advance(250)
 
@@ -389,7 +399,7 @@ describe('SmartScoreViewer', () => {
         await act(async () => {
             // trackKey undefined (== row never had a key set) also counts as
             // "empty" and is the common case for newly-imported MusicXML.
-            render(<SmartScoreViewer url="https://example.com/score.xml" trackId="track-xyz" />)
+            render(<SmartScoreViewer fileId="file-score" trackId="track-xyz" />)
         })
         await advance(250)
 
@@ -403,7 +413,7 @@ describe('SmartScoreViewer', () => {
         mockAuthValues.isBandLeader = true
 
         await act(async () => {
-            render(<SmartScoreViewer url="https://example.com/score.xml" />)
+            render(<SmartScoreViewer fileId="file-score" />)
         })
         await advance(250)
 
@@ -420,7 +430,7 @@ describe('SmartScoreViewer', () => {
 
         let container!: HTMLElement
         await act(async () => {
-            const result = render(<SmartScoreViewer url="https://example.com/score.xml" />)
+            const result = render(<SmartScoreViewer fileId="file-score" />)
             container = result.container
         })
         // Overlay visible immediately on mount.
@@ -448,7 +458,7 @@ describe('SmartScoreViewer', () => {
         let container!: HTMLElement
         let rerender!: (ui: React.ReactElement) => void
         await act(async () => {
-            const result = render(<Wrapper><SmartScoreViewer url="https://example.com/score.xml" /></Wrapper>)
+            const result = render(<Wrapper><SmartScoreViewer fileId="file-score" /></Wrapper>)
             container = result.container
             rerender = result.rerender
         })
@@ -470,7 +480,7 @@ describe('SmartScoreViewer', () => {
 
         mockStoreValues.transposition = 2
         await act(async () => {
-            rerender(<Wrapper><SmartScoreViewer url="https://example.com/score.xml" /></Wrapper>)
+            rerender(<Wrapper><SmartScoreViewer fileId="file-score" /></Wrapper>)
         })
         await advance(250) // fire the debounced render + microtask flush
 
@@ -490,7 +500,7 @@ describe('SmartScoreViewer', () => {
         let container!: HTMLElement
         let rerender!: (ui: React.ReactElement) => void
         await act(async () => {
-            const result = render(<Wrapper><SmartScoreViewer url="https://example.com/score.xml" /></Wrapper>)
+            const result = render(<Wrapper><SmartScoreViewer fileId="file-score" /></Wrapper>)
             container = result.container
             rerender = result.rerender
         })
@@ -513,7 +523,7 @@ describe('SmartScoreViewer', () => {
 
         mockStoreValues.transposition = 1
         await act(async () => {
-            rerender(<Wrapper><SmartScoreViewer url="https://example.com/score.xml" /></Wrapper>)
+            rerender(<Wrapper><SmartScoreViewer fileId="file-score" /></Wrapper>)
         })
         await advance(250)
 
@@ -527,7 +537,7 @@ describe('SmartScoreViewer', () => {
         // that lands the LAST value (T=3), not T=1 or T=2.
         let rerender!: (ui: React.ReactElement) => void
         await act(async () => {
-            const result = render(<SmartScoreViewer url="https://example.com/score.xml" />)
+            const result = render(<SmartScoreViewer fileId="file-score" />)
             rerender = result.rerender
         })
         await advance(250) // initial load settle
@@ -537,29 +547,29 @@ describe('SmartScoreViewer', () => {
 
         // Tap 1 → schedule debounce
         mockStoreValues.transposition = 1
-        await act(async () => { rerender(<SmartScoreViewer url="https://example.com/score.xml" />) })
+        await act(async () => { rerender(<SmartScoreViewer fileId="file-score" />) })
         await advance(50)
 
         // Tap 2 within window → reset debounce
         mockStoreValues.transposition = 2
-        await act(async () => { rerender(<SmartScoreViewer url="https://example.com/score.xml" />) })
+        await act(async () => { rerender(<SmartScoreViewer fileId="file-score" />) })
         await advance(50)
 
         // Tap 3 within window → reset debounce again
         mockStoreValues.transposition = 3
-        await act(async () => { rerender(<SmartScoreViewer url="https://example.com/score.xml" />) })
+        await act(async () => { rerender(<SmartScoreViewer fileId="file-score" />) })
         await advance(250) // fire the (single, rescheduled) render
 
         expect(mockOsmdInstance.render).toHaveBeenCalledTimes(1)
         expect(mockOsmdInstance.Sheet.Transpose).toBe(3)
     })
 
-    it('S7: prefers MusicXML sourceUrl over stale aiXmlContent at mount', async () => {
-        // Pre-fix priority was `aiXmlContent || sourceUrl` — if AI transcription
-        // for a prior PDF chart left `aiXmlContent` set in the store, mounting
-        // SmartScoreViewer for a NEW MusicXML chart would render the stale AI
-        // XML instead of the chart's actual MusicXML file. Post-fix priority
-        // is `sourceUrl || aiXmlContent`; sourceUrl wins.
+    it('S7: prefers the fileId-resolved MusicXML over stale aiXmlContent at mount', async () => {
+        // If AI transcription for a prior PDF chart left `aiXmlContent` set in
+        // the store, mounting SmartScoreViewer for a NEW MusicXML chart must
+        // render the chart's actual MusicXML (resolved from its fileId), NOT
+        // the stale AI XML. With a fileId present, aiXmlContent is ignored;
+        // here the IDB miss resolves the bytes from the network route.
         const STALE_AI_XML = '<score-partwise data-source="stale-pdf-ai"><part-list/></score-partwise>'
         const MUSICXML_FROM_URL = '<score-partwise data-source="fresh-musicxml-url"><part-list/></score-partwise>'
 
@@ -572,13 +582,69 @@ describe('SmartScoreViewer', () => {
         }))
 
         await act(async () => {
-            render(<SmartScoreViewer url="https://example.com/fresh.xml" />)
+            render(<SmartScoreViewer fileId="file-fresh" />)
         })
         await advance(250)
 
-        // sourceUrl content reached load(), aiXmlContent did NOT.
+        // The fileId-resolved content reached load(), aiXmlContent did NOT.
         expect(mockOsmdInstance.load).toHaveBeenCalledWith(MUSICXML_FROM_URL)
         expect(mockOsmdInstance.load).not.toHaveBeenCalledWith(STALE_AI_XML)
+    })
+
+    // ── WS-10: offline IDB-first source resolution ──
+
+    it('IDB-first: renders the offline-idb cached MusicXML bytes WITHOUT a network fetch', async () => {
+        // Cache HIT: getFile returns the cached bytes as a Blob. The viewer
+        // reads them via the Blob API (no fetch(blob:) round-trip) and hands
+        // the XML string to OSMD. fetch must NOT be called.
+        const fetchSpy = vi.fn()
+        vi.stubGlobal('fetch', fetchSpy)
+        mockGetFile.mockResolvedValue(new Blob([XML], { type: 'application/xml' }))
+
+        await act(async () => {
+            render(<SmartScoreViewer fileId="file-cached" />)
+        })
+        await advance(250)
+
+        expect(mockGetFile).toHaveBeenCalledWith('file-cached')
+        expect(mockOsmdInstance.load).toHaveBeenCalledWith(XML)
+        expect(fetchSpy).not.toHaveBeenCalled()
+    })
+
+    it('Network-fallback: fetches /api/drive/file/<id> on an IDB miss', async () => {
+        // Cache MISS (getFile → null, default). The viewer falls back to the
+        // network route, which the suite stub answers with valid MusicXML.
+        const fetchSpy = vi.fn().mockResolvedValue({
+            ok: true,
+            arrayBuffer: async () => new TextEncoder().encode(XML).buffer,
+        })
+        vi.stubGlobal('fetch', fetchSpy)
+
+        await act(async () => {
+            render(<SmartScoreViewer fileId="file-net" />)
+        })
+        await advance(250)
+
+        expect(fetchSpy).toHaveBeenCalledWith('/api/drive/file/file-net')
+        expect(mockOsmdInstance.load).toHaveBeenCalledWith(XML)
+    })
+
+    it('Compressed .mxl: hands OSMD a Blob when the cached bytes are not plain XML', async () => {
+        // A compressed .mxl is a zip (PK\x03\x04 header) — not text-sniffable
+        // as XML — so the viewer must pass the original Blob to osmd.load
+        // (OSMD unzips .mxl itself), not a decoded string.
+        const fetchSpy = vi.fn()
+        vi.stubGlobal('fetch', fetchSpy)
+        const mxlBytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00])
+        mockGetFile.mockResolvedValue(new Blob([mxlBytes], { type: 'application/vnd.recordare.musicxml' }))
+
+        await act(async () => {
+            render(<SmartScoreViewer fileId="file-mxl" />)
+        })
+        await advance(250)
+
+        expect(mockOsmdInstance.load).toHaveBeenCalledWith(expect.any(Blob))
+        expect(fetchSpy).not.toHaveBeenCalled()
     })
 
     // ── Phase-2 MED: detected-key header + "Match label to written key" ──
@@ -595,7 +661,7 @@ describe('SmartScoreViewer', () => {
         // without waiting for the load effect.
         vi.useRealTimers()
         const { container } = (() => {
-            const r = render(<SmartScoreViewer url="https://example.com/x.xml" />)
+            const r = render(<SmartScoreViewer fileId="file-x" />)
             return r
         })()
         expect(container.querySelector('[data-testid="musicxml-key-header"]')).toBeNull()
@@ -605,7 +671,7 @@ describe('SmartScoreViewer', () => {
     it('Header: renders "Key: <X>" when musicXmlKey is set and no trackKey provided', () => {
         mockStoreValues.musicXmlKey = 'D'
         vi.useRealTimers()
-        render(<SmartScoreViewer url="https://example.com/x.xml" />)
+        render(<SmartScoreViewer fileId="file-x" />)
         const header = screen.getByTestId('musicxml-key-header')
         expect(header).toBeTruthy()
         expect(header.textContent).toMatch(/Key/i)
@@ -619,7 +685,7 @@ describe('SmartScoreViewer', () => {
         mockStoreValues.musicXmlKey = 'Eb'
         mockAuthValues.isBandLeader = true
         vi.useRealTimers()
-        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-1" trackKey="D" />)
+        render(<SmartScoreViewer fileId="file-x" trackId="t-1" trackKey="D" />)
         const header = screen.getByTestId('musicxml-key-header')
         expect(header.textContent).toMatch(/Written/i)
         expect(header.textContent).toMatch(/Eb/)
@@ -633,7 +699,7 @@ describe('SmartScoreViewer', () => {
         mockAuthValues.isBandLeader = true
         mockAuthValues.isAdmin = false
         vi.useRealTimers()
-        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-1" trackKey="D" />)
+        render(<SmartScoreViewer fileId="file-x" trackId="t-1" trackKey="D" />)
         expect(screen.getByLabelText(/Match label to written key Eb/i)).toBeTruthy()
         vi.useFakeTimers()
     })
@@ -643,7 +709,7 @@ describe('SmartScoreViewer', () => {
         mockAuthValues.isBandLeader = false
         mockAuthValues.isAdmin = true
         vi.useRealTimers()
-        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-2" trackKey="G" />)
+        render(<SmartScoreViewer fileId="file-x" trackId="t-2" trackKey="G" />)
         expect(screen.getByLabelText(/Match label to written key/i)).toBeTruthy()
         vi.useFakeTimers()
     })
@@ -653,7 +719,7 @@ describe('SmartScoreViewer', () => {
         mockAuthValues.isBandLeader = false
         mockAuthValues.isAdmin = false
         vi.useRealTimers()
-        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-1" trackKey="D" />)
+        render(<SmartScoreViewer fileId="file-x" trackId="t-1" trackKey="D" />)
         // Header still renders (informational); button does NOT.
         expect(screen.getByTestId('musicxml-key-header')).toBeTruthy()
         expect(screen.queryByLabelText(/Match label to written key/i)).toBeNull()
@@ -664,7 +730,7 @@ describe('SmartScoreViewer', () => {
         mockStoreValues.musicXmlKey = 'C'
         mockAuthValues.isBandLeader = true
         vi.useRealTimers()
-        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-1" trackKey="C" />)
+        render(<SmartScoreViewer fileId="file-x" trackId="t-1" trackKey="C" />)
         expect(screen.queryByLabelText(/Match label to written key/i)).toBeNull()
         // Header still shows informational "Key: C".
         expect(screen.getByTestId('musicxml-key-header').textContent).toMatch(/C/)
@@ -676,7 +742,7 @@ describe('SmartScoreViewer', () => {
         mockAuthValues.isBandLeader = true
         vi.useRealTimers()
         // No trackKey prop — the load effect's heal handles this case.
-        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-1" />)
+        render(<SmartScoreViewer fileId="file-x" trackId="t-1" />)
         expect(screen.queryByLabelText(/Match label to written key/i)).toBeNull()
         vi.useFakeTimers()
     })
@@ -685,7 +751,7 @@ describe('SmartScoreViewer', () => {
         mockStoreValues.musicXmlKey = 'Eb'
         mockAuthValues.isBandLeader = true
         vi.useRealTimers()
-        render(<SmartScoreViewer url="https://example.com/x.xml" trackId="t-9" trackKey="D" />)
+        render(<SmartScoreViewer fileId="file-x" trackId="t-9" trackKey="D" />)
 
         const btn = screen.getByLabelText(/Match label to written key Eb/i)
         await act(async () => {
