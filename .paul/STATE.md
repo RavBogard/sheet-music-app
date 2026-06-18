@@ -13,9 +13,9 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 Milestone: **🚧 v11.6 — Airtight (Weekend Stress & Usability) — OPENED 2026-06-17.** Narrow stress + usability hardening anchored to the three upcoming Camp Sabra weekend sets. Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar = usability-AND-access. Source context consumed: `.paul/MILESTONE-CONTEXT.md`. (v11.5 ✅ `v11.5.0`; v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`.)
 Phase: **🚧 v11.6-02 (Perform reading airtight) — IN PROGRESS.** Complex phase RE-DECOMPOSED into 4 vertical slices (text split P1-core vs nits): **Plan 01 ✅ Nav & hydration (WS-02/01/09)** `49dbe460e7` · **Plan 02 = Text Fit-mode P1 core (WS-03 legibility floor+true-width+scroll / WS-04 transposed-chord alignment / WS-20 touch-targets)** · Plan 03 = Text chord-correctness nits (WS-19 regex / WS-23 preferFlats / WS-24 gap / WS-25 slash-bass) · Plan 04 = PDF/image+toolbar+drawer-nav (WS-05/06/07/08/14–18/22/26–28). (v11.6-01 ✅ COMPLETE 1/4 phases.)
-Plan: **`v11.6-02-06` ✅ CLOSED (loop complete), commit `5f15209a0b` pushed.** Image viewer: WS-06 (`ImageScoreViewer` reads store `zoom` via CSS-`zoom` in an overflow-auto container → toolbar Zoom scales + pans images; fit-1 object-contain baseline unchanged) · WS-15 (error state → `role="alert"` + ≥44px Retry remounting `<img>` via `reloadNonce` — signed-URL-safe). Next: **`/paul:plan` Plan 07 (drawer-nav WS-08 P1/17/28) → LAST plan of phase 02 → phase-02 close** (PROJECT/ROADMAP evolve + phase-close commit). (Plan 05 ✅ `241e6e04e8`.)
-Status: **Plan v11.6-02-06 CLOSED — phase 02 at 6 of 7 plans. Ready for `/paul:plan` (Plan 07, final).**
-Last activity: 2026-06-18 — **UNIFIED v11.6-02-06 + committed `5f15209a0b` (pushed `acf80ba2ee..5f15209a0b`, Vercel auto-deploy).** Image viewer airtight (zoom + retry). All three Perform viewers (PDF/text/image) now honor zoom + recover from load errors.
+Plan: **`v11.6-02-07` ✅ CREATED, awaiting APPLY — FINAL plan of phase 02.** Drawer-nav: WS-08 P1 (in-chart drawer open → `jumpToSong(globalIndex)` within the live queue instead of `router.push('/perform/<fileId>')` → Next/Prev preserved; `globalIndex`==playbackQueue index confirmed) · WS-28 (delete the unmounted `SwipeOverlay` + orphaned `swipe-anim` keyframe — dead code, false swipe promise). **DECISION: WS-17 DEFERRED → cycle-13a leader-broadcast** (its `currentTrackIndex`/`setCurrentPosition` plumbing is owned by that active v7.1 lane; cycle-13a's leader-broadcast IS the real fix — PAUL touching it would collide). 2-task plan; /ui-ux-pro-max BLOCKING; autonomous:true. **UNIFY triggers phase-02 TRANSITION.**
+Status: **Plan v11.6-02-07 CREATED — awaiting APPLY. Phase 02 at 6 of 7 plans (Plan 07 = FINAL).**
+Last activity: 2026-06-18 — **PLANNED v11.6-02-07** (WS-08 drawer jumpToSong + WS-28 delete SwipeOverlay; WS-17 deferred→cycle-13a). Prior: UNIFIED v11.6-02-06 + committed `5f15209a0b`.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,10 +43,10 @@ Last activity: 2026-06-18 — **UNIFIED v11.6-02-06 + committed `5f15209a0b` (pu
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-06 loop CLOSED — ready for next PLAN]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-07 PLAN created, awaiting approval — FINAL plan]
+  ✓        ○        ○
 ```
-(v11.6 OPENED 2026-06-17. Phase 01 ✅. **Phase 02 IN PROGRESS (6/7 plans) — 01 `49dbe460e7` / 02 `34a39fba30` / 03 `8f7f1a5bd7` / 04 `ea4dcd7ec9` / 05 `241e6e04e8` / 06 `5f15209a0b` shipped. Next: `/paul:plan` Plan 07 (drawer-nav WS-08/17/28) — LAST plan → phase-02 close.** WS-19/23/24 deferred→v11.7.)
+(v11.6 OPENED 2026-06-17. Phase 01 ✅. **Phase 02 IN PROGRESS — 01 `49dbe460e7` / 02 `34a39fba30` / 03 `8f7f1a5bd7` / 04 `ea4dcd7ec9` / 05 `241e6e04e8` / 06 `5f15209a0b` shipped; Plan 07 CREATED (drawer-nav WS-08/28; WS-17→cycle-13a), awaiting `/paul:apply` → its UNIFY closes phase 02.** WS-19/23/24 deferred→v11.7.)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
@@ -95,10 +95,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-06 loop CLOSED — ready f
 
 ## Session Continuity
 
-Last session: 2026-06-18 — **closed Plan 06** (image viewer WS-06/15), committed `5f15209a0b`. Phase 02 at 6 of 7 plans.
-Stopped at: **Plan v11.6-02-06 CLOSED. Phase 02 at 6 of 7 plans — ONE plan left (Plan 07).**
-Next action: **`/paul:plan` for Plan 07 (drawer-nav — WS-08 P1 / WS-17 / WS-28)** — WS-08 P1 (in-chart Setlist drawer `router.push('/perform/<fileId>')` → single-chart route with `onNavigate={()=>{}}` → Next/Prev die, setlist context lost; `SetlistDrawer.tsx:402-406`) · WS-17 (dead "current position" highlight — `currentTrackIndex=-1` no-op; `use-setlist-performance.ts:180,226`) · WS-28 (`SwipeOverlay` advertises swipe but has no handler + is unmounted — decide implement-or-delete; `SwipeOverlay.tsx:39-40`). **Plan 07 is the LAST plan → its UNIFY triggers phase-02 TRANSITION** (PROJECT/ROADMAP evolve + phase-close commit). /ui-ux-pro-max BLOCKING.
-Resume file: **`.paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-06-SUMMARY.md`** → context in `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (WS-08/17/28 cites).
+Last session: 2026-06-18 — **PLANNED Plan 07** (FINAL: WS-08 + WS-28; WS-17 deferred→cycle-13a). Prior: closed Plan 06 `5f15209a0b`.
+Stopped at: **Plan v11.6-02-07 CREATED, awaiting APPLY (FINAL plan of phase 02).**
+Next action: **`/paul:apply .paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-07-PLAN.md`** — 2 tasks: T1 WS-08 (SetlistDrawer QueueRow `onOpen` → `jumpToSong(globalIndex)` not `router.push` → Next/Prev preserved; globalIndex==playbackQueue index confirmed; + `setlist-drawer.test.tsx` mocking the virtualizer) / T2 WS-28 (delete unmounted `SwipeOverlay.tsx` + orphaned `swipe-anim` keyframe in globals.css; re-confirm zero render sites first). **Load /ui-ux-pro-max FIRST (BLOCKING). UNIFY → phase-02 TRANSITION** (PROJECT/ROADMAP evolve + phase-close commit). WS-17 → cycle-13a.
+Resume file: **`.paul/HANDOFF-2026-06-18-v11.6-02-07-pre-apply.md`** (full pre-apply pickup) → then `.paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-07-PLAN.md` + context in `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (WS-08/28 cites).
 **Carry (this phase):** the live stress sweep showed INTERMITTENT headless-WebKit `open-chart` timeouts on text sets (NOT a regression — known headless+Firestore-streaming fidelity gap); confirm real-device chart-open on camp wifi in phase 03.
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context:
