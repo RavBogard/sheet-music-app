@@ -8,8 +8,8 @@
 
 ## Active Milestone
 
-**🚧 v11.6 — Airtight (Weekend Stress & Usability)** (OPENED 2026-06-17 · `package.json` → 11.6.0 at close · **1 of 4 phases complete**)
-Status: 🚧 **In Progress** · Phases: **1 of 4** (01 ✅ discovery → 02/03/04 fixes) · **Oracle:** `docs/ACCESS-POLICY.md` **v0.4** (access-shaped findings) · **Triage bar widened to usability-AND-access** · **Source:** `.paul/MILESTONE-CONTEXT.md` (consumed at /paul:milestone 2026-06-17). **Discovery report:** `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (31 findings WS-01..31; drives 02/03/04).
+**🚧 v11.6 — Airtight (Weekend Stress & Usability)** (OPENED 2026-06-17 · `package.json` → 11.6.0 at close · **2 of 4 phases complete**)
+Status: 🚧 **In Progress** · Phases: **2 of 4** (01 ✅ discovery · 02 ✅ Perform reading airtight → 03/04 remain) · **Oracle:** `docs/ACCESS-POLICY.md` **v0.4** (access-shaped findings) · **Triage bar widened to usability-AND-access** · **Source:** `.paul/MILESTONE-CONTEXT.md` (consumed at /paul:milestone 2026-06-17). **Discovery report:** `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (31 findings WS-01..31; drives 02/03/04).
 **Doctrine:** A deliberately **narrow** hardening milestone — not a feature milestone. v11.5 hardened by reasoning; v11.6 hardens by **driving the real surface against the three real upcoming sets and fixing what actually breaks.** Authoring stays MCP-first; the broad backlog (photo-import, library density, comms layer) is pushed to v11.7.
 Focus: Stress-test the band's *entire* path against the three upcoming **Camp Sabra weekend** sets and fix whatever isn't airtight — special weight on **text/plain chord-chart iPad reading** (two of three sets are scraped text charts on the less-hardened `TextScoreViewer` path) and **off-site flaky-wifi resilience** (a camp may break the "venue has wifi" assumption that justified dropping PWA offline). The three sets are the canonical stress fixtures (realism anchor, NOT a service-gate/deadline-triage axis — paper stays the implicit fallback). CRC + broslaz both live; CRC byte-identical where shared.
 
@@ -21,7 +21,7 @@ Focus: Stress-test the band's *entire* path against the three upcoming **Camp Sa
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v11.6-01 | Stress sweep & triage — live Playwright (3 sets, wifi-drop sim) + multi-agent code audit → triaged findings report [DISCOVERY, verify-first, BLOCKS the rest] | 01 (research) ✅ | ✅ Complete | 2026-06-17 |
-| v11.6-02 | Perform reading airtight — text/plain rendering + transpose/swipe/zoom on iPad-WebKit [P0/P1] | 01 nav+hydration ✅ `49dbe460e7` · 02 text Fit-core ✅ `34a39fba30` · 03 WS-25 slash-bass ✅ `8f7f1a5bd7` (WS-19/23/24→v11.7) · 04 PDF-render ✅ `ea4dcd7ec9` · 05 toolbar+image (WS-06/14/15/18/22/26) · 06 drawer-nav (WS-08/17/28) | 🚧 In progress (4/6) | - |
+| v11.6-02 | Perform reading airtight — text/plain rendering + transpose/swipe/zoom on iPad-WebKit [P0/P1] | 01 nav+hydration ✅ `49dbe460e7` · 02 text Fit-core ✅ `34a39fba30` · 03 WS-25 slash-bass ✅ `8f7f1a5bd7` (WS-19/23/24→v11.7) · 04 PDF-render ✅ `ea4dcd7ec9` · 05 reading-controls WS-18/22/26/14 ✅ `241e6e04e8` · 06 image-viewer WS-06/15 ✅ `5f15209a0b` · 07 drawer-nav WS-08/28 ✅ `6dee681893` (WS-17→cycle-13a) | ✅ Complete (7/7) | 2026-06-18 |
 | v11.6-03 | Off-site resilience (flaky wifi) — characterize wifi-drop w/ set open; decide bounded offline guarantee [P1, characterize→decide] | TBD | Not started | - |
 | v11.6-04 | Authoring + publish round-trip — finalize 3 sets via MCP; airtight publish-&-deliver [P1, live send = STOP-gate] | TBD | Not started | - |
 
