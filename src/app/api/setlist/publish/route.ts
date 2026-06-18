@@ -156,7 +156,7 @@ export const POST = createApiHandler(
                     type: 'setlist_published',
                     title: 'New setlist published',
                     body: `"${setlistName}" is now available`,
-                    link: `/setlist/${setlistId}`,
+                    link: `/perform/setlist/${setlistId}`,
                     entityId: setlistId,
                     read: false,
                     createdAt: FieldValue.serverTimestamp(),

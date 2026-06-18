@@ -768,7 +768,7 @@ export async function publishSetlist(
                     type: "setlist_published",
                     title: "New setlist published",
                     body: `"${setlistName}" is now available`,
-                    link: `/setlist/${args.setlistId}`,
+                    link: `/perform/setlist/${args.setlistId}`,
                     entityId: args.setlistId,
                     read: false,
                     createdAt: FieldValue.serverTimestamp(),

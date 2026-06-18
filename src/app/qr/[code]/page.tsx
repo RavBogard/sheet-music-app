@@ -33,17 +33,49 @@ export default function QRApprovePage() {
     const org = useOrg()
     const orgName = getOrgBranding(org).shortName
 
-    // Check if the session is still valid
+    // Check if the session is still valid.
+    // WS-31: a phone that scans before the iPad's background registration POST
+    // lands gets 404 (not-yet-registered) — distinct from 410 (genuinely
+    // expired/already-used). Retry 404 on a short cadence so an early scan
+    // recovers, while staying in the "Checking session…" loading state (no
+    // blank screen, no premature "expired"). 410 and a 404 that persists past
+    // the recovery window still resolve to "expired".
     useEffect(() => {
         if (!code) return
-        fetch(`/api/auth/qr?code=${code}`)
-            .then(res => {
-                if (res.status === 410) setState("expired")
-                else if (res.status === 404) setState("expired")
-                else if (res.ok) setState("ready")
-                else setState("error")
-            })
-            .catch(() => setState("error"))
+        let cancelled = false
+        let attempts = 0
+        const MAX_ATTEMPTS = 6 // ~6 checks
+        const RETRY_INTERVAL_MS = 1000 // ~1s apart → ~5s recovery window
+        let timer: ReturnType<typeof setTimeout> | null = null
+
+        const check = async () => {
+            attempts += 1
+            try {
+                const res = await fetch(`/api/auth/qr?code=${code}`)
+                if (cancelled) return
+                if (res.status === 410) {
+                    setState("expired")
+                } else if (res.ok) {
+                    setState("ready")
+                } else if (res.status === 404 && attempts < MAX_ATTEMPTS) {
+                    // Not registered yet — keep "Checking session…" and retry.
+                    timer = setTimeout(check, RETRY_INTERVAL_MS)
+                } else {
+                    // Persistent 404 past the window means the iPad never
+                    // registered → expired; any other status → unrecoverable.
+                    setState(res.status === 404 ? "expired" : "error")
+                }
+            } catch {
+                if (!cancelled) setState("error")
+            }
+        }
+
+        check()
+
+        return () => {
+            cancelled = true
+            if (timer) clearTimeout(timer)
+        }
     }, [code])
 
     // Auto-approve if user is already signed in and session is ready

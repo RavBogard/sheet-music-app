@@ -251,6 +251,14 @@ describe("MCP publish_setlist (emulator)", () => {
                 .collection("notifications")
                 .get()
             expect(notifSnap.size).toBeGreaterThanOrEqual(1)
+            // WS-11 regression: the in-app bell notification must link to the
+            // LIVE setlist route (/perform/setlist/{id}) — not the dead
+            // /setlist/{id} route (no such page) that 404s the tapping musician.
+            for (const doc of notifSnap.docs) {
+                const link = doc.data().link as string | undefined
+                expect(link).toBeDefined()
+                expect(link!.startsWith("/perform/setlist/")).toBe(true)
+            }
         }
         expect(r.delivery.inApp.sent).toBe(4)
 
