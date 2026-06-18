@@ -602,3 +602,11 @@ shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iP
 ## v11.6-02-07 (Drawer-nav — WS-08) — real 11" iPad Safari, post-deploy
 - **WS-08 drawer jump preserves the queue:** open a multi-song setlist in Perform (e.g. **Camp Sabra Havdalah** `7e005452-7c42-4cdc-b27d-ff0c78b6667b` or **Staff Concert** `7c640a8a-358e-48ee-8523-6b8a0eca9d05`), open the in-chart **Setlist** drawer, and tap a DIFFERENT song. It jumps straight to that song's chart AND the bottom Next/Prev chevrons still traverse the whole set (NOT "Song 1 of 1" with greyed chevrons). Transpose/zoom for the tapped song are its own (per-chart restore). Tapping an unbonded flow row (no chart) does nothing.
 - jsdom has no radix-portal/layout fidelity for the full gesture, so the open-handler wiring (jumpToSong vs router.push, no-fileId no-op) is unit-proven; real-device confirms the live queue + chevron traversal after the jump.
+
+## v11.6-02.1 (P0 — gig packet text charts) — David, centralreform.live, post-deploy
+- **Re-print on the website:** open a text-chart set (e.g. **Camp Sabra — Staff Concert — June 20** `c2075393-d994-4643-ade3-432a6864d87f`) → Gig Packet → **Full Packet (PDFs)** → Download. The PDF now contains a monospace chord-chart page per song (was a cover page with NO charts). Try a per-musician transpose too (chords shift, stay over lyrics).
+- Prod-verified server-side already: MCP generate_gig_packet rendered 16/16 bonded text charts (pageCount 22, 0 missing) on the live set. This item is David's real-device browser confirmation.
+
+## v11.6-03-02 (off-site WS-12/13) — real 11" iPad, post-deploy
+- **WS-12 open set survives offline error:** open a set in Perform, then drop wifi (or incognito/memory mode) so a Firestore onSnapshot error fires → the set STAYS on screen (charts still readable), NOT replaced by the "Couldn't load setlist" full-screen error. A genuine empty-load failure still shows the error.
+- **WS-13 definitive saved count:** open a set → the Save-offline control reads "Saved N/N" (green check) once every chart is cached, and "Save M/N" (amber) while partial — so you can confirm all charts are cached before leaving wifi.
