@@ -22,7 +22,7 @@ Focus: Stress-test the band's *entire* path against the three upcoming **Camp Sa
 |-------|------|-------|--------|-----------|
 | v11.6-01 | Stress sweep & triage — live Playwright (3 sets, wifi-drop sim) + multi-agent code audit → triaged findings report [DISCOVERY, verify-first, BLOCKS the rest] | 01 (research) ✅ | ✅ Complete | 2026-06-17 |
 | v11.6-02 | Perform reading airtight — text/plain rendering + transpose/swipe/zoom on iPad-WebKit [P0/P1] | 01 nav+hydration ✅ `49dbe460e7` · 02 text Fit-core ✅ `34a39fba30` · 03 WS-25 slash-bass ✅ `8f7f1a5bd7` (WS-19/23/24→v11.7) · 04 PDF-render ✅ `ea4dcd7ec9` · 05 reading-controls WS-18/22/26/14 ✅ `241e6e04e8` · 06 image-viewer WS-06/15 ✅ `5f15209a0b` · 07 drawer-nav WS-08/28 ✅ `6dee681893` (WS-17→cycle-13a) | ✅ Complete (7/7) | 2026-06-18 |
-| v11.6-03 | Off-site resilience (flaky wifi) — characterize wifi-drop w/ set open; decide bounded offline guarantee [P1, characterize→decide] | TBD | Not started | - |
+| v11.6-03 | Off-site resilience (flaky wifi) — **REFRAMED by Phase-01: offline reading WORKS** (SW+IDB cache re-introduced 2026-05-28) → verify + close narrow residual gaps (WS-10/12/13/29/30), NOT re-introduce | 01 verify+close-scope decision (created, awaiting apply) | 🚧 Planning | - |
 | v11.6-04 | Authoring + publish round-trip — finalize 3 sets via MCP; airtight publish-&-deliver [P1, live send = STOP-gate] | TBD | Not started | - |
 
 ### Phase v11.6-01: Stress sweep & triage [DISCOVERY — verify-first, blocks the fix phases]

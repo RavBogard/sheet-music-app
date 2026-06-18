@@ -13,9 +13,9 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 Milestone: **🚧 v11.6 — Airtight (Weekend Stress & Usability) — OPENED 2026-06-17.** Narrow stress + usability hardening anchored to the three upcoming Camp Sabra weekend sets. Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar = usability-AND-access. Source context consumed: `.paul/MILESTONE-CONTEXT.md`. (v11.5 ✅ `v11.5.0`; v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`.)
 Phase: **✅ v11.6-02 (Perform reading airtight) — COMPLETE 7/7 (2026-06-18, phase tip `6dee681893`).** All 7 plans shipped: 01 nav+hydration `49dbe460e7` (WS-01/02/09) · 02 text Fit-core `34a39fba30` (WS-03/04/20) · 03 slash-bass `8f7f1a5bd7` (WS-25) · 04 PDF render `ea4dcd7ec9` (WS-05/07/16) · 05 reading-controls+fit-page `241e6e04e8` (WS-18/22/26/14) · 06 image-viewer `5f15209a0b` (WS-06/15) · 07 drawer-nav `6dee681893` (WS-08/28). WS-19/23/24→v11.7; WS-17→cycle-13a. **→ Phase v11.6-03 (Off-site resilience), ready to plan.** (v11.6-01 ✅ + 02 ✅ = 2/4 phases.)
-Plan: **Not started** — next is `/paul:plan` for Phase v11.6-03 (Off-site flaky-wifi resilience; characterize wifi-drop with a set open → decide bounded offline guarantee; likely `checkpoint:decision`).
-Status: **Phase v11.6-02 COMPLETE — ready to plan Phase v11.6-03.**
-Last activity: 2026-06-18 — **APPLIED + UNIFIED v11.6-02-07** (WS-08 drawer jumpToSong-in-queue + WS-28 delete SwipeOverlay; WS-17 deferred→cycle-13a); phase-02 TRANSITION executed (PROJECT/ROADMAP/STATE evolved). Committed `6dee681893`, pushed `origin master`.
+Plan: **`v11.6-03-01` ✅ CREATED, awaiting approval.** Verify-first + decide (NO prod code): Task 1 verifies the 5 residual offline gaps (WS-10/12/13/29/30) against DEPLOYED code + writes `.paul/research/v11-6-03-offline-gap-verify-2026-06-18.md`; Task 2 = **`checkpoint:decision`** close-scope fork (A camp-only WS-12/13 [recommended] · B +WS-10 lone-P1 · C full sweep). `autonomous:false` (the decision gates Plan 02 implementation, where /ui-ux-pro-max is BLOCKING). **Reframed by Phase-01: offline reading WORKS** (SW+IDB cache re-introduced 2026-05-28) → 03 = verify + close narrow gaps, NOT re-introduce.
+Status: **PLAN v11.6-03-01 created — ready for APPLY** (apply runs the verify + surfaces the close-scope decision to Daniel).
+Last activity: 2026-06-18 — **PLANNED v11.6-03-01** (verify 5 offline gaps + close-scope checkpoint:decision). Prior: APPLIED+UNIFIED v11.6-02-07 + phase-02 transition (`6dee681893`).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,10 +43,10 @@ Last activity: 2026-06-18 — **APPLIED + UNIFIED v11.6-02-07** (WS-08 drawer ju
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02 COMPLETE — phase-02 transition done; next: PLAN v11.6-03]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-03-01 PLAN created, awaiting approval]
+  ✓        ○        ○
 ```
-(v11.6 OPENED 2026-06-17. **Phase 01 ✅ + Phase 02 ✅ COMPLETE (2/4).** Phase 02 all 7 plans shipped: 01 `49dbe460e7` / 02 `34a39fba30` / 03 `8f7f1a5bd7` / 04 `ea4dcd7ec9` / 05 `241e6e04e8` / 06 `5f15209a0b` / 07 `6dee681893` (drawer-nav, phase-02 close). WS-19/23/24 deferred→v11.7; WS-17→cycle-13a. **Next: `/paul:plan` for Phase v11.6-03.**)
+(v11.6 OPENED 2026-06-17. **Phase 01 ✅ + Phase 02 ✅ COMPLETE (2/4).** **Phase 03 PLANNING — Plan 01 created (verify 5 offline gaps + close-scope checkpoint:decision; autonomous:false), awaiting `/paul:apply`.** Phase 02 tip `6dee681893`. WS-19/23/24 deferred→v11.7; WS-17→cycle-13a.)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
@@ -95,10 +95,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02 COMPLETE — phase-02 tran
 
 ## Session Continuity
 
-Last session: 2026-06-18 — **APPLIED + UNIFIED v11.6-02-07** (WS-08 drawer jumpToSong-in-queue + WS-28 SwipeOverlay delete) → committed `6dee681893`, pushed; **phase-02 TRANSITION executed** (PROJECT/ROADMAP/STATE evolved, phase 02 ✅ 7/7).
-Stopped at: **Phase v11.6-02 COMPLETE (2/4 phases). At a phase boundary — ready to plan Phase v11.6-03.**
-Next action: **`/paul:plan` for Phase v11.6-03 (Off-site resilience / flaky wifi).** Characterize wifi-drop with a Camp Sabra set already open (does the open set/chart keep working? what re-fetches and 401s/spins?), then **decide** a bounded offline guarantee for the open set + its charts — revisits the PWA-removal "venue has wifi" call for the off-site case. Likely carries a `checkpoint:decision` (do-nothing vs. open-set cache vs. narrow SW shell — a genuine 2+-option fork). /ui-ux-pro-max BLOCKING if any UI is touched. NOTE the Phase-01 finding: **offline reading was confirmed working live** → 03 leans verify+bound, not re-introduce from scratch.
-Resume file: **`.paul/ROADMAP.md`** § Phase v11.6-03 + `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (offline/wifi findings: WS-10/12/13/21/29-31 area).
+Last session: 2026-06-18 — **PLANNED v11.6-03-01** (verify 5 residual offline gaps WS-10/12/13/29/30 against deployed code + close-scope `checkpoint:decision`). Prior: APPLIED+UNIFIED v11.6-02-07 + phase-02 transition (`6dee681893`).
+Stopped at: **Plan v11.6-03-01 CREATED, awaiting approval/APPLY.**
+Next action: **`/paul:apply .paul/phases/v11.6-03-offsite-resilience/v11.6-03-01-PLAN.md`** — verify-first (NO prod code): T1 reads the 5 cited offline sources on master, classifies each gap CONFIRMED/MITIGATED/REFUTED with current file:line + camp relevance, writes `.paul/research/v11-6-03-offline-gap-verify-2026-06-18.md`; T2 = **`checkpoint:decision`** close-scope fork → **Daniel selects A (camp-only WS-12/13, recommended) / B (+WS-10 lone-P1) / C (full sweep)**. The chosen scope drives Plan v11.6-03-02 (implementation, /ui-ux-pro-max BLOCKING). `autonomous:false` — APPLY will STOP at the decision.
+Resume file: **`.paul/phases/v11.6-03-offsite-resilience/v11.6-03-01-PLAN.md`** + Phase-01 report `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (offline section: WS-10/12/13/29/30).
 **Carry (this phase):** the live stress sweep showed INTERMITTENT headless-WebKit `open-chart` timeouts on text sets (NOT a regression — known headless+Firestore-streaming fidelity gap); confirm real-device chart-open on camp wifi in phase 03.
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context:
