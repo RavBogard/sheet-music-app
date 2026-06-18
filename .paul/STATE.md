@@ -13,9 +13,9 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 Milestone: **🚧 v11.6 — Airtight (Weekend Stress & Usability) — OPENED 2026-06-17.** Narrow stress + usability hardening anchored to the three upcoming Camp Sabra weekend sets. Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar = usability-AND-access. Source context consumed: `.paul/MILESTONE-CONTEXT.md`. (v11.5 ✅ `v11.5.0`; v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`.)
 Phase: **🚧 v11.6-02 (Perform reading airtight) — IN PROGRESS.** Complex phase RE-DECOMPOSED into 4 vertical slices (text split P1-core vs nits): **Plan 01 ✅ Nav & hydration (WS-02/01/09)** `49dbe460e7` · **Plan 02 = Text Fit-mode P1 core (WS-03 legibility floor+true-width+scroll / WS-04 transposed-chord alignment / WS-20 touch-targets)** · Plan 03 = Text chord-correctness nits (WS-19 regex / WS-23 preferFlats / WS-24 gap / WS-25 slash-bass) · Plan 04 = PDF/image+toolbar+drawer-nav (WS-05/06/07/08/14–18/22/26–28). (v11.6-01 ✅ COMPLETE 1/4 phases.)
-Plan: **`v11.6-02-04` ✅ CLOSED (loop complete), commit `ea4dcd7ec9` pushed.** PDF render reliability: WS-05 (render watchdog + width-guard), WS-07 ("Page X of N"), WS-16 (rotate retry-reset); decisions in pure `pdf-viewer-state.ts`. Next: **`/paul:plan` for Plan 05 (toolbar + image: WS-18/22/06/15/14/26).** Then Plan 06 (drawer-nav: WS-08/17/28) → phase-02 close.
-Status: **Plan v11.6-02-04 CLOSED — phase 02 at 4 of 6 plans. Ready for `/paul:plan` (Plan 05).**
-Last activity: 2026-06-17 — **UNIFIED v11.6-02-04 + committed `ea4dcd7ec9` (pushed `d0c27b9e3c..ea4dcd7ec9`, Vercel auto-deploy).** Four loops closed this session. PDF-render P1 cluster done; pivoted to pure-helper decision tests (react-pdf jsdom-hostile; render behavior→UAT).
+Plan: **`v11.6-02-05` ✅ CREATED, awaiting APPLY.** Reading controls (toolbar + PDF fit): WS-18 (zoom-% always visible on iPad) · WS-22 (transpose reachability — ROOT CAUSE = e2e `.first()` grabs the hidden off-breakpoint trigger → 6s click timeout; harness selector fix + live re-run proof, no product change expected) · WS-26 + WS-14 (fit-page mode so landscape portrait-PDFs read fully + honest Fit-control label; pure `computeFitPageWidth` in `pdf-viewer-state.ts`, ephemeral `fitMode` store slice default 'width'). **DECISION: scoped to WS-18/22/26/14; image WS-06/15 DEFERRED → Plan 06** (3 weekend sets have ZERO image charts = lowest live-weight; matches handoff sub-scoping). /ui-ux-pro-max BLOCKING. autonomous:true. Then Plan 06 (image WS-06/15) → Plan 07 (drawer-nav WS-08/17/28) → phase-02 close.
+Status: **Plan v11.6-02-05 APPLIED (3/3 tasks PASS) — awaiting UNIFY + commit.** tsc 0 · `next build --webpack` 0 · 47 affected tests green (toolbar 19 / pdf-viewer 18 / fit-mode 5 / chart-zoom 5). WS-22 PROVEN via live prod sweep (transpose opens + applies, both orientations × PDF+text). Pre-existing-on-master failures (public-view / perform-cls / sync-engine-songs-mirror) confirmed NOT mine. Phase 02 = 4 of 7 plans (05 toolbar+PDF-fit / 06 image / 07 drawer-nav).
+Last activity: 2026-06-17 — **APPLIED v11.6-02-05.** WS-18 (zoom-% always visible) · WS-22 (e2e visible-trigger selector fix + live prod sweep proof) · WS-26 (honest "Reset zoom to 100%" label + PDF fit-mode toggle) · WS-14 (fit-page: pure `computeFitPageWidth` + ephemeral `fitMode` store slice default 'width' + PDFViewer height/aspect wiring). Real-iPad UAT appended. Prior: PLANNED 05; UNIFIED 04 `ea4dcd7ec9`.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,10 +43,10 @@ Last activity: 2026-06-17 — **UNIFIED v11.6-02-04 + committed `ea4dcd7ec9` (pu
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-04 loop CLOSED — phase 02 at 4/6 plans]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-05 APPLIED, awaiting UNIFY]
+  ✓        ✓        ○
 ```
-(v11.6 OPENED 2026-06-17. Phase 01 ✅. **Phase 02 IN PROGRESS (4/6 plans) — 01 `49dbe460e7` / 02 `34a39fba30` / 03 `8f7f1a5bd7` / 04 `ea4dcd7ec9` shipped. Next: `/paul:plan` for Plan 05 (toolbar+image WS-18/22/06/15/14/26)** → Plan 06 (drawer-nav WS-08/17/28) → phase-02 close. WS-19/23/24 deferred→v11.7.)
+(v11.6 OPENED 2026-06-17. Phase 01 ✅. **Phase 02 IN PROGRESS — 01 `49dbe460e7` / 02 `34a39fba30` / 03 `8f7f1a5bd7` / 04 `ea4dcd7ec9` shipped; Plan 05 CREATED (WS-18/22/26/14), awaiting `/paul:apply`.** Re-decomposed to 7 plans: 05 toolbar+PDF-fit → 06 image (WS-06/15) → 07 drawer-nav (WS-08/17/28) → phase-02 close. WS-19/23/24 deferred→v11.7.)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
@@ -95,10 +95,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-02-04 loop CLOSED — phase 0
 
 ## Session Continuity
 
-Last session: 2026-06-17 — closed FOUR full PAUL loops in phase 02: **01 Nav & hydration** `49dbe460e7` + **02 Text Fit-mode** `34a39fba30` + **03 WS-25 slash-bass** `8f7f1a5bd7` + **04 PDF render reliability** `ea4dcd7ec9`. All pushed to `origin master` (Vercel auto-deploy).
-Stopped at: **Plan v11.6-02-04 CLOSED. Phase 02 at 4 of 6 plans.**
-Next action: **`/paul:plan` for Plan 05 (toolbar + image viewer)** — WS-18 (zoom-% readout `hidden md:` → bare `/` on iPad; PerformanceToolbar:181-183) / WS-22 (transpose trigger click timed out on iPad in the sweep — verify reachability, likely toolbar overflow) / WS-06 (`ImageScoreViewer` ignores store zoom) / WS-15 (image-chart no Retry) / WS-14 (landscape PDF fit-page overflow) / WS-26 (`PerformanceToolbar` "Fit to width" actually does `setZoom(1)`). NOTE: no image charts in the 3 weekend sets (WS-06/15 lower live-weight; WS-18/22 hit the live sets). Then Plan 06 (drawer-nav: WS-08 P1/17/28) → phase-02 close. /ui-ux-pro-max BLOCKING.
-Resume file: **`.paul/HANDOFF-2026-06-17-v11.6-02-mid.md`** (full session-break pickup) → then `.paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-04-SUMMARY.md` + `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md`.
+Last session: 2026-06-17 — closed FOUR full PAUL loops (01–04) in phase 02, then **PLANNED Plan 05** (reading controls). All code pushed to `origin master`.
+Stopped at: **Plan v11.6-02-05 CREATED, awaiting APPLY.**
+Next action: **`/paul:apply .paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-05-PLAN.md`** — 3 tasks: T1 WS-18 (zoom-% always visible; PerformanceToolbar:181-183) / T2 WS-22 (e2e selector `.first()` grabs hidden off-breakpoint trigger → fix to visible-filter + live re-run proof, both orientations × PDF+text) / T3 WS-26+WS-14 (fit-page mode + honest Fit label; pure `computeFitPageWidth`, ephemeral `fitMode` default 'width'). **Load /ui-ux-pro-max FIRST (BLOCKING).** Image WS-06/15 deferred → Plan 06.
+Resume file: **`.paul/phases/v11.6-02-perform-reading-airtight/v11.6-02-05-PLAN.md`** → context in `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (WS-18/22/26/14 line cites).
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context:
 - Oracle `docs/ACCESS-POLICY.md` **v0.4**; but **triage bar is widened to usability-AND-access** for this milestone (a real usability defect counts even if it doesn't contradict an access cell). err-public still governs access-shaped findings.

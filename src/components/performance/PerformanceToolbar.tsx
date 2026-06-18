@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { useMusicStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { Sparkles, Loader2, Speaker, ZoomIn, ZoomOut, X, List, Printer } from "lucide-react"
+import { Sparkles, Loader2, Speaker, ZoomIn, ZoomOut, X, List, Printer, StretchHorizontal, Scan } from "lucide-react"
 import { TransposerMenu } from "../music/TransposerMenu"
 import { ChordEditBar } from "../music/ChordEditBar"
 import { estimateKey, transposeChord } from "@/lib/music-math"
@@ -48,7 +48,8 @@ interface PerformanceToolbarProps {
 
 export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock }: PerformanceToolbarProps) {
     const {
-        aiState, setAiEnabled, capoFret, transposition, zoom, setZoom, musicXmlKey
+        aiState, setAiEnabled, capoFret, transposition, zoom, setZoom, musicXmlKey,
+        fitMode, setFitMode
     } = useMusicStore()
     // v70-01-01 Task 3: image-typed charts have no extractable chord data,
     // so transposition + AI-chord editing are unavailable. Disable the
@@ -58,6 +59,9 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock
     // Daniel can see the option exists.
     const currentType = useMusicStore((s) => s.playbackQueue[s.queueIndex]?.type)
     const isImageChart = currentType === 'image'
+    // WS-14: fit-page is PDF-only (text/MusicXML/image viewers ignore fitMode),
+    // so the fit-mode toggle is shown only when the current chart is a PDF.
+    const isPdfChart = currentType === 'pdf'
     const transposeDisabledReason =
         "Transposing isn't available for image charts. Re-upload as a PDF or MusicXML to change keys."
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
@@ -164,22 +168,27 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock
             >
                 <ZoomOut className="h-5 w-5" />
             </Button>
-            {/* v11.5-02-04 (H1): the zoom-% readout doubles as a Fit reset —
-                tapping snaps the current chart back to its auto-fit baseline
+            {/* v11.5-02-04 (H1): the zoom-% readout doubles as a reset —
+                tapping snaps the current chart back to its active fit baseline
                 (setZoom(1), which clears this chart's per-device calibration).
                 ≥44px touch target (h-11/min-w-11) + ghost hover so it reads as
-                tappable without shifting layout. */}
+                tappable without shifting layout.
+                v11.6-02-05 (WS-18): the percentage is now ALWAYS visible (was
+                `hidden md:inline`, which collapsed to a bare "/" on iPad so the
+                band couldn't read the current zoom). `tabular-nums` + fixed-width
+                span keeps the layout stable across 90%/100%/110%.
+                v11.6-02-05 (WS-26): honest aria-label/title — this resets to 100%;
+                the width↔page FIT choice is the separate toggle beside it. */}
             <Button
                 variant="ghost"
                 onClick={() => setZoom(1)}
-                aria-label="Fit chart to width (reset zoom to 100%)"
-                title="Fit to width"
+                aria-label="Reset zoom to 100%"
+                title="Reset to 100%"
                 className={cn(
                     "font-medium text-foreground text-center flex items-center justify-center cursor-pointer rounded-lg hover:bg-muted hover:text-foreground h-11 min-w-11 px-1 text-xs"
                 )}
             >
-                <span className="md:hidden text-muted-foreground/40 font-light px-0.5">/</span>
-                <span className="hidden md:inline w-10">{Math.round(zoom * 100)}%</span>
+                <span className="tabular-nums w-11 text-center">{Math.round(zoom * 100)}%</span>
             </Button>
             <Button
                 variant="ghost" size="icon"
@@ -192,6 +201,31 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock
             >
                 <ZoomIn className="h-5 w-5" />
             </Button>
+            {/* WS-14 / WS-26: fit-mode toggle (PDF only). 'width' fills the
+                container width (portrait pages overflow below the fold in
+                landscape); 'page' fits the whole page in the viewport height so
+                a portrait chart is fully readable in landscape. The icon shows
+                the ACTIVE mode; the aria-label states the ACTION. A primary tint
+                in 'page' mode is the peripheral cue that fit-page is engaged
+                (mirrors the transpose button's active-state pattern). */}
+            {isPdfChart && (
+                <Button
+                    variant="ghost" size="icon"
+                    onClick={() => setFitMode(fitMode === 'width' ? 'page' : 'width')}
+                    aria-label={fitMode === 'width' ? 'Fit whole page to screen' : 'Fit chart to full width'}
+                    title={fitMode === 'width' ? 'Fit whole page' : 'Fit to width'}
+                    className={cn(
+                        "rounded-lg h-11 w-11",
+                        fitMode === 'page'
+                            ? "text-primary bg-primary/15 hover:bg-primary/25"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
+                >
+                    {fitMode === 'width'
+                        ? <StretchHorizontal className="h-5 w-5" />
+                        : <Scan className="h-5 w-5" />}
+                </Button>
+            )}
         </div>
     )
 

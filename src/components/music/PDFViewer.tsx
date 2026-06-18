@@ -15,7 +15,7 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import { logger } from "@/lib/logger"
 import { getFile } from '@/lib/offline-idb'
 import { desiredWorkerSrc, ensureOfflineWorkerReady } from '@/lib/pdf-worker-offline'
-import { shouldStartRenderWatchdog, isRotateScaleResize } from './pdf-viewer-state'
+import { shouldStartRenderWatchdog, isRotateScaleResize, computeFitPageWidth } from './pdf-viewer-state'
 
 // Configure PDF.js worker — use local copy from public/ (copied by
 // scripts/copy-pdf-worker.js during postinstall + build). Local worker
@@ -72,6 +72,9 @@ interface PDFViewerProps {
 export function PDFViewer({ url, trackName }: PDFViewerProps) {
     const [numPages, setNumPages] = useState<number>(0)
     const [width, setWidth] = useState<number>(0)
+    // WS-14: container height + first-page aspect ratio feed the fit-page math.
+    const [containerHeight, setContainerHeight] = useState<number>(0)
+    const [pageAspect, setPageAspect] = useState<number>(0)
     const [source, setSource] = useState<{ data: Uint8Array } | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
@@ -239,6 +242,9 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
         setRetryBust(0)
         setRenderTimedOut(false)
         setCurrentPage(1)
+        // WS-14: re-measure the page aspect for the new chart (portrait vs
+        // landscape source differs); fit math falls back to width until set.
+        setPageAspect(0)
     }, [url])
 
     // WS-05 render-stage watchdog: once bytes are in hand (`source` set, not
@@ -316,6 +322,11 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
             for (const entry of entries) {
                 if (entry.contentRect) {
                     const w = entry.contentRect.width - 4
+                    // WS-14: track height for fit-page (subtract the same slack).
+                    // Guard non-finite height (e.g. test environments) → 0, which
+                    // makes computeFitPageWidth fall back to the width contract.
+                    const h = entry.contentRect.height
+                    setContainerHeight(Number.isFinite(h) ? Math.max(0, h - 4) : 0)
                     const prev = lastWidthRef.current
                     // WS-16: a rotate-scale width change (orientation flip, not
                     // scrollbar jitter) restores a fresh retry budget so a
@@ -391,6 +402,18 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
     // Use selectors to avoid re-render on unrelated store changes
     const zoom = useMusicStore(s => s.zoom)
     const transposition = useMusicStore(s => s.transposition)
+    const fitMode = useMusicStore(s => s.fitMode)
+
+    // WS-14: the per-page render width honors the active fit mode. 'width'
+    // (default) = container width * zoom (unchanged); 'page' = fit the page
+    // height to the viewport so a portrait chart is fully visible in landscape.
+    const pageRenderWidth = computeFitPageWidth({
+        containerWidth: width,
+        containerHeight,
+        pageAspect,
+        mode: fitMode,
+        zoom,
+    })
 
     return (
         <div className="flex flex-col h-full w-full relative group">
@@ -464,8 +487,9 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                                       <div key={`page_${index + 1}`} data-pdf-page={index + 1}>
                                           <PDFPageWrapper
                                               pageNumber={index + 1}
-                                              width={width * zoom}
+                                              width={pageRenderWidth}
                                               transposition={transposition}
+                                              onPageAspect={index === 0 ? setPageAspect : undefined}
                                           />
                                       </div>
                                   ))

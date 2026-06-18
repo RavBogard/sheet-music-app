@@ -9,6 +9,7 @@ vi.mock("@/lib/utils", () => ({
 
 // Mock the music store
 const mockSetZoom = vi.fn()
+const mockSetFitMode = vi.fn()
 const mockStoreState = {
     setQueue: vi.fn(),
     queueIndex: 0,
@@ -19,6 +20,8 @@ const mockStoreState = {
     transposition: 0,
     zoom: 1,
     setZoom: mockSetZoom,
+    fitMode: 'width' as 'width' | 'page',
+    setFitMode: mockSetFitMode,
     currentSetlistId: null,
     jumpToSong: vi.fn(),
 }
@@ -66,6 +69,11 @@ describe("PerformanceToolbar", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockStoreState.zoom = 1
+        // Reset shared mutable store state so test order can't leak (tests below
+        // set playbackQueue/fitMode for image/PDF cases).
+        mockStoreState.playbackQueue = []
+        mockStoreState.queueIndex = 0
+        mockStoreState.fitMode = 'width'
     })
 
     it("renders mobile layout with zoom controls, metronome, and exit", () => {
@@ -115,23 +123,56 @@ describe("PerformanceToolbar", () => {
         expect(mockOnHome).toHaveBeenCalled()
     })
 
-    // v11.5-02-04 (H1): the zoom-% readout doubles as a Fit reset — tapping
-    // snaps the current chart back to its auto-fit baseline via setZoom(1)
-    // (which clears this chart's per-device calibration in the store). AC-3.
-    it("v11.5-02-04: Fit control is a labelled ≥44px button that resets zoom to 1", () => {
+    // v11.5-02-04 (H1) + v11.6-02-05 (WS-18/WS-26): the zoom-% readout shows the
+    // current zoom and resets to 100% on tap. WS-26 made the label HONEST — it no
+    // longer claims "fit to width" (which silently meant reset-to-100%); the
+    // width↔page FIT choice is the separate toggle. WS-18: the % is always shown.
+    it("v11.6-02-05: zoom readout is a labelled ≥44px button that resets zoom to 1 and shows the %", () => {
         mockStoreState.zoom = 1.4
         render(<PerformanceToolbar onHome={mockOnHome} />)
 
-        const fitButtons = screen.getAllByRole("button", {
-            name: /fit chart to width/i,
+        const resetButtons = screen.getAllByRole("button", {
+            name: /reset zoom to 100%/i,
         })
         // Rendered in both breakpoint trees (mobile + desktop).
-        expect(fitButtons.length).toBeGreaterThanOrEqual(1)
+        expect(resetButtons.length).toBeGreaterThanOrEqual(1)
         // iOS HIG 44px floor (C10I1-001 contract): h-11.
-        expect(fitButtons[0].className).toMatch(/(^|\s)h-11(\s|$)/)
+        expect(resetButtons[0].className).toMatch(/(^|\s)h-11(\s|$)/)
+        // WS-18: the percentage is visible (no bare "/" placeholder).
+        expect(screen.getAllByText("140%").length).toBeGreaterThanOrEqual(1)
 
-        fireEvent.click(fitButtons[0])
+        fireEvent.click(resetButtons[0])
         expect(mockSetZoom).toHaveBeenCalledWith(1)
+    })
+
+    // v11.6-02-05 (WS-14/WS-26): PDF charts expose a fit-mode toggle (fit-width
+    // ↔ fit-page) so a portrait page can be read fully in landscape. The toggle
+    // is PDF-only and flips the store's fitMode.
+    it("v11.6-02-05: PDF charts show a fit-mode toggle that flips fitMode width↔page", () => {
+        mockStoreState.playbackQueue = [
+            { fileId: 'upload-pdf', type: 'pdf', title: 'Strange Fruit' } as unknown,
+        ]
+        mockStoreState.queueIndex = 0
+        mockStoreState.fitMode = 'width'
+        render(<PerformanceToolbar onHome={mockOnHome} />)
+
+        // In 'width' mode the action is "fit whole page" (mobile + desktop trees).
+        const toFitPage = screen.getAllByRole("button", { name: /fit whole page to screen/i })
+        expect(toFitPage.length).toBeGreaterThanOrEqual(1)
+        expect(toFitPage[0].className).toMatch(/(^|\s)h-11(\s|$)/)
+        fireEvent.click(toFitPage[0])
+        expect(mockSetFitMode).toHaveBeenCalledWith('page')
+    })
+
+    it("v11.6-02-05: non-PDF charts do NOT show the fit-mode toggle", () => {
+        mockStoreState.playbackQueue = [
+            { fileId: 'upload-txt', type: 'text', title: 'Wagon Wheel' } as unknown,
+        ]
+        mockStoreState.queueIndex = 0
+        render(<PerformanceToolbar onHome={mockOnHome} />)
+
+        expect(screen.queryByRole("button", { name: /fit whole page to screen/i })).toBeNull()
+        expect(screen.queryByRole("button", { name: /fit chart to full width/i })).toBeNull()
     })
 
     // v70-01-01 Task 3: image-typed charts disable the transposer trigger

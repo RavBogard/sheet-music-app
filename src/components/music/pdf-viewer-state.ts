@@ -32,3 +32,44 @@ export function shouldStartRenderWatchdog(s: RenderWatchdogInputs): boolean {
 export function isRotateScaleResize(prevWidth: number, newWidth: number, threshold = 120): boolean {
     return prevWidth > 0 && Math.abs(newWidth - prevWidth) >= threshold
 }
+
+export type FitMode = 'width' | 'page'
+
+export interface FitPageInputs {
+    /** Available container width in CSS px (already minus scrollbar slack). */
+    containerWidth: number
+    /** Available container height in CSS px. */
+    containerHeight: number
+    /** Page intrinsic aspect ratio = pageHeight / pageWidth (portrait > 1). */
+    pageAspect: number
+    /** Active fit mode. */
+    mode: FitMode
+    /** User zoom multiplier (1 = fit baseline). */
+    zoom: number
+}
+
+/**
+ * WS-14 / WS-26: compute the px width to render a PDF page at, honoring the
+ * active fit mode.
+ *
+ * - `'width'` (default, current behavior): the page fills the container width,
+ *   then the user zoom scales it. A tall portrait page in a wide landscape
+ *   viewport overflows below the fold — this is fit-to-WIDTH.
+ * - `'page'`: the page is sized so its HEIGHT fits the container height
+ *   (`width = containerHeight / pageAspect`), capped at the container width so
+ *   a wide/landscape page never exceeds the width. This makes a portrait chart
+ *   fully visible in landscape with no vertical scroll. User zoom then scales.
+ *
+ * Guards: a non-positive containerHeight or pageAspect (page dims not yet
+ * measured) falls back to the width contract so we never return 0/NaN and never
+ * regress the default. zoom is clamped to >= 0.
+ */
+export function computeFitPageWidth(s: FitPageInputs): number {
+    const zoom = s.zoom > 0 ? s.zoom : 1
+    const widthFit = s.containerWidth * zoom
+    if (s.mode !== 'page') return widthFit
+    if (s.containerHeight <= 0 || s.pageAspect <= 0 || s.containerWidth <= 0) return widthFit
+    const heightConstrainedWidth = s.containerHeight / s.pageAspect
+    const fitPageBaseline = Math.min(s.containerWidth, heightConstrainedWidth)
+    return fitPageBaseline * zoom
+}

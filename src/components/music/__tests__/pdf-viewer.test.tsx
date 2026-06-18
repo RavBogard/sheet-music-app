@@ -51,7 +51,7 @@ vi.mock('@/lib/offline-idb', () => ({
 }))
 
 import { PDFViewer } from '../PDFViewer'
-import { shouldStartRenderWatchdog, isRotateScaleResize } from '../pdf-viewer-state'
+import { shouldStartRenderWatchdog, isRotateScaleResize, computeFitPageWidth } from '../pdf-viewer-state'
 
 // Controllable ResizeObserver: capture the callback so tests can drive width
 // (jsdom's RO never delivers contentRect on its own).
@@ -158,5 +158,47 @@ describe('isRotateScaleResize (WS-16 decision)', () => {
     })
     it('false for the initial 0 -> N measure (no prior width)', () => {
         expect(isRotateScaleResize(0, 800)).toBe(false)
+    })
+})
+
+describe('computeFitPageWidth (WS-14 / WS-26 fit-mode math)', () => {
+    // ~US Letter portrait page: 11/8.5 ≈ 1.294
+    const PORTRAIT = 11 / 8.5
+
+    it("'width' mode returns containerWidth * zoom (unchanged contract)", () => {
+        expect(computeFitPageWidth({ containerWidth: 1000, containerHeight: 800, pageAspect: PORTRAIT, mode: 'width', zoom: 1 })).toBe(1000)
+        expect(computeFitPageWidth({ containerWidth: 1000, containerHeight: 800, pageAspect: PORTRAIT, mode: 'width', zoom: 1.5 })).toBe(1500)
+    })
+
+    it("'page' mode height-constrains a portrait page in a landscape viewport", () => {
+        // landscape iPad ~1180x800; portrait page would overflow at full width
+        const w = computeFitPageWidth({ containerWidth: 1180, containerHeight: 800, pageAspect: PORTRAIT, mode: 'page', zoom: 1 })
+        // height-fit width = 800 / 1.294 ≈ 618, well under the 1180 container width
+        expect(w).toBeCloseTo(800 / PORTRAIT, 1)
+        expect(w).toBeLessThan(1180)
+        // and the resulting page height fits the viewport
+        expect(w * PORTRAIT).toBeCloseTo(800, 0)
+    })
+
+    it("'page' mode caps at container width when width is the tighter constraint", () => {
+        // tall, narrow viewport: height isn't the limit, so it never exceeds width
+        const w = computeFitPageWidth({ containerWidth: 400, containerHeight: 2000, pageAspect: PORTRAIT, mode: 'page', zoom: 1 })
+        expect(w).toBe(400)
+    })
+
+    it("'page' mode applies zoom on top of the fit baseline", () => {
+        const base = computeFitPageWidth({ containerWidth: 1180, containerHeight: 800, pageAspect: PORTRAIT, mode: 'page', zoom: 1 })
+        const zoomed = computeFitPageWidth({ containerWidth: 1180, containerHeight: 800, pageAspect: PORTRAIT, mode: 'page', zoom: 2 })
+        expect(zoomed).toBeCloseTo(base * 2, 5)
+    })
+
+    it('falls back to the width contract when page dims are not yet measured', () => {
+        expect(computeFitPageWidth({ containerWidth: 1180, containerHeight: 0, pageAspect: PORTRAIT, mode: 'page', zoom: 1 })).toBe(1180)
+        expect(computeFitPageWidth({ containerWidth: 1180, containerHeight: 800, pageAspect: 0, mode: 'page', zoom: 1 })).toBe(1180)
+    })
+
+    it('never returns NaN/0 from a non-positive zoom (clamped to 1)', () => {
+        expect(computeFitPageWidth({ containerWidth: 1000, containerHeight: 800, pageAspect: PORTRAIT, mode: 'width', zoom: 0 })).toBe(1000)
+        expect(computeFitPageWidth({ containerWidth: 1000, containerHeight: 800, pageAspect: PORTRAIT, mode: 'width', zoom: -5 })).toBe(1000)
     })
 })

@@ -97,13 +97,18 @@ for (const set of SETS) {
 
     // --- Cell: transpose (key for the text/plain camp sets — TXT-1 chord drift) ---
     await safe(obs, set.id, 'transpose', async () => {
+      // WS-22 root cause: the toolbar renders TWO transpose triggers (one per
+      // breakpoint) and CSS hides the off-breakpoint one. The prior
+      // `.or(...).first()` picked the first in DOM order regardless of
+      // visibility → on landscape (≥lg) it grabbed the display:none MOBILE
+      // trigger, so `.click()` waited on an invisible element → the 6s timeout
+      // the sweep recorded. Target only the VISIBLE trigger via the `:visible`
+      // engine so we click whichever breakpoint is actually rendered.
       const trigger = page
-        .getByTestId('transpose-trigger-mobile')
-        .or(page.getByTestId('transpose-trigger-desktop'))
-        .or(page.getByRole('button', { name: /^transpose$/i }))
+        .locator('[data-testid="transpose-trigger-mobile"]:visible, [data-testid="transpose-trigger-desktop"]:visible')
         .first()
       const present = await trigger.count()
-      if (!present) return 'no transpose control on this chart type (expected for PDF)'
+      if (!present) return 'no transpose control on this chart type (expected for PDF / image)'
       await trigger.click({ timeout: 6000 })
       await page.getByRole('button', { name: 'Transpose up' }).first().click({ timeout: 5000 })
       await page.getByRole('button', { name: 'Transpose up' }).first().click({ timeout: 5000 })
@@ -119,8 +124,13 @@ for (const set of SETS) {
       if (!(await zin.count())) return 'no zoom control present'
       await zin.click({ timeout: 5000 })
       await zin.click({ timeout: 5000 })
-      await page.getByRole('button', { name: /Fit chart to width/ }).first().click({ timeout: 5000 }).catch(() => {})
-      return 'zoom +2 then Fit reset'
+      // WS-18/WS-26 (02-05): the % readout is the reset-to-100% control (relabeled).
+      await page.getByRole('button', { name: /Reset zoom to 100%/i }).first().click({ timeout: 5000 }).catch(() => {})
+      // WS-14 (02-05): PDF charts expose a fit-mode toggle (fit-width ↔ fit-page).
+      const fitToggle = page.getByRole('button', { name: /Fit whole page to screen|Fit chart to full width/i }).first()
+      const hasFit = await fitToggle.count()
+      if (hasFit) await fitToggle.click({ timeout: 5000 }).catch(() => {})
+      return `zoom +2 then reset; fit-mode-toggle=${hasFit ? 'present' : 'absent (non-PDF)'}`
     })
 
     // --- Cell: next/prev navigation ---

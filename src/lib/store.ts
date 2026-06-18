@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ChordOverlay } from '@/lib/chord-cache'
+import type { FitMode } from '@/components/music/pdf-viewer-state'
 
 export type FileType = 'pdf' | 'musicxml' | 'chordpro' | 'text' | 'image'
 
@@ -38,6 +39,19 @@ export interface MusicState {
      * 1 = the viewer's auto-fit baseline (PDFViewer full-width / OSMD fitBase).
      */
     chartZoom: Record<string, number>
+
+    /**
+     * v11.6-02-05 (WS-14): PDF fit mode. `'width'` (default) fills the container
+     * width — the long-standing behavior; a portrait page in a landscape
+     * viewport overflows below the fold. `'page'` sizes the page to fit the
+     * container HEIGHT so a portrait chart is fully visible in landscape with no
+     * vertical scroll. EPHEMERAL session state — NOT persisted (kept out of
+     * `partialize`) and RESET to `'width'` on every chart transition, so each
+     * chart opens at the safe default. Unlike `chartZoom`, fit mode is not a
+     * per-chart preference. PDF-only; text/MusicXML viewers ignore it.
+     */
+    fitMode: FitMode
+    setFitMode: (mode: FitMode) => void
 
     // AI Transposer State
     aiState: {
@@ -150,6 +164,7 @@ export const useMusicStore = create<MusicState>()(
             transposition: 0,
             zoom: 1,
             chartZoom: {},
+            fitMode: 'width',
             aiXmlContent: null, // Init
 
             playbackQueue: [],
@@ -187,6 +202,7 @@ export const useMusicStore = create<MusicState>()(
                 capoFret: null,
                 capoSemitones: 0,
                 musicXmlKey: null,
+                fitMode: 'width',
                 isEditingChords: false,
                 aiState: { isEnabled: false, scanningPages: [], pageData: {}, error: null },
                 aiXmlContent: null, // Clear AI content
@@ -202,6 +218,9 @@ export const useMusicStore = create<MusicState>()(
                     ? { zoom: z, chartZoom: { ...state.chartZoom, [fileId]: z } }
                     : { zoom: z }
             }),
+            // v11.6-02-05 (WS-14): ephemeral, not written through to any per-chart
+            // map — it resets to 'width' on each chart transition below.
+            setFitMode: (mode: FitMode) => set({ fitMode: mode }),
 
             setQueue: (items, startIndex = 0, returnPath, setlistId) => {
                 // Apply per-track transposition + per-chart zoom from the first song
@@ -215,6 +234,7 @@ export const useMusicStore = create<MusicState>()(
                     currentSetlistId: setlistId || null,
                     transposition: trackTransposition,
                     zoom: trackZoom,
+                    fitMode: 'width',
                     // Clear page data when starting a new queue
                     aiState: { ...get().aiState, pageData: {}, scanningPages: [], error: null }
                 })
@@ -228,6 +248,7 @@ export const useMusicStore = create<MusicState>()(
                         queueIndex: nextIndex,
                         transposition: nextTrack.transposition ?? 0,
                         zoom: nextTrack.fileId ? (get().chartZoom[nextTrack.fileId] ?? 1) : 1,
+                        fitMode: 'width',
                         isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
                     })
@@ -244,6 +265,7 @@ export const useMusicStore = create<MusicState>()(
                         queueIndex: prevIndex,
                         transposition: prevTrack.transposition ?? 0,
                         zoom: prevTrack.fileId ? (get().chartZoom[prevTrack.fileId] ?? 1) : 1,
+                        fitMode: 'width',
                         isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
                     })
@@ -259,6 +281,7 @@ export const useMusicStore = create<MusicState>()(
                         queueIndex: index,
                         transposition: track.transposition ?? 0,
                         zoom: track.fileId ? (get().chartZoom[track.fileId] ?? 1) : 1,
+                        fitMode: 'width',
                         isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
                     })
@@ -308,6 +331,7 @@ export const useMusicStore = create<MusicState>()(
                 transposition: 0,
                 zoom: 1,
                 chartZoom: {},
+                fitMode: 'width',
                 aiXmlContent: null,
                 isEditingChords: false,
                 pendingEditCount: 0,
