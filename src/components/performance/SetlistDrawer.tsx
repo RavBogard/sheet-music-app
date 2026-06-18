@@ -101,7 +101,7 @@ export function QueueRow({
 
 export function SetlistDrawer() {
     const router = useRouter()
-    const { playbackQueue, queueIndex, setQueue } = useMusicStore()
+    const { playbackQueue, queueIndex, setQueue, jumpToSong } = useMusicStore()
     const { user } = useAuth()
     // v11-04-03: scope the public-picker subscription to the host's tenant.
     const org = useOrg()
@@ -401,7 +401,11 @@ export function SetlistDrawer() {
                                                     isCurrent={isCurrent}
                                                     onOpen={() => {
                                                         if (!track.fileId) return
-                                                        router.push(`/perform/${track.fileId}`)
+                                                        // Jump WITHIN the live queue so Next/Prev keep
+                                                        // traversing the full setlist — a router.push to
+                                                        // the standalone /perform/<fileId> route drops the
+                                                        // queue and dead-ends at "Song 1 of 1" (WS-08).
+                                                        jumpToSong(globalIndex)
                                                         setOpen(false)
                                                     }}
                                                 />
