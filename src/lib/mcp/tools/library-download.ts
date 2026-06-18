@@ -7,6 +7,7 @@ import { fetchFileById } from "@/lib/file-fetcher"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
+import { renderTextChartToPdf } from "@/lib/pdf/text-chart-pdf"
 
 /**
  * MCP chart-download tool — return one chart's bytes (base64) + mimeType so
@@ -393,7 +394,7 @@ export async function generateGigPacket(
                 })
             } else if (ct.startsWith("text/")) {
                 const text = fetched.buffer.toString("utf-8")
-                await renderTextChart(mergedPdf, rawTitle, text)
+                await renderTextChartToPdf(mergedPdf, rawTitle, text)
                 appendedCount++
             } else {
                 missingCharts.push({
@@ -550,69 +551,11 @@ function toWinAnsi(s: string): string {
         .replace(/[^\x00-\xff]/g, "?")
 }
 
-async function renderTextChart(
-    pdf: PDFDocument,
-    rawTitle: string,
-    rawText: string,
-): Promise<void> {
-    const courier = await pdf.embedFont(StandardFonts.Courier)
-    const helveticaBold = await pdf.embedFont(StandardFonts.HelveticaBold)
-    const PAGE_W = 612
-    const PAGE_H = 792
-    const MARGIN_L = 50
-    const MARGIN_T = 60
-    const MARGIN_B = 50
-    const TITLE_SIZE = 14
-    const BODY_SIZE = 10
-    const LINE_H = BODY_SIZE * 1.2
-    const usableW = PAGE_W - MARGIN_L * 2
-    const charW = courier.widthOfTextAtSize("M", BODY_SIZE)
-    const charsPerLine = Math.max(20, Math.floor(usableW / charW))
-
-    const title = toWinAnsi(rawTitle)
-    const text = toWinAnsi(rawText)
-
-    const wrapped: string[] = []
-    for (const rawLine of text.replace(/\r\n?/g, "\n").split("\n")) {
-        if (rawLine.length <= charsPerLine) {
-            wrapped.push(rawLine)
-        } else {
-            let i = 0
-            while (i < rawLine.length) {
-                wrapped.push(rawLine.slice(i, i + charsPerLine))
-                i += charsPerLine
-            }
-        }
-    }
-
-    let page = pdf.addPage([PAGE_W, PAGE_H])
-    let y = PAGE_H - MARGIN_T
-    page.drawText(title, {
-        x: MARGIN_L,
-        y,
-        size: TITLE_SIZE,
-        font: helveticaBold,
-        color: rgb(0, 0, 0),
-    })
-    y -= TITLE_SIZE + 12
-
-    for (const line of wrapped) {
-        if (y < MARGIN_B) {
-            page = pdf.addPage([PAGE_W, PAGE_H])
-            y = PAGE_H - MARGIN_T
-        }
-        if (line.length > 0) {
-            page.drawText(line, {
-                x: MARGIN_L,
-                y,
-                size: BODY_SIZE,
-                font: courier,
-                color: rgb(0.1, 0.1, 0.1),
-            })
-        }
-        y -= LINE_H
-    }
-}
+// The text-chart renderer now lives in the shared module
+// `src/lib/pdf/text-chart-pdf.ts` (used by both this MCP path and the website
+// print pipeline) — the text branch in generateGigPacket calls
+// `renderTextChartToPdf`. `toWinAnsi` stays local (still used by
+// `renderMissingChartsAppendix`); the shared module carries its own copy.
 
 async function renderMissingChartsAppendix(
     pdf: PDFDocument,

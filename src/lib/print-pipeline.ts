@@ -12,6 +12,7 @@
 
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib"
 import { fetchFileById } from "@/lib/file-fetcher"
+import { renderTextChartToPdf } from "@/lib/pdf/text-chart-pdf"
 import { getTransposedKeyName } from "@/lib/music-math"
 import { initAdmin, getFirestore, getStorage } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
@@ -778,6 +779,23 @@ export async function generatePrintPdf(
             const fetched = await fetchFileById(track.fileId)
             if (!fetched || fetched.buffer.byteLength === 0) {
                 logger.warn(`[PrintPipeline] Empty or missing file: ${track.title}`)
+                continue
+            }
+
+            // Text/plain scraped chord charts can't be parsed by PDFDocument.load
+            // (it throws on non-PDF bytes → caught below → the chart was silently
+            // dropped from the packet). Render them to monospace Courier pages
+            // instead — chord-over-lyric, transpose-aware — matching the Perform
+            // TextScoreViewer. Shared with MCP generate_gig_packet.
+            const fetchedCt = (fetched.contentType || "").toLowerCase()
+            if (fetchedCt.startsWith("text/")) {
+                await renderTextChartToPdf(
+                    mergedPdf,
+                    track.title,
+                    Buffer.from(fetched.buffer).toString("utf-8"),
+                    { transposition: track.transposition, preferFlats: track.preferFlats },
+                )
+                stats.appendedTracks++
                 continue
             }
 
