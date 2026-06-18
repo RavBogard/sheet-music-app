@@ -21,7 +21,7 @@ Focus: Stress-test the band's *entire* path against the three upcoming **Camp Sa
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v11.6-01 | Stress sweep & triage — live Playwright (3 sets, wifi-drop sim) + multi-agent code audit → triaged findings report [DISCOVERY, verify-first, BLOCKS the rest] | 01 (research) ✅ | ✅ Complete | 2026-06-17 |
-| v11.6-02 | Perform reading airtight — text/plain rendering + transpose/swipe/zoom on iPad-WebKit [P0/P1] | 01 nav+hydration ✅ `49dbe460e7` · 02 text Fit-core ✅ `34a39fba30` · 03 WS-25 slash-bass (WS-19/23/24→v11.7) · 04 PDF/img+toolbar+drawer | 🚧 In progress (2/4) | - |
+| v11.6-02 | Perform reading airtight — text/plain rendering + transpose/swipe/zoom on iPad-WebKit [P0/P1] | 01 nav+hydration ✅ `49dbe460e7` · 02 text Fit-core ✅ `34a39fba30` · 03 WS-25 slash-bass ✅ `8f7f1a5bd7` (WS-19/23/24→v11.7) · 04 PDF/img+toolbar+drawer | 🚧 In progress (3/4) | - |
 | v11.6-03 | Off-site resilience (flaky wifi) — characterize wifi-drop w/ set open; decide bounded offline guarantee [P1, characterize→decide] | TBD | Not started | - |
 | v11.6-04 | Authoring + publish round-trip — finalize 3 sets via MCP; airtight publish-&-deliver [P1, live send = STOP-gate] | TBD | Not started | - |
 
