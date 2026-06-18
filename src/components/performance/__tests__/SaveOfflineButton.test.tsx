@@ -166,6 +166,17 @@ describe('SaveOfflineButton', () => {
         expect(btn().textContent).toContain('Save 1/2')
     })
 
+    // WS-13 (v11.6-03-02): the all-ready state shows the explicit N/N count so a
+    // player can confirm EVERY chart is cached before leaving wifi.
+    it('all-ready state shows the explicit N/N count', async () => {
+        stubNoopIdle()
+        mockListFileIds.mockResolvedValue(['upload-1', 'upload-2']) // both cached
+        render(<SaveOfflineButton fileIds={['upload-1', 'upload-2']} />)
+        const btn = () => screen.getByTestId('save-offline')
+        await waitFor(() => expect(btn().getAttribute('data-state')).toBe('saved'))
+        expect(btn().textContent).toContain('Saved 2/2')
+    })
+
     /**
      * ipad-idle-auto-precache-fix REGRESSION.
      *

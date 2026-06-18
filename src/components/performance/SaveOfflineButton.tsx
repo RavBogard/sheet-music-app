@@ -202,10 +202,13 @@ export function SaveOfflineButton({ fileIds }: Props) {
           ? "text-amber-800 dark:text-amber-400"
           : "text-muted-foreground"
 
+    // WS-13 (v11.6-03-02): the all-ready state shows the explicit N/N count
+    // (not a bare "Saved") so a player can confirm EVERY chart is cached before
+    // leaving wifi — symmetric with the partial "Save M/N".
     const label = saving
         ? `Saving ${progress}/${total}`
         : allReady
-          ? "Saved"
+          ? `Saved ${total}/${total}`
           : partial
             ? `Save ${readyCount}/${total}`
             : "Save offline"

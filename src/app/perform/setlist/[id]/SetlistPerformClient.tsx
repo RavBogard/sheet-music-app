@@ -33,6 +33,7 @@ import { SetlistView } from "@/components/performance/SetlistView"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
 import { SaveOfflineButton } from "@/components/performance/SaveOfflineButton"
 import { KeepAwakeToggle } from "@/components/performance/KeepAwakeToggle"
+import { shouldShowFatalSetlistError } from "./perform-error-gate"
 import type { Setlist, SetlistTrack } from "@/types/models"
 
 const PrintModal = dynamic(
@@ -210,7 +211,11 @@ export function SetlistPerformClient({
         )
     }
 
-    if (errorMessage) {
+    // WS-12: only blank the view with the fatal error when there's no loaded
+    // content to fall back on. An already-hydrated set (SSR seed / Dexie cache /
+    // prior live frame) survives a transient offline onSnapshot error — the
+    // PerformanceOfflineIndicator below signals offline non-blockingly.
+    if (shouldShowFatalSetlistError(errorMessage, tracks.length > 0)) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] md:pt-20 gap-4">
                 <p className="text-muted-foreground">{errorMessage}</p>
