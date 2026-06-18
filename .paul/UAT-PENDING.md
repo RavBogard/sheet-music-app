@@ -610,3 +610,10 @@ shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iP
 ## v11.6-03-02 (off-site WS-12/13) — real 11" iPad, post-deploy
 - **WS-12 open set survives offline error:** open a set in Perform, then drop wifi (or incognito/memory mode) so a Firestore onSnapshot error fires → the set STAYS on screen (charts still readable), NOT replaced by the "Couldn't load setlist" full-screen error. A genuine empty-load failure still shows the error.
 - **WS-13 definitive saved count:** open a set → the Save-offline control reads "Saved N/N" (green check) once every chart is cached, and "Save M/N" (amber) while partial — so you can confirm all charts are cached before leaving wifi.
+
+## v11.6-03-03 (WS-10 — MusicXML offline) — real 11" iPad, post-deploy
+- **WS-10 offline MusicXML:** with a MusicXML chart cached (open it once online + "Saved N/N"), drop wifi and reopen it in Perform → the score renders from the IDB cache, NOT "Failed to load music XML." *(Forward-risk: no MusicXML in the 3 camp sets — needs a MusicXML chart to exercise; unit-proven IDB-first / network-fallback / .mxl-Blob.)*
+
+## v11.6-03-04 (WS-29/30 — off-site SW + audio, ACCEPTED residuals) — real 11" iPad, post-deploy
+- **WS-30 full offline reload (should already work):** open a `/perform/setlist/<id>` online, confirm "Saved N/N", drop wifi, then **hard-reload (F5)** that same URL → the set re-renders from cache (HTML + chunks), charts still readable. *(Known accepted residual, NOT a fix target: soft-navigating to a DIFFERENT, not-yet-visited setlist while offline will fail — open the set before leaving wifi.)*
+- **WS-29 audio offline (accepted edge):** with an audio-bonded chart cached, go offline and open it → audio is best-effort and may not start on iPad WebKit (`<audio src=blob:>` rejection). ACCEPTED residual — confirm it at least fails gracefully ("Audio file not found"), no crash. *(No audio rows in the 3 camp sets.)*
