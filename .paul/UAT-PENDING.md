@@ -15,7 +15,7 @@ plan or an emergent phase.
 
 ## ⏳ v11.6-04-02 (WS-21) — QR approval claim-lag fallback (real device)
 
-**Deployed commit:** `<this plan's commit>` (prod `master`).
+**Deployed commit:** `cdfc16cead` (prod `master`).
 
 Emulator/unit-proven (`auth/qr/__tests__/route.test.ts`, 18/18 incl. 4 WS-21 cases).
 Live confirm (NON-BLOCKING): with a band member whose `role` claim is stale/absent
