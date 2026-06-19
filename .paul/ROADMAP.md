@@ -18,7 +18,7 @@ Status: 🚧 **In Progress** · Phases: **1 of 7** (01 ✅ verify-first audit �
 | v11.7-01 | Verify-first audit — confirm CURRENT MCP behaviors vs deployed code + asymmetry inventory + index needs [DISCOVERY, verify-first, BLOCKS the MCP-build phases] | 01 (research) ✅ | ✅ Complete | 2026-06-18 |
 | v11.7-02 | P0 user directory — `find_user` (no instrument gate; returns orgIds) + suggest_* coverage [MCP headline] | 01 ✅ | ✅ Complete | 2026-06-19 |
 | v11.7-03 | P1 setlist reverse-lookup — `find_setlists_referencing_chart` + `search_setlists` | 01 ✅ | ✅ Complete | 2026-06-19 |
-| v11.7-04 | P2–P5 reverse-index sweep (opportunistic, trimmed) — `find_setlists_from_template`, `find_contact`, `list_recent_commands`, `list_recent_library_changes` | TBD | Not started | - |
+| v11.7-04 | P2 reverse-index sweep (trimmed) — `find_setlists_from_template`, `find_contact` (index-free per 03 idiom; P4/P5 list_recent_* DEFER → v11.8) | 01 ✅ | ✅ Complete | 2026-06-19 |
 | v11.7-05 | F3 library browse density/filters — thumbnails, composer/recency metadata, search ergonomics [/ui-ux-pro-max BLOCKING] | TBD | Not started | - |
 | v11.7-06 | Infra adjacents fold — recordings org-scoping + upload orgId stamp · `finalize_chart_upload` signed-URL org-stamp · anon chord-cache org-scoping · v7.0 fold-forward re-triage | TBD | Not started | - |
 | v11.7-07 | Authed-broslaz design pass + cross-org leader-wall UI check [/ui-ux-pro-max BLOCKING] | TBD | Not started | - |
@@ -35,9 +35,10 @@ Plans: TBD (defined during /paul:plan)
 Focus: `find_setlists_referencing_chart(fileId) -> [{setlistId, name, eventDate, trackIds[]}]` (surface the index `delete_chart`'s guard already walks) + `search_setlists({ trackTitleContains?, leadMusician?, templateType?, from?, to? })`. Tenant-scoped. New composite index (if 01 finds one needed) deploys via firebase CLI as an AUTO task.
 Plans: TBD (defined during /paul:plan)
 
-### Phase v11.7-04: P2–P5 reverse-index sweep [opportunistic, trimmed]
-Focus: Take what 01 finds cheap / already backed by existing signals — `find_setlists_from_template(templateId)` (reverse of `sourceTemplateId`; `delete_template` doesn't cascade), `find_contact({email|nameContains})`, `list_recent_commands({sinceSeconds?, status?})` (bounded by the ~5min ack TTL), `list_recent_library_changes({sinceISO, limit})` (likely off `library_signals`). Each read's gating mirrors its corresponding write/owner tier; log anything trimmed to v11.8.
-Plans: TBD (defined during /paul:plan)
+### Phase v11.7-04: P2 reverse-index sweep [trimmed] — ✅ COMPLETE (2026-06-19)
+Focus: Take what 01 found cheap / already backed by existing signals — `find_setlists_from_template(templateId)` (reverse of `sourceTemplateId`) + `find_contact({email|nameContains})`. Each read's gating mirrors its write tier (setlists ungated-authenticated public-by-design; contacts assertEditor-gated).
+Shipped (Plan 01, `feat(v11.7-04)`): both resolvers index-free — single-field auto-indexed query + in-memory `rowOrg` cross-tenant wall (NO composite index, NO deploy), per the v11.7-03 idiom (a templateId is org-unique → collision impossible). find_setlists_from_template in `setlists.ts`, find_contact in `contacts.ts`, both registered in `index.ts`; 8 emulator cases. AC-1..AC-6 PASS; tsc 0 / emulator 24/24 / `next build --webpack` 0. **TRIMMED:** `list_recent_commands` (P4) + `list_recent_library_changes` (P5) DEFER → v11.8 (infra-blocked: ephemeral acks; `library_signals` is an in-process emitter, not a collection).
+Plans: 01 ✅ (SUMMARY `.paul/phases/v11.7-04-reverse-index-sweep/v11.7-04-01-SUMMARY.md`)
 
 ### Phase v11.7-05: F3 library browse density/filters [/ui-ux-pro-max BLOCKING]
 Focus: Library browse ergonomics — thumbnails, composer/recency metadata, search/filter affordances. Consumer + author surfaces; CRC byte-identical where shared.

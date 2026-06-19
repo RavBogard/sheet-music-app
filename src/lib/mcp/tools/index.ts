@@ -5,6 +5,7 @@ import {
     getSetlist,
     findSetlistsReferencingChart,
     searchSetlists,
+    findSetlistsFromTemplate,
 } from "./setlists"
 import { getCongregationContext } from "./congregation"
 import {
@@ -116,7 +117,7 @@ import {
     commitStagedChanges,
 } from "./propose-changes"
 import { previewPublish } from "./preview-publish"
-import { listContacts, createContact, deleteContact } from "./contacts"
+import { listContacts, createContact, deleteContact, findContact } from "./contacts"
 import {
     flagBond,
     reviewFlaggedBonds,
@@ -441,6 +442,30 @@ export function registerReadTools(server: McpServer): void {
         async (args, extra) =>
             jsonResult(
                 await searchSetlists(uidFrom(extra), args, orgFrom(extra)),
+            ),
+    )
+
+    server.registerTool(
+        "find_setlists_from_template",
+        {
+            description:
+                "Reverse lookup: which LIVE setlists were cloned from a given template? The read partner to clone_setlist_from_template — pass `templateId` (from list_templates) and get back every setlist in your org whose `sourceTemplateId` matches, with its name and dates. Tenant-scoped to your org. Use to answer 'which services came from the Randy Shabbat template?' or to see a template's usage before editing/deleting it. Returns `{ok, templateId, setlists: [{setlistId, name, date, eventDate, sourceTemplateId}], count, truncated?}`.",
+            inputSchema: {
+                templateId: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Template id from list_templates. Returns the setlists cloned from it.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await findSetlistsFromTemplate(
+                    uidFrom(extra),
+                    args,
+                    orgFrom(extra),
+                ),
             ),
     )
 
@@ -1458,6 +1483,30 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (_args, extra) =>
             jsonResult(await listContacts(uidFrom(extra), {}, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "find_contact",
+        {
+            description:
+                "Look up a saved contact by email or name — the read partner to create_contact/delete_contact, so you don't have to list_contacts and scan. `email` matches exactly (case-insensitive); `nameContains` is a case-insensitive substring of the contact's name. Combine with AND. Org-scoped, leaders only. Returns `{ok, contacts: [{id, name, email, phone}], count}`.",
+            inputSchema: {
+                email: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Exact email to match (case-insensitive). Pass email and/or nameContains.",
+                    ),
+                nameContains: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Case-insensitive substring of the contact's name to match.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await findContact(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

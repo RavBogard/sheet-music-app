@@ -74,6 +74,66 @@ export async function listContacts(
     return { ok: true, contacts }
 }
 
+export interface FindContactArgs {
+    email?: string
+    nameContains?: string
+}
+
+export interface FindContactResult {
+    ok: true
+    contacts: ContactView[]
+    count: number
+}
+
+/**
+ * v11.7-04: the read partner to create_contact/delete_contact — look up a saved
+ * contact by email (case-insensitive exact) or name (case-insensitive substring)
+ * so an agent doesn't have to list_contacts and scan. Org-scoped + assertEditor-gated
+ * like its siblings (contacts are PII/people). In-org scan + in-memory filter,
+ * matching createContact's dedupe approach (small address book — no email index).
+ */
+export async function findContact(
+    callerUid: string,
+    args: FindContactArgs,
+    org: OrgId = DEFAULT_ORG_ID,
+): Promise<FindContactResult | RichErrorEnvelope> {
+    const email = args.email?.trim() || undefined
+    const nameContains = args.nameContains?.trim() || undefined
+    if (!email && !nameContains) {
+        return richError(
+            "invalid_argument",
+            "Pass `email` or `nameContains` to look up a contact.",
+            { fields: ["email", "nameContains"] },
+            "email matches exactly (case-insensitive); nameContains is a case-insensitive substring.",
+        )
+    }
+
+    initAdmin()
+    const db = getFirestore()
+    const editor = await assertEditor(db, callerUid)
+    if (!editor.ok) return editor
+
+    const emailLower = email?.toLowerCase()
+    const nameLower = nameContains?.toLowerCase()
+
+    const snap = await db.collection("contacts").where("orgId", "==", org).get()
+    const contacts = snap.docs
+        .map((doc) => toView(doc.id, doc.data() as Record<string, unknown>))
+        .filter((c) => {
+            if (emailLower) {
+                if (!c.email || c.email.toLowerCase() !== emailLower)
+                    return false
+            }
+            if (nameLower) {
+                if (!c.name.toLowerCase().includes(nameLower)) return false
+            }
+            return true
+        })
+        .sort((a, b) => a.name.localeCompare(b.name))
+
+    return { ok: true, contacts, count: contacts.length }
+}
+
 export async function createContact(
     callerUid: string,
     args: CreateContactArgs,

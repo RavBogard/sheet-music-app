@@ -17,6 +17,7 @@ import { getFirestore, Timestamp } from "firebase-admin/firestore"
 import {
     findSetlistsReferencingChart,
     searchSetlists,
+    findSetlistsFromTemplate,
 } from "../tools/setlists"
 
 /**
@@ -39,6 +40,7 @@ describe("MCP setlist reverse-lookup tools (emulator)", () => {
             name: string
             orgId?: string
             templateType?: string
+            sourceTemplateId?: string
             date: string
             eventDate?: string
         },
@@ -51,6 +53,8 @@ describe("MCP setlist reverse-lookup tools (emulator)", () => {
         }
         if (opts.orgId) payload.orgId = opts.orgId
         if (opts.templateType) payload.templateType = opts.templateType
+        if (opts.sourceTemplateId)
+            payload.sourceTemplateId = opts.sourceTemplateId
         if (opts.eventDate) {
             payload.eventDate = Timestamp.fromDate(
                 new Date(`${opts.eventDate}T00:00:00.000Z`),
@@ -100,6 +104,7 @@ describe("MCP setlist reverse-lookup tools (emulator)", () => {
             name: "Erev Shabbat 6/19",
             orgId: "crc",
             templateType: "friday_night",
+            sourceTemplateId: "tmpl-A",
             date: "2026-06-17",
             eventDate: "2026-06-19",
         })
@@ -107,14 +112,17 @@ describe("MCP setlist reverse-lookup tools (emulator)", () => {
             name: "Shabbat Morning 6/20",
             orgId: "crc",
             templateType: "shabbat_morning",
+            sourceTemplateId: "tmpl-A",
             date: "2026-06-18",
             eventDate: "2026-06-20",
         })
-        // broslaz setlist (other tenant).
+        // broslaz setlist (other tenant). Same sourceTemplateId on purpose to
+        // prove the in-memory rowOrg wall (templateIds are org-unique in prod).
         await seedSetlist("S-bl", {
             name: "BL Show",
             orgId: "brotherslazaroff",
             templateType: "other",
+            sourceTemplateId: "tmpl-A",
             date: "2026-06-15",
             eventDate: "2026-06-21",
         })
@@ -244,5 +252,51 @@ describe("MCP setlist reverse-lookup tools (emulator)", () => {
         )
         if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
         expect(r.setlists.map((s) => s.id)).not.toContain("S-crc")
+    })
+
+    // ─── find_setlists_from_template (v11.7-04) ───────────────────────────────
+
+    it("returns the caller-org clones of a template, newest-first (AC-1)", async () => {
+        const r = await findSetlistsFromTemplate(
+            CALLER,
+            { templateId: "tmpl-A" },
+            "crc",
+        )
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        const ids = r.setlists.map((s) => s.setlistId)
+        expect(ids).toEqual(["S2-crc", "S-crc"]) // eventDate desc: 6/20 before 6/19
+        expect(ids).not.toContain("S-bl") // tenant wall
+        expect(r.count).toBe(2)
+        expect(r.setlists[0].sourceTemplateId).toBe("tmpl-A")
+        expect(r.setlists[0].name).toBe("Shabbat Morning 6/20")
+    })
+
+    it("tenant wall: a BL caller sees only the BL clone of the same templateId (AC-2)", async () => {
+        const r = await findSetlistsFromTemplate(
+            CALLER,
+            { templateId: "tmpl-A" },
+            "brotherslazaroff",
+        )
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        expect(r.setlists.map((s) => s.setlistId)).toEqual(["S-bl"])
+    })
+
+    it("unknown templateId returns an empty set (AC-2)", async () => {
+        const r = await findSetlistsFromTemplate(
+            CALLER,
+            { templateId: "tmpl-none" },
+            "crc",
+        )
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        expect(r.count).toBe(0)
+        expect(r.setlists).toEqual([])
+    })
+
+    it("rejects an empty call with invalid_argument (AC-3)", async () => {
+        const r = await findSetlistsFromTemplate(CALLER, {}, "crc")
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "invalid_argument" },
+        })
     })
 })

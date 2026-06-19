@@ -35,7 +35,12 @@ vi.mock("@/lib/file-fetcher", () => ({
     fetchFileById: vi.fn(),
 }))
 
-import { listContacts, createContact, deleteContact } from "../tools/contacts"
+import {
+    listContacts,
+    createContact,
+    deleteContact,
+    findContact,
+} from "../tools/contacts"
 import { previewPublish } from "../tools/preview-publish"
 
 /**
@@ -216,5 +221,45 @@ describe("MCP contacts (emulator)", () => {
         expect(r.savedContacts.map((c) => c.name)).not.toContain("BL Guest")
         // savedContacts is informational — recommendation gate unaffected.
         expect(r.recommendation).toBe("publish")
+    })
+
+    // ─── find_contact (v11.7-04) ────────────────────────────────────────────
+
+    it("find_contact: email match is case-insensitive and org-walled (AC-4)", async () => {
+        await createContact(ADMIN, { name: "Jane Cohen", email: "jane@x.org" }, CRC)
+        // Same email under the other tenant — must NOT leak into the CRC lookup.
+        await createContact(ADMIN, { name: "Jane Cohen", email: "jane@x.org" }, BL)
+
+        const r = await findContact(ADMIN, { email: "JANE@X.ORG" }, CRC)
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        expect(r.count).toBe(1)
+        expect(r.contacts[0].name).toBe("Jane Cohen")
+        expect(r.contacts[0].email).toBe("jane@x.org")
+    })
+
+    it("find_contact: nameContains is a case-insensitive substring (AC-4)", async () => {
+        await createContact(ADMIN, { name: "Jane Cohen", email: "jane@x.org" }, CRC)
+        await createContact(ADMIN, { name: "Bob Levy", email: "bob@x.org" }, CRC)
+
+        const r = await findContact(ADMIN, { nameContains: "cohen" }, CRC)
+        if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+        expect(r.contacts.map((c) => c.name)).toEqual(["Jane Cohen"])
+    })
+
+    it("find_contact: a non-leader (musician) is refused (AC-4)", async () => {
+        await createContact(ADMIN, { name: "Jane Cohen", email: "jane@x.org" }, CRC)
+        const r = await findContact(MUSICIAN, { email: "jane@x.org" }, CRC)
+        expect("ok" in r && (r as { ok?: boolean }).ok).not.toBe(true)
+        expect(
+            (r as { error?: { machine_code?: string } }).error?.machine_code,
+        ).toBe("forbidden_role")
+    })
+
+    it("find_contact: neither email nor nameContains → invalid_argument (AC-5)", async () => {
+        const r = await findContact(ADMIN, {}, CRC)
+        expect(r).toMatchObject({
+            ok: false,
+            error: { machine_code: "invalid_argument" },
+        })
     })
 })

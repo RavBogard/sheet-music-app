@@ -7,8 +7,8 @@
     "status": "in_progress"
   },
   "phase": {
-    "number": "v11.7-03",
-    "name": "P1 setlist reverse-lookup",
+    "number": "v11.7-04",
+    "name": "P2 reverse-index sweep",
     "status": "complete"
   },
   "loop": {
@@ -17,7 +17,7 @@
   },
   "timestamps": {
     "created_at": "2026-06-07T00:00:00Z",
-    "updated_at": "2026-06-19T14:32:00Z"
+    "updated_at": "2026-06-19T16:05:00Z"
   },
   "satellite": {
     "groom": true

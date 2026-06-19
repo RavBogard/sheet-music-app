@@ -542,3 +542,118 @@ export async function searchSetlists(
         )
     }
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// find_setlists_from_template (v11.7-04 — reverse read of clone_setlist_from_template)
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface FindSetlistsFromTemplateArgs {
+    templateId?: string
+}
+
+export interface SetlistFromTemplate {
+    setlistId: string
+    name: string
+    date: string | null
+    eventDate: string | null
+    sourceTemplateId: string | null
+}
+
+export interface FindSetlistsFromTemplateResult {
+    ok: true
+    templateId: string
+    setlists: SetlistFromTemplate[]
+    count: number
+    truncated?: boolean
+}
+
+/**
+ * v11.7-04: the read partner to clone_setlist_from_template. Surfaces which LIVE
+ * setlists were cloned from a given template (by sourceTemplateId, stamped at
+ * templates.ts:878). Mirrors find_setlists_referencing_chart's idiom: single-field
+ * query (sourceTemplateId is auto-indexed — NO composite index) + in-memory rowOrg
+ * cross-tenant wall. A templateId is unique to one org and clone stamps the clone's
+ * orgId to the cloning org, so cross-tenant rows cannot collide; rowOrg is the hard
+ * safety net. Ungated authenticated read, consistent with list_setlists/get_setlist
+ * (setlist data is public-by-design).
+ */
+export async function findSetlistsFromTemplate(
+    _uid: string,
+    args: FindSetlistsFromTemplateArgs,
+    org: OrgId = DEFAULT_ORG_ID,
+): Promise<FindSetlistsFromTemplateResult | RichErrorEnvelope> {
+    const templateId = args.templateId?.trim() || undefined
+    if (!templateId) {
+        return richError(
+            "invalid_argument",
+            "Pass `templateId` to find the setlists cloned from a template.",
+            { field: "templateId" },
+            "Discover a templateId via list_templates.",
+        )
+    }
+
+    initAdmin()
+    const db = getFirestore()
+
+    try {
+        // Single-field auto-index on sourceTemplateId; NO composite index.
+        const snap = await db
+            .collection("setlists")
+            .where("sourceTemplateId", "==", templateId)
+            .limit(REVERSE_LOOKUP_CAP)
+            .get()
+
+        const truncated = snap.size === REVERSE_LOOKUP_CAP
+        if (truncated) {
+            logger.warn(
+                `[find_setlists_from_template] hit ${REVERSE_LOOKUP_CAP}-setlist cap for templateId=${templateId}; result truncated.`,
+            )
+        }
+
+        const setlists: SetlistFromTemplate[] = []
+        for (const doc of snap.docs) {
+            const data = doc.data() as Record<string, unknown>
+            // In-memory cross-tenant wall (defense-in-depth; templateId is org-unique).
+            if (rowOrg(data.orgId) !== org) continue
+            // serializeSetlist deep-serializes Firestore Timestamps → ISO strings
+            // (raw doc dates are Timestamps, not strings) — same as the sibling.
+            const s = serializeSetlist(doc.id, data) as Record<string, unknown>
+            setlists.push({
+                setlistId: doc.id,
+                name: typeof s.name === "string" ? s.name : "(untitled)",
+                date: isoOf(s.date),
+                eventDate: isoOf(s.eventDate),
+                sourceTemplateId:
+                    typeof s.sourceTemplateId === "string"
+                        ? s.sourceTemplateId
+                        : null,
+            })
+        }
+
+        setlists.sort((a, b) => {
+            const at = Date.parse(a.eventDate ?? a.date ?? "")
+            const bt = Date.parse(b.eventDate ?? b.date ?? "")
+            if (Number.isNaN(at) && Number.isNaN(bt)) return 0
+            if (Number.isNaN(at)) return 1
+            if (Number.isNaN(bt)) return -1
+            return bt - at
+        })
+
+        return {
+            ok: true,
+            templateId,
+            setlists,
+            count: setlists.length,
+            ...(truncated ? { truncated: true } : {}),
+        }
+    } catch (err) {
+        return richError(
+            "find_setlists_from_template_failed",
+            `Failed to find setlists from template: ${
+                err instanceof Error ? err.message : String(err)
+            }`,
+            {},
+            "Check Firestore connectivity; setlists are the source.",
+        )
+    }
+}
