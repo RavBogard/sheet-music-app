@@ -7,7 +7,7 @@
 See: .paul/PROJECT.md (updated 2026-06-07)
 
 **Core value:** The band gets the right charts + recordings on their iPads each week, and Daniel authors setlists conversationally via Claude + MCP. Now MULTI-TENANT (2nd live tenant: Brothers Lazaroff on brotherslazaroff.live).
-**Current focus:** **🚧 v11.6 — Airtight (Weekend Stress & Usability) — OPENED 2026-06-17.** A deliberately NARROW hardening milestone (NOT features): stress the band's entire path against the three real upcoming **Camp Sabra weekend** sets and fix what isn't airtight. 4 phases — 01 stress sweep & triage (discovery; live Playwright + multi-agent code audit; BLOCKS the rest) → 02 Perform reading airtight (text/plain weighted) → 03 off-site flaky-wifi resilience (characterize→decide) → 04 authoring + publish round-trip (live send = STOP-gate). Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar widened to usability-AND-access; err-public + CRC-byte-identical hold. **Next action: `/paul:plan` for Phase v11.6-04 (Authoring + publish round-trip — FINAL milestone phase; live send = STOP-gate).** Phases 01 ✅ + 02 ✅ + 03 ✅ done. Broad backlog (photo-import, library density, comms layer) deferred to v11.7. **F4 BL key badges still await authoring** (`update_song`/`edit_library_entry` on the 18 BL charts — verdict B). v7.1 hardening continues in parallel via `.coord/`.
+**Current focus:** **🚧 v11.7 — Discoverability & Deferred Backlog — OPENED 2026-06-18.** Headline = MCP **Asymmetry Principle** (every write/act-by-id tool gets a read/resolve-id path; reverse-index reads for write-side pointers). BROAD scope: MCP discoverability + folded deferred backlog (F3 library density, infra org-scoping, broslaz design pass). 7 phases: 01 ✅ verify-first audit → 02 P0 `find_user` (MCP headline; the David-is-invisible fix) → 03 P1 setlist reverse-lookup → 04 P2–P5 sweep (trimmed) → 05 F3 library density → 06 infra org-scoping → 07 broslaz design pass. **Next action: `/paul:plan` for Phase v11.7-02 (P0 `find_user`).** Oracle `docs/ACCESS-POLICY.md` v0.4; resolvers tenant-scoped (cross-tenant hard wall); err-public + CRC-byte-identical hold. Photo-import OFF roadmap; F5 comms gated stretch; P4/P5 sweep tools → v11.8. v7.1 hardening continues in parallel via `.coord/`. (v11.6 ✅ tag `v11.6.0`.)
 
 ## Current Position
 
@@ -21,18 +21,21 @@ Last activity: 2026-06-18 — **Closed v11.7-01 verify-first audit** (report + S
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
 - **Band leaders:** explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle (today hand-set via scripts). The **authoring** tier.
 
-## Milestone Phases (v11.6 — 🚧 3 of 4 complete)
+## Milestone Phases (v11.7 — 🚧 1 of 7 complete)
 
-| Phase | Focus | Priority |
-|-------|-------|----------|
-| v11.6-01 | ✅ **COMPLETE (2026-06-17)** — Stress sweep & triage: live Playwright (3 sets, iPad-WebKit ±landscape, wifi-drop) + 5-surface code audit → `.paul/research/v11-6-01-stress-triage-REPORT-2026-06-17.md` (31 findings WS-01..31). No prod code. Offline-works confirmed; P0 WS-01 + P1 WS-02/03/04/05/11 routed to 02–04. | **DISCOVERY (verify-first)** |
-| v11.6-02 | ✅ **COMPLETE 7/7 (2026-06-18, tip `6dee681893`)** — Perform reading airtight: nav+hydration (WS-01/02/09), text Fit-core (WS-03/04/20), slash-bass (WS-25), PDF render (WS-05/07/16), reading-controls+fit-page (WS-18/22/26/14), image-viewer (WS-06/15), drawer-nav (WS-08/28). WS-19/23/24→v11.7; WS-17→cycle-13a. /ui-ux-pro-max BLOCKING held. | P0/P1 |
-| v11.6-03 | **Off-site resilience (flaky wifi)** — characterize wifi-drop with a set open; decide bounded offline guarantee (revisits PWA-removal for off-site). Likely `checkpoint:decision`. | P1 (characterize→decide) |
-| v11.6-04 | **Authoring + publish round-trip** — finalize 3 sets via MCP (keys/BPM/order/bonds); airtight publish-&-deliver (`publish_setlist`/QR/push). **Live send = STOP-gate** (`autonomous:false`). | P1 |
+| Phase | Focus | Status |
+|-------|-------|--------|
+| v11.7-01 | ✅ **COMPLETE (2026-06-18)** — Verify-first MCP discovery-gap audit (read-only): all P0–P3 claims CONFIRMED vs deployed code; report `.paul/research/v11-7-01-mcp-discovery-verify-REPORT-2026-06-18.md`. P4/P5 sweep tools → v11.8. | ✅ DISCOVERY |
+| v11.7-02 | **P0 user directory** — `find_user({email?,nameContains?,role?,includeProfileless?})`; DROP instrument gate; tenant-scoped; `assertEditor`. The David-is-invisible fix; also fixes `suggest_*`. | **NEXT** |
+| v11.7-03 | **P1 setlist reverse-lookup** — `find_setlists_referencing_chart` (surface `delete_chart` walk) + `search_setlists` (app-side filter). | pending |
+| v11.7-04 | **P2–P5 sweep (TRIMMED)** — `find_setlists_from_template` (+ index) + `find_contact`. list_recent_commands + list_recent_library_changes DEFER → v11.8. | pending |
+| v11.7-05 | **F3 library browse density/filters** — thumbnails, composer/recency metadata, search ergonomics. /ui-ux-pro-max BLOCKING. | pending |
+| v11.7-06 | **Infra adjacents** — recordings/finalize/anon-chord-cache org-scoping + cheap v7.0 fold-forward hygiene. | pending |
+| v11.7-07 | **Authed-broslaz design pass + cross-org leader-wall UI check.** /ui-ux-pro-max BLOCKING. | pending |
 
-**Source:** `.paul/MILESTONE-CONTEXT.md` (consumed). Oracle `docs/ACCESS-POLICY.md` **v0.4**; **triage bar widened to usability-AND-access**. **Phase ordering:** 01 discovery is a HARD prerequisite for 02/03/04 (they consume its findings); fixes ordered by surface + severity. **Method:** live Playwright on prod (this Windows box, NOT cowork — cowork can't launch WebKit) + multi-agent code audit; manual Daniel UAT → `.paul/UAT-PENDING.md`, not a primary gate. **/ui-ux-pro-max BLOCKING** on UI-touching phases (02/03). **Anchor fixtures:** the 3 named weekend setlists (all chart-healthy, none published). CRC byte-identical where shared.
+**Source:** `.paul/MILESTONE-CONTEXT.md` (consumed). Oracle `docs/ACCESS-POLICY.md` **v0.4**; resolvers tenant-scoped (err-public cross-tenant hard wall). **Phase ordering:** 01 verify-first is the HARD prerequisite for 02–04 (done). **Quality floor:** tsc + tests + AC proof; `next build --webpack` before deployable; emulator tests where rules/queries change; /ui-ux-pro-max BLOCKING on UI phases (05/07). No STOP-gates expected (read-only + infra). Photo-import OFF; F5 comms gated stretch.
 
-(v11.5 ✅ COMPLETE 2026-06-16 tag `v11.5.0` — archived `.paul/milestones/v11.5.0-ROADMAP.md` + MILESTONES.md § v11.5. v11.4 ✅ 2026-06-11 tag `v11.4.0`. v11.3 ✅ 2026-06-10 tag `v11.3.0`. v11.2 ✅ 2026-06-11 tag `v11.2.0`.)
+(v11.6 ✅ COMPLETE 2026-06-18 tag `v11.6.0` — archived `.paul/milestones/v11.6.0-ROADMAP.md` + MILESTONES.md § v11.6. v11.5 ✅ `v11.5.0`. v11.4 ✅ `v11.4.0`. v11.3 ✅ `v11.3.0`.)
 
 ## Git State
 
@@ -102,18 +105,16 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.7-01 COMPLETE — phase boundar
 Last session: 2026-06-18 — **Closed v11.6 (tag `v11.6.0`) + opened v11.7 + completed v11.7-01 verify-first audit** (report `.paul/research/v11-7-01-mcp-discovery-verify-REPORT-2026-06-18.md`; PLAN→APPLY→UNIFY ✓; no prod code). All P0–P3 audit claims CONFIRMED; P4/P5 sweep tools DEFER to v11.8 (infra-blocked); 2 corrections baked. **Photo-import DROPPED** (Daniel, [[feedback_no_photo_import]]).
 Stopped at: **✅ v11.7-01 COMPLETE (phase boundary) — ready to plan v11.7-02 (P0 `find_user`).**
 Next action: **`/paul:plan` for Phase v11.7-02 (P0 `find_user`).** Verified-ready spec: NEW `find_user({email?, nameContains?, role?, includeProfileless?})` on `users` collection — DROP the instrument gate (the bug that hides David); role+email viable now (email via in-memory filter at current scale; `(orgId,email)` index optional), name=app-side substring; tenant-scope via `orgFrom`+`rowOrgIds` (no leakage); gate `assertEditor`. Consider shipping the cheap `includeProfileless` interim on `list_musicians` in the same plan. Fixes `suggest_*` coverage as a side effect.
-**Weekend sets (finalized, chart-clean, NOT published — band opens in Perform):** Shir Shabbat–Juneteenth `a84f8cce-176e-4b5e-9653-4df71db6f5ba` (PDF) · Camp Sabra Havdalah `7e005452-7c42-4cdc-b27d-ff0c78b6667b` (PDF+text) · **Camp Sabra Staff Concert `c2075393-d994-4643-ade3-432a6864d87f`** (text). **`7c640a8a…` is the superseded "(OLD)" staff concert — ignore it.** WS-11/31/21 deployed to prod (Vercel).
-Resume file: **`.paul/HANDOFF-2026-06-18-v11.6-03-complete.md`** (full session pickup) → then `.paul/ROADMAP.md` (§ Phase v11.6-04) + `.paul/UAT-PENDING.md` (open field-confirm items) + the v11.6 anchor fixtures (3 Camp Sabra sets, IDs in Resume context below).
-**Carry (this phase):** the live stress sweep showed INTERMITTENT headless-WebKit `open-chart` timeouts on text sets (NOT a regression — known headless+Firestore-streaming fidelity gap); confirm real-device chart-open on camp wifi in phase 03.
+Resume file: **`.paul/HANDOFF-2026-06-19.md`** (full session pickup) → then `.paul/research/v11-7-01-mcp-discovery-verify-REPORT-2026-06-18.md` (audit findings + asymmetry inventory + ready-to-plan verdicts) + `.paul/ROADMAP.md` (§ v11.7 phase table).
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
-Resume context:
-- Oracle `docs/ACCESS-POLICY.md` **v0.4**; but **triage bar is widened to usability-AND-access** for this milestone (a real usability defect counts even if it doesn't contradict an access cell). err-public still governs access-shaped findings.
-- **Method:** live Playwright on prod from THIS Windows box + multi-agent code audit. NOT cowork for browser probes (cowork can't launch WebKit). Manual Daniel UAT → `.paul/UAT-PENDING.md`, not a primary gate.
-- **Anchor fixtures:** Shir Shabbat—Juneteenth `a84f8cce-176e-4b5e-9653-4df71db6f5ba` (Fri, all PDF) · Camp Sabra Havdalah `7e005452-7c42-4cdc-b27d-ff0c78b6667b` (Sat, mostly text/plain) · Camp Sabra Staff Concert `7c640a8a-358e-48ee-8523-6b8a0eca9d05` (Sat, all text/plain). Two camp sets are text/plain → `TextScoreViewer`, the highest-leverage usability surface.
-- **Off-site angle:** Camp Sabra may break the "venue has wifi" assumption that justified dropping PWA offline (phase 03 may re-open that decision).
-- Autonomy posture binding (auto-commit+push per phase to master; quality floor held; /ui-ux-pro-max blocking on UI-touching phases). Phase 04 live publish/notify send = STOP-gate. Every fixed item gets a regression cell/test re-runnable by the Phase 01 sweep.
-- **Operational (carry):** David STAYS admin (settled). **F4 BL key badges** still await authoring (18 BL charts). **INFRA (not app code):** `/perform` cold·mobile CLS 0.250 + Vercel TTFB keep-warm.
-**Open UAT-PENDING (live/safe, `.paul/UAT-PENDING.md`):** THIS phase — browser persona sign-in via a minted `loginUrl` + re-open-fails (single-use) + AC-2 expired-account session-mint rejection + admin-loginable-refused. EARLIER (unchanged) — v11.2 BL-connector reconnect → BUG-1 create→propose→commit + BUG-9 `preview_publish` BL roster size; v11.1 broslaz authed-surface checklist (nav/library/dashboard/matrix/MCP-authoring/admin-membership, CRC unchanged).
+Resume context (v11.7):
+- **find_user (02) verified-ready:** `users` collection has uid/displayName/email/role/musicianProfile.instrument/.schedulingTier/orgIds. DROP the instrument gate (`roster.ts:114–126` is the bug). role/email queryable now (email in-memory filter; `(orgId,email)` index optional); name=app-side substring. Tenant via `orgFrom`+`rowOrgIds` (`org-context.ts`), gate `assertEditor`. Cheap `includeProfileless` interim available on `list_musicians`.
+- **find_setlists_referencing_chart (03):** surface the `delete_chart` walk at `library-upload.ts:787–846` (no new index). `search_setlists` = app-side filter at current scale.
+- **04 sweep TRIMMED:** keep `find_setlists_from_template` (+ index `setlists(orgId,sourceTemplateId)`) + `find_contact`; DEFER `list_recent_commands` + `list_recent_library_changes` → v11.8 (infra-blocked).
+- **05/07 UI phases:** /ui-ux-pro-max BLOCKING. **06 infra:** known org-scoping gaps (recordings / `finalize_chart_upload` signed-URL / anon chord-cache) + cheap v7.0 fold-forward hygiene items.
+- Autonomy posture binding (auto-commit+push per phase to master; quality floor held; resolvers tenant-scoped per err-public). No STOP-gates expected (read-only + infra, no publish-send). No publish/notify, no photo-import.
+- **Operational (carry):** David STAYS admin (settled). F4 BL key badges still await authoring (18 BL charts). INFRA (not app code): `/perform` cold·mobile CLS 0.250 + Vercel TTFB keep-warm.
+**Open UAT-PENDING (live/safe, `.paul/UAT-PENDING.md`, unchanged from v11.6):** browser persona sign-in via minted `loginUrl` + single-use re-open + AC-2 expired-account session-mint rejection + admin-loginable-refused; v11.2 BL-connector reconnect (BUG-1 create→propose→commit, BUG-9 `preview_publish` roster size); v11.1 broslaz authed-surface checklist. The 3 Camp Sabra weekend sets shipped finalized + chart-clean (v11.6, band opens in Perform; no publish).
 
 ---
 *STATE.md — digest, not archive. Target <100 lines.*
