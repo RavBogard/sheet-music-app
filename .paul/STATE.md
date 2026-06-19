@@ -11,11 +11,11 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Milestone: **✅ v11.6 — Airtight (Weekend Stress & Usability) — COMPLETE 2026-06-18 (tag `v11.6.0`).** Narrow stress + usability hardening anchored to the three Camp Sabra weekend sets; all 4 phases done. Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar = usability-AND-access. Archived `.paul/milestones/v11.6.0-ROADMAP.md` + MILESTONES.md § v11.6. **Now awaiting next milestone.** (v11.5 ✅ `v11.5.0`; v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`.)
-Phase: **None active — milestone boundary.** Next milestone in discussion: **MCP read/discovery-gap audit** (write/act-by-id tools lacking a corresponding read/resolve-id path; P0 = user-directory `find_user`, P1 = setlist reverse-lookup, etc.) → `/paul:discuss-milestone` in progress, then `/paul:milestone`.
-Plan: **None active.** Last closed: `v11.6-04-03` ✅ (finalize-only; live publish send intentionally skipped — Daniel doesn't use publish/notify).
-Status: **✅ v11.6 milestone CLOSED (tag `v11.6.0`).** package.json/paul.json/STATE aligned at 11.6.0. Next: define v11.7 via `/paul:milestone` (MCP read/discovery-gap audit context being gathered now).
-Last activity: 2026-06-18 — **Closed v11.6 milestone** (MILESTONES.md entry + `.paul/milestones/v11.6.0-ROADMAP.md` archive + ROADMAP reorg + version→11.6.0 + tag `v11.6.0`). Prior: shipped v11.6-04-02 `cdfc16cead` (WS-21), v11.6-04-01 `1a1690478d` (WS-11+WS-31); v11.6-03 CLOSED `c6f75080a3`; v11.6-02 ✅.
+Milestone: **🚧 v11.7 — Discoverability & Deferred Backlog — OPENED 2026-06-18.** Headline = MCP **Asymmetry Principle** (every write/act-by-id tool gets a read/resolve-id path; reverse-index reads for write-side pointers). BROAD scope (Daniel): MCP discoverability + folded deferred backlog (F3 library density, infra org-scoping adjacents, broslaz design pass). 7 phases. Oracle `docs/ACCESS-POLICY.md` v0.4; cross-tenant hard wall governs the new resolvers. Source consumed: `.paul/MILESTONE-CONTEXT.md`. **Photo-import EXCLUDED (Daniel declined); F5 comms = gated stretch.** (v11.6 ✅ `v11.6.0`; v11.5 ✅ `v11.5.0`.)
+Phase: **v11.7-01 (Verify-first audit) — NOT STARTED.** DISCOVERY/verify-first; confirms CURRENT MCP behaviors vs deployed code + asymmetry inventory + index needs; HARD prerequisite for 02–04. No prod code. **Next action: `/paul:plan` for Phase v11.7-01.**
+Plan: **None active — ready to plan v11.7-01.**
+Status: **🚧 v11.7 OPENED — 0 of 7 phases. Ready for first PLAN.** Phase map: 01 verify-first audit (DISCOVERY) → 02 P0 `find_user` (MCP headline) → 03 P1 setlist reverse-lookup → 04 P2–P5 sweep → 05 F3 library density → 06 infra org-scoping → 07 broslaz design pass.
+Last activity: 2026-06-18 — **Opened v11.7 milestone** (ROADMAP v11.7 section + 7 phase dirs + STATE/paul.json). Dropped photo-import per Daniel ("not a feature I'm looking for"). Prior: **closed v11.6** (tag `v11.6.0`).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,10 +43,10 @@ Last activity: 2026-06-18 — **Closed v11.6 milestone** (MILESTONES.md entry + 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [Milestone v11.6 COMPLETE (tag v11.6.0) — ready for next]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.7 OPENED — ready for first PLAN (Phase v11.7-01)]
   ○        ○        ○
 ```
-(v11.6 OPENED 2026-06-17, **CLOSED 2026-06-18 (tag `v11.6.0`)** — all 4 phases done. Next: `/paul:milestone` to open v11.7 from the MCP read/discovery-gap audit context now being gathered via `/paul:discuss-milestone`.)
+(v11.7 OPENED 2026-06-18 — 7 phases, 0 complete. Next: `/paul:plan` for Phase v11.7-01 (Verify-first audit; DISCOVERY, blocks 02–04). Photo-import dropped per Daniel; F5 comms gated stretch. Prior: v11.6 ✅ CLOSED tag `v11.6.0`.)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
@@ -98,9 +98,9 @@ PLAN ──▶ APPLY ──▶ UNIFY        [Milestone v11.6 COMPLETE (tag v11.6
 
 ## Session Continuity
 
-Last session: 2026-06-18 — **CLOSED v11.6 milestone (tag `v11.6.0`).** MILESTONES.md entry + `.paul/milestones/v11.6.0-ROADMAP.md` archive + ROADMAP reorg + version→11.6.0 (package.json/paul.json/STATE) + annotated tag `v11.6.0` (local; push when ready). All 4 phases shipped: 01 stress-triage · 02 Perform reading (7 plans) · 03 off-site resilience · 04 authoring/publish (live send intentionally skipped — Daniel doesn't use publish/notify; [[feedback_no_publish_or_assignments]]).
-Stopped at: **✅ v11.6 CLOSED — discussing next milestone (MCP read/discovery-gap audit).**
-Next action: **`/paul:milestone`** to open v11.7 from the MCP read/discovery-gap audit context (`/paul:discuss-milestone` gathering now). The audit catalogs write/act-by-id tools lacking a read/resolve-id counterpart — P0 user-directory `find_user` (instrument-gating hides David/profileless users), P1 setlist reverse-lookup (`find_setlists_referencing_chart`/`search_setlists`), P2 template→derived graph, P3 contact resolver, P4 recent-commands, P5 recent-library-changes feed. Prior v11.7 backlog still queued: photo-import, F3 library browse density, F5 comms layer, text-chart nits WS-19/23/24, recordings/finalize org-scoping, F4 BL key badges, unify TextScoreViewer detection onto `text-chart-pdf.ts`.
+Last session: 2026-06-18 — **Closed v11.6 (tag `v11.6.0`, pushed `4e30913c2a`) + OPENED v11.7 — Discoverability & Deferred Backlog.** v11.7 = MCP read/resolve-symmetry audit (P0 `find_user` + P1 setlist reverse-lookup committed; P2–P5 swept) folded with the deferred backlog (F3 library density, infra org-scoping, broslaz design pass). 7 phases, 0 complete. **Photo-import DROPPED** — Daniel: "not a feature I'm looking for" (declined twice now; OFF roadmap, [[feedback_no_publish_or_assignments]]-adjacent — see new memory). F5 comms = gated stretch.
+Stopped at: **🚧 v11.7 OPENED — ready for first PLAN (Phase v11.7-01 Verify-first audit).**
+Next action: **`/paul:plan` for Phase v11.7-01** (Verify-first audit — confirm CURRENT MCP tool behaviors against deployed code: `list_musicians` instrument-gating, `create_contact` dedup, `delete_chart` guard walk, command-ack TTL, `library_signals` shape; surface any new composite index need for `search_setlists`; light v7.0 fold-forward re-triage. DISCOVERY, no prod code, blocks 02–04).
 **Weekend sets (finalized, chart-clean, NOT published — band opens in Perform):** Shir Shabbat–Juneteenth `a84f8cce-176e-4b5e-9653-4df71db6f5ba` (PDF) · Camp Sabra Havdalah `7e005452-7c42-4cdc-b27d-ff0c78b6667b` (PDF+text) · **Camp Sabra Staff Concert `c2075393-d994-4643-ade3-432a6864d87f`** (text). **`7c640a8a…` is the superseded "(OLD)" staff concert — ignore it.** WS-11/31/21 deployed to prod (Vercel).
 Resume file: **`.paul/HANDOFF-2026-06-18-v11.6-03-complete.md`** (full session pickup) → then `.paul/ROADMAP.md` (§ Phase v11.6-04) + `.paul/UAT-PENDING.md` (open field-confirm items) + the v11.6 anchor fixtures (3 Camp Sabra sets, IDs in Resume context below).
 **Carry (this phase):** the live stress sweep showed INTERMITTENT headless-WebKit `open-chart` timeouts on text sets (NOT a regression — known headless+Firestore-streaming fidelity gap); confirm real-device chart-open on camp wifi in phase 03.

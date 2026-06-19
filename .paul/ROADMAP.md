@@ -4,11 +4,62 @@
 
 ## Next Milestone
 
-**v11.7 (candidate backlog)** — Photo-of-paper-chart import (dropped from v11.5 2026-06-14; recon in `.paul/milestones/v11.5.0-ROADMAP.md` § Phase v11.5-03); F3 library browse density/filters (thumbnails, composer/recency metadata, search ergonomics); F5 comms design layer (waits on the Antigravity mural/BL mockups); the v11.5-deferred infra adjacents not folded into v11.5-04 (recordings-collection org-scoping + `/api/recordings/upload` orgId stamp, `finalize_chart_upload` signed-URL org-stamp gap, SERVICE_TYPE_LABELS vocab table, v7.0 fold-forward re-triage); authed-broslaz design pass + cross-org leader-wall UI check. v7.1 Production Hardening continues independently via the bongo `.coord/` cadence.
+**v11.8 (candidate backlog)** — F5 comms design layer (gated on the Antigravity mural/BL mockups; carried as a v11.7 stretch, lands here if the external dep doesn't arrive); anything trimmed from the v11.7 P2–P5 opportunistic sweep; SERVICE_TYPE_LABELS vocab table (only if a non-synagogue tenant needs it); v7.0 fold-forward residuals after the v11.7-01 re-triage. **Photo-of-paper-chart import is OFF the roadmap** — Daniel declined it twice (v11.5 + v11.7); do not re-propose. v7.1 Production Hardening continues independently via the bongo `.coord/` cadence.
 
 ## Active Milestone
 
-**Awaiting next milestone** — run `/paul:discuss-milestone` or `/paul:milestone` to define (v11.7 candidate backlog above).
+**🚧 v11.7 — Discoverability & Deferred Backlog** (OPENED 2026-06-18 · `package.json` → 11.7.0 at close · **0 of 7 phases complete**)
+Status: 🚧 **In Progress** · Phases: **0 of 7** · **Source:** `.paul/MILESTONE-CONTEXT.md` (consumed at /paul:milestone 2026-06-18; MCP read/discovery-gap audit + scope decisions). **Oracle:** `docs/ACCESS-POLICY.md` **v0.4** (err-public; cross-tenant hard wall governs the new resolvers).
+**Theme:** The **Asymmetry Principle** — every MCP tool that mutates/acts on an opaque id (uid, fileId, setlistId, templateId, commandId, contactId) must have a discovery path returning that id from human input; every write-side denormalized pointer gets a reverse-lookup read (**Reverse-Index Principle**). The assistant must never be able to mutate an entity it can't discover. Folded in (Daniel chose BROAD): the deferred v11.7 backlog (F3 library density, infra org-scoping adjacents, authed-broslaz design pass). MCP-first authoring; CRC + broslaz both live; CRC byte-identical where shared.
+**Scope decisions (Daniel 2026-06-18):** BROAD milestone (MCP discoverability + deferred backlog); MCP depth = P0+P1 committed first-class, P2–P5 an opportunistic sweep trimmed to what's cheap. **Photo-of-paper-chart import EXCLUDED** (Daniel declined — not a wanted feature). **F5 comms is a gated stretch** (externally blocked), not a committed phase.
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| v11.7-01 | Verify-first audit — confirm CURRENT MCP behaviors vs deployed code + asymmetry inventory + index needs [DISCOVERY, verify-first, BLOCKS the MCP-build phases] | TBD | Not started | - |
+| v11.7-02 | P0 user directory — `find_user` (no instrument gate; returns orgIds) + suggest_* coverage [MCP headline] | TBD | Not started | - |
+| v11.7-03 | P1 setlist reverse-lookup — `find_setlists_referencing_chart` + `search_setlists` | TBD | Not started | - |
+| v11.7-04 | P2–P5 reverse-index sweep (opportunistic, trimmed) — `find_setlists_from_template`, `find_contact`, `list_recent_commands`, `list_recent_library_changes` | TBD | Not started | - |
+| v11.7-05 | F3 library browse density/filters — thumbnails, composer/recency metadata, search ergonomics [/ui-ux-pro-max BLOCKING] | TBD | Not started | - |
+| v11.7-06 | Infra adjacents fold — recordings org-scoping + upload orgId stamp · `finalize_chart_upload` signed-URL org-stamp · anon chord-cache org-scoping · v7.0 fold-forward re-triage | TBD | Not started | - |
+| v11.7-07 | Authed-broslaz design pass + cross-org leader-wall UI check [/ui-ux-pro-max BLOCKING] | TBD | Not started | - |
+
+### Phase v11.7-01: Verify-first audit [DISCOVERY — verify-first, blocks the MCP-build phases]
+Focus: Confirm each claimed CURRENT behavior against DEPLOYED MCP code (NOT the audit's assertions or memory): `list_musicians` instrument-gating; `create_contact` email-dedup; `delete_chart` reference-guard walk internals; command-ack ~5min TTL; `library_signals` event shape; whether `search_setlists` needs a new composite index (STATE: no `(orgId, createdAt)` on `setlists`). Lock the asymmetry inventory + a light re-triage of the v7.0 fold-forward backlog. No production code this phase.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.7-02: P0 user directory [MCP headline]
+Focus: `find_user({ email?, nameContains?, role?, includeProfileless?: true }) -> [{uid, displayName, email, role, instrument|null, schedulingTier|null, orgIds}]`. email exact-match (0/1); name substring; **MUST NOT gate on instrument** (David/admins are invisible today while the write side accepts any uid). Tenant-scoped (err-public cross-tenant wall — no uid/email leakage). Likely fixes `suggest_musicians`/`suggest_band` coverage as a side effect. Cheaper interim fallback: `includeProfileless` on `list_musicians`.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.7-03: P1 setlist reverse-lookup
+Focus: `find_setlists_referencing_chart(fileId) -> [{setlistId, name, eventDate, trackIds[]}]` (surface the index `delete_chart`'s guard already walks) + `search_setlists({ trackTitleContains?, leadMusician?, templateType?, from?, to? })`. Tenant-scoped. New composite index (if 01 finds one needed) deploys via firebase CLI as an AUTO task.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.7-04: P2–P5 reverse-index sweep [opportunistic, trimmed]
+Focus: Take what 01 finds cheap / already backed by existing signals — `find_setlists_from_template(templateId)` (reverse of `sourceTemplateId`; `delete_template` doesn't cascade), `find_contact({email|nameContains})`, `list_recent_commands({sinceSeconds?, status?})` (bounded by the ~5min ack TTL), `list_recent_library_changes({sinceISO, limit})` (likely off `library_signals`). Each read's gating mirrors its corresponding write/owner tier; log anything trimmed to v11.8.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.7-05: F3 library browse density/filters [/ui-ux-pro-max BLOCKING]
+Focus: Library browse ergonomics — thumbnails, composer/recency metadata, search/filter affordances. Consumer + author surfaces; CRC byte-identical where shared.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.7-06: Infra adjacents fold
+Focus: The v11.5/v11.3-deferred infra adjacents — recordings-collection org-scoping + `/api/recordings/upload` orgId stamp (stamp from host x-org-id, THEN host-filter the subscribe); `finalize_chart_upload` signed-URL org-stamp gap; anon chord-cache org-scoping (POST chordData + PATCH nativeKey, org-scoped together); v7.0 fold-forward re-triage (from 01). Any org-scoping backfill gets dry-run + idempotency marker + rollback.
+Plans: TBD (defined during /paul:plan)
+
+### Phase v11.7-07: Authed-broslaz design pass + cross-org leader-wall UI check [/ui-ux-pro-max BLOCKING]
+Focus: Design polish of the authed broslaz surface + a UI check that the cross-org leader wall reads correctly (a both-org leader's authoring scope is clear; no CRC leak on BL). CRC byte-identical where shared.
+Plans: TBD (defined during /paul:plan)
+
+Constraints (locked at /paul:milestone 2026-06-18):
+1. **err-public cross-tenant HARD WALL:** all new resolvers (`find_user`, `find_contact`, setlist/template searches) are **tenant-scoped**, matching the tenant-scoped write tools — no cross-tenant uid/email leakage across crc↔broslaz.
+2. **Read-only additions don't widen writes:** each new READ tool's gating mirrors its corresponding write/owner tool's tier (review/enrichment reads stay admin-gated).
+3. **Verify-first (binding):** do NOT trust the audit's behavior claims or memory — confirm against deployed code before building (phase 01 is the hard prerequisite for 02–04).
+4. **MCP validation shape:** new tools surface validation as `result.isError: true` with content prose, never JSON-RPC `error.code`.
+5. **Quality floor (non-negotiable, carried v11.0–v11.6):** tsc clean + tests green + AC proof every task; `SKIP_ENV_VALIDATION=1 npx next build --webpack` before any route-/shared-lib/client phase is deployable; emulator-backed tests where rules/queries change; **/ui-ux-pro-max BLOCKING on every UI-touching phase** (05 F3, 07 broslaz design).
+6. **Deploys/backfills are AUTO tasks:** new Firestore composite indexes deploy via `firebase deploy --project crcmusiccharts`; org-scoping backfills get dry-run + idempotency marker + rollback, single-owner executor.
+7. **No STOP-gates expected:** Stream A is read-only; Stream B's infra org-scoping has no publish/notify send → fully autonomous, auto-commit + push per phase to `master`. STOP only for product ambiguity, an unresolvable quality-gate failure, or a discovered cross-tenant leak / CRC lock-out. **No publish/notify or assignment-scheduling work.**
+8. **Explicit non-goals:** photo-of-paper-chart import (Daniel declined — OFF the roadmap); F5 comms design layer (gated stretch, externally blocked → v11.8 if the dep doesn't land); SERVICE_TYPE_LABELS vocab (only if a non-synagogue tenant needs it); F4 BL key badges (await authoring, not a code phase).
 
 ## Most Recent Milestone (✅ COMPLETE)
 

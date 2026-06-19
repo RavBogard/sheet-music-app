@@ -1,15 +1,15 @@
 {
   "name": "sheet-music-app",
-  "version": "11.6.0",
+  "version": "11.7.0",
   "milestone": {
-    "name": "v11.6 Airtight (Weekend Stress & Usability)",
-    "version": "11.6.0",
-    "status": "complete"
+    "name": "v11.7 Discoverability & Deferred Backlog",
+    "version": "11.7.0",
+    "status": "in_progress"
   },
   "phase": {
-    "number": "v11.6-04",
-    "name": "Authoring + publish round-trip",
-    "status": "complete"
+    "number": "v11.7-01",
+    "name": "Verify-first audit",
+    "status": "not_started"
   },
   "loop": {
     "plan": null,
