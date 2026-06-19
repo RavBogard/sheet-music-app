@@ -12,22 +12,22 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.7 — Discoverability & Deferred Backlog — OPENED 2026-06-18.** Headline = MCP **Asymmetry Principle** (every write/act-by-id tool gets a read/resolve-id path; reverse-index reads for write-side pointers). BROAD scope (Daniel): MCP discoverability + folded deferred backlog (F3 library density, infra org-scoping adjacents, broslaz design pass). 7 phases. Oracle `docs/ACCESS-POLICY.md` v0.4; cross-tenant hard wall governs the new resolvers. Source consumed: `.paul/MILESTONE-CONTEXT.md`. **Photo-import EXCLUDED (Daniel declined); F5 comms = gated stretch.** (v11.6 ✅ `v11.6.0`; v11.5 ✅ `v11.5.0`.)
-Phase: **v11.7-02 (P0 `find_user`) — ✅ COMPLETE (1/1, 2026-06-19).** Shipped `find_user` resolver + `includeProfileless` on `list_musicians` (the David-is-invisible fix). AC-1..AC-5 PASS; tsc 0 / roster emulator 58/58 / `next build --webpack` 0. SUMMARY `.paul/phases/v11.7-02-find-user/v11.7-02-01-SUMMARY.md`. **Next phase: v11.7-03 (P1 setlist reverse-lookup).**
-Plan: **`v11.7-02-01` ✅ COMPLETE + UNIFIED.** `find_user({email?,nameContains?,role?,includeProfileless?})` in `roster.ts` (opt-in `buildMusicianRow({allowProfileless})`; find_user defaults to include profileless) + registered in `index.ts` (`assertEditor`, `orgFrom`+`rowOrgIds`) + `includeProfileless` on `list_musicians` + 7 emulator cases. In-memory filters, NO new index, NO deploy.
-Status: **🚧 v11.7 — 2 of 7 phases complete (01 ✅, 02 ✅). Ready to plan v11.7-03 (P1 setlist reverse-lookup).** Phase map: 01 ✅ → 02 ✅ → 03 P1 setlist reverse-lookup → 04 P2–P5 sweep (TRIMMED: find_setlists_from_template + find_contact; **list_recent_commands + list_recent_library_changes DEFER → v11.8**) → 05 F3 library density → 06 infra org-scoping → 07 broslaz design pass.
-Last activity: 2026-06-19 — **Closed v11.7-02 (P0 `find_user`)** — PLAN→APPLY→UNIFY ✓; commit `feat(v11.7-02)`. Prior: closed v11.7-01 verify-first audit; opened v11.7; closed v11.6 (tag `v11.6.0`).
+Phase: **v11.7-03 (P1 setlist reverse-lookup) — ✅ COMPLETE (1/1, 2026-06-19).** Shipped `find_setlists_referencing_chart` + `search_setlists`. AC-1..AC-5 PASS; tsc 0 / setlist-rev emulator 9/9 / setlists.test 12/12 / `next build --webpack` 0. SUMMARY `.paul/phases/v11.7-03-setlist-reverse-lookup/v11.7-03-01-SUMMARY.md`. **Next phase: v11.7-04 (P2 sweep — find_setlists_from_template + find_contact).**
+Plan: **`v11.7-03-01` ✅ COMPLETE + UNIFIED.** `find_setlists_referencing_chart({fileId?,songId?})` (surfaces delete_chart walk, live+tenant, dangling-excluded) + `search_setlists({trackTitle?,leadMusician?,templateType?})` (app-side) in `setlists.ts` + registered in `index.ts`. **Ungated-authenticated** (NOT assertEditor — setlist-public-by-design) + tenant-scoped via `rowOrg`. NO new index, NO deploy.
+Status: **🚧 v11.7 — 3 of 7 phases complete (01 ✅, 02 ✅, 03 ✅). Ready to plan v11.7-04 (P2 sweep).** Phase map: 01 ✅ → 02 ✅ → 03 ✅ → 04 P2–P5 sweep (TRIMMED: find_setlists_from_template [+ NEW index `(orgId,sourceTemplateId)`] + find_contact; **list_recent_commands + list_recent_library_changes DEFER → v11.8**) → 05 F3 library density → 06 infra org-scoping → 07 broslaz design pass.
+Last activity: 2026-06-19 — **Closed v11.7-03 (P1 setlist reverse-lookup)** — PLAN→APPLY→UNIFY ✓; commit `feat(v11.7-03)`. Prior: closed v11.7-02 (find_user); closed v11.7-01 audit; opened v11.7.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
 - **Band leaders:** explicit `orgIds` membership (CRC / broslaz / both) set via a NEW admin toggle (today hand-set via scripts). The **authoring** tier.
 
-## Milestone Phases (v11.7 — 🚧 2 of 7 complete)
+## Milestone Phases (v11.7 — 🚧 3 of 7 complete)
 
 | Phase | Focus | Status |
 |-------|-------|--------|
 | v11.7-01 | ✅ **COMPLETE (2026-06-18)** — Verify-first MCP discovery-gap audit (read-only): all P0–P3 claims CONFIRMED vs deployed code; report `.paul/research/v11-7-01-mcp-discovery-verify-REPORT-2026-06-18.md`. P4/P5 sweep tools → v11.8. | ✅ DISCOVERY |
 | v11.7-02 | ✅ **COMPLETE (2026-06-19)** — `find_user({email?,nameContains?,role?,includeProfileless?})` shipped (instrument gate dropped via opt-in `buildMusicianRow`; find_user defaults include-profileless) + `includeProfileless` on `list_musicians`; tenant-scoped + `assertEditor`. The David-is-invisible fix. tsc 0 / emulator 58/58 / build 0. | ✅ SHIPPED |
-| v11.7-03 | **P1 setlist reverse-lookup** — `find_setlists_referencing_chart` (surface `delete_chart` walk) + `search_setlists` (app-side filter). | pending |
+| v11.7-03 | ✅ **COMPLETE (2026-06-19)** — `find_setlists_referencing_chart` (surfaces the `delete_chart` walk; live+tenant, dangling-excluded) + `search_setlists` (app-side trackTitle/leadMusician/templateType). Ungated-authenticated + tenant-scoped. tsc 0 / emulator 9/9 / build 0. | ✅ SHIPPED |
 | v11.7-04 | **P2–P5 sweep (TRIMMED)** — `find_setlists_from_template` (+ index) + `find_contact`. list_recent_commands + list_recent_library_changes DEFER → v11.8. | pending |
 | v11.7-05 | **F3 library browse density/filters** — thumbnails, composer/recency metadata, search ergonomics. /ui-ux-pro-max BLOCKING. | pending |
 | v11.7-06 | **Infra adjacents** — recordings/finalize/anon-chord-cache org-scoping + cheap v7.0 fold-forward hygiene. | pending |
@@ -46,10 +46,10 @@ Last activity: 2026-06-19 — **Closed v11.7-02 (P0 `find_user`)** — PLAN→AP
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.7-02 COMPLETE — phase boundary; ready to plan v11.7-03]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.7-03 COMPLETE — phase boundary; ready to plan v11.7-04]
   ✓        ✓        ✓
 ```
-(v11.7 — 2 of 7 phases complete (01 ✅ audit, 02 ✅ find_user). Next: `/paul:plan` for Phase v11.7-03 (P1 setlist reverse-lookup). Phase 04 sweep TRIMMED — P4/P5 defer to v11.8. Photo-import dropped; F5 comms gated stretch. Prior: v11.6 ✅ tag `v11.6.0`.)
+(v11.7 — 3 of 7 phases complete (01 ✅ audit, 02 ✅ find_user, 03 ✅ setlist reverse-lookup). Next: `/paul:plan` for Phase v11.7-04 (P2 sweep — find_setlists_from_template + find_contact; find_setlists_from_template needs NEW `(orgId,sourceTemplateId)` index → firebase deploy). Prior: v11.6 ✅ tag `v11.6.0`.)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
@@ -102,10 +102,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.7-02 COMPLETE — phase boundar
 
 ## Session Continuity
 
-Last session: 2026-06-19 — **Closed v11.7-02 (P0 `find_user`)** — PLAN→APPLY→UNIFY ✓, commit `feat(v11.7-02)`. find_user resolver + includeProfileless on list_musicians; tsc 0 / roster emulator 58/58 / next build --webpack 0. Prior: completed v11.7-01 verify-first audit; opened v11.7; closed v11.6 (tag `v11.6.0`). Photo-import DROPPED (Daniel, [[feedback_no_photo_import]]).
-Stopped at: **✅ v11.7-02 COMPLETE (phase boundary) — ready to plan v11.7-03 (P1 setlist reverse-lookup).**
-Next action: **`/paul:plan` for Phase v11.7-03 (P1 setlist reverse-lookup).** Verified-ready spec (v11.7-01): `find_setlists_referencing_chart` = surface the existing `delete_chart` reference-walk at `library-upload.ts:787–846` (tracks where fileId== → distinct setlistId → parent setlists; CHEAP, no new index); `search_setlists` (by trackTitle/leadMusician/templateType) = app-side filter over `list_setlists`→`get_setlist` at current scale (composite index optional). Tenant-scoped + `assertEditor`, mirroring find_user's pattern.
-Resume file: **`.paul/phases/v11.7-02-find-user/v11.7-02-01-SUMMARY.md`** → then `.paul/research/v11-7-01-mcp-discovery-verify-REPORT-2026-06-18.md` (asymmetry inventory) + `.paul/ROADMAP.md` (§ v11.7 phase table).
+Last session: 2026-06-19 — **Closed v11.7-03 (P1 setlist reverse-lookup)** — PLAN→APPLY→UNIFY ✓, commit `feat(v11.7-03)`. find_setlists_referencing_chart + search_setlists; ungated-authenticated + tenant-scoped; tsc 0 / setlist-rev emulator 9/9 / setlists.test 12/12 / next build --webpack 0. Prior: closed v11.7-02 (find_user); v11.7-01 audit; opened v11.7. Photo-import DROPPED (Daniel, [[feedback_no_photo_import]]).
+Stopped at: **✅ v11.7-03 COMPLETE (phase boundary) — ready to plan v11.7-04 (P2 sweep).**
+Next action: **`/paul:plan` for Phase v11.7-04 (P2–P5 sweep, TRIMMED).** Verified-ready spec (v11.7-01): `find_setlists_from_template({templateId})` = `where orgId== && sourceTemplateId==` (sourceTemplateId written at `templates.ts:878`) → needs NEW composite index `setlists(orgId,sourceTemplateId)` (firebase deploy as AUTO task); `find_contact({email?,nameContains?})` = filter over the org `contacts` collection (the dedupe path already reads it, `contacts.ts:106–122`), `assertEditor`-gated like the other contact tools. **DEFER `list_recent_commands` + `list_recent_library_changes` → v11.8** (infra-blocked).
+Resume file: **`.paul/phases/v11.7-03-setlist-reverse-lookup/v11.7-03-01-SUMMARY.md`** → then `.paul/research/v11-7-01-mcp-discovery-verify-REPORT-2026-06-18.md` (asymmetry inventory) + `.paul/ROADMAP.md` (§ v11.7 phase table).
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context (v11.7):
 - **find_user (02) verified-ready:** `users` collection has uid/displayName/email/role/musicianProfile.instrument/.schedulingTier/orgIds. DROP the instrument gate (`roster.ts:114–126` is the bug). role/email queryable now (email in-memory filter; `(orgId,email)` index optional); name=app-side substring. Tenant via `orgFrom`+`rowOrgIds` (`org-context.ts`), gate `assertEditor`. Cheap `includeProfileless` interim available on `list_musicians`.

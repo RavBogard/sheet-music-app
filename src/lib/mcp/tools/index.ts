@@ -1,6 +1,11 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
-import { listSetlists, getSetlist } from "./setlists"
+import {
+    listSetlists,
+    getSetlist,
+    findSetlistsReferencingChart,
+    searchSetlists,
+} from "./setlists"
 import { getCongregationContext } from "./congregation"
 import {
     searchLibrary,
@@ -375,6 +380,68 @@ export function registerReadTools(server: McpServer): void {
                 )
             return jsonResult(setlist)
         },
+    )
+
+    server.registerTool(
+        "find_setlists_referencing_chart",
+        {
+            description:
+                "Reverse lookup: which LIVE setlists bond a given chart? The read partner to delete_chart's chart_in_use refusal — pass `fileId` (or `songId`) and get back every live setlist that references it, with the matching track. Tracks whose parent setlist was deleted (dangling) are excluded and counted in `danglingTracksIgnored`. Tenant-scoped to your org. Use BEFORE delete_chart to see what would block the delete, or to answer 'where is this chart used?'. Returns `{ok, fileId, songId, setlists: [{setlistId, name, date, eventDate, trackId, trackTitle, order}], count, danglingTracksIgnored, truncated?}`.",
+            inputSchema: {
+                fileId: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Chart fileId (e.g. 'upload-<uuid>' or a Drive id). Discover via list_library/search_library.",
+                    ),
+                songId: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Bonded songId (alternative to fileId). Pass one of fileId/songId.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await findSetlistsReferencingChart(
+                    uidFrom(extra),
+                    args,
+                    orgFrom(extra),
+                ),
+            ),
+    )
+
+    server.registerTool(
+        "search_setlists",
+        {
+            description:
+                "Find your org's setlists by track content or service type. `trackTitle` (case-insensitive substring of a track title) and `leadMusician` (case-insensitive substring of a track's vocal lead) match per-track and return the matching tracks; `templateType` (e.g. 'friday_night', 'shabbat_morning') filters by service type. Combine filters with AND. App-side search over your org's setlists. Use to answer 'which services included <song>?' or 'what has <musician> led?'. Returns `{ok, setlists: [{id, name, date, eventDate, templateType, matchedTracks: [{trackId, title, leadMusician}]}], count}`.",
+            inputSchema: {
+                trackTitle: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Case-insensitive substring of a track title to match.",
+                    ),
+                leadMusician: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Case-insensitive substring of a track's leadMusician (vocal lead) to match.",
+                    ),
+                templateType: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Service template type to filter by (e.g. 'friday_night', 'shabbat_morning').",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await searchSetlists(uidFrom(extra), args, orgFrom(extra)),
+            ),
     )
 
     server.registerTool(

@@ -6,6 +6,7 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
+import { logger } from "@/lib/logger"
 
 /**
  * MCP read tools for setlists. Plain async functions wrapping the existing
@@ -199,5 +200,345 @@ export async function getSetlist(
                         : undefined,
             }
         }),
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// find_setlists_referencing_chart (v11.7-03 — reverse-index read partner)
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface FindSetlistsReferencingChartArgs {
+    fileId?: string
+    songId?: string
+}
+
+export interface SetlistReference {
+    setlistId: string
+    name: string
+    date: string | null
+    eventDate: string | null
+    trackId: string
+    trackTitle: string | null
+    order: number | null
+}
+
+export interface FindSetlistsReferencingChartResult {
+    ok: true
+    fileId: string | null
+    songId: string | null
+    setlists: SetlistReference[]
+    count: number
+    danglingTracksIgnored: number
+    truncated?: boolean
+}
+
+/**
+ * v11.7-03: the read partner to delete_chart's chart_in_use refusal. Surfaces
+ * which LIVE setlists bond a given chart (by fileId or songId) — the same walk
+ * delete_chart does internally (library-upload.ts:787–846), but returning ALL
+ * live matches instead of capping at existence. Dangling tracks (parent setlist
+ * deleted/absent) are excluded. Tenant-scoped via rowOrg (cross-tenant wall);
+ * ungated authenticated read, consistent with list_setlists/get_setlist
+ * (setlist data is public-by-design).
+ */
+const REVERSE_LOOKUP_CAP = 200
+
+export async function findSetlistsReferencingChart(
+    _uid: string,
+    args: FindSetlistsReferencingChartArgs,
+    org: OrgId = DEFAULT_ORG_ID,
+): Promise<FindSetlistsReferencingChartResult | RichErrorEnvelope> {
+    const fileId = args.fileId?.trim() || undefined
+    const songId = args.songId?.trim() || undefined
+    if (!fileId && !songId) {
+        return richError(
+            "invalid_argument",
+            "Pass `fileId` or `songId` to find the setlists that reference a chart.",
+            { fields: ["fileId", "songId"] },
+            "Discover a fileId via list_library/search_library; a songId is the track's bonded song.",
+        )
+    }
+
+    initAdmin()
+    const db = getFirestore()
+
+    try {
+        // Query the tracks collection on the primary key (single-field auto-index;
+        // no composite index needed). delete_chart uses the same where('fileId').
+        const field = fileId ? "fileId" : "songId"
+        const value = fileId ?? (songId as string)
+        const tracksSnap = await db
+            .collection("tracks")
+            .where(field, "==", value)
+            .limit(REVERSE_LOOKUP_CAP)
+            .get()
+
+        if (tracksSnap.empty) {
+            return {
+                ok: true,
+                fileId: fileId ?? null,
+                songId: songId ?? null,
+                setlists: [],
+                count: 0,
+                danglingTracksIgnored: 0,
+            }
+        }
+
+        const truncated = tracksSnap.size === REVERSE_LOOKUP_CAP
+        if (truncated) {
+            logger.warn(
+                `[find_setlists_referencing_chart] hit ${REVERSE_LOOKUP_CAP}-track cap for ${field}=${value}; result truncated.`,
+            )
+        }
+
+        // When both keys are passed, additionally require the secondary match.
+        const matched = tracksSnap.docs
+            .map((d) => {
+                const data = d.data() as Record<string, unknown>
+                return {
+                    trackId: d.id,
+                    setlistId:
+                        typeof data.setlistId === "string"
+                            ? data.setlistId
+                            : null,
+                    title: typeof data.title === "string" ? data.title : null,
+                    order: typeof data.order === "number" ? data.order : null,
+                    fileId:
+                        typeof data.fileId === "string" ? data.fileId : null,
+                    songId:
+                        typeof data.songId === "string" ? data.songId : null,
+                }
+            })
+            .filter((t) => {
+                if (fileId && songId) return t.songId === songId
+                return true
+            })
+
+        const distinctSetlistIds = [
+            ...new Set(
+                matched
+                    .map((t) => t.setlistId)
+                    .filter((s): s is string => !!s),
+            ),
+        ]
+
+        // getAll the parent setlists; keep only LIVE (exists) AND in-tenant.
+        const inTenantLiveSetlists = new Map<
+            string,
+            ReturnType<typeof serializeSetlist>
+        >()
+        if (distinctSetlistIds.length > 0) {
+            const parentSnaps = await db.getAll(
+                ...distinctSetlistIds.map((id) =>
+                    db.collection("setlists").doc(id),
+                ),
+            )
+            for (const snap of parentSnaps) {
+                if (!snap.exists) continue
+                const data = snap.data() as Record<string, unknown>
+                if (rowOrg(data.orgId) !== org) continue
+                inTenantLiveSetlists.set(
+                    snap.id,
+                    serializeSetlist(snap.id, data),
+                )
+            }
+        }
+
+        const liveTracks = matched.filter(
+            (t) => t.setlistId !== null && inTenantLiveSetlists.has(t.setlistId),
+        )
+        const danglingTracksIgnored = matched.length - liveTracks.length
+
+        const setlists: SetlistReference[] = liveTracks.map((t) => {
+            const parent = inTenantLiveSetlists.get(t.setlistId as string) as
+                | Record<string, unknown>
+                | undefined
+            return {
+                setlistId: t.setlistId as string,
+                name:
+                    parent && typeof parent.name === "string"
+                        ? parent.name
+                        : "(untitled)",
+                date: parent ? isoOf(parent.date) : null,
+                eventDate: parent ? isoOf(parent.eventDate) : null,
+                trackId: t.trackId,
+                trackTitle: t.title,
+                order: t.order,
+            }
+        })
+
+        setlists.sort((a, b) => {
+            const at = Date.parse(a.eventDate ?? a.date ?? "")
+            const bt = Date.parse(b.eventDate ?? b.date ?? "")
+            if (Number.isNaN(at) && Number.isNaN(bt)) return 0
+            if (Number.isNaN(at)) return 1
+            if (Number.isNaN(bt)) return -1
+            return bt - at
+        })
+
+        return {
+            ok: true,
+            fileId: fileId ?? null,
+            songId: songId ?? null,
+            setlists,
+            count: setlists.length,
+            danglingTracksIgnored,
+            ...(truncated ? { truncated: true } : {}),
+        }
+    } catch (err) {
+        return richError(
+            "find_setlists_referencing_chart_failed",
+            `Failed to find referencing setlists: ${
+                err instanceof Error ? err.message : String(err)
+            }`,
+            { fileId: fileId ?? null, songId: songId ?? null },
+            "Check Firestore connectivity; the tracks collection is the source.",
+        )
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// search_setlists (v11.7-03 — app-side content search)
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface SearchSetlistsArgs {
+    trackTitle?: string
+    leadMusician?: string
+    templateType?: string
+}
+
+export interface SetlistContentMatch {
+    id: string
+    name: string
+    date: string | null
+    eventDate: string | null
+    templateType: string | null
+    matchedTracks: {
+        trackId: string
+        title: string | null
+        leadMusician: string | null
+    }[]
+}
+
+export interface SearchSetlistsResult {
+    ok: true
+    setlists: SetlistContentMatch[]
+    count: number
+}
+
+/**
+ * v11.7-03: find the caller-org's setlists by track content (trackTitle /
+ * leadMusician) or service type (templateType). App-side filtering at the
+ * current catalog scale (≤~50 setlists) per the v11.7-01 audit — no track-content
+ * index. templateType filters at the setlist level (no track read). Tenant-scoped
+ * via getAllSetlists({org}); ungated authenticated read like its siblings.
+ */
+export async function searchSetlists(
+    _uid: string,
+    args: SearchSetlistsArgs,
+    org: OrgId = DEFAULT_ORG_ID,
+): Promise<SearchSetlistsResult | RichErrorEnvelope> {
+    const trackTitle = args.trackTitle?.trim().toLowerCase() || undefined
+    const leadMusician = args.leadMusician?.trim().toLowerCase() || undefined
+    const templateType = args.templateType?.trim() || undefined
+    if (!trackTitle && !leadMusician && !templateType) {
+        return richError(
+            "invalid_argument",
+            "Pass at least one of `trackTitle`, `leadMusician`, or `templateType`.",
+            { fields: ["trackTitle", "leadMusician", "templateType"] },
+            "trackTitle/leadMusician match track content; templateType matches the service type.",
+        )
+    }
+
+    initAdmin()
+    const db = getFirestore()
+
+    try {
+        // Tenant-scoped at the query (existing (orgId,date) composite index).
+        const all = await getAllSetlists({ org, limit: MAX_SETLIST_FETCH })
+
+        // templateType narrows at the setlist level first (cheap, no track read).
+        const candidates = all.filter((s) => {
+            if (!templateType) return true
+            const tt = (s as Record<string, unknown>).templateType
+            return typeof tt === "string" && tt === templateType
+        })
+
+        const needsTrackScan = !!trackTitle || !!leadMusician
+
+        const out: SetlistContentMatch[] = []
+        for (const s of candidates) {
+            const row = s as Record<string, unknown>
+            const id = String(row.id)
+            const base: SetlistContentMatch = {
+                id,
+                name: typeof row.name === "string" ? row.name : "(untitled)",
+                date: isoOf(row.date),
+                eventDate: isoOf(row.eventDate),
+                templateType:
+                    typeof row.templateType === "string"
+                        ? row.templateType
+                        : null,
+                matchedTracks: [],
+            }
+
+            if (!needsTrackScan) {
+                out.push(base)
+                continue
+            }
+
+            const tracks = await getTracksForSetlist(db, id, {})
+            const matchedTracks = tracks
+                .filter((t) => {
+                    const tr = t as unknown as Record<string, unknown>
+                    const title =
+                        typeof tr.title === "string"
+                            ? tr.title.toLowerCase()
+                            : ""
+                    const lead =
+                        typeof tr.leadMusician === "string"
+                            ? tr.leadMusician.toLowerCase()
+                            : ""
+                    if (trackTitle && !title.includes(trackTitle)) return false
+                    if (leadMusician && !lead.includes(leadMusician))
+                        return false
+                    return true
+                })
+                .map((t) => {
+                    const tr = t as unknown as Record<string, unknown>
+                    return {
+                        trackId: t.id,
+                        title: typeof tr.title === "string" ? tr.title : null,
+                        leadMusician:
+                            typeof tr.leadMusician === "string"
+                                ? tr.leadMusician
+                                : null,
+                    }
+                })
+
+            if (matchedTracks.length > 0) {
+                out.push({ ...base, matchedTracks })
+            }
+        }
+
+        out.sort((a, b) => {
+            const at = Date.parse(a.eventDate ?? a.date ?? "")
+            const bt = Date.parse(b.eventDate ?? b.date ?? "")
+            if (Number.isNaN(at) && Number.isNaN(bt)) return 0
+            if (Number.isNaN(at)) return 1
+            if (Number.isNaN(bt)) return -1
+            return bt - at
+        })
+
+        return { ok: true, setlists: out, count: out.length }
+    } catch (err) {
+        return richError(
+            "search_setlists_failed",
+            `Failed to search setlists: ${
+                err instanceof Error ? err.message : String(err)
+            }`,
+            {},
+            "Check Firestore connectivity; setlists + tracks are the source.",
+        )
     }
 }
