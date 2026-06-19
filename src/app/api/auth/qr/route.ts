@@ -176,9 +176,32 @@ export async function PUT(req: NextRequest) {
         // members only (musician/band_leader/admin) so non-band `member`
         // accounts can't device-approve and pending accounts can't participate
         // in device sign-in. Shared iPads are a band-only surface.
-        const role = decoded.role as string | undefined
+        //
+        // WS-21 (v11.6-04-02): resolve an EFFECTIVE role — the token `role` claim
+        // if it is already an allowed band role (fast path, no read), else fall
+        // back to the caller's users/{uid}.role Firestore field. This closes the
+        // claim-lag false-403: a recently-approved member (or one whose role was
+        // set via /api/admin/set-role with claimsUpdated=false) has the role in
+        // Firestore before it propagates to their ID token. The allowed set is
+        // unchanged — this fixes a false NEGATIVE, it does not widen access.
+        const db = getFirestore()
         const allowedRoles = new Set(["musician", "band_leader", "admin"])
-        if (!role || !allowedRoles.has(role)) {
+        const claimRole = decoded.role as string | undefined
+        let effectiveRole = claimRole
+        if (!effectiveRole || !allowedRoles.has(effectiveRole)) {
+            // Claim missing/stale — consult the user doc. A read failure degrades
+            // to "no role" (→ 403), never a 500 that would mask the gate.
+            try {
+                const userSnap = await db.collection("users").doc(decoded.uid).get()
+                effectiveRole = userSnap.exists
+                    ? (userSnap.data()?.role as string | undefined)
+                    : undefined
+            } catch (e) {
+                logger.warn("[QR] user-doc role fallback read failed:", e)
+                effectiveRole = undefined
+            }
+        }
+        if (!effectiveRole || !allowedRoles.has(effectiveRole)) {
             return NextResponse.json(
                 { error: "Approval requires an approved member account" },
                 { status: 403 },
@@ -191,7 +214,6 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: "Invalid code format" }, { status: 400 })
         }
 
-        const db = getFirestore()
         const docRef = db.collection(COLLECTION).doc(code)
         const doc = await docRef.get()
 

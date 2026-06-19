@@ -13,6 +13,29 @@ plan or an emergent phase.
 
 ---
 
+## ⏳ v11.6-04-02 (WS-21) — QR approval claim-lag fallback (real device)
+
+**Deployed commit:** `<this plan's commit>` (prod `master`).
+
+Emulator/unit-proven (`auth/qr/__tests__/route.test.ts`, 18/18 incl. 4 WS-21 cases).
+Live confirm (NON-BLOCKING): with a band member whose `role` claim is stale/absent
+but whose `users/{uid}.role` is musician/band_leader/admin (e.g. freshly approved, or
+role set via `/api/admin/set-role` with `claimsUpdated=false`):
+- On their phone, scan the iPad QR and approve → the iPad signs in (was: 403
+  "Approval requires an approved member account").
+- Sanity: a `member`/`pending` account still cannot approve (403); a normal
+  claim-bearing musician approves as before.
+
+## ⏳ v11.6-04-01 (WS-11 / WS-31) — deliver-airtight (real device)
+
+**Deployed commit:** `1a1690478d` (prod `master`).
+
+- **WS-11:** publish a setlist to a uid recipient → tap the in-app bell notification →
+  it opens `/perform/setlist/{id}` (was a 404 on the dead `/setlist/{id}`).
+- **WS-31:** open `/qr/{code}` on a phone the instant the iPad shows the QR (before the
+  iPad's background register lands) → it shows "Checking session…" and recovers to the
+  sign-in screen instead of a false "expired".
+
 ## ⏳ v11.5-01-03 (H9) — band_leader library-edit (live MCP, David's bearer)
 
 **Deployed commit:** `d7cbb1a4e0` (prod `master` / prod MCP).

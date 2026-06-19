@@ -17,10 +17,20 @@ import { NextRequest } from "next/server"
 
 const mockCheckRateLimit = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => null) // null = not rate-limited
 const mockInitAdmin = vi.fn(() => true)
-const mockGet = vi.fn(async () => ({ exists: false }))
+type DocSnap = { exists: boolean; data?: () => unknown }
+const mockGet = vi.fn<(...args: unknown[]) => Promise<DocSnap>>(async () => ({ exists: false }))          // qr-sessions/<code>
 const mockSet = vi.fn(async () => undefined)
-const mockDoc = vi.fn(() => ({ get: mockGet, set: mockSet }))
-const mockCollection = vi.fn(() => ({ doc: mockDoc }))
+const mockUpdate = vi.fn(async () => undefined)
+const mockDoc = vi.fn(() => ({ get: mockGet, set: mockSet, update: mockUpdate }))
+// WS-21: the PUT handler also reads users/<uid> for the role fallback, so the
+// Firestore mock routes by collection name (users → user doc, else qr-sessions).
+const mockUserGet = vi.fn<(...args: unknown[]) => Promise<DocSnap>>(async () => ({ exists: false }))      // users/<uid>
+const mockUserDoc = vi.fn(() => ({ get: mockUserGet }))
+const mockCollection = vi.fn((name: string) =>
+    name === "users" ? { doc: mockUserDoc } : { doc: mockDoc },
+)
+const mockVerifyIdToken = vi.fn<(...args: unknown[]) => Promise<unknown>>()
+const mockCreateCustomToken = vi.fn(async () => "custom-token-stub")
 
 vi.mock("@/lib/rate-limit", () => ({
     checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
@@ -29,8 +39,8 @@ vi.mock("@/lib/rate-limit", () => ({
 vi.mock("@/lib/firebase-admin", () => ({
     initAdmin: () => mockInitAdmin(),
     getFirestore: () => ({ collection: mockCollection }),
-    getAuth: () => ({}),
-    verifyIdToken: vi.fn(),
+    getAuth: () => ({ createCustomToken: mockCreateCustomToken }),
+    verifyIdToken: (...args: unknown[]) => mockVerifyIdToken(...args),
 }))
 
 vi.mock("@/lib/logger", () => ({
@@ -38,7 +48,7 @@ vi.mock("@/lib/logger", () => ({
 }))
 
 // Imported AFTER the mocks are registered.
-import { GET, POST } from "../route"
+import { GET, POST, PUT } from "../route"
 // generateCode lives in the sibling ./code module (route.ts may only export
 // HTTP handlers — see code.ts). Import it directly for the distribution tests.
 import { generateCode } from "../code"
@@ -186,5 +196,82 @@ describe("POST /api/auth/qr — server-generated code round-trips (BUG-13 AC-2)"
         // ...and NOT self-rejected by the GET format guard (reaches lookup → 404).
         const getRes = await GET(makeReq(`?code=${code}`))
         expect(getRes.status).toBe(404)
+    })
+})
+
+describe("PUT /api/auth/qr — approval role gate (WS-21)", () => {
+    // WS-21: the approval gate must accept a claim-lagged-but-real band member —
+    // one whose users/{uid}.role is musician/band_leader/admin even though the
+    // `role` claim hasn't propagated to their ID token (e.g. set-role left
+    // claimsUpdated=false). It must still refuse genuine non-members, and must
+    // short-circuit (no user-doc read) when the claim already carries an allowed role.
+
+    beforeEach(() => {
+        vi.clearAllMocks()
+        mockCheckRateLimit.mockResolvedValue(null)
+        mockInitAdmin.mockReturnValue(true)
+        mockCreateCustomToken.mockResolvedValue("custom-token-stub")
+        // qr-sessions/<code> resolves to a valid pending session by default.
+        mockGet.mockResolvedValue({
+            exists: true,
+            data: () => ({ status: "pending", expiresAt: Date.now() + 60_000 }),
+        })
+        mockUpdate.mockResolvedValue(undefined)
+    })
+
+    const makePutReq = (token: string | null, code = "ABC123") =>
+        new NextRequest(new URL("http://localhost/api/auth/qr"), {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ code }),
+        })
+
+    // AC-1 — claim-lagged but real member: no role claim, users/<uid>.role=musician → approve.
+    it("approves when the role claim is absent but users/{uid}.role is a band role", async () => {
+        mockVerifyIdToken.mockResolvedValue({ uid: "u1", name: "Musician One", email: "m@example.com" })
+        mockUserGet.mockResolvedValue({ exists: true, data: () => ({ role: "musician" }) })
+
+        const res = await PUT(makePutReq("lagged-token"))
+        expect(res.status).toBe(200)
+        const body = await res.json()
+        expect(body.success).toBe(true)
+        // The session was actually approved...
+        expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ status: "approved" }))
+        // ...via the user-doc fallback (the claim was absent).
+        expect(mockUserDoc).toHaveBeenCalledWith("u1")
+    })
+
+    // AC-2a — non-member user-doc role → still 403, no approval.
+    it("refuses (403) when neither claim nor user-doc role is an allowed band role", async () => {
+        mockVerifyIdToken.mockResolvedValue({ uid: "u2", email: "guest@example.com" })
+        mockUserGet.mockResolvedValue({ exists: true, data: () => ({ role: "member" }) })
+
+        const res = await PUT(makePutReq("lagged-token"))
+        expect(res.status).toBe(403)
+        expect(mockUpdate).not.toHaveBeenCalled()
+    })
+
+    // AC-2b — no user doc at all → 403.
+    it("refuses (403) when the user doc does not exist", async () => {
+        mockVerifyIdToken.mockResolvedValue({ uid: "u3", email: "ghost@example.com" })
+        mockUserGet.mockResolvedValue({ exists: false })
+
+        const res = await PUT(makePutReq("lagged-token"))
+        expect(res.status).toBe(403)
+        expect(mockUpdate).not.toHaveBeenCalled()
+    })
+
+    // AC-3 — claim already allowed → short-circuit; the user doc is NOT read.
+    it("approves on a present role claim without reading the user doc (short-circuit)", async () => {
+        mockVerifyIdToken.mockResolvedValue({ uid: "u4", role: "musician", name: "Claimed", email: "c@example.com" })
+
+        const res = await PUT(makePutReq("good-token"))
+        expect(res.status).toBe(200)
+        const body = await res.json()
+        expect(body.success).toBe(true)
+        expect(mockUserDoc).not.toHaveBeenCalled()
     })
 })
