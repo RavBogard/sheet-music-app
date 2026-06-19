@@ -11,11 +11,11 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Milestone: **🚧 v11.6 — Airtight (Weekend Stress & Usability) — OPENED 2026-06-17.** Narrow stress + usability hardening anchored to the three upcoming Camp Sabra weekend sets. Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar = usability-AND-access. Source context consumed: `.paul/MILESTONE-CONTEXT.md`. (v11.5 ✅ `v11.5.0`; v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`.)
-Phase: **🚧 v11.6-04 (Authoring + publish round-trip) — PLANNING (FINAL milestone phase).** Plan map (3 plans): **01** deliver-airtight code — WS-11 (dead in-app bell link `/setlist/`→`/perform/setlist/`, P1) + WS-31 (QR phone page retries on not-yet-registered 404 instead of false "expired", P3) — `autonomous:true`; **02** WS-21 QR approval claim-lag remedy — **auth-gate change → `autonomous:false` STOP-gate**; **03** finalize 3 sets via MCP (keys/BPM/order/bonds, `verify_setlist_charts` clean + `preview_publish`) + **LIVE publish/notify send → `autonomous:false` STOP-gate** → milestone close. Verified vs deployed code 2026-06-18: publish→push/email/SMS/in-app→QR round-trip already fully wired+working (Explore map); all 3 sets already chart-healthy (sweep: 0 missing/0 unreachable). (v11.6-01 ✅ + 02 ✅ + 03 ✅ = 3/4 phases.)
-Plan: **`v11.6-04-03` ✅ COMPLETE + UNIFIED** (finalize-only; live send intentionally skipped). 3 sets verified chart-clean; corrected the stale staff-concert ID (live = `c2075393`, NOT "(OLD)" `7c640a8a`); 2 safe key fills applied (Eliyahu-fast→Dm, Hallelujah→G), both re-verified clean. **LIVE PUBLISH SEND NOT PERFORMED** — Daniel doesn't use publish/notify (band opens Perform; no emails). SUMMARY: `.../v11.6-04-03-SUMMARY.md`. (Prior: 02 ✅ `cdfc16cead` WS-21; 01 ✅ `1a1690478d` WS-11+WS-31.) **→ Phase v11.6-04 COMPLETE (3/3). v11.6 milestone ready to close.**
-Status: **✅ Phase v11.6-04 COMPLETE — v11.6 milestone ready to close. Next: `/paul:complete-milestone` (milestone boundary — Daniel's go).** No live publish was sent (Daniel decision); the 3 weekend sets are finalized + chart-clean for the band to open in Perform.
-Last activity: 2026-06-18 — **Shipped + UNIFIED v11.6-04-02** (WS-21 QR claim-lag fallback; Daniel-approved STOP-gate; pushed — hash in Git State). Prior this session: shipped v11.6-04-01 `1a1690478d` (WS-11+WS-31); created the v11.6-04 plan map; **Phase v11.6-03 CLOSED `c6f75080a3`**; WS-10 `df0bd6b433`; WS-12/13 `7ac307812f`; P0 gig-packet `a48382929a` (prod-verified 16/16); v11.6-02 ✅.
+Milestone: **✅ v11.6 — Airtight (Weekend Stress & Usability) — COMPLETE 2026-06-18 (tag `v11.6.0`).** Narrow stress + usability hardening anchored to the three Camp Sabra weekend sets; all 4 phases done. Oracle `docs/ACCESS-POLICY.md` v0.4; triage bar = usability-AND-access. Archived `.paul/milestones/v11.6.0-ROADMAP.md` + MILESTONES.md § v11.6. **Now awaiting next milestone.** (v11.5 ✅ `v11.5.0`; v11.4 ✅ `v11.4.0`; v11.3 ✅ `v11.3.0`.)
+Phase: **None active — milestone boundary.** Next milestone in discussion: **MCP read/discovery-gap audit** (write/act-by-id tools lacking a corresponding read/resolve-id path; P0 = user-directory `find_user`, P1 = setlist reverse-lookup, etc.) → `/paul:discuss-milestone` in progress, then `/paul:milestone`.
+Plan: **None active.** Last closed: `v11.6-04-03` ✅ (finalize-only; live publish send intentionally skipped — Daniel doesn't use publish/notify).
+Status: **✅ v11.6 milestone CLOSED (tag `v11.6.0`).** package.json/paul.json/STATE aligned at 11.6.0. Next: define v11.7 via `/paul:milestone` (MCP read/discovery-gap audit context being gathered now).
+Last activity: 2026-06-18 — **Closed v11.6 milestone** (MILESTONES.md entry + `.paul/milestones/v11.6.0-ROADMAP.md` archive + ROADMAP reorg + version→11.6.0 + tag `v11.6.0`). Prior: shipped v11.6-04-02 `cdfc16cead` (WS-21), v11.6-04-01 `1a1690478d` (WS-11+WS-31); v11.6-03 CLOSED `c6f75080a3`; v11.6-02 ✅.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,10 +43,10 @@ Last activity: 2026-06-18 — **Shipped + UNIFIED v11.6-04-02** (WS-21 QR claim-
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-04-03 CLOSED — Phase v11.6-04 COMPLETE (3/3); v11.6 ready to close]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [Milestone v11.6 COMPLETE (tag v11.6.0) — ready for next]
+  ○        ○        ○
 ```
-(v11.6 OPENED 2026-06-17. **ALL 4 PHASES COMPLETE: 01 ✅ + 02 ✅ + 03 ✅ + 04 ✅.** Phase 04 plan map: 01 (WS-11+WS-31) ✅ `1a1690478d` · 02 (WS-21 QR auth) ✅ `cdfc16cead` · 03 (finalize 3 sets) ✅ — LIVE SEND SKIPPED (Daniel doesn't use publish). **Milestone v11.6 ready for `/paul:complete-milestone`.**)
+(v11.6 OPENED 2026-06-17, **CLOSED 2026-06-18 (tag `v11.6.0`)** — all 4 phases done. Next: `/paul:milestone` to open v11.7 from the MCP read/discovery-gap audit context now being gathered via `/paul:discuss-milestone`.)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
@@ -98,9 +98,9 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.6-04-03 CLOSED — Phase v11.6-
 
 ## Session Continuity
 
-Last session: 2026-06-18 — **v11.6 ALL 4 PHASES COMPLETE.** Phase 04: 01 `1a1690478d` (WS-11+WS-31) + 02 `cdfc16cead` (WS-21 QR claim-lag) + 03 finalize-only (3 weekend sets verified chart-clean via MCP; corrected stale staff-concert ID → `c2075393`; 2 key fills). **Live publish send intentionally NOT performed** — Daniel doesn't use publish/notify or assignment-scheduling (only gig dates, no emails); see [[feedback_no_publish_or_assignments]]. Earlier: phase v11.6-03 CLOSED `c6f75080a3`; v11.6-02 ✅.
-Stopped at: **✅ Phase v11.6-04 COMPLETE (3/3) — v11.6 milestone ready to close.**
-Next action: **`/paul:complete-milestone`** (milestone boundary — Daniel's go) → version/tag bump, archive ROADMAP, route to v11.7. v11.7 backlog already queued: photo-import, library browse density/filters (F3), comms layer (F5), text-chart nits WS-19/23/24, recordings/finalize org-scoping adjacents, F4 BL key badges, unify TextScoreViewer detection onto `text-chart-pdf.ts`.
+Last session: 2026-06-18 — **CLOSED v11.6 milestone (tag `v11.6.0`).** MILESTONES.md entry + `.paul/milestones/v11.6.0-ROADMAP.md` archive + ROADMAP reorg + version→11.6.0 (package.json/paul.json/STATE) + annotated tag `v11.6.0` (local; push when ready). All 4 phases shipped: 01 stress-triage · 02 Perform reading (7 plans) · 03 off-site resilience · 04 authoring/publish (live send intentionally skipped — Daniel doesn't use publish/notify; [[feedback_no_publish_or_assignments]]).
+Stopped at: **✅ v11.6 CLOSED — discussing next milestone (MCP read/discovery-gap audit).**
+Next action: **`/paul:milestone`** to open v11.7 from the MCP read/discovery-gap audit context (`/paul:discuss-milestone` gathering now). The audit catalogs write/act-by-id tools lacking a read/resolve-id counterpart — P0 user-directory `find_user` (instrument-gating hides David/profileless users), P1 setlist reverse-lookup (`find_setlists_referencing_chart`/`search_setlists`), P2 template→derived graph, P3 contact resolver, P4 recent-commands, P5 recent-library-changes feed. Prior v11.7 backlog still queued: photo-import, F3 library browse density, F5 comms layer, text-chart nits WS-19/23/24, recordings/finalize org-scoping, F4 BL key badges, unify TextScoreViewer detection onto `text-chart-pdf.ts`.
 **Weekend sets (finalized, chart-clean, NOT published — band opens in Perform):** Shir Shabbat–Juneteenth `a84f8cce-176e-4b5e-9653-4df71db6f5ba` (PDF) · Camp Sabra Havdalah `7e005452-7c42-4cdc-b27d-ff0c78b6667b` (PDF+text) · **Camp Sabra Staff Concert `c2075393-d994-4643-ade3-432a6864d87f`** (text). **`7c640a8a…` is the superseded "(OLD)" staff concert — ignore it.** WS-11/31/21 deployed to prod (Vercel).
 Resume file: **`.paul/HANDOFF-2026-06-18-v11.6-03-complete.md`** (full session pickup) → then `.paul/ROADMAP.md` (§ Phase v11.6-04) + `.paul/UAT-PENDING.md` (open field-confirm items) + the v11.6 anchor fixtures (3 Camp Sabra sets, IDs in Resume context below).
 **Carry (this phase):** the live stress sweep showed INTERMITTENT headless-WebKit `open-chart` timeouts on text sets (NOT a regression — known headless+Firestore-streaming fidelity gap); confirm real-device chart-open on camp wifi in phase 03.

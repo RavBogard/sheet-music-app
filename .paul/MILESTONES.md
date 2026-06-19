@@ -41,6 +41,37 @@ Completed milestone log for this project.
 | v11.3 Worthiness & Access | 2026-06-10 | ~1 session | 5 phases, 10 plans; all post-stress-test findings the oracle confirmed closed (anon chart deep-link + transpose, agent docx/Gdocs→PDF upload + chunked inline, harness/QR/orphan hygiene, /perform CLS 0.187→0.000 + TTFB stream, broslaz PWA manifest + NAT rate-limit). Oracle `docs/ACCESS-POLICY.md` v0.3; err-public held; CRC byte-identical throughout; tag `v11.3.0` |
 | v11.4 Publish & Notify (D8) | 2026-06-11 | ~1 session | 4 phases, 5 plans; D8 shipped — no-auto-blast + explicit recipient model (browser + MCP `publish_setlist` requires `recipients`), org-branded comms, remembered ad-hoc recipients as MCP contacts, musician org membership admin-toggleable + default-both (19/19 backfilled both on doc + Auth claim). Oracle → v0.4; err-public held; CRC byte-identical; tag `v11.4.0` |
 | v11.5 Bulletproof Performance | 2026-06-16 | ~5 days | 4 phases (+1 dropped), 14 plans; consumer-surface hardening — tenancy/anon correctness (H4/H5/H9), Perform reading+editing (H3 seekable audio · H1 per-device zoom · F2 live-director · H7 TTFB infra-bound), hygiene & harness (error contracts · library junk filter · monitor-bus cascade), consumer polish (Q6 vocab · Q3 QR copy · Q5 title strip · F4 read-time key resolution · Q4 anon `/setlists` cleanup). Oracle v0.4; err-public held; CRC byte-identical where shared (Q5 extension-strip an intentional CRC fix); tag `v11.5.0` |
+| v11.6 Airtight (Weekend Stress & Usability) | 2026-06-18 | ~2 days | 4 phases, 16 plans; narrow stress-and-usability hardening anchored to 3 real Camp Sabra weekend sets — live iPad-WebKit Playwright sweep + 5-surface code audit → 31 findings (WS-01..31); Perform reading airtight (nav/hydration, text-Fit chord-lyric width, slash-bass spelling, PDF render watchdog, reading controls + fit-page, image-viewer zoom/retry, drawer-nav full-queue); off-site resilience verified (offline reading already WORKS via SW+IDB — fatal-error gate softened, Saved N/N label, MusicXML IDB-first; audio-blob + soft-nav-offline ACCEPTED residuals); authoring round-trip (dead bell link → `/perform/setlist/`, QR 404-vs-410 retry, QR claim-lag role fallback) + 3 weekend sets finalized chart-clean via MCP. P0 gig-packet text-chart render fix folded in. Live publish/notify send intentionally NOT used (Daniel: band opens Perform, no emails). Oracle v0.4; triage bar widened to usability-AND-access; err-public held; CRC byte-identical where shared; tag `v11.6.0` |
+
+---
+
+## ✅ v11.6 Airtight (Weekend Stress & Usability)
+
+**Completed:** 2026-06-18
+**Duration:** ~2 days (opened 2026-06-17)
+**Tag:** `v11.6.0` · **Oracle:** `docs/ACCESS-POLICY.md` v0.4 · **Triage bar:** usability-AND-access
+
+### Stats
+
+| Metric | Value |
+|--------|-------|
+| Phases | 4 (01 stress-triage · 02 Perform reading · 03 off-site resilience · 04 authoring/publish) + 02.1 P0 gig-packet fold |
+| Plans | 16 SUMMARYs (01:1 · 02:7 · 02.1:1 · 03:4 · 04:3) |
+| CRC impact | byte-identical on shared surfaces |
+
+### Key Accomplishments
+
+- **Discovery (verify-first):** live Playwright sweep on prod (real 11" 820×1180 iPad-WebKit, ±landscape, wifi-drop) across all 3 Camp Sabra weekend sets + a 5-surface multi-agent code audit → one severity-ranked report, 31 findings WS-01..31, **zero prod code that phase**. Confirmed offline reading already works.
+- **Perform reading airtight (7 plans):** nav+hydration (bonded prayer/reading rows open their own chart, no follower-yank; CSP `cleardot.gif` fix) · text-Fit chord-lyric true-width (kills constant-40 clip; transpose-stable columns) · slash-bass enharmonic spelling · PDF render 30s watchdog + page indicator + rotate-resize recovery · reading controls + PDF fit-page toggle · image-viewer zoom + retry · in-chart drawer keeps full-queue traversal + dead SwipeOverlay removed.
+- **Off-site resilience (REFRAMED → verify, not re-introduce):** offline reading already recovers (networkFirst HTML + cacheFirst chunks + IDB blobs from the online visit). Softened the fatal-error gate so a transient offline `onSnapshot` error can't blank an open set; `Saved N/N` pre-departure signal; MusicXML IDB-first. Audio-blob (iPad-WebKit) + soft-nav-to-unvisited-set-offline ACCEPTED as by-design residuals (no SW churn — the SW is load-bearing with a recovery-loop history).
+- **Authoring + delivery round-trip:** in-app "published" bell now links to `/perform/setlist/{id}` (was a dead `/setlist/{id}`); QR phone page distinguishes 404 (not-registered-yet → bounded retry) from 410 (expired); QR approval resolves an effective role via Firestore fallback when the `role` claim lags (closes a false-403). All 3 weekend sets finalized chart-clean via MCP (corrected a stale staff-concert ID; 2 safe key fills).
+- **P0 live-service fix (folded):** gig packet now renders `text/plain` charts (David's Camp Sabra text sets had been printing a chartless cover page) via a shared Courier text-chart PDF renderer, wired into both web print + MCP `generate_gig_packet`; prod-verified 16/16.
+
+### Key Decisions
+
+- **Publish/notify + assignments NOT used (Daniel, at the phase-04 STOP-gate):** Daniel doesn't use `publish_setlist`/notify or musician-assignment scheduling — only gig dates, "no emails sent to anyone." Band consumes setlists by opening Perform on the iPads. No live publish sent; sets finalized chart-clean instead. Never propose publishing/notifying as a step. See [[feedback_no_publish_or_assignments]].
+- **Off-site offline = ACCEPT-AND-DOCUMENT (Decision A):** a full offline reload of a visited `/perform` URL already recovers; open-set next/prev nav works offline. Residuals are uncommon edges, not gaps — no SW code change.
+- **v11.6 text-chart nits deferred → v11.7:** WS-19 (chord-line regex), WS-23 (preferFlats), WS-24 (section-gap) — each risked misfiring on the live camp fixtures; only WS-25 slash-bass was an unambiguous bug (fixed).
 
 ---
 
