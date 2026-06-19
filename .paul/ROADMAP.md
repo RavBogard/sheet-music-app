@@ -8,14 +8,14 @@
 
 ## Active Milestone
 
-**🚧 v11.7 — Discoverability & Deferred Backlog** (OPENED 2026-06-18 · `package.json` → 11.7.0 at close · **0 of 7 phases complete**)
-Status: 🚧 **In Progress** · Phases: **0 of 7** · **Source:** `.paul/MILESTONE-CONTEXT.md` (consumed at /paul:milestone 2026-06-18; MCP read/discovery-gap audit + scope decisions). **Oracle:** `docs/ACCESS-POLICY.md` **v0.4** (err-public; cross-tenant hard wall governs the new resolvers).
+**🚧 v11.7 — Discoverability & Deferred Backlog** (OPENED 2026-06-18 · `package.json` → 11.7.0 at close · **1 of 7 phases complete**)
+Status: 🚧 **In Progress** · Phases: **1 of 7** (01 ✅ verify-first audit — report `.paul/research/v11-7-01-mcp-discovery-verify-REPORT-2026-06-18.md`; P0–P3 confirmed, P4/P5 sweep tools → v11.8) · **Source:** `.paul/MILESTONE-CONTEXT.md` (consumed at /paul:milestone 2026-06-18; MCP read/discovery-gap audit + scope decisions). **Oracle:** `docs/ACCESS-POLICY.md` **v0.4** (err-public; cross-tenant hard wall governs the new resolvers).
 **Theme:** The **Asymmetry Principle** — every MCP tool that mutates/acts on an opaque id (uid, fileId, setlistId, templateId, commandId, contactId) must have a discovery path returning that id from human input; every write-side denormalized pointer gets a reverse-lookup read (**Reverse-Index Principle**). The assistant must never be able to mutate an entity it can't discover. Folded in (Daniel chose BROAD): the deferred v11.7 backlog (F3 library density, infra org-scoping adjacents, authed-broslaz design pass). MCP-first authoring; CRC + broslaz both live; CRC byte-identical where shared.
 **Scope decisions (Daniel 2026-06-18):** BROAD milestone (MCP discoverability + deferred backlog); MCP depth = P0+P1 committed first-class, P2–P5 an opportunistic sweep trimmed to what's cheap. **Photo-of-paper-chart import EXCLUDED** (Daniel declined — not a wanted feature). **F5 comms is a gated stretch** (externally blocked), not a committed phase.
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
-| v11.7-01 | Verify-first audit — confirm CURRENT MCP behaviors vs deployed code + asymmetry inventory + index needs [DISCOVERY, verify-first, BLOCKS the MCP-build phases] | TBD | Not started | - |
+| v11.7-01 | Verify-first audit — confirm CURRENT MCP behaviors vs deployed code + asymmetry inventory + index needs [DISCOVERY, verify-first, BLOCKS the MCP-build phases] | 01 (research) ✅ | ✅ Complete | 2026-06-18 |
 | v11.7-02 | P0 user directory — `find_user` (no instrument gate; returns orgIds) + suggest_* coverage [MCP headline] | TBD | Not started | - |
 | v11.7-03 | P1 setlist reverse-lookup — `find_setlists_referencing_chart` + `search_setlists` | TBD | Not started | - |
 | v11.7-04 | P2–P5 reverse-index sweep (opportunistic, trimmed) — `find_setlists_from_template`, `find_contact`, `list_recent_commands`, `list_recent_library_changes` | TBD | Not started | - |

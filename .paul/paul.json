@@ -9,7 +9,7 @@
   "phase": {
     "number": "v11.7-01",
     "name": "Verify-first audit",
-    "status": "not_started"
+    "status": "complete"
   },
   "loop": {
     "plan": null,

@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.7 — Discoverability & Deferred Backlog — OPENED 2026-06-18.** Headline = MCP **Asymmetry Principle** (every write/act-by-id tool gets a read/resolve-id path; reverse-index reads for write-side pointers). BROAD scope (Daniel): MCP discoverability + folded deferred backlog (F3 library density, infra org-scoping adjacents, broslaz design pass). 7 phases. Oracle `docs/ACCESS-POLICY.md` v0.4; cross-tenant hard wall governs the new resolvers. Source consumed: `.paul/MILESTONE-CONTEXT.md`. **Photo-import EXCLUDED (Daniel declined); F5 comms = gated stretch.** (v11.6 ✅ `v11.6.0`; v11.5 ✅ `v11.5.0`.)
-Phase: **v11.7-01 (Verify-first audit) — NOT STARTED.** DISCOVERY/verify-first; confirms CURRENT MCP behaviors vs deployed code + asymmetry inventory + index needs; HARD prerequisite for 02–04. No prod code. **Next action: `/paul:plan` for Phase v11.7-01.**
-Plan: **None active — ready to plan v11.7-01.**
-Status: **🚧 v11.7 OPENED — 0 of 7 phases. Ready for first PLAN.** Phase map: 01 verify-first audit (DISCOVERY) → 02 P0 `find_user` (MCP headline) → 03 P1 setlist reverse-lookup → 04 P2–P5 sweep → 05 F3 library density → 06 infra org-scoping → 07 broslaz design pass.
-Last activity: 2026-06-18 — **Opened v11.7 milestone** (ROADMAP v11.7 section + 7 phase dirs + STATE/paul.json). Dropped photo-import per Daniel ("not a feature I'm looking for"). Prior: **closed v11.6** (tag `v11.6.0`).
+Phase: **v11.7-01 (Verify-first audit) — ✅ COMPLETE (1/1, 2026-06-18).** Report: `.paul/research/v11-7-01-mcp-discovery-verify-REPORT-2026-06-18.md`. P0–P3 claims ALL CONFIRMED; 2 corrections (`library_signals` = in-process emitter not a collection; `delete_chart` walk lives in `library-upload.ts:787–846`). No prod code. **Next phase: v11.7-02 (P0 `find_user`).**
+Plan: **`v11.7-01-01` ✅ COMPLETE + UNIFIED (research).** AC-1/2/3 PASS; SUMMARY written; zero src/ changes.
+Status: **🚧 v11.7 — 1 of 7 phases complete (01 ✅). Ready to plan v11.7-02 (P0 `find_user`).** Phase map: 01 ✅ → 02 P0 `find_user` (MCP headline) → 03 P1 setlist reverse-lookup → 04 P2–P5 sweep (TRIMMED: find_setlists_from_template + find_contact; **list_recent_commands + list_recent_library_changes DEFER → v11.8**, both blocked on new infra) → 05 F3 library density → 06 infra org-scoping → 07 broslaz design pass.
+Last activity: 2026-06-18 — **Closed v11.7-01 verify-first audit** (report + SUMMARY; PLAN→APPLY→UNIFY ✓). Prior this session: opened v11.7; closed v11.6 (tag `v11.6.0`).
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -43,10 +43,10 @@ Last activity: 2026-06-18 — **Opened v11.7 milestone** (ROADMAP v11.7 section 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.7 OPENED — ready for first PLAN (Phase v11.7-01)]
-  ○        ○        ○
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.7-01 COMPLETE — phase boundary; ready to plan v11.7-02]
+  ✓        ✓        ✓
 ```
-(v11.7 OPENED 2026-06-18 — 7 phases, 0 complete. Next: `/paul:plan` for Phase v11.7-01 (Verify-first audit; DISCOVERY, blocks 02–04). Photo-import dropped per Daniel; F5 comms gated stretch. Prior: v11.6 ✅ CLOSED tag `v11.6.0`.)
+(v11.7 — 1 of 7 phases complete (01 ✅ verify-first audit). Next: `/paul:plan` for Phase v11.7-02 (P0 `find_user`). Phase 04 sweep TRIMMED — P4/P5 defer to v11.8. Photo-import dropped; F5 comms gated stretch. Prior: v11.6 ✅ tag `v11.6.0`.)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
@@ -80,7 +80,8 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.7 OPENED — ready for first PL
 - **v11.6-02 text-chart nits DEFERRED → v11.7 polish (2026-06-17):** WS-19 (chord-line regex false-positive — "A E" is genuinely valid chords; heuristic tweak risks demoting real sparse chord/intro lines), WS-23 (preferFlats hardwired undefined — an estimateKey-driven preference can MISFIRE and flip spelling on the live camp fixtures; current source-convention default safer), WS-24 (section-gap collapse — NOT reproducible from the parser; needs a concrete sample chart first). WS-25 (slash-bass) was the only unambiguous bug → fixed in Plan v11.6-02-03.
 - **Off-site SW + audio residuals ACCEPTED (v11.6-03-04, 2026-06-18):** **WS-29** — audio offline is best-effort IDB blob in `AudioViewer` (getFile→createObjectURL) with network fallback; the residual is iPad-WebKit rejecting `<audio src=blob:>` (no cheap reliable fix; no audio rows in the 3 camp sets). **WS-30** — a full offline reload of a VISITED `/perform` URL recovers (networkFirst HTML + cacheFirst chunks); residual = soft-nav to an UNVISITED setlist offline (RSC pass-through). Both accepted as by-design edges (Decision A); NO prod change — re-open only if a real off-site failure surfaces. (The `.paul/AUDIT.md` the plan named does not exist at root; residuals are tracked HERE, the project's residuals home — plan-deviation logged in the SUMMARY.)
 - v11-06 residuals (low-risk, in AUDIT.md): setlistTemplates app-only; scheduling_history orgId-absent rows; users claim-based (no orgId field).
-- v7.0 fold-forward backlog (`MILESTONES.md` § v7.0) — re-triage what's still live.
+- **v11.7-04 sweep TRIM (verified 2026-06-18, v11.7-01):** `list_recent_commands` (P4) + `list_recent_library_changes` (P5) DEFER → v11.8 — both BLOCKED on new infra: command acks are ephemeral (TTL ~5min, no `createdAt`, not indexed) → needs a new bridge command-log; `library_signals` is an in-process event emitter (`library-events.ts`), NOT a queryable Firestore collection → needs a new persistent `library_changes` collection + write path. Not MCP-only adds. Sweep keeps `find_setlists_from_template` (+ index `setlists(orgId,sourceTemplateId)`) + `find_contact` (both cheap).
+- **v7.0 fold-forward re-triage (v11.7-01):** 11/13 still live, mostly in-app library-UI tech debt (ImporterModal P3 polish, `extractApiError` unification, 40→44px in-app targets, dead TanStack block in SetlistGrid, unused `Recording.durationSeconds`, recordings/upload caps) → route the cheap ones into phase v11.7-06. `/api/drive/file` weak-auth was a DELIBERATE v70-08-02 non-fix, not a regression.
 - ROADMAP.md / PROJECT.md / MILESTONES.md carry full historical detail intentionally (archive — collapse, don't delete); only STATE has a hard size target.
 
 ### Blockers/Concerns
@@ -98,9 +99,9 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.7 OPENED — ready for first PL
 
 ## Session Continuity
 
-Last session: 2026-06-18 — **Closed v11.6 (tag `v11.6.0`, pushed `4e30913c2a`) + OPENED v11.7 — Discoverability & Deferred Backlog.** v11.7 = MCP read/resolve-symmetry audit (P0 `find_user` + P1 setlist reverse-lookup committed; P2–P5 swept) folded with the deferred backlog (F3 library density, infra org-scoping, broslaz design pass). 7 phases, 0 complete. **Photo-import DROPPED** — Daniel: "not a feature I'm looking for" (declined twice now; OFF roadmap, [[feedback_no_publish_or_assignments]]-adjacent — see new memory). F5 comms = gated stretch.
-Stopped at: **🚧 v11.7 OPENED — ready for first PLAN (Phase v11.7-01 Verify-first audit).**
-Next action: **`/paul:plan` for Phase v11.7-01** (Verify-first audit — confirm CURRENT MCP tool behaviors against deployed code: `list_musicians` instrument-gating, `create_contact` dedup, `delete_chart` guard walk, command-ack TTL, `library_signals` shape; surface any new composite index need for `search_setlists`; light v7.0 fold-forward re-triage. DISCOVERY, no prod code, blocks 02–04).
+Last session: 2026-06-18 — **Closed v11.6 (tag `v11.6.0`) + opened v11.7 + completed v11.7-01 verify-first audit** (report `.paul/research/v11-7-01-mcp-discovery-verify-REPORT-2026-06-18.md`; PLAN→APPLY→UNIFY ✓; no prod code). All P0–P3 audit claims CONFIRMED; P4/P5 sweep tools DEFER to v11.8 (infra-blocked); 2 corrections baked. **Photo-import DROPPED** (Daniel, [[feedback_no_photo_import]]).
+Stopped at: **✅ v11.7-01 COMPLETE (phase boundary) — ready to plan v11.7-02 (P0 `find_user`).**
+Next action: **`/paul:plan` for Phase v11.7-02 (P0 `find_user`).** Verified-ready spec: NEW `find_user({email?, nameContains?, role?, includeProfileless?})` on `users` collection — DROP the instrument gate (the bug that hides David); role+email viable now (email via in-memory filter at current scale; `(orgId,email)` index optional), name=app-side substring; tenant-scope via `orgFrom`+`rowOrgIds` (no leakage); gate `assertEditor`. Consider shipping the cheap `includeProfileless` interim on `list_musicians` in the same plan. Fixes `suggest_*` coverage as a side effect.
 **Weekend sets (finalized, chart-clean, NOT published — band opens in Perform):** Shir Shabbat–Juneteenth `a84f8cce-176e-4b5e-9653-4df71db6f5ba` (PDF) · Camp Sabra Havdalah `7e005452-7c42-4cdc-b27d-ff0c78b6667b` (PDF+text) · **Camp Sabra Staff Concert `c2075393-d994-4643-ade3-432a6864d87f`** (text). **`7c640a8a…` is the superseded "(OLD)" staff concert — ignore it.** WS-11/31/21 deployed to prod (Vercel).
 Resume file: **`.paul/HANDOFF-2026-06-18-v11.6-03-complete.md`** (full session pickup) → then `.paul/ROADMAP.md` (§ Phase v11.6-04) + `.paul/UAT-PENDING.md` (open field-confirm items) + the v11.6 anchor fixtures (3 Camp Sabra sets, IDs in Resume context below).
 **Carry (this phase):** the live stress sweep showed INTERMITTENT headless-WebKit `open-chart` timeouts on text sets (NOT a regression — known headless+Firestore-streaming fidelity gap); confirm real-device chart-open on camp wifi in phase 03.
