@@ -119,6 +119,7 @@ import {
 } from "./bond-corrections"
 import {
     listMusicians,
+    findUser,
     getMusicianProfile,
     listMusiciansOnDate,
     listPendingAssignments,
@@ -2954,10 +2955,50 @@ export function registerRosterTools(server: McpServer): void {
                     .describe(
                         "Filter by scheduling tier. 'core' = always-invite (auto-confirmed on assign); 'regular' = standard pending; 'guest' = occasional.",
                     ),
+                includeProfileless: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Include users with NO instrument set (e.g. band leaders who never filled a musicianProfile). Default false (instrument-bearing musicians only). For a full directory search by name/email, prefer find_user.",
+                    ),
             },
         },
         async (args, extra) =>
             jsonResult(await listMusicians(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "find_user",
+        {
+            description:
+                "Admin/band_leader only — the user DIRECTORY search: resolve a person's uid (and profile row) by email, name fragment, or role. Unlike list_musicians, this returns EVERY user in your org INCLUDING those with no instrument set (band leaders, admins) — use it to find the uid you need BEFORE assign_musician, assign_monitor_bus, or get_musician_profile when you only know someone's name or email. Filters (all optional, combine with AND): `email` (exact, case-insensitive), `nameContains` (case-insensitive substring of displayName), `role` (musician|band_leader|admin), `includeProfileless` (default TRUE — pass false to narrow to instrument-bearing musicians). An empty call returns the whole org directory, sorted by displayName. Tenant-scoped: only your org's users, never the other tenant's. Returns `{ok: true, users: [{uid, displayName, email, role, instrument|null, instrumentLabel|null, schedulingTier, phone, notificationPreferences}], count}`.",
+            inputSchema: {
+                email: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Exact email match (case-insensitive). Best when you know the person's address.",
+                    ),
+                nameContains: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Case-insensitive substring of the displayName (e.g. 'lazaroff').",
+                    ),
+                role: z
+                    .enum(["musician", "band_leader", "admin"])
+                    .optional()
+                    .describe("Narrow to a single role."),
+                includeProfileless: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Include users with no instrument set. Default TRUE (this is a directory). Pass false to narrow to instrument-bearing musicians only.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await findUser(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(

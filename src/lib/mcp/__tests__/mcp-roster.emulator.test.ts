@@ -62,6 +62,7 @@ vi.mock("@/lib/rate-limit", () => ({
 
 import {
     listMusicians,
+    findUser,
     getMusicianProfile,
     listMusiciansOnDate,
     listPendingAssignments,
@@ -295,6 +296,131 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
         const r = await listMusicians(ADMIN, { instrument: "guitar" })
         if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
         expect(r.musicians.map((m) => m.uid)).toContain(BAND_LEADER)
+    })
+
+    // ─── v11.7-02: list_musicians includeProfileless interim (AC-4) ───────────
+
+    it("list_musicians: default drops instrument-less users; includeProfileless surfaces them", async () => {
+        // A CRC band_leader with NO musicianProfile (the David shape).
+        await seedUser("leader-noinstr", {
+            role: "band_leader",
+            instrument: null,
+        })
+
+        const def = await listMusicians(ADMIN)
+        if (!("ok" in def) || !def.ok) throw new Error("expected ok=true")
+        expect(def.musicians.map((m) => m.uid)).not.toContain("leader-noinstr")
+
+        const incl = await listMusicians(ADMIN, { includeProfileless: true })
+        if (!("ok" in incl) || !incl.ok) throw new Error("expected ok=true")
+        const row = incl.musicians.find((m) => m.uid === "leader-noinstr")
+        expect(row).toBeDefined()
+        expect(row!.instrument).toBeNull()
+        expect(row!.instrumentLabel).toBeNull()
+    })
+
+    // ─── v11.7-02: find_user directory resolver ───────────────────────────────
+
+    describe("find_user (v11.7-02 — Asymmetry Principle)", () => {
+        // A CRC band_leader with NO instrument — invisible to list_musicians.
+        async function seedDavid() {
+            await seedUser("david", {
+                role: "band_leader",
+                instrument: null,
+                email: "David.Lazaroff@example.com",
+                displayName: "David Lazaroff",
+                orgIds: ["crc"],
+            })
+        }
+
+        it("find_user: surfaces an instrument-less user by name (the David fix, AC-1)", async () => {
+            await seedDavid()
+            const r = await findUser(ADMIN, { nameContains: "lazaroff" }, "crc")
+            if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+            const david = r.users.find((u) => u.uid === "david")
+            expect(david).toBeDefined()
+            expect(david!.instrument).toBeNull()
+            expect(david!.role).toBe("band_leader")
+            expect(david!.email).toBe("David.Lazaroff@example.com")
+        })
+
+        it("find_user: matches email case-insensitively (AC-1)", async () => {
+            await seedDavid()
+            const r = await findUser(
+                ADMIN,
+                { email: "david.lazaroff@EXAMPLE.com" },
+                "crc",
+            )
+            if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+            expect(r.users.map((u) => u.uid)).toContain("david")
+        })
+
+        it("find_user: role filter includes the profileless leader, excludes plain musicians (AC-1)", async () => {
+            await seedDavid()
+            const r = await findUser(ADMIN, { role: "band_leader" }, "crc")
+            if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+            const uids = r.users.map((u) => u.uid)
+            expect(uids).toContain("david")
+            expect(uids).toContain(BAND_LEADER)
+            expect(uids).not.toContain(MUSICIAN)
+        })
+
+        it("find_user: tenant wall — broslaz-only user hidden from CRC caller; dual-org visible (AC-2)", async () => {
+            await seedUser("bl-only", {
+                role: "musician",
+                instrument: "voice",
+                displayName: "Blair Only",
+                orgIds: ["brotherslazaroff"],
+            })
+            await seedUser("dual", {
+                role: "band_leader",
+                instrument: null,
+                displayName: "Dora Dual",
+                orgIds: ["crc", "brotherslazaroff"],
+            })
+
+            const r = await findUser(ADMIN, {}, "crc")
+            if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+            const uids = r.users.map((u) => u.uid)
+            expect(uids).not.toContain("bl-only")
+            expect(uids).toContain("dual")
+        })
+
+        it("find_user: refuses a plain musician with the rich forbidden_role envelope (AC-3)", async () => {
+            const r = await findUser(MUSICIAN, { nameContains: "x" }, "crc")
+            expect(r).toMatchObject({
+                ok: false,
+                error: { machine_code: "forbidden_role" },
+                callerRole: "musician",
+            })
+        })
+
+        it("find_user: an empty call returns the whole org directory incl. profileless (AC-3)", async () => {
+            await seedDavid()
+            const r = await findUser(ADMIN, {}, "crc")
+            if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+            const uids = r.users.map((u) => u.uid)
+            // 4 base CRC users + david
+            expect(uids).toContain("david")
+            expect(uids).toContain(MUSICIAN)
+            expect(uids).toContain(ADMIN)
+            // sorted by displayName
+            const names = r.users.map((u) => u.displayName)
+            expect(names).toEqual([...names].sort((a, b) =>
+                a.localeCompare(b, undefined, { sensitivity: "base" }),
+            ))
+        })
+
+        it("find_user: includeProfileless:false narrows to instrument-bearing musicians", async () => {
+            await seedDavid()
+            const r = await findUser(
+                ADMIN,
+                { includeProfileless: false },
+                "crc",
+            )
+            if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
+            expect(r.users.map((u) => u.uid)).not.toContain("david")
+        })
     })
 
     // ─── v11-05-02: org-scoping (multi-org membership via doc.orgIds) ─────────

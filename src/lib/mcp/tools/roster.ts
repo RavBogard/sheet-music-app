@@ -114,6 +114,7 @@ interface MusicianRow {
 function buildMusicianRow(
     uid: string,
     data: FirebaseFirestore.DocumentData,
+    opts?: { allowProfileless?: boolean },
 ): MusicianRow | null {
     const profile = data.musicianProfile as
         | Record<string, unknown>
@@ -122,9 +123,15 @@ function buildMusicianRow(
         profile && typeof profile.instrument === "string"
             ? (profile.instrument as string)
             : null
-    if (!instrument) return null
+    // v11.7-02: instrument-less users are dropped UNLESS the caller opts in
+    // (find_user / list_musicians includeProfileless). suggest_* + the default
+    // list_musicians path pass no flag → behavior unchanged (David-is-invisible
+    // bug is confined to that default; the directory tools surface him).
+    if (!instrument && !opts?.allowProfileless) return null
 
-    const presetLabel = INSTRUMENT_PRESETS[instrument]?.label ?? null
+    const presetLabel = instrument
+        ? (INSTRUMENT_PRESETS[instrument]?.label ?? null)
+        : null
     const rawTier =
         profile && typeof profile.schedulingTier === "string"
             ? (profile.schedulingTier as string)
@@ -196,6 +203,13 @@ function instrumentMatches(have: string, want: string): boolean {
 export interface ListMusiciansArgs {
     instrument?: string
     schedulingTier?: "core" | "regular" | "guest"
+    /**
+     * v11.7-02 interim: include users with no `musicianProfile.instrument`
+     * (e.g. band leaders who never filled a profile). Default false preserves
+     * the historical "configured instrument only" roster. For a full directory
+     * search prefer `find_user`.
+     */
+    includeProfileless?: boolean
 }
 
 export interface ListMusiciansResult {
@@ -227,7 +241,9 @@ export async function listMusicians(
         for (const d of snap.docs) {
             // v11-05-02: tenant wall — only members of the caller's org.
             if (!rowOrgIds(d.data().orgIds).includes(org)) continue
-            const row = buildMusicianRow(d.id, d.data())
+            const row = buildMusicianRow(d.id, d.data(), {
+                allowProfileless: args.includeProfileless === true,
+            })
             if (!row) continue
             if (filterTier && row.schedulingTier !== filterTier) continue
             if (filterInstrument) {
@@ -256,6 +272,96 @@ export async function listMusicians(
         return richError(
             "list_musicians_failed",
             `Failed to enumerate musicians: ${
+                err instanceof Error ? err.message : String(err)
+            }`,
+            {},
+            "Check Firestore connectivity; the users collection is the source.",
+        )
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// find_user (v11.7-02 — the Asymmetry-Principle directory resolver)
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface FindUserArgs {
+    /** Exact email match (case-insensitive, in-memory at current scale). */
+    email?: string
+    /** Case-insensitive substring of displayName. */
+    nameContains?: string
+    /** Narrow to one role. */
+    role?: "musician" | "band_leader" | "admin"
+    /**
+     * Include users with no `musicianProfile.instrument`. DEFAULTS TO TRUE —
+     * find_user is a directory: surfacing instrument-less people (band leaders
+     * like David) is the whole point. Pass false to narrow to instrument-bearing
+     * musicians only.
+     */
+    includeProfileless?: boolean
+}
+
+export interface FindUserResult {
+    ok: true
+    users: MusicianRow[]
+    count: number
+}
+
+/**
+ * v11.7-02: resolve a person's uid (and profile row) by email / name / role —
+ * the read partner to the act-by-uid tools (assign_musician, assign_monitor_bus,
+ * get_musician_profile). Unlike list_musicians it does NOT drop instrument-less
+ * users by default, so band leaders without a musicianProfile are discoverable.
+ *
+ * Tenant-scoped exactly like list_musicians (rowOrgIds wall — no cross-tenant
+ * leakage), editor-gated via assertEditor. All filters run in-memory over the
+ * by-role query (viable at current roster scale; no new index).
+ */
+export async function findUser(
+    uid: string,
+    args: FindUserArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
+): Promise<FindUserResult | RichErrorEnvelope> {
+    initAdmin()
+    const db = getFirestore()
+    const gate = await assertEditor(db, uid)
+    if (!gate.ok) return gate
+
+    const emailArg = args.email?.trim().toLowerCase()
+    const nameArg = args.nameContains?.trim().toLowerCase()
+    // find_user includes profileless users unless explicitly told not to.
+    const allowProfileless = args.includeProfileless !== false
+
+    try {
+        const snap = await db
+            .collection("users")
+            .where("role", "in", ["musician", "band_leader", "admin"])
+            .get()
+
+        const rows: MusicianRow[] = []
+        for (const d of snap.docs) {
+            // tenant wall — only members of the caller's org (no leakage).
+            if (!rowOrgIds(d.data().orgIds).includes(org)) continue
+            const row = buildMusicianRow(d.id, d.data(), { allowProfileless })
+            if (!row) continue
+            if (args.role && row.role !== args.role) continue
+            if (emailArg && row.email.toLowerCase() !== emailArg) continue
+            if (nameArg && !row.displayName.toLowerCase().includes(nameArg)) {
+                continue
+            }
+            rows.push(row)
+        }
+
+        rows.sort((a, b) =>
+            a.displayName.localeCompare(b.displayName, undefined, {
+                sensitivity: "base",
+            }),
+        )
+
+        return { ok: true, users: rows, count: rows.length }
+    } catch (err) {
+        return richError(
+            "find_user_failed",
+            `Failed to search users: ${
                 err instanceof Error ? err.message : String(err)
             }`,
             {},

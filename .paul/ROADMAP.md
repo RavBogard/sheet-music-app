@@ -16,7 +16,7 @@ Status: 🚧 **In Progress** · Phases: **1 of 7** (01 ✅ verify-first audit �
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | v11.7-01 | Verify-first audit — confirm CURRENT MCP behaviors vs deployed code + asymmetry inventory + index needs [DISCOVERY, verify-first, BLOCKS the MCP-build phases] | 01 (research) ✅ | ✅ Complete | 2026-06-18 |
-| v11.7-02 | P0 user directory — `find_user` (no instrument gate; returns orgIds) + suggest_* coverage [MCP headline] | TBD | Not started | - |
+| v11.7-02 | P0 user directory — `find_user` (no instrument gate; returns orgIds) + suggest_* coverage [MCP headline] | 01 ✅ | ✅ Complete | 2026-06-19 |
 | v11.7-03 | P1 setlist reverse-lookup — `find_setlists_referencing_chart` + `search_setlists` | TBD | Not started | - |
 | v11.7-04 | P2–P5 reverse-index sweep (opportunistic, trimmed) — `find_setlists_from_template`, `find_contact`, `list_recent_commands`, `list_recent_library_changes` | TBD | Not started | - |
 | v11.7-05 | F3 library browse density/filters — thumbnails, composer/recency metadata, search ergonomics [/ui-ux-pro-max BLOCKING] | TBD | Not started | - |
