@@ -20,10 +20,11 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
 import type { Recording } from '@/types/models'
 
 // vi.hoisted guarantees these exist before the vi.mock factories run.
-const { mockSubscribe, mockUpload, authState } = vi.hoisted(() => ({
+const { mockSubscribe, mockUpload, authState, orgState } = vi.hoisted(() => ({
     mockSubscribe: vi.fn(),
     mockUpload: vi.fn(),
     authState: { isBandLeader: false, isAdmin: false },
+    orgState: { current: 'crc' as string },
 }))
 
 vi.mock('@/lib/recordings/recordings-client', () => ({
@@ -35,6 +36,11 @@ vi.mock('@/lib/recordings/recordings-client', () => ({
 
 vi.mock('@/lib/auth-context', () => ({
     useAuth: () => authState,
+}))
+
+// v11.7-06-01: the popover scopes the subscription to the current tenant org.
+vi.mock('@/lib/org/org-context', () => ({
+    useOrg: () => orgState.current,
 }))
 
 import { RecordingBindPopover } from '../RecordingBindPopover'
@@ -56,6 +62,7 @@ beforeEach(() => {
     mockUpload.mockReset()
     authState.isBandLeader = false
     authState.isAdmin = false
+    orgState.current = 'crc'
 })
 
 afterEach(() => {
@@ -69,7 +76,7 @@ describe('RecordingBindPopover', () => {
             makeRecording({ id: 'rec-2', title: 'Take 2' }),
         ]
         mockSubscribe.mockImplementation(
-            (_songId: string, cb: (r: Recording[]) => void) => {
+            (_songId: string, _orgId: string, cb: (r: Recording[]) => void) => {
                 cb(recs)
                 return () => {}
             },
@@ -94,13 +101,39 @@ describe('RecordingBindPopover', () => {
         )
         expect(mockSubscribe).toHaveBeenCalledWith(
             'song-1',
+            'crc',
+            expect.any(Function),
+        )
+    })
+
+    it('scopes the subscription to the current tenant org', async () => {
+        // A viewer on the Brothers Lazaroff host → subscribe filters on that org.
+        orgState.current = 'brotherslazaroff'
+        mockSubscribe.mockImplementation(
+            (_songId: string, _orgId: string, cb: (r: Recording[]) => void) => {
+                cb([])
+                return () => {}
+            },
+        )
+
+        render(
+            <RecordingBindPopover songId="song-1">
+                <button>open</button>
+            </RecordingBindPopover>,
+        )
+        await userEvent.click(screen.getByText('open'))
+        await screen.findByTestId('recording-bind-popover')
+
+        expect(mockSubscribe).toHaveBeenCalledWith(
+            'song-1',
+            'brotherslazaroff',
             expect.any(Function),
         )
     })
 
     it('shows an empty state when the song has no recordings', async () => {
         mockSubscribe.mockImplementation(
-            (_songId: string, cb: (r: Recording[]) => void) => {
+            (_songId: string, _orgId: string, cb: (r: Recording[]) => void) => {
                 cb([])
                 return () => {}
             },
@@ -121,7 +154,7 @@ describe('RecordingBindPopover', () => {
 
     it('shows the upload affordance only for band-leaders / admins', async () => {
         mockSubscribe.mockImplementation(
-            (_songId: string, cb: (r: Recording[]) => void) => {
+            (_songId: string, _orgId: string, cb: (r: Recording[]) => void) => {
                 cb([])
                 return () => {}
             },

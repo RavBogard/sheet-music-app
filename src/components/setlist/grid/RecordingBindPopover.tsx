@@ -10,6 +10,7 @@ import {
 } from 'react'
 
 import { useAuth } from '@/lib/auth-context'
+import { useOrg } from '@/lib/org/org-context'
 import {
     getRecordingPlaybackUrl,
     subscribeRecordingsForSong,
@@ -44,6 +45,8 @@ export function RecordingBindPopover({
 }: RecordingBindPopoverProps) {
     const { isBandLeader, isAdmin } = useAuth()
     const canUpload = isBandLeader || isAdmin
+    // v11.7-06-01: scope the recordings subscription to the current tenant.
+    const orgId = useOrg()
 
     const [open, setOpen] = useState(false)
     const [recordings, setRecordings] = useState<Recording[]>([])
@@ -62,12 +65,12 @@ export function RecordingBindPopover({
             return
         }
         setLoaded(false)
-        const unsub = subscribeRecordingsForSong(songId, (recs) => {
+        const unsub = subscribeRecordingsForSong(songId, orgId, (recs) => {
             setRecordings(recs)
             setLoaded(true)
         })
         return () => unsub()
-    }, [open, songId])
+    }, [open, songId, orgId])
 
     const handleFile = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]

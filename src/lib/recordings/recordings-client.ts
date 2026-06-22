@@ -12,21 +12,28 @@ import {
 
 import { apiFetch } from "@/lib/api-client"
 import { subscribeWithDb, recoverFromFirestoreShutdown } from "@/lib/firebase"
+import type { OrgId } from "@/lib/org/types"
 import type { Recording } from "@/types/models"
 
 /**
- * Subscribe to the recordings linked to a song, newest-first.
+ * Subscribe to the recordings linked to a song for the current tenant,
+ * newest-first.
  *
- * Uses the v70-02 `recordings: songId ASC, createdAt DESC` composite index.
+ * v11.7-06-01: org-scoped. Filters on `orgId` (the viewer's host org) so a
+ * recording never crosses the tenant wall — the upload stamps orgId from the
+ * host x-org-id, this read filters on it. Uses the
+ * `recordings: orgId ASC, songId ASC, createdAt DESC` composite index.
  * Returns the unsubscribe function — call it on popover close / unmount.
  */
 export function subscribeRecordingsForSong(
     songId: string,
+    orgId: OrgId,
     cb: (recordings: Recording[]) => void,
 ): () => void {
     return subscribeWithDb((db) => {
         const q = query(
             collection(db, "recordings"),
+            where("orgId", "==", orgId),
             where("songId", "==", songId),
             orderBy("createdAt", "desc"),
         )

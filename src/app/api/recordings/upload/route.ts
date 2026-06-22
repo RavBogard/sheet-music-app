@@ -6,7 +6,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { uploadRecordingToStorage } from "@/lib/firebase-storage"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
-import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { coerceOrgId } from "@/lib/org/registry"
 
 // Max recording size: 25MB (matches the library upload cap).
 const MAX_FILE_SIZE = 25 * 1024 * 1024
@@ -64,6 +64,11 @@ export const POST = createApiHandler(async (ctx) => {
     }
     const db = getFirestore()
 
+    // v11.7-06-01: stamp the recording with the caller's host org, resolved
+    // from the Edge-set x-org-id header (crc fallback for missing/unknown).
+    // Same idiom as /api/library/list. Closes the v11.1-03 recordings tenancy gap.
+    const hostOrg = coerceOrgId(ctx.req.headers.get("x-org-id"))
+
     const formData = await ctx.req.formData()
     const file = formData.get('file') as File | null
     const songId = (formData.get('songId') as string | null)?.trim()
@@ -102,9 +107,9 @@ export const POST = createApiHandler(async (ctx) => {
     // FirestoreDate accepts string (same convention as library/upload).
     const recordingDoc = {
         id: recordingId,
-        // v11-01-02: stamp tenant scope. Defaults to DEFAULT_ORG_ID ("crc");
-        // Phase v11-02 wires the caller's org from the bearer/session.
-        orgId: DEFAULT_ORG_ID,
+        // v11.7-06-01: tenant scope resolved from the host x-org-id header
+        // (was hardcoded DEFAULT_ORG_ID). crc fallback via coerceOrgId.
+        orgId: hostOrg,
         songId,
         title,
         fileName: file.name,
