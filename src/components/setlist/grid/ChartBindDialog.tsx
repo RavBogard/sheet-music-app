@@ -9,7 +9,6 @@ import {
     CommandList,
 } from 'cmdk'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { FileText } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
@@ -21,6 +20,7 @@ import {
 } from '@/components/ui/dialog'
 import { getDb } from '@/lib/local/schema'
 import type { LocalSong } from '@/lib/local/types'
+import { ChartPickerItemContent } from './ChartPickerItemContent'
 
 /**
  * v54-02-01 (Bug 3 fix, 2026-05-12): centered command dialog for binding a
@@ -163,13 +163,7 @@ export function ChartBindDialog({
                                         }
                                         className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm aria-selected:bg-indigo-500/15 data-[current=true]:text-indigo-300"
                                     >
-                                        <FileText
-                                            aria-hidden
-                                            className="h-3.5 w-3.5 text-muted-foreground/70"
-                                        />
-                                        <span className="truncate">
-                                            {song.title}
-                                        </span>
+                                        <ChartPickerItemContent song={song} />
                                     </CommandItem>
                                 ))}
                             </CommandGroup>
@@ -193,13 +187,7 @@ export function ChartBindDialog({
                                         }
                                         className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm aria-selected:bg-indigo-500/15 data-[current=true]:text-indigo-300"
                                     >
-                                        <FileText
-                                            aria-hidden
-                                            className="h-3.5 w-3.5 text-muted-foreground/70"
-                                        />
-                                        <span className="truncate">
-                                            {song.title}
-                                        </span>
+                                        <ChartPickerItemContent song={song} />
                                     </CommandItem>
                                 ))}
                             </CommandGroup>

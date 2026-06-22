@@ -19,7 +19,7 @@ Status: 🚧 **In Progress** · Phases: **1 of 7** (01 ✅ verify-first audit �
 | v11.7-02 | P0 user directory — `find_user` (no instrument gate; returns orgIds) + suggest_* coverage [MCP headline] | 01 ✅ | ✅ Complete | 2026-06-19 |
 | v11.7-03 | P1 setlist reverse-lookup — `find_setlists_referencing_chart` + `search_setlists` | 01 ✅ | ✅ Complete | 2026-06-19 |
 | v11.7-04 | P2 reverse-index sweep (trimmed) — `find_setlists_from_template`, `find_contact` (index-free per 03 idiom; P4/P5 list_recent_* DEFER → v11.8) | 01 ✅ | ✅ Complete | 2026-06-19 |
-| v11.7-05 | F3 library browse density — TEXT-ONLY dense rows + composer/key/recency (NO thumbnails — Daniel 2026-06-22); filters already exist (verify-first). LibraryFileRow (01 ✅ `feat(v11.7-05-01)`) + bind-picker (02 ⏳) [/ui-ux-pro-max BLOCKING] | 01 ✅ / 02 ⏳ | 🚧 In progress (1/2) | - |
+| v11.7-05 | F3 library browse density — TEXT-ONLY dense rows + composer/key/recency (NO thumbnails — Daniel 2026-06-22). LibraryFileRow (01 `feat(v11.7-05-01)`) + bind-picker ChartBindPopover/Dialog (02 `feat(v11.7-05-02)`, shared ChartPickerItemContent) [/ui-ux-pro-max] | 01 ✅ / 02 ✅ | ✅ Complete | 2026-06-22 |
 | v11.7-06 | Infra adjacents fold — recordings org-scoping + upload orgId stamp · `finalize_chart_upload` signed-URL org-stamp · anon chord-cache org-scoping · v7.0 fold-forward re-triage | TBD | Not started | - |
 | v11.7-07 | Authed-broslaz design pass + cross-org leader-wall UI check [/ui-ux-pro-max BLOCKING] | TBD | Not started | - |
 
@@ -40,9 +40,13 @@ Focus: Take what 01 found cheap / already backed by existing signals — `find_s
 Shipped (Plan 01, `feat(v11.7-04)`): both resolvers index-free — single-field auto-indexed query + in-memory `rowOrg` cross-tenant wall (NO composite index, NO deploy), per the v11.7-03 idiom (a templateId is org-unique → collision impossible). find_setlists_from_template in `setlists.ts`, find_contact in `contacts.ts`, both registered in `index.ts`; 8 emulator cases. AC-1..AC-6 PASS; tsc 0 / emulator 24/24 / `next build --webpack` 0. **TRIMMED:** `list_recent_commands` (P4) + `list_recent_library_changes` (P5) DEFER → v11.8 (infra-blocked: ephemeral acks; `library_signals` is an in-process emitter, not a collection).
 Plans: 01 ✅ (SUMMARY `.paul/phases/v11.7-04-reverse-index-sweep/v11.7-04-01-SUMMARY.md`)
 
-### Phase v11.7-05: F3 library browse density/filters [/ui-ux-pro-max BLOCKING]
-Focus: Library browse ergonomics — thumbnails, composer/recency metadata, search/filter affordances. Consumer + author surfaces; CRC byte-identical where shared.
-Plans: TBD (defined during /paul:plan)
+### Phase v11.7-05: F3 library browse density [/ui-ux-pro-max BLOCKING] — ✅ COMPLETE (2026-06-22)
+Focus: Library browse ergonomics — denser rows + composer/key/recency metadata. **Reframed by /paul:discuss + verify-first (Daniel 2026-06-22):** search + key/topic/recency FILTERS already shipped; the gap was row DENSITY + composer surfacing. **TEXT-ONLY — NO thumbnails** (Daniel; ROADMAP "thumbnails" overridden).
+Shipped (2 plans):
+- **01 `feat(v11.7-05-01)`** — `LibraryFileRow` densified to a Logic-Pro track-list row (`text-base font-medium` title, smaller icons, `py-1.5` under a `min-h-11` ≥44px tap floor); composer split from the filename parenthetical into a dimmed sub-label via new pure `chart-composer.ts` `splitChartComposer`; key badge + recency now at ALL widths (recency right-aligned). New chart-composer (8) + LibraryFileRow (5) tests.
+- **02 `feat(v11.7-05-02)`** — bind picker (`ChartBindPopover` + `ChartBindDialog`) rows show composer + sparse key (`song.defaults?.key`, show-when-present) via a new shared `ChartPickerItemContent`; cmdk filter/onSelect/highlight unchanged. ChartBindPopover test +1.
+AC PASS both plans; tsc 0 / library 53/53 + setlist-grid 167 / `next build --webpack` 0. iPad density UAT items (non-blocking) logged.
+Plans: 01 ✅ + 02 ✅ (SUMMARYs in `.paul/phases/v11.7-05-library-density/`)
 
 ### Phase v11.7-06: Infra adjacents fold
 Focus: The v11.5/v11.3-deferred infra adjacents — recordings-collection org-scoping + `/api/recordings/upload` orgId stamp (stamp from host x-org-id, THEN host-filter the subscribe); `finalize_chart_upload` signed-URL org-stamp gap; anon chord-cache org-scoping (POST chordData + PATCH nativeKey, org-scoped together); v7.0 fold-forward re-triage (from 01). Any org-scoping backfill gets dry-run + idempotency marker + rollback.

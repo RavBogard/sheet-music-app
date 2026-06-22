@@ -89,6 +89,45 @@ describe('ChartBindPopover', () => {
         expect(screen.getByText('Lecha Dodi')).toBeInTheDocument()
     })
 
+    it('renders the composer sub-label + key badge (v11.7-05-02), sparse-safe', async () => {
+        await getDb().songs.bulkPut([
+            {
+                id: 'song-1',
+                title: 'Hashkivenu (Klepper-Freelander)',
+                normalizedTitle: 'hashkivenu (klepper-freelander)',
+                defaults: { key: 'Dm' },
+            } as LocalSong,
+            {
+                id: 'song-2',
+                title: 'Adon Olam',
+                normalizedTitle: 'adon olam',
+            } as LocalSong,
+        ])
+
+        const onBind = vi.fn()
+        render(
+            <ChartBindPopover onBind={onBind}>
+                <ChartCell hasChart={false} />
+            </ChartBindPopover>,
+        )
+        await waitFor(async () => {
+            expect((await getDb().songs.toArray()).length).toBe(2)
+        })
+        await userEvent.click(screen.getByTestId('chart-cell'))
+        await waitFor(() => {
+            expect(screen.getByTestId('chart-bind-popover')).toBeInTheDocument()
+        })
+
+        // Title split from composer; both render as separate nodes.
+        expect(screen.getAllByText('Hashkivenu').length).toBeGreaterThan(0)
+        const composer = screen.getAllByText('Klepper-Freelander')[0]
+        expect(composer).toBeInTheDocument()
+        expect(composer.className).toContain('text-muted-foreground')
+        // Key badge present for the keyed song, absent for the keyless one.
+        expect(screen.getAllByText('Dm').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Adon Olam').length).toBeGreaterThan(0)
+    })
+
     it('selecting a library entry fires onBind with songId + title and closes', async () => {
         await seedSongs([{ id: 'song-1', title: 'Adon Olam' }])
         const onBind = vi.fn()

@@ -646,3 +646,7 @@ shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iP
 - **Composer sub-label:** charts with a `(Composer)` in the filename show the composer as a dimmed, smaller text beside the title (e.g. "Hashkivenu" + dimmed "Klepper-Freelander"), not mashed into the bold title. Charts without one show just the title (no empty slot).
 - **Key + recency at all widths:** the key badge (e.g. "Dm") and the "Last: <date> · N×" recency read in BOTH iPad portrait and landscape (recency was previously hidden on narrow widths).
 - **Touch targets:** every row is comfortably tappable (≥44px) despite the denser look.
+
+## v11.7-05-02 (F3 library density — bind picker) — real 11" iPad, post-deploy
+- **Bind-picker metadata:** on a setlist row, tap the chart cell (or row menu → "Bind chart") → the picker rows show the composer dimmed beside the title, and a small key badge (e.g. "Dm") when the song has a known key; songs without a composer/key show neither (no empty slots). Rows stay dense + single-line.
+- **Behavior intact:** typing still filters (composer-in-title still matches), and picking a row still binds the correct chart to the row.
