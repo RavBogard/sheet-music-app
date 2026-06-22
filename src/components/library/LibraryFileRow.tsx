@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { DriveFile } from "@/types/models"
 import { isFileCached } from "@/lib/cache-utils"
+import { splitChartComposer } from "@/lib/library/chart-composer"
 
 interface LibraryFileRowProps {
     item: DriveFile
@@ -55,6 +56,14 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
             : isAudio
                 ? getAudioCleanName(item.name)
                 : getCleanName(item.name)
+
+    // v11.7-05: for chart rows, split the trailing composer/arrangement
+    // parenthetical out of the title so it can render as a dimmed sub-label
+    // (text-only; never a thumbnail). Folders/audio keep their full name.
+    const isChart = !isFolder && !isAudio
+    const { title: chartTitle, composer } = isChart
+        ? splitChartComposer(displayName)
+        : { title: displayName, composer: undefined as string | undefined }
 
     const handleClick = () => {
         if (selectMode && !isFolder && onToggleSelect) {
@@ -119,7 +128,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                     : ''
                         }`}
                 >
-                    <div className="flex items-center gap-3 sm:gap-4 py-3 sm:py-4 px-2 sm:px-4 list-cell">
+                    <div className="flex items-center gap-2 sm:gap-3 py-1.5 px-2 sm:px-4 min-h-11 list-cell">
                         {/* Select mode checkbox */}
                         {selectMode && !isFolder && (
                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-brand border-brand' : 'border-muted-foreground/40'
@@ -129,9 +138,9 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                         )}
 
                         {isFolder ? (
-                            <Folder className="h-7 w-7 sm:h-10 sm:w-10 text-yellow-400 shrink-0 group-hover:scale-110 transition-transform" />
+                            <Folder className="h-6 w-6 sm:h-7 sm:w-7 text-yellow-400 shrink-0 group-hover:scale-110 transition-transform" />
                         ) : isAudio ? (
-                            <div className="h-7 w-7 sm:h-10 sm:w-10 shrink-0 rounded-full bg-brand/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <div className="h-6 w-6 sm:h-7 sm:w-7 shrink-0 rounded-full bg-brand/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                                 {isPlaying ? (
                                     <Pause className="h-5 w-5 text-brand" />
                                 ) : (
@@ -140,18 +149,27 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                             </div>
                         ) : isDigitizing ? (
                             <div className="relative">
-                                <FileMusic className="h-7 w-7 sm:h-10 sm:w-10 text-brand shrink-0 opacity-50" />
+                                <FileMusic className="h-6 w-6 sm:h-7 sm:w-7 text-brand shrink-0 opacity-50" />
                                 <Loader2 className="h-5 w-5 text-brand/50 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
                             </div>
                         ) : (
-                            <FileMusic className="h-7 w-7 sm:h-10 sm:w-10 text-brand shrink-0 group-hover:scale-110 transition-transform" />
+                            <FileMusic className="h-6 w-6 sm:h-7 sm:w-7 text-brand shrink-0 group-hover:scale-110 transition-transform" />
                         )}
 
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3">
-                                <div className="font-bold text-base sm:text-xl truncate">
-                                    {displayName}
+                            <div className="flex items-center gap-2">
+                                <div className="font-medium text-base truncate">
+                                    {isChart ? chartTitle : displayName}
                                 </div>
+
+                                {/* v11.7-05: composer/arrangement as a dimmed
+                                    sub-label — subordinate to the title, never
+                                    competing; omitted when absent (text-only). */}
+                                {composer && (
+                                    <span className="text-xs sm:text-sm text-muted-foreground truncate shrink min-w-0">
+                                        {composer}
+                                    </span>
+                                )}
 
                                 {isAudio && (
                                     <span className="text-xs bg-brand/10 text-foreground px-2 py-0.5 rounded-md flex items-center gap-1">
@@ -200,9 +218,11 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                     </div>
                                 )}
 
-                                {/* Song Usage Badge */}
+                                {/* Song Usage Badge — v11.7-05: visible at all
+                                    widths (was hidden sm:inline) so recency
+                                    reads on iPad portrait too. */}
                                 {!isFolder && !isAudio && usageInfo && (
-                                    <span className="hidden sm:inline text-xs text-muted-foreground" title={`Last used in: ${usageInfo.lastUsedDate}`}>
+                                    <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums" title={`Last used in: ${usageInfo.lastUsedDate}`}>
                                         {formatUsageBadge(usageInfo.lastUsedDate, usageInfo.totalUses)}
                                     </span>
                                 )}

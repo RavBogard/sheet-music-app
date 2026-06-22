@@ -19,7 +19,7 @@ Status: 🚧 **In Progress** · Phases: **1 of 7** (01 ✅ verify-first audit �
 | v11.7-02 | P0 user directory — `find_user` (no instrument gate; returns orgIds) + suggest_* coverage [MCP headline] | 01 ✅ | ✅ Complete | 2026-06-19 |
 | v11.7-03 | P1 setlist reverse-lookup — `find_setlists_referencing_chart` + `search_setlists` | 01 ✅ | ✅ Complete | 2026-06-19 |
 | v11.7-04 | P2 reverse-index sweep (trimmed) — `find_setlists_from_template`, `find_contact` (index-free per 03 idiom; P4/P5 list_recent_* DEFER → v11.8) | 01 ✅ | ✅ Complete | 2026-06-19 |
-| v11.7-05 | F3 library browse density/filters — thumbnails, composer/recency metadata, search ergonomics [/ui-ux-pro-max BLOCKING] | TBD | Not started | - |
+| v11.7-05 | F3 library browse density — TEXT-ONLY dense rows + composer/key/recency (NO thumbnails — Daniel 2026-06-22); filters already exist (verify-first). LibraryFileRow (01 ✅ `feat(v11.7-05-01)`) + bind-picker (02 ⏳) [/ui-ux-pro-max BLOCKING] | 01 ✅ / 02 ⏳ | 🚧 In progress (1/2) | - |
 | v11.7-06 | Infra adjacents fold — recordings org-scoping + upload orgId stamp · `finalize_chart_upload` signed-URL org-stamp · anon chord-cache org-scoping · v7.0 fold-forward re-triage | TBD | Not started | - |
 | v11.7-07 | Authed-broslaz design pass + cross-org leader-wall UI check [/ui-ux-pro-max BLOCKING] | TBD | Not started | - |
 

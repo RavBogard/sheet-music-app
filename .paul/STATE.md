@@ -12,10 +12,10 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Milestone: **🚧 v11.7 — Discoverability & Deferred Backlog — OPENED 2026-06-18.** Headline = MCP **Asymmetry Principle** (every write/act-by-id tool gets a read/resolve-id path; reverse-index reads for write-side pointers). BROAD scope (Daniel): MCP discoverability + folded deferred backlog (F3 library density, infra org-scoping adjacents, broslaz design pass). 7 phases. Oracle `docs/ACCESS-POLICY.md` v0.4; cross-tenant hard wall governs the new resolvers. Source consumed: `.paul/MILESTONE-CONTEXT.md`. **Photo-import EXCLUDED (Daniel declined); F5 comms = gated stretch.** (v11.6 ✅ `v11.6.0`; v11.5 ✅ `v11.5.0`.)
-Phase: **v11.7-04 (P2 sweep) — ✅ COMPLETE (1/1, 2026-06-19).** Shipped `find_setlists_from_template` + `find_contact` (index-free; NO deploy). AC-1..AC-6 PASS; tsc 0 / emulator 24/24 (setlists-reverse 13 + contacts 11) / `next build --webpack` 0. SUMMARY `.paul/phases/v11.7-04-reverse-index-sweep/v11.7-04-01-SUMMARY.md`. **Next phase: v11.7-05 (F3 library browse density — UI, /ui-ux-pro-max BLOCKING).**
-Plan: **`v11.7-04-01` ✅ COMPLETE + UNIFIED.** `find_setlists_from_template({templateId})` (setlists.ts; ungated-auth, single-field `sourceTemplateId` query → `serializeSetlist` → in-memory `rowOrg` wall) + `find_contact({email?,nameContains?})` (contacts.ts; assertEditor-gated, in-org scan + case-insensitive email/name filters) + index.ts registration + 8 emulator cases. **DECISION (baked): NO composite index, NO deploy** — index-free per the v11.7-03 sibling idiom (templateId org-unique; rowOrg is the hard wall). STOP-gate-free pure-backend phase.
-Status: **🚧 v11.7 — 4 of 7 complete (01 ✅, 02 ✅, 03 ✅, 04 ✅).** Phase map: 01 ✅ → 02 ✅ → 03 ✅ → 04 ✅ P2 sweep → 05 F3 library density (UI) → 06 infra org-scoping → 07 broslaz design pass. (list_recent_commands + list_recent_library_changes DEFER → v11.8.)
-Last activity: 2026-06-19 — **Closed v11.7-04 (P2 sweep)** — PLAN→APPLY→UNIFY ✓; commit `feat(v11.7-04)`. find_setlists_from_template + find_contact; index-free; tsc 0 / emulator 24/24 / next build --webpack 0. Qualify caught+fixed a date-serialization GAP (raw Timestamp → serializeSetlist). Prior: closed v11.7-03 (setlist reverse-lookup); closed v11.7-02 (find_user).
+Phase: **v11.7-05 (F3 library browse density) — 🚧 IN PROGRESS (Plan 1 of 2, 2026-06-22).** Plan 01 ✅ COMPLETE+UNIFIED (LibraryFileRow density + composer); **Plan 02 (bind-picker ChartBindPopover/Dialog metadata) NEXT.** UI phase, /ui-ux-pro-max BLOCKING. Prior: v11.7-04 ✅.
+Plan: **`v11.7-05-01` ✅ COMPLETE + UNIFIED.** Densified `LibraryFileRow` into a Logic-Pro track-list row (title `text-base font-medium`, icon h-6/h-7, py-1.5, `min-h-11` tap floor) + dimmed composer sub-label via new pure `chart-composer.ts` `splitChartComposer` + key/recency visible at ALL widths (recency right-aligned `ml-auto`). **TEXT-ONLY, no thumbnails** (Daniel; overrides ROADMAP "thumbnails"). AC-1..AC-4 PASS; tsc 0 / library 53/53 (chart-composer 8 + LibraryFileRow 5 new) / `next build --webpack` 0. Auto-fixed an `xs:`-breakpoint composer-hide before verify.
+Status: **🚧 v11.7 — 4 of 7 phases complete (01–04 ✅); 05 IN PROGRESS (Plan 1/2 done).** Phase map: 01–04 ✅ → 05 🚧 F3 library density (Plan 01 ✅ LibraryFileRow; Plan 02 ⏳ bind-picker) → 06 infra org-scoping → 07 broslaz design pass. (list_recent_* DEFER → v11.8.)
+Last activity: 2026-06-22 — **Closed Plan v11.7-05-01 (library row density + composer)** — PLAN→APPLY→UNIFY ✓; commit `feat(v11.7-05-01)`. Next: Plan 02 (bind-picker metadata). Prior: created Plan 05-01 via /paul:discuss; closed v11.7-04.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -29,7 +29,7 @@ Last activity: 2026-06-19 — **Closed v11.7-04 (P2 sweep)** — PLAN→APPLY→
 | v11.7-02 | ✅ **COMPLETE (2026-06-19)** — `find_user({email?,nameContains?,role?,includeProfileless?})` shipped (instrument gate dropped via opt-in `buildMusicianRow`; find_user defaults include-profileless) + `includeProfileless` on `list_musicians`; tenant-scoped + `assertEditor`. The David-is-invisible fix. tsc 0 / emulator 58/58 / build 0. | ✅ SHIPPED |
 | v11.7-03 | ✅ **COMPLETE (2026-06-19)** — `find_setlists_referencing_chart` (surfaces the `delete_chart` walk; live+tenant, dangling-excluded) + `search_setlists` (app-side trackTitle/leadMusician/templateType). Ungated-authenticated + tenant-scoped. tsc 0 / emulator 9/9 / build 0. | ✅ SHIPPED |
 | v11.7-04 | ✅ **COMPLETE (2026-06-19)** — `find_setlists_from_template` (reverse of clone_setlist_from_template) + `find_contact` (email/name lookup). Index-free (single-field + rowOrg wall, NO composite/deploy). tsc 0 / emulator 24/24 / build 0. | ✅ SHIPPED |
-| v11.7-05 | **F3 library browse density/filters** — thumbnails, composer/recency metadata, search ergonomics. /ui-ux-pro-max BLOCKING. | pending |
+| v11.7-05 | 🚧 **IN PROGRESS (Plan 1/2)** — F3 library density. **TEXT-ONLY (no thumbnails — Daniel).** Plan 01 ✅ LibraryFileRow density + composer sub-label (`feat(v11.7-05-01)`; tsc 0 / library 53/53 / build 0). Plan 02 ⏳ bind-picker (ChartBindPopover/Dialog) metadata. /ui-ux-pro-max BLOCKING. | 🚧 1/2 |
 | v11.7-06 | **Infra adjacents** — recordings/finalize/anon-chord-cache org-scoping + cheap v7.0 fold-forward hygiene. | pending |
 | v11.7-07 | **Authed-broslaz design pass + cross-org leader-wall UI check.** /ui-ux-pro-max BLOCKING. | pending |
 
@@ -46,10 +46,10 @@ Last activity: 2026-06-19 — **Closed v11.7-04 (P2 sweep)** — PLAN→APPLY→
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.7-04 COMPLETE — loop closed; ready to plan v11.7-05]
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.7-05-01 loop closed; Plan 02 of phase NEXT]
   ✓        ✓        ✓
 ```
-(v11.7 — 4 of 7 complete (01 ✅ audit, 02 ✅ find_user, 03 ✅ setlist reverse-lookup, 04 ✅ P2 sweep). Next: `/paul:plan` for Phase v11.7-05 (F3 library browse density/filters — UI, /ui-ux-pro-max BLOCKING). Prior: v11.6 ✅ tag `v11.6.0`.)
+(v11.7 — 4 of 7 phases complete (01–04 ✅); 05 IN PROGRESS — Plan 01 ✅ closed (LibraryFileRow density + composer; `feat(v11.7-05-01)`). Next: `/paul:plan` for Plan v11.7-05-02 (bind-picker ChartBindPopover/Dialog metadata). Prior: v11.6 ✅ tag `v11.6.0`.)
 (Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
 
 ## Execution Substrate (bongo .coord/)
@@ -102,10 +102,10 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.7-04 COMPLETE — loop closed; 
 
 ## Session Continuity
 
-Last session: 2026-06-19 — **Closed v11.7-04 (P2 sweep)** — PLAN→APPLY→UNIFY ✓, commit `feat(v11.7-04)`. find_setlists_from_template + find_contact; index-free (single-field + rowOrg wall, NO deploy); tsc 0 / emulator 24/24 / next build --webpack 0. Qualify caught+fixed a date-serialization GAP (Timestamp → serializeSetlist). Prior: closed v11.7-03 (setlist reverse-lookup); v11.7-02 (find_user); v11.7-01 audit. Photo-import DROPPED (Daniel, [[feedback_no_photo_import]]).
-Stopped at: **✅ v11.7-04 COMPLETE (phase boundary) — ready to plan v11.7-05.**
-Next action: **`/paul:plan` for Phase v11.7-05 (F3 library browse density/filters).** UI phase — **/ui-ux-pro-max BLOCKING** (consumer + author surfaces; CRC byte-identical where shared). Scope: thumbnails, composer/recency metadata, search/filter ergonomics on the library browse surface. **DEFER `list_recent_commands` + `list_recent_library_changes` → v11.8** (infra-blocked).
-Resume file: **`.paul/phases/v11.7-04-reverse-index-sweep/v11.7-04-01-SUMMARY.md`** → then `.paul/ROADMAP.md` (§ v11.7-05 detail) + `.paul/research/v11-7-01-mcp-discovery-verify-REPORT-2026-06-18.md` (F3 fold-forward context).
+Last session: 2026-06-22 — **Closed Plan v11.7-05-01 (library row density + composer)** — PLAN→APPLY→UNIFY ✓, commit `feat(v11.7-05-01)`. Densified LibraryFileRow + `splitChartComposer` sub-label + key/recency at all widths; TEXT-ONLY (no thumbnails, Daniel). tsc 0 / library 53/53 / next build --webpack 0. Prior: created 05-01 via /paul:discuss; closed v11.7-04. Photo-import DROPPED ([[feedback_no_photo_import]]).
+Stopped at: **🚧 v11.7-05 Plan 1 of 2 closed — Plan 02 (bind-picker) NEXT (phase NOT complete).**
+Next action: **`/paul:plan` for Plan v11.7-05-02 (bind-picker metadata).** Apply `splitChartComposer` + compact key/recency to `ChartBindPopover` + `ChartBindDialog` (`src/components/setlist/grid/`) — already-dense `cmdk` rows that currently show NO key/composer/recency; it maps Song objects (song.key/title available). /ui-ux-pro-max BLOCKING. After 05-02 (final plan) → phase transition (PROJECT/ROADMAP evolve + phase done) → v11.7-06.
+Resume file: **`.paul/phases/v11.7-05-library-density/v11.7-05-01-SUMMARY.md`** + **CONTEXT.md** → then `src/components/setlist/grid/ChartBindPopover.tsx` (225 lines; recent/library cmdk rows at `px-2 py-1 text-sm`) + `src/lib/library/chart-composer.ts` (reuse).
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context (v11.7):
 - **find_user (02) verified-ready:** `users` collection has uid/displayName/email/role/musicianProfile.instrument/.schedulingTier/orgIds. DROP the instrument gate (`roster.ts:114–126` is the bug). role/email queryable now (email in-memory filter; `(orgId,email)` index optional); name=app-side substring. Tenant via `orgFrom`+`rowOrgIds` (`org-context.ts`), gate `assertEditor`. Cheap `includeProfileless` interim available on `list_musicians`.

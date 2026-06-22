@@ -640,3 +640,9 @@ shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iP
 ## v11.6-03-04 (WS-29/30 — off-site SW + audio, ACCEPTED residuals) — real 11" iPad, post-deploy
 - **WS-30 full offline reload (should already work):** open a `/perform/setlist/<id>` online, confirm "Saved N/N", drop wifi, then **hard-reload (F5)** that same URL → the set re-renders from cache (HTML + chunks), charts still readable. *(Known accepted residual, NOT a fix target: soft-navigating to a DIFFERENT, not-yet-visited setlist while offline will fail — open the set before leaving wifi.)*
 - **WS-29 audio offline (accepted edge):** with an audio-bonded chart cached, go offline and open it → audio is best-effort and may not start on iPad WebKit (`<audio src=blob:>` rejection). ACCEPTED residual — confirm it at least fails gracefully ("Audio file not found"), no crash. *(No audio rows in the 3 camp sets.)*
+
+## v11.7-05-01 (F3 library density — LibraryFileRow) — real 11" iPad, post-deploy
+- **Dense track-list rows:** open `/library` signed-in → chart rows read as a compact Logic-Pro-style track list (smaller title/icon, tighter rows), NOT the old spacious cards. Tapping a row still opens/selects the chart; long-press still enters select mode.
+- **Composer sub-label:** charts with a `(Composer)` in the filename show the composer as a dimmed, smaller text beside the title (e.g. "Hashkivenu" + dimmed "Klepper-Freelander"), not mashed into the bold title. Charts without one show just the title (no empty slot).
+- **Key + recency at all widths:** the key badge (e.g. "Dm") and the "Last: <date> · N×" recency read in BOTH iPad portrait and landscape (recency was previously hidden on narrow widths).
+- **Touch targets:** every row is comfortably tappable (≥44px) despite the denser look.
