@@ -13,6 +13,23 @@ plan or an emergent phase.
 
 ---
 
+## ⏳ v11.7-07-01 — Authed BL design pass + cross-org leader-wall (real device)
+
+**Deployed commit:** `<pending push>` (prod `master`).
+
+Code/build-proven (tsc 0, `next build --webpack` 0, nav+org 39/39). Two parts:
+
+**A — teal glow (visual):** On **brotherslazaroff.live** signed in, confirm the active
+nav link (desktop ≥768px) and the active/center **mobile tab bar** tabs glow **teal**,
+not purple. On **centralreform.live**, confirm CRC's indigo glow is unchanged (byte-identical).
+
+**B — cross-org leader-wall:** Sign in as a both-org leader (David / a minted both-org
+session) on **brotherslazaroff.live** → dashboard, library, manage show ONLY brotherslazaroff
+setlists + library rows + the BL wordmark/teal theme; NO CRC content or CRC chrome flashes.
+Reverse-check on **centralreform.live** → CRC content + CRC branding, no BL bleed.
+(Data-layer wall shipped v11.7-06; this confirms the authed surface reads it correctly.)
+Re-open the phase only if a cross-tenant leak is observed.
+
 ## ⏳ v11.6-04-02 (WS-21) — QR approval claim-lag fallback (real device)
 
 **Deployed commit:** `cdfc16cead` (prod `master`).

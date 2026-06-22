@@ -214,6 +214,14 @@
   /* The login hero composites this performance photo UNDER the bl-hero gradient
      (see @utility bl-hero). Sourced from brotherslazaroff.com (Joe's Cafe). */
   --bl-hero-image: url('/brands/brotherslazaroff/hero.jpg');
+  /* v11.7-07-01: retune the active-state glow accents from CRC indigo (hue 275)
+     to the BL teal brand (hue 210, matching --brand) so the desktop active nav
+     link + the mobile tab bar's active/center tabs glow teal, not purple. These
+     override the :root tokens consumed via var() — no component edits needed for
+     MobileTabBar; CRC's :root values are untouched (CRC byte-identical). */
+  --shadow-brand-glow: 0 0 12px oklch(0.72 0.115 210 / 0.40);
+  --shadow-brand-glow-soft: 0 0 14px oklch(0.72 0.115 210 / 0.20);
+  --nav-active-glow: 0 0 10px oklch(0.72 0.115 210 / 0.30);
 }
 
 .dark[data-org="brotherslazaroff"] {
@@ -281,6 +289,10 @@
 :root {
   --shadow-brand-glow: 0 0 12px oklch(0.50 0.20 275 / 0.3);
   --shadow-brand-glow-soft: 0 0 14px oklch(0.50 0.20 275 / 0.15);
+  /* v11.7-07-01: active-nav-link glow. Default = the prior DesktopHeader inline
+     literal verbatim (CRC pixels unchanged); overridden to teal under
+     [data-org="brotherslazaroff"] so BL stops glowing CRC-indigo. */
+  --nav-active-glow: 0 0 10px oklch(0.50 0.20 275 / 0.2);
 }
 
 @utility pt-safe {
