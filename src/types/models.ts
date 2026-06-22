@@ -177,7 +177,6 @@ export interface Recording {
     fileName?: string        // original uploaded filename
     mimeType?: string        // audio mime, e.g. 'audio/mpeg'
     storagePath: string      // recordings/{id}.{ext} — see getRecordingStoragePath
-    durationSeconds?: number // for the v70-03 inline <audio> UI
     notes?: string           // free-form attribution (v7.0 constraint #4)
     createdAt: FirestoreDate
     createdBy: string        // uid of the uploader

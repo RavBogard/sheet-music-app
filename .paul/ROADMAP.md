@@ -20,7 +20,7 @@ Status: 🚧 **In Progress** · Phases: **1 of 7** (01 ✅ verify-first audit �
 | v11.7-03 | P1 setlist reverse-lookup — `find_setlists_referencing_chart` + `search_setlists` | 01 ✅ | ✅ Complete | 2026-06-19 |
 | v11.7-04 | P2 reverse-index sweep (trimmed) — `find_setlists_from_template`, `find_contact` (index-free per 03 idiom; P4/P5 list_recent_* DEFER → v11.8) | 01 ✅ | ✅ Complete | 2026-06-19 |
 | v11.7-05 | F3 library browse density — TEXT-ONLY dense rows + composer/key/recency (NO thumbnails — Daniel 2026-06-22). LibraryFileRow (01 `feat(v11.7-05-01)`) + bind-picker ChartBindPopover/Dialog (02 `feat(v11.7-05-02)`, shared ChartPickerItemContent) [/ui-ux-pro-max] | 01 ✅ / 02 ✅ | ✅ Complete | 2026-06-22 |
-| v11.7-06 | Infra adjacents fold — recordings org-scoping + upload orgId stamp · `finalize_chart_upload` signed-URL org-stamp · anon chord-cache org-scoping · v7.0 fold-forward re-triage | TBD | Not started | - |
+| v11.7-06 | Infra adjacents fold — recordings org-scoping + upload orgId stamp · `finalize_chart_upload` signed-URL org-stamp · anon chord-cache org-scoping · v7.0 fold-forward re-triage | 01 `feat(v11.7-06-01)` ✅ / 02 `feat(v11.7-06-02)` ✅ / 03 `feat(v11.7-06-03)` ✅ | ✅ Complete | 2026-06-22 |
 | v11.7-07 | Authed-broslaz design pass + cross-org leader-wall UI check [/ui-ux-pro-max BLOCKING] | TBD | Not started | - |
 
 ### Phase v11.7-01: Verify-first audit [DISCOVERY — verify-first, blocks the MCP-build phases]
@@ -48,9 +48,13 @@ Shipped (2 plans):
 AC PASS both plans; tsc 0 / library 53/53 + setlist-grid 167 / `next build --webpack` 0. iPad density UAT items (non-blocking) logged.
 Plans: 01 ✅ + 02 ✅ (SUMMARYs in `.paul/phases/v11.7-05-library-density/`)
 
-### Phase v11.7-06: Infra adjacents fold
-Focus: The v11.5/v11.3-deferred infra adjacents — recordings-collection org-scoping + `/api/recordings/upload` orgId stamp (stamp from host x-org-id, THEN host-filter the subscribe); `finalize_chart_upload` signed-URL org-stamp gap; anon chord-cache org-scoping (POST chordData + PATCH nativeKey, org-scoped together); v7.0 fold-forward re-triage (from 01). Any org-scoping backfill gets dry-run + idempotency marker + rollback.
-Plans: TBD (defined during /paul:plan)
+### Phase v11.7-06: Infra adjacents fold — ✅ COMPLETE (3/3, 2026-06-22)
+Focus: The v11.5/v11.3-deferred infra adjacents — recordings-collection org-scoping + `/api/recordings/upload` orgId stamp; `finalize_chart_upload` signed-URL org-stamp gap; anon chord-cache org-scoping; v7.0 fold-forward re-triage.
+Shipped (3 plans, backend/MCP+API only — NO backfill, NO rules change, one composite index):
+- **01 `feat(v11.7-06-01)`** — recordings org-scoping end-to-end: upload stamps `orgId = coerceOrgId(x-org-id)` (was hardcoded DEFAULT_ORG_ID); `subscribeRecordingsForSong(songId,orgId,cb)` + `where("orgId","==")`; NEW `recordings(orgId,songId,createdAt)` index DEPLOYED. Query-level scoping (rules untouched). No backfill (prod recordings empty). upload-route 3 + RecordingBindPopover 4.
+- **02 `feat(v11.7-06-02)`** — `finalizeChartUpload(uid,args,org?)` org-stamps the NEW chart only (heal returns earlier → never re-tenanted; optional/no-default so the chunked path isn't double-stamped); handler passes `orgFrom(extra)`. Anon chord-cache POST+PATCH `assertChordCacheTenant` (coerceOrgId vs `rowOrg`): 403 on definite cross-tenant mismatch, same-tenant + row-absent write-through. upload-session emulator 23/23 + chord-cache 13/13.
+- **03 `feat(v11.7-06-03)`** — v7.0 fold-forward tail: removed dead `Recording.durationSeconds`; verify-first retired the rest (`extractApiError` STALE, no dead TanStack block [only live react-table], caps already exist; 40→44px + ImporterModal UI → deferred to v11.7-07).
+AC PASS all plans; tsc 0 / `next build --webpack` 0 throughout. SUMMARYs in `.paul/phases/v11.7-06-infra-adjacents/`.
 
 ### Phase v11.7-07: Authed-broslaz design pass + cross-org leader-wall UI check [/ui-ux-pro-max BLOCKING]
 Focus: Design polish of the authed broslaz surface + a UI check that the cross-org leader wall reads correctly (a both-org leader's authoring scope is clear; no CRC leak on BL). CRC byte-identical where shared.
