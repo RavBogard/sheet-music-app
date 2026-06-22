@@ -2765,7 +2765,9 @@ export function registerChartUploadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await finalizeChartUpload(uidFrom(extra), args)),
+            jsonResult(
+                await finalizeChartUpload(uidFrom(extra), args, orgFrom(extra)),
+            ),
     )
 
     server.registerTool(

@@ -283,6 +283,75 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         expect(session.resultFileId).toBe("upload-new-1")
     })
 
+    // v11.7-06-02 AC-1: signed-URL finalize org-stamps the NEW chart from the
+    // caller's host org (mirrors the chunked-commit stamp; processChartUpload is
+    // mocked so we seed the row stampOrg would update).
+    it("finalize org-stamps the new chart with the caller's host org", async () => {
+        mockGetSignedUrl.mockResolvedValueOnce(["https://signed.example/put-org"])
+        const init = await requestChartUploadUrl(ADMIN, {
+            title: "BL Signed Chart",
+            mimeType: "application/pdf",
+        })
+        if (!("ok" in init) || !init.ok) throw new Error("init failed")
+
+        mockStagedExists.mockResolvedValueOnce([true])
+        mockStagedDownload.mockResolvedValueOnce([Buffer.from("%PDF broslaz")])
+        // Seed the row + songs mirror processChartUpload "would" have written, so
+        // stampOrg (updates existing docs only) has something to stamp.
+        await db()
+            .collection("library_index")
+            .doc("upload-org-1")
+            .set({ name: "BL Signed Chart", status: "active" })
+        await db().collection("songs").doc("upload-org-1").set({ status: "active" })
+        mockProcessChartUpload.mockResolvedValueOnce({
+            ok: true,
+            fileId: "upload-org-1",
+            title: "BL Signed Chart",
+            collection: "uploads",
+            mimeType: "application/pdf",
+            storageUrl: "gs://x/library/upload-org-1.pdf",
+        })
+
+        const r = await finalizeChartUpload(
+            ADMIN,
+            { uploadSessionId: init.uploadSessionId },
+            "brotherslazaroff",
+        )
+        expect("ok" in r && r.ok).toBe(true)
+        const row = (
+            await db().collection("library_index").doc("upload-org-1").get()
+        ).data()!
+        expect(row.orgId).toBe("brotherslazaroff")
+    })
+
+    // v11.7-06-02 AC-2: heal mode must NOT re-tenant an existing chart — the
+    // org-stamp lives only on the new-chart return path, after heal returns.
+    it("finalize heal mode does NOT re-stamp an existing chart's org", async () => {
+        const ORPHAN = "upload-orphan-org-keep-1"
+        await db().collection("library_index").doc(ORPHAN).set({
+            name: "Existing CRC Chart.pdf",
+            status: "orphaned",
+            source: "local_upload",
+            orgId: "crc",
+        })
+
+        const sessionId = await stageSession(ADMIN)
+        mockStagedExists.mockResolvedValueOnce([true])
+        mockStagedDownload.mockResolvedValueOnce([Buffer.from("%PDF healed")])
+
+        const r = await finalizeChartUpload(
+            ADMIN,
+            { uploadSessionId: sessionId, targetFileId: ORPHAN },
+            "brotherslazaroff",
+        )
+        expect("ok" in r && r.ok).toBe(true)
+        if (!("ok" in r) || !r.ok) return
+        expect(r.healed).toBe(true)
+        // org-stamp skipped on the heal path → orgId stays "crc" (no cross-tenant move).
+        const row = (await db().collection("library_index").doc(ORPHAN).get()).data()!
+        expect(row.orgId).toBe("crc")
+    })
+
     it("finalize refuses if no bytes were staged at the path", async () => {
         mockGetSignedUrl.mockResolvedValueOnce(["https://signed.example/put-3"])
         const init = await requestChartUploadUrl(ADMIN, {

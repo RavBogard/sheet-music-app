@@ -332,6 +332,11 @@ export interface FinalizeChartUploadResult {
 export async function finalizeChartUpload(
     uid: string,
     args: FinalizeChartUploadArgs,
+    // v11.7-06-02: optional caller host org. When given, the NEW chart is
+    // org-stamped (heal mode returns earlier, so an existing chart is never
+    // re-tenanted). OPTIONAL/no-default on purpose — absent means "don't stamp"
+    // so the chunked-commit path (which stamps externally) isn't double-stamped.
+    org?: OrgId,
 ): Promise<FinalizeChartUploadResult | RichErrorEnvelope> {
     if (!args.uploadSessionId?.trim()) {
         return richError(
@@ -563,6 +568,10 @@ export async function finalizeChartUpload(
         finalizedAt: FieldValue.serverTimestamp(),
         resultFileId: result.fileId,
     })
+
+    // v11.7-06-02: org-stamp the NEW chart from the caller's host org (heal mode
+    // returned earlier, so this only ever stamps a freshly-created chart).
+    if (org) await stampOrg(db, result.fileId, org)
 
     return {
         ok: true,

@@ -3,7 +3,34 @@ import { getFirestore } from "firebase-admin/firestore"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import type { AuthResult } from "@/lib/api-auth"
+import { coerceOrgId } from "@/lib/org/registry"
+import { rowOrg } from "@/lib/org/membership"
 import { z } from "zod"
+
+/**
+ * v11.7-06-02: cross-tenant write guard for the anon chord-cache writes.
+ * Resolves the library_index/{fileId} row's org and compares it against the
+ * host org (x-org-id). Returns a 403 on a DEFINITE cross-tenant mismatch; null
+ * when same-tenant OR the row doesn't exist yet — the latter preserves the anon
+ * scan-cache write-through path (benign derived data; err-public within tenant,
+ * hard wall across). NOTE: module-local helper, not exported — App Router
+ * route.ts may only export HTTP handlers + route config.
+ */
+async function assertChordCacheTenant(
+    db: ReturnType<typeof getFirestore>,
+    fileId: string,
+    req: import("next/server").NextRequest,
+): Promise<NextResponse | null> {
+    const hostOrg = coerceOrgId(req.headers.get("x-org-id"))
+    const row = await db.collection("library_index").doc(fileId).get()
+    if (row.exists && rowOrg(row.data()?.orgId) !== hostOrg) {
+        return NextResponse.json(
+            { error: "cross-tenant chord-cache write refused" },
+            { status: 403 },
+        )
+    }
+    return null
+}
 
 interface ChordPosition {
     text: string
@@ -103,6 +130,10 @@ export const POST = createApiHandler(
 
         const db = getFirestore()
 
+        // v11.7-06-02: refuse a cross-tenant chordData write (row-absent → allow).
+        const tenantBlock = await assertChordCacheTenant(db, fileId, ctx.req)
+        if (tenantBlock) return tenantBlock
+
         const cacheData: PageChordData = {
             chords: chords.map((c: ChordPosition) => {
                 // Firestore rejects undefined values, so fallback optional fields to null
@@ -181,6 +212,11 @@ export const PATCH = createApiHandler(
         }
 
         const db = getFirestore()
+
+        // v11.7-06-02: refuse a cross-tenant metadata write (row-absent → allow).
+        const tenantBlock = await assertChordCacheTenant(db, fileId, ctx.req)
+        if (tenantBlock) return tenantBlock
+
         const updates: Record<string, unknown> = {}
 
         if (nativeKey !== undefined) {

@@ -172,4 +172,60 @@ describe("v11.3-01-02 · /api/library/chord-cache · anon read/persist (BUG-4)",
         expect(res.status).toBe(429)
         expect(mockSet).not.toHaveBeenCalled()
     })
+
+    // ── v11.7-06-02: cross-tenant write guard (POST + PATCH) ─────────────────
+
+    const crcRow = { exists: true, data: () => ({ orgId: "crc" }) }
+
+    it("refuses a cross-tenant POST (CRC row, broslaz host) → 403, no write", async () => {
+        mockGet.mockResolvedValue(crcRow)
+        const res = await POST(
+            makeReq("/api/library/chord-cache", {
+                method: "POST",
+                headers: { "x-org-id": "brotherslazaroff" },
+                body: { fileId: "upload-x", page: 0, chords: [{ text: "C", x: 1, y: 2 }] },
+            }),
+        )
+        expect(res.status).toBe(403)
+        expect(mockSet).not.toHaveBeenCalled()
+    })
+
+    it("allows a same-tenant POST (CRC row, CRC host) → 200, write", async () => {
+        mockGet.mockResolvedValue(crcRow)
+        const res = await POST(
+            makeReq("/api/library/chord-cache", {
+                method: "POST",
+                headers: { "x-org-id": "crc" },
+                body: { fileId: "upload-x", page: 0, chords: [{ text: "C", x: 1, y: 2 }] },
+            }),
+        )
+        expect(res.status).toBe(200)
+        expect(mockSet).toHaveBeenCalledTimes(1)
+    })
+
+    it("allows a POST when no library_index row exists yet → 200 (write-through)", async () => {
+        // mockGet default = { exists: false } → row absent → guard allows.
+        const res = await POST(
+            makeReq("/api/library/chord-cache", {
+                method: "POST",
+                headers: { "x-org-id": "brotherslazaroff" },
+                body: { fileId: "upload-x", page: 0, chords: [{ text: "C", x: 1, y: 2 }] },
+            }),
+        )
+        expect(res.status).toBe(200)
+        expect(mockSet).toHaveBeenCalledTimes(1)
+    })
+
+    it("refuses a cross-tenant PATCH (CRC row, broslaz host) → 403, no write", async () => {
+        mockGet.mockResolvedValue(crcRow)
+        const res = await PATCH(
+            makeReq("/api/library/chord-cache", {
+                method: "PATCH",
+                headers: { "x-org-id": "brotherslazaroff" },
+                body: { fileId: "upload-x", nativeKey: "G" },
+            }),
+        )
+        expect(res.status).toBe(403)
+        expect(mockSet).not.toHaveBeenCalled()
+    })
 })
