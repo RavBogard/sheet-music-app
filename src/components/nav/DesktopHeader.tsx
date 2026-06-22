@@ -173,7 +173,7 @@ export function DesktopHeader(props: AppNavigationProps) {
                                 value={searchQuery}
                                 onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true) }}
                                 onFocus={() => setShowResults(true)}
-                                className="w-48 lg:w-64 bg-brand/5 border-border/50 rounded-full pl-9 h-9 text-sm focus:ring-brand/10 focus:bg-background focus:border-brand/30 transition-all fluid-interaction shadow-inner"
+                                className="w-48 lg:w-64 bg-brand/5 border-border/50 rounded-full pl-9 h-11 text-sm focus:ring-brand/10 focus:bg-background focus:border-brand/30 transition-all fluid-interaction shadow-inner"
                             />
                             {showResults && searchResults.length > 0 && (
                                 <div className="absolute top-full mt-2 left-0 right-0 material-thin rounded-xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 border border-brand/10">
