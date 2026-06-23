@@ -11,11 +11,11 @@ See: .paul/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Milestone: **🚧 v11.7 — Discoverability & Deferred Backlog — OPENED 2026-06-18.** Headline = MCP **Asymmetry Principle** (every write/act-by-id tool gets a read/resolve-id path; reverse-index reads for write-side pointers). BROAD scope (Daniel): MCP discoverability + folded deferred backlog (F3 library density, infra org-scoping adjacents, broslaz design pass). 7 phases. Oracle `docs/ACCESS-POLICY.md` v0.4; cross-tenant hard wall governs the new resolvers. Source consumed: `.paul/MILESTONE-CONTEXT.md`. **Photo-import EXCLUDED (Daniel declined); F5 comms = gated stretch.** (v11.6 ✅ `v11.6.0`; v11.5 ✅ `v11.5.0`.)
-Phase: **v11.7-07 (Authed-broslaz design pass + cross-org leader-wall UI check) — ✅ COMPLETE (2/2, 2026-06-22).** 01 teal active-glow bleed fix (BL-scoped/CRC-byte-identical, `feat(v11.7-07-01)`); 02 verify-first tap-target/ImporterModal close-out — desktop search input h-9→h-11; rest already-satisfied/accepted (`feat(v11.7-07-02)`). /ui-ux-pro-max held both plans. **This was the LAST phase. v11.7 = 7 of 7 phases COMPLETE → ready for `/paul:complete-milestone` (tag v11.7.0).**
-Plan: **`v11.7-07-02` ✅ COMPLETE + UNIFIED (2 of 2 — phase closed).** Verify-first close-out: the 40→44px sweep was already done at the component level (Button h-11/size-11; Perform; library; nav) → fixed only the desktop-header search Input (h-9→h-11); ImporterModal P3 = accept-as-is (low-traffic authoring surface Daniel bypasses; dense-table-editor exception). CRC+BL shared a11y. tsc 0 / build 0.
-Status: **✅ v11.7 — 7 of 7 phases COMPLETE (01–07 ✅). Milestone ready to close (tag v11.7.0).** (list_recent_* DEFER → v11.8.)
-Last activity: 2026-06-22 — **Closed `v11.7-07-02` + phase v11.7-07 (2/2) → v11.7 milestone 7/7 COMPLETE** — `feat(v11.7-07-02)`; SUMMARY + transition docs. Prior: `feat(v11.7-07-01)` teal-glow fix.
+Milestone: **✅ v11.7 — Discoverability & Deferred Backlog — COMPLETE & CLOSED 2026-06-22 (tag `v11.7.0`, `package.json` 11.7.0; archived `.paul/milestones/v11.7.0-ROADMAP.md`).** 7 phases / 11 plans — MCP Asymmetry Principle (discovery/reverse-read for every act-by-id write tool) + folded deferred backlog (F3 density, infra cross-tenant org-scoping, authed-broslaz design pass). **No active milestone.** Next: `/paul:discuss-milestone` or `/paul:milestone` → v11.8 (candidate backlog: P4/P5 `list_recent_*` infra-blocked tools; F5 comms gated stretch; SERVICE_TYPE_LABELS vocab if a non-synagogue tenant needs it; F4 BL key badges await authoring). Photo-import OFF. (v11.6 ✅ `v11.6.0`; v11.5 ✅ `v11.5.0`.)
+Phase: **None active** — v11.7 closed at phase 07/07.
+Plan: **None** — awaiting next milestone.
+Status: **✅ v11.7 CLOSED (tag `v11.7.0`). Production on `master`, in sync with `origin/master`.** Ready for next milestone.
+Last activity: 2026-06-22 — **Closed v11.7 milestone (7/7 phases, tag `v11.7.0`)** — MILESTONES entry + ROADMAP archive + PROJECT/STATE/paul.json evolve + package.json 11.6.0→11.7.0. Prior: `feat(v11.7-07-02)` phase-07 close.
 
 **Tenancy model (locked 2026-06-09 — the spec everything derives from):**
 - **Consumers (musicians + members):** NOT per-org-gated; anyone uses either site. The **landing-page host** determines the experience (branding/setlists/library) via the `x-org-id` proxy header / `<html data-org>`. Consistent with err-public.
@@ -46,12 +46,10 @@ Last activity: 2026-06-22 — **Closed `v11.7-07-02` + phase v11.7-07 (2/2) → 
 ## Loop Position
 
 ```
-PLAN ──▶ APPLY ──▶ UNIFY        [v11.7-07 COMPLETE (2/2) — v11.7 milestone 7/7 done; ready to close]
-  ✓        ✓        ✓
+PLAN ──▶ APPLY ──▶ UNIFY        [v11.7 milestone COMPLETE & CLOSED (tag v11.7.0) — no active loop]
+  ○        ○        ○
 ```
-(v11.7-07 ✅ CLOSED (2/2): 01 `feat(v11.7-07-01)` teal active-glow bleed fix (BL-scoped/CRC-byte-identical) + 02 `feat(v11.7-07-02)` verify-first tap-target/ImporterModal close-out (search input h-9→h-11; rest already-satisfied/accepted). **v11.7 = 7 of 7 phases COMPLETE.** Next: `/paul:complete-milestone` → tag `v11.7.0`, bump package.json, archive ROADMAP. STOPPED at the milestone-close boundary for Daniel's go. UAT-PENDING carries the v11.7-07-01 leader-wall + teal-glow visual check.)
-(Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16. Full record in MILESTONES.md.)
-(Prior: v11.5 ✅ COMPLETE tag `v11.5.0` 2026-06-16 — phases 01/02/04/05 done, 03 dropped → v11.7 backlog. Full record in MILESTONES.md § v11.5 + `.paul/milestones/v11.5.0-ROADMAP.md`.)
+(v11.7 ✅ COMPLETE & CLOSED 2026-06-22 — 7 of 7 phases, 11 plans, tag `v11.7.0`, `package.json` 11.7.0, archived `.paul/milestones/v11.7.0-ROADMAP.md`. No active loop. Next: `/paul:discuss-milestone` or `/paul:milestone` → v11.8. UAT-PENDING carries the v11.7-07-01 leader-wall + teal-glow visual check (live/non-blocking). Prior milestones: v11.6 `v11.6.0`, v11.5 `v11.5.0` — full record in MILESTONES.md.)
 
 ## Execution Substrate (bongo .coord/)
 
@@ -104,9 +102,9 @@ PLAN ──▶ APPLY ──▶ UNIFY        [v11.7-07 COMPLETE (2/2) — v11.7 m
 ## Session Continuity
 
 Last session: 2026-06-22 — **Completed all of v11.7-06 (Infra adjacents, 3/3)** — three full PLAN→APPLY→UNIFY loops: `feat(v11.7-06-01)` recordings org-scoping (upload host-org stamp + filtered subscribe + deployed `recordings(orgId,songId,createdAt)` index; no backfill — prod recordings empty); `feat(v11.7-06-02)` finalize signed-URL org-stamp (heal-skip) + anon chord-cache cross-tenant guard; `feat(v11.7-06-03)` v7.0 fold-forward tail (dead durationSeconds removed; rest retired verify-first; UI→07) + phase close. All three cross-tenant org-scoping gaps closed. tsc 0 / tests green / build 0 throughout. SESSION PAUSED for context clear. Prior: closed v11.7-05 (F3 density, 2/2).
-Stopped at: **v11.7-07 COMPLETE (2/2) → v11.7 milestone 7/7 COMPLETE. STOPPED at the milestone-close boundary** (`feat(v11.7-07-02)` committed). Awaiting Daniel's go on the milestone close.
-Next action: **`/paul:complete-milestone`** — tag `v11.7.0`, bump `package.json` 11.6.0→11.7.0, evolve PROJECT/MILESTONES, archive ROADMAP → `.paul/milestones/v11.7.0-ROADMAP.md`. Then v11.8 (deferred: P4/P5 `list_recent_*` infra-blocked tools; F4 BL key badges await authoring).
-Resume file: **`.paul/phases/v11.7-07-broslaz-design-pass/`** (01/02 SUMMARYs) + `.paul/ROADMAP.md`.
+Stopped at: **v11.7 milestone COMPLETE & CLOSED (tag `v11.7.0`).** All bookkeeping done (MILESTONES entry, ROADMAP archive+reorg, PROJECT/STATE/paul.json, package.json 11.7.0). Release commit + tag-push pending in this session.
+Next action: **`/paul:discuss-milestone`** (or `/paul:milestone`) to open **v11.8** — candidate backlog: P4/P5 `list_recent_*` (infra-blocked: bridge command-log + persistent `library_changes` collection), F5 comms (gated/externally-blocked), SERVICE_TYPE_LABELS vocab (only if a non-synagogue tenant), F4 BL key badges (await authoring). Photo-import OFF.
+Resume file: **`.paul/ROADMAP.md`** + `.paul/MILESTONES.md`.
 Git strategy: master (prod). `git pull` first next session (multi-computer); push `origin master` (NOT master:main).
 Resume context (v11.7):
 - **find_user (02) verified-ready:** `users` collection has uid/displayName/email/role/musicianProfile.instrument/.schedulingTier/orgIds. DROP the instrument gate (`roster.ts:114–126` is the bug). role/email queryable now (email in-memory filter; `(orgId,email)` index optional); name=app-side substring. Tenant via `orgFrom`+`rowOrgIds` (`org-context.ts`), gate `assertEditor`. Cheap `includeProfileless` interim available on `list_musicians`.
