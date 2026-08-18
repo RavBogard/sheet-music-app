@@ -355,6 +355,48 @@ describe("SongChartsLibrary", () => {
         expect(screen.queryByText(/Shireinu/)).toBeNull()
     })
 
+    // ── Nava Tehilah collection (2026-08-18) ──
+
+    it("crc renders the Nava Tehilah tab; broslaz omits it", () => {
+        const { unmount } = render(<SongChartsLibrary org="crc" />)
+        expect(screen.getByText(/Nava Tehilah \(\d+\)/)).toBeDefined()
+        unmount()
+
+        render(<SongChartsLibrary org="brotherslazaroff" />)
+        expect(screen.queryByText(/Nava Tehilah/)).toBeNull()
+    })
+
+    // The 'core' tab is a NEGATIVE filter (every collection that is not
+    // supplemental/uploads/nava). A new collection that isn't added to that
+    // exclusion list leaks its rows into CRC Charts, which is silent and
+    // wrong — this pins the count so the leak can't come back.
+    it("keeps nava rows out of the CRC Charts count and in the Nava Tehilah count", () => {
+        const navaChart: DriveFile = {
+            id: "nava-1", name: "Niggun Tishrei.pdf", mimeType: "application/pdf",
+            collection: "nava",
+        }
+        mockDisplayedFiles = [chartFile1, navaChart]
+        mockAllFiles = [chartFile1, navaChart]
+
+        render(<SongChartsLibrary org="crc" />)
+        expect(screen.getByText("CRC Charts (1)")).toBeDefined()
+        expect(screen.getByText("Nava Tehilah (1)")).toBeDefined()
+    })
+
+    it("switching to the Nava Tehilah tab shows only nava charts", () => {
+        const navaChart: DriveFile = {
+            id: "nava-1", name: "Niggun Tishrei.pdf", mimeType: "application/pdf",
+            collection: "nava",
+        }
+        mockDisplayedFiles = [chartFile1, navaChart]
+        mockAllFiles = [chartFile1, navaChart]
+
+        render(<SongChartsLibrary org="crc" />)
+        fireEvent.click(screen.getByText("Nava Tehilah (1)"))
+        expect(screen.getByText(/Niggun Tishrei/)).toBeDefined()
+        expect(screen.queryByText(/Ma.Tovu/)).toBeNull()
+    })
+
     it("shows the admin-only 'All sites' toggle for admins, hides it for non-admins", () => {
         const { unmount } = render(<SongChartsLibrary org="brotherslazaroff" />)
         expect(screen.getByRole("switch", { name: /all sites/i })).toBeDefined()

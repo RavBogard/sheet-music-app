@@ -55,12 +55,13 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 export const MAX_CHART_UPLOAD_BYTES = 25 * 1024 * 1024 // 25 MB — matches HTTP route
 
-export type LibraryCollection = "core" | "supplemental" | "uploads"
+export type LibraryCollection = "core" | "supplemental" | "uploads" | "nava"
 
 export const ALLOWED_LIBRARY_COLLECTIONS: LibraryCollection[] = [
     "core",
     "supplemental",
     "uploads",
+    "nava",
 ]
 
 export interface ProcessChartUploadInput {

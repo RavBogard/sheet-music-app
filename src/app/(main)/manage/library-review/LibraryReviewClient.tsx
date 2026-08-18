@@ -964,7 +964,8 @@ function EditForm({
             if (
                 collection === "core" ||
                 collection === "supplemental" ||
-                collection === "uploads"
+                collection === "uploads" ||
+                collection === "nava"
             ) {
                 edits.collection = collection
             }
@@ -1043,6 +1044,7 @@ function EditForm({
                     >
                         <option value="core">core</option>
                         <option value="supplemental">supplemental</option>
+                        <option value="nava">nava</option>
                         <option value="uploads">uploads</option>
                     </select>
                 </Field>

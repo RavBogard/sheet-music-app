@@ -543,13 +543,13 @@ export function registerReadTools(server: McpServer): void {
         "list_library",
         {
             description:
-                "Browse the chart-file index alphabetically — every chart in the library, with its collection ('core' | 'supplemental' | 'uploads'), mimeType, file size, and upload metadata. Use this when the user wants to SEE the catalog (\"what's in core?\", \"show me every chart I've uploaded\"); use search_library for targeted lookup by title/key/BPM. Optional collection filter narrows to one section. Paged via offset+limit (default limit 50; values above 200 are silently clamped to 200). Returns rows + a total count so the caller can detect whether more pages exist. Default browse hides folders, audio files, dotfiles like .DS_Store, AND rows the dedupe pass has marked status:'duplicate' / Drive-side status:'orphaned' — same hidden-set as search_library and the in-app /library catalog, so counts surfaced here match what Daniel sees in the browser. Pass includeNonCharts: true for raw artifacts (folders/audio/junk); pass includeNonChartHealthy: true to also include duplicate/orphaned rows (audit/reconciliation only). Metadata only — to fetch chart bytes call download_chart, or to print a setlist's packet call generate_gig_packet. Cycle-3 DATA-002: response carries a uniform `coverage:{total, eligible, scanned, filteredOut:{byStatus, byCollection, byOther}}` field that matches the same shape returned by dedupe_library / backfill_library_index / reconcile_library — letting operators correlate scan totals across the four hygiene tools without spelunking into source.",
+                "Browse the chart-file index alphabetically — every chart in the library, with its collection ('core' | 'supplemental' | 'nava' | 'uploads'), mimeType, file size, and upload metadata. Use this when the user wants to SEE the catalog (\"what's in core?\", \"show me every chart I've uploaded\"); use search_library for targeted lookup by title/key/BPM. Optional collection filter narrows to one section. Paged via offset+limit (default limit 50; values above 200 are silently clamped to 200). Returns rows + a total count so the caller can detect whether more pages exist. Default browse hides folders, audio files, dotfiles like .DS_Store, AND rows the dedupe pass has marked status:'duplicate' / Drive-side status:'orphaned' — same hidden-set as search_library and the in-app /library catalog, so counts surfaced here match what Daniel sees in the browser. Pass includeNonCharts: true for raw artifacts (folders/audio/junk); pass includeNonChartHealthy: true to also include duplicate/orphaned rows (audit/reconciliation only). Metadata only — to fetch chart bytes call download_chart, or to print a setlist's packet call generate_gig_packet. Cycle-3 DATA-002: response carries a uniform `coverage:{total, eligible, scanned, filteredOut:{byStatus, byCollection, byOther}}` field that matches the same shape returned by dedupe_library / backfill_library_index / reconcile_library — letting operators correlate scan totals across the four hygiene tools without spelunking into source.",
             inputSchema: {
                 collection: z
-                    .enum(["core", "supplemental", "uploads"])
+                    .enum(["core", "supplemental", "uploads", "nava"])
                     .optional()
                     .describe(
-                        "Library section to browse. 'core' matches the in-app CRC Charts tab (every row that is not 'supplemental' or 'uploads', including legacy rows with no collection field). Omit to list every chart across all collections.",
+                        "Library section to browse. 'core' matches the in-app CRC Charts tab (every row that is not 'supplemental', 'nava' or 'uploads', including legacy rows with no collection field). 'nava' is the Nava Tehila corpus. Omit to list every chart across all collections.",
                     ),
                 limit: z
                     .number()
@@ -2056,7 +2056,7 @@ export function registerWriteTools(server: McpServer): void {
                     .optional()
                     .describe("Display title; non-empty when supplied."),
                 collection: z
-                    .enum(["core", "supplemental", "uploads"])
+                    .enum(["core", "supplemental", "uploads", "nava"])
                     .optional()
                     .describe(
                         "Library collection. Operator override is permitted here (David's-subfolder authority does NOT bind operator edits, only AI).",
@@ -2093,7 +2093,7 @@ export function registerWriteTools(server: McpServer): void {
         "edit_enrichment",
         {
             description:
-                "Admin + band-leader — operator edit of a `library_index` row (cycle-3 a5; also available under the clearer alias `edit_library_entry`). DESPITE THE NAME, this works on ANY library_index row, not just AI-review-queue rows — a row with `enrichmentStatus: null` (never enriched) is editable too. Calls a4's shared `editEnrichment` helper: applies the supplied `edits` payload directly to the doc (including `collection` — the operator override path IS allowed even though the AI's acceptEnrichment is NOT), sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and sets `humanRenamedAt` whenever `title` is changed (so future enrichment runs won't re-rename). Editable fields: title (non-empty), collection (core|supplemental|uploads), key (string), bpm (positive number or null to clear), leadMusician (string), tags (string[]). At least one field required. v11.5-01-03 (H9): band leaders may edit tags/title/key/bpm/leadMusician on rows in THEIR OWN tenant (a row in another org returns row_not_found) but cannot change `collection` (admin-only, returns forbidden_field); admins are unscoped. For just a key/bpm fix, update_song also works. F-05 contract: `dryRun: true` (default) validates the edits payload + checks the row exists, returns `plannedPatch` without writing; real-run without `force: true` refuses. Validation failures surface as `invalid_field` rich envelopes. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
+                "Admin + band-leader — operator edit of a `library_index` row (cycle-3 a5; also available under the clearer alias `edit_library_entry`). DESPITE THE NAME, this works on ANY library_index row, not just AI-review-queue rows — a row with `enrichmentStatus: null` (never enriched) is editable too. Calls a4's shared `editEnrichment` helper: applies the supplied `edits` payload directly to the doc (including `collection` — the operator override path IS allowed even though the AI's acceptEnrichment is NOT), sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and sets `humanRenamedAt` whenever `title` is changed (so future enrichment runs won't re-rename). Editable fields: title (non-empty), collection (core|supplemental|nava|uploads), key (string), bpm (positive number or null to clear), leadMusician (string), tags (string[]). At least one field required. v11.5-01-03 (H9): band leaders may edit tags/title/key/bpm/leadMusician on rows in THEIR OWN tenant (a row in another org returns row_not_found) but cannot change `collection` (admin-only, returns forbidden_field); admins are unscoped. For just a key/bpm fix, update_song also works. F-05 contract: `dryRun: true` (default) validates the edits payload + checks the row exists, returns `plannedPatch` without writing; real-run without `force: true` refuses. Validation failures surface as `invalid_field` rich envelopes. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
             inputSchema: editLibraryEntryInputSchema,
         },
         async (args, extra) =>
@@ -2104,7 +2104,7 @@ export function registerWriteTools(server: McpServer): void {
         "edit_library_entry",
         {
             description:
-                "Admin + band-leader — operator edit of ANY `library_index` row (clearer-named alias for `edit_enrichment`; identical behavior). Use this to set/correct a chart's title, collection (core|supplemental|uploads), key, bpm, leadMusician, or tags on any library entry — the row does NOT need to be in the AI review queue. Sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and `humanRenamedAt` on a title change. v11.5-01-03 (H9): band leaders may edit tags/title/key/bpm/leadMusician on rows in THEIR OWN tenant (a row in another org returns row_not_found) but cannot change `collection` (admin-only, returns forbidden_field); admins are unscoped. For a key/bpm-only fix, update_song also works. F-05 contract: `dryRun: true` (default) returns `plannedPatch` without writing; real run needs `dryRun: false, force: true`. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
+                "Admin + band-leader — operator edit of ANY `library_index` row (clearer-named alias for `edit_enrichment`; identical behavior). Use this to set/correct a chart's title, collection (core|supplemental|nava|uploads), key, bpm, leadMusician, or tags on any library entry — the row does NOT need to be in the AI review queue. Sets `enrichmentStatus: 'human_curated'`, stamps reviewedAt/reviewedBy, and `humanRenamedAt` on a title change. v11.5-01-03 (H9): band leaders may edit tags/title/key/bpm/leadMusician on rows in THEIR OWN tenant (a row in another org returns row_not_found) but cannot change `collection` (admin-only, returns forbidden_field); admins are unscoped. For a key/bpm-only fix, update_song also works. F-05 contract: `dryRun: true` (default) returns `plannedPatch` without writing; real run needs `dryRun: false, force: true`. Returns `{ok: true, rowId, status: 'human_curated', plannedStatus, plannedPatch, dryRun}`.",
             inputSchema: editLibraryEntryInputSchema,
         },
         async (args, extra) =>
@@ -2568,15 +2568,15 @@ export function registerMonitorTools(server: McpServer): void {
  *  - scrape_chart_from_url   — Gemini-extract chord chart from a URL or raw text.
  *  - save_scraped_chart      — save scraped text content into the library.
  *
- * Collection-aware: callers pick 'core' | 'supplemental' | 'uploads' just
+ * Collection-aware: callers pick 'core' | 'supplemental' | 'nava' | 'uploads' just
  * like the in-app UploadDialog. Per-user rate limits keyed on the bearer-
  * token uid (not Claude's egress IP).
  */
 const collectionSchema = z
-    .enum(["core", "supplemental", "uploads"])
+    .enum(["core", "supplemental", "uploads", "nava"])
     .optional()
     .describe(
-        "Which library section to file the chart under. 'uploads' is the user-uploaded section (default). 'core' is the main CRC catalog — admins and band leaders may write to it. 'supplemental' is the Shireinu songbook — admins and band leaders may write to it. Musicians and canUpload-only callers should leave this unset or pass 'uploads'. NOTE: deleting from 'core' or 'supplemental' still requires admin (delete_chart).",
+        "Which library section to file the chart under. 'uploads' is the user-uploaded section (default). 'core' is the main CRC catalog — admins and band leaders may write to it. 'supplemental' is the Shireinu songbook and 'nava' is the Nava Tehila corpus — admins and band leaders may write to both. Musicians and canUpload-only callers should leave this unset or pass 'uploads'. NOTE: deleting from 'core', 'supplemental' or 'nava' still requires admin (delete_chart).",
     )
 
 export function registerChartUploadTools(server: McpServer): void {
@@ -2983,7 +2983,7 @@ export function registerChartUploadTools(server: McpServer): void {
         "delete_chart",
         {
             description:
-                "Delete a chart from the library. Only the chart's uploader or an admin may delete. Deleting from 'core' or 'supplemental' (curated catalogs) requires admin. Will REFUSE if any setlist track still references the chart — remove the tracks first via remove_track, then retry. Best-effort Storage cleanup. This action is irreversible.",
+                "Delete a chart from the library. Only the chart's uploader or an admin may delete. Deleting from 'core', 'supplemental' or 'nava' (curated catalogs) requires admin. Will REFUSE if any setlist track still references the chart — remove the tracks first via remove_track, then retry. Best-effort Storage cleanup. This action is irreversible.",
             inputSchema: {
                 fileId: z
                     .string()

@@ -112,7 +112,7 @@ const MAX_RETRY_ATTEMPTS = 3
 /** Backoff schedule in minutes — `attempts` indexes into this list. */
 const BACKOFF_MINUTES = [5, 30, 120, 360]
 
-const ALLOWED_COLLECTIONS = ["core", "supplemental", "uploads"] as const
+const ALLOWED_COLLECTIONS = ["core", "supplemental", "uploads", "nava"] as const
 
 // ─── Output schema ─────────────────────────────────────────────────────────
 

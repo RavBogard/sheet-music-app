@@ -441,6 +441,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                 >
                                     <option value="crc">CRC Charts</option>
                                     <option value="supplemental">Shireinu</option>
+                                    <option value="nava">Nava Tehilah</option>
                                     <option value="uploads">Uploads</option>
                                 </select>
                             </div>

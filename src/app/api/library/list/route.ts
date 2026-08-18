@@ -28,7 +28,7 @@ export const GET = createApiHandler(
         const cursor = url.searchParams.get("cursor")
         const all = url.searchParams.get("all") === "true"
         const statusFilter = url.searchParams.get("status") // 'archived' to show only archived
-        const collectionFilter = url.searchParams.get("collection") // 'supplemental' or 'core'
+        const collectionFilter = url.searchParams.get("collection") // 'core' | 'supplemental' | 'nava' | 'uploads' | 'all'
         const limitParam = Math.min(parseInt(url.searchParams.get("limit") || "200"), 500)
 
         // v11.1-03: host-org display filter. Default = the landing-page org

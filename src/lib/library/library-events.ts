@@ -45,7 +45,7 @@ export interface LibraryRowCreatedEvent {
     mimeType: string
     /** Buffer size in bytes (post-conversion). */
     sizeBytes: number
-    /** Library collection (`'core' | 'supplemental' | 'uploads'`). */
+    /** Library collection (`'core' | 'supplemental' | 'nava' | 'uploads'`). */
     collection: string
     /** First parent folder id from Drive metadata, when present — maps to subfolder routing. */
     subfolder?: string

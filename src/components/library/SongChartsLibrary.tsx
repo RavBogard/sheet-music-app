@@ -39,7 +39,7 @@ import { useLibraryActions } from "./useLibraryActions"
 import { useAddToSetlist } from "@/hooks/use-add-to-setlist"
 import { AddToSetlistSheet } from "./AddToSetlistSheet"
 
-type LibraryTab = "core" | "supplemental" | "uploads" | "audio"
+type LibraryTab = "core" | "supplemental" | "nava" | "uploads" | "audio"
 
 function isAudioFile(f: DriveFile) {
     return f.mimeType.startsWith('audio/') ||
@@ -212,8 +212,10 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
     const [usageMap, setUsageMap] = useState<Record<string, { lastUsedDate: string; totalUses: number } | null>>({})
 
     // Apply library filters (key, topic, recency) to chart files
+    // NOTE: 'core' is a NEGATIVE filter — every collection that gets its own
+    // tab must be excluded here too, or its rows leak into the CRC Charts tab.
     const allFilteredCore = useMemo(
-        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection !== 'supplemental' && f.collection !== 'uploads'), libraryFilters, usageMap)),
+        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection !== 'supplemental' && f.collection !== 'uploads' && f.collection !== 'nava'), libraryFilters, usageMap)),
         [rawFiles, libraryFilters, usageMap]
     )
 
@@ -222,12 +224,17 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
         [rawFiles, libraryFilters, usageMap]
     )
 
+    const allFilteredNava = useMemo(
+        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection === 'nava'), libraryFilters, usageMap)),
+        [rawFiles, libraryFilters, usageMap]
+    )
+
     const allFilteredUploads = useMemo(
         () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection === 'uploads'), libraryFilters, usageMap)),
         [rawFiles, libraryFilters, usageMap]
     )
 
-    const files = tab === "supplemental" ? allFilteredSupplemental : tab === "uploads" ? allFilteredUploads : allFilteredCore
+    const files = tab === "supplemental" ? allFilteredSupplemental : tab === "nava" ? allFilteredNava : tab === "uploads" ? allFilteredUploads : allFilteredCore
     const combinedItems = tab === "audio" ? audioFiles : files
 
     // v4.3 P01: memoize the id-key so the effect below has a stable dep.
@@ -371,9 +378,13 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                             // v11.1-03: org-neutral labels for non-crc tenants. CRC keeps
                             // "CRC Charts" + the "Shireinu" (supplemental) tab byte-identical;
                             // broslaz shows "Charts" and omits the CRC-specific Shireinu tab.
+                            // The "Nava Tehilah" tab is CRC-only on the same basis.
                             { value: 'core' as const, label: `${org === 'crc' ? 'CRC Charts' : 'Charts'} (${allFilteredCore.length})`, icon: null },
                             ...(org === 'crc'
-                                ? [{ value: 'supplemental' as const, label: `Shireinu (${allFilteredSupplemental.length})`, icon: null }]
+                                ? [
+                                    { value: 'supplemental' as const, label: `Shireinu (${allFilteredSupplemental.length})`, icon: null },
+                                    { value: 'nava' as const, label: `Nava Tehilah (${allFilteredNava.length})`, icon: null },
+                                ]
                                 : []),
                             { value: 'uploads' as const, label: `Uploads (${allFilteredUploads.length})`, icon: null },
                             ...(hasAudio

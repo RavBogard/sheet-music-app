@@ -58,7 +58,7 @@ import { recomputeIndexNameFields } from "@/lib/library/recompute-index-name-fie
 import { bareStem } from "@/lib/mcp/title-specificity"
 import { logger } from "@/lib/logger"
 
-const ALLOWED_COLLECTIONS = ["core", "supplemental", "uploads"] as const
+const ALLOWED_COLLECTIONS = ["core", "supplemental", "uploads", "nava"] as const
 export type LibraryCollection = (typeof ALLOWED_COLLECTIONS)[number]
 
 // ─── Queue read shape ──────────────────────────────────────────────────────

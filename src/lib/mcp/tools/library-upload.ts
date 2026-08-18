@@ -93,12 +93,15 @@ function curatedCatalogGate(
     roles: UploaderRoles,
     collection: LibraryCollection | undefined,
 ): RichErrorEnvelope | null {
-    // Curated catalogs ('core' = main CRC liturgy, 'supplemental' = Shireinu)
-    // are reserved for admin AND band_leader. Musicians + canUpload-only users
-    // still default to 'uploads'. Curated DELETE remains admin-only (handled
-    // in deleteChart) — destructive ops on curated stay stricter.
+    // Curated catalogs ('core' = main CRC liturgy, 'supplemental' = Shireinu,
+    // 'nava' = the Nava Tehila corpus) are reserved for admin AND band_leader.
+    // Musicians + canUpload-only users still default to 'uploads'. Curated
+    // DELETE remains admin-only (handled in deleteChart) — destructive ops on
+    // curated stay stricter.
     if (
-        (collection === "core" || collection === "supplemental") &&
+        (collection === "core" ||
+            collection === "supplemental" ||
+            collection === "nava") &&
         !isTrustedLeader(roles)
     ) {
         return forbiddenRoleEnvelope({

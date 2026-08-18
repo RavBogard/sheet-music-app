@@ -23,7 +23,7 @@ export const maxDuration = 30
 const EditsSchema = z
     .object({
         title: z.string().min(1).optional(),
-        collection: z.enum(["core", "supplemental", "uploads"]).optional(),
+        collection: z.enum(["core", "supplemental", "uploads", "nava"]).optional(),
         key: z.string().optional(),
         bpm: z.number().positive().nullable().optional(),
         leadMusician: z.string().optional(),

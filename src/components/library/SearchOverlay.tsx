@@ -46,7 +46,7 @@ export function SearchOverlay({
     onAddToSetlist,
 }: SearchOverlayProps) {
     const [query, setQuery] = useState("")
-    const [collection, setCollection] = useState<"core" | "supplemental">("core")
+    const [collection, setCollection] = useState<"core" | "supplemental" | "nava">("core")
     const inputRef = useRef<HTMLInputElement>(null)
     const { allFiles } = useLibraryStore()
     
@@ -117,11 +117,12 @@ export function SearchOverlay({
                 <div
                     role="group"
                     aria-label="Library collection"
-                    className="w-full max-w-sm mx-auto grid grid-cols-2 gap-1 p-1 rounded-md bg-muted/50"
+                    className="w-full max-w-sm mx-auto grid grid-cols-3 gap-1 p-1 rounded-md bg-muted/50"
                 >
                     {([
                         { value: "core" as const, label: "CRC Charts" },
                         { value: "supplemental" as const, label: "Shireinu" },
+                        { value: "nava" as const, label: "Nava Tehilah" },
                     ]).map(({ value, label }) => {
                         const active = collection === value
                         return (
@@ -187,6 +188,10 @@ export function SearchOverlay({
                                         {file.collection === 'supplemental' ? (
                                             <span className="text-[10px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-md border border-amber-500/20 shrink-0 mt-0.5">
                                                 Shireinu
+                                            </span>
+                                        ) : file.collection === 'nava' ? (
+                                            <span className="text-[10px] font-medium bg-violet-500/10 text-violet-600 dark:text-violet-400 px-1.5 py-0.5 rounded-md border border-violet-500/20 shrink-0 mt-0.5">
+                                                Nava Tehilah
                                             </span>
                                         ) : (
                                             <span className="text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-md border border-blue-500/20 shrink-0 mt-0.5">

@@ -99,7 +99,9 @@ function curatedCatalogGate(
     collection: LibraryCollection | undefined,
 ): RichErrorEnvelope | null {
     if (
-        (collection === "core" || collection === "supplemental") &&
+        (collection === "core" ||
+            collection === "supplemental" ||
+            collection === "nava") &&
         !isTrustedLeader(roles)
     ) {
         return forbiddenRoleEnvelope({

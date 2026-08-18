@@ -515,7 +515,7 @@ export const LIST_LIBRARY_MAX_LIMIT = 200
 export const LIST_LIBRARY_DEFAULT_LIMIT = 50
 
 export interface ListLibraryArgs {
-    collection?: "core" | "supplemental" | "uploads"
+    collection?: "core" | "supplemental" | "uploads" | "nava"
     limit?: number
     offset?: number
     includeNonCharts?: boolean
@@ -805,7 +805,8 @@ export async function listLibrary(
               })
 
         // "core" matches the UI semantics in SongChartsLibrary: the CRC
-        // Charts tab is the negative-set complement of supplemental + uploads,
+        // Charts tab is the negative-set complement of supplemental + nava +
+        // uploads,
         // so any row with collection: null / unset / "core" surfaces there.
         // Historical library_index rows (the 101 CRC charts) carry
         // collection: null rather than "core", so strict-equality would hide
@@ -815,7 +816,8 @@ export async function listLibrary(
                 ? chartHealthy.filter((e) => {
                       if (
                           e.collection === "supplemental" ||
-                          e.collection === "uploads"
+                          e.collection === "uploads" ||
+                          e.collection === "nava"
                       ) {
                           filteredOut.byCollection[e.collection] =
                               (filteredOut.byCollection[e.collection] ?? 0) + 1

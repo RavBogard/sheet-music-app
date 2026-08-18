@@ -195,7 +195,13 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                     </span>
                                 )}
 
-                                {!isFolder && !isAudio && item.collection !== 'supplemental' && (
+                                {!isFolder && !isAudio && item.collection === 'nava' && (
+                                    <span className="text-xs font-medium bg-violet-500/10 text-violet-600 dark:text-violet-400 px-2 py-0.5 rounded-md border border-violet-500/20">
+                                        Nava Tehilah
+                                    </span>
+                                )}
+
+                                {!isFolder && !isAudio && item.collection !== 'supplemental' && item.collection !== 'nava' && (
                                     <span className="text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md border border-blue-500/20">
                                         CRC
                                     </span>

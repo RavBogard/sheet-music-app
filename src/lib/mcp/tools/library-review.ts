@@ -60,7 +60,7 @@ import { logger } from "@/lib/logger"
 
 const ALLOWED_KINDS = ["enrichment", "import", "all"] as const
 const ALLOWED_STATUSES = ["review_pending", "failed"] as const
-const ALLOWED_COLLECTIONS = ["core", "supplemental", "uploads"] as const
+const ALLOWED_COLLECTIONS = ["core", "supplemental", "uploads", "nava"] as const
 const ALLOWED_EDIT_FIELDS = new Set([
     "title",
     "collection",
@@ -153,7 +153,7 @@ function hintFor(code: ActionErrorCode | string): string {
         case "queue_doc_missing":
             return "The retry / import queue doc is gone — the row may have already drained. Call `list_review_queue` to refresh."
         case "invalid_field":
-            return "Adjust the `edits` payload to match the field constraints (title non-empty; collection ∈ core/supplemental/uploads; bpm > 0 or null; tags string[])."
+            return "Adjust the `edits` payload to match the field constraints (title non-empty; collection ∈ core/supplemental/uploads/nava; bpm > 0 or null; tags string[])."
         default:
             return "Call `list_review_queue` to refresh state, then retry."
     }
