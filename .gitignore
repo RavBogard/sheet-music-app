@@ -91,3 +91,6 @@ bridge/release/
 # v11.4-04 backfill rollback snapshots — local run artifacts (per-user prior
 # doc+claim orgIds). Never commit (recovery side-channel, not source).
 scripts/.backfill-snapshots/
+
+# Nava ingest run artifact (contains local absolute paths)
+nava-ingest-manifest.json

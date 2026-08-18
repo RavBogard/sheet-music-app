@@ -48,6 +48,7 @@
  *   --commit           Perform the writes. Omitted = dry run (default, no bearer needed).
  *   --bearer <token>   Required with --commit. Or set CRL_BEARER.
  *   --limit <n>        Only process the first n selected charts (smoke test).
+ *   --skip <n>         Skip the first n selected charts (resume a partial run).
  *   --manifest <path>  Where to write the JSON manifest. Default: ./nava-ingest-manifest.json
  */
 
@@ -365,10 +366,13 @@ async function main() {
     const dirArg = arg("dir")
     const commit = process.argv.includes("--commit")
     const limit = arg("limit") ? parseInt(arg("limit")!, 10) : undefined
+    // Selection order is deterministic, so --skip n resumes after a partial run
+    // (e.g. a --limit 3 smoke) without re-uploading what already landed.
+    const skip = arg("skip") ? parseInt(arg("skip")!, 10) : 0
     const manifestPath = arg("manifest") ?? "nava-ingest-manifest.json"
 
     if (!dirArg) {
-        console.error('Usage: npx tsx scripts/ingest-nava.ts --dir "<extracted root>" [--commit] [--limit n]')
+        console.error('Usage: npx tsx scripts/ingest-nava.ts --dir "<extracted root>" [--commit] [--limit n] [--skip n]')
         process.exit(1)
     }
 
@@ -383,7 +387,8 @@ async function main() {
 
     console.log(`Scanning: ${root}\n`)
     const { picks, flags, droppedDupes } = selectCharts(root)
-    const selected = limit ? picks.slice(0, limit) : picks
+    const afterSkip = skip > 0 ? picks.slice(skip) : picks
+    const selected = limit ? afterSkip.slice(0, limit) : afterSkip
 
     const reasons = picks.reduce<Record<string, number>>((acc, p) => {
         acc[p.why] = (acc[p.why] ?? 0) + 1
@@ -393,7 +398,8 @@ async function main() {
     console.log(`Charts selected:    ${picks.length}`)
     console.log(`Selection tiers:    ${JSON.stringify(reasons)}`)
     console.log(`Byte-identical dropped: ${droppedDupes}`)
-    if (limit) console.log(`--limit ${limit} → processing ${selected.length}`)
+    if (skip) console.log(`--skip ${skip} → resuming after the first ${skip}`)
+    if (limit || skip) console.log(`processing ${selected.length}`)
     console.log()
     if (flags.length) {
         console.log(`Flagged for review (${flags.length}):`)
