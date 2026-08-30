@@ -269,7 +269,9 @@ export const trackRowFields = {
         .string()
         .min(1)
         .optional()
-        .describe("Library song id — title/key/lead default from this song"),
+        .describe(
+            "Library song id — defaults title/key/lead from this song AND bonds its chart to the row. The library is keyed by Drive file id.",
+        ),
     title: z
         .string()
         .optional()
