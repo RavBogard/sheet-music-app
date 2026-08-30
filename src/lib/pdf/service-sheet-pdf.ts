@@ -33,7 +33,6 @@ export interface ServiceSheetInput {
     rabbi?: string
     book?: string
     bookTitle?: string
-    serviceNotes?: string
     tracks: ServiceSheetTrack[]
 }
 
@@ -51,7 +50,15 @@ function clean(s: unknown): string {
     return typeof s === "string" ? toWinAnsi(s).trim() : ""
 }
 
-/** Greedy word wrap against a real font metric. */
+/**
+ * Greedy word wrap against a real font metric.
+ *
+ * A word that is itself wider than the column is broken at the character level
+ * rather than drawn past the right margin — nothing is ever dropped or clipped.
+ * Names and page numbers running off the edge of the paper is the failure this
+ * document cannot afford: the sheet still looks fine, and the rabbi reading it
+ * aloud has no way to know a name was cut.
+ */
 function wrap(text: string, font: PDFFont, size: number, maxW: number): string[] {
     const words = text.split(/\s+/).filter(Boolean)
     const lines: string[] = []
@@ -60,10 +67,27 @@ function wrap(text: string, font: PDFFont, size: number, maxW: number): string[]
         const next = line ? `${line} ${w}` : w
         if (font.widthOfTextAtSize(next, size) <= maxW) {
             line = next
-        } else {
-            if (line) lines.push(line)
-            line = w
+            continue
         }
+        if (line) {
+            lines.push(line)
+            line = ""
+        }
+        if (font.widthOfTextAtSize(w, size) <= maxW) {
+            line = w
+            continue
+        }
+        // Unbreakable token wider than the column: split on character boundaries.
+        let chunk = ""
+        for (const ch of w) {
+            if (chunk && font.widthOfTextAtSize(chunk + ch, size) > maxW) {
+                lines.push(chunk)
+                chunk = ch
+            } else {
+                chunk += ch
+            }
+        }
+        line = chunk
     }
     if (line) lines.push(line)
     return lines
@@ -88,15 +112,21 @@ export async function renderServiceSheetPdf(
 
     // ---- Header -----------------------------------------------------------
     const title = clean(input.setlistName) || "Service"
-    page.drawText(title, { x: MARGIN, y: y - 18, size: 18, font: bold, color: INK })
-    y -= 26
+    for (const line of wrap(title, bold, 18, CONTENT_W)) {
+        page.drawText(line, { x: MARGIN, y: y - 18, size: 18, font: bold, color: INK })
+        y -= 22
+    }
+    y -= 4
 
     const meta = [clean(input.eventDate), clean(input.rabbi), clean(input.bookTitle) || clean(input.book)]
         .filter(Boolean)
         .join("   ·   ")
     if (meta) {
-        page.drawText(meta, { x: MARGIN, y: y - 10, size: 10, font: body, color: MUTED })
-        y -= 18
+        for (const line of wrap(meta, body, 10, CONTENT_W)) {
+            page.drawText(line, { x: MARGIN, y: y - 10, size: 10, font: body, color: MUTED })
+            y -= 13
+        }
+        y -= 5
     }
     page.drawLine({
         start: { x: MARGIN, y },
@@ -111,36 +141,62 @@ export async function renderServiceSheetPdf(
         (t.honors ?? []).map((h) => ({ ...h, at: clean(t.title) })),
     )
     if (allHonors.length > 0) {
-        const lines = allHonors.map((h) => {
+        // Wrapped to the box's inner width, then split across as many boxes as it
+        // takes. A single need() plus an unchecked draw loop put later honorees
+        // below the physical page — these are people's names, so the box has to
+        // paginate like any other content.
+        const lines = allHonors.flatMap((h) => {
             const who = clean(h.name)
             const why = clean(h.note)
             const at = h.at ? ` (${h.at})` : ""
-            return why ? `${who} - ${why}${at}` : `${who}${at}`
+            const text = why ? `${who} - ${why}${at}` : `${who}${at}`
+            return wrap(text, body, 9, CONTENT_W - 16)
         })
-        const boxH = 18 + lines.length * 12
-        need(boxH + 10)
-        page.drawRectangle({
-            x: MARGIN,
-            y: y - boxH,
-            width: CONTENT_W,
-            height: boxH,
-            borderColor: RULE,
-            borderWidth: 1,
-        })
-        page.drawText("HONORS", { x: MARGIN + 8, y: y - 14, size: 8, font: bold, color: MUTED })
-        let hy = y - 26
-        for (const line of lines) {
-            page.drawText(line, { x: MARGIN + 8, y: hy, size: 9, font: body, color: INK })
-            hy -= 12
+
+        const CHROME = 18 // "HONORS" label + box padding
+        let idx = 0
+        let first = true
+        while (idx < lines.length) {
+            let capacity = Math.floor((y - BOTTOM - CHROME) / 12)
+            if (capacity < 1) {
+                page = pdf.addPage([PAGE_W, PAGE_H])
+                y = PAGE_H - MARGIN
+                capacity = Math.floor((y - BOTTOM - CHROME) / 12)
+            }
+            const chunk = lines.slice(idx, idx + capacity)
+            const boxH = CHROME + chunk.length * 12
+            page.drawRectangle({
+                x: MARGIN,
+                y: y - boxH,
+                width: CONTENT_W,
+                height: boxH,
+                borderColor: RULE,
+                borderWidth: 1,
+            })
+            page.drawText(first ? "HONORS" : "HONORS (CONT.)", {
+                x: MARGIN + 8,
+                y: y - 14,
+                size: 8,
+                font: bold,
+                color: MUTED,
+            })
+            let hy = y - 26
+            for (const line of chunk) {
+                page.drawText(line, { x: MARGIN + 8, y: hy, size: 9, font: body, color: INK })
+                hy -= 12
+            }
+            y -= boxH + 14
+            idx += chunk.length
+            first = false
         }
-        y -= boxH + 14
     }
 
     // ---- Rows -------------------------------------------------------------
     for (const t of input.tracks) {
         const rowTitle = clean(t.title)
         if (t.type === "header") {
-            need(28)
+            const labelLines = wrap(rowTitle.toUpperCase(), bold, 9, CONTENT_W)
+            need(16 + labelLines.length * 12)
             y -= 6
             page.drawLine({
                 start: { x: MARGIN, y },
@@ -148,16 +204,19 @@ export async function renderServiceSheetPdf(
                 thickness: 0.75,
                 color: RULE,
             })
-            const label = rowTitle.toUpperCase()
-            const w = bold.widthOfTextAtSize(label, 9)
-            page.drawText(label, {
-                x: MARGIN + (CONTENT_W - w) / 2,
-                y: y - 13,
-                size: 9,
-                font: bold,
-                color: MUTED,
-            })
-            y -= 24
+            let ly = y - 13
+            for (const label of labelLines) {
+                const w = bold.widthOfTextAtSize(label, 9)
+                page.drawText(label, {
+                    x: MARGIN + Math.max(0, (CONTENT_W - w) / 2),
+                    y: ly,
+                    size: 9,
+                    font: bold,
+                    color: MUTED,
+                })
+                ly -= 12
+            }
+            y -= 12 + labelLines.length * 12
             continue
         }
 
@@ -167,37 +226,48 @@ export async function renderServiceSheetPdf(
             const why = clean(h.note)
             cueParts.push(why ? `${who} - ${why}` : who)
         }
+        // The cue line carries honorees' names, so it wraps to the column exactly
+        // as the description does. Unwrapped, a Torah service bundling several
+        // aliyot onto one row printed names off the edge of the paper.
         const cue = cueParts.join("   ·   ")
+        const cueLines = cue ? wrap(cue, body, 9, CONTENT_W) : []
         const descLines = t.description
             ? wrap(clean(t.description), body, 8, CONTENT_W - 70)
             : []
 
-        const rowH = 16 + (cue ? 11 : 0) + descLines.length * 10 + 6
+        // The folio owns the right end of the title line; the title gets what is
+        // left of the column minus a gutter, so the two can never collide.
+        const folio = t.liturgyRef ? String(t.liturgyRef.folio) : ""
+        const folioW = folio ? bold.widthOfTextAtSize(folio, 14) : 0
+        const titleLines = wrap(
+            rowTitle || "(untitled)",
+            bold,
+            11,
+            CONTENT_W - (folioW ? folioW + 12 : 0),
+        )
+
+        const rowH =
+            titleLines.length * 16 + cueLines.length * 11 + descLines.length * 10 + 6
         need(rowH)
 
-        page.drawText(rowTitle || "(untitled)", {
-            x: MARGIN,
-            y: y - 12,
-            size: 11,
-            font: bold,
-            color: INK,
-        })
+        const rowTop = y
+        for (const line of titleLines) {
+            page.drawText(line, { x: MARGIN, y: y - 12, size: 11, font: bold, color: INK })
+            y -= 16
+        }
 
-        if (t.liturgyRef) {
-            const folio = String(t.liturgyRef.folio)
-            const w = bold.widthOfTextAtSize(folio, 14)
+        if (folio) {
             page.drawText(folio, {
-                x: PAGE_W - MARGIN - w,
-                y: y - 13,
+                x: PAGE_W - MARGIN - folioW,
+                y: rowTop - 13,
                 size: 14,
                 font: bold,
                 color: INK,
             })
         }
-        y -= 16
 
-        if (cue) {
-            page.drawText(cue, { x: MARGIN, y: y - 8, size: 9, font: body, color: MUTED })
+        for (const line of cueLines) {
+            page.drawText(line, { x: MARGIN, y: y - 8, size: 9, font: body, color: MUTED })
             y -= 11
         }
         for (const line of descLines) {
