@@ -137,6 +137,7 @@ import {
 } from "./roster"
 import { listServicePersonnel } from "./service-personnel"
 import { updateSong } from "./song-metadata"
+import { listBooksTool, lookupBookPageTool } from "./books"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 export { registerMintAdminBearerTools } from "./mint-admin-bearer"
@@ -548,6 +549,37 @@ export function registerReadTools(server: McpServer): void {
                 )
             return jsonResult(setlist)
         },
+    )
+
+    server.registerTool(
+        "list_books",
+        {
+            description:
+                "List the liturgy books (siddurim and machzorim) this system can reference. Returns each book's `slug` (use it for a setlist's `book` and for liturgyRef.book), title, `tier` ('feed' = generated from the Shirei Typst pipeline with stable unit ids; 'pagemap' = hand-verified page list for a legacy book), and page count. Call this before setting a setlist's book or resolving page numbers with lookup_book_page.",
+            inputSchema: {},
+        },
+        async () => jsonResult(listBooksTool()),
+    )
+
+    server.registerTool(
+        "lookup_book_page",
+        {
+            description:
+                "Resolve a prayer or liturgical moment to its PRINTED page number in one book. Use this when adding rows to a setlist that has a `book` set — never guess a page number, because it prints on the rabbi's service sheet. Returns `matches` (each with `folio` = printed page, `unitId` = feed-tier books only, pass it through to liturgyRef so the reference survives a re-pagination, and `confidence`), plus `totalMatches` (the count before truncation) and `truncated` (true when more matches exist than are returned — currently capped at 8). Confidence handling: 'high' — commit the page silently. 'medium' — commit, but mention it when you summarize the change. 'low' — several candidates (including same-name entries that print at different pages); ask which one is meant rather than guessing. A query that matches nothing returns `{ok:true, matches:[]}`, not an error. When `truncated` is true, tell the user how many total matched and that the list shown is partial rather than exhaustive.",
+            inputSchema: {
+                book: z
+                    .string()
+                    .min(1)
+                    .describe("Book slug from list_books, e.g. 'crc-friday'."),
+                query: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Prayer/moment name, e.g. 'Mi Chamocha'. Case- and punctuation-insensitive; aliases are matched.",
+                    ),
+            },
+        },
+        async (args) => jsonResult(lookupBookPageTool(args)),
     )
 
     server.registerTool(
