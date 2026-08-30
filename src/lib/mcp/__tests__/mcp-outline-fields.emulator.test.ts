@@ -86,6 +86,36 @@ describe("outline fields survive the MCP write path (emulator)", () => {
         })
     })
 
+    // Fix round 2: getSetlist's per-track view is a hand-maintained field
+    // list (src/lib/mcp/tools/setlists.ts), separate from the write-path
+    // allowlist — a field can survive the write and still be dropped on the
+    // way back out. This test reads through get_setlist (the real MCP read
+    // surface), NOT a raw Firestore doc, which is what let that slip.
+    it("surfaces liturgyRef, honors, performer, description and estimatedMinutes through get_setlist", async () => {
+        const setlistId = await newSetlist()
+        const added = await addTrackToSetlist(ADMIN, {
+            setlistId,
+            title: "Candle Lighting",
+            type: "reading",
+            performer: "Congregation",
+            description: "Blessing over the candles, read responsively.",
+            estimatedMinutes: 3,
+            liturgyRef: { book: "crc-friday", folio: 4 },
+            honors: [{ name: "Rachel Cohen", note: "birthday — candle lighting" }],
+        })
+        expect(added).toMatchObject({ ok: true })
+
+        const sl = await getSetlist(ADMIN, { id: setlistId })
+        expect(sl?.tracks).toHaveLength(1)
+        expect(sl?.tracks[0]).toMatchObject({
+            performer: "Congregation",
+            description: "Blessing over the candles, read responsively.",
+            estimatedMinutes: 3,
+            liturgyRef: { book: "crc-friday", folio: 4 },
+            honors: [{ name: "Rachel Cohen", note: "birthday — candle lighting" }],
+        })
+    })
+
     it("updates outline fields through update_track's patch allowlist", async () => {
         const setlistId = await newSetlist()
         const added = await addTrackToSetlist(ADMIN, { setlistId, title: "Mi Chamocha", type: "prayer" })

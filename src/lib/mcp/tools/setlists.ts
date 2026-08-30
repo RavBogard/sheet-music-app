@@ -193,6 +193,24 @@ export async function getSetlist(
                 referenceLink:
                     typeof row.referenceLink === "string" ? row.referenceLink : null,
                 notes: typeof row.notes === "string" ? row.notes : null,
+                // Task 5 fix round 2: these five fields survive the write
+                // path (server-tracks-write.ts UPDATABLE_FIELDS) but were
+                // missing from this hand-maintained read view — the same
+                // failure class that left `pageNumber` inert. Same
+                // typed-check-or-null convention as the neighbouring fields.
+                performer:
+                    typeof row.performer === "string" ? row.performer : null,
+                description:
+                    typeof row.description === "string" ? row.description : null,
+                estimatedMinutes:
+                    typeof row.estimatedMinutes === "number"
+                        ? row.estimatedMinutes
+                        : null,
+                liturgyRef:
+                    row.liturgyRef && typeof row.liturgyRef === "object"
+                        ? row.liturgyRef
+                        : null,
+                honors: Array.isArray(row.honors) ? row.honors : null,
                 version: typeof row.version === "number" ? row.version : undefined,
                 lastModifiedAt:
                     typeof row.lastModifiedAt === "string"
