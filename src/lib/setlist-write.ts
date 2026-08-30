@@ -46,6 +46,13 @@ export interface CreateSetlistInput {
     /** Maps to the setlist doc's `templateType` field. */
     serviceType?: Setlist['templateType']
     rabbi?: string
+    /**
+     * Task 5 (liturgy outlines Phase 2) — registry slug of the liturgy book
+     * used at this service, e.g. 'crc-friday'. Optional, like `rabbi`;
+     * existing callers (CSV import, doc import) that never pass it are
+     * unaffected.
+     */
+    book?: string
     tracks: ServerSetlistTrackInput[]
     /**
      * Cycle-5 C5A-003 — optional explicit `isTest:true` override. When set,
@@ -78,6 +85,8 @@ export type SetlistMetadataPatch = Partial<{
     serviceType: Setlist['templateType']
     rabbi: string
     serviceNotes: string
+    /** Task 5 (liturgy outlines Phase 2) — see CreateSetlistInput.book. */
+    book: string
 }>
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -167,6 +176,9 @@ export async function createSetlistServerSide(
     if (input.rabbi !== undefined) {
         setlistPayload.rabbi = input.rabbi
     }
+    if (input.book !== undefined) {
+        setlistPayload.book = input.book
+    }
 
     // One atomic batch: the parent setlists/{id} doc + every top-level
     // tracks/{id} seed. Either the whole setlist commits or nothing does.
@@ -237,6 +249,9 @@ export async function updateSetlistServerSide(
     if (patch.rabbi !== undefined) mapped.rabbi = patch.rabbi
     if (patch.serviceNotes !== undefined) {
         mapped.serviceNotes = patch.serviceNotes
+    }
+    if (patch.book !== undefined) {
+        mapped.book = patch.book
     }
     if (patch.serviceType !== undefined) {
         mapped.templateType = patch.serviceType

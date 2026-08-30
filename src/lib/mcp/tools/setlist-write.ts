@@ -107,10 +107,9 @@ export interface CreateSetlistArgs {
     isTest?: boolean
     /**
      * Task 5 (liturgy outlines Phase 2) — registry slug of the liturgy book
-     * used at this service, e.g. 'crc-friday'. Optional. Persisted with a
-     * follow-up single-field write (createSetlistServerSide's CreateSetlistInput
-     * has its own field allowlist and is shared with CSV/doc import, so this
-     * field is layered on here rather than threaded through that module).
+     * used at this service, e.g. 'crc-friday'. Optional; threaded straight
+     * through to createSetlistServerSide's CreateSetlistInput.book so it
+     * lands in the same atomic batch as the rest of the setlist doc.
      */
     book?: string
 }
@@ -152,18 +151,10 @@ export async function createSetlist(
         eventDate: args.eventDate,
         serviceType: args.serviceType as SetlistMetadataPatch["serviceType"],
         rabbi: args.rabbi,
+        book: args.book,
         tracks: [],
         isTest: args.isTest === true ? true : undefined,
     })
-    // Task 5 (liturgy outlines Phase 2): persist `book` with a follow-up
-    // single-field write — see CreateSetlistArgs.book for why this isn't
-    // threaded through createSetlistServerSide's own input allowlist.
-    if (args.book !== undefined) {
-        await db
-            .collection("setlists")
-            .doc(result.setlistId)
-            .update({ book: args.book })
-    }
     // G-16: echo owner so callers don't need a follow-up get_setlist to learn
     // who the setlist is owned by (the create_setlist's caller IS the owner,
     // but agent UIs benefit from seeing it in the response).
@@ -194,8 +185,9 @@ export interface UpdateSetlistArgs {
     rabbi?: string
     serviceNotes?: string
     /**
-     * Task 5 (liturgy outlines Phase 2) — see CreateSetlistArgs.book. Persisted
-     * with the same follow-up single-field write pattern.
+     * Task 5 (liturgy outlines Phase 2) — see CreateSetlistArgs.book. Threaded
+     * through to updateSetlistServerSide's SetlistMetadataPatch.book so it
+     * lands in the same write as the rest of the patch.
      */
     book?: string
     /** W-04 Plan 02 optimistic-concurrency gate (setlist-level version). */
@@ -235,6 +227,7 @@ export async function updateSetlist(
     }
     if (args.rabbi !== undefined) patch.rabbi = args.rabbi
     if (args.serviceNotes !== undefined) patch.serviceNotes = args.serviceNotes
+    if (args.book !== undefined) patch.book = args.book
 
     const updateResult = await updateSetlistServerSide(
         args.id,
@@ -251,12 +244,6 @@ export async function updateSetlist(
             { setlistId: args.id },
             "Verify the id via list_setlists.",
         )
-    }
-
-    // Task 5 (liturgy outlines Phase 2): persist `book` with the same
-    // follow-up single-field write pattern as create_setlist.
-    if (args.book !== undefined) {
-        await db.collection("setlists").doc(args.id).update({ book: args.book })
     }
 
     // G-11: echo the post-update state so callers don't need a follow-up
