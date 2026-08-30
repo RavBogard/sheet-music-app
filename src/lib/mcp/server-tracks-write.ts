@@ -34,6 +34,26 @@ export function sanitizeFreeformString(s: string): string {
 }
 
 /**
+ * Task 5 (liturgy outlines Phase 2): `honors` carries user-authored
+ * names/notes — sanitize the nested strings the same way `notes`/`title`
+ * are sanitized, since it is an array of objects and can't go through
+ * `sanitizeFreeformString` directly.
+ */
+function sanitizeHonors(
+    value: unknown,
+): Array<{ name: string; note?: string }> | undefined {
+    if (!Array.isArray(value)) return undefined
+    return value
+        .filter((h): h is { name: string; note?: string } =>
+            !!h && typeof h === "object" && typeof (h as { name?: unknown }).name === "string",
+        )
+        .map((h) => ({
+            name: sanitizeFreeformString(h.name),
+            ...(typeof h.note === "string" ? { note: sanitizeFreeformString(h.note) } : {}),
+        }))
+}
+
+/**
  * W-04 Plan 01: every write path stamps `version: increment(1)` +
  * `lastModifiedAt` on the setlist + affected tracks. Plan 02 swaps to
  * read-check-write transactions for stale-version rejection; Plan 01
@@ -196,6 +216,13 @@ export interface AddTrackInput {
     notes?: string
     /** 0-based insert index; out-of-range or omitted → append at the end. */
     position?: number
+    /** Task 5 (liturgy outlines Phase 2) — service-flow fields, on the model
+     *  since v6 but unreachable via MCP add until now. */
+    performer?: string
+    description?: string
+    estimatedMinutes?: number
+    liturgyRef?: { book: string; unitId?: string; folio: number }
+    honors?: Array<{ name: string; note?: string }>
 }
 
 /**
@@ -247,6 +274,14 @@ export async function addTrack(
     if (input.fileName !== undefined) payload.fileName = input.fileName
     if (input.mimeType !== undefined) payload.mimeType = input.mimeType
     if (input.notes !== undefined) payload.notes = sanitizeFreeformString(input.notes)
+    if (input.performer !== undefined) payload.performer = sanitizeFreeformString(input.performer)
+    if (input.description !== undefined) payload.description = sanitizeFreeformString(input.description)
+    if (input.estimatedMinutes !== undefined) payload.estimatedMinutes = input.estimatedMinutes
+    if (input.liturgyRef !== undefined) payload.liturgyRef = input.liturgyRef
+    if (input.honors !== undefined) {
+        const sanitizedHonors = sanitizeHonors(input.honors)
+        if (sanitizedHonors !== undefined) payload.honors = sanitizedHonors
+    }
     batch.set(db.collection("tracks").doc(trackId), payload)
 
     // W-04 Plan 01: shifted siblings get their version bumped too — their
@@ -410,6 +445,13 @@ export interface UpdateTrackPatch {
     referenceLink?: string
     /** 0-based target position; clamps into [0, trackCount-1]. */
     position?: number
+    /** Task 5 (liturgy outlines Phase 2) — service-flow fields, on the model
+     *  since v6 but unreachable via MCP until now. */
+    performer?: string
+    description?: string
+    estimatedMinutes?: number
+    liturgyRef?: { book: string; unitId?: string; folio: number }
+    honors?: Array<{ name: string; note?: string }>
 }
 
 /** Field patches that survive into the Firestore update (not the reorder). */
@@ -422,6 +464,11 @@ const UPDATABLE_FIELDS = [
     "type",
     "songId",
     "referenceLink",
+    "performer",
+    "description",
+    "estimatedMinutes",
+    "liturgyRef",
+    "honors",
 ] as const
 
 /**
@@ -495,7 +542,7 @@ export async function updateTrack(
     // yet. We mutate `fieldUpdate` in place as we resolve songLookup-driven
     // side-effects so the tx body can apply it verbatim.
     const wantsUnbond = patch.songId === null
-    const FREEFORM_FIELDS = new Set(["key", "leadMusician", "title", "notes", "referenceLink"])
+    const FREEFORM_FIELDS = new Set(["key", "leadMusician", "title", "notes", "referenceLink", "performer", "description"])
     const fieldUpdate: Record<string, unknown> = {}
     let changed = false
     for (const k of UPDATABLE_FIELDS) {
@@ -503,6 +550,16 @@ export async function updateTrack(
         // Unbond (`songId: null`) is applied via FieldValue.delete() below —
         // never write a literal null into the row's songId.
         if (k === "songId" && patch.songId === null) continue
+        // honors is an array of {name, note} objects — sanitizeFreeformString
+        // takes a string, so its nested strings go through sanitizeHonors.
+        if (k === "honors") {
+            const sanitizedHonors = sanitizeHonors(patch.honors)
+            if (sanitizedHonors !== undefined) {
+                fieldUpdate.honors = sanitizedHonors
+                changed = true
+            }
+            continue
+        }
         // F-015: strip control chars/null bytes from user freeform string fields.
         const v = patch[k]
         fieldUpdate[k] = FREEFORM_FIELDS.has(k) && typeof v === "string" ? sanitizeFreeformString(v) : v
@@ -1216,7 +1273,7 @@ export async function bulkUpdateTracks(
                     updatedAt: FieldValue.serverTimestamp(),
                     ...versionBumpFields(), // W-04 Plan 01
                 }
-                const BULK_FREEFORM = new Set(["key", "leadMusician", "title", "notes", "referenceLink"])
+                const BULK_FREEFORM = new Set(["key", "leadMusician", "title", "notes", "referenceLink", "performer", "description"])
                 for (const k of UPDATABLE_FIELDS) {
                     if (entry.patch[k] === undefined) continue
                     if (k === "songId" && entry.patch.songId === null) {
@@ -1224,6 +1281,11 @@ export async function bulkUpdateTracks(
                         update.songId = FieldValue.delete()
                         update.fileId = FieldValue.delete()
                         update.fileName = FieldValue.delete()
+                        continue
+                    }
+                    if (k === "honors") {
+                        const sanitizedHonors = sanitizeHonors(entry.patch.honors)
+                        if (sanitizedHonors !== undefined) update.honors = sanitizedHonors
                         continue
                     }
                     // F-015: strip control chars/null bytes from freeform strings.
@@ -1438,6 +1500,13 @@ export interface BulkAddTrackInput {
     fileId?: string
     fileName?: string
     notes?: string
+    /** Task 5 (liturgy outlines Phase 2) — service-flow fields, on the model
+     *  since v6 but unreachable via MCP bulk-add until now. */
+    performer?: string
+    description?: string
+    estimatedMinutes?: number
+    liturgyRef?: { book: string; unitId?: string; folio: number }
+    honors?: Array<{ name: string; note?: string }>
 }
 
 export interface BulkAddTracksOptions {
@@ -1618,6 +1687,14 @@ export async function bulkAddTracks(
         if (fileName !== undefined) payload.fileName = fileName
         if (mimeType !== undefined) payload.mimeType = mimeType
         if (row.notes !== undefined) payload.notes = row.notes
+        if (row.performer !== undefined) payload.performer = sanitizeFreeformString(row.performer)
+        if (row.description !== undefined) payload.description = sanitizeFreeformString(row.description)
+        if (row.estimatedMinutes !== undefined) payload.estimatedMinutes = row.estimatedMinutes
+        if (row.liturgyRef !== undefined) payload.liturgyRef = row.liturgyRef
+        if (row.honors !== undefined) {
+            const sanitizedHonors = sanitizeHonors(row.honors)
+            if (sanitizedHonors !== undefined) payload.honors = sanitizedHonors
+        }
 
         planned.push({
             kind: "ok",
@@ -1738,6 +1815,15 @@ export async function bulkAddTracks(
                     fileId: p.fileId,
                     fileName: p.payload.fileName as string | undefined,
                     notes: p.payload.notes as string | undefined,
+                    performer: p.payload.performer as string | undefined,
+                    description: p.payload.description as string | undefined,
+                    estimatedMinutes: p.payload.estimatedMinutes as number | undefined,
+                    liturgyRef: p.payload.liturgyRef as
+                        | { book: string; unitId?: string; folio: number }
+                        | undefined,
+                    honors: p.payload.honors as
+                        | Array<{ name: string; note?: string }>
+                        | undefined,
                     position: anchor + writtenSoFar,
                 })
                 results[i] = {

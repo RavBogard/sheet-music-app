@@ -105,6 +105,14 @@ export interface CreateSetlistArgs {
      * `isTestSetlist({name, ownerId})` fallback when this is omitted.
      */
     isTest?: boolean
+    /**
+     * Task 5 (liturgy outlines Phase 2) — registry slug of the liturgy book
+     * used at this service, e.g. 'crc-friday'. Optional. Persisted with a
+     * follow-up single-field write (createSetlistServerSide's CreateSetlistInput
+     * has its own field allowlist and is shared with CSV/doc import, so this
+     * field is layered on here rather than threaded through that module).
+     */
+    book?: string
 }
 
 export async function createSetlist(
@@ -147,6 +155,15 @@ export async function createSetlist(
         tracks: [],
         isTest: args.isTest === true ? true : undefined,
     })
+    // Task 5 (liturgy outlines Phase 2): persist `book` with a follow-up
+    // single-field write — see CreateSetlistArgs.book for why this isn't
+    // threaded through createSetlistServerSide's own input allowlist.
+    if (args.book !== undefined) {
+        await db
+            .collection("setlists")
+            .doc(result.setlistId)
+            .update({ book: args.book })
+    }
     // G-16: echo owner so callers don't need a follow-up get_setlist to learn
     // who the setlist is owned by (the create_setlist's caller IS the owner,
     // but agent UIs benefit from seeing it in the response).
@@ -176,6 +193,11 @@ export interface UpdateSetlistArgs {
     serviceType?: string
     rabbi?: string
     serviceNotes?: string
+    /**
+     * Task 5 (liturgy outlines Phase 2) — see CreateSetlistArgs.book. Persisted
+     * with the same follow-up single-field write pattern.
+     */
+    book?: string
     /** W-04 Plan 02 optimistic-concurrency gate (setlist-level version). */
     lastSeenVersion?: number
 }
@@ -229,6 +251,12 @@ export async function updateSetlist(
             { setlistId: args.id },
             "Verify the id via list_setlists.",
         )
+    }
+
+    // Task 5 (liturgy outlines Phase 2): persist `book` with the same
+    // follow-up single-field write pattern as create_setlist.
+    if (args.book !== undefined) {
+        await db.collection("setlists").doc(args.id).update({ book: args.book })
     }
 
     // G-11: echo the post-update state so callers don't need a follow-up
@@ -292,6 +320,13 @@ export interface AddTrackArgs {
      * re-upload the bytes, or the row will be reconciled).
      */
     force?: boolean
+    /** Task 5 (liturgy outlines Phase 2) — service-flow fields, on the model
+     *  since v6 but unreachable via MCP add until now. */
+    performer?: string
+    description?: string
+    estimatedMinutes?: number
+    liturgyRef?: { book: string; unitId?: string; folio: number }
+    honors?: Array<{ name: string; note?: string }>
 }
 
 /**
@@ -436,6 +471,11 @@ export async function addTrackToSetlist(
         mimeType: mimeHint,
         notes: args.notes,
         position: args.position,
+        performer: args.performer,
+        description: args.description,
+        estimatedMinutes: args.estimatedMinutes,
+        liturgyRef: args.liturgyRef,
+        honors: args.honors,
     })
 
     // Re-read the just-written track so the response shape mirrors

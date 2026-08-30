@@ -58,6 +58,22 @@ export interface SetlistTrack {
     estimatedMinutes?: number // Numeric duration for run sheet time calculations
     pageNumber?: number // Which page of a multi-page PDF to open to (1-indexed)
     unmatched?: boolean // True when template expansion found no matching chart for this slot; title stays clean, search instructions live in notes.
+    /**
+     * Reference into a liturgy book (siddur/machzor) for this moment —
+     * "this row is on p.<folio> of <book>". Distinct from `pageNumber`,
+     * which addresses a page of this row's own bonded chart PDF.
+     * `folio` is the PRINTED page number, resolved at authoring time from
+     * the book registry (src/data/books) so nothing at render time depends
+     * on an external repo. `unitId` is an AR-3 stable id and is present only
+     * for feed-tier books.
+     */
+    liturgyRef?: { book: string; unitId?: string; folio: number }
+    /**
+     * Named congregants honored at this moment — "Rachel Cohen, birthday,
+     * lights the candles". Free-text names; not linked to contacts. Printed
+     * on the rabbi's service sheet. Never copied by templates or clone.
+     */
+    honors?: Array<{ name: string; note?: string }>
 }
 
 /** A musician assigned to play a specific service/setlist */
@@ -106,6 +122,12 @@ export interface Setlist {
     ownerName?: string
     rabbi?: string // Which rabbi is leading this service
     serviceNotes?: string // Service-wide instructions for performers
+    /**
+     * Registry slug of the liturgy book used at this service (one book per
+     * service), e.g. 'crc-friday'. Optional — setlists with no book (a gig,
+     * a rehearsal) behave exactly as before. See src/data/books/registry.json.
+     */
+    book?: string
     musicians?: SetlistMusician[] // Who's playing this service
     isTemplate?: boolean
     templateType?: 'shabbat_morning' | 'friday_night' | 'rosh_hashanah' | 'yom_kippur' | 'festival' | 'other'
