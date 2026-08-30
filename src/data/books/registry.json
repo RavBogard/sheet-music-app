@@ -1,0 +1,16 @@
+[
+    {
+        "slug": "crc-friday",
+        "title": "CRC Friday Siddur",
+        "tier": "pagemap",
+        "pages": 48,
+        "source": "https://www.centralreform.org/wp-content/uploads/Friday-Siddur.pdf"
+    },
+    {
+        "slug": "crc-saturday",
+        "title": "CRC Saturday Siddur",
+        "tier": "pagemap",
+        "pages": 54,
+        "source": "https://www.centralreform.org/wp-content/uploads/Saturday-Siddur.pdf"
+    }
+]

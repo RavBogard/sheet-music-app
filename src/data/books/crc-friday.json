@@ -1,0 +1,9 @@
+{
+    "slug": "crc-friday",
+    "title": "CRC Friday Siddur",
+    "tier": "pagemap",
+    "pages": 48,
+    "entries": [
+        { "name": "Mi Chamocha", "aliases": ["Mi Khamokha", "Mi Chamocha Ba'elim"], "page": 1 }
+    ]
+}
