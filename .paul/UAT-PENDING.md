@@ -667,3 +667,9 @@ shipped 2026-06-14; 29/29 unit tests green. NON-BLOCKING field confirm on the iP
 ## v11.7-05-02 (F3 library density — bind picker) — real 11" iPad, post-deploy
 - **Bind-picker metadata:** on a setlist row, tap the chart cell (or row menu → "Bind chart") → the picker rows show the composer dimmed beside the title, and a small key badge (e.g. "Dm") when the song has a known key; songs without a composer/key show neither (no empty slots). Rows stay dense + single-line.
 - **Behavior intact:** typing still filters (composer-in-title still matches), and picking a row still binds the correct chart to the row.
+
+## Liturgy-aware service outlines (shipped 2026-08-30, a6e55f367c)
+- [ ] **Verify the CRC page maps against the physical books.** Checklist: `docs/superpowers/plans/artifacts/2026-08-30-crc-pagemap-checklist.md`. 110 entries (48 Friday / 62 Saturday), zero inferred, independently re-verified across all 102 pages by a second agent — but never checked against paper. The CRC siddurim are the operational books, so this data is load-bearing.
+- [ ] **Print a real service sheet and read it at the shtender.** Sample: `docs/superpowers/plans/artifacts/2026-08-30-service-sheet-sample.pdf` (B'nai Mitzvah morning, six aliyot honors on one row, 3-digit folio, a no-folio row). Print at 100%. Check: the page number reads at lectern distance while standing; the grey cue lines survive a real printer; no honoree's name is cut.
+- [ ] **Answer the one open product question:** are the CRC Friday and Saturday siddurim two separate booklets whose numbering runs continuously (Friday 3-47, Saturday 50-101), or one bound volume? The page guard now refuses any crc-saturday reference below 50. Correct for separate booklets; wrong for a shared volume. Registry data change if wrong.
+- [ ] **Before Rosh Hashanah:** re-run `npm run sync:books` and diff folios for `shirei-tshuvah` only. Our snapshot came from feeds dated 2026-08-17 and the machzor iterates heavily.
