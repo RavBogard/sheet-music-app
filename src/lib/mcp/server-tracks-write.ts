@@ -19,6 +19,7 @@ import {
     type RichErrorEnvelope,
     type WriteRejection,
 } from "@/lib/mcp/error-envelopes"
+import { liturgyRefGuard } from "@/lib/mcp/liturgy-ref-guard"
 
 /**
  * F-015: Strip null bytes and C0/C1 control characters from user-supplied
@@ -1133,6 +1134,22 @@ export async function bulkUpdateTracks(
                 },
             }
         }
+        // Task 7 (liturgy outlines Phase 3): guard each patch's liturgyRef
+        // against the book registry in the same pre-validation pass so
+        // `mode:'atomic'` rejects the whole batch with ZERO writes — the
+        // established all-or-nothing contract this batch path already has
+        // for missing tracks / unresolved re-bonds above.
+        const liturgyBad = liturgyRefGuard(patch.liturgyRef)
+        if (liturgyBad) {
+            return {
+                kind: "invalid",
+                result: {
+                    trackId,
+                    ok: false,
+                    error: liturgyBad.error.message,
+                },
+            }
+        }
         const preview: Record<string, unknown> = { ...row }
         for (const k of fields) preview[k] = patch[k]
         if (patch.songId === null) {
@@ -1661,6 +1678,22 @@ export async function bulkAddTracks(
                 index: i,
                 machine_code: "title_required",
                 message: "title is required (or pass a songId to derive it)",
+            })
+            continue
+        }
+
+        // Task 7 (liturgy outlines Phase 3): guard each row's liturgyRef
+        // against the book registry in this same pre-validation pass, so
+        // `mode:'atomic'` rejects the whole batch with ZERO writes — the
+        // established all-or-nothing contract already applied to the
+        // song_not_found / title_required checks above.
+        const liturgyBad = liturgyRefGuard(row.liturgyRef)
+        if (liturgyBad) {
+            planned.push({
+                kind: "invalid",
+                index: i,
+                machine_code: liturgyBad.error.machine_code,
+                message: liturgyBad.error.message,
             })
             continue
         }

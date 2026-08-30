@@ -203,4 +203,69 @@ describe("outline fields survive the MCP write path (emulator)", () => {
             honors: [{ name: "David Lazaroff", note: "aliyah" }],
         })
     })
+
+    describe("liturgyRef validation (emulator)", () => {
+        it("rejects an unknown book slug", async () => {
+            const setlistId = await newSetlist()
+            const res = await addTrackToSetlist(ADMIN, {
+                setlistId,
+                title: "Mi Chamocha",
+                type: "prayer",
+                liturgyRef: { book: "not-a-book", folio: 4 },
+            })
+            expect(res).toMatchObject({
+                ok: false,
+                error: { machine_code: "unknown_book" },
+            })
+        })
+
+        it("rejects a folio past the end of the book", async () => {
+            const setlistId = await newSetlist()
+            const res = await addTrackToSetlist(ADMIN, {
+                setlistId,
+                title: "Mi Chamocha",
+                type: "prayer",
+                liturgyRef: { book: "crc-friday", folio: 9999 },
+            })
+            expect(res).toMatchObject({
+                ok: false,
+                error: { machine_code: "folio_out_of_range" },
+            })
+        })
+
+        it("rejects a unitId that is not in the named feed book", async () => {
+            const setlistId = await newSetlist()
+            const res = await addTrackToSetlist(ADMIN, {
+                setlistId,
+                title: "Barchu",
+                type: "prayer",
+                liturgyRef: { book: "shirei-tshuvah", unitId: "nope@nowhere", folio: 2 },
+            })
+            expect(res).toMatchObject({
+                ok: false,
+                error: { machine_code: "unknown_unit_id" },
+            })
+        })
+
+        it("writes nothing when validation fails", async () => {
+            const setlistId = await newSetlist()
+            await addTrackToSetlist(ADMIN, {
+                setlistId,
+                title: "Mi Chamocha",
+                type: "prayer",
+                liturgyRef: { book: "not-a-book", folio: 4 },
+            })
+            const snap = await db().collection("tracks").get()
+            expect(snap.size).toBe(0)
+        })
+
+        it("rejects an unknown book on create_setlist", async () => {
+            const res = await createSetlist(ADMIN, {
+                name: "Bad book",
+                eventDate: "2026-09-04",
+                book: "not-a-book",
+            })
+            expect(res).toMatchObject({ ok: false, error: { machine_code: "unknown_book" } })
+        })
+    })
 })

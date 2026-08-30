@@ -17,6 +17,7 @@ import {
     type StaleVersionEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { STOP_AND_ASK_THRESHOLD } from "@/lib/mcp/title-specificity"
+import { liturgyRefGuard } from "@/lib/mcp/liturgy-ref-guard"
 import {
     resolveTrackBondDefaults,
     type ResolvedTrackBond,
@@ -199,6 +200,17 @@ export async function proposeSetlistChanges(
                 { proposalIndex: i },
                 "Fix the proposal entry and re-stage.",
             )
+    }
+
+    // Task 7 (liturgy outlines Phase 3): registry-backed liturgyRef check at
+    // STAGE time — so Daniel sees the rejection before commit_staged_changes,
+    // and NOTHING is written (no stage doc, no track mutation) when a
+    // proposal carries an invalid liturgyRef. Passed straight through so the
+    // caller sees the exact unknown_book / folio_out_of_range /
+    // unknown_unit_id machine_code from the registry.
+    for (let i = 0; i < args.proposals.length; i++) {
+        const badLiturgyRef = liturgyRefGuard(args.proposals[i].liturgyRef)
+        if (badLiturgyRef) return badLiturgyRef
     }
 
     // Look up each unique songId once to derive per-proposal confidence

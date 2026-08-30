@@ -31,6 +31,7 @@ import {
 } from "@/lib/mcp/error-envelopes"
 import { getSongById, resolveTrackBondDefaults } from "@/lib/mcp/server-songs"
 import { getChartHealth } from "@/lib/file-fetcher"
+import { liturgyRefGuard, bookSlugGuard } from "@/lib/mcp/liturgy-ref-guard"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
@@ -139,6 +140,12 @@ export async function createSetlist(
     const editor = await assertEditor(db, uid)
     if (!editor.ok) return editor
 
+    // Task 7 (liturgy outlines Phase 3): reject an unknown book slug before
+    // any write. Zod only checked the shape of `book`; the registry is the
+    // only source of truth for whether the slug exists.
+    const badBook = bookSlugGuard(args.book)
+    if (badBook) return badBook
+
     const ownerName = await ownerNameFor(db, uid)
 
     const result = await createSetlistServerSide({
@@ -218,6 +225,11 @@ export async function updateSetlist(
 
     const loaded = await loadEditableSetlist(db, args.id, uid, org)
     if (!loaded.ok) return loaded
+
+    // Task 7 (liturgy outlines Phase 3): reject an unknown book slug before
+    // any write.
+    const badBook = bookSlugGuard(args.book)
+    if (badBook) return badBook
 
     const patch: SetlistMetadataPatch = {}
     if (args.name !== undefined) patch.name = args.name
@@ -372,6 +384,14 @@ export async function addTrackToSetlist(
     const loaded = await loadEditableSetlist(db, args.setlistId, uid, org)
     if (!loaded.ok) return loaded
 
+    // Task 7 (liturgy outlines Phase 3): registry-backed check BEFORE any
+    // write. Zod (Task 6) only validated the shape of liturgyRef; only the
+    // book registry knows whether the book exists and the page is inside
+    // it. A wrong page number reaching the rabbi's printed sheet is the one
+    // failure mode this feature cannot afford.
+    const badLiturgyRef = liturgyRefGuard(args.liturgyRef)
+    if (badLiturgyRef) return badLiturgyRef
+
     const type = args.type ?? "song"
 
     // MCP-008 (cycle-2): shared chart-resolve helper. Pre-extraction this
@@ -515,6 +535,16 @@ export async function updateSetlistTrack(
 
     const loaded = await loadEditableSetlist(db, args.setlistId, uid, org)
     if (!loaded.ok) return loaded
+
+    // Task 7 (liturgy outlines Phase 3): registry-backed check BEFORE any
+    // write. Guarded here (the MCP wrapper) rather than inside
+    // server-tracks-write.ts's low-level `updateTrack` because that
+    // function's return type (`WriteError | WriteRejection`) has no slot for
+    // a RichErrorEnvelope with a preserved machine_code — mirrors the
+    // existing pre-validate-in-the-wrapper pattern used for `patch.songId`
+    // immediately below.
+    const badLiturgyRef = liturgyRefGuard(args.patch.liturgyRef)
+    if (badLiturgyRef) return badLiturgyRef
 
     // F-01 (2026-05-16 bugstomp): pre-validate songId before writing. Without
     // this, a patch with a bogus songId silently bonds a row to a non-existent
