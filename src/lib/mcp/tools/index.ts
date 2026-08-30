@@ -177,8 +177,16 @@ export const lastSeenVersionSchema = z
  * bulk_add_tracks, update_track, bulk_update_tracks and propose_setlist_changes.
  *
  * Defined once because these five schemas have drifted before (`position` is
- * accepted by update_track but rejected by bulk_update_tracks). A parity test
- * in __tests__/outline-schema-parity.test.ts guards against re-drift.
+ * accepted by update_track but rejected by bulk_update_tracks). The parity
+ * test in __tests__/outline-schema-parity.test.ts safeParses SAMPLE against
+ * all five surfaces directly: `updateTrackPatchSchema` and
+ * `bulkTrackPatchSchema` below for update_track/bulk_update_tracks, and the
+ * exported `addTrackToSetlistFields` / `bulkAddTrackRowSchema` /
+ * `proposeChangeProposalSchema` (which all spread the sibling
+ * `trackRowFields` fragment) for add_track_to_setlist, bulk_add_tracks and
+ * propose_setlist_changes — the same exported objects `registerWriteTools`
+ * actually registers, not lookalikes, so an accidental field drop at any of
+ * the five call sites fails the test.
  */
 export const outlineFields = {
     performer: z
@@ -242,6 +250,91 @@ export const outlineFields = {
             "Named congregants honored at this moment. Printed prominently on the rabbi's sheet. Never copied by templates or clone_setlist — honors are per-service.",
         ),
 } as const
+
+/**
+ * Row/proposal field surface shared by add_track_to_setlist, the per-row
+ * shape inside bulk_add_tracks, and the per-proposal shape inside
+ * propose_setlist_changes. Extracted for the same reason as
+ * `trackPatchFields` below: these three were separate hand-maintained
+ * z.object literals — the fix that first threaded `outlineFields` into all
+ * three (spreading it independently at each call site) left the OTHER seven
+ * fields (songId/title/type/key/leadMusician/referenceLink/notes) still
+ * hand-duplicated three times, with nothing to catch one of the three
+ * silently drifting from the others. Not merged with `trackPatchFields`:
+ * that fragment's `songId` is nullable (supports the update-path unbond
+ * gesture) where this one's is not — same field name, different contract.
+ */
+export const trackRowFields = {
+    songId: z
+        .string()
+        .min(1)
+        .optional()
+        .describe("Library song id — title/key/lead default from this song"),
+    title: z
+        .string()
+        .optional()
+        .describe(
+            "Row title — required for header / reading / prayer / transition / note rows, or to override a song's title",
+        ),
+    type: z
+        .enum(["song", "header", "reading", "prayer", "transition", "note"])
+        .optional()
+        .describe(
+            "Row type (default 'song'). 'header' = section break; 'reading' = Torah/scripture/responsive; 'prayer' = silent/responsive prayer; 'transition' = instrumental/transition; 'note' = free-text annotation.",
+        ),
+    key: z.string().optional().describe("Musical key for this row"),
+    leadMusician: z.string().optional().describe("Vocal Lead for this row"),
+    referenceLink: z.string().optional().describe("Reference URL for this row"),
+    notes: z.string().optional().describe("Free-text notes for this row"),
+    ...outlineFields,
+} as const
+
+/**
+ * add_track_to_setlist's full inputSchema (a raw ZodRawShape, not wrapped —
+ * `registerTool`'s `inputSchema` takes the shape directly). Exported so the
+ * parity test can `z.object(addTrackToSetlistFields).safeParse(...)` against
+ * the EXACT shape the tool registers.
+ */
+export const addTrackToSetlistFields = {
+    setlistId: z.string().min(1).describe("Setlist id"),
+    ...trackRowFields,
+    position: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("0-based insert index; omit to append"),
+    force: z
+        .boolean()
+        .optional()
+        .describe(
+            "Bind even if the chart's bytes are dead. By default a songId whose chart is missing (404) or an unembeddable Google Drive shortcut is REFUSED with chart_unbindable — binding it would render a broken row in Perform mode and drop from gig packets. Set true to override (e.g. you're re-uploading the bytes next, or the row will be reconciled).",
+        ),
+} as const
+
+/** bulk_add_tracks' per-row schema — exported so the parity test targets the exact object registered in `tracks: z.array(bulkAddTrackRowSchema)`. */
+export const bulkAddTrackRowSchema = z.object(trackRowFields)
+
+/** propose_setlist_changes' per-proposal schema — exported so the parity test targets the exact object registered in `proposals: z.array(proposeChangeProposalSchema)`. */
+export const proposeChangeProposalSchema = z.object({
+    action: z
+        .enum(["add", "update", "remove"])
+        .describe(
+            "Proposal action: add a new row, update an existing row's fields/bond, or remove a row.",
+        ),
+    trackId: z
+        .string()
+        .min(1)
+        .optional()
+        .describe("Required for update/remove; from get_setlist tracks[].id."),
+    position: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("For action='add': 0-based insert index; omit to append."),
+    ...trackRowFields,
+})
 
 /**
  * Track-patch field surface — common between update_track and
@@ -1049,50 +1142,7 @@ export function registerWriteTools(server: McpServer): void {
         {
             description:
                 "Add one row to a setlist. Row types: 'song' (pass songId to pull title/key/vocal-lead from the library AND bond the song's chart so it renders on the row, or pass an explicit title for a free-text row), 'header' (section break with a title), 'reading' (Torah / scripture / D'var / responsive reading — title required), 'prayer' (silent or responsive prayer — title required), 'transition' (instrumental/transition moment), or 'note' (free-text annotation). position is a 0-based insert index; omit it to append at the end. Admins and band leaders may add tracks — band_leader may add to setlists owned by others (collaborate), but only the owner or admin may delete the setlist itself (see delete_setlist).",
-            inputSchema: {
-                setlistId: z.string().min(1).describe("Setlist id"),
-                songId: z
-                    .string()
-                    .min(1)
-                    .optional()
-                    .describe("Library song id — title/key/lead default from this song"),
-                title: z
-                    .string()
-                    .optional()
-                    .describe(
-                        "Row title — required for header / reading / prayer / transition / note rows, or to override a song's title",
-                    ),
-                type: z
-                    .enum([
-                        "song",
-                        "header",
-                        "reading",
-                        "prayer",
-                        "transition",
-                        "note",
-                    ])
-                    .optional()
-                    .describe(
-                        "Row type (default 'song'). 'header' = section break; 'reading' = Torah/scripture/responsive; 'prayer' = silent/responsive prayer; 'transition' = instrumental/transition; 'note' = free-text annotation.",
-                    ),
-                key: z.string().optional().describe("Musical key for this row"),
-                leadMusician: z.string().optional().describe("Vocal Lead for this row"),
-                referenceLink: z.string().optional().describe("Reference URL for this row"),
-                notes: z.string().optional().describe("Free-text notes for this row"),
-                ...outlineFields,
-                position: z
-                    .number()
-                    .int()
-                    .min(0)
-                    .optional()
-                    .describe("0-based insert index; omit to append"),
-                force: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "Bind even if the chart's bytes are dead. By default a songId whose chart is missing (404) or an unembeddable Google Drive shortcut is REFUSED with chart_unbindable — binding it would render a broken row in Perform mode and drop from gig packets. Set true to override (e.g. you're re-uploading the bytes next, or the row will be reconciled).",
-                    ),
-            },
+            inputSchema: addTrackToSetlistFields,
         },
         async (args, extra) => jsonResult(await addTrackToSetlist(uidFrom(extra), args, orgFrom(extra))),
     )
@@ -1105,48 +1155,7 @@ export function registerWriteTools(server: McpServer): void {
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 tracks: z
-                    .array(
-                        z.object({
-                            songId: z
-                                .string()
-                                .min(1)
-                                .optional()
-                                .describe(
-                                    "Library song id — title/key/lead default from this song",
-                                ),
-                            title: z
-                                .string()
-                                .optional()
-                                .describe(
-                                    "Row title — required for non-song rows or to override a song's title",
-                                ),
-                            type: z
-                                .enum([
-                                    "song",
-                                    "header",
-                                    "reading",
-                                    "prayer",
-                                    "transition",
-                                    "note",
-                                ])
-                                .optional()
-                                .describe("Row type (default 'song')"),
-                            key: z.string().optional().describe("Musical key"),
-                            leadMusician: z
-                                .string()
-                                .optional()
-                                .describe("Vocal Lead"),
-                            referenceLink: z
-                                .string()
-                                .optional()
-                                .describe("Reference URL"),
-                            notes: z
-                                .string()
-                                .optional()
-                                .describe("Free-text notes"),
-                            ...outlineFields,
-                        }),
-                    )
+                    .array(bulkAddTrackRowSchema)
                     .min(1)
                     .max(50)
                     .describe("Rows to insert, in performance order; max 50"),
@@ -1443,65 +1452,7 @@ export function registerWriteTools(server: McpServer): void {
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 proposals: z
-                    .array(
-                        z.object({
-                            action: z
-                                .enum(["add", "update", "remove"])
-                                .describe(
-                                    "Proposal action: add a new row, update an existing row's fields/bond, or remove a row.",
-                                ),
-                            trackId: z
-                                .string()
-                                .min(1)
-                                .optional()
-                                .describe(
-                                    "Required for update/remove; from get_setlist tracks[].id.",
-                                ),
-                            position: z
-                                .number()
-                                .int()
-                                .min(0)
-                                .optional()
-                                .describe(
-                                    "For action='add': 0-based insert index; omit to append.",
-                                ),
-                            songId: z
-                                .string()
-                                .min(1)
-                                .optional()
-                                .describe(
-                                    "Library song id — bond this row's chart. The library is keyed by Drive file id.",
-                                ),
-                            title: z.string().optional().describe("Row title."),
-                            key: z.string().optional().describe("Musical key."),
-                            leadMusician: z
-                                .string()
-                                .optional()
-                                .describe("Vocal Lead."),
-                            referenceLink: z
-                                .string()
-                                .optional()
-                                .describe("Reference URL."),
-                            notes: z
-                                .string()
-                                .optional()
-                                .describe("Free-text notes."),
-                            type: z
-                                .enum([
-                                    "song",
-                                    "header",
-                                    "reading",
-                                    "prayer",
-                                    "transition",
-                                    "note",
-                                ])
-                                .optional()
-                                .describe(
-                                    "Row type (default 'song' for add).",
-                                ),
-                            ...outlineFields,
-                        }),
-                    )
+                    .array(proposeChangeProposalSchema)
                     .min(1)
                     .max(50)
                     .describe("1–50 proposals to stage."),
