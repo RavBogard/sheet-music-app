@@ -53,8 +53,14 @@ type DB = FirebaseFirestore.Firestore
 
 const COLLECTION = "setlistTemplates"
 
-/** Track-row fields safe to copy verbatim from template → real setlist. */
-const COPYABLE_TRACK_FIELDS = [
+/**
+ * Fields copied setlist→template and template→setlist.
+ *
+ * `honors` is deliberately absent: honors name specific congregants at a
+ * specific service ("Rachel Cohen — birthday, candle lighting") and must never
+ * ride a template into next week's service.
+ */
+export const COPYABLE_TRACK_FIELDS = [
     "type",
     "title",
     "key",
@@ -65,6 +71,10 @@ const COPYABLE_TRACK_FIELDS = [
     "songId",
     "fileId",
     "fileName",
+    "performer",
+    "description",
+    "estimatedMinutes",
+    "liturgyRef",
 ] as const
 
 type CopyableTrackField = (typeof COPYABLE_TRACK_FIELDS)[number]
@@ -80,6 +90,10 @@ export interface TemplateTrack {
     songId?: string | null
     fileId?: string | null
     fileName?: string | null
+    performer?: string | null
+    description?: string | null
+    estimatedMinutes?: number | null
+    liturgyRef?: { book: string; unitId?: string; folio: number } | null
 }
 
 async function ownerNameFor(db: DB, uid: string): Promise<string> {
