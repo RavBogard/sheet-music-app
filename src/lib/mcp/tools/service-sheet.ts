@@ -49,8 +49,41 @@ function toStringOrUndef(v: unknown): string | undefined {
     return typeof v === "string" && v.length > 0 ? v : undefined
 }
 
-function toNumberOrUndef(v: unknown): number | undefined {
-    return typeof v === "number" && Number.isFinite(v) ? v : undefined
+/**
+ * The header's service date.
+ *
+ * `eventDate` is persisted as a Firestore Timestamp on every write path
+ * (create_setlist / update_setlist / clone_setlist all run the string through
+ * parseEventDate first), so the previous `typeof eventDate === "string"` test
+ * was ALWAYS false and the sheet always printed with no date at all — last
+ * week's sheet and this week's were indistinguishable on the lectern. Same
+ * Timestamp-unwrap shape as `str()` in setlist-write.ts's get-back echo, but
+ * formatted for a human reading it aloud rather than as an ISO string:
+ * "September 4, 2026", matching setlist-publish.ts's existing en-US long-date
+ * precedent. Pinned to America/Chicago (the CRC service locale, and the zone
+ * parseEventDate anchors to) so a UTC-hosted serverless run can't print the
+ * neighbouring day. A legacy string value is passed through verbatim.
+ */
+function toEventDateLabel(v: unknown): string | undefined {
+    if (typeof v === "string") return v.length > 0 ? v : undefined
+    if (
+        v &&
+        typeof v === "object" &&
+        "toDate" in v &&
+        typeof (v as { toDate: unknown }).toDate === "function"
+    ) {
+        try {
+            return (v as { toDate(): Date }).toDate().toLocaleDateString("en-US", {
+                timeZone: "America/Chicago",
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+            })
+        } catch {
+            return undefined
+        }
+    }
+    return undefined
 }
 
 function toLiturgyRef(v: unknown): ServiceSheetTrack["liturgyRef"] {
@@ -139,8 +172,7 @@ export async function generateServiceSheet(
     const setlistData = setlistDoc.data() as Record<string, unknown>
     const setlistName =
         (typeof setlistData.name === "string" && setlistData.name) || args.setlistId
-    const eventDate =
-        typeof setlistData.eventDate === "string" ? setlistData.eventDate : undefined
+    const eventDate = toEventDateLabel(setlistData.eventDate)
     const rabbi = typeof setlistData.rabbi === "string" ? setlistData.rabbi : undefined
     const book = typeof setlistData.book === "string" ? setlistData.book : undefined
     const bookTitle = book ? getRegistryEntry(book)?.title : undefined
@@ -162,7 +194,6 @@ export async function generateServiceSheet(
                 performer: toStringOrUndef(row.performer),
                 leadMusician: toStringOrUndef(row.leadMusician),
                 description: toStringOrUndef(row.description),
-                estimatedMinutes: toNumberOrUndef(row.estimatedMinutes),
                 liturgyRef: toLiturgyRef(row.liturgyRef),
                 honors: toHonors(row.honors),
             } satisfies ServiceSheetTrack

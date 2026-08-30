@@ -1,7 +1,16 @@
 import { describe, it, expect } from "vitest"
 import { COPYABLE_TRACK_FIELDS, patchHasChange } from "../templates"
+import { COPYABLE_TRACK_FIELDS as SHARED_COPYABLE_TRACK_FIELDS } from "../copyable-track-fields"
 
 describe("template copyable fields", () => {
+    // templates.ts used to declare this list itself and clone-setlist.ts
+    // declared a twin, with a comment claiming they matched. They drifted and a
+    // clone dropped every liturgyRef. Identity, not equality: this fails if
+    // templates.ts ever goes back to owning its own array.
+    it("IS the shared constant, not a copy of it", () => {
+        expect(COPYABLE_TRACK_FIELDS).toBe(SHARED_COPYABLE_TRACK_FIELDS)
+    })
+
     it("carries the outline structure fields", () => {
         for (const f of ["performer", "description", "estimatedMinutes", "liturgyRef"]) {
             expect(COPYABLE_TRACK_FIELDS).toContain(f)

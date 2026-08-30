@@ -22,7 +22,11 @@ export interface ServiceSheetTrack {
     performer?: string
     leadMusician?: string
     description?: string
-    estimatedMinutes?: number
+    // `estimatedMinutes` is deliberately NOT accepted here. The row data model
+    // carries it (run-sheet timing), but this renderer draws no timing column —
+    // accepting a parameter and silently ignoring it is the same trap that got
+    // `serviceNotes` removed from this interface. If the sheet ever grows a
+    // timing column, add the field back with the drawing code in the same change.
     liturgyRef?: { book: string; unitId?: string; folio: number }
     honors?: Array<{ name: string; note?: string }>
 }

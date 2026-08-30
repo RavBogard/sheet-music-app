@@ -339,6 +339,76 @@ describe("MCP clone_setlist (emulator)", () => {
         })
     })
 
+    /**
+     * clone_setlist declared its OWN copyable-field list — a twin of the one in
+     * templates.ts, with a comment in templates.ts claiming they matched. They
+     * drifted: the outline fields never reached the clone list, so Daniel's 90%
+     * flow ("clone last week's Erev Shabbat") returned an outline with every
+     * printed page number, the book and every performer cue silently gone. Both
+     * files now import one shared constant.
+     */
+    describe("service-outline fields survive the clone", () => {
+        async function buildOutlineSource(): Promise<string> {
+            const created = (await createSetlist(SOURCE_OWNER, {
+                name: "Erev Shabbat — Outline Source",
+                eventDate: "2026-09-04",
+                rabbi: "Rabbi Daniel",
+                book: "crc-friday",
+            })) as { setlistId: string }
+            await addTrackToSetlist(SOURCE_OWNER, {
+                setlistId: created.setlistId,
+                title: "Candle Lighting",
+                type: "reading",
+                performer: "Congregation",
+                description: "Read responsively.",
+                estimatedMinutes: 3,
+                liturgyRef: { book: "crc-friday", folio: 4 },
+                honors: [{ name: "Rachel Cohen", note: "birthday" }],
+            })
+            return created.setlistId
+        }
+
+        it("copies performer, description, estimatedMinutes and liturgyRef onto the cloned rows", async () => {
+            const sourceId = await buildOutlineSource()
+            const result = (await cloneSetlist(ADMIN, {
+                sourceSetlistId: sourceId,
+            })) as { ok: true; setlistId: string }
+            expect(result.ok).toBe(true)
+            const rows = await tracksOf(result.setlistId)
+            expect(rows).toHaveLength(1)
+            expect(rows[0].data).toMatchObject({
+                title: "Candle Lighting",
+                performer: "Congregation",
+                description: "Read responsively.",
+                estimatedMinutes: 3,
+                liturgyRef: { book: "crc-friday", folio: 4 },
+            })
+        })
+
+        it("does NOT copy honors — they name congregants at one specific service", async () => {
+            const sourceId = await buildOutlineSource()
+            const result = (await cloneSetlist(ADMIN, {
+                sourceSetlistId: sourceId,
+            })) as { ok: true; setlistId: string }
+            const rows = await tracksOf(result.setlistId)
+            expect(rows[0].data.honors).toBeUndefined()
+            // ...and the source keeps its own honors untouched.
+            const src = await tracksOf(sourceId)
+            expect(src[0].data.honors).toEqual([{ name: "Rachel Cohen", note: "birthday" }])
+        })
+
+        it("copies the setlist-level `book` so the cloned page numbers still name a volume", async () => {
+            const sourceId = await buildOutlineSource()
+            const result = (await cloneSetlist(ADMIN, {
+                sourceSetlistId: sourceId,
+            })) as { ok: true; setlistId: string }
+            const cloneDoc = (
+                await db().collection("setlists").doc(result.setlistId).get()
+            ).data() as Record<string, unknown>
+            expect(cloneDoc.book).toBe("crc-friday")
+        })
+    })
+
     it("rejects an empty sourceSetlistId", async () => {
         const result = await cloneSetlist(ADMIN, { sourceSetlistId: "  " })
         expect(result).toMatchObject({

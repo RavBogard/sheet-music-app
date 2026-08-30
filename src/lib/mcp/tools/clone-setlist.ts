@@ -23,6 +23,16 @@ import {
     toBondReviewRows,
     type BondReviewRow,
 } from "./chart-bond-audit"
+/**
+ * Track-row fields safe to copy verbatim from source → clone. Shared with the
+ * template surfaces (`create_template_from_setlist`,
+ * `clone_setlist_from_template`) — this file used to declare its own private
+ * twin of that list, and the two drifted: the outline fields (`performer`,
+ * `description`, `estimatedMinutes`, `liturgyRef`) reached the template list
+ * and never this one, so a clone silently dropped every printed page number.
+ * `honors` is excluded by design — see the shared module's header.
+ */
+import { COPYABLE_TRACK_FIELDS } from "./copyable-track-fields"
 
 /**
  * GAP-002 (cycle-2) — clone an existing setlist into a brand new one.
@@ -144,20 +154,6 @@ export interface CloneSetlistResult {
      */
     staleMetadataCandidates: StaleMetadataCandidates
 }
-
-/** Track-row fields safe to copy verbatim from source → clone. */
-const COPYABLE_TRACK_FIELDS = [
-    "type",
-    "title",
-    "key",
-    "bpm",
-    "leadMusician",
-    "referenceLink",
-    "notes",
-    "songId",
-    "fileId",
-    "fileName",
-] as const
 
 export async function cloneSetlist(
     uid: string,
@@ -298,6 +294,14 @@ export async function cloneSetlist(
     }
     if (typeof sourceData.rabbi === "string") {
         setlistPayload.rabbi = sourceData.rabbi
+    }
+    // `book` is the siddur/machzor the service is read from — an attribute of
+    // the service kind, exactly like rabbi/templateType. Without it the clone's
+    // rows keep their `liturgyRef.folio` page numbers but the setlist has no
+    // book, so the rabbi's service sheet prints page numbers with no volume
+    // named and lookup_book_page has nothing to resolve against.
+    if (typeof sourceData.book === "string") {
+        setlistPayload.book = sourceData.book
     }
     if (copyServiceNotes && typeof sourceData.serviceNotes === "string") {
         setlistPayload.serviceNotes = sourceData.serviceNotes

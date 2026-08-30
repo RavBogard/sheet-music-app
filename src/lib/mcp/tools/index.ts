@@ -201,7 +201,7 @@ export const outlineFields = {
         .string()
         .optional()
         .describe(
-            "Body text for readings/prayers — responsive reading text or stage directions. Printed under the row on the service sheet.",
+            "Body text for readings/prayers — responsive reading text or stage directions. Printed under the row on the service sheet. Latin characters only: Hebrew prints as '?' on the sheet, so transliterate.",
         ),
     estimatedMinutes: z
         .number()
@@ -238,7 +238,13 @@ export const outlineFields = {
     honors: z
         .array(
             z.object({
-                name: z.string().min(1).max(120).describe("Person being honored."),
+                name: z
+                    .string()
+                    .min(1)
+                    .max(120)
+                    .describe(
+                        "Person being honored. Latin characters only: Hebrew prints as '?' on the rabbi's sheet, so transliterate the name (e.g. 'Rivka bat Sarah', not the Hebrew).",
+                    ),
                 note: z
                     .string()
                     .max(200)
@@ -252,6 +258,41 @@ export const outlineFields = {
             "Named congregants honored at this moment. Printed prominently on the rabbi's sheet. Never copied by templates or clone_setlist — honors are per-service.",
         ),
 } as const
+
+/**
+ * The template surface's outline fields: everything in `outlineFields` EXCEPT
+ * `honors`.
+ *
+ * Templates deliberately never carry honors — honors name specific congregants
+ * at a specific service, and `COPYABLE_TRACK_FIELDS` (the single list every
+ * copy surface uses) omits the field for that reason. Derived from
+ * `outlineFields` by destructuring rather than re-listing, so the four fields
+ * that DO travel keep one definition, one set of validation rules and one set
+ * of descriptions across all seven write surfaces.
+ *
+ * This existed as a hand-written ten-field list duplicated at create_template
+ * and update_template, missing all four outline fields — so the natural
+ * round-trip (get_template → edit one row → update_template) handed Zod a
+ * payload carrying page numbers, Zod's default strip mode deleted them, and
+ * the template permanently lost every liturgyRef with no error raised.
+ */
+const { honors: _honorsNotOnTemplates, ...templateOutlineFields } = outlineFields
+
+/** Per-row shape for create_template / update_template `tracks[]`. One
+ *  definition, both call sites — the two used to be separate literals. */
+const templateTrackSchema = z.object({
+    type: z.string().optional(),
+    title: z.string().optional(),
+    key: z.string().nullable().optional(),
+    bpm: z.number().nullable().optional(),
+    leadMusician: z.string().nullable().optional(),
+    referenceLink: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+    songId: z.string().nullable().optional(),
+    fileId: z.string().nullable().optional(),
+    fileName: z.string().nullable().optional(),
+    ...templateOutlineFields,
+})
 
 /**
  * Row/proposal field surface shared by add_track_to_setlist, the per-row
@@ -278,7 +319,7 @@ export const trackRowFields = {
         .string()
         .optional()
         .describe(
-            "Row title — required for header / reading / prayer / transition / note rows, or to override a song's title",
+            "Row title — required for header / reading / prayer / transition / note rows, or to override a song's title. Latin characters only: Hebrew prints as '?' on the rabbi's service sheet, so transliterate.",
         ),
     type: z
         .enum(["song", "header", "reading", "prayer", "transition", "note"])
@@ -353,7 +394,12 @@ const trackPatchFields = {
     ...outlineFields,
     key: z.string().optional(),
     leadMusician: z.string().optional(),
-    title: z.string().optional(),
+    title: z
+        .string()
+        .optional()
+        .describe(
+            "Row title. Latin characters only: Hebrew prints as '?' on the rabbi's service sheet, so transliterate.",
+        ),
     notes: z.string().optional(),
     type: z
         .enum(["song", "header", "reading", "prayer", "transition", "note"])
@@ -963,7 +1009,7 @@ export function registerWriteTools(server: McpServer): void {
         "get_template",
         {
             description:
-                "Read a setlist template by id. Returns the full doc: name, templateType, serviceNotes, tracks[] (each with type, title, key, bpm, leadMusician, referenceLink, notes, songId, fileId, fileName), owner + version + timestamps. Admin + band_leader only. Use before update_template to fetch current state.",
+                "Read a setlist template by id. Returns the full doc: name, templateType, serviceNotes, tracks[] (each with type, title, key, bpm, leadMusician, referenceLink, notes, songId, fileId, fileName, performer, description, estimatedMinutes, liturgyRef), owner + version + timestamps. Templates DO carry liturgyRef page numbers; `honors` is never templated (it is per-service). Admin + band_leader only. Use before update_template to fetch current state — update_template accepts the same row shape, so an edited round-trip preserves page numbers.",
             inputSchema: {
                 templateId: z
                     .string()
@@ -999,23 +1045,10 @@ export function registerWriteTools(server: McpServer): void {
                         "Pastoral / liturgical notes that travel with the service kind. Cloned setlists copy this by default (override via clone_setlist_from_template `copyServiceNotes: false`).",
                     ),
                 tracks: z
-                    .array(
-                        z.object({
-                            type: z.string().optional(),
-                            title: z.string().optional(),
-                            key: z.string().nullable().optional(),
-                            bpm: z.number().nullable().optional(),
-                            leadMusician: z.string().nullable().optional(),
-                            referenceLink: z.string().nullable().optional(),
-                            notes: z.string().nullable().optional(),
-                            songId: z.string().nullable().optional(),
-                            fileId: z.string().nullable().optional(),
-                            fileName: z.string().nullable().optional(),
-                        }),
-                    )
+                    .array(templateTrackSchema)
                     .optional()
                     .describe(
-                        "Initial track list. Each row defaults to type='song' + title='' if omitted. Chart bonds (fileId/fileName/songId) copy verbatim into cloned setlists.",
+                        "Initial track list. Each row defaults to type='song' + title='' if omitted. Chart bonds (fileId/fileName/songId) copy verbatim into cloned setlists, as do the outline fields (performer, description, estimatedMinutes, liturgyRef). `honors` is NOT accepted — honors are per-service, never templated.",
                     ),
             },
         },
@@ -1039,21 +1072,11 @@ export function registerWriteTools(server: McpServer): void {
                         templateType: z.string().nullable().optional(),
                         serviceNotes: z.string().nullable().optional(),
                         tracks: z
-                            .array(
-                                z.object({
-                                    type: z.string().optional(),
-                                    title: z.string().optional(),
-                                    key: z.string().nullable().optional(),
-                                    bpm: z.number().nullable().optional(),
-                                    leadMusician: z.string().nullable().optional(),
-                                    referenceLink: z.string().nullable().optional(),
-                                    notes: z.string().nullable().optional(),
-                                    songId: z.string().nullable().optional(),
-                                    fileId: z.string().nullable().optional(),
-                                    fileName: z.string().nullable().optional(),
-                                }),
-                            )
-                            .optional(),
+                            .array(templateTrackSchema)
+                            .optional()
+                            .describe(
+                                "Full replacement of the template's track list. Pass back the rows from get_template with your edits — the outline fields (performer, description, estimatedMinutes, liturgyRef) round-trip, so page numbers survive an edit. `honors` is NOT accepted — honors are per-service.",
+                            ),
                     })
                     .describe(
                         "Fields to patch. Pass null on templateType/serviceNotes to clear them; pass a new tracks[] to fully replace the existing list.",
@@ -3110,7 +3133,7 @@ export function registerChartUploadTools(server: McpServer): void {
         "generate_service_sheet",
         {
             description:
-                "Render the RABBI's printed service sheet for a setlist — the order of the service, the printed page number in that day's siddur/machzor for each row (from liturgyRef), who leads/performs each moment, and named honors. This is the paper that goes on the shtender for the rabbi to read from; it deliberately omits charts, keys and BPM — use generate_gig_packet instead for the band's charts. Returns a 10-minute Firebase Storage signed download URL (`downloadUrl`, `expiresAt`, `sizeBytes`, `pageCount`, `storagePath`). Works for any setlist: rows with no page reference (no liturgyRef) simply print without a page number, and a setlist with no `book` set still produces a sheet. Use this when the rabbi or an assistant says 'make the service sheet', 'print the order of service', or 'give me the page numbers for Friday'.",
+                "Render the RABBI's printed service sheet for a setlist — the order of the service, the printed page number in that day's siddur/machzor for each row (from liturgyRef), who leads/performs each moment, and named honors. This is the paper that goes on the shtender for the rabbi to read from; it deliberately omits charts, keys and BPM — use generate_gig_packet instead for the band's charts. Returns a 10-minute Firebase Storage signed download URL (`downloadUrl`, `expiresAt`, `sizeBytes`, `pageCount`, `storagePath`). Works for any setlist: rows with no page reference (no liturgyRef) simply print without a page number, and a setlist with no `book` set still produces a sheet. Use this when the rabbi or an assistant says 'make the service sheet', 'print the order of service', or 'give me the page numbers for Friday'. LATIN CHARACTERS ONLY: the sheet's font cannot print Hebrew, so any Hebrew in a row title, description or honoree name comes out as '?' — transliterate before authoring, and warn the rabbi if a row already carries Hebrew.",
             inputSchema: {
                 setlistId: z
                     .string()

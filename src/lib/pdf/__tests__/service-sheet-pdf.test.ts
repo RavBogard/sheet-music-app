@@ -192,6 +192,31 @@ describe("renderServiceSheetPdf", () => {
         const pdf = await PDFDocument.load(await renderServiceSheetPdf({ ...BASE, tracks: [] }))
         expect(pdf.getPageCount()).toBe(1)
     })
+
+    // Nothing here asserted a single character of header content, which is how
+    // the missing date survived: `generate_service_sheet` read `eventDate` with
+    // a `typeof === "string"` test against a value always persisted as a
+    // Firestore Timestamp, so the date was always undefined and last week's
+    // sheet was indistinguishable from this week's on the lectern.
+    it("prints the date, the rabbi and the book in the header", async () => {
+        const bytes = await renderServiceSheetPdf({ ...BASE, tracks: [track()] })
+        const drawn = extractRuns(bytes).map((r) => r.text).join(" ")
+        expect(drawn).toContain("Erev Shabbat")
+        expect(drawn).toContain("2026-09-04")
+        expect(drawn).toContain("Rabbi Daniel")
+        expect(drawn).toContain("CRC Friday Siddur")
+    })
+
+    it("omits the date cleanly when the setlist has none", async () => {
+        const bytes = await renderServiceSheetPdf({
+            ...BASE,
+            eventDate: undefined,
+            tracks: [track()],
+        })
+        const drawn = extractRuns(bytes).map((r) => r.text).join(" ")
+        expect(drawn).not.toContain("2026-09-04")
+        expect(drawn).toContain("Rabbi Daniel")
+    })
 })
 
 describe("renderServiceSheetPdf — nothing runs off the paper", () => {

@@ -21,6 +21,10 @@ import {
     toBondReviewRows,
     type BondReviewRow,
 } from "./chart-bond-audit"
+import {
+    COPYABLE_TRACK_FIELDS,
+    type CopyableTrackField,
+} from "./copyable-track-fields"
 
 /**
  * Cycle-6 Lane 2 — setlist-template CRUD pack.
@@ -54,30 +58,17 @@ type DB = FirebaseFirestore.Firestore
 const COLLECTION = "setlistTemplates"
 
 /**
- * Fields copied setlist→template and template→setlist.
+ * Fields copied setlist→template and template→setlist. Defined ONCE in
+ * `./copyable-track-fields` and shared with `clone_setlist` — see that
+ * module's header for why (the two lists used to be hand-maintained twins and
+ * drifted, dropping every liturgyRef off a clone). Re-exported here because
+ * this module's public surface already exposed it.
  *
  * `honors` is deliberately absent: honors name specific congregants at a
  * specific service ("Rachel Cohen — birthday, candle lighting") and must never
  * ride a template into next week's service.
  */
-export const COPYABLE_TRACK_FIELDS = [
-    "type",
-    "title",
-    "key",
-    "bpm",
-    "leadMusician",
-    "referenceLink",
-    "notes",
-    "songId",
-    "fileId",
-    "fileName",
-    "performer",
-    "description",
-    "estimatedMinutes",
-    "liturgyRef",
-] as const
-
-type CopyableTrackField = (typeof COPYABLE_TRACK_FIELDS)[number]
+export { COPYABLE_TRACK_FIELDS }
 
 export interface TemplateTrack {
     type?: string
