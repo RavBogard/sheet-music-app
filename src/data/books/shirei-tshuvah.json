@@ -1,0 +1,1073 @@
+{
+    "slug": "shirei-tshuvah",
+    "title": "Shirei Tshuvah — Rosh Hashanah",
+    "tier": "feed",
+    "pages": 248,
+    "units": [
+        {
+            "id": "erev-maariv.in-preparation@rh1-maariv",
+            "name": "Candle Lighting",
+            "folios": [
+                1
+            ]
+        },
+        {
+            "id": "emaariv.barchu@rh1-maariv",
+            "name": "Bar’chu",
+            "folios": [
+                2
+            ]
+        },
+        {
+            "id": "emaariv.maariv-aravim@rh1-maariv",
+            "name": "Ma’ariv Aravim",
+            "folios": [
+                2,
+                3
+            ]
+        },
+        {
+            "id": "emaariv.ahavat-olam@rh1-maariv",
+            "name": "Ahavat Olam",
+            "folios": [
+                3,
+                4
+            ]
+        },
+        {
+            "id": "emaariv.the-shma@rh1-maariv",
+            "name": "The Sh’ma",
+            "folios": [
+                4
+            ]
+        },
+        {
+            "id": "emaariv.vahavta-tzitzit@rh1-maariv",
+            "name": "V’ahavta & Tzitzit",
+            "folios": [
+                5,
+                6,
+                7,
+                8
+            ]
+        },
+        {
+            "id": "emaariv.emet-vemunah@rh1-maariv",
+            "name": "Emet v’Emunah",
+            "folios": [
+                9
+            ]
+        },
+        {
+            "id": "emaariv.mi-chamocha@rh1-maariv",
+            "name": "Mi Chamocha",
+            "folios": [
+                9,
+                10
+            ]
+        },
+        {
+            "id": "emaariv.hashkivenu@rh1-maariv",
+            "name": "Hashkivenu",
+            "folios": [
+                11,
+                12
+            ]
+        },
+        {
+            "id": "emaariv.tiku@rh1-maariv",
+            "name": "Tik’u vaChodesh",
+            "folios": [
+                13
+            ]
+        },
+        {
+            "id": "emaariv.chatzi-kaddish@rh1-maariv",
+            "name": "Chatzi Kaddish",
+            "folios": [
+                14,
+                15
+            ]
+        },
+        {
+            "id": "emamidah.the-silent-amidah@rh1-maariv",
+            "name": "The Silent Amidah",
+            "folios": [
+                15
+            ]
+        },
+        {
+            "id": "emamidah.avot-vimahot@rh1-maariv",
+            "name": "Avot v’Imahot",
+            "folios": [
+                15,
+                16
+            ]
+        },
+        {
+            "id": "emamidah.gvurot@rh1-maariv",
+            "name": "G’vurot",
+            "folios": [
+                16,
+                17
+            ]
+        },
+        {
+            "id": "emamidah.kdushat-hashem@rh1-maariv",
+            "name": "K’dushat HaShem",
+            "folios": [
+                18
+            ]
+        },
+        {
+            "id": "emamidah.uvchein@rh1-maariv",
+            "name": "Uv’chein",
+            "folios": [
+                18,
+                19,
+                20
+            ]
+        },
+        {
+            "id": "emamidah.kdushat-hayom@rh1-maariv",
+            "name": "K’dushat HaYom",
+            "folios": [
+                20,
+                21,
+                22,
+                23,
+                24
+            ]
+        },
+        {
+            "id": "emamidah.avodah@rh1-maariv",
+            "name": "Avodah",
+            "folios": [
+                24
+            ]
+        },
+        {
+            "id": "emamidah.modim@rh1-maariv",
+            "name": "Modim",
+            "folios": [
+                25,
+                26
+            ]
+        },
+        {
+            "id": "emamidah.shalom-rav@rh1-maariv",
+            "name": "Shalom Rav",
+            "folios": [
+                26,
+                27
+            ]
+        },
+        {
+            "id": "emamidah.elohai-ntzor@rh1-maariv",
+            "name": "Elohai N’tzor",
+            "folios": [
+                27,
+                28,
+                29,
+                30,
+                31
+            ]
+        },
+        {
+            "id": "econcluding.kaddish-shalem@rh1-maariv",
+            "name": "Kaddish Shalem",
+            "folios": [
+                34,
+                35
+            ]
+        },
+        {
+            "id": "econcluding.aleinu@rh1-maariv",
+            "name": "Aleinu",
+            "folios": [
+                36,
+                37
+            ]
+        },
+        {
+            "id": "econcluding.mourners-kaddish@rh1-maariv",
+            "name": "Mourner’s Kaddish",
+            "folios": [
+                38,
+                39
+            ]
+        },
+        {
+            "id": "econcluding.psalm-27@rh1-maariv",
+            "name": "Psalm 27",
+            "folios": [
+                40,
+                41
+            ]
+        },
+        {
+            "id": "econcluding.birkat-kohanim@rh1-maariv",
+            "name": "Birkat Kohanim",
+            "folios": [
+                42
+            ]
+        },
+        {
+            "id": "econcluding.adon-olam@rh1-maariv",
+            "name": "Adon Olam",
+            "folios": [
+                43,
+                44
+            ]
+        },
+        {
+            "id": "ekiddush.kiddush@rh1-maariv",
+            "name": "Kiddush",
+            "folios": [
+                45,
+                46,
+                47,
+                48
+            ]
+        },
+        {
+            "id": "awakening.hineni@rh-shacharit",
+            "name": "Hineni",
+            "folios": [
+                50,
+                51,
+                52,
+                53
+            ]
+        },
+        {
+            "id": "awakening.hareini@shabbat-shacharit",
+            "name": "Hareini",
+            "folios": [
+                53
+            ]
+        },
+        {
+            "id": "awakening.modeh-ani@shabbat-shacharit",
+            "name": "Modeh Ani",
+            "folios": [
+                54
+            ]
+        },
+        {
+            "id": "awakening.mah-tovu@shabbat-shacharit",
+            "name": "Mah Tovu",
+            "folios": [
+                54,
+                55
+            ]
+        },
+        {
+            "id": "awakening.asher-yatzar@shabbat-shacharit",
+            "name": "Asher Yatzar",
+            "folios": [
+                55,
+                56
+            ]
+        },
+        {
+            "id": "awakening.elohai-nshamah@shabbat-shacharit",
+            "name": "Elohai N’shamah",
+            "folios": [
+                56
+            ]
+        },
+        {
+            "id": "awakening.birchot-hashachar@shabbat-shacharit",
+            "name": "Birchot HaShachar",
+            "folios": [
+                57,
+                58,
+                59
+            ]
+        },
+        {
+            "id": "awakening.birkot-hatorah@shabbat-shacharit",
+            "name": "Birkot HaTorah",
+            "folios": [
+                60
+            ]
+        },
+        {
+            "id": "awakening.eilu-dvarim@shabbat-shacharit",
+            "name": "Eilu D’varim",
+            "folios": [
+                61
+            ]
+        },
+        {
+            "id": "awakening.chatzi-kaddish@shabbat-shacharit",
+            "name": "Chatzi Kaddish",
+            "folios": [
+                62,
+                63
+            ]
+        },
+        {
+            "id": "psukei.baruch-sheamar@shabbat-shacharit",
+            "name": "Baruch She’amar",
+            "folios": [
+                63,
+                64
+            ]
+        },
+        {
+            "id": "psukei.hodu-davids-song@shabbat-shacharit",
+            "name": "Hodu — David’s Song",
+            "folios": [
+                64,
+                65,
+                66,
+                67,
+                68
+            ]
+        },
+        {
+            "id": "psukei.mizmor-shir@shabbat-shacharit",
+            "name": "Mizmor Shir",
+            "folios": [
+                68,
+                69,
+                70
+            ]
+        },
+        {
+            "id": "psukei.psalm-91@shabbat-shacharit",
+            "name": "Psalm 91",
+            "folios": [
+                70,
+                71,
+                72,
+                73
+            ]
+        },
+        {
+            "id": "psukei.psalm-92@shabbat-shacharit",
+            "name": "Psalm 92",
+            "folios": [
+                73,
+                74
+            ]
+        },
+        {
+            "id": "psukei.psalm-93@shabbat-shacharit",
+            "name": "Psalm 93",
+            "folios": [
+                74,
+                75
+            ]
+        },
+        {
+            "id": "psukei.psalm-84@shabbat-shacharit",
+            "name": "Psalm 84",
+            "folios": [
+                75,
+                76,
+                77
+            ]
+        },
+        {
+            "id": "psukei.yehi-chevod@shabbat-shacharit",
+            "name": "Yehi Chevod",
+            "folios": [
+                78,
+                79,
+                80
+            ]
+        },
+        {
+            "id": "psukei.ashrei@shabbat-shacharit",
+            "name": "Ashrei",
+            "folios": [
+                81,
+                82,
+                83
+            ]
+        },
+        {
+            "id": "psukei.psalm-146@shabbat-shacharit",
+            "name": "Psalm 146",
+            "folios": [
+                83,
+                84,
+                85
+            ]
+        },
+        {
+            "id": "psukei.psalm-147@shabbat-shacharit",
+            "name": "Psalm 147",
+            "folios": [
+                85,
+                86,
+                87
+            ]
+        },
+        {
+            "id": "psukei.psalm-148@shabbat-shacharit",
+            "name": "Psalm 148",
+            "folios": [
+                88,
+                89
+            ]
+        },
+        {
+            "id": "psukei.psalm-149@shabbat-shacharit",
+            "name": "Psalm 149",
+            "folios": [
+                90,
+                91
+            ]
+        },
+        {
+            "id": "psukei.psalm-150@shabbat-shacharit",
+            "name": "Psalm 150",
+            "folios": [
+                91,
+                92
+            ]
+        },
+        {
+            "id": "psukei.az-yashir@shabbat-shacharit",
+            "name": "Az Yashir",
+            "folios": [
+                92,
+                93,
+                94,
+                95,
+                96
+            ]
+        },
+        {
+            "id": "psukei.nishmat-kol-chai@shabbat-shacharit",
+            "name": "Nishmat Kol Chai",
+            "folios": [
+                96,
+                97,
+                98,
+                99
+            ]
+        },
+        {
+            "id": "psukei.shochein-ad@shabbat-shacharit",
+            "name": "Shochein Ad",
+            "folios": [
+                100,
+                101
+            ]
+        },
+        {
+            "id": "psukei.hamelech@rh-shacharit",
+            "name": "HaMelech",
+            "folios": [
+                102
+            ]
+        },
+        {
+            "id": "psukei.yishtabach@shabbat-shacharit",
+            "name": "Yishtabach",
+            "folios": [
+                103
+            ]
+        },
+        {
+            "id": "shma.barchu@rh-shacharit",
+            "name": "Bar’chu",
+            "folios": [
+                104
+            ]
+        },
+        {
+            "id": "shma.yotzer-or@rh-shacharit",
+            "name": "Yotzer Or",
+            "folios": [
+                104,
+                105,
+                106,
+                107,
+                108,
+                109,
+                110,
+                111,
+                112
+            ]
+        },
+        {
+            "id": "shma.ahavah-rabbah@rh-shacharit",
+            "name": "Ahavah Rabbah",
+            "folios": [
+                113,
+                114
+            ]
+        },
+        {
+            "id": "shma.the-shma@rh-shacharit",
+            "name": "The Sh’ma",
+            "folios": [
+                115
+            ]
+        },
+        {
+            "id": "shma.vahavta@rh-shacharit",
+            "name": "V’ahavta",
+            "folios": [
+                115,
+                116,
+                117,
+                118
+            ]
+        },
+        {
+            "id": "shma.mi-chamocha@rh-shacharit",
+            "name": "Mi Chamocha",
+            "folios": [
+                118,
+                119,
+                120,
+                121,
+                122,
+                123
+            ]
+        },
+        {
+            "id": "amidah.the-silent-amidah@rh-shacharit",
+            "name": "The Silent Amidah",
+            "folios": [
+                123
+            ]
+        },
+        {
+            "id": "amidah.avot-vimahot@rh-shacharit",
+            "name": "Avot v’Imahot",
+            "folios": [
+                123,
+                124
+            ]
+        },
+        {
+            "id": "amidah.gvurot@rh-shacharit",
+            "name": "G’vurot",
+            "folios": [
+                124,
+                125
+            ]
+        },
+        {
+            "id": "amidah.kdushat-hashem@rh-shacharit",
+            "name": "K’dushat HaShem",
+            "folios": [
+                126
+            ]
+        },
+        {
+            "id": "amidah.uvchein@rh-shacharit",
+            "name": "Uv’chein",
+            "folios": [
+                126,
+                127,
+                128
+            ]
+        },
+        {
+            "id": "amidah.untaneh-tokef@rh-shacharit",
+            "name": "Un’taneh Tokef",
+            "folios": [
+                130,
+                131,
+                133,
+                134
+            ]
+        },
+        {
+            "id": "amidah.kdushah@rh-shacharit",
+            "name": "K’dushah",
+            "folios": [
+                135,
+                136
+            ]
+        },
+        {
+            "id": "amidah.kdushat-hayom@rh-shacharit",
+            "name": "K’dushat HaYom",
+            "folios": [
+                137,
+                138,
+                139,
+                140
+            ]
+        },
+        {
+            "id": "amidah.avodah@rh-shacharit",
+            "name": "Avodah",
+            "folios": [
+                140
+            ]
+        },
+        {
+            "id": "amidah.modim@rh-shacharit",
+            "name": "Modim",
+            "folios": [
+                141,
+                142
+            ]
+        },
+        {
+            "id": "amidah.sim-shalom@rh-shacharit",
+            "name": "Sim Shalom",
+            "folios": [
+                142,
+                143
+            ]
+        },
+        {
+            "id": "amidah.elohai-ntzor@rh-shacharit",
+            "name": "Elohai N’tzor",
+            "folios": [
+                143,
+                144
+            ]
+        },
+        {
+            "id": "amidah.avinu-malkeinu@rh-shacharit",
+            "name": "Avinu Malkeinu",
+            "folios": [
+                146,
+                147,
+                148
+            ]
+        },
+        {
+            "id": "amidah.kaddish-shalem@rh-shacharit",
+            "name": "Kaddish Shalem",
+            "folios": [
+                150,
+                151
+            ]
+        },
+        {
+            "id": "torah.ein-kamocha@rh-shacharit",
+            "name": "Ein Kamocha",
+            "folios": [
+                152,
+                153
+            ]
+        },
+        {
+            "id": "torah.vayhi-binsoa@rh-shacharit",
+            "name": "Vay’hi Binso’a",
+            "folios": [
+                154
+            ]
+        },
+        {
+            "id": "torah.taking-out-the-torah@rh-shacharit",
+            "name": "Taking Out the Torah",
+            "folios": [
+                155
+            ]
+        },
+        {
+            "id": "torah.shma-procession-call@rh-shacharit",
+            "name": "Sh’ma",
+            "folios": [
+                155,
+                156
+            ]
+        },
+        {
+            "id": "torah.lcha-adonai-hagedulah@rh-shacharit",
+            "name": "L’cha Adonai HaGedulah",
+            "folios": [
+                156
+            ]
+        },
+        {
+            "id": "torah.called-to-the-torah@rh-shacharit",
+            "name": "Called to the Torah",
+            "folios": [
+                157
+            ]
+        },
+        {
+            "id": "torah.blessing-before-the-torah@rh-shacharit",
+            "name": "Blessing Before the Torah",
+            "folios": [
+                157,
+                158
+            ]
+        },
+        {
+            "id": "torah.torah-reading-day-1@rh1",
+            "name": "Torah Reading · Day 1",
+            "folios": [
+                158
+            ]
+        },
+        {
+            "id": "torah.torah-reading-day-2@rh2",
+            "name": "Torah Reading · Day 2",
+            "folios": [
+                161,
+                163,
+                164
+            ]
+        },
+        {
+            "id": "torah.blessing-after-the-torah@rh-shacharit",
+            "name": "Blessing After the Torah",
+            "folios": [
+                164
+            ]
+        },
+        {
+            "id": "torah.mi-shebeirach-healing@rh-shacharit",
+            "name": "Mi Shebeirach",
+            "folios": [
+                165,
+                166
+            ]
+        },
+        {
+            "id": "torah.vzot-hatorah@rh-shacharit",
+            "name": "V’zot HaTorah",
+            "folios": [
+                166
+            ]
+        },
+        {
+            "id": "torah.blessing-before-the-haftarah@rh-shacharit",
+            "name": "Haftarah Blessing",
+            "folios": [
+                167
+            ]
+        },
+        {
+            "id": "torah.haftarah-day-1@rh1",
+            "name": "Haftarah · Day 1",
+            "folios": [
+                167,
+                169
+            ]
+        },
+        {
+            "id": "torah.haftarah-day-2@rh2",
+            "name": "Haftarah · Day 2",
+            "folios": [
+                171
+            ]
+        },
+        {
+            "id": "torah.blessings-after-the-haftarah@rh-shacharit",
+            "name": "Blessings After the Haftarah",
+            "folios": [
+                174,
+                175,
+                176
+            ]
+        },
+        {
+            "id": "torah.yhalelu@rh-shacharit",
+            "name": "Y’halelu",
+            "folios": [
+                176,
+                177
+            ]
+        },
+        {
+            "id": "torah.eitz-chayim@rh-shacharit",
+            "name": "Eitz Chayim",
+            "folios": [
+                177,
+                178
+            ]
+        },
+        {
+            "id": "shofar.psalm-47@rh-shacharit",
+            "name": "Psalm 47",
+            "folios": [
+                180,
+                181
+            ]
+        },
+        {
+            "id": "shofar.malchuyot@rh-shacharit",
+            "name": "Malchuyot",
+            "folios": [
+                183,
+                184,
+                185,
+                186
+            ]
+        },
+        {
+            "id": "shofar.hayom-harat-olam@malchuyot",
+            "name": "Hayom Harat Olam · Malchuyot",
+            "folios": [
+                187
+            ]
+        },
+        {
+            "id": "shofar.zichronot@rh-shacharit",
+            "name": "Zichronot",
+            "folios": [
+                188,
+                189,
+                190
+            ]
+        },
+        {
+            "id": "shofar.hayom-harat-olam@zichronot",
+            "name": "Hayom Harat Olam · Zichronot",
+            "folios": [
+                191
+            ]
+        },
+        {
+            "id": "shofar.shofarot@rh-shacharit",
+            "name": "Shofarot",
+            "folios": [
+                192,
+                193,
+                194
+            ]
+        },
+        {
+            "id": "shofar.hayom-harat-olam@shofarot",
+            "name": "Hayom Harat Olam · Shofarot",
+            "folios": [
+                195
+            ]
+        },
+        {
+            "id": "concluding.hayom-tamtzeinu@rh-shacharit",
+            "name": "Hayom T’am’tzeinu",
+            "folios": [
+                196,
+                197
+            ]
+        },
+        {
+            "id": "concluding.ein-keloheinu@rh-shacharit",
+            "name": "Ein Keloheinu",
+            "folios": [
+                198,
+                199
+            ]
+        },
+        {
+            "id": "concluding.aleinu@rh-shacharit",
+            "name": "Aleinu",
+            "folios": [
+                200,
+                201,
+                202
+            ]
+        },
+        {
+            "id": "concluding.mourners-kaddish@rh-shacharit",
+            "name": "Mourner’s Kaddish",
+            "folios": [
+                204,
+                205
+            ]
+        },
+        {
+            "id": "concluding.shehecheyanu@rh-shacharit",
+            "name": "Shehecheyanu",
+            "folios": [
+                205,
+                206
+            ]
+        },
+        {
+            "id": "concluding.birkat-kohanim@rh-shacharit",
+            "name": "Birkat Kohanim",
+            "folios": [
+                207
+            ]
+        },
+        {
+            "id": "concluding.adon-olam@rh-shacharit",
+            "name": "Adon Olam",
+            "folios": [
+                208,
+                209
+            ]
+        },
+        {
+            "id": "concluding.yigdal@rh-shacharit",
+            "name": "Yigdal",
+            "folios": [
+                210,
+                211
+            ]
+        },
+        {
+            "id": "mincha.ashrei@rh1-mincha",
+            "name": "Ashrei",
+            "folios": [
+                212,
+                213,
+                214
+            ]
+        },
+        {
+            "id": "mincha.chatzi-kaddish@rh1-mincha",
+            "name": "Chatzi Kaddish",
+            "folios": [
+                215
+            ]
+        },
+        {
+            "id": "mincha.the-silent-amidah@rh1-mincha",
+            "name": "The Silent Amidah",
+            "folios": [
+                216
+            ]
+        },
+        {
+            "id": "mincha.avot-vimahot@rh1-mincha",
+            "name": "Avot v’Imahot",
+            "folios": [
+                216,
+                217
+            ]
+        },
+        {
+            "id": "mincha.gvurot@rh1-mincha",
+            "name": "G’vurot",
+            "folios": [
+                217,
+                218
+            ]
+        },
+        {
+            "id": "mincha.kdushat-hashem@rh1-mincha",
+            "name": "K’dushat HaShem",
+            "folios": [
+                219
+            ]
+        },
+        {
+            "id": "mincha.uvchein@rh1-mincha",
+            "name": "Uv’chein",
+            "folios": [
+                219,
+                220,
+                221
+            ]
+        },
+        {
+            "id": "mincha.kdushah@rh1-mincha",
+            "name": "K’dushah",
+            "folios": [
+                221,
+                222,
+                223
+            ]
+        },
+        {
+            "id": "mincha.kdushat-hayom@rh1-mincha",
+            "name": "K’dushat HaYom",
+            "folios": [
+                223,
+                224,
+                225,
+                226
+            ]
+        },
+        {
+            "id": "mincha.avodah@rh1-mincha",
+            "name": "Avodah",
+            "folios": [
+                226
+            ]
+        },
+        {
+            "id": "mincha.modim@rh1-mincha",
+            "name": "Modim",
+            "folios": [
+                227,
+                228
+            ]
+        },
+        {
+            "id": "mincha.sim-shalom@rh1-mincha",
+            "name": "Sim Shalom",
+            "folios": [
+                228,
+                229
+            ]
+        },
+        {
+            "id": "mincha.elohai-ntzor@rh1-mincha",
+            "name": "Elohai N’tzor",
+            "folios": [
+                229,
+                230
+            ]
+        },
+        {
+            "id": "mincha.avinu-malkeinu@rh1-mincha",
+            "name": "Avinu Malkeinu",
+            "folios": [
+                232,
+                233,
+                234
+            ]
+        },
+        {
+            "id": "mincha.kaddish-shalem@rh1-mincha",
+            "name": "Kaddish Shalem",
+            "folios": [
+                236,
+                237
+            ]
+        },
+        {
+            "id": "mincha.aleinu@rh1-mincha",
+            "name": "Aleinu",
+            "folios": [
+                238,
+                239
+            ]
+        },
+        {
+            "id": "mincha.mourners-kaddish@rh1-mincha",
+            "name": "Mourner’s Kaddish",
+            "folios": [
+                240,
+                241
+            ]
+        },
+        {
+            "id": "mincha.birkat-kohanim@rh1-mincha",
+            "name": "Birkat Kohanim",
+            "folios": [
+                242
+            ]
+        },
+        {
+            "id": "havdalah.parting@rh-havdalah",
+            "name": "Havdalah",
+            "folios": [
+                243,
+                244,
+                245,
+                246
+            ]
+        },
+        {
+            "id": "tashlich.tashlich@rh1-tashlich",
+            "name": "Tashlich",
+            "folios": [
+                247,
+                248
+            ]
+        }
+    ]
+}

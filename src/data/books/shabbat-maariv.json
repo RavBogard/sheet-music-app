@@ -1,0 +1,387 @@
+{
+    "slug": "shabbat-maariv",
+    "title": "Shirei Shabbat — Friday Night",
+    "tier": "feed",
+    "pages": 69,
+    "units": [
+        {
+            "id": "kabbalat.yedid-nefesh@shabbat-maariv",
+            "name": "Yedid Nefesh",
+            "folios": [
+                2,
+                3
+            ]
+        },
+        {
+            "id": "kabbalat.lighting-the-candles@shabbat-maariv",
+            "name": "Lighting the Candles",
+            "folios": [
+                3
+            ]
+        },
+        {
+            "id": "kabbalat.shalom-aleichem@shabbat-maariv",
+            "name": "Shalom Aleichem",
+            "folios": [
+                4,
+                5
+            ]
+        },
+        {
+            "id": "kabbalat.psalm-95@shabbat-maariv",
+            "name": "Psalm 95",
+            "folios": [
+                5,
+                6
+            ]
+        },
+        {
+            "id": "kabbalat.psalm-96@shabbat-maariv",
+            "name": "Psalm 96",
+            "folios": [
+                6,
+                7
+            ]
+        },
+        {
+            "id": "kabbalat.psalm-97@shabbat-maariv",
+            "name": "Psalm 97",
+            "folios": [
+                8,
+                9
+            ]
+        },
+        {
+            "id": "kabbalat.psalm-98@shabbat-maariv",
+            "name": "Psalm 98",
+            "folios": [
+                9,
+                10
+            ]
+        },
+        {
+            "id": "kabbalat.psalm-99@shabbat-maariv",
+            "name": "Psalm 99",
+            "folios": [
+                10,
+                11
+            ]
+        },
+        {
+            "id": "kabbalat.psalm-29@shabbat-maariv",
+            "name": "Psalm 29",
+            "folios": [
+                12,
+                13
+            ]
+        },
+        {
+            "id": "kabbalat.ana-bkoach@shabbat-maariv",
+            "name": "Ana B’koach",
+            "folios": [
+                13,
+                14
+            ]
+        },
+        {
+            "id": "kabbalat.lcha-dodi@shabbat-maariv",
+            "name": "L’cha Dodi",
+            "folios": [
+                15,
+                16,
+                17,
+                18
+            ]
+        },
+        {
+            "id": "kabbalat.psalm-92@shabbat-maariv",
+            "name": "Psalm 92",
+            "folios": [
+                18,
+                19,
+                20
+            ]
+        },
+        {
+            "id": "kabbalat.psalm-93@shabbat-maariv",
+            "name": "Psalm 93",
+            "folios": [
+                20
+            ]
+        },
+        {
+            "id": "shma.barchu@shabbat-maariv",
+            "name": "Bar’chu",
+            "folios": [
+                21,
+                22
+            ]
+        },
+        {
+            "id": "shma.maariv-aravim@shabbat-maariv",
+            "name": "Ma’ariv Aravim",
+            "folios": [
+                22,
+                23
+            ]
+        },
+        {
+            "id": "shma.ahavat-olam@shabbat-maariv",
+            "name": "Ahavat Olam",
+            "folios": [
+                23
+            ]
+        },
+        {
+            "id": "shma.the-shma@shabbat-maariv",
+            "name": "The Sh’ma",
+            "folios": [
+                24
+            ]
+        },
+        {
+            "id": "shma.vahavta-tzitzit@shabbat-maariv",
+            "name": "V’ahavta & Tzitzit",
+            "folios": [
+                24,
+                25,
+                26,
+                27,
+                28
+            ]
+        },
+        {
+            "id": "shma.emet-vemunah@shabbat-maariv",
+            "name": "Emet v’Emunah",
+            "folios": [
+                28
+            ]
+        },
+        {
+            "id": "shma.mi-chamocha@shabbat-maariv",
+            "name": "Mi Chamocha",
+            "folios": [
+                28,
+                29
+            ]
+        },
+        {
+            "id": "shma.hashkivenu@shabbat-maariv",
+            "name": "Hashkivenu",
+            "folios": [
+                30,
+                31
+            ]
+        },
+        {
+            "id": "shma.vshamru@shabbat-maariv",
+            "name": "V’shamru",
+            "folios": [
+                32
+            ]
+        },
+        {
+            "id": "shma.chatzi-kaddish@shabbat-maariv",
+            "name": "Chatzi Kaddish",
+            "folios": [
+                33,
+                34
+            ]
+        },
+        {
+            "id": "amidah.the-silent-amidah@shabbat-maariv",
+            "name": "The Silent Amidah",
+            "folios": [
+                34
+            ]
+        },
+        {
+            "id": "amidah.avot-vimahot@shabbat-maariv",
+            "name": "Avot v’Imahot",
+            "folios": [
+                35,
+                36
+            ]
+        },
+        {
+            "id": "amidah.gvurot@shabbat-maariv",
+            "name": "G’vurot",
+            "folios": [
+                36,
+                37
+            ]
+        },
+        {
+            "id": "amidah.kdushat-hashem@shabbat-maariv",
+            "name": "K’dushat HaShem",
+            "folios": [
+                37
+            ]
+        },
+        {
+            "id": "amidah.kdushat-hayom@shabbat-maariv",
+            "name": "K’dushat HaYom",
+            "folios": [
+                37,
+                38,
+                39
+            ]
+        },
+        {
+            "id": "amidah.avodah@shabbat-maariv",
+            "name": "Avodah",
+            "folios": [
+                39
+            ]
+        },
+        {
+            "id": "amidah.modim@shabbat-maariv",
+            "name": "Modim",
+            "folios": [
+                40,
+                41
+            ]
+        },
+        {
+            "id": "amidah.shalom-rav@shabbat-maariv",
+            "name": "Shalom Rav",
+            "folios": [
+                41
+            ]
+        },
+        {
+            "id": "amidah.elohai-ntzor@shabbat-maariv",
+            "name": "Elohai N’tzor",
+            "folios": [
+                42,
+                43
+            ]
+        },
+        {
+            "id": "amidah.vayechulu@shabbat-maariv",
+            "name": "Vayechulu",
+            "folios": [
+                43
+            ]
+        },
+        {
+            "id": "amidah.meein-sheva@shabbat-maariv",
+            "name": "Me’ein Sheva",
+            "folios": [
+                44,
+                45
+            ]
+        },
+        {
+            "id": "amidah.kaddish-shalem@shabbat-maariv",
+            "name": "Kaddish Shalem",
+            "folios": [
+                46,
+                47
+            ]
+        },
+        {
+            "id": "concluding.mi-shebeirach-healing@shabbat-maariv",
+            "name": "Mi Shebeirach — Healing",
+            "folios": [
+                49
+            ]
+        },
+        {
+            "id": "concluding.aleinu@shabbat-maariv",
+            "name": "Aleinu",
+            "folios": [
+                50,
+                51
+            ]
+        },
+        {
+            "id": "concluding.mourners-kaddish@shabbat-maariv",
+            "name": "Mourner’s Kaddish",
+            "folios": [
+                52,
+                53
+            ]
+        },
+        {
+            "id": "concluding.priestly-blessing@shabbat-maariv",
+            "name": "Priestly Blessing",
+            "folios": [
+                54
+            ]
+        },
+        {
+            "id": "concluding.adon-olam@shabbat-maariv",
+            "name": "Adon Olam",
+            "folios": [
+                55,
+                56,
+                57
+            ]
+        },
+        {
+            "id": "seasonal.rise-and-come@shabbat-maariv",
+            "name": "Rise and Come",
+            "folios": [
+                57,
+                58
+            ]
+        },
+        {
+            "id": "seasonal.for-the-miracles@shabbat-maariv",
+            "name": "For the Miracles",
+            "folios": [
+                58,
+                59,
+                60
+            ]
+        },
+        {
+            "id": "seasonal.in-the-days-of-mordechai@shabbat-maariv",
+            "name": "In the Days of Mordechai",
+            "folios": [
+                60,
+                61
+            ]
+        },
+        {
+            "id": "seasonal.remember-us-for-life@shabbat-maariv",
+            "name": "Remember Us for Life",
+            "folios": [
+                61,
+                62
+            ]
+        },
+        {
+            "id": "seasonal.counting-the-omer@shabbat-maariv",
+            "name": "Counting the Omer",
+            "folios": [
+                63
+            ]
+        },
+        {
+            "id": "seasonal.festival-kiddush@shabbat-maariv",
+            "name": "Festival Kiddush",
+            "folios": [
+                63,
+                64,
+                65
+            ]
+        },
+        {
+            "id": "seasonal.shehecheyanu@shabbat-maariv",
+            "name": "Shehecheyanu",
+            "folios": [
+                66
+            ]
+        },
+        {
+            "id": "seasonal.kiddush@shabbat-maariv",
+            "name": "Kiddush",
+            "folios": [
+                68,
+                69
+            ]
+        }
+    ]
+}

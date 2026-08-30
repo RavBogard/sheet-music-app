@@ -17,7 +17,8 @@
     "test:ci": "vitest run && playwright test",
     "analyze": "cross-env ANALYZE=true next build --webpack",
     "check:types": "node scripts/check-types-sync.js",
-    "postinstall": "node scripts/copy-pdf-worker.js"
+    "postinstall": "node scripts/copy-pdf-worker.js",
+    "sync:books": "node scripts/sync-books.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

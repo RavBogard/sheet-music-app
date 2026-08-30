@@ -57,3 +57,49 @@ describe("book registry", () => {
         expect(res).toMatchObject({ ok: false, machineCode: "unknown_unit_id" })
     })
 })
+
+describe("feed-tier book snapshots", () => {
+    const FEED_SLUGS = ["shabbat-maariv", "shabbat-shacharit", "shirei-tshuvah"]
+
+    it.each(FEED_SLUGS)("%s is registered as a feed-tier book", (slug) => {
+        const entry = listBooks().find((b) => b.slug === slug)
+        expect(entry).toBeDefined()
+        expect(entry?.tier).toBe("feed")
+        expect(entry?.pages).toBeGreaterThan(0)
+    })
+
+    it.each(FEED_SLUGS)("%s snapshot has units with ids, names and folios", (slug) => {
+        const book = getBook(slug)
+        expect(book).toBeDefined()
+        expect(book!.units!.length).toBeGreaterThan(0)
+        for (const u of book!.units!) {
+            expect(u.id).toMatch(/@/) // AR-3 ids always carry an @occasion-service suffix
+            expect(typeof u.name).toBe("string")
+            expect(Array.isArray(u.folios)).toBe(true)
+            expect(u.folios.length).toBeGreaterThan(0)
+            for (const f of u.folios) expect(Number.isInteger(f)).toBe(true)
+        }
+    })
+
+    it("every unit folio is within its book's declared page count", () => {
+        for (const slug of FEED_SLUGS) {
+            const entry = listBooks().find((b) => b.slug === slug)!
+            for (const u of getBook(slug)!.units!) {
+                for (const f of u.folios) {
+                    expect(f).toBeGreaterThanOrEqual(1)
+                    expect(f).toBeLessThanOrEqual(entry.pages)
+                }
+            }
+        }
+    })
+
+    it("validates a real unitId from the machzor", () => {
+        const book = getBook("shirei-tshuvah")!
+        const unit = book.units![0]
+        expect(validateLiturgyRef({
+            book: "shirei-tshuvah",
+            unitId: unit.id,
+            folio: unit.folios[0],
+        })).toEqual({ ok: true })
+    })
+})
