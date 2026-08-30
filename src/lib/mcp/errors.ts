@@ -51,6 +51,14 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     invalid_argument: 400,
     invalid_field: 400,
     invalid_state: 400,
+    // Task 7 fix round 1 (liturgy outlines Phase 3): a client-correctable
+    // input error, not a server fault. Without these rows codeFor() defaults
+    // to 500 — which an LLM caller reads as "transient, retry" instead of
+    // "your input is wrong, fix it or ask" — the opposite of this feature's
+    // stop-and-ask design intent.
+    unknown_book: 400,
+    folio_out_of_range: 400,
+    unknown_unit_id: 400,
     invalid_bus_index: 400,
     invalid_role: 400,
     validation_error: 400,
