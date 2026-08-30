@@ -429,7 +429,38 @@ export interface UpdateTemplateResult {
     version: number
 }
 
-function patchHasChange(
+/**
+ * `??`-normalised equality for a single copyable-track field. Primitive
+ * fields (the original ten) keep exact `!==` semantics. `liturgyRef` (and
+ * any future object-valued field) is the first non-primitive entry in
+ * `COPYABLE_TRACK_FIELDS` — comparing it with `!==` always reports "changed"
+ * because the stored-snapshot object and the freshly-normalized object are
+ * never the same reference, even with identical contents. Fall back to a
+ * shallow, key-order-independent structural compare whenever either side is
+ * a non-null object; every current object-valued field (`liturgyRef`) is
+ * flat, so one level of key sorting is sufficient.
+ */
+function fieldValuesEqual(a: unknown, b: unknown): boolean {
+    const av = a ?? null
+    const bv = b ?? null
+    const aIsObject = av !== null && typeof av === "object"
+    const bIsObject = bv !== null && typeof bv === "object"
+    if (aIsObject || bIsObject) {
+        const stable = (v: unknown): string => {
+            if (v !== null && typeof v === "object" && !Array.isArray(v)) {
+                const obj = v as Record<string, unknown>
+                const sorted: Record<string, unknown> = {}
+                for (const k of Object.keys(obj).sort()) sorted[k] = obj[k]
+                return JSON.stringify(sorted)
+            }
+            return JSON.stringify(v)
+        }
+        return stable(av) === stable(bv)
+    }
+    return av === bv
+}
+
+export function patchHasChange(
     existing: Record<string, unknown>,
     patch: UpdateTemplatePatch,
 ): boolean {
@@ -462,7 +493,7 @@ function patchHasChange(
             const a = existingTracks[i] ?? {}
             const b = nextTracks[i]
             for (const field of COPYABLE_TRACK_FIELDS) {
-                if ((a[field] ?? null) !== ((b as Record<string, unknown>)[field] ?? null)) {
+                if (!fieldValuesEqual(a[field], (b as Record<string, unknown>)[field])) {
                     return true
                 }
             }
