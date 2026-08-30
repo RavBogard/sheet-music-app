@@ -10,6 +10,9 @@ describe("lookupBookPage", () => {
     })
 
     it("finds a feed-tier unit by name and returns its first folio and unitId", () => {
+        // shirei-tshuvah has two units named "Bar'chu" (folio 2 and folio 104,
+        // one per service) — an exact match with disagreeing folios, so both
+        // resolve to "low" (stop-and-ask), not "high".
         const res = lookupBookPage("shirei-tshuvah", "Barchu")
         expect(res.ok).toBe(true)
         if (!res.ok) return
@@ -17,7 +20,7 @@ describe("lookupBookPage", () => {
         const top = res.matches[0]
         expect(top.unitId).toMatch(/@/)
         expect(top.folio).toBeGreaterThan(0)
-        expect(["high", "medium", "low"]).toContain(top.confidence)
+        expect(top.confidence).toBe("low")
     })
 
     it("is case- and punctuation-insensitive", () => {
@@ -48,5 +51,54 @@ describe("lookupBookPage", () => {
         expect(exact.ok).toBe(true)
         if (!exact.ok) return
         expect(exact.matches[0].confidence).toBe("high")
+    })
+
+    it("stops-and-asks on several exact matches that disagree on folio", () => {
+        // shirei-tshuvah "Aleinu": rh1-maariv folio 36, rh-shacharit folio 200,
+        // rh1-mincha folio 238 — three real occurrences of the same prayer at
+        // three different pages. All three must come back "low".
+        const res = lookupBookPage("shirei-tshuvah", "Aleinu")
+        expect(res.ok).toBe(true)
+        if (!res.ok) return
+        expect(res.matches.map((m) => m.folio)).toEqual([36, 200, 238])
+        for (const m of res.matches) expect(m.confidence).toBe("low")
+    })
+
+    it("signals truncation when a substring query has more candidates than the cap", () => {
+        // shirei-tshuvah has 9 distinct units whose name contains "Kaddish"
+        // (Chatzi Kaddish x3, Kaddish Shalem x3, Mourner's Kaddish x3) —
+        // more than MAX_MATCHES (8). The dropped one (highest folio, 240:
+        // mincha.mourners-kaddish@rh1-mincha) must be signaled via totalMatches
+        // and truncated, not silently discarded.
+        const res = lookupBookPage("shirei-tshuvah", "Kaddish")
+        expect(res.ok).toBe(true)
+        if (!res.ok) return
+        expect(res.totalMatches).toBe(9)
+        expect(res.matches.length).toBe(8)
+        expect(res.truncated).toBe(true)
+        expect(res.matches.map((m) => m.folio)).not.toContain(240)
+    })
+
+    it("commits a single unambiguous exact match with no truncation", () => {
+        // "Ahavat Olam" occurs exactly once in shirei-tshuvah
+        // (emaariv.ahavat-olam@rh1-maariv, folio 3) — verified against the
+        // real data file, no other unit's name or id contains "ahavat".
+        const res = lookupBookPage("shirei-tshuvah", "Ahavat Olam")
+        expect(res.ok).toBe(true)
+        if (!res.ok) return
+        expect(res.matches[0].confidence).toBe("high")
+        expect(res.truncated).toBe(false)
+    })
+
+    it("returns exact matches sorted ascending by folio", () => {
+        // "Kaddish Shalem" (a full unit name, not just a substring) occurs
+        // three times at folios 34, 150, 236 — differing folios, so all "low",
+        // but the ordering invariant is independent of confidence.
+        const res = lookupBookPage("shirei-tshuvah", "Kaddish Shalem")
+        expect(res.ok).toBe(true)
+        if (!res.ok) return
+        const folios = res.matches.map((m) => m.folio)
+        expect(folios).toEqual([34, 150, 236])
+        expect(folios).toEqual([...folios].sort((a, b) => a - b))
     })
 })
