@@ -173,6 +173,77 @@ export const lastSeenVersionSchema = z
     .optional()
 
 /**
+ * Outline fields shared by every setlist-row write surface — add_track_to_setlist,
+ * bulk_add_tracks, update_track, bulk_update_tracks and propose_setlist_changes.
+ *
+ * Defined once because these five schemas have drifted before (`position` is
+ * accepted by update_track but rejected by bulk_update_tracks). A parity test
+ * in __tests__/outline-schema-parity.test.ts guards against re-drift.
+ */
+export const outlineFields = {
+    performer: z
+        .string()
+        .optional()
+        .describe(
+            "Who leads this moment: 'Rabbi', 'Cantor', 'Congregation', 'Band'. Printed on the rabbi's service sheet.",
+        ),
+    description: z
+        .string()
+        .optional()
+        .describe(
+            "Body text for readings/prayers — responsive reading text or stage directions. Printed under the row on the service sheet.",
+        ),
+    estimatedMinutes: z
+        .number()
+        .int()
+        .min(0)
+        .max(600)
+        .optional()
+        .describe("Rough duration of this moment, for run-sheet timing."),
+    liturgyRef: z
+        .object({
+            book: z
+                .string()
+                .min(1)
+                .describe("Book registry slug — call list_books for valid values."),
+            unitId: z
+                .string()
+                .min(1)
+                .optional()
+                .describe(
+                    "Stable liturgical unit id (feed-tier books only), e.g. 'shma.mi-chamocha@rh-shacharit'. Get it from lookup_book_page.",
+                ),
+            folio: z
+                .number()
+                .int()
+                .min(1)
+                .describe(
+                    "PRINTED page number in that book. Resolve it with lookup_book_page rather than guessing — a wrong page prints on the rabbi's sheet.",
+                ),
+        })
+        .optional()
+        .describe(
+            "Where this moment is in the service's liturgy book. Use lookup_book_page against the setlist's `book` to resolve it.",
+        ),
+    honors: z
+        .array(
+            z.object({
+                name: z.string().min(1).max(120).describe("Person being honored."),
+                note: z
+                    .string()
+                    .max(200)
+                    .optional()
+                    .describe("Why/what, e.g. 'birthday — candle lighting'."),
+            }),
+        )
+        .max(12)
+        .optional()
+        .describe(
+            "Named congregants honored at this moment. Printed prominently on the rabbi's sheet. Never copied by templates or clone_setlist — honors are per-service.",
+        ),
+} as const
+
+/**
  * Track-patch field surface — common between update_track and
  * bulk_update_tracks. `position` is NOT in this base; it's added back
  * exclusively in updateTrackPatchSchema. bulkTrackPatchSchema instead
@@ -182,6 +253,7 @@ export const lastSeenVersionSchema = z
  * one field", which left the operator with no idea position was unsupported.
  */
 const trackPatchFields = {
+    ...outlineFields,
     key: z.string().optional(),
     leadMusician: z.string().optional(),
     title: z.string().optional(),
@@ -680,6 +752,12 @@ export function registerWriteTools(server: McpServer): void {
                     .describe(
                         "When true, stamp the setlist doc with `isTest:true` so /perform filters it out. Default false; no heuristic on `test-` prefixes is applied at the MCP layer (the underlying writer still falls back to the standard name/owner heuristic when this is omitted).",
                     ),
+                book: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Liturgy book slug used at this service (one book per service), e.g. 'crc-friday'. Call list_books for valid slugs. Page references on this setlist's rows resolve against it.",
+                    ),
             },
         },
         async (args, extra) => jsonResult(await createSetlist(uidFrom(extra), args, orgFrom(extra))),
@@ -952,6 +1030,12 @@ export function registerWriteTools(server: McpServer): void {
                 serviceType: z.string().optional().describe("New service/template type"),
                 rabbi: z.string().optional().describe("New rabbi leading the service"),
                 serviceNotes: z.string().optional().describe("Free-text service notes"),
+                book: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Liturgy book slug used at this service (one book per service), e.g. 'crc-friday'. Call list_books for valid slugs. Page references on this setlist's rows resolve against it.",
+                    ),
                 lastSeenVersion: lastSeenVersionSchema.describe(
                     "Optional optimistic-concurrency gate: pass the setlist's `version` from your last get_setlist / list_setlists. The write rejects with `{error: 'stale_version', currentVersion, lastSeenVersion, hint, ...}` if it doesn't match — call get_setlist and retry.",
                 ),
@@ -995,6 +1079,7 @@ export function registerWriteTools(server: McpServer): void {
                 leadMusician: z.string().optional().describe("Vocal Lead for this row"),
                 referenceLink: z.string().optional().describe("Reference URL for this row"),
                 notes: z.string().optional().describe("Free-text notes for this row"),
+                ...outlineFields,
                 position: z
                     .number()
                     .int()
@@ -1059,6 +1144,7 @@ export function registerWriteTools(server: McpServer): void {
                                 .string()
                                 .optional()
                                 .describe("Free-text notes"),
+                            ...outlineFields,
                         }),
                     )
                     .min(1)
@@ -1413,6 +1499,7 @@ export function registerWriteTools(server: McpServer): void {
                                 .describe(
                                     "Row type (default 'song' for add).",
                                 ),
+                            ...outlineFields,
                         }),
                     )
                     .min(1)

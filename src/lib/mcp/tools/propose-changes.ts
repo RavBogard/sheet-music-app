@@ -84,6 +84,12 @@ export interface ProposalInput {
     referenceLink?: string
     notes?: string
     type?: TrackType
+    /** Task 6 (liturgy outlines Phase 3) — outline fields, same set as index.ts's outlineFields. */
+    performer?: string
+    description?: string
+    estimatedMinutes?: number
+    liturgyRef?: { book: string; unitId?: string; folio: number }
+    honors?: Array<{ name: string; note?: string }>
 }
 
 /** Per-proposal computed envelope returned in the stage response. */
@@ -765,5 +771,10 @@ function buildNewTrackPayload(
         payload.fileId = p.songId
     }
     if (fileName !== undefined) payload.fileName = fileName
+    if (p.performer !== undefined) payload.performer = p.performer
+    if (p.description !== undefined) payload.description = p.description
+    if (p.estimatedMinutes !== undefined) payload.estimatedMinutes = p.estimatedMinutes
+    if (p.liturgyRef !== undefined) payload.liturgyRef = p.liturgyRef
+    if (p.honors !== undefined) payload.honors = p.honors
     return payload
 }
