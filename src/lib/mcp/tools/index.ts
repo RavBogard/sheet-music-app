@@ -97,6 +97,7 @@ import {
     importChartFromDrive,
 } from "./library-upload"
 import { downloadChart, generateGigPacket } from "./library-download"
+import { generateServiceSheet } from "./service-sheet"
 import { publishSetlist } from "./setlist-publish"
 import { getChartStatus, verifySetlistCharts } from "./library-verify"
 import { reviewChartBonds } from "./chart-bond-audit"
@@ -3103,6 +3104,24 @@ export function registerChartUploadTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await generateGigPacket(uidFrom(extra), args)),
+    )
+
+    server.registerTool(
+        "generate_service_sheet",
+        {
+            description:
+                "Render the RABBI's printed service sheet for a setlist — the order of the service, the printed page number in that day's siddur/machzor for each row (from liturgyRef), who leads/performs each moment, and named honors. This is the paper that goes on the shtender for the rabbi to read from; it deliberately omits charts, keys and BPM — use generate_gig_packet instead for the band's charts. Returns a 10-minute Firebase Storage signed download URL (`downloadUrl`, `expiresAt`, `sizeBytes`, `pageCount`, `storagePath`). Works for any setlist: rows with no page reference (no liturgyRef) simply print without a page number, and a setlist with no `book` set still produces a sheet. Use this when the rabbi or an assistant says 'make the service sheet', 'print the order of service', or 'give me the page numbers for Friday'.",
+            inputSchema: {
+                setlistId: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Setlist id (from list_setlists or create_setlist). Every row on the setlist appears on the sheet in performance order.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await generateServiceSheet(uidFrom(extra), args)),
     )
 }
 

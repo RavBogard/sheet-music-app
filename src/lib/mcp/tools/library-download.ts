@@ -52,7 +52,10 @@ export interface DownloadChartResult {
     source: "firebase-storage" | "google-drive-fallback"
 }
 
-async function readLeaderRole(
+// Exported so generate_service_sheet (service-sheet.ts) can reuse the exact
+// same trusted-leader lookup + rate-limit-bypass logic instead of a second
+// implementation.
+export async function readLeaderRole(
     db: FirebaseFirestore.Firestore,
     uid: string,
 ): Promise<"admin" | "band_leader" | "other"> {
@@ -207,7 +210,9 @@ export const GIG_PACKET_SIGNED_URL_TTL_MS = 10 * 60 * 1000
 
 const GIG_PACKET_STORAGE_PREFIX = "gig-packets"
 
-function gigPacketBucket() {
+// Exported so generate_service_sheet (service-sheet.ts) reuses the same
+// bucket resolution instead of a second `FIREBASE_STORAGE_BUCKET` reader.
+export function gigPacketBucket() {
     const bucketName =
         process.env.FIREBASE_STORAGE_BUCKET ||
         process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
