@@ -13,6 +13,7 @@ import {
     updateSetlistTrack,
 } from "../tools/setlist-write"
 import { getSetlist } from "../tools/setlists"
+import { proposeSetlistChanges, commitStagedChanges } from "../tools/propose-changes"
 
 /**
  * Task 5 (liturgy outlines Phase 2) — the new outline fields (book,
@@ -154,6 +155,52 @@ describe("outline fields survive the MCP write path (emulator)", () => {
             key: "G",
             performer: "Band",
             liturgyRef: { book: "crc-friday", folio: 23 },
+        })
+    })
+
+    // Fix round 1 (Task 6): `buildFieldPatch` in
+    // src/lib/mcp/tools/propose-changes.ts is a fourth hand-maintained field
+    // list on the staging commit path — it built the `action: 'update'`
+    // proposal's Firestore patch without copying the five outline fields, so
+    // a staged update proposal silently dropped `honors`/`performer`/etc. at
+    // commit while add_track_to_setlist and bulk_add_tracks already carried
+    // them through. propose_setlist_changes -> commit_staged_changes is the
+    // sanctioned MCP authoring flow (stage, confirm, commit), so this gap
+    // would have bitten the real weekly motion. Exercises the real MCP
+    // handlers end-to-end and reads back through get_setlist — NOT a raw
+    // Firestore doc read, which is what hid the earlier get_setlist gap.
+    it("carries outline fields through a staged update proposal on commit", async () => {
+        const setlistId = await newSetlist()
+        const added = await addTrackToSetlist(ADMIN, { setlistId, title: "Mi Chamocha", type: "prayer" })
+        const trackId = (added as { trackId: string }).trackId
+
+        const staged = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [
+                {
+                    action: "update",
+                    trackId,
+                    performer: "Cantor",
+                    description: "Sung responsively.",
+                    estimatedMinutes: 5,
+                    liturgyRef: { book: "crc-friday", folio: 12 },
+                    honors: [{ name: "David Lazaroff", note: "aliyah" }],
+                },
+            ],
+        })) as { stageId: string }
+        expect(staged.stageId).toBeTruthy()
+
+        const committed = await commitStagedChanges(ADMIN, { stageId: staged.stageId })
+        expect(committed).toMatchObject({ ok: true })
+
+        const sl = await getSetlist(ADMIN, { id: setlistId })
+        expect(sl?.tracks).toHaveLength(1)
+        expect(sl?.tracks[0]).toMatchObject({
+            performer: "Cantor",
+            description: "Sung responsively.",
+            estimatedMinutes: 5,
+            liturgyRef: { book: "crc-friday", folio: 12 },
+            honors: [{ name: "David Lazaroff", note: "aliyah" }],
         })
     })
 })

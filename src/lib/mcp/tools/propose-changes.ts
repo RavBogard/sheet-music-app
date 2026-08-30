@@ -732,6 +732,11 @@ function buildFieldPatch(p: ProposalInput): Record<string, unknown> {
         // Library is keyed by Drive file id, so fileId follows songId.
         out.fileId = p.songId
     }
+    if (p.performer !== undefined) out.performer = p.performer
+    if (p.description !== undefined) out.description = p.description
+    if (p.estimatedMinutes !== undefined) out.estimatedMinutes = p.estimatedMinutes
+    if (p.liturgyRef !== undefined) out.liturgyRef = p.liturgyRef
+    if (p.honors !== undefined) out.honors = p.honors
     return out
 }
 
