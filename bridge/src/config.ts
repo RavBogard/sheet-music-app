@@ -9,6 +9,7 @@
 import * as admin from "firebase-admin"
 import { MonitorConfig } from "./types"
 import type { BridgeDiagnostics } from "./bridge-control"
+import { canStealLease, type LeaseIdentity, type LeaseRecord } from "./lease-identity"
 
 const DEFAULT_CONFIG: MonitorConfig = {
     bridgeUrl: "wss://localhost:9001",
@@ -216,6 +217,69 @@ export class ConfigManager {
         }
     }
 
+    /**
+     * R1 — STANDBY liveness marker.
+     *
+     * A standby bridge deliberately writes NOTHING under `bridge.*`: that map is
+     * the ACTIVE bridge's health doc, and `isBridgeOnline()` reads
+     * `bridge.lastSeen`. A standby stamping it would report a desk that is
+     * actually dark as online — the exact lie R1 is about. So standby liveness
+     * gets its own field, `bridgeStandby`, and every consumer that means "is the
+     * desk being driven?" keeps reading `bridge.*` untouched.
+     *
+     * What this buys the cloud: it can now tell "a bridge is up but not elected"
+     * (a takeover in flight, or a second PC that should be shut down) apart from
+     * "nothing is running at that venue at all" — two situations that used to
+     * look identical, because a standby wrote no trace of itself anywhere.
+     *
+     * Same fire-and-forget contract as `writeHeartbeat`: 5s cap, never throws,
+     * never blocks the bridge.
+     */
+    async writeStandbyHeartbeat(data: {
+        instanceId: string
+        machineId: string
+        pid: number
+        x32Connected: boolean
+    }): Promise<void> {
+        try {
+            await Promise.race([
+                this.db.collection("config").doc("monitor").update({
+                    "bridgeStandby.lastSeen": admin.firestore.FieldValue.serverTimestamp(),
+                    "bridgeStandby.instanceId": data.instanceId,
+                    "bridgeStandby.machineId": data.machineId,
+                    "bridgeStandby.pid": data.pid,
+                    "bridgeStandby.x32Connected": data.x32Connected,
+                    "bridgeStandby.version": process.env.BRIDGE_VERSION || "2.0.0",
+                }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
+            ])
+        } catch (err) {
+            console.warn("[Standby] Marker write failed:", (err as Error).message)
+        }
+    }
+
+    /**
+     * R1 — clear our own standby marker (on promotion to ACTIVE, or on shutdown).
+     *
+     * Guarded by instanceId so a bridge that has just LOST the election can't wipe
+     * the marker of the standby that is still sitting there. Best-effort: a
+     * leftover marker is only ever a stale diagnostic, never a wrong health verdict.
+     */
+    async clearStandbyMarker(instanceId: string): Promise<void> {
+        const ref = this.db.collection("config").doc("monitor")
+        try {
+            await this.db.runTransaction(async (tx) => {
+                const snap = await tx.get(ref)
+                const standby = snap.data()?.bridgeStandby as { instanceId?: string } | undefined
+                if (standby?.instanceId === instanceId) {
+                    tx.set(ref, { bridgeStandby: admin.firestore.FieldValue.delete() }, { merge: true })
+                }
+            })
+        } catch {
+            // Best-effort.
+        }
+    }
+
     /** Mark bridge as offline in Firestore (graceful shutdown). */
     async writeOffline(): Promise<void> {
         try {
@@ -263,18 +327,30 @@ export class ConfigManager {
      *   - held by another, still live     → refuse, false (caller stays standby)
      *
      * Renew on an interval shorter than `ttlMs`; only the holder drains commands +
-     * writes state. The expiry is wall-clock (`Date.now()`); the large TTL (≫ NTP
-     * skew between two NTP-synced PCs) keeps this correct for the studio's
-     * single-PC-with-accidental-second-bridge case it guards. Fails CLOSED (false)
+     * writes state. The expiry is wall-clock (`Date.now()`); the TTL is kept well
+     * clear of realistic NTP skew between two NTP-synced PCs. Fails CLOSED (false)
      * on any transaction error so a bridge never assumes ownership it didn't win.
+     *
+     * R1 (v10.0.8) — optional `identity`. A bridge that crashes and relaunches
+     * mints a NEW ownerId and would otherwise stand by for the whole TTL with the
+     * desk dark. Passing an identity records machineId/pid/heartbeatAt on the
+     * lease and lets `canStealLease` take back a lease this MACHINE left behind
+     * when its holder is provably gone — near-instant recovery, with the
+     * two-live-bridges guarantee intact (see lease-identity.ts for the rules and
+     * why a cross-host steal is refused). Omit it and behavior is unchanged
+     * except for the extra recorded fields.
      */
-    async acquireOrRenewLease(ownerId: string, ttlMs: number): Promise<boolean> {
+    async acquireOrRenewLease(
+        ownerId: string,
+        ttlMs: number,
+        identity?: LeaseIdentity,
+    ): Promise<boolean> {
         const ref = this.db.collection("config").doc("monitor")
         try {
             return await this.db.runTransaction(async (tx) => {
                 const snap = await tx.get(ref)
                 const lease = snap.exists
-                    ? (snap.data()?.bridgeLease as { ownerId?: string; expiresAt?: number } | undefined)
+                    ? (snap.data()?.bridgeLease as LeaseRecord | undefined)
                     : undefined
                 const now = Date.now()
                 const heldByOther =
@@ -282,10 +358,27 @@ export class ConfigManager {
                     lease.ownerId !== ownerId &&
                     typeof lease.expiresAt === "number" &&
                     lease.expiresAt > now
-                if (heldByOther) return false
+                if (heldByOther) {
+                    const verdict = canStealLease(lease!, now, identity)
+                    if (!verdict.steal) return false
+                    console.warn(
+                        `[Lease] Stealing lease from ${lease!.ownerId} — ${verdict.reason}`,
+                    )
+                }
                 tx.set(
                     ref,
-                    { bridgeLease: { ownerId, acquiredAt: now, expiresAt: now + ttlMs } },
+                    {
+                        bridgeLease: {
+                            ownerId,
+                            machineId: identity?.machineId ?? null,
+                            pid: identity?.pid ?? null,
+                            acquiredAt: now,
+                            // Renewed on every tick — this, not `expiresAt`, is what
+                            // the same-host staleness test reads.
+                            heartbeatAt: now,
+                            expiresAt: now + ttlMs,
+                        },
+                    },
                     { merge: true },
                 )
                 return true

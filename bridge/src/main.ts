@@ -484,6 +484,13 @@ async function startBackgroundBridge() {
         process.env.HTTP_PORT = "9001";
         process.env.NODE_ENV = "production";
 
+        // R1 — durable state dir for the persisted machine ID (lease-identity.ts).
+        // Same durability argument as the Bug#1 credential move: userData is keyed
+        // by app NAME, so the ID survives reinstalls and auto-updates. If it did
+        // NOT survive, a relaunched bridge would look like a different machine and
+        // the same-host lease steal would never fire.
+        process.env.BRIDGE_STATE_DIR = credDir || exeDir;
+
         // Load bridge config — prefer the durable userData copy, fall back to exeDir.
         let keyPathFromConfig: string | null = null;
         const configCandidates = [

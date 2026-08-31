@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  NOTE ON ENCODING: this file is saved as UTF-8 and the declaration says UTF-8.
+  Task Scheduler's own exports are UTF-16; if you ever re-save this from
+  Notepad, keep the declaration and the actual encoding matching or schtasks
+  reports "The task XML is malformed". If that happens, use the schtasks
+  one-liner in INSTALL.md instead — it needs no file at all.
+-->
+<!--
+  CentralReform Bridge watchdog — Windows Task Scheduler definition.
+
+  Import with:
+    schtasks /Create /TN "CRC Bridge Watchdog" /XML "C:\CRC\watchdog\CRC-Bridge-Watchdog.xml"
+
+  Before importing, edit the <Arguments> line below if you put the script
+  somewhere other than C:\CRC\watchdog\.
+
+  Design notes (each of these matters for a machine nobody can touch mid-service):
+    * Runs as the LOGGED-IN USER, interactively. The bridge is a tray app that
+      needs the user's desktop session and the user's AppData (credentials,
+      machine ID). A SYSTEM-context task would start a bridge that cannot find
+      its own service-account key.
+    * Repeats every minute, forever, and also fires at logon — so a reboot is
+      covered even before the first minute elapses.
+    * MultipleInstancesPolicy IgnoreNew: if one run is still in its 15s
+      confirmation sleep, the next minute's tick is dropped rather than queued.
+    * No ExecutionTimeLimit (PT0S) and no idle/battery/network conditions: the
+      venue PC must be watched under every condition, including on battery
+      during a power event.
+-->
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>Restarts the CentralReform Bridge if it is not running. Checks every minute.</Description>
+    <URI>\CRC Bridge Watchdog</URI>
+  </RegistrationInfo>
+  <Triggers>
+    <TimeTrigger>
+      <Repetition>
+        <Interval>PT1M</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+      <StartBoundary>2026-01-01T00:00:00</StartBoundary>
+      <Enabled>true</Enabled>
+    </TimeTrigger>
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+      <Delay>PT1M</Delay>
+    </LogonTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <GroupId>S-1-5-32-545</GroupId>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <Priority>7</Priority>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>powershell.exe</Command>
+      <Arguments>-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "C:\CRC\watchdog\bridge-watchdog.ps1"</Arguments>
+    </Exec>
+  </Actions>
+</Task>

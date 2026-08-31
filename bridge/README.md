@@ -59,6 +59,19 @@ See [SETUP_GUIDE.md](./SETUP_GUIDE.md) for the step-by-step walkthrough.
   directory (the bridge auto-migrates from the legacy `exeDir` location on
   first boot of v10.x). If credentials are lost, re-run the setup wizard from
   the tray menu.
+- **Watchdog** (`watchdog/`) — a Windows Task Scheduler job that restarts the
+  bridge within a minute if the PROCESS dies. Every other recovery lever here
+  (crash guards, X32 reconnect, remote `restart`) needs the process to still
+  exist; this is the layer below them. Install once per venue PC —
+  `watchdog/INSTALL.md`. Not bundled in the installer yet (see the note at the
+  end of that file).
+- **Election** — the single-writer lease at `config/monitor.bridgeLease` decides
+  which bridge drives the desk. TTL 20s, renewed every 6s. A bridge that
+  relaunches on the SAME machine takes its own lease straight back (a persisted
+  machine ID + a dead-PID check — `src/lease-identity.ts`); a takeover from a
+  different PC waits out the TTL. A bridge that is up but not elected publishes
+  `config/monitor.bridgeStandby` and writes nothing under `config/monitor.bridge`,
+  so a standby can never make a dark desk read as online.
 
 ## File structure
 
@@ -73,10 +86,12 @@ bridge/
 │   ├── firestore-transport.ts # Firestore message bus — commands, acks, state writes
 │   ├── ack-writer.ts         # monitor-live/commands/acks/{id} writer + TTL sweep
 │   ├── config.ts             # Firestore config snapshot + R5 resubscribe-on-error
+│   ├── lease-identity.ts     # persisted machine ID, PID liveness, same-host steal rule
 │   ├── bridge-control.ts     # remote dispatch (resync / reconnect / restart / selftest)
 │   ├── remote-log.ts         # bounded error ring + startup-noise filter
 │   └── types.ts
 ├── ui/index.html             # tray dashboard + setup-wizard overlay
+├── watchdog/                 # Task Scheduler job that restarts a dead bridge (INSTALL.md)
 └── __tests__/                # vitest suites (mocked firebase-admin, dgram)
 ```
 

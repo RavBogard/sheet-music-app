@@ -89,7 +89,7 @@ export class FirestoreTransport {
     // the X32 confirm key ("bus_fader:5", "send_level:2:5"). On the matching
     // change event we write an `applied` ack with the confirmed value; if none
     // arrives within ACK_CONFIRM_TIMEOUT_MS we write a `timeout` ack.
-    private pendingAcks: Map<string, { commandId: string; timer: ReturnType<typeof setTimeout> }> = new Map();
+    private pendingAcks: Map<string, { commandId: string; timer: ReturnType<typeof setTimeout>; uid?: string }> = new Map();
     private readonly ACK_CONFIRM_TIMEOUT_MS = 1_500;
 
     // B13 — real connected-client count. With the Firestore transport there is no
@@ -289,8 +289,8 @@ export class FirestoreTransport {
         // for THIS local copy of the queue only — no double-apply because the ack
         // surface and the pending-command surface are different docs.
         if (!this.isActiveBridge()) {
-            for (const { ref } of this.pendingCommandQueue) {
-                void this.ackWriter.write(ref.id, "rejected", { reason: "bridge-standby" })
+            for (const { cmd, ref } of this.pendingCommandQueue) {
+                void this.ackWriter.write(ref.id, "rejected", { reason: "bridge-standby", uid: cmd.uid })
             }
             this.pendingCommandQueue = [];
             return;
@@ -364,7 +364,7 @@ export class FirestoreTransport {
             const authorized = await this.isCommandAuthorized(cmd);
             if (!authorized) {
                 console.warn(`[Transport] Unauthorized command from ${cmd.uid}: ${cmd.type}`)
-                void this.ackWriter.write(commandId, "rejected", { reason: "unauthorized" })
+                void this.ackWriter.write(commandId, "rejected", { reason: "unauthorized", uid: cmd.uid })
                 batch.update(ref, { error: "Unauthorized", processedAt: Date.now() })
                 return
             }
@@ -394,6 +394,7 @@ export class FirestoreTransport {
             if (serverCreateMs < lastCmdTime) {
                 void this.ackWriter.write(commandId, "rejected", {
                     reason: "superseded by a newer command for the same target",
+                    uid: cmd.uid,
                 })
                 batch.delete(ref)
                 return
@@ -409,6 +410,7 @@ export class FirestoreTransport {
                 console.warn(`[Transport] Unknown or malformed command: ${cmd.type}`)
                 void this.ackWriter.write(commandId, "rejected", {
                     reason: `unknown or malformed command: ${cmd.type}`,
+                    uid: cmd.uid,
                 })
                 batch.delete(ref)
                 return
@@ -439,13 +441,13 @@ export class FirestoreTransport {
             // B6 — await the C2 read-back: an `applied` ack (with the confirmed
             // value) on the matching change event, or a `timeout` ack if none
             // arrives within the window.
-            this.registerPendingAck(confirmKey, commandId)
+            this.registerPendingAck(confirmKey, commandId, cmd.uid)
 
             // Mark for deletion after successful execution
             batch.delete(ref)
         } catch (err) {
             console.error(`[Transport] Command error:`, (err as Error).message)
-            void this.ackWriter.write(commandId, "rejected", { reason: (err as Error).message })
+            void this.ackWriter.write(commandId, "rejected", { reason: (err as Error).message, uid: cmd.uid })
             batch.update(ref, { error: (err as Error).message, processedAt: Date.now() })
         }
     }
@@ -494,21 +496,27 @@ export class FirestoreTransport {
      * the newer command's read-back carries the authoritative value. If no
      * confirmation arrives within ACK_CONFIRM_TIMEOUT_MS we write a `timeout`.
      */
-    private registerPendingAck(confirmKey: string, commandId: string): void {
+    private registerPendingAck(confirmKey: string, commandId: string, uid?: string): void {
         const existing = this.pendingAcks.get(confirmKey)
         if (existing) {
             clearTimeout(existing.timer)
             void this.ackWriter.write(existing.commandId, "applied", {
                 reason: "superseded by a newer command for the same target",
+                // R2: the superseded command's OWN uid — not this one's. Two
+                // musicians can hold the same target key (an engineer riding a
+                // bus a musician also owns), and an ack must stay readable only
+                // by whoever issued that command.
+                uid: existing.uid,
             })
         }
         const timer = setTimeout(() => {
             this.pendingAcks.delete(confirmKey)
             void this.ackWriter.write(commandId, "timeout", {
                 reason: `no read-back confirmation within ${this.ACK_CONFIRM_TIMEOUT_MS}ms`,
+                uid,
             })
         }, this.ACK_CONFIRM_TIMEOUT_MS)
-        this.pendingAcks.set(confirmKey, { commandId, timer })
+        this.pendingAcks.set(confirmKey, { commandId, timer, uid })
     }
 
     /**
@@ -522,7 +530,7 @@ export class FirestoreTransport {
         if (!pending) return
         clearTimeout(pending.timer)
         this.pendingAcks.delete(confirmKey)
-        void this.ackWriter.write(pending.commandId, "applied", { confirmedValue })
+        void this.ackWriter.write(pending.commandId, "applied", { confirmedValue, uid: pending.uid })
     }
 
     /** B13 — record that a client is active (sent a command). */

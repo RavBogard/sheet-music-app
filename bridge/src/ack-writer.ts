@@ -42,6 +42,15 @@ export interface CommandAck {
     status: AckStatus
     confirmedValue?: number | boolean
     reason?: string
+    /**
+     * R2 — the uid of the musician whose command this acks, copied from the
+     * pending command doc. REQUIRED for the client read path: the
+     * `monitor-live/commands/acks` rule gates on
+     * `resource.data.uid == request.auth.uid`, so an ack written without it is
+     * readable by nobody (deny, not allow — the safe failure direction). Omitted
+     * only where the originating uid is genuinely unknown.
+     */
+    uid?: string
     at: admin.firestore.FieldValue
     createdAtMs: number
 }
@@ -70,7 +79,7 @@ export class AckWriter {
     async write(
         commandId: string,
         status: AckStatus,
-        opts: { confirmedValue?: number | boolean; reason?: string } = {},
+        opts: { confirmedValue?: number | boolean; reason?: string; uid?: string } = {},
     ): Promise<void> {
         if (!commandId) return
         const doc: CommandAck = {
@@ -81,6 +90,7 @@ export class AckWriter {
         }
         if (opts.confirmedValue !== undefined) doc.confirmedValue = opts.confirmedValue
         if (opts.reason !== undefined) doc.reason = opts.reason
+        if (opts.uid !== undefined) doc.uid = opts.uid
         try {
             await this.db.doc(`${ACKS_COLLECTION}/${commandId}`).set(doc)
         } catch (err) {

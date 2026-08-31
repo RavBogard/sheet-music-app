@@ -27,6 +27,7 @@ import { FirestoreTransport } from "./firestore-transport"
 import { RemoteLogger } from "./remote-log"
 import { BridgeControlDispatcher, collectDiagnostics } from "./bridge-control"
 import { pickLocalIp } from "./get-local-ip"
+import { getMachineId, type LeaseIdentity } from "./lease-identity"
 import type { BridgeControl, MonitorConfig } from "./types"
 
 /**
@@ -54,9 +55,35 @@ const STATE_LIVENESS_THRESHOLD_MS = 30_000
  * a bridge that can't hold it stands by (listens but does not drain commands or
  * write state). TTL ≫ renew interval so one missed renewal doesn't drop it; TTL
  * also ≫ realistic NTP skew between two PCs.
+ *
+ * R1 (v10.0.8) — TTL cut 90s → 20s, renew 20s → 6s. The old TTL sized the window
+ * for a crash-relaunch, and it made that window ~110s of dark desk (90s TTL + up
+ * to one 20s retry tick) with nobody able to intervene mid-service. Same-host
+ * relaunch no longer waits at all (the lease is STOLEN back — see
+ * lease-identity.ts), so the TTL now only has to cover the genuinely-cross-host
+ * case, where ~26s worst case is the right trade. 20/6 still gives a healthy
+ * bridge three renewals inside one TTL, so two consecutive Firestore hiccups
+ * can't drop a lease it is entitled to.
  */
-const LEASE_TTL_MS = 90_000
-const LEASE_RENEW_MS = 20_000
+const LEASE_TTL_MS = 20_000
+const LEASE_RENEW_MS = 6_000
+
+/**
+ * R1 — a same-machine lease whose holder hasn't renewed for this long is treated
+ * as abandoned. 2× the renew cadence: a live bridge renews every 6s, so this
+ * cannot fire against one that is merely slow, and it only ever applies to a
+ * holder on THIS machine (cross-host steals are refused outright).
+ */
+const LEASE_STALE_HEARTBEAT_MS = 2 * LEASE_RENEW_MS
+
+/**
+ * R1 — minimum spacing between `bridgeStandby` marker writes. The marker rides
+ * the 6s lease tick so a takeover in flight is visible in the cloud within
+ * seconds, but a bridge wrongly left standing by on a second PC would then burn
+ * a Firestore write every 6s forever. 15s keeps the marker well inside any
+ * human's "is anything running there?" window at a tenth of that cost.
+ */
+const STANDBY_MARKER_MIN_INTERVAL_MS = 15_000
 
 /**
  * O4 (passive cadence) — periodic selftest write interval. The dispatcher's
@@ -170,13 +197,44 @@ async function main() {
     //     it, this one starts in STANDBY: it still listens, but won't drain
     //     commands or write state (the transport's isActiveBridge gate). The renew
     //     loop below promotes it to active if the lease later frees up.
+    //     R1 — the instance ID is per-LAUNCH (it carries the pid + a uuid), which
+    //     is exactly why a relaunched bridge used to be a stranger to its own
+    //     lease. The machine ID is per-INSTALL and persisted to disk, so the new
+    //     process can prove the lease it is looking at is one this box left
+    //     behind and take it straight back.
     const bridgeInstanceId = `${os.hostname()}-${process.pid}-${randomUUID().slice(0, 8)}`
-    let leaseHeld = await config.acquireOrRenewLease(bridgeInstanceId, LEASE_TTL_MS)
+    const machineId = getMachineId()
+    const leaseIdentity: LeaseIdentity = {
+        machineId,
+        pid: process.pid,
+        staleAfterMs: LEASE_STALE_HEARTBEAT_MS,
+    }
+    let leaseHeld = await config.acquireOrRenewLease(bridgeInstanceId, LEASE_TTL_MS, leaseIdentity)
     if (leaseHeld) {
         console.log(`[Bridge] Single-writer lease ACQUIRED (${bridgeInstanceId}) — this bridge is ACTIVE`)
     } else {
         console.warn(`[Bridge] Single-writer lease held by another bridge — entering STANDBY (will not drive the X32)`)
     }
+
+    /**
+     * R1 — publish the STANDBY liveness marker (throttled; `force` bypasses the
+     * throttle for the transitions worth seeing immediately). Writes only
+     * `bridgeStandby.*`; `bridge.lastSeen` stays the ACTIVE bridge's word alone,
+     * so a standby can never hold `isBridgeOnline()` true over a dark desk.
+     */
+    let lastStandbyMarkerAt = 0
+    const publishStandbyMarker = async (force = false) => {
+        const now = Date.now()
+        if (!force && now - lastStandbyMarkerAt < STANDBY_MARKER_MIN_INTERVAL_MS) return
+        lastStandbyMarkerAt = now
+        await config.writeStandbyHeartbeat({
+            instanceId: bridgeInstanceId,
+            machineId,
+            pid: process.pid,
+            x32Connected: x32.isConnected(),
+        })
+    }
+    if (!leaseHeld) await publishStandbyMarker(true)
 
     // 4. Start the Firestore transport FIRST (B2) so its state_synced listener is
     //    attached BEFORE syncFullState emits — otherwise the initial event is lost.
@@ -297,6 +355,12 @@ async function main() {
 
             // Clean up stale commands (safety net) + TTL-sweep acks.
             await transport.cleanupStaleCommands()
+        } else {
+            // R1 — a standby used to write NOTHING, anywhere, for its whole
+            // window: from the cloud it was indistinguishable from an unplugged
+            // PC. Publish the standby-only marker instead. Still not one byte
+            // under `bridge.*`.
+            await publishStandbyMarker()
         }
     }
 
@@ -309,15 +373,26 @@ async function main() {
     // On a standby→active transition, resync the desk so the now-active bridge
     // publishes fresh state instead of waiting for the 30s re-query.
     const leaseInterval = setInterval(async () => {
-        const held = await config.acquireOrRenewLease(bridgeInstanceId, LEASE_TTL_MS)
+        const held = await config.acquireOrRenewLease(bridgeInstanceId, LEASE_TTL_MS, leaseIdentity)
         if (held && !leaseHeld) {
             console.log("[Bridge] Single-writer lease ACQUIRED — promoting to ACTIVE")
+            // R1 — we are the active bridge now; drop our standby marker so the
+            // cloud doesn't keep reading a standby that no longer exists.
+            await config.clearStandbyMarker(bridgeInstanceId)
+            leaseHeld = true
             if (x32.isConnected()) {
                 await x32.syncFullState(config.getConfig().monitorBuses)
                 await transport.writeFullState()
             }
+            // Publish health immediately rather than waiting out the rest of the
+            // 60s heartbeat tick: a takeover that isn't visible for another minute
+            // still reads as an outage to everyone watching (R1).
+            await heartbeatLoop()
         } else if (!held && leaseHeld) {
             console.warn("[Bridge] Single-writer lease LOST — another bridge is ACTIVE; standing by")
+            await publishStandbyMarker(true)
+        } else if (!held) {
+            await publishStandbyMarker()
         }
         leaseHeld = held
     }, LEASE_RENEW_MS)
@@ -426,10 +501,19 @@ async function main() {
         clearInterval(selftestInterval)
         transport.stop()
         remoteLogger.stop()
-        await config.writeOffline()
-        // B10 — release the lease so a standby bridge can take over immediately
-        // (rather than waiting out the TTL).
-        if (leaseHeld) await config.releaseLease(bridgeInstanceId)
+        // R1 — `writeOffline` stamps bridge.status AND bridge.lastSeen, which are
+        // the ACTIVE bridge's fields. A standby calling it would both declare the
+        // real active bridge offline and refresh `lastSeen` on its way out — a
+        // standby write keeping `isBridgeOnline()` true, which is precisely what
+        // must never happen. Only the lease holder speaks for `bridge.*`.
+        if (leaseHeld) {
+            await config.writeOffline()
+            // B10 — release the lease so a standby bridge can take over immediately
+            // (rather than waiting out the TTL).
+            await config.releaseLease(bridgeInstanceId)
+        } else {
+            await config.clearStandbyMarker(bridgeInstanceId)
+        }
         config.stopWatching()
         x32.disconnect()
         process.exit(0)

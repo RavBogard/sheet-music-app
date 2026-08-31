@@ -99,6 +99,25 @@ describe("AckWriter (B6) — per-command ack docs", () => {
         expect(h.setCalls[0].data.confirmedValue).toBe(false)
     })
 
+    // ── R2: the uid stamp the client read path depends on ────────────────────
+    //
+    // `firestore.rules` gates ack reads on
+    // `resource.data.uid == request.auth.uid`. Without this field the ack is
+    // readable by NOBODY, and the musician is back to the wordless 2s revert
+    // this whole path exists to replace — so the stamp is load-bearing, not
+    // decorative.
+
+    it("stamps the requesting uid so the issuing musician can read the ack", async () => {
+        await writer.write("cmd-uid", "rejected", { reason: "unauthorized", uid: "musician-1" })
+        expect(h.setCalls[0].data.uid).toBe("musician-1")
+        expect(h.setCalls[0].data.reason).toBe("unauthorized")
+    })
+
+    it("omits uid entirely when unknown (Firestore rejects undefined; the rule then denies)", async () => {
+        await writer.write("cmd-nouid", "timeout", { reason: "no read-back" })
+        expect("uid" in h.setCalls[0].data).toBe(false)
+    })
+
     it("writes a REJECTED ack with a reason and no confirmedValue", async () => {
         await writer.write("cmd-2", "rejected", { reason: "unauthorized" })
         const doc = h.setCalls[0].data
