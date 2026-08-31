@@ -32,7 +32,12 @@ vi.mock('@/lib/firebase', () => ({
         return typeof u === 'function' ? u : () => {}
     }),
 }))
-vi.mock('firebase/firestore', () => ({ doc: vi.fn() }))
+// `Timestamp` is needed now that the SSR-primed `eventDate` prop wiring
+// runs `firestore-helpers.toISOString` -> `toDate`, which does
+// `value instanceof Timestamp`. `initialSetlist.eventDate` below is a
+// plain string, so a stub class (never actually instantiated) is enough
+// to keep `instanceof` from throwing on the unmocked export.
+vi.mock('firebase/firestore', () => ({ doc: vi.fn(), Timestamp: class {} }))
 
 vi.mock('@/lib/auth-context', () => ({
     useAuth: () => ({

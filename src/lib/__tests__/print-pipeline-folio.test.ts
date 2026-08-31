@@ -519,7 +519,7 @@ describe("gig packet cover page — liturgyRef folio column", () => {
     })
 })
 
-// ── Pagination (Finding 1) ───────────────────────────────────────────────────
+// ── Pagination (Finding 1 / Phase-4 cover-density fix) ──────────────────────
 //
 // The cover table used to be ONE page that dropped every row past
 // `yOffset < 60` with no marker. Measured at HEAD: a 34-track setlist drew 26
@@ -528,9 +528,30 @@ describe("gig packet cover page — liturgyRef folio column", () => {
 // the packet's only carrier of page numbers, a Shabbat-morning packet printed
 // folios through the middle of the service and stopped before Aleinu and
 // Mourner's Kaddish.
+//
+// A follow-up fix then tightened the whole header block and row pitch (title
+// shrunk-to-fit instead of a fixed 28pt that ran off the page; date/book
+// merged onto one line; smaller header-block fonts and spacing; 16pt/20pt row
+// pitch instead of 18pt/22pt) so that a REAL 34-track Shabbat-morning packet —
+// the shape Daniel actually prints, 7 headers + 27 rows, "Prepared for" +
+// "Led by" both present — now fits on a single cover page. AC-P1 through AC-P4
+// below now exercise a 60-row fixture instead of the 34-row one specifically
+// so pagination itself (multi-page correctness) still gets a genuine,
+// non-vacuous multi-page fixture; AC-P6 is the fixture that proves the actual
+// point of this change — 34 rows, worst case, one page.
+//
+// Measured directly (rendering real-shaped data, not estimated from the
+// geometry constants): a 34-row service (7 headers / 27 rows) fits on ONE
+// page in EVERY header-line combination, including the absolute worst case —
+// title + date + book + eventName + "Led by" + "Prepared for" all present at
+// once (AC-P6 below pins exactly this). 36 rows spills to two pages. So real
+// worst-case capacity on page 1 is ~35 rows, not an exact round number, and
+// that's fine: Daniel's library includes real 38/44/45-track services, and
+// those are EXPECTED to paginate onto a second page — pagination is the
+// correct, tested behavior (AC-P1 through AC-P4), not a shortfall.
 
 /** Lowest baseline a row may occupy (print-pipeline COVER_ROW_BOTTOM). */
-const ROW_BOTTOM = 60
+const ROW_BOTTOM = 50
 /** The packet footer's baseline — the only ink allowed below ROW_BOTTOM. */
 const FOOTER_Y = 30
 
@@ -549,17 +570,34 @@ const EXPECTED_TITLES = SERVICE_34.map(t =>
 )
 const EXPECTED_FOLIOS = SERVICE_34.map(t => `p. ${t.liturgyRef!.folio}`)
 
-/** The measured worst case: a "Prepared for" packet, which fits fewest rows. */
+/** A 60-row service, built exactly like SERVICE_34, sized to genuinely spill
+ *  onto a second page even under the new, denser geometry. */
+const SERVICE_60: PrintTrack[] = Array.from({ length: 60 }, (_, i) => ({
+    title: `Service Item ${String(i + 1).padStart(2, "0")}`,
+    key: i % 3 === 0 ? "G" : "",
+    notes: "",
+    type: i % 7 === 0 ? "header" : i % 3 === 0 ? "song" : "prayer",
+    liturgyRef: { book: "crc-saturday", folio: 100 + i },
+}))
+
+const EXPECTED_TITLES_60 = SERVICE_60.map(t =>
+    t.type === "header" ? t.title.toUpperCase() : t.title,
+)
+const EXPECTED_FOLIOS_60 = SERVICE_60.map(t => `p. ${t.liturgyRef!.folio}`)
+
+/** The measured worst case: a "Prepared for" packet carrying the title, date,
+ *  book and "Led by" lines too — everything the page-1 header block can draw. */
 const personalReq = (tracks: PrintTrack[]): PrintRequest => ({
     ...req(tracks),
     musicianName: "David Lazaroff - Guitar",
     rabbi: "Rabbi Daniel Bogard",
+    bookTitle: "Mishkan T'filah",
 })
 
 describe("gig packet cover page — pagination", () => {
-    it("AC-P1: a 34-track service draws ALL 34 rows and ALL 34 folios", async () => {
+    it("AC-P1: a 60-track service draws ALL 60 rows and ALL 60 folios", async () => {
         const { doc, all } = await readAllPages(
-            (await generatePrintPdf(personalReq(SERVICE_34))).pdf,
+            (await generatePrintPdf(personalReq(SERVICE_60))).pdf,
         )
 
         // It genuinely spilled — otherwise this test would pass vacuously on a
@@ -567,35 +605,35 @@ describe("gig packet cover page — pagination", () => {
         expect(doc.getPageCount()).toBeGreaterThan(1)
 
         const texts = all.map(i => i.text)
-        const missingTitles = EXPECTED_TITLES.filter(t => !texts.includes(t))
+        const missingTitles = EXPECTED_TITLES_60.filter(t => !texts.includes(t))
         expect(missingTitles, "rows dropped off the end of the cover table").toEqual([])
 
         // Folios in DOCUMENT ORDER (pages in order, draw order within a page):
         // not just "all present" but "all present, in the order of service".
-        expect(texts.filter(t => t.startsWith("p. "))).toEqual(EXPECTED_FOLIOS)
+        expect(texts.filter(t => t.startsWith("p. "))).toEqual(EXPECTED_FOLIOS_60)
     })
 
     it("AC-P2: no row is split across the page boundary — a title and its folio always share a page", async () => {
         const { pages } = await readAllPages(
-            (await generatePrintPdf(personalReq(SERVICE_34))).pdf,
+            (await generatePrintPdf(personalReq(SERVICE_60))).pdf,
         )
         const pageOf = (needle: string) =>
             pages.findIndex(items => items.some(i => i.text === needle))
 
-        for (let i = 0; i < SERVICE_34.length; i++) {
-            const titlePage = pageOf(EXPECTED_TITLES[i])
-            const folioPage = pageOf(EXPECTED_FOLIOS[i])
-            expect(titlePage, `${EXPECTED_TITLES[i]} was not drawn at all`).toBeGreaterThanOrEqual(0)
+        for (let i = 0; i < SERVICE_60.length; i++) {
+            const titlePage = pageOf(EXPECTED_TITLES_60[i])
+            const folioPage = pageOf(EXPECTED_FOLIOS_60[i])
+            expect(titlePage, `${EXPECTED_TITLES_60[i]} was not drawn at all`).toBeGreaterThanOrEqual(0)
             expect(
                 folioPage,
-                `${EXPECTED_TITLES[i]} is on page ${titlePage} but its ${EXPECTED_FOLIOS[i]} is on page ${folioPage}`,
+                `${EXPECTED_TITLES_60[i]} is on page ${titlePage} but its ${EXPECTED_FOLIOS_60[i]} is on page ${folioPage}`,
             ).toBe(titlePage)
         }
     })
 
     it("AC-P3: every table page repeats the column headers; only page 1 carries the header block", async () => {
         const { doc, pages } = await readAllPages(
-            (await generatePrintPdf(personalReq(SERVICE_34))).pdf,
+            (await generatePrintPdf(personalReq(SERVICE_60))).pdf,
         )
         expect(doc.getPageCount()).toBeGreaterThan(1)
 
@@ -619,13 +657,13 @@ describe("gig packet cover page — pagination", () => {
 
     it("AC-P4: nothing but the footer is drawn below the bottom margin, and nothing overruns the folio column", async () => {
         const { pages } = await readAllPages(
-            (await generatePrintPdf(personalReq(SERVICE_34))).pdf,
+            (await generatePrintPdf(personalReq(SERVICE_60))).pdf,
         )
         const fonts = await metrics()
         const bold = fonts.get("Helvetica-Bold")!
         const folioW = Math.max(
             bold.widthOfTextAtSize("Page", 10),
-            ...EXPECTED_FOLIOS.map(s => bold.widthOfTextAtSize(s, 9)),
+            ...EXPECTED_FOLIOS_60.map(s => bold.widthOfTextAtSize(s, 9)),
         )
         const folioLeft = CONTENT_RIGHT - folioW - FOLIO_GUTTER
 
@@ -643,6 +681,46 @@ describe("gig packet cover page — pagination", () => {
             (await generatePrintPdf(personalReq(SERVICE_34.slice(0, 12)))).pdf,
         )
         expect(doc.getPageCount()).toBe(1)
+    })
+
+    it("AC-P6: a real 34-track Shabbat-morning packet — title, date, book, eventName, \"Led by\" and \"Prepared for\" all present — fits on ONE page", async () => {
+        // The absolute worst case for page-1 header-block height: every
+        // optional header line present at once, including `eventName` — the
+        // fourth optional line (costs another 14pt) that `personalReq` alone
+        // doesn't exercise, since AC-P1..P4 reuse `personalReq` for the
+        // pagination cases and must not have it changed there.
+        const { doc, all } = await readAllPages(
+            (await generatePrintPdf({ ...personalReq(SERVICE_34), eventName: "B'nai Mitzvah of Ari Cohen" })).pdf,
+        )
+
+        expect(doc.getPageCount()).toBe(1)
+
+        const texts = all.map(i => i.text)
+        const missingTitles = EXPECTED_TITLES.filter(t => !texts.includes(t))
+        expect(missingTitles, "rows dropped off the cover table").toEqual([])
+        expect(texts.filter(t => t.startsWith("p. "))).toEqual(EXPECTED_FOLIOS)
+    })
+
+    it("AC-P7: a long real title is drawn in full, shrunk to fit, and never runs off the paper", async () => {
+        const LONG_REAL_TITLE = "Shabbat Morning - Parashat Nitzavim-Vayeilech - September 5"
+        const { items } = await readCover(
+            (
+                await generatePrintPdf({
+                    ...req([{ title: "Bar'chu", key: "", notes: "", type: "prayer" }]),
+                    title: LONG_REAL_TITLE,
+                })
+            ).pdf,
+        )
+        const fonts = await metrics()
+        const bold = fonts.get("Helvetica-Bold")!
+
+        // The full, untruncated string is what got drawn — it fits at the
+        // shrunk size, so there is no need to ellipsize it.
+        const drawn = items.find(i => i.text === LONG_REAL_TITLE)
+        expect(drawn, "the long title was not drawn verbatim").toBeDefined()
+
+        const right = drawn!.x + bold.widthOfTextAtSize(drawn!.text, drawn!.size)
+        expect(right).toBeLessThanOrEqual(CONTENT_RIGHT)
     })
 })
 
@@ -671,7 +749,12 @@ describe("gig packet cover page — prayer book attribution", () => {
     const BOOK = "Shirei Shabbat — Friday Night"
     const BOOK_DRAWN = "Shirei Shabbat - Friday Night"
 
-    it("AC-B1: draws the book title under the date, above the table", async () => {
+    it("AC-B1: draws the book title beside the date (or, if it wouldn't fit, on its own line beneath), above the table", async () => {
+        // Phase-4 cover-density fix: the book title moved from its own 22pt
+        // line onto the date line, immediately after the date text, to buy
+        // back vertical space for the row table. It only falls back to its
+        // own line when date + separator + book together would overrun the
+        // content width — this fixture's combination fits inline.
         const { items } = await readCover(
             (await generatePrintPdf({ ...req(oneRow), bookTitle: BOOK })).pdf,
         )
@@ -682,12 +765,16 @@ describe("gig packet cover page — prayer book attribution", () => {
 
         const date = byText("Saturday, September 6, 2026")!
         const columnHeader = byText("Song")!
-        // Under the date…
-        expect(book!.y).toBeLessThan(date.y)
+        // Same line as the date (the inline case) or, at worst, beneath it —
+        // never above it.
+        expect(book!.y).toBeLessThanOrEqual(date.y)
         // …and above the table's column-header band.
         expect(book!.y).toBeGreaterThan(columnHeader.y)
-        // Same left margin as every other header-block line.
-        expect(book!.x).toBe(50)
+        // This fixture's date + separator + book fits on one line, so the
+        // book is drawn AFTER the date text on the same baseline, not at the
+        // shared x=50 left margin.
+        expect(book!.y).toBe(date.y)
+        expect(book!.x).toBeGreaterThan(50)
         // The folio it qualifies still prints.
         expect(items.map(i => i.text)).toContain("p. 12")
     })
@@ -700,8 +787,11 @@ describe("gig packet cover page — prayer book attribution", () => {
 
         const a = withBook.items.map(i => i.text)
         const b = without.items.map(i => i.text)
-        // Exactly one drawn string differs: the book title itself.
-        expect(a.filter(t => !b.includes(t))).toEqual([BOOK_DRAWN])
+        // Exactly the book title and its " · " separator differ — the
+        // separator is only drawn when a book is present (it ties the date to
+        // the book on the same line), so it is part of "the book", not a
+        // placeholder of its own.
+        expect(a.filter(t => !b.includes(t)).sort()).toEqual([" · ", BOOK_DRAWN].sort())
         // …and the no-book cover draws NOTHING the with-book one doesn't: no
         // placeholder, no em dash, no empty label. (The exact-diff pair above
         // is the whole assertion — a `some(/book|siddur/)` sweep would only

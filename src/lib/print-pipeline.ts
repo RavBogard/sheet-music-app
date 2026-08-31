@@ -310,12 +310,14 @@ function clean(s: unknown): string {
 const COVER_PAGE_W = 612
 const COVER_PAGE_H = 792
 /**
- * Lowest baseline a table row may occupy. The packet footer draws at y=30, and
- * a row's zebra rectangle extends 8pt below its baseline, so 60 keeps even the
- * deepest row band clear of it. This was the old truncation cap; it is now the
- * page-break trigger instead.
+ * Lowest baseline a table row may occupy. The packet footer draws at y=30
+ * (occupying roughly y=30-39 at size 9), and a NORMAL row's zebra rectangle
+ * extends 4pt below its baseline (a header row's extends 8pt, but header rows
+ * break at `yOffset - 4`, which lands at the same floor) — so 50 keeps even
+ * the deepest row band clear of the footer with room to spare. This was the
+ * old truncation cap; it is now the page-break trigger instead.
  */
-const COVER_ROW_BOTTOM = 60
+const COVER_ROW_BOTTOM = 50
 /** First row-band baseline on a continuation page (no header block above it). */
 const COVER_CONTINUATION_TOP = COVER_PAGE_H - 60
 
@@ -348,66 +350,108 @@ async function buildCoverPage(
     // ── Header block — PAGE 1 ONLY ──
     // Continuation pages carry the column headers and rows, nothing else.
 
-    // Title
-    page.drawText(clean(req.title), {
-        x: 50, y: height - 80, size: 28,
+    // Title. Sized to FIT the content width rather than a fixed 28pt — at 28pt
+    // a realistic service title ("Shabbat Morning — Parashat
+    // Nitzavim-Vayeilech — September 5") measured ~830pt against this page's
+    // 512pt content width and ran off the right edge of the paper, drawn in
+    // full and never truncated. Character caps have caused two off-page bugs
+    // in this file already (the header title and the notes cell both used to
+    // cap by length); `widthOfTextAtSize` is the only correct instrument, so
+    // the title shrinks by measured width and only ellipsizes — by measured
+    // width, never by character count — if it still doesn't fit at the floor.
+    const titleContentWidth = (width - 50) - 50
+    let titleSize = 16
+    let titleText = clean(req.title)
+    while (titleSize > 11 && helveticaBold.widthOfTextAtSize(titleText, titleSize) > titleContentWidth) {
+        titleSize -= 0.5
+    }
+    if (helveticaBold.widthOfTextAtSize(titleText, titleSize) > titleContentWidth) {
+        let n = titleText.length
+        while (n > 5 && helveticaBold.widthOfTextAtSize(titleText.substring(0, n) + "...", titleSize) > titleContentWidth) {
+            n--
+        }
+        titleText = titleText.substring(0, n) + "..."
+    }
+    page.drawText(titleText, {
+        x: 50, y: height - 52, size: titleSize,
         font: helveticaBold, color: rgb(0, 0, 0),
     })
 
     // Date
-    page.drawText(clean(req.date), {
-        x: 50, y: height - 110, size: 13,
+    const dateText = clean(req.date)
+    const dateY = height - 70
+    page.drawText(dateText, {
+        x: 50, y: dateY, size: 10,
         font: helvetica, color: rgb(0.4, 0.4, 0.4),
     })
 
-    let yOffset = height - 138
+    let yOffset = height - 86
 
-    // Prayer book (Phase 4). Drawn directly under the date, in the same brand
-    // blue as the folio column so the eye ties `p. 12` to the book it indexes.
-    // Both sibling renderers already name the book — the iPad
-    // (SetlistPerformClient) and the rabbi's sheet (pdf/service-sheet-pdf) —
-    // and this packet is the one a musician carries next to another week's.
-    // No book on the setlist → nothing is drawn. Never a placeholder.
+    // Prayer book (Phase 4). Drawn on the SAME line as the date when it fits,
+    // in the same brand blue as the folio column so the eye ties `p. 12` to
+    // the book it indexes. Both sibling renderers already name the book — the
+    // iPad (SetlistPerformClient) and the rabbi's sheet
+    // (pdf/service-sheet-pdf) — and this packet is the one a musician carries
+    // next to another week's. No book on the setlist → nothing is drawn.
+    // Never a placeholder. Falls back to its own line beneath the date only
+    // when the combined date + separator + book would overrun the content
+    // width — the shrunk-header-block trade-off buys back vertical space, and
+    // this is the one place that could give it back if a book title runs long.
     const coverBookTitle = clean(req.bookTitle)
     if (coverBookTitle) {
-        page.drawText(coverBookTitle, {
-            x: 50, y: yOffset, size: 13,
-            font: helvetica, color: rgb(0.2, 0.4, 0.8),
-        })
-        yOffset -= 22
+        const dateWidth = helvetica.widthOfTextAtSize(dateText, 10)
+        const sep = " · "
+        const sepWidth = helvetica.widthOfTextAtSize(sep, 10)
+        const bookWidth = helvetica.widthOfTextAtSize(coverBookTitle, 10)
+        if (50 + dateWidth + sepWidth + bookWidth <= width - 50) {
+            page.drawText(sep, {
+                x: 50 + dateWidth, y: dateY, size: 10,
+                font: helvetica, color: rgb(0.4, 0.4, 0.4),
+            })
+            page.drawText(coverBookTitle, {
+                x: 50 + dateWidth + sepWidth, y: dateY, size: 10,
+                font: helvetica, color: rgb(0.2, 0.4, 0.8),
+            })
+        } else {
+            page.drawText(coverBookTitle, {
+                x: 50, y: yOffset, size: 10,
+                font: helvetica, color: rgb(0.2, 0.4, 0.8),
+            })
+            yOffset -= 14
+        }
     }
 
     if (req.eventName) {
         page.drawText(clean(req.eventName), {
-            x: 50, y: yOffset, size: 13,
+            x: 50, y: yOffset, size: 10,
             font: helvetica, color: rgb(0.4, 0.4, 0.4),
         })
-        yOffset -= 22
+        yOffset -= 14
     }
 
     if (req.rabbi) {
         page.drawText(`Led by: ${clean(req.rabbi)}`, {
-            x: 50, y: yOffset, size: 13,
+            x: 50, y: yOffset, size: 10,
             font: helvetica, color: rgb(0.4, 0.4, 0.4),
         })
-        yOffset -= 22
+        yOffset -= 14
     }
 
     if (req.musicianName) {
         page.drawText(`Prepared for: ${clean(req.musicianName)}`, {
-            x: 50, y: yOffset, size: 13,
+            x: 50, y: yOffset, size: 10,
             font: helveticaBold, color: rgb(0, 0, 0),
         })
-        yOffset -= 28
+        yOffset -= 18
     }
 
     // Divider
-    yOffset -= 10
+    yOffset -= 8
     page.drawLine({
         start: { x: 50, y: yOffset }, end: { x: width - 50, y: yOffset },
         thickness: 1.5, color: rgb(0.2, 0.4, 0.8),
     })
-    yOffset -= 25
+    yOffset -= 16
 
     // Column positions
     const colNum = 50
@@ -486,7 +530,7 @@ async function buildCoverPage(
             start: { x: 50, y: yOffset }, end: { x: width - 50, y: yOffset },
             thickness: 0.5, color: rgb(0.8, 0.8, 0.8),
         })
-        yOffset -= 16
+        yOffset -= 14
     }
 
     /** Break to a fresh table page and re-establish the column headers. */
@@ -612,7 +656,7 @@ async function buildCoverPage(
             yOffset -= 4 // Extra space before header
             page.drawText(songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
             if (rowFolio) drawFolio(rowFolio, yOffset)
-            yOffset -= 18
+            yOffset -= 16
             return
         }
 
@@ -628,7 +672,7 @@ async function buildCoverPage(
         if (notesDisplay) page.drawText(notesDisplay, { x: colNotes, y: yOffset, size: 9, font: helveticaOblique, color: rgb(0.5, 0.5, 0.5) })
         if (rowFolio) drawFolio(rowFolio, yOffset)
 
-        yOffset -= 18
+        yOffset -= 16
     })
 
     // Footer — on EVERY table page. A continuation page with no footer reads as

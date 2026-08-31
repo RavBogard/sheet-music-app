@@ -389,4 +389,40 @@ describe("PrintModal", () => {
         render(<PrintModal {...defaultProps} />)
         expect(screen.getByTestId("current-mode").textContent).toBe("standard")
     })
+
+    // ── Date field: service date vs. print date ──
+    //
+    // Production regression: no caller ever passed `eventDate`, so the date
+    // line always fell back to `new Date()` — the day the packet was
+    // printed, not the day of the service. Verified against production:
+    // setlist 1e108f17-f24b-4bf0-a9f7-6a0392ccc43d carries
+    // `eventDate: "2026-09-05T14:00:00.000Z"` but printed "Monday, August
+    // 31, 2026". `use-setlist-performance.ts` now threads the setlist's
+    // `eventDate` through to this prop; these two tests pin the wiring
+    // itself, independent of the hook.
+    describe("date field — service date vs. print date", () => {
+        it("shows the setlist's eventDate, not today, when one is supplied", () => {
+            // 14:00 UTC is safely mid-day local time everywhere this suite
+            // actually runs (no TZ override in vitest.config.ts — the host
+            // defaults to America/Chicago, CI to UTC — both read Sept 5
+            // here), so the UTC-vs-local boundary can't flip the calendar
+            // day. This is also the exact timestamp shape from the
+            // production setlist above.
+            render(<PrintModal {...defaultProps} eventDate="2026-09-05T14:00:00.000Z" />)
+            const dateField = screen.getByLabelText("Date") as HTMLInputElement
+            expect(dateField.value).toBe("Saturday, September 5, 2026")
+        })
+
+        it("falls back to today's date when the setlist has no eventDate", () => {
+            vi.useFakeTimers()
+            vi.setSystemTime(new Date("2026-08-31T14:00:00.000Z"))
+            try {
+                render(<PrintModal {...defaultProps} eventDate={undefined} />)
+                const dateField = screen.getByLabelText("Date") as HTMLInputElement
+                expect(dateField.value).toBe("Monday, August 31, 2026")
+            } finally {
+                vi.useRealTimers()
+            }
+        })
+    })
 })

@@ -90,6 +90,7 @@ export function SetlistPerformClient({
         musicians,
         rabbi,
         book,
+        eventDate,
         isWakeLockActive,
         isWakeLockSupported,
         wakeLockError,
@@ -365,6 +366,10 @@ export function SetlistPerformClient({
                     setlistId={setlistId}
                     assignedMusicians={musicians}
                     rabbi={rabbi}
+                    // The setlist's own service date, not the day the packet
+                    // happens to be printed. PrintModal falls back to today
+                    // when this is null (no eventDate on the doc).
+                    eventDate={eventDate}
                     // Phase 4: the same book name this header shows, so the
                     // printed packet's folio column is attributed too.
                     bookTitle={bookName}

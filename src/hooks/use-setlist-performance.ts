@@ -19,6 +19,7 @@ import {
 } from "@/lib/sync/snapshot-listener"
 import { Setlist, SetlistTrack, SetlistMusician } from "@/types/models"
 import { MusicianProfile } from "@/types/models"
+import { toISOString } from "@/lib/firestore-helpers"
 
 interface UseSetlistPerformanceReturn {
     tracks: SetlistTrack[]
@@ -43,6 +44,14 @@ interface UseSetlistPerformanceReturn {
     setlistId: string
     rabbi: string | undefined
     book: string | undefined
+    /** PrintModal's gig-packet date line — the setlist's own service date, not
+     *  the day the packet happens to be printed. Normalised at the hook
+     *  boundary from whatever FirestoreDate shape the doc carries (Timestamp,
+     *  ISO string, {seconds}) to an ISO string, since that's what `new Date()`
+     *  in PrintModal expects. `null` (no eventDate on the doc, or unparseable)
+     *  is a valid, meaningful value — PrintModal's existing `eventDate ? ... :
+     *  new Date()` fallback already treats falsy as "use today". */
+    eventDate: string | null
 }
 
 interface UseSetlistPerformanceOpts {
@@ -179,6 +188,8 @@ export function useSetlistPerformance(
         setlistData?.rabbi ?? initial?.setlist?.rabbi
     const book: string | undefined =
         setlistData?.book ?? initial?.setlist?.book
+    const eventDate: string | null =
+        toISOString(setlistData?.eventDate ?? initial?.setlist?.eventDate)
 
     const currentTrackIndex = -1
 
@@ -248,5 +259,6 @@ export function useSetlistPerformance(
         setlistId,
         rabbi,
         book,
+        eventDate,
     }
 }
