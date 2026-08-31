@@ -7,7 +7,7 @@ import { useLiveQuery } from "dexie-react-hooks"
 import { getDb as getFirestoreDb } from "@/lib/firebase"
 import { useAuth } from "@/lib/auth-context"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
-import { useWakeLock } from "@/hooks/use-wake-lock"
+import { useKeepAwake } from "@/components/performance/keep-awake-context"
 import { logger } from "@/lib/logger"
 import { subscribeToMusicianProfile } from "@/lib/musician-profile"
 import { getDb } from "@/lib/local/schema"
@@ -188,6 +188,7 @@ export function useSetlistPerformance(
         setlistData?.rabbi ?? initial?.setlist?.rabbi
     const book: string | undefined =
         setlistData?.book ?? initial?.setlist?.book
+
     const eventDate: string | null =
         toISOString(setlistData?.eventDate ?? initial?.setlist?.eventDate)
 
@@ -220,21 +221,31 @@ export function useSetlistPerformance(
 
     const defaultTransposition = musicianProfile?.defaultTransposition || 0
 
-    // Wake lock: surface the controls so the caller can render a
-    // gesture-gated toggle (e.g. SetlistPerformClient's "Keep screen on"
-    // header button). DO NOT auto-call requestWakeLock on mount — iOS Safari
-    // rejects `navigator.wakeLock.request('screen')` with NotAllowedError
-    // outside a transient user-activation context, and the rejection is
-    // swallowed as a debug log. The Yizkor-service regression 2026-05-23
-    // (iPad screen timed out mid-service) was exactly this: the hook fired
-    // on mount, iOS no-op'd it, no UI surfaced the failure, the iPad slept.
+    // Wake lock: surface the controls so the caller can render the
+    // "Keep screen on" toggle (SetlistPerformClient's header + the chart
+    // overlay's toolbar).
+    //
+    // 2026-08-31: switched from `useWakeLock()` to `useKeepAwake()`. Under
+    // /perform this now resolves to the layout's KeepAwakeProvider — the ONE
+    // sentinel the whole route tree shares — instead of minting a second,
+    // competing one that the toggle could never fully release. Outside a
+    // provider (unit tests, any future non-/perform host) it transparently
+    // falls back to a private `useWakeLock()` instance, so this hook's
+    // contract is unchanged.
+    //
+    // This hook still does NOT arm on mount; arming is the chart surface's
+    // decision, made by rendering <KeepAwakeAutoArm/>. (The old comment here
+    // claimed a mount-time request is guaranteed to be rejected by iOS. That
+    // was a misdiagnosis of the 2026-05-23 Yizkor regression — see the
+    // corrected analysis in `use-wake-lock.ts`. The real culprit was the
+    // iPadOS <18.4 standalone-app wake-lock bug, WebKit 254545.)
     const {
         isSupported: isWakeLockSupported,
         isLocked: isWakeLockActive,
         lastError: wakeLockError,
         requestWakeLock,
         releaseWakeLock,
-    } = useWakeLock()
+    } = useKeepAwake()
 
     // No-op position control (live stepping removed)
     const setCurrentPosition = () => {}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useWakeLock } from "@/hooks/use-wake-lock"
+import { useKeepAwake } from "./keep-awake-context"
 import { KeepAwakeToggle } from "./KeepAwakeToggle"
 
 /**
@@ -21,11 +21,18 @@ import { KeepAwakeToggle } from "./KeepAwakeToggle"
  * entirely while preserving the documented leader workflow — full-remove (a)
  * would regress it.
  *
- * NOTE: the wake-lock request was ALREADY strictly gesture-gated (it never
- * fired on mount — see the `shouldLockRef` guard in `useWakeLock`), so this is
- * not fixing an active auto-request bug. It removes a pointless affordance +
- * idle listener from anonymous visitors and makes "the anon landing never
- * touches the WakeLock API" a structural property rather than an incidental one.
+ * NOTE: the wake-lock request never fires on mount here, so this is not
+ * fixing an active auto-request bug. It removes a pointless affordance + idle
+ * listener from anonymous visitors and makes "the anon landing never touches
+ * the WakeLock API" a structural property rather than an incidental one. That
+ * property SURVIVES the 2026-08-31 auto-arm wave: `/perform` (this landing)
+ * renders no `<KeepAwakeAutoArm/>`, and the layout's KeepAwakeProvider does
+ * not arm on its own.
+ *
+ * 2026-08-31: reads through `useKeepAwake()` rather than `useWakeLock()`
+ * directly, so under the /perform layout this toggle drives the ONE shared
+ * sentinel instead of minting a private second one that "turn it off" could
+ * never fully release.
  */
 export function KeepAwakeControl() {
     const {
@@ -34,7 +41,7 @@ export function KeepAwakeControl() {
         lastError,
         requestWakeLock,
         releaseWakeLock,
-    } = useWakeLock()
+    } = useKeepAwake()
 
     return (
         <KeepAwakeToggle

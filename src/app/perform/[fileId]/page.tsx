@@ -10,6 +10,7 @@ import { useLibrary } from "@/hooks/use-library"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { captureMessage } from "@/lib/error-reporting"
+import { KeepAwakeAutoArm, useKeepAwake } from "@/components/performance/keep-awake-context"
 import Link from "next/link"
 
 const LOAD_TIMEOUT_MS = 15_000
@@ -22,6 +23,22 @@ export default function StandalonePerformPage() {
     const { allFiles, initialized } = useLibraryStore()
     const { user, loading: authLoading } = useAuth()
     const { isError, error: queryError, refetch, isFetching } = useLibrary()
+
+    // Keep-alive for the SINGLE-CHART perform route (2026-08-31).
+    //
+    // This route rendered <PDFOverlay> with no `wakeLock` prop at all, so the
+    // toolbar's "Keep screen on" control never mounted here and nothing held a
+    // sentinel: open one chart straight from the library on the bimah iPad and
+    // the screen slept on the device idle timer, with no affordance anywhere
+    // on screen to stop it. It now shares the /perform layout's single lock,
+    // identical to the setlist surface.
+    const {
+        isSupported: isWakeLockSupported,
+        isLocked: isWakeLockActive,
+        lastError: wakeLockError,
+        requestWakeLock,
+        releaseWakeLock,
+    } = useKeepAwake()
 
     const file = useMemo(() => allFiles.find(f => f.id === fileId), [allFiles, fileId])
 
@@ -130,13 +147,24 @@ export default function StandalonePerformPage() {
     }
 
     return (
-        <PDFOverlay
-            track={track}
-            tracks={[track]}
-            currentIndex={0}
-            onClose={() => router.back()}
-            onNavigate={() => {}}
-            isPublicView={false}
-        />
+        <>
+            {/* Opening a chart to perform is the intent to keep the screen on. */}
+            <KeepAwakeAutoArm />
+            <PDFOverlay
+                track={track}
+                tracks={[track]}
+                currentIndex={0}
+                onClose={() => router.back()}
+                onNavigate={() => {}}
+                isPublicView={false}
+                wakeLock={{
+                    isActive: isWakeLockActive,
+                    isSupported: isWakeLockSupported,
+                    onRequest: requestWakeLock,
+                    onRelease: releaseWakeLock,
+                    lastError: wakeLockError,
+                }}
+            />
+        </>
     )
 }

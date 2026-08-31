@@ -4,6 +4,8 @@ import { useEffect } from "react"
 import { AuthedQueryProvider } from "@/components/authed-query-provider"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
 import { registerPerformShellSW } from "@/components/performance/perform-shell-sw-register"
+import { KeepAwakeProvider } from "@/components/performance/keep-awake-context"
+import { KeepAwakeBanner } from "@/components/performance/KeepAwakeBanner"
 import { primeOfflineWorker } from "@/lib/pdf-worker-offline"
 
 /**
@@ -165,14 +167,25 @@ export default function PerformLayout({
     // nothing to target, and axe flags landmark-main on every /perform surface.
     // Using <main> instead of <div> here gives the landmark + keeps the id stable
     // for any callers wiring skip-link/anchor links to #main-content.
+    // KeepAwakeProvider (2026-08-31): ONE WakeLockSentinel for the whole
+    // /perform tree. Both chart surfaces (`/perform/setlist/[id]` and
+    // `/perform/[fileId]`) plus the toolbar toggle and the status banner now
+    // read the same lock — previously each `useWakeLock()` call site owned a
+    // separate sentinel, so "turn it off" released one and the screen stayed
+    // on. The provider does NOT arm by itself; the chart surfaces ask via
+    // <KeepAwakeAutoArm/>, which keeps FU-c12-3's "the anonymous /perform
+    // landing never touches the WakeLock API" property intact.
     return (
         <AuthedQueryProvider>
-            <main id="main-content" className="min-h-screen">
-                <PdfWorkerPreload />
-                <PerformShellSWBootstrap />
-                <PerformanceOfflineIndicator />
-                {children}
-            </main>
+            <KeepAwakeProvider>
+                <main id="main-content" className="min-h-screen">
+                    <PdfWorkerPreload />
+                    <PerformShellSWBootstrap />
+                    <PerformanceOfflineIndicator />
+                    {children}
+                    <KeepAwakeBanner />
+                </main>
+            </KeepAwakeProvider>
         </AuthedQueryProvider>
     )
 }

@@ -33,6 +33,7 @@ import { SetlistView } from "@/components/performance/SetlistView"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
 import { SaveOfflineButton } from "@/components/performance/SaveOfflineButton"
 import { KeepAwakeToggle } from "@/components/performance/KeepAwakeToggle"
+import { KeepAwakeAutoArm } from "@/components/performance/keep-awake-context"
 import { bookTitle } from "@/lib/books/titles"
 import { shouldShowFatalSetlistError } from "./perform-error-gate"
 import type { Setlist, SetlistTrack } from "@/types/models"
@@ -232,6 +233,13 @@ export function SetlistPerformClient({
 
     return (
         <div className="flex flex-col min-h-[calc(100dvh-5rem)] md:pt-20 bg-background text-foreground overflow-hidden">
+            {/* 2026-08-31: opening a setlist to perform IS the intent to keep
+                the screen awake — no one should have to remember a toggle
+                before every service. This asks the layout's KeepAwakeProvider
+                to arm (restoring a stored intent, or arming for the first
+                time); an explicit disarm via the toggle is remembered and is
+                NOT overridden here. Renders nothing. */}
+            <KeepAwakeAutoArm />
             {/* Header — compact for maximum setlist visibility */}
             <div className="flex items-center gap-2 px-4 py-2 glass border-b-0 z-20 relative">
                 <Link
@@ -252,13 +260,16 @@ export function SetlistPerformClient({
                     )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                    {/* ipad-wake-lock-fix: gesture-gated "Keep screen on" toggle.
-                        iOS Safari refuses navigator.wakeLock.request without a
-                        user gesture; the prior auto-on-mount path silently failed
-                        through the Yizkor service 2026-05-23. Daniel taps once at
-                        the start of service → visibilitychange-rebind in the hook
-                        re-acquires across iOS lock-screen / app-switch for the
-                        rest of the session. */}
+                    {/* "Keep screen on" — now a MANUAL OVERRIDE, not the only
+                        way in (2026-08-31). <KeepAwakeAutoArm/> above already
+                        armed the lock on mount; this toggle exists so a
+                        musician can turn it OFF (recorded durably, so it stays
+                        off across reloads) and so the engaged state is visible
+                        before the service starts. The old comment here said
+                        iOS refuses a non-gesture request — that was a
+                        misdiagnosis of the 2026-05-23 Yizkor regression; see
+                        `use-wake-lock.ts` for what actually broke (iPadOS
+                        <18.4 standalone-app wake-lock bug, WebKit 254545). */}
                     <KeepAwakeToggle
                         isActive={isWakeLockActive}
                         isSupported={isWakeLockSupported}
@@ -362,14 +373,14 @@ export function SetlistPerformClient({
             {showPrintModal && (
                 <PrintModal
                     setlistName={name}
-                    tracks={tracks}
-                    setlistId={setlistId}
-                    assignedMusicians={musicians}
-                    rabbi={rabbi}
                     // The setlist's own service date, not the day the packet
                     // happens to be printed. PrintModal falls back to today
                     // when this is null (no eventDate on the doc).
                     eventDate={eventDate}
+                    tracks={tracks}
+                    setlistId={setlistId}
+                    assignedMusicians={musicians}
+                    rabbi={rabbi}
                     // Phase 4: the same book name this header shows, so the
                     // printed packet's folio column is attributed too.
                     bookTitle={bookName}

@@ -14,13 +14,19 @@ import type { WakeLockError } from "@/hooks/use-wake-lock"
  * (`SetlistPerformClient`, `PublicSetlistListing`) — the iPad-first hardware
  * Daniel + band run during services ([[project_band_ipad_hardware]]).
  *
- * Why a header toggle and not auto-on-mount: iOS Safari requires
- * `navigator.wakeLock.request('screen')` to run inside transient
- * user-activation. A mount-time call rejects with NotAllowedError and the
- * lock silently never engages — exactly the Yizkor-service screen-timeout
- * Daniel reported 2026-05-23. A tap-to-arm pattern guarantees the gesture
- * and surfaces the lock state so the band can verify it before the service
- * starts.
+ * Role, as of 2026-08-31: a MANUAL OVERRIDE and a status readout — no longer
+ * the only way to arm the lock. Perform chart surfaces auto-arm on mount
+ * (`<KeepAwakeAutoArm/>`), so the band no longer performs the tap-before-every-
+ * service ritual. What this button is still for: turning the lock OFF (that
+ * choice is persisted, and auto-arm honours it), and letting Daniel confirm
+ * the engaged state before the service starts.
+ *
+ * The comment that used to live here claimed iOS Safari requires transient
+ * user-activation for `navigator.wakeLock.request('screen')`. It does not —
+ * the W3C algorithm requires only a visible, active document. The 2026-05-23
+ * Yizkor screen-timeout was the iPadOS <18.4 Home-Screen-app wake-lock bug
+ * (WebKit 254545); see `use-wake-lock.ts` for the full correction, and
+ * `KeepAwakeBanner` for the warning that device now gets.
  *
  * M3-001 peripheral confirmation + failure feedback (cycle-11, 2026-05-28):
  * - **Peripheral pulse-dot:** when `engaged` is true a small pulsing dot
