@@ -41,8 +41,11 @@ describe("SetlistRow — liturgy outline rendering", () => {
         }
         render(<SetlistRow track={track} {...defaultProps} />)
 
-        expect(screen.getByTestId("folio").textContent).toContain("12")
-        expect(screen.getByText(/^p\./)).toBeDefined()
+        // Highest-stakes field on the surface — assert the literal rendered
+        // string, not a substring/regex pair that would still pass if a
+        // regression split "p." from the digits or emitted "p. 1" + "2".
+        // RTL's text normalizer collapses the &nbsp; to a plain space.
+        expect(screen.getByText("p. 12")).toBeDefined()
         expect(screen.getByText("Congregation")).toBeDefined()
         expect(screen.getByText("Rachel Cohen")).toBeDefined()
         expect(screen.getByText(/birthday — candle lighting/)).toBeDefined()
@@ -57,7 +60,7 @@ describe("SetlistRow — liturgy outline rendering", () => {
         }
         expect(() => render(<SetlistRow track={track} {...defaultProps} />)).not.toThrow()
         expect(screen.queryByTestId("folio")).toBeNull()
-        expect(screen.queryByText(/^p\./)).toBeNull()
+        expect(screen.queryByText(/^p\.\s/)).toBeNull()
     })
 
     it("renders the honoree's name on a header row with honors (not swallowed by the divider)", () => {
@@ -85,23 +88,41 @@ describe("SetlistRow — liturgy outline rendering", () => {
         expect(screen.getByTestId("folio").textContent).toContain("30")
     })
 
-    it("leaves a song row unchanged — key badge and leadMusician/performer second line, no outline block", () => {
+    // P4-5 ruling: sung liturgy is still liturgy — Mi Chamocha, Shalom Rav,
+    // Oseh Shalom, Adonai S'fatai are all songs AND printed in the book.
+    // A song row keeps everything it does today AND gains a folioBadge +
+    // honors — but NOT description (track.notes already covers that role
+    // on song rows).
+    it("song row keeps its key badge and leadMusician/performer line, AND gains folio + honors, AND never renders description", () => {
         const track: SetlistTrack = {
             id: "s1",
-            title: "Amazing Grace",
+            title: "Mi Chamocha",
             key: "C",
             type: "song",
             leadMusician: "Randy",
             fileId: "file-abc",
-            liturgyRef: { book: "crc-friday", folio: 5 },
-            honors: [{ name: "Should Not Appear" }],
-            description: "Should not appear either",
+            liturgyRef: { book: "crc-friday", folio: 18 },
+            honors: [{ name: "Rachel Cohen", note: "aliyah" }],
+            description: "Should not appear on a song row",
         }
         render(<SetlistRow track={track} {...defaultProps} />)
         expect(screen.getByTestId("key-badge")).toBeDefined()
         expect(screen.getByText("Randy")).toBeDefined()
-        expect(screen.queryByTestId("folio")).toBeNull()
-        expect(screen.queryByText("Should Not Appear")).toBeNull()
-        expect(screen.queryByText("Should not appear either")).toBeNull()
+        expect(screen.getByText("p. 18")).toBeDefined()
+        expect(screen.getByText("Rachel Cohen")).toBeDefined()
+        expect(screen.getByText(/aliyah/)).toBeDefined()
+        expect(screen.queryByText("Should not appear on a song row")).toBeNull()
+    })
+
+    it("song row falls back to performer when leadMusician is absent", () => {
+        const track: SetlistTrack = {
+            id: "s2",
+            title: "Shalom Rav",
+            type: "song",
+            performer: "Cantor",
+            fileId: "file-def",
+        }
+        render(<SetlistRow track={track} {...defaultProps} />)
+        expect(screen.getByText("Cantor")).toBeDefined()
     })
 })

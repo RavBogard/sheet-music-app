@@ -94,6 +94,24 @@ export function SetlistRow({
         </span>
     ) : null
 
+    // Extracted so the identical honors treatment can be shared by
+    // outlineDetail (prayer/reading rows) AND the song row (P4-5: sung
+    // liturgy — Mi Chamocha, Shalom Rav, Oseh Shalom, Adonai S'fatai — is
+    // still liturgy and still carries honors) without duplicating markup.
+    const honorsList = honors.length > 0 ? (
+        <ul className="mt-0.5 space-y-0.5">
+            {honors.map((h, i) => (
+                <li key={`${h.name}-${i}`} className="flex items-center gap-1.5 text-sm">
+                    <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <span className="text-foreground truncate">{h.name}</span>
+                    {h.note && (
+                        <span className="text-muted-foreground truncate">— {h.note}</span>
+                    )}
+                </li>
+            ))}
+        </ul>
+    ) : null
+
     const outlineDetail = (
         <>
             {outlinePerformer && (
@@ -101,19 +119,7 @@ export function SetlistRow({
                     {outlinePerformer}
                 </p>
             )}
-            {honors.length > 0 && (
-                <ul className="mt-0.5 space-y-0.5">
-                    {honors.map((h, i) => (
-                        <li key={`${h.name}-${i}`} className="flex items-center gap-1.5 text-sm">
-                            <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                            <span className="text-foreground truncate">{h.name}</span>
-                            {h.note && (
-                                <span className="text-muted-foreground truncate">— {h.note}</span>
-                            )}
-                        </li>
-                    ))}
-                </ul>
-            )}
+            {honorsList}
             {track.description && (
                 // Clamped: the full text lives in the book on the page named to the
                 // right. Two lines is enough to identify the moment, not read it.
@@ -219,6 +225,10 @@ export function SetlistRow({
                         {track.bpm} BPM
                     </span>
                 )}
+                {/* P4-5: folioBadge is LAST on the song row's first line, after
+                    BPM — the fixed w-16 text-right column only stays scannable
+                    if every row type's folio lands at the same right edge. */}
+                {folioBadge}
             </div>
             {hasSecondLine && (
                 // text-blue-700 in light mode (text-blue-400 fails WCAG AA
@@ -228,6 +238,10 @@ export function SetlistRow({
                     {track.leadMusician || track.performer}
                 </p>
             )}
+            {/* P4-5: sung liturgy (Mi Chamocha, Shalom Rav…) still carries
+                honors; deliberately NOT track.description — songs already
+                surface that role via track.notes on the first line. */}
+            {honorsList}
         </div>
     ) : openableNonSong ? (
         // Prayer/reading WITH a bonded chart: must read as tappable, not as a

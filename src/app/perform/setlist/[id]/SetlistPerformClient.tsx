@@ -185,6 +185,7 @@ export function SetlistPerformClient({
     // Song count for header
     const songCount = tracks.filter((t) => !t.type || t.type === "song").length
     const totalCount = tracks.filter((t) => t.type !== "header").length
+    const bookName = bookTitle(book)
 
     // Back link: authenticated users go to /setlists, public users go to /perform (public listing)
     const backHref = isPublicView ? "/perform" : "/setlists"
@@ -245,8 +246,8 @@ export function SetlistPerformClient({
                         {songCount} song{songCount !== 1 ? "s" : ""}
                         {totalCount > songCount ? ` · ${totalCount} items` : ""}
                     </p>
-                    {bookTitle(book) && (
-                        <p className="text-sm text-muted-foreground truncate">{bookTitle(book)}</p>
+                    {bookName && (
+                        <p className="text-sm text-muted-foreground truncate">{bookName}</p>
                     )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
