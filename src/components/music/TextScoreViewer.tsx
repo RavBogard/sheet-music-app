@@ -33,12 +33,30 @@ interface TextScoreViewerProps {
 }
 
 export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
-    const { transposition } = useMusicStore()
+    const transposition = useMusicStore((s) => s.transposition)
+    /**
+     * WAVE1 Bug 4 (2026-08-31) — the toolbar's zoom buttons used to do NOTHING
+     * on a text chart. `PerformanceToolbar` renders them for every viewer kind
+     * (only the fit toggle is gated on `isPdfChart`) and binds its "%" readout
+     * to store `zoom`, but this component kept its zoom in component-local
+     * `useState`. So a musician on one of the 66 text charts tapped +, watched
+     * the percentage climb, and the chart did not move — the obvious recovery
+     * action silently no-opped, on exactly the charts that need it most (the
+     * fit-mode font is clamped to 11-15px, ~8.7-11.9pt at music-stand distance).
+     *
+     * Store `zoom` is now the single source of truth, matching PDFViewer
+     * (`s.zoom` -> computeFitPageWidth), ImageScoreViewer (`s.zoom` -> CSS zoom)
+     * and SmartScoreViewer (`s.zoom` -> OSMD fitBase * zoom). Going through
+     * `setZoom` also means text charts finally get `chartZoom` write-through, so
+     * a text chart's zoom is restored per chart instead of resetting to 100% on
+     * every open.
+     */
+    const zoomLevel = useMusicStore((s) => s.zoom)
+    const setZoom = useMusicStore((s) => s.setZoom)
     const [content, setContent] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [wrapMode, setWrapMode] = useState(false)
-    const [zoomLevel, setZoomLevel] = useState(1.0)
 
     // Auto-enable wrap mode on small screens on initial load
     useEffect(() => {
@@ -276,13 +294,19 @@ export function TextScoreViewer({ fileId }: TextScoreViewerProps) {
                     {wrapMode ? "Wrap" : "Fit"}
                 </Button>
                 <div className="w-px bg-border my-1" />
-                <Button variant="outline" size="icon" aria-label="Zoom out" className="h-11 w-11" onClick={() => setZoomLevel(z => Math.max(0.5, z - 0.1))}>
+                {/* WAVE1 Bug 4: these write the SAME store slot the toolbar
+                    reads, so the two controls can no longer disagree. This bar
+                    keeps its wider 0.5-3.0 range (the 11-15px font clamp means
+                    text charts genuinely need more than the toolbar's 2.0 cap);
+                    the toolbar clamps to 2.0 but is guarded against dragging a
+                    higher value back down. */}
+                <Button variant="outline" size="icon" aria-label="Zoom out" className="h-11 w-11" onClick={() => setZoom(Math.max(0.5, zoomLevel - 0.1))}>
                     <ZoomOut className="h-4 w-4" />
                 </Button>
-                <div className="flex items-center justify-center w-12 text-xs font-medium">
+                <div className="flex items-center justify-center w-12 text-xs font-medium tabular-nums">
                     {Math.round(zoomLevel * 100)}%
                 </div>
-                <Button variant="outline" size="icon" aria-label="Zoom in" className="h-11 w-11" onClick={() => setZoomLevel(z => Math.min(3.0, z + 0.1))}>
+                <Button variant="outline" size="icon" aria-label="Zoom in" className="h-11 w-11" onClick={() => setZoom(Math.min(3.0, zoomLevel + 0.1))}>
                     <ZoomIn className="h-4 w-4" />
                 </Button>
             </div>

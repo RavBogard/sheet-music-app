@@ -115,6 +115,33 @@ describe("PerformanceToolbar", () => {
         expect(mockSetZoom).toHaveBeenCalledWith(expect.closeTo(1.1, 1))
     })
 
+    it("zoom in caps at 2.0 (unchanged)", () => {
+        mockStoreState.zoom = 1.95
+        render(<PerformanceToolbar onHome={mockOnHome} />)
+        fireEvent.click(screen.getAllByLabelText("Zoom in")[0])
+        expect(mockSetZoom).toHaveBeenCalledWith(2.0)
+    })
+
+    // WAVE1 Bug 4 (2026-08-31): TextScoreViewer's own control bar reaches 3.0 —
+    // its 11-15px font clamp needs the headroom — and now writes the SAME store
+    // slot this toolbar reads. A bare `Math.min(2.0, zoom + 0.1)` would therefore
+    // snap a 2.5 down to 2.0: a "+" button that shrinks the chart, mid-service,
+    // on the charts with the smallest type in the library.
+    it("WAVE1 Bug 4: zoom in never DECREASES a value already above the 2.0 cap", () => {
+        mockStoreState.zoom = 2.5
+        render(<PerformanceToolbar onHome={mockOnHome} />)
+        fireEvent.click(screen.getAllByLabelText("Zoom in")[0])
+        expect(mockSetZoom).toHaveBeenCalledWith(2.5)
+        expect(mockSetZoom).not.toHaveBeenCalledWith(2.0)
+    })
+
+    it("WAVE1 Bug 4: zoom out still steps down normally from above the cap", () => {
+        mockStoreState.zoom = 2.5
+        render(<PerformanceToolbar onHome={mockOnHome} />)
+        fireEvent.click(screen.getAllByLabelText("Zoom out")[0])
+        expect(mockSetZoom).toHaveBeenCalledWith(expect.closeTo(2.4, 1))
+    })
+
     it("exit button calls onHome", () => {
         render(<PerformanceToolbar onHome={mockOnHome} />)
 

@@ -192,7 +192,12 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock
             </Button>
             <Button
                 variant="ghost" size="icon"
-                onClick={() => setZoom(Math.min(2.0, zoom + 0.1))}
+                // WAVE1 Bug 4: never DECREASE on a zoom-in tap. TextScoreViewer's
+                // own control bar reaches 3.0 (its 11-15px font clamp needs the
+                // headroom) and writes the same store slot, so a bare
+                // Math.min(2.0, ...) would snap 2.5 down to 2.0 — a "+" button
+                // that shrinks the chart. Zoom out still steps down normally.
+                onClick={() => setZoom(Math.max(zoom, Math.min(2.0, zoom + 0.1)))}
                 className={cn(
                     // C10I1-001: ≥44px (h-11 w-11) on all viewports.
                     "text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg h-11 w-11"
