@@ -449,7 +449,21 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
             <div
                 ref={containerRef}
                 data-pdf-scroll=""
-                className="flex-1 overflow-auto bg-muted dark:bg-zinc-900 scrollbar-hide flex justify-start relative pb-32"
+                /* WAVE1 Bug 2 (2026-08-31) — THIS ELEMENT MUST CARRY NO PADDING.
+                   It is the element the ResizeObserver below measures, and
+                   `ResizeObserver.contentRect` reports the CONTENT box, which
+                   EXCLUDES padding. It used to carry `pb-32`, so the height fed
+                   to `computeFitPageWidth` under-reported the available space by
+                   128px. Measured at 1180x820 landscape on a US Letter chart in
+                   fit-page mode: clientHeight 755 -> contentRect.height 627 ->
+                   (627 - 4) / 1.2941 = 481px rendered, where 755 / 1.2941 = 583px
+                   was actually available. Fit-page — the one mode whose entire
+                   job is "make the whole page readable" — threw away 21% of the
+                   legibility to a padding value and parked 128px of dead grey
+                   under the chart. Bottom clearance now lives INSIDE the scrolled
+                   content (see the spacer below), so it costs scroll distance
+                   instead of measured height. */
+                className="flex-1 overflow-auto bg-muted dark:bg-zinc-900 scrollbar-hide flex justify-start relative"
             >
                 <div data-pdf-scroll-content="" className="relative mx-auto">
                     {loading && (
@@ -541,6 +555,18 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
                         <div className="pointer-events-none fixed bottom-28 left-1/2 -translate-x-1/2 z-20 rounded-full bg-card/90 border border-border px-3 py-1 text-xs font-medium text-foreground shadow-lg">
                             Page {currentPage} of {numPages}
                         </div>
+                    )}
+
+                    {/* WAVE1 Bug 2: bottom clearance for the FIXED "Page N of M"
+                        pill above, which otherwise sits over the last ~30px of
+                        the final page. Lives INSIDE the scrolled content (the
+                        pattern TextScoreViewer.tsx already uses) so it never
+                        reaches `ResizeObserver.contentRect` and never shrinks
+                        the fit-page height budget. Rendered only when the pill
+                        is — a single-page chart in fit-page mode must still fit
+                        with zero vertical scroll. */}
+                    {source && !loading && !renderTimedOut && numPages > 1 && width > 0 && (
+                        <div aria-hidden="true" data-pdf-bottom-spacer="" className="h-16" />
                     )}
                 </div>
             </div>
