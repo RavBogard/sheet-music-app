@@ -1,6 +1,6 @@
 "use client"
 
-import { FileMusic, ChevronRight } from "lucide-react"
+import { FileMusic, ChevronRight, User } from "lucide-react"
 import { SetlistTrack } from "@/types/models"
 import { getTransposedKeyName } from "@/lib/music-math"
 import { displayChartTitle } from "@/lib/format/chart-title"
@@ -75,6 +75,70 @@ export function SetlistRow({
     const openableNonSong = hasFile && !isSong
     const hasSecondLine = !!(track.leadMusician || track.performer)
 
+    // Outline fields — rendered for every row type. `folio` is stored at
+    // authoring time (never resolved at render), so this is a pure read.
+    const folio = track.liturgyRef?.folio
+    const honors = track.honors?.filter((h) => h?.name?.trim()) ?? []
+    const outlinePerformer = !isSong ? track.performer : undefined
+
+    // The field the eye hunts for mid-service. Right-aligned in a fixed column
+    // so folios line up down the list; `p.` prefix so the meaning is never
+    // carried by position or color alone. Full-strength foreground even on
+    // de-emphasised rows — the row title may be muted, the page number never is.
+    const folioBadge = folio !== undefined ? (
+        <span
+            data-testid="folio"
+            className="shrink-0 w-16 text-right font-bold text-lg tabular-nums text-foreground"
+        >
+            p.&nbsp;{folio}
+        </span>
+    ) : null
+
+    const outlineDetail = (
+        <>
+            {outlinePerformer && (
+                <p className="text-sm text-blue-700 dark:text-blue-400 truncate mt-0.5">
+                    {outlinePerformer}
+                </p>
+            )}
+            {honors.length > 0 && (
+                <ul className="mt-0.5 space-y-0.5">
+                    {honors.map((h, i) => (
+                        <li key={`${h.name}-${i}`} className="flex items-center gap-1.5 text-sm">
+                            <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                            <span className="text-foreground truncate">{h.name}</span>
+                            {h.note && (
+                                <span className="text-muted-foreground truncate">— {h.note}</span>
+                            )}
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {track.description && (
+                // Clamped: the full text lives in the book on the page named to the
+                // right. Two lines is enough to identify the moment, not read it.
+                <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
+                    {track.description}
+                </p>
+            )}
+        </>
+    )
+
+    const headerExtra = (folio !== undefined || honors.length > 0) ? (
+        <div className="flex items-center gap-2 px-4 pb-1">
+            {honors.length > 0 && (
+                <span className="flex items-center gap-1.5 text-sm min-w-0">
+                    <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <span className="text-foreground truncate">
+                        {honors.map((h) => h.note ? `${h.name} — ${h.note}` : h.name).join(", ")}
+                    </span>
+                </span>
+            )}
+            <span className="flex-1" />
+            {folioBadge}
+        </div>
+    ) : null
+
     const handleClick = () => {
         if (isLeader) {
             onLeaderSetPosition()
@@ -100,19 +164,25 @@ export function SetlistRow({
         )
         if (isLeader) {
             return (
-                <button
-                    type="button"
-                    onClick={handleClick}
-                    className="flex items-center gap-3 px-4 min-h-11 w-full text-left my-1 cursor-pointer"
-                >
-                    {headerInner}
-                </button>
+                <>
+                    <button
+                        type="button"
+                        onClick={handleClick}
+                        className="flex items-center gap-3 px-4 min-h-11 w-full text-left my-1 cursor-pointer"
+                    >
+                        {headerInner}
+                    </button>
+                    {headerExtra}
+                </>
             )
         }
         return (
-            <div className="flex items-center gap-3 px-4 py-1.5 my-1">
-                {headerInner}
-            </div>
+            <>
+                <div className="flex items-center gap-3 px-4 py-1.5 my-1">
+                    {headerInner}
+                </div>
+                {headerExtra}
+            </>
         )
     }
 
@@ -163,13 +233,29 @@ export function SetlistRow({
         // Prayer/reading WITH a bonded chart: must read as tappable, not as a
         // passive dimmed label. Leading chart glyph + foreground title + trailing
         // chevron — affordance is shape-based (color-not-alone).
-        <div className="flex flex-1 items-center gap-2.5 min-w-0">
-            <FileMusic className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-            <span className="text-base text-foreground truncate min-w-0">{title}</span>
-            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground ml-auto" aria-hidden="true" />
+        <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+                <FileMusic className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                <span className="text-base text-foreground truncate min-w-0">{title}</span>
+                <span className="flex-1" />
+                {folioBadge}
+                <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+            </div>
+            {outlineDetail}
         </div>
     ) : (
-        <span className="text-sm text-muted-foreground">{title}</span>
+        // Passive outline row. Title stays muted to preserve the song/non-song
+        // distinction, but rises to 16px — 14px is below the readable floor for a
+        // tablet read at arm's length while standing. De-emphasis is COLOR ONLY;
+        // never re-introduce opacity here (see the rowClasses comment).
+        <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+                <span className="text-base text-muted-foreground truncate min-w-0">{title}</span>
+                <span className="flex-1" />
+                {folioBadge}
+            </div>
+            {outlineDetail}
+        </div>
     )
 
     const rowClasses = cn(
