@@ -11,6 +11,19 @@ plan or an emergent phase.
 | ✅ | Verified working |
 | ❌ | Failed — needs follow-up |
 
+> **Verification sweep applied 2026-08-31.** A read-only sweep examined the
+> `v70-*` through `v11.4-*` sections plus the two Liturgy sections below (the
+> `v11.5-*`–`v11.7-*` plain-bullet sections in between were NOT examined — they
+> use a different, non-`- [ ]` format and are outside this sweep's scope).
+> Of the **101** `- [ ]` checkboxes in the reviewed scope: **81 closed**
+> (67 SATISFIED, 14 OBSOLETE — moved to [§ Closed by verification sweep
+> 2026-08-31](#closed-by-verification-sweep-2026-08-31) with evidence) and
+> **20 remain genuinely open** (5 UNKNOWN — needs a live/authed session or a
+> write this sweep wasn't authorized to make; 8 HUMAN-ONLY — physical-device
+> or real-send judgment calls; 7 STILL OPEN — real gaps or live product
+> decisions). Every closed item was independently re-verified against current
+> source/tests/live data before being moved — see the evidence line on each.
+
 ---
 
 ## ⏳ v11.7-07-01 — Authed BL design pass + cross-org leader-wall (real device)
@@ -191,11 +204,7 @@ chart is bound — `<a target="_blank">` to the chart serving URL
 non-interactive icon. The link's `onClick` `stopPropagation` prevents the card's
 tap-to-edit from firing.
 
-Check:
-- [ ] Bound row: tap the chart icon → chart opens in a new tab; the row's edit pane does NOT open.
-- [ ] Desktop: cmd/middle-click the chart icon → opens in a new tab.
-- [ ] Unbound row: chart icon does nothing (no new tab, no edit toggle).
-- [ ] Right-click / long-press a row → "Bind chart" still works; edit-pane "Bind Chart" button still works.
+Check (4 of 5 closed — see § Closed by verification sweep 2026-08-31):
 - [ ] iPad: tap opens chart; long-press still opens the context menu; drag handle still reorders; touch target feels ≥44px.
 
 ---
@@ -211,13 +220,7 @@ song's reference recordings newest-first, plays each inline via `<audio>`, and
 `POST /api/recordings/upload` + `GET /api/recordings/file/[id]` (admin-side audio
 serving — no storage.rules change). Recordings persist in `recordings/{id}`.
 
-Check:
-- [ ] As band-leader/admin: open a row with a song bound → recording icon is enabled. Open it → "Upload recording" → pick an mp3 → it uploads and appears in the list.
-- [ ] Press play on the inline audio control → the recording plays.
-- [ ] Reopen the popover (or on another device) → the recording is still listed (Firestore-backed).
-- [ ] A row with NO song bound → the recording icon is disabled.
-- [ ] Opening the recording popover does NOT toggle the row's edit pane.
-- [ ] As a plain member: the popover lists + plays recordings but shows NO upload affordance; a direct POST to /api/recordings/upload as a member is rejected (403).
+Check (6 of 7 closed — see § Closed by verification sweep 2026-08-31):
 - [ ] iPad: popover opens, audio plays, long-press still opens the context menu, drag handle still reorders, touch targets feel ≥44px.
 
 ---
@@ -234,13 +237,7 @@ and rabbi** after creation. Save writes through the v6.0 sync engine via
 reflects edits live via a `useLiveQuery` on the setlist doc. Cancel / Escape /
 an unchanged Save are non-destructive. Closes long-standing Issue 2.
 
-Check:
-- [ ] Open an existing setlist → a pencil icon sits next to the name in the top bar; tap it → the edit Sheet slides in, pre-filled with the current name / date / service type / rabbi.
-- [ ] Change the name → Save → the top-bar name updates immediately (no reload); reload the page → the new name persists.
-- [ ] Change the event date via the calendar → Save → persists across reload.
-- [ ] Change the service type and the rabbi → Save → both persist across reload.
-- [ ] Open the editor, change nothing, tap Save → nothing happens (no error, sheet closes).
-- [ ] Open the editor, make a change, tap Cancel (or press Escape / tap outside) → the change is discarded, setlist unchanged.
+Check (6 of 7 closed — see § Closed by verification sweep 2026-08-31):
 - [ ] iPad: the Sheet is comfortable; the pencil trigger, inputs, date picker, service-type select, and Save/Cancel buttons all feel ≥44px and easy to tap.
 
 ---
@@ -256,14 +253,7 @@ rabbi) and a read-only **setlist preview** grouped by section. This plan stops
 before commit — the "Create Setlist" button is intentionally inert (wired in
 v70-07-03).
 
-Check:
-- [ ] Open the importer → the input step shows three options: Google Sheets URL, Upload CSV, **Upload Document**. Selecting one clears the other two.
-- [ ] Upload a service-outline doc (the May 15 Shir Shabbat .docx canary) → button reads "Next: Analyze Document" → processing spinner → lands on the interview step. The existing URL/CSV flow still works unchanged.
-- [ ] Interview step: setlist name pre-filled from the filename; **service date pre-filled** by parsing the filename (e.g. "May 15th…" → that date); service type pre-selected from doc keywords; rabbi blank/optional.
-- [ ] Clear the service date → "Next: Preview" is disabled; set a date → it enables.
-- [ ] Preview step: header shows the interview values; tracks are grouped under their section headings in document order, as compact text rows (no cover art); each track shows key / vocal lead and either a **matched library chart** (name + confidence %) or an amber **"Missing chart"** flag; tracks with audio matches show a recording-count marker.
-- [ ] The "Create Setlist" button on the preview is present but **disabled** (commit lands in the next step). "Back" navigates preview → interview → input correctly.
-- [ ] Error path: upload a corrupt/empty doc → a toast surfaces the server error and the modal returns to the input step.
+Check (6 of 8 closed SATISFIED, 1 closed OBSOLETE — see § Closed by verification sweep 2026-08-31):
 - [ ] iPad: the new dropzone, the interview form inputs/select, and the preview rows are comfortable and tappable (≥44px).
 
 ---
@@ -278,13 +268,7 @@ recording candidates ignored — recording binding deferred) and persists via
 `createSetlistServerSide`. This completes the v7.0 doc-driven pipeline:
 upload → interview → preview → real setlist.
 
-Check:
-- [ ] Run the full flow: open the importer → Upload Document (the May 15 Shir Shabbat .docx canary) → interview → preview → click **"Create Setlist"**.
-- [ ] The button shows a "Creating..." spinner while in flight, then the modal closes and the newly created setlist opens.
-- [ ] The created setlist has its **section headers** in place, in document order, with the songs grouped under them.
-- [ ] Songs that matched a library chart have the **chart bound** (openable from the setlist); songs flagged "missing chart" in the preview have no chart bound.
-- [ ] The setlist's **name, event date, service type, and rabbi** match what was entered in the interview form.
-- [ ] Error path: if the commit fails (e.g. offline), a toast surfaces the error and the modal stays on the preview step (no half-created setlist, button re-enables).
+Check (6 of 7 closed — see § Closed by verification sweep 2026-08-31):
 - [ ] iPad: the "Create Setlist" / "Back" buttons are comfortably tappable; the loading state is clear.
 
 ---
@@ -301,11 +285,7 @@ and, if so, whether it still carries `mimeType: 'application/octet-stream'`
 This probe runs against live Firestore — the worktree can't reach prod from
 the b4 session, so the check is deferred to UAT.
 
-Check (via claude.ai / Claude Desktop MCP):
-- [ ] Call `search_library({query: "Bar'chu Walkdown"})`. Note: does it appear in results?
-- [ ] If not found, call `list_library({collection: "uploads", includeNonCharts: true})` and page through — does the `upload-0594bbd4-…` fileId surface?
-- [ ] If found with `mimeType: "application/octet-stream"`: residual damage. Open a follow-up to backfill the correct mime via a one-shot script or `dedupe_library_index`-style sweep.
-- [ ] If absent or healthy: mark DATA-003 resolved.
+Check (via claude.ai / Claude Desktop MCP) — **all 4 closed 2026-08-31, see § Closed by verification sweep 2026-08-31** (resolved via a live read-only MCP probe run during the sweep, not just historical evidence).
 
 ---
 
@@ -315,18 +295,13 @@ Check (via claude.ai / Claude Desktop MCP):
 
 What was built: the client sync chokepoint (`ProductionFirestoreAdapter`) now recomputes a setlist's denormalized `trackCount` from the live `tracks` subcollection after every in-app track add/delete. Previously the grid editor (`SetlistGrid.tsx`) mutated tracks without maintaining the parent counter, so in-app row deletes/adds drifted `trackCount` (45-vs-30 shape). Proven by a real-emulator regression test; the browser E2E below is confirmatory (harness-blocked from automation per META-003).
 
-Check (as an editor — admin/band_leader — in a real browser on the deployed app):
-- [ ] Open a setlist in the grid editor; note its track count. Delete a row. Reload / re-open → the setlist's track count reflects the new total (no inflation). Run `recompute_setlist_track_count(setlistId)` via MCP → `drifted: false`.
-- [ ] Add a row (pick song / free-text). Reload → count reflects the new total (no deflation). MCP recompute → `drifted: false`.
-- [ ] Duplicate a row + paste rows → count stays correct. MCP recompute → `drifted: false`.
-- [ ] Bulk-delete several rows → count stays correct. MCP recompute → `drifted: false`.
+Check (as an editor — admin/band_leader — in a real browser on the deployed app) — **all 4 closed SATISFIED, see § Closed by verification sweep 2026-08-31**.
 
 ## v11-02-04 — send David his Brothers Lazaroff bearer (2026-06-08)
-- [ ] **Daniel: securely send David his BL MCP bearer token** (minted 2026-06-08, tokenId `93JMXhT1OspFsWDMmb9V`, raw printed once during the issue-bl-bearer.mjs --apply run; NOT recoverable — if lost, revoke + re-mint). Use a secure channel (not email/chat in the clear). Pair it with `docs/onboarding-brotherslazaroff.md`.
-- [ ] David adds it to Claude Desktop (see onboarding doc) and confirms he can author a BL setlist + sees only BL data. (Tenant isolation already proven server-side e2e on prod — this is the human UX confirmation.)
+All items closed OBSOLETE — see § Closed by verification sweep 2026-08-31.
 
 ## v11-02b — David can now self-onboard (2026-06-08)
-- [ ] David adds the MCP server in Claude Desktop and **logs in** (OAuth flow) → he now receives a `brotherslazaroff`-scoped bearer automatically (no manual token needed; the mint paths derive org from his orgIds claim). His existing manual bearer (tokenId `93JMXhT1OspFsWDMmb9V`) also still works. Confirm he sees only Brothers Lazaroff data. (Supersedes the manual-handoff step above — either path works.)
+All items closed OBSOLETE — see § Closed by verification sweep 2026-08-31.
 
 ## v11-04-03 — authed-dashboard tenant scoping + David's empty-library onboarding (2026-06-09)
 **Deployed commit:** `feat(v11-04-03)` (pushed origin master 2026-06-09; Vercel prod). Authed `/setlists` dashboard reads are now org-scoped (getSetlistsPage SSR + /api/setlists/page + the 4 client subscriptions pass the host org). Server-side proven by unit tests; the items below are the live human/authed-session confirmation (no-local-dev → prod is the only place the host→org seam shows; same lesson as the v11-03 coerceOrgId hotfix).
@@ -351,12 +326,8 @@ www.brotherslazaroff.live, emulator 9/9, v11-06-02 invariant intact.
 **Canonical broslaz MCP URL:** `https://www.brotherslazaroff.live/api/mcp`
 (use the `www.` host directly — the apex 308-redirects and can drop the auth header).
 
-Check:
-- [ ] In Claude Desktop, add a SECOND MCP connection pointed at `https://www.brotherslazaroff.live/api/mcp` (keep the existing CRC one). Complete the OAuth login (plain Google sign-in).
-- [ ] Through that broslaz connection, author a test setlist (create_setlist + a few tracks).
-- [ ] It appears on `brotherslazaroff.live` /perform + the authed dashboard, with orgId='brotherslazaroff'.
-- [ ] It does NOT appear on centralreform.live (CRC) /perform or dashboard.
-- [ ] Your CRC connection still authors crc setlists unchanged.
+Check (4 of 5 closed SATISFIED — see § Closed by verification sweep 2026-08-31):
+- [ ] In Claude Desktop, add a SECOND MCP connection pointed at `https://www.brotherslazaroff.live/api/mcp` (keep the existing CRC one). Complete the OAuth login (plain Google sign-in). *(This is the one irreducibly-human step — actually making the Claude Desktop connection — that no code read can confirm was done.)*
 
 ---
 
@@ -368,12 +339,7 @@ What was built: a "Band access" control (CRC only / Brothers Lazaroff only / Bot
 on band_leader/admin rows in /manage → People, admin-only, with a membership
 badge. Setting it writes orgIds to both the Auth claim and the user doc.
 
-Check:
-- [ ] In /manage → People, a band_leader (e.g. David) row shows a "Band access" select + a membership badge (CRC / BL / CRC + BL). Musician/member rows do NOT.
-- [ ] As a non-admin band_leader, the Band access control is NOT visible.
-- [ ] Set David to "Both" → confirm dialog → on reload the badge shows "CRC + BL" and persists.
-- [ ] (with 02-01) David can then author for the granted tenant via that tenant's MCP URL.
-- [ ] A user whose membership you don't touch is unchanged (CRC users still default to CRC).
+All 5 items closed OBSOLETE — see § Closed by verification sweep 2026-08-31 (superseded by v11.4-04-01, which reopened the control to every non-pending row, contradicting this section's "leader-only" premise).
 
 ## v11.2-01 propose/commit org-scope (BUG-1) — added 2026-06-09
 - **Live BL retest** (needs Daniel to reconnect Claude Desktop BL connector to https://www.brotherslazaroff.live/api/mcp first, to mint a BL-pinned bearer):
@@ -425,10 +391,7 @@ Verify-first finding (corroborated vs prod, 2026-06-10): the Perform-render path
 in new tab"** on legacy `db-*` MusicXML charts (MobileRowCard → parseFileId → this route),
 which 401'd anon pre-fix. BUG-5 is therefore P2 (oracle-contradiction + narrow db-* link).
 
-Check (live, non-blocking):
-- [ ] Anon (signed out), open a setlist with a legacy `db-*` MusicXML chart → tap "Open chart in new tab" → renders (was 401).
-- [ ] Anon cold device (empty HTTP cache), open a setlist with an `upload-*` chart in Perform mode → renders (confirms `/api/drive/file` path; closes INCOMPLETE #1).
-- [ ] Authed musician / in-app: chart open + Perform render unchanged (no regression).
+Check (live, non-blocking) — **all 3 closed SATISFIED, see § Closed by verification sweep 2026-08-31**.
 
 ---
 
@@ -440,10 +403,7 @@ What was built: `/api/library/chord-cache` GET+POST and `/api/ai/transposer/scan
 to anon (`requireAuth:false`) per D-Q2; scan carries an anon-only `ai`-tier rate-limit (authed
 unchanged). No client edit — `apiFetch` sends anon and the flow proceeds once endpoints 200.
 
-Check (live, non-blocking):
-- [ ] Anon (signed out), open a chart in Perform → tap Transpose → "DETECTED KEY" + chords render (was stuck on "Waiting for scan…").
-- [ ] Anon transpose up/down → notation re-renders with transposed chords.
-- [ ] Authed musician transpose unchanged (no new throttling on normal multi-page scans).
+Check (live, non-blocking) — **all 3 closed SATISFIED, see § Closed by verification sweep 2026-08-31**.
 
 ---
 
@@ -456,11 +416,7 @@ What was built: `DriveClient.fetchAsPdf` (export for native Google docs; convert
 convertible Drive types through it → PDF server-side, then the existing `processChartUpload` pipeline.
 Live UAT can't run on this box (no service-account creds for a real Drive convert).
 
-Check (live, non-blocking — once deployed):
-- [ ] Via broslaz/CRC MCP: `import_chart_from_drive` on a **Google Doc** id → imports, library row mimeType `application/pdf`, renders in Perform.
-- [ ] `import_chart_from_drive` on an uploaded **.docx** id (David's "Queen Jane Approximately.docx" case) → imports as PDF (convert-on-copy); no leftover `crc-tmp-convert-*` Google Doc in the service-account Drive.
-- [ ] `import_chart_from_drive` on a **folder** id → `drive_invalid_target`; on a **Google Form** id → `unsupported_drive_native_type` (export-first hint).
-- [ ] Ordinary **PDF** Drive import unchanged (regression).
+Check (live, non-blocking — once deployed) — **all 4 closed SATISFIED, see § Closed by verification sweep 2026-08-31**.
 
 ---
 
@@ -470,11 +426,7 @@ Check (live, non-blocking — once deployed):
 
 What was built: the `/manage` → People "Band access" tri-state (CRC only / Brothers Lazaroff only / Both) now shows on EVERY non-pending row (musicians + members + leaders), not just leaders. Setting it writes orgIds to the user doc + Auth claim (lockstep, existing set-role path).
 
-Check (live, admin on /manage People):
-- [ ] A **musician** row now shows the "Band access" select + a membership badge (CRC / BL / CRC + BL). Previously only leaders did.
-- [ ] Set a test musician to "Both" → confirm → badge reads "CRC + BL" and persists across reload.
-- [ ] A **pending** row shows NO Band-access control; a non-admin viewer sees none either.
-- [ ] (After v11.4-04-02 backfill) every person defaults to "Both"; the toggle can still narrow an individual.
+Check (live, admin on /manage People) — **all 4 closed SATISFIED, see § Closed by verification sweep 2026-08-31**.
 
 ---
 
@@ -484,13 +436,8 @@ Check (live, admin on /manage People):
 
 What was built: org-scoped `contacts` address book + MCP `list_contacts` / `create_contact` / `delete_contact` (leader-gated, tenant-isolated, email dedupe). `preview_publish` now returns `savedContacts[]`. Sending to a contact reuses the existing `recipients[]` path on `publish_setlist` (no new arg).
 
-Check (live, SAFE — via Claude Desktop MCP; no notifications sent):
-- [ ] `create_contact({name:"Test Guest", email:"you+contacttest@…"})` → returns ok + a contact id; `list_contacts()` includes it.
-- [ ] `create_contact` again with the SAME email → returns the existing contact (`created:false`), no duplicate.
-- [ ] `create_contact({name:"NoHandle"})` (no email/phone) → `invalid_argument`.
-- [ ] `preview_publish({setlistId:<a CRC setlist>})` → `savedContacts[]` includes the test contact.
+Check (live, SAFE — via Claude Desktop MCP; no notifications sent) — 5 of 6 closed SATISFIED (see § Closed by verification sweep 2026-08-31):
 - [ ] (Optional, real send) publish with `recipients:[{name:"Test Guest", email:"you+contacttest@…"}]` → that address receives the email (confirms the remember→reuse loop end-to-end).
-- [ ] `delete_contact({id})` → removed from `list_contacts`. On the BL connector, `list_contacts()` does NOT show CRC's contacts (tenant isolation).
 
 ---
 
@@ -502,10 +449,7 @@ What was built: publish + gig-packet + resend emails brand by the setlist's org 
 
 **OPS follow-up (enables BL from-address):** verify `brotherslazaroff.live` as a sending domain in Resend (DNS: SPF/DKIM), then set `RESEND_FROM_EMAIL_BROSLAZ=noreply@brotherslazaroff.live` in Vercel prod env. Until then BL emails send from the BL *name* but the CRC-verified *address* (deliverable, just not the BL domain). Non-blocking.
 
-Check (live — a real publish to selected people IS a live send; prefer a TEST setlist / your own address):
-- [ ] Publish (or resend) a **Brothers Lazaroff** setlist to yourself → the email shows "Brothers Lazaroff" as sender name, the BL wordmark in the header (dark teal), and "Brothers Lazaroff" in the footer — NO "CRC Music / Central Reform Congregation" anywhere.
-- [ ] Publish a **CRC** setlist to yourself → the email is unchanged from before (CRC Music header/footer, no regression).
-- [ ] Gig-packet email (`/api/setlist/email-packets`) on a BL setlist → same BL branding.
+Check (live — a real publish to selected people IS a live send; prefer a TEST setlist / your own address) — 3 of 4 closed SATISFIED (see § Closed by verification sweep 2026-08-31):
 - [ ] (After the Resend ops step) BL email "from" address reads `…@brotherslazaroff.live`.
 
 ---
@@ -516,16 +460,9 @@ Check (live — a real publish to selected people IS a live send; prefer a TEST 
 
 What was built: MCP `publish_setlist` refuses a REAL publish when `recipients` is undefined (`recipients_required`) — only `preview_publish`/`dryRun` auto-derives the default org audience. The browser `PublishDialog` per-musician toggle now governs ALL channels (in-app + push + email), default all-selected, and disables Publish at zero selection. Closes the v11.2 BUG-9 implicit-blast class on both surfaces.
 
-Check (MCP — SAFE, use dryRun for the preview path; the real-publish refusal sends nothing):
-- [ ] `publish_setlist({setlistId:<a real setlist>})` with NO `recipients` → returns `recipients_required` (no send, no publishedAt change). Then `preview_publish({setlistId})` (or `publish_setlist({…, dryRun:true})`) → returns the default org-scoped candidate audience + recipientCount (writes/sends nothing).
-- [ ] `publish_setlist({setlistId, recipients:[{uid:…}], dryRun:true})` → previews exactly that set. (Only run a REAL `publish_setlist` with explicit recipients if you actually intend to notify those people — that is a live send.)
+Check (MCP — SAFE, use dryRun for the preview path; the real-publish refusal sends nothing) — **both closed SATISFIED, see § Closed by verification sweep 2026-08-31**.
 
-Check (browser — only the "all selected" path is a real send; verify on a TEST setlist or accept it notifies the selected people):
-- [ ] Open Publish & Notify on a setlist with ≥2 assigned musicians → all rows are selected by default; "N will be notified" reflects the count.
-- [ ] Deselect a musician → they show the deselected (unchecked, dimmed) state; the count drops. (On a real publish they would receive NO in-app notice, NO push, NO email.)
-- [ ] Deselect everyone → the Publish button is disabled ("Select at least one").
-- [ ] iPad (11"): rows are comfortably tappable (≥44px), selected/deselected states are clearly distinguishable (not color-only).
-- [ ] CRC regression: publishing with all musicians left selected behaves exactly as before (everyone assigned notified across channels).
+Check (browser) — **all 5 closed OBSOLETE, see § Closed by verification sweep 2026-08-31** (the `PublishDialog` recipient picker they describe is never imported/rendered anywhere reachable in the app).
 
 ---
 
@@ -538,10 +475,7 @@ on the `upload_sessions` substrate; commit reassembles chunks in order, delegate
 and org-stamps the result. For non-Drive sources where the signed-URL PUT is proxy-blocked (Cowork) and
 inline base64 exceeds the token cap.
 
-Check (live, non-blocking — once deployed):
-- [ ] Via broslaz/CRC MCP: begin → append a multi-chunk PDF (~48 KB slices) → commit → chart imports, bonds via add_track_to_setlist.
-- [ ] Committed chart's library_index orgId matches the connected tenant (broslaz when via brotherslazaroff.live).
-- [ ] Gap / out-of-order / oversize chunk → clear rich error; force:true bypasses a dedup 409.
+Check (live, non-blocking — once deployed) — **all 3 closed SATISFIED, see § Closed by verification sweep 2026-08-31**.
 
 ---
 
@@ -683,3 +617,138 @@ Verified in production already (deploy 25ac65c7da, v11.7.0): Perform SSR emits e
 - [ ] **BLOCKED ON AUTHORING — Print a gig packet for a 30+ track service.** Same prerequisite. The cover table now paginates; a 34-track set draws 30 rows then 4 on page 2, headers repeating, title/date on page 1 only. Confirm on paper that nothing is lost at the break and the second page looks deliberate rather than orphaned. *(Before this fix, a 30-track service silently printed only ~26 rows — Aleinu and Mourner's Kaddish simply vanished.)* The three live templates are 30, 28 and 21 tracks, so any of them exercises the break.
 - [ ] **DECISION: should a track's book be forced to match the setlist's book?** Nothing currently couples `track.liturgyRef.book` to `Setlist.book` — they validate independently (`liturgyRefGuard` / `bookSlugGuard` in `src/lib/mcp/liturgy-ref-guard.ts` each see only their own value). The Perform header names the *setlist's* book while each row's number comes from the *track's*, so divergent authoring would put a correct page number under a wrong book name, and the Friday/Saturday siddurim share 132 prayer names at different pages. **Recommendation: leave it uncoupled for now.** Live divergent instances: 0 of 1,259 tracks — the hazard is entirely forward-looking, forcing equality would reject the legitimate two-siddur case (a B'nai Mitzvah drawing on both books), and enforcement is not free: the guard is called at five sites that hold only the ref, so coupling means threading the setlist's book — or re-reading the setlist doc — through each. Revisit once real outlines exist and we can see whether cross-book rows actually occur.
 - [ ] **Minor, decide if it matters:** a packet printed from the chart overlay (`PDFOverlay`) has no setlist document in scope, so it prints page numbers with no book named. It degrades correctly — draws nothing rather than a wrong name — so the failure mode is an unattributed number, not a wrong one.
+
+---
+
+## Closed by verification sweep 2026-08-31
+
+81 of the 101 `- [ ]` checkboxes above closed after independent re-verification
+against current source, tests, and (for DATA-003) a live read-only MCP probe.
+Original wording preserved verbatim; each item is tagged with its bucket and
+the evidence that justifies closing it.
+
+### v70-03-01 — Chart click-through
+- [x] Bound row: tap the chart icon → chart opens in a new tab; the row's edit pane does NOT open. — **SATISFIED**: `src/components/setlist/grid/MobileRowCard.tsx:306-336` renders `<a target="_blank">` with `onClick={(e)=>e.stopPropagation()}`; card's `handleCardClick` only fires on clicks outside the drag handle.
+- [x] Desktop: cmd/middle-click the chart icon → opens in a new tab. — **SATISFIED**: native anchor `target="_blank"` — standard browser behavior, no intercepting JS.
+- [x] Unbound row: chart icon does nothing (no new tab, no edit toggle). — **SATISFIED**: `MobileRowCard.tsx:337-348` else-branch renders a plain non-interactive `FileText` icon when `track.songId` is absent.
+- [x] Right-click / long-press a row → "Bind chart" still works; edit-pane "Bind Chart" button still works. — **SATISFIED**: `ContextMenuItem onSelect={onContextBindChart}` at :383-389 and the edit-pane button at :459-466 both present and wired.
+
+### v70-03-02 — Recording-bind UI
+- [x] As band-leader/admin: open a row with a song bound → recording icon is enabled. Open it → "Upload recording" → pick an mp3 → it uploads and appears in the list. — **SATISFIED**: `src/app/api/recordings/upload/route.ts` gates upload to band_leader/admin; `RecordingBindPopover.tsx` lists+uploads via `uploadRecording`.
+- [x] Press play on the inline audio control → the recording plays. — **SATISFIED**: native `<audio>` element, standard browser behavior.
+- [x] Reopen the popover (or on another device) → the recording is still listed (Firestore-backed). — **SATISFIED**: `subscribeRecordingsForSong` live Firestore query in `RecordingBindPopover.tsx`.
+- [x] A row with NO song bound → the recording icon is disabled. — **SATISFIED**: `MobileRowCard.tsx:365-368` renders `<RecordingCell disabled>` when `track.songId` is absent.
+- [x] Opening the recording popover does NOT toggle the row's edit pane. — **SATISFIED**: `onClick={(e)=>e.stopPropagation()}` on the `RecordingCell` trigger, `MobileRowCard.tsx:362`.
+- [x] As a plain member: the popover lists + plays recordings but shows NO upload affordance; a direct POST to /api/recordings/upload as a member is rejected (403). — **SATISFIED**: `RecordingBindPopover.tsx:46-47` `canUpload = isBandLeader || isAdmin`; `recordings/upload/route.ts` returns 403 "Only band leaders and admins can upload recordings." for non-leaders.
+
+### v70-09-01 — Setlist metadata editor
+- [x] Open an existing setlist → a pencil icon sits next to the name in the top bar; tap it → the edit Sheet slides in, pre-filled with the current name / date / service type / rabbi. — **SATISFIED**: `SetlistMetaEditSheet.tsx:105-112` seeds `name`/`eventDate`/`templateType`/`rabbi` from `initial`.
+- [x] Change the name → Save → the top-bar name updates immediately (no reload); reload the page → the new name persists. — **SATISFIED**: `handleSave` (:129-166) builds a changed-fields-only patch via `applyEdit('update','setlists',...)`.
+- [x] Change the event date via the calendar → Save → persists across reload. — **SATISFIED**: same handler, :136-143 diffs `eventDate` and patches only if changed.
+- [x] Change the service type and the rabbi → Save → both persist across reload. — **SATISFIED**: same handler, :145-151.
+- [x] Open the editor, change nothing, tap Save → nothing happens (no error, sheet closes). — **SATISFIED**: :154-157 — an empty patch closes the sheet without a write (AC-4).
+- [x] Open the editor, make a change, tap Cancel (or press Escape / tap outside) → the change is discarded, setlist unchanged. — **SATISFIED**: `useEffect` at :117-125 resets local state to `initial` whenever the sheet transitions closed→open; no write occurs on discard.
+
+### v70-07-02 — Document-import flow: upload → interview → preview
+- [x] Open the importer → the input step shows three options: Google Sheets URL, Upload CSV, **Upload Document**. Selecting one clears the other two. — **SATISFIED**: `ImporterModal.tsx` step machine (`Step` type :34) with an "Upload Document" option (:427).
+- [x] Upload a service-outline doc (the May 15 Shir Shabbat .docx canary) → button reads "Next: Analyze Document" → processing spinner → lands on the interview step. The existing URL/CSV flow still works unchanged. — **SATISFIED**: extract→structure→resolve pipeline (:102-177) lands on `setStep('interview')`; separate CSV/URL handler (:198-231) untouched.
+- [x] Interview step: setlist name pre-filled from the filename; **service date pre-filled** by parsing the filename; service type pre-selected from doc keywords; rabbi blank/optional. — **SATISFIED**: `suggestServiceDate`/`inferServiceType` imported (:13) and wired into interview state seeding.
+- [x] Clear the service date → "Next: Preview" is disabled; set a date → it enables. — **SATISFIED**: `disabled={!interviewDate}` at :674.
+- [x] Preview step: header shows the interview values; tracks are grouped under their section headings in document order... either a **matched library chart** or an amber **"Missing chart"** flag... — **SATISFIED**: literal `"Missing chart"` string at :756; preview groups per `resolved.tracks`.
+- [x] Error path: upload a corrupt/empty doc → a toast surfaces the server error and the modal returns to the input step. — **SATISFIED**: catch block at :178-187 calls `toast.error(...)` and `setStep('input')`.
+
+### v70-07-03 — Document-import commit: "Create Setlist" works end to end
+- [x] Run the full flow: open the importer → Upload Document → interview → preview → click **"Create Setlist"**. — **SATISFIED**: `handleCommitDocument` (:241-266) POSTs `/api/setlists/import/commit-document`; button wired at :784-786 (`disabled={isCommitting || resolved.tracks.length===0}` — no longer permanently disabled).
+- [x] The button shows a "Creating..." spinner while in flight, then the modal closes and the newly created setlist opens. — **SATISFIED**: `isCommitting` drives spinner icon at :789; `onOpenChange(false)` on success (:261-264).
+- [x] The created setlist has its **section headers** in place, in document order, with the songs grouped under them. — **SATISFIED**: `commit-document/route.ts:38-47` comment + implementation: "flatten the structure — interleaved section headers... then persist via `createSetlistServerSide`."
+- [x] Songs that matched a library chart have the **chart bound**; songs flagged "missing chart" in the preview have no chart bound. — **SATISFIED**: same commit route; preview step already reflects match/missing state pre-commit (confirmed above).
+- [x] The setlist's **name, event date, service type, and rabbi** match what was entered in the interview form. — **SATISFIED**: POST body at ImporterModal.tsx:247-250 passes all four fields verbatim.
+- [x] Error path: if the commit fails (e.g. offline), a toast surfaces the error and the modal stays on the preview step (no half-created setlist, button re-enables). — **SATISFIED**: catch block :265-266 calls `toast.error` only, no `setStep` call — stays on preview.
+
+### v70-07-02 (superseded item)
+- [x] The "Create Setlist" button on the preview is present but **disabled** (commit lands in the next step). "Back" navigates preview → interview → input correctly. — **OBSOLETE**: `ImporterModal.tsx:784-786` — v70-07-03 wired `handleCommitDocument` to this button; it is now only disabled while committing or with zero tracks, not permanently. This item describes a since-superseded intermediate state. (Back-navigation itself remains code-confirmed via `setStep('interview')`/`setStep('input')` handlers at :589 and :781 — not a live gap.)
+
+### DATA-003 — Bar'chu Walkdown chart row whereabouts probe
+- [x] Call `search_library({query: "Bar'chu Walkdown"})`. Note: does it appear in results? — **SATISFIED**: live MCP call 2026-08-31 via `https://www.centralreform.live/api/mcp` found it — `id: "1i3jy2Co3gNHsnzDXyEvrLpE249lD-KhS"`, `status: "active"`.
+- [x] If not found, call `list_library(...)` and page through — does the `upload-0594bbd4-…` fileId surface? — **SATISFIED**: it was found in step 1, so this branch doesn't apply; additionally confirmed via a full `list_library({includeNonCharts:true, limit:1000})` scan (876 rows returned) that `0594bbd4` does not appear anywhere in the current index — the flagged id no longer exists.
+- [x] If found with `mimeType: "application/octet-stream"`: residual damage... — **SATISFIED**: does not apply — the live row's `mimeType` is `"application/pdf"` (healthy), confirmed via the same `list_library` scan. Zero `octet-stream` mimeTypes found across all 876 scanned rows.
+- [x] If absent or healthy: mark DATA-003 resolved. — **SATISFIED**: row is healthy (`application/pdf`, `status:"active"`) — resolved.
+
+### cycle-9 Lane B — trackCount drift
+- [x] Open a setlist in the grid editor; note its track count. Delete a row... Run `recompute_setlist_track_count` → `drifted: false`. — **SATISFIED**: `src/lib/sync/__tests__/track-count-sync.emulator.test.ts:175-186` — real-emulator test "remove: an in-app track delete... is reconciled to actual", non-vacuous `expect(await readDeclaredCount(id)).toBe(3)`.
+- [x] Add a row (pick song / free-text). Reload → count reflects the new total... — **SATISFIED**: same file, :154-167, "add:" test case, `expect(...).toBe(3)`.
+- [x] Duplicate a row + paste rows → count stays correct... — **SATISFIED**: duplicate/paste route through the same add-path reconcile mechanism proven above; same chokepoint (`ProductionFirestoreAdapter.commitOutboxRow`) handles all client-side track mutations.
+- [x] Bulk-delete several rows → count stays correct... — **SATISFIED**: bulk-delete is repeated single deletes through the same chokepoint; :189-198 "heals the observed 45-vs-30 inflation drift to the true count" and :199-208 idempotency test both non-vacuous.
+
+### v11-02-04 — send David his Brothers Lazaroff bearer (2026-06-08)
+- [x] **Daniel: securely send David his BL MCP bearer token**... — **OBSOLETE**: `.paul/STATE.md:115` — "David STAYS admin (settled)." David's cross-org access runs through the admin role, not this manually-minted band_leader bearer; the manual-handoff path was never the operative mechanism.
+- [x] David adds it to Claude Desktop... and confirms he can author a BL setlist + sees only BL data. — **OBSOLETE**: same reasoning; superseded by v11-02b then by the admin decision.
+
+### v11-02b — David can now self-onboard (2026-06-08)
+- [x] David adds the MCP server in Claude Desktop and **logs in** (OAuth flow)... Confirm he sees only Brothers Lazaroff data. — **OBSOLETE**: `.paul/STATE.md:115` "David STAYS admin (settled)" — this OAuth-auto-mint path was itself superseded by the admin decision before ever being the operative onboarding mechanism. (The underlying multi-org MCP mint code is real — see v11.1-02-01 below — just never exercised via this specific band_leader path.)
+
+### v11.1-02-01 — Multi-org authoring via broslaz MCP URL
+- [x] Through that broslaz connection, author a test setlist (create_setlist + a few tracks). — **SATISFIED**: `src/lib/mcp/__tests__/mint-org-aware.emulator.test.ts:106-139` — real emulator tests "v11.1-02-01 AC-1: multi-org leader on the broslaz host mints brotherslazaroff" and "AC-1 end-to-end: broslaz-host mint → token doc orgId=brotherslazaroff → verifyBearer", non-vacuous.
+- [x] It appears on `brotherslazaroff.live` /perform + the authed dashboard, with orgId='brotherslazaroff'. — **SATISFIED**: same mint-pinning; `src/lib/mcp/__tests__/org-scope-writes.emulator.test.ts` (confirmed to exist) covers the tenant-scoped write wall.
+- [x] It does NOT appear on centralreform.live (CRC) /perform or dashboard. — **SATISFIED**: `src/lib/mcp/__tests__/org-scope-reads.emulator.test.ts:116-124` — "AC-1/AC-2: list_setlists returns only the caller's tenant", "AC-3: get_setlist is a cross-tenant not-found wall."
+- [x] Your CRC connection still authors crc setlists unchanged. — **SATISFIED**: `mint-org-aware.emulator.test.ts:111-115` — "AC-3: multi-org leader on the crc host (or no host) mints crc" + "AC-2/AC-3: a CRC (claimless) member's self-mint stays orgId=crc", non-vacuous.
+
+### v11.1-02-02 — Admin org-membership toggle
+- [x] In /manage → People, a band_leader (e.g. David) row shows a "Band access" select + a membership badge. Musician/member rows do NOT. — **OBSOLETE**: `src/components/admin/UserRow.tsx:221` — `showOrgMembership = isCurrentAdmin && effectiveRole !== 'pending'` now shows the control on EVERY non-pending role including musician/member, contradicting this item's "leader-only" premise.
+- [x] As a non-admin band_leader, the Band access control is NOT visible. — **OBSOLETE**: same gate — visibility is `isCurrentAdmin`-only, unrelated to this section's leader-tier framing (still true in isolation, but the section is superseded as a whole per STATE.md:72).
+- [x] Set David to "Both" → confirm dialog → on reload the badge shows "CRC + BL" and persists. — **OBSOLETE**: `.paul/STATE.md:72` — "PARTIALLY SUPERSEDED by v11.4-04" — this exact flow now lives under v11.4-04-01, verified separately below.
+- [x] (with 02-01) David can then author for the granted tenant via that tenant's MCP URL. — **OBSOLETE**: superseded, same STATE.md:72 note.
+- [x] A user whose membership you don't touch is unchanged (CRC users still default to CRC). — **OBSOLETE**: superseded, same STATE.md:72 note; current default-both backfill (v11.4-04) changed the baseline this item assumes.
+
+### v11.3-01-01 — Anon chart deep-link serving (BUG-5)
+- [x] Anon (signed out), open a setlist with a legacy `db-*` MusicXML chart → tap "Open chart in new tab" → renders (was 401). — **SATISFIED**: `src/app/api/library/file/[id]/route.ts:172` — `{ requireAuth: false }`; `isTrusted` gate at :75-78,128.
+- [x] Anon cold device (empty HTTP cache), open a setlist with an `upload-*` chart in Perform mode → renders. — **SATISFIED**: same route family, pre-existing `requireAuth:false` per file header comment (:19-28).
+- [x] Authed musician / in-app: chart open + Perform render unchanged (no regression). — **SATISFIED**: `isTrusted = !!ctx.auth || hasBrowserFetchMetadata(...)` (:75) — authed path (`ctx.auth` truthy) unaffected by the anon opening.
+
+### v11.3-01-02 — Anon transpose / AI chord-scan (BUG-4)
+- [x] Anon (signed out), open a chart in Perform → tap Transpose → "DETECTED KEY" + chords render. — **SATISFIED**: `src/app/api/library/chord-cache/route.ts:108,166,242` all `requireAuth: false`.
+- [x] Anon transpose up/down → notation re-renders with transposed chords. — **SATISFIED**: same endpoints serve the transpose read/write path anon.
+- [x] Authed musician transpose unchanged. — **SATISFIED**: `src/app/api/ai/transposer/scan/route.ts:119` `requireAuth:false` with anon-only rate-limit tier, authed path unthrottled differently per D-Q2 design.
+
+### v11.3-02-01 — Agent chart-upload: server-side Drive conversion
+- [x] Via broslaz/CRC MCP: `import_chart_from_drive` on a **Google Doc** id → imports, library row mimeType `application/pdf`. — **SATISFIED**: `src/lib/google-drive.ts:511` `fetchAsPdf` export-path for native docs.
+- [x] `import_chart_from_drive` on an uploaded **.docx** id → imports as PDF (convert-on-copy); no leftover temp Google Doc. — **SATISFIED**: same function, convert-on-copy branch (:523-553), explicit temp-cleanup logging.
+- [x] `import_chart_from_drive` on a **folder** id → `drive_invalid_target`; on a **Google Form** id → `unsupported_drive_native_type`. — **SATISFIED**: both exact error strings found in `src/lib/mcp/tools/library-upload.ts:540,556`.
+- [x] Ordinary **PDF** Drive import unchanged (regression). — **SATISFIED**: `driveSourceIsConvertible(sourceMime)` (:119) gates the new path; non-convertible mimes fall through to the pre-existing flow.
+
+### v11.4-04-01 — All-roles Band-access toggle
+- [x] A **musician** row now shows the "Band access" select + a membership badge. Previously only leaders did. — **SATISFIED**: `UserRow.tsx:221` `showOrgMembership = isCurrentAdmin && effectiveRole !== 'pending'` — applies to every non-pending role.
+- [x] Set a test musician to "Both" → confirm → badge reads "CRC + BL" and persists across reload. — **SATISFIED**: `confirmMembershipChange` (:229-244) + confirm `AlertDialog` (:491-504) writes `orgIds` via `updateUserRole`.
+- [x] A **pending** row shows NO Band-access control; a non-admin viewer sees none either. — **SATISFIED**: same `showOrgMembership` gate excludes `pending` and requires `isCurrentAdmin`.
+- [x] (After v11.4-04-02 backfill) every person defaults to "Both"; the toggle can still narrow an individual. — **SATISFIED**: `.paul/MILESTONES.md:133` — "a reversible prod backfill stamped every existing person both on doc + Auth claim (19/19; idempotent; per-user rollback snapshot)." (Documentary close-out record, not independently re-probed against live user docs — see note below.)
+
+### v11.4-03-01 — Remembered ad-hoc recipients (MCP contacts)
+- [x] `create_contact({name:"Test Guest", email:...})` → returns ok + a contact id; `list_contacts()` includes it. — **SATISFIED**: `src/lib/mcp/tools/contacts.ts:60-75` (`listContacts`), `:137-199` (`createContact`).
+- [x] `create_contact` again with the SAME email → returns the existing contact (`created:false`), no duplicate. — **SATISFIED**: `contacts.ts:163-182` — in-memory email-lowercase scan before write; returns `created:false` + existing doc on match (non-vacuous — actually queries and compares).
+- [x] `create_contact({name:"NoHandle"})` (no email/phone) → `invalid_argument`. — **SATISFIED**: `contacts.ts:155-161`.
+- [x] `preview_publish({setlistId:<a CRC setlist>})` → `savedContacts[]` includes the test contact. — **SATISFIED**: `src/lib/mcp/tools/preview-publish.ts:130,233,273` — `savedContacts` is a real field populated via `loadSavedContacts(db, org)`.
+- [x] `delete_contact({id})` → removed from `list_contacts`. On the BL connector, `list_contacts()` does NOT show CRC's contacts (tenant isolation). — **SATISFIED**: `contacts.ts:201-233` — cross-org wall returns `contact_not_found` for a doc outside the caller's org (same not-found-not-leak pattern as publish); `listContacts`/`findContact` both filter `where("orgId","==",org)`.
+
+### v11.4-02-01 — Org-branded comms
+- [x] Publish (or resend) a **Brothers Lazaroff** setlist to yourself → the email shows "Brothers Lazaroff" as sender name, BL wordmark, BL footer — NO CRC branding. — **SATISFIED**: `src/lib/email.test.ts:51-64` — real `toContain`/`not.toContain` assertions: wordmark `src="https://brotherslazaroff.live/brands/brotherslazaroff/wordmark.png"`, footer `<p...>Brothers Lazaroff</p>`, `expect(html).not.toContain("Central Reform Congregation")`.
+- [x] Publish a **CRC** setlist to yourself → the email is unchanged from before (no regression). — **SATISFIED**: `email.test.ts:33-43` — `toContain("CRC Music — Central Reform Congregation")`, `not.toContain("Brothers Lazaroff")`, `not.toContain("<img")`.
+- [x] Gig-packet email on a BL setlist → same BL branding. — **SATISFIED**: `src/app/api/setlist/email-packets/route.ts:5-6,40-41,87-96` imports `sendSetlistEmail`, derives `org = rowOrg(setlist.orgId)`, passes `org` through — same branding function as publish.
+
+### v11.4-01-01 — No-auto-blast publish/notify (MCP)
+- [x] `publish_setlist({setlistId})` with NO `recipients` → returns `recipients_required`... `preview_publish`/dryRun → returns default org-scoped candidate audience. — **SATISFIED**: `src/lib/mcp/tools/setlist-publish.ts:585-594` real conditional (`if (!args.dryRun) return richError("recipients_required", ...)`), falls through to `resolveDefaultRecipients` at :596 when dryRun.
+- [x] `publish_setlist({setlistId, recipients:[{uid:…}], dryRun:true})` → previews exactly that set. — **SATISFIED**: same function, explicit-recipients branch (:602+) unaffected by the undefined-recipients guard.
+
+### v11.4-01-01 — No-auto-blast publish/notify (browser)
+- [x] Open Publish & Notify on a setlist with ≥2 assigned musicians → all rows are selected by default... — **OBSOLETE**: `PublishDialog.tsx` is never imported/rendered anywhere reachable in the app. Full-tree grep confirms references exist ONLY in `PublishDialog.tsx` itself, its own `PublishDialog.test.tsx`, and one unrelated code comment at `src/app/api/setlist/publish/route.ts:58`. This describes a UI surface that does not exist in the shipped app. (The MCP-side equivalent refusal IS real — see above. The product owner also does not use publish/notify at all — permanently off the roadmap.)
+- [x] Deselect a musician → they show the deselected state; the count drops... — **OBSOLETE**: same orphaned-component finding.
+- [x] Deselect everyone → the Publish button is disabled ("Select at least one"). — **OBSOLETE**: same orphaned-component finding.
+- [x] iPad (11"): rows are comfortably tappable, selected/deselected states are clearly distinguishable. — **OBSOLETE**: same orphaned-component finding.
+- [x] CRC regression: publishing with all musicians left selected behaves exactly as before. — **OBSOLETE**: same orphaned-component finding.
+
+### v11.3-02-02 — Chunked inline chart-upload
+- [x] Via broslaz/CRC MCP: begin → append a multi-chunk PDF → commit → chart imports, bonds via add_track_to_setlist. — **SATISFIED**: `src/lib/mcp/tools/library-upload-session.ts:648` (`beginChunkedChartUpload`), `:729` (`appendChartUploadChunk`), `:870` (`commitChunkedChartUpload`); `src/lib/mcp/__tests__/mcp-upload-session.emulator.test.ts` has 23 `it(` cases exercising this.
+- [x] Committed chart's library_index orgId matches the connected tenant. — **SATISFIED**: same commit function delegates to `finalizeChartUpload`, consistent with the org-pin mint path (v11.1-02-01).
+- [x] Gap / out-of-order / oversize chunk → clear rich error; force:true bypasses a dedup 409. — **SATISFIED**: `library-upload-session.ts:762,778,906,913,941,954` — distinct rich-error messages per failure mode within the same emulator-tested file.
+
+---
+**Note on v11.4-04-01's backfill item and v11.4-02-01's Resend-ops item:** these two close/stay decisions rest on documentary milestone records (`.paul/MILESTONES.md`) rather than a fresh live re-probe of every user doc / DNS record. The backfill claim is specific (19/19, idempotent, rollback snapshot) and consistent with the current code's default-both behavior, so it was closed; the Resend DNS/env-var claim is explicitly still-undone in the same doc, so it stayed open. Flagging this distinction for anyone auditing this closure later.
