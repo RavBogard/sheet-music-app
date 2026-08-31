@@ -501,6 +501,39 @@
   }
 }
 
+/* ── Single-chart print (desktop "Print this chart" action) ──
+   print-pipeline.ts has NO MusicXML branch, so the only way to print a
+   MusicXML chart today is the browser's own print of the live-rendered OSMD
+   SVG. Toggled via a `body.printing-chart` class (see
+   src/components/performance/print-current-chart.ts) rather than folded into
+   the generic print block above, since it must isolate ONE specific chart
+   surface (`[data-print-target="musicxml-score"]`, stamped by
+   SmartScoreViewer) out of the whole fullscreen Perform overlay — everything
+   else in the overlay (toolbar, setlist drawer, other chrome) must NOT print.
+   Standard "isolate one subtree" technique: hide everything, re-reveal just
+   the target (visibility, not display, so descendants can override their
+   hidden ancestor), then pull it to the top of the page so the printed
+   output isn't a near-blank first page. */
+@media print {
+  body.printing-chart * {
+    visibility: hidden !important;
+  }
+
+  body.printing-chart [data-print-target="musicxml-score"],
+  body.printing-chart [data-print-target="musicxml-score"] * {
+    visibility: visible !important;
+  }
+
+  body.printing-chart [data-print-target="musicxml-score"] {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
 /* ── Page Transition ── */
 @keyframes page-fade-in {
   from {

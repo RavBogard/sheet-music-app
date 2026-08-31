@@ -39,6 +39,14 @@ export interface GeneratePrintPayload {
      *  schema. Omitted → the cover names no book. */
     bookTitle?: string
     coverOnly: boolean
+    /**
+     * print-this-chart (PDFOverlay desktop print action): render the
+     * track(s) WITHOUT the multi-page cover table. Forwarded verbatim to
+     * PrintRequest.omitCover by the passthrough POST /api/setlist/print
+     * schema. Omitted (every existing caller) → the cover renders exactly as
+     * before.
+     */
+    omitCover?: boolean
     tracks: PrintTrackPayload[]
 }
 

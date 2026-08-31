@@ -574,7 +574,15 @@ export function SmartScoreViewer({ fileId, trackId, trackKey }: SmartScoreViewer
 
             <Card className="w-full bg-white dark:bg-zinc-100 p-4">
                 {/* OSMD renders dark text by default, so we enforce a light background to ensure contrast */}
-                <div ref={containerRef} className="w-full text-black min-h-[400px]" />
+                {/* print-current-chart: this container is the ONLY element the
+                    `body.printing-chart` print stylesheet (globals.css) leaves
+                    visible — it holds exactly the OSMD-rendered SVG, nothing
+                    else. See src/components/performance/print-current-chart.ts. */}
+                <div
+                    ref={containerRef}
+                    data-print-target="musicxml-score"
+                    className="w-full text-black min-h-[400px]"
+                />
             </Card>
 
             {showOverlay && !error && (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import dynamic from "next/dynamic"
 import { SetlistTrack } from "@/types/models"
 import { PerformanceToolbar, type PerformanceToolbarWakeLock } from "./PerformanceToolbar"
@@ -11,6 +11,7 @@ import { toQueueItem } from "@/lib/queue-utils"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
 import { LiveDirectorGesture } from "./LiveDirectorGesture"
 import { resolveViewerKind } from "./resolveViewerKind"
+import { printCurrentChart, currentDisplayedPreferFlats } from "./print-current-chart"
 const PrintModal = dynamic(() => import("@/components/setlist/PrintModal").then(m => m.PrintModal), { ssr: false })
 
 // Dynamically import PDFViewer to avoid SSR worker issues (per RESEARCH.md Pitfall 1)
@@ -65,8 +66,10 @@ export interface PDFOverlayProps {
     setlistId?: string
     /** Wake-lock controls from the parent Perform surface, threaded to the
      *  toolbar so "Keep screen on" is reachable from inside the chart overlay
-     *  (C10I1-003). Optional — the standalone /perform/[fileId] route has no
-     *  setlist-performance hook and renders without it. */
+     *  (C10I1-003). Optional in the type, but BOTH perform routes now pass it:
+     *  `/perform/[fileId]` used to omit it, which left the single-chart route
+     *  with no keep-alive and no on-screen affordance at all (fixed
+     *  2026-08-31 — it reads the shared lock via `useKeepAwake()`). */
     wakeLock?: PerformanceToolbarWakeLock
 }
 
@@ -364,6 +367,28 @@ export function PDFOverlay({
     // behavior intact for musicians.
     const gestureEligible = isLeader && !!setlistId && !!track.id
 
+    // "Print this chart" (desktop-only control lives in PerformanceToolbar):
+    // available whenever the current viewer kind can print — excludes
+    // `audio`/`unknown`, the same terminal cases the render branch above
+    // treats as non-chart. Reads live transposition/capo/AI-chord state
+    // fresh via getState() at click time rather than subscribing (this
+    // component doesn't otherwise need to re-render when transposition
+    // changes), matching the getState() pattern already used elsewhere in
+    // this file (e.g. the tempo-flash and prefetch effects).
+    const canPrintChart = viewerKind !== 'audio' && viewerKind !== 'unknown' && !!track.fileId
+    const handlePrintChart = useCallback(async () => {
+        const state = useMusicStore.getState()
+        const preferFlats = currentDisplayedPreferFlats(state.aiState, state.musicXmlKey, state.transposition)
+        await printCurrentChart({
+            viewerKind,
+            track,
+            networkUrl,
+            transposition: state.transposition,
+            preferFlats,
+            capoFret: state.capoFret ?? 0,
+        })
+    }, [viewerKind, track, networkUrl])
+
     const chartSurface = (
         <SectionErrorBoundary key={track.fileId} label="Chart">
             {viewerKind === 'musicxml' ? (
@@ -463,6 +488,7 @@ export function PDFOverlay({
                 onHome={onClose}
                 onMenuOpenChange={setMenuOpen}
                 onPrint={() => setShowPrintModal(true)}
+                onPrintChart={canPrintChart ? handlePrintChart : undefined}
                 wakeLock={wakeLock}
             />
 

@@ -43,10 +43,21 @@ interface PerformanceToolbarProps {
     onHome: () => void
     onMenuOpenChange?: (open: boolean) => void
     onPrint?: () => void
+    /**
+     * "Print this chart" — desktop-only (Perform mode's iPad target has no
+     * use for it; the control renders only in the `lg:` single-row desktop
+     * layout below, never the two-row touch layout). Prints ONLY the chart
+     * currently open in PDFOverlay, unlike `onPrint` (the whole-setlist
+     * `PrintModal`). Absent when the current viewer kind can't be printed
+     * (`audio`/`unknown`) — the control simply doesn't render. Rejecting
+     * surfaces a visible inline error; never fails silently. See
+     * `print-current-chart.ts` for the per-kind routing.
+     */
+    onPrintChart?: () => Promise<void>
     wakeLock?: PerformanceToolbarWakeLock
 }
 
-export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock }: PerformanceToolbarProps) {
+export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, onPrintChart, wakeLock }: PerformanceToolbarProps) {
     const {
         aiState, setAiEnabled, capoFret, transposition, zoom, setZoom, musicXmlKey,
         fitMode, setFitMode
@@ -88,6 +99,25 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock
     // race documented above.
     const [monitorOpenMobile, setMonitorOpenMobile] = useState(false)
     const [monitorOpenDesktop, setMonitorOpenDesktop] = useState(false)
+
+    // "Print this chart" — busy while the render/fetch is in flight (a
+    // server-transposed or text/chordpro render can take several seconds),
+    // and a visible error on failure. Cleared at the start of every attempt
+    // so a stale error doesn't linger next to a successful retry.
+    const [isPrintingChart, setIsPrintingChart] = useState(false)
+    const [printChartError, setPrintChartError] = useState<string | null>(null)
+    const handlePrintChart = useCallback(async () => {
+        if (!onPrintChart || isPrintingChart) return
+        setPrintChartError(null)
+        setIsPrintingChart(true)
+        try {
+            await onPrintChart()
+        } catch (err) {
+            setPrintChartError(err instanceof Error ? err.message : "Couldn't print this chart.")
+        } finally {
+            setIsPrintingChart(false)
+        }
+    }, [onPrintChart, isPrintingChart])
 
     const trackPopover = useCallback((id: string, open: boolean) => {
         setOpenPopovers(prev => {
@@ -433,6 +463,50 @@ export function PerformanceToolbar({ onHome, onMenuOpenChange, onPrint, wakeLock
 
                     {/* Scale Controls */}
                     {zoomControls(false)}
+
+                    {/* "Print this chart" — desktop-only (this whole row is
+                        `hidden lg:flex`), next to the zoom controls it shares
+                        a visual home with. Rendered only when PDFOverlay
+                        determined the current chart's viewer kind can print
+                        (excludes audio/unknown). */}
+                    {onPrintChart && (
+                        <div className="relative inline-flex">
+                            <Button
+                                variant="ghost" size="icon"
+                                onClick={handlePrintChart}
+                                disabled={isPrintingChart}
+                                aria-label={isPrintingChart ? "Printing this chart…" : "Print this chart"}
+                                aria-describedby={printChartError ? "print-chart-error" : undefined}
+                                title="Print this chart"
+                                className={cn(
+                                    "rounded-lg h-11 w-11 cursor-pointer",
+                                    "text-muted-foreground hover:text-foreground hover:bg-muted",
+                                    isPrintingChart && "cursor-wait",
+                                    printChartError && "text-destructive hover:text-destructive",
+                                )}
+                            >
+                                {isPrintingChart ? (
+                                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                                ) : (
+                                    <Printer className="h-5 w-5" aria-hidden="true" />
+                                )}
+                            </Button>
+                            {/* Visible failure alert — spatially anchored above
+                                the button (mirrors KeepAwakeToggle's M3-001
+                                inline alert pill) so a failed print is never
+                                silent. */}
+                            {printChartError && (
+                                <div
+                                    id="print-chart-error"
+                                    role="alert"
+                                    data-testid="print-chart-error"
+                                    className="absolute bottom-full left-0 mb-2 z-50 w-56 whitespace-normal rounded-md border border-destructive/40 bg-destructive/95 px-2.5 py-1.5 text-[11px] font-medium text-destructive-foreground shadow-lg"
+                                >
+                                    {printChartError}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     <SetlistDrawer />
                 </div>

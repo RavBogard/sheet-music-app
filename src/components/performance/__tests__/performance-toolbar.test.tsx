@@ -455,4 +455,82 @@ describe("PerformanceToolbar", () => {
         mockStoreState.playbackQueue = []
         mockStoreState.queueIndex = 0
     })
+
+    // ── print-current-chart: desktop "Print this chart" control ─────────
+    // Distinct from the pre-existing `onPrint` (whole-setlist PrintModal,
+    // still unwired to any button here — untouched by this feature). The
+    // new control is conditionally rendered: present only when PDFOverlay
+    // determines the current viewer kind can print.
+    describe("print-current-chart", () => {
+        it("renders no print-chart button when onPrintChart is absent (audio/unknown charts)", () => {
+            render(<PerformanceToolbar onHome={mockOnHome} />)
+            expect(screen.queryByRole("button", { name: /print this chart/i })).toBeNull()
+        })
+
+        it("renders a print-chart button when onPrintChart is provided, and invokes it on click", async () => {
+            const onPrintChart = vi.fn().mockResolvedValue(undefined)
+            render(<PerformanceToolbar onHome={mockOnHome} onPrintChart={onPrintChart} />)
+
+            const button = screen.getByRole("button", { name: /print this chart/i })
+            fireEvent.click(button)
+            expect(onPrintChart).toHaveBeenCalledTimes(1)
+            // Let the resolved promise's finally-block state update settle
+            // before the test tears down (avoids an act() warning; not itself
+            // an assertion — the busy-state transition is covered below).
+            await screen.findByRole("button", { name: /^print this chart$/i })
+        })
+
+        it("shows a busy state while onPrintChart's promise is in flight, then clears it", async () => {
+            let resolvePrint: () => void = () => {}
+            const onPrintChart = vi.fn(() => new Promise<void>((resolve) => { resolvePrint = resolve }))
+            render(<PerformanceToolbar onHome={mockOnHome} onPrintChart={onPrintChart} />)
+
+            const button = screen.getByRole("button", { name: /print this chart/i })
+            fireEvent.click(button)
+
+            // Busy: disabled + relabelled while the render is in flight.
+            // (House convention in this test suite — see SaveOfflineButton.test.tsx
+            // — reads the DOM `.disabled` property directly rather than a
+            // jest-dom matcher, which isn't wired into this vitest setup.)
+            const busyButton = (await screen.findByRole("button", {
+                name: /printing this chart/i,
+            })) as HTMLButtonElement
+            expect(busyButton.disabled).toBe(true)
+
+            resolvePrint()
+            const idleButton = (await screen.findByRole("button", {
+                name: /^print this chart$/i,
+            })) as HTMLButtonElement
+            expect(idleButton.disabled).toBe(false)
+        })
+
+        it("surfaces a visible inline error when onPrintChart rejects — never fails silently", async () => {
+            const onPrintChart = vi.fn().mockRejectedValue(new Error("Couldn't load the chart to print."))
+            render(<PerformanceToolbar onHome={mockOnHome} onPrintChart={onPrintChart} />)
+
+            fireEvent.click(screen.getByRole("button", { name: /print this chart/i }))
+
+            const alert = await screen.findByTestId("print-chart-error")
+            expect(alert.textContent).toMatch(/couldn't load the chart to print/i)
+        })
+
+        it("clears a stale error at the start of a new attempt", async () => {
+            const onPrintChart = vi.fn()
+                .mockRejectedValueOnce(new Error("first failure"))
+                .mockResolvedValueOnce(undefined)
+            render(<PerformanceToolbar onHome={mockOnHome} onPrintChart={onPrintChart} />)
+
+            const button = () => screen.getByRole("button", { name: /print this chart/i })
+            fireEvent.click(button())
+            const errorPill = await screen.findByTestId("print-chart-error")
+            expect(errorPill).toBeTruthy()
+
+            fireEvent.click(button())
+            expect(screen.queryByTestId("print-chart-error")).toBeNull()
+            // Let the second attempt's resolved promise settle before the test
+            // tears down (avoids an act() warning from the finally-block state
+            // update landing after the test function returns).
+            await screen.findByRole("button", { name: /^print this chart$/i })
+        })
+    })
 })

@@ -69,6 +69,16 @@ export interface PrintRequest {
     tracks: PrintTrack[]
     coverOnly?: boolean
     /**
+     * Print-this-chart (single-chart desktop print action, PDFOverlay):
+     * render every track WITHOUT the multi-page cover table. This is the
+     * INVERSE of `coverOnly` (which renders NOTHING but the cover) — the two
+     * are independent flags, not a shared enum, so a future caller could in
+     * principle set both (yielding an empty document); no current caller
+     * does. Every existing caller omits this field (or passes false) and
+     * keeps getting a cover — strictly additive, no default change.
+     */
+    omitCover?: boolean
+    /**
      * Phase 4: display title of the prayer book the folio column's page numbers
      * refer to — e.g. "CRC Friday Siddur". Resolved by the caller from the
      * setlist's `book` slug via `bookTitle()` in @/lib/books/titles (NOT
@@ -117,7 +127,7 @@ export interface PrintResult {
  */
 function computeContentHash(req: PrintRequest): string {
     const significant = {
-        cacheVersion: 6, // Increment when PDF rendering logic changes to bypass stale cache. v70-01-02: 2→3 (image tracks embed instead of skip). v70-01-02-fix: 3→4 — library_index mimeType backstop now embeds image tracks that lack a persisted track.mimeType; prints cached since the v70-01-02 deploy dropped those images and must not serve. Phase 4: 4→5 — the cover page now draws the liturgyRef folio column; every packet cached before this deploy has no page numbers and must not serve. Phase 4 fix wave: 5→6 — the cover table now PAGINATES (a v5 packet of >26 rows silently stopped mid-service, folios and all) and names the prayer book. Any v5 entry written by a preview deploy into the shared print-cache bucket would serve a truncated, unattributed packet.
+        cacheVersion: 7, // Increment when PDF rendering logic changes to bypass stale cache. v70-01-02: 2→3 (image tracks embed instead of skip). v70-01-02-fix: 3→4 — library_index mimeType backstop now embeds image tracks that lack a persisted track.mimeType; prints cached since the v70-01-02 deploy dropped those images and must not serve. Phase 4: 4→5 — the cover page now draws the liturgyRef folio column; every packet cached before this deploy has no page numbers and must not serve. Phase 4 fix wave: 5→6 — the cover table now PAGINATES (a v5 packet of >26 rows silently stopped mid-service, folios and all) and names the prayer book. Any v5 entry written by a preview deploy into the shared print-cache bucket would serve a truncated, unattributed packet. print-this-chart: 6→7 — `omitCover` joined the hash below (a single-chart omitCover:true job must never collide with the full-packet result for the same track set); bumping the version documents that this also invalidates every pre-existing cache entry, not just omitCover ones.
         title: req.title,
         date: req.date,
         musicianName: req.musicianName,
@@ -125,6 +135,10 @@ function computeContentHash(req: PrintRequest): string {
         // setlists identical but for their prayer book must not collide.
         bookTitle: req.bookTitle,
         coverOnly: req.coverOnly || false,
+        // print-this-chart: omitCover is the inverse flag — must be in the
+        // hash or an omitCover:true single-track job would collide with the
+        // (cover-bearing) full-packet result for that same track set.
+        omitCover: req.omitCover || false,
         tracks: req.tracks.map(t => ({
             fileId: t.fileId,
             transposition: t.transposition || 0,
@@ -944,7 +958,13 @@ export async function generatePrintPdf(
 
     // ── Step 1: Build merged PDF with cover page ──
     const mergedPdf = await PDFDocument.create()
-    await buildCoverPage(mergedPdf, req, hasTranspositions, printFooter)
+    // omitCover: the print-this-chart action wants ONLY the chart page(s),
+    // matching what's on screen — no multi-page cover table for a single
+    // track. Every other caller leaves this unset and gets the cover exactly
+    // as before.
+    if (!req.omitCover) {
+        await buildCoverPage(mergedPdf, req, hasTranspositions, printFooter)
+    }
 
     // ── Step 1b: Cover-only mode — skip all track processing ──
     if (req.coverOnly) {
@@ -1047,8 +1067,24 @@ export async function generatePrintPdf(
             // dropped from the packet). Render them to monospace Courier pages
             // instead — chord-over-lyric, transpose-aware — matching the Perform
             // TextScoreViewer. Shared with MCP generate_gig_packet.
+            //
+            // print-this-chart: a chordpro-typed chart (resolveViewerKind's
+            // 'chordpro' kind — the same text-shaped bytes as a plain-text
+            // chart, just tagged `application/x-chordpro` / a .cho-family
+            // extension) does NOT match a bare `startsWith("text/")` check,
+            // so it would fall through to PDFDocument.load, throw on non-PDF
+            // bytes, and get silently dropped into the missing-charts
+            // appendix. Widen the detection to the same mimeType/extension
+            // signals resolveViewerKind consults, so a chordpro chart routes
+            // to the same text renderer instead of vanishing from the packet.
             const fetchedCt = (fetched.contentType || "").toLowerCase()
-            if (fetchedCt.startsWith("text/")) {
+            const trackMimeLower = (track.mimeType || "").toLowerCase()
+            const nameForExt = (track.fileName || track.fileId || "").toLowerCase()
+            const isChordProChart =
+                fetchedCt === "application/x-chordpro" || fetchedCt.endsWith("chordpro") ||
+                trackMimeLower === "application/x-chordpro" || trackMimeLower.endsWith("chordpro") ||
+                /\.(cho|chordpro|crd|chopro)$/i.test(nameForExt)
+            if (fetchedCt.startsWith("text/") || isChordProChart) {
                 await renderTextChartToPdf(
                     mergedPdf,
                     track.title,
