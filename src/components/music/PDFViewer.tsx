@@ -417,8 +417,41 @@ export function PDFViewer({ url, trackName }: PDFViewerProps) {
 
     return (
         <div className="flex flex-col h-full w-full relative group">
-            <div ref={containerRef} className="flex-1 overflow-auto bg-muted dark:bg-zinc-900 scrollbar-hide flex justify-center relative pb-32">
-                <div className="relative">
+            {/* WAVE1 Bug 1 (2026-08-31) — the page stack is centred by an AUTO
+                MARGIN on the child, never by `justify-center` on the scroller.
+                A flex item wider than its scroll container that is centred with
+                `justify-content: center` has its start edge placed at a NEGATIVE
+                offset from the scroll origin. Measured at 820x1180 / 200% zoom
+                (page 1602px in an 805px container) that is 398px of clef, key
+                signature and first beat of every system: Chromium strands it
+                outright (scrollWidth comes back 1204, short by exactly the
+                overflow, scrollLeft range [0, 399]); WebKit keeps it reachable
+                via a negative scroll origin but still RESTS mid-page, so the
+                chart opens with the clef off-screen and only a backwards swipe
+                recovers it. Zooming in to read small type was the action that
+                hid the start of the music.
+
+                Auto margins absorb only POSITIVE free space (CSS Flexbox L1
+                §9.5 — "Otherwise, set all auto margins ... to zero"), so
+                `mx-auto` centres a page narrower than the viewport and collapses
+                to 0 the moment the page overflows, anchoring the scroll origin
+                at the left edge where the music starts. That rule predates every
+                shipping flexbox implementation; `justify-content: safe center`
+                would also work but Safari/iOS Safari only gained `safe` in 17.6,
+                and an iPad held on 17.0-17.5 would drop the declaration.
+                `justify-center` MUST NOT come back — it overrides the auto
+                margin on overflow (proven in e2e/flex-scroll-reachability.spec.ts,
+                which measures this in real Chromium + real iPad WebKit).
+
+                `data-pdf-scroll` / `data-pdf-scroll-content` are the seams the
+                reachability tests and the prod probe use to find these two
+                boxes. */}
+            <div
+                ref={containerRef}
+                data-pdf-scroll=""
+                className="flex-1 overflow-auto bg-muted dark:bg-zinc-900 scrollbar-hide flex justify-start relative pb-32"
+            >
+                <div data-pdf-scroll-content="" className="relative mx-auto">
                     {loading && (
                         <div className="flex flex-col items-center mt-4 gap-3">
                             <Skeleton className="w-full max-w-[600px] aspect-[8.5/11] rounded-lg" />
