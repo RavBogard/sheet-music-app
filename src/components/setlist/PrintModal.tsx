@@ -211,6 +211,11 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                     performer: t.performer,
                     estimatedMinutes: t.estimatedMinutes,
                     description: t.description,
+                    // Phase 4: the prayer-book page number. This map dropped it
+                    // silently, so the musicians' packet printed no page numbers
+                    // while the rabbi's sheet did.
+                    liturgyRef: t.liturgyRef,
+                    honors: t.honors,
                 }
             })
         })

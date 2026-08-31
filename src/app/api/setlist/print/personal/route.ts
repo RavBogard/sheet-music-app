@@ -91,6 +91,12 @@ export const GET = createApiHandler(
                 performer: t.performer,
                 estimatedMinutes: t.estimatedMinutes,
                 description: t.description,
+                // Phase 4: the prayer-book page number. This map is a third
+                // hand-built PrintTrack projection alongside PrintModal's; it
+                // dropped liturgyRef too, so the folio column the cover page now
+                // draws would have been permanently empty on this surface.
+                liturgyRef: t.liturgyRef,
+                honors: t.honors,
                 // Apply musician profile transposition
                 transposition: (t.transposition || 0) + (profile.defaultTransposition || 0),
                 preferFlats: profile.preferFlats,

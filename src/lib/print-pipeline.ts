@@ -12,7 +12,7 @@
 
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib"
 import { fetchFileById } from "@/lib/file-fetcher"
-import { renderTextChartToPdf } from "@/lib/pdf/text-chart-pdf"
+import { renderTextChartToPdf, toWinAnsi } from "@/lib/pdf/text-chart-pdf"
 import { getTransposedKeyName } from "@/lib/music-math"
 import { initAdmin, getFirestore, getStorage } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
@@ -45,6 +45,10 @@ export interface PrintTrack {
     performer?: string
     estimatedMinutes?: number
     description?: string
+    /** Phase 4: printed page in the service's prayer book. The musician's
+     *  packet needs this for the same reason the rabbi's sheet does. */
+    liturgyRef?: { book: string; unitId?: string; folio: number }
+    honors?: Array<{ name: string; note?: string }>
 }
 
 /** v70-01-01 Task 3: detects image-typed tracks for the print-pipeline skip
@@ -101,7 +105,7 @@ export interface PrintResult {
  */
 function computeContentHash(req: PrintRequest): string {
     const significant = {
-        cacheVersion: 4, // Increment when PDF rendering logic changes to bypass stale cache. v70-01-02: 2→3 (image tracks embed instead of skip). v70-01-02-fix: 3→4 — library_index mimeType backstop now embeds image tracks that lack a persisted track.mimeType; prints cached since the v70-01-02 deploy dropped those images and must not serve.
+        cacheVersion: 5, // Increment when PDF rendering logic changes to bypass stale cache. v70-01-02: 2→3 (image tracks embed instead of skip). v70-01-02-fix: 3→4 — library_index mimeType backstop now embeds image tracks that lack a persisted track.mimeType; prints cached since the v70-01-02 deploy dropped those images and must not serve. Phase 4: 4→5 — the cover page now draws the liturgyRef folio column; every packet cached before this deploy has no page numbers and must not serve.
         title: req.title,
         date: req.date,
         musicianName: req.musicianName,
@@ -112,6 +116,11 @@ function computeContentHash(req: PrintRequest): string {
             preferFlats: t.preferFlats || false,
             capoFret: t.capoFret || 0,
             omitPdf: t.omitPdf || false,
+            // Phase 4: the folio is drawn on the cover page, so two otherwise
+            // identical setlists that differ only in their page numbers must
+            // not collide on one cache key. `honors` is deliberately absent —
+            // PrintTrack carries it but the packet renders no honors cell.
+            folio: t.liturgyRef?.folio ?? null,
         })),
     } as Record<string, unknown>
     // v11-05-04: per-org congregation footer differs, so non-CRC orgs must NOT
@@ -251,6 +260,26 @@ async function cacheResult(hash: string, pdf: Uint8Array): Promise<void> {
 
 // ── Cover Page Builder ──
 
+/**
+ * Sanitise a string for a pdf-lib StandardFont.
+ *
+ * The cover page draws with Helvetica, which is WinAnsi/CP1252 only. pdf-lib
+ * THROWS on an unencodable codepoint — from `drawText` *and* from
+ * `widthOfTextAtSize` — so a single Hebrew character in a track title used to
+ * take down gig-packet generation for the whole setlist. Mirrors
+ * `clean()` in src/lib/pdf/service-sheet-pdf.ts: Hebrew degrades to '?' rather
+ * than crashing or corrupting the document. Every string this page measures or
+ * draws goes through here, and it must run BEFORE any width measurement.
+ */
+function clean(s: unknown): string {
+    if (typeof s !== "string") return ""
+    // toWinAnsi maps every codepoint above 0xFF to '?', which would turn the
+    // existing bullet separators (U+2022, used in the congregation's configured
+    // printFooter) into question marks. U+00B7 MIDDLE DOT is inside WinAnsi and
+    // is the separator glyph the rabbi's service sheet already uses.
+    return toWinAnsi(s.replace(/•/g, "·")).trim()
+}
+
 async function buildCoverPage(
     mergedPdf: PDFDocument,
     req: PrintRequest,
@@ -265,20 +294,20 @@ async function buildCoverPage(
     const { width, height } = coverPage.getSize()
 
     // Title
-    coverPage.drawText(req.title, {
+    coverPage.drawText(clean(req.title), {
         x: 50, y: height - 80, size: 28,
         font: helveticaBold, color: rgb(0, 0, 0),
     })
 
     // Date
-    coverPage.drawText(req.date, {
+    coverPage.drawText(clean(req.date), {
         x: 50, y: height - 110, size: 13,
         font: helvetica, color: rgb(0.4, 0.4, 0.4),
     })
 
     let yOffset = height - 138
     if (req.eventName) {
-        coverPage.drawText(req.eventName, {
+        coverPage.drawText(clean(req.eventName), {
             x: 50, y: yOffset, size: 13,
             font: helvetica, color: rgb(0.4, 0.4, 0.4),
         })
@@ -286,7 +315,7 @@ async function buildCoverPage(
     }
 
     if (req.rabbi) {
-        coverPage.drawText(`Led by: ${req.rabbi}`, {
+        coverPage.drawText(`Led by: ${clean(req.rabbi)}`, {
             x: 50, y: yOffset, size: 13,
             font: helvetica, color: rgb(0.4, 0.4, 0.4),
         })
@@ -294,7 +323,7 @@ async function buildCoverPage(
     }
 
     if (req.musicianName) {
-        coverPage.drawText(`Prepared for: ${req.musicianName}`, {
+        coverPage.drawText(`Prepared for: ${clean(req.musicianName)}`, {
             x: 50, y: yOffset, size: 13,
             font: helveticaBold, color: rgb(0, 0, 0),
         })
@@ -320,6 +349,45 @@ async function buildCoverPage(
     const colTransKey = 430
     const colNotes = hasTranspositions ? 490 : 475
 
+    // ── Folio column (Phase 4) ──
+    // The printed page in the prayer book the congregation is holding. Mirrors
+    // the rabbi's sheet (src/lib/pdf/service-sheet-pdf.ts): right-aligned,
+    // `p. <n>`, in a column RESERVED before any row text is drawn.
+    //
+    // The reservation is the point. The service sheet shipped a bug where an
+    // unwrapped cue line ran a congregant's name past the physical edge of the
+    // paper inside a perfectly valid PDF. This table had the same latent
+    // defect: the Notes cell is capped by CHARACTER COUNT (maxNotesLen), never
+    // by width, so 18 wide glyphs at x=475 already ran off the right edge of
+    // the page. `rowRight` is now the single width budget every cell on the row
+    // is measured against, so nothing can reach the folio or the paper's edge.
+    const FOLIO_LABEL = "Page"
+    const FOLIO_GUTTER = 8
+    const FOLIO_SIZE = 9
+    const contentRight = width - 50
+    /** `p. <n>` for a row that has a folio, `""` for one that doesn't. A row
+     *  with no liturgyRef prints no number and never blocks generation. */
+    const folioTextFor = (t: PrintTrack): string => {
+        const f = t.liturgyRef?.folio
+        return typeof f === "number" && Number.isFinite(f) ? clean(`p. ${f}`) : ""
+    }
+    const folioTexts = req.tracks.map(folioTextFor)
+    const anyFolio = folioTexts.some(Boolean)
+    const folioColW = anyFolio
+        ? Math.max(
+            helveticaBold.widthOfTextAtSize(FOLIO_LABEL, 10),
+            ...folioTexts.map(s => (s ? helveticaBold.widthOfTextAtSize(s, FOLIO_SIZE) : 0)),
+        )
+        : 0
+    /** Right-hand limit for every non-folio cell on a row. */
+    const rowRight = anyFolio ? contentRight - folioColW - FOLIO_GUTTER : contentRight
+    const drawFolio = (text: string, y: number) => {
+        coverPage.drawText(text, {
+            x: contentRight - helveticaBold.widthOfTextAtSize(text, FOLIO_SIZE),
+            y, size: FOLIO_SIZE, font: helveticaBold, color: rgb(0.2, 0.4, 0.8),
+        })
+    }
+
     // Header
     coverPage.drawText("#", { x: colNum, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     coverPage.drawText("Song", { x: colTitle, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
@@ -329,6 +397,12 @@ async function buildCoverPage(
         coverPage.drawText("As", { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
     }
     coverPage.drawText("Notes", { x: colNotes, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+    if (anyFolio) {
+        coverPage.drawText(FOLIO_LABEL, {
+            x: contentRight - helveticaBold.widthOfTextAtSize(FOLIO_LABEL, 10),
+            y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4),
+        })
+    }
 
     yOffset -= 8
     coverPage.drawLine({
@@ -341,20 +415,22 @@ async function buildCoverPage(
     const printableTracks = req.tracks
     let rowNum = 0
     let songNum = 0
-    printableTracks.forEach((track) => {
+    printableTracks.forEach((track, trackIdx) => {
         if (yOffset < 60) return
 
         const trackType = track.type || 'song'
         const isServiceFlow = trackType !== 'song'
+        const rowFolio = folioTexts[trackIdx]
 
         // Determine font and max width constraints based on layout and track type
         const titleFont = isServiceFlow ? helveticaOblique : helvetica
         const titleColor = isServiceFlow ? rgb(0.4, 0.4, 0.4) : rgb(0, 0, 0)
         let finalTitleSize = 10
-        let songTitle = track.title
-        
+        let songTitle = clean(track.title)
+
         if (trackType === 'header') {
-            const headerMax = 300
+            // Capped against the reserved folio column, not just the nominal 300.
+            const headerMax = Math.max(40, Math.min(300, rowRight - colTitle))
             let headerTitle = songTitle.toUpperCase()
             while (finalTitleSize > 7 && helveticaBold.widthOfTextAtSize(headerTitle, finalTitleSize) > headerMax) finalTitleSize -= 0.5
             if (helveticaBold.widthOfTextAtSize(headerTitle, finalTitleSize) > headerMax) {
@@ -364,7 +440,9 @@ async function buildCoverPage(
             }
             songTitle = headerTitle
         } else {
-            const maxAvailableWidth = hasTranspositions ? 190 : 220
+            const maxAvailableWidth = Math.max(
+                40, Math.min(hasTranspositions ? 190 : 220, rowRight - colTitle),
+            )
             while (finalTitleSize > 6.5 && titleFont.widthOfTextAtSize(songTitle, finalTitleSize) > maxAvailableWidth) finalTitleSize -= 0.5
             if (titleFont.widthOfTextAtSize(songTitle, finalTitleSize) > maxAvailableWidth) {
                 let truncateLen = songTitle.length
@@ -373,22 +451,38 @@ async function buildCoverPage(
             }
         }
 
-        const key = isServiceFlow ? "" : (track.key || "-")
+        const key = isServiceFlow ? "" : (clean(track.key) || "-")
         const maxLeadLen = hasTranspositions ? 12 : 15
-        const lead = isServiceFlow ? (track.performer || "") : (track.leadMusician || "")
+        const lead = isServiceFlow ? clean(track.performer) : clean(track.leadMusician)
         const leadDisplay = lead.length > maxLeadLen
             ? lead.substring(0, maxLeadLen - 3) + "..." : lead
 
         let notesStr = isServiceFlow
             ? (track.estimatedMinutes ? `~${track.estimatedMinutes} min` : "")
-            : (track.notes || "")
+            : clean(track.notes)
         if (!isServiceFlow && track.capoFret && track.capoFret > 0) {
             const capoNote = `Capo ${track.capoFret}`
-            notesStr = notesStr ? `${capoNote} • ${notesStr}` : capoNote
+            // Composed AFTER clean(track.notes), so the literal separator has to
+            // be re-cleaned or it reaches drawText as a raw U+2022.
+            notesStr = clean(notesStr ? `${capoNote} • ${notesStr}` : capoNote)
         }
         const maxNotesLen = hasTranspositions ? 14 : 18
-        const notesDisplay = notesStr.length > maxNotesLen
+        let notesDisplay = notesStr.length > maxNotesLen
             ? notesStr.substring(0, maxNotesLen - 3) + "..." : notesStr
+
+        // Notes are the rightmost cell, so they are what would run into the
+        // reserved folio column — or, before this change, straight off the
+        // right edge of the paper, since the cap above counts characters and
+        // never measures them. Measure and re-truncate against rowRight.
+        const notesMaxW = Math.max(0, rowRight - colNotes)
+        if (notesDisplay && helveticaOblique.widthOfTextAtSize(notesDisplay, 9) > notesMaxW) {
+            let n = notesDisplay.length
+            while (n > 1 && helveticaOblique.widthOfTextAtSize(notesDisplay.substring(0, n) + "...", 9) > notesMaxW) n--
+            const candidate = notesDisplay.substring(0, n) + "..."
+            // If even one glyph plus the ellipsis doesn't fit, drop the cell
+            // rather than draw something that overlaps the folio.
+            notesDisplay = helveticaOblique.widthOfTextAtSize(candidate, 9) <= notesMaxW ? candidate : ""
+        }
 
         const transKey = (!isServiceFlow && track.transposition && track.transposition !== 0 && track.key)
             ? getTransposedKeyName(track.key, track.transposition) : null
@@ -410,6 +504,7 @@ async function buildCoverPage(
         if (trackType === 'header') {
             yOffset -= 4 // Extra space before header
             coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
+            if (rowFolio) drawFolio(rowFolio, yOffset)
             yOffset -= 18
             return
         }
@@ -424,6 +519,7 @@ async function buildCoverPage(
             coverPage.drawText(transKey, { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.42, 0.16, 0.84) })
         }
         if (notesDisplay) coverPage.drawText(notesDisplay, { x: colNotes, y: yOffset, size: 9, font: helveticaOblique, color: rgb(0.5, 0.5, 0.5) })
+        if (rowFolio) drawFolio(rowFolio, yOffset)
 
         yOffset -= 18
     })
@@ -432,8 +528,8 @@ async function buildCoverPage(
     const songCount = printableTracks.filter(t => !t.type || t.type === 'song').length
     const footerParts = [`${songCount} song${songCount !== 1 ? 's' : ''}`]
     if (hasTranspositions) footerParts.push("transposed")
-    footerParts.push(printFooter)
-    coverPage.drawText(footerParts.join(" • "), {
+    footerParts.push(clean(printFooter))
+    coverPage.drawText(clean(footerParts.join(" • ")), {
         x: 50, y: 30, size: 9, font: helvetica, color: rgb(0.6, 0.6, 0.6),
     })
 }

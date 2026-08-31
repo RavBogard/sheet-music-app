@@ -72,6 +72,12 @@ export async function GET(request: NextRequest) {
                 performer: t.performer,
                 estimatedMinutes: t.estimatedMinutes,
                 description: t.description,
+                // Phase 4: the prayer-book page number. This map is a fourth
+                // hand-built PrintTrack projection; it dropped liturgyRef too,
+                // so the folio column the cover page now draws would have been
+                // permanently empty on the emailed/public packet.
+                liturgyRef: t.liturgyRef,
+                honors: t.honors,
                 transposition: t.transposition || 0,
             })),
         }

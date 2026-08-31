@@ -20,6 +20,10 @@ export interface PrintTrackPayload {
     performer?: string
     estimatedMinutes?: number
     description?: string
+    /** Phase 4: printed page in the service's prayer book. The musician's
+     *  packet needs this for the same reason the rabbi's sheet does. */
+    liturgyRef?: { book: string; unitId?: string; folio: number }
+    honors?: Array<{ name: string; note?: string }>
 }
 
 export interface GeneratePrintPayload {

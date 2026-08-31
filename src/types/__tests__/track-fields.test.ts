@@ -72,6 +72,8 @@ const PROJECTIONS: Projection[] = [
             "performer",
             "estimatedMinutes",
             "description",
+            "liturgyRef", // rendered as the cover page's right-aligned `p. <n>` folio column
+            "honors", // carried on PrintTrack; the cover table draws no honors cell (the rabbi's service sheet owns that lens)
         ],
         intentionallyDropped: {
             id: "Internal Firestore document id; the print pipeline addresses tracks by fileId, not the source doc id.",
@@ -85,8 +87,6 @@ const PROJECTIONS: Projection[] = [
             pageNumber:
                 "PrintTrack has no field for it; print-pipeline.ts never reads track.pageNumber, so multi-page targeting is not applied when printing.",
             unmatched: "Template-expansion UI badge only; irrelevant to a track that has an actual chart to print.",
-            liturgyRef: "not yet plumbed; Task 3 of this plan forwards them",
-            honors: "not yet plumbed; Task 3 of this plan forwards them",
         },
     },
 ]
