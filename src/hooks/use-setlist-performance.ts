@@ -42,6 +42,7 @@ interface UseSetlistPerformanceReturn {
     musicians: SetlistMusician[]
     setlistId: string
     rabbi: string | undefined
+    book: string | undefined
 }
 
 interface UseSetlistPerformanceOpts {
@@ -176,6 +177,8 @@ export function useSetlistPerformance(
         setlistData?.musicians || initial?.setlist?.musicians || []
     const rabbi: string | undefined =
         setlistData?.rabbi ?? initial?.setlist?.rabbi
+    const book: string | undefined =
+        setlistData?.book ?? initial?.setlist?.book
 
     const currentTrackIndex = -1
 
@@ -244,5 +247,6 @@ export function useSetlistPerformance(
         musicians,
         setlistId,
         rabbi,
+        book,
     }
 }

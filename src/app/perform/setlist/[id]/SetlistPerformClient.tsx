@@ -33,6 +33,7 @@ import { SetlistView } from "@/components/performance/SetlistView"
 import { PerformanceOfflineIndicator } from "@/components/performance/PerformanceOfflineIndicator"
 import { SaveOfflineButton } from "@/components/performance/SaveOfflineButton"
 import { KeepAwakeToggle } from "@/components/performance/KeepAwakeToggle"
+import { bookTitle } from "@/lib/books/titles"
 import { shouldShowFatalSetlistError } from "./perform-error-gate"
 import type { Setlist, SetlistTrack } from "@/types/models"
 
@@ -88,6 +89,7 @@ export function SetlistPerformClient({
         setCurrentPosition,
         musicians,
         rabbi,
+        book,
         isWakeLockActive,
         isWakeLockSupported,
         wakeLockError,
@@ -243,6 +245,9 @@ export function SetlistPerformClient({
                         {songCount} song{songCount !== 1 ? "s" : ""}
                         {totalCount > songCount ? ` · ${totalCount} items` : ""}
                     </p>
+                    {bookTitle(book) && (
+                        <p className="text-sm text-muted-foreground truncate">{bookTitle(book)}</p>
+                    )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                     {/* ipad-wake-lock-fix: gesture-gated "Keep screen on" toggle.
