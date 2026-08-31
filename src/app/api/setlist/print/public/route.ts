@@ -6,6 +6,9 @@ import { logger } from "@/lib/logger"
 import { SetlistTrack } from "@/types/models"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { rowOrg } from "@/lib/org/membership"
+// titles.ts, NOT ./registry — registry statically imports every book's page
+// JSON (~80KB); this surface only needs the slug → display-title map.
+import { bookTitle } from "@/lib/books/titles"
 
 export const maxDuration = 120
 
@@ -60,6 +63,9 @@ export async function GET(request: NextRequest) {
         const printReq: PrintRequest = {
             title: setlist.name || 'Setlist',
             date: setlist.eventDate?.toDate?.()?.toISOString?.() || setlist.date || '',
+            // Phase 4: name the book the folio column indexes. Unresolvable or
+            // absent slug → undefined → the cover draws no book line at all.
+            bookTitle: bookTitle(setlist.book),
             // v11-05-04: per-org print footer from the setlist's tenant.
             org: rowOrg(setlist.orgId),
             tracks: tracks.map(t => ({

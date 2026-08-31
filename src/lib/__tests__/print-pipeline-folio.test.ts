@@ -16,6 +16,7 @@ import {
     PDFRawStream,
     PDFName,
     PDFDict,
+    PDFArray,
     StandardFonts,
     rgb,
     type PDFFont,
@@ -209,6 +210,46 @@ async function readCover(pdfBytes: Uint8Array) {
     const doc = await PDFDocument.load(pdfBytes)
     const items = drawnText(rawContent(doc), fontResourceMap(doc, 0))
     return { doc, items }
+}
+
+// ── Per-page reader (pagination) ─────────────────────────────────────────────
+//
+// `rawContent` deliberately flattens the whole document, which cannot answer
+// "which page did row 27 land on?" — and pdf-lib allocates font resource names
+// (/F1…) PER PAGE, so page 2's /F1 is not necessarily page 1's font. Both
+// facts matter once the cover table spans more than one page.
+
+/** The (inflated) content stream(s) belonging to exactly one page. */
+function pageStream(doc: PDFDocument, pageIndex: number): string {
+    const parts: string[] = []
+    const push = (obj: unknown) => {
+        if (!(obj instanceof PDFRawStream)) return
+        const bytes = obj.getContents()
+        let decoded: Buffer
+        try {
+            decoded = inflateSync(Buffer.from(bytes))
+        } catch {
+            decoded = Buffer.from(bytes)
+        }
+        parts.push(decoded.toString("latin1"))
+    }
+    const contents = doc.context.lookup(doc.getPage(pageIndex).node.get(PDFName.of("Contents")))
+    if (contents instanceof PDFArray) {
+        for (let i = 0; i < contents.size(); i++) push(doc.context.lookup(contents.get(i)))
+    } else {
+        push(contents)
+    }
+    return parts.join("\n")
+}
+
+/** Drawn text page by page, plus the whole document flattened in page order. */
+async function readAllPages(pdfBytes: Uint8Array) {
+    const doc = await PDFDocument.load(pdfBytes)
+    const pages: DrawnText[][] = []
+    for (let i = 0; i < doc.getPageCount(); i++) {
+        pages.push(drawnText(pageStream(doc, i), fontResourceMap(doc, i)))
+    }
+    return { doc, pages, all: pages.flat() }
 }
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -475,5 +516,230 @@ describe("gig packet cover page — liturgyRef folio column", () => {
 
         expect(violations.length).toBeGreaterThan(0)
         expect(violations.join(" ")).toMatch(/watch the ritard/)
+    })
+})
+
+// ── Pagination (Finding 1) ───────────────────────────────────────────────────
+//
+// The cover table used to be ONE page that dropped every row past
+// `yOffset < 60` with no marker. Measured at HEAD: a 34-track setlist drew 26
+// rows and 26 folios; rows 27-34 vanished. Production templates are 30, 28 and
+// 21 tracks, so two of three truncated — and because this branch made the cover
+// the packet's only carrier of page numbers, a Shabbat-morning packet printed
+// folios through the middle of the service and stopped before Aleinu and
+// Mourner's Kaddish.
+
+/** Lowest baseline a row may occupy (print-pipeline COVER_ROW_BOTTOM). */
+const ROW_BOTTOM = 60
+/** The packet footer's baseline — the only ink allowed below ROW_BOTTOM. */
+const FOOTER_Y = 30
+
+/** A 34-row service: headers, songs and prayers, every row carrying a folio. */
+const SERVICE_34: PrintTrack[] = Array.from({ length: 34 }, (_, i) => ({
+    title: `Service Item ${String(i + 1).padStart(2, "0")}`,
+    key: i % 3 === 0 ? "G" : "",
+    notes: "",
+    type: i % 7 === 0 ? "header" : i % 3 === 0 ? "song" : "prayer",
+    liturgyRef: { book: "crc-saturday", folio: 100 + i },
+}))
+
+/** Header rows draw their title upper-cased; everything else draws verbatim. */
+const EXPECTED_TITLES = SERVICE_34.map(t =>
+    t.type === "header" ? t.title.toUpperCase() : t.title,
+)
+const EXPECTED_FOLIOS = SERVICE_34.map(t => `p. ${t.liturgyRef!.folio}`)
+
+/** The measured worst case: a "Prepared for" packet, which fits fewest rows. */
+const personalReq = (tracks: PrintTrack[]): PrintRequest => ({
+    ...req(tracks),
+    musicianName: "David Lazaroff - Guitar",
+    rabbi: "Rabbi Daniel Bogard",
+})
+
+describe("gig packet cover page — pagination", () => {
+    it("AC-P1: a 34-track service draws ALL 34 rows and ALL 34 folios", async () => {
+        const { doc, all } = await readAllPages(
+            (await generatePrintPdf(personalReq(SERVICE_34))).pdf,
+        )
+
+        // It genuinely spilled — otherwise this test would pass vacuously on a
+        // build that simply raised the cap.
+        expect(doc.getPageCount()).toBeGreaterThan(1)
+
+        const texts = all.map(i => i.text)
+        const missingTitles = EXPECTED_TITLES.filter(t => !texts.includes(t))
+        expect(missingTitles, "rows dropped off the end of the cover table").toEqual([])
+
+        // Folios in DOCUMENT ORDER (pages in order, draw order within a page):
+        // not just "all present" but "all present, in the order of service".
+        expect(texts.filter(t => t.startsWith("p. "))).toEqual(EXPECTED_FOLIOS)
+    })
+
+    it("AC-P2: no row is split across the page boundary — a title and its folio always share a page", async () => {
+        const { pages } = await readAllPages(
+            (await generatePrintPdf(personalReq(SERVICE_34))).pdf,
+        )
+        const pageOf = (needle: string) =>
+            pages.findIndex(items => items.some(i => i.text === needle))
+
+        for (let i = 0; i < SERVICE_34.length; i++) {
+            const titlePage = pageOf(EXPECTED_TITLES[i])
+            const folioPage = pageOf(EXPECTED_FOLIOS[i])
+            expect(titlePage, `${EXPECTED_TITLES[i]} was not drawn at all`).toBeGreaterThanOrEqual(0)
+            expect(
+                folioPage,
+                `${EXPECTED_TITLES[i]} is on page ${titlePage} but its ${EXPECTED_FOLIOS[i]} is on page ${folioPage}`,
+            ).toBe(titlePage)
+        }
+    })
+
+    it("AC-P3: every table page repeats the column headers; only page 1 carries the header block", async () => {
+        const { doc, pages } = await readAllPages(
+            (await generatePrintPdf(personalReq(SERVICE_34))).pdf,
+        )
+        expect(doc.getPageCount()).toBeGreaterThan(1)
+
+        for (let p = 0; p < pages.length; p++) {
+            const texts = pages[p].map(i => i.text)
+            expect(texts, `page ${p + 1} lost the column headers`).toContain("Song")
+            expect(texts, `page ${p + 1} lost the folio column header`).toContain("Page")
+            // The footer is repeated too — a continuation sheet with no footer
+            // reads as a stray page once the band shuffles the packet.
+            expect(texts.some(t => t.includes("song")), `page ${p + 1} lost the footer`).toBe(true)
+        }
+
+        // Title / date / "Prepared for" / "Led by" stay on page 1.
+        for (const once of ["Shabbat Morning", "Prepared for: David Lazaroff - Guitar", "Led by: Rabbi Daniel Bogard"]) {
+            expect(pages[0].map(i => i.text)).toContain(once)
+            for (let p = 1; p < pages.length; p++) {
+                expect(pages[p].map(i => i.text), `page ${p + 1} repeated the header block`).not.toContain(once)
+            }
+        }
+    })
+
+    it("AC-P4: nothing but the footer is drawn below the bottom margin, and nothing overruns the folio column", async () => {
+        const { pages } = await readAllPages(
+            (await generatePrintPdf(personalReq(SERVICE_34))).pdf,
+        )
+        const fonts = await metrics()
+        const bold = fonts.get("Helvetica-Bold")!
+        const folioW = Math.max(
+            bold.widthOfTextAtSize("Page", 10),
+            ...EXPECTED_FOLIOS.map(s => bold.widthOfTextAtSize(s, 9)),
+        )
+        const folioLeft = CONTENT_RIGHT - folioW - FOLIO_GUTTER
+
+        for (let p = 0; p < pages.length; p++) {
+            const belowMargin = pages[p]
+                .filter(i => i.y < ROW_BOTTOM && i.y !== FOOTER_Y && i.text.trim())
+                .map(i => `"${i.text}" at y=${i.y}`)
+            expect(belowMargin, `page ${p + 1} drew a row under the bottom margin`).toEqual([])
+            expect(overlapViolations(pages[p], fonts, folioLeft), `page ${p + 1}`).toEqual([])
+        }
+    })
+
+    it("AC-P5: a short setlist still fits on a single cover page (no gratuitous break)", async () => {
+        const { doc } = await readAllPages(
+            (await generatePrintPdf(personalReq(SERVICE_34.slice(0, 12)))).pdf,
+        )
+        expect(doc.getPageCount()).toBe(1)
+    })
+})
+
+// ── Prayer-book attribution (Finding 2) ──────────────────────────────────────
+//
+// The packet printed `p. 12` and named no book anywhere, while both sibling
+// renderers name it — the iPad (SetlistPerformClient) and the rabbi's sheet
+// (pdf/service-sheet-pdf). A musician holding a Friday packet and a Saturday
+// packet gets two unqualified numbers for prayers the two books share at
+// different pages.
+
+describe("gig packet cover page — prayer book attribution", () => {
+    const oneRow: PrintTrack[] = [
+        {
+            title: "Bar'chu",
+            key: "",
+            notes: "",
+            type: "prayer",
+            liturgyRef: { book: "shabbat-maariv", folio: 12 },
+        },
+    ]
+
+    // The real registry title for `shabbat-maariv`, em dash and all — every
+    // drawn string goes through clean(), whose toWinAnsi step folds U+2014 to
+    // an ASCII hyphen rather than letting pdf-lib throw on it.
+    const BOOK = "Shirei Shabbat — Friday Night"
+    const BOOK_DRAWN = "Shirei Shabbat - Friday Night"
+
+    it("AC-B1: draws the book title under the date, above the table", async () => {
+        const { items } = await readCover(
+            (await generatePrintPdf({ ...req(oneRow), bookTitle: BOOK })).pdf,
+        )
+        const byText = (t: string) => items.find(i => i.text === t)
+
+        const book = byText(BOOK_DRAWN)
+        expect(book, "the cover names no book").toBeDefined()
+
+        const date = byText("Saturday, September 6, 2026")!
+        const columnHeader = byText("Song")!
+        // Under the date…
+        expect(book!.y).toBeLessThan(date.y)
+        // …and above the table's column-header band.
+        expect(book!.y).toBeGreaterThan(columnHeader.y)
+        // Same left margin as every other header-block line.
+        expect(book!.x).toBe(50)
+        // The folio it qualifies still prints.
+        expect(items.map(i => i.text)).toContain("p. 12")
+    })
+
+    it("AC-B2: a setlist with no book draws nothing — no placeholder, no blank line", async () => {
+        const withBook = await readCover(
+            (await generatePrintPdf({ ...req(oneRow), bookTitle: BOOK })).pdf,
+        )
+        const without = await readCover((await generatePrintPdf(req(oneRow))).pdf)
+
+        const a = withBook.items.map(i => i.text)
+        const b = without.items.map(i => i.text)
+        // Exactly one drawn string differs: the book title itself.
+        expect(a.filter(t => !b.includes(t))).toEqual([BOOK_DRAWN])
+        // …and the no-book cover draws NOTHING the with-book one doesn't: no
+        // placeholder, no em dash, no empty label. (The exact-diff pair above
+        // is the whole assertion — a `some(/book|siddur/)` sweep would only
+        // catch the packet footer, "Generated by CRC Music Books".)
+        expect(b.filter(t => !a.includes(t))).toEqual([])
+        // The rows below the header block are untouched by the book's absence.
+        expect(b).toContain("p. 12")
+        expect(b).toContain("Bar'chu")
+    })
+
+    it("AC-B3: an unencodable book title degrades instead of rejecting the packet", async () => {
+        // pdf-lib StandardFonts throw from widthOfTextAtSize as well as
+        // drawText, so an unsanitised Hebrew book name would take down the
+        // whole packet rather than one line of it.
+        const res = await generatePrintPdf({
+            ...req(oneRow),
+            bookTitle: "שירי שבת",
+        })
+        const { items } = await readCover(res.pdf)
+        const texts = items.map(i => i.text)
+        expect(texts).toContain("p. 12")
+        for (const t of texts) expect(/[^\x00-\xff]/.test(t)).toBe(false)
+    })
+
+    it("AC-B4: two setlists identical but for their book render different covers", async () => {
+        // Guards the drawn output, not the cache; the result-cache key carries
+        // `bookTitle` too (computeContentHash), which is why cacheVersion moved
+        // 5→6 in the same change.
+        const friday = await generatePrintPdf({ ...req(oneRow), bookTitle: BOOK })
+        const saturday = await generatePrintPdf({
+            ...req(oneRow),
+            bookTitle: "CRC Saturday Siddur",
+        })
+        const a = (await readCover(friday.pdf)).items.map(i => i.text)
+        const b = (await readCover(saturday.pdf)).items.map(i => i.text)
+        expect(a).toContain(BOOK_DRAWN)
+        expect(a).not.toContain("CRC Saturday Siddur")
+        expect(b).toContain("CRC Saturday Siddur")
+        expect(b).not.toContain(BOOK_DRAWN)
     })
 })

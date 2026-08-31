@@ -4,8 +4,10 @@ import type { SetlistTrack } from "@/types/models"
  * Runtime census of every field on `SetlistTrack`.
  *
  * WHY THIS EXISTS: several modules project a SetlistTrack into a narrower
- * shape by hand-listing fields (queue-utils' `toQueueItem`, print-pipeline's
- * `PrintTrack`, PrintModal's payload builder, the MCP read/write allowlists).
+ * shape by hand-listing fields — queue-utils' `toQueueItem`, print-pipeline's
+ * `PrintTrack`, print-generation's `PrintTrackPayload`, PrintModal's payload
+ * builder, the two `/api/setlist/print/{personal,public}` route maps, and the
+ * MCP read/write allowlists.
  * Each is a place where adding a field to SetlistTrack silently does nothing.
  * That failure mode has shipped repeatedly — `pageNumber` was inert for months,
  * and the gig-packet path dropped `liturgyRef` from the day it was added.

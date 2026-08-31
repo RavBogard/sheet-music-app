@@ -365,6 +365,9 @@ export function SetlistPerformClient({
                     setlistId={setlistId}
                     assignedMusicians={musicians}
                     rabbi={rabbi}
+                    // Phase 4: the same book name this header shows, so the
+                    // printed packet's folio column is attributed too.
+                    bookTitle={bookName}
                     onClose={() => setShowPrintModal(false)}
                 />
             )}

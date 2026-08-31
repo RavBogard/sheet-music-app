@@ -10,7 +10,7 @@
  * 4. Incremental resilience — individual track failures don't kill the job.
  */
 
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib"
+import { PDFDocument, rgb, StandardFonts, type PDFPage } from "pdf-lib"
 import { fetchFileById } from "@/lib/file-fetcher"
 import { renderTextChartToPdf, toWinAnsi } from "@/lib/pdf/text-chart-pdf"
 import { getTransposedKeyName } from "@/lib/music-math"
@@ -69,6 +69,18 @@ export interface PrintRequest {
     tracks: PrintTrack[]
     coverOnly?: boolean
     /**
+     * Phase 4: display title of the prayer book the folio column's page numbers
+     * refer to — e.g. "CRC Friday Siddur". Resolved by the caller from the
+     * setlist's `book` slug via `bookTitle()` in @/lib/books/titles (NOT
+     * ./registry, which statically imports every book's page JSON).
+     *
+     * Without it the packet prints `p. 12` and names no book, and a musician
+     * holding both a Friday and a Saturday packet gets two unqualified numbers
+     * for prayers the two books share at different pages. Absent → the cover
+     * draws nothing; never a placeholder.
+     */
+    bookTitle?: string
+    /**
      * v11-05-04: tenant org for the print job. Drives the per-org congregation
      * read (printFooter identity). Resolved by the route from the setlist's
      * orgId (public/personal) or the host `x-org-id` (gig-packet POST). Absent /
@@ -105,10 +117,13 @@ export interface PrintResult {
  */
 function computeContentHash(req: PrintRequest): string {
     const significant = {
-        cacheVersion: 5, // Increment when PDF rendering logic changes to bypass stale cache. v70-01-02: 2→3 (image tracks embed instead of skip). v70-01-02-fix: 3→4 — library_index mimeType backstop now embeds image tracks that lack a persisted track.mimeType; prints cached since the v70-01-02 deploy dropped those images and must not serve. Phase 4: 4→5 — the cover page now draws the liturgyRef folio column; every packet cached before this deploy has no page numbers and must not serve.
+        cacheVersion: 6, // Increment when PDF rendering logic changes to bypass stale cache. v70-01-02: 2→3 (image tracks embed instead of skip). v70-01-02-fix: 3→4 — library_index mimeType backstop now embeds image tracks that lack a persisted track.mimeType; prints cached since the v70-01-02 deploy dropped those images and must not serve. Phase 4: 4→5 — the cover page now draws the liturgyRef folio column; every packet cached before this deploy has no page numbers and must not serve. Phase 4 fix wave: 5→6 — the cover table now PAGINATES (a v5 packet of >26 rows silently stopped mid-service, folios and all) and names the prayer book. Any v5 entry written by a preview deploy into the shared print-cache bucket would serve a truncated, unattributed packet.
         title: req.title,
         date: req.date,
         musicianName: req.musicianName,
+        // Phase 4: the book that qualifies every folio on the cover. Two
+        // setlists identical but for their prayer book must not collide.
+        bookTitle: req.bookTitle,
         coverOnly: req.coverOnly || false,
         tracks: req.tracks.map(t => ({
             fileId: t.fileId,
@@ -291,34 +306,79 @@ function clean(s: unknown): string {
         .trim()
 }
 
+/** Cover-table page geometry — US Letter portrait, 50pt side margins. */
+const COVER_PAGE_W = 612
+const COVER_PAGE_H = 792
+/**
+ * Lowest baseline a table row may occupy. The packet footer draws at y=30, and
+ * a row's zebra rectangle extends 8pt below its baseline, so 60 keeps even the
+ * deepest row band clear of it. This was the old truncation cap; it is now the
+ * page-break trigger instead.
+ */
+const COVER_ROW_BOTTOM = 60
+/** First row-band baseline on a continuation page (no header block above it). */
+const COVER_CONTINUATION_TOP = COVER_PAGE_H - 60
+
 async function buildCoverPage(
     mergedPdf: PDFDocument,
     req: PrintRequest,
     hasTranspositions: boolean,
     printFooter: string
 ): Promise<void> {
-    const coverPage = mergedPdf.addPage([612, 792])
+    // Phase-4 fix wave: the cover table PAGINATES. It used to be one page that
+    // dropped every row past `yOffset < 60` with no marker — 26 rows for a
+    // "Prepared for" packet, 29 for a public one, against production templates
+    // of 30, 28 and 21 tracks. Once the folio column moved onto this page that
+    // truncation started eating prayer-book page numbers: a Shabbat-morning
+    // packet printed folios through the middle of the service and stopped
+    // before Aleinu and Mourner's Kaddish.
+    //
+    // `page` is reassigned on every break, so every draw helper below closes
+    // over the CURRENT page rather than capturing the first one.
+    let page: PDFPage = mergedPdf.addPage([COVER_PAGE_W, COVER_PAGE_H])
+    /** Every page of the cover table, in order. The footer is drawn on each. */
+    const tablePages: PDFPage[] = [page]
+
     const helveticaBold = await mergedPdf.embedFont(StandardFonts.HelveticaBold)
     const helvetica = await mergedPdf.embedFont(StandardFonts.Helvetica)
     const helveticaOblique = await mergedPdf.embedFont(StandardFonts.HelveticaOblique)
 
-    const { width, height } = coverPage.getSize()
+    const { width, height } = page.getSize()
+
+    // ── Header block — PAGE 1 ONLY ──
+    // Continuation pages carry the column headers and rows, nothing else.
 
     // Title
-    coverPage.drawText(clean(req.title), {
+    page.drawText(clean(req.title), {
         x: 50, y: height - 80, size: 28,
         font: helveticaBold, color: rgb(0, 0, 0),
     })
 
     // Date
-    coverPage.drawText(clean(req.date), {
+    page.drawText(clean(req.date), {
         x: 50, y: height - 110, size: 13,
         font: helvetica, color: rgb(0.4, 0.4, 0.4),
     })
 
     let yOffset = height - 138
+
+    // Prayer book (Phase 4). Drawn directly under the date, in the same brand
+    // blue as the folio column so the eye ties `p. 12` to the book it indexes.
+    // Both sibling renderers already name the book — the iPad
+    // (SetlistPerformClient) and the rabbi's sheet (pdf/service-sheet-pdf) —
+    // and this packet is the one a musician carries next to another week's.
+    // No book on the setlist → nothing is drawn. Never a placeholder.
+    const coverBookTitle = clean(req.bookTitle)
+    if (coverBookTitle) {
+        page.drawText(coverBookTitle, {
+            x: 50, y: yOffset, size: 13,
+            font: helvetica, color: rgb(0.2, 0.4, 0.8),
+        })
+        yOffset -= 22
+    }
+
     if (req.eventName) {
-        coverPage.drawText(clean(req.eventName), {
+        page.drawText(clean(req.eventName), {
             x: 50, y: yOffset, size: 13,
             font: helvetica, color: rgb(0.4, 0.4, 0.4),
         })
@@ -326,7 +386,7 @@ async function buildCoverPage(
     }
 
     if (req.rabbi) {
-        coverPage.drawText(`Led by: ${clean(req.rabbi)}`, {
+        page.drawText(`Led by: ${clean(req.rabbi)}`, {
             x: 50, y: yOffset, size: 13,
             font: helvetica, color: rgb(0.4, 0.4, 0.4),
         })
@@ -334,7 +394,7 @@ async function buildCoverPage(
     }
 
     if (req.musicianName) {
-        coverPage.drawText(`Prepared for: ${clean(req.musicianName)}`, {
+        page.drawText(`Prepared for: ${clean(req.musicianName)}`, {
             x: 50, y: yOffset, size: 13,
             font: helveticaBold, color: rgb(0, 0, 0),
         })
@@ -343,7 +403,7 @@ async function buildCoverPage(
 
     // Divider
     yOffset -= 10
-    coverPage.drawLine({
+    page.drawLine({
         start: { x: 50, y: yOffset }, end: { x: width - 50, y: yOffset },
         thickness: 1.5, color: rgb(0.2, 0.4, 0.8),
     })
@@ -393,43 +453,67 @@ async function buildCoverPage(
     /** Right-hand limit for every non-folio cell on a row. */
     const rowRight = anyFolio ? contentRight - folioColW - FOLIO_GUTTER : contentRight
     const drawFolio = (text: string, y: number) => {
-        coverPage.drawText(text, {
+        page.drawText(text, {
             x: contentRight - helveticaBold.widthOfTextAtSize(text, FOLIO_SIZE),
             y, size: FOLIO_SIZE, font: helveticaBold, color: rgb(0.2, 0.4, 0.8),
         })
     }
 
-    // Header
-    coverPage.drawText("#", { x: colNum, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    coverPage.drawText("Song", { x: colTitle, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    coverPage.drawText("Key", { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    coverPage.drawText("Vocal Lead", { x: colLead, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    if (hasTranspositions) {
-        coverPage.drawText("As", { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    }
-    coverPage.drawText("Notes", { x: colNotes, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
-    if (anyFolio) {
-        coverPage.drawText(FOLIO_LABEL, {
-            x: contentRight - helveticaBold.widthOfTextAtSize(FOLIO_LABEL, 10),
-            y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4),
+    /**
+     * Column-header band + rule, drawn at the current yOffset and advancing past
+     * it. Called once under the page-1 header block and again at the top of
+     * every continuation page — a table that continues without repeating its
+     * headers is a table whose right-hand "Page" column is unlabelled.
+     */
+    const drawColumnHeaders = () => {
+        page.drawText("#", { x: colNum, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        page.drawText("Song", { x: colTitle, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        page.drawText("Key", { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        page.drawText("Vocal Lead", { x: colLead, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        if (hasTranspositions) {
+            page.drawText("As", { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        }
+        page.drawText("Notes", { x: colNotes, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) })
+        if (anyFolio) {
+            page.drawText(FOLIO_LABEL, {
+                x: contentRight - helveticaBold.widthOfTextAtSize(FOLIO_LABEL, 10),
+                y: yOffset, size: 10, font: helveticaBold, color: rgb(0.4, 0.4, 0.4),
+            })
+        }
+
+        yOffset -= 8
+        page.drawLine({
+            start: { x: 50, y: yOffset }, end: { x: width - 50, y: yOffset },
+            thickness: 0.5, color: rgb(0.8, 0.8, 0.8),
         })
+        yOffset -= 16
     }
 
-    yOffset -= 8
-    coverPage.drawLine({
-        start: { x: 50, y: yOffset }, end: { x: width - 50, y: yOffset },
-        thickness: 0.5, color: rgb(0.8, 0.8, 0.8),
-    })
-    yOffset -= 16
+    /** Break to a fresh table page and re-establish the column headers. */
+    const startContinuationPage = () => {
+        page = mergedPdf.addPage([COVER_PAGE_W, COVER_PAGE_H])
+        tablePages.push(page)
+        yOffset = COVER_CONTINUATION_TOP
+        drawColumnHeaders()
+    }
+
+    drawColumnHeaders()
 
     // Rows — show all items in the order of service (songs, readings, prayers, headers)
     const printableTracks = req.tracks
     let rowNum = 0
     let songNum = 0
     printableTracks.forEach((track, trackIdx) => {
-        if (yOffset < 60) return
-
         const trackType = track.type || 'song'
+
+        // A cover-table row is an ATOMIC single baseline: number, title, key,
+        // lead, transposed key, notes and folio all draw at the same y (header
+        // rows one notch lower, after their extra 4pt of lead-in). Deciding to
+        // break BEFORE any ink is laid down is what makes it impossible for a
+        // row — or its folio — to be split across two pages.
+        const rowBaseline = trackType === 'header' ? yOffset - 4 : yOffset
+        if (rowBaseline < COVER_ROW_BOTTOM) startContinuationPage()
+
         const isServiceFlow = trackType !== 'song'
         const rowFolio = folioTexts[trackIdx]
 
@@ -514,7 +598,7 @@ async function buildCoverPage(
 
         // Draw alternating background row for zebra striping for ALL rows (including headers)
         if (rowNum % 2 === 0) {
-            coverPage.drawRectangle({
+            page.drawRectangle({
                 x: 45,
                 y: trackType === 'header' ? yOffset - 8 : yOffset - 4,
                 width: width - 90,
@@ -526,7 +610,7 @@ async function buildCoverPage(
         // Headers render as bold centered labels (no number)
         if (trackType === 'header') {
             yOffset -= 4 // Extra space before header
-            coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
+            page.drawText(songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) })
             if (rowFolio) drawFolio(rowFolio, yOffset)
             yOffset -= 18
             return
@@ -534,27 +618,31 @@ async function buildCoverPage(
 
         songNum++
 
-        coverPage.drawText(`${songNum}.`, { x: colNum, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
-        coverPage.drawText(songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: titleFont, color: titleColor })
-        if (leadDisplay) coverPage.drawText(leadDisplay, { x: colLead, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
-        if (key) coverPage.drawText(key, { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
+        page.drawText(`${songNum}.`, { x: colNum, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
+        page.drawText(songTitle, { x: colTitle, y: yOffset, size: finalTitleSize, font: titleFont, color: titleColor })
+        if (leadDisplay) page.drawText(leadDisplay, { x: colLead, y: yOffset, size: 10, font: helvetica, color: rgb(0.3, 0.3, 0.3) })
+        if (key) page.drawText(key, { x: colKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.2, 0.4, 0.8) })
         if (hasTranspositions && transKey) {
-            coverPage.drawText(transKey, { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.42, 0.16, 0.84) })
+            page.drawText(transKey, { x: colTransKey, y: yOffset, size: 10, font: helveticaBold, color: rgb(0.42, 0.16, 0.84) })
         }
-        if (notesDisplay) coverPage.drawText(notesDisplay, { x: colNotes, y: yOffset, size: 9, font: helveticaOblique, color: rgb(0.5, 0.5, 0.5) })
+        if (notesDisplay) page.drawText(notesDisplay, { x: colNotes, y: yOffset, size: 9, font: helveticaOblique, color: rgb(0.5, 0.5, 0.5) })
         if (rowFolio) drawFolio(rowFolio, yOffset)
 
         yOffset -= 18
     })
 
-    // Footer
+    // Footer — on EVERY table page. A continuation page with no footer reads as
+    // a stray sheet; the band prints these double-sided and shuffles them.
     const songCount = printableTracks.filter(t => !t.type || t.type === 'song').length
     const footerParts = [`${songCount} song${songCount !== 1 ? 's' : ''}`]
     if (hasTranspositions) footerParts.push("transposed")
     footerParts.push(clean(printFooter))
-    coverPage.drawText(clean(footerParts.join(" • ")), {
-        x: 50, y: 30, size: 9, font: helvetica, color: rgb(0.6, 0.6, 0.6),
-    })
+    const footerText = clean(footerParts.join(" • "))
+    for (const tablePage of tablePages) {
+        tablePage.drawText(footerText, {
+            x: 50, y: 30, size: 9, font: helvetica, color: rgb(0.6, 0.6, 0.6),
+        })
+    }
 }
 
 // ── Service Flow Item Renderer ──

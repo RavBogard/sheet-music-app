@@ -43,9 +43,18 @@ interface PrintModalProps {
     assignedMusicians?: Array<{ uid?: string; name: string; displayName?: string }>
     eventDate?: string | null
     rabbi?: string
+    /**
+     * Phase 4: display title of the setlist's prayer book, already resolved
+     * from the slug by the caller via `bookTitle()` in @/lib/books/titles
+     * (the modal never imports @/lib/books/registry — it statically pulls in
+     * every book's page JSON and this is a client component). Drawn on the
+     * gig-packet cover under the date so the folio column's `p. <n>` names
+     * the book it indexes. Absent → the cover names no book.
+     */
+    bookTitle?: string
 }
 
-export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMusicians, eventDate, rabbi }: PrintModalProps) {
+export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMusicians, eventDate, rabbi, bookTitle }: PrintModalProps) {
     const { user, profile } = useAuth()
     const [title, setTitle] = useState(setlistName)
     const [date, setDate] = useState(() => {
@@ -191,6 +200,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
             musicianName: name || undefined,
             eventName: eventName || undefined,
             rabbi: rabbi || undefined,
+            // Phase 4: qualifies every `p. <n>` on the cover's folio column.
+            bookTitle: bookTitle || undefined,
             coverOnly,
             tracks: tracks.map(t => {
                 const useTransposition = printMode === "just-me"

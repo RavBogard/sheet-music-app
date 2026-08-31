@@ -252,8 +252,16 @@ export function SetlistRow({
                 <FileMusic className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
                 <span className="text-base text-foreground truncate min-w-0">{title}</span>
                 <span className="flex-1" />
-                {folioBadge}
+                {/* P4-5: the chevron draws BEFORE the folio, so the badge is the
+                    last element on every row type's line and its fixed w-16
+                    right-aligned column lands at the same right edge as the
+                    song, passive and header rows. With the chevron trailing it,
+                    a bonded prayer/reading's folio sat ~30px (h-5 icon + gap-2.5)
+                    left of every other row's — the one column the eye hunts down
+                    while standing, out of alignment on exactly the rows that
+                    carry a page number. */}
                 <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                {folioBadge}
             </div>
             {outlineDetail}
         </div>

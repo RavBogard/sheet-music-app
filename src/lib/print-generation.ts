@@ -32,6 +32,12 @@ export interface GeneratePrintPayload {
     musicianName?: string
     eventName?: string
     rabbi?: string
+    /** Phase 4: display title of the prayer book the cover's folio column
+     *  indexes (already resolved from the setlist's `book` slug via
+     *  `bookTitle()` in @/lib/books/titles). Forwarded verbatim to
+     *  PrintRequest.bookTitle by the passthrough POST /api/setlist/print
+     *  schema. Omitted → the cover names no book. */
+    bookTitle?: string
     coverOnly: boolean
     tracks: PrintTrackPayload[]
 }

@@ -114,6 +114,94 @@ describe("SetlistRow — liturgy outline rendering", () => {
         expect(screen.queryByText("Should not appear on a song row")).toBeNull()
     })
 
+    // The folioBadge comment calls the fixed `w-16 text-right` column out as the
+    // reason folios line up down the list. A bonded prayer/reading row rendered
+    // {folioBadge} BEFORE its trailing ChevronRight, which pushed that row's
+    // folio ~30px (h-5 icon + gap-2.5) left of every other row type's — the one
+    // column the eye hunts for mid-service, out of alignment on exactly the
+    // rows that carry a page number.
+    describe("folio column alignment — the badge is the last element on its line", () => {
+        const lastOnItsLine = (testId = "folio") => {
+            const badge = screen.getByTestId(testId)
+            return {
+                badge,
+                next: badge.nextElementSibling,
+                prev: badge.previousElementSibling,
+            }
+        }
+
+        it("bonded prayer/reading row draws the chevron BEFORE the folio", () => {
+            const track: SetlistTrack = {
+                id: "b1",
+                title: "Adonai S'fatai",
+                type: "prayer",
+                fileId: "file-bonded",
+                liturgyRef: { book: "crc-friday", folio: 42 },
+            }
+            render(<SetlistRow track={track} {...defaultProps} />)
+
+            const { next, prev } = lastOnItsLine()
+            // Nothing after the badge → it owns the right edge of the line.
+            expect(next).toBeNull()
+            // …and the affordance chevron is what precedes it.
+            expect(prev).not.toBeNull()
+            expect(prev!.tagName.toLowerCase()).toBe("svg")
+        })
+
+        it.each([
+            [
+                "song",
+                {
+                    id: "a1",
+                    title: "Mi Chamocha",
+                    key: "C",
+                    type: "song",
+                    fileId: "file-song",
+                    bpm: 92,
+                    liturgyRef: { book: "crc-friday", folio: 42 },
+                } as SetlistTrack,
+            ],
+            [
+                "passive prayer (no bonded chart)",
+                {
+                    id: "a2",
+                    title: "Silent Prayer",
+                    type: "prayer",
+                    liturgyRef: { book: "crc-friday", folio: 42 },
+                } as SetlistTrack,
+            ],
+            [
+                "bonded prayer (chart + chevron)",
+                {
+                    id: "a3",
+                    title: "Bar'chu",
+                    type: "prayer",
+                    fileId: "file-bonded",
+                    liturgyRef: { book: "crc-friday", folio: 42 },
+                } as SetlistTrack,
+            ],
+        ])("%s row ends its line with the folio badge", (_label, track) => {
+            render(<SetlistRow track={track} {...defaultProps} />)
+            const { badge, next } = lastOnItsLine()
+            expect(next).toBeNull()
+            // Same fixed-width right-aligned column on every row type — this is
+            // what makes the right edge identical without measuring layout.
+            expect(badge.className).toContain("w-16")
+            expect(badge.className).toContain("text-right")
+        })
+
+        it("header row's folio is also last on its line", () => {
+            const track: SetlistTrack = {
+                id: "a4",
+                title: "Torah Service",
+                type: "header",
+                liturgyRef: { book: "crc-friday", folio: 42 },
+            }
+            render(<SetlistRow track={track} {...defaultProps} />)
+            expect(lastOnItsLine().next).toBeNull()
+        })
+    })
+
     it("song row falls back to performer when leadMusician is absent", () => {
         const track: SetlistTrack = {
             id: "s2",
