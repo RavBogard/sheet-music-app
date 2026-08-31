@@ -45,10 +45,22 @@ export interface MusicState {
      * width — the long-standing behavior; a portrait page in a landscape
      * viewport overflows below the fold. `'page'` sizes the page to fit the
      * container HEIGHT so a portrait chart is fully visible in landscape with no
-     * vertical scroll. EPHEMERAL session state — NOT persisted (kept out of
-     * `partialize`) and RESET to `'width'` on every chart transition, so each
-     * chart opens at the safe default. Unlike `chartZoom`, fit mode is not a
-     * per-chart preference. PDF-only; text/MusicXML viewers ignore it.
+     * vertical scroll. PDF-only; text/MusicXML viewers ignore it.
+     *
+     * WAVE1 Bug 3 (2026-08-31): fit mode is a VIEWING POSTURE, not a per-chart
+     * property. It used to be reset to `'width'` by `setQueue`, `nextSong`,
+     * `prevSong` and `jumpToSong`, so a musician who set a comfortable view lost
+     * it at every single song — during a service, on six or seven iPads
+     * independently. That is the difference between a control that exists and a
+     * control that helps, and it made the toggle worse than useless: it looked
+     * like it had taken effect and then silently reverted at the downbeat.
+     * Navigation now LEAVES IT ALONE.
+     *
+     * Still session-scoped: kept out of `partialize`, and `setFile` (the
+     * standalone /perform/[fileId] entry, which also clears transposition, capo
+     * and AI state) still resets it as part of that full context reset. Unlike
+     * `chartZoom` it is deliberately NOT a per-chart map — one posture for the
+     * session is what the band actually wants.
      */
     fitMode: FitMode
     setFitMode: (mode: FitMode) => void
@@ -234,7 +246,8 @@ export const useMusicStore = create<MusicState>()(
                     currentSetlistId: setlistId || null,
                     transposition: trackTransposition,
                     zoom: trackZoom,
-                    fitMode: 'width',
+                    // WAVE1 Bug 3: fitMode deliberately NOT reset here — the
+                    // musician's viewing posture survives the whole session.
                     // Clear page data when starting a new queue
                     aiState: { ...get().aiState, pageData: {}, scanningPages: [], error: null }
                 })
@@ -248,7 +261,7 @@ export const useMusicStore = create<MusicState>()(
                         queueIndex: nextIndex,
                         transposition: nextTrack.transposition ?? 0,
                         zoom: nextTrack.fileId ? (get().chartZoom[nextTrack.fileId] ?? 1) : 1,
-                        fitMode: 'width',
+                        // WAVE1 Bug 3: fitMode is NOT reset on navigation.
                         isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
                     })
@@ -265,7 +278,7 @@ export const useMusicStore = create<MusicState>()(
                         queueIndex: prevIndex,
                         transposition: prevTrack.transposition ?? 0,
                         zoom: prevTrack.fileId ? (get().chartZoom[prevTrack.fileId] ?? 1) : 1,
-                        fitMode: 'width',
+                        // WAVE1 Bug 3: fitMode is NOT reset on navigation.
                         isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
                     })
@@ -281,7 +294,7 @@ export const useMusicStore = create<MusicState>()(
                         queueIndex: index,
                         transposition: track.transposition ?? 0,
                         zoom: track.fileId ? (get().chartZoom[track.fileId] ?? 1) : 1,
-                        fitMode: 'width',
+                        // WAVE1 Bug 3: fitMode is NOT reset on navigation.
                         isEditingChords: false,
                         aiState: { ...aiState, pageData: {}, scanningPages: [], error: null }
                     })
