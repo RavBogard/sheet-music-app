@@ -31,7 +31,7 @@
         "slug": "shirei-tshuvah",
         "title": "Shirei Tshuvah — Rosh Hashanah",
         "tier": "feed",
-        "pages": 248,
-        "source": "shireishabbat dist/shirei-tshuvah-feed.json"
+        "pages": 184,
+        "source": "shireishabbat feed @21417d9 (licensed lane = the PRINTED press form, 188pp); folios verified 0-disagreement against out-shirei-tshuvah-2026-08-29-21417d9-PRESS.pdf; PRINTED EDITION, frozen — regenerate only if reprinted (R-0831-live-pagemap-1)"
     }
 ]
