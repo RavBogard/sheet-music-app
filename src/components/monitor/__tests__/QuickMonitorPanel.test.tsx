@@ -56,6 +56,9 @@ vi.mock("@/components/ui/scroll-fade", () => ({
 vi.mock("@/components/monitor/ConnectionIndicator", () => ({
     getBridgeStatusMessage: () => null,
     isMixerOffline: () => false,
+    // R7: the panel now distinguishes "mixer unreachable" (overlay) from
+    // "state pipeline behind" (quiet Syncing hint, faders stay live).
+    isStateSyncing: () => false,
     DisconnectedOverlay: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
@@ -85,7 +88,9 @@ function buildStore(overrides: Partial<Record<string, unknown>> = {}) {
                 ],
             },
         ],
-        config: { bridge: { x32Connected: true } },
+        config: { bridge: { x32Connected: true, socketAlive: true } },
+        unconfirmed: [],
+        rejections: {},
         myBusIndex: 5,
         snapshotCount: 1,
         starredChannels: [1, 2, 3],

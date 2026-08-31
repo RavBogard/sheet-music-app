@@ -21,10 +21,20 @@ import {
 } from "firebase/firestore"
 import { MixerSnapshot, MonitorConfig } from "@/types/monitor"
 import { coerceMixerSnapshot } from "@/lib/monitor/coerce-state"
+import { commandTargetKey } from "@/lib/monitor/target-key"
 import { firestoreDateToMillis } from "@/lib/monitor/state-freshness"
 import { logger } from "@/lib/logger"
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error"
+
+/** R2 — a command the bridge refused, addressed to the fader that sent it. */
+export interface CommandRejection {
+    /** The desk slot, in the bridge's own key vocabulary (`send_level:3:5`). */
+    targetKey: string
+    /** The bridge's raw reason (`unauthorized`, `bridge-standby`, …). */
+    reason: string
+    commandId: string
+}
 
 export interface FirestoreMonitorClientOptions {
     /**
@@ -36,6 +46,12 @@ export interface FirestoreMonitorClientOptions {
     onStateUpdate: (snapshot: MixerSnapshot, stateUpdatedAt: number | null) => void
     onConfigUpdate: (config: MonitorConfig) => void
     onStatusChange: (status: ConnectionStatus, error?: string) => void
+    /**
+     * R2 — the bridge wrote a `rejected` ack for one of THIS user's commands.
+     * Optional so existing constructions (and tests) keep compiling; when absent
+     * no ack listener is ever attached.
+     */
+    onCommandRejected?: (rejection: CommandRejection) => void
 }
 
 // Command throttle: batch rapid fader changes (e.g., dragging)
@@ -55,6 +71,36 @@ interface ThrottledCommand {
 const ERROR_RETRY_DELAY_MS = 2000
 const MAX_CONSECUTIVE_ERRORS = 3
 
+/**
+ * R2 — how long to WAIT before attaching an ack listener for a command.
+ *
+ * A drag emits a command every ~50ms per target. Attaching a listener per
+ * command would open and close ~20 Firestore watches a second on congregation
+ * WiFi, and every rejection it could surface mid-drag is `superseded` — noise,
+ * by construction, since a newer command for the same target already replaced
+ * it. So each new command for a target RESCHEDULES the pending attach: while the
+ * finger is moving nothing is watched, and ~250ms after the musician stops,
+ * exactly one listener attaches — for the release command, the one whose verdict
+ * they are actually waiting on. Acks live 5 minutes (`ACK_TTL_MS`), so the delay
+ * cannot miss one.
+ */
+const ACK_WATCH_DELAY_MS = 250
+
+/**
+ * How long an attached ack listener stays attached. The bridge's own confirm
+ * budget is 1.5s (`ACK_CONFIRM_TIMEOUT_MS`), after which it writes a `timeout`
+ * ack; 6s covers that plus Firestore propagation with room to spare, and bounds
+ * the listener so an ack that never arrives cannot leak a watch.
+ */
+const ACK_WATCH_TTL_MS = 6000
+
+interface AckWatch {
+    commandId: string
+    attachTimer: ReturnType<typeof setTimeout> | null
+    expiryTimer: ReturnType<typeof setTimeout> | null
+    unsub: Unsubscribe | null
+}
+
 export class FirestoreMonitorClient {
     private options: FirestoreMonitorClientOptions
     private stateUnsub: Unsubscribe | null = null
@@ -70,6 +116,8 @@ export class FirestoreMonitorClient {
     private _retryTimer: ReturnType<typeof setTimeout> | null = null
     private _disconnected = false // v4.3 P6-B03: guards against post-teardown forwardSnapshot
     private _lastCommandError = 0
+    /** R2 — at most ONE ack watch per target key (see ACK_WATCH_DELAY_MS). */
+    private ackWatches = new Map<string, AckWatch>()
 
     constructor(options: FirestoreMonitorClientOptions) {
         this.options = options
@@ -203,6 +251,9 @@ export class FirestoreMonitorClient {
         this._pendingSnapshot = null
         this._pendingStateUpdatedAt = null
 
+        // R2: drop every ack listener (and its pending attach) on teardown.
+        this.clearAllAckWatches()
+
         // Flush any pending throttled commands before disconnecting
         // This ensures the last fader position is always sent
         for (const [, throttled] of this.throttleMap) {
@@ -304,6 +355,11 @@ export class FirestoreMonitorClient {
 
     /**
      * Send a command to Firestore immediately.
+     *
+     * R2: the created document's id is the ack id — the bridge writes its verdict
+     * to `monitor-live/commands/acks/{id}`. This used to discard the
+     * `DocumentReference`, which is half of why every rejection was invisible
+     * (the other half being that `firestore.rules` denied clients the read).
      */
     private async sendCommandImmediate(data: Record<string, unknown>): Promise<void> {
         const user = auth.currentUser
@@ -311,15 +367,95 @@ export class FirestoreMonitorClient {
 
         try {
             const db = await getDb()
-            await addDoc(collection(db, "monitor-live", "commands", "pending"), {
+            const ref = await addDoc(collection(db, "monitor-live", "commands", "pending"), {
                 ...data,
                 uid: user.uid,
                 createdAt: Date.now(),
             })
+            this.scheduleAckWatch(ref.id, data)
         } catch (err) {
             this._lastCommandError = Date.now()
             logger.error("[MonitorFS] Command send failed:", (err as Error).message)
         }
+    }
+
+    // ─── R2: per-command ack watching ───
+
+    /**
+     * Arm (or re-arm) the ack watch for this command's target. Called after every
+     * successful send; a newer command for the same target replaces the pending
+     * attach rather than adding a second listener.
+     */
+    private scheduleAckWatch(commandId: string, data: Record<string, unknown>): void {
+        if (!this.options.onCommandRejected || this._disconnected) return
+        const targetKey = commandTargetKey(data)
+        if (!targetKey) return // malformed shape — the bridge will reject it, but we can't key it
+
+        this.clearAckWatch(targetKey)
+
+        const watch: AckWatch = {
+            commandId,
+            attachTimer: setTimeout(() => {
+                watch.attachTimer = null
+                this.attachAckWatch(targetKey, watch)
+            }, ACK_WATCH_DELAY_MS),
+            expiryTimer: null,
+            unsub: null,
+        }
+        this.ackWatches.set(targetKey, watch)
+    }
+
+    private attachAckWatch(targetKey: string, watch: AckWatch): void {
+        if (this._disconnected) return
+
+        watch.expiryTimer = setTimeout(() => this.clearAckWatch(targetKey), ACK_WATCH_TTL_MS)
+
+        watch.unsub = subscribeWithDb((db) => onSnapshot(
+            doc(db, "monitor-live", "commands", "acks", watch.commandId),
+            (snap) => {
+                if (!snap.exists() || this._disconnected) return
+                const ack = snap.data() as { status?: string; reason?: string }
+
+                if (ack.status === "rejected") {
+                    this.clearAckWatch(targetKey)
+                    logger.warn("[MonitorFS] Command rejected (%s): %s", targetKey, ack.reason || "no reason given")
+                    this.options.onCommandRejected?.({
+                        targetKey,
+                        reason: ack.reason || "",
+                        commandId: watch.commandId,
+                    })
+                    return
+                }
+
+                // `applied` — nothing to say; the authoritative snapshot confirms
+                // the fader. `timeout` is deliberately NOT surfaced as a rejection:
+                // the bridge may well have applied it and merely missed the
+                // read-back, so the existing confirmation machine's gentle ease-back
+                // stays the honest response.
+                if (ack.status === "applied") this.clearAckWatch(targetKey)
+            },
+            (err) => {
+                // A denied or failed ack read must never break command sending —
+                // this is a diagnostic channel, not the control path.
+                if (!recoverFromFirestoreShutdown(err)) {
+                    logger.debug("[MonitorFS] Ack listener error (%s): %s", targetKey, err.message)
+                }
+                this.clearAckWatch(targetKey)
+            },
+        ))
+    }
+
+    private clearAckWatch(targetKey: string): void {
+        const watch = this.ackWatches.get(targetKey)
+        if (!watch) return
+        if (watch.attachTimer) clearTimeout(watch.attachTimer)
+        if (watch.expiryTimer) clearTimeout(watch.expiryTimer)
+        if (watch.unsub) watch.unsub()
+        this.ackWatches.delete(targetKey)
+    }
+
+    private clearAllAckWatches(): void {
+        for (const targetKey of [...this.ackWatches.keys()]) this.clearAckWatch(targetKey)
     }
 
     get lastCommandError(): number {

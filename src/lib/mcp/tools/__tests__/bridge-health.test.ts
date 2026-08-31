@@ -149,6 +149,41 @@ describe("getBridgeHealth (O3)", () => {
         expect(res.summary).toContain("No bridge heartbeat")
     })
 
+    /**
+     * R1 — "standby present" vs "nothing running". Before bridge v10.0.8 a
+     * standby wrote nothing anywhere, so these two situations were
+     * indistinguishable from the cloud: both read as a dead bridge, and the
+     * second one is the only one that needs a human dispatched to the venue.
+     */
+    it("surfaces a standby bridge alongside a dead heartbeat (crash-relaunch in flight)", async () => {
+        mockConfig.mockResolvedValue({
+            bridge: { status: "online", x32Connected: true, lastSeen: Date.now() - 300_000, version: "10.0.8" },
+            bridgeStandby: {
+                lastSeen: Date.now() - 4_000,
+                instanceId: "VENUEPC-8123-ab12cd34",
+                machineId: "machine-A",
+            },
+        })
+        const res = await getBridgeHealth("admin")
+        if (!("alive" in res)) throw new Error("expected a success result")
+        expect(res.alive).toBe(false)
+        expect(res.standby).not.toBeNull()
+        expect(res.standby?.ageS).toBe(4)
+        expect(res.standby?.instanceId).toBe("VENUEPC-8123-ab12cd34")
+        expect(res.summary).toContain("STANDBY bridge is present")
+    })
+
+    it("reports standby:null when nothing is standing by (and against an older bridge)", async () => {
+        mockConfig.mockResolvedValue({
+            bridge: { status: "online", x32Connected: true, lastSeen: Date.now() - 300_000, version: "10.0.4" },
+        })
+        const res = await getBridgeHealth("admin")
+        if (!("alive" in res)) throw new Error("expected a success result")
+        expect(res.alive).toBe(false)
+        expect(res.standby).toBeNull()
+        expect(res.summary).not.toContain("STANDBY")
+    })
+
     it("returns monitor_unconfigured when config/monitor is absent", async () => {
         mockConfig.mockResolvedValue(null)
         const res = await getBridgeHealth("admin")

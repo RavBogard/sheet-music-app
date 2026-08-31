@@ -149,6 +149,72 @@ export async function sendBridgeRedemptionAlert(params: {
 }
 
 /**
+ * R8 — pre-service bridge tripwire.
+ *
+ * Sibling of `sendBridgeRedemptionAlert` (same Resend client, same
+ * `BRIDGE_ALERT_EMAIL` recipient, same graceful degradation), for the one thing
+ * nobody was ever told: the monitor bridge is down, and there is a service in a
+ * couple of hours. Sent ONLY when something is wrong — a green check sends
+ * nothing, because an alert that arrives every Friday whether or not it matters
+ * is an alert nobody reads by the third week.
+ *
+ * `remedy` is the whole point of the message: the owner cannot fix anything
+ * mid-service, so the mail has to say what to do NOW, while there is still time.
+ */
+export async function sendBridgeHealthAlert(params: {
+  subject: string
+  problems: string[]
+  remedy: string
+  detail: Record<string, unknown>
+  checkedAt: Date
+}): Promise<{ ok: boolean; reason?: string; messageId?: string }> {
+  const client = getResend()
+  if (!client) return { ok: false, reason: 'no_api_key' }
+
+  const to = process.env.BRIDGE_ALERT_EMAIL
+  if (!to) return { ok: false, reason: 'no_recipient' }
+
+  const text = [
+    'Monitor bridge pre-service check FAILED.',
+    '',
+    ...params.problems.map(p => `  • ${p}`),
+    '',
+    `What to do: ${params.remedy}`,
+    '',
+    `Checked: ${params.checkedAt.toISOString()}`,
+    '',
+    'Detail:',
+    JSON.stringify(params.detail, null, 2),
+  ].join('\n')
+
+  const html = `<pre style="font-family:ui-monospace,monospace;white-space:pre-wrap">${text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')}</pre>`
+
+  try {
+    const { data, error } = await client.emails.send({
+      from: `CRC Monitor <${getFromEmail()}>`,
+      to,
+      subject: params.subject,
+      text,
+      html,
+    })
+    if (error) {
+      const msg = error.message || JSON.stringify(error)
+      logger.error(`[Email] Bridge health alert error: ${msg}`)
+      return { ok: false, reason: msg }
+    }
+    logger.info(`[Email] Sent bridge health alert to ${to}`)
+    return { ok: true, messageId: data?.id }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error(`[Email] Bridge health alert threw: ${msg}`)
+    return { ok: false, reason: msg }
+  }
+}
+
+/**
  * Send setlist email notifications to all active members with emails.
  * Returns structured result with count and any error details.
  */

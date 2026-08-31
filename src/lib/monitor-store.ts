@@ -17,6 +17,15 @@ import {
     MixerSnapshot,
 } from "@/types/monitor"
 import { logger } from "@/lib/logger"
+import {
+    busFaderKey,
+    busOnKey,
+    matrixFaderKey,
+    matrixOnKey,
+    parseTargetKey,
+    sendLevelKey,
+    sendOnKey,
+} from "@/lib/monitor/target-key"
 
 /** Shallow compare two arrays by length and element reference */
 function shallowEqualArray<T>(a: T[], b: T[]): boolean {
@@ -78,6 +87,25 @@ interface MonitorState {
     buses: BusInfo[]
     matrices: MatrixInfo[]
     config: MonitorConfig | null
+    /**
+     * R5 — target keys the bridge could not READ from the desk (B11). The value
+     * shown for these is a fabricated 0/false; the UI must say so rather than
+     * print a confident level.
+     */
+    unconfirmed: string[]
+    /**
+     * R2 — the latest rejection per target key. `seq` is monotonic so a repeat
+     * rejection of the same fader re-fires the cue (a bare reason string would
+     * be reference-equal and the effect would not run).
+     */
+    rejections: Record<string, { reason: string; seq: number }>
+    /**
+     * R2 — the authoritative value captured immediately BEFORE the first
+     * optimistic write to each target, so a rejection can put the exact number
+     * back. Cleared whenever a real snapshot lands (that snapshot IS the truth,
+     * and a rollback to a pre-snapshot value would be a regression).
+     */
+    rollbacks: Record<string, number | boolean>
 
     // User's assigned bus
     myBusIndex: number | null
@@ -111,7 +139,32 @@ interface MonitorState {
     setStarredChannels: (channels: number[]) => void
     setDefaultChannels: (channels: number[]) => void
     setConfig: (config: MonitorConfig) => void
+    /**
+     * R2 — the bridge rejected the command for `targetKey`. Roll the optimistic
+     * value back to what the desk actually holds and record the reason for the
+     * fader's cue. Called from the ack listener in `FirestoreMonitorClient`.
+     */
+    rejectCommand: (targetKey: string, reason: string) => void
+    /** Clear a surfaced rejection once its cue has been shown. */
+    clearRejection: (targetKey: string) => void
     reset: () => void
+}
+
+/**
+ * Snapshot the current authoritative value for `key` before the first optimistic
+ * write lands on it. Later optimistic writes to the same key must NOT overwrite
+ * the capture — mid-drag there are ~10 of them per second, and rolling back to
+ * "the value 100ms ago" instead of "the value before the drag" would leave the
+ * musician at a level neither they nor the desk ever chose.
+ */
+function captureRollback(
+    rollbacks: Record<string, number | boolean>,
+    key: string,
+    previous: number | boolean | undefined,
+): Record<string, number | boolean> {
+    if (previous === undefined) return rollbacks
+    if (key in rollbacks) return rollbacks
+    return { ...rollbacks, [key]: previous }
 }
 
 export const useMonitorStore = create<MonitorState>((set, get) => ({
@@ -121,6 +174,9 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     buses: [],
     matrices: [],
     config: null,
+    unconfirmed: [],
+    rejections: {},
+    rollbacks: {},
     myBusIndex: null,
     userId: null,
     starredChannels: [],
@@ -136,10 +192,14 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
 
         // Always update health tracking (even if data unchanged). C-6: carry
         // the bridge's own write time so an idle/frozen desk reads stale.
+        // R2: an authoritative snapshot supersedes every captured pre-optimistic
+        // value — rolling back to one AFTER the desk has spoken would undo a real
+        // change (a co-owner's move, or the engineer's).
         const healthUpdate = {
             lastSnapshotAt: Date.now(),
             snapshotCount: state.snapshotCount + 1,
             stateUpdatedAt,
+            rollbacks: {},
         }
 
         // Stale-while-revalidate: Ignore empty/malformed snapshots if we already have valid data.
@@ -162,14 +222,19 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         const myBusIndex = deriveMyBusIndex(state.config, userId)
 
         const matrices = snapshot.matrices || []
+        // R5: the B11 "we could not read this" list, carried through coercion.
+        const unconfirmed = snapshot.unconfirmed || []
 
         // Shallow equality check — skip store update if nothing changed
         const channelsSame = shallowEqualArray(state.channels, snapshot.channels)
         const busesSame = shallowEqualArray(state.buses, snapshot.buses)
         const matricesSame = shallowEqualArray(state.matrices, matrices)
+        // Strings compare by value under ===, so unlike the object arrays above
+        // this one is a genuine content check, not a reference check.
+        const unconfirmedSame = shallowEqualArray(state.unconfirmed, unconfirmed)
         const busIndexSame = state.myBusIndex === myBusIndex
 
-        if (channelsSame && busesSame && matricesSame && busIndexSame) {
+        if (channelsSame && busesSame && matricesSame && unconfirmedSame && busIndexSame) {
             logger.debug("[MonitorStore] Snapshot skipped (no changes)")
             set(healthUpdate)
             return
@@ -181,6 +246,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
             channels: snapshot.channels,
             buses: snapshot.buses,
             matrices,
+            unconfirmed,
             myBusIndex,
             userId,
             ...healthUpdate,
@@ -188,11 +254,16 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     },
 
     updateBusFader: (busIndex, value) => {
-        const { buses } = get()
+        const { buses, rollbacks } = get()
         set({
             buses: buses.map(b =>
                 b.index === busIndex ? { ...b, fader: value } : b
-            )
+            ),
+            rollbacks: captureRollback(
+                rollbacks,
+                busFaderKey(busIndex),
+                buses.find(b => b.index === busIndex)?.fader,
+            ),
         })
     },
 
@@ -201,16 +272,24 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         // fader confirmation machine (C-2) sees the local set, then reconciles
         // against the bridge's authoritative snapshot once the OSC round-trip
         // lands on `/bus/MM/mix/on`.
-        const { buses } = get()
+        const { buses, rollbacks } = get()
         set({
             buses: buses.map(b =>
                 b.index === busIndex ? { ...b, on } : b
-            )
+            ),
+            rollbacks: captureRollback(
+                rollbacks,
+                busOnKey(busIndex),
+                buses.find(b => b.index === busIndex)?.on,
+            ),
         })
     },
 
     updateSendLevel: (busIndex, channelIndex, value) => {
-        const { buses } = get()
+        const { buses, rollbacks } = get()
+        const previous = buses
+            .find(b => b.index === busIndex)?.sends
+            .find(s => s.channelIndex === channelIndex)?.level
         set({
             buses: buses.map(b =>
                 b.index === busIndex
@@ -221,12 +300,16 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
                         )
                     }
                     : b
-            )
+            ),
+            rollbacks: captureRollback(rollbacks, sendLevelKey(channelIndex, busIndex), previous),
         })
     },
 
     updateSendOn: (busIndex, channelIndex, on) => {
-        const { buses } = get()
+        const { buses, rollbacks } = get()
+        const previous = buses
+            .find(b => b.index === busIndex)?.sends
+            .find(s => s.channelIndex === channelIndex)?.on
         set({
             buses: buses.map(b =>
                 b.index === busIndex
@@ -237,25 +320,36 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
                         )
                     }
                     : b
-            )
+            ),
+            rollbacks: captureRollback(rollbacks, sendOnKey(channelIndex, busIndex), previous),
         })
     },
 
     updateMatrixFader: (matrixIndex, value) => {
-        const { matrices } = get()
+        const { matrices, rollbacks } = get()
         set({
             matrices: matrices.map(m =>
                 m.index === matrixIndex ? { ...m, fader: value } : m
-            )
+            ),
+            rollbacks: captureRollback(
+                rollbacks,
+                matrixFaderKey(matrixIndex),
+                matrices.find(m => m.index === matrixIndex)?.fader,
+            ),
         })
     },
 
     updateMatrixOn: (matrixIndex, on) => {
-        const { matrices } = get()
+        const { matrices, rollbacks } = get()
         set({
             matrices: matrices.map(m =>
                 m.index === matrixIndex ? { ...m, on } : m
-            )
+            ),
+            rollbacks: captureRollback(
+                rollbacks,
+                matrixOnKey(matrixIndex),
+                matrices.find(m => m.index === matrixIndex)?.on,
+            ),
         })
     },
 
@@ -271,6 +365,87 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         set({ config, myBusIndex, defaultChannels: config.defaultChannels ?? current })
     },
 
+    /**
+     * R2 — apply a bridge rejection.
+     *
+     * Two things happen, in this order and both synchronously: the optimistic
+     * value is put back to the desk's real value (so no one is left looking at a
+     * level that never existed), and the reason is recorded for the fader cue.
+     * Before this, a rejection was invisible — the knob simply eased back 2s
+     * later with an amber undo glyph and no words, identically for "not your
+     * bus", "bridge restarting" and "you lost a race".
+     */
+    rejectCommand: (targetKey, reason) => {
+        const state = get()
+        const parsed = parseTargetKey(targetKey)
+        const previous = state.rollbacks[targetKey]
+
+        const rejections = {
+            ...state.rejections,
+            [targetKey]: { reason, seq: (state.rejections[targetKey]?.seq ?? 0) + 1 },
+        }
+
+        // No captured value (a snapshot already landed, or the rejection names a
+        // key we never wrote) ⇒ record the reason only. The store already holds
+        // the authoritative value in that case; there is nothing to undo.
+        if (parsed == null || previous === undefined) {
+            set({ rejections })
+            return
+        }
+
+        const rollbacks = { ...state.rollbacks }
+        delete rollbacks[targetKey]
+
+        const buses = state.buses.map(b => {
+            if (parsed.kind === "bus_fader" && b.index === parsed.busIndex && typeof previous === "number") {
+                return { ...b, fader: previous }
+            }
+            if (parsed.kind === "bus_on" && b.index === parsed.busIndex && typeof previous === "boolean") {
+                return { ...b, on: previous }
+            }
+            if (
+                (parsed.kind === "send_level" || parsed.kind === "send_on") &&
+                b.index === parsed.busIndex
+            ) {
+                return {
+                    ...b,
+                    sends: b.sends.map(s => {
+                        if (s.channelIndex !== parsed.channelIndex) return s
+                        if (parsed.kind === "send_level" && typeof previous === "number") {
+                            return { ...s, level: previous }
+                        }
+                        if (parsed.kind === "send_on" && typeof previous === "boolean") {
+                            return { ...s, on: previous }
+                        }
+                        return s
+                    }),
+                }
+            }
+            return b
+        })
+
+        const matrices = state.matrices.map(m => {
+            if (parsed.kind === "matrix_fader" && m.index === parsed.matrixIndex && typeof previous === "number") {
+                return { ...m, fader: previous }
+            }
+            if (parsed.kind === "matrix_on" && m.index === parsed.matrixIndex && typeof previous === "boolean") {
+                return { ...m, on: previous }
+            }
+            return m
+        })
+
+        logger.info("[MonitorStore] Command rejected for %s: %s (rolled back)", targetKey, reason)
+        set({ buses, matrices, rollbacks, rejections })
+    },
+
+    clearRejection: (targetKey) => {
+        const { rejections } = get()
+        if (!(targetKey in rejections)) return
+        const next = { ...rejections }
+        delete next[targetKey]
+        set({ rejections: next })
+    },
+
     reset: () => set({
         status: "disconnected",
         error: null,
@@ -278,6 +453,9 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         buses: [],
         matrices: [],
         config: null,
+        unconfirmed: [],
+        rejections: {},
+        rollbacks: {},
         myBusIndex: null,
         userId: null,
         starredChannels: [],

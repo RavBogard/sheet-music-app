@@ -90,6 +90,12 @@ function ensureConnected(userId: string): void {
         onStatusChange: (status, err) => {
             useMonitorStore.getState().setStatus(status, err)
         },
+        // R2: the bridge's per-command verdict, finally wired to a screen. The
+        // store rolls the optimistic value back and records the reason; the
+        // fader picks it up by target key and says it in words.
+        onCommandRejected: ({ targetKey, reason }) => {
+            useMonitorStore.getState().rejectCommand(targetKey, reason)
+        },
     })
 
     activeClient = client

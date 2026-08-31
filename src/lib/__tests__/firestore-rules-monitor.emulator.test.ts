@@ -204,4 +204,97 @@ describe('monitor-fix-f1 firestore.rules monitor-live/commands/pending', () => {
         await assertFails(pending(db).doc('seeded').update({ value: 1 }))
         await assertFails(pending(db).doc('seeded').delete())
     })
+
+    // ─── R2: command ACKS — the read path that did not exist ───────────────
+    //
+    // Before R2 there was NO match for monitor-live/commands/acks, so the
+    // deny-all fallback applied and no client could ever read the bridge's own
+    // verdict on its own command. Every failure class — unauthorized,
+    // bridge-standby, superseded, malformed, X32 error — reached the musician as
+    // the same wordless 2s spinner-then-revert. These cases pin the new rule:
+    // member-or-SE, self-attributed, read-only.
+
+    const acks = (db: ReturnType<ReturnType<RulesTestEnvironment['authenticatedContext']>['firestore']>) =>
+        db.collection('monitor-live').doc('commands').collection('acks')
+
+    const seedAck = async (id: string, uid: string | null) =>
+        testEnv.withSecurityRulesDisabled(async (ctx) => {
+            const data: Record<string, unknown> = {
+                commandId: id,
+                status: 'rejected',
+                reason: 'unauthorized',
+                createdAtMs: Date.now(),
+            }
+            if (uid !== null) data.uid = uid
+            await ctx
+                .firestore()
+                .collection('monitor-live')
+                .doc('commands')
+                .collection('acks')
+                .doc(id)
+                .set(data)
+        })
+
+    it('O: musician reads the ack for their OWN command — ALLOWED', async () => {
+        await seedAck('ack-own', 'musician-uid')
+        const db = testEnv.authenticatedContext('musician-uid', { role: 'musician' }).firestore()
+        await assertSucceeds(acks(db).doc('ack-own').get())
+    })
+
+    it('O2: member (the base gate admits members, like pending) — ALLOWED', async () => {
+        await seedAck('ack-member', 'member-uid')
+        const db = testEnv.authenticatedContext('member-uid', { role: 'member' }).firestore()
+        await assertSucceeds(acks(db).doc('ack-member').get())
+    })
+
+    it('O3: sound-engineer with NO role — ALLOWED (mirrors the pending base gate)', async () => {
+        await seedAck('ack-se', 'se-uid')
+        const db = testEnv.authenticatedContext('se-uid', { soundEngineer: true }).firestore()
+        await assertSucceeds(acks(db).doc('ack-se').get())
+    })
+
+    it("P: reading ANOTHER musician's ack is DENIED (no reading the band's mix activity)", async () => {
+        await seedAck('ack-other', 'someone-else')
+        const db = testEnv.authenticatedContext('musician-uid', { role: 'musician' }).firestore()
+        await assertFails(acks(db).doc('ack-other').get())
+    })
+
+    it('P2: even an ADMIN cannot read a foreign ack through the rules (Admin SDK is the ops path)', async () => {
+        await seedAck('ack-foreign', 'musician-uid')
+        const db = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
+        await assertFails(acks(db).doc('ack-foreign').get())
+    })
+
+    it('Q: signed-in with NO role (pending/denied) is DENIED even for a self-attributed ack', async () => {
+        await seedAck('ack-pending', 'pending-uid')
+        const db = testEnv.authenticatedContext('pending-uid', {}).firestore()
+        await assertFails(acks(db).doc('ack-pending').get())
+    })
+
+    it('Q2: unauthenticated read is DENIED', async () => {
+        await seedAck('ack-anon', 'musician-uid')
+        const db = testEnv.unauthenticatedContext().firestore()
+        await assertFails(acks(db).doc('ack-anon').get())
+    })
+
+    it('R: an ack with NO uid (pre-R2 bridge) is unreadable — fails closed, not open', async () => {
+        await seedAck('ack-nouid', null)
+        const db = testEnv.authenticatedContext('musician-uid', { role: 'musician' }).firestore()
+        await assertFails(acks(db).doc('ack-nouid').get())
+    })
+
+    it('S: clients cannot WRITE acks (the bridge is the only writer)', async () => {
+        const db = testEnv.authenticatedContext('musician-uid', { role: 'musician' }).firestore()
+        await assertFails(
+            acks(db).doc('ack-forge').set({
+                commandId: 'ack-forge',
+                status: 'applied',
+                uid: 'musician-uid',
+                createdAtMs: Date.now(),
+            }),
+        )
+        await seedAck('ack-mutate', 'musician-uid')
+        await assertFails(acks(db).doc('ack-mutate').update({ status: 'applied' }))
+        await assertFails(acks(db).doc('ack-mutate').delete())
+    })
 })

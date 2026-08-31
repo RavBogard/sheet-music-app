@@ -20,7 +20,20 @@ export interface MonitorConfig {
 export interface BridgeStatus {
     status: "online" | "offline"
     lastSeen: FirestoreDate | null
+    /**
+     * FOLDED health bit: `socketAlive && stateAgeMs < 30s` (bridge index.ts).
+     * Deliberately conservative for *display*, but it conflates two very
+     * different failures — a dead mixer and a wedged Firestore write path — so
+     * consumers must NOT use it to disable control (R7). Prefer `socketAlive`.
+     */
     x32Connected: boolean
+    /**
+     * RAW OSC socket liveness, unfolded (bridge v10.0.4+; absent on older
+     * bridges). This is the only field that answers "can a command still reach
+     * the desk?", which is the only question that may take a fader away from a
+     * musician mid-service.
+     */
+    socketAlive?: boolean
     clients: number
     localIp: string | null
     version: string
@@ -69,6 +82,14 @@ export interface MixerSnapshot {
     channels: ChannelInfo[]
     buses: BusInfo[]
     matrices?: MatrixInfo[]  // Optional — bridge v2+ only
+    /**
+     * B11 / R5 — target keys (`bus_fader:5`, `send_level:3:5`, …) whose value the
+     * bridge could NOT read from the desk after 3 attempts. The number shown for
+     * such a key is a FABRICATED 0/false, not a measurement. Published by the
+     * bridge since v10.0.4 and dropped on the floor by the client until R5;
+     * consumers must render these distinctly rather than as confident levels.
+     */
+    unconfirmed?: string[]
     config: MonitorConfig
 }
 

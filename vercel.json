@@ -43,6 +43,18 @@
         {
             "path": "/api/cron/disable-expired-test-accounts",
             "schedule": "0 * * * *"
+        },
+        {
+            "path": "/api/cron/bridge-watch",
+            "schedule": "0 14 * * *"
+        },
+        {
+            "path": "/api/cron/bridge-watch",
+            "schedule": "0 19 * * 5"
+        },
+        {
+            "path": "/api/cron/bridge-watch",
+            "schedule": "30 21 * * 5"
         }
     ]
 }

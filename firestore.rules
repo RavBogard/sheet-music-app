@@ -531,6 +531,30 @@ service cloud.firestore {
       allow update, delete: if false; // Bridge deletes via Admin SDK
     }
 
+    // Monitor command ACKS — the bridge's per-command verdict (applied /
+    // rejected+reason / timeout), written by the Admin SDK and read by the iPad
+    // that issued the command.
+    //
+    // R2: this match did not exist, so the deny-all fallback applied and NO
+    // client could ever read an ack. The bridge classified every failure
+    // precisely — `unauthorized`, `bridge-standby`, `superseded`, malformed, X32
+    // error — and every one of them reached the musician as the same wordless
+    // 2s spinner-then-revert. The only reader was the MCP `get_command_status`
+    // tool via the Admin SDK, i.e. Daniel, after the fact.
+    //
+    // Scoped exactly like the sibling `pending` match: real membership (NOT bare
+    // isSignedIn, so a pending/denied account reads nothing) plus
+    // self-attribution — a musician may read the verdicts on their OWN commands
+    // and no one else's. `uid` is stamped by the bridge's AckWriter from the
+    // originating command; an ack written without one (a pre-uid bridge) is
+    // therefore unreadable rather than world-readable, which is the safe
+    // direction to fail.
+    match /monitor-live/commands/acks/{commandId} {
+      allow read: if (isMember() || isSoundEngineer())
+                  && resource.data.uid == request.auth.uid;
+      allow write: if false; // Bridge writes via Admin SDK only
+    }
+
     // System-wide alerts (read by all signed-in users, written by admins).
     match /system/globalAlert {
       allow read:  if isSignedIn();

@@ -30,12 +30,50 @@ export function isBridgeOnline(bridge?: BridgeStatus): boolean {
 }
 
 /**
+ * R7 \u2014 is the MIXER itself unreachable, as opposed to the state pipeline being
+ * wedged?
+ *
+ * The bridge publishes `x32Connected` FOLDED: `socketAlive && stateAgeMs < 30s`.
+ * That fold is right for a status light (it refuses to show green over dead
+ * writes) and catastrophically wrong as a permission to disable faders \u2014 a
+ * Firestore write stall on congested venue WiFi flips it false while the OSC
+ * socket, and therefore the entire command path, is perfectly healthy.
+ *
+ * `socketAlive` is the raw, unfolded bit (bridge v10.0.4+) and is the only
+ * honest answer to "can a command still reach the desk?". Older bridges don't
+ * publish it, so we fall back to the folded bit for them \u2014 the previous
+ * behaviour, preserved deliberately rather than assuming reachability we cannot
+ * observe.
+ */
+export function isMixerUnreachable(bridge?: BridgeStatus): boolean {
+    if (!bridge) return false
+    if (typeof bridge.socketAlive === "boolean") return !bridge.socketAlive
+    return bridge.x32Connected === false
+}
+
+/**
+ * R7 \u2014 the bridge and the desk are both fine, but the state pipeline is behind
+ * (folded `x32Connected` false while `socketAlive` is true). Faders MUST stay
+ * live here; this drives a quiet "Syncing\u2026" hint instead.
+ */
+export function isStateSyncing(bridge?: BridgeStatus): boolean {
+    if (!bridge) return false
+    if (bridge.socketAlive !== true) return false // unknown or dead socket \u2192 not this case
+    return bridge.x32Connected === false
+}
+
+/**
  * Returns a human-readable bridge status message, or null if everything is fine.
+ *
+ * R7: a syncing state pipeline deliberately returns null. `QuickMonitorPanel`
+ * uses this message as an EARLY RETURN \u2014 a non-null value replaces the whole
+ * fader panel with a line of text \u2014 so returning "mixer disconnected" during a
+ * Firestore stall took every fader off a musician's screen on a healthy desk.
  */
 export function getBridgeStatusMessage(bridge?: BridgeStatus): string | null {
     if (!bridge?.lastSeen) return null
     if (!isBridgeOnline(bridge)) return "Bridge is offline"
-    if (bridge.x32Connected === false) return "Bridge online \u2014 mixer disconnected"
+    if (isMixerUnreachable(bridge)) return "Bridge online \u2014 mixer disconnected"
     return null
 }
 
@@ -69,8 +107,14 @@ export function getConnectionDisplayState(
         return { label: "Bridge offline", color: "bg-red-500", isAnimated: false }
     }
 
-    if (bridge && bridge.x32Connected === false) {
+    if (bridge && isMixerUnreachable(bridge)) {
         return { label: "Mixer disconnected", color: "bg-yellow-500", isAnimated: false }
+    }
+
+    // R7: state pipeline behind, control path fine. Named distinctly so nobody
+    // reads "Mixer disconnected" off a desk that is answering commands.
+    if (bridge && isStateSyncing(bridge)) {
+        return { label: "Syncing…", color: "bg-yellow-500", isAnimated: false }
     }
 
     return { label: "Connected", color: "bg-green-500", isAnimated: false }
@@ -87,12 +131,21 @@ export function getConnectionDisplayState(
  * control path still works, so blocking interaction would wrongly stop a
  * musician on a healthy-but-idle desk. Staleness is surfaced non-blockingly via
  * the per-fader cue + Live/Stale badge (see `useMonitorStaleness`).
+ *
+ * R7 (2026-08-31): that reasoning was written here and then bypassed one line
+ * later, because the last condition read the FOLDED `x32Connected`
+ * (`socketAlive && stateAgeMs < 30s`). A >30s Firestore write stall therefore
+ * did exactly what the paragraph above forbids: `pointer-events-none` over every
+ * fader, "Mixer offline — last known levels", mid-service, on a desk that was
+ * answering commands the whole time. The gate now asks the only question that
+ * justifies taking control away — is the OSC socket down — and routes a wedged
+ * state pipeline to the non-blocking Syncing hint instead.
  */
 export function isMixerOffline(status: ConnectionStatus, bridge?: BridgeStatus): boolean {
     if (status === "disconnected" || status === "error") return true
     if (!bridge) return false
     if (!isBridgeOnline(bridge)) return true
-    return bridge.x32Connected === false
+    return isMixerUnreachable(bridge)
 }
 
 // ─── ConnectionIndicator component ───

@@ -6,7 +6,8 @@ import { MatrixPanel } from "@/components/monitor/MatrixPanel"
 import { BusAssignmentPanel } from "@/components/monitor/BusAssignmentPanel"
 import { DefaultChannelPicker } from "@/components/monitor/DefaultChannelPicker"
 import { ConnectionIndicator, DisconnectedOverlay, isMixerOffline } from "@/components/monitor/ConnectionIndicator"
-import { getVisibleChannels } from "@/lib/monitor-store"
+import { getVisibleChannels, useMonitorStore } from "@/lib/monitor-store"
+import { busFaderKey, sendLevelKey } from "@/lib/monitor/target-key"
 import { useMonitorStaleness } from "@/lib/monitor/use-monitor-staleness"
 import { Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -99,6 +100,10 @@ export function MonitorTabs({
     // full DisconnectedOverlay only when control is HARD-offline (bridge/X32 down).
     const { stale } = useMonitorStaleness()
     const mixerOffline = isMixerOffline(status, config?.bridge)
+    // R5 / R2: keyed by the bridge's own target-key vocabulary (see target-key.ts).
+    const unconfirmed = useMonitorStore(s => s.unconfirmed) ?? []
+    const rejections = useMonitorStore(s => s.rejections) ?? {}
+    const masterKey = busFaderKey(myBusIndex)
 
     return (
         <div className="max-w-lg mx-auto p-4 pb-24">
@@ -151,6 +156,8 @@ export function MonitorTabs({
                                     on={myBus.on ?? true}
                                     isMaster
                                     stale={stale} snapshotSeq={snapshotSeq}
+                                    unconfirmed={unconfirmed.includes(masterKey)}
+                                    rejection={rejections[masterKey] ?? null}
                                     onChange={onBusMaster}
                                 />
                             </div>
@@ -172,6 +179,8 @@ export function MonitorTabs({
                                                         value={send.level}
                                                         on={send.on}
                                                         stale={stale} snapshotSeq={snapshotSeq}
+                                                        unconfirmed={unconfirmed.includes(sendLevelKey(send.channelIndex, myBusIndex))}
+                                                        rejection={rejections[sendLevelKey(send.channelIndex, myBusIndex)] ?? null}
                                                         onChange={(val) => onSendLevel(send.channelIndex, val)}
                                                         onUnmuteCheck={() => onSendOn(send.channelIndex, true)}
                                                     />
@@ -202,6 +211,8 @@ export function MonitorTabs({
                             on={true}
                             isMaster
                             stale={stale} snapshotSeq={snapshotSeq}
+                            unconfirmed={unconfirmed.includes(masterKey)}
+                            rejection={rejections[masterKey] ?? null}
                             onChange={onBusMaster}
                         />
                     </div>
@@ -240,6 +251,8 @@ export function MonitorTabs({
                                                 value={send.level}
                                                 on={send.on}
                                                 stale={stale} snapshotSeq={snapshotSeq}
+                                                unconfirmed={unconfirmed.includes(sendLevelKey(send.channelIndex, myBusIndex))}
+                                                rejection={rejections[sendLevelKey(send.channelIndex, myBusIndex)] ?? null}
                                                 onChange={(val) => onSendLevel(send.channelIndex, val)}
                                                 onUnmuteCheck={() => onSendOn(send.channelIndex, true)}
                                             />

@@ -1,15 +1,17 @@
 "use client"
 
 import { useCallback, useRef, useReducer, useEffect } from "react"
-import { Loader2, Volume2, VolumeX, Clock, Check, Undo2 } from "lucide-react"
+import { Loader2, Volume2, VolumeX, Clock, Check, Undo2, Ban, HelpCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
     faderReducer,
+    humanizeRejection,
     initFaderState,
     FADER_CONFIRM_TIMEOUT_MS,
     type FaderEvent,
     type FaderMachineState,
 } from "@/lib/monitor/fader-confirmation"
+import { useFaderThrottle } from "@/lib/monitor/use-fader-throttle"
 
 interface VerticalFaderStripProps {
     label: string
@@ -22,9 +24,16 @@ interface VerticalFaderStripProps {
     stale?: boolean
     /** Authoritative snapshot sequence (store `snapshotCount`) for the confirmation machine (C-2). */
     snapshotSeq?: number
+    /** R5: the bridge could not read this value — the number shown is fabricated (B11). */
+    unconfirmed?: boolean
+    /** R2: the bridge refused this fader's last command (`seq` monotonic so repeats re-fire). */
+    rejection?: { reason: string; seq: number } | null
 }
 
 const OUTCOME_CUE_MS = 800
+
+/** A rejection carries words to read, so it lingers longer than a check/undo glyph. */
+const REJECTION_CUE_MS = 4000
 
 /**
  * Vertical fader strip for the live monitor popup.
@@ -34,12 +43,11 @@ const OUTCOME_CUE_MS = 800
  * Carries the same C-2/C-3/C-12 confirmation machine + C-6 staleness cue as the
  * horizontal `FaderStrip`, so the perform-toolbar surface is just as honest.
  */
-export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMuteToggle, stale = false, snapshotSeq = 0 }: VerticalFaderStripProps) {
+export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMuteToggle, stale = false, snapshotSeq = 0, unconfirmed = false, rejection = null }: VerticalFaderStripProps) {
     const isDraggingRef = useRef(false)
     const sliderRef = useRef<HTMLDivElement>(null)
-    const lastWriteTime = useRef<number>(0)
-    const rafRef = useRef<number | null>(null)
     const lastTapTime = useRef<number>(0)
+    const lastRejectionSeq = useRef<number>(rejection?.seq ?? 0)
 
     const [machine, dispatch] = useReducer(
         (s: FaderMachineState, e: FaderEvent) => faderReducer(s, e),
@@ -64,26 +72,28 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
         return () => clearTimeout(timer)
     }, [phase, machine.sentAt, value])
 
+    // R2: an ack said the desk refused this move — revert now, with a reason,
+    // rather than spinning out the 2s timeout wordlessly.
+    useEffect(() => {
+        if (!rejection || rejection.seq === lastRejectionSeq.current) return
+        lastRejectionSeq.current = rejection.seq
+        dispatch({ type: "rejected", value, reason: rejection.reason })
+    }, [rejection, value])
+
     useEffect(() => {
         if (outcome == null) return
-        const timer = setTimeout(() => dispatch({ type: "clear_outcome" }), OUTCOME_CUE_MS)
+        const timer = setTimeout(
+            () => dispatch({ type: "clear_outcome" }),
+            outcome === "rejected" ? REJECTION_CUE_MS : OUTCOME_CUE_MS,
+        )
         return () => clearTimeout(timer)
     }, [outcome])
 
-    // Throttle writes to parent (max 10 updates/sec)
-    const throttledOnChange = useCallback((val: number) => {
-        const now = Date.now()
-        if (now - lastWriteTime.current > 100) {
-            lastWriteTime.current = now
-            onChange(val)
-        } else {
-            if (rafRef.current) cancelAnimationFrame(rafRef.current)
-            rafRef.current = requestAnimationFrame(() => {
-                lastWriteTime.current = Date.now()
-                onChange(val)
-            })
-        }
-    }, [onChange])
+    // R4: mid-drag motion throttled; every commit (release, cancel, reset tap,
+    // keyboard nudge) sent synchronously, plus a flush on hide/pagehide/unmount.
+    // This surface is the one inside the perform popover — the popover unmounting
+    // over a just-released fader was exactly how the final value got lost.
+    const throttle = useFaderThrottle(onChange)
 
     // clientY-based vertical interaction: top=1.0, bottom=0.0
     const updateFromPointer = useCallback((clientY: number) => {
@@ -92,8 +102,8 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
         const ratio = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height))
 
         dispatch({ type: "drag_move", value: ratio })
-        throttledOnChange(ratio)
-    }, [throttledOnChange])
+        throttle.move(ratio)
+    }, [throttle])
 
     const handlePointerDown = useCallback((e: React.PointerEvent) => {
         const now = Date.now()
@@ -102,7 +112,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
             const resetVal = displayValue > 0.1 ? 0.0 : 0.75
             isDraggingRef.current = false
             dispatch({ type: "commit", value: resetVal, now })
-            throttledOnChange(resetVal)
+            throttle.commit(resetVal) // R4: a reset tap is terminal — never throttled
             return
         }
         lastTapTime.current = now
@@ -111,7 +121,7 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
         dispatch({ type: "drag_start" })
         ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
         updateFromPointer(e.clientY)
-    }, [updateFromPointer, displayValue, throttledOnChange])
+    }, [updateFromPointer, displayValue, throttle])
 
     const handlePointerMove = useCallback((e: React.PointerEvent) => {
         if (!isDraggingRef.current) return
@@ -121,17 +131,18 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
     const handlePointerUp = useCallback(() => {
         if (!isDraggingRef.current) return
         isDraggingRef.current = false
-        if (rafRef.current) cancelAnimationFrame(rafRef.current)
+        // R4: synchronous — the drop value must not wait on an animation frame
+        // the closing popover will never run.
         dispatch({ type: "commit", value: displayValue, now: Date.now() })
-        throttledOnChange(displayValue)
-    }, [displayValue, throttledOnChange])
+        throttle.commit(displayValue)
+    }, [displayValue, throttle])
 
     // Keyboard nudges are discrete sent values → commit (optimistic + pending).
     const nudge = useCallback((newVal: number) => {
         const clamped = Math.max(0, Math.min(1, newVal))
         dispatch({ type: "commit", value: clamped, now: Date.now() })
-        throttledOnChange(clamped)
-    }, [throttledOnChange])
+        throttle.commit(clamped) // R4: a nudge is a discrete sent value, not motion
+    }, [throttle])
 
     const percentage = Math.round(displayValue * 100)
     const fillHeight = `${percentage}%`
@@ -142,11 +153,15 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
         ? "duration-75"
         : "duration-300 ease-out motion-reduce:transition-none"
     const showStale = stale && phase === "idle"
+    // R5: only while showing the desk's own (fabricated) value.
+    const showUnconfirmed = unconfirmed && phase === "idle"
     const outcomeRing = outcome === "confirmed"
         ? "ring-2 ring-emerald-400/60"
-        : outcome === "reverted"
-            ? "ring-2 ring-amber-400/60"
-            : "ring-0 ring-transparent"
+        : outcome === "rejected"
+            ? "ring-2 ring-red-400/60"
+            : outcome === "reverted"
+                ? "ring-2 ring-amber-400/60"
+                : "ring-0 ring-transparent"
 
     return (
         <div
@@ -197,12 +212,22 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
                     nudge(newVal)
                 }}
             >
-                {/* Fill bar from bottom up */}
+                {/* Fill bar from bottom up. R5: faint + hatched when the bridge could
+                    not read this level — a fabricated 0 must not look like a measured 0. */}
                 <div
-                    className={`absolute bottom-0 left-0 right-0 transition-[height,opacity] ${barMotion} ${barOpacity} ${
+                    data-testid={showUnconfirmed ? "vfader-unconfirmed-fill" : undefined}
+                    className={`absolute bottom-0 left-0 right-0 transition-[height,opacity] ${barMotion} ${showUnconfirmed ? "opacity-30" : barOpacity} ${
                         isMaster ? "bg-brand/60" : "bg-brand/50"
                     }`}
-                    style={{ height: fillHeight }}
+                    style={{
+                        height: fillHeight,
+                        ...(showUnconfirmed
+                            ? {
+                                backgroundImage:
+                                    "repeating-linear-gradient(45deg, rgba(255,255,255,0.28) 0 4px, transparent 4px 8px)",
+                            }
+                            : {}),
+                    }}
                 />
 
                 {/* Status cue (pending / confirmed / reverted / stale) — color-not-alone via glyph + aria-label */}
@@ -221,12 +246,26 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
                             aria-label="Level confirmed by the mixer"
                             className="w-3.5 h-3.5 text-emerald-400"
                         />
+                    ) : outcome === "rejected" ? (
+                        <Ban
+                            data-testid="vfader-rejected-cue"
+                            role="img"
+                            aria-label="Refused by the mixer"
+                            className="w-3.5 h-3.5 text-red-400"
+                        />
                     ) : outcome === "reverted" ? (
                         <Undo2
                             data-testid="vfader-reverted-cue"
                             role="img"
                             aria-label="No confirmation — reset to the mixer's level"
                             className="w-3.5 h-3.5 text-amber-400"
+                        />
+                    ) : showUnconfirmed ? (
+                        <HelpCircle
+                            data-testid="vfader-unconfirmed-cue"
+                            role="img"
+                            aria-label="Level unknown — could not read this from the desk"
+                            className="w-3 h-3 text-muted-foreground"
                         />
                     ) : showStale ? (
                         <Clock
@@ -240,9 +279,27 @@ export function VerticalFaderStrip({ label, value, on, isMaster, onChange, onMut
             </div>
 
             {/* Percentage value */}
-            <div className={`text-[10px] font-mono font-bold mt-1 mb-0.5 ${showStale ? "text-yellow-500/90" : "text-muted-foreground/70"}`}>
-                {percentage}%
+            <div
+                className={`text-[10px] font-mono font-bold mt-1 mb-0.5 ${showUnconfirmed
+                    ? "text-muted-foreground/60 italic"
+                    : showStale
+                        ? "text-yellow-500/90"
+                        : "text-muted-foreground/70"}`}
+                title={showUnconfirmed ? "Could not read this level from the desk" : undefined}
+            >
+                {showUnconfirmed ? `~${percentage}%` : `${percentage}%`}
             </div>
+
+            {/* R2: the reason, in words. Narrow column, so it wraps to two short
+                lines rather than pushing the fader row wider. */}
+            {outcome === "rejected" && (
+                <div
+                    data-testid="vfader-rejection-reason"
+                    className="text-[9px] leading-tight text-center text-red-400 max-w-[56px] mb-0.5"
+                >
+                    {humanizeRejection(machine.rejectionReason ?? undefined)}
+                </div>
+            )}
 
             {/* Mute button */}
             <Button

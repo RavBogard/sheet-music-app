@@ -65,6 +65,15 @@ export interface GetBridgeHealthResult {
     stateStale: boolean
     /** Whether the single-writer lease has expired; null when no lease present. */
     leaseExpired: boolean | null
+    /**
+     * R1 (bridge v10.0.8) — a bridge that is UP but not elected. `null` means no
+     * standby marker, which now genuinely means "nothing standing by" rather than
+     * "we can't tell": a standby publishes `config/monitor.bridgeStandby` every
+     * ≤15s. A live standby alongside `alive: false` is the crash-relaunch/takeover
+     * signature — someone IS at the venue PC, they just don't hold the lease yet.
+     * Null against a pre-v10.0.8 bridge, which wrote nothing while standing by.
+     */
+    standby: { ageS: number | null; instanceId: string | null; machineId: string | null } | null
     /** Raw last-write-wins heartbeat fields (may LIE once the bridge is down). */
     status: "online" | "offline" | null
     x32Connected: boolean | null
@@ -124,6 +133,27 @@ export async function getBridgeHealth(
             typeof lease?.expiresAt === "number" ? lease.expiresAt < now : null
         const stale = isStateStale(stateAgeS)
 
+        // R1 — standby liveness. Read defensively: absent on every bridge before
+        // v10.0.8, and absent (correctly) whenever the local bridge is ACTIVE.
+        const standbyRaw = (
+            config as {
+                bridgeStandby?: {
+                    lastSeen?: unknown
+                    instanceId?: unknown
+                    machineId?: unknown
+                }
+            }
+        ).bridgeStandby
+        const standby = standbyRaw
+            ? {
+                  ageS: computeStateAgeSeconds(standbyRaw.lastSeen, now),
+                  instanceId:
+                      typeof standbyRaw.instanceId === "string" ? standbyRaw.instanceId : null,
+                  machineId:
+                      typeof standbyRaw.machineId === "string" ? standbyRaw.machineId : null,
+              }
+            : null
+
         const summary = !bridge
             ? "No bridge heartbeat has ever been written (config/monitor.bridge is absent)."
             : alive
@@ -133,7 +163,10 @@ export async function getBridgeHealth(
                     : "")
               : `Bridge appears DOWN — last heartbeat ${
                     lastSeenAgeS == null ? "never" : `${lastSeenAgeS}s`
-                } ago. The status/x32Connected fields are last-write-wins and may still read "online".`
+                } ago. The status/x32Connected fields are last-write-wins and may still read "online".` +
+                (standby
+                    ? ` A STANDBY bridge is present (last marker ${standby.ageS ?? "?"}s ago) — a process IS running at the venue, it just doesn't hold the single-writer lease yet.`
+                    : "")
 
         return {
             ok: true,
@@ -143,6 +176,7 @@ export async function getBridgeHealth(
             stateAgeS,
             stateStale: stale,
             leaseExpired,
+            standby,
             status: bridge?.status ?? null,
             x32Connected:
                 typeof bridge?.x32Connected === "boolean"

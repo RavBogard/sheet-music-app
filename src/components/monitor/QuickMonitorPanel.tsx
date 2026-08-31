@@ -12,7 +12,8 @@ import { doc, getDoc } from "firebase/firestore"
 import { getDb } from "@/lib/firebase"
 import { Loader2, Wifi, WifiOff, Server, ServerOff, Clock, X } from "lucide-react"
 import { ScrollFade } from "@/components/ui/scroll-fade"
-import { getBridgeStatusMessage, isMixerOffline, DisconnectedOverlay } from "@/components/monitor/ConnectionIndicator"
+import { getBridgeStatusMessage, isMixerOffline, isStateSyncing, DisconnectedOverlay } from "@/components/monitor/ConnectionIndicator"
+import { busFaderKey, sendLevelKey } from "@/lib/monitor/target-key"
 
 /**
  * Compact monitor mixer panel for the performance toolbar.
@@ -46,6 +47,13 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
     const myBusIndex = useMonitorStore(s => s.myBusIndex)
     // C-2: authoritative-snapshot counter for the fader confirmation machine.
     const snapshotSeq = useMonitorStore(s => s.snapshotCount)
+    // R5 / R2: the bridge's "could not read this" list and its per-command
+    // verdicts, both keyed by the bridge's own target-key vocabulary.
+    // Defaulted at the selector: a partial store (an older persisted shape, or a
+    // test fixture) must degrade to "nothing flagged", never throw inside the
+    // panel a musician is holding mid-service.
+    const unconfirmed = useMonitorStore(s => s.unconfirmed) ?? []
+    const rejections = useMonitorStore(s => s.rejections) ?? {}
     const starredChannels = useMonitorStore(s => s.starredChannels)
     const defaultChannels = useMonitorStore(s => s.defaultChannels)
     const setStarredChannels = useMonitorStore(s => s.setStarredChannels)
@@ -166,6 +174,9 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
     }
 
     const mixerOffline = isMixerOffline(status, config?.bridge)
+    // R7: bridge + desk healthy, state pipeline behind. Faders stay interactive;
+    // optimistic writes still queue and still reach the desk.
+    const syncing = isStateSyncing(config?.bridge)
 
     return (
         <div className="w-full h-full flex flex-col">
@@ -180,10 +191,13 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    {config?.bridge?.x32Connected === false ? (
+                    {/* R7: a wedged state pipeline is a QUIET hint, not "No mixer" and
+                        certainly not a reason to disable anything — the desk is still
+                        taking commands. Only a genuinely unreachable mixer says so. */}
+                    {syncing ? (
                         <div className="flex items-center gap-1.5">
-                            <Server className="w-3 h-3 text-yellow-500" />
-                            <span className="text-[10px] text-yellow-500">No mixer</span>
+                            <Server className="w-3 h-3 text-muted-foreground" />
+                            <span className="text-[10px] text-muted-foreground">Syncing…</span>
                         </div>
                     ) : stale ? (
                         // C-6: honest staleness — don't show a green "Live" over a frozen desk.
@@ -225,6 +239,8 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
                         isMaster
                         stale={stale}
                         snapshotSeq={snapshotSeq}
+                        unconfirmed={unconfirmed.includes(busFaderKey(myBusIndex))}
+                        rejection={rejections[busFaderKey(myBusIndex)] ?? null}
                         onChange={handleBusMaster}
                         onMuteToggle={() => handleBusOn(!(myBus.on ?? true))}
                     />
@@ -251,6 +267,8 @@ export function QuickMonitorPanel({ onClose }: QuickMonitorPanelProps = {}) {
                                     on={send.on}
                                     stale={stale}
                                     snapshotSeq={snapshotSeq}
+                                    unconfirmed={unconfirmed.includes(sendLevelKey(send.channelIndex, myBusIndex))}
+                                    rejection={rejections[sendLevelKey(send.channelIndex, myBusIndex)] ?? null}
                                     onChange={(val) => handleSendLevel(send.channelIndex, val)}
                                     onMuteToggle={() => handleSendOn(send.channelIndex, !send.on)}
                                 />

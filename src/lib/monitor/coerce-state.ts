@@ -65,6 +65,14 @@ export function coerceMixerSnapshot(raw: unknown): MixerSnapshot {
             }
         }) as BusInfo[],
         matrices: coerceArray<MatrixInfo>(data.matrices),
+        // R5: carry the bridge's B11 `unconfirmed` list through instead of
+        // dropping it. Dropping it was how a value the bridge explicitly flagged
+        // as "could not read — this 0 is fabricated" reached a musician as a
+        // confident 0%. Coerced + filtered to strings so a corrupted field
+        // degrades to "nothing is flagged" rather than throwing at render.
+        unconfirmed: coerceArray<unknown>(data.unconfirmed).filter(
+            (k): k is string => typeof k === "string",
+        ),
         config: data.config as MixerSnapshot["config"],
     }
 }

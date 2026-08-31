@@ -36,8 +36,28 @@
  * `displayValue` change via a CSS transition.
  */
 
+/**
+ * R2 — musician-facing wording for the bridge's own rejection reasons.
+ *
+ * The bridge writes engineering strings ("unauthorized", "bridge-standby",
+ * "superseded by a newer command for the same target"). A musician mid-service
+ * needs to know one thing: is this me, is this the system, or is this nothing?
+ * Matching is substring-based because the X32-error branch passes an arbitrary
+ * `Error.message` straight through — anything unrecognized falls back to a plain
+ * honest sentence rather than printing a stack-flavoured string onto a fader.
+ */
+export function humanizeRejection(reason: string | undefined): string {
+    const r = (reason || "").toLowerCase()
+    if (r.includes("unauthorized")) return "No permission for this bus"
+    if (r.includes("standby")) return "Bridge is restarting"
+    if (r.includes("superseded")) return "Superseded"
+    if (r.includes("unknown or malformed")) return "Mixer didn't understand that"
+    if (r.includes("stale")) return "Took too long — try again"
+    return "The mixer refused that"
+}
+
 export type FaderPhase = "idle" | "dragging" | "pending"
-export type FaderOutcome = "confirmed" | "reverted" | null
+export type FaderOutcome = "confirmed" | "reverted" | "rejected" | null
 
 export interface FaderMachineState {
     phase: FaderPhase
@@ -51,6 +71,12 @@ export interface FaderMachineState {
     lastSeq: number
     /** Momentary reconciliation result for the UI cue; cleared via `clear_outcome`. */
     outcome: FaderOutcome
+    /**
+     * R2: why the desk refused this move, in words a musician can act on
+     * ("Not your bus" / "Bridge restarting"). Set only alongside
+     * `outcome: "rejected"`; null otherwise.
+     */
+    rejectionReason: string | null
 }
 
 export interface FaderConfig {
@@ -86,6 +112,12 @@ export type FaderEvent =
     | { type: "commit"; value: number; now: number }
     | { type: "external"; value: number; seq: number; now: number }
     | { type: "tick"; value: number; now: number }
+    /**
+     * R2: the bridge wrote a `rejected` ack for this fader's command. The desk
+     * never moved, so `value` (the store's rolled-back authoritative value) is
+     * the truth RIGHT NOW — no need to sit out the 2s timeout.
+     */
+    | { type: "rejected"; value: number; reason: string }
     | { type: "clear_outcome" }
 
 /** Initial machine state showing `value`, anchored to authoritative sequence `seq`. */
@@ -97,6 +129,7 @@ export function initFaderState(value: number, seq = 0): FaderMachineState {
         sentAt: null,
         lastSeq: seq,
         outcome: null,
+        rejectionReason: null,
     }
 }
 
@@ -109,7 +142,7 @@ export function faderReducer(
     switch (event.type) {
         case "drag_start":
             // Begin a drag; clear any lingering outcome cue.
-            return { ...state, phase: "dragging", outcome: null }
+            return { ...state, phase: "dragging", outcome: null, rejectionReason: null }
 
         case "drag_move":
             return { ...state, phase: "dragging", displayValue: event.value }
@@ -124,6 +157,7 @@ export function faderReducer(
                 optimisticValue: event.value,
                 sentAt: event.now,
                 outcome: null,
+                rejectionReason: null,
             }
 
         case "external": {
@@ -182,6 +216,28 @@ export function faderReducer(
             return { ...state, lastSeq: event.seq }
         }
 
+        case "rejected": {
+            // R2: an authoritative "no". Before this, every rejection class
+            // (unauthorized / bridge-standby / superseded / malformed) was
+            // indistinguishable from ordinary latency — the knob span for 2s and
+            // eased back wordlessly. A rejection is terminal information, so it
+            // reverts IMMEDIATELY and carries its reason to the cue.
+            //
+            // Ignored while `dragging`: the musician still has a finger on the
+            // knob, and yanking it mid-drag is the very thing C-12 exists to
+            // prevent. The ack for their eventual release will speak for itself.
+            if (state.phase === "dragging") return state
+            return {
+                ...state,
+                phase: "idle",
+                displayValue: event.value,
+                optimisticValue: null,
+                sentAt: null,
+                outcome: "rejected",
+                rejectionReason: event.reason,
+            }
+        }
+
         case "tick": {
             // Wall-clock check so a timeout fires even when NO new snapshot
             // arrives. Never confirms (the `value` here may be our optimistic
@@ -204,7 +260,9 @@ export function faderReducer(
         }
 
         case "clear_outcome":
-            return state.outcome === null ? state : { ...state, outcome: null }
+            return state.outcome === null && state.rejectionReason === null
+                ? state
+                : { ...state, outcome: null, rejectionReason: null }
 
         default:
             return state
