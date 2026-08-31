@@ -277,7 +277,18 @@ function clean(s: unknown): string {
     // existing bullet separators (U+2022, used in the congregation's configured
     // printFooter) into question marks. U+00B7 MIDDLE DOT is inside WinAnsi and
     // is the separator glyph the rabbi's service sheet already uses.
-    return toWinAnsi(s.replace(/•/g, "·")).trim()
+    return toWinAnsi(s.replace(/•/g, "·"))
+        // Control characters are the asymmetric trap: pdf-lib's drawText
+        // TOLERATES them (it splits lines on \n) but widthOfTextAtSize THROWS.
+        // Any cell that is measured therefore rejects the entire packet. Track
+        // notes are edited in a free multi-line <textarea>
+        // (grid/MobileRowCard.tsx), so a newline here is ordinary use, not a
+        // synthetic input. toWinAnsi leaves them alone — they are all inside
+        // 0x00-0xFF — so they have to be stripped here. Collapsing whitespace
+        // afterwards keeps a wrapped note from printing as a ragged gap.
+        .replace(/[\x00-\x1f\x7f-\x9f]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
 }
 
 async function buildCoverPage(
@@ -431,7 +442,10 @@ async function buildCoverPage(
         if (trackType === 'header') {
             // Capped against the reserved folio column, not just the nominal 300.
             const headerMax = Math.max(40, Math.min(300, rowRight - colTitle))
-            let headerTitle = songTitle.toUpperCase()
+            // Re-cleaned AFTER the case fold: case folding can leave WinAnsi.
+            // "µ" (U+00B5) upper-cases to U+039C GREEK CAPITAL MU, and the
+            // very next line measures it.
+            let headerTitle = clean(songTitle.toUpperCase())
             while (finalTitleSize > 7 && helveticaBold.widthOfTextAtSize(headerTitle, finalTitleSize) > headerMax) finalTitleSize -= 0.5
             if (helveticaBold.widthOfTextAtSize(headerTitle, finalTitleSize) > headerMax) {
                 let truncateLen = headerTitle.length
@@ -451,14 +465,19 @@ async function buildCoverPage(
             }
         }
 
-        const key = isServiceFlow ? "" : (clean(track.key) || "-")
+        const cleanKey = clean(track.key)
+        const key = isServiceFlow ? "" : (cleanKey || "-")
         const maxLeadLen = hasTranspositions ? 12 : 15
         const lead = isServiceFlow ? clean(track.performer) : clean(track.leadMusician)
         const leadDisplay = lead.length > maxLeadLen
             ? lead.substring(0, maxLeadLen - 3) + "..." : lead
 
+        // estimatedMinutes is typed `number`, but /api/setlist/print validates
+        // its tracks with `z.array(z.any())` passthrough, so at runtime it is
+        // whatever the client sent. Interpolating it unsanitised would put an
+        // arbitrary string into a measured cell.
         let notesStr = isServiceFlow
-            ? (track.estimatedMinutes ? `~${track.estimatedMinutes} min` : "")
+            ? (track.estimatedMinutes ? clean(`~${track.estimatedMinutes} min`) : "")
             : clean(track.notes)
         if (!isServiceFlow && track.capoFret && track.capoFret > 0) {
             const capoNote = `Capo ${track.capoFret}`
@@ -484,8 +503,12 @@ async function buildCoverPage(
             notesDisplay = helveticaOblique.widthOfTextAtSize(candidate, 9) <= notesMaxW ? candidate : ""
         }
 
-        const transKey = (!isServiceFlow && track.transposition && track.transposition !== 0 && track.key)
-            ? getTransposedKeyName(track.key, track.transposition) : null
+        // Built from the CLEANED key, and cleaned again on the way out:
+        // getTransposedKeyName returns its input unchanged when the key doesn't
+        // match ^[A-G], so an unsanitised key would pass straight through to
+        // drawText even though the adjacent key cell is clean.
+        const transKey = (!isServiceFlow && track.transposition && track.transposition !== 0 && cleanKey)
+            ? clean(getTransposedKeyName(cleanKey, track.transposition)) : null
 
         rowNum++
 
@@ -539,6 +562,15 @@ async function buildCoverPage(
 /**
  * Render a non-song service flow item (header, reading, prayer, transition, note)
  * as a formatted label/card in the printed PDF.
+ *
+ * DEAD CODE — nothing calls this. Service-flow rows have no `fileId`, and
+ * `generatePrintPdf` skips them outright ("they appear on cover page only"), so
+ * the cover-page table in `buildCoverPage` is the only place such a row is drawn.
+ *
+ * It is also the ONLY drawing code in this file that does not sanitise: every
+ * `drawText`/`widthOfTextAtSize` below takes a raw `track.*` string, and
+ * `widthOfTextAtSize` throws on a control character or any codepoint outside
+ * WinAnsi. If you ever wire this up, route every string through `clean()` first.
  */
 async function renderServiceFlowItem(
     doc: PDFDocument,

@@ -374,6 +374,82 @@ describe("gig packet cover page — liturgyRef folio column", () => {
         for (const t of texts) expect(/[^\x00-\xff]/.test(t)).toBe(false)
     })
 
+    // ── Sanitisation regressions (fix round 1) ───────────────────────────────
+    //
+    // Every one of these throws out of `generatePrintPdf` before the clean()
+    // hardening: pdf-lib's drawText TOLERATES control characters (it splits on
+    // \n) but widthOfTextAtSize THROWS on them, so any measured cell rejects the
+    // whole packet. The width-cap added for the folio column is what made the
+    // notes cell measured for the first time.
+
+    /** No codepoint outside WinAnsi survived into the content stream. */
+    const expectWinAnsiSafe = (texts: string[]) => {
+        for (const t of texts) {
+            expect([...t].some(c => (c.codePointAt(0) ?? 0) > 0xff), JSON.stringify(t) + " carries a non-WinAnsi codepoint").toBe(false)
+            expect([...t].some(c => { const v = c.codePointAt(0) ?? 0; return v < 0x20 || (v >= 0x7f && v <= 0x9f) }), JSON.stringify(t) + " carries a control character").toBe(false)
+        }
+    }
+
+    it("REGRESSION 1: a multi-line note does not reject the packet", async () => {
+        // src/components/setlist/grid/MobileRowCard.tsx binds `notes` to a free
+        // two-row <textarea> ("Add lyrics, chords, or performance notes…"), so a
+        // newline here is ordinary use, not a synthetic input. Measured for the
+        // first time by the folio width-cap → `WinAnsi cannot encode "\n"`.
+        const res = await generatePrintPdf(
+            req([{ title: "Adon Olam", key: "D", notes: "hold\ncut", type: "song" }]),
+        )
+        const { items } = await readCover(res.pdf)
+        const texts = items.map(i => i.text)
+        // The newline collapses to a single space rather than a ragged gap.
+        expect(texts).toContain("hold cut")
+        expect(texts).toContain("Adon Olam")
+        expectWinAnsiSafe(texts)
+    })
+
+    it("REGRESSION 2: a non-Latin key with a transposition does not throw", async () => {
+        // getTransposedKeyName returns its input UNCHANGED when the key doesn't
+        // match ^[A-G], so a raw key reached drawText even though the adjacent
+        // key cell was cleaned.
+        const res = await generatePrintPdf(
+            req([{ title: "Hashkivenu", key: "ש", notes: "", type: "song", transposition: 2 }]),
+        )
+        const { items } = await readCover(res.pdf)
+        const texts = items.map(i => i.text)
+        expect(texts).toContain("Hashkivenu")
+        // hasTranspositions → the "As" (transposed key) column is present.
+        expect(texts).toContain("As")
+        expectWinAnsiSafe(texts)
+    })
+
+    it("REGRESSION 3: a header title that case-folds outside WinAnsi does not throw", async () => {
+        // clean() ran BEFORE toUpperCase, and "µ" (U+00B5, inside WinAnsi)
+        // upper-cases to U+039C GREEK CAPITAL MU, which is not.
+        const res = await generatePrintPdf(
+            req([{ title: "Kol µ Nidre", key: "", notes: "", type: "header" }]),
+        )
+        const { items } = await readCover(res.pdf)
+        const texts = items.map(i => i.text)
+        expect(texts.some(t => t.startsWith("KOL "))).toBe(true)
+        expectWinAnsiSafe(texts)
+    })
+
+    it("REGRESSION 4: a multi-line TITLE does not throw (pre-existing, closed by the same fix)", async () => {
+        // This one predates the folio work — the title-fit measurement loop has
+        // always measured the title. Titles already route through clean(), so
+        // hardening clean() closes it too.
+        const res = await generatePrintPdf(
+            req([
+                { title: "Adon\nOlam", key: "C", notes: "", type: "song" },
+                { title: "Yih'yu\tL'ratzon", key: "", notes: "", type: "header" },
+            ]),
+        )
+        const { items } = await readCover(res.pdf)
+        const texts = items.map(i => i.text)
+        expect(texts).toContain("Adon Olam")
+        expect(texts).toContain("YIH'YU L'RATZON")
+        expectWinAnsiSafe(texts)
+    })
+
     it("NEGATIVE CONTROL: the overlap checker actually fires on an overlapping row", async () => {
         // Evidence that AC-4 is not vacuously green. Hand-build the exact defect
         // AC-4 forbids — an unmeasured notes cell drawn over the folio column and
