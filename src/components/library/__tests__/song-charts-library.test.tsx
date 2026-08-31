@@ -1,6 +1,28 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react"
 import { DriveFile } from "@/types/models"
+
+// The row list is virtualized (@tanstack/react-virtual, same pattern as
+// components/performance/SetlistDrawer.tsx). jsdom reports every element as
+// 0x0, so the real virtualizer would window down to ~1 row and these tests
+// would assert on layout rather than on behaviour. Mock it to yield EVERY
+// index — identical to the precedent in
+// src/components/performance/__tests__/setlist-drawer.test.tsx.
+vi.mock("@tanstack/react-virtual", () => ({
+    useVirtualizer: (opts: { count: number }) => ({
+        getTotalSize: () => opts.count * 64,
+        getVirtualItems: () =>
+            Array.from({ length: opts.count }, (_, index) => ({
+                index,
+                key: index,
+                size: 64,
+                start: index * 64,
+            })),
+        measure: vi.fn(),
+        measureElement: vi.fn(),
+        scrollToIndex: vi.fn(),
+    }),
+}))
 
 // Hoisted mocks
 const mockSetFilter = vi.hoisted(() => vi.fn())
@@ -33,9 +55,11 @@ vi.mock("@/lib/store", () => ({
 
 // Mock auth (mutable isAdmin so the v11.1-03 admin-only "All sites" toggle can
 // be tested for both roles; defaults to admin to preserve existing tests).
-const authState = vi.hoisted(() => ({ isAdmin: true }))
+// `user` must be truthy or the usage-fetch effect early-returns (it waits for
+// the Firebase client auth token).
+const authState = vi.hoisted(() => ({ isAdmin: true, user: { uid: "test-uid" } as { uid: string } | null }))
 vi.mock("@/lib/auth-context", () => ({
-    useAuth: () => ({ isAdmin: authState.isAdmin, isBandLeader: true, profile: {}, canUpload: true }),
+    useAuth: () => ({ isAdmin: authState.isAdmin, isBandLeader: true, profile: {}, canUpload: true, user: authState.user }),
 }))
 
 // Mock congregation
@@ -113,13 +137,21 @@ vi.mock("@/components/ui/illustrations", () => ({
     EmptyAudioIllustration: () => <div data-testid="empty-audio-illustration" />,
 }))
 vi.mock("../LibraryFileRow", () => ({
-    LibraryFileRow: ({ item, onClick, selectMode, isSelected, onToggleSelect }: {
+    LibraryFileRow: ({ item, onClick, selectMode, isSelected, onToggleSelect, usageInfo }: {
         item: DriveFile; onClick: () => void; selectMode: boolean; isSelected: boolean;
         onToggleSelect: (id: string) => void
+        usageInfo?: { lastUsedDate: string; totalUses: number } | null
     }) => (
         <div data-testid={`file-row-${item.id}`} onClick={selectMode ? () => onToggleSelect(item.id) : onClick}>
             <span>{item.name}</span>
             {selectMode && <span data-testid={`selected-${item.id}`}>{isSelected ? "selected" : "unselected"}</span>}
+            {/* Mirrors the real row's "last used" badge — present only when the
+                component actually received usage data for this chart. */}
+            {usageInfo && (
+                <span data-testid={`usage-${item.id}`}>
+                    {usageInfo.lastUsedDate}|{usageInfo.totalUses}
+                </span>
+            )}
         </div>
     ),
 }))
@@ -146,11 +178,31 @@ vi.mock("../SelectionActionBar", () => ({
         </div>
     ) : null,
 }))
-vi.mock("../LibraryFilters", () => ({
-    LibraryFilters: () => <div data-testid="library-filters" />,
-    applyLibraryFilters: (files: DriveFile[]) => files,
-    createEmptyFilters: () => ({}),
-}))
+// Keep the REAL `applyLibraryFilters` / `createEmptyFilters` so the Recency
+// behaviour under test is the shipped implementation, not a stub. Only the
+// visual chip row is replaced — with a probe that exposes whether the parent
+// considers the usage map complete (it passes `undefined` while incomplete),
+// plus a button to drive the recency filter without the real chip UI.
+vi.mock("../LibraryFilters", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("../LibraryFilters")>()
+    return {
+        ...actual,
+        LibraryFilters: ({ filters, onFiltersChange, usageMap }: {
+            filters: import("../LibraryFilters").LibraryFilterState
+            onFiltersChange: (f: import("../LibraryFilters").LibraryFilterState) => void
+            usageMap?: Record<string, { lastUsedDate: string; totalUses: number } | null>
+        }) => (
+            <div data-testid="library-filters" data-recency-available={usageMap ? "yes" : "no"}>
+                <button
+                    data-testid="set-recency-recent"
+                    onClick={() => onFiltersChange({ ...filters, recency: "recent" })}
+                >
+                    Recent
+                </button>
+            </div>
+        ),
+    }
+})
 vi.mock("@/components/audio/AudioPlayer", () => ({
     AudioPlayer: () => <div data-testid="audio-player" />,
 }))
@@ -189,13 +241,24 @@ const audioFile1: DriveFile = {
     id: "audio-1", name: "intro.mp3", mimeType: "audio/mpeg",
 }
 
+/** Reset apiFetch to the inert default — `clearAllMocks` keeps implementations. */
+function resetApiFetch() {
+    mockApiFetch.mockImplementation(() =>
+        Promise.resolve({ ok: true, json: () => Promise.resolve({}) }) as never
+    )
+}
+
 describe("SongChartsLibrary", () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        resetApiFetch()
         mockDisplayedFiles = [chartFile1, chartFile2]
         mockAllFiles = [chartFile1, chartFile2]
         mockInitialized = true
         authState.isAdmin = true
+        // No auth user → the usage effect early-returns, exactly as before this
+        // suite existed. The usage path has its own describe block below.
+        authState.user = null
     })
 
     // ── Rendering ──
@@ -259,11 +322,20 @@ describe("SongChartsLibrary", () => {
 
     // ── Search ──
 
+    // Fix 2 (2026-08-31): the filter push is now debounced ~180ms, so this
+    // assertion needs the timer advanced. The assertion itself is unchanged —
+    // typing still ends up calling setFilter("tovu").
     it("search input updates filter in library store", () => {
-        render(<SongChartsLibrary />)
-        const searchInput = screen.getByPlaceholderText("Search by name, key, topic...")
-        fireEvent.change(searchInput, { target: { value: "tovu" } })
-        expect(mockSetFilter).toHaveBeenCalledWith("tovu")
+        vi.useFakeTimers()
+        try {
+            render(<SongChartsLibrary />)
+            const searchInput = screen.getByPlaceholderText("Search by name, key, topic...")
+            fireEvent.change(searchInput, { target: { value: "tovu" } })
+            act(() => { vi.advanceTimersByTime(200) })
+            expect(mockSetFilter).toHaveBeenCalledWith("tovu")
+        } finally {
+            vi.useRealTimers()
+        }
     })
 
     // ── Back button ──
@@ -418,7 +490,9 @@ describe("SongChartsLibrary", () => {
 describe("SongChartsLibrary — dedupe keeps distinct arrangements", () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        resetApiFetch()
         mockInitialized = true
+        authState.user = null
     })
 
     const pdf = (id: string, name: string): DriveFile => ({ id, name, mimeType: "application/pdf" })
@@ -463,5 +537,256 @@ describe("SongChartsLibrary — dedupe keeps distinct arrangements", () => {
         expect(screen.getAllByTestId(/^file-row-/)).toHaveLength(1)
         expect(screen.getByTestId("file-row-dup-1")).toBeDefined()
         expect(screen.queryByTestId("file-row-dup-2")).toBeNull()
+    })
+})
+
+// ══════════════════════════════════════════════════════════════════════════
+// Fix 1 (2026-08-31) — usage data was silently truncated at 100 charts.
+//
+// The old effect was:
+//     const batchIds = fileIds.slice(0, 100)
+//     apiFetch(`/api/library/usage?fileIds=${batchIds.join(',')}`)
+//         .then(...).catch(() => {})
+// — one slice, no loop, and every failure swallowed. With 762 alphabetically
+// sorted charts, everything past #100 had NO usage entry: no "last used"
+// badge, and `applyLibraryFilters` read the missing entry as "never played",
+// so the Recency filter silently hid/kept the wrong charts.
+//
+// Every test below fails against that code and passes against the batched
+// implementation.
+// ══════════════════════════════════════════════════════════════════════════
+
+const USAGE_DATE = new Date().toISOString() // "recent" by definition
+
+/** Build N charts whose names sort in id order, so `chart-NNN` is alphabetical. */
+function manyCharts(n: number): DriveFile[] {
+    return Array.from({ length: n }, (_, i) => ({
+        id: `chart-${String(i).padStart(3, "0")}`,
+        name: `Song ${String(i).padStart(3, "0")}.pdf`,
+        mimeType: "application/pdf",
+    }))
+}
+
+/** apiFetch stub that answers /api/library/usage with real data for every id asked. */
+function usageRespondingApiFetch(requested: string[][]) {
+    return (url: string) => {
+        if (typeof url === "string" && url.includes("/api/library/usage")) {
+            const ids = decodeURIComponent(url.split("fileIds=")[1] ?? "")
+                .split(",")
+                .filter(Boolean)
+            requested.push(ids)
+            return Promise.resolve({
+                ok: true,
+                json: () =>
+                    Promise.resolve(
+                        Object.fromEntries(
+                            ids.map(id => [id, { lastUsedDate: USAGE_DATE, totalUses: 4 }]),
+                        ),
+                    ),
+            })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+    }
+}
+
+describe("SongChartsLibrary — usage data covers the WHOLE library (Fix 1)", () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        resetApiFetch()
+        mockInitialized = true
+        authState.isAdmin = true
+        authState.user = { uid: "test-uid" }
+    })
+
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    it("the alphabetically LAST chart of 250 gets its last-used data", async () => {
+        const charts = manyCharts(250)
+        mockDisplayedFiles = charts
+        mockAllFiles = charts
+        const requested: string[][] = []
+        mockApiFetch.mockImplementation(usageRespondingApiFetch(requested) as never)
+
+        render(<SongChartsLibrary />)
+
+        // chart-249 is index 249 — far past the old 100-id slice.
+        await waitFor(() => {
+            expect(screen.getByTestId("usage-chart-249")).toBeDefined()
+        })
+        expect(screen.getByTestId("usage-chart-249").textContent).toBe(`${USAGE_DATE}|4`)
+        // …and the first chart still has its data too.
+        expect(screen.getByTestId("usage-chart-000")).toBeDefined()
+    })
+
+    it("issues one request per 100-id chunk and asks for every id exactly once", async () => {
+        const charts = manyCharts(250)
+        mockDisplayedFiles = charts
+        mockAllFiles = charts
+        const requested: string[][] = []
+        mockApiFetch.mockImplementation(usageRespondingApiFetch(requested) as never)
+
+        render(<SongChartsLibrary />)
+        await waitFor(() => {
+            expect(screen.getByTestId("usage-chart-249")).toBeDefined()
+        })
+
+        expect(requested).toHaveLength(3)
+        // Never above the server's hard cap (>100 ids is a 400, not a truncation).
+        for (const batch of requested) expect(batch.length).toBeLessThanOrEqual(100)
+        const flat = requested.flat()
+        expect(flat).toHaveLength(250)
+        expect(new Set(flat).size).toBe(250)
+        expect(new Set(flat)).toEqual(new Set(charts.map(c => c.id)))
+    })
+
+    // The acceptance criterion: correctly INCLUDED by the Recency filter.
+    it("the Recency filter includes a chart past #100 that was recently used", async () => {
+        const charts = manyCharts(250)
+        mockDisplayedFiles = charts
+        mockAllFiles = charts
+        mockApiFetch.mockImplementation(usageRespondingApiFetch([]) as never)
+
+        render(<SongChartsLibrary />)
+
+        // The recency chip only becomes available once usage is COMPLETE —
+        // filtering on a half-loaded map would be confidently wrong.
+        await waitFor(() => {
+            expect(screen.getByTestId("library-filters").getAttribute("data-recency-available")).toBe("yes")
+        })
+
+        fireEvent.click(screen.getByTestId("set-recency-recent"))
+
+        // Every chart was used today, so "recent" must keep all 250 — including
+        // the ones the old single-slice fetch never asked about.
+        expect(screen.getByTestId("file-row-chart-249")).toBeDefined()
+        expect(screen.getByTestId("file-row-chart-100")).toBeDefined()
+        expect(screen.getAllByTestId(/^file-row-/)).toHaveLength(250)
+    })
+
+    it("does not expose the Recency filter while usage is still loading", () => {
+        const charts = manyCharts(250)
+        mockDisplayedFiles = charts
+        mockAllFiles = charts
+        // Never resolves → permanently 'loading'.
+        mockApiFetch.mockImplementation((() => new Promise(() => { })) as never)
+
+        render(<SongChartsLibrary />)
+        expect(screen.getByTestId("library-filters").getAttribute("data-recency-available")).toBe("no")
+    })
+
+    it("surfaces a retry instead of swallowing a failed usage fetch", async () => {
+        const charts = manyCharts(120)
+        mockDisplayedFiles = charts
+        mockAllFiles = charts
+        mockApiFetch.mockImplementation(((url: string) =>
+            typeof url === "string" && url.includes("/api/library/usage")
+                ? Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+                : Promise.resolve({ ok: true, json: () => Promise.resolve({}) })) as never)
+
+        render(<SongChartsLibrary />)
+
+        // Visible in behaviour, not a silent `.catch(() => {})`.
+        await waitFor(() => {
+            expect(screen.getByRole("button", { name: /retry/i })).toBeDefined()
+        })
+        expect(screen.getByTestId("library-filters").getAttribute("data-recency-available")).toBe("no")
+
+        // Retry re-issues the batches; on success the notice clears and the
+        // recency filter becomes available.
+        mockApiFetch.mockImplementation(usageRespondingApiFetch([]) as never)
+        fireEvent.click(screen.getByRole("button", { name: /retry/i }))
+        await waitFor(() => {
+            expect(screen.getByTestId("library-filters").getAttribute("data-recency-available")).toBe("yes")
+        })
+        expect(screen.queryByRole("button", { name: /retry/i })).toBeNull()
+    })
+
+    it("does not refetch usage when the user switches tabs or searches", async () => {
+        const charts = [
+            ...manyCharts(120),
+            { id: "supp-1", name: "Shireinu Song.pdf", mimeType: "application/pdf", collection: "supplemental" as const },
+        ]
+        mockDisplayedFiles = charts
+        mockAllFiles = charts
+        const requested: string[][] = []
+        mockApiFetch.mockImplementation(usageRespondingApiFetch(requested) as never)
+
+        render(<SongChartsLibrary />)
+        await waitFor(() => {
+            expect(screen.getByTestId("usage-chart-119")).toBeDefined()
+        })
+        const afterInitial = requested.length
+
+        fireEvent.click(screen.getByText(/Shireinu \(\d+\)/))
+        fireEvent.change(screen.getByPlaceholderText("Search by name, key, topic..."), {
+            target: { value: "song" },
+        })
+
+        expect(requested).toHaveLength(afterInitial)
+    })
+})
+
+// ══════════════════════════════════════════════════════════════════════════
+// Fix 2 (2026-08-31) — search was pushed into a full-catalog Fuse.js scan on
+// every keystroke. The filter is now debounced; the controlled input is not.
+// ══════════════════════════════════════════════════════════════════════════
+
+describe("SongChartsLibrary — search filtering is debounced (Fix 2)", () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        resetApiFetch()
+        mockDisplayedFiles = [chartFile1, chartFile2]
+        mockAllFiles = [chartFile1, chartFile2]
+        mockInitialized = true
+        authState.isAdmin = true
+        authState.user = null // keep the usage effect out of this suite
+    })
+
+    afterEach(() => {
+        vi.useRealTimers()
+        authState.user = { uid: "test-uid" }
+    })
+
+    it("a 5-keystroke burst produces ONE filter scan, with the final value", () => {
+        vi.useFakeTimers()
+        render(<SongChartsLibrary />)
+        const input = screen.getByPlaceholderText("Search by name, key, topic...")
+        mockSetFilter.mockClear() // ignore the mount-time setFilter("")
+
+        for (const value of ["t", "to", "tov", "tovu", "tovu "]) {
+            fireEvent.change(input, { target: { value } })
+            act(() => { vi.advanceTimersByTime(40) })
+        }
+
+        // Nothing has fired yet — every keystroke landed inside the window.
+        expect(mockSetFilter).not.toHaveBeenCalled()
+
+        act(() => { vi.advanceTimersByTime(200) })
+        expect(mockSetFilter).toHaveBeenCalledTimes(1)
+        expect(mockSetFilter).toHaveBeenCalledWith("tovu ")
+    })
+
+    it("the input itself stays synchronous — never debounced", () => {
+        vi.useFakeTimers()
+        render(<SongChartsLibrary />)
+        const input = screen.getByPlaceholderText("Search by name, key, topic...") as HTMLInputElement
+
+        fireEvent.change(input, { target: { value: "hashkiv" } })
+        // No timer advance: the caret must already show the typed text.
+        expect(input.value).toBe("hashkiv")
+    })
+
+    it("clearing the box applies immediately (no debounce on the empty query)", () => {
+        vi.useFakeTimers()
+        render(<SongChartsLibrary />)
+        const input = screen.getByPlaceholderText("Search by name, key, topic...")
+        fireEvent.change(input, { target: { value: "tovu" } })
+        act(() => { vi.advanceTimersByTime(200) })
+        mockSetFilter.mockClear()
+
+        fireEvent.change(input, { target: { value: "" } })
+        expect(mockSetFilter).toHaveBeenCalledWith("")
     })
 })

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo, useEffect, useRef, useLayoutEffect } from "react"
+import { useState, useMemo, useEffect, useRef, useLayoutEffect, useCallback } from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { ChevronLeft, Search, Music, CheckSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 // C4-004: Radix Tabs removed from /library — the prior `<Tabs><TabsList>
@@ -38,8 +39,29 @@ import { SelectionActionBar } from "./SelectionActionBar"
 import { useLibraryActions } from "./useLibraryActions"
 import { useAddToSetlist } from "@/hooks/use-add-to-setlist"
 import { AddToSetlistSheet } from "./AddToSetlistSheet"
+import { fetchUsageBatches, type UsageMap } from "@/lib/library/usage-batch"
 
 type LibraryTab = "core" | "supplemental" | "nava" | "uploads" | "audio"
+
+/**
+ * Debounce applied to the *filtering* only — never to the controlled input's
+ * own value, which stays fully synchronous so typing feels instant on a
+ * tablet. 180ms sits inside the 150-200ms band that reads as "immediate"
+ * while still collapsing a burst of keystrokes into one full-catalog Fuse
+ * scan over 762 charts.
+ */
+const SEARCH_DEBOUNCE_MS = 180
+
+/**
+ * Estimated row height in px (content min-h-11 = 44px + py-1.5 ×2 = 12px,
+ * plus the 8px inter-row gap the old `gap-2` grid provided). Only a seed —
+ * every mounted row is measured for real via `measureElement`, so wrapped
+ * long titles keep their true height and nothing about row density changes.
+ */
+const ROW_ESTIMATE_PX = 64
+
+/** Matches the `gap-2` (0.5rem) the non-virtualized grid used between rows. */
+const ROW_GAP_PX = 8
 
 function isAudioFile(f: DriveFile) {
     return f.mimeType.startsWith('audio/') ||
@@ -117,6 +139,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
     const { setFile } = useMusicStore()
 
     const {
+        allFiles,
         displayedFiles,
         loading: filtering,
         setFilter,
@@ -181,7 +204,19 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
     const [selectMode, setSelectMode] = useState(false)
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
-    useEffect(() => { setFilter(searchQuery) }, [searchQuery, setFilter])
+    // Debounce the FILTER, not the input. `searchQuery` still updates on every
+    // keystroke (the <Input value> below reads it directly), so the caret never
+    // lags; only the full-catalog Fuse.js scan behind `setFilter` is deferred.
+    // Clearing the box applies immediately — an empty query is a no-op scan and
+    // "clear" should feel instant.
+    useEffect(() => {
+        if (searchQuery === "") {
+            setFilter("")
+            return
+        }
+        const timer = setTimeout(() => setFilter(searchQuery), SEARCH_DEBOUNCE_MS)
+        return () => clearTimeout(timer)
+    }, [searchQuery, setFilter])
 
     // Separate charts and audio (no folders)
     const { files: rawFiles, audioFiles } = useMemo(() => {
@@ -208,62 +243,125 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
     const { digitizing, handleDigitize, handleArchive, handleRename } = useLibraryActions({ loadLibrary, getCleanName })
     const addToSetlist = useAddToSetlist()
 
-    // Song usage data
-    const [usageMap, setUsageMap] = useState<Record<string, { lastUsedDate: string; totalUses: number } | null>>({})
+    // Song usage data. `usageStatus` is load-bearing, not cosmetic: a MISSING
+    // entry and a "never played" entry are indistinguishable in the map, so the
+    // Recency filter is only offered once we know the map covers every chart.
+    const [usageMap, setUsageMap] = useState<UsageMap>({})
+    const [usageStatus, setUsageStatus] = useState<'idle' | 'loading' | 'complete' | 'partial'>('idle')
+    const [usageRetryToken, setUsageRetryToken] = useState(0)
+
+    // Only hand the usage map to the recency filter once it covers the whole
+    // catalog. `applyLibraryFilters` reads a missing id as "never played", so
+    // filtering on a partial map silently mis-sorts charts; and LibraryFilters
+    // hides the Recency chip entirely when this is undefined, which is the
+    // honest state while the batches are still landing (or after they failed).
+    const recencyUsageMap = usageStatus === 'complete' ? usageMap : undefined
 
     // Apply library filters (key, topic, recency) to chart files
     // NOTE: 'core' is a NEGATIVE filter — every collection that gets its own
     // tab must be excluded here too, or its rows leak into the CRC Charts tab.
     const allFilteredCore = useMemo(
-        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection !== 'supplemental' && f.collection !== 'uploads' && f.collection !== 'nava'), libraryFilters, usageMap)),
-        [rawFiles, libraryFilters, usageMap]
+        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection !== 'supplemental' && f.collection !== 'uploads' && f.collection !== 'nava'), libraryFilters, recencyUsageMap)),
+        [rawFiles, libraryFilters, recencyUsageMap]
     )
 
     const allFilteredSupplemental = useMemo(
-        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection === 'supplemental'), libraryFilters, usageMap)),
-        [rawFiles, libraryFilters, usageMap]
+        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection === 'supplemental'), libraryFilters, recencyUsageMap)),
+        [rawFiles, libraryFilters, recencyUsageMap]
     )
 
     const allFilteredNava = useMemo(
-        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection === 'nava'), libraryFilters, usageMap)),
-        [rawFiles, libraryFilters, usageMap]
+        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection === 'nava'), libraryFilters, recencyUsageMap)),
+        [rawFiles, libraryFilters, recencyUsageMap]
     )
 
     const allFilteredUploads = useMemo(
-        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection === 'uploads'), libraryFilters, usageMap)),
-        [rawFiles, libraryFilters, usageMap]
+        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection === 'uploads'), libraryFilters, recencyUsageMap)),
+        [rawFiles, libraryFilters, recencyUsageMap]
     )
 
     const files = tab === "supplemental" ? allFilteredSupplemental : tab === "nava" ? allFilteredNava : tab === "uploads" ? allFilteredUploads : allFilteredCore
     const combinedItems = tab === "audio" ? audioFiles : files
 
-    // v4.3 P01: memoize the id-key so the effect below has a stable dep.
-    // Previously deps used `combinedItems.map(i=>i.id).join(',')` inline,
-    // which is a fresh string every render → effect re-ran and re-fetched
-    // usage on every render.
-    const combinedItemIdsKey = useMemo(
-        () => combinedItems.map(i => i.id).join(','),
-        [combinedItems],
+    // Usage is fetched for the WHOLE chart catalog, not the currently-visible
+    // tab/filter slice. Two reasons:
+    //   1. the Recency filter reads usage for rows it is about to hide, so
+    //      scoping the fetch to the post-filter list is circular; and
+    //   2. it makes the fetch independent of tab switching and search, so it
+    //      runs once per catalog rather than on every view change.
+    const usageFileIds = useMemo(
+        () => allFiles.filter(isChartFile).map(f => f.id),
+        [allFiles],
     )
+    // v4.3 P01: memoize the id-key so the effect below has a stable dep — an
+    // inline `.map().join()` is a fresh string every render → refetch loop.
+    const usageFileIdsKey = useMemo(() => usageFileIds.join(','), [usageFileIds])
 
     useEffect(() => {
         if (!user) return // Wait for Firebase client auth token to initialize
+        if (usageFileIds.length === 0) {
+            setUsageMap({})
+            setUsageStatus('complete')
+            return
+        }
 
-        const fileIds = combinedItems
-            .filter(f => !isAudioFile(f))
-            .map(f => f.id)
-        if (fileIds.length === 0) return
+        let cancelled = false
+        setUsageStatus('loading')
+        setUsageMap({})
 
-        // Fetch in batches of 100 (uses apiFetch for auth header)
-        const batchIds = fileIds.slice(0, 100)
-        apiFetch(`/api/library/usage?fileIds=${batchIds.join(',')}`)
-            .then(r => r.ok ? r.json() : {})
-            .then(data => setUsageMap(data))
-            .catch(() => { }) // Silent -- usage badges are non-critical
+        // /api/library/usage 400s above 100 ids, so chunk and cover ALL of
+        // them. The old code sliced the first 100 once and dropped the rest.
+        fetchUsageBatches(
+            usageFileIds,
+            async (batch) => {
+                const res = await apiFetch(`/api/library/usage?fileIds=${batch.join(',')}`)
+                if (!res.ok) throw new Error(`usage batch failed: ${res.status}`)
+                return await res.json()
+            },
+            {
+                // Fill badges in as each batch lands rather than waiting for all.
+                onBatch: (partial) => {
+                    if (!cancelled) setUsageMap(prev => ({ ...prev, ...partial }))
+                },
+            },
+        ).then(({ failedIds }) => {
+            if (cancelled) return
+            // NOT silent: a partial map disables the Recency filter and shows a
+            // retry affordance, because "we don't know" must not render as
+            // "never played".
+            setUsageStatus(failedIds.length > 0 ? 'partial' : 'complete')
+            if (failedIds.length > 0) {
+                logger.warn(`[Library] usage unavailable for ${failedIds.length} charts`)
+            }
+        })
+
+        return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [combinedItemIdsKey, user])
+    }, [usageFileIdsKey, user, usageRetryToken])
 
     const hasAudio = audioFiles.length > 0
+
+    // ── Row virtualization (same @tanstack/react-virtual pattern as
+    // components/performance/SetlistDrawer.tsx). At 762 charts the old
+    // `combinedItems.map()` mounted 762 ContextMenus and fired 762
+    // `isFileCached()` IndexedDB reads on every tab switch. This is a pure
+    // windowing change: identical row markup, identical density, measured
+    // heights so wrapped titles still size themselves.
+    const scrollRootRef = useRef<HTMLDivElement>(null)
+    const getScrollElement = useCallback(
+        () => scrollRootRef.current?.querySelector<HTMLElement>('[data-slot="scroll-area-viewport"]') ?? null,
+        [],
+    )
+    const rowVirtualizer = useVirtualizer({
+        count: combinedItems.length,
+        getScrollElement,
+        estimateSize: () => ROW_ESTIMATE_PX,
+        // Keep a healthy ring of mounted rows either side of the viewport so
+        // an iPad flick never lands on blank space, and so a keyboard Tab out
+        // of the last visible row still finds a real element.
+        overscan: 10,
+        getItemKey: (index) => combinedItems[index]?.id ?? index,
+    })
 
     return (
         <div className="h-screen flex flex-col bg-background text-foreground">
@@ -363,8 +461,29 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                         allFiles={rawFiles}
                         filters={libraryFilters}
                         onFiltersChange={setLibraryFilters}
-                        usageMap={usageMap}
+                        usageMap={recencyUsageMap}
                     />
+                )}
+
+                {/* Usage-data status. The old code swallowed every usage
+                    failure (`.catch(() => {})`) and silently rendered charts
+                    past #100 as if they had never been played. If any batch
+                    fails now, say so and offer a retry instead. */}
+                {tab !== "audio" && usageStatus === 'partial' && (
+                    <div
+                        role="status"
+                        aria-live="polite"
+                        className="max-w-xl mx-auto flex flex-wrap items-center justify-center gap-3 text-base text-amber-700 dark:text-amber-300"
+                    >
+                        <span>Last-used data didn&apos;t fully load, so the recency filter is unavailable.</span>
+                        <Button
+                            variant="outline"
+                            className="min-h-11 px-4 text-base border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
+                            onClick={() => setUsageRetryToken(t => t + 1)}
+                        >
+                            Retry
+                        </Button>
+                    </div>
                 )}
 
                 {/* Section toggles — plain segmented control; see C4-004 note on imports above. */}
@@ -431,7 +550,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
             </div>
 
             {/* File List */}
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-4" ref={scrollRootRef}>
                 {/*
                   C5C-003: render the skeleton while the store hasn't yet been
                   hydrated, regardless of whether a React Query fetch is
@@ -453,7 +572,7 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                         <ErrorState title="Library Error" description={error || "Failed to load files"} onRetry={() => loadLibrary()} />
                     </div>
                 ) : (
-                    <div className="max-w-3xl mx-auto grid grid-cols-1 gap-2 pb-10">
+                    <div className="max-w-3xl mx-auto pb-10">
                         {combinedItems.length === 0 && !loading && (
                             <EmptyState
                                 icon={Search}
@@ -470,40 +589,73 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                             />
                         )}
 
-                        {combinedItems.map(item => {
-                            const isAudio = isAudioFile(item)
-                            return (
-                                <LibraryFileRow
-                                    key={item.id}
-                                    item={item}
-                                    onClick={() => isAudio ? setPlayingFile(item) : handleSelectFile(item)}
-                                    isDigitizing={digitizing === item.id}
-                                    isAdmin={!!isAdmin}
-                                    onDigitize={() => handleDigitize(item)}
-                                    onArchive={() => handleArchive(item)}
-                                    onRename={(file) => handleRename(file)}
-                                    getCleanName={getCleanName}
-                                    isPlaying={playingFile?.id === item.id}
-                                    selectMode={selectMode}
-                                    isSelected={selectedIds.has(item.id)}
-                                    onToggleSelect={(id) => {
-                                        setSelectedIds(prev => {
-                                            const next = new Set(prev)
-                                            if (next.has(id)) next.delete(id)
-                                            else next.add(id)
-                                            return next
-                                        })
-                                    }}
-                                    onLongPress={(id) => {
-                                        setSelectMode(true)
-                                        setSelectedIds(new Set([id]))
-                                    }}
-                                    usageInfo={usageMap[item.id] ?? undefined}
-                                    canAddToSetlist={addToSetlist.canAddToSetlist}
-                                    onAddToSetlist={(item) => addToSetlist.openForSongs([item])}
-                                />
-                            )
-                        })}
+                        {/* Windowed rows. The wrapper div reproduces the 8px
+                            `gap-2` the old grid supplied and is what gets
+                            measured, so row height/spacing is unchanged. */}
+                        <div
+                            style={{
+                                height: `${rowVirtualizer.getTotalSize()}px`,
+                                width: '100%',
+                                position: 'relative',
+                            }}
+                        >
+                            {rowVirtualizer.getVirtualItems().map(virtualRow => {
+                                const item = combinedItems[virtualRow.index]
+                                if (!item) return null
+                                const isAudio = isAudioFile(item)
+                                return (
+                                    <div
+                                        key={item.id}
+                                        data-index={virtualRow.index}
+                                        ref={rowVirtualizer.measureElement}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            transform: `translateY(${virtualRow.start}px)`,
+                                            paddingBottom: `${ROW_GAP_PX}px`,
+                                        }}
+                                    >
+                                        <LibraryFileRow
+                                            item={item}
+                                            onClick={() => isAudio ? setPlayingFile(item) : handleSelectFile(item)}
+                                            isDigitizing={digitizing === item.id}
+                                            isAdmin={!!isAdmin}
+                                            onDigitize={() => handleDigitize(item)}
+                                            onArchive={() => handleArchive(item)}
+                                            onRename={(file) => handleRename(file)}
+                                            getCleanName={getCleanName}
+                                            isPlaying={playingFile?.id === item.id}
+                                            selectMode={selectMode}
+                                            isSelected={selectedIds.has(item.id)}
+                                            onToggleSelect={(id) => {
+                                                setSelectedIds(prev => {
+                                                    const next = new Set(prev)
+                                                    if (next.has(id)) next.delete(id)
+                                                    else next.add(id)
+                                                    return next
+                                                })
+                                            }}
+                                            onLongPress={(id) => {
+                                                setSelectMode(true)
+                                                setSelectedIds(new Set([id]))
+                                            }}
+                                            usageInfo={usageMap[item.id] ?? undefined}
+                                            canAddToSetlist={addToSetlist.canAddToSetlist}
+                                            onAddToSetlist={(item) => addToSetlist.openForSongs([item])}
+                                        />
+                                    </div>
+                                )
+                            })}
+                        </div>
+
+                        {/* Result count — the list now updates after a debounce
+                            AND only paints a window of rows, so give assistive
+                            tech a stable, announced total. */}
+                        <div role="status" aria-live="polite" className="sr-only">
+                            {combinedItems.length} {combinedItems.length === 1 ? 'chart' : 'charts'}
+                        </div>
 
                         <div className="h-20" />
                     </div>
