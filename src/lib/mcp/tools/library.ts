@@ -1195,6 +1195,7 @@ function clusterBySimilarity(
 export async function dedupeLibraryIndex(
     uid: string,
     args: DedupeLibraryIndexArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<DedupeLibraryIndexResult | RichErrorEnvelope> {
     const dryRun = args.dryRun === true
     const force = args.force === true
@@ -1235,6 +1236,16 @@ export async function dedupeLibraryIndex(
 
         const snap = await db.collection("library_index").get()
 
+        // v11-02-02 tenant isolation — L1-W3, Daniel's call 2026-09-01.
+        // The hygiene tools scanned the RAW collection while list_library
+        // filtered by rowOrg, which is exactly why they reported 943 against
+        // the browse's 891: the 52-row gap was another tenant's rows, and a
+        // force-run would have written to them (7 of the 8 groups in the live
+        // plan on 2026-09-01 were entirely another org's charts). Scoped here
+        // so all four hygiene tools' `coverage` agrees with the browse — which
+        // is what cycle-3 DATA-002 built that uniform field for.
+        const orgDocs = snap.docs.filter((d) => rowOrg(d.data().orgId) === org)
+
         // Collect dedupable candidates. Skip rows already marked
         // `duplicate` (idempotence) only.
         //
@@ -1256,7 +1267,7 @@ export async function dedupeLibraryIndex(
         const candidates: Candidate[] = []
         const filteredByStatus: Record<string, number> = {}
         const filteredByOther: Record<string, number> = {}
-        for (const d of snap.docs) {
+        for (const d of orgDocs) {
             const data = d.data()
             const status = typeof data.status === "string" ? data.status : "active"
             if (status === "duplicate") {
@@ -1417,7 +1428,7 @@ export async function dedupeLibraryIndex(
         // no writes. Mirrors reconcile_library / backfill_library_index /
         // backfill_setlist_test_flag / library-review (REG-003 canonical shape).
         const coverage: HygieneCoverage = {
-            total: snap.docs.length,
+            total: orgDocs.length,
             eligible: candidates.length,
             scanned: candidates.length,
             filteredOut: {
@@ -1604,6 +1615,7 @@ async function probeStorageFileSize(
 export async function backfillLibraryIndex(
     uid: string,
     args: BackfillLibraryIndexArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<BackfillLibraryIndexResult | RichErrorEnvelope> {
     // Default to dryRun. Caller must explicitly opt OUT of dryRun (via
     // dryRun:false) AND opt IN to writes (via force:true). Same posture
@@ -1638,7 +1650,13 @@ export async function backfillLibraryIndex(
             // Cycle-3 REG-003: real-run without force returns the rich
             // `force_required` envelope carrying the dry-run plan in
             // extras. F-05 standing rule preserved.
-            const planOnly = await backfillLibraryIndex(uid, { dryRun: true })
+            // L1-W3: the org MUST ride along, or a non-crc caller hitting the
+            // force_required branch gets a crc-scoped plan back in the envelope.
+            const planOnly = await backfillLibraryIndex(
+                uid,
+                { dryRun: true },
+                org,
+            )
             if ("ok" in planOnly && planOnly.ok === false) return planOnly
             return richError(
                 "force_required",
@@ -1656,6 +1674,16 @@ export async function backfillLibraryIndex(
 
         const snap = await db.collection("library_index").get()
 
+        // v11-02-02 tenant isolation — L1-W3, Daniel's call 2026-09-01.
+        // The hygiene tools scanned the RAW collection while list_library
+        // filtered by rowOrg, which is exactly why they reported 943 against
+        // the browse's 891: the 52-row gap was another tenant's rows, and a
+        // force-run would have written to them (7 of the 8 groups in the live
+        // plan on 2026-09-01 were entirely another org's charts). Scoped here
+        // so all four hygiene tools' `coverage` agrees with the browse — which
+        // is what cycle-3 DATA-002 built that uniform field for.
+        const orgDocs = snap.docs.filter((d) => rowOrg(d.data().orgId) === org)
+
         interface Candidate {
             fileId: string
             rawName: string | null
@@ -1665,7 +1693,7 @@ export async function backfillLibraryIndex(
             currentStatus: string
         }
 
-        const candidates: Candidate[] = snap.docs.map((d) => {
+        const candidates: Candidate[] = orgDocs.map((d) => {
             const data = d.data()
             const rawName =
                 typeof data.name === "string"

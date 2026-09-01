@@ -8,6 +8,9 @@ import {
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
+import { rowOrg } from "@/lib/mcp/org-context"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * `archive_nonchart_artifacts` — bulk soft-archive the UNAMBIGUOUS non-chart
@@ -142,6 +145,7 @@ function readStatus(data: FirebaseFirestore.DocumentData): string {
 export async function archiveNonChartArtifacts(
     uid: string,
     args: ArchiveNonChartArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<ArchiveNonChartResult | RichErrorEnvelope> {
     const dryRun = args.dryRun !== false
     const force = args.force === true
@@ -222,6 +226,14 @@ export async function archiveNonChartArtifacts(
                         return
                     }
                     const data = doc.data() as FirebaseFirestore.DocumentData
+                    // v11-02-02 tenant isolation — L1-W3, Daniel's call
+                    // 2026-09-01. A row in another org is refused the same
+                    // way a non-folder/sheet mime is: into `notMatched`,
+                    // never archived, even when its id is passed explicitly.
+                    if (rowOrg(data.orgId) !== org) {
+                        notMatched.push(id)
+                        return
+                    }
                     const mimeType = readMimeType(data)
                     if (!ARCHIVABLE_MIMETYPES[mimeType]) {
                         // explicit guard: a provided id that is NOT a folder/sheet
@@ -236,8 +248,15 @@ export async function archiveNonChartArtifacts(
             }
         } else {
             const snap = await db.collection("library_index").get()
-            scanned = snap.size
-            for (const d of snap.docs) {
+            // v11-02-02 tenant isolation — L1-W3. This scan took the whole
+            // collection and this tool WRITES `status:'archived'`, so an
+            // admin of one org could soft-delete another org's folders and
+            // sheets. `scanned` now reports the caller's tenant only.
+            const orgDocs = snap.docs.filter(
+                (d) => rowOrg(d.data().orgId) === org,
+            )
+            scanned = orgDocs.length
+            for (const d of orgDocs) {
                 classify(d.id, d.data() as FirebaseFirestore.DocumentData)
             }
         }

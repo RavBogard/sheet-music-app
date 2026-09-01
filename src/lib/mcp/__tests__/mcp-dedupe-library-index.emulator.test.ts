@@ -299,6 +299,66 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         expect(r.committed).toBe(0)
     })
 
+    it("L1-W3 — scans ONLY the caller's tenant", async () => {
+        // The fail branch, and it was real in production on 2026-09-01: this
+        // tool scanned the raw collection while list_library filtered by
+        // rowOrg, so it reported 943 rows against the browse's 891. SEVEN of
+        // the eight groups in the live plan were entirely another tenant's
+        // charts, and a force-run would have marked them `duplicate`.
+        await seedIndex("crc-1", { name: "Shalom Rav.pdf", orgId: "crc" })
+        await seedIndex("crc-2", { name: "Shalom Rav", orgId: "crc" })
+        await seedIndex("other-1", {
+            name: "Shalom Rav.pdf",
+            orgId: "broslaz",
+        })
+        await seedIndex("other-2", { name: "Shalom Rav", orgId: "broslaz" })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: true }, "crc")
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+
+        // Four rows exist; the caller owns two of them.
+        expect(r.coverage.total).toBe(2)
+        expect(r.coverage.eligible).toBe(2)
+        expect(r.groupsFound).toBe(1)
+        expect(r.wouldMark).toBe(1)
+        const ids = [
+            r.groups[0].kept.fileId,
+            ...r.groups[0].duplicates.map((d) => d.fileId),
+        ].sort()
+        expect(ids).toEqual(["crc-1", "crc-2"])
+    })
+
+    it("L1-W3 — the other tenant sees only its own rows", async () => {
+        await seedIndex("crc-1", { name: "Shalom Rav.pdf", orgId: "crc" })
+        await seedIndex("other-1", {
+            name: "Shalom Rav.pdf",
+            orgId: "broslaz",
+        })
+        await seedIndex("other-2", { name: "Shalom Rav", orgId: "broslaz" })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: true }, "broslaz")
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+        expect(r.coverage.total).toBe(2)
+        const ids = [
+            r.groups[0].kept.fileId,
+            ...r.groups[0].duplicates.map((d) => d.fileId),
+        ].sort()
+        expect(ids).toEqual(["other-1", "other-2"])
+    })
+
+    it("L1-W3 — a row with no orgId is treated as crc (rowOrg contract)", async () => {
+        // v11-01-03 stamped every existing doc, but rowOrg defaults an
+        // absent/empty orgId to crc and legacy Drive-scan rows must not fall
+        // out of Daniel's own hygiene scan.
+        await seedIndex("legacy-1", { name: "Achot ketana.pdf" })
+        await seedIndex("legacy-2", { name: "Achot ketana" })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: true }, "crc")
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+        expect(r.coverage.total).toBe(2)
+        expect(r.groupsFound).toBe(1)
+    })
+
     it("L1-W2 — INCLUDES archived rows in grouping", async () => {
         // Inverted by L1-W2 (R-0901-live-cw-1 3). This asserted the opposite
         // until 2026-09-01: archived rows were filtered OUT of the hygiene

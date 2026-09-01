@@ -10,6 +10,9 @@ import { DriveClient } from "@/lib/google-drive"
 import { logger } from "@/lib/logger"
 import { isNonChartArtifactShape } from "./library"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/errors"
+import { rowOrg } from "@/lib/mcp/org-context"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * Cycle-3 NEW-2 (ADDENDUM-1 §3) — one-shot bootstrap reconciliation MCP
@@ -215,6 +218,7 @@ interface Candidate {
 
 async function loadAdminCandidates(
     uid: string,
+    org: OrgId,
 ): Promise<
     | {
           ok: true
@@ -247,9 +251,15 @@ async function loadAdminCandidates(
     }
 
     const snap = await db.collection("library_index").get()
+
+    // v11-02-02 tenant isolation — L1-W3, Daniel's call 2026-09-01. This scan
+    // took the whole collection while list_library filtered by rowOrg, so
+    // reconcile could probe and re-status another tenant's charts. Scoped to
+    // the caller's org; `total` now agrees with the browse.
+    const orgDocs = snap.docs.filter((d) => rowOrg(d.data().orgId) === org)
     const candidates: Candidate[] = []
     const filteredByStatus: Record<string, number> = {}
-    for (const d of snap.docs) {
+    for (const d of orgDocs) {
         const data = d.data()
         // Skip rows already definitively orphaned — re-running reconcile
         // should NOT re-probe them. They were marked orphaned for cause
@@ -283,7 +293,7 @@ async function loadAdminCandidates(
     return {
         ok: true,
         candidates,
-        total: snap.docs.length,
+        total: orgDocs.length,
         filteredByStatus,
     }
 }
@@ -853,12 +863,13 @@ function bucketReport<T>(rows: T[]): {
 export async function reconcileLibrary(
     uid: string,
     args: ReconcileLibraryArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<ReconcileLibraryResult | ReconcileLibraryError> {
     const dryRun = args.dryRun !== false
     const force = args.force === true
 
     try {
-        const loaded = await loadAdminCandidates(uid)
+        const loaded = await loadAdminCandidates(uid, org)
         if (!loaded.ok) return loaded.envelope
         const candidates = loaded.candidates
         const coverage: HygieneCoverage = {

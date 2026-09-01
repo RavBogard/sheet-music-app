@@ -107,6 +107,59 @@ describe("MCP archive_nonchart_artifacts — dh-20260527a Class 3 (emulator)", (
         }
     })
 
+    it("L1-W3 — the full scan sees only the caller's tenant", async () => {
+        // This tool WRITES `status:'archived'` off a full-collection scan and
+        // had zero orgId handling, so an admin of one org could soft-delete
+        // another org's folders and sheets. The census named three unscoped
+        // hygiene tools; this was the fourth.
+        await seedUser(ADMIN, "admin")
+        await seedIndex("crc-folder", {
+            name: "CRC Folder",
+            mimeType: "application/vnd.google-apps.folder",
+            orgId: "crc",
+        })
+        await seedIndex("other-folder", {
+            name: "Their Folder",
+            mimeType: "application/vnd.google-apps.folder",
+            orgId: "broslaz",
+        })
+
+        const r = asResult(
+            await archiveNonChartArtifacts(ADMIN, { dryRun: true }, "crc"),
+        )
+        expect(r.scanned).toBe(1)
+        expect(r.toArchive.count).toBe(1)
+        expect(r.toArchive.rows[0].fileId).toBe("crc-folder")
+    })
+
+    it("L1-W3 — an explicit fileId from another tenant is refused, never archived", async () => {
+        // The `fileIds` path bypasses the scan entirely, so it needs its own
+        // guard. A cross-tenant id lands in `notMatched`, exactly like the
+        // existing non-folder/sheet mime refusal.
+        await seedUser(ADMIN, "admin")
+        await seedIndex("other-folder", {
+            name: "Their Folder",
+            mimeType: "application/vnd.google-apps.folder",
+            orgId: "broslaz",
+        })
+
+        const r = asResult(
+            await archiveNonChartArtifacts(
+                ADMIN,
+                { dryRun: false, force: true, fileIds: ["other-folder"] },
+                "crc",
+            ),
+        )
+        expect(r.toArchive.count).toBe(0)
+        expect(r.committed).toBe(0)
+        expect(r.notMatched).toEqual(["other-folder"])
+
+        // and the row is untouched on disk
+        const doc = await db().collection("library_index").doc("other-folder").get()
+        expect(doc.data()?.status).toBeUndefined()
+        expect(doc.data()?.archivedAt).toBeUndefined()
+    })
+
     it("dryRun classifies folder/sheet → toArchive, doc → held, chart → ignored, no writes", async () => {
         await seedIndex("f1", { name: "Old Folder", mimeType: FOLDER })
         await seedIndex("s1", { name: "Set Sheet", mimeType: SHEET })
