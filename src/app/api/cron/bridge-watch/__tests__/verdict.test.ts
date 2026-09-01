@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { evaluateBridge } from "@/app/api/cron/bridge-watch/route"
+import { evaluateBridge } from "@/app/api/cron/bridge-watch/evaluate"
 
 /**
  * R8 — the pre-service tripwire's verdict logic.
