@@ -142,3 +142,16 @@ This guide exists so the agent never recreates that failure shape.
 
 When in doubt, prefer `preview_publish` + `propose_setlist_changes` over
 their direct counterparts. The propose-confirm loop is the trust contract.
+
+## This server is part of a family
+
+centralreform.live is the music/setlist satellite of a three-repo family
+(`shireishabbat`, the liturgy source of truth; `shirei-tshuvah-web`, the
+siddur app; this one) worked in parallel by several Claude instances under
+several accounts. The coordination policy is canonical at
+`shireishabbat/COORDINATION.md` — read it before any work that leaves this
+server's own data. The moment work reads or writes liturgy data or another
+family repo, it takes a row on the family baton board,
+`shireishabbat/STATUS.md`, with its path claims. Nothing here overrides the
+propose → confirm → commit loop above; setlist authoring for Daniel needs no
+row.
