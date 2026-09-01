@@ -1,3 +1,0 @@
-event: message
-data: {"result":{"content":[{"type":"text","text":"{\n  \"id\": \"b12a5221-111a-4ffa-b408-350cdbd28190\",\n  \"date\": \"2026-02-20T19:44:46.077Z\",\n  \"ownerId\": \"93Xn3DbS0bSNb8zmfzLyfOMX1A13\",\n  \"eventDate\": \"2026-02-21T12:00:00.000-06:00\",\n  \"trackCount\": 43,\n  \"name\": \"Eitan Shabbat Morning 2/21\",\n  \"rabbi\": \"Daniel\",\n  \"ownerName\": \"Daniel Bogard\",\n  \"updatedAt\": \"2026-03-12T12:36:01.100Z\",\n  \"tracks\": [],\n  \"lastModifiedAt\": \"2026-05-17T01:45:14.480Z\",\n  \"version\": 1,\n  \"isTest\": false\n}"}]},"jsonrpc":"2.0","id":80}
-

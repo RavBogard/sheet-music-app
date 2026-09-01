@@ -1,2 +1,0 @@
-event: message
-data: {"result":{"content":[{"type":"text","text":"{\n  \"uid\": \"test-c7i1-band_leader-ba109553\",\n  \"role\": \"band_leader\",\n  \"soundEngineer\": false,\n  \"token\": \"crl_live_126512cab17f05b259a8dc87d5b73c3e81f4b42c4f6257895ba3368617815808\",\n  \"tokenId\": \"FVzcHBGmxT0qoYlKbR4r\",\n  \"expiresAt\": \"2026-05-19T19:39:34.862Z\",\n  \"displayName\": \"[TEST] band_leader\"\n}"}]},"jsonrpc":"2.0","id":100}

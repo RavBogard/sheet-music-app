@@ -1,9 +1,0 @@
-
-Running 1 test using 1 worker
-
-[cold-boot-state] {"hasSwController":false,"swRegistrations":0,"idbDbNames":["validate-browser-context-for-indexeddb-analytics-module","firebaseLocalStorageDb"],"localStorageLen":0}
-[fresh-install] heading="Shavuot Yizkor — May 23" chartRows=9 viewport=820×1180
-[post-render-idb] ["firestore/[DEFAULT]/crcmusiccharts/main","crc-offline","firebase-heartbeat-database","crc-local","firebaseLocalStorageDb"]
-  ✓  1 [ipad-webkit] › e2e\perform-ipad-pwa-fresh-install.spec.ts:105:9 › perform-ipad-pwa-fresh-install — cold-boot Perform render (portrait 820) › cold-boot → public setlist → first chart bytes load via explicit tap (15.6s)
-
-  1 passed (19.8s)

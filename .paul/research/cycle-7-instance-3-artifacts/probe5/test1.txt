@@ -1,3 +1,0 @@
-event: message
-data: {"result":{"content":[{"type":"text","text":"{\n  \"changed\": true,\n  \"currentVersion\": 3,\n  \"changes\": [\n    {\n      \"entity\": \"setlist\",\n      \"id\": \"ccc87a19-1991-45c3-a0f0-b7e3cf7c4a9a\",\n      \"version\": 3,\n      \"kind\": \"update\",\n      \"at\": \"2026-05-19T16:30:22.771Z\"\n    }\n  ]\n}"}]},"jsonrpc":"2.0","id":61}
-

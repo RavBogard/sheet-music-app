@@ -1,3 +1,0 @@
-
-{"result":{"content":[{"type":"text","text":"{\n  \"ok\": true,\n  \"setlistId\": \"841df759-0dba-4b50-958d-f17cfb2894e1\",\n  \"eventDate\": null,\n  \"matchedSetlists\": [\n    {\n      \"id\": \"841df759-0dba-4b50-958d-f17cfb2894e1\",\n      \"name\": \"c7i1-Shabbat Morning � May 23 (probe)\",\n      \"eventDate\": \"2026-05-23T12:00:00.000Z\"\n    }\n  ],\n  \"scheduling_assignments\": {\n    \"pending\": [],\n    \"confirmed\": [],\n    \"declined\": [],\n    \"cancelled\": []\n  },\n  \"vocal_leads\": [],\n  \"total\": 0\n}"}]},"jsonrpc":"2.0","id":40}
-

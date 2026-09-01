@@ -1,7 +1,0 @@
-
-Running 2 tests using 1 worker
-
-  ✓  1 [ipad-webkit] › e2e\chart-bind-ipad.spec.ts:117:9 › ipad-sweep-library — chart-bind on 11" iPad (WebKit, MobileCardList) › iPad bind flow: card → edit pane → Bind Chart → picker → bond verified (9.1s)
-  ✓  2 [ipad-webkit] › e2e\chart-bind-ipad.spec.ts:225:9 › ipad-sweep-library — chart-bind on 11" iPad (WebKit, MobileCardList) › bound charts load in Perform under WebKit (mimeType backstop) (3.3s)
-
-  2 passed (20.2s)

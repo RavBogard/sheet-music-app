@@ -1,3 +1,0 @@
-event: message
-data: {"result":{"content":[{"type":"text","text":"{\n  \"ok\": false,\n  \"error\": {\n    \"code\": 400,\n    \"machine_code\": \"no_valid_recipients\",\n    \"message\": \"Every supplied recipient was either the publisher or had neither a uid nor an email — nothing to send.\"\n  },\n  \"setlistId\": \"841df759-0dba-4b50-958d-f17cfb2894e1\",\n  \"suppliedCount\": 1,\n  \"hint\": \"Pass uid (a user account) or email per entry, or omit `recipients` to auto-derive from the band audience.\"\n}"}]},"jsonrpc":"2.0","id":77}
-

@@ -1,9 +1,0 @@
-
-Running 4 tests using 1 worker
-
-  ✓  1 [ipad-webkit] › e2e\library-ipad.spec.ts:117:9 › ipad-sweep-library — /library on standard 11" iPad (WebKit) › golden browse — renders dense, no horizontal overflow, tap targets ≥44px (3.1s)
-  ✓  2 [ipad-webkit] › e2e\library-ipad.spec.ts:157:9 › ipad-sweep-library — /library on standard 11" iPad (WebKit) › search — single-token filters; reordered multi-token is probed (3.5s)
-  ✓  3 [ipad-webkit] › e2e\library-ipad.spec.ts:232:9 › ipad-sweep-library — /library on standard 11" iPad (WebKit) › gibberish query stays responsive; empty-state precision is probed (4.4s)
-  ✓  4 [ipad-webkit] › e2e\library-ipad.spec.ts:285:9 › ipad-sweep-library — /library on standard 11" iPad (WebKit) › dedup — no two visible curated rows share an identical display name (2.9s)
-
-  4 passed (17.2s)

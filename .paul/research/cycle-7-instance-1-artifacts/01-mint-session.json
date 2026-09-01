@@ -1,3 +1,0 @@
-
-{"result":{"content":[{"type":"text","text":"{\n  \"uid\": \"test-c7i1-band_leader-db04aebb\",\n  \"role\": \"band_leader\",\n  \"soundEngineer\": false,\n  \"token\": \"crl_live_4e22ca4c734dca1104dfc1b6edd4295f08e8750828eb58425ac589f9431ad87f\",\n  \"tokenId\": \"DWWcORNfWyJ65bSBzExL\",\n  \"expiresAt\": \"2026-05-19T19:29:34.931Z\",\n  \"displayName\": \"[TEST] band_leader\"\n}"}]},"jsonrpc":"2.0","id":10}
-

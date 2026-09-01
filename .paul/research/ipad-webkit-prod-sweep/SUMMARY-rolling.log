@@ -1,7 +1,0 @@
-live-director-gesture exit=0
-perform-ipad exit=1
-perform-ipad-deep exit=0
-perform-ipad-offline exit=1
-chart-bind-ipad exit=0
-library-ipad exit=0
-onboarding-qr-ipad exit=0
