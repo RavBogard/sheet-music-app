@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import { dedupeNormalize } from "../tools/library"
+import {
+    DEDUPE_STRIPPABLE_EXTENSION_RE,
+    dedupeNormalize,
+} from "../tools/library"
+import { STRIPPABLE_EXTENSION_RE } from "@/lib/mcp/title-specificity"
 
 /**
  * L1-W1 (R-0901-live-cw-1 §4) — `dedupe_library`'s exact pass could not see the
@@ -72,7 +76,7 @@ describe("dedupeNormalize — trailing extension strip (L1-W1)", () => {
     })
 
     describe("the strip stays narrow", () => {
-        it("covers every token in the shared pinned set", () => {
+        it("covers every CHART token", () => {
             for (const ext of [
                 "pdf",
                 "musicxml",
@@ -81,14 +85,52 @@ describe("dedupeNormalize — trailing extension strip (L1-W1)", () => {
                 "jpg",
                 "png",
                 "webp",
-                "mp3",
-                "m4a",
-                "wav",
             ]) {
                 expect(dedupeNormalize(`Hodu (Silver).${ext}`)).toBe(
                     "hodu silver",
                 )
             }
+        })
+
+        it("does NOT strip audio — a recording is not a duplicate of a chart", () => {
+            // The fail branch this pins is one W1 briefly shipped: with audio
+            // in the set, `Adon Olam.mp3` and `Adon Olam` shared a key, the
+            // canonical picker kept the RECORDING (earliest uploadedAt, not a
+            // Google-Apps mime) and two real charts would have been marked
+            // `duplicate` on a force-run. Live-measured: 5 mixed groups, 3 of
+            // them audio-wins. With audio excluded: 0.
+            for (const ext of ["mp3", "m4a", "wav"]) {
+                expect(dedupeNormalize(`Adon Olam.${ext}`)).not.toBe(
+                    dedupeNormalize("Adon Olam"),
+                )
+            }
+            expect(dedupeNormalize("Adon Olam.mp3")).toBe("adon olammp3")
+        })
+
+        it("keeps the four real audio/chart pairs apart", () => {
+            for (const [audio, chart] of [
+                ["Adon Olam.mp3", "Adon Olam"],
+                ["Mizmor Shiru L'adonai .mp3", "Mizmor Shiru Ladonai.pdf"],
+                ["Sim Shalom.mp3", "Sim_shalom.pdf"],
+                ["Veshamru .mp3", "Veshamru.pdf"],
+            ]) {
+                expect(dedupeNormalize(audio)).not.toBe(dedupeNormalize(chart))
+            }
+        })
+
+        it("is exactly the shared pinned set MINUS the audio tokens", () => {
+            // Pins the divergence so a token added to the shared set cannot
+            // quietly change what dedupe treats as packaging.
+            const tokens = (re: RegExp) => {
+                const m = /\(([^)]+)\)/.exec(re.source)
+                if (!m) throw new Error(`unexpected shape: ${re.source}`)
+                return m[1].split("|").sort()
+            }
+            const shared = tokens(STRIPPABLE_EXTENSION_RE)
+            const dedupe = tokens(DEDUPE_STRIPPABLE_EXTENSION_RE)
+            const audio = ["m4a", "mp3", "wav"]
+            expect(shared.filter((t) => !audio.includes(t))).toEqual(dedupe)
+            expect(shared.filter((t) => !dedupe.includes(t))).toEqual(audio)
         })
 
         it("is case-insensitive", () => {

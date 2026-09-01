@@ -3,10 +3,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getStorage } from "firebase-admin/storage"
 import { getChartHealth } from "@/lib/file-fetcher"
 import { logger } from "@/lib/logger"
-import {
-    STRIPPABLE_EXTENSION_RE,
-    bareStem,
-} from "@/lib/mcp/title-specificity"
+import { bareStem } from "@/lib/mcp/title-specificity"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
@@ -985,6 +982,34 @@ export interface DedupeLibraryIndexResult {
 }
 
 /**
+ * L1-W1 — the extensions `dedupe_library` treats as PACKAGING.
+ *
+ * This is `STRIPPABLE_EXTENSION_RE` MINUS the audio tokens (`mp3`/`m4a`/`wav`),
+ * and the divergence is the point rather than drift. The shared set exists for
+ * STEM IDENTITY — `Adon Olam.mp3` and `Adon Olam.pdf` are the same *song*, so
+ * folding the extension is right when you are asking "what prayer is this?".
+ * Dedupe asks a different question — "is this the same ARTIFACT?" — and a
+ * recording is not a duplicate of a lead sheet.
+ *
+ * Measured on the live catalog 2026-09-01: stripping audio too produced 95
+ * groups of which FIVE mixed a recording with a chart, and in three of them the
+ * canonical picker kept the recording and would have marked a real chart
+ * `duplicate` on a force-run — `Adon Olam.mp3` over two `Adon Olam` charts,
+ * `Mizmor Shiru L'adonai .mp3` over `Mizmor Shiru Ladonai.pdf`, `Sim Shalom.mp3`
+ * over `Sim_shalom.pdf`. Excluding audio gives 91 groups and ZERO mixed groups.
+ *
+ * The picker's own contract says the same thing from the other side: it demotes
+ * only Google-Apps mimes, and its comment states that when a non-chart artifact
+ * reaches it, "the upstream skip is the bug to fix, not the picker tiebreak".
+ * This IS that upstream fix.
+ *
+ * Pinned against the shared set by test, so adding a token there cannot quietly
+ * change what dedupe considers packaging.
+ */
+export const DEDUPE_STRIPPABLE_EXTENSION_RE =
+    /.(pdf|musicxml|xml|mxl|jpg|png|webp)$/i
+
+/**
  * Exact-grouping key for `dedupe_library`. Distinct from f010's persisted
  * `normalizedName` (`recompute-index-name-fields.ts`) BY DESIGN:
  *
@@ -1009,10 +1034,10 @@ export interface DedupeLibraryIndexResult {
  * safely excluded from grouping by the empty-key guard.
  *
  * L1-W1 (R-0901-live-cw-1 4): the TRAILING media extension is stripped
- * before the punctuation pass, using the SHARED `STRIPPABLE_EXTENSION_RE`
- * that `recompute-index-name-fields` and `library-upload` already apply to
- * the persisted `normalizedName` / `stem`. Reused rather than re-declared so
- * the dedupe key and the persisted name fields cannot drift apart.
+ * before the punctuation pass, using `DEDUPE_STRIPPABLE_EXTENSION_RE` — the
+ * shared `STRIPPABLE_EXTENSION_RE` minus audio. See that constant for why the
+ * two sets differ and for the three live charts the audio tokens would have
+ * buried behind an .mp3.
  *
  * Why it matters: the dominant duplication shape in this library is a Drive
  * row named `X.pdf` beside an upload row named `X`. Keeping the extension
@@ -1036,7 +1061,7 @@ export function dedupeNormalize(s: string): string {
         .replace(/[̀-ͯ]/g, "")
         .toLowerCase()
         .replace(/[_\s\-]+/g, " ")
-        .replace(STRIPPABLE_EXTENSION_RE, "")
+        .replace(DEDUPE_STRIPPABLE_EXTENSION_RE, "")
         .replace(/[^\p{L}\p{N} ]/gu, "")
         .trim()
 }
