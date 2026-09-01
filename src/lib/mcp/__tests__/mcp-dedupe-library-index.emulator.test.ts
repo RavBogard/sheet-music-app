@@ -299,8 +299,12 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         expect(r.committed).toBe(0)
     })
 
-    it("excludes archived rows from grouping", async () => {
-        // archived sister row should not count toward the dupe group.
+    it("L1-W2 — INCLUDES archived rows in grouping", async () => {
+        // Inverted by L1-W2 (R-0901-live-cw-1 3). This asserted the opposite
+        // until 2026-09-01: archived rows were filtered OUT of the hygiene
+        // scan while list_library's browse still SHOWED them, so an archived
+        // twin of a live chart was visible to Daniel and reachable by no
+        // hygiene tool. The browse hides archived now; this scan takes it.
         await seedIndex("active1", { name: "Ana B_Koach.pdf" })
         await seedIndex("archived1", {
             name: "Ana B_Koach.pdf",
@@ -309,8 +313,9 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
-        expect(r.scanned).toBe(1) // archived row excluded
-        expect(r.groupsFound).toBe(0)
+        expect(r.scanned).toBe(2) // archived row now in scope
+        expect(r.groupsFound).toBe(1)
+        expect(r.wouldMark).toBe(1)
     })
 
     it("normalizes diacritics, punctuation, separators, and case", async () => {
@@ -331,7 +336,10 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
         expect(r.groupsFound).toBe(1)
-        expect(r.groups[0].normalizedName).toBe("shabbat shalompdf")
+        // L1-W1: was "shabbat shalompdf" - the trailing .pdf is stripped now.
+        // The diacritic/separator/case folding this test exists to pin is
+        // unchanged; all three names still collapse to ONE group.
+        expect(r.groups[0].normalizedName).toBe("shabbat shalom")
         expect(r.groups[0].kept.fileId).toBe("a") // earliest
         expect(r.groups[0].duplicates.map((d) => d.fileId).sort()).toEqual([
             "b",
@@ -429,10 +437,12 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: true })
         if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
         expect(r.coverage.total).toBe(3)
-        expect(r.coverage.eligible).toBe(1) // only 'active1' survives the status filter
-        expect(r.coverage.scanned).toBe(1)
+        // L1-W2: 'arch1' now survives the status filter alongside 'active1';
+        // only 'duplicate' is still skipped (idempotence).
+        expect(r.coverage.eligible).toBe(2)
+        expect(r.coverage.scanned).toBe(2)
         expect(r.coverage.filteredOut.byStatus.duplicate).toBe(1)
-        expect(r.coverage.filteredOut.byStatus.archived).toBe(1)
+        expect(r.coverage.filteredOut.byStatus.archived).toBeUndefined()
         expect(r.threshold).toBe(0.85) // standing-rule default surfaced
     })
 

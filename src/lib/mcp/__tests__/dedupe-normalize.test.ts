@@ -37,8 +37,13 @@ describe("dedupeNormalize — Unicode script preservation (C10I2-001)", () => {
 
     it("leaves the all-Latin catalog key byte-identical", () => {
         // Separator collapse + lowercase preserved exactly as before.
-        expect(dedupeNormalize("Ana B_Koach.pdf")).toBe("ana b koachpdf")
-        expect(dedupeNormalize(" Ana B_Koach.pdf")).toBe("ana b koachpdf")
+        // L1-W1: the trailing `.pdf` is now STRIPPED (shared
+        // STRIPPABLE_EXTENSION_RE) - this fixture asserted `koachpdf` before
+        // the wave and is updated deliberately, not incidentally. The
+        // separator collapse it exists to pin (`B_Koach` -> `b koach`, and
+        // the leading-space variant) is unchanged.
+        expect(dedupeNormalize("Ana B_Koach.pdf")).toBe("ana b koach")
+        expect(dedupeNormalize(" Ana B_Koach.pdf")).toBe("ana b koach")
         expect(dedupeNormalize("Oseh shalom (camp)")).toBe("oseh shalom camp")
     })
 

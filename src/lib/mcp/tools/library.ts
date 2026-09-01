@@ -3,7 +3,10 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getStorage } from "firebase-admin/storage"
 import { getChartHealth } from "@/lib/file-fetcher"
 import { logger } from "@/lib/logger"
-import { bareStem } from "@/lib/mcp/title-specificity"
+import {
+    STRIPPABLE_EXTENSION_RE,
+    bareStem,
+} from "@/lib/mcp/title-specificity"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
@@ -520,7 +523,8 @@ export interface ListLibraryArgs {
     offset?: number
     includeNonCharts?: boolean
     /**
-     * If true, include rows with `status` ∈ {`duplicate`, `orphaned`} that the
+     * If true, include rows with `status` ∈ {`duplicate`, `orphaned`,
+     * `archived`} that the
      * default browse and the in-app /library catalog hide. Defaults to false.
      * Cycle-2 DATA-004: aligns list_library's default to the UI's hidden-set so
      * caller-side counts match (e.g. `/library` "CRC Charts (162)" vs MCP 185).
@@ -788,6 +792,17 @@ export async function listLibrary(
                   return true
               })
 
+        // L1-W2 (R-0901-live-cw-1 3, Daniel's call): `archived` now leaves the
+        // browse AND enters the hygiene scan. Before this wave the two sides
+        // disagreed - the browse hid only `duplicate` + `orphaned` while
+        // dedupe_library / reconcile_library filtered `archived` OUT of their
+        // scan, so 20 archived rows sat in the catalog Daniel browses and no
+        // hygiene tool could reach them (measured live 2026-09-01: 20 archived,
+        // 17 with an active row of the same name, 12 byte-identical by
+        // fileSize). Both sides move together; `includeNonChartHealthy: true`
+        // stays the audit escape hatch and now surfaces `archived` too, so
+        // nothing becomes unreachable by any tool.
+        //
         // Cycle-2 DATA-004: align list_library's default with the in-app
         // /library catalog, which hides rows that the dedupe pass has marked
         // `status: "duplicate"` and Drive-side `status: "orphaned"` rows. Same
@@ -796,7 +811,11 @@ export async function listLibrary(
         const chartHealthy = args.includeNonChartHealthy
             ? chartLike
             : chartLike.filter((e) => {
-                  if (e.status === "duplicate" || e.status === "orphaned") {
+                  if (
+                      e.status === "duplicate" ||
+                      e.status === "orphaned" ||
+                      e.status === "archived"
+                  ) {
                       filteredOut.byStatus[e.status] =
                           (filteredOut.byStatus[e.status] ?? 0) + 1
                       return false
@@ -988,6 +1007,28 @@ export interface DedupeLibraryIndexResult {
  * NFKD step above, before this regex). Emoji/punctuation-only titles still
  * normalize to `""` (symbols are `\p{S}`, not `\p{L}`/`\p{N}`) and remain
  * safely excluded from grouping by the empty-key guard.
+ *
+ * L1-W1 (R-0901-live-cw-1 4): the TRAILING media extension is stripped
+ * before the punctuation pass, using the SHARED `STRIPPABLE_EXTENSION_RE`
+ * that `recompute-index-name-fields` and `library-upload` already apply to
+ * the persisted `normalizedName` / `stem`. Reused rather than re-declared so
+ * the dedupe key and the persisted name fields cannot drift apart.
+ *
+ * Why it matters: the dominant duplication shape in this library is a Drive
+ * row named `X.pdf` beside an upload row named `X`. Keeping the extension
+ * made those two distinct keys (`achot ketanapdf` vs `achot ketana`), so the
+ * exact pass could not see the pattern at all - measured on the live surface
+ * 2026-09-01, the exact pass returned 8 groups where extension-stripping
+ * returns 79 over the same 908-row eligible set.
+ *
+ * ORDER MATTERS: the strip runs AFTER separator collapse (so `Ana B_Koach.pdf`
+ * is `ana b koach.pdf` by this point) and BEFORE the punctuation pass, which
+ * would otherwise delete the `.` the regex anchors on.
+ *
+ * NOT stripped: `.txt` / `.doc` / `.docx`. They are absent from the shared
+ * pinned set, and widening it is a separate question - 11 live rows carry a
+ * `.doc`/`.docx` name over genuinely PDF bytes, so the extension there is a
+ * naming defect, not packaging. Returned to the desk, not decided here.
  */
 export function dedupeNormalize(s: string): string {
     return s
@@ -995,6 +1036,7 @@ export function dedupeNormalize(s: string): string {
         .replace(/[̀-ͯ]/g, "")
         .toLowerCase()
         .replace(/[_\s\-]+/g, " ")
+        .replace(STRIPPABLE_EXTENSION_RE, "")
         .replace(/[^\p{L}\p{N} ]/gu, "")
         .trim()
 }
@@ -1169,7 +1211,12 @@ export async function dedupeLibraryIndex(
         const snap = await db.collection("library_index").get()
 
         // Collect dedupable candidates. Skip rows already marked
-        // `duplicate` (idempotence) or `archived` (out of scope).
+        // `duplicate` (idempotence) only.
+        //
+        // L1-W2: `archived` is NO LONGER skipped. It was excluded as "out of
+        // scope", but the browse did not hide it, so archived rows were visible
+        // to Daniel and invisible to every hygiene tool at the same time. They
+        // are in scope now; the browse hides them instead.
         //
         // mimeType is captured for the per-group canonical-pick sort:
         // Google-Apps rows (Docs/Sheets/Slides) are demoted vs file-bytes
@@ -1187,7 +1234,7 @@ export async function dedupeLibraryIndex(
         for (const d of snap.docs) {
             const data = d.data()
             const status = typeof data.status === "string" ? data.status : "active"
-            if (status === "duplicate" || status === "archived") {
+            if (status === "duplicate") {
                 filteredByStatus[status] = (filteredByStatus[status] ?? 0) + 1
                 continue
             }

@@ -432,6 +432,43 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         expect(sng.data()?.status).toBe("orphaned")
     })
 
+    it("L1-W2 guard — an archived row that probes dead stays archived, never orphaned", async () => {
+        // The fail branch this pins: L1-W2 put archived rows INTO the reconcile
+        // scan. Archived rows are non-chart soft-deletes with no bytes, so every
+        // one of them probes 404 — without the guard in commitOrphanBatch a
+        // force-run would flip archived -> orphaned on all of them, and nothing
+        // in the toolset can flip `orphaned` back (it needs a manual re-upload).
+        await seedUser(ADMIN, "admin")
+        driveState.metadata.set("archived-folder", "404")
+        await seedIndex("archived-folder", {
+            name: "Old Folder",
+            mimeType: "application/vnd.google-apps.folder",
+            status: "archived",
+        })
+        await seedSong("archived-folder", {
+            title: "Old Folder",
+            status: "archived",
+        })
+
+        const r = await reconcileLibrary(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+
+        // It IS in scope now — that is the ordered half of W2.
+        expect(r.coverage.filteredOut.byStatus.archived).toBeUndefined()
+        expect(r.coverage.eligible).toBe(1)
+
+        // …but the status is NOT rewritten, on either collection.
+        const idx = await db()
+            .collection("library_index")
+            .doc("archived-folder")
+            .get()
+        expect(idx.data()?.status).toBe("archived")
+        expect(idx.data()?.orphanedAt).toBeUndefined()
+
+        const sng = await db().collection("songs").doc("archived-folder").get()
+        expect(sng.data()?.status).toBe("archived")
+    })
+
     it("Drive 5xx leaves the row untouched and surfaces in transient bucket", async () => {
         await seedUser(ADMIN, "admin")
         driveState.metadata.set("blip-id", "5xx")
@@ -519,7 +556,7 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         expect(r.transient.count).toBe(0)
     })
 
-    it("orphaned, duplicate, and archived rows are skipped on every run", async () => {
+    it("orphaned and duplicate rows are skipped on every run; archived is NOT (L1-W2)", async () => {
         await seedUser(ADMIN, "admin")
         await seedIndex("already-orphaned", {
             name: "Old Dead.pdf",
@@ -531,8 +568,11 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
             mimeType: "application/pdf",
             status: "duplicate",
         })
-        // dh-20260527a: non-chart folders/sheets soft-archived via
-        // archive_nonchart_artifacts must vanish from reconcile scans too.
+        // L1-W2 (R-0901-live-cw-1 3) INVERTED the archived clause. dh-20260527a
+        // had archived rows vanish from reconcile scans too — but the browse
+        // never hid them, so they were visible to Daniel and unreachable by
+        // every hygiene tool at once. The browse hides them now; reconcile
+        // scans them. This row is therefore a CANDIDATE, not a skip.
         await seedIndex("already-archived", {
             name: "Old Folder",
             mimeType: "application/vnd.google-apps.folder",
@@ -542,10 +582,18 @@ describe("MCP reconcile_library — NEW-2 cycle-3 (emulator)", () => {
         const r = await reconcileLibrary(ADMIN, { dryRun: true })
         if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
-        expect(r.scanned).toBe(0)
+        // Only the two genuinely-skipped statuses are filtered out now.
+        expect(r.coverage.filteredOut.byStatus.orphaned).toBe(1)
+        expect(r.coverage.filteredOut.byStatus.duplicate).toBe(1)
+        expect(r.coverage.filteredOut.byStatus.archived).toBeUndefined()
+        expect(r.coverage.eligible).toBe(1) // the archived row
         expect(r.alreadyHealthy).toBe(0)
         expect(r.driveMirror.count).toBe(0)
-        expect(r.orphan.count).toBe(0)
+        // The archived folder has no bytes, so it REPORTS as an orphan
+        // candidate — which is the point of putting it in the scan: it is
+        // reachable and visible now. The commit guard is what keeps it from
+        // being rewritten; that is pinned separately in the L1-W2 guard test.
+        expect(r.orphan.count).toBe(1)
         expect(r.transient.count).toBe(0)
     })
 

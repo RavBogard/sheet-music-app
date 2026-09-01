@@ -256,16 +256,14 @@ async function loadAdminCandidates(
         // (Drive 404), and unmarking requires explicit operator action
         // (manual re-upload). This is what makes the tool idempotent.
         // `duplicate` rows are also out of scope — handled by dedupe_library.
-        // `archived` rows are intentional soft-deletes (e.g. the dh-20260527a
-        // Class-3 non-chart folders/sheets archived via archive_nonchart_artifacts)
-        // — reconcile must skip them so they vanish from every scan, not just
-        // /library's status-filtered view.
+        // L1-W2 (R-0901-live-cw-1 3): `archived` is NO LONGER skipped here.
+        // It used to be treated as an intentional soft-delete that should
+        // vanish from every scan - but list_library's default browse never
+        // hid it, so archived rows stayed visible to Daniel while being
+        // unreachable by reconcile and dedupe. The browse hides them now;
+        // this scan picks them up.
         const status = typeof data.status === "string" ? data.status : "active"
-        if (
-            status === "orphaned" ||
-            status === "duplicate" ||
-            status === "archived"
-        ) {
+        if (status === "orphaned" || status === "duplicate") {
             filteredByStatus[status] = (filteredByStatus[status] ?? 0) + 1
             continue
         }
@@ -763,16 +761,38 @@ async function commitRebondBatch(
     return { committed, healed, orphanedDuringRebond, stillNeedsRebond }
 }
 
+/**
+ * L1-W2 guard (R-0901-live-cw-1 3) — archived rows are now IN the reconcile
+ * scan, but they must not be silently re-statused.
+ *
+ * `archived` is a deliberate, reversible soft-delete (archive_nonchart_artifacts
+ * sets archivedBy/archivedAt). `orphaned` is not reversible by any tool — this
+ * file's own scan comment says unmarking it 'requires explicit operator action
+ * (manual re-upload)'. An archived Drive folder or sheet has no chart bytes by
+ * construction, so the moment reconcile started scanning archived rows, every
+ * one of them probed dead and would have been flipped archived -> orphaned on
+ * the next force-run, destroying the archive classification on rows Daniel
+ * archived on purpose.
+ *
+ * The order asked for archived to ENTER THE SCAN, which it now has: these rows
+ * are counted, probed and REPORTED. It did not ask for a new status transition,
+ * and `live` does not mint one (rule 1) — so the write is held and surfaced as
+ * `heldArchived` rather than either committed or hidden.
+ */
 async function commitOrphanBatch(
     db: FirebaseFirestore.Firestore,
     plan: ProbeResult[],
-): Promise<number> {
-    if (plan.length === 0) return 0
+): Promise<{ committed: number; heldArchived: number }> {
+    const writable = plan.filter(
+        (p) => p.candidate.currentStatus !== "archived",
+    )
+    const heldArchived = plan.length - writable.length
+    if (writable.length === 0) return { committed: 0, heldArchived }
     const nowIso = new Date().toISOString()
     const BATCH_MAX = 400
     let committed = 0
-    for (let i = 0; i < plan.length; i += BATCH_MAX) {
-        const slice = plan.slice(i, i + BATCH_MAX)
+    for (let i = 0; i < writable.length; i += BATCH_MAX) {
+        const slice = writable.slice(i, i + BATCH_MAX)
         const batch = db.batch()
         for (const p of slice) {
             batch.set(
@@ -794,7 +814,7 @@ async function commitOrphanBatch(
         await batch.commit()
         committed += slice.length
     }
-    return committed
+    return { committed, heldArchived }
 }
 
 async function broadcastReconcileSignal(
@@ -1017,7 +1037,14 @@ export async function reconcileLibrary(
         const finalNeedsRebondRows: NeedsRebondRow[] =
             rebondOutcome.stillNeedsRebond
 
-        const orphansCommitted = await commitOrphanBatch(db, fullOrphanPlan)
+        const orphanCommit = await commitOrphanBatch(db, fullOrphanPlan)
+        const orphansCommitted = orphanCommit.committed
+        if (orphanCommit.heldArchived > 0) {
+            logger.info(
+                "[mcp] reconcile_library held archived rows at orphan-commit",
+                { uid, heldArchived: orphanCommit.heldArchived },
+            )
+        }
         const committed =
             mirrorOutcome.committed +
             rebondOutcome.committed +
