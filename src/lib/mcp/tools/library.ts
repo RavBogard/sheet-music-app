@@ -21,6 +21,7 @@ import type { HygieneCoverage } from "./reconcile-library"
 // surfaces). Imported here for the existing internal callers + re-exported so
 // reconcile-library and any other importer keep their `from "./library"` path.
 import { isNonChartArtifactShape } from "@/lib/library/junk-filter"
+import { libraryDisplayName } from "@/lib/library/display-name"
 
 export { isNonChartArtifactShape }
 /**
@@ -505,7 +506,10 @@ export async function searchLibrary(
         // R-0901-live-cw-4 §5: render the name the browse shows. Matching on
         // the current name and then returning the stale one is the same defect
         // wearing a different face.
-        const displayName = merged.name ?? merged.indexTitle
+        // R-0902-live-cw-1 §2: same shared display path as list_library, so
+        // the two surfaces cannot drift again. The filter above matched on the
+        // RAW name, so `Hashkivenu.pdf` still finds the row.
+        const displayName = libraryDisplayName(merged.name ?? merged.indexTitle)
         if (displayName) row.title = displayName
         // Only annotate non-ok rows — keeps the healthy-row wire shape lean.
         if (health.status !== "ok") {
@@ -733,7 +737,10 @@ function toLibraryEntry(
     const enrichment = projectionFromLibraryIndexData(data, retryQueued)
     return {
         fileId: id,
-        name,
+        // R-0902-live-cw-1 §2: the extension is packaging. Display-side only —
+        // `mimeType` below still carries the real file type, and every filter
+        // in this module reads the raw `data.name`.
+        name: libraryDisplayName(name),
         collection: typeof data.collection === "string" ? data.collection : null,
         mimeType: typeof data.mimeType === "string" ? data.mimeType : null,
         fileSize: typeof data.fileSize === "number" ? data.fileSize : null,

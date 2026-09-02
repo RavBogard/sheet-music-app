@@ -53,7 +53,7 @@ vi.mock("@/lib/file-fetcher", () => ({
     fetchFileById: vi.fn(),
 }))
 
-import { searchLibrary } from "../library"
+import { searchLibrary, listLibrary } from "../library"
 
 /** The live case: renamed so the parenthetical could seed `arrangement`. */
 const RENAMED_ID = "1-NavaOsehShalomRow"
@@ -124,5 +124,46 @@ describe("searchLibrary reads the name the browse shows (R-0901-live-cw-4 §5)",
         expect(r[0]).not.toHaveProperty("indexTitle")
         expect(r[0]).not.toHaveProperty("name")
         expect(r[0]).not.toHaveProperty("mimeType")
+    })
+})
+
+describe("the extension is hidden from ONE shared path (R-0902-live-cw-1 §2)", () => {
+    beforeEach(() => {
+        h.songs = [{ id: "pdf-row", title: "Hashkivenu", key: "Am" }]
+        h.indexDocs = [
+            {
+                id: "pdf-row",
+                data: {
+                    name: "Hashkivenu.pdf",
+                    mimeType: "application/pdf",
+                    status: "active",
+                },
+            },
+        ]
+    })
+
+    it("search renders the name without the extension", async () => {
+        const r = await searchLibrary("u", { query: "hashkivenu" })
+        expect(r[0]?.title).toBe("Hashkivenu")
+    })
+
+    it("the extension stays MATCHABLE — stripping is display-side only", async () => {
+        const r = await searchLibrary("u", { query: "Hashkivenu.pdf" })
+        expect(r.map((s) => s.id)).toEqual(["pdf-row"])
+        expect(r[0]?.title).toBe("Hashkivenu")
+    })
+
+    it("browse and search render the SAME string — one path, not two", async () => {
+        const listed = await listLibrary("u", {})
+        const searched = await searchLibrary("u", { query: "hashkivenu" })
+        const browseName = ("rows" in listed ? listed.rows : [])[0]?.name
+        expect(browseName).toBe("Hashkivenu")
+        expect(searched[0]?.title).toBe(browseName)
+    })
+
+    it("browse still carries the real mimeType, so file type is not lost", async () => {
+        const listed = await listLibrary("u", {})
+        const row = ("rows" in listed ? listed.rows : [])[0]
+        expect(row?.mimeType).toBe("application/pdf")
     })
 })
