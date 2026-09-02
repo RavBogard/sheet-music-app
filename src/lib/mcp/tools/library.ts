@@ -43,6 +43,31 @@ export function isGoogleAppsMime(mime: string | null | undefined): boolean {
 }
 
 /**
+ * L1-W2 (R-0901-live-cw-2 §5, plan review) — canonical-pick status rank.
+ *
+ * `active` is the only status the browse shows. Every other status is
+ * hidden, so a non-active row taken as canonical does not merely keep the
+ * wrong row — it empties the group: the canonical stays hidden by its own
+ * status and every loser is hidden by the `duplicate` mark that dedupe
+ * just wrote. The song leaves the library browse entirely.
+ *
+ * That was unreachable while archived rows were filtered out of the scan.
+ * R-0901-live-cw-1 §3 put them in, and the first plan taken afterwards had
+ * 4 groups in exactly that shape (`Shema (major)`, `Avinu Malkeinu_trad_
+ * Choir_Em`, `Oseh shalom (S&P)`, `V_shamru_(trad)` — measured live at
+ * `ca7fca91ce`, 2026-09-02). So the rank is a consequence of that ruling,
+ * not a pre-existing bug it exposed.
+ *
+ * Deliberately coarse: active vs everything-else, rather than a full status
+ * ordering. The question the picker asks is "can this row be the library's
+ * visible face", and that is binary. It also covers `orphaned` for free
+ * (0 such rows live today, but dedupe has never skipped them).
+ */
+export function canonicalStatusRank(status: string | null | undefined): number {
+    return status === "active" ? 0 : 1
+}
+
+/**
  * MCP read tools for the song library. Plain async functions wrapping the
  * Admin-SDK songs reader. `uid` is threaded for a consistent contract with the
  * write tools to come; library reads are not user-scoped today.
@@ -1113,6 +1138,9 @@ interface SimilarityCandidate {
     // the same Google-Apps demotion as the exact-group sort. See
     // `dedupeLibraryIndex` per-group sort comment.
     mimeType: string | null
+    // L1-W2: and the same status rank, so the two passes cannot disagree
+    // about what may be canonical.
+    status: string
 }
 function clusterBySimilarity(
     candidates: SimilarityCandidate[],
@@ -1169,7 +1197,12 @@ function clusterBySimilarity(
  * `songs/{id}` mirror.
  *
  * Canonical-pick policy (applies identically to exact + fuzzy groups):
- *   1. Non-Google-Apps mime BEFORE Google-Apps. A file-bytes row
+ *   1. `active` BEFORE any other status (`canonicalStatusRank`). Age
+ *      decides only WITHIN a status. Without this the picker can hand
+ *      canonical to a row the browse hides and mark the visible one
+ *      `duplicate`, which removes the song from the browse altogether
+ *      rather than merely picking the wrong survivor.
+ *   2. Non-Google-Apps mime BEFORE Google-Apps. A file-bytes row
  *      (PDF/image/MusicXML) wins canonical over a Google-Doc with the
  *      same normalized name even when the Google-Doc has the earlier
  *      `uploadedAt`. Closes the groups-7/9 trap where Daniel's
@@ -1178,9 +1211,9 @@ function clusterBySimilarity(
  *      survivor. Behavior-preserving for any group containing zero
  *      Google-Apps rows (the demotion only flips an outcome when a
  *      mixed-mime group exists).
- *   2. Earliest `uploadedAt` — null sorts to the end so a
+ *   3. Earliest `uploadedAt` — null sorts to the end so a
  *      metadata-stripped scan artifact never beats a real timestamp.
- *   3. `fileId` ASC tiebreak — fully deterministic.
+ *   4. `fileId` ASC tiebreak — fully deterministic.
  *
  * Non-chart artifacts (audio / .xlsx / .docx / folders / dotfiles)
  * should never reach the picker — they are filtered upstream by
@@ -1263,6 +1296,10 @@ export async function dedupeLibraryIndex(
             name: string
             uploadedAt: string | null
             mimeType: string | null
+            // L1-W2: carried for the canonical-pick status rank. It was
+            // read for the skip above and then dropped, which is why the
+            // picker could not see it.
+            status: string
         }
         const candidates: Candidate[] = []
         const filteredByStatus: Record<string, number> = {}
@@ -1296,6 +1333,7 @@ export async function dedupeLibraryIndex(
                 name: rawName,
                 uploadedAt,
                 mimeType,
+                status,
             })
         }
 
@@ -1322,18 +1360,25 @@ export async function dedupeLibraryIndex(
         for (const [key, bucket] of groups) {
             if (bucket.length < 2) continue
             // Deterministic canonical pick. Sort priority:
-            //   (a) non-Google-Apps mime BEFORE Google-Apps — a real-bytes
+            //   (a) `active` BEFORE any other status. A hidden row taken
+            //       as canonical empties the group: it stays hidden by its
+            //       own status while every loser is hidden by the mark
+            //       this run writes. See `canonicalStatusRank`.
+            //   (b) non-Google-Apps mime BEFORE Google-Apps — a real-bytes
             //       PDF wins canonical over a Google-Doc with the same
             //       normalized name (groups-7/9 trap: a Google-Doc upload
             //       could otherwise out-rank a later PDF re-upload by
             //       uploadedAt alone and silently mark the renderable
             //       bytes `duplicate`). Behavior-preserving for groups
             //       containing zero Google-Apps rows.
-            //   (b) earliest uploadedAt — rows with null uploadedAt sort
+            //   (c) earliest uploadedAt — rows with null uploadedAt sort
             //       to the end (a metadata-stripped scan artifact never
             //       beats a real timestamp).
-            //   (c) tiebreak: fileId asc.
+            //   (d) tiebreak: fileId asc.
             bucket.sort((a, b) => {
+                const aLive = canonicalStatusRank(a.status)
+                const bLive = canonicalStatusRank(b.status)
+                if (aLive !== bLive) return aLive - bLive
                 const aGoogle = isGoogleAppsMime(a.mimeType) ? 1 : 0
                 const bGoogle = isGoogleAppsMime(b.mimeType) ? 1 : 0
                 if (aGoogle !== bGoogle) return aGoogle - bGoogle
@@ -1377,6 +1422,7 @@ export async function dedupeLibraryIndex(
                     normalizedKey: key,
                     uploadedAt: c.uploadedAt,
                     mimeType: c.mimeType,
+                    status: c.status,
                 })
             }
             const fuzzyClusters = clusterBySimilarity(
@@ -1386,10 +1432,14 @@ export async function dedupeLibraryIndex(
             for (const cluster of fuzzyClusters.values()) {
                 if (cluster.length < 2) continue
                 // Same sort priority as the exact-group bucket above:
-                // (a) non-Google-Apps mime first, (b) earliest uploadedAt,
-                // (c) fileId asc. Keeps the canonical-pick policy uniform
-                // between exact-normalize groups and similarity clusters.
+                // (a) active-status first, (b) non-Google-Apps mime first,
+                // (c) earliest uploadedAt, (d) fileId asc. Keeps the
+                // canonical-pick policy uniform between exact-normalize
+                // groups and similarity clusters.
                 cluster.sort((a, b) => {
+                    const aLive = canonicalStatusRank(a.status)
+                    const bLive = canonicalStatusRank(b.status)
+                    if (aLive !== bLive) return aLive - bLive
                     const aGoogle = isGoogleAppsMime(a.mimeType) ? 1 : 0
                     const bGoogle = isGoogleAppsMime(b.mimeType) ? 1 : 0
                     if (aGoogle !== bGoogle) return aGoogle - bGoogle
@@ -1418,6 +1468,7 @@ export async function dedupeLibraryIndex(
                         name: r.name,
                         uploadedAt: r.uploadedAt,
                         mimeType: r.mimeType,
+                        status: r.status,
                     })),
                 )
             }

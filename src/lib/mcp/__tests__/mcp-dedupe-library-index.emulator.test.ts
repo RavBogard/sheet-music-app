@@ -378,6 +378,97 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         expect(r.wouldMark).toBe(1)
     })
 
+    /**
+     * L1-W2 canonical status rank (R-0901-live-cw-2 §5, plan review).
+     *
+     * The fail branch these pin is not hypothetical and not a fixture: the
+     * first `dedupe_library({dryRun:true})` plan taken after archived rows
+     * entered the scan had FOUR groups in this exact shape — an archived row
+     * older than its active twin, so the picker (age only) handed canonical
+     * to the archived one and marked the active one `duplicate`. Both are
+     * then hidden, and the song leaves the browse entirely. Measured live at
+     * `ca7fca91ce` on 2026-09-02: `Shema (major).pdf`,
+     * `Avinu Malkeinu_trad_Choir_Em.pdf`, `Oseh shalom (S&P).pdf`,
+     * `V_shamru_(trad).pdf` — Rosh Hashanah repertoire, ten days out.
+     *
+     * Remove the rank comparison and every assertion below flips.
+     */
+    it("L1-W2 rank — an ACTIVE row outranks an older ARCHIVED twin", async () => {
+        // The `Shema (major).pdf` group, reproduced: same name, same bytes,
+        // archived copy uploaded two months earlier.
+        await seedIndex("shema-archived", {
+            name: "Shema (major).pdf",
+            uploadedAt: "2025-05-06T17:59:42.000Z",
+            status: "archived",
+        })
+        await seedIndex("shema-active", {
+            name: "Shema (major).pdf",
+            uploadedAt: "2025-07-08T16:53:49.000Z",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+
+        expect(r.groupsFound).toBe(1)
+        // Pre-rank this was `shema-archived` — the earlier uploadedAt.
+        expect(r.groups[0].kept.fileId).toBe("shema-active")
+        expect(r.groups[0].duplicates.map((d) => d.fileId)).toEqual([
+            "shema-archived",
+        ])
+
+        // The invariant the rank actually protects: the group still has a
+        // row the browse will show. Asserted on disk, not on the report.
+        const keep = await db().collection("library_index").doc("shema-active").get()
+        expect(keep.data()?.status).toBeUndefined() // untouched => active
+        const loser = await db().collection("library_index").doc("shema-archived").get()
+        expect(loser.data()?.status).toBe("duplicate")
+    })
+
+    it("L1-W2 rank — status outranks the Google-Apps demotion", async () => {
+        // Deliberate precedence, and the only place the two rules can
+        // disagree: an archived PDF vs an active Google-Doc. The mime
+        // demotion asks which row renders; the rank asks which row the
+        // browse can show at all. A group with no visible row is the worse
+        // outcome, so the rank runs first. (No live group has this shape
+        // today — pinned so the ordering is a decision, not an accident.)
+        await seedIndex("mixed-archived-pdf", {
+            name: "Oseh shalom (S&P).pdf",
+            uploadedAt: "2025-05-06T18:51:47.000Z",
+            mimeType: "application/pdf",
+            status: "archived",
+        })
+        await seedIndex("mixed-active-gdoc", {
+            name: "Oseh shalom (S&P).pdf",
+            uploadedAt: "2025-07-08T16:54:33.000Z",
+            mimeType: "application/vnd.google-apps.document",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+        expect(r.groups[0].kept.fileId).toBe("mixed-active-gdoc")
+    })
+
+    it("L1-W2 rank — age still decides WITHIN a status", async () => {
+        // The `Lecha Dodi Lincoln_s Nigun.pdf` group: both rows archived, so
+        // the rank ties and the pre-existing uploadedAt sort is untouched.
+        // This group legitimately has no visible row — dedupe did not empty
+        // it and must not be blamed for it.
+        await seedIndex("lecha-late", {
+            name: "Lecha Dodi Lincoln_s Nigun.pdf",
+            uploadedAt: "2025-08-01T00:00:00Z",
+            status: "archived",
+        })
+        await seedIndex("lecha-early", {
+            name: "Lecha Dodi Lincoln_s Nigun.pdf",
+            uploadedAt: "2025-06-01T00:00:00Z",
+            status: "archived",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+        expect(r.groups[0].kept.fileId).toBe("lecha-early")
+    })
+
     it("normalizes diacritics, punctuation, separators, and case", async () => {
         // All three should collapse into one group of three.
         await seedIndex("a", {
