@@ -239,3 +239,44 @@ describe("getSong", () => {
         expect(await getSong("u", { id: "nope" })).toBeNull()
     })
 })
+
+describe("chartFormatClass (L1-W4)", () => {
+    // The picker cannot rescue a cross-format group, so the grouping key
+    // has to keep the pair apart. These are the exact mimes of the two
+    // production rows that regressed.
+    it("separates a PDF chart from a scraped text chart", async () => {
+        const { chartFormatClass } = await import("@/lib/mcp/tools/library")
+        expect(chartFormatClass("application/pdf")).toBe("score")
+        expect(chartFormatClass("text/plain")).toBe("text")
+        expect(chartFormatClass("application/pdf")).not.toBe(
+            chartFormatClass("text/plain"),
+        )
+    })
+
+    it("keeps every real chart rendering in one class", async () => {
+        const { chartFormatClass } = await import("@/lib/mcp/tools/library")
+        // MusicXML is the strategic preferred format and an image chart is
+        // still a chart; none of these should be split away from a PDF,
+        // because two of them WOULD be genuine duplicates of each other.
+        for (const m of [
+            "application/pdf",
+            "application/vnd.recordare.musicxml+xml",
+            "application/xml",
+            "image/png",
+            "application/octet-stream",
+        ]) {
+            expect(chartFormatClass(m)).toBe("score")
+        }
+    })
+
+    it("keeps the Google-Apps class distinct and tolerates missing mime", async () => {
+        const { chartFormatClass } = await import("@/lib/mcp/tools/library")
+        expect(chartFormatClass("application/vnd.google-apps.document")).toBe(
+            "gapps",
+        )
+        // A row with no mimeType is unknowable, not text — it must stay
+        // groupable with real charts or dedupe silently stops seeing it.
+        expect(chartFormatClass(null)).toBe("score")
+        expect(chartFormatClass(undefined)).toBe("score")
+    })
+})

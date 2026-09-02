@@ -44,6 +44,36 @@ export function isGoogleAppsMime(mime: string | null | undefined): boolean {
 }
 
 /**
+ * L1-W4 (2026-09-02) — the rendering-format class of a library row.
+ *
+ * A PDF chart and a scraped chord-chart text file of the same song share a
+ * normalized name but are NOT two uploads of one thing: they are two
+ * renderings, and both are wanted. Grouping them collapses a real artifact,
+ * and no canonical-pick tiebreak can help — whichever wins, the other is
+ * marked `duplicate` and leaves the browse.
+ *
+ * Caught in production: `Three Little Birds` had a 44,377-byte
+ * `application/pdf` (uploaded by David, human-curated hours earlier) and a
+ * 763-byte `text/plain` chart. They grouped, the text row won canonical on
+ * an earlier `uploadedAt`, and the PDF was marked `duplicate` and hidden
+ * from the browse, search and Perform. `BATCH-L3-ARRANGEMENTS-2026-09-02.md`
+ * had already read the pair and called it "the PDF and the text chart …
+ * not a duplicate".
+ *
+ * This is NOT the "upstream skip is the bug, not the picker tiebreak"
+ * case the picker doc names. Both rows are legitimate charts that belong
+ * in the library; nothing slipped past `archive_nonchart_artifacts`. The
+ * grouping key is what was wrong, so the key is what changes: dedupe
+ * compares like with like, and cross-format pairs never form a group.
+ */
+export function chartFormatClass(mime: string | null | undefined): string {
+    if (isGoogleAppsMime(mime)) return "gapps"
+    const m = (mime ?? "").toLowerCase()
+    if (m === "text/plain") return "text"
+    return "score"
+}
+
+/**
  * L1-W2 (R-0901-live-cw-2 §5, plan review) — canonical-pick status rank.
  *
  * `active` is the only status the browse shows. Every other status is
@@ -1266,6 +1296,12 @@ function clusterBySimilarity(
  * `isNonChartArtifactShape`-positive rows: if those slip through, the
  * upstream skip is the bug to fix, not the picker tiebreak.
  *
+ * L1-W4: that reasoning holds only for rows that should not be in the
+ * group. It does NOT cover a PDF and a text chart of the same song —
+ * both are legitimate charts, and no tiebreak here can keep both
+ * visible. That case is handled before the picker runs, by the grouping
+ * key. See `chartFormatClass`.
+ *
  * Dedup threshold (0.85 strict) and force-override semantics are not
  * touched by this picker; see `[[feedback_dedup_force_override]]`.
  */
@@ -1392,17 +1428,24 @@ export async function dedupeLibraryIndex(
                     (filteredByOther.empty_normalized_key ?? 0) + 1
                 continue
             }
-            const bucket = groups.get(key) ?? []
+            // L1-W4: like compares with like. A PDF and a text chart of
+            // the same song are two renderings, not two uploads, so they
+            // must never share a bucket. See `chartFormatClass`.
+            const bucketKey = `${key} ${chartFormatClass(c.mimeType)}`
+            const bucket = groups.get(bucketKey) ?? []
             bucket.push(c)
-            groups.set(key, bucket)
+            groups.set(bucketKey, bucket)
         }
 
         // Pick canonical + collect losers per group.
         const dupeGroups: DedupeGroup[] = []
         const losers: Candidate[] = []
         const exactGroupedIds = new Set<string>()
-        for (const [key, bucket] of groups) {
+        for (const [bucketKey, bucket] of groups) {
             if (bucket.length < 2) continue
+            // Strip the L1-W4 format-class suffix for reporting; the group
+            // is still identified to the operator by its normalized name.
+            const key = bucketKey.slice(0, bucketKey.indexOf(" "))
             // Deterministic canonical pick. Sort priority:
             //   (a) `active` BEFORE any other status. A hidden row taken
             //       as canonical empties the group: it stays hidden by its
@@ -1469,10 +1512,26 @@ export async function dedupeLibraryIndex(
                     status: c.status,
                 })
             }
-            const fuzzyClusters = clusterBySimilarity(
-                remaining,
-                similarityThreshold,
-            )
+            // L1-W4: the similarity pass gets the same like-with-like
+            // guard as the exact pass — cluster inside one format class,
+            // never across. A fuzzy match is a weaker signal than an exact
+            // one, so crossing formats here would be strictly worse.
+            const byFormat = new Map<string, SimilarityCandidate[]>()
+            for (const c of remaining) {
+                const cls = chartFormatClass(c.mimeType)
+                const arr = byFormat.get(cls) ?? []
+                arr.push(c)
+                byFormat.set(cls, arr)
+            }
+            const fuzzyClusters = new Map<string, SimilarityCandidate[]>()
+            for (const [cls, rows] of byFormat) {
+                for (const [k, cluster] of clusterBySimilarity(
+                    rows,
+                    similarityThreshold,
+                )) {
+                    fuzzyClusters.set(`${cls} ${k}`, cluster)
+                }
+            }
             for (const cluster of fuzzyClusters.values()) {
                 if (cluster.length < 2) continue
                 // Same sort priority as the exact-group bucket above:

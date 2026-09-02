@@ -448,6 +448,64 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         expect(r.groups[0].kept.fileId).toBe("mixed-active-gdoc")
     })
 
+    it("L1-W4 — a PDF and a text chart of the same song do NOT group", async () => {
+        // The production regression, modelled on the row it happened to.
+        // `Three Little Birds` had a 44,377-byte PDF (uploaded by David,
+        // human-curated hours before) and a 763-byte scraped text chart.
+        // They shared a normalized name, so they grouped; the text row won
+        // canonical on an earlier uploadedAt, and the PDF was marked
+        // `duplicate` — hidden from the browse, from search, and from
+        // Perform. No canonical-pick tiebreak fixes this: whichever row
+        // wins, the other legitimate rendering is the one that disappears.
+        // So the grouping key carries the format class and the pair never
+        // meets. See `chartFormatClass`.
+        await seedIndex("tlb-text", {
+            name: "Three Little Birds",
+            uploadedAt: "2026-06-18T05:43:56.814Z",
+            mimeType: "text/plain",
+        })
+        await seedIndex("tlb-pdf", {
+            name: "Three Little Birds",
+            uploadedAt: "2026-06-20T14:00:50.319Z",
+            mimeType: "application/pdf",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+        expect(r.groupsFound).toBe(0)
+        expect(r.wouldMark).toBe(0)
+        expect(r.committed).toBe(0)
+
+        // Both rows still visible. This is the assertion that would have
+        // caught it: not "the right row won" but "no row was hidden".
+        const text = await db().collection("library_index").doc("tlb-text").get()
+        const pdf = await db().collection("library_index").doc("tlb-pdf").get()
+        expect(text.data()?.status ?? "active").toBe("active")
+        expect(pdf.data()?.status ?? "active").toBe("active")
+    })
+
+    it("L1-W4 — two charts of the SAME format still group", async () => {
+        // The guard splits by format; it must not stop dedupe doing its
+        // job. Two real PDF uploads of one chart are still one group, and
+        // the earliest uploadedAt still wins canonical.
+        await seedIndex("same-fmt-old", {
+            name: "Mi Chamocha (camp).pdf",
+            uploadedAt: "2025-04-01T10:00:00.000Z",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("same-fmt-new", {
+            name: "Mi Chamocha (camp).pdf",
+            uploadedAt: "2025-09-01T10:00:00.000Z",
+            mimeType: "application/pdf",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
+        expect(r.groupsFound).toBe(1)
+        expect(r.groups[0].kept.fileId).toBe("same-fmt-old")
+        expect(r.groups[0].normalizedName).not.toContain(" ")
+    })
+
     it("L1-W2 rank — age still decides WITHIN a status", async () => {
         // The `Lecha Dodi Lincoln_s Nigun.pdf` group: both rows archived, so
         // the rank ties and the pre-existing uploadedAt sort is untouched.
