@@ -134,6 +134,10 @@ interface LibraryW02Fields {
      *  isNonChartArtifactShape can match against the library_index name
      *  when the songs/{id} title was cleaned (extension stripped). */
     name?: string
+    /** R-0901-live-cw-4 §5: `library_index.title` — the browse's own fallback
+     *  when a row carries no `name`. Joined so search_library resolves the
+     *  displayed name through exactly the precedence `toLibraryEntry` uses. */
+    indexTitle?: string
     /** Cycle-3 AI-001: enrichment projection joined alongside W-02 so the
      *  single library_index scan in loadLibraryW02Map serves both feature
      *  groups. Always populated (defaults to EMPTY_ENRICHMENT_PROJECTION
@@ -230,6 +234,8 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
                 mimeType:
                     typeof data.mimeType === "string" ? data.mimeType : undefined,
                 name: typeof data.name === "string" ? data.name : undefined,
+                indexTitle:
+                    typeof data.title === "string" ? data.title : undefined,
                 enrichment: projectionFromLibraryIndexData(
                     data,
                     retryIds.has(d.id),
@@ -349,8 +355,26 @@ export async function searchLibrary(
             // (Typos like "weisberg" vs "weisenberg" still miss; Levenshtein
             // is a deliberately-deferred future lane.)
             if (q) {
-                const title = normalizeForSearch(s.title)
-                if (!q.split(" ").every((tok) => title.includes(tok))) return false
+                // R-0901-live-cw-4 §5: `edit_library_entry` renames
+                // `library_index` and never mirrors into `songs/{id}`, so
+                // `s.title` can be a name Daniel can no longer see anywhere.
+                // Match the name the BROWSE shows (same `name ?? title`
+                // precedence as `toLibraryEntry`), and keep the songs title as
+                // an alternate so a row findable by its old name today stays
+                // findable — a strict superset, nothing that matched stops.
+                const w02q = w02Map.get(s.id)
+                const searchable = [w02q?.name ?? w02q?.indexTitle, s.title]
+                const toks = q.split(" ")
+                const hit = searchable.some(
+                    (cand) =>
+                        typeof cand === "string" &&
+                        cand.length > 0 &&
+                        (() => {
+                            const t = normalizeForSearch(cand)
+                            return toks.every((tok) => t.includes(tok))
+                        })(),
+                )
+                if (!hit) return false
             }
             if (key && s.key?.toLowerCase() !== key) return false
             if (args.bpmMin !== undefined && (s.bpm === undefined || s.bpm < args.bpmMin)) {
@@ -464,12 +488,25 @@ export async function searchLibrary(
             _rank: number
             mimeType?: string
             name?: string
+            indexTitle?: string
         }
-        const { _rank: _r, mimeType: _m, name: _n, ...rest } = merged
+        const {
+            _rank: _r,
+            mimeType: _m,
+            name: _n,
+            indexTitle: _it,
+            ...rest
+        } = merged
         void _r
         void _m
         void _n
+        void _it
         const row = rest as SongRecord
+        // R-0901-live-cw-4 §5: render the name the browse shows. Matching on
+        // the current name and then returning the stale one is the same defect
+        // wearing a different face.
+        const displayName = merged.name ?? merged.indexTitle
+        if (displayName) row.title = displayName
         // Only annotate non-ok rows — keeps the healthy-row wire shape lean.
         if (health.status !== "ok") {
             row.chartHealth = {
