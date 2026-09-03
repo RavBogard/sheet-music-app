@@ -1057,13 +1057,78 @@ export interface DedupeLibraryIndexArgs {
     forceScore?: number
 }
 
+/**
+ * W2/W5 (R-0903-live-cw-2 §3, §5) — which pass grouped a group.
+ *
+ * The hash pass ADDS a lane; it does not replace the name pass. Byte
+ * identity is exact and needs no name; the normalized-name pass stays for
+ * the near-misses a hash can never see. An operator reading a group needs
+ * to know which question it answers, because the two have different failure
+ * modes: a name group can be wrong about the song, a hash group cannot, and
+ * only a name group can be argued with.
+ */
+export type DedupePass = "exact-name" | "fuzzy-name"
+
 export interface DedupeGroup {
     /** Normalized name key shared by every row in the group. */
     normalizedName: string
+    /**
+     * W2 — the pass that formed this group. Recorded on the group and in
+     * the run record, so an undo can say not just what it reverses but what
+     * reasoning marked it.
+     */
+    groupedBy: DedupePass
     /** Canonical surviving row. */
     kept: { fileId: string; name: string; uploadedAt: string | null }
     /** Losers that would be / were marked `status: "duplicate"`. */
     duplicates: Array<{ fileId: string; name: string; uploadedAt: string | null }>
+}
+
+/**
+ * W2 (R-0903-live-cw-2 §5) — one marked row's reversibility record.
+ *
+ * `priorStatus` is the status as READ IN THIS RUN, never a guess. That is
+ * the whole point: 18 of the 85 rows in the 09-01 sweep carried
+ * `priorStatus: "archived"`, so a restore that defaults to `active` would
+ * un-archive rows somebody deliberately archived.
+ */
+export interface DedupeRunRow {
+    fileId: string
+    /** The row's status as read in this run. `null` when the row had none. */
+    priorStatus: string | null
+    /** The row that survived, so an operator can see WHY this one was hidden. */
+    canonicalFileId: string
+    /** Which pass grouped it. */
+    groupedBy: DedupePass
+}
+
+/**
+ * W2 (R-0903-live-cw-2 §5) — the `dedupeRuns/{runId}` document.
+ *
+ * Written BEFORE the status batches. Firestore caps a batch at 500 writes
+ * and a real run can exceed that, so the marks span several batches and no
+ * single atomic unit can cover run-record-plus-every-mark. The ordering is
+ * therefore chosen for which way it FAILS: a crash between the record and
+ * the marks leaves a record describing rows that were never hidden — an
+ * undo that is a harmless no-op — whereas the reverse leaves hidden rows
+ * that nothing can reverse, which is the exact harm this collection exists
+ * to end. Reversibility precedes hiding (G2).
+ */
+export interface DedupeRunRecord {
+    runId: string
+    /** ISO timestamp of the run. */
+    at: string
+    /** The similarity threshold actually applied. */
+    threshold: number
+    /** The uid that ran it. */
+    actorUid: string
+    /** Org scope of the scan, so a restore cannot cross tenants. */
+    orgId: string
+    groupsFound: number
+    /** Rows this run marked. Asserted equal to `rows.length` before any write. */
+    marked: number
+    /** Per marked row: its prior state and the row that displaced it. */
+    rows: DedupeRunRow[]
 }
 
 export interface DedupeLibraryIndexResult {
@@ -1094,6 +1159,13 @@ export interface DedupeLibraryIndexResult {
     refused?: boolean
     /** Cycle-3 MCP-001 — the threshold actually applied for this call (default 0.85). */
     threshold: number
+    /**
+     * W2 (R-0903-live-cw-2 §5) — the `dedupeRuns/{runId}` id this call wrote,
+     * and the argument an operator hands `undo_dedupe_group` to reverse it.
+     * Absent on dryRun, on a refused run, and on a run that marked nothing —
+     * a run row is written only when rows are actually hidden.
+     */
+    dedupeRunId?: string
     /** Cycle-3 DATA-002 — uniform hygiene scan coverage. */
     coverage: HygieneCoverage
 }
@@ -1458,6 +1530,15 @@ export async function dedupeLibraryIndex(
         // Pick canonical + collect losers per group.
         const dupeGroups: DedupeGroup[] = []
         const losers: Candidate[] = []
+        /**
+         * W2 — loser fileId -> the row that displaced it, and the pass that
+         * decided. Populated at the same moment a loser is created, so the
+         * two cannot drift apart.
+         */
+        const loserProvenance = new Map<
+            string,
+            { canonicalFileId: string; groupedBy: DedupePass }
+        >()
         const exactGroupedIds = new Set<string>()
         for (const [bucketKey, bucket] of groups) {
             if (bucket.length < 2) continue
@@ -1495,6 +1576,7 @@ export async function dedupeLibraryIndex(
             const [keep, ...rest] = bucket
             dupeGroups.push({
                 normalizedName: key,
+                groupedBy: "exact-name",
                 kept: {
                     fileId: keep.fileId,
                     name: keep.name,
@@ -1507,6 +1589,16 @@ export async function dedupeLibraryIndex(
                 })),
             })
             for (const c of bucket) exactGroupedIds.add(c.fileId)
+            // W2: remember WHY each loser is a loser. The old code pushed
+            // losers into a flat list and dropped the group link, so a run
+            // record could not say which row displaced which — and an undo
+            // with no canonical is an undo an operator cannot audit.
+            for (const r of rest) {
+                loserProvenance.set(r.fileId, {
+                    canonicalFileId: keep.fileId,
+                    groupedBy: "exact-name",
+                })
+            }
             losers.push(...rest)
         }
 
@@ -1572,6 +1664,7 @@ export async function dedupeLibraryIndex(
                 const [keep, ...rest] = cluster
                 dupeGroups.push({
                     normalizedName: keep.normalizedKey,
+                    groupedBy: "fuzzy-name",
                     kept: {
                         fileId: keep.fileId,
                         name: keep.name,
@@ -1583,6 +1676,12 @@ export async function dedupeLibraryIndex(
                         uploadedAt: r.uploadedAt,
                     })),
                 })
+                for (const r of rest) {
+                    loserProvenance.set(r.fileId, {
+                        canonicalFileId: keep.fileId,
+                        groupedBy: "fuzzy-name",
+                    })
+                }
                 losers.push(
                     ...rest.map((r) => ({
                         fileId: r.fileId,
@@ -1632,6 +1731,13 @@ export async function dedupeLibraryIndex(
         }
 
         let songsMirrored = 0
+        /**
+         * W2 — set only when this call actually wrote marks. A dryRun, a
+         * refused run, and a run that found nothing all leave it undefined,
+         * so "skipping writes no run row" is visible in the response and not
+         * merely true in the database.
+         */
+        let committedRunId: string | undefined
         if (!dryRun && losers.length > 0) {
             // Find which losers have a `songs/{id}` mirror so we don't
             // create phantom rows. .update() throws on missing docs;
@@ -1645,6 +1751,73 @@ export async function dedupeLibraryIndex(
             songsMirrored = songsToTag.size
 
             const nowIso = new Date().toISOString()
+            const runId = `run-${nowIso.replace(/[:.]/g, "-")}-${Math.random()
+                .toString(36)
+                .slice(2, 8)}`
+
+            // W2 (R-0903-live-cw-2 §5) — the reversibility record, built
+            // BEFORE a single status is written.
+            //
+            // Until now the mark wrote `status: "duplicate"` and `dedupedAt`
+            // and recorded no prior state anywhere. That is why the 09-01
+            // sweep's reversibility lives in a hand-written JSON file in a
+            // different repository, and why 100 rows are hidden today that
+            // no tool inside this system can restore.
+            //
+            // `priorStatus` is the status as READ IN THIS RUN. It is not
+            // inferred and it is not defaulted: 18 of the 85 rows in that
+            // 09-01 file were `archived`, so an undo that assumes `active`
+            // would un-archive rows somebody deliberately archived.
+            const runRows: DedupeRunRow[] = losers.map((loser) => {
+                const prov = loserProvenance.get(loser.fileId)
+                if (!prov) {
+                    // Unreachable by construction — provenance is written in
+                    // the same statement that creates a loser. Asserted
+                    // rather than defaulted, because a record with a guessed
+                    // canonical is worse than no record: it looks auditable.
+                    throw new Error(
+                        `dedupe: loser ${loser.fileId} has no group provenance; ` +
+                            `refusing to write a reversibility record it cannot justify`,
+                    )
+                }
+                return {
+                    fileId: loser.fileId,
+                    priorStatus: loser.status ?? null,
+                    canonicalFileId: prov.canonicalFileId,
+                    groupedBy: prov.groupedBy,
+                }
+            })
+
+            // G2 — reversibility precedes hiding, asserted in code and not
+            // in a comment. If these two counts ever disagree, some row is
+            // about to be hidden with nothing to reverse it, and the run
+            // must refuse rather than hide it.
+            if (runRows.length !== losers.length) {
+                throw new Error(
+                    `dedupe: ${losers.length} rows would be marked but only ` +
+                        `${runRows.length} reversibility records exist; refusing to ` +
+                        `hide a row this run cannot reverse (G2)`,
+                )
+            }
+
+            const runRecord: DedupeRunRecord = {
+                runId,
+                at: nowIso,
+                threshold,
+                actorUid: uid,
+                orgId: org,
+                groupsFound: dupeGroups.length,
+                marked: runRows.length,
+                rows: runRows,
+            }
+            // The record lands first. The marks below span several batches
+            // (Firestore caps a batch at 500 writes), so no atomic unit can
+            // cover the record and every mark together — the order is
+            // therefore chosen for which way it fails. A crash here leaves a
+            // record for rows that were never hidden, and undoing that is a
+            // no-op. The reverse leaves hidden rows nothing can reach.
+            await db.collection("dedupeRuns").doc(runId).set(runRecord)
+
             // Firestore caps batches at 500 writes. Stay under with headroom.
             const BATCH_MAX = 400
             interface Op {
@@ -1653,14 +1826,27 @@ export async function dedupeLibraryIndex(
             }
             const ops: Op[] = []
             for (const loser of losers) {
+                // W2: the prior state travels in the SAME update as the
+                // status. A single `batch.update` is one atomic write, so
+                // there is no window in which a row is `duplicate` while its
+                // own `priorStatus` is missing.
                 ops.push({
                     ref: db.collection("library_index").doc(loser.fileId),
-                    data: { status: "duplicate", dedupedAt: nowIso },
+                    data: {
+                        priorStatus: loser.status ?? null,
+                        dedupeRunId: runId,
+                        status: "duplicate",
+                        dedupedAt: nowIso,
+                    },
                 })
                 if (songsToTag.has(loser.fileId)) {
                     ops.push({
                         ref: db.collection("songs").doc(loser.fileId),
-                        data: { status: "duplicate" },
+                        data: {
+                            priorStatus: loser.status ?? null,
+                            dedupeRunId: runId,
+                            status: "duplicate",
+                        },
                     })
                 }
             }
@@ -1671,6 +1857,7 @@ export async function dedupeLibraryIndex(
                 }
                 await batch.commit()
             }
+            committedRunId = runId
         }
 
         return {
@@ -1684,6 +1871,7 @@ export async function dedupeLibraryIndex(
             groups: dupeGroups,
             dryRun,
             threshold,
+            ...(committedRunId ? { dedupeRunId: committedRunId } : {}),
             coverage,
         }
     } catch (err) {

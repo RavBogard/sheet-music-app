@@ -689,6 +689,29 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // DEDUPE RUNS (W2 of the content-hash order, R-0903-live-cw-2 §5) —
+    // the reversibility record for every `dedupe_library` real-run. Each doc
+    // is one run: its timestamp, threshold, which pass grouped each group,
+    // and per marked row `{fileId, priorStatus, canonicalFileId}`. Written
+    // BEFORE the status batches, so a crash can leave a record with no mark
+    // (a harmless no-op to undo) but never a mark with no record.
+    //
+    // This collection exists because 100 rows are marked `duplicate` today
+    // and NOTHING inside the system can reverse them — the 09-01 sweep's
+    // undo lives in a hand-written JSON file in another repository. Reads
+    // are admin-only (it names hidden rows and is the operator's undo
+    // surface, via `undo_dedupe_group`); writes are server-only, since the
+    // Admin SDK bypasses these rules and a hard `false` keeps every client
+    // — admin included — from forging or editing a reversibility record.
+    //
+    // A Vercel push does NOT deploy rules. Without this match the collection
+    // falls to the deny-all below and `undo_dedupe_group` would look built
+    // while leaving nothing reversible — this repo's own 19:4xZ finding.
+    match /dedupeRuns/{runId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Deny-all fallback — any collection not explicitly matched above is locked.
     // Prevents new collections from being accidentally accessible.
     match /{document=**} {

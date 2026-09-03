@@ -63,7 +63,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
     })
 
     beforeEach(async () => {
-        for (const col of ["songs", "library_index", "users"]) {
+        for (const col of ["songs", "library_index", "users", "dedupeRuns"]) {
             const snap = await db().collection(col).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
@@ -704,6 +704,290 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         expect(withFuzzy.groups[0].duplicates.map((d) => d.fileId)).toEqual([
             "hash-b",
         ])
+    })
+
+    /* ─────────────────────────────────────────────────────────────────────
+     * W2 (R-0903-live-cw-2 §5) — reversibility precedes hiding.
+     *
+     * Before this wave the mark wrote `status: "duplicate"` + `dedupedAt`
+     * and recorded no prior state anywhere, which is why 100 rows are
+     * hidden in production today that no tool inside the system can
+     * restore. These tests pin the record, not the comment.
+     * ───────────────────────────────────────────────────────────────────── */
+
+    it("W2/G2 — a real run writes one dedupeRuns record holding EVERY marked row", async () => {
+        await seedIndex("w2-old", {
+            name: "Hashkivenu (Randy)",
+            uploadedAt: "2025-01-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("w2-new", {
+            name: "Hashkivenu (Randy)",
+            uploadedAt: "2025-06-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(JSON.stringify(r.error))
+
+        // The runId is on the response — it is the argument an operator
+        // hands `undo_dedupe_group`, so it must not require a query to find.
+        expect(r.dedupeRunId).toBeTruthy()
+        const runId = r.dedupeRunId as string
+
+        const runSnap = await db().collection("dedupeRuns").doc(runId).get()
+        expect(runSnap.exists).toBe(true)
+        const run = runSnap.data() as {
+            runId: string
+            marked: number
+            groupsFound: number
+            threshold: number
+            actorUid: string
+            orgId: string
+            rows: Array<{
+                fileId: string
+                priorStatus: string | null
+                canonicalFileId: string
+                groupedBy: string
+            }>
+        }
+
+        // G2 asserted from the outside: every row this run marked is held
+        // by the record. count(marked) == count(records).
+        expect(run.marked).toBe(r.committed)
+        expect(run.rows).toHaveLength(r.committed)
+        expect(run.rows.map((x) => x.fileId)).toEqual(["w2-new"])
+        expect(run.runId).toBe(runId)
+        expect(run.actorUid).toBe(ADMIN)
+        expect(run.groupsFound).toBe(1)
+        // The pass that decided is recorded, so an undo can say what
+        // reasoning hid the row and not merely that something did.
+        expect(run.rows[0].groupedBy).toBe("exact-name")
+        expect(run.rows[0].canonicalFileId).toBe("w2-old")
+    })
+
+    it("W2 — priorStatus is the status AS READ, so an archived row is not restored to active", async () => {
+        // The 09-01 shape, and the reason the field exists: 18 of the 85
+        // rows in that sweep were `archived`. A record that defaulted to
+        // `active` would hand the undo a licence to un-archive rows
+        // somebody deliberately archived.
+        await seedIndex("w2-arch-keep", {
+            name: "Lecha Dodi Lincoln_s Nigun",
+            uploadedAt: "2025-01-01T00:00:00Z",
+            mimeType: "application/pdf",
+            status: "archived",
+        })
+        await seedIndex("w2-arch-lose", {
+            name: "Lecha Dodi Lincoln_s Nigun",
+            uploadedAt: "2025-02-01T00:00:00Z",
+            mimeType: "application/pdf",
+            status: "archived",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(JSON.stringify(r.error))
+        const run = (
+            await db()
+                .collection("dedupeRuns")
+                .doc(r.dedupeRunId as string)
+                .get()
+        ).data() as { rows: Array<{ fileId: string; priorStatus: string | null }> }
+
+        expect(run.rows).toHaveLength(1)
+        expect(run.rows[0].fileId).toBe("w2-arch-lose")
+        expect(run.rows[0].priorStatus).toBe("archived")
+
+        // And the same pair travels on the row itself, in the same atomic
+        // update as the status — there is no window where the row is
+        // `duplicate` with no prior state beside it.
+        const row = (
+            await db().collection("library_index").doc("w2-arch-lose").get()
+        ).data() as Record<string, unknown>
+        expect(row.status).toBe("duplicate")
+        expect(row.priorStatus).toBe("archived")
+        expect(row.dedupeRunId).toBe(r.dedupeRunId)
+        expect(row.dedupedAt).toBeTruthy()
+    })
+
+    it("W2 — a row with NO status field records priorStatus 'active', the value the system already reads it as", async () => {
+        // Written expecting `null` and corrected by the run: the candidate
+        // build normalizes a missing `status` to "active"
+        // (`typeof data.status === "string" ? data.status : "active"`), and
+        // every other surface reads such a row the same way — the browse
+        // shows it, `search_library` returns it. So "as read in this run" IS
+        // "active" here, and recording it is what lets the undo restore
+        // without interpreting. `null` would have pushed exactly the guess
+        // the field exists to remove down into the undo tool.
+        //
+        // The one visible consequence, and it is benign: restoring such a
+        // row WRITES `status: "active"` where there was no field before.
+        // The row lands where the system already placed it.
+        await seedIndex("w2-nostatus-keep", {
+            name: "Oseh Shalom (camp)",
+            uploadedAt: "2025-01-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("w2-nostatus-lose", {
+            name: "Oseh Shalom (camp)",
+            uploadedAt: "2025-03-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(JSON.stringify(r.error))
+        const run = (
+            await db()
+                .collection("dedupeRuns")
+                .doc(r.dedupeRunId as string)
+                .get()
+        ).data() as { rows: Array<{ priorStatus: string | null }> }
+        expect(run.rows[0].priorStatus).toBe("active")
+
+        const seeded = (
+            await db().collection("library_index").doc("w2-nostatus-lose").get()
+        ).data() as Record<string, unknown>
+        expect(seeded.priorStatus).toBe("active")
+    })
+
+    it("W2 — the mirrored songs doc carries the prior state too", async () => {
+        await seedIndex("w2-mirror-keep", {
+            name: "Bar'chu Walkdown",
+            uploadedAt: "2025-01-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("w2-mirror-lose", {
+            name: "Bar'chu Walkdown",
+            uploadedAt: "2025-04-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedSong("w2-mirror-lose", "Bar'chu Walkdown")
+
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(JSON.stringify(r.error))
+        expect(r.songsMirrored).toBe(1)
+
+        const song = (
+            await db().collection("songs").doc("w2-mirror-lose").get()
+        ).data() as Record<string, unknown>
+        expect(song.status).toBe("duplicate")
+        expect(song.priorStatus).toBe("active")
+        expect(song.dedupeRunId).toBe(r.dedupeRunId)
+    })
+
+    it("W2 — dryRun writes no run record, and a refused run writes none either", async () => {
+        await seedIndex("w2-dry-a", {
+            name: "Twilight",
+            uploadedAt: "2025-01-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("w2-dry-b", {
+            name: "Twilight",
+            uploadedAt: "2025-05-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+
+        const dry = await dedupeLibraryIndex(ADMIN, { dryRun: true })
+        if ("error" in dry) throw new Error(JSON.stringify(dry.error))
+        expect(dry.groupsFound).toBe(1)
+        expect(dry.dedupeRunId).toBeUndefined()
+
+        // Real run without force: the F-05 refusal. Reports, writes nothing.
+        const refused = await dedupeLibraryIndex(ADMIN, { dryRun: false })
+        expect("error" in refused).toBe(true)
+
+        expect((await db().collection("dedupeRuns").get()).size).toBe(0)
+    })
+
+    it("W2 — idempotence unchanged: a second run marks nothing and writes NO new run row", async () => {
+        await seedIndex("w2-idem-keep", {
+            name: "G-minor Spirits",
+            uploadedAt: "2025-01-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("w2-idem-lose", {
+            name: "G-minor Spirits",
+            uploadedAt: "2025-02-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+
+        const first = await dedupeLibraryIndex(ADMIN, {
+            dryRun: false,
+            force: true,
+        })
+        if ("error" in first) throw new Error(JSON.stringify(first.error))
+        expect(first.committed).toBe(1)
+        expect((await db().collection("dedupeRuns").get()).size).toBe(1)
+
+        const second = await dedupeLibraryIndex(ADMIN, {
+            dryRun: false,
+            force: true,
+        })
+        if ("error" in second) throw new Error(JSON.stringify(second.error))
+        expect(second.groupsFound).toBe(0)
+        expect(second.committed).toBe(0)
+        expect(second.dedupeRunId).toBeUndefined()
+        // Skipping writes no run row — the ruling's wording, asserted.
+        expect((await db().collection("dedupeRuns").get()).size).toBe(1)
+
+        // The first run's record is untouched by the second run.
+        const run = (
+            await db()
+                .collection("dedupeRuns")
+                .doc(first.dedupeRunId as string)
+                .get()
+        ).data() as { rows: unknown[] }
+        expect(run.rows).toHaveLength(1)
+    })
+
+    it("W2 — every group reports which pass grouped it (exact and fuzzy)", async () => {
+        await seedIndex("w2-pass-exact-a", {
+            name: "Niggun - Full Score",
+            uploadedAt: "2025-01-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("w2-pass-exact-b", {
+            name: "Niggun - Full Score",
+            uploadedAt: "2025-02-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        // Near-miss pair: no exact-normalize match, but above 0.85.
+        await seedIndex("w2-pass-fuzzy-a", {
+            name: "Mi Chamocha Havdalah",
+            uploadedAt: "2025-03-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+        await seedIndex("w2-pass-fuzzy-b", {
+            name: "Mi Chamocha Havdala",
+            uploadedAt: "2025-04-01T00:00:00Z",
+            mimeType: "application/pdf",
+        })
+
+        const r = await dedupeLibraryIndex(ADMIN, {
+            dryRun: false,
+            force: true,
+            forceScore: 0.85,
+        })
+        if ("error" in r) throw new Error(JSON.stringify(r.error))
+        expect(r.groupsFound).toBe(2)
+
+        const passes = r.groups.map((g) => g.groupedBy).sort()
+        expect(passes).toEqual(["exact-name", "fuzzy-name"])
+
+        // The run record carries the pass per ROW, not just per group, so a
+        // per-row undo can report the reasoning that hid that one row.
+        const run = (
+            await db()
+                .collection("dedupeRuns")
+                .doc(r.dedupeRunId as string)
+                .get()
+        ).data() as { rows: Array<{ fileId: string; groupedBy: string }> }
+        expect(run.rows).toHaveLength(2)
+        expect(
+            run.rows.find((x) => x.fileId === "w2-pass-exact-b")?.groupedBy,
+        ).toBe("exact-name")
+        expect(
+            run.rows.find((x) => x.fileId === "w2-pass-fuzzy-b")?.groupedBy,
+        ).toBe("fuzzy-name")
     })
 
     it("canonical-picker — mixed-mime group: PDF beats earlier Google-Doc (groups-7/9 fix)", async () => {
