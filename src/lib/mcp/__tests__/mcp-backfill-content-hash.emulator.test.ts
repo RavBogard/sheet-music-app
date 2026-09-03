@@ -394,4 +394,184 @@ describe("MCP backfill_content_hash (emulator)", () => {
         expect(r.coverage.filteredOut.byOther.other_org).toBe(1)
         expect((await row("other-1"))!.contentHash).toBeUndefined()
     })
+
+    /**
+     * §5 as AMENDED (R-0903-live-cw-3 §3) — the two populations.
+     *
+     * The amendment's complaint about the order as first written was that a
+     * blended number answers neither question, so these tests assert the
+     * PARTITION, not just the presence of a field: an audio row's bytes must
+     * not appear in the chart population's `bytesRead`, because that is the
+     * exact confusion the amendment exists to prevent.
+     */
+    describe("two populations, never blended (§5 amended)", () => {
+        const AUDIO = Buffer.alloc(4096, 7)
+
+        it("splits rows, reads, bytes and hashes by population", async () => {
+            await seed("chart-1", {
+                orgId: "crc",
+                name: "Hashkivenu (Randy).pdf",
+                mimeType: "application/pdf",
+                fileSize: PDF_A.byteLength,
+            })
+            await seed("audio-1", {
+                orgId: "crc",
+                name: "Avinu Malkeinu Janowski D minor - Alto.mp3",
+                mimeType: "audio/mpeg",
+                fileSize: AUDIO.byteLength,
+            })
+            BYTES.set("chart-1", PDF_A)
+            BYTES.set("audio-1", AUDIO)
+
+            const r = await backfillContentHash(ADMIN, { force: true })
+            if ("error" in r) throw new Error("unexpected refusal")
+
+            expect(r.populations.chart.rows).toBe(1)
+            expect(r.populations.nonChart.rows).toBe(1)
+            expect(r.populations.chart.read).toBe(1)
+            expect(r.populations.nonChart.read).toBe(1)
+            expect(r.populations.chart.hashed).toBe(1)
+            expect(r.populations.nonChart.hashed).toBe(1)
+
+            // The figure the amendment actually cares about: the cost, in
+            // bytes, attributed to the population that incurred it.
+            expect(r.populations.chart.bytesRead).toBe(PDF_A.byteLength)
+            expect(r.populations.nonChart.bytesRead).toBe(AUDIO.byteLength)
+            expect(
+                r.populations.chart.bytesRead +
+                    r.populations.nonChart.bytesRead,
+            ).toBe(PDF_A.byteLength + AUDIO.byteLength)
+
+            // Both halves add up to the blended totals, so the partition is
+            // a decomposition and not a second, disagreeing measurement.
+            expect(r.populations.chart.rows + r.populations.nonChart.rows).toBe(
+                r.scanned,
+            )
+            expect(r.populations.chart.read + r.populations.nonChart.read).toBe(
+                r.read,
+            )
+        })
+
+        it("hashes the audio rows at all — the amendment's whole point", async () => {
+            await seed("audio-1", {
+                orgId: "crc",
+                name: "May The Memory - Soprano.mp3",
+                mimeType: "audio/mpeg",
+                fileSize: AUDIO.byteLength,
+            })
+            BYTES.set("audio-1", AUDIO)
+
+            const r = await backfillContentHash(ADMIN, { force: true })
+            if ("error" in r) throw new Error("unexpected refusal")
+
+            // As the order was FIRST written, §9 said these rows were out of
+            // scope. If a later change ever re-excludes them, this fails.
+            const stored = await row("audio-1")
+            expect((stored?.contentHash as { value: string }).value).toBe(
+                sha256Hex(AUDIO),
+            )
+            expect(r.populations.nonChart.hashed).toBe(1)
+            expect(r.populations.chart.rows).toBe(0)
+        })
+
+        it("attributes a failure to its own population, not the other one", async () => {
+            await seed("audio-dead", {
+                orgId: "crc",
+                name: "Barechu_trad - Tenor.mp3",
+                mimeType: "audio/mpeg",
+                fileSize: 999,
+            })
+            await seed("chart-1", {
+                orgId: "crc",
+                name: "Twilight.pdf",
+                mimeType: "application/pdf",
+                fileSize: PDF_A.byteLength,
+            })
+            BYTES.set("chart-1", PDF_A)
+            // audio-dead deliberately has no bytes.
+
+            const r = await backfillContentHash(ADMIN, { force: true })
+            if ("error" in r) throw new Error("unexpected refusal")
+
+            expect(r.populations.nonChart.failed).toBe(1)
+            expect(r.populations.chart.failed).toBe(0)
+            expect(r.populations.chart.hashed).toBe(1)
+            expect(r.populations.nonChart.hashed).toBe(0)
+            expect(
+                r.populations.chart.failed + r.populations.nonChart.failed,
+            ).toBe(r.failed)
+        })
+
+        it("counts a Google-Apps row as nonChart, where the classifier puts it", async () => {
+            await seed("gdoc-1", {
+                orgId: "crc",
+                name: "Kol Nidre notes",
+                mimeType: "application/vnd.google-apps.document",
+            })
+
+            const r = await backfillContentHash(ADMIN, { force: true })
+            if ("error" in r) throw new Error("unexpected refusal")
+
+            // Recorded as a finding rather than asserted as obviously right:
+            // `isNonChartArtifactShape` calls a Google-Doc non_chart, so its
+            // `bytes_unreachable` failure lands in the nonChart population
+            // even though a reader thinking "non_chart means audio" would
+            // expect it elsewhere. The partition follows ONE classifier
+            // rather than a fresh definition, and this test pins which.
+            expect(r.populations.nonChart.rows).toBe(1)
+            expect(r.populations.nonChart.failed).toBe(1)
+            expect(r.populations.nonChart.read).toBe(0)
+            expect(r.populations.nonChart.bytesRead).toBe(0)
+            expect(r.failures[0].reason).toBe("bytes_unreachable")
+        })
+
+        it("carries the populations in the force_required refusal too", async () => {
+            await seed("audio-1", {
+                orgId: "crc",
+                name: "May The Memory - Alto.mp3",
+                mimeType: "audio/mpeg",
+                fileSize: AUDIO.byteLength,
+            })
+            BYTES.set("audio-1", AUDIO)
+
+            const r = await backfillContentHash(ADMIN, {})
+            expect("error" in r).toBe(true)
+            if (!("error" in r)) throw new Error("unreachable")
+            expect(r.error.machine_code).toBe("force_required")
+            // richError spreads extras at the TOP level of the envelope,
+            // not under error.data (errors.ts) — a refusal that reported
+            // less than the run it refuses is how an operator gets a
+            // surprise bill on the audio population.
+            const plan = (r as unknown as { dryRunPlan: Record<string, unknown> })
+                .dryRunPlan
+            const pops = plan.populations as {
+                nonChart: { rows: number; bytesRead: number }
+                chart: { rows: number }
+            }
+            expect(pops.nonChart.rows).toBe(1)
+            expect(pops.nonChart.bytesRead).toBe(AUDIO.byteLength)
+            expect(pops.chart.rows).toBe(0)
+        })
+
+        it("attributes alreadyCurrent to the right population on a re-run", async () => {
+            await seed("audio-1", {
+                orgId: "crc",
+                name: "Barechu_trad - Bass.mp3",
+                mimeType: "audio/mpeg",
+                fileSize: AUDIO.byteLength,
+            })
+            BYTES.set("audio-1", AUDIO)
+
+            await backfillContentHash(ADMIN, { force: true })
+            const second = await backfillContentHash(ADMIN, { force: true })
+            if ("error" in second) throw new Error("unexpected refusal")
+
+            // Resumability is the reason the amendment can say "let it run
+            // long" about a megabyte-and-a-half-per-group population.
+            expect(second.populations.nonChart.alreadyCurrent).toBe(1)
+            expect(second.populations.nonChart.read).toBe(0)
+            expect(second.populations.nonChart.bytesRead).toBe(0)
+            expect(second.read).toBe(0)
+        })
+    })
 })

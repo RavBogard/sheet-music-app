@@ -6,6 +6,7 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { fetchFileById } from "@/lib/file-fetcher"
 import { isGoogleAppsMime } from "@/lib/mcp/tools/library"
+import { isNonChartArtifactShape } from "@/lib/library/junk-filter"
 import {
     contentHashFor,
     crossCheckMd5,
@@ -65,6 +66,25 @@ export interface BackfillContentHashFailureRow {
     detail: string
 }
 
+/**
+ * One population's figures. Deliberately the same shape for both, so the
+ * return can print them as two rows of one table and a reader can subtract.
+ */
+export interface BackfillPopulationTally {
+    /** Eligible rows in this population. */
+    rows: number
+    /** Rows whose bytes were read this call. */
+    read: number
+    /** Bytes actually downloaded this call — the cost, in the unit that matters. */
+    bytesRead: number
+    /** Rows given a `contentHash` this call (0 on dryRun). */
+    hashed: number
+    /** Rows already current, skipped without a byte read. */
+    alreadyCurrent: number
+    /** Rows recorded `hashFailed` — no hash written. */
+    failed: number
+}
+
 export interface BackfillContentHashResult {
     /** Rows eligible for hashing in the caller's org. */
     scanned: number
@@ -78,6 +98,26 @@ export interface BackfillContentHashResult {
     failed: number
     /** Rows left for a later call because `limit` was reached. */
     remaining: number
+    /**
+     * §5 (amended, R-0903-live-cw-3 §3) — the two populations, reported
+     * SEPARATELY and never blended.
+     *
+     * Daniel is waiting on one question about the `non_chart` rows (are the
+     * 12 audio part-track groups one file uploaded under several part
+     * names?) and a different question about the charts. A single blended
+     * count answers neither, so the tally is partitioned by the SAME
+     * classifier the browse surfaces use — `isNonChartArtifactShape` —
+     * rather than by a second definition invented here.
+     *
+     * `bytesRead` is in bytes, not rows, because the amendment names the
+     * cost in bytes: the audio population runs to roughly 1.5 MB per group
+     * against a chart population of a few hundred KB in total. A row count
+     * would hide the thing that makes this wave long.
+     */
+    populations: {
+        chart: BackfillPopulationTally
+        nonChart: BackfillPopulationTally
+    }
     /**
      * The md5 cross-check tally. `mismatched` is the number that STOPS this
      * wave if it is not near zero (order §8): a handful is data, a
@@ -156,6 +196,24 @@ export async function backfillContentHash(
         let read = 0
         let hashed = 0
         let alreadyCurrent = 0
+
+        // §5 (amended) — two populations, tallied as the loop goes rather
+        // than reconstructed afterwards. Reconstructing would mean
+        // re-classifying rows from the failure list, and a row that failed
+        // for `bytes_unreachable` is not in the failure list twice.
+        const emptyTally = (): BackfillPopulationTally => ({
+            rows: 0,
+            read: 0,
+            bytesRead: 0,
+            hashed: 0,
+            alreadyCurrent: 0,
+            failed: 0,
+        })
+        const populations = { chart: emptyTally(), nonChart: emptyTally() }
+        // Which population each row belongs to, so the post-commit `hashed`
+        // count (which is only knowable after the batches land) can be
+        // attributed without classifying a row twice.
+        const popOf = new Map<string, keyof typeof populations>()
         const failures: BackfillContentHashFailureRow[] = []
         const md5 = { claimed: 0, agreed: 0, mismatched: 0 }
         const hashByRow = new Map<
@@ -178,10 +236,26 @@ export async function backfillContentHash(
                 typeof data.fileSize === "number" ? data.fileSize : null
             const status = (data.status as string | undefined) ?? null
 
+            // §5 (amended) — the partition, taken from the SAME classifier
+            // the browse surfaces and `search_library` use. Note that it
+            // calls Google-Apps rows non_chart too, which is why the
+            // `bytes_unreachable` gapps failures below land in that
+            // population: they are counted where the classifier puts them,
+            // not where a reader might expect a "chart" to be.
+            const pop: keyof typeof populations = isNonChartArtifactShape({
+                mimeType,
+                name,
+            })
+                ? "nonChart"
+                : "chart"
+            popOf.set(doc.id, pop)
+            populations[pop].rows += 1
+
             // Already current — the resumability path, and the reason a
             // second run is free.
             if (!rehash && hashIsCurrent(data.contentHash, data.fileSize)) {
                 alreadyCurrent += 1
+                populations[pop].alreadyCurrent += 1
                 const h = data.contentHash as ContentHash
                 hashByRow.set(doc.id, { hash: h, name, status })
                 continue
@@ -201,6 +275,7 @@ export async function backfillContentHash(
                         "Google-Apps row — no stored bytes exist to hash. " +
                         "This is why the metadata md5 cannot be the key: it is absent here.",
                 })
+                populations[pop].failed += 1
                 continue
             }
 
@@ -210,6 +285,7 @@ export async function backfillContentHash(
             }
 
             read += 1
+            populations[pop].read += 1
             let fetched: Awaited<ReturnType<typeof fetchFileById>> = null
             let fetchError: string | null = null
             try {
@@ -229,8 +305,11 @@ export async function backfillContentHash(
                         fetchError ??
                         "neither Firebase Storage nor the Drive fallback returned bytes",
                 })
+                populations[pop].failed += 1
                 continue
             }
+            populations[pop].bytesRead += fetched.buffer.byteLength
+
             if (fetched.buffer.byteLength === 0) {
                 failures.push({
                     fileId: doc.id,
@@ -240,6 +319,7 @@ export async function backfillContentHash(
                     reason: "empty_buffer",
                     detail: "the fetch succeeded but returned 0 bytes",
                 })
+                populations[pop].failed += 1
                 continue
             }
 
@@ -267,6 +347,7 @@ export async function backfillContentHash(
                         reason: "md5_mismatch",
                         detail: check.detail,
                     })
+                populations[pop].failed += 1
                     // NO hash for this row. A wrong hash makes a false pair
                     // confidently, which is strictly worse than an absence.
                     writes.push({
@@ -299,6 +380,7 @@ export async function backfillContentHash(
                             .length,
                         alreadyCurrent,
                         failed: failures.length,
+                        populations,
                         md5CrossCheck: md5,
                         dryRun: false,
                         refused: true,
@@ -316,9 +398,15 @@ export async function backfillContentHash(
                     batch.update(db.collection(LIBRARY).doc(w.fileId), w.data)
                 }
                 await batch.commit()
-                hashed += writes
-                    .slice(i, i + BATCH_MAX)
-                    .filter((w) => w.data.contentHash).length
+                // Counted AFTER the commit, per population, so a run that
+                // dies mid-backfill reports what actually landed rather
+                // than what it intended to write.
+                for (const w of writes.slice(i, i + BATCH_MAX)) {
+                    if (!w.data.contentHash) continue
+                    hashed += 1
+                    const pop = popOf.get(w.fileId)
+                    if (pop) populations[pop].hashed += 1
+                }
             }
         }
 
@@ -358,6 +446,7 @@ export async function backfillContentHash(
             alreadyCurrent,
             failed: failures.length,
             remaining,
+            populations,
             md5CrossCheck: md5,
             failures,
             byteIdenticalClusters,
