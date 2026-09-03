@@ -16,6 +16,7 @@ import {
     backfillLibraryIndex,
 } from "./library"
 import { undoDedupeGroup, seedLegacyDedupeRun } from "./undo-dedupe"
+import { backfillContentHash } from "./backfill-content-hash"
 import { searchChartText } from "./chart-text-search"
 import { reconcileLibrary } from "./reconcile-library"
 import { salvageChartBytes } from "./salvage-chart-bytes"
@@ -1853,6 +1854,46 @@ export function registerWriteTools(server: McpServer): void {
                     { dryRun: args.dryRun, force: args.force },
                     orgFrom(extra),
                 ),
+            ),
+    )
+
+    server.registerTool(
+        "backfill_content_hash",
+        {
+            description:
+                "Admin-only, batched and RESUMABLE — populate `library_index.contentHash` by reading each row's bytes once. The persisted shape is `{alg:'sha256', value, sizeBytes, at, source}`. This is the only library tool that costs real time and bandwidth: it downloads every chart. It is safe to interrupt and safe to re-run — a row whose recorded `contentHash.sizeBytes` still matches its `fileSize` is skipped WITHOUT a byte read, so a re-run after an interruption resumes and a re-run after a completed pass is free. Use `limit` to take a bite at a time. WHY SHA256 AND NOT THE FREE METADATA MD5 (R-0903-live-cw-2 §3): the md5 is not uniform — Google-Apps rows carry no `md5Checksum` at all — so a column holding whichever hash was cheapest would silently split a true pair whose two rows were hashed by different routes, and a confident non-match is worse than an absence. THE MD5 IS STILL USED, as a CROSS-CHECK: where a row claims a `driveMd5` (hex) or a Storage `md5Hash` (base64), the md5 recomputed from the downloaded bytes must agree. A mismatch means we did not fetch the bytes this row claims, so the row is recorded `hashFailed` with the mismatching values and NO `contentHash` is written — a wrong hash makes a false pair confidently. Rows whose bytes are unreachable (Google-Apps rows, dead-byte rows) are returned as a named POPULATION in `failures`, never skipped in silence. Every status is in scope, `duplicate` included: a marked row's bytes are exactly what decides whether the mark was right. Returns `{scanned, read, hashed, alreadyCurrent, failed, remaining, md5CrossCheck:{claimed,agreed,mismatched}, failures[], byteIdenticalClusters[], dryRun, coverage}` — `byteIdenticalClusters` is the answer the wave exists for, and it reports clusters (which are often 3 rows, not 2), not just pairs. STOP CONDITION: if `md5CrossCheck.mismatched` is not near zero, the download path and the rows disagree about which object belongs to which row — that is a finding to report, not a retry. F-05: `dryRun` reports everything without writing and never needs `force`.",
+            inputSchema: {
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true, reads bytes and reports the full plan — hashes, failures, md5 cross-check tally, byte-identical clusters — without writing. F-05: does not require force.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Required for real writes. Pair with `dryRun: false`. Omitting it returns the rich `force_required` envelope carrying the plan, and no writes.",
+                    ),
+                limit: z
+                    .number()
+                    .int()
+                    .positive()
+                    .optional()
+                    .describe(
+                        "Stop after this many rows have had their BYTES READ (skips do not count). The backfill is resumable, so a small limit is the intended way to run it: take a bite, read the failure shape, take another.",
+                    ),
+                rehash: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Re-read and re-hash rows that already carry a current hash. Off by default — the column exists so this never needs doing twice. Use only when you suspect stored bytes changed under a row without its fileSize changing.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await backfillContentHash(uidFrom(extra), args, orgFrom(extra)),
             ),
     )
 

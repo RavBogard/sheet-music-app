@@ -14,6 +14,7 @@ import { safelyDeleteLibraryObject } from "@/lib/library/safely-delete-library-o
 import { processMuseScoreFile } from "@/lib/musescore-converter"
 import { levenshteinDistance } from "@/lib/string-utils"
 import { logger } from "@/lib/logger"
+import { contentHashFor } from "@/lib/library/content-hash"
 import heicConvert from "heic-convert"
 import {
     STRIPPABLE_EXTENSION_RE,
@@ -629,6 +630,17 @@ export async function processChartUpload(
         collection,
         storageUrl,
         status: "active",
+        // W4 (R-0903-live-cw-2 §3) — content identity, set ON THE WRITE PATH.
+        //
+        // The buffer is already in hand here, so this is free, and that is
+        // the whole reason the column never needs backfilling twice. A
+        // sha256 of this same buffer was ALREADY being computed a few
+        // hundred lines below — but inside a fire-and-forget try/catch that
+        // runs AFTER this row is written, and spent only on an
+        // `aiEnrichmentCache` doc id and an event payload. It never reached
+        // the row, which is why 785 rows need a byte-reading backfill to
+        // recover a value the uploader had for free.
+        contentHash: contentHashFor(buffer, "upload", new Date().toISOString()),
     }
     if (input.key) indexEntry.key = input.key
     if (input.bpm) indexEntry.bpm = input.bpm
