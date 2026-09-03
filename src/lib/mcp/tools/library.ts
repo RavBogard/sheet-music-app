@@ -92,6 +92,94 @@ export function chartFormatClass(mime: string | null | undefined): string {
 export const FORMAT_CLASS_SEP = "\u0000"
 
 /**
+ * W5 — read `library_index.contentHash` defensively.
+ *
+ * Returns the identity pair only when the stored value is a well-formed
+ * sha256. A malformed or truncated digest is treated as ABSENT rather than
+ * trusted, because the hash pass's entire claim is exactness: a group formed
+ * on a 6-character "digest" would assert byte identity it never checked.
+ */
+/**
+ * W5 — the shape every dedupe row is reported in.
+ *
+ * One place builds it, so a group, a run record and a plan file cannot
+ * disagree about which fields an operator gets to decide on.
+ */
+export interface CanonicalSortable {
+    fileId: string
+    name: string
+    uploadedAt: string | null
+    mimeType: string | null
+    status: string | null
+    sizeBytes?: number | null
+    contentHash?: { alg: string; value: string } | null
+    bondCount?: number
+}
+
+export function rowView(c: CanonicalSortable): DedupeRowView {
+    return {
+        fileId: c.fileId,
+        name: c.name,
+        uploadedAt: c.uploadedAt,
+        mimeType: c.mimeType ?? null,
+        sizeBytes: c.sizeBytes ?? null,
+        status: c.status ?? null,
+        contentHash: c.contentHash ?? null,
+        bondCount: c.bondCount ?? 0,
+    }
+}
+
+/**
+ * W5 (R-0903-live-cw-2 §4) — THE canonical-pick order, in one place.
+ *
+ * Sort priority, and every step is a ruling with a scar behind it:
+ *   (a) `active` before any other status. A hidden row taken as canonical
+ *       EMPTIES the group — it stays hidden by its own status while every
+ *       loser is hidden by the mark this run writes.
+ *   (b) real bytes before Google-Apps. A never-rendered Google-Doc must not
+ *       out-rank a renderable PDF (the groups-7/9 trap).
+ *   (c) BONDED before unbonded — new in W5, and positioned exactly here.
+ *       Above (b) a bonded Google-Doc would out-rank renderable PDF bytes;
+ *       below (d) age keeps beating USE, which is how `Bar'chu Walkdown`
+ *       came to be marked while 4 setlists bonded it.
+ *   (d) earliest `uploadedAt`; nulls sort last, so a metadata-stripped scan
+ *       artifact never beats a real timestamp.
+ *   (e) `fileId` asc, so the pick is deterministic.
+ *
+ * Extracted rather than copied: this comparator already existed twice
+ * (exact bucket, fuzzy cluster) and the hash pass would have made three
+ * copies of a five-step policy that must not drift between lanes.
+ */
+export function canonicalCompare(
+    a: CanonicalSortable,
+    b: CanonicalSortable,
+): number {
+    const aLive = canonicalStatusRank(a.status)
+    const bLive = canonicalStatusRank(b.status)
+    if (aLive !== bLive) return aLive - bLive
+    const aGoogle = isGoogleAppsMime(a.mimeType) ? 1 : 0
+    const bGoogle = isGoogleAppsMime(b.mimeType) ? 1 : 0
+    if (aGoogle !== bGoogle) return aGoogle - bGoogle
+    const aBond = (a.bondCount ?? 0) > 0 ? 0 : 1
+    const bBond = (b.bondCount ?? 0) > 0 ? 0 : 1
+    if (aBond !== bBond) return aBond - bBond
+    const aAt = a.uploadedAt ?? "\uffff"
+    const bAt = b.uploadedAt ?? "\uffff"
+    if (aAt !== bAt) return aAt.localeCompare(bAt)
+    return a.fileId.localeCompare(b.fileId)
+}
+
+export function readContentHash(
+    value: unknown,
+): { alg: string; value: string } | null {
+    if (!value || typeof value !== "object") return null
+    const h = value as { alg?: unknown; value?: unknown }
+    if (h.alg !== "sha256") return null
+    if (typeof h.value !== "string" || h.value.length !== 64) return null
+    return { alg: h.alg, value: h.value }
+}
+
+/**
  * L1-W2 (R-0901-live-cw-2 §5, plan review) — canonical-pick status rank.
  *
  * `active` is the only status the browse shows. Every other status is
@@ -1067,10 +1155,50 @@ export interface DedupeLibraryIndexArgs {
  * modes: a name group can be wrong about the song, a hash group cannot, and
  * only a name group can be argued with.
  */
-export type DedupePass = "exact-name" | "fuzzy-name"
+export type DedupePass = "exact-name" | "fuzzy-name" | "exact-hash"
+
+/**
+ * W5 (R-0903-live-cw-2 §6) — the DECIDING fields, carried on every row of
+ * every group.
+ *
+ * This is the root fix for the 02:0xZ finding, and the fix is a type rather
+ * than a report. All 84 groups in the 09-01 plan file carried only
+ * `fileId`, `name` and `uploadedAt` — not because the plan writer chose to
+ * be terse, but because the candidate shape carried nothing else. The
+ * artifact was thin because the type was thin, so an authorization ask
+ * showed Daniel names and dates and withheld the mime, the size and the
+ * curation state he would actually decide on. Widen the type once and every
+ * future plan file, report and proposal carries the deciding fields for
+ * free.
+ */
+export interface DedupeRowView {
+    fileId: string
+    name: string
+    uploadedAt: string | null
+    /** Deciding field: a 44 KB PDF and a 763 B text chart are not one upload. */
+    mimeType: string | null
+    /** Deciding field, and the hash pass's own evidence. */
+    sizeBytes: number | null
+    /** The row's status as read in this scan. */
+    status: string | null
+    /** sha256 of the stored bytes, when W4 has hashed this row. */
+    contentHash: { alg: string; value: string } | null
+    /**
+     * How many LIVE, in-tenant setlists bond this row. Deciding field: it is
+     * how `Bar'chu Walkdown` came to be marked while 4 setlists bonded it.
+     * Counted from live setlists only — a track whose parent setlist was
+     * deleted is not a bond, which is the defect `delete_chart`'s guard had.
+     */
+    bondCount: number
+}
 
 export interface DedupeGroup {
-    /** Normalized name key shared by every row in the group. */
+    /**
+     * Normalized name key shared by every row in the group. On an
+     * `exact-hash` group there is no shared name — the rows were grouped by
+     * bytes and their names may differ entirely — so this carries the
+     * `sha256:<digest>` key instead, and `groupedBy` says which it is.
+     */
     normalizedName: string
     /**
      * W2 — the pass that formed this group. Recorded on the group and in
@@ -1079,9 +1207,16 @@ export interface DedupeGroup {
      */
     groupedBy: DedupePass
     /** Canonical surviving row. */
-    kept: { fileId: string; name: string; uploadedAt: string | null }
+    kept: DedupeRowView
     /** Losers that would be / were marked `status: "duplicate"`. */
-    duplicates: Array<{ fileId: string; name: string; uploadedAt: string | null }>
+    duplicates: DedupeRowView[]
+    /**
+     * W5 (§6a) — set when the group is a conclusion rather than an action.
+     * A no-op is a conclusion, and the operator gets the premise: a
+     * cross-format pair whose hidden row is `non_chart` STAYS marked, and is
+     * still listed, with that reason.
+     */
+    noActionReason?: string
 }
 
 /**
@@ -1166,6 +1301,38 @@ export interface DedupeLibraryIndexResult {
      * a run row is written only when rows are actually hidden.
      */
     dedupeRunId?: string
+    /**
+     * W5 (R-0903-live-cw-2 §3) — the byte-identity lane, REPORT ONLY.
+     *
+     * The hash pass ADDS a lane; it does not replace the name pass. Byte
+     * identity is exact and needs no name, so it sees pairs the name pass
+     * never could (`gminor_spirits` / `G-minor Spirits`); the name pass
+     * stays for near-misses a hash can never see. These groups are
+     * REPORTED and never marked — every new mark from bytes is Daniel's,
+     * per cluster, which is why they are a separate field and not folded
+     * into `groups`.
+     */
+    hashGroups: DedupeGroup[]
+    /**
+     * Rows that could not be candidates for the hash pass because W4 has
+     * not hashed them. Counted, not silently omitted: a hash pass that
+     * reports "no byte pairs" over an unhashed library is saying nothing,
+     * and the caller has to be able to tell the difference.
+     */
+    hashPassCoverage: {
+        hashed: number
+        unhashed: number
+        /** Rows carrying a recorded `hashFailed` — bytes that did not verify. */
+        hashFailed: number
+    }
+    /**
+     * W5 (§6b) — the order the filters actually ran in, stated rather than
+     * rediscovered. `list_library` and this tool disagreed on the marked
+     * count (99 vs 103) purely because one filter runs before another and a
+     * row caught by the earlier one is never counted by the later. Stating
+     * the order makes that readable off the response.
+     */
+    filterOrder: string[]
     /** Cycle-3 DATA-002 — uniform hygiene scan coverage. */
     coverage: HygieneCoverage
 }
@@ -1305,6 +1472,11 @@ interface SimilarityCandidate {
     // L1-W2: and the same status rank, so the two passes cannot disagree
     // about what may be canonical.
     status: string
+    // W5: and the deciding fields, so the fuzzy lane's plan rows are not
+    // the thin ones the 09-01 artifact was made of.
+    sizeBytes: number | null
+    contentHash: { alg: string; value: string } | null
+    bondCount: number
 }
 function clusterBySimilarity(
     candidates: SimilarityCandidate[],
@@ -1449,6 +1621,53 @@ export async function dedupeLibraryIndex(
         // is what cycle-3 DATA-002 built that uniform field for.
         const orgDocs = snap.docs.filter((d) => rowOrg(d.data().orgId) === org)
 
+        /* ── W5 (§4) — bond counts, read ONCE for the whole scan ────────────
+         * A bond is a `tracks` doc pointing at the row, but only if its
+         * parent setlist is still LIVE and in this tenant. That distinction
+         * is not pedantry: `delete_chart`'s guard counted tracks of DELETED
+         * setlists and refused deletions over bonds that no longer existed
+         * (the lane-c2 cause). `find_setlists_referencing_chart` already
+         * resolves it the right way — tracks, then distinct setlistIds, then
+         * keep only the setlists that exist and are in-tenant — and this
+         * does the same, once, rather than 785 times.
+         *
+         * Bondedness earns its place in the canonical sort because age was
+         * beating USE: `Bar'chu Walkdown` was marked `duplicate` while 4
+         * setlists bonded it, purely because another row was older. */
+        const bondCount = new Map<string, number>()
+        try {
+            const [tracksSnap, setlistsSnap] = await Promise.all([
+                db.collection("tracks").get(),
+                db.collection("setlists").get(),
+            ])
+            const liveSetlists = new Set(
+                setlistsSnap.docs
+                    .filter((s) => rowOrg(s.data().orgId) === org)
+                    .map((s) => s.id),
+            )
+            for (const t of tracksSnap.docs) {
+                const data = t.data() as Record<string, unknown>
+                const fileId =
+                    typeof data.fileId === "string" ? data.fileId : null
+                const setlistId =
+                    typeof data.setlistId === "string" ? data.setlistId : null
+                // A track with no live parent is not a bond. Counting it
+                // would resurrect exactly the defect above.
+                if (!fileId || !setlistId || !liveSetlists.has(setlistId)) {
+                    continue
+                }
+                bondCount.set(fileId, (bondCount.get(fileId) ?? 0) + 1)
+            }
+        } catch (bondErr) {
+            // A bond-count failure must not take the whole scan down; it
+            // degrades the SORT, not the grouping. Reported by absence: every
+            // row then reads bondCount 0, which the response makes visible.
+            logger.warn(
+                "[mcp] dedupe_library: bond counts unavailable, canonical sort falls back to age:",
+                bondErr,
+            )
+        }
+
         // Collect dedupable candidates. Skip rows already marked
         // `duplicate` (idempotence) only.
         //
@@ -1466,6 +1685,13 @@ export async function dedupeLibraryIndex(
             name: string
             uploadedAt: string | null
             mimeType: string | null
+            // W5 (§6) — the DECIDING fields. The 09-01 plan file carried
+            // only fileId/name/uploadedAt because this interface did; the
+            // artifact was thin because the type was.
+            sizeBytes: number | null
+            contentHash: { alg: string; value: string } | null
+            hashFailed: boolean
+            bondCount: number
             // L1-W2: carried for the canonical-pick status rank. It was
             // read for the skip above and then dropped, which is why the
             // picker could not see it.
@@ -1504,6 +1730,11 @@ export async function dedupeLibraryIndex(
                 uploadedAt,
                 mimeType,
                 status,
+                sizeBytes:
+                    typeof data.fileSize === "number" ? data.fileSize : null,
+                contentHash: readContentHash(data.contentHash),
+                hashFailed: !!data.hashFailed,
+                bondCount: bondCount.get(d.id) ?? 0,
             })
         }
 
@@ -1561,32 +1792,13 @@ export async function dedupeLibraryIndex(
             //       to the end (a metadata-stripped scan artifact never
             //       beats a real timestamp).
             //   (d) tiebreak: fileId asc.
-            bucket.sort((a, b) => {
-                const aLive = canonicalStatusRank(a.status)
-                const bLive = canonicalStatusRank(b.status)
-                if (aLive !== bLive) return aLive - bLive
-                const aGoogle = isGoogleAppsMime(a.mimeType) ? 1 : 0
-                const bGoogle = isGoogleAppsMime(b.mimeType) ? 1 : 0
-                if (aGoogle !== bGoogle) return aGoogle - bGoogle
-                const aAt = a.uploadedAt ?? "￿"
-                const bAt = b.uploadedAt ?? "￿"
-                if (aAt !== bAt) return aAt.localeCompare(bAt)
-                return a.fileId.localeCompare(b.fileId)
-            })
+            bucket.sort(canonicalCompare)
             const [keep, ...rest] = bucket
             dupeGroups.push({
                 normalizedName: key,
                 groupedBy: "exact-name",
-                kept: {
-                    fileId: keep.fileId,
-                    name: keep.name,
-                    uploadedAt: keep.uploadedAt,
-                },
-                duplicates: rest.map((r) => ({
-                    fileId: r.fileId,
-                    name: r.name,
-                    uploadedAt: r.uploadedAt,
-                })),
+                kept: rowView(keep),
+                duplicates: rest.map(rowView),
             })
             for (const c of bucket) exactGroupedIds.add(c.fileId)
             // W2: remember WHY each loser is a loser. The old code pushed
@@ -1620,6 +1832,11 @@ export async function dedupeLibraryIndex(
                     uploadedAt: c.uploadedAt,
                     mimeType: c.mimeType,
                     status: c.status,
+                    // W5 — the deciding fields travel into the fuzzy lane
+                    // too, or its plan rows would be the thin ones again.
+                    sizeBytes: c.sizeBytes,
+                    contentHash: c.contentHash,
+                    bondCount: c.bondCount,
                 })
             }
             // L1-W4: the similarity pass gets the same like-with-like
@@ -1649,32 +1866,13 @@ export async function dedupeLibraryIndex(
                 // (c) earliest uploadedAt, (d) fileId asc. Keeps the
                 // canonical-pick policy uniform between exact-normalize
                 // groups and similarity clusters.
-                cluster.sort((a, b) => {
-                    const aLive = canonicalStatusRank(a.status)
-                    const bLive = canonicalStatusRank(b.status)
-                    if (aLive !== bLive) return aLive - bLive
-                    const aGoogle = isGoogleAppsMime(a.mimeType) ? 1 : 0
-                    const bGoogle = isGoogleAppsMime(b.mimeType) ? 1 : 0
-                    if (aGoogle !== bGoogle) return aGoogle - bGoogle
-                    const aAt = a.uploadedAt ?? "￿"
-                    const bAt = b.uploadedAt ?? "￿"
-                    if (aAt !== bAt) return aAt.localeCompare(bAt)
-                    return a.fileId.localeCompare(b.fileId)
-                })
+                cluster.sort(canonicalCompare)
                 const [keep, ...rest] = cluster
                 dupeGroups.push({
                     normalizedName: keep.normalizedKey,
                     groupedBy: "fuzzy-name",
-                    kept: {
-                        fileId: keep.fileId,
-                        name: keep.name,
-                        uploadedAt: keep.uploadedAt,
-                    },
-                    duplicates: rest.map((r) => ({
-                        fileId: r.fileId,
-                        name: r.name,
-                        uploadedAt: r.uploadedAt,
-                    })),
+                    kept: rowView(keep),
+                    duplicates: rest.map(rowView),
                 })
                 for (const r of rest) {
                     loserProvenance.set(r.fileId, {
@@ -1689,10 +1887,133 @@ export async function dedupeLibraryIndex(
                         uploadedAt: r.uploadedAt,
                         mimeType: r.mimeType,
                         status: r.status,
+                        sizeBytes: r.sizeBytes ?? null,
+                        contentHash: r.contentHash ?? null,
+                        hashFailed: false,
+                        bondCount: r.bondCount ?? 0,
                     })),
                 )
             }
         }
+
+        /* ═══ W5 (R-0903-live-cw-2 §3) — THE HASH PASS, REPORT ONLY ════════
+         *
+         * The hash pass ADDS a lane; it does not replace the name pass.
+         * Byte identity is exact and needs no name at all, so it sees pairs
+         * the name pass never could — `gminor_spirits` / `G-minor Spirits`
+         * share no normalized name and are the same 42,729 bytes. The
+         * normalized-name pass with `chartFormatClass` stays for the
+         * near-misses a hash can never see.
+         *
+         * THIS LANE MARKS NOTHING. Every new mark decided by bytes is
+         * Daniel's, per cluster, which is why these groups leave in their
+         * own field and never enter `losers`.
+         *
+         * Unlike the name passes this one scans EVERY status, `duplicate`
+         * included. That is deliberate and it is what makes the lane
+         * useful: a byte-identical cluster where one row is already hidden
+         * is a cluster where the existing mark is byte-JUSTIFIED, and the
+         * operator needs to see that it needs no decision. Measured on the
+         * live catalog 2026-09-03: all 5 of the byte-identical clusters the
+         * order names already have exactly one visible row each, and that
+         * fact is invisible to a scan that skips marked rows. */
+        const hashBuckets = new Map<string, Candidate[]>()
+        let hashedRows = 0
+        let unhashedRows = 0
+        let hashFailedRows = 0
+        for (const doc of orgDocs) {
+            const data = doc.data() as Record<string, unknown>
+            if (data.hashFailed) hashFailedRows += 1
+            const h = readContentHash(data.contentHash)
+            if (!h) {
+                // Not a candidate, and COUNTED. A hash pass reporting "no
+                // byte pairs" over an unhashed library says nothing at all,
+                // and the caller has to be able to tell the difference.
+                unhashedRows += 1
+                continue
+            }
+            hashedRows += 1
+            const rawName =
+                (typeof data.name === "string" && data.name) ||
+                (typeof data.title === "string" && data.title) ||
+                doc.id
+            const key = `${h.alg}:${h.value}`
+            const bucket = hashBuckets.get(key) ?? []
+            bucket.push({
+                fileId: doc.id,
+                name: rawName,
+                uploadedAt:
+                    typeof data.uploadedAt === "string"
+                        ? data.uploadedAt
+                        : typeof data.modifiedTime === "string"
+                          ? data.modifiedTime
+                          : null,
+                mimeType:
+                    typeof data.mimeType === "string" ? data.mimeType : null,
+                status:
+                    typeof data.status === "string" ? data.status : "active",
+                sizeBytes:
+                    typeof data.fileSize === "number" ? data.fileSize : null,
+                contentHash: h,
+                hashFailed: !!data.hashFailed,
+                bondCount: bondCount.get(doc.id) ?? 0,
+            })
+            hashBuckets.set(key, bucket)
+        }
+
+        const hashGroups: DedupeGroup[] = []
+        for (const [key, bucket] of hashBuckets) {
+            if (bucket.length < 2) continue
+            bucket.sort(canonicalCompare)
+            const [keep, ...rest] = bucket
+
+            // §6a — a no-op is a conclusion, and the operator gets the
+            // premise. Two shapes are reported rather than silently dropped:
+            // a cluster already resolved (every non-canonical row hidden),
+            // and a cluster whose hidden row is `non_chart`, where the mark
+            // is correct and no action follows from it.
+            const hiddenRest = rest.filter((r) => r.status !== "active")
+            const nonChartHidden = rest.filter(
+                (r) =>
+                    r.status !== "active" &&
+                    isNonChartArtifactShape({
+                        mimeType: r.mimeType,
+                        name: r.name,
+                    }),
+            )
+            const reasons: string[] = []
+            if (hiddenRest.length === rest.length) {
+                reasons.push(
+                    `already resolved: ${rest.length} of ${bucket.length} byte-identical rows are already hidden, and \`${keep.fileId}\` is the one visible row — the existing mark is byte-justified and no decision follows`,
+                )
+            }
+            if (nonChartHidden.length > 0) {
+                reasons.push(
+                    `${nonChartHidden.length} hidden row(s) are non_chart artifacts, which stay marked by design (§6a)`,
+                )
+            }
+            const crossFormat =
+                new Set(bucket.map((r) => chartFormatClass(r.mimeType))).size > 1
+            if (crossFormat) {
+                reasons.push(
+                    "cross-format cluster: the name passes partition by `chartFormatClass` and could never have seen this one",
+                )
+            }
+
+            hashGroups.push({
+                // There is no shared NAME here — the rows were grouped by
+                // bytes and their names may differ entirely — so the key
+                // carries the digest, and `groupedBy` says which it is.
+                normalizedName: key,
+                groupedBy: "exact-hash",
+                kept: rowView(keep),
+                duplicates: rest.map(rowView),
+                ...(reasons.length > 0
+                    ? { noActionReason: reasons.join("; ") }
+                    : {}),
+            })
+        }
+        hashGroups.sort((a, b) => b.duplicates.length - a.duplicates.length)
 
         // F-05 refusal: real run without `force: true` returns the rich
         // force_required envelope (FU-1) carrying the plan in `dryRunPlan`,
@@ -1723,6 +2044,12 @@ export async function dedupeLibraryIndex(
                         groups: dupeGroups,
                         dryRun: false,
                         threshold,
+                        hashGroups,
+                        hashPassCoverage: {
+                            hashed: hashedRows,
+                            unhashed: unhashedRows,
+                            hashFailed: hashFailedRows,
+                        },
                         coverage,
                     },
                 },
@@ -1872,6 +2199,23 @@ export async function dedupeLibraryIndex(
             dryRun,
             threshold,
             ...(committedRunId ? { dedupeRunId: committedRunId } : {}),
+            hashGroups,
+            hashPassCoverage: {
+                hashed: hashedRows,
+                unhashed: unhashedRows,
+                hashFailed: hashFailedRows,
+            },
+            // §6b — stated, not rediscovered. `list_library` reports 99
+            // marked rows against this scan's 103 purely because its
+            // non_chart filter runs BEFORE its status filter, so a row
+            // caught by the earlier one is never counted by the later.
+            filterOrder: [
+                "orgId (tenant scope)",
+                "status === 'duplicate' (idempotence skip)",
+                "empty name",
+                "empty normalized key",
+                "chartFormatClass partition (like compares with like)",
+            ],
             coverage,
         }
     } catch (err) {
