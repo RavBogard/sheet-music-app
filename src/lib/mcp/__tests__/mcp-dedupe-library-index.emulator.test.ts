@@ -9,7 +9,7 @@ import {
 import { initializeApp, deleteApp, getApps, type App } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
 
-import { dedupeLibraryIndex } from "../tools/library"
+import { dedupeLibraryIndex, FORMAT_CLASS_SEP } from "../tools/library"
 import { searchLibrary } from "../tools/library"
 
 /**
@@ -503,7 +503,7 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
         expect(r.groupsFound).toBe(1)
         expect(r.groups[0].kept.fileId).toBe("same-fmt-old")
-        expect(r.groups[0].normalizedName).not.toContain(" ")
+        expect(r.groups[0].normalizedName).not.toContain(FORMAT_CLASS_SEP)
     })
 
     it("L1-W2 rank — age still decides WITHIN a status", async () => {

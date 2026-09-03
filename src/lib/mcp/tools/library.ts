@@ -74,6 +74,24 @@ export function chartFormatClass(mime: string | null | undefined): string {
 }
 
 /**
+ * W1 (R-0903-live-cw-2 §7) — the bucket-key separator, spelled as an escape.
+ *
+ * The three sites that build and parse this key (the exact-pass bucket key,
+ * its `indexOf` parse, and the fuzzy-cluster key) carried this byte RAW in
+ * the source. One raw NUL makes the whole file binary to `grep`, so
+ * `grep -rn "chartFormatClass" src/` answered `binary file matches` and
+ * printed no lines — the sites a reader most needs were unreachable by the
+ * tool they would use to find them.
+ *
+ * The byte is UNCHANGED. U+0000 is still the separator and every emitted key
+ * string stays byte-identical; only the spelling in the source moved from a
+ * literal to an escape behind one name, so the writer and the parser cannot
+ * diverge. It stays U+0000 deliberately: it cannot occur in a normalized
+ * name or in a `chartFormatClass` value, so no name can forge a boundary.
+ */
+export const FORMAT_CLASS_SEP = "\u0000"
+
+/**
  * L1-W2 (R-0901-live-cw-2 §5, plan review) — canonical-pick status rank.
  *
  * `active` is the only status the browse shows. Every other status is
@@ -1431,7 +1449,7 @@ export async function dedupeLibraryIndex(
             // L1-W4: like compares with like. A PDF and a text chart of
             // the same song are two renderings, not two uploads, so they
             // must never share a bucket. See `chartFormatClass`.
-            const bucketKey = `${key} ${chartFormatClass(c.mimeType)}`
+            const bucketKey = `${key}${FORMAT_CLASS_SEP}${chartFormatClass(c.mimeType)}`
             const bucket = groups.get(bucketKey) ?? []
             bucket.push(c)
             groups.set(bucketKey, bucket)
@@ -1445,7 +1463,7 @@ export async function dedupeLibraryIndex(
             if (bucket.length < 2) continue
             // Strip the L1-W4 format-class suffix for reporting; the group
             // is still identified to the operator by its normalized name.
-            const key = bucketKey.slice(0, bucketKey.indexOf(" "))
+            const key = bucketKey.slice(0, bucketKey.indexOf(FORMAT_CLASS_SEP))
             // Deterministic canonical pick. Sort priority:
             //   (a) `active` BEFORE any other status. A hidden row taken
             //       as canonical empties the group: it stays hidden by its
@@ -1529,7 +1547,7 @@ export async function dedupeLibraryIndex(
                     rows,
                     similarityThreshold,
                 )) {
-                    fuzzyClusters.set(`${cls} ${k}`, cluster)
+                    fuzzyClusters.set(`${cls}${FORMAT_CLASS_SEP}${k}`, cluster)
                 }
             }
             for (const cluster of fuzzyClusters.values()) {
