@@ -263,10 +263,15 @@ describe("chartFormatClass (L1-W4)", () => {
             "application/vnd.recordare.musicxml+xml",
             "application/xml",
             "image/png",
-            "application/octet-stream",
         ]) {
             expect(chartFormatClass(m)).toBe("score")
         }
+        // E1 (`R-0904-live-cw-3`, `library.ts:98`) moved `octet-stream` OUT
+        // of this class, and it belongs out: it is not a rendering of a
+        // chart, it is the absence of a declared one. Grouping it with a PDF
+        // is how an mp3 and its own chart ended up in one dedupe group.
+        // Asserted here rather than dropped, so the boundary stays covered.
+        expect(chartFormatClass("application/octet-stream")).toBe("unknown")
     })
 
     it("keeps the Google-Apps class distinct and tolerates missing mime", async () => {
@@ -274,9 +279,14 @@ describe("chartFormatClass (L1-W4)", () => {
         expect(chartFormatClass("application/vnd.google-apps.document")).toBe(
             "gapps",
         )
-        // A row with no mimeType is unknowable, not text — it must stay
-        // groupable with real charts or dedupe silently stops seeing it.
-        expect(chartFormatClass(null)).toBe("score")
-        expect(chartFormatClass(undefined)).toBe("score")
+        // A row with no mimeType is unknowable, not text — and under E1
+        // (`R-0904-live-cw-3`, `library.ts:74`) unknowable no longer means
+        // groupable: an unknown class is not a matching class, so a
+        // mime-less row groups with NOTHING, itself included
+        // (`refuseOnFormatClass` refuses a set containing `unknown`).
+        // Production reach of this arm is zero — 892 catalog rows, 0 with an
+        // empty mimeType, measured 2026-09-04 — so no caller sits behind it.
+        expect(chartFormatClass(null)).toBe("unknown")
+        expect(chartFormatClass(undefined)).toBe("unknown")
     })
 })

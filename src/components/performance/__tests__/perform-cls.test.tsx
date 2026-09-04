@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 
 /**
  * v11.3-04-02 (BUG-2) — CLS regression for the /perform public listing.
@@ -100,8 +100,15 @@ describe("/perform CLS — sign-in card slot reservation (BUG-2, web-vitals /per
         // real card mounts; the real card is NOT shown yet (no flash).
         expect(screen.getByTestId("signin-reserve")).toBeDefined()
         expect(screen.queryByTestId("qr-signin")).toBeNull()
-        // The lists are already present at their final position.
-        expect(screen.getByText("Shabbat Morning")).toBeDefined()
+        // The lists are already present at their final position. Scoped to
+        // the Upcoming section: F1's "next service" hero renders
+        // `upcoming[0]` a second time above the lists
+        // (`PublicSetlistListing.tsx:261`), so this title is in the document
+        // twice. This test is about the LISTS being at their final position,
+        // which is exactly what the scoped query still asserts.
+        expect(
+            within(screen.getByTestId("upcoming-list")).getByText("Shabbat Morning"),
+        ).toBeDefined()
     })
 
     it("does NOT reserve the slot during authLoading for an expected-authed returner (cachedUser present) — no new collapse-shift", async () => {
@@ -118,7 +125,11 @@ describe("/perform CLS — sign-in card slot reservation (BUG-2, web-vitals /per
         // reserve → nothing above the lists to later collapse and shift them.
         expect(screen.queryByTestId("signin-reserve")).toBeNull()
         expect(screen.queryByTestId("qr-signin")).toBeNull()
-        expect(screen.getByText("Shabbat Morning")).toBeDefined()
+        // Scoped to the Upcoming section — see the note in the expected-anon
+        // test above; the hero renders this title a second time.
+        expect(
+            within(screen.getByTestId("upcoming-list")).getByText("Shabbat Morning"),
+        ).toBeDefined()
     })
 
     it("swaps the reserved slot for the real card on anon resolve (replace, not append-above)", async () => {

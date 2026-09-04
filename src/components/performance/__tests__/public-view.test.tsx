@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 
 // Mock firebase modules before any component imports
 vi.mock("@/lib/firebase", () => ({
@@ -290,8 +290,16 @@ describe("Public View", () => {
 
             // Card content from the SSR slice — would be absent if we'd
             // rendered the skeleton instead.
-            expect(screen.getByText("Erev Shabbat (SSR)")).toBeDefined()
-            const link = screen.getByRole("link", { name: /Erev Shabbat \(SSR\)/i })
+            //
+            // SCOPED to the Upcoming section (F1's "next service" hero renders
+            // `upcoming[0]` a second time above the lists, so this title is in
+            // the document TWICE and an unscoped query is ambiguous). Scoping
+            // rather than widening to `getAllByText(..., 2)` keeps this test
+            // about the SSR card and leaves the hero's own render-site count
+            // to the one test that asserts the hero.
+            const upcomingList = within(screen.getByTestId("upcoming-list"))
+            expect(upcomingList.getByText("Erev Shabbat (SSR)")).toBeDefined()
+            const link = upcomingList.getByRole("link", { name: /Erev Shabbat \(SSR\)/i })
             expect(link.getAttribute("href")).toBe("/perform/setlist/ssr-1")
         })
 
@@ -323,8 +331,13 @@ describe("Public View", () => {
                 />,
             )
 
-            expect(screen.getByText("Saturday B'nei Mitzvah")).toBeDefined()
-            const link = screen.getByRole("link", { name: /Saturday B'nei Mitzvah/i })
+            // Scoped to the Upcoming section — see the SSR-prefetch test
+            // above; the F1 hero renders `upcoming[0]` a second time. The
+            // publishedAt-gate invariant is unchanged: if a gate returns, this
+            // row is absent from the LISTING and the test still fails.
+            const upcomingList = within(screen.getByTestId("upcoming-list"))
+            expect(upcomingList.getByText("Saturday B'nei Mitzvah")).toBeDefined()
+            const link = upcomingList.getByRole("link", { name: /Saturday B'nei Mitzvah/i })
             expect(link.getAttribute("href")).toBe("/perform/setlist/cd2010f4-saturday-bnei-mitzvah")
         })
 
@@ -359,7 +372,12 @@ describe("Public View", () => {
                 />,
             )
 
-            expect(screen.getByText("Real Service")).toBeDefined()
+            // The positive half is scoped to the listing (the hero renders the
+            // soonest upcoming twice); the sandbox-exclusion half stays on
+            // `screen` DELIBERATELY — an isTest row must be absent from the
+            // WHOLE document, hero included, not merely from the list.
+            const upcomingList = within(screen.getByTestId("upcoming-list"))
+            expect(upcomingList.getByText("Real Service")).toBeDefined()
             expect(screen.queryByText(/CYCLE11- probe sandbox setlist/)).toBeNull()
         })
 
@@ -389,10 +407,91 @@ describe("Public View", () => {
 
             // Each setlist card is a Link (role=link); the Google button is a
             // button, the QR stub a div — so links == rendered service rows.
-            expect(screen.getAllByRole("link")).toHaveLength(5)
+            //
+            // Counted INSIDE the Upcoming section. `screen.getAllByRole` now
+            // returns 6 because F1's hero adds a sixth <a> above the lists —
+            // the cap itself did not move (`MAX_PUBLIC_SERVICES = 5` at
+            // `public-setlist-order.ts:13`, applied at `:97`-`:98`). Writing 6
+            // here would pin the hero's current render-site count into a test
+            // about the cap; scoping keeps this assertion on the thing it
+            // names, and it still FAILS if the cap changes to 4 or 6.
+            const upcomingList = within(screen.getByTestId("upcoming-list"))
+            expect(upcomingList.getAllByRole("link")).toHaveLength(5)
+            // And the hero is the only link outside the two sections, so the
+            // page total is exactly the cap plus one — this is what would
+            // catch a THIRD render site appearing.
+            expect(screen.getAllByRole("link")).toHaveLength(6)
             // All 5 should be upcoming (upcoming-prioritized), no past rows.
             expect(screen.queryByText("Past 1")).toBeNull()
             expect(screen.queryByText("Past 2")).toBeNull()
+            expect(screen.queryByTestId("past-list")).toBeNull()
+        })
+
+        // NEW (`R-0904-live-cw-18` §3). Six tests in this file and
+        // `perform-cls.test.tsx` just stopped caring that the soonest service
+        // is in the DOM twice — so ONE test has to start caring that it is
+        // there at all. Before this, NOTHING in the tree asserted the F1 hero
+        // renders: `grep -rl "Go to next service" src --include=*.test.ts*`
+        // returned only `public-setlist-order.test.ts`, whose F1 reference at
+        // `:52` describes the pure selector `firstUpcomingSetlist`, not the
+        // DOM; and `src/app/perform/__tests__/page.test.tsx:144` caps the SSR
+        // PROP, not the markup. Without this test the hero could be deleted
+        // and all six scoped tests would stay green.
+        it("renders the F1 'next service' hero for the soonest upcoming service, above the listing", async () => {
+            const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
+            mockSubscribeToPublicSetlists.mockImplementation(() => vi.fn())
+
+            // Deliberately NOT in date order, so the hero is proven to pick
+            // the soonest rather than the first element it is handed.
+            render(
+                <PublicSetlistListing
+                    initialSetlists={[
+                        {
+                            id: "later-1",
+                            name: "Later Shabbat Morning",
+                            eventDate: "2099-03-01T10:00:00Z",
+                            isTest: false,
+                            trackCount: 9,
+                            songCount: 9,
+                        } as any,
+                        {
+                            id: "soonest-1",
+                            name: "Soonest Erev Shabbat",
+                            eventDate: "2099-01-02T18:00:00Z",
+                            isTest: false,
+                            trackCount: 12,
+                            songCount: 11,
+                        } as any,
+                    ]}
+                />,
+            )
+
+            // The hero, by its accessible name (`PublicSetlistListing.tsx:267`).
+            const hero = screen.getByRole("link", {
+                name: "Go to next service: Soonest Erev Shabbat",
+            })
+            expect(hero.getAttribute("href")).toBe("/perform/setlist/soonest-1")
+
+            // It is the SOONEST, not the later one, and not the input order.
+            expect(
+                screen.queryByRole("link", {
+                    name: "Go to next service: Later Shabbat Morning",
+                }),
+            ).toBeNull()
+
+            // Twice in the document — once in the hero, once in the list —
+            // which is the exact fact the six scoped tests now tolerate. If
+            // the hero is deleted this drops to 1 and this test fails; if a
+            // third render site appears it rises to 3 and this test fails.
+            expect(screen.getAllByText("Soonest Erev Shabbat")).toHaveLength(2)
+            const upcomingList = screen.getByTestId("upcoming-list")
+            expect(within(upcomingList).getByText("Soonest Erev Shabbat")).toBeDefined()
+            // And the hero is ABOVE the listing, which is its whole purpose:
+            // the band taps in without scanning the list.
+            expect(
+                hero.compareDocumentPosition(upcomingList) &
+                    Node.DOCUMENT_POSITION_FOLLOWING,
+            ).toBeTruthy()
         })
     })
 

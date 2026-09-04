@@ -295,7 +295,19 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                         )
                     })()}
                     {upcoming.length > 0 && (
-                        <section className="flex flex-col gap-3">
+                        <section
+                            className="flex flex-col gap-3"
+                            /* Test landmark only — no behaviour. The hero above
+                               renders `upcoming[0]` a SECOND time, so the
+                               soonest service is legitimately in the DOM twice
+                               and an unscoped getByText/getAllByText over a
+                               service title is ambiguous. Six tests scope to
+                               this landmark instead of widening their
+                               matchers; the past section's heading is
+                               org-dependent (`label(org, 'pastSection')`), so
+                               a heading-based lookup would not be stable. */
+                            data-testid="upcoming-list"
+                        >
                             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground px-1">
                                 Upcoming
                             </h2>
@@ -305,7 +317,10 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
                         </section>
                     )}
                     {past.length > 0 && (
-                        <section className="flex flex-col gap-3 mt-5">
+                        <section
+                            className="flex flex-col gap-3 mt-5"
+                            data-testid="past-list"
+                        >
                             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground px-1">
                                 {label(org, 'pastSection')}
                             </h2>

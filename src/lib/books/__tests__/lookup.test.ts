@@ -1,5 +1,23 @@
 import { describe, it, expect } from "vitest"
 import { lookupBookPage } from "../lookup"
+import { getBook, getRegistryEntry } from "../registry"
+
+/**
+ * `R-0904-live-cw-19` — re-derivation helper.
+ *
+ * The folio literals that used to sit in this file were regenerated out from
+ * under it every time `corpus` rebuilt a book (Aleinu moved 36/200/238 →
+ * 30/135/167; Kaddish Shalem 34/150/236 → 28/91/165). A fresh set of numbers
+ * is a promise to break again, so the tests below derive from the registry
+ * they already read and keep the RELATIONSHIPS as the assertions.
+ *
+ * `lookup.ts:77` reads `u.folios[0]` for a feed book — the FIRST folio, not
+ * the whole span — so that is what a match's `folio` must equal.
+ */
+function unitsNamed(slug: string, name: string) {
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "")
+    return (getBook(slug)!.units ?? []).filter((u) => norm(u.name) === norm(name))
+}
 
 describe("lookupBookPage", () => {
     it("returns unknown_book for an unregistered slug", () => {
@@ -54,13 +72,32 @@ describe("lookupBookPage", () => {
     })
 
     it("stops-and-asks on several exact matches that disagree on folio", () => {
-        // shirei-tshuvah "Aleinu": rh1-maariv folio 36, rh-shacharit folio 200,
-        // rh1-mincha folio 238 — three real occurrences of the same prayer at
-        // three different pages. All three must come back "low".
+        // shirei-tshuvah "Aleinu" occurs in three services (evening,
+        // shacharit, mincha) at three different pages. Re-derived: the folios
+        // come from the book's own units instead of being pinned.
+        //
+        // STILL FAILABLE, and this is the point: the "low" verdict is
+        // CONDITIONAL on the three disagreeing (`lookup.ts:85`-`:89` — several
+        // exact hits on ONE folio resolve to "high"). So the test asserts the
+        // premise it depends on — three units, three DISTINCT folios — and
+        // would fail if the data collapsed them onto one page, if a fourth
+        // Aleinu appeared, if a folio left the book's page range, if the
+        // ascending sort at `:92` broke, or if the disagreement rule ever
+        // stopped dropping to "low".
+        const units = unitsNamed("shirei-tshuvah", "Aleinu")
+        const expected = units.map((u) => u.folios[0]).sort((a, b) => a - b)
+        expect(units).toHaveLength(3)
+        expect(new Set(expected).size).toBe(3) // they must DISAGREE, or "high" is correct
+        const pages = getRegistryEntry("shirei-tshuvah")!.pages
+        for (const f of expected) {
+            expect(f).toBeGreaterThanOrEqual(1)
+            expect(f).toBeLessThanOrEqual(pages)
+        }
+
         const res = lookupBookPage("shirei-tshuvah", "Aleinu")
         expect(res.ok).toBe(true)
         if (!res.ok) return
-        expect(res.matches.map((m) => m.folio)).toEqual([36, 200, 238])
+        expect(res.matches.map((m) => m.folio)).toEqual(expected)
         for (const m of res.matches) expect(m.confidence).toBe("low")
     })
 
@@ -92,13 +129,25 @@ describe("lookupBookPage", () => {
 
     it("returns exact matches sorted ascending by folio", () => {
         // "Kaddish Shalem" (a full unit name, not just a substring) occurs
-        // three times at folios 34, 150, 236 — differing folios, so all "low",
-        // but the ordering invariant is independent of confidence.
+        // three times; the ordering invariant is independent of confidence.
+        // Re-derived — the three folios used to be pinned as 34/150/236 and
+        // the feed moved them.
+        //
+        // STILL FAILABLE: the sort at `lookup.ts:92` is the subject, and it is
+        // asserted against the book's own folios in ascending order AND
+        // against an independent re-sort of what came back — so a lookup that
+        // returned the right three in DECLARATION order (which is not
+        // ascending for every prayer in this book) fails the first assertion
+        // while passing the second. It also fails if the unit count changes.
+        const units = unitsNamed("shirei-tshuvah", "Kaddish Shalem")
+        expect(units).toHaveLength(3)
+        const expected = units.map((u) => u.folios[0]).sort((a, b) => a - b)
+
         const res = lookupBookPage("shirei-tshuvah", "Kaddish Shalem")
         expect(res.ok).toBe(true)
         if (!res.ok) return
         const folios = res.matches.map((m) => m.folio)
-        expect(folios).toEqual([34, 150, 236])
+        expect(folios).toEqual(expected)
         expect(folios).toEqual([...folios].sort((a, b) => a - b))
     })
 })

@@ -81,9 +81,52 @@ describe("book registry", () => {
  */
 describe("folio floor is derived from each book's own data", () => {
     it("derives the floor from pagemap entries and feed unit folios", () => {
-        expect(bookFolioFloor("crc-friday")).toBe(3)
-        expect(bookFolioFloor("crc-saturday")).toBe(50)
-        expect(bookFolioFloor("shirei-tshuvah")).toBe(1)
+        // RE-DERIVED (`R-0904-live-cw-19`). These were three literals —
+        // 3 / 50 / 1 — and the third had already gone stale: shirei-tshuvah’s
+        // own data starts at folio 2, not 1, so the test was pinning the very
+        // hardcoded-1 the floor exists to replace. Literals here have re-broken
+        // on every feed regeneration, so the test now states the RULE.
+        //
+        // WHAT WOULD STILL MAKE THIS FAIL — three things the DATA can violate,
+        // none of them a restatement of the implementation:
+        //  (a) a book whose lowest reached folio is past its declared page
+        //      count, i.e. a book nothing in it can validly cite;
+        //  (b) crc-friday and crc-saturday overlapping again. That is the
+        //      original defect in one line: the two share 132 normalized
+        //      name/alias keys at different pages, so while Saturday’s floor
+        //      sat at a hardcoded 1, every Friday page validated silently
+        //      under `book: "crc-saturday"` and printed on the lectern sheet.
+        //      Asserted as a RELATIONSHIP between the two books’ own data, so
+        //      it fails the moment either pagemap moves into the other;
+        //  (c) every floor collapsing back to 1, which is the regression the
+        //      whole describe-block is named for.
+        const floors = new Map(
+            listBooks().map((b) => [b.slug, bookFolioFloor(b.slug)] as const),
+        )
+
+        for (const b of listBooks()) {
+            const file = getBook(b.slug)!
+            const reached = [
+                ...(file.entries ?? []).map((e) => e.page),
+                ...(file.units ?? []).flatMap((u) => u.folios),
+            ].filter((n) => Number.isInteger(n))
+            expect(reached.length).toBeGreaterThan(0)
+            // (the floor is the lowest folio the book’s own data reaches)
+            expect(floors.get(b.slug)).toBe(Math.min(...reached))
+            // (a)
+            expect(floors.get(b.slug)!).toBeGreaterThanOrEqual(1)
+            expect(floors.get(b.slug)!).toBeLessThanOrEqual(b.pages)
+        }
+
+        // (b) — the two CRC pagemaps do not overlap, and Saturday sits above
+        // Friday. Both sides derived; neither is a literal.
+        const highestFriday = Math.max(
+            ...getBook("crc-friday")!.entries!.map((e) => e.page),
+        )
+        expect(floors.get("crc-saturday")!).toBeGreaterThan(highestFriday)
+
+        // (c) — a real floor exists somewhere; not every book starts at 1.
+        expect([...floors.values()].some((f) => f > 1)).toBe(true)
     })
 
     it("falls back to 1 for a slug with no book data", () => {

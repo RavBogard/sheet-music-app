@@ -165,6 +165,25 @@ describe('v60-11-01 syncLibraryIndex songs/* mirror', () => {
         mockListAllFiles.mockResolvedValue([])
     })
 
+    // LEFT RED DELIBERATELY — R2's own STOP clause in
+    // `HANDOFF-CODE-LIVE-GREEN-REPAIR-2026-09-04.md`, under `R-0904-live-cw-17` §2.
+    //
+    // The order asked for a chart-shaped fixture so the shortcut mirror is
+    // actually exercised. Measured at `cdf1c37386`: no such fixture exists.
+    // `isNonChartArtifactShape` rejects the whole Google-Apps namespace on
+    // `mime.startsWith("application/vnd.google-apps.")` (`junk-filter.ts:35`),
+    // a Drive shortcut IS `application/vnd.google-apps.shortcut`, and the
+    // ingestion filter reads `f.mimeType` — never
+    // `shortcutDetails.targetMimeType` (`sync-engine.ts:146`-`:148`). So EVERY
+    // shortcut is dropped before the mirror, deliberately: `sync-engine.ts:16`
+    // names the ~134 shortcuts as part of what this change excludes.
+    //
+    // Giving the fixture `mimeType: 'application/pdf'` would turn it green
+    // while testing a shape Drive cannot return, and inverting it to assert
+    // the drop would report the deletion of a named behaviour as a repair —
+    // which R2 refuses. So it stays red and returns instead: whether a
+    // shortcut-bonded row should still reach songs/* is a behaviour question
+    // for `live-cw`, not a test edit.
     it('Scenario 1: new Drive shortcut mirrors to songs/* with raw name (no .pdf strip, no status)', async () => {
         const file = makeDriveFile({
             id: 'shortcut-lechu',
@@ -221,8 +240,17 @@ describe('v60-11-01 syncLibraryIndex songs/* mirror', () => {
     })
 
     it('Scenario 4: empty/missing name → NO songs/* write, library_index write still happens', async () => {
-        // Drive returns a file with empty name (folder with whitespace name, edge case).
-        const file = makeDriveFile({ id: 'empty-name', name: '   ', mimeType: 'application/vnd.google-apps.folder' })
+        // Drive returns a file whose name is whitespace only. The fixture is a
+        // PDF, not a folder, DELIBERATELY: v11.5-04-02's ingestion filter
+        // (`sync-engine.ts:146`, `isNonChartArtifactShape`) drops folders
+        // before either write, so the old folder fixture could no longer reach
+        // the guard this test is named for — it asserted 0 library writes for
+        // the FILTER's reason instead of the guard's. A whitespace name is not
+        // itself non-chart-shaped (`junk-filter.ts:47` rejects a leading dot
+        // and audio/office extensions, not blank), so a whitespace-named PDF
+        // is ingested and the empty-name skip at `sync-engine.ts:294`-`:303`
+        // is what is measured here.
+        const file = makeDriveFile({ id: 'empty-name', name: '   ', mimeType: 'application/pdf' })
         mockListAllFiles.mockResolvedValue([file])
 
         const { syncLibraryIndex } = await import('@/lib/sync-engine')
@@ -232,7 +260,14 @@ describe('v60-11-01 syncLibraryIndex songs/* mirror', () => {
         expect(songsWritesFor('empty-name')).toHaveLength(0) // songs/* skipped
     })
 
-    it('Scenario 5: non-chart MIME types (folder, audio, doc) ARE mirrored — no MIME filter', async () => {
+    // Renamed from 'non-chart MIME types (folder, audio, doc) ARE mirrored — no
+    // MIME filter'. v11.5-04-02 added exactly that filter, one layer EARLIER
+    // than the mirror this file was written to guard: the drop is at ingestion
+    // (`sync-engine.ts:146`-`:148`), so a non-chart artifact now reaches
+    // neither library_index nor songs/*. The old title promised the opposite
+    // of what the app does, which is worse than a red test — so the name moves
+    // with the assertions.
+    it('Scenario 5: non-chart MIME types (folder, audio, doc) are DROPPED at ingestion — v11.5-04-02 filter, counted in stats.skippedNonChart', async () => {
         const folder = makeDriveFile({ id: 'folder-1', name: 'CRC Charts', mimeType: 'application/vnd.google-apps.folder' })
         const audio = makeDriveFile({ id: 'audio-1', name: 'recording.mp3', mimeType: 'audio/mpeg' })
         const doc = makeDriveFile({ id: 'doc-1', name: 'liner-notes.docx', mimeType: 'application/vnd.google-apps.document' })
@@ -240,19 +275,29 @@ describe('v60-11-01 syncLibraryIndex songs/* mirror', () => {
         mockListAllFiles.mockResolvedValue([folder, audio, doc, pdf])
 
         const { syncLibraryIndex } = await import('@/lib/sync-engine')
-        await syncLibraryIndex()
+        const stats = await syncLibraryIndex()
 
-        // All 4 get songs/* writes (no MIME filter at mirror site)
-        expect(songsWritesFor('folder-1')).toHaveLength(1)
-        expect(songsWritesFor('audio-1')).toHaveLength(1)
-        expect(songsWritesFor('doc-1')).toHaveLength(1)
-        expect(songsWritesFor('pdf-1')).toHaveLength(1)
-
-        // None carry status
-        for (const id of ['folder-1', 'audio-1', 'doc-1', 'pdf-1']) {
-            const op = songsWritesFor(id)[0]
-            expect(op.data).not.toHaveProperty('status')
+        // Dropped BEFORE either batch — not filtered at the mirror site — so
+        // library_index is empty for all three as well. Asserting BOTH
+        // collections is what distinguishes 'dropped at ingestion' from
+        // 'mirrored but MIME-filtered', which is the change this test now
+        // documents.
+        for (const id of ['folder-1', 'audio-1', 'doc-1']) {
+            expect(songsWritesFor(id)).toHaveLength(0)
+            expect(libraryWritesFor(id)).toHaveLength(0)
         }
+
+        // The chart still goes through both, and still carries no status — the
+        // mirror contract this file exists for is UNCHANGED, and this is the
+        // assertion that stops the inverted test from passing vacuously if the
+        // filter ever widened to swallow PDFs too.
+        expect(libraryWritesFor('pdf-1')).toHaveLength(1)
+        const pdfOps = songsWritesFor('pdf-1')
+        expect(pdfOps).toHaveLength(1)
+        expect(pdfOps[0].data).not.toHaveProperty('status')
+
+        // `sync-engine.ts:149` — the drop is counted, not silent.
+        expect(stats.skippedNonChart).toBe(3)
     })
 
     it('Scenario 6: library_index batch and songs batch use SEPARATE batch IDs (parallel commits)', async () => {
