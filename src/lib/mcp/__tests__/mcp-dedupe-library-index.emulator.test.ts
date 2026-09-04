@@ -180,6 +180,25 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         expect(r.groupsFound).toBe(1)
         expect(r.wouldMark).toBe(1)
         expect(r.committed).toBe(1) // F-005: real-run commits the plan
+
+        // M2b (R-0904-live-cw-7 §2): the same call WITH `forceScore` is
+        // refused outright — the fuzzy lane plans, it never commits.
+        const fuzzy = await dedupeLibraryIndex(ADMIN, {
+            dryRun: false,
+            force: true,
+            forceScore: 0.85,
+        })
+        expect("error" in fuzzy).toBe(true)
+        expect(JSON.stringify(fuzzy)).toContain("fuzzy_execution_refused")
+        expect(JSON.stringify(fuzzy)).toContain("R-0904-live-cw-7")
+
+        // ...and the diagnostic it gates is untouched: `dryRun` with
+        // `forceScore` still returns a full plan.
+        const plan = await dedupeLibraryIndex(ADMIN, {
+            dryRun: true,
+            forceScore: 0.85,
+        })
+        expect("error" in plan).toBe(false)
         expect(r.groups[0].kept.fileId).toBe("ana-clean") // earliest uploadedAt
         expect(r.groups[0].duplicates.map((d) => d.fileId)).toEqual([
             "ana-leading-space",

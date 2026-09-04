@@ -1677,6 +1677,40 @@ export async function dedupeLibraryIndex(
             )
         }
 
+        /**
+         * M2b (R-0904-live-cw-7 §2): the fuzzy lane is a FINDER, never an
+         * executor. `forceScore` may plan; it may not commit.
+         *
+         * Measured on the live catalog at 0.85 on 2026-09-04: of the 17 marks
+         * the fuzzy plan proposed, about half would have hidden real, distinct
+         * music. `Haftarah Blessings (Cantillation)` behind `Torah Blessings`;
+         * `Kedusha Am` behind `Kedusha Em`; `Aleinu Shur melody (low voice)`
+         * behind `(high voice)`; and — four days before Rosh Hashanah — ALTO,
+         * TENOR and BASS of `Avinu Malkeinu Janowski D minor` behind SOPRANO,
+         * plus TENOR and BASS of `Avinu Malkeinu_traditional_Em` behind ALTO.
+         *
+         * The catalog encodes voice part, key and liturgical section as short
+         * suffixes, and Levenshtein reads exactly those as noise: the score is
+         * high BECAUSE the titles are careful. No threshold repairs that — it
+         * only moves which real chart gets hidden. A single row that a person
+         * decided about is written by the single-row mark, not by a sweep.
+         *
+         * `dryRun: true` with `forceScore` is deliberately untouched: the
+         * diagnostic is how we found this, and it stays fully available.
+         */
+        if (similarityThreshold !== null && force) {
+            return richError(
+                "fuzzy_execution_refused",
+                "dedupe_library refuses `forceScore` together with `force`: the fuzzy lane may plan, never commit (R-0904-live-cw-7).",
+                {
+                    forceScore: similarityThreshold,
+                    ruling: "R-0904-live-cw-7",
+                    measuredOn: "2026-09-04",
+                },
+                "Re-run with `dryRun: true` to read the plan. To act on one row, use the single-row mark, which records a person's decision and is reversible.",
+            )
+        }
+
         const snap = await db.collection("library_index").get()
 
         // v11-02-02 tenant isolation — L1-W3, Daniel's call 2026-09-01.
