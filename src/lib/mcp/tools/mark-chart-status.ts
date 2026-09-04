@@ -5,6 +5,7 @@ import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import type { DedupeRunRecord, DedupeRunRow } from "./library"
+import { findSetlistsReferencingChart } from "./setlists"
 
 /**
  * M1 of MARK-TOOL-AND-TENANT-WALL — the single-row mark
@@ -49,6 +50,14 @@ import type { DedupeRunRecord, DedupeRunRow } from "./library"
  * `"human-mark"` rather than a pass name. `threshold` is `null`, because a
  * decision does not have one — that is not a missing value, it is the
  * absence of a mechanism.
+ *
+ * 5. A BONDED ROW IS NOT HIDDEN (N2 of REFUSALS-AND-PAIRS). `R-0903-live-cw-8`
+ *    has always required byte-identical AND UNBONDED, and until now the
+ *    unbonded half lived only in a ledger: this file read no bond count at
+ *    any line. It does now, and it refuses. Hiding a row that live setlists
+ *    still bond is how the band gets a dead chart on a Friday — the same
+ *    outcome `Bar'chu Walkdown` had when age beat USE in the sweep's sort.
+ *    `toStatus: "active"` is exempt: un-hiding a bonded row is the repair.
  *
  * The record is a `dedupeRuns` document on purpose: `undo_dedupe_group`'s
  * `runId` mode restores from `rows[].priorStatus`, so the mark is reversible
@@ -203,6 +212,74 @@ export async function markChartStatus(
                 songMirrored: false,
                 dryRun,
                 noop: `row already reads \`${toStatus}\` — nothing written, and no record created for a change that did not happen`,
+            }
+        }
+
+        // (5) THE UNBONDED HALF OF `R-0903-live-cw-8`, ENFORCED.
+        //
+        // Placed here on purpose: after the honest-idempotence short-circuit
+        // (a no-op writes nothing, so there is nothing to refuse) and BEFORE
+        // the dryRun/force branch, so `force: true` cannot walk past it and a
+        // `dryRun` reports the refusal a real run would make rather than a
+        // plan it would never carry out.
+        //
+        // The count is NOT reconstructed here. `find_setlists_referencing_chart`
+        // (`src/lib/mcp/tools/setlists.ts:264`) already resolves bondedness the
+        // one right way — `tracks where fileId ==` on the primary key, then
+        // distinct setlistIds, then keep only the parents that EXIST and are
+        // in-tenant — and a track whose parent setlist was deleted is not a
+        // bond, which is the defect `delete_chart`'s guard had (the lane-c2
+        // cause). `dedupe_library`'s own bondCount (library.ts:1765–1787)
+        // applies the identical rule but builds it by scanning the whole
+        // `tracks` and `setlists` collections, which is right for 785 rows and
+        // wrong for one. Cost of the query used here: one indexed equality
+        // query on `tracks.fileId` (single-field auto-index, capped at 200)
+        // plus one `getAll` of the distinct parent setlists.
+        if (toStatus !== "active") {
+            const refs = await findSetlistsReferencingChart(
+                uid,
+                { fileId },
+                org,
+            )
+            // A bond-count failure must not be read as "unbonded" — that is
+            // the direction that hides a chart in use. Refuse and say why.
+            if (refs.ok === false) {
+                return richError(
+                    "mark_refused_row_is_bonded",
+                    `Cannot mark \`${fileId}\` \`${toStatus}\`: its bond count could not be read, and an unreadable count is not an absent one.`,
+                    {
+                        fileId,
+                        toStatus,
+                        bondCount: null,
+                        underlying: refs.error.machine_code,
+                    },
+                    "Re-read the bonds with find_setlists_referencing_chart. `toStatus: \"active\"` is never refused by this guard.",
+                )
+            }
+            if (refs.count > 0) {
+                return richError(
+                    "mark_refused_row_is_bonded",
+                    `Cannot mark \`${fileId}\`${name ? ` (\`${name}\`)` : ""} \`${toStatus}\`: ${refs.count} live setlist${refs.count === 1 ? "" : "s"} still bond${refs.count === 1 ? "s" : ""} it. R-0903-live-cw-8 requires a hidden row be byte-identical AND unbonded.`,
+                    {
+                        fileId,
+                        name,
+                        toStatus,
+                        priorStatus,
+                        bondCount: refs.count,
+                        // The refusal NAMES the bonds. An operator who is not
+                        // told what is holding the row has to guess.
+                        bonds: refs.setlists.map((r) => ({
+                            setlistId: r.setlistId,
+                            name: r.name,
+                            date: r.eventDate ?? r.date,
+                            trackId: r.trackId,
+                            trackTitle: r.trackTitle,
+                        })),
+                        ...(refs.truncated ? { truncated: true } : {}),
+                        ruling: "R-0903-live-cw-8",
+                    },
+                    "Move or remove the bonds first (remove_track / swap_chart to the surviving row), then re-issue the mark. `toStatus: \"active\"` is never refused by this guard — un-hiding a bonded row is a repair.",
+                )
             }
         }
 

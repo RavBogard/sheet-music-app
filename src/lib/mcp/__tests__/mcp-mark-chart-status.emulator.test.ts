@@ -46,7 +46,17 @@ describe("MCP mark_chart_status — the single-row human mark (emulator)", () =>
         await deleteApp(app)
     })
     beforeEach(async () => {
-        for (const col of ["songs", "library_index", "users", "dedupeRuns"]) {
+        // `tracks` + `setlists` joined this list at N2: the mark now READS
+        // bondedness, so residue from a sibling test file would refuse a mark
+        // this file expects to land.
+        for (const col of [
+            "songs",
+            "library_index",
+            "users",
+            "dedupeRuns",
+            "tracks",
+            "setlists",
+        ]) {
             const snap = await db().collection(col).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
@@ -243,5 +253,132 @@ describe("MCP mark_chart_status — the single-row human mark (emulator)", () =>
         expect(JSON.stringify(cross).split("theirs").join("X")).toBe(
             JSON.stringify(absent).split("no-such-row").join("X"),
         )
+    })
+
+    /**
+     * N2 of REFUSALS-AND-PAIRS — the unbonded half of `R-0903-live-cw-8`.
+     *
+     * The ruling always said byte-identical AND UNBONDED; until this wave the
+     * second half lived only in a ledger and this file read no bond count at
+     * any line. These are that half stated as code.
+     */
+    async function seedBond(
+        setlistId: string,
+        trackId: string,
+        fileId: string,
+        extra: Record<string, unknown> = {},
+    ) {
+        await db()
+            .collection("setlists")
+            .doc(setlistId)
+            .set({ name: `Setlist ${setlistId}`, ...extra })
+        await db()
+            .collection("tracks")
+            .doc(trackId)
+            .set({ setlistId, fileId, title: "bound track", order: 0 })
+    }
+
+    it("N2 — refuses to hide a bonded row, names the bonds, and writes nothing", async () => {
+        await seedIndex("bonded", { name: "Shalom Aleichem (Goldfarb).pdf" })
+        await seedBond("sl-1", "tr-1", "bonded", { eventDate: "2026-09-11" })
+        await seedBond("sl-2", "tr-2", "bonded")
+
+        const r = await markChartStatus(ADMIN, {
+            fileId: "bonded",
+            toStatus: "duplicate",
+            dryRun: false,
+            // `force` must NOT walk past this: the refusal is placed before
+            // the F-05 gate on purpose.
+            force: true,
+        })
+        if (!("error" in r)) throw new Error("expected a refusal")
+        expect(r.error.machine_code).toBe("mark_refused_row_is_bonded")
+        expect(r.error.code).toBe(409)
+        // It says WHAT is holding the row, not just that something is.
+        const body = r as unknown as {
+            bondCount: number
+            bonds: { setlistId: string; trackId: string }[]
+        }
+        expect(body.bondCount).toBe(2)
+        expect(body.bonds.map((b) => b.setlistId).sort()).toEqual([
+            "sl-1",
+            "sl-2",
+        ])
+
+        // The post-state is "nothing written": the row is untouched and no
+        // record exists for a change that did not happen.
+        const row = await db().collection("library_index").doc("bonded").get()
+        expect(row.data()?.status).toBe("active")
+        expect(row.data()?.dedupeRunId).toBeUndefined()
+        const runs = await db().collection("dedupeRuns").get()
+        expect(runs.size).toBe(0)
+    })
+
+    it("N2 — a dryRun reports the refusal a real run would make, not a plan it would never carry out", async () => {
+        await seedIndex("bonded", { name: "a.pdf" })
+        await seedBond("sl-1", "tr-1", "bonded")
+
+        const r = await markChartStatus(ADMIN, {
+            fileId: "bonded",
+            toStatus: "archived",
+            dryRun: true,
+        })
+        if (!("error" in r)) throw new Error("expected a refusal")
+        expect(r.error.machine_code).toBe("mark_refused_row_is_bonded")
+        expect((r as unknown as { bondCount: number }).bondCount).toBe(1)
+    })
+
+    it("N2 — `toStatus: \"active\"` is NEVER refused: un-hiding a bonded row is a repair", async () => {
+        await seedIndex("bonded", { name: "a.pdf", status: "archived" })
+        await seedBond("sl-1", "tr-1", "bonded")
+
+        const r = await markChartStatus(ADMIN, {
+            fileId: "bonded",
+            toStatus: "active",
+            ruling: "R-0903-live-cw-8",
+            dryRun: false,
+            force: true,
+        })
+        if ("error" in r) throw new Error(JSON.stringify(r.error))
+        expect(r.fromStatus).toBe("archived")
+        expect(r.toStatus).toBe("active")
+        const row = await db().collection("library_index").doc("bonded").get()
+        expect(row.data()?.status).toBe("active")
+    })
+
+    it("N2 — a track whose parent setlist is gone is NOT a bond (the lane-c2 defect)", async () => {
+        await seedIndex("dangling", { name: "a.pdf" })
+        // A track pointing at a setlist that does not exist. `delete_chart`'s
+        // old guard counted exactly this and refused over bonds that were not
+        // there; the mark must not resurrect it.
+        await db()
+            .collection("tracks")
+            .doc("tr-orphan")
+            .set({ setlistId: "deleted-setlist", fileId: "dangling", order: 0 })
+
+        const r = await markChartStatus(ADMIN, {
+            fileId: "dangling",
+            toStatus: "duplicate",
+            dryRun: false,
+            force: true,
+        })
+        if ("error" in r) throw new Error(JSON.stringify(r.error))
+        expect(r.toStatus).toBe("duplicate")
+    })
+
+    it("N2 — a bond in ANOTHER tenant's setlist does not hold this row", async () => {
+        await seedIndex("mine", { name: "a.pdf" })
+        await seedBond("sl-theirs", "tr-theirs", "mine", {
+            orgId: "brotherslazaroff",
+        })
+
+        const r = await markChartStatus(ADMIN, {
+            fileId: "mine",
+            toStatus: "duplicate",
+            dryRun: false,
+            force: true,
+        })
+        if ("error" in r) throw new Error(JSON.stringify(r.error))
+        expect(r.toStatus).toBe("duplicate")
     })
 })
