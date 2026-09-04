@@ -727,14 +727,40 @@ export async function deleteChart(
     })
     if (limited) return rateLimitEnvelope(limited.error)
 
+    /**
+     * E5 (`R-0904-live-cw-3`) — the hint used to send the caller back to the
+     * tool that misled them.
+     *
+     * It read "Verify the fileId via list_library / search_library." But
+     * `search_library` reads `songs` and this tool requires a `library_index`
+     * row, and those two collections disagree about 257 rows [measured
+     * 2026-09-03]. So for a `songs`-only row the hint named the very tool
+     * that had just shown the caller the row — a loop `R-0903-live-cw-6`
+     * spent a whole sitting inside.
+     *
+     * ONE message and ONE hint, built here and used by BOTH branches below,
+     * so they cannot drift apart. That is not tidiness: the cross-tenant
+     * branch must stay byte-indistinguishable from a genuine absence, or a
+     * caller learns another org's chart exists (`v11-02-03`). Distinguishing
+     * "no index row" from "no such chart" is done in the WORDS, which are
+     * true of both states, never by giving the two branches different text.
+     */
+    const notFoundMessage = `Chart '${args.fileId}' was not found in library_index.`
+    const notFoundHint =
+        "This means no `library_index` row — which is not the same as no such chart. " +
+        "`search_library` reads `songs` and can show a row this tool cannot delete; " +
+        "`list_library` reads `library_index` and is the collection that decides here. " +
+        "If the chart is visible in search but absent here, it is a `songs`-only row: " +
+        "report it, do not retry."
+
     const indexRef = db.collection("library_index").doc(args.fileId)
     const indexSnap = await indexRef.get()
     if (!indexSnap.exists)
         return richError(
             "chart_not_found",
-            `Chart '${args.fileId}' was not found in library_index.`,
+            notFoundMessage,
             { fileId: args.fileId },
-            "Verify the fileId via list_library / search_library.",
+            notFoundHint,
         )
     const indexData = indexSnap.data() as Record<string, unknown>
 
@@ -742,11 +768,13 @@ export async function deleteChart(
     // Return chart_not_found (not forbidden) BEFORE the uploader/curated checks
     // so a cross-tenant caller never learns the chart exists or who uploaded it.
     if (rowOrg(indexData.orgId) !== org) {
+        // Byte-identical to the absence branch above, by construction — see
+        // the note on `notFoundHint`. Do not specialise this message.
         return richError(
             "chart_not_found",
-            `Chart '${args.fileId}' was not found in library_index.`,
+            notFoundMessage,
             { fileId: args.fileId },
-            "Verify the fileId via list_library / search_library.",
+            notFoundHint,
         )
     }
 

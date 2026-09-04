@@ -39,7 +39,21 @@ export interface GetChartStatusArgs {
 export interface GetChartStatusResult {
     ok: true
     fileId: string
-    health: ChartHealth
+    /**
+     * E4 (`R-0904-live-cw-3`) — health, PLUS the catalog fact.
+     *
+     * `getChartHealth` probes Storage and Drive and consults no catalog at
+     * all, so a fileId with bytes at a candidate path and NO `library_index`
+     * row returned a flat `{status: "ok"}`. Callers read that green as "the
+     * band can open this", and for such a row they cannot: `download_chart`
+     * keys on `library_index` and answers `chart_not_found`. Five ZZTEST
+     * fixtures held exactly that shape until they were deleted, and the
+     * census that followed found 257 more rows in `songs` with no index row.
+     *
+     * So `ok` now requires reachable bytes AND an index row, and the
+     * bytes-without-a-row case gets its own name rather than a green.
+     */
+    health: ChartStatusHealth
     /**
      * Cycle-3 AI-001 — enrichment projection of the matching
      * `library_index/{fileId}` row + retry-queue presence. Always populated;
@@ -59,6 +73,19 @@ async function readLeaderRole(
     if (role === "band_leader") return "band_leader"
     return "other"
 }
+
+/**
+ * E4 — `getChartHealth`'s answer widened by one case this tool can see and
+ * that probe cannot. Every existing `ChartHealth` variant passes through
+ * unchanged; only a green over a row-less fileId is re-labelled.
+ */
+export type ChartStatusHealth =
+    | ChartHealth
+    | {
+          status: "bytes_without_index_row"
+          reason: string
+          mimeType?: string
+      }
 
 export async function getChartStatus(
     uid: string,
@@ -90,7 +117,7 @@ export async function getChartStatus(
     // parallel — both are read-only Firestore/Storage reads. Enrichment is
     // fail-soft: a Firestore blip degrades to the empty projection so the
     // health probe still returns.
-    const [health, enrichment] = await Promise.all([
+    const [health, enrichment, indexSnap] = await Promise.all([
         getChartHealth(fileIdTrimmed, args.mimeType),
         loadEnrichmentProjection(db, fileIdTrimmed).catch((err) => {
             logger.warn(
@@ -99,8 +126,38 @@ export async function getChartStatus(
             )
             return EMPTY_ENRICHMENT_PROJECTION
         }),
+        // E4 — the catalog fact. Read directly rather than inferred from the
+        // enrichment projection, which cannot tell "no row" from "a row with
+        // no enrichment fields".
+        db
+            .collection("library_index")
+            .doc(fileIdTrimmed)
+            .get()
+            .catch((err) => {
+                logger.warn(
+                    `[mcp] get_chart_status index read failed for ${fileIdTrimmed}:`,
+                    err,
+                )
+                return null
+            }),
     ])
-    return { ok: true, fileId: args.fileId, health, enrichment }
+
+    // Fail-soft: a Firestore blip returns null, and an UNKNOWN catalog is not
+    // evidence of absence — the health answer stands as probed.
+    const hasIndexRow = indexSnap === null ? true : indexSnap.exists
+    const projected: ChartStatusHealth =
+        health.status === "ok" && !hasIndexRow
+            ? {
+                  status: "bytes_without_index_row",
+                  reason:
+                      "bytes are reachable, but no `library_index` row exists for this fileId. " +
+                      "`download_chart` keys on that row and will answer `chart_not_found`, so this " +
+                      "chart cannot be opened from a setlist even though the object is present. " +
+                      "It may still be visible in `search_library`, which reads `songs`.",
+                  ...(health.mimeType ? { mimeType: health.mimeType } : {}),
+              }
+            : health
+    return { ok: true, fileId: args.fileId, health: projected, enrichment }
 }
 
 export interface VerifySetlistChartsArgs {

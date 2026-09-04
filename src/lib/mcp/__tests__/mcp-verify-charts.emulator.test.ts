@@ -82,6 +82,12 @@ describe("MCP chart-health tools (emulator)", () => {
     })
 
     it("get_chart_status returns the health envelope for any caller", async () => {
+        // E4 (`R-0904-live-cw-3`): a green requires bytes AND an index row,
+        // so the row has to exist for this to read `ok` — which is the point.
+        await db().collection("library_index").doc("song-oseh").set({
+            name: "Oseh shalom.pdf",
+            mimeType: "application/pdf",
+        })
         mockGetChartHealth.mockResolvedValueOnce({
             status: "ok",
             source: "firebase-storage",
@@ -92,6 +98,25 @@ describe("MCP chart-health tools (emulator)", () => {
             ok: true,
             fileId: "song-oseh",
             health: { status: "ok" },
+        })
+    })
+
+    it("E4 — bytes with NO library_index row are not a green", async () => {
+        // The ZZTEST shape, and the reason this changed: bytes sat at a
+        // candidate path, `get_chart_status` called it healthy, and
+        // `download_chart` answered `chart_not_found` for every one of them
+        // because it keys on `library_index`. A caller reads a green as "the
+        // band can open this"; for this row they cannot.
+        mockGetChartHealth.mockResolvedValueOnce({
+            status: "ok",
+            source: "firebase-storage",
+            mimeType: "application/pdf",
+        })
+        const r = await getChartStatus(ADMIN, { fileId: "bytes-no-row" })
+        expect(r).toMatchObject({
+            ok: true,
+            fileId: "bytes-no-row",
+            health: { status: "bytes_without_index_row" },
         })
     })
 

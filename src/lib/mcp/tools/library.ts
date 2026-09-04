@@ -22,6 +22,7 @@ import type { HygieneCoverage } from "./reconcile-library"
 // reconcile-library and any other importer keep their `from "./library"` path.
 import { isNonChartArtifactShape } from "@/lib/library/junk-filter"
 import { libraryDisplayName } from "@/lib/library/display-name"
+import { isAllowedChartMime } from "@/lib/chart-heal"
 
 export { isNonChartArtifactShape }
 /**
@@ -68,9 +69,52 @@ export function isGoogleAppsMime(mime: string | null | undefined): boolean {
  */
 export function chartFormatClass(mime: string | null | undefined): string {
     if (isGoogleAppsMime(mime)) return "gapps"
-    const m = (mime ?? "").toLowerCase()
+    const m = (mime ?? "").trim().toLowerCase()
+    // E1 (R-0904-live-cw-3): an unknown class is not a matching class.
+    if (!m) return "unknown"
     if (m === "text/plain") return "text"
-    return "score"
+    // E1 — the half L1-W4 left open, and the one that mattered.
+    //
+    // Audio fell through to `score`, so a chart and its own recording shared
+    // a class and the fuzzy lane reassembled the exact lane's forbidden
+    // group. Measured on the live catalog 2026-09-04 at `forceScore: 0.85`:
+    // TWO mixed groups, both a PDF chart with its mp3 — `Mizmor Shiru
+    // Ladonai.pdf` with BOTH mp3s including the canonical Daniel chose, and
+    // `Mi Chamocha Shur Cantor Choir Descant` .pdf with its .mp3.
+    //
+    // `DEDUPE_STRIPPABLE_EXTENSION_RE` protects the EXACT lane by leaving
+    // audio tokens in the key, which is a property of NAMES; the fuzzy lane
+    // builds no key from an extension, so a name-shaped guard has nothing to
+    // bite on there. This is the same rule expressed as a property of the
+    // ROW, which every lane can apply.
+    if (m.startsWith("audio/")) return "audio"
+    // Reuses the upload/heal allowlist rather than inventing a fourth
+    // classifier: pdf, MusicXML, xml, png, jpeg. `text/plain` is already
+    // its own class above and never reaches here.
+    if (isAllowedChartMime(m)) return "score"
+    // Spreadsheets, documents, `application/octet-stream` — artifacts that
+    // are not a rendering of a chart at all. They are not grouped with
+    // anything, including each other.
+    return "unknown"
+}
+
+/**
+ * E1 (`R-0904-live-cw-3`) — the gate, applied on group EMISSION by every
+ * lane.
+ *
+ * The partition at key construction is what PREVENTS a mixed group; this is
+ * what proves it. A lane that forgets the key (as the fuzzy lane effectively
+ * did, by classing audio as `score`) still cannot emit across classes, and a
+ * group of `unknown` rows is refused outright — an unrecognised mime is not
+ * evidence of sameness.
+ *
+ * Returns `true` when the group MUST NOT be emitted.
+ */
+export function refuseOnFormatClass(
+    rows: { mimeType: string | null | undefined }[],
+): boolean {
+    const classes = new Set(rows.map((r) => chartFormatClass(r.mimeType)))
+    return classes.size > 1 || classes.has("unknown")
 }
 
 /**
@@ -136,8 +180,8 @@ export function rowView(c: CanonicalSortable): DedupeRowView {
  *   (a) `active` before any other status. A hidden row taken as canonical
  *       EMPTIES the group — it stays hidden by its own status while every
  *       loser is hidden by the mark this run writes.
- *   (b) real bytes before Google-Apps. A never-rendered Google-Doc must not
- *       out-rank a renderable PDF (the groups-7/9 trap).
+ *   (b) RETIRED at E3 — real-bytes-before-Google-Apps. The class gate (E1)
+ *       refuses the mixed group before this comparator can see it.
  *   (c) BONDED before unbonded — new in W5, and positioned exactly here.
  *       Above (b) a bonded Google-Doc would out-rank renderable PDF bytes;
  *       below (d) age keeps beating USE, which is how `Bar'chu Walkdown`
@@ -157,9 +201,23 @@ export function canonicalCompare(
     const aLive = canonicalStatusRank(a.status)
     const bLive = canonicalStatusRank(b.status)
     if (aLive !== bLive) return aLive - bLive
-    const aGoogle = isGoogleAppsMime(a.mimeType) ? 1 : 0
-    const bGoogle = isGoogleAppsMime(b.mimeType) ? 1 : 0
-    if (aGoogle !== bGoogle) return aGoogle - bGoogle
+    // (b) RETIRED at E3 (`R-0904-live-cw-3`). The Google-Apps demotion
+    //     read: `isGoogleAppsMime(a) ? 1 : 0` before `b`, so a real-bytes
+    //     PDF out-ranked a never-rendered Google-Doc sharing a normalized
+    //     name (the groups-7/9 trap, Daniel 2026-05-27).
+    //
+    //     It is not removed for being unused. It is removed because THE
+    //     CLASS GATE NOW DECIDES: `R-0903-live-cw-5` made Google-Apps its
+    //     own format class, and E1 refuses to EMIT any group whose members
+    //     span two classes. So a group reaching this comparator has one
+    //     class in it, `aGoogle === bGoogle` always, and the tiebreak is
+    //     unreachable BY CONSTRUCTION rather than by circumstance — a
+    //     stronger statement than the one it replaces, and the reason a
+    //     later reader must not restore it as a "safety" tiebreak. The
+    //     protection moved earlier in the pipeline, not away.
+    //
+    //     `isGoogleAppsMime` itself stays: the class function and the
+    //     backfill both still need it.
     const aBond = (a.bondCount ?? 0) > 0 ? 0 : 1
     const bBond = (b.bondCount ?? 0) > 0 ? 0 : 1
     if (aBond !== bBond) return aBond - bBond
@@ -1326,6 +1384,16 @@ export interface DedupeLibraryIndexResult {
         hashFailed: number
     }
     /**
+     * E1 (`R-0904-live-cw-3`) — groups the format-class gate refused to
+     * emit, across all three lanes.
+     *
+     * A prohibition on `forceScore` was holding this line by promise; this
+     * is the gate that replaces it, and this number is how a caller sees it
+     * ran. `0` means no near-name spanned two classes on this scan — NOT
+     * that the gate is off.
+     */
+    formatClassRefusals: number
+    /**
      * W5 (§6b) — the order the filters actually ran in, stated rather than
      * rediscovered. `list_library` and this tool disagreed on the marked
      * count (99 vs 103) purely because one filter runs before another and a
@@ -1740,6 +1808,20 @@ export async function dedupeLibraryIndex(
 
         // Group by normalized key.
         const groups = new Map<string, Candidate[]>()
+        /**
+         * E1 (`R-0904-live-cw-3`) — how often the gate FIRED.
+         *
+         * "A gate that cannot say how often it fired cannot be trusted to
+         * have fired." Counted where the partition actually PREVENTS an
+         * emission: a name key (or similarity cluster) holding two or more
+         * rows that span more than one format class, plus any group refused
+         * at emission. Zero on a catalog with no cross-format near-names is
+         * a true zero; zero on THIS catalog at `forceScore: 0.85` would mean
+         * the gate is not running.
+         */
+        let formatClassRefusals = 0
+        /** Name key -> the classes present under it, before partitioning. */
+        const classesByName = new Map<string, Set<string>>()
         for (const c of candidates) {
             const key = dedupeNormalize(c.name)
             // Refuse to group rows whose name normalizes to empty (e.g.
@@ -1756,6 +1838,24 @@ export async function dedupeLibraryIndex(
             const bucket = groups.get(bucketKey) ?? []
             bucket.push(c)
             groups.set(bucketKey, bucket)
+            // E1 — record what the key partitioned, so the refusal can be
+            // counted rather than merely accomplished.
+            const seen = classesByName.get(key) ?? new Set<string>()
+            seen.add(chartFormatClass(c.mimeType))
+            classesByName.set(key, seen)
+        }
+        // E1 — a name that holds more than one class is a group the exact
+        // lane would have emitted without the partition.
+        const nameCounts = new Map<string, number>()
+        for (const c of candidates) {
+            const k = dedupeNormalize(c.name)
+            if (!k) continue
+            nameCounts.set(k, (nameCounts.get(k) ?? 0) + 1)
+        }
+        for (const [k, classes] of classesByName) {
+            if (classes.size > 1 && (nameCounts.get(k) ?? 0) >= 2) {
+                formatClassRefusals += 1
+            }
         }
 
         // Pick canonical + collect losers per group.
@@ -1773,6 +1873,14 @@ export async function dedupeLibraryIndex(
         const exactGroupedIds = new Set<string>()
         for (const [bucketKey, bucket] of groups) {
             if (bucket.length < 2) continue
+            // E1 — defence in depth. The bucket key already partitions by
+            // class, so this cannot fire from the key path; it fires if a
+            // future lane builds this map another way, and it refuses an
+            // all-`unknown` bucket, which the key alone would have emitted.
+            if (refuseOnFormatClass(bucket)) {
+                formatClassRefusals += 1
+                continue
+            }
             // Strip the L1-W4 format-class suffix for reporting; the group
             // is still identified to the operator by its normalized name.
             const key = bucketKey.slice(0, bucketKey.indexOf(FORMAT_CLASS_SEP))
@@ -1850,6 +1958,19 @@ export async function dedupeLibraryIndex(
                 arr.push(c)
                 byFormat.set(cls, arr)
             }
+            // E1 — the unpartitioned clustering, computed ONLY to count what
+            // the partition refused. Its output is never emitted and never
+            // marked; it is the measurement that makes the gate auditable,
+            // and it is why `formatClassRefusals` reads 2 on this catalog at
+            // 0.85 rather than 0.
+            for (const [, cluster] of clusterBySimilarity(
+                remaining,
+                similarityThreshold,
+            )) {
+                if (cluster.length >= 2 && refuseOnFormatClass(cluster)) {
+                    formatClassRefusals += 1
+                }
+            }
             const fuzzyClusters = new Map<string, SimilarityCandidate[]>()
             for (const [cls, rows] of byFormat) {
                 for (const [k, cluster] of clusterBySimilarity(
@@ -1861,6 +1982,11 @@ export async function dedupeLibraryIndex(
             }
             for (const cluster of fuzzyClusters.values()) {
                 if (cluster.length < 2) continue
+                // E1 — the emission gate, same rule as the exact lane.
+                if (refuseOnFormatClass(cluster)) {
+                    formatClassRefusals += 1
+                    continue
+                }
                 // Same sort priority as the exact-group bucket above:
                 // (a) active-status first, (b) non-Google-Apps mime first,
                 // (c) earliest uploadedAt, (d) fileId asc. Keeps the
@@ -1992,12 +2118,17 @@ export async function dedupeLibraryIndex(
                     `${nonChartHidden.length} hidden row(s) are non_chart artifacts, which stay marked by design (§6a)`,
                 )
             }
-            const crossFormat =
-                new Set(bucket.map((r) => chartFormatClass(r.mimeType))).size > 1
-            if (crossFormat) {
-                reasons.push(
-                    "cross-format cluster: the name passes partition by `chartFormatClass` and could never have seen this one",
-                )
+            // E1 (`R-0904-live-cw-3`) — "not emitted, by ANY lane: exact,
+            // fuzzy or hash." This lane previously EMITTED a cross-format
+            // cluster carrying a `noActionReason` explaining itself, which
+            // is a weaker thing than a gate: a reason is read by a person, a
+            // refusal is read by the guard. Byte-identical rows in two
+            // format classes should be impossible — different renderings do
+            // not share bytes — so a cluster reaching here is a finding, and
+            // the counter is where it surfaces.
+            if (refuseOnFormatClass(bucket)) {
+                formatClassRefusals += 1
+                continue
             }
 
             hashGroups.push({
@@ -2050,6 +2181,7 @@ export async function dedupeLibraryIndex(
                             unhashed: unhashedRows,
                             hashFailed: hashFailedRows,
                         },
+                        formatClassRefusals,
                         coverage,
                     },
                 },
@@ -2205,6 +2337,7 @@ export async function dedupeLibraryIndex(
                 unhashed: unhashedRows,
                 hashFailed: hashFailedRows,
             },
+            formatClassRefusals,
             // §6b — stated, not rediscovered. `list_library` reports 99
             // marked rows against this scan's 103 purely because its
             // non_chart filter runs BEFORE its status filter, so a row
@@ -2215,6 +2348,7 @@ export async function dedupeLibraryIndex(
                 "empty name",
                 "empty normalized key",
                 "chartFormatClass partition (like compares with like)",
+                "format-class gate on emission (E1) — see `formatClassRefusals`",
             ],
             coverage,
         }

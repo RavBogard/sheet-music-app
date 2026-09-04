@@ -37,7 +37,14 @@ describe("MCP dedupe_library — the hash pass (emulator)", () => {
         }
     }
     async function seed(id: string, data: Record<string, unknown>) {
-        await db().collection("library_index").doc(id).set(data)
+        // E1 fixture audit — see the note in
+        // `mcp-dedupe-library-index.emulator.test.ts`. Production rows all
+        // carry a mime; a row without one now classifies `unknown` and its
+        // group is refused.
+        await db()
+            .collection("library_index")
+            .doc(id)
+            .set({ mimeType: "application/pdf", ...data })
     }
 
     beforeAll(async () => {
@@ -187,13 +194,14 @@ describe("MCP dedupe_library — the hash pass (emulator)", () => {
         expect(r.hashGroups[0].duplicates).toHaveLength(2)
     })
 
-    it("§6a — a cluster whose hidden row is non_chart stays marked AND is listed with the reason", async () => {
-        // NOTE, found by this test failing: `application/octet-stream` is
-        // non_chart to `isNonChartArtifactShape` but `chartFormatClass`
-        // maps it to "score", the same class as a PDF. The two classifiers
-        // disagree about octet-stream, so this fixture is NOT cross-format
-        // — it is same-class with a junk-shaped row. The cross-format case
-        // is the next test.
+    it("E1 — the octet-stream cluster this test used to REPORT is now refused", async () => {
+        // This test carried a recorded complaint: `application/octet-stream`
+        // was non_chart to `isNonChartArtifactShape` but `score` to
+        // `chartFormatClass`, "so this fixture is NOT cross-format". E1
+        // closes that disagreement — octet-stream is not a rendering of a
+        // chart, so it classifies `unknown`, and an unknown class is not a
+        // matching class. The cluster is refused rather than reported, and
+        // the row keeps whatever status it already had.
         await seed("xf-pdf", {
             name: "Bar'chu Walkdown",
             uploadedAt: "2025-01-01T00:00:00Z",
@@ -214,10 +222,9 @@ describe("MCP dedupe_library — the hash pass (emulator)", () => {
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: true })
         if ("error" in r) throw new Error(JSON.stringify(r.error))
-        expect(r.hashGroups).toHaveLength(1)
-        const g = r.hashGroups[0]
-        expect(g.noActionReason).toContain("non_chart")
-        // Still marked — the no-op is reported, not acted on.
+        expect(r.hashGroups).toHaveLength(0)
+        expect(r.formatClassRefusals).toBeGreaterThanOrEqual(1)
+        // Still marked — the refusal changes nothing on disk.
         expect(
             (
                 (
@@ -252,10 +259,13 @@ describe("MCP dedupe_library — the hash pass (emulator)", () => {
         if ("error" in r) throw new Error(JSON.stringify(r.error))
         // The name pass refuses to group them (L1-W4 like-with-like)...
         expect(r.groupsFound).toBe(0)
-        // ...and the hash pass reports them, saying why only it could.
-        expect(r.hashGroups).toHaveLength(1)
-        expect(r.hashGroups[0].noActionReason).toContain("cross-format")
-        expect(r.hashGroups[0].noActionReason).toContain("chartFormatClass")
+        // ...and E1 makes the hash pass refuse them too. It used to EMIT
+        // this cluster with a `noActionReason` explaining itself, which is a
+        // weaker thing than a gate: a reason is read by a person, a refusal
+        // is read by the guard. `R-0904-live-cw-3` — not emitted by ANY
+        // lane, exact, fuzzy or hash.
+        expect(r.hashGroups).toHaveLength(0)
+        expect(r.formatClassRefusals).toBeGreaterThanOrEqual(1)
     })
 
     it("counts unhashed rows, so `no byte pairs` cannot be confused with `nothing hashed`", async () => {

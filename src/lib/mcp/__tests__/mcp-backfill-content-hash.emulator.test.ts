@@ -127,7 +127,15 @@ describe("MCP backfill_content_hash (emulator)", () => {
             ),
         )
 
-        expect(r.md5CrossCheck).toEqual({ claimed: 1, agreed: 0, mismatched: 1 })
+        // E2 — `applicable` is the DENOMINATOR: rows whose bytes came from a
+        // source that exposes a checksum. GREEN is `claimed === applicable`,
+        // and `applicable === 0` is NOT APPLICABLE, never a pass.
+        expect(r.md5CrossCheck).toEqual({
+            applicable: 1,
+            claimed: 1,
+            agreed: 0,
+            mismatched: 1,
+        })
         expect(r.hashed).toBe(0)
         expect(r.failed).toBe(1)
         expect(r.failures[0].reason).toBe("md5_mismatch")
@@ -155,7 +163,12 @@ describe("MCP backfill_content_hash (emulator)", () => {
         })
         const r = await backfillContentHash(ADMIN, { dryRun: false, force: true })
         if ("error" in r) throw new Error(JSON.stringify(r.error))
-        expect(r.md5CrossCheck).toEqual({ claimed: 1, agreed: 1, mismatched: 0 })
+        expect(r.md5CrossCheck).toEqual({
+            applicable: 1,
+            claimed: 1,
+            agreed: 1,
+            mismatched: 0,
+        })
         expect((await row("h-ok"))!.contentHash).toBeTruthy()
     })
 

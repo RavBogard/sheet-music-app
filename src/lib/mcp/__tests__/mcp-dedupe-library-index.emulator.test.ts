@@ -38,7 +38,17 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         await db().collection("users").doc(uid).set({ role })
     }
     async function seedIndex(id: string, data: Record<string, unknown>) {
-        await db().collection("library_index").doc(id).set(data)
+        // E1 fixture audit (`R-0904-live-cw-3`): every row in the production
+        // catalog carries a `mimeType` — measured 2026-09-04, 892 of 892,
+        // zero null. These fixtures did not, and after E1 a row with no mime
+        // classifies as `unknown` and is refused, which is the ruling working
+        // as intended against a shape production does not have. A default
+        // here rather than a mime on every seed call: tests that care about
+        // the class still pass one explicitly and it wins.
+        await db()
+            .collection("library_index")
+            .doc(id)
+            .set({ mimeType: "application/pdf", ...data })
     }
     async function seedSong(
         id: string,
@@ -424,13 +434,17 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         expect(loser.data()?.status).toBe("duplicate")
     })
 
-    it("L1-W2 rank — status outranks the Google-Apps demotion", async () => {
-        // Deliberate precedence, and the only place the two rules can
-        // disagree: an archived PDF vs an active Google-Doc. The mime
-        // demotion asks which row renders; the rank asks which row the
-        // browse can show at all. A group with no visible row is the worse
-        // outcome, so the rank runs first. (No live group has this shape
-        // today — pinned so the ordering is a decision, not an accident.)
+    it("E3 — the mixed-mime group the rank used to arbitrate is now never emitted", async () => {
+        // This test asserted a RETIRED rule. It seeded an archived PDF
+        // against an active Google-Doc and required the status rank to beat
+        // the Google-Apps demotion — a real precedence question while both
+        // rows could share a group.
+        //
+        // `R-0903-live-cw-5` made Google-Apps its own format class and E1
+        // refuses to EMIT any group spanning two classes, so the question
+        // no longer arises: the pair never meets and neither tiebreak runs.
+        // The assertion is replaced rather than deleted, because a deleted
+        // test leaves no evidence the behaviour changed on purpose.
         await seedIndex("mixed-archived-pdf", {
             name: "Oseh shalom (S&P).pdf",
             uploadedAt: "2025-05-06T18:51:47.000Z",
@@ -445,7 +459,24 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
 
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
-        expect(r.groups[0].kept.fileId).toBe("mixed-active-gdoc")
+
+        // Not emitted, and the refusal is COUNTED — a gate that cannot say
+        // how often it fired cannot be trusted to have fired.
+        expect(r.groupsFound).toBe(0)
+        expect(r.formatClassRefusals).toBeGreaterThanOrEqual(1)
+
+        // And neither row was marked: the archived row stays archived, the
+        // Google-Doc stays visible. Asserted on disk, not on the report.
+        const pdf = await db()
+            .collection("library_index")
+            .doc("mixed-archived-pdf")
+            .get()
+        expect(pdf.data()?.status).toBe("archived")
+        const gdoc = await db()
+            .collection("library_index")
+            .doc("mixed-active-gdoc")
+            .get()
+        expect(gdoc.data()?.status).toBeUndefined()
     })
 
     it("L1-W4 — a PDF and a text chart of the same song do NOT group", async () => {
@@ -990,11 +1021,17 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         ).toBe("fuzzy-name")
     })
 
-    it("canonical-picker — mixed-mime group: PDF beats earlier Google-Doc (groups-7/9 fix)", async () => {
+    it("E3 — the groups-7/9 trap is closed EARLIER: the mixed group is not emitted", async () => {
         // Daniel-surfaced trap: a Google-Doc uploaded BEFORE the PDF
         // re-upload was winning canonical by uploadedAt alone, silently
-        // marking the renderable PDF `duplicate`. Post-fix the
-        // non-Google-Apps row wins regardless of who's earlier.
+        // marking the renderable PDF `duplicate`. The first fix was a
+        // canonical-pick demotion, and this test required the PDF to WIN.
+        //
+        // E3 retires that demotion because E1 closes the trap one step
+        // earlier and more completely: the pair never forms a group, so
+        // NEITHER row is marked. Winning canonical was always the second-
+        // best outcome — the Google-Doc still left the browse. Now nothing
+        // does.
         await seedIndex("ana-google", {
             name: "Ana B_Koach",
             uploadedAt: "2026-03-01T00:00:00Z",
@@ -1009,23 +1046,21 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
         if ("error" in r) throw new Error(typeof r.error === "string" ? r.error : JSON.stringify(r.error))
 
-        expect(r.groupsFound).toBe(1)
-        // Pre-fix would have picked `ana-google` (earlier uploadedAt).
-        expect(r.groups[0].kept.fileId).toBe("ana-pdf")
-        expect(r.groups[0].duplicates.map((d) => d.fileId)).toEqual([
-            "ana-google",
-        ])
+        expect(r.groupsFound).toBe(0)
+        expect(r.formatClassRefusals).toBeGreaterThanOrEqual(1)
 
-        const loser = await db()
+        // The point of the change: the Google-Doc is no longer marked
+        // either. Both rows stay visible to the browse.
+        const gdoc = await db()
             .collection("library_index")
             .doc("ana-google")
             .get()
-        expect(loser.data()?.status).toBe("duplicate")
-        const keep = await db()
+        expect(gdoc.data()?.status).toBeUndefined()
+        const pdf = await db()
             .collection("library_index")
             .doc("ana-pdf")
             .get()
-        expect(keep.data()?.status).toBeUndefined()
+        expect(pdf.data()?.status).toBeUndefined()
     })
 
     it("canonical-picker — all-PDF group: uploadedAt asc + fileId asc preserved (regression)", async () => {

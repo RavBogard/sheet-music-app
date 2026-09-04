@@ -5,6 +5,7 @@ import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { fetchFileById } from "@/lib/file-fetcher"
+import { getStorageObjectMd5 } from "@/lib/firebase-storage"
 import { isGoogleAppsMime } from "@/lib/mcp/tools/library"
 import { isNonChartArtifactShape } from "@/lib/library/junk-filter"
 import {
@@ -124,7 +125,25 @@ export interface BackfillContentHashResult {
      * systematic rate means the download path and the row disagree about
      * which object is the row's, and that is a finding, not a retry.
      */
-    md5CrossCheck: { claimed: number; agreed: number; mismatched: number }
+    md5CrossCheck: {
+        /**
+         * E2 (`R-0903-live-cw-11` §3) — the DENOMINATOR.
+         *
+         * Rows whose bytes came from a source that exposes a checksum of its
+         * own. Rows with no Storage object (Google-Apps, Drive-only) are
+         * outside this count BY CONSTRUCTION, not by exception, so the
+         * guard's silence about them is not a gap.
+         *
+         * GREEN is `claimed === applicable && mismatched === 0`.
+         * **`applicable === 0` is NOT APPLICABLE and is never a pass** — it
+         * is what `{0, 0, 0}` meant for 853 rows while `storageMd5Hash` was
+         * read at one site and written at none.
+         */
+        applicable: number
+        claimed: number
+        agreed: number
+        mismatched: number
+    }
     /** Every failure, named. A population, not a silence. */
     failures: BackfillContentHashFailureRow[]
     /** Byte-identical clusters visible in what has been hashed SO FAR. */
@@ -215,7 +234,7 @@ export async function backfillContentHash(
         // attributed without classifying a row twice.
         const popOf = new Map<string, keyof typeof populations>()
         const failures: BackfillContentHashFailureRow[] = []
-        const md5 = { claimed: 0, agreed: 0, mismatched: 0 }
+        const md5 = { applicable: 0, claimed: 0, agreed: 0, mismatched: 0 }
         const hashByRow = new Map<
             string,
             { hash: ContentHash; name: string; status: string | null }
@@ -323,10 +342,52 @@ export async function backfillContentHash(
                 continue
             }
 
+            /**
+             * E2 (`R-0903-live-cw-11`) — ask the OBJECT, not the row.
+             *
+             * `storageMd5Hash` is read here and written NOWHERE: the field
+             * has never existed on a single row, which is the whole of the
+             * `{claimed: 0}` this guard reported over 853 rows. The fix is
+             * not to add the field and backfill it — `getStorageObjectMd5`
+             * returns the object's own `md5Hash` from metadata without
+             * downloading bytes, and the loop is already holding that object
+             * open. A claim read off the artifact at the moment of use cannot
+             * go stale and needs no migration; a claim stored on the row is a
+             * second copy of a fact.
+             *
+             * WHAT AGREEMENT CERTIFIES, in one sentence: the store computed
+             * that md5 over the bytes the store holds, so agreement proves
+             * THE READ WAS FAITHFUL — that what we hashed is what is stored.
+             * It does not prove the bytes are the right chart, and it is not
+             * an independent witness to provenance. `crc32c` sits on every
+             * object too and would certify exactly the same thing; it is not
+             * taken here because Node has no built-in crc32c, so a second
+             * implementation would have to be trusted to make a claim the
+             * md5 already makes.
+             *
+             * The row's own `storageMd5Hash` is still honoured if some future
+             * writer populates it — the object's answer simply takes
+             * precedence, because it is the one that cannot be stale.
+             */
+            let objectMd5: string | null = null
+            if (fetched.source === "firebase-storage") {
+                const objectMeta = await getStorageObjectMd5(
+                    doc.id,
+                    mimeType ?? undefined,
+                )
+                objectMd5 =
+                    objectMeta && objectMeta.md5Base64
+                        ? objectMeta.md5Base64
+                        : null
+            }
+            const driveClaim =
+                typeof data.driveMd5 === "string" && data.driveMd5.length > 0
+            if (objectMd5 || driveClaim) md5.applicable += 1
+
             // G4 — the cross-check, BEFORE any hash is written.
             const check = crossCheckMd5(fetched.buffer, {
                 driveMd5: data.driveMd5,
-                storageMd5Hash: data.storageMd5Hash,
+                storageMd5Hash: objectMd5 ?? data.storageMd5Hash,
             })
             if (check.checked) {
                 md5.claimed += 1
