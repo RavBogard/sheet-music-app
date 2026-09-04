@@ -56,3 +56,4 @@
 
 src/lib/books/__tests__/registry.test.ts
 src/lib/__tests__/sync-engine-songs-mirror.test.ts
+src/components/music/__tests__/pdf-viewer.test.tsx
