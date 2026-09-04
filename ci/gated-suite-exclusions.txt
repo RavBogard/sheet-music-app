@@ -1,0 +1,43 @@
+# Gated Unit Suite — the exclusion list. R-0904-live-cw-21 §2, adopted by
+# R-0904-live-cw-23 on Daniel's word ("whatever you recommend").
+#
+# WHAT THIS IS. `Gated Unit Suite` is the required status check on `master`.
+# It runs the whole vitest suite MINUS the files listed here. Every line is a
+# test file whose failure does not block a promotion — i.e. this file is the
+# repo's counted test debt, written down as a list of names instead of a
+# number nobody can see.
+#
+# THE LIST IS REMOVE-ONLY (R-0904-live-cw-21 §2(c)). A line may be deleted by
+# any lane the moment CI reports that file green in the gated job. A line may
+# NOT be added: adding one is the same act as hiding a bonded row — the number
+# improves and the thing the number was for is gone. An addition needs a
+# RULING from Daniel, and `ci/check-exclusions-remove-only.sh` fails the build
+# if one appears without it.
+#
+# WHEN THIS FILE IS EMPTY, the gate moves: `Unit & Integration Tests` becomes
+# the required check and the `Gated Unit Suite` job is deleted
+# (R-0904-live-cw-21 §2(c)). Until then both jobs run, so the FULL suite
+# number stays visible on every push rather than hiding behind the subset.
+#
+# Format: one repo-relative test path per line. `#` comments and blank lines
+# are ignored. `wc -l` is not the debt — the guard prints the real count.
+#
+# INSTALLED AT SEVEN ON PURPOSE (R-0904-live-cw-23 §2). These are the seven
+# red files Daniel adopted the shape against. Five of them were repaired by
+# `1bb4c775f2` and come off this list IN THIS SAME WAVE — but only once the
+# gated job has reported each one green IN CI, because the guard is remove-only
+# and there is no way back if a mount-green file turns out red on the runner
+# (R-0904-live-cw-16 §4 is why: CI and the mount have already disagreed on the
+# skip set). Seven is the safe direction of the same decision.
+#
+# NOTE: `src/lib/org/__tests__/registry.test.ts` is a DIFFERENT, green,
+# out-of-scope file and is deliberately NOT on this list (R-0904-live-cw-10 —
+# an order names its file in full; so does an exclusion).
+
+src/lib/mcp/tools/__tests__/library.test.ts
+src/lib/__tests__/sync-engine-songs-mirror.test.ts
+src/components/performance/__tests__/public-view.test.tsx
+src/components/performance/__tests__/perform-cls.test.tsx
+src/lib/books/__tests__/lookup.test.ts
+src/lib/books/__tests__/registry.test.ts
+src/lib/mcp/tools/__tests__/books.test.ts

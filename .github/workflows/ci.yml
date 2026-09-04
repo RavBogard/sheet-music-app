@@ -56,6 +56,63 @@ jobs:
       - name: Run Tests
         run: npx vitest run --reporter=verbose
 
+  # R-0904-live-cw-21 §2, adopted by R-0904-live-cw-23 on Daniel's word.
+  #
+  # THE REQUIRED CHECK. `Unit & Integration Tests` above runs the WHOLE suite
+  # and stays NOT required, so the full number remains visible on every push
+  # instead of hiding behind this subset. This job runs the same suite MINUS
+  # the files in `ci/gated-suite-exclusions.txt` — the counted test debt — and
+  # IS required on `master` alongside `Build Check`.
+  #
+  # THE NAME IS LOAD-BEARING. Branch protection pins a check by its name
+  # string, so `Gated Unit Suite` must not be re-worded without re-running the
+  # `gh api .../branches/master/protection` call. A renamed job silently
+  # becomes a check that is required and never reports, which blocks every
+  # push with no failure to read.
+  #
+  # When the exclusion list reaches empty, this job is DELETED and
+  # `Unit & Integration Tests` becomes the required check (R-0904-live-cw-21
+  # §2(c)).
+  gated-unit-suite:
+    name: Gated Unit Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          # The remove-only guard diffs the exclusion list against its own
+          # previous state, so it needs more than the tip commit. `0` rather
+          # than `2`: on a pull_request the baseline is the MERGE BASE, which
+          # can be many commits back.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # R-0904-live-cw-21 §2(c). Runs BEFORE the suite: if this push tried to
+      # hide a failing test, that is the finding, and a green subset computed
+      # from a grown list would bury it.
+      - name: Exclusion list is remove-only
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            # A new branch's first push reports before=000…0; fall back to the
+            # tip's parent so the guard still has a baseline to diff.
+            case "$BASE" in
+              ''|*[!0]*) ;;
+              *) BASE="$(git rev-parse HEAD^ 2>/dev/null || echo HEAD)" ;;
+            esac
+          fi
+          bash ci/check-exclusions-remove-only.sh "$BASE"
+
+      - name: Run gated suite
+        run: npx vitest run --config vitest.gated.config.ts --reporter=verbose
+
   # v54-02-01: Harness Fidelity Gate phase 1. Runs the *.emulator.test.ts
   # subset against a real Firebase Local Emulator Suite (Firestore + Auth)
   # to catch v5h3-01-class cache-vs-fresh races the in-memory FakeFirestore
