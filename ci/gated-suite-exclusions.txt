@@ -22,22 +22,37 @@
 # Format: one repo-relative test path per line. `#` comments and blank lines
 # are ignored. `wc -l` is not the debt — the guard prints the real count.
 #
-# INSTALLED AT SEVEN ON PURPOSE (R-0904-live-cw-23 §2). These are the seven
-# red files Daniel adopted the shape against. Five of them were repaired by
-# `1bb4c775f2` and come off this list IN THIS SAME WAVE — but only once the
-# gated job has reported each one green IN CI, because the guard is remove-only
-# and there is no way back if a mount-green file turns out red on the runner
-# (R-0904-live-cw-16 §4 is why: CI and the mount have already disagreed on the
-# skip set). Seven is the safe direction of the same decision.
+# INSTALLED AT SEVEN, NOW AT TWO (R-0904-live-cw-23 §2, then G6). The list
+# went in carrying the seven red files Daniel adopted the shape against, and
+# five came off in the same wave on CI evidence — `Unit & Integration Tests`
+# (the whole suite, unrequired) reported exactly 3 failures at `1bb4c775f2`
+# and again at `e2084e32dc`, all three inside the two files left below, which
+# is the only CI evidence that CAN exist for an excluded file: the gated job
+# cannot report a file it is excluding. The gated run on the commit that
+# removes them is the confirmation.
+#
+# WHAT IS LEFT IS THE REAL DEBT. Both remaining files are red for a reason
+# that is NOT a bug in the test, and each leaves this list in its own wave:
+#
+#   registry.test.ts — TWO tests, `:175` (declared-count side) and `:119`
+#   (accept side, no literal, derived from the books' own data). Both catch
+#   the same class-2 defect: `seasonal.shehecheyanu@shabbat-shacharit` carries
+#   folio 145 against a declared `pages: 144`. Leaves when
+#   R-0904-live-cw-27's folio is answered from a PRINTED page — that value is
+#   machzor/corpus's, not a lane's.
+#
+#   sync-engine-songs-mirror.test.ts — Scenario 1, left red under the
+#   GREEN-REPAIR order's own STOP clause: every Drive shortcut is dropped at
+#   ingestion (`junk-filter.ts:35` rejects the whole
+#   `application/vnd.google-apps.` prefix, and the filter reads `f.mimeType`,
+#   not `shortcutDetails.targetMimeType`), so no chart-shaped shortcut fixture
+#   exists and turning it green would test a shape Drive cannot return.
+#   Leaves when R-0904-live-cw-28 rules whether a shortcut-bonded row should
+#   reach `songs/*` at all.
 #
 # NOTE: `src/lib/org/__tests__/registry.test.ts` is a DIFFERENT, green,
 # out-of-scope file and is deliberately NOT on this list (R-0904-live-cw-10 —
 # an order names its file in full; so does an exclusion).
 
-src/lib/mcp/tools/__tests__/library.test.ts
-src/lib/__tests__/sync-engine-songs-mirror.test.ts
-src/components/performance/__tests__/public-view.test.tsx
-src/components/performance/__tests__/perform-cls.test.tsx
-src/lib/books/__tests__/lookup.test.ts
 src/lib/books/__tests__/registry.test.ts
-src/lib/mcp/tools/__tests__/books.test.ts
+src/lib/__tests__/sync-engine-songs-mirror.test.ts
