@@ -115,10 +115,12 @@ describe('PDFViewer — multi-page indicator (WS-07) + width guard (WS-05)', () 
     it('does NOT render pages at width 0 (no blank zero-width pages)', async () => {
         h.numPages = 2
         render(<PDFViewer url="/api/drive/file/zero" />)
-        await waitFor(() => expect(screen.getByTestId('pdf-document')).toBeTruthy())
-        // width still 0 (no resize fired) → measuring placeholder, no pages
+        // Wait on the STATE the negative depends on, not on an element that lands one
+        // flush earlier: `Measuring…` is reachable ONLY when numPages > 0 and width === 0,
+        // so once it is on screen the pages WOULD render but for the width guard — which is
+        // what makes page-1's absence mean the guard, and not a pre-load window (WS-05).
+        await waitFor(() => expect(screen.getByText(/Measuring…/)).toBeTruthy())
         expect(screen.queryByTestId('page-1')).toBeNull()
-        expect(screen.getByText(/Measuring…/)).toBeTruthy()
     })
 })
 
