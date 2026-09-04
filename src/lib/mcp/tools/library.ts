@@ -1213,7 +1213,18 @@ export interface DedupeLibraryIndexArgs {
  * modes: a name group can be wrong about the song, a hash group cannot, and
  * only a name group can be argued with.
  */
-export type DedupePass = "exact-name" | "fuzzy-name" | "exact-hash"
+/**
+ * How a row came to be in a run record.
+ *
+ * `human-mark` is not a pass and never will be: it is the marker that keeps a
+ * decision a PERSON made from reading like a sweep result to someone who
+ * finds the record cold (M1, R-0904-live-cw-6 §5). Nothing groups in it.
+ */
+export type DedupePass =
+    | "exact-name"
+    | "fuzzy-name"
+    | "exact-hash"
+    | "human-mark"
 
 /**
  * W5 (R-0903-live-cw-2 §6) — the DECIDING fields, carried on every row of
@@ -1311,8 +1322,12 @@ export interface DedupeRunRecord {
     runId: string
     /** ISO timestamp of the run. */
     at: string
-    /** The similarity threshold actually applied. */
-    threshold: number
+    /**
+     * The similarity threshold actually applied — `null` for a human mark,
+     * which does not have one. That null is the ABSENCE OF A MECHANISM, not
+     * a missing number.
+     */
+    threshold: number | null
     /** The uid that ran it. */
     actorUid: string
     /** Org scope of the scan, so a restore cannot cross tenants. */
@@ -1322,6 +1337,17 @@ export interface DedupeRunRecord {
     marked: number
     /** Per marked row: its prior state and the row that displaced it. */
     rows: DedupeRunRow[]
+    /**
+     * WHO concluded this. Absent on every record written before 2026-09-04,
+     * all of which are sweeps — so a reader treats absence as `"sweep"`.
+     * A record marked `"human"` was decided by a person, and the difference
+     * between a decision and an inference is not a matter of degree.
+     */
+    decidedBy?: "sweep" | "human"
+    /** The ruling that authorised a human mark, e.g. `R-0903-live-cw-8`. */
+    ruling?: string
+    /** Why, in the decider's words. Recorded verbatim, never summarised. */
+    reason?: string
 }
 
 export interface DedupeLibraryIndexResult {

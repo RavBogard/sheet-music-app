@@ -16,6 +16,7 @@ import {
     backfillLibraryIndex,
 } from "./library"
 import { undoDedupeGroup, seedLegacyDedupeRun } from "./undo-dedupe"
+import { markChartStatus } from "./mark-chart-status"
 import { backfillContentHash } from "./backfill-content-hash"
 import { searchChartText } from "./chart-text-search"
 import { reconcileLibrary } from "./reconcile-library"
@@ -1810,6 +1811,60 @@ export function registerWriteTools(server: McpServer): void {
         async (args, extra) =>
             jsonResult(
                 await undoDedupeGroup(uidFrom(extra), args, orgFrom(extra)),
+            ),
+    )
+
+    server.registerTool(
+        "mark_chart_status",
+        {
+            description:
+                "Admin-only SINGLE-ROW mark \u2014 the tool for writing a decision a PERSON made, as opposed to a conclusion a sweep reached. One row, named by `fileId`. No predicate, no threshold, no similarity pass: a human mark is not a search result, and this tool contains no way to find a second row. `toStatus` is REQUIRED and never defaulted (`active` | `duplicate` | `archived`) \u2014 the tool does not know what you meant. `priorStatus` is READ off the row inside the same operation and there is NO PARAMETER with which to supply it: the field the caller cannot pass is the field that cannot be invented. Reversibility precedes hiding \u2014 a `dedupeRuns/{runId}` record lands BEFORE the status write, so a crash between the two leaves a record for a row that was never hidden (a harmless no-op) rather than a hidden row nothing can reach. Hand the returned `runId` to `undo_dedupe_group` to reverse it; that works the moment the mark exists, with nothing else to build. A human mark is deliberately IMPOSSIBLE TO MISTAKE for a sweep result by a reader who finds the record cold: the runId is prefixed `human-mark-`, the record carries `decidedBy: \"human\"` with the `ruling` that authorised it and the decider's `reason` verbatim, every row's `groupedBy` reads `human-mark`, and `threshold` is `null` \u2014 the absence of a mechanism, not a missing number. The timestamp is always real; a decision is never filed under a borrowed or back-dated runId. USE THIS, NOT `dedupe_library`, WHEN A PERSON HAS CHOSEN WHICH ROW SURVIVES. The canonical picker in `dedupe_library` is a DEFAULT for rows nobody has decided about \u2014 it breaks ties on earliest upload, which is why it kept the wrong Mizmor recording \u2014 and it is not where a decision lives. Pass `canonicalFileId` to record which row survives; this tool never writes that row. Tenant-scoped: another org's row answers as an absence, in the same words as a genuine one. Idempotent and honest \u2014 a row already reading `toStatus` returns a `noop` and writes NO record for a change that did not happen. F-05: `dryRun` returns the full plan without writing and never needs `force`; a real write requires `force: true`. Returns `{fileId, name, fromStatus, toStatus, priorStatus, canonicalFileId, ruling, runId, songMirrored, dryRun, refused?, noop?}`.",
+            inputSchema: {
+                fileId: z
+                    .string()
+                    .describe(
+                        "The ONE library_index row this decision is about. There is no batch form and no predicate form of this tool.",
+                    ),
+                toStatus: z
+                    .enum(["active", "duplicate", "archived"])
+                    .describe(
+                        "REQUIRED. The status to write. Never defaulted — `duplicate` hides the row from browse and search, `active` shows it, `archived` retires it.",
+                    ),
+                canonicalFileId: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "The row that SURVIVES, when this mark hides one of a pair. Recorded so a later reader can see why this row was hidden. Context only: this tool never writes the canonical row.",
+                    ),
+                ruling: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "The ruling id that authorised the decision, e.g. `R-0903-live-cw-8`. Recorded on the run record as the decision's provenance.",
+                    ),
+                reason: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Why, in the decider's own words. Recorded verbatim on the run record, never summarised.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "When true, returns what would be written — including the `priorStatus` read off the row — without writing. F-05: does NOT require force.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Required for the real write. Pair with `dryRun: false`. Omitting it returns the plan with `refused: true` and writes nothing.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await markChartStatus(uidFrom(extra), args, orgFrom(extra)),
             ),
     )
 
