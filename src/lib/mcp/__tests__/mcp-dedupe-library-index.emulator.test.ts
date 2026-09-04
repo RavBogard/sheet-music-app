@@ -191,6 +191,13 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
         expect("error" in fuzzy).toBe(true)
         expect(JSON.stringify(fuzzy)).toContain("fuzzy_execution_refused")
         expect(JSON.stringify(fuzzy)).toContain("R-0904-live-cw-7")
+        // N1 of REFUSALS-AND-PAIRS: the code, not just the slug. Without a
+        // row in ERROR_CODE_MAP this defaulted to 500, and an LLM caller
+        // reads 500 as "transient, retry" — the opposite of a permanent,
+        // deliberate refusal. 400: a refused argument combination.
+        expect(
+            (fuzzy as unknown as { error: { code: number } }).error.code,
+        ).toBe(400)
 
         // ...and the diagnostic it gates is untouched: `dryRun` with
         // `forceScore` still returns a full plan.

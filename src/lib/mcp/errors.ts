@@ -74,6 +74,15 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     duplicate_chart: 400,
     publish_refused_unhealthy_charts: 400,
     bridge_mode_required: 400,
+    // N1 of REFUSALS-AND-PAIRS (R-0904-live-cw-7 / -9). `dedupe_library`
+    // refuses `forceScore` together with `force` — the fuzzy lane may plan,
+    // never commit. That is a refused ARGUMENT COMBINATION the caller can fix
+    // locally, not an authorization failure (there is no permission that
+    // grants it) and not a conflict. Without this row `codeFor()` defaulted to
+    // 500, so a deliberate, permanent refusal read to an LLM caller as
+    // "transient, retry" — see the :56 comment above. Behaviour unchanged;
+    // the row IS the fix.
+    fuzzy_execution_refused: 400,
     payload_too_large: 413,
 
     // 401 — caller is unauthenticated
@@ -110,6 +119,11 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     already_exists: 409,
     force_required: 409,
     already_bonded: 409,
+    // N2 of REFUSALS-AND-PAIRS. `mark_chart_status` refuses to hide a row
+    // that live, in-tenant setlists still bond (`R-0903-live-cw-8`: a mark is
+    // byte-identical AND UNBONDED). A conflict, not a bad argument: the
+    // fileId is correct and the caller may re-issue it once the bonds move.
+    mark_refused_row_is_bonded: 409,
     batch_rolled_back: 409, // v11.2-03-02 (BUG-3): atomic-batch collateral — a sibling row failed pre-validation
 
     // 422 — request is structurally valid but logically rejected
