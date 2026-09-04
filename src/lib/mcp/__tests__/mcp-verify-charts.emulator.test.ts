@@ -120,6 +120,42 @@ describe("MCP chart-health tools (emulator)", () => {
         })
     })
 
+    it("M2/G5 — another org's row answers EXACTLY as a row-less fileId does", async () => {
+        // A cross-tenant row: bytes reachable, and a library_index row that
+        // belongs to someone else.
+        await db()
+            .collection("library_index")
+            .doc("theirs")
+            .set({
+                name: "Their Chart.pdf",
+                status: "active",
+                orgId: "brotherslazaroff",
+                mimeType: "application/pdf",
+            })
+        mockGetChartHealth.mockResolvedValueOnce({
+            status: "ok",
+            source: "firebase-storage",
+            mimeType: "application/pdf",
+        })
+        const cross = await getChartStatus(ADMIN, { fileId: "theirs" })
+
+        // The same call for a fileId with no row anywhere.
+        mockGetChartHealth.mockResolvedValueOnce({
+            status: "ok",
+            source: "firebase-storage",
+            mimeType: "application/pdf",
+        })
+        const absent = await getChartStatus(ADMIN, { fileId: "no-row-at-all" })
+
+        // Byte-identical once the echoed id is masked — no error class of its
+        // own, which would announce the case rather than hide it, and no
+        // enrichment from a catalog that is not ours.
+        expect(JSON.stringify(cross).split("theirs").join("X")).toBe(
+            JSON.stringify(absent).split("no-row-at-all").join("X"),
+        )
+        expect(JSON.stringify(cross)).not.toContain("Their Chart")
+    })
+
     it("get_chart_status surfaces missing reason", async () => {
         mockGetChartHealth.mockResolvedValueOnce({
             status: "missing",

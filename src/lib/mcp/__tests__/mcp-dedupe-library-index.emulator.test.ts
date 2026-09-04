@@ -1012,32 +1012,46 @@ describe("MCP dedupe_library_index — F-019 / F-008 (emulator)", () => {
             mimeType: "application/pdf",
         })
 
-        const r = await dedupeLibraryIndex(ADMIN, {
-            dryRun: false,
-            force: true,
+        // M2b (R-0904-live-cw-7 §2): this assertion used to run a REAL
+        // forceScore run. It cannot any more — the fuzzy lane may plan and
+        // may not commit — so the per-group labelling is read off the plan,
+        // which is where a fuzzy group can now legitimately appear.
+        const plan = await dedupeLibraryIndex(ADMIN, {
+            dryRun: true,
             forceScore: 0.85,
         })
-        if ("error" in r) throw new Error(JSON.stringify(r.error))
-        expect(r.groupsFound).toBe(2)
+        if ("error" in plan) throw new Error(JSON.stringify(plan.error))
+        expect(plan.groupsFound).toBe(2)
 
-        const passes = r.groups.map((g) => g.groupedBy).sort()
+        const passes = plan.groups.map((g) => g.groupedBy).sort()
         expect(passes).toEqual(["exact-name", "fuzzy-name"])
 
         // The run record carries the pass per ROW, not just per group, so a
-        // per-row undo can report the reasoning that hid that one row.
+        // per-row undo can report the reasoning that hid that one row. Only
+        // the EXACT pass can reach a run record now, and that is the point:
+        // no row is ever hidden by a similarity score again.
+        const r = await dedupeLibraryIndex(ADMIN, { dryRun: false, force: true })
+        if ("error" in r) throw new Error(JSON.stringify(r.error))
         const run = (
             await db()
                 .collection("dedupeRuns")
                 .doc(r.dedupeRunId as string)
                 .get()
         ).data() as { rows: Array<{ fileId: string; groupedBy: string }> }
-        expect(run.rows).toHaveLength(2)
+        expect(run.rows).toHaveLength(1)
+        expect(run.rows[0].fileId).toBe("w2-pass-exact-b")
+        expect(run.rows[0].groupedBy).toBe("exact-name")
+        // The fuzzy pair is untouched by the committed run. Asserted as "not
+        // marked" rather than "active": this fixture is seeded with no
+        // `status` field at all, and absent is not the same as active.
         expect(
-            run.rows.find((x) => x.fileId === "w2-pass-exact-b")?.groupedBy,
-        ).toBe("exact-name")
-        expect(
-            run.rows.find((x) => x.fileId === "w2-pass-fuzzy-b")?.groupedBy,
-        ).toBe("fuzzy-name")
+            (
+                await db()
+                    .collection("library_index")
+                    .doc("w2-pass-fuzzy-b")
+                    .get()
+            ).data()?.status,
+        ).not.toBe("duplicate")
     })
 
     it("E3 — the groups-7/9 trap is closed EARLIER: the mixed group is not emitted", async () => {

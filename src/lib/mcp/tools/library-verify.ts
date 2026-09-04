@@ -1,3 +1,6 @@
+import { rowOrg } from "@/lib/mcp/org-context"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { getChartHealth, type ChartHealth } from "@/lib/file-fetcher"
@@ -90,6 +93,7 @@ export type ChartStatusHealth =
 export async function getChartStatus(
     uid: string,
     args: GetChartStatusArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<GetChartStatusResult | RichErrorEnvelope> {
     if (!args.fileId?.trim())
         return richError(
@@ -142,9 +146,41 @@ export async function getChartStatus(
             }),
     ])
 
-    // Fail-soft: a Firestore blip returns null, and an UNKNOWN catalog is not
-    // evidence of absence — the health answer stands as probed.
-    const hasIndexRow = indexSnap === null ? true : indexSnap.exists
+    /**
+     * M2 — the tenant wall (`R-0904-live-cw-6` §3–4).
+     *
+     * Decided HERE, before anything downstream uses the row, and scoped the
+     * way `delete_chart` scopes: another org's row is answered as an absence.
+     *
+     * What it does NOT do is return `chart_not_found`, and that is the whole
+     * design. This tool has no `chart_not_found` path — an unknown fileId
+     * gets `{ok: true, health: {status: "missing"|"bytes_without_index_row"}}`
+     * — so inventing an error class for the cross-tenant case would ANNOUNCE
+     * that case rather than hide it, turning a wall into an oracle. The
+     * indistinguishable answer is E4's own: from the caller's tenant there
+     * genuinely is no row it can use, and `bytes_without_index_row` says
+     * exactly that, in the same words a caller gets for a fileId with no row
+     * anywhere.
+     *
+     * The residual is stated so nobody mistakes this for more than it is: a
+     * caller who already holds a fileId can still learn whether SOME bytes
+     * are reachable for it. That oracle is keyed on a bare id and answers
+     * identically for ids in no catalog at all, so it is not a tenant leak
+     * and closing it is a separate question — one that would retire E4's
+     * `bytes_without_index_row` report, which exists to find exactly this
+     * shape in our own catalog.
+     *
+     * Fail-soft is preserved: a Firestore blip returns null, and an UNKNOWN
+     * catalog is not evidence of absence, so the health answer stands as
+     * probed. A blip cannot silently WIDEN the wall either — a null snap
+     * means the row is treated as present-and-ours, which is the pre-M2
+     * behaviour, not a cross-tenant read.
+     */
+    const indexIsOurs =
+        indexSnap !== null &&
+        indexSnap.exists &&
+        rowOrg((indexSnap.data() as Record<string, unknown>).orgId) === org
+    const hasIndexRow = indexSnap === null ? true : indexIsOurs
     const projected: ChartStatusHealth =
         health.status === "ok" && !hasIndexRow
             ? {
@@ -157,7 +193,20 @@ export async function getChartStatus(
                   ...(health.mimeType ? { mimeType: health.mimeType } : {}),
               }
             : health
-    return { ok: true, fileId: args.fileId, health: projected, enrichment }
+    // The enrichment projection is catalog content. A row that is not ours
+    // must not contribute any, for the same reason its status must not: it
+    // would name another org's chart. An absent row projects empty already,
+    // so this keeps the two answers identical.
+    const projectedEnrichment =
+        indexSnap !== null && indexSnap.exists && !indexIsOurs
+            ? EMPTY_ENRICHMENT_PROJECTION
+            : enrichment
+    return {
+        ok: true,
+        fileId: args.fileId,
+        health: projected,
+        enrichment: projectedEnrichment,
+    }
 }
 
 export interface VerifySetlistChartsArgs {

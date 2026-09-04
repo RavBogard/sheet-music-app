@@ -1467,7 +1467,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await getChartStatus(uidFrom(extra), args)),
+            jsonResult(await getChartStatus(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
