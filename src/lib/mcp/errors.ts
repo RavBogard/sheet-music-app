@@ -107,6 +107,13 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     file_not_found: 404,
     row_not_found: 404,
     chart_not_found: 404,
+    // B2 of GREEN-BASELINE (R-0904-live-cw-12). `undo_dedupe_group` throws
+    // this when no `dedupeRuns/{runId}` exists (undo-dedupe.ts:314). A record
+    // that does not exist is not a server fault — without a row here the
+    // default at :161 made a plain not-found present as `500`, which an LLM
+    // caller reads as "transient, retry". Same defect as N1's
+    // `fuzzy_execution_refused`, one row away. Behaviour unchanged.
+    run_not_found: 404,
     queue_doc_missing: 404,
     musician_not_found: 404,
     assignment_not_found: 404,

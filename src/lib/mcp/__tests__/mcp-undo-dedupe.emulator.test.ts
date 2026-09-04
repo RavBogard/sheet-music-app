@@ -345,6 +345,12 @@ describe("MCP undo_dedupe_group (emulator)", () => {
         expect("error" in r).toBe(true)
         if (!("error" in r)) throw new Error("unreachable")
         expect(r.error.machine_code).toBe("run_not_found")
+        // B2 of GREEN-BASELINE: the CODE, not just the slug. Without a row
+        // in ERROR_CODE_MAP this was the 500 default, so a record that simply
+        // does not exist announced itself as a server fault. Asserted here so
+        // the row cannot silently regress — the same shape N1's dedupe test
+        // took for `fuzzy_execution_refused`.
+        expect(r.error.code).toBe(404)
     })
 
     /* ── the legacy seed ─────────────────────────────────────────────────── */
