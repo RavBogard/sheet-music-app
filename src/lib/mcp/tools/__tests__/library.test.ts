@@ -271,7 +271,7 @@ describe("chartFormatClass (L1-W4)", () => {
         // chart, it is the absence of a declared one. Grouping it with a PDF
         // is how an mp3 and its own chart ended up in one dedupe group.
         // Asserted here rather than dropped, so the boundary stays covered.
-        expect(chartFormatClass("application/octet-stream")).toBe("unknown")
+        expect(chartFormatClass("application/octet-stream")).toBe("THROWAWAY-DELIBERATE-FAILURE")
     })
 
     it("keeps the Google-Apps class distinct and tolerates missing mime", async () => {
