@@ -1,3 +1,13 @@
+> **PRODUCER TRANSITION — Daniel, 2026-09-05.** Daniel is Executive Producer;
+> Codex is Producer and may code, delegate, and integrate. Read the canonical
+> [Producer agreement](C:/Users/dsbog/shireishabbat/PRODUCER.md)
+> (on another mount: shireishabbat/PRODUCER.md). It supersedes conflicting PROCESS
+> instructions below, including vision dispatch, advisory-only Codex, unlimited
+> standing, and per-tool decision privileges. Content/edition/licensing safeguards
+> remain. Current workers finish/checkpoint their bounded operation, report to
+> Producer, then stop taking old orders. Posted notice is not an acknowledgment.
+> Queue: shireishabbat/ops/tasks/; legacy STATUS is transition intake.
+
 # CLAUDE.md — sheet-music-app (centralreform.live)
 
 > **FAMILY POLICY — read before anything else (rule 12, R-0901-vision-4).** This repo is the
