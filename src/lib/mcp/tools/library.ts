@@ -338,6 +338,14 @@ interface LibraryW02Fields {
      *  groups. Always populated (defaults to EMPTY_ENRICHMENT_PROJECTION
      *  when the row pre-dates NEW-3 enrichment). */
     enrichment?: EnrichmentProjection
+    /** R-0904-live-cw-34 §1: `library_index.status` is the source of truth;
+     *  `songs/{id}.status` is a mirror that cannot represent "unknown" —
+     *  server-songs.ts's G-15 default rewrites an absent value to "active",
+     *  so an archived row reads live to every getAllSongs() caller. Joined
+     *  so searchLibrary gates on the authoritative field. Deliberately NOT
+     *  defaulted: an absent library_index status must stay `undefined` so
+     *  the caller can fall back, never a fabricated "active" (§1(b)). */
+    status?: string
 }
 
 /**
@@ -435,6 +443,10 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
                     data,
                     retryIds.has(d.id),
                 ),
+                // R-0904-live-cw-34 §1(b): no `?? "active"` here — an absent
+                // value joins as undefined so the gate can fall back to the
+                // songs mirror for that row instead of inventing a status.
+                status: typeof data.status === "string" ? data.status : undefined,
             })
         }
         return map
@@ -533,13 +545,22 @@ export async function searchLibrary(
         .filter((s) => {
             // v11-02-02: tenant isolation — only the caller's org's songs.
             if (rowOrg(s.orgId) !== org) return false
-            if (s.status === "archived") return false
+            // R-0904-live-cw-34 §1/§2: gate on `library_index.status`, the
+            // source of truth, and fall back to the `songs` mirror ONLY when
+            // the joined value is absent — either no library_index row, or a
+            // row carrying no status field. The mirror is unreliable in both
+            // directions: server-songs.ts's G-15 default reads an absent
+            // value as "active" (surfacing archived rows in search while
+            // every hygiene tool called them gone), and a stale mirror can
+            // equally hide a row library_index calls live.
+            const status = w02Map.get(s.id)?.status ?? s.status
+            if (status === "archived") return false
             // Cycle-1 F-019: `duplicate` is the status applied by the
             // dedupe_library_index pass to losing rows of a dupe group.
             // Always hidden from search — operators audit dupes via the
             // dedupe report or list_library, not search.
-            if (s.status === "duplicate") return false
-            if (!args.includeOrphaned && s.status === "orphaned") return false
+            if (status === "duplicate") return false
+            if (!args.includeOrphaned && status === "orphaned") return false
             // Lane D (Bug 3): per-token AND-match instead of one contiguous
             // substring. Every whitespace token of the normalized query must
             // appear somewhere in the normalized title, so word-order, dropped/
@@ -592,7 +613,13 @@ export async function searchLibrary(
             // rides alongside the W-02 fields. The W-02 sub-object also
             // carries `mimeType` / `name` for the non-chart-artifact filter
             // below — those get stripped in the final mapper.
-            const { enrichment, ...rest } = w02
+            // R-0904-live-cw-34: `status` is joined for the GATE above and is
+            // dropped here on purpose. Spreading it would rewrite the wire's
+            // `status` — and, worse, spread `undefined` over a good songs
+            // value for any library_index row that carries no status field.
+            // Making the wire authoritative is a change to the output shape
+            // this order does not authorize (its §2 is the predicate alone).
+            const { enrichment, status: _joinedStatus, ...rest } = w02
             return {
                 ...s,
                 ...rest,
