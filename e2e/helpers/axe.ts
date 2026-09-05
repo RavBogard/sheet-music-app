@@ -42,9 +42,14 @@ export interface AxeRunResult {
 // boundary refines the shape we care about. Cast through `unknown` because
 // the structural mismatch is intentional: we know the runtime values are
 // AxeViolation-shaped (axe's contract), the JSDoc is just looser than ours.
-import { runAxe as runAxeImpl } from '../../cycle-4/harness/lib/runAxe.mjs'
-
 export async function runAxe(page: Page, surface: string): Promise<AxeRunResult> {
+    // Playwright loads TypeScript helpers through its CommonJS transform. A
+    // static import of the native ESM harness module makes that transform try
+    // to execute the `.mjs` file as CommonJS (`exports is not defined`). Keep
+    // the module boundary native by loading it at call time.
+    const { runAxe: runAxeImpl } = await import(
+        '../../cycle-4/harness/lib/runAxe.mjs'
+    )
     const raw = await runAxeImpl(page, surface)
     return raw as unknown as AxeRunResult
 }
