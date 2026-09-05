@@ -166,30 +166,50 @@ describe("an absent library_index status joins as undefined, never as active (§
     })
 })
 
-describe("the joined status gates but does not reach the wire", () => {
+describe("the wire carries the value the gate used (R-0905-live-cw-1 §1/§3)", () => {
     beforeEach(() => {
         h.songs = []
         h.indexDocs = []
     })
 
+    it("reports what library_index says for the reverse-divergence row, not the mirror", async () => {
+        // The state wave 7 itself created: this row is now correctly SHOWN,
+        // and used to arrive saying `"status":"archived"` — so an agent
+        // reading status before bonding would refuse the very row the join
+        // exists to surface.
+        h.songs = [song("live-row", "archived")]
+        h.indexDocs = [indexRow("live-row", "active")]
+        const r = await searchLibrary("u", { query: QUERY })
+        expect(r.map((s) => s.id)).toEqual(["live-row"])
+        expect(r[0]?.status).toBe("active")
+    })
+
+    it("reports the joined status for an orphan surfaced by includeOrphaned", async () => {
+        h.songs = [song("orphan-row", "active")]
+        h.indexDocs = [indexRow("orphan-row", "orphaned")]
+        const r = await searchLibrary("u", {
+            query: QUERY,
+            includeOrphaned: true,
+        })
+        expect(r.map((s) => s.id)).toEqual(["orphan-row"])
+        expect(r[0]?.status).toBe("orphaned")
+    })
+
     it("does not erase songs.status when the library_index row has no status field", async () => {
-        // The regression the drop guards: `{...s, ...w02}` would spread
-        // `status: undefined` over a perfectly good mirror value.
+        // The erasure the destructure guards: spreading the joined object
+        // would put `status: undefined` over a perfectly good mirror value.
         h.songs = [song("fieldless-row", "active")]
         h.indexDocs = [indexRow("fieldless-row")]
         const r = await searchLibrary("u", { query: QUERY })
         expect(r[0]?.status).toBe("active")
     })
 
-    it("leaves the wire status as the songs value — the predicate moved, the shape did not", async () => {
-        // Making the wire authoritative is a separate change, unordered here.
-        h.songs = [song("live-row", "active")]
-        h.indexDocs = [indexRow("live-row", "orphaned")]
-        const r = await searchLibrary("u", {
-            query: QUERY,
-            includeOrphaned: true,
-        })
-        expect(r.map((s) => s.id)).toEqual(["live-row"])
+    it("keeps the songs status on the wire when there is no library_index row", async () => {
+        // The `no-w02` early return is untouched: with no index row the wire
+        // reads exactly what it read before wave 7.
+        h.songs = [song("no-index-row", "active")]
+        h.indexDocs = []
+        const r = await searchLibrary("u", { query: QUERY })
         expect(r[0]?.status).toBe("active")
     })
 })

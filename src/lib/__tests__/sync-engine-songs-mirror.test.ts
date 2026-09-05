@@ -2,7 +2,14 @@
  * v60-11-01 Task 2 — syncLibraryIndex songs/* mirror parity.
  *
  * Validates that the new songsBatch alongside the library_index batch:
- *   1. Mirrors EVERY library_index batch.set, regardless of MIME type (no MIME filter).
+ *   1. Mirrors EVERY library_index batch.set — the mirror SITE applies no MIME filter
+ *      of its own. This is true of the site and FALSE of the pipeline: since the
+ *      v11.5-04-02 ingestion filter landed, `sync-engine.ts`'s `ingestFiles` drops
+ *      every non-chart artifact (audio, Office, folders, dotfiles, and the whole
+ *      `application/vnd.google-apps.` namespace) before either batch is built, so a
+ *      fixture the filter rejects never reaches the mirror at all. State both, because
+ *      believing only the first is how a fixture gets written that its own test cannot
+ *      reach (R-0905-live-cw-3). Scenario 5 asserts the drop directly.
  *   2. Writes payload { id, title, normalizedTitle, fileId, createdAt? } only —
  *      NO `status` field (owned by /api/library/archive; cron must not clobber).
  *   3. Preserves library_index.name VERBATIM in songs/{id}.title — no .pdf stripping —
@@ -165,45 +172,47 @@ describe('v60-11-01 syncLibraryIndex songs/* mirror', () => {
         mockListAllFiles.mockResolvedValue([])
     })
 
-    // LEFT RED DELIBERATELY — R2's own STOP clause in
-    // `HANDOFF-CODE-LIVE-GREEN-REPAIR-2026-09-04.md`, under `R-0904-live-cw-17` §2.
+    // RE-CUT under `R-0905-live-cw-3` §3, replacing the LEFT-RED note that stood
+    // here under `R-0904-live-cw-17` §2.
     //
-    // The order asked for a chart-shaped fixture so the shortcut mirror is
-    // actually exercised. Measured at `cdf1c37386`: no such fixture exists.
-    // `isNonChartArtifactShape` rejects the whole Google-Apps namespace on
-    // `mime.startsWith("application/vnd.google-apps.")` (`junk-filter.ts:35`),
-    // a Drive shortcut IS `application/vnd.google-apps.shortcut`, and the
-    // ingestion filter reads `f.mimeType` — never
-    // `shortcutDetails.targetMimeType` (`sync-engine.ts:146`-`:148`). So EVERY
-    // shortcut is dropped before the mirror, deliberately: `sync-engine.ts:16`
-    // names the ~134 shortcuts as part of what this change excludes.
+    // This case used to seed a Drive shortcut. `isNonChartArtifactShape` rejects
+    // the whole Google-Apps namespace (`junk-filter.ts:35`) and the ingestion
+    // filter reads `f.mimeType`, never `shortcutDetails.targetMimeType`
+    // (`sync-engine.ts:146`), so the fixture was dropped before either batch and
+    // the test died at its FIRST expect — it never once reached the `no status`
+    // assertion its own name advertised. It was red for a reason that had
+    // nothing to do with what it claimed to test, which is how it survived
+    // unread across at least three shas.
     //
-    // Giving the fixture `mimeType: 'application/pdf'` would turn it green
-    // while testing a shape Drive cannot return, and inverting it to assert
-    // the drop would report the deletion of a named behaviour as a repair —
-    // which R2 refuses. So it stays red and returns instead: whether a
-    // shortcut-bonded row should still reach songs/* is a behaviour question
-    // for `live-cw`, not a test edit.
-    it('Scenario 1: new Drive shortcut mirrors to songs/* with raw name (no .pdf strip, no status)', async () => {
+    // The fix is the fixture, not the assertions: every surviving claim below is
+    // the one that stood before. The mime is now one the pipeline admits, and
+    // `.musicxml` keeps the no-strip claim honest for a non-PDF extension, which
+    // is what keeps this distinct from Scenario 2's verbatim-title check.
+    //
+    // What this does NOT settle: whether a shortcut-bonded row should reach
+    // songs/* at all. That stays open at `R-0905-live-cw-3` §6 — a behaviour
+    // question for `live-cw`. Scenario 5 asserts the drop directly and is what
+    // keeps this re-cut honest; putting a google-apps mime back on this fixture
+    // must turn it red at the FIRST expect, not at the `status` one.
+    it('Scenario 1: a new chart mirrors to songs/* with its raw name (no extension strip, no status)', async () => {
         const file = makeDriveFile({
-            id: 'shortcut-lechu',
-            name: 'Lechu Goldman.pdf',
-            mimeType: 'application/vnd.google-apps.shortcut',
-            shortcutDetails: { targetId: 'target-abc' },
+            id: 'chart-lechu',
+            name: 'Lechu Goldman.musicxml',
+            mimeType: 'application/vnd.recordare.musicxml+xml',
         })
         mockListAllFiles.mockResolvedValue([file])
 
         const { syncLibraryIndex } = await import('@/lib/sync-engine')
         await syncLibraryIndex()
 
-        expect(libraryWritesFor('shortcut-lechu')).toHaveLength(1)
-        const songsOps = songsWritesFor('shortcut-lechu')
+        expect(libraryWritesFor('chart-lechu')).toHaveLength(1)
+        const songsOps = songsWritesFor('chart-lechu')
         expect(songsOps).toHaveLength(1)
         const songsData = songsOps[0].data
-        expect(songsData.title).toBe('Lechu Goldman.pdf') // verbatim — no .pdf strip
-        expect(songsData.normalizedTitle).toBe('lechu goldman.pdf')
-        expect(songsData.fileId).toBe('shortcut-lechu')
-        expect(songsData.id).toBe('shortcut-lechu')
+        expect(songsData.title).toBe('Lechu Goldman.musicxml') // verbatim — no extension strip
+        expect(songsData.normalizedTitle).toBe('lechu goldman.musicxml')
+        expect(songsData.fileId).toBe('chart-lechu')
+        expect(songsData.id).toBe('chart-lechu')
         expect(songsData.createdAt).toBeTypeOf('number') // new file → createdAt set
         expect(songsData).not.toHaveProperty('status') // status owned by archive route
         expect(songsOps[0].opts).toEqual({ merge: true })
@@ -315,10 +324,16 @@ describe('v60-11-01 syncLibraryIndex songs/* mirror', () => {
     })
 
     it('contract: NO songs/* write ever carries a status field (cron must not clobber archive state)', async () => {
+        // R-0905-live-cw-3 §4: this loop is a SWEEP, so it needs a population.
+        // It used to seed three files of which the ingestion filter dropped two,
+        // leaving the `for` to iterate over a single row — a contract asserted
+        // against one example. Every fixture below is one the filter admits, so
+        // the sweep covers a new write, an existing (merge) write, and a
+        // non-PDF chart.
         const files = [
             makeDriveFile({ id: 'a', name: 'A.pdf' }),
-            makeDriveFile({ id: 'b', name: 'B.pdf', mimeType: 'application/vnd.google-apps.shortcut' }),
-            makeDriveFile({ id: 'c', name: 'C.mp3', mimeType: 'audio/mpeg' }),
+            makeDriveFile({ id: 'b', name: 'B.pdf' }),
+            makeDriveFile({ id: 'c', name: 'C.musicxml', mimeType: 'application/vnd.recordare.musicxml+xml' }),
         ]
         mockListAllFiles.mockResolvedValue(files)
         addExistingLibraryDoc('a')

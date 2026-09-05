@@ -530,6 +530,23 @@ function normalizeForSearch(s: string): string {
         .trim()
 }
 
+/**
+ * The one site where the status fall-back rule lives (R-0905-live-cw-1 §3:
+ * a `??` written twice is a rule written twice).
+ *
+ * `library_index.status` is authoritative (R-0904-live-cw-34 §1). The `songs`
+ * mirror is read ONLY when the joined value is absent — either the row has no
+ * `library_index` entry, or its entry carries no `status` field. Both the
+ * search filter and the response mapper read this, so the value a caller sees
+ * is by construction the value the gate decided on.
+ */
+function effectiveStatus(
+    row: { id: string; status?: string },
+    w02Map: Map<string, LibraryW02Fields>,
+): string | undefined {
+    return w02Map.get(row.id)?.status ?? row.status
+}
+
 export async function searchLibrary(
     _uid: string,
     args: SearchLibraryArgs,
@@ -553,7 +570,7 @@ export async function searchLibrary(
             // value as "active" (surfacing archived rows in search while
             // every hygiene tool called them gone), and a stale mirror can
             // equally hide a row library_index calls live.
-            const status = w02Map.get(s.id)?.status ?? s.status
+            const status = effectiveStatus(s, w02Map)
             if (status === "archived") return false
             // Cycle-1 F-019: `duplicate` is the status applied by the
             // dedupe_library_index pass to losing rows of a dupe group.
@@ -613,17 +630,17 @@ export async function searchLibrary(
             // rides alongside the W-02 fields. The W-02 sub-object also
             // carries `mimeType` / `name` for the non-chart-artifact filter
             // below — those get stripped in the final mapper.
-            // R-0904-live-cw-34: `status` is joined for the GATE above and is
-            // dropped here on purpose. Spreading it would rewrite the wire's
-            // `status` — and, worse, spread `undefined` over a good songs
-            // value for any library_index row that carries no status field.
-            // Making the wire authoritative is a change to the output shape
-            // this order does not authorize (its §2 is the predicate alone).
+            // R-0905-live-cw-1 §1: the wire carries the value the GATE used.
+            // The joined `status` is still destructured out of the spread —
+            // spreading it would put `undefined` over a good songs value for
+            // an index row carrying no status field — and assigned explicitly
+            // from effectiveStatus(), the same derivation the filter read.
             const { enrichment, status: _joinedStatus, ...rest } = w02
             return {
                 ...s,
                 ...rest,
                 ...(enrichment ?? EMPTY_ENRICHMENT_PROJECTION),
+                status: effectiveStatus(s, w02Map),
             }
         })
         // Cycle-1 F-007/F-024: hide non-chart artifacts by default.
