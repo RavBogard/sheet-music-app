@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
+// @vitest-environment node
+
+import { NextRequest } from "next/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MODEH_ANI_PUBLIC_READER_CHART } from "@/lib/reader-music-public"
@@ -17,8 +19,8 @@ vi.mock("@/lib/reader-music-server", () => ({
     fetchPublicResolvedReaderMusic: mocks.fetchPublic,
     setReaderMusicPreference: mocks.setPreference,
 }))
-vi.mock("@/lib/rate-limit", () => ({
-    checkRateLimit: mocks.rateLimit,
+vi.mock("@/lib/reader-public-rate-limit", () => ({
+    checkPublicReaderRateLimit: mocks.rateLimit,
 }))
 
 import {
@@ -70,7 +72,7 @@ describe("anonymous public reader-chart routes", () => {
         process.env.READER_PUBLIC_CHARTS_ENABLED = "true"
         mocks.resolvePublic.mockReset().mockResolvedValue({ status: "unavailable" })
         mocks.fetchPublic.mockReset().mockResolvedValue(null)
-        mocks.rateLimit.mockReset().mockResolvedValue(null)
+        mocks.rateLimit.mockReset().mockResolvedValue({ allowed: true })
     })
 
     it("permits only the configured origin and credential-free public headers", async () => {
@@ -203,7 +205,7 @@ describe("anonymous public reader-chart routes", () => {
         expect(response.headers.get("Vary")).toBe("Origin")
     })
 
-    it("serves only approved bytes with explicit bounded-cache headers", async () => {
+    it("serves only approved bytes with revocation-safe no-store headers", async () => {
         const buffer = Buffer.from("%PDF-1.7 pilot")
         mocks.fetchPublic.mockResolvedValue({
             definition: MODEH_ANI_PUBLIC_READER_CHART,
@@ -218,27 +220,24 @@ describe("anonymous public reader-chart routes", () => {
         expect(response.headers.get("Content-Disposition")).toBe(
             'inline; filename="chart.pdf"',
         )
-        expect(response.headers.get("Cache-Control")).toBe(
-            "public, max-age=60, s-maxage=300, must-revalidate",
-        )
+        expect(response.headers.get("Cache-Control")).toBe("no-store")
         expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff")
         expect(response.headers.get("Vary")).toBe("Origin")
         expect(await response.text()).toBe("%PDF-1.7 pilot")
     })
 
-    it("applies existing API/chart rate limits and minimizes their response", async () => {
-        mocks.rateLimit.mockResolvedValue(
-            NextResponse.json(
-                { error: "Too many requests" },
-                { status: 429, headers: { "Retry-After": "60" } },
-            ),
-        )
+    it("applies dedicated anonymous selection/chart limits and minimizes their response", async () => {
+        mocks.rateLimit.mockResolvedValue({
+            allowed: false,
+            status: 429,
+            retryAfterSec: 60,
+        })
         const metadata = await selectMusic(selectionRequest())
         expect(metadata.status).toBe(429)
         await expect(metadata.json()).resolves.toEqual({ status: "unavailable" })
         expect(metadata.headers.get("Retry-After")).toBe("60")
         expect(mocks.resolvePublic).not.toHaveBeenCalled()
-        expect(mocks.rateLimit).toHaveBeenCalledWith(expect.any(NextRequest), "api")
+        expect(mocks.rateLimit).toHaveBeenCalledWith(expect.any(NextRequest), "selection")
 
         mocks.rateLimit.mockClear()
         const bytes = await getChart(
@@ -249,6 +248,43 @@ describe("anonymous public reader-chart routes", () => {
         expect(bytes.headers.get("Retry-After")).toBe("60")
         expect(mocks.fetchPublic).not.toHaveBeenCalled()
         expect(mocks.rateLimit).toHaveBeenCalledWith(expect.any(NextRequest), "chart")
+    })
+
+    it("rejects Authorization and Range before limiting or resolving", async () => {
+        for (const headers of [
+            { Authorization: "Bearer forged.jwt.value" },
+            { Range: "bytes=0-99" },
+        ]) {
+            const selection = await selectMusic(
+                request("/api/reader/music/select", {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify({ unitId: UNIT_ID }),
+                }),
+            )
+            expect(selection.status).toBe(400)
+
+            const chart = await getChart(
+                request(
+                    `/api/reader/music/chart?unitId=${encodeURIComponent(UNIT_ID)}`,
+                    { headers },
+                ),
+            )
+            expect(chart.status).toBe(400)
+        }
+        expect(mocks.rateLimit).not.toHaveBeenCalled()
+        expect(mocks.resolvePublic).not.toHaveBeenCalled()
+        expect(mocks.fetchPublic).not.toHaveBeenCalled()
+    })
+
+    it("fails closed when the distributed limiter cannot decide", async () => {
+        mocks.rateLimit.mockResolvedValue({ allowed: false, status: 503 })
+        const response = await getChart(
+            request(`/api/reader/music/chart?unitId=${encodeURIComponent(UNIT_ID)}`),
+        )
+        expect(response.status).toBe(503)
+        expect(response.headers.get("Cache-Control")).toBe("no-store")
+        expect(mocks.fetchPublic).not.toHaveBeenCalled()
     })
 })
 

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MODEH_ANI_PUBLIC_READER_CHART } from "@/lib/reader-music-public"
@@ -12,7 +14,7 @@ const state = vi.hoisted(() => {
         setlistsGet,
         getAll,
         tracks: vi.fn(),
-        downloadStorage: vi.fn(),
+        downloadExact: vi.fn(),
         db: {
             collection: (name: string) => ({
                 doc: (id: string) => ({ name, id, get: crosswalkGet }),
@@ -39,7 +41,7 @@ vi.mock("@/lib/file-fetcher", () => ({
     fetchFileById: vi.fn(),
 }))
 vi.mock("@/lib/firebase-storage", () => ({
-    downloadFromStorage: state.downloadStorage,
+    downloadExactStorageGeneration: state.downloadExact,
 }))
 
 import {
@@ -49,9 +51,37 @@ import {
 
 const definition = MODEH_ANI_PUBLIC_READER_CHART
 const now = Date.parse("2026-09-06T12:00:00Z")
+const PILOT_BYTES = Buffer.from("%PDF-1.7 pilot")
+const manifest = {
+    version: 1 as const,
+    songId: "song-private",
+    fileId: "file-private",
+    storagePath: "library/file-private.pdf",
+    generation: "1725550000000000",
+    sha256: createHash("sha256").update(PILOT_BYTES).digest("hex"),
+    sizeBytes: PILOT_BYTES.byteLength,
+    contentType: "application/pdf" as const,
+}
 
-function activeSnapshot() {
+function songSnapshot() {
     return { exists: true, data: () => ({ status: "active", orgId: "crc" }) }
+}
+
+function librarySnapshot() {
+    return {
+        exists: true,
+        data: () => ({
+            status: "active",
+            orgId: "crc",
+            mimeType: manifest.contentType,
+            fileSize: manifest.sizeBytes,
+            contentHash: {
+                alg: "sha256",
+                value: manifest.sha256,
+                sizeBytes: manifest.sizeBytes,
+            },
+        }),
+    }
 }
 
 describe("public reader chart server boundary", () => {
@@ -66,6 +96,7 @@ describe("public reader chart server boundary", () => {
                 orgId: definition.orgId,
                 momentId: definition.unitId,
                 pieceId: definition.pieceId,
+                publicReaderManifest: manifest,
             }),
         })
         state.setlistsGet.mockReset().mockResolvedValue({
@@ -82,8 +113,8 @@ describe("public reader chart server boundary", () => {
             ],
         })
         state.getAll.mockReset().mockResolvedValue([
-            activeSnapshot(),
-            activeSnapshot(),
+            songSnapshot(),
+            librarySnapshot(),
         ])
         state.tracks.mockReset().mockResolvedValue([
             {
@@ -102,11 +133,13 @@ describe("public reader chart server boundary", () => {
                 },
             },
         ])
-        state.downloadStorage.mockReset().mockResolvedValue({
+        state.downloadExact.mockReset().mockResolvedValue({
             success: true,
             data: {
-                buffer: Buffer.from("%PDF-1.7 pilot"),
+                buffer: PILOT_BYTES,
                 contentType: "application/pdf",
+                generation: manifest.generation,
+                sizeBytes: manifest.sizeBytes,
             },
         })
     })
@@ -121,6 +154,7 @@ describe("public reader chart server boundary", () => {
                 trackId: "track-private",
                 fileId: "file-private",
             },
+            manifest,
         })
         expect(state.crosswalkGet).toHaveBeenCalledTimes(1)
         expect(state.setlistsGet).toHaveBeenCalledTimes(1)
@@ -147,8 +181,9 @@ describe("public reader chart server boundary", () => {
                     status: "reviewed",
                     publicReaderStatus,
                     orgId: definition.orgId,
-                    momentId: definition.unitId,
-                    pieceId: definition.pieceId,
+                        momentId: definition.unitId,
+                        pieceId: definition.pieceId,
+                        publicReaderManifest: manifest,
                 }),
             })
             await expect(
@@ -170,33 +205,99 @@ describe("public reader chart server boundary", () => {
         const result = await fetchPublicResolvedReaderMusic(definition.unitId)
         expect(result).toEqual({
             definition,
-            buffer: Buffer.from("%PDF-1.7 pilot"),
+            buffer: PILOT_BYTES,
         })
-        expect(state.downloadStorage).toHaveBeenCalledWith(
-            "file-private",
-            "application/pdf",
-        )
+        expect(state.downloadExact).toHaveBeenCalledWith({
+            path: manifest.storagePath,
+            generation: manifest.generation,
+            contentType: manifest.contentType,
+            expectedSizeBytes: manifest.sizeBytes,
+            maxBytes: 4 * 1024 * 1024,
+        })
 
-        state.downloadStorage.mockResolvedValueOnce({
+        state.downloadExact.mockResolvedValueOnce({
             success: true,
             data: {
                 buffer: Buffer.from("<html>wrong bytes</html>"),
                 contentType: "application/pdf",
+                generation: manifest.generation,
+                sizeBytes: manifest.sizeBytes,
             },
         })
         await expect(
             fetchPublicResolvedReaderMusic(definition.unitId),
         ).resolves.toBeNull()
 
-        state.downloadStorage.mockResolvedValueOnce({
+        state.downloadExact.mockResolvedValueOnce({
             success: true,
             data: {
-                buffer: Buffer.from("%PDF-1.7 mislabeled"),
+                buffer: PILOT_BYTES,
                 contentType: "text/html",
+                generation: manifest.generation,
+                sizeBytes: manifest.sizeBytes,
             },
         })
         await expect(
             fetchPublicResolvedReaderMusic(definition.unitId),
         ).resolves.toBeNull()
+    })
+
+    it("fails closed for catalog drift and exact-generation drift", async () => {
+        state.getAll.mockResolvedValueOnce([
+            songSnapshot(),
+            {
+                ...librarySnapshot(),
+                data: () => ({
+                    ...librarySnapshot().data(),
+                    contentHash: {
+                        alg: "sha256",
+                        value: "f".repeat(64),
+                        sizeBytes: manifest.sizeBytes,
+                    },
+                }),
+            },
+        ])
+        await expect(resolvePublicReaderMusic(definition.unitId, now)).resolves.toEqual({
+            status: "unavailable",
+        })
+
+        state.downloadExact.mockResolvedValueOnce({
+            success: true,
+            data: {
+                buffer: PILOT_BYTES,
+                contentType: manifest.contentType,
+                generation: "1725550000000001",
+                sizeBytes: manifest.sizeBytes,
+            },
+        })
+        await expect(fetchPublicResolvedReaderMusic(definition.unitId)).resolves.toBeNull()
+    })
+
+    it("rechecks approval after fetch so a concurrent revocation serves no bytes", async () => {
+        state.crosswalkGet
+            .mockResolvedValueOnce({
+                exists: true,
+                data: () => ({
+                    status: "reviewed",
+                    publicReaderStatus: "approved",
+                    orgId: definition.orgId,
+                    momentId: definition.unitId,
+                    pieceId: definition.pieceId,
+                    publicReaderManifest: manifest,
+                }),
+            })
+            .mockResolvedValueOnce({
+                exists: true,
+                data: () => ({
+                    status: "reviewed",
+                    publicReaderStatus: "revoked",
+                    orgId: definition.orgId,
+                    momentId: definition.unitId,
+                    pieceId: definition.pieceId,
+                    publicReaderManifest: manifest,
+                }),
+            })
+        await expect(fetchPublicResolvedReaderMusic(definition.unitId)).resolves.toBeNull()
+        expect(state.downloadExact).toHaveBeenCalledTimes(1)
     })
 })

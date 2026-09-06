@@ -9,12 +9,23 @@ import {
 } from "@/lib/reader-music-public"
 
 const definition = MODEH_ANI_PUBLIC_READER_CHART
+const manifest = {
+    version: 1 as const,
+    songId: "song-private",
+    fileId: "file-private",
+    storagePath: "library/file-private.pdf",
+    generation: "1725550000000000",
+    sha256: "a".repeat(64),
+    sizeBytes: 1024,
+    contentType: "application/pdf" as const,
+}
 const approvedRow = {
     status: "reviewed",
     publicReaderStatus: "approved",
     orgId: definition.orgId,
     momentId: definition.unitId,
     pieceId: definition.pieceId,
+    publicReaderManifest: manifest,
 }
 
 describe("public reader chart allowlist", () => {
@@ -40,6 +51,7 @@ describe("public reader chart allowlist", () => {
             momentId: definition.unitId,
             pieceId: definition.pieceId,
             status: "reviewed",
+            publicReaderManifest: manifest,
         })
         for (const patch of [
             { publicReaderStatus: undefined },
@@ -48,6 +60,14 @@ describe("public reader chart allowlist", () => {
             { orgId: "brotherslazaroff" },
             { momentId: "amidah.oseh-shalom@legacy-shabbat-morning" },
             { pieceId: "oseh-shalom.nava-tehila" },
+            { publicReaderManifest: undefined },
+            { publicReaderManifest: { ...manifest, songId: "../other" } },
+            { publicReaderManifest: { ...manifest, fileId: "other" } },
+            { publicReaderManifest: { ...manifest, storagePath: "library/other.pdf" } },
+            { publicReaderManifest: { ...manifest, generation: "latest" } },
+            { publicReaderManifest: { ...manifest, sha256: "short" } },
+            { publicReaderManifest: { ...manifest, sizeBytes: MAX_PUBLIC_READER_CHART_BYTES + 1 } },
+            { publicReaderManifest: { ...manifest, contentType: "text/html" } },
         ]) {
             expect(
                 approvedPublicReaderCrosswalk(

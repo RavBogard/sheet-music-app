@@ -127,9 +127,11 @@ function bindingSignature(binding: ReaderMusicBinding): string {
     return JSON.stringify([
         binding.songId,
         binding.fileId,
+        binding.title,
         binding.key,
         binding.arrangement,
         binding.version,
+        binding.mimeType?.split(";", 1)[0]?.trim().toLowerCase() ?? null,
     ])
 }
 

@@ -16,17 +16,67 @@ found in the source evidence. This exception is therefore limited in code to:
 
 Publication needs all three controls: `READER_PUBLIC_CHARTS_ENABLED=true`, the
 code allowlist above, and `publicReaderStatus: "approved"` on that exact
-`reader_music_crosswalk` document. The reviewed crosswalk, newest exact past
-binding, active CRC song/library rows, a 10 MiB limit, and PDF byte signature are
-rechecked on every origin fetch. Approved bytes may remain in the CDN for at
-most five minutes (`s-maxage=300`, with mandatory revalidation); all metadata,
-unavailable, and error responses are `no-store`. No fallback to an older or
-fuzzy-title binding is allowed.
+`reader_music_crosswalk` document. Approval also requires this additive nested
+manifest (existing private-reader fields remain unchanged):
 
-Rollback is either to set `READER_PUBLIC_CHARTS_ENABLED=false` or remove the
-crosswalk's `publicReaderStatus` field. A data rollback must delete the field,
-not set it to null, and must use the post-approval update-time precondition so a
-concurrent edit is never overwritten.
+```text
+publicReaderManifest: {
+  version: 1,
+  songId: "<exact active songs doc id>",
+  fileId: "<exact active library_index doc id>",
+  storagePath: "library/<that fileId>.pdf", // extensionless form also valid
+  generation: "<decimal GCS generation>",
+  sha256: "<64 lowercase/uppercase hex digits>",
+  sizeBytes: <exact integer>,
+  contentType: "application/pdf"
+}
+```
+
+An old approval with no complete manifest is unavailable, so schema deployment
+is migration-compatible but fail-closed. The newest exact past binding must
+match the manifest's song/file/normalized MIME; the active CRC catalog row must
+match its MIME, size, and SHA-256. The exact GCS path+generation is metadata-
+checked before download, streamed through a 4 MiB hard ceiling, hashed, and
+then the approval/catalog/latest binding are re-read before delivery. No fuzzy
+path guessing, Drive fallback, mutable "latest" object, older occurrence, or
+same-instant conflicting representation is accepted.
+
+Every response is `no-store`. There is no CDN/server-cache invalidation channel
+that could honestly promise rapid withdrawal, so an approval is rechecked on
+every future fetch. Bytes already delivered to a browser or external cache
+cannot be erased by revocation.
+
+## Rollout and rollback
+
+1. Deploy this code with `READER_PUBLIC_CHARTS_ENABLED` absent/false and with
+   Upstash configured. Confirm the trusted Vercel IP header reaches the route.
+2. From the exact reviewed Storage generation, compute SHA-256 and record the
+   complete manifest plus `publicReaderStatus: "approved"` using the document's
+   update-time precondition. Do not bulk-publish or infer IDs from titles.
+3. Set `READER_PUBLIC_CHARTS_ENABLED=true` and redeploy. Environment changes do
+   not alter an already-running deployment; old deployment URLs may retain old
+   code/environment and must be retired or protected separately.
+
+For immediate data rollback, delete `publicReaderStatus` (or set it to a
+non-approved state such as `revoked`) with the post-approval update-time
+precondition. Then set the environment flag false and redeploy for a second
+independent stop. A flag-only rollback also requires redeploy. No rollback can
+revoke bytes a client already received.
+
+## Anonymous abuse controls
+
+The public select/chart routes reject `Authorization` and `Range`; neither can
+create a distinct limiter identity or a partial-response cache variant. They
+key only on Vercel's platform-overwritten `x-vercel-forwarded-for` header.
+Production requires the distributed Upstash limiter and denies on missing IP,
+missing configuration, or Redis failure. The bounded in-process limiter is for
+development/tests only.
+
+Add platform/WAF rules as a second layer: per-IP ceilings for
+`/api/reader/music/select` and `/api/reader/music/chart`, method allowlists
+(POST/OPTIONS and GET/OPTIONS respectively), query/body size limits, and bot/
+abuse blocking. Keep the application limiter enabled because WAF configuration
+can drift between production and old/preview deployments.
 
 The public byte resolver reads Firebase Storage only. It does not use the
 private Google Drive fallback, return a Storage URL, or change Storage rules.

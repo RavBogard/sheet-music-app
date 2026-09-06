@@ -14,6 +14,29 @@ export interface PublicReaderChartDefinition {
     contentType: "application/pdf"
 }
 
+/**
+ * Immutable bytes approved for one public-reader crosswalk.
+ *
+ * This object is intentionally nested under `publicReaderManifest` on the
+ * existing crosswalk document.  That makes the rollout additive for private
+ * reader-music users while old `publicReaderStatus: "approved"` rows fail
+ * closed until an operator records the exact reviewed object.
+ */
+export interface PublicReaderChartManifest {
+    version: 1
+    songId: string
+    fileId: string
+    storagePath: string
+    generation: string
+    sha256: string
+    sizeBytes: number
+    contentType: "application/pdf"
+}
+
+export interface ApprovedPublicReaderCrosswalk extends ReaderMusicCrosswalk {
+    publicReaderManifest: PublicReaderChartManifest
+}
+
 export const MODEH_ANI_PUBLIC_READER_CHART = Object.freeze({
     unitId: "awakening.modeh-ani@legacy-shabbat-morning",
     pieceId: "modeh-ani.halpert",
@@ -26,8 +49,12 @@ const PUBLIC_READER_CHARTS = new Map<string, PublicReaderChartDefinition>([
     [MODEH_ANI_PUBLIC_READER_CHART.unitId, MODEH_ANI_PUBLIC_READER_CHART],
 ])
 
-/** 10 MiB is ample for the reviewed pilot and bounds origin/CDN abuse. */
-export const MAX_PUBLIC_READER_CHART_BYTES = 10 * 1024 * 1024
+/**
+ * Vercel's non-streaming response limit is 4.5 MB.  Keep a full 512 KiB of
+ * headroom for platform framing and reject from object metadata before a byte
+ * stream is opened.
+ */
+export const MAX_PUBLIC_READER_CHART_BYTES = 4 * 1024 * 1024
 
 /**
  * Deployment kill switch. It is intentionally default-off; the exact
@@ -51,7 +78,7 @@ export function publicReaderChartDefinition(
 export function approvedPublicReaderCrosswalk(
     row: Record<string, unknown>,
     definition: PublicReaderChartDefinition,
-): ReaderMusicCrosswalk | null {
+): ApprovedPublicReaderCrosswalk | null {
     if (
         row.status !== "reviewed" ||
         row.publicReaderStatus !== "approved" ||
@@ -61,11 +88,89 @@ export function approvedPublicReaderCrosswalk(
     ) {
         return null
     }
+
+    const manifest = publicReaderManifest(row.publicReaderManifest, definition)
+    if (!manifest) return null
     return {
         orgId: definition.orgId,
         momentId: definition.unitId,
         pieceId: definition.pieceId,
         status: "reviewed",
+        publicReaderManifest: manifest,
+    }
+}
+
+function exactId(value: unknown): string | null {
+    if (typeof value !== "string" || value !== value.trim() || !value) return null
+    // IDs are data keys, never paths.  Keeping them single-segment also makes
+    // the storage-path/file-id binding below unambiguous.
+    return /^[A-Za-z0-9_-]+$/.test(value) ? value : null
+}
+
+export function normalizeReaderMusicMime(value: unknown): string | null {
+    if (typeof value !== "string") return null
+    const normalized = value.split(";", 1)[0]?.trim().toLowerCase()
+    return normalized || null
+}
+
+function publicReaderManifest(
+    value: unknown,
+    definition: PublicReaderChartDefinition,
+): PublicReaderChartManifest | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null
+    const row = value as Record<string, unknown>
+    if (Object.keys(row).some((key) => ![
+        "version",
+        "songId",
+        "fileId",
+        "storagePath",
+        "generation",
+        "sha256",
+        "sizeBytes",
+        "contentType",
+    ].includes(key))) return null
+
+    const songId = exactId(row.songId)
+    const fileId = exactId(row.fileId)
+    const generation =
+        typeof row.generation === "string" && /^[1-9][0-9]*$/.test(row.generation)
+            ? row.generation
+            : null
+    const sha256 =
+        typeof row.sha256 === "string" && /^[a-f0-9]{64}$/i.test(row.sha256)
+            ? row.sha256.toLowerCase()
+            : null
+    const sizeBytes = row.sizeBytes
+    const contentType = normalizeReaderMusicMime(row.contentType)
+    if (
+        row.version !== 1 ||
+        !songId ||
+        !fileId ||
+        !generation ||
+        !sha256 ||
+        typeof sizeBytes !== "number" ||
+        !Number.isSafeInteger(sizeBytes) ||
+        sizeBytes <= 0 ||
+        sizeBytes > MAX_PUBLIC_READER_CHART_BYTES ||
+        contentType !== definition.contentType
+    ) return null
+
+    const allowedPaths = new Set([
+        `library/${fileId}`,
+        `library/${fileId}.pdf`,
+    ])
+    if (typeof row.storagePath !== "string" || !allowedPaths.has(row.storagePath)) {
+        return null
+    }
+    return {
+        version: 1,
+        songId,
+        fileId,
+        storagePath: row.storagePath,
+        generation,
+        sha256,
+        sizeBytes,
+        contentType: definition.contentType,
     }
 }
 
@@ -74,7 +179,7 @@ export function isSafePublicReaderChart(
     bytes: Uint8Array,
     definition: PublicReaderChartDefinition,
 ): boolean {
-    const normalized = contentType?.split(";", 1)[0]?.trim().toLowerCase()
+    const normalized = normalizeReaderMusicMime(contentType)
     if (normalized !== definition.contentType) return false
     if (bytes.byteLength === 0 || bytes.byteLength > MAX_PUBLIC_READER_CHART_BYTES) {
         return false

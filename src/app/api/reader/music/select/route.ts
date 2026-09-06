@@ -3,11 +3,12 @@ import { NextRequest, NextResponse } from "next/server"
 import {
     publicReaderMusicPreflight,
     rejectDisallowedPublicReaderOrigin,
+    rejectPublicReaderCredentialsOrRange,
     withPublicReaderMusicHeaders,
 } from "@/lib/reader-music-http"
 import { publicReaderChartDefinition } from "@/lib/reader-music-public"
 import { resolvePublicReaderMusic } from "@/lib/reader-music-server"
-import { checkRateLimit } from "@/lib/rate-limit"
+import { checkPublicReaderRateLimit } from "@/lib/reader-public-rate-limit"
 
 export const dynamic = "force-dynamic"
 export const OPTIONS = publicReaderMusicPreflight
@@ -60,11 +61,13 @@ function calmUnavailable(
     )
 }
 
-function rateLimited(request: Request, limited: Response): Response {
-    const response = calmUnavailable(request, 429)
-    const retryAfter = limited.headers.get("Retry-After")
-    if (retryAfter && /^\d+$/.test(retryAfter)) {
-        response.headers.set("Retry-After", retryAfter)
+function rateLimited(
+    request: Request,
+    decision: { status: 429 | 503; retryAfterSec?: number },
+): Response {
+    const response = calmUnavailable(request, decision.status)
+    if (decision.retryAfterSec) {
+        response.headers.set("Retry-After", String(decision.retryAfterSec))
     }
     return response
 }
@@ -73,13 +76,15 @@ export async function POST(request: NextRequest): Promise<Response> {
     try {
         const originFailure = rejectDisallowedPublicReaderOrigin(request)
         if (originFailure) return originFailure
+        const transportFailure = rejectPublicReaderCredentialsOrRange(request)
+        if (transportFailure) return transportFailure
 
         const declaredLength = Number(request.headers.get("content-length") ?? "0")
         if (Number.isFinite(declaredLength) && declaredLength > MAX_SELECTION_BODY_BYTES) {
             return calmUnavailable(request, 400)
         }
-        const limited = await checkRateLimit(request, "api")
-        if (limited) return rateLimited(request, limited)
+        const limit = await checkPublicReaderRateLimit(request, "selection")
+        if (!limit.allowed) return rateLimited(request, limit)
 
         let body: unknown
         try {

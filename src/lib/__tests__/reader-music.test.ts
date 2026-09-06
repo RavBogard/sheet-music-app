@@ -175,6 +175,35 @@ describe("selectLatestReaderMusic", () => {
         expect(d.isBindingAuthorized).not.toHaveBeenCalled()
     })
 
+    it("includes normalized MIME and publication metadata in same-instant ambiguity", async () => {
+        const sameMime = deps({
+            a: [track("ta", { mimeType: "Application/PDF; charset=binary" })],
+            b: [track("tb", { mimeType: "application/pdf" })],
+        })
+        await expect(
+            selectLatestReaderMusic(
+                [setlist("a", "2026-09-01"), setlist("b", "2026-09-01")],
+                crosswalk,
+                now,
+                sameMime,
+            ),
+        ).resolves.toMatchObject({ status: "available" })
+
+        const differentMime = deps({
+            a: [track("ta", { mimeType: "application/pdf" })],
+            b: [track("tb", { mimeType: "text/html" })],
+        })
+        await expect(
+            selectLatestReaderMusic(
+                [setlist("a", "2026-09-01"), setlist("b", "2026-09-01")],
+                crosswalk,
+                now,
+                differentMime,
+            ),
+        ).resolves.toEqual({ status: "unavailable" })
+        expect(differentMime.isBindingAuthorized).not.toHaveBeenCalled()
+    })
+
     it("does not fall back when the latest occurrence is unbound", async () => {
         const d = deps({
             old: [track("old")],

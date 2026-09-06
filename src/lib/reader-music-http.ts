@@ -59,22 +59,34 @@ export function rejectDisallowedReaderOrigin(request: Request): Response | null 
         : null
 }
 
-const PUBLIC_READER_BYTES_CACHE =
-    "public, max-age=60, s-maxage=300, must-revalidate"
-
 export function publicReaderMusicHeaders(
     request: Request,
-    cache: "no-store" | "approved-bytes" = "no-store",
+    _cache: "no-store" | "approved-bytes" = "no-store",
 ): HeadersInit {
     const headers: Record<string, string> = {
-        "Cache-Control":
-            cache === "approved-bytes" ? PUBLIC_READER_BYTES_CACHE : "no-store",
+        // No cache invalidation channel exists for a withdrawn crosswalk.
+        // Revalidate every future request; bytes already delivered to a client
+        // cannot be clawed back and the deployment documentation says so.
+        "Cache-Control": "no-store",
         "X-Content-Type-Options": "nosniff",
         Vary: "Origin",
     }
     const origin = readerMusicOrigin(request)
     if (origin) headers["Access-Control-Allow-Origin"] = origin
     return headers
+}
+
+/** Anonymous routes neither authenticate nor support byte ranges. */
+export function rejectPublicReaderCredentialsOrRange(
+    request: Request,
+): Response | null {
+    if (!request.headers.has("authorization") && !request.headers.has("range")) {
+        return null
+    }
+    return withPublicReaderMusicHeaders(
+        request,
+        NextResponse.json({ status: "unavailable" }, { status: 400 }),
+    )
 }
 
 export function withPublicReaderMusicHeaders(

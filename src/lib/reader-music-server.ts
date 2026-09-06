@@ -1,9 +1,11 @@
+import { createHash } from "node:crypto"
+
 import { getAuth } from "firebase-admin/auth"
 import { getFirestore } from "firebase-admin/firestore"
 
 import { fetchFileById, type FetchedFile } from "@/lib/file-fetcher"
 import { initAdmin } from "@/lib/firebase-admin"
-import { downloadFromStorage } from "@/lib/firebase-storage"
+import { downloadExactStorageGeneration } from "@/lib/firebase-storage"
 import { rowOrg, rowOrgIds, userInOrg } from "@/lib/org/membership"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import {
@@ -15,7 +17,11 @@ import {
 import {
     approvedPublicReaderCrosswalk,
     isSafePublicReaderChart,
+    MAX_PUBLIC_READER_CHART_BYTES,
+    normalizeReaderMusicMime,
     publicReaderChartDefinition,
+    type ApprovedPublicReaderCrosswalk,
+    type PublicReaderChartManifest,
     type PublicReaderChartDefinition,
 } from "@/lib/reader-music-public"
 import { getTracksForSetlist } from "@/lib/server-tracks"
@@ -119,7 +125,7 @@ async function reviewedCrosswalk(
 
 async function approvedPublicCrosswalk(
     definition: PublicReaderChartDefinition,
-): Promise<ReaderMusicCrosswalk | null> {
+): Promise<ApprovedPublicReaderCrosswalk | null> {
     const snap = await getFirestore()
         .collection("reader_music_crosswalk")
         .doc(definition.unitId)
@@ -131,6 +137,7 @@ async function approvedPublicCrosswalk(
 async function bindingIsActiveAndAuthorized(
     binding: ReaderMusicBinding,
     orgId: string,
+    manifest?: PublicReaderChartManifest,
 ): Promise<boolean> {
     const db = getFirestore()
     const [song, library] = await db.getAll(
@@ -140,11 +147,29 @@ async function bindingIsActiveAndAuthorized(
     if (!song.exists || !library.exists) return false
     const songRow = song.data() ?? {}
     const libraryRow = library.data() ?? {}
-    return (
+    if (!(
         songRow.status === "active" &&
         libraryRow.status === "active" &&
         rowOrg(songRow.orgId) === orgId &&
         rowOrg(libraryRow.orgId) === orgId
+    )) return false
+    if (!manifest) return true
+
+    const contentHash = libraryRow.contentHash
+    const hashRow =
+        contentHash && typeof contentHash === "object"
+            ? (contentHash as Record<string, unknown>)
+            : null
+    return (
+        binding.songId === manifest.songId &&
+        binding.fileId === manifest.fileId &&
+        normalizeReaderMusicMime(binding.mimeType) === manifest.contentType &&
+        normalizeReaderMusicMime(libraryRow.mimeType) === manifest.contentType &&
+        Number(libraryRow.fileSize) === manifest.sizeBytes &&
+        hashRow?.alg === "sha256" &&
+        typeof hashRow.value === "string" &&
+        hashRow.value.toLowerCase() === manifest.sha256 &&
+        Number(hashRow.sizeBytes) === manifest.sizeBytes
     )
 }
 
@@ -165,6 +190,7 @@ export async function resolveReaderMusic(
 async function resolveWithCrosswalk(
     crosswalk: ReaderMusicCrosswalk,
     nowMs: number,
+    manifest?: PublicReaderChartManifest,
 ): Promise<ResolvedReaderMusic> {
     const db = getFirestore()
     const snap = await db
@@ -182,7 +208,7 @@ async function resolveWithCrosswalk(
             getTracksForSetlist: (setlistId, setlist) =>
                 getTracksForSetlist(db, setlistId, setlist),
             isBindingAuthorized: (binding) =>
-                bindingIsActiveAndAuthorized(binding, crosswalk.orgId),
+                bindingIsActiveAndAuthorized(binding, crosswalk.orgId, manifest),
         },
     )
     return selection.status === "available"
@@ -194,6 +220,7 @@ export type PublicResolvedReaderMusic = {
     status: "available"
     binding: ReaderMusicBinding
     definition: PublicReaderChartDefinition
+    manifest: PublicReaderChartManifest
 } | { status: "unavailable" }
 
 /** Anonymous resolution has no user/profile dependency and no arbitrary-id path. */
@@ -206,16 +233,23 @@ export async function resolvePublicReaderMusic(
     if (!initAdmin()) return { status: "unavailable" }
     const crosswalk = await approvedPublicCrosswalk(definition)
     if (!crosswalk) return { status: "unavailable" }
-    const resolved = await resolveWithCrosswalk(crosswalk, nowMs)
+    const manifest = crosswalk.publicReaderManifest
+    const resolved = await resolveWithCrosswalk(crosswalk, nowMs, manifest)
     if (
         resolved.status !== "available" ||
         resolved.pieceId !== definition.pieceId ||
-        resolved.binding.mimeType?.split(";", 1)[0]?.trim().toLowerCase() !==
-            definition.contentType
+        resolved.binding.songId !== manifest.songId ||
+        resolved.binding.fileId !== manifest.fileId ||
+        normalizeReaderMusicMime(resolved.binding.mimeType) !== manifest.contentType
     ) {
         return { status: "unavailable" }
     }
-    return { status: "available", binding: resolved.binding, definition }
+    return {
+        status: "available",
+        binding: resolved.binding,
+        definition,
+        manifest,
+    }
 }
 
 export async function fetchResolvedReaderMusic(
@@ -240,12 +274,19 @@ export async function fetchPublicResolvedReaderMusic(
 } | null> {
     const resolved = await resolvePublicReaderMusic(unitId)
     if (resolved.status !== "available") return null
-    const storage = await downloadFromStorage(
-        resolved.binding.fileId,
-        resolved.definition.contentType,
-    )
+    const storage = await downloadExactStorageGeneration({
+        path: resolved.manifest.storagePath,
+        generation: resolved.manifest.generation,
+        contentType: resolved.manifest.contentType,
+        expectedSizeBytes: resolved.manifest.sizeBytes,
+        maxBytes: MAX_PUBLIC_READER_CHART_BYTES,
+    })
     if (
         !storage.success ||
+        storage.data.generation !== resolved.manifest.generation ||
+        storage.data.sizeBytes !== resolved.manifest.sizeBytes ||
+        createHash("sha256").update(storage.data.buffer).digest("hex") !==
+            resolved.manifest.sha256 ||
         !isSafePublicReaderChart(
             storage.data.contentType,
             storage.data.buffer,
@@ -254,5 +295,17 @@ export async function fetchPublicResolvedReaderMusic(
     ) {
         return null
     }
+
+    // Revocation/catalog recheck after the potentially slow byte fetch.  The
+    // immutable generation+SHA bind the bytes themselves; this second resolve
+    // ensures an approval hold, catalog archive, or newer eligible occurrence
+    // that landed while fetching prevents delivery.
+    const current = await resolvePublicReaderMusic(unitId)
+    if (
+        current.status !== "available" ||
+        current.binding.songId !== resolved.binding.songId ||
+        current.binding.fileId !== resolved.binding.fileId ||
+        JSON.stringify(current.manifest) !== JSON.stringify(resolved.manifest)
+    ) return null
     return { definition: resolved.definition, buffer: storage.data.buffer }
 }
