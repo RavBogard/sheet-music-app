@@ -110,6 +110,7 @@ export function SyncIndicator({
     const lastSyncAt = useSyncStatus((s) => s.lastSyncAt)
     const lastError = useSyncStatus((s) => s.lastError)
     const [announce, setAnnounce] = useState('')
+    const [nowMs, setNowMs] = useState<number | null>(null)
 
     const visual = VISUALS[state]
     const label = visual.label(queued)
@@ -121,10 +122,15 @@ export function SyncIndicator({
         return () => clearTimeout(t)
     }, [state, queued, visual])
 
+    useEffect(() => {
+        if (state === 'idle' && lastSyncAt) {
+            setNowMs(nowFn ? nowFn() : Date.now())
+        }
+    }, [state, lastSyncAt, nowFn])
+
     const tooltip = useMemo(() => {
         if (state === 'idle' && lastSyncAt) {
-            const now = nowFn ? nowFn() : Date.now()
-            return `Saved ${formatRelative(lastSyncAt, now)}`
+            return `Saved ${formatRelative(lastSyncAt, nowMs ?? lastSyncAt)}`
         }
         if (state === 'failed' && lastError) return `Last error: ${lastError}`
         if (state === 'conflict')
@@ -132,7 +138,7 @@ export function SyncIndicator({
         if (state === 'offline')
             return `${queued} change${queued === 1 ? '' : 's'} will sync when you’re back online.`
         return label
-    }, [state, lastSyncAt, lastError, queued, label, nowFn])
+    }, [state, lastSyncAt, lastError, queued, label, nowMs])
 
     // v50-06-02 / v60-01: `resolveConflictHandler` is retained for prop-shape
     // backward-compat (callers may still pass `onResolveConflict`), but as of

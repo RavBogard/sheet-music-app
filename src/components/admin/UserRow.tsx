@@ -102,9 +102,10 @@ export function UserRow({ user, currentUserUid, currentUserRole, isSelected, onS
     // v11.1-02-02: clear a stale membership confirmation once the doc's orgIds
     // change lands (the select then reflects the latest props). Dep on the
     // joined string so a new array identity per snapshot doesn't loop.
+    const orgIdsKey = rowOrgIds(user.orgIds).join(",")
     useEffect(() => {
         setPendingMembership(null)
-    }, [rowOrgIds(user.orgIds).join(",")])
+    }, [orgIdsKey])
 
     const currentLevel = ROLE_HIERARCHY[currentUserRole] ?? 0
     const isCurrentAdmin = currentUserRole === 'admin'

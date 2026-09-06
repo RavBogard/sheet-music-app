@@ -37,16 +37,13 @@ export default async function LibraryReviewPage() {
         )
     }
 
+    let initial: Awaited<ReturnType<typeof readReviewQueue>> | null = null
+    let initialError: string | null = null
     try {
-        const initial = await readReviewQueue(getFirestore())
-        return <LibraryReviewClient initial={initial} initialError={null} />
+        initial = await readReviewQueue(getFirestore())
     } catch (err) {
-        const message = formatError(err)
-        return (
-            <LibraryReviewClient
-                initial={null}
-                initialError={`Initial queue load failed: ${message}`}
-            />
-        )
+        initialError = `Initial queue load failed: ${formatError(err)}`
     }
+
+    return <LibraryReviewClient initial={initial} initialError={initialError} />
 }

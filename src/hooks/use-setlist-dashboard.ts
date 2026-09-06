@@ -67,7 +67,10 @@ export function useSetlistDashboard({
     const isAdmin = authIsAdmin || serverIsAdmin
     const effectiveUid = authUser?.uid || serverUid
     // We construct a minimal user object if auth hasn't loaded but we have a server user
-    const user = authUser || (serverUid ? { uid: serverUid, displayName: null } : null)
+    const user = useMemo(
+        () => authUser || (serverUid ? { uid: serverUid, displayName: null } : null),
+        [authUser, serverUid],
+    )
 
     const { downloadSetlist, isDownloading } = useOffline()
 

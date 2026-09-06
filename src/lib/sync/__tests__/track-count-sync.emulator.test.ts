@@ -49,10 +49,8 @@ const OWNER_UID = 'leader-uid'
 
 let webDb: Firestore
 let webAuth: Auth
-let webAppName = 'cycle9-trackcount-web'
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const webAppName = 'cycle9-trackcount-web'
 let webApp: any
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let adminDb: import('firebase-admin/firestore').Firestore
 
 async function seedSetlist(

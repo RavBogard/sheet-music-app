@@ -162,7 +162,7 @@ export function useSetlistPerformance(
     )
 
     // v60-08-01: helper is single-branch (Dexie wins, else []). setlistData
-    // param is retained for ABI stability; no longer in the dep list.
+    // remains the fallback while Dexie's live query is unresolved.
     //
     // UNAUTH-009 (cycle-4 supplement): when SSR primed `opts.initial.tracks`
     // and Dexie's live-query is still in flight (`dexieTracks === undefined`),
@@ -171,7 +171,7 @@ export function useSetlistPerformance(
     const initial = opts.initial ?? null
     const liveTracks: SetlistTrack[] = useMemo(
         () => getTracksForSetlistClient(dexieTracks, setlistData ?? undefined),
-        [dexieTracks],
+        [dexieTracks, setlistData],
     )
     const tracks: SetlistTrack[] =
         dexieTracks === undefined && initial?.tracks?.length

@@ -144,7 +144,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                     acc[r.status] = (acc[r.status] ?? 0) + 1
                     return acc
                 }, {})
-                // eslint-disable-next-line no-console
+
                 console.info(`[Outbox] ${all.length} total — by status:`, byStatus)
                 const samples = all.slice(0, 10).map(r => ({
                     id: r.localId,
@@ -156,7 +156,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                     forceLww: r.forceLwwOnConflict,
                     lastError: r.lastError?.slice(0, 120),
                 }))
-                // eslint-disable-next-line no-console
+
                 console.info('[Outbox] first 10 rows:', samples)
                 const errorClasses = all
                     .map(r => r.lastError)
@@ -166,10 +166,10 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                         acc[key] = (acc[key] ?? 0) + 1
                         return acc
                     }, {})
-                // eslint-disable-next-line no-console
+
                 console.info('[Outbox] lastError class breakdown:', errorClasses)
             } catch (e) {
-                // eslint-disable-next-line no-console
+
                 console.error('[Outbox] diagnostic failed:', e)
             }
         })()
@@ -189,7 +189,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
         // and other cold-load failures.
         // v60-13-02b: log auth state alongside subscription so we can correlate
         // "incognito blanks" with the actual auth posture seen by Firestore.
-        // eslint-disable-next-line no-console
+
         console.info(`[Dashboard] subscribing — authUid=${authUser?.uid ?? 'null'} serverUid=${serverUid ?? 'null'} effectiveUid=${effectiveUid ?? 'null'}`)
         const unsub = setlistService.subscribeToAllSetlists(
             (setlists, fromCache) => {
@@ -209,12 +209,12 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                 setSetlistsLoaded(true)
                 setSubscriptionError(null)
                 setDiagInfo({ count: setlists.length, fromCache, firedAt: new Date().toLocaleTimeString() })
-                // eslint-disable-next-line no-console
+
                 console.info(`[Dashboard] subscription fired: ${setlists.length} setlists, fromCache=${fromCache}`)
             },
             (err) => {
                 const msg = err instanceof Error ? `${err.name}: ${err.message}` : formatError(err)
-                // eslint-disable-next-line no-console
+
                 console.error('[Dashboard] subscription error:', msg, err)
                 setSubscriptionError(msg)
                 setSetlistsLoaded(true)
@@ -223,7 +223,14 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
         )
 
         return () => unsub()
-    }, [setlistService, filterUpcoming, org])
+    }, [
+        setlistService,
+        filterUpcoming,
+        org,
+        authUser?.uid,
+        serverUid,
+        effectiveUid,
+    ])
 
     // Content is ready once setlists have loaded.
     const setlistsReady = setlistsLoaded
@@ -287,7 +294,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                         alt "CRC Music". Empty logoUrl (broslaz) → OrgLogo "BL" monogram. */}
                     <div className="flex items-center gap-2.5 mb-5">
                         {heroLogoUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element -- tiny static brand asset; parity with the prior hero <img>
+
                             <img
                                 src={heroLogoUrl}
                                 alt={heroShortName}

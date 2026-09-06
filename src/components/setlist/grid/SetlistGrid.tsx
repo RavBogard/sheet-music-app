@@ -21,6 +21,7 @@ import {
     type CellContext,
     type ColumnDef,
     type Row,
+    type RowData,
     flexRender,
     getCoreRowModel,
     type Table as TanstackTable,
@@ -131,8 +132,10 @@ interface GridMeta {
 }
 
 declare module '@tanstack/react-table' {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    interface TableMeta<TData extends unknown> extends GridMeta {}
+    interface TableMeta<TData extends RowData> extends GridMeta {
+        /** Type-only marker keeps TanStack's row generic attached to its metadata. */
+        readonly __rowType?: TData
+    }
 }
 
 function getMeta(table: TanstackTable<LocalTrack>): GridMeta {
@@ -959,7 +962,7 @@ export function SetlistGrid({
     ) as LocalTrack[] | undefined
 
     const isLoading = tracks === undefined
-    const rows = tracks ?? []
+    const rows = useMemo(() => tracks ?? [], [tracks])
 
     // v70-09: live setlist doc — drives the metadata editor's seed values and
     // lets the top bar reflect name/date edits immediately (no reload).

@@ -106,12 +106,14 @@ export function MobileRowCard({
     // inline editor is open (`isEditing`) so we don't register 30+
     // listeners across a large setlist.
     const flushRef = useRef<() => void>(() => {})
-    flushRef.current = () => {
-        commitTitle()
-        commitLead()
-        commitBpm()
-        commitNotes()
-    }
+    useEffect(() => {
+        flushRef.current = () => {
+            commitTitle()
+            commitLead()
+            commitBpm()
+            commitNotes()
+        }
+    })
     useEffect(() => {
         if (!isEditing) return
         const onHide = () => flushRef.current()

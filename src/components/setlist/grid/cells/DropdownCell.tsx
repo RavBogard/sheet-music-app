@@ -9,6 +9,15 @@ import { cn } from '@/lib/utils'
 
 import { TouchOrPopover } from '../TouchOrPopover'
 
+function recordDropdownEdit(): Promise<void> {
+    return recordEdit({
+        ts: Date.now(),
+        source: 'dropdown-cell',
+        cellType: 'dropdown',
+        payloadKeys: ['(dropdown)'],
+    })
+}
+
 export interface DropdownOption {
     value: string
     label: string
@@ -78,7 +87,7 @@ export function DropdownCell({
     const [open, setOpen] = useState(false)
     const [filter, setFilter] = useState('')
     const buttonRef = useRef<HTMLButtonElement>(null)
-    const advanceAfterCloseRef = useRef<
+    const [advanceAfterClose, setAdvanceAfterClose] = useState<
         'up' | 'down' | 'left' | 'right' | null
     >(null)
 
@@ -101,10 +110,13 @@ export function DropdownCell({
 
     const close = () => {
         setOpen(false)
-        const dir = advanceAfterCloseRef.current
-        advanceAfterCloseRef.current = null
-        if (dir) onMoveFocus?.(dir)
     }
+
+    useEffect(() => {
+        if (open || !advanceAfterClose) return
+        onMoveFocus?.(advanceAfterClose)
+        setAdvanceAfterClose(null)
+    }, [open, advanceAfterClose, onMoveFocus])
 
     const commit = (next: string, advance?: 'up' | 'down' | 'left' | 'right') => {
         if (next !== (value ?? '')) {
@@ -113,14 +125,9 @@ export function DropdownCell({
             // — only the placeholder '(dropdown)' is recorded. Never the
             // selected value, never the ariaLabel. Same discipline as
             // TextCell.
-            void recordEdit({
-                ts: Date.now(),
-                source: 'dropdown-cell',
-                cellType: 'dropdown',
-                payloadKeys: ['(dropdown)'],
-            })
+            void recordDropdownEdit()
         }
-        advanceAfterCloseRef.current = advance ?? null
+        setAdvanceAfterClose(advance ?? null)
         setOpen(false)
     }
 

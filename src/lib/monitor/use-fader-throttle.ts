@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useState } from "react"
 import { createFaderThrottle, type FaderThrottle } from "@/lib/monitor/fader-throttle"
 
 /**
@@ -19,23 +19,18 @@ import { createFaderThrottle, type FaderThrottle } from "@/lib/monitor/fader-thr
  *     waiting in. The cleanup flushes rather than cancels: the value the
  *     musician left the fader at is the value they meant.
  *
- * The throttle instance is created once and reads `onChange` through a ref, so a
- * parent re-render that hands down a new callback identity cannot orphan a
- * pending value mid-drag.
+ * The throttle instance is created once and its delivery callback is refreshed
+ * in an effect, so a parent re-render that hands down a new callback identity
+ * cannot orphan a pending value mid-drag.
  */
 export function useFaderThrottle(onChange: (value: number) => void): FaderThrottle {
-    const onChangeRef = useRef(onChange)
-    useEffect(() => {
-        onChangeRef.current = onChange
-    }, [onChange])
+    const [throttle] = useState<FaderThrottle>(() =>
+        createFaderThrottle({ onChange }),
+    )
 
-    const throttleRef = useRef<FaderThrottle | null>(null)
-    if (throttleRef.current === null) {
-        throttleRef.current = createFaderThrottle({
-            onChange: (value) => onChangeRef.current(value),
-        })
-    }
-    const throttle = throttleRef.current
+    useEffect(() => {
+        throttle.setOnChange(onChange)
+    }, [onChange, throttle])
 
     useEffect(() => {
         const onVisibility = () => {

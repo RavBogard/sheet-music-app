@@ -221,7 +221,7 @@ describe('v60-03 H-SL-7 regression canary — engine writeback threads server up
     let adminDb: import('firebase-admin/firestore').Firestore
     let Timestamp: typeof import('firebase-admin/firestore').Timestamp
     let FieldValue: typeof import('firebase-admin/firestore').FieldValue
-    let appName = 'v60-03-canary-app'
+    const appName = 'v60-03-canary-app'
 
     beforeAll(async () => {
         const { initializeApp, getApps } = await import('firebase-admin/app')

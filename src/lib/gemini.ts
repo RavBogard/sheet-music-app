@@ -24,7 +24,7 @@ export function geminiProVision() {
 export function geminiFlashWithSearch() {
     return getGenAI().getGenerativeModel({ 
         model: "gemini-2.5-flash", // 2.5 flash supports search grounding reliably
-        // @ts-ignore - Tool type in older SDK versions doesn't include googleSearch
+        // @ts-expect-error - Tool type in older SDK versions doesn't include googleSearch
         tools: [{ googleSearch: {} }] 
     });
 }

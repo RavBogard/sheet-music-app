@@ -42,7 +42,7 @@ describe("isTestUid", () => {
         expect(isTestUid("")).toBe(false)
         // @ts-expect-error — deliberate runtime hostile input
         expect(isTestUid(42)).toBe(false)
-        // @ts-expect-error
+        // @ts-expect-error — deliberate runtime hostile input
         expect(isTestUid({})).toBe(false)
     })
 

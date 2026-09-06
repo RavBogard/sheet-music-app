@@ -56,6 +56,8 @@ export interface FaderThrottleOptions {
 }
 
 export interface FaderThrottle {
+    /** Replace the delivery callback without discarding pending throttle state. */
+    setOnChange: (onChange: (value: number) => void) => void
     /** Continuous motion: send now if the window is open, else schedule a trailing send. */
     move: (value: number) => void
     /**
@@ -83,12 +85,12 @@ function defaultCancel(handle: number): void {
 
 export function createFaderThrottle(options: FaderThrottleOptions): FaderThrottle {
     const {
-        onChange,
         now = () => Date.now(),
         schedule = defaultSchedule,
         cancel = defaultCancel,
         intervalMs = FADER_THROTTLE_MS,
     } = options
+    let onChange = options.onChange
 
     let lastWriteAt = 0
     let handle: number | null = null
@@ -108,6 +110,10 @@ export function createFaderThrottle(options: FaderThrottleOptions): FaderThrottl
     }
 
     return {
+        setOnChange(nextOnChange: (value: number) => void): void {
+            onChange = nextOnChange
+        },
+
         move(value: number): void {
             if (now() - lastWriteAt > intervalMs) {
                 clearScheduled()

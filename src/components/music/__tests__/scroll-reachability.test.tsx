@@ -41,7 +41,7 @@ vi.mock('react-pdf', () => ({
         onLoadSuccess?: (d: { numPages: number }) => void
         children?: React.ReactNode
     }) => {
-        React.useEffect(() => { onLoadSuccess?.({ numPages: h.numPages }) }, [])
+        React.useEffect(() => { onLoadSuccess?.({ numPages: h.numPages }) }, [onLoadSuccess])
         return <div data-testid="pdf-document">{children}</div>
     },
     Page: ({ pageNumber }: { pageNumber: number }) => <div data-testid={`rpdf-page-${pageNumber}`} />,
