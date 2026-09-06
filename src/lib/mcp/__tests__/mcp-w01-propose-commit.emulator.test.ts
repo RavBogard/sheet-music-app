@@ -109,6 +109,7 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
             "tracks",
             "proposal_stages",
             "library_index",
+            "mcp_write_receipts",
         ]) {
             const snap = await db().collection(col).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
@@ -271,6 +272,64 @@ describe("W-01 Task 1+2 — propose + commit lifecycle (emulator)", () => {
             .map((d) => (d.data() as { order: number }).order)
             .sort((a, b) => a - b)
         expect(orders).toEqual([0, 1, 2])
+    })
+
+    it("commit_staged_changes replays its durable stage receipt without applying twice", async () => {
+        const setlistId = await newSetlist()
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [{ action: "add", title: "Exactly Once" }],
+        })) as StageRecord
+
+        const first = await commitStagedChanges(ADMIN, { stageId: stage.stageId })
+        const replay = await commitStagedChanges(ADMIN, { stageId: stage.stageId })
+
+        expect(first).toMatchObject({
+            ok: true,
+            replayed: false,
+            receiptId: expect.any(String),
+        })
+        expect(replay).toMatchObject({
+            ok: true,
+            replayed: true,
+            receiptId: (first as { receiptId: string }).receiptId,
+            addedTrackIds: (first as { addedTrackIds: string[] }).addedTrackIds,
+        })
+        expect(
+            (
+                await db()
+                    .collection("tracks")
+                    .where("setlistId", "==", setlistId)
+                    .get()
+            ).size,
+        ).toBe(1)
+        expect(await readVersion("setlists", setlistId)).toBe(2)
+    })
+
+    it("concurrent commits of one stage converge on one commit receipt", async () => {
+        const setlistId = await newSetlist()
+        const stage = (await proposeSetlistChanges(ADMIN, {
+            setlistId,
+            proposals: [{ action: "add", title: "Concurrent Once" }],
+        })) as StageRecord
+
+        const [a, b] = await Promise.all([
+            commitStagedChanges(ADMIN, { stageId: stage.stageId }),
+            commitStagedChanges(ADMIN, { stageId: stage.stageId }),
+        ])
+        expect([a, b].every((r) => "ok" in r && r.ok)).toBe(true)
+        expect((a as { addedTrackIds: string[] }).addedTrackIds).toEqual(
+            (b as { addedTrackIds: string[] }).addedTrackIds,
+        )
+        expect([a, b].filter((r) => (r as { replayed?: boolean }).replayed)).toHaveLength(1)
+        expect(
+            (
+                await db()
+                    .collection("tracks")
+                    .where("setlistId", "==", setlistId)
+                    .get()
+            ).size,
+        ).toBe(1)
     })
 
     // ─── MCP-008 (cycle-2): add-proposal commit populates fileName ────────

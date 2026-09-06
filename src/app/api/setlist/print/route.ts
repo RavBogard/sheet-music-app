@@ -31,6 +31,17 @@ export const POST = createApiHandler(
 
         logger.info(`[Print] Generated: ${result.stats.appendedTracks} tracks, ${result.stats.transposedTracks} transposed`)
 
+        if (result.stats.omittedTracks.length > 0 && !body.allowOmissions) {
+            return NextResponse.json(
+                {
+                    error: 'Some charts could not be included in the packet.',
+                    code: 'PRINT_CHARTS_OMITTED',
+                    details: { omittedCharts: result.stats.omittedTracks },
+                },
+                { status: 409 },
+            )
+        }
+
         return new NextResponse(Buffer.from(result.pdf), {
             headers: {
                 'Content-Type': 'application/pdf',

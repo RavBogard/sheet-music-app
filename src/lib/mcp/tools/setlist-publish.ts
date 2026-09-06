@@ -21,6 +21,12 @@ import { rowOrg, rowOrgIds } from "@/lib/org/membership"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
+import {
+    WRITE_RECEIPTS_COLLECTION,
+    type StoredWriteReceipt,
+    writeInputHash,
+    writeReceiptId,
+} from "@/lib/mcp/write-receipts"
 
 /**
  * MCP publish_setlist — send the setlist to the band via MCP, mirroring
@@ -103,6 +109,12 @@ export interface PublishSetlistArgs {
      * them to pass it.
      */
     lastSeenVersion?: number
+    /**
+     * Optional caller-minted retry key for a real publish. Same key + same
+     * payload returns the original delivery receipt; omit/use a new key for a
+     * deliberate re-publish, which remains a distinct fan-out action.
+     */
+    idempotencyKey?: string
 }
 
 export interface PublishSetlistResult {
@@ -133,6 +145,8 @@ export interface PublishSetlistResult {
      * bugstomp).
      */
     version: number
+    receiptId?: string
+    replayed?: boolean
     /**
      * Chart-health pre-flight report. Always populated. Each entry mirrors
      * `verify_setlist_charts.rows[]` shape: { fileId, title, status }.
@@ -348,6 +362,58 @@ export async function publishSetlist(
 
     const editor = await assertEditor(db, callerUid)
     if (!editor.ok) return editor
+
+    const idempotencyKey = args.idempotencyKey?.trim()
+    if (args.idempotencyKey !== undefined && (!idempotencyKey || idempotencyKey.length > 128)) {
+        return richError(
+            "invalid_argument",
+            "idempotencyKey must be 1-128 non-whitespace characters when supplied.",
+            { field: "idempotencyKey" },
+        )
+    }
+    const receiptId = idempotencyKey
+        ? writeReceiptId("publish_setlist", callerUid, org, idempotencyKey)
+        : undefined
+    const receiptRef = receiptId
+        ? db.collection(WRITE_RECEIPTS_COLLECTION).doc(receiptId)
+        : undefined
+    const inputHash = idempotencyKey
+        ? writeInputHash({
+              setlistId: args.setlistId,
+              recipients: args.recipients,
+              audience: args.audience,
+              note: args.note,
+              subject: args.subject,
+              force: args.force,
+          })
+        : undefined
+
+    // A completed receipt is authoritative even though publish advanced the
+    // setlist version: a transport retry with the old lastSeenVersion must
+    // recover the success, not be misreported as a fresh stale-version error.
+    if (!args.dryRun && receiptRef) {
+        const priorSnap = await receiptRef.get()
+        if (priorSnap.exists) {
+            const prior = priorSnap.data() as StoredWriteReceipt<PublishSetlistResult>
+            if (prior.inputHash !== inputHash) {
+                return richError(
+                    "idempotency_key_reused",
+                    "This idempotencyKey was already used for a different publish_setlist payload.",
+                    { idempotencyKey, receiptId },
+                    "Use the original payload to retrieve its receipt, or mint a new key for a deliberate re-publish.",
+                )
+            }
+            if (prior.state === "complete" && prior.result) {
+                return { ...prior.result, receiptId, replayed: true }
+            }
+            return richError(
+                "operation_in_progress",
+                "A publish with this idempotencyKey is already in progress.",
+                { idempotencyKey, receiptId, setlistId: args.setlistId },
+                "Retry with the same key after the original publish finishes; do not mint a new key unless you intend another fan-out.",
+            )
+        }
+    }
 
     // assertEditor already gates on admin OR band_leader; this re-read is just
     // for the rate-limit bypass + audit. The setlist-ownership branch is moot
@@ -696,6 +762,9 @@ export async function publishSetlist(
         snapshot,
         version: preCommitVersion,
         chartHealth,
+        ...(receiptId && !args.dryRun
+            ? { receiptId, replayed: false }
+            : {}),
     }
 
     if (args.dryRun) {
@@ -711,18 +780,135 @@ export async function publishSetlist(
     // W-04: bump version + stamp lastModifiedAt so wait_for_setlist_change
     // observers wake on a publish, and so a subsequent edit can pass the
     // post-publish version as its `lastSeenVersion`.
-    await setlistRef.update({
-        ...(wasPublished ? {} : { publishedAt: FieldValue.serverTimestamp() }),
-        publishedSnapshot: snapshot,
-        lastNotifiedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-        version: FieldValue.increment(1),
-        lastModifiedAt: new Date().toISOString(),
-        lastModifiedBy: callerUid,
-    })
-    // version-echo: surface the post-bump value so callers can chain a
-    // `lastSeenVersion` follow-up without re-reading the setlist.
-    result.version = preCommitVersion + 1
+    if (receiptRef && idempotencyKey && inputHash) {
+        const claim = await db.runTransaction<
+            | { kind: "claimed"; version: number; wasPublished: boolean }
+            | { kind: "replay"; result: PublishSetlistResult }
+            | { kind: "conflict" }
+            | { kind: "in_progress" }
+            | { kind: "stale"; envelope: StaleVersionEnvelope }
+        >(async (tx) => {
+            const [liveReceiptSnap, liveSetlistSnap] = await Promise.all([
+                tx.get(receiptRef),
+                tx.get(setlistRef),
+            ])
+            if (liveReceiptSnap.exists) {
+                const prior = liveReceiptSnap.data() as StoredWriteReceipt<PublishSetlistResult>
+                if (prior.inputHash !== inputHash) return { kind: "conflict" }
+                if (prior.state === "complete" && prior.result) {
+                    return {
+                        kind: "replay",
+                        result: { ...prior.result, receiptId, replayed: true },
+                    }
+                }
+                return { kind: "in_progress" }
+            }
+            if (!liveSetlistSnap.exists) throw new Error(`Setlist '${args.setlistId}' no longer exists.`)
+            const liveSetlist = liveSetlistSnap.data() as Record<string, unknown>
+            const liveVersion = readVersion(liveSetlist)
+            // Chart health, recipients, and the published snapshot were all
+            // derived from preCommitVersion. If an editor wins the race while
+            // those checks run, do not publish that stale view or overwrite
+            // the editor's newer publishedSnapshot metadata.
+            if (liveVersion !== preCommitVersion) {
+                return {
+                    kind: "stale",
+                    envelope: staleVersionEnvelope({
+                        resource: "setlist",
+                        currentVersion: liveVersion,
+                        lastSeenVersion: preCommitVersion,
+                        lastModifiedBy: liveSetlist.lastModifiedBy as string | undefined,
+                        lastModifiedAt: readLastModifiedAt(liveSetlist),
+                    }),
+                }
+            }
+            const liveWasPublished = !!liveSetlist.publishedAt
+            const version = liveVersion + 1
+            tx.update(setlistRef, {
+                ...(liveWasPublished ? {} : { publishedAt: FieldValue.serverTimestamp() }),
+                publishedSnapshot: snapshot,
+                lastNotifiedAt: FieldValue.serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp(),
+                version: FieldValue.increment(1),
+                lastModifiedAt: new Date().toISOString(),
+                lastModifiedBy: callerUid,
+            })
+            tx.create(receiptRef, {
+                tool: "publish_setlist",
+                uid: callerUid,
+                orgId: org,
+                idempotencyKey,
+                inputHash,
+                state: "in_progress",
+                createdAt: FieldValue.serverTimestamp(),
+            } satisfies StoredWriteReceipt<PublishSetlistResult>)
+            return { kind: "claimed", version, wasPublished: liveWasPublished }
+        })
+        if (claim.kind === "conflict") {
+            return richError(
+                "idempotency_key_reused",
+                "This idempotencyKey was already used for a different publish_setlist payload.",
+                { idempotencyKey, receiptId },
+                "Use the original payload to retrieve its receipt, or mint a new key for a deliberate re-publish.",
+            )
+        }
+        if (claim.kind === "in_progress") {
+            return richError(
+                "operation_in_progress",
+                "A publish with this idempotencyKey is already in progress.",
+                { idempotencyKey, receiptId, setlistId: args.setlistId },
+                "Retry with the same key after the original publish finishes; do not mint a new key unless you intend another fan-out.",
+            )
+        }
+        if (claim.kind === "stale") return claim.envelope
+        if (claim.kind === "replay") return claim.result
+        result.version = claim.version
+        result.wasAlreadyPublished = claim.wasPublished
+        result.delivery.sms.skippedRepublish = claim.wasPublished
+    } else {
+        const commit = await db.runTransaction<
+            | { kind: "committed"; version: number; wasPublished: boolean }
+            | { kind: "stale"; envelope: StaleVersionEnvelope }
+        >(async (tx) => {
+            const liveSnap = await tx.get(setlistRef)
+            if (!liveSnap.exists) {
+                throw new Error(`Setlist '${args.setlistId}' no longer exists.`)
+            }
+            const liveSetlist = liveSnap.data() as Record<string, unknown>
+            const liveVersion = readVersion(liveSetlist)
+            if (liveVersion !== preCommitVersion) {
+                return {
+                    kind: "stale",
+                    envelope: staleVersionEnvelope({
+                        resource: "setlist",
+                        currentVersion: liveVersion,
+                        lastSeenVersion: preCommitVersion,
+                        lastModifiedBy: liveSetlist.lastModifiedBy as string | undefined,
+                        lastModifiedAt: readLastModifiedAt(liveSetlist),
+                    }),
+                }
+            }
+            const liveWasPublished = !!liveSetlist.publishedAt
+            tx.update(setlistRef, {
+                ...(liveWasPublished ? {} : { publishedAt: FieldValue.serverTimestamp() }),
+                publishedSnapshot: snapshot,
+                lastNotifiedAt: FieldValue.serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp(),
+                version: FieldValue.increment(1),
+                lastModifiedAt: new Date().toISOString(),
+                lastModifiedBy: callerUid,
+            })
+            return {
+                kind: "committed",
+                version: liveVersion + 1,
+                wasPublished: liveWasPublished,
+            }
+        })
+        if (commit.kind === "stale") return commit.envelope
+        result.version = commit.version
+        result.wasAlreadyPublished = commit.wasPublished
+        result.delivery.sms.skippedRepublish = commit.wasPublished
+    }
 
     // Song-usage record — fire-and-forget; never fail publish on its account.
     const eventDateRaw = setlist.eventDate ?? setlist.date
@@ -862,7 +1048,7 @@ export async function publishSetlist(
     }
 
     // SMS — first-publish only, opt-in users only, matches HTTP route policy.
-    if (!wasPublished) {
+    if (!result.wasAlreadyPublished) {
         const origin =
             process.env.NEXT_PUBLIC_BASE_URL || "https://centralreform.live"
         for (const r of recipients) {
@@ -897,6 +1083,19 @@ export async function publishSetlist(
             },
         })
         .catch((err) => logger.warn("[mcp publish] audit log failed", err))
+
+    if (receiptRef) {
+        // Strip undefined optional recipient fields before persisting; the
+        // public response retains its existing shape.
+        const storedResult = JSON.parse(
+            JSON.stringify(result),
+        ) as PublishSetlistResult
+        await receiptRef.update({
+            state: "complete",
+            result: storedResult,
+            completedAt: FieldValue.serverTimestamp(),
+        })
+    }
 
     logger.info("[mcp] setlist published", {
         setlistId: args.setlistId,

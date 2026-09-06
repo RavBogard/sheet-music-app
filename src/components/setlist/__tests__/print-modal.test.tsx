@@ -170,6 +170,104 @@ describe("PrintModal", () => {
         expect(screen.queryByText(/included in printed packets/i)).toBeNull()
     })
 
+    it("reports only chartless song rows before generating a full packet", async () => {
+        const tracks: SetlistTrack[] = [
+            ...sampleTracks,
+            { id: "missing-song", title: "Mi Chamocha" },
+            { id: "lyrics", title: "Lyrics cue", type: "note", notes: "Congregation sings refrain" },
+            { id: "spoken", title: "Spoken reading", type: "reading", description: "Leader and congregation" },
+            { id: "section", title: "Torah service", type: "section" as SetlistTrack["type"] },
+        ]
+        render(<PrintModal {...defaultProps} tracks={tracks} />)
+        fireEvent.click(screen.getByText("Full Packet (PDFs)"))
+
+        fireEvent.click(screen.getByText("Download PDF"))
+
+        expect(await screen.findByText("1 chart needs attention")).toBeDefined()
+        expect(screen.getByText("Mi Chamocha")).toBeDefined()
+        expect(screen.queryByText("Lyrics cue")).toBeNull()
+        expect(screen.queryByText("Spoken reading")).toBeNull()
+        expect(screen.queryByText("Torah service")).toBeNull()
+        expect(mockApiFetch).not.toHaveBeenCalled()
+    })
+
+    it("lets the user cancel or explicitly continue without missing charts", async () => {
+        const tracks: SetlistTrack[] = [
+            ...sampleTracks,
+            { id: "missing-song", title: "Mi Chamocha", type: "song" },
+        ]
+        const blob = new Blob(["pdf-content"], { type: "application/pdf" })
+        mockApiFetch.mockResolvedValue({ ok: true, blob: () => Promise.resolve(blob) })
+        global.URL.createObjectURL = vi.fn(() => "blob:test-url")
+        global.URL.revokeObjectURL = vi.fn()
+
+        render(<PrintModal {...defaultProps} tracks={tracks} />)
+        fireEvent.click(screen.getByText("Full Packet (PDFs)"))
+        fireEvent.click(screen.getByText("Download PDF"))
+        fireEvent.click(await screen.findByText("Cancel"))
+
+        expect(screen.queryByText("1 chart needs attention")).toBeNull()
+        expect(mockApiFetch).not.toHaveBeenCalled()
+
+        fireEvent.click(screen.getByText("Download PDF"))
+        fireEvent.click(await screen.findByText("Continue without 1 chart"))
+
+        await waitFor(() => expect(mockApiFetch).toHaveBeenCalledTimes(1))
+    })
+
+    it("keeps setlist-only downloads one tap because they do not need chart pages", async () => {
+        const tracks: SetlistTrack[] = [
+            ...sampleTracks,
+            { id: "missing-song", title: "Mi Chamocha", type: "song" },
+        ]
+        const blob = new Blob(["pdf-content"], { type: "application/pdf" })
+        mockApiFetch.mockResolvedValue({ ok: true, blob: () => Promise.resolve(blob) })
+        global.URL.createObjectURL = vi.fn(() => "blob:test-url")
+        global.URL.revokeObjectURL = vi.fn()
+
+        render(<PrintModal {...defaultProps} tracks={tracks} />)
+        fireEvent.click(screen.getByText("Download PDF"))
+
+        await waitFor(() => expect(mockApiFetch).toHaveBeenCalledTimes(1))
+        expect(screen.queryByText(/needs attention/)).toBeNull()
+    })
+
+    it("stops a download when the server discovers an unreadable bonded chart, then honors explicit continue", async () => {
+        const blob = new Blob(["pdf-with-omission-notice"], { type: "application/pdf" })
+        mockApiFetch
+            .mockResolvedValueOnce({
+                ok: false,
+                status: 409,
+                json: () => Promise.resolve({
+                    error: "Some charts could not be included in the packet.",
+                    code: "PRINT_CHARTS_OMITTED",
+                    details: {
+                        omittedCharts: [{
+                            title: "Shalom Aleichem",
+                            fileId: "file-2",
+                            reason: "The chart file is not a readable PDF.",
+                        }],
+                    },
+                }),
+            })
+            .mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(blob) })
+        global.URL.createObjectURL = vi.fn(() => "blob:test-url")
+        global.URL.revokeObjectURL = vi.fn()
+
+        render(<PrintModal {...defaultProps} />)
+        fireEvent.click(screen.getByText("Full Packet (PDFs)"))
+        fireEvent.click(screen.getByText("Download PDF"))
+
+        expect(await screen.findByText("1 chart needs attention")).toBeDefined()
+        expect(screen.getByText("The chart file is not a readable PDF.")).toBeDefined()
+        expect(mockApiFetch).toHaveBeenCalledTimes(1)
+
+        fireEvent.click(screen.getByText("Continue without 1 chart"))
+        await waitFor(() => expect(mockApiFetch).toHaveBeenCalledTimes(2))
+        const secondBody = JSON.parse(mockApiFetch.mock.calls[1][1].body)
+        expect(secondBody.allowOmissions).toBe(true)
+    })
+
     // ── Mode switching ──
 
     it("defaults to just-me mode when user has musician profile", () => {

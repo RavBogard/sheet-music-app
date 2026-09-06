@@ -79,11 +79,8 @@ export interface OutboxRow {
     attempts: number
     lastError?: string
     createdAt: number
-    // v60-01: set by retryFailedOutboxRows when the user clicks the conflict
-    // pill. Sole-admin app — manual retry IS intent to overwrite (locked
-    // decision #4). The engine's VersionMismatch branch consumes this flag
-    // to take a silent last-write-wins path + Sentry capture instead of
-    // re-failing the row. Cleared on use. Never set by applyEdit.
+    // Legacy compatibility only. Current clients clear this flag and require
+    // explicit reconciliation before overwriting a competing remote edit.
     forceLwwOnConflict?: boolean
 }
 

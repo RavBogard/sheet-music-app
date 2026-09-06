@@ -97,6 +97,8 @@ export interface PrintRequest {
      * crc → the bare `config/congregation` doc (byte-identical to pre-change).
      */
     org?: OrgId
+    /** User explicitly reviewed the omission list and chose to continue. */
+    allowOmissions?: boolean
 }
 
 export interface PrintProgress {
@@ -116,7 +118,14 @@ export interface PrintResult {
         cacheHits: number
         cacheMisses: number
         fromResultCache: boolean
+        omittedTracks: PrintOmission[]
     }
+}
+
+export interface PrintOmission {
+    title: string
+    fileId?: string
+    reason: string
 }
 
 // ── Content Hash ──
@@ -127,7 +136,7 @@ export interface PrintResult {
  */
 function computeContentHash(req: PrintRequest): string {
     const significant = {
-        cacheVersion: 7, // Increment when PDF rendering logic changes to bypass stale cache. v70-01-02: 2→3 (image tracks embed instead of skip). v70-01-02-fix: 3→4 — library_index mimeType backstop now embeds image tracks that lack a persisted track.mimeType; prints cached since the v70-01-02 deploy dropped those images and must not serve. Phase 4: 4→5 — the cover page now draws the liturgyRef folio column; every packet cached before this deploy has no page numbers and must not serve. Phase 4 fix wave: 5→6 — the cover table now PAGINATES (a v5 packet of >26 rows silently stopped mid-service, folios and all) and names the prayer book. Any v5 entry written by a preview deploy into the shared print-cache bucket would serve a truncated, unattributed packet. print-this-chart: 6→7 — `omitCover` joined the hash below (a single-chart omitCover:true job must never collide with the full-packet result for the same track set); bumping the version documents that this also invalidates every pre-existing cache entry, not just omitCover ones.
+        cacheVersion: 8, // v8 never caches an incomplete packet and adds an explicit omission appendix. This invalidates old cached PDFs whose skipped charts were unknowable from cache metadata.
         title: req.title,
         date: req.date,
         musicianName: req.musicianName,
@@ -914,6 +923,66 @@ async function embedImageTrack(mergedPdf: PDFDocument, track: PrintTrack): Promi
     }
 }
 
+async function appendOmittedChartsPage(
+    pdf: PDFDocument,
+    omissions: PrintOmission[],
+): Promise<void> {
+    if (omissions.length === 0) return
+
+    const regular = await pdf.embedFont(StandardFonts.Helvetica)
+    const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
+    const pageWidth = 612
+    const pageHeight = 792
+    const margin = 48
+    const lineHeight = 17
+    let page: PDFPage
+    let y = 0
+
+    const beginPage = () => {
+        page = pdf.addPage([pageWidth, pageHeight])
+        y = pageHeight - margin
+        page.drawText('Charts omitted from this packet', {
+            x: margin,
+            y,
+            size: 18,
+            font: bold,
+            color: rgb(0.55, 0.2, 0.05),
+        })
+        y -= 28
+        page.drawText(
+            'These setlist rows did not produce a printable chart page:',
+            { x: margin, y, size: 10, font: regular },
+        )
+        y -= 24
+    }
+
+    beginPage()
+    for (const omission of omissions) {
+        if (y < margin + lineHeight * 2) beginPage()
+        page!.drawText(`• ${toWinAnsi(omission.title)}`, {
+            x: margin,
+            y: y!,
+            size: 11,
+            font: bold,
+        })
+        y! -= lineHeight
+        const reason = toWinAnsi(omission.reason)
+        const chunks = reason.match(/.{1,78}(?:\s|$)/g) ?? [reason]
+        for (const chunk of chunks) {
+            if (y! < margin + lineHeight) beginPage()
+            page!.drawText(chunk.trim(), {
+                x: margin + 14,
+                y: y!,
+                size: 9,
+                font: regular,
+                color: rgb(0.3, 0.3, 0.3),
+            })
+            y! -= 13
+        }
+        y! -= 7
+    }
+}
+
 // ── Main Pipeline ──
 
 export async function generatePrintPdf(
@@ -929,6 +998,7 @@ export async function generatePrintPdf(
         cacheHits: 0,
         cacheMisses: 0,
         fromResultCache: false,
+        omittedTracks: [] as PrintOmission[],
     }
 
     // ── Step 0: Check result cache ──
@@ -1024,7 +1094,14 @@ export async function generatePrintPdf(
             continue
         }
 
-        if (!track.fileId || track.omitPdf) continue
+        if (track.omitPdf) continue
+        if (!track.fileId) {
+            stats.omittedTracks.push({
+                title: track.title,
+                reason: 'No chart is attached to this song.',
+            })
+            continue
+        }
 
         // Apply the library_index mimeType backstop: a track bound without a
         // persisted mimeType still gets correctly routed below.
@@ -1045,6 +1122,13 @@ export async function generatePrintPdf(
             })
             const embedded = await embedImageTrack(mergedPdf, track)
             if (embedded) stats.appendedTracks++
+            else {
+                stats.omittedTracks.push({
+                    title: track.title,
+                    fileId: track.fileId,
+                    reason: 'The image chart could not be fetched or embedded.',
+                })
+            }
             continue
         }
         trackIndex++
@@ -1059,6 +1143,11 @@ export async function generatePrintPdf(
             const fetched = await fetchFileById(track.fileId)
             if (!fetched || fetched.buffer.byteLength === 0) {
                 logger.warn(`[PrintPipeline] Empty or missing file: ${track.title}`)
+                stats.omittedTracks.push({
+                    title: track.title,
+                    fileId: track.fileId,
+                    reason: 'The chart file is missing or empty.',
+                })
                 continue
             }
 
@@ -1149,9 +1238,21 @@ export async function generatePrintPdf(
                 stats.appendedTracks++
             } catch (err) {
                 logger.error(`[PrintPipeline] PDF parse error for ${track.title}:`, err)
+                stats.omittedTracks.push({
+                    title: track.title,
+                    fileId: track.fileId,
+                    reason: 'The chart file is not a readable PDF or supported chart format.',
+                })
             }
         } catch (err) {
             logger.error(`[PrintPipeline] Failed to fetch ${track.title}:`, err)
+            stats.omittedTracks.push({
+                title: track.title,
+                fileId: track.fileId,
+                // Keep internal provider/path details in server logs. This
+                // reason is returned to clients and printed in the packet.
+                reason: 'The chart could not be fetched.',
+            })
         }
     }
 
@@ -1161,11 +1262,14 @@ export async function generatePrintPdf(
         currentTitle: '', message: 'Generating final PDF...',
     })
 
+    await appendOmittedChartsPage(mergedPdf, stats.omittedTracks)
     const finalPdfBytes = await mergedPdf.save()
     const pdf = new Uint8Array(finalPdfBytes)
 
     // Cache result for future requests (fire-and-forget)
-    cacheResult(contentHash, pdf).catch(err => logger.warn("[PrintPipeline] Result cache write failed:", err))
+    if (stats.omittedTracks.length === 0) {
+        cacheResult(contentHash, pdf).catch(err => logger.warn("[PrintPipeline] Result cache write failed:", err))
+    }
 
     logger.info(`[PrintPipeline] Complete: ${stats.appendedTracks} files, ${stats.transposedTracks} transposed, ${stats.cacheHits} cache hits, ${stats.cacheMisses} misses`)
 

@@ -912,7 +912,7 @@ export function registerWriteTools(server: McpServer): void {
         "create_setlist",
         {
             description:
-                "Create a new, empty setlist owned by the user. Use when the user wants to start a new service/gig. Returns the new setlist id, trackCount, and the owner's ownerId + ownerName — follow up with add_track_to_setlist to populate it. eventDate is an ISO date string. Requires an admin or band leader account. Pass `isTest:true` to flag the setlist as test traffic (drops out of /perform public listing) regardless of name/owner heuristics — useful for autonomous cycles whose setlists carry real-looking names like 'test-rehearsal'.",
+                "Create a new, empty setlist owned by the user. Use when the user wants to start a new service/gig. Returns the new setlist id, trackCount, and the owner's ownerId + ownerName — follow up with add_track_to_setlist to populate it. eventDate is an ISO date string. Requires an admin or band leader account. Pass `isTest:true` to flag the setlist as test traffic (drops out of /perform public listing) regardless of name/owner heuristics — useful for autonomous cycles whose setlists carry real-looking names like 'test-rehearsal'. For a transport retry, pass the SAME caller-minted `idempotencyKey`: same key + payload returns the original receipt (`replayed:true`) instead of creating a duplicate. Omit/use a new key for an intentional second setlist, even if its fields match.",
             inputSchema: {
                 name: z.string().min(1).describe("Setlist name, e.g. 'Shabbat Morning — June 7'"),
                 eventDate: eventDateSchema.describe(
@@ -934,6 +934,15 @@ export function registerWriteTools(server: McpServer): void {
                     .optional()
                     .describe(
                         "Liturgy book slug used at this service (one book per service), e.g. 'crc-friday'. Call list_books for valid slugs. Page references on this setlist's rows resolve against it.",
+                    ),
+                idempotencyKey: z
+                    .string()
+                    .trim()
+                    .min(1)
+                    .max(128)
+                    .optional()
+                    .describe(
+                        "Optional retry key. Reuse only for the same logical create; omit or mint a new key for a deliberate additional setlist.",
                     ),
             },
         },
@@ -1391,7 +1400,7 @@ export function registerWriteTools(server: McpServer): void {
         "publish_setlist",
         {
             description:
-                "Publish a setlist to the band — snapshots song-row state, marks the setlist as published, and fans out notifications across in-app, FCM push, email, and SMS (SMS only on first publish, opt-in users only). Equivalent to clicking the in-app Publish button. Use when the user says \"send the setlist to the band\", \"publish tonight's service\", \"notify everyone\". By default, recipients are every active admin / band_leader / musician account (excluding the publisher); pass `audience: 'all'` to include `member` accounts, or pass an explicit `recipients` array to override entirely. A `recipients` entry is one of two kinds: an account holder (`uid` → in-app + push + SMS) or an ad-hoc person with no app account (`name` + `email` → email only); reuse a leader's remembered ad-hoc people via their saved contacts (`list_contacts` / `create_contact`, surfaced as `preview_publish.savedContacts`). `note` adds a free-text message above the song list in the email; `subject` overrides the email subject. `dryRun: true` returns the would-publish recipient set + snapshot without writing or sending — preview the blast before pulling the trigger. Re-publishing a setlist that was already published refreshes the snapshot + re-fans-out in-app/push/email but skips SMS (cost control). Admins and band leaders only.",
+                "Publish a setlist to the band — snapshots song-row state, marks the setlist as published, and fans out notifications across in-app, FCM push, email, and SMS (SMS only on first publish, opt-in users only). Equivalent to clicking the in-app Publish button. Use when the user says \"send the setlist to the band\", \"publish tonight's service\", \"notify everyone\". By default, recipients are every active admin / band_leader / musician account (excluding the publisher); pass `audience: 'all'` to include `member` accounts, or pass an explicit `recipients` array to override entirely. A `recipients` entry is one of two kinds: an account holder (`uid` → in-app + push + SMS) or an ad-hoc person with no app account (`name` + `email` → email only); reuse a leader's remembered ad-hoc people via their saved contacts (`list_contacts` / `create_contact`, surfaced as `preview_publish.savedContacts`). `note` adds a free-text message above the song list in the email; `subject` overrides the email subject. `dryRun: true` returns the would-publish recipient set + snapshot without writing or sending — preview the blast before pulling the trigger. Re-publishing a setlist that was already published refreshes the snapshot + re-fans-out in-app/push/email but skips SMS (cost control). For a transport retry of a REAL publish, reuse the same caller-minted `idempotencyKey`; omit/use a new key for a deliberate re-publish. Admins and band leaders only.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 recipients: z
@@ -1440,6 +1449,15 @@ export function registerWriteTools(server: McpServer): void {
                 lastSeenVersion: lastSeenVersionSchema.describe(
                     "Optional setlist-level optimistic-concurrency gate (W-04 Plan 03). Pass the setlist's `version` from your last get_setlist; rejects with `{error: 'stale_version', currentVersion, ...}` if another writer changed the setlist after you read it. The check runs before the chart-health pre-flight and recipient resolution, so a stale call is cheap. Omit to skip the gate — useful for HTTP callers or for a publish that intentionally races a concurrent edit.",
                 ),
+                idempotencyKey: z
+                    .string()
+                    .trim()
+                    .min(1)
+                    .max(128)
+                    .optional()
+                    .describe(
+                        "Optional real-publish retry key. Same key + payload returns the original delivery receipt; a new/omitted key remains a distinct fan-out action. Ignored by dryRun.",
+                    ),
             },
         },
         async (args, extra) =>
@@ -1536,7 +1554,7 @@ export function registerWriteTools(server: McpServer): void {
         "commit_staged_changes",
         {
             description:
-                "W-01 — COMMIT a previously-staged batch from `propose_setlist_changes` atomically. Reads the stage, version-gates the setlist (W-04 optimistic concurrency), applies every proposal in one Firestore transaction (adds + updates + removes; track-order re-packed contiguous on success), then deletes the stage doc. Returns `{ok, setlistVersion, addedTrackIds, updatedTrackIds, removedTrackIds}`. Returns `{error: 'stale_version', currentVersion, ...}` if the setlist drifted past `lastSeenVersion` (or past the version captured when the stage was created, if lastSeenVersion omitted) — re-fetch state and re-stage. Returns `{error: 'stage_expired', ...}` if the TTL fired. Returns `{error: 'Stage not found, ...'}` if the stage was already committed or never existed (one-shot semantic).",
+                "W-01 — COMMIT a previously-staged batch from `propose_setlist_changes` atomically. Reads the stage, version-gates the setlist (W-04 optimistic concurrency), applies every proposal in one Firestore transaction (adds + updates + removes; track-order re-packed contiguous on success), writes a durable receipt, then deletes the stage doc. `stageId` is intrinsically the retry key: retrying a successfully committed stage returns the original result with `replayed:true`, while a genuinely unknown/expired stage still returns stage_not_found/stage_expired. Returns `{ok, setlistVersion, addedTrackIds, updatedTrackIds, removedTrackIds, receiptId, replayed}`. Returns `{error: 'stale_version', currentVersion, ...}` if the setlist drifted past `lastSeenVersion` (or past the version captured when the stage was created, if lastSeenVersion omitted) — re-fetch state and re-stage.",
             inputSchema: {
                 stageId: z
                     .string()

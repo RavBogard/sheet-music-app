@@ -132,7 +132,7 @@ describe("MCP publish_setlist (emulator)", () => {
         mockSendPushToUsers.mockClear()
         mockSendSMS.mockClear()
         mockRecordSongUsage.mockClear()
-        for (const col of ["users", "setlists", "tracks"]) {
+        for (const col of ["users", "setlists", "tracks", "mcp_write_receipts"]) {
             const snap = await db().collection(col).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
@@ -189,6 +189,110 @@ describe("MCP publish_setlist (emulator)", () => {
             title: "Kabbalat Shabbat",
         })
     }
+
+    it("replays a completed publish receipt, rejects key reuse, and keeps deliberate re-publish explicit", async () => {
+        const id = "set-publish-receipt"
+        await seedPublishableSetlist(id)
+        const args = {
+            setlistId: id,
+            recipients: [] as Array<{ uid: string }>,
+            idempotencyKey: "publish-retry-1",
+        }
+
+        const first = await publishSetlist(ADMIN, args)
+        const replay = await publishSetlist(ADMIN, { ...args, lastSeenVersion: 0 })
+        expect(first).toMatchObject({
+            ok: true,
+            replayed: false,
+            receiptId: expect.any(String),
+            version: 1,
+        })
+        expect(replay).toMatchObject({
+            ok: true,
+            replayed: true,
+            receiptId: (first as { receiptId: string }).receiptId,
+            version: 1,
+        })
+        expect((await db().collection("setlists").doc(id).get()).data()?.version).toBe(1)
+
+        const conflict = await publishSetlist(ADMIN, {
+            ...args,
+            note: "different payload",
+        })
+        expect(conflict).toMatchObject({
+            ok: false,
+            error: { machine_code: "idempotency_key_reused", code: 409 },
+        })
+
+        const deliberate = await publishSetlist(ADMIN, {
+            setlistId: id,
+            recipients: [],
+            idempotencyKey: "publish-deliberate-2",
+        })
+        expect(deliberate).toMatchObject({ ok: true, replayed: false, version: 2 })
+        expect((await db().collection("setlists").doc(id).get()).data()?.version).toBe(2)
+    })
+
+    it("concurrent same-key publishes claim one fan-out and leave a replayable receipt", async () => {
+        const id = "set-publish-concurrent-receipt"
+        await seedPublishableSetlist(id)
+        const args = {
+            setlistId: id,
+            recipients: [] as Array<{ uid: string }>,
+            idempotencyKey: "publish-concurrent-1",
+        }
+
+        const pair = await Promise.all([
+            publishSetlist(ADMIN, args),
+            publishSetlist(ADMIN, args),
+        ])
+        const successful = pair.filter((r) => "ok" in r && r.ok)
+        expect(successful.length).toBeGreaterThanOrEqual(1)
+        for (const other of pair.filter((r) => !("ok" in r && r.ok))) {
+            expect(other).toMatchObject({
+                error: { machine_code: "operation_in_progress", code: 409 },
+            })
+        }
+        expect((await db().collection("setlists").doc(id).get()).data()?.version).toBe(1)
+
+        const replay = await publishSetlist(ADMIN, args)
+        expect(replay).toMatchObject({ ok: true, replayed: true, version: 1 })
+        expect((await db().collection("mcp_write_receipts").get()).size).toBe(1)
+    })
+
+    it("refuses an idempotent publish when the setlist changes during preflight", async () => {
+        const id = "set-publish-preflight-race"
+        await seedPublishableSetlist(id)
+        await db().collection("setlists").doc(id).update({ version: 4 })
+        mockGetChartHealth.mockImplementationOnce(async () => {
+            await db().collection("setlists").doc(id).update({
+                version: 5,
+                name: "Newer editor title",
+                lastModifiedBy: LEADER,
+                lastModifiedAt: "2026-09-06T12:00:00.000Z",
+            })
+            return { status: "ok", source: "firebase-storage" }
+        })
+
+        const result = await publishSetlist(ADMIN, {
+            setlistId: id,
+            recipients: [] as Array<{ uid: string }>,
+            idempotencyKey: "publish-preflight-race-1",
+            lastSeenVersion: 4,
+        })
+
+        expect(result).toMatchObject({
+            ok: false,
+            error: { machine_code: "stale_version", code: 409 },
+            currentVersion: 5,
+            lastSeenVersion: 4,
+        })
+        const setlist = (await db().collection("setlists").doc(id).get()).data()!
+        expect(setlist.name).toBe("Newer editor title")
+        expect(setlist.publishedSnapshot).toBeUndefined()
+        expect((await db().collection("mcp_write_receipts").get()).empty).toBe(true)
+        expect(mockEmailAllMembers).not.toHaveBeenCalled()
+    })
 
     it("happy path: first-publish writes snapshot + publishedAt + lastNotifiedAt and fans out across all channels", async () => {
         const id = "set-pub-1"

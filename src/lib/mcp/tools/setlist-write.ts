@@ -1,4 +1,6 @@
+import crypto from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+import { FieldValue } from "firebase-admin/firestore"
 import {
     createSetlistServerSide,
     updateSetlistServerSide,
@@ -35,6 +37,14 @@ import { liturgyRefGuard, bookSlugGuard } from "@/lib/mcp/liturgy-ref-guard"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
+import { parseEventDate } from "@/lib/parse-event-date"
+import { isTestSetlist } from "@/types/models"
+import {
+    WRITE_RECEIPTS_COLLECTION,
+    type StoredWriteReceipt,
+    writeInputHash,
+    writeReceiptId,
+} from "@/lib/mcp/write-receipts"
 
 /**
  * MCP write tools (Phase 4b). Plain async functions wrapping the shared
@@ -113,6 +123,22 @@ export interface CreateSetlistArgs {
      * lands in the same atomic batch as the rest of the setlist doc.
      */
     book?: string
+    /**
+     * Optional caller-minted retry key. Reusing the same key with the same
+     * payload returns the original receipt; omit it for a deliberate new
+     * setlist, even when every visible field is identical.
+     */
+    idempotencyKey?: string
+}
+
+interface CreateSetlistOk {
+    setlistId: string
+    trackCount: number
+    ownerId: string
+    ownerName: string
+    version: number
+    receiptId?: string
+    replayed?: boolean
 }
 
 export async function createSetlist(
@@ -120,18 +146,7 @@ export async function createSetlist(
     args: CreateSetlistArgs,
     org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
-    | {
-          setlistId: string
-          trackCount: number
-          ownerId: string
-          ownerName: string
-          /**
-           * W-04: surface the doc's initial version so callers can chain a
-           * `lastSeenVersion` follow-up without a separate get_setlist round
-           * trip. version-echo-missing NOTE (v6 bugstomp).
-           */
-          version: number
-      }
+    | CreateSetlistOk
     | RichErrorEnvelope
 > {
     initAdmin()
@@ -146,7 +161,112 @@ export async function createSetlist(
     const badBook = bookSlugGuard(args.book)
     if (badBook) return badBook
 
+    const idempotencyKey = args.idempotencyKey?.trim()
+    if (args.idempotencyKey !== undefined && (!idempotencyKey || idempotencyKey.length > 128)) {
+        return richError(
+            "invalid_argument",
+            "idempotencyKey must be 1-128 non-whitespace characters when supplied.",
+            { field: "idempotencyKey" },
+        )
+    }
+
     const ownerName = await ownerNameFor(db, uid)
+
+    if (idempotencyKey) {
+        const tool = "create_setlist"
+        const receiptId = writeReceiptId(tool, uid, org, idempotencyKey)
+        const receiptRef = db.collection(WRITE_RECEIPTS_COLLECTION).doc(receiptId)
+        const inputHash = writeInputHash({
+            name: args.name,
+            eventDate: args.eventDate,
+            serviceType: args.serviceType,
+            rabbi: args.rabbi,
+            isTest: args.isTest,
+            book: args.book,
+        })
+        // Allocate once per invocation. If Firestore retries this transaction,
+        // the callback keeps the same target id; a concurrent invocation loses
+        // the receipt race and returns the winner's stored target instead.
+        const candidateSetlistId = crypto.randomUUID()
+        const outcome = await db.runTransaction<
+            | { kind: "ok"; result: CreateSetlistOk }
+            | { kind: "conflict" }
+        >(async (tx) => {
+            const receiptSnap = await tx.get(receiptRef)
+            if (receiptSnap.exists) {
+                const receipt = receiptSnap.data() as StoredWriteReceipt<CreateSetlistOk>
+                if (receipt.inputHash !== inputHash) return { kind: "conflict" }
+                if (receipt.state === "complete" && receipt.result) {
+                    return {
+                        kind: "ok",
+                        result: { ...receipt.result, receiptId, replayed: true },
+                    }
+                }
+                // create_setlist writes its result atomically with the receipt,
+                // so an in-progress row is never expected here.
+                throw new Error(`Incomplete ${tool} receipt '${receiptId}'.`)
+            }
+
+            const result: CreateSetlistOk = {
+                setlistId: candidateSetlistId,
+                trackCount: 0,
+                ownerId: uid,
+                ownerName,
+                version: 1,
+                receiptId,
+                replayed: false,
+            }
+            const nowIso = new Date().toISOString()
+            const setlistPayload: Record<string, unknown> = {
+                id: candidateSetlistId,
+                orgId: org,
+                name: args.name,
+                date: FieldValue.serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp(),
+                trackCount: 0,
+                songCount: 0,
+                hydrated: true,
+                ownerId: uid,
+                ownerName,
+                version: 1,
+                lastModifiedAt: nowIso,
+                lastModifiedBy: uid,
+                isTest:
+                    args.isTest === true
+                        ? true
+                        : isTestSetlist({ name: args.name, ownerId: uid }),
+            }
+            if (args.eventDate !== undefined) {
+                setlistPayload.eventDate = parseEventDate(args.eventDate)
+            }
+            if (args.serviceType !== undefined) setlistPayload.templateType = args.serviceType
+            if (args.rabbi !== undefined) setlistPayload.rabbi = args.rabbi
+            if (args.book !== undefined) setlistPayload.book = args.book
+
+            tx.create(db.collection("setlists").doc(candidateSetlistId), setlistPayload)
+            tx.create(receiptRef, {
+                tool,
+                uid,
+                orgId: org,
+                idempotencyKey,
+                inputHash,
+                state: "complete",
+                result,
+                createdAt: FieldValue.serverTimestamp(),
+                completedAt: FieldValue.serverTimestamp(),
+            } satisfies StoredWriteReceipt<CreateSetlistOk>)
+            return { kind: "ok", result }
+        })
+        if (outcome.kind === "conflict") {
+            return richError(
+                "idempotency_key_reused",
+                "This idempotencyKey was already used for a different create_setlist payload.",
+                { idempotencyKey, receiptId },
+                "Use the original payload to retrieve its receipt, or mint a new key for a deliberate new setlist.",
+            )
+        }
+        return outcome.result
+    }
 
     const result = await createSetlistServerSide({
         name: args.name,

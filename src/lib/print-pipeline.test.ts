@@ -385,6 +385,13 @@ describe('Print Pipeline — Error Resilience', () => {
 
         expect(result.stats.totalTracks).toBe(3)
         expect(result.stats.appendedTracks).toBe(2) // missing one skipped
+        expect(result.stats.omittedTracks).toEqual([
+            {
+                title: 'Song 2',
+                fileId: 'missing',
+                reason: 'The chart file is missing or empty.',
+            },
+        ])
     })
 
     it('skips tracks with empty buffer', async () => {
@@ -745,6 +752,12 @@ describe('Print Pipeline — Image Chart Embed', () => {
 
         expect(result.stats.totalTracks).toBe(3)
         expect(result.stats.appendedTracks).toBe(2) // PDF + good JPEG; corrupt PNG skipped
+        expect(result.stats.omittedTracks).toEqual([
+            expect.objectContaining({
+                title: 'Corrupt PNG',
+                fileId: 'upload-bad',
+            }),
+        ])
         // The failed embed is observable in logs (never a silent drop)
         expect(mockLoggerWarn).toHaveBeenCalledWith(
             expect.stringContaining('Image embed failed for "Corrupt PNG"')

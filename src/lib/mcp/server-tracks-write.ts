@@ -235,89 +235,100 @@ export async function addTrack(
     db: DB,
     input: AddTrackInput,
 ): Promise<{ trackId: string; order: number }> {
-    const existing = await getTracksForSetlist(db, input.setlistId, {})
-    // v11-01-02: the new track inherits the parent setlist's tenant scope.
-    const orgId = await readParentOrgId(db, input.setlistId)
-    const insertAt =
-        input.position === undefined ||
-        input.position < 0 ||
-        input.position > existing.length
-            ? existing.length
-            : input.position
-
+    // Allocate once, outside the transaction callback. Firestore may retry the
+    // callback after a concurrent writer changes the parent/query; reusing the
+    // id makes those retries one logical insert rather than minting ghost ids.
     const trackId = crypto.randomUUID()
-    const batch = db.batch()
-
-    // Shift rows at/after the insert point down by one.
-    for (const t of existing) {
-        if (t.order >= insertAt) {
-            batch.update(db.collection("tracks").doc(t.id), { order: t.order + 1 })
+    const insertAt = await db.runTransaction(async (tx) => {
+        const setlistRef = db.collection("setlists").doc(input.setlistId)
+        const [setlistSnap, tracksSnap] = await Promise.all([
+            tx.get(setlistRef),
+            tx.get(
+                db.collection("tracks").where("setlistId", "==", input.setlistId),
+            ),
+        ])
+        if (!setlistSnap.exists) {
+            throw new Error(`Setlist '${input.setlistId}' no longer exists.`)
         }
-    }
 
-    const payload: Record<string, unknown> = {
-        id: trackId,
-        setlistId: input.setlistId,
-        orgId, // v11-01-02: inherited from the parent setlist
-        order: insertAt,
-        type: input.type,
-        title: sanitizeFreeformString(input.title),
-        updatedAt: FieldValue.serverTimestamp(),
-        ...initialVersionFields(), // W-04 Plan 01: new track → version 1
-    }
-    if (input.key !== undefined) payload.key = sanitizeFreeformString(input.key)
-    // bpm is numeric (coder-3 f017) — not a freeform string, no sanitization.
-    if (input.bpm !== undefined) payload.bpm = input.bpm
-    if (input.leadMusician !== undefined) payload.leadMusician = sanitizeFreeformString(input.leadMusician)
-    if (input.referenceLink !== undefined) payload.referenceLink = sanitizeFreeformString(input.referenceLink)
-    if (input.songId !== undefined) payload.songId = input.songId
-    if (input.fileId !== undefined) payload.fileId = input.fileId
-    if (input.fileName !== undefined) payload.fileName = input.fileName
-    if (input.mimeType !== undefined) payload.mimeType = input.mimeType
-    if (input.notes !== undefined) payload.notes = sanitizeFreeformString(input.notes)
-    if (input.performer !== undefined) payload.performer = sanitizeFreeformString(input.performer)
-    if (input.description !== undefined) payload.description = sanitizeFreeformString(input.description)
-    if (input.estimatedMinutes !== undefined) payload.estimatedMinutes = input.estimatedMinutes
-    if (input.liturgyRef !== undefined) payload.liturgyRef = input.liturgyRef
-    if (input.honors !== undefined) {
-        const sanitizedHonors = sanitizeHonors(input.honors)
-        if (sanitizedHonors !== undefined) payload.honors = sanitizedHonors
-    }
-    batch.set(db.collection("tracks").doc(trackId), payload)
+        // Numeric order is legacy-dirty in production (gaps and duplicates).
+        // Treat the sorted rows as the logical sequence, tie-breaking duplicate
+        // orders by id, then assign every post-insert row its array index. This
+        // makes omitted/out-of-range position mean the actual tail, not the
+        // numeric slot `existing.length` somewhere in the middle of [0,2,5].
+        const existing = tracksSnap.docs
+            .map((doc) => {
+                const data = doc.data() as Record<string, unknown>
+                return {
+                    id: doc.id,
+                    data,
+                    order: typeof data.order === "number" ? data.order : 0,
+                }
+            })
+            .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+        const target =
+            input.position === undefined ||
+            input.position < 0 ||
+            input.position > existing.length
+                ? existing.length
+                : input.position
 
-    // W-04 Plan 01: shifted siblings get their version bumped too — their
-    // `order` is mutating, which means callers reading them with an old
-    // version are stale. Plan 02 will gate writes on it; Plan 01 stamps.
-    for (const t of existing) {
-        if (t.order >= insertAt) {
-            // Already added to batch above with order update — extend with
-            // versionBumpFields by re-writing the same ref.
-            batch.update(db.collection("tracks").doc(t.id), versionBumpFields())
+        const payload: Record<string, unknown> = {
+            id: trackId,
+            setlistId: input.setlistId,
+            orgId: rowOrg(setlistSnap.data()?.orgId),
+            order: target,
+            type: input.type,
+            title: sanitizeFreeformString(input.title),
+            updatedAt: FieldValue.serverTimestamp(),
+            ...initialVersionFields(),
         }
-    }
+        if (input.key !== undefined) payload.key = sanitizeFreeformString(input.key)
+        if (input.bpm !== undefined) payload.bpm = input.bpm
+        if (input.leadMusician !== undefined) payload.leadMusician = sanitizeFreeformString(input.leadMusician)
+        if (input.referenceLink !== undefined) payload.referenceLink = sanitizeFreeformString(input.referenceLink)
+        if (input.songId !== undefined) payload.songId = input.songId
+        if (input.fileId !== undefined) payload.fileId = input.fileId
+        if (input.fileName !== undefined) payload.fileName = input.fileName
+        if (input.mimeType !== undefined) payload.mimeType = input.mimeType
+        if (input.notes !== undefined) payload.notes = sanitizeFreeformString(input.notes)
+        if (input.performer !== undefined) payload.performer = sanitizeFreeformString(input.performer)
+        if (input.description !== undefined) payload.description = sanitizeFreeformString(input.description)
+        if (input.estimatedMinutes !== undefined) payload.estimatedMinutes = input.estimatedMinutes
+        if (input.liturgyRef !== undefined) payload.liturgyRef = input.liturgyRef
+        if (input.honors !== undefined) {
+            const sanitizedHonors = sanitizeHonors(input.honors)
+            if (sanitizedHonors !== undefined) payload.honors = sanitizedHonors
+        }
 
-    // C10I1-002: keep the song-type subset counter (`songCount`, rendered on
-    // the public /perform landing) fresh on every add. Authoritative from the
-    // in-scope sibling set — no extra read.
-    const existingSongs = existing.filter((t) =>
-        isSongType((t as { type?: unknown }).type),
-    ).length
-    const setlistPatch: Record<string, unknown> = {
-        trackCount: existing.length + 1,
-        songCount: existingSongs + (isSongType(input.type) ? 1 : 0),
-        updatedAt: FieldValue.serverTimestamp(),
-        ...versionBumpFields(), // W-04 Plan 01: setlist mutation → bump
-    }
-    // Bond the chart into the parent's denormalized fileIds set so the app
-    // renders it on the row without waiting for the client-side reconciler.
-    // arrayUnion is idempotent; the SetlistGridHydrator reconciler computes
-    // the same distinct set and will normalize ordering on next open.
-    if (input.fileId) {
-        setlistPatch.fileIds = FieldValue.arrayUnion(input.fileId)
-    }
-    batch.update(db.collection("setlists").doc(input.setlistId), setlistPatch)
+        const postInsert = existing.slice()
+        postInsert.splice(target, 0, { id: trackId, data: payload, order: target })
+        const nowIso = new Date().toISOString()
+        postInsert.forEach((row, order) => {
+            if (row.id === trackId) {
+                tx.set(db.collection("tracks").doc(trackId), { ...payload, order })
+            } else if (row.order !== order) {
+                tx.update(db.collection("tracks").doc(row.id), {
+                    order,
+                    version: FieldValue.increment(1),
+                    lastModifiedAt: nowIso,
+                    updatedAt: FieldValue.serverTimestamp(),
+                })
+            }
+        })
 
-    await batch.commit()
+        const existingSongs = existing.filter((t) => isSongType(t.data.type)).length
+        const setlistPatch: Record<string, unknown> = {
+            trackCount: existing.length + 1,
+            songCount: existingSongs + (isSongType(input.type) ? 1 : 0),
+            updatedAt: FieldValue.serverTimestamp(),
+            ...versionBumpFields(),
+        }
+        if (input.fileId) setlistPatch.fileIds = FieldValue.arrayUnion(input.fileId)
+        tx.update(setlistRef, setlistPatch)
+        return target
+    })
+
     logger.info("[mcp] track added", { setlistId: input.setlistId, trackId, order: insertAt })
     return { trackId, order: insertAt }
 }
@@ -1624,6 +1635,10 @@ export async function bulkAddTracks(
         options.position > existing.length
             ? existing.length
             : options.position
+    const appendAtTail =
+        options.position === undefined ||
+        options.position < 0 ||
+        options.position > existing.length
 
     // Pre-resolve song lookups so the atomic batch has no async surprises.
     const planned: Array<
@@ -1791,46 +1806,102 @@ export async function bulkAddTracks(
     }
 
     if (mode === "atomic") {
-        const batch = db.batch()
-        // Shift existing rows at/after the anchor down by the insert count.
         const insertCount = planned.filter((p) => p.kind === "ok").length
-        for (const t of existing) {
-            if (t.order >= anchor) {
-                batch.update(db.collection("tracks").doc(t.id), {
-                    order: t.order + insertCount,
-                    ...versionBumpFields(), // W-04 Plan 01: shifted siblings
-                })
-            }
-        }
         const newFileIds = new Set<string>()
         let insertSongCount = 0
         for (const p of planned) {
             if (p.kind !== "ok") continue
-            batch.set(db.collection("tracks").doc(p.trackId), p.payload)
             if (p.fileId) newFileIds.add(p.fileId)
             // C10I1-002: count song-type inserts for the songCount denorm.
             // payload.type defaults to "song" (undefined) — isSongType matches.
             if (isSongType((p.payload as { type?: unknown }).type)) insertSongCount++
         }
-        const existingSongs = existing.filter((t) =>
-            isSongType((t as { type?: unknown }).type),
-        ).length
-        const setlistPatch: Record<string, unknown> = {
-            trackCount: existing.length + insertCount,
-            songCount: existingSongs + insertSongCount,
-            updatedAt: FieldValue.serverTimestamp(),
-            ...versionBumpFields(), // W-04 Plan 01
+        const committedOrders = await db.runTransaction(async (tx) => {
+            const setlistRef = db.collection("setlists").doc(setlistId)
+            const [setlistSnap, tracksSnap] = await Promise.all([
+                tx.get(setlistRef),
+                tx.get(db.collection("tracks").where("setlistId", "==", setlistId)),
+            ])
+            if (!setlistSnap.exists) {
+                throw new Error(`Setlist '${setlistId}' no longer exists.`)
+            }
+            const liveExisting = tracksSnap.docs
+                .map((doc) => {
+                    const data = doc.data() as Record<string, unknown>
+                    return {
+                        id: doc.id,
+                        data,
+                        order: typeof data.order === "number" ? data.order : 0,
+                    }
+                })
+                .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+            const liveAnchor =
+                options.position === undefined ||
+                options.position < 0 ||
+                options.position > liveExisting.length
+                    ? liveExisting.length
+                    : options.position
+
+            type OrderedRow =
+                | { kind: "existing"; id: string; order: number; data: Record<string, unknown> }
+                | { kind: "new"; id: string; payload: Record<string, unknown>; index: number }
+            const ordered: OrderedRow[] = liveExisting.map((row) => ({
+                kind: "existing",
+                ...row,
+            }))
+            const newRows: OrderedRow[] = planned
+                .filter((p): p is Extract<(typeof planned)[number], { kind: "ok" }> => p.kind === "ok")
+                .map((p) => ({ kind: "new", id: p.trackId, payload: p.payload, index: p.index }))
+            ordered.splice(liveAnchor, 0, ...newRows)
+
+            const orderByInputIndex = new Map<number, number>()
+            const nowIso = new Date().toISOString()
+            const orgId = rowOrg(setlistSnap.data()?.orgId)
+            ordered.forEach((row, order) => {
+                if (row.kind === "new") {
+                    tx.set(db.collection("tracks").doc(row.id), {
+                        ...row.payload,
+                        orgId,
+                        order,
+                    })
+                    orderByInputIndex.set(row.index, order)
+                } else if (row.order !== order) {
+                    tx.update(db.collection("tracks").doc(row.id), {
+                        order,
+                        version: FieldValue.increment(1),
+                        lastModifiedAt: nowIso,
+                        updatedAt: FieldValue.serverTimestamp(),
+                    })
+                }
+            })
+
+            const existingSongs = liveExisting.filter((t) =>
+                isSongType(t.data.type),
+            ).length
+            const setlistPatch: Record<string, unknown> = {
+                trackCount: liveExisting.length + insertCount,
+                songCount: existingSongs + insertSongCount,
+                updatedAt: FieldValue.serverTimestamp(),
+                ...versionBumpFields(),
+            }
+            if (newFileIds.size > 0) {
+                setlistPatch.fileIds = FieldValue.arrayUnion(...newFileIds)
+            }
+            tx.update(setlistRef, setlistPatch)
+            return [...orderByInputIndex.entries()]
+        })
+        for (const [inputIndex, order] of committedOrders) {
+            const resultIndex = results.findIndex((r) => r.index === inputIndex)
+            if (resultIndex >= 0 && results[resultIndex].ok) {
+                results[resultIndex].order = order
+            }
         }
-        if (newFileIds.size > 0) {
-            setlistPatch.fileIds = FieldValue.arrayUnion(...newFileIds)
-        }
-        batch.update(db.collection("setlists").doc(setlistId), setlistPatch)
-        await batch.commit()
     } else {
         // Best-effort: insert each row independently. addTrack re-reads the
         // current setlist state per call, so positions stay contiguous even
-        // if a row in the middle fails. We pass `position: anchor + i` for
-        // the first successful insert and let subsequent ones drift naturally.
+        // if a row in the middle fails. Preserve omitted/out-of-range as an
+        // actual append signal on every retry; converting it to the pre-read
+        // numeric `anchor` would insert ahead of a concurrent append.
         let writtenSoFar = 0
         for (let i = 0; i < planned.length; i++) {
             const p = planned[i]
@@ -1857,7 +1928,9 @@ export async function bulkAddTracks(
                     honors: p.payload.honors as
                         | Array<{ name: string; note?: string }>
                         | undefined,
-                    position: anchor + writtenSoFar,
+                    position: appendAtTail
+                        ? undefined
+                        : anchor + writtenSoFar,
                 })
                 results[i] = {
                     index: p.index,

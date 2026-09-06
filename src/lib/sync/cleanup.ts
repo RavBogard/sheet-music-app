@@ -63,26 +63,9 @@ export interface RetryFailedOptions {
  * Reset every failed outbox row to status='pending' (attempts=0,
  * scheduledFor=now, lastError=undefined) and nudge the engine to drain.
  *
- * v60-13-03 (2026-05-13): ALSO marks every PENDING row with
- * forceLwwOnConflict=true. Reason: the engine stops draining on the first
- * VersionMismatch (engine.ts:447 returns 'stop-drain'). Daniel UAT showed a
- * 49-row stuck queue (1 failed + 48 pending) where each pending edit hits
- * its own VersionMismatch as soon as the previous row's write changes
- * updatedAt — so retrying ONLY failed rows surfaces a "Saving forever"
- * symptom that requires 49 separate clicks to drain the queue. Marking the
- * queue tail with forceLwwOnConflict=true lets the engine's silent-LWW
- * branch auto-resolve every conflict in one drain pass, matching the
- * "manual retry IS intent to overwrite" intent of locked decision #4.
- * Sole-admin app — there is no other writer to conflict with.
- *
- * NOT touched: rows in 'sending' status (in-flight to Firestore;
- * touching them risks double-write). They'll either succeed and be
- * removed, or fail and become 'failed' next pass — either way the next
- * retry click resolves them.
- *
- * This is the systemic fix for the previous "Failed — retry" pill which
- * actually deleted rows. The button now does what its label says: retry
- * everything pending in the queue, with overwrite intent.
+ * Pending and sending rows are left untouched. Most importantly, retrying
+ * a network/auth failure is not consent to overwrite a competing remote
+ * edit; version mismatches go through the explicit reconciliation flow.
  */
 export async function retryFailedOutboxRows(
     options: RetryFailedOptions = {},
@@ -90,16 +73,9 @@ export async function retryFailedOutboxRows(
     const db = options.db ?? getDb()
     const now = Date.now()
 
-    // v60-13-03: include both failed AND pending rows so the entire queue
-    // drains as LWW on a single retry click. Avoids the 49-clicks-to-drain
-    // symptom Daniel hit with a stuck queue.
     const failedRows = await db.outbox
         .where('status')
         .equals('failed')
-        .toArray()
-    const pendingRows = await db.outbox
-        .where('status')
-        .equals('pending')
         .toArray()
 
     let retried = 0
@@ -110,28 +86,11 @@ export async function retryFailedOutboxRows(
                 attempts: 0,
                 scheduledFor: now,
                 lastError: undefined,
-                // v60-01: mark this row as "user clicked retry" so the
-                // engine's VersionMismatch branch can take silent LWW +
-                // Sentry capture on the retry instead of re-failing the
-                // row. Sole-admin app per locked decision #4 — manual
-                // retry IS intent to overwrite. discardFailedOutboxRows
-                // does NOT set this flag (explicit give-up path).
-                forceLwwOnConflict: true,
+                forceLwwOnConflict: undefined,
             })
             retried += 1
         }
     }
-    // v60-13-03: also stamp pending rows with forceLwwOnConflict so the
-    // engine doesn't stop-drain on the next VersionMismatch in the queue.
-    // Don't reset their status/attempts/scheduledFor — those are already
-    // valid; we just want the LWW flag to be honored when their turn arrives.
-    for (const row of pendingRows) {
-        if (row.localId !== undefined && row.forceLwwOnConflict !== true) {
-            await db.outbox.update(row.localId, { forceLwwOnConflict: true })
-            retried += 1
-        }
-    }
-
     if (retried > 0) {
         try {
             const pump =

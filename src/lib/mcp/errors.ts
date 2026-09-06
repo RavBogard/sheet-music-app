@@ -126,6 +126,8 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     already_exists: 409,
     force_required: 409,
     already_bonded: 409,
+    idempotency_key_reused: 409,
+    operation_in_progress: 409,
     // N2 of REFUSALS-AND-PAIRS. `mark_chart_status` refuses to hide a row
     // that live, in-tenant setlists still bond (`R-0903-live-cw-8`: a mark is
     // byte-identical AND UNBONDED). A conflict, not a bad argument: the

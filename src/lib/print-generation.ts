@@ -48,6 +48,23 @@ export interface GeneratePrintPayload {
      */
     omitCover?: boolean
     tracks: PrintTrackPayload[]
+    allowOmissions?: boolean
+}
+
+export interface OmittedPrintChart {
+    title: string
+    fileId?: string
+    reason: string
+}
+
+export class PrintChartsOmittedError extends Error {
+    readonly omittedCharts: OmittedPrintChart[]
+
+    constructor(omittedCharts: OmittedPrintChart[]) {
+        super('Some charts could not be included in the packet.')
+        this.name = 'PrintChartsOmittedError'
+        this.omittedCharts = omittedCharts
+    }
 }
 
 export async function generatePdfBlob(payload: GeneratePrintPayload): Promise<Blob> {
@@ -60,8 +77,12 @@ export async function generatePdfBlob(payload: GeneratePrintPayload): Promise<Bl
         let errorMsg = 'Failed to generate PDF'
         try {
             const err = await response.json()
+            if (err.code === 'PRINT_CHARTS_OMITTED' && Array.isArray(err.details?.omittedCharts)) {
+                throw new PrintChartsOmittedError(err.details.omittedCharts)
+            }
             errorMsg = err.error || errorMsg
-        } catch {
+        } catch (error) {
+            if (error instanceof PrintChartsOmittedError) throw error
             errorMsg = `Server error (${response.status})`
         }
         throw new Error(errorMsg)

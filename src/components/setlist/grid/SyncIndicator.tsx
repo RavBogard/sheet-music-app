@@ -140,15 +140,9 @@ export function SyncIndicator({
         return label
     }, [state, lastSyncAt, lastError, queued, label, nowMs])
 
-    // v50-06-02 / v60-01: `resolveConflictHandler` is retained for prop-shape
-    // backward-compat (callers may still pass `onResolveConflict`), but as of
-    // v60-01 (locked decision #4) it is NO LONGER wired to clicks. The
-    // reconciliation modal was force-disabled at `a0c61cc` and gets fully
-    // deleted in v60-08; the conflict pill now retries silently last-write-
-    // wins via `retryFailedHandler`. The optional hook is kept as a no-op
-    // reference so removing the prop in v60-08 is a clean delete.
     const reconciliation = useReconciliationModalOptional()
-    void (onResolveConflict ?? reconciliation?.openModal)
+    const resolveConflictHandler =
+        onResolveConflict ?? reconciliation?.openModal
 
     // Bug 2 fix (2026-05-12): the button labeled "Failed — retry" must
     // actually retry. The previous default discarded failed outbox rows
@@ -158,11 +152,6 @@ export function SyncIndicator({
     // pending + attempts=0 + scheduledFor=now and nudges the engine. A
     // separate, explicit "Discard" affordance can be added in the future
     // for a user-confirmed give-up path (see `discardFailedOutboxRows`).
-    //
-    // v60-01: this handler now ALSO drives the conflict pill — clicking
-    // "Conflict — review" calls retryFailedOutboxRows, which marks the
-    // reset rows with `forceLwwOnConflict: true` so the engine takes a
-    // silent last-write-wins path on the next drain. No modal, no banner.
     const defaultRetryFailed = async () => {
         await retryFailedOutboxRows()
     }
@@ -172,10 +161,8 @@ export function SyncIndicator({
 
     const Icon = visual.icon
     const isAction = state === 'failed' || state === 'conflict'
-    // v60-01: both 'conflict' and 'failed' invoke retry. Conflict-state
-    // click flows through retryFailedOutboxRows → engine silent-LWW branch
-    // (see `forceLwwOnConflict` in engine.ts).
-    const onClick = retryFailedHandler
+    const onClick =
+        state === 'conflict' ? resolveConflictHandler : retryFailedHandler
 
     const Element = isAction ? 'button' : 'span'
 

@@ -102,7 +102,7 @@ describe("MCP setlist write tools (emulator)", () => {
     })
 
     beforeEach(async () => {
-        for (const col of ["setlists", "tracks"]) {
+        for (const col of ["setlists", "tracks", "mcp_write_receipts"]) {
             const snap = await db().collection(col).get()
             await Promise.all(snap.docs.map((d) => d.ref.delete()))
         }
@@ -173,6 +173,62 @@ describe("MCP setlist write tools (emulator)", () => {
             await db().collection("setlists").doc(baseline.setlistId).get()
         ).data()!
         expect(baselineData.isTest).toBe(false)
+    })
+
+    it("create_setlist replays the original receipt for the same idempotency key", async () => {
+        const args = {
+            name: "Retry-safe Service",
+            eventDate: "2026-09-11",
+            idempotencyKey: "create-retry-1",
+        }
+        const first = await createSetlist(ADMIN, args)
+        const replay = await createSetlist(ADMIN, args)
+
+        expect(first).toMatchObject({ replayed: false, receiptId: expect.any(String) })
+        expect(replay).toMatchObject({
+            setlistId: (first as { setlistId: string }).setlistId,
+            replayed: true,
+            receiptId: (first as { receiptId: string }).receiptId,
+        })
+        expect((await db().collection("setlists").get()).size).toBe(1)
+        expect((await db().collection("mcp_write_receipts").get()).size).toBe(1)
+    })
+
+    it("create_setlist serializes concurrent same-key calls, while a new/omitted key remains deliberate", async () => {
+        const args = {
+            name: "Concurrent Create",
+            idempotencyKey: "create-concurrent-1",
+        }
+        const [a, b] = await Promise.all([
+            createSetlist(ADMIN, args),
+            createSetlist(ADMIN, args),
+        ])
+        expect((a as { setlistId: string }).setlistId).toBe(
+            (b as { setlistId: string }).setlistId,
+        )
+        expect([a, b].filter((r) => (r as { replayed?: boolean }).replayed)).toHaveLength(1)
+
+        const deliberate = await createSetlist(ADMIN, { name: "Concurrent Create" })
+        expect((deliberate as { setlistId: string }).setlistId).not.toBe(
+            (a as { setlistId: string }).setlistId,
+        )
+        expect((await db().collection("setlists").get()).size).toBe(2)
+    })
+
+    it("create_setlist refuses reuse of an idempotency key for a different payload", async () => {
+        await createSetlist(ADMIN, {
+            name: "Original",
+            idempotencyKey: "create-conflict-1",
+        })
+        const conflict = await createSetlist(ADMIN, {
+            name: "Different",
+            idempotencyKey: "create-conflict-1",
+        })
+        expect(conflict).toMatchObject({
+            ok: false,
+            error: { machine_code: "idempotency_key_reused", code: 409 },
+        })
+        expect((await db().collection("setlists").get()).size).toBe(1)
     })
 
     it("update_setlist: any editor may edit any setlist; members may not", async () => {

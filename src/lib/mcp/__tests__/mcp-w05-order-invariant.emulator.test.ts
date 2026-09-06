@@ -16,6 +16,8 @@ import { FieldValue, getFirestore } from "firebase-admin/firestore"
 import crypto from "crypto"
 
 import {
+    addTrackToSetlist,
+    bulkAddSetlistTracks,
     createSetlist,
     removeSetlistTrack,
     reorderSetlist,
@@ -38,9 +40,8 @@ import {
  * drift), exercises ONE named path, then asserts the post-write sorted
  * tracks have orders [0, 1, ...] with no gaps.
  *
- * Out of scope: `add_track_to_setlist` and `bulk_add_tracks` are also
- * leak sources (insert-shift doesn't heal pre-existing gaps); left for a
- * separate pass.
+ * The append paths are covered too: append means logical tail even when
+ * legacy numeric order has gaps/duplicates, and concurrent appends serialize.
  */
 describe("W-05 — order-invariant on the 3 named write paths (emulator)", () => {
     let app: App
@@ -87,6 +88,24 @@ describe("W-05 — order-invariant on the 3 named write paths (emulator)", () =>
         return snap.docs
             .map((d) => (d.data() as { order: number }).order)
             .sort((a, b) => a - b)
+    }
+
+    async function readTracksInOrder(setlistId: string): Promise<Array<{
+        id: string
+        title: string
+        order: number
+    }>> {
+        const snap = await db()
+            .collection("tracks")
+            .where("setlistId", "==", setlistId)
+            .get()
+        return snap.docs
+            .map((d) => ({
+                id: d.id,
+                title: d.data().title as string,
+                order: d.data().order as number,
+            }))
+            .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
     }
 
     beforeAll(async () => {
@@ -174,5 +193,100 @@ describe("W-05 — order-invariant on the 3 named write paths (emulator)", () =>
         const { setlistId, trackIds } = await seedDriftedSetlist([0, 1, 1])
         await removeSetlistTrack(ADMIN, { setlistId, trackId: trackIds[0] })
         expect(await readOrdersSorted(setlistId)).toEqual([0, 1])
+    })
+
+    it("add_track append lands at the logical tail and heals gaps", async () => {
+        const { setlistId, trackIds } = await seedDriftedSetlist([0, 2, 5])
+        const added = (await addTrackToSetlist(ADMIN, {
+            setlistId,
+            title: "Actual Tail",
+        })) as { trackId: string; order: number }
+
+        expect(added.order).toBe(3)
+        expect((await readTracksInOrder(setlistId)).map((t) => t.id)).toEqual([
+            ...trackIds,
+            added.trackId,
+        ])
+        expect(await readOrdersSorted(setlistId)).toEqual([0, 1, 2, 3])
+    })
+
+    it("add_track append lands after every duplicate-order sibling", async () => {
+        const { setlistId } = await seedDriftedSetlist([0, 1, 1])
+        const added = (await addTrackToSetlist(ADMIN, {
+            setlistId,
+            title: "After Duplicates",
+        })) as { trackId: string; order: number }
+
+        const ordered = await readTracksInOrder(setlistId)
+        expect(ordered.at(-1)?.id).toBe(added.trackId)
+        expect(ordered.map((t) => t.order)).toEqual([0, 1, 2, 3])
+    })
+
+    it("bulk_add append preserves caller order at the logical tail and heals drift", async () => {
+        const { setlistId, trackIds } = await seedDriftedSetlist([0, 2, 5])
+        const result = (await bulkAddSetlistTracks(ADMIN, {
+            setlistId,
+            tracks: [{ title: "Bulk Tail A" }, { title: "Bulk Tail B" }],
+        })) as {
+            committed: boolean
+            results: Array<{ trackId: string; order: number }>
+        }
+
+        expect(result.committed).toBe(true)
+        expect(result.results.map((r) => r.order)).toEqual([3, 4])
+        expect((await readTracksInOrder(setlistId)).map((t) => t.id)).toEqual([
+            ...trackIds,
+            ...result.results.map((r) => r.trackId),
+        ])
+        expect(await readOrdersSorted(setlistId)).toEqual([0, 1, 2, 3, 4])
+    })
+
+    it("concurrent appends serialize without duplicate slots or lost rows", async () => {
+        const { setlistId } = await seedDriftedSetlist([0, 2, 5])
+        const titles = Array.from({ length: 6 }, (_, i) => `Concurrent ${i}`)
+
+        const results = await Promise.all(
+            titles.map((title) => addTrackToSetlist(ADMIN, { setlistId, title })),
+        )
+
+        const ordered = await readTracksInOrder(setlistId)
+        expect(ordered.map((t) => t.order)).toEqual(
+            Array.from({ length: 9 }, (_, i) => i),
+        )
+        expect(new Set(ordered.map((t) => t.id)).size).toBe(9)
+        expect(ordered.slice(3).map((t) => t.title).sort()).toEqual(titles.sort())
+        expect(new Set(results.map((r) => (r as { trackId: string }).trackId)).size).toBe(6)
+    })
+
+    it("concurrent atomic bulk appends each preserve their block at the tail", async () => {
+        const { setlistId } = await seedDriftedSetlist([0, 2, 5])
+        const [a, b] = await Promise.all([
+            bulkAddSetlistTracks(ADMIN, {
+                setlistId,
+                tracks: [{ title: "A1" }, { title: "A2" }],
+            }),
+            bulkAddSetlistTracks(ADMIN, {
+                setlistId,
+                tracks: [{ title: "B1" }, { title: "B2" }],
+            }),
+        ])
+
+        const ordered = await readTracksInOrder(setlistId)
+        expect(ordered.map((t) => t.order)).toEqual(
+            Array.from({ length: 7 }, (_, i) => i),
+        )
+        const tailTitles = ordered.slice(3).map((t) => t.title)
+        expect(tailTitles).toEqual(
+            tailTitles[0].startsWith("A")
+                ? ["A1", "A2", "B1", "B2"]
+                : ["B1", "B2", "A1", "A2"],
+        )
+        expect(
+            [a, b].flatMap((r) =>
+                "results" in r
+                    ? r.results.map((row) => row.trackId)
+                    : [],
+            ),
+        ).toHaveLength(4)
     })
 })

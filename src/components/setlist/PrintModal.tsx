@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react"
 import { createPortal } from "react-dom"
-import { X, Printer, Download, Loader2, Mail, FileStack, ListChecks } from "lucide-react"
+import { X, Download, Loader2, Mail, FileStack, ListChecks, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SetlistTrack } from "@/types/models"
@@ -15,13 +15,32 @@ import { PrintModeSelector, PrintMode } from "./PrintModeSelector"
 import { PrintStats } from "./PrintStats"
 import { logger } from "@/lib/logger"
 import { toast } from "sonner"
-import { generatePdfBlob, generateZipBlob, downloadBlob } from "@/lib/print-generation"
+import {
+    generatePdfBlob,
+    generateZipBlob,
+    downloadBlob,
+    PrintChartsOmittedError,
+    type OmittedPrintChart,
+} from "@/lib/print-generation"
 
 const STORAGE_KEY = "crc-print-selection"
 
 interface SavedSelection {
     mode: PrintMode
     selectedUids: string[]
+}
+
+type PendingPacketAction = "download" | "email"
+
+/**
+ * Match preview_publish's unbonded-song boundary: an absent type is the
+ * backward-compatible song default, while explicit service-flow rows are
+ * intentionally chartless. The print pipeline needs fileId bytes, so a song
+ * row without one would otherwise disappear from a full packet silently.
+ */
+export function isPacketSongMissingChart(track: SetlistTrack): boolean {
+    const isSong = !track.type || track.type === "song"
+    return isSong && !(typeof track.fileId === "string" && track.fileId.trim())
 }
 
 function loadSavedSelection(): SavedSelection | null {
@@ -67,6 +86,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     const [generating, setGenerating] = useState(false)
     const [progressMsg, setProgressMsg] = useState("")
     const [error, setError] = useState<string | null>(null)
+    const [pendingPacketAction, setPendingPacketAction] = useState<PendingPacketAction | null>(null)
+    const [detectedOmissions, setDetectedOmissions] = useState<OmittedPrintChart[]>([])
 
     // Musicians
     const [musicians, setMusicians] = useState<{ uid: string; displayName: string; profile: MusicianProfile }[]>([])
@@ -179,6 +200,19 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     }, [printMode, trackTranspositions])
 
     const printableSelectedCount = tracks.filter(t => !!t.fileId && trackIncludedIds.has(t.id)).length
+    const missingChartItems = useMemo(() => {
+        const items = new Map<string, OmittedPrintChart>()
+        for (const track of tracks.filter(isPacketSongMissingChart)) {
+            items.set(track.id, {
+                title: track.title,
+                reason: "No chart is attached to this song.",
+            })
+        }
+        for (const omission of detectedOmissions) {
+            items.set(omission.fileId ?? `title:${omission.title}`, omission)
+        }
+        return [...items.values()]
+    }, [tracks, detectedOmissions])
 
     const myLabel = useMemo(() => {
         if (!myProfile?.instrument) return null
@@ -193,7 +227,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
     // ── PDF Generation (direct blob fetch — no Inngest, no Firestore polling) ──
     const generateForMusician = async (
-        name: string, transposition: number, preferFlats: boolean, capoFret: number
+        name: string, transposition: number, preferFlats: boolean, capoFret: number,
+        allowOmissions = false,
     ): Promise<Blob> => {
         return generatePdfBlob({
             title, date,
@@ -203,6 +238,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
             // Phase 4: qualifies every `p. <n>` on the cover's folio column.
             bookTitle: bookTitle || undefined,
             coverOnly,
+            allowOmissions,
             tracks: tracks.map(t => {
                 const useTransposition = printMode === "just-me"
                 const tp = useTransposition ? trackTranspositions[t.id] : null
@@ -267,7 +303,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
         }
     }
 
-    const handleGenerate = async () => {
+    const handleGenerate = async (allowOmissions = false) => {
         setGenerating(true)
         setError(null)
         setProgressMsg("Generating gig packet...")
@@ -286,7 +322,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
                     const blob = await generateForMusician(
                         name, m.profile.defaultTransposition || 0,
-                        m.profile.preferFlats || false, m.profile.preferredCapoFret || 0
+                        m.profile.preferFlats || false, m.profile.preferredCapoFret || 0,
+                        allowOmissions,
                     )
                     
                     completed++
@@ -329,16 +366,47 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                 }
             }
 
-            const blob = await generateForMusician(name, transposition, preferFlats, capoFret)
+            const blob = await generateForMusician(name, transposition, preferFlats, capoFret, allowOmissions)
 
             downloadBlob(blob, `${title.replace(/[^a-z0-9]/gi, '_')}.pdf`)
             
             onClose()
         } catch (e: unknown) {
+            if (e instanceof PrintChartsOmittedError) {
+                setDetectedOmissions(e.omittedCharts)
+                setPendingPacketAction("download")
+                setError(null)
+                return
+            }
             logger.error('Print generation failed:', e)
             setError(e instanceof Error ? e.message : 'Failed to generate PDF')
         } finally {
             setGenerating(false)
+        }
+    }
+
+    const beginPacketAction = (action: PendingPacketAction) => {
+        const actionNeedsCharts = action === "email" || !coverOnly
+        const hasKnownMissingChart = tracks.some(isPacketSongMissingChart)
+        if (actionNeedsCharts && (hasKnownMissingChart || detectedOmissions.length > 0)) {
+            setPendingPacketAction(action)
+            return
+        }
+
+        if (action === "email") {
+            setShowEmailConfirm(true)
+        } else {
+            void handleGenerate(false)
+        }
+    }
+
+    const proceedWithoutMissingCharts = () => {
+        const action = pendingPacketAction
+        setPendingPacketAction(null)
+        if (action === "email") {
+            setShowEmailConfirm(true)
+        } else if (action === "download") {
+            void handleGenerate(true)
         }
     }
 
@@ -364,7 +432,29 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
                 {/* Scrollable Content */}
                 <div className="overflow-y-auto flex-1 p-4 space-y-3 min-h-0">
-                    {showEmailConfirm ? (
+                    {pendingPacketAction ? (
+                        <div className="space-y-4 pb-4" role="alert" aria-labelledby="missing-chart-title">
+                            <div className="flex items-start gap-3 rounded-lg border border-amber-500/50 bg-amber-500/10 p-4">
+                                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+                                <div className="min-w-0 space-y-1">
+                                    <h3 id="missing-chart-title" className="font-semibold text-foreground">
+                                        {missingChartItems.length} chart{missingChartItems.length !== 1 ? "s need" : " needs"} attention
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        {pendingPacketAction === "email" ? "The emailed full packets" : "The full packet"} will leave {missingChartItems.length === 1 ? "this chart" : "these charts"} out. You can cancel and repair the {missingChartItems.length === 1 ? "chart" : "charts"}, or continue with the available charts and an omission notice.
+                                    </p>
+                                </div>
+                            </div>
+                            <ul className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3 text-sm" aria-label="Songs missing charts">
+                                {missingChartItems.map((item, index) => (
+                                    <li key={`${item.fileId ?? item.title}-${index}`}>
+                                        <span className="font-medium">{item.title}</span>
+                                        <span className="block text-xs text-muted-foreground">{item.reason}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ) : showEmailConfirm ? (
                         <div className="space-y-4 pb-4">
                             <div className="space-y-2">
                                 <h3 className="font-semibold text-lg text-foreground">Select Email Recipients</h3>
@@ -513,7 +603,19 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
                 {/* Actions */}
                 <div className="p-4 border-t border-border shrink-0 space-y-3">
-                    {showEmailConfirm ? (
+                    {pendingPacketAction ? (
+                        <div className="flex gap-3 w-full">
+                            <Button variant="outline" className="flex-1" onClick={() => {
+                                setPendingPacketAction(null)
+                                setDetectedOmissions([])
+                            }}>
+                                Cancel
+                            </Button>
+                            <Button className="flex-[2]" onClick={proceedWithoutMissingCharts}>
+                                Continue without {missingChartItems.length} chart{missingChartItems.length !== 1 ? "s" : ""}
+                            </Button>
+                        </div>
+                    ) : showEmailConfirm ? (
                         <div className="flex gap-3 w-full">
                             <Button variant="outline" className="flex-1" onClick={() => setShowEmailConfirm(false)} disabled={sendingEmails}>
                                 Cancel
@@ -532,7 +634,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                             <div className="flex gap-3">
                                 <Button
                                     className="flex-1 gap-2"
-                                    onClick={handleGenerate}
+                                    onClick={() => beginPacketAction("download")}
                                     disabled={!canGenerate}
                                 >
                                     {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
@@ -543,7 +645,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                 <Button
                                     variant="outline"
                                     className="w-full gap-2 text-muted-foreground"
-                                    onClick={() => setShowEmailConfirm(true)}
+                                    onClick={() => beginPacketAction("email")}
                                     disabled={sendingEmails}
                                 >
                                     <Mail className="h-4 w-4" />

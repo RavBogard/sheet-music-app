@@ -24,6 +24,12 @@ import {
 } from "@/lib/mcp/server-songs"
 import { isSongType } from "@/lib/setlist-track-count"
 import { logger } from "@/lib/logger"
+import {
+    WRITE_RECEIPTS_COLLECTION,
+    type StoredWriteReceipt,
+    writeInputHash,
+    writeReceiptId,
+} from "@/lib/mcp/write-receipts"
 
 /**
  * W-01 propose-then-confirm staging + commit lifecycle.
@@ -278,6 +284,10 @@ export interface CommitResult {
     addedTrackIds: string[]
     updatedTrackIds: string[]
     removedTrackIds: string[]
+    /** Durable proof used to recover a response lost after the atomic commit. */
+    receiptId: string
+    /** True when this response was recovered from the prior commit receipt. */
+    replayed: boolean
 }
 
 export async function commitStagedChanges(
@@ -301,8 +311,34 @@ export async function commitStagedChanges(
     if (!editor.ok) return editor
 
     const stageRef = db.collection("proposal_stages").doc(args.stageId)
+    // A stage is intrinsically one-shot, so stageId itself is the retry key:
+    // there is no legitimate second action for the same stage to hide.
+    const receiptId = writeReceiptId(
+        "commit_staged_changes",
+        uid,
+        org,
+        args.stageId,
+    )
+    const receiptRef = db.collection(WRITE_RECEIPTS_COLLECTION).doc(receiptId)
+    const inputHash = writeInputHash({ stageId: args.stageId })
+    const priorReceipt = await receiptRef.get()
+    if (priorReceipt.exists) {
+        const stored = priorReceipt.data() as StoredWriteReceipt<CommitResult>
+        if (stored.state === "complete" && stored.result) {
+            return { ...stored.result, receiptId, replayed: true }
+        }
+    }
     const stageSnap = await stageRef.get()
     if (!stageSnap.exists) {
+        // Close the read/read race with a concurrent successful commit: its
+        // transaction creates the receipt and deletes the stage atomically.
+        const racedReceipt = await receiptRef.get()
+        if (racedReceipt.exists) {
+            const stored = racedReceipt.data() as StoredWriteReceipt<CommitResult>
+            if (stored.state === "complete" && stored.result) {
+                return { ...stored.result, receiptId, replayed: true }
+            }
+        }
         return richError(
             "stage_not_found",
             `Stage '${args.stageId}' was not found (already committed, expired, or never created — stages are one-shot).`,
@@ -357,11 +393,33 @@ export async function commitStagedChanges(
               updatedTrackIds: string[]
               removedTrackIds: string[]
           }
+        | { kind: "replay"; result: CommitResult }
         | { kind: "stale_version"; envelope: StaleVersionEnvelope }
         | { kind: "error"; envelope: RichErrorEnvelope }
 
     const txResult = await db.runTransaction<TxResult>(async (tx) => {
-        const setlistSnap = await tx.get(setlistRef)
+        const [receiptSnap, setlistSnap] = await Promise.all([
+            tx.get(receiptRef),
+            tx.get(setlistRef),
+        ])
+        if (receiptSnap.exists) {
+            const stored = receiptSnap.data() as StoredWriteReceipt<CommitResult>
+            if (stored.state === "complete" && stored.result) {
+                return {
+                    kind: "replay",
+                    result: { ...stored.result, receiptId, replayed: true },
+                }
+            }
+            return {
+                kind: "error",
+                envelope: richError(
+                    "operation_in_progress",
+                    `Commit receipt '${receiptId}' exists but is not complete.`,
+                    { receiptId, stageId: args.stageId },
+                    "Retry with the same stageId.",
+                ),
+            }
+        }
         if (!setlistSnap.exists) {
             return {
                 kind: "error",
@@ -608,6 +666,29 @@ export async function commitStagedChanges(
             fileIds: [...canonical],
         }
         tx.update(setlistRef, setlistPatch)
+        const committedResult: CommitResult = {
+            ok: true,
+            stageId: args.stageId,
+            setlistId: stage.setlistId,
+            appliedCount: stage.proposals.length,
+            setlistVersion: currentVersion + 1,
+            addedTrackIds,
+            updatedTrackIds,
+            removedTrackIds: [...removedTrackIds],
+            receiptId,
+            replayed: false,
+        }
+        tx.create(receiptRef, {
+            tool: "commit_staged_changes",
+            uid,
+            orgId: org,
+            idempotencyKey: args.stageId,
+            inputHash,
+            state: "complete",
+            result: committedResult,
+            createdAt: FieldValue.serverTimestamp(),
+            completedAt: FieldValue.serverTimestamp(),
+        } satisfies StoredWriteReceipt<CommitResult>)
         tx.delete(stageRef)
 
         return {
@@ -621,6 +702,7 @@ export async function commitStagedChanges(
 
     if (txResult.kind === "stale_version") return txResult.envelope
     if (txResult.kind === "error") return txResult.envelope
+    if (txResult.kind === "replay") return txResult.result
 
     logger.info("[mcp] commit_staged_changes committed", {
         stageId: args.stageId,
@@ -637,6 +719,8 @@ export async function commitStagedChanges(
         addedTrackIds: txResult.addedTrackIds,
         updatedTrackIds: txResult.updatedTrackIds,
         removedTrackIds: txResult.removedTrackIds,
+        receiptId,
+        replayed: false,
     }
 }
 

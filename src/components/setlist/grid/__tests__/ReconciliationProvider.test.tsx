@@ -123,7 +123,7 @@ function makeAdapter(
 // (hasConflict = false). Tests that asserted modal-opening behavior are
 // skipped pending the Tier 3 Y.js pivot which deletes the modal entirely.
 // The classifyOutboxError unit tests below remain active (pure function).
-describe.skip('ReconciliationProvider', () => {
+describe('ReconciliationProvider', () => {
     beforeEach(async () => {
         await resetDbForTests()
         setMockState('idle')
@@ -228,6 +228,41 @@ describe.skip('ReconciliationProvider', () => {
         const theirLabels = await screen.findAllByText(/Their version/)
         expect(yourLabels.length).toBe(3)
         expect(theirLabels.length).toBe(3)
+    })
+
+    it('shows only version mismatches when unrelated failed saves also exist', async () => {
+        await seedTrack('t1', { title: 'Aleinu', key: 'F' })
+        await seedTrack('t2', { title: 'Lecha Dodi', key: 'G' })
+        await seedFailedRows([
+            {
+                docId: 't1',
+                payload: { key: 'A' },
+                lastError: 'expected updatedAt=1000, remote=2000',
+            },
+            {
+                docId: 't2',
+                payload: { key: 'D' },
+                lastError: 'Auth failure on tracks/t2: permission-denied',
+            },
+        ])
+        const adapter = makeAdapter({
+            t1: { data: { id: 't1', key: 'G' }, updatedAt: 2000 },
+            t2: { data: { id: 't2', key: 'C' }, updatedAt: 2000 },
+        })
+
+        setMockState('conflict')
+        render(
+            <ReconciliationProvider adapter={adapter}>
+                <span>child</span>
+            </ReconciliationProvider>,
+        )
+
+        await screen.findByTestId('reconciliation-dialog')
+        await waitFor(() => expect(adapter.readDocCalls).toHaveLength(1))
+        expect(adapter.readDocCalls[0]).toEqual(['tracks', 't1'])
+        expect(screen.getAllByTestId(/^reconciliation-card-/)).toHaveLength(1)
+        expect(screen.getByText('Aleinu')).toBeInTheDocument()
+        expect(screen.queryByText('Lecha Dodi')).toBeNull()
     })
 
     it('AC-3 (mine path): "Resolve all and save" calls onResolveConflict with chosen value + newExpectedUpdatedAt', async () => {
@@ -484,7 +519,7 @@ describe('T1.4: classifyOutboxError', () => {
     })
 })
 
-describe.skip('T1.4: modal title adapts to error kinds', () => {
+describe('T1.4: modal title adapts to error kinds', () => {
     beforeEach(async () => {
         await resetDbForTests()
         setMockState('idle')

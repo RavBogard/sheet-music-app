@@ -231,17 +231,10 @@ export function ReconciliationProvider({
         [failedRows],
     )
 
-    // P0 (2026-05-12, second pass): the modal adds nothing the user
-    // actually wants — even "Keep mine / Take theirs" radios on real
-    // version-mismatch rows are friction rather than utility for a sole-
-    // user app. Force-disable the modal entirely. Failed outbox rows still
-    // surface via SyncIndicator's "Failed — retry" pill, and Fix #3 in
-    // engine.ts auto-heals legacy-unstamped VersionMismatchErrors before
-    // they ever reach 'failed' state. This whole component goes away in
-    // the Tier 3 Y.js pivot; until then it's effectively dormant.
-    const hasConflict = false
-    void state
-    void conflictRows
+    // A real optimistic-concurrency mismatch must stay visible until the
+    // user chooses which row to keep. Network/auth failures remain on the
+    // ordinary retry path and never appear in this dialog.
+    const hasConflict = state === 'conflict' && conflictRows.length > 0
 
     // Bug 2 fix (2026-05-12): the modal must actually open. The previous
     // `const open = false` plus no-op `openModal/closeModal` stub meant the
@@ -300,7 +293,7 @@ export function ReconciliationProvider({
         setSnapshotsLoading(true)
         const next = new Map<string, RemoteDocSnapshot | null>()
         Promise.all(
-            failedRows.map(async (r) => {
+            conflictRows.map(async (r) => {
                 try {
                     const snap = await adapter.readDoc(r.collection, r.docId)
                     next.set(rowKey(r), snap)
@@ -338,7 +331,7 @@ export function ReconciliationProvider({
         const next = new Map<string, string>()
         const db = getDb()
         Promise.all(
-            failedRows.map(async (r) => {
+            conflictRows.map(async (r) => {
                 try {
                     const local = (await db[r.collection].get(r.docId)) as
                         | { title?: string; name?: string }
@@ -356,7 +349,7 @@ export function ReconciliationProvider({
         return () => {
             cancelled = true
         }
-    }, [idSetKey, open, failedRows])
+    }, [idSetKey, open, conflictRows])
 
     // Real open / close handlers (the previous no-op stubs are what made the
     // modal invisible). `openModal` is called from SyncIndicator's conflict
@@ -382,7 +375,7 @@ export function ReconciliationProvider({
                   if (!engine) return
                   await engine.resolveConflict(localId, choice, opts)
               }
-        for (const r of failedRows) {
+        for (const r of conflictRows) {
             // Bug 2 fix (2026-05-12): respect the user's per-row choice.
             // The previous hardcoded 'mine' silently overwrote cross-device
             // edits regardless of intent. Default is 'theirs' (safe — user
@@ -405,7 +398,7 @@ export function ReconciliationProvider({
         }
         setChoices(new Map())
         setDismissedKey(null)
-    }, [choices, failedRows, remoteSnapshots, resolveOverride])
+    }, [choices, conflictRows, remoteSnapshots, resolveOverride])
 
     const value = useMemo<ReconciliationContextValue>(
         () => ({ openModal }),
@@ -454,7 +447,7 @@ export function ReconciliationProvider({
                         // existing UX). When any row is a non-conflict
                         // failure, switch to neutral title; per-row cards
                         // surface the specific cause.
-                        const kinds = failedRows.map((r) =>
+                        const kinds = conflictRows.map((r) =>
                             classifyOutboxError(r.lastError),
                         )
                         const allVersionMismatch = kinds.every(
@@ -464,8 +457,8 @@ export function ReconciliationProvider({
                             ? 'Remote changes detected'
                             : 'Some saves need attention'
                         const desc = allVersionMismatch
-                            ? `Someone else (or another device) changed ${failedRows.length === 1 ? 'this row' : 'these rows'} while you were editing. Pick which version to keep. "Take theirs" is the safe default.`
-                            : `${failedRows.length === 1 ? 'A row' : `${failedRows.length} rows`} couldn’t be saved. Each card below explains why and what to do.`
+                            ? `Someone else (or another device) changed ${conflictRows.length === 1 ? 'this row' : 'these rows'} while you were editing. Pick which version to keep. "Take theirs" is the safe default.`
+                            : `${conflictRows.length === 1 ? 'A row' : `${conflictRows.length} rows`} couldn’t be saved. Each card below explains why and what to do.`
                         return (
                             <AlertDialogHeader>
                                 <AlertDialogTitle data-testid="reconciliation-title">
@@ -479,7 +472,7 @@ export function ReconciliationProvider({
                     })()}
 
                     <div className="max-h-[60vh] overflow-y-auto space-y-3 py-2">
-                        {failedRows.map((r) => {
+                        {conflictRows.map((r) => {
                             const remote = remoteSnapshots.get(rowKey(r))
                             const title =
                                 titleMap.get(rowKey(r)) ?? r.docId
@@ -523,7 +516,7 @@ export function ReconciliationProvider({
                             }}
                             disabled={
                                 snapshotsLoading ||
-                                remoteSnapshots.size < failedRows.length
+                                remoteSnapshots.size < conflictRows.length
                             }
                         >
                             Resolve all and save
