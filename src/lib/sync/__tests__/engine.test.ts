@@ -75,7 +75,7 @@ class FakeClock implements EngineClock {
     async advance(ms: number): Promise<void> {
         const target = this.t + ms
         await flushAll()
-        // eslint-disable-next-line no-constant-condition
+
         while (true) {
             this.timers.sort((a, b) => a.at - b.at)
             const due = this.timers.find((t) => t.at <= target)

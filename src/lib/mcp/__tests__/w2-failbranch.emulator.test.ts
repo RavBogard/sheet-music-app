@@ -67,7 +67,7 @@ describe("G2 fail branch — a run that cannot record refuses to hide", () => {
 
         const broken = "error" in r
 
-        // eslint-disable-next-line no-console
+
         console.log(
             "[G2 FAIL BRANCH]",
             JSON.stringify(

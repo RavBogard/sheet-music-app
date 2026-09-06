@@ -42,7 +42,7 @@ export default async function LoginPage() {
                         {/* v11.1-05: the band's real wordmark replaces the plain text title. */}
                         {wordmarkUrl ? (
                             <h1 className="drop-shadow-[0_2px_16px_rgba(0,0,0,0.6)]">
-                                {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset on the SSR'd login skeleton */}
+                                { }
                                 <img
                                     src={wordmarkUrl}
                                     alt={shortName}
@@ -110,7 +110,7 @@ export default async function LoginPage() {
                 <div className="flex flex-col items-center gap-4">
                     <div className="relative">
                         <div className="absolute inset-0 rounded-full bg-brand/15 blur-xl scale-150" aria-hidden="true" />
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        { }
                         <img
                             src={logoUrl}
                             alt={shortName}

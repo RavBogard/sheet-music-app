@@ -117,7 +117,7 @@ describe("MCP backfill_content_hash (emulator)", () => {
         const r = await backfillContentHash(ADMIN, { dryRun: false, force: true })
         if ("error" in r) throw new Error(JSON.stringify(r.error))
 
-        // eslint-disable-next-line no-console
+
         console.log(
             "[G4 FAIL BRANCH]",
             JSON.stringify(

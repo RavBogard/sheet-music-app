@@ -44,7 +44,7 @@ export function MobileHeader({
                 {/* Center: Logo + Name (v11.1-05: real wordmark image replaces it when set) */}
                 <Link href="/" className="flex items-center gap-2 group">
                     {serverWordmarkUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- small static brand asset
+
                         <img
                             src={serverWordmarkUrl}
                             alt={serverOrgShortName ?? congregation.shortName}

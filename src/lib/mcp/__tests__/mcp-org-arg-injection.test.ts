@@ -41,7 +41,7 @@ describe("v11-06-02 no-arg-injection: no MCP tool accepts a caller-suppliable or
             // defensive no-ops in case any entrypoint grows another call shape
             registerResource() {},
             registerPrompt() {},
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         } as any
 
         registerReadTools(mockServer)

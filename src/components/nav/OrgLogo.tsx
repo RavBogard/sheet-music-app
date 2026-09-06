@@ -37,7 +37,7 @@ export function OrgLogo({
 
     if (logoUrl) {
         return (
-            // eslint-disable-next-line @next/next/no-img-element -- parity with the prior nav <img>; a tiny static logo doesn't need next/image
+
             <img
                 src={logoUrl}
                 alt={alt}

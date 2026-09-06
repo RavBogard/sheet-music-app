@@ -84,7 +84,7 @@ export function MonitorTabs({
     error,
     snapshotSeq,
     onBusMaster,
-    onBusOn: _onBusOn, // eslint-disable-line @typescript-eslint/no-unused-vars -- on-contract for symmetry; see prop-type comment
+    onBusOn: _onBusOn,
     onSendLevel,
     onSendOn,
     onMatrixFader,

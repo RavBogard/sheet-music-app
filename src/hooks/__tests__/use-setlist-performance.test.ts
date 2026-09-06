@@ -325,7 +325,7 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
     })
 
     const stopFn = vi.fn()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const startFn = vi.fn((_opts: any) => stopFn)
 
     const { unmount } = renderHook(() =>
@@ -406,7 +406,7 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
 
       const { result } = renderHook(() =>
         useSetlistPerformance(SETLIST_ID, {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           initial: { setlist: initialSetlist as any, tracks: initialTracks as any },
         }),
       )
@@ -446,7 +446,7 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
 
       const { result } = renderHook(() =>
         useSetlistPerformance(SETLIST_ID, {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           initial: {
             setlist: { id: SETLIST_ID, name: 'SSR Name' } as any,
             tracks: [{ id: 'ssr-only', title: 'SSR Only', key: 'C' } as any],

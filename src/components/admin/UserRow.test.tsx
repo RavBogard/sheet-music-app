@@ -37,7 +37,7 @@ beforeAll(() => {
     }
 })
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const musician: any = {
     uid: "m1",
     displayName: "Alex",
@@ -49,10 +49,10 @@ const musician: any = {
 function renderRow(currentUserRole: string) {
     return render(
         <UserRow
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             user={musician as any}
             currentUserUid="admin-uid"
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             currentUserRole={currentUserRole as any}
         />,
     )

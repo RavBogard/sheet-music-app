@@ -649,7 +649,7 @@ describe('SetlistGridHydrator', () => {
     // behavior is covered by snapshot-listener.test.ts.
     it('starts the snapshot listener after hydration; unsubscribes on unmount', async () => {
         const stopFn = vi.fn()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const startFn = vi.fn((_opts: any) => stopFn)
 
         const { findByTestId, unmount } = render(

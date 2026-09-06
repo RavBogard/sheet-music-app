@@ -171,7 +171,7 @@ describe("MCP undo_dedupe_group (emulator)", () => {
         // `richError` spreads its extras at the TOP LEVEL of the envelope
         // (errors.ts:215-220), not under `error.data`.
         const d = r as unknown as Record<string, number>
-        // eslint-disable-next-line no-console
+
         console.log("[G3 REFUSAL]", JSON.stringify(r, null, 2))
 
         expect(d.markedRowsTotal).toBe(3)

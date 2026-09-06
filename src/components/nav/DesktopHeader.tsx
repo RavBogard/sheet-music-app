@@ -107,7 +107,7 @@ export function DesktopHeader(props: AppNavigationProps) {
                     {/* v11.1-01: server-resolved host-org branding first (flash-free); congregation store is the live-update fallback.
                         v11.1-05: a real wordmark image (broslaz) replaces the monogram+text lockup. */}
                     {props.serverWordmarkUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- small static brand asset; parity with the prior nav <img>
+
                         <img
                             src={props.serverWordmarkUrl}
                             alt={props.serverOrgShortName ?? congregation.shortName}

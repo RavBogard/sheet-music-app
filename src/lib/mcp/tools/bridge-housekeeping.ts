@@ -124,7 +124,7 @@ async function deleteSubcollection(
     let total = 0
     // Iterate until a fetch returns fewer than BATCH_SIZE docs — that's the
     // last page. We never re-page on the same set because deletes shrink it.
-    // eslint-disable-next-line no-constant-condition
+
     while (true) {
         const snap = await db.collection(path).limit(BATCH_SIZE).get()
         if (snap.empty) break

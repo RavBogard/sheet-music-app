@@ -87,7 +87,7 @@ class FakeClock {
         const target = this.t + ms
         // Iterate carefully — handlers may schedule new timers.
         // Process in chronological order until target.
-        // eslint-disable-next-line no-constant-condition
+
         while (true) {
             this.timers.sort((a, b) => a.at - b.at)
             const due = this.timers.find((t) => t.at <= target)
