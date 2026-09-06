@@ -58,3 +58,61 @@ export function rejectDisallowedReaderOrigin(request: Request): Response | null 
           )
         : null
 }
+
+const PUBLIC_READER_BYTES_CACHE =
+    "public, max-age=60, s-maxage=300, must-revalidate"
+
+export function publicReaderMusicHeaders(
+    request: Request,
+    cache: "no-store" | "approved-bytes" = "no-store",
+): HeadersInit {
+    const headers: Record<string, string> = {
+        "Cache-Control":
+            cache === "approved-bytes" ? PUBLIC_READER_BYTES_CACHE : "no-store",
+        "X-Content-Type-Options": "nosniff",
+        Vary: "Origin",
+    }
+    const origin = readerMusicOrigin(request)
+    if (origin) headers["Access-Control-Allow-Origin"] = origin
+    return headers
+}
+
+export function withPublicReaderMusicHeaders(
+    request: Request,
+    response: Response,
+    cache: "no-store" | "approved-bytes" = "no-store",
+): Response {
+    const headers = publicReaderMusicHeaders(request, cache) as Record<string, string>
+    for (const [name, value] of Object.entries(headers)) {
+        response.headers.set(name, value)
+    }
+    return response
+}
+
+/** Public chart CORS never permits credentials or Authorization headers. */
+export function publicReaderMusicPreflight(request: Request): Response {
+    const suppliedOrigin = request.headers.get("origin")
+    const origin = readerMusicOrigin(request)
+    if (suppliedOrigin && !origin) {
+        return withPublicReaderMusicHeaders(
+            request,
+            NextResponse.json({ status: "unavailable" }, { status: 403 }),
+        )
+    }
+    const response = new NextResponse(null, { status: 204 })
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type")
+    response.headers.set("Access-Control-Max-Age", "600")
+    return withPublicReaderMusicHeaders(request, response)
+}
+
+export function rejectDisallowedPublicReaderOrigin(
+    request: Request,
+): Response | null {
+    return request.headers.get("origin") && !readerMusicOrigin(request)
+        ? withPublicReaderMusicHeaders(
+              request,
+              NextResponse.json({ status: "unavailable" }, { status: 403 }),
+          )
+        : null
+}

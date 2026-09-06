@@ -3,6 +3,7 @@ import { getFirestore } from "firebase-admin/firestore"
 
 import { fetchFileById, type FetchedFile } from "@/lib/file-fetcher"
 import { initAdmin } from "@/lib/firebase-admin"
+import { downloadFromStorage } from "@/lib/firebase-storage"
 import { rowOrg, rowOrgIds, userInOrg } from "@/lib/org/membership"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import {
@@ -11,6 +12,12 @@ import {
     type ReaderMusicCrosswalk,
     type ReaderMusicSetlist,
 } from "@/lib/reader-music"
+import {
+    approvedPublicReaderCrosswalk,
+    isSafePublicReaderChart,
+    publicReaderChartDefinition,
+    type PublicReaderChartDefinition,
+} from "@/lib/reader-music-public"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 
 const ELIGIBLE_ROLES = new Set(["member", "musician", "band_leader", "admin"])
@@ -110,6 +117,17 @@ async function reviewedCrosswalk(
     }
 }
 
+async function approvedPublicCrosswalk(
+    definition: PublicReaderChartDefinition,
+): Promise<ReaderMusicCrosswalk | null> {
+    const snap = await getFirestore()
+        .collection("reader_music_crosswalk")
+        .doc(definition.unitId)
+        .get()
+    if (!snap.exists) return null
+    return approvedPublicReaderCrosswalk(snap.data() ?? {}, definition)
+}
+
 async function bindingIsActiveAndAuthorized(
     binding: ReaderMusicBinding,
     orgId: string,
@@ -141,11 +159,17 @@ export async function resolveReaderMusic(
 ): Promise<ResolvedReaderMusic> {
     const crosswalk = await reviewedCrosswalk(unitId, orgId)
     if (!crosswalk) return { status: "unavailable" }
+    return resolveWithCrosswalk(crosswalk, nowMs)
+}
 
+async function resolveWithCrosswalk(
+    crosswalk: ReaderMusicCrosswalk,
+    nowMs: number,
+): Promise<ResolvedReaderMusic> {
     const db = getFirestore()
     const snap = await db
         .collection("setlists")
-        .where("orgId", "==", orgId)
+        .where("orgId", "==", crosswalk.orgId)
         .get()
     const setlists = snap.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() }) as ReaderMusicSetlist,
@@ -158,12 +182,40 @@ export async function resolveReaderMusic(
             getTracksForSetlist: (setlistId, setlist) =>
                 getTracksForSetlist(db, setlistId, setlist),
             isBindingAuthorized: (binding) =>
-                bindingIsActiveAndAuthorized(binding, orgId),
+                bindingIsActiveAndAuthorized(binding, crosswalk.orgId),
         },
     )
     return selection.status === "available"
         ? { ...selection, pieceId: crosswalk.pieceId }
         : selection
+}
+
+export type PublicResolvedReaderMusic = {
+    status: "available"
+    binding: ReaderMusicBinding
+    definition: PublicReaderChartDefinition
+} | { status: "unavailable" }
+
+/** Anonymous resolution has no user/profile dependency and no arbitrary-id path. */
+export async function resolvePublicReaderMusic(
+    unitId: string,
+    nowMs = Date.now(),
+): Promise<PublicResolvedReaderMusic> {
+    const definition = publicReaderChartDefinition(unitId)
+    if (!definition) return { status: "unavailable" }
+    if (!initAdmin()) return { status: "unavailable" }
+    const crosswalk = await approvedPublicCrosswalk(definition)
+    if (!crosswalk) return { status: "unavailable" }
+    const resolved = await resolveWithCrosswalk(crosswalk, nowMs)
+    if (
+        resolved.status !== "available" ||
+        resolved.pieceId !== definition.pieceId ||
+        resolved.binding.mimeType?.split(";", 1)[0]?.trim().toLowerCase() !==
+            definition.contentType
+    ) {
+        return { status: "unavailable" }
+    }
+    return { status: "available", binding: resolved.binding, definition }
 }
 
 export async function fetchResolvedReaderMusic(
@@ -178,4 +230,29 @@ export async function fetchResolvedReaderMusic(
     )
     if (!file) return null
     return { binding: resolved.binding, file }
+}
+
+export async function fetchPublicResolvedReaderMusic(
+    unitId: string,
+): Promise<{
+    definition: PublicReaderChartDefinition
+    buffer: Buffer
+} | null> {
+    const resolved = await resolvePublicReaderMusic(unitId)
+    if (resolved.status !== "available") return null
+    const storage = await downloadFromStorage(
+        resolved.binding.fileId,
+        resolved.definition.contentType,
+    )
+    if (
+        !storage.success ||
+        !isSafePublicReaderChart(
+            storage.data.contentType,
+            storage.data.buffer,
+            resolved.definition,
+        )
+    ) {
+        return null
+    }
+    return { definition: resolved.definition, buffer: storage.data.buffer }
 }

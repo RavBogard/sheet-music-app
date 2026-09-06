@@ -1,24 +1,57 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 import {
-    readerMusicPreflight,
-    rejectDisallowedReaderOrigin,
-    withReaderMusicHeaders,
+    publicReaderMusicPreflight,
+    rejectDisallowedPublicReaderOrigin,
+    withPublicReaderMusicHeaders,
 } from "@/lib/reader-music-http"
-import {
-    authorizeReaderMusic,
-    resolveReaderMusic,
-} from "@/lib/reader-music-server"
+import { publicReaderChartDefinition } from "@/lib/reader-music-public"
+import { resolvePublicReaderMusic } from "@/lib/reader-music-server"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 export const dynamic = "force-dynamic"
-export const OPTIONS = readerMusicPreflight
+export const OPTIONS = publicReaderMusicPreflight
+
+const MAX_SELECTION_BODY_BYTES = 512
+
+async function readBoundedBody(request: Request): Promise<string | null> {
+    if (!request.body) return ""
+    const reader = request.body.getReader()
+    const chunks: Uint8Array[] = []
+    let total = 0
+    try {
+        while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            total += value.byteLength
+            if (total > MAX_SELECTION_BODY_BYTES) {
+                await reader.cancel()
+                return null
+            }
+            chunks.push(value)
+        }
+    } finally {
+        reader.releaseLock()
+    }
+    const bytes = new Uint8Array(total)
+    let offset = 0
+    for (const chunk of chunks) {
+        bytes.set(chunk, offset)
+        offset += chunk.byteLength
+    }
+    try {
+        return new TextDecoder("utf-8", { fatal: true }).decode(bytes)
+    } catch {
+        return null
+    }
+}
 
 function calmUnavailable(
     request: Request,
     status: number,
     unitId?: string,
 ): Response {
-    return withReaderMusicHeaders(
+    return withPublicReaderMusicHeaders(
         request,
         NextResponse.json(
             unitId ? { status: "unavailable", unitId } : { status: "unavailable" },
@@ -27,21 +60,32 @@ function calmUnavailable(
     )
 }
 
-export async function POST(request: Request): Promise<Response> {
+function rateLimited(request: Request, limited: Response): Response {
+    const response = calmUnavailable(request, 429)
+    const retryAfter = limited.headers.get("Retry-After")
+    if (retryAfter && /^\d+$/.test(retryAfter)) {
+        response.headers.set("Retry-After", retryAfter)
+    }
+    return response
+}
+
+export async function POST(request: NextRequest): Promise<Response> {
     try {
-        const originFailure = rejectDisallowedReaderOrigin(request)
+        const originFailure = rejectDisallowedPublicReaderOrigin(request)
         if (originFailure) return originFailure
-        const access = await authorizeReaderMusic(request, true)
-        if (!access.ok) {
-            return calmUnavailable(
-                request,
-                access.kind === "unauthenticated" ? 401 : 403,
-            )
+
+        const declaredLength = Number(request.headers.get("content-length") ?? "0")
+        if (Number.isFinite(declaredLength) && declaredLength > MAX_SELECTION_BODY_BYTES) {
+            return calmUnavailable(request, 400)
         }
+        const limited = await checkRateLimit(request, "api")
+        if (limited) return rateLimited(request, limited)
 
         let body: unknown
         try {
-            body = await request.json()
+            const raw = await readBoundedBody(request)
+            if (raw === null) return calmUnavailable(request, 400)
+            body = JSON.parse(raw)
         } catch {
             return calmUnavailable(request, 400)
         }
@@ -55,18 +99,20 @@ export async function POST(request: Request): Promise<Response> {
             return calmUnavailable(request, 400)
         }
         const unitId = (body as { unitId: string }).unitId.trim()
-        const resolved = await resolveReaderMusic(unitId, access.orgId)
-        if (resolved.status !== "available" || !resolved.pieceId) {
+        const definition = publicReaderChartDefinition(unitId)
+        if (!definition) return calmUnavailable(request, 200, unitId)
+        const resolved = await resolvePublicReaderMusic(unitId)
+        if (resolved.status !== "available") {
             return calmUnavailable(request, 200, unitId)
         }
 
-        return withReaderMusicHeaders(
+        return withPublicReaderMusicHeaders(
             request,
             NextResponse.json({
                 status: "available",
                 unitId,
-                pieceId: resolved.pieceId,
-                selection: resolved.binding,
+                kind: definition.kind,
+                contentType: definition.contentType,
                 chartUrl: `/api/reader/music/chart?unitId=${encodeURIComponent(unitId)}`,
             }),
         )
