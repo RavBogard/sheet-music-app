@@ -128,6 +128,158 @@ describe('useWakeLock', () => {
     expect(result.current.isLocked).toBe(false)
   })
 
+  it('coalesces overlapping acquire attempts into one sentinel', async () => {
+    let resolveRequest!: (sentinel: ReturnType<typeof createMockSentinel>) => void
+    const sentinel = createMockSentinel()
+    requestSpy.mockImplementation(
+      () => new Promise(resolve => {
+        resolveRequest = resolve
+      }),
+    )
+
+    const { result } = renderHook(() => useWakeLock())
+
+    let first!: Promise<void>
+    let second!: Promise<void>
+    act(() => {
+      first = result.current.requestWakeLock()
+      second = result.current.ensureLock()
+    })
+
+    expect(requestSpy).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      resolveRequest(sentinel)
+      await Promise.all([first, second])
+    })
+
+    expect(result.current.isLocked).toBe(true)
+    await act(async () => {
+      await result.current.releaseWakeLock()
+    })
+    expect(sentinel.release).toHaveBeenCalledTimes(1)
+  })
+
+  it('releases an acquire that resolves after the musician turns keep-awake off', async () => {
+    let resolveRequest!: (sentinel: ReturnType<typeof createMockSentinel>) => void
+    const sentinel = createMockSentinel()
+    requestSpy.mockImplementation(
+      () => new Promise(resolve => {
+        resolveRequest = resolve
+      }),
+    )
+
+    const { result } = renderHook(() => useWakeLock())
+
+    let pending!: Promise<void>
+    act(() => {
+      pending = result.current.requestWakeLock()
+    })
+    await act(async () => {
+      await result.current.releaseWakeLock()
+    })
+
+    await act(async () => {
+      resolveRequest(sentinel)
+      await pending
+    })
+
+    expect(sentinel.release).toHaveBeenCalledTimes(1)
+    expect(result.current.isArmed).toBe(false)
+    expect(result.current.isLocked).toBe(false)
+    expect(window.localStorage.getItem(KEEP_AWAKE_INTENT_KEY)).toBe('0')
+  })
+
+  it('does not show a late rejection after the musician turns keep-awake off', async () => {
+    let rejectRequest!: (error: DOMException) => void
+    requestSpy.mockImplementation(
+      () => new Promise((_resolve, reject) => {
+        rejectRequest = reject
+      }),
+    )
+
+    const { result } = renderHook(() => useWakeLock())
+
+    let pending!: Promise<void>
+    act(() => {
+      pending = result.current.requestWakeLock()
+    })
+    await act(async () => {
+      await result.current.releaseWakeLock()
+    })
+    await act(async () => {
+      rejectRequest(new DOMException('Denied', 'NotAllowedError'))
+      await pending
+    })
+
+    expect(result.current.isArmed).toBe(false)
+    expect(result.current.isLocked).toBe(false)
+    expect(result.current.lastError).toBeNull()
+  })
+
+  it('releases an acquire that resolves after the Perform surface unmounts', async () => {
+    let resolveRequest!: (sentinel: ReturnType<typeof createMockSentinel>) => void
+    const sentinel = createMockSentinel()
+    requestSpy.mockImplementation(
+      () => new Promise(resolve => {
+        resolveRequest = resolve
+      }),
+    )
+
+    const { result, unmount } = renderHook(() => useWakeLock())
+
+    let pending!: Promise<void>
+    act(() => {
+      pending = result.current.requestWakeLock()
+    })
+    unmount()
+
+    await act(async () => {
+      resolveRequest(sentinel)
+      await pending
+    })
+
+    expect(sentinel.release).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores a stale release event after a replacement sentinel is active', async () => {
+    const releaseHandlers: Array<() => void> = []
+    const createTrackedSentinel = () => ({
+      release: vi.fn(() => Promise.resolve()),
+      addEventListener: vi.fn((event: string, handler: () => void) => {
+        if (event === 'release') releaseHandlers.push(handler)
+      }),
+      released: false,
+      type: 'screen',
+    })
+    const firstSentinel = createTrackedSentinel()
+    const secondSentinel = createTrackedSentinel()
+    requestSpy
+      .mockResolvedValueOnce(firstSentinel)
+      .mockResolvedValueOnce(secondSentinel)
+
+    const { result } = renderHook(() => useWakeLock())
+    await act(async () => {
+      await result.current.requestWakeLock()
+    })
+
+    firstSentinel.released = true
+    await act(async () => {
+      await result.current.ensureLock()
+    })
+    expect(result.current.isLocked).toBe(true)
+
+    act(() => {
+      releaseHandlers[0]?.()
+    })
+
+    expect(result.current.isLocked).toBe(true)
+    await act(async () => {
+      await result.current.releaseWakeLock()
+    })
+    expect(secondSentinel.release).toHaveBeenCalledTimes(1)
+  })
+
   it('handles NotAllowedError gracefully', async () => {
     const notAllowedError = new DOMException('Not allowed', 'NotAllowedError')
     requestSpy.mockRejectedValue(notAllowedError)
@@ -311,6 +463,42 @@ describe('useWakeLock', () => {
       'a second wakeLock.request must fire when the tab becomes visible again with the intent still armed',
     ).toHaveBeenCalledTimes(2)
     expect(result.current.isLocked).toBe(true)
+  })
+
+  it('surfaces a failed foreground re-acquire and recovers on the next tap', async () => {
+    const firstSentinel = createMockSentinel()
+    const recoveredSentinel = createMockSentinel()
+    requestSpy
+      .mockResolvedValueOnce(firstSentinel)
+      .mockRejectedValueOnce(new DOMException('Denied', 'NotAllowedError'))
+      .mockResolvedValueOnce(recoveredSentinel)
+
+    const { result } = renderHook(() => useWakeLock())
+    await act(async () => {
+      await result.current.requestWakeLock()
+    })
+
+    firstSentinel.released = true
+    act(() => {
+      releaseHandler?.()
+    })
+    expect(result.current.isLocked).toBe(false)
+
+    setDocumentVisibility('visible')
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+
+    expect(result.current.isArmed).toBe(true)
+    expect(result.current.isLocked).toBe(false)
+    expect(result.current.lastError).toBe('denied')
+
+    await act(async () => {
+      await result.current.requestWakeLock()
+    })
+
+    expect(result.current.isLocked).toBe(true)
+    expect(result.current.lastError).toBeNull()
   })
 
   it('does NOT stack a second sentinel when the first survived the visibility change', async () => {

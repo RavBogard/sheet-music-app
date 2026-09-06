@@ -56,7 +56,7 @@ export interface KeepAwakeToggleProps {
     isActive: boolean
     /** Whether the WakeLock API is available in this browser. */
     isSupported: boolean
-    /** Acquire a wake-lock — MUST be called from inside a user-gesture handler. */
+    /** Acquire a wake-lock. A direct user gesture is the strongest retry path. */
     onRequest: () => void | Promise<void>
     /** Release the held wake-lock. */
     onRelease: () => void | Promise<void>

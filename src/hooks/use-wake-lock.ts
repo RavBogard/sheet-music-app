@@ -94,9 +94,9 @@ function exposeSentinelForProbe(sentinel: WakeLockSentinel | null): void {
  *   (`document.visibilityState === 'hidden'`). The musician likely tapped
  *   the toggle from the home-screen icon or with the chart backgrounded;
  *   the fix is "tap the chart to re-focus and retry".
- * - `'denied'` — `NotAllowedError` from a non-hidden context: no transient
- *   user-activation (mount-effect call) or system restriction (low battery,
- *   power-saver). The fix is "tap the toggle again from the gesture".
+ * - `'denied'` — `NotAllowedError` from a non-hidden context: the browser,
+ *   permissions policy, or system refused the request. Older Safari builds
+ *   also required transient activation. The recovery is a deliberate tap.
  * - `null` — no error or last attempt succeeded. UI clears the alert.
  */
 export type WakeLockError = 'hidden' | 'denied' | null
@@ -175,6 +175,12 @@ export function useWakeLock(options: UseWakeLockOptions = {}) {
      * successful acquire.
      */
     const sentinelRef = useRef<WakeLockSentinel | null>(null)
+    // One acquire may be triggered by mount, foreground return, the heartbeat,
+    // and a pointer in the same turn. Browsers return a distinct sentinel for
+    // each request; losing track of even one means the UI can say "off" while
+    // that orphan still keeps the screen awake. Coalesce every caller onto the
+    // one in-flight request.
+    const acquirePromiseRef = useRef<Promise<void> | null>(null)
     // Track whether we *should* be locked (survives sentinel releases on
     // backgrounding so visibilitychange can re-acquire automatically).
     const shouldLockRef = useRef(false)
@@ -210,45 +216,85 @@ export function useWakeLock(options: UseWakeLockOptions = {}) {
             logger.warn("Wake Lock API not supported")
             return
         }
-        // M3-001: a hidden document rejects `wakeLock.request('screen')`
-        // synchronously with NotAllowedError. Classify BEFORE the try so the
-        // verdict isn't ambiguous with the "no gesture" path below.
-        const hiddenAtRequest =
-            typeof document !== "undefined" &&
-            document.visibilityState === "hidden"
-        try {
-            const lock = await navigator.wakeLock.request("screen")
-            sentinelRef.current = lock
-            setIsLocked(true)
-            setLastError(null)
-            exposeSentinelForProbe(lock)
-            logger.info("Wake Lock active")
+        const current = sentinelRef.current
+        if (current && !current.released) return
 
-            lock.addEventListener("release", () => {
-                logger.info("Wake Lock released")
-                setIsLocked(false)
-                // Only clear the ref if THIS sentinel is still the live one —
-                // a re-acquire that raced ahead of a stale release event must
-                // not have its fresh sentinel wiped out from under it.
-                if (sentinelRef.current === lock) sentinelRef.current = null
-                exposeSentinelForProbe(null)
-            })
-        } catch (err: unknown) {
-            const name = (err as { name?: string } | null)?.name
-            // NotAllowedError surfaces when the call wasn't user-activated
-            // (mount effect, programmatic re-request after long background)
-            // OR the document is currently hidden. Surface a reactive verdict
-            // so the toggle can show the band WHY the lock didn't engage
-            // (M3-001 — replaces the prior silent debug-log path).
-            if (name === "NotAllowedError") {
-                const verdict: WakeLockError = hiddenAtRequest ? "hidden" : "denied"
-                setLastError(verdict)
-                logger.debug(
-                    `Wake lock request denied (${verdict === "hidden" ? "document hidden" : "no user gesture"})`,
-                )
-            } else {
-                setLastError("denied")
-                logger.error("Failed to acquire Wake Lock:", err)
+        const pending = acquirePromiseRef.current
+        if (pending) {
+            await pending
+            return
+        }
+
+        const attempt = (async () => {
+            // M3-001: a hidden document rejects `wakeLock.request('screen')`
+            // synchronously with NotAllowedError. Classify BEFORE the try so the
+            // verdict isn't ambiguous with the "no gesture" path below.
+            const hiddenAtRequest =
+                typeof document !== "undefined" &&
+                document.visibilityState === "hidden"
+            try {
+                const lock = await navigator.wakeLock.request("screen")
+
+                // The musician can turn keep-awake off (or leave Perform mode)
+                // while the browser request is pending. A late result must be
+                // released immediately, never installed as an invisible lock.
+                if (!shouldLockRef.current || !enabledRef.current) {
+                    await lock.release()
+                    return
+                }
+
+                // Defensive: if an engine or an older render produced another
+                // live sentinel despite the single-flight gate, keep the one we
+                // already own and release the duplicate handle.
+                const live = sentinelRef.current
+                if (live && !live.released) {
+                    await lock.release()
+                    return
+                }
+
+                sentinelRef.current = lock
+                setIsLocked(true)
+                setLastError(null)
+                exposeSentinelForProbe(lock)
+                logger.info("Wake Lock active")
+
+                lock.addEventListener("release", () => {
+                    logger.info("Wake Lock released")
+                    // A delayed release event from an older sentinel must not
+                    // make a newer, live lock look inactive (or clear its probe).
+                    if (sentinelRef.current !== lock) return
+                    sentinelRef.current = null
+                    setIsLocked(false)
+                    exposeSentinelForProbe(null)
+                })
+            } catch (err: unknown) {
+                // A refusal that arrives after explicit disarm/unmount is no
+                // longer actionable and must not resurrect a failure banner.
+                if (!shouldLockRef.current || !enabledRef.current) return
+                const name = (err as { name?: string } | null)?.name
+                // NotAllowedError surfaces when the browser/system refuses the
+                // request OR the document is currently hidden. Surface a reactive verdict
+                // so the toggle can show the band WHY the lock didn't engage
+                // (M3-001 — replaces the prior silent debug-log path).
+                if (name === "NotAllowedError") {
+                    const verdict: WakeLockError = hiddenAtRequest ? "hidden" : "denied"
+                    setLastError(verdict)
+                    logger.debug(
+                        `Wake lock request denied (${verdict === "hidden" ? "document hidden" : "browser or system refusal"})`,
+                    )
+                } else {
+                    setLastError("denied")
+                    logger.error("Failed to acquire Wake Lock:", err)
+                }
+            }
+        })()
+
+        acquirePromiseRef.current = attempt
+        try {
+            await attempt
+        } finally {
+            if (acquirePromiseRef.current === attempt) {
+                acquirePromiseRef.current = null
             }
         }
     }, [])
@@ -306,7 +352,7 @@ export function useWakeLock(options: UseWakeLockOptions = {}) {
         await acquireLock()
         // No live sentinel → the request was refused (hidden document, or a
         // stricter-than-spec engine). Catch the next touch instead of asking.
-        if (!sentinelRef.current) scheduleGestureRetry()
+        if (shouldLockRef.current && !sentinelRef.current) scheduleGestureRetry()
     }, [acquireLock, scheduleGestureRetry])
 
     const releaseWakeLock = useCallback(async () => {
