@@ -198,6 +198,25 @@ describe("v11-01-04 firestore.rules org-scope", () => {
         )
     })
 
+    it("AC-2: a foreign leader cannot update or delete an existing crc track", async () => {
+        const foreignTrack = blLeader().collection("tracks").doc("tk-crc")
+        await assertFails(foreignTrack.update({ key: "F#" }))
+        await assertFails(foreignTrack.delete())
+
+        const ownTrack = blLeader().collection("tracks").doc("tk-bl-owned")
+        await assertSucceeds(
+            ownTrack.set({
+                setlistId: "sl-bl",
+                title: "Own tenant",
+                order: 0,
+                type: "song",
+                orgId: "brotherslazaroff",
+            }),
+        )
+        await assertSucceeds(ownTrack.update({ key: "D" }))
+        await assertSucceeds(ownTrack.delete())
+    })
+
     // ─── AC-3: reads UNCHANGED (err-public, no lock-out) ───────────────────
 
     it("AC-3: unauthenticated reads of setlists + tracks still SUCCEED (public)", async () => {

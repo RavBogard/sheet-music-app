@@ -54,7 +54,10 @@ export async function authorizeReaderMusic(
     const profileSnap = await getFirestore().collection("users").doc(decoded.uid).get()
     if (!profileSnap.exists) return { ok: false, kind: "forbidden" }
     const profile = profileSnap.data() ?? {}
-    if (!ELIGIBLE_ROLES.has(String(profile.role ?? decoded.role ?? ""))) {
+    // Custom claims are the role authority. A user may write their own profile
+    // document under the existing Firestore rules, so profile.role must never
+    // be accepted as an authorization fallback.
+    if (!ELIGIBLE_ROLES.has(String(decoded.role ?? ""))) {
         return { ok: false, kind: "forbidden" }
     }
     // Claims are the authentication authority; the user row is an independent

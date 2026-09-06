@@ -61,6 +61,18 @@ describe("reader music account access", () => {
         })
     })
 
+    it("does not accept a self-writable profile role over a denied claim", async () => {
+        state.decoded.role = "pending"
+        state.profile.role = "admin"
+        const request = new Request("https://centralreform.live/api/reader/music/select", {
+            headers: { Authorization: "Bearer firebase-id-token" },
+        })
+        await expect(authorizeReaderMusic(request, true)).resolves.toEqual({
+            ok: false,
+            kind: "forbidden",
+        })
+    })
+
     it("checks Firebase token revocation rather than accepting a cached ID token", async () => {
         const request = new Request("https://centralreform.live/api/reader/music/select", {
             headers: { Authorization: "Bearer firebase-id-token" },

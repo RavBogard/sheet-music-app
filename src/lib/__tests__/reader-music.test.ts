@@ -34,6 +34,7 @@ function track(id: string, extra: Partial<LocalTrack> = {}): LocalTrack {
     return {
         id,
         setlistId: "ignored",
+        orgId: "crc",
         order: 0,
         songId: "song-1",
         fileId: "file-1",
@@ -136,6 +137,26 @@ describe("selectLatestReaderMusic", () => {
         await expect(
             selectLatestReaderMusic([setlist("s", "2026-08-01")], crosswalk, now, d),
         ).resolves.toEqual({ status: "unavailable" })
+    })
+
+    it("ignores a cross-org track even when its setlist id and identity match", async () => {
+        const d = deps({
+            s: [track("foreign", { orgId: "other" })],
+        })
+        await expect(
+            selectLatestReaderMusic([setlist("s", "2026-08-01")], crosswalk, now, d),
+        ).resolves.toEqual({ status: "unavailable" })
+        expect(d.isBindingAuthorized).not.toHaveBeenCalled()
+    })
+
+    it("does not default an unstamped track into the target tenant", async () => {
+        const d = deps({
+            s: [track("legacy", { orgId: undefined })],
+        })
+        await expect(
+            selectLatestReaderMusic([setlist("s", "2026-08-01")], crosswalk, now, d),
+        ).resolves.toEqual({ status: "unavailable" })
+        expect(d.isBindingAuthorized).not.toHaveBeenCalled()
     })
 
     it("treats same-instant differing bindings as ambiguous", async () => {

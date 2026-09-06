@@ -137,6 +137,9 @@ function matchesReviewedIdentity(
     track: LocalTrack,
     crosswalk: ReaderMusicCrosswalk,
 ): boolean {
+    // Cross-app delivery fail-closes on unstamped legacy rows. Unlike in-app
+    // CRC reads, an absent orgId must not inherit the default tenant here.
+    if (track.orgId !== crosswalk.orgId) return false
     const identity = track.readerMusic
     if (!identity || typeof identity !== "object") return false
     const persisted = identity as Record<string, unknown>

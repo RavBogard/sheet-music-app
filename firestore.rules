@@ -56,6 +56,16 @@ service cloud.firestore {
         || request.resource.data.orgId == resource.data.orgId
         || isAdmin();
     }
+    // A tenant marker being immutable is not sufficient: without checking the
+    // existing row, a leader from another tenant could update or delete it
+    // while leaving orgId unchanged. Legacy unstamped rows belong to CRC for
+    // write authorization, matching the established claimless-CRC default.
+    function callerCanWriteExistingOrg() {
+      return isAdmin()
+        || (('orgId' in resource.data)
+          ? resource.data.orgId in callerOrgs()
+          : 'crc' in callerOrgs());
+    }
     // v11-06-01 READ-ISOLATION: a tenant-scoped read is allowed only when the
     // doc's orgId names a tenant the caller belongs to. orgId-ABSENT docs are
     // allowed (back-compat / pre-stamp legacy rows → crc-safe; never locks out
@@ -163,8 +173,8 @@ service cloud.firestore {
       allow read: if true;
       // v11-01-04: + org-scope write isolation (read stays public for /perform).
       allow create: if isSignedIn() && (isBandLeader() || isAdmin()) && orgCreateOk();
-      allow update: if isSignedIn() && (isBandLeader() || isAdmin()) && orgUpdateOk();
-      allow delete: if isSignedIn() && (isBandLeader() || isAdmin());
+      allow update: if isSignedIn() && (isBandLeader() || isAdmin()) && callerCanWriteExistingOrg() && orgUpdateOk();
+      allow delete: if isSignedIn() && (isBandLeader() || isAdmin()) && callerCanWriteExistingOrg();
     }
 
     // SONGS Collection (v5.0 first-class song catalog with sticky memory)
