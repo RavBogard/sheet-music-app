@@ -11,11 +11,77 @@ on:
     branches: [master, main]
   pull_request:
     branches: [master, main]
+  workflow_dispatch:
+
+# A newer commit on the same source branch makes the older result obsolete.
+# Using the PR head repository/ref also collapses a same-repository push + PR
+# pair if a protected branch is ever used as the PR source.
+concurrency:
+  group: ci-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Classify Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      substantive: ${{ steps.classify.outputs.substantive }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      # Do not put path filters on the workflow trigger: GitHub would leave
+      # required checks pending forever. Jobs skipped by this classifier still
+      # create visible, successful check records. Manual runs always validate
+      # everything.
+      - name: Detect documentation-only changes
+        id: classify
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "substantive=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE="$PR_BASE"
+          else
+            BASE="$PUSH_BASE"
+          fi
+
+          # If GitHub reports an unusable baseline, run the full suite.
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "substantive=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          substantive=false
+          while IFS= read -r -d '' path; do
+            case "$path" in
+              docs/*|RESEARCH/*) ;;
+              */*) substantive=true; break ;;
+              *.md|*.txt) ;;
+              *) substantive=true; break ;;
+            esac
+          # Disable rename detection so moving runtime code into docs still
+          # exposes the deleted runtime path and cannot bypass validation.
+          done < <(git diff --name-only --no-renames -z "$BASE" "$HEAD_SHA")
+
+          echo "substantive=$substantive" >> "$GITHUB_OUTPUT"
+
   lint-and-type-check:
     name: Lint & Type Check
+    needs: changes
+    if: needs.changes.outputs.substantive == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -42,7 +108,10 @@ jobs:
 
   unit-tests:
     name: Unit & Integration Tests
+    needs: changes
+    if: needs.changes.outputs.substantive == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -75,7 +144,10 @@ jobs:
   # §2(c)).
   gated-unit-suite:
     name: Gated Unit Suite
+    needs: changes
+    if: needs.changes.outputs.substantive == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -120,7 +192,10 @@ jobs:
   # actions/setup-java@v4 so this gate doesn't depend on local installs.
   emulator-tests:
     name: Emulator Tests (Firestore + Auth)
+    needs: changes
+    if: needs.changes.outputs.substantive == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -149,7 +224,10 @@ jobs:
 
   build-check:
     name: Build Check
+    needs: changes
+    if: needs.changes.outputs.substantive == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -170,7 +248,9 @@ jobs:
   e2e-smoke:
     name: E2E Smoke (Playwright)
     runs-on: ubuntu-latest
-    needs: build-check
+    needs: [changes, build-check]
+    if: always() && needs.changes.outputs.substantive == 'true' && needs.build-check.result == 'success'
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
