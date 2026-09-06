@@ -223,6 +223,8 @@ export interface UserProfile {
     // user doc (by /api/admin/set-role) for the People-list display + roster
     // filtering (v11-05-02 rowOrgIds). Absent → default ['crc'] via rowOrgIds.
     orgIds?: string[]
+    /** Explicit opt-in for the cross-app reader music pilot. Missing is false. */
+    readerMusicEnabled?: boolean
 }
 
 /**
