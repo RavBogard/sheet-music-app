@@ -1997,6 +1997,40 @@ describe('v50-07-04: kitchen-sink under random failure mix', () => {
         )
     }, 240_000)
 
+    it('does not spin when a conflict blocks a later pending edit after force-quit', async () => {
+        // Minimized from CI fast-check seed 32272089, path
+        // 10:4:5:8:9:7:7:7:7. The failed setlist row is intentionally left
+        // for reconciliation; its pending successor must not schedule an
+        // immediate pump until that conflict is resolved.
+        await runKitchenSink([
+            {
+                kind: 'cross-tab',
+                collection: 'setlists',
+                docId: 'ks-s1',
+                payload: { v: 0 },
+            },
+            {
+                kind: 'lazy-hydrate',
+                setlistId: 'ks-s1',
+                trackIds: ['ks-t1'],
+            },
+            {
+                kind: 'edit-set',
+                collection: 'setlists',
+                docId: 'ks-s1',
+                payload: { v: 0 },
+            },
+            { kind: 'force-quit' },
+            { kind: 'tick', ms: 0 },
+            {
+                kind: 'lazy-hydrate',
+                setlistId: 'ks-s1',
+                trackIds: ['ks-t1'],
+            },
+            { kind: 'tick', ms: 0 },
+        ])
+    }, 15_000)
+
     // Deterministic regression — the production-shape lazy-hydration cascade.
     // Mirrors what SetlistGridHydrator does on first edit-open of a legacy
     // setlist with 3 embedded tracks. Re-running is a no-op (hydrated:true

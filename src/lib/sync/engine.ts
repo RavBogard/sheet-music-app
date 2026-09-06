@@ -538,10 +538,21 @@ export class SyncEngine {
             this.clock.clearTimeout(this.pumpHandle)
             this.pumpHandle = null
         }
-        const next = await this.db.outbox
-            .where('status')
-            .equals('pending')
-            .toArray()
+        const rows = await this.db.outbox.toArray()
+        // Match drainOnce's per-document barrier. A pending edit behind a
+        // failed conflict cannot run until the user resolves that conflict;
+        // scheduling it at delay=0 creates an endless pump/timer loop (most
+        // visible during page reload/force-quit recovery).
+        const blockedDocs = new Set(
+            rows
+                .filter((row) => row.status === 'failed' || row.status === 'sending')
+                .map((row) => `${row.collection}/${row.docId}`),
+        )
+        const next = rows.filter(
+            (row) =>
+                row.status === 'pending' &&
+                !blockedDocs.has(`${row.collection}/${row.docId}`),
+        )
         if (next.length === 0) return
         const soonest = next.reduce(
             (m, r) => Math.min(m, r.scheduledFor),
