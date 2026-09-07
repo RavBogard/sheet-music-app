@@ -48,10 +48,10 @@ export async function GET(request: NextRequest): Promise<Response> {
         }
         const unitId = unitIds[0]?.trim()
         if (!unitId) return unavailable(request, 404)
+        if (!publicReaderChartDefinition(unitId)) return unavailable(request, 404)
 
         const limit = await checkPublicReaderRateLimit(request, "chart")
         if (!limit.allowed) return rateLimited(request, limit)
-        if (!publicReaderChartDefinition(unitId)) return unavailable(request, 404)
 
         const resolved = await fetchPublicResolvedReaderMusic(unitId)
         if (!resolved) return unavailable(request, 404)

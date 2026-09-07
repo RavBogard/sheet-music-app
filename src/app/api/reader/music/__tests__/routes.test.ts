@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { NextRequest } from "next/server"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MODEH_ANI_PUBLIC_READER_CHART } from "@/lib/reader-music-public"
 
@@ -67,6 +67,8 @@ function selectionRequest(unitId = UNIT_ID): NextRequest {
 }
 
 describe("anonymous public reader-chart routes", () => {
+    afterEach(() => vi.unstubAllEnvs())
+
     beforeEach(() => {
         process.env.READER_MUSIC_ALLOWED_ORIGINS = ORIGIN
         process.env.READER_PUBLIC_CHARTS_ENABLED = "true"
@@ -142,15 +144,31 @@ describe("anonymous public reader-chart routes", () => {
         expect(response.headers.get("Cache-Control")).toBe("no-store")
     })
 
-    it("is default-off and performs no chart resolution while off", async () => {
+    it("returns the default-off contract without a production limiter", async () => {
+        vi.stubEnv("NODE_ENV", "production")
+        vi.stubEnv("VERCEL", "1")
+        vi.stubEnv("UPSTASH_REDIS_REST_URL", "")
+        vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "")
         delete process.env.READER_PUBLIC_CHARTS_ENABLED
-        const response = await selectMusic(selectionRequest())
-        expect(response.status).toBe(200)
-        await expect(response.json()).resolves.toEqual({
+        mocks.rateLimit.mockResolvedValue({ allowed: false, status: 503 })
+
+        const selection = await selectMusic(selectionRequest())
+        expect(selection.status).toBe(200)
+        await expect(selection.json()).resolves.toEqual({
             status: "unavailable",
             unitId: UNIT_ID,
         })
+        expect(selection.headers.get("Cache-Control")).toBe("no-store")
+        const chart = await getChart(
+            request(`/api/reader/music/chart?unitId=${encodeURIComponent(UNIT_ID)}`),
+        )
+        expect(chart.status).toBe(404)
+        await expect(chart.json()).resolves.toEqual({ status: "unavailable" })
+        expect(chart.headers.get("Cache-Control")).toBe("no-store")
+
+        expect(mocks.rateLimit).not.toHaveBeenCalled()
         expect(mocks.resolvePublic).not.toHaveBeenCalled()
+        expect(mocks.fetchPublic).not.toHaveBeenCalled()
     })
 
     it("does not pass arbitrary stable-looking IDs to Firestore resolution", async () => {
@@ -162,6 +180,7 @@ describe("anonymous public reader-chart routes", () => {
             status: "unavailable",
             unitId: "amidah.oseh-shalom@legacy-shabbat-morning",
         })
+        expect(mocks.rateLimit).not.toHaveBeenCalled()
         expect(mocks.resolvePublic).not.toHaveBeenCalled()
     })
 
@@ -178,6 +197,7 @@ describe("anonymous public reader-chart routes", () => {
             expect(response.status).toBe(400)
             await expect(response.json()).resolves.toEqual({ status: "unavailable" })
         }
+        expect(mocks.rateLimit).not.toHaveBeenCalled()
         expect(mocks.resolvePublic).not.toHaveBeenCalled()
     })
 
@@ -186,12 +206,14 @@ describe("anonymous public reader-chart routes", () => {
             "/api/reader/music/chart?fileId=upload-private",
             `/api/reader/music/chart?unitId=${encodeURIComponent(UNIT_ID)}&fileId=x`,
             `/api/reader/music/chart?unitId=${encodeURIComponent(UNIT_ID)}&unitId=x`,
+            "/api/reader/music/chart?unitId=amidah.oseh-shalom%40legacy-shabbat-morning",
         ]
         for (const path of paths) {
             const response = await getChart(request(path))
             expect(response.status).toBe(404)
             await expect(response.json()).resolves.toEqual({ status: "unavailable" })
         }
+        expect(mocks.rateLimit).not.toHaveBeenCalled()
         expect(mocks.fetchPublic).not.toHaveBeenCalled()
     })
 
@@ -279,13 +301,23 @@ describe("anonymous public reader-chart routes", () => {
         expect(mocks.fetchPublic).not.toHaveBeenCalled()
     })
 
-    it("fails closed when the distributed limiter cannot decide", async () => {
+    it("fails closed when enabled without the production distributed limiter", async () => {
+        vi.stubEnv("NODE_ENV", "production")
+        vi.stubEnv("VERCEL", "1")
+        vi.stubEnv("UPSTASH_REDIS_REST_URL", "")
+        vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "")
         mocks.rateLimit.mockResolvedValue({ allowed: false, status: 503 })
-        const response = await getChart(
+
+        const selection = await selectMusic(selectionRequest())
+        expect(selection.status).toBe(503)
+        expect(selection.headers.get("Cache-Control")).toBe("no-store")
+
+        const chart = await getChart(
             request(`/api/reader/music/chart?unitId=${encodeURIComponent(UNIT_ID)}`),
         )
-        expect(response.status).toBe(503)
-        expect(response.headers.get("Cache-Control")).toBe("no-store")
+        expect(chart.status).toBe(503)
+        expect(chart.headers.get("Cache-Control")).toBe("no-store")
+        expect(mocks.resolvePublic).not.toHaveBeenCalled()
         expect(mocks.fetchPublic).not.toHaveBeenCalled()
     })
 })

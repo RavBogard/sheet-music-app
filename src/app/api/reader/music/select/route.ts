@@ -83,8 +83,6 @@ export async function POST(request: NextRequest): Promise<Response> {
         if (Number.isFinite(declaredLength) && declaredLength > MAX_SELECTION_BODY_BYTES) {
             return calmUnavailable(request, 400)
         }
-        const limit = await checkPublicReaderRateLimit(request, "selection")
-        if (!limit.allowed) return rateLimited(request, limit)
 
         let body: unknown
         try {
@@ -106,6 +104,9 @@ export async function POST(request: NextRequest): Promise<Response> {
         const unitId = (body as { unitId: string }).unitId.trim()
         const definition = publicReaderChartDefinition(unitId)
         if (!definition) return calmUnavailable(request, 200, unitId)
+
+        const limit = await checkPublicReaderRateLimit(request, "selection")
+        if (!limit.allowed) return rateLimited(request, limit)
         const resolved = await resolvePublicReaderMusic(unitId)
         if (resolved.status !== "available") {
             return calmUnavailable(request, 200, unitId)
