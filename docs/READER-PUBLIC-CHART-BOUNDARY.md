@@ -1,8 +1,19 @@
 # Reader public chart boundary
 
-CHARTS-001 creates one narrow exception for CRC's siddur reader. It does not
-make the chart catalog, Firebase Storage, private file IDs, setlists, or account
-data public, and it does not change the public-mirror rule for chart PDFs.
+CHARTS-001 creates one narrow exception for CRC's siddur reader. This review
+establishes the controls local to the new `/api/reader/music/select` and
+`/api/reader/music/chart` Modeh endpoints; it is not an assurance of
+system-wide chart privacy. These endpoints do not make the chart catalog,
+Firebase Storage, private file IDs, setlists, or account data public, and they
+do not change the public-mirror rule for chart PDFs.
+
+Known policy-dependent risk: the legacy anonymous Firestore `tracks` read and
+arbitrary-file paths `/api/drive/file/[fileId]` and
+`/api/library/file/[id]` are unchanged by this boundary. Restricting or
+migrating those paths is held pending Daniel's decision on the intended
+publication semantics for Perform/public-print workflows. Until that decision
+and migration are complete, the local Modeh controls below must not be cited as
+closing those legacy enumeration or download risks.
 
 The family rights policy says third-party chart bytes do not cross repositories.
 The later CHARTS-001 Producer disposition authorizes anonymous in-reader display
