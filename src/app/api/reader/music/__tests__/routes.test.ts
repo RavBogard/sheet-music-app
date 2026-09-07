@@ -251,10 +251,12 @@ describe("anonymous public reader-chart routes", () => {
     })
 
     it("rejects Authorization and Range before limiting or resolving", async () => {
-        for (const headers of [
+        const blockedHeaders: HeadersInit[] = [
             { Authorization: "Bearer forged.jwt.value" },
             { Range: "bytes=0-99" },
-        ]) {
+        ]
+
+        for (const headers of blockedHeaders) {
             const selection = await selectMusic(
                 request("/api/reader/music/select", {
                     method: "POST",
