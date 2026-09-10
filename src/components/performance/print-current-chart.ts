@@ -3,6 +3,7 @@ import type { MusicState } from "@/lib/store"
 import type { ViewerKind } from "./resolveViewerKind"
 import { estimateKey, transposeChord, keyUsesFlats } from "@/lib/music-math"
 import { generatePdfBlob, type GeneratePrintPayload } from "@/lib/print-generation"
+import { printPdfBlob, printImageBlob } from "./print-document"
 
 /**
  * "Print this chart" — desktop-only PDFOverlay toolbar action. Prints ONLY
@@ -11,12 +12,17 @@ import { generatePdfBlob, type GeneratePrintPayload } from "@/lib/print-generati
  *
  * Routes on `resolveViewerKind` — PDFOverlay's canonical classifier — same
  * shortest-correct-path table as the render branch in PDFOverlay.tsx:
- *   - `pdf`, untransposed → original bytes, hidden-iframe print (vector, all
+ *   - `pdf`, untransposed → original bytes, printed via `printPdfBlob` (all
  *     pages, no server round trip).
  *   - `pdf`, transposed   → POST /api/setlist/print (`omitCover: true`,
- *     single track), then the same hidden-iframe print, so paper matches the
+ *     single track), then the same `printPdfBlob`, so paper matches the
  *     transposed screen.
- *   - `image`             → original bytes, hidden-iframe print.
+ *   - `image`             → original bytes, `printImageBlob`.
+ *
+ * Both printers live in `./print-document`, which rasterizes with pdf.js and
+ * prints a same-origin document we author. Handing a `blob:` PDF straight to
+ * a hidden iframe (the pre-2026-09-10 implementation) prints a blank sheet
+ * in Chrome — see that module's header for the probe evidence.
  *   - `text` / `chordpro` → POST /api/setlist/print always. Unlike `pdf`
  *     there's no "just print the original bytes" shortcut — the on-screen
  *     render for these kinds is already a server-shaped chord-over-lyric
@@ -117,89 +123,6 @@ async function fetchServerPrintBlob(params: {
     return generatePdfBlob(payload)
 }
 
-/**
- * Print a Blob (PDF or image) by loading it into a hidden `<iframe>` and
- * calling the frame's native `print()` — vector quality, every page, no
- * server round trip once the bytes are in hand.
- *
- * Resolves once `print()` has been issued (not once the OS dialog closes —
- * that part is the browser's business and the caller's busy state should
- * clear once the file is ready, not stay spinning behind a modal dialog the
- * user can already see).
- */
-export function printBlobInHiddenIframe(blob: Blob): Promise<void> {
-    return new Promise((resolve, reject) => {
-        const url = URL.createObjectURL(blob)
-        const iframe = document.createElement("iframe")
-        iframe.setAttribute("aria-hidden", "true")
-        iframe.style.position = "fixed"
-        iframe.style.right = "0"
-        iframe.style.bottom = "0"
-        iframe.style.width = "0"
-        iframe.style.height = "0"
-        iframe.style.border = "0"
-
-        let settled = false
-        let fallbackTimer: ReturnType<typeof setTimeout> | undefined
-        const onAfterPrint = () => {
-            cleanup()
-        }
-        const cleanup = () => {
-            if (settled) return
-            settled = true
-            clearTimeout(loadTimeout)
-            if (fallbackTimer) clearTimeout(fallbackTimer)
-            try {
-                iframe.contentWindow?.removeEventListener("afterprint", onAfterPrint)
-            } catch {
-                /* cross-origin or already torn down — nothing to remove */
-            }
-            // Give the print dialog a beat before the frame (and its blob
-            // URL) disappear out from under it.
-            setTimeout(() => {
-                try {
-                    document.body.removeChild(iframe)
-                } catch {
-                    /* already gone */
-                }
-                URL.revokeObjectURL(url)
-            }, 1000)
-        }
-
-        const loadTimeout = setTimeout(() => {
-            cleanup()
-            reject(new Error("Timed out preparing the chart for print."))
-        }, 20000)
-
-        iframe.onload = () => {
-            clearTimeout(loadTimeout)
-            try {
-                const win = iframe.contentWindow
-                if (!win) throw new Error("Couldn't open the print preview.")
-                win.addEventListener("afterprint", onAfterPrint)
-                win.focus()
-                win.print()
-                resolve()
-                // Some browsers never fire afterprint reliably on a
-                // cross-document iframe — clean up regardless once the
-                // dialog has had time to run its course.
-                fallbackTimer = setTimeout(cleanup, 60000)
-            } catch (err) {
-                cleanup()
-                reject(err instanceof Error ? err : new Error(String(err)))
-            }
-        }
-        iframe.onerror = () => {
-            clearTimeout(loadTimeout)
-            cleanup()
-            reject(new Error("Couldn't load the chart for print."))
-        }
-
-        document.body.appendChild(iframe)
-        iframe.src = url
-    })
-}
-
 /** The data attribute SmartScoreViewer stamps on its OSMD container — the
  *  print stylesheet (`globals.css` `body.printing-chart`) isolates exactly
  *  this element. */
@@ -266,24 +189,26 @@ export async function printCurrentChart(params: PrintCurrentChartParams): Promis
         throw new Error("This chart has no file to print.")
     }
 
+    const title = track.title || "Chart"
+
     if (viewerKind === "image") {
         const blob = await fetchOriginalChartBlob(track.fileId, networkUrl)
-        await printBlobInHiddenIframe(blob)
+        await printImageBlob(blob, title)
         return
     }
 
     if (viewerKind === "text" || viewerKind === "chordpro") {
         const blob = await fetchServerPrintBlob({ track, transposition, preferFlats, capoFret })
-        await printBlobInHiddenIframe(blob)
+        await printPdfBlob(blob, title)
         return
     }
 
     // viewerKind === "pdf"
     if (transposition !== 0) {
         const blob = await fetchServerPrintBlob({ track, transposition, preferFlats, capoFret })
-        await printBlobInHiddenIframe(blob)
+        await printPdfBlob(blob, title)
         return
     }
     const blob = await fetchOriginalChartBlob(track.fileId, networkUrl)
-    await printBlobInHiddenIframe(blob)
+    await printPdfBlob(blob, title)
 }

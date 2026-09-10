@@ -306,7 +306,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     const handleGenerate = async (allowOmissions = false) => {
         setGenerating(true)
         setError(null)
-        setProgressMsg("Generating gig packet...")
+        setProgressMsg("Generating printout...")
 
         try {
             if (printMode === "select-musicians" && selectedUids.length > 1) {
@@ -330,7 +330,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                     setProgressMsg(`Processing packets... (${completed}/${total})`)
 
                     return {
-                        name: `${m.displayName.replace(/[^a-z0-9]/gi, '_')}_gig_packet.pdf`,
+                        name: `${m.displayName.replace(/[^a-z0-9]/gi, '_')}_print.pdf`,
                         blob
                     }
                 }))
@@ -424,8 +424,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
             <div className="bg-card rounded-2xl w-full max-w-lg max-h-[90dvh] sm:max-h-[85dvh] flex flex-col shadow-2xl border border-border overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 sm:px-6 sm:py-5 border-b border-border shrink-0 bg-muted/30">
-                    <h2 className="text-xl font-bold">Gig Packet</h2>
-                    <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close gig packet dialog">
+                    <h2 className="text-xl font-bold">Print</h2>
+                    <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close print dialog">
                         <X className="h-5 w-5" />
                     </Button>
                 </div>
@@ -459,7 +459,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                             <div className="space-y-2">
                                 <h3 className="font-semibold text-lg text-foreground">Select Email Recipients</h3>
                                 <p className="text-sm text-muted-foreground">
-                                    Send personalized gig packet download links directly to these band members.
+                                    Send personalized printout download links directly to these band members.
                                 </p>
                             </div>
                             <div className="block border border-border rounded-lg bg-card overflow-hidden">

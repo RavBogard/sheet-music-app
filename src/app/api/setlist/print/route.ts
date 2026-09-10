@@ -27,7 +27,7 @@ export const POST = createApiHandler(
         body.org = coerceOrgId(ctx.req.headers.get("x-org-id"))
 
         const result = await generatePrintPdf(body)
-        const filename = `${(body.title || 'Gig_Packet').replace(/[^a-z0-9]/gi, '_')}.pdf`
+        const filename = `${(body.title || 'Print').replace(/[^a-z0-9]/gi, '_')}.pdf`
 
         logger.info(`[Print] Generated: ${result.stats.appendedTracks} tracks, ${result.stats.transposedTracks} transposed`)
 

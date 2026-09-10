@@ -159,8 +159,13 @@ export function SetlistPerformClient({
         }
     }, [activeSongIndex, setlistId, tracks])
 
-    const { isMusician, isBandLeader, isAdmin } = useAuth()
-    const canPrint = isMusician || isBandLeader || isAdmin
+    const { user, isBandLeader, isAdmin } = useAuth()
+    // Printing is NOT a privilege (Daniel, 2026-09-10). Anyone signed in can
+    // print the setlist — the old `isMusician || isBandLeader || isAdmin`
+    // gate hid the button from every signed-in person without a role, which
+    // is exactly backwards for a band that needs paper. The only remaining
+    // condition is a session, because POST /api/setlist/print authenticates.
+    const canPrint = !!user
 
     // live-director-gesture: the swap-chart / insert-song modals consume
     // `useLibraryStore.allFiles`. Perform routes don't otherwise hydrate
@@ -282,9 +287,9 @@ export function SetlistPerformClient({
                         everyone performing — offline resilience isn't role-gated. */}
                     {songFileIds.length > 0 && <SaveOfflineButton fileIds={songFileIds} />}
                     {canPrint && (
-                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label="Open gig packet" className="h-11 min-w-11 gap-1.5 text-muted-foreground">
+                        <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label="Print setlist" className="h-11 min-w-11 gap-1.5 text-muted-foreground">
                             <Printer className="h-4 w-4" />
-                            <span className="text-xs hidden sm:inline">Gig Packet</span>
+                            <span className="text-xs hidden sm:inline">Print</span>
                         </Button>
                     )}
                     {isLeader && (

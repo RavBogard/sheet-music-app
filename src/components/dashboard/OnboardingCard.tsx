@@ -146,7 +146,7 @@ export function OnboardingCard({ role, isMember, profile, congregationShortName,
                 <span className="text-2xl">{"\u{1F389}"}</span>
                 <h2 className="text-lg font-semibold mt-2">You&apos;re approved!</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Set up your instrument to get transposed charts and personalized gig packets.
+                    Set up your instrument to get transposed charts and personalized printouts.
                 </p>
             </div>
             {!showQuickSetup ? (

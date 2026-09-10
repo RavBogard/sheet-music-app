@@ -85,7 +85,7 @@ export function MusicianProfileSettings() {
                 <div>
                     <h3 className="text-lg font-semibold text-foreground">Musician Profile</h3>
                     <p className="text-sm text-muted-foreground">
-                        Set your instrument for automatic transposition and personalized gig packets
+                        Set your instrument for automatic transposition and personalized printouts
                     </p>
                 </div>
             </div>
@@ -95,7 +95,7 @@ export function MusicianProfileSettings() {
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
                     <span className="text-lg mt-0.5">🎵</span>
                     <p className="text-sm text-amber-700 dark:text-amber-400">
-                        Set your instrument below to get <strong>automatically transposed charts</strong> in your key and personalized gig packet PDFs.
+                        Set your instrument below to get <strong>automatically transposed charts</strong> in your key and personalized printout PDFs.
                     </p>
                 </div>
             )}

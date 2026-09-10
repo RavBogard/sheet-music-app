@@ -140,7 +140,7 @@ describe("PrintModal", () => {
 
     it("renders modal with title and header", () => {
         render(<PrintModal {...defaultProps} />)
-        expect(screen.getByText("Gig Packet")).toBeDefined()
+        expect(screen.getByText("Print")).toBeDefined()
     })
 
     it("renders title input with setlist name", () => {
@@ -468,7 +468,7 @@ describe("PrintModal", () => {
 
         // During generation, should show the progress message
         await waitFor(() => {
-            expect(screen.getByText("Generating gig packet...")).toBeDefined()
+            expect(screen.getByText("Generating printout...")).toBeDefined()
         })
     })
 
