@@ -89,12 +89,22 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     const [pendingPacketAction, setPendingPacketAction] = useState<PendingPacketAction | null>(null)
     const [detectedOmissions, setDetectedOmissions] = useState<OmittedPrintChart[]>([])
 
+    /**
+     * A signed-out guest may print (Daniel, 2026-09-10), but printing is all
+     * they get: the per-musician packet modes, the band roster and the email
+     * action are band administration, not printing, and the roster read is
+     * authenticated anyway. `isSignedIn` gates all three below.
+     */
+    const isSignedIn = !!user
+
     // Musicians
     const [musicians, setMusicians] = useState<{ uid: string; displayName: string; profile: MusicianProfile }[]>([])
     useEffect(() => {
+        // No session → no roster subscription; the query would only be denied.
+        if (!isSignedIn) return
         const unsub = subscribeToAllMusicianProfiles(setMusicians)
         return unsub
-    }, [])
+    }, [isSignedIn])
 
     // ── Print Mode ──
     const saved = useMemo(() => loadSavedSelection(), [])
@@ -102,6 +112,11 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     const hasMyProfile = !!myProfile?.instrument
 
     const [printMode, setPrintMode] = useState<PrintMode>(() => {
+        // A guest gets the standard printout — the other modes need a profile
+        // or the roster. Note the saved mode is per-BROWSER, so on a shared
+        // shul iPad it can be the leader's "select-musicians"; ignoring it
+        // when signed out is deliberate, not just a default.
+        if (!isSignedIn) return "standard"
         if (saved?.mode) return saved.mode
         return hasMyProfile ? "just-me" : "standard"
     })
@@ -113,8 +128,11 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     })
 
     useEffect(() => {
+        // Don't let a guest's forced "standard" overwrite the leader's saved
+        // preference on a shared device.
+        if (!isSignedIn) return
         saveSelection({ mode: printMode, selectedUids })
-    }, [printMode, selectedUids])
+    }, [isSignedIn, printMode, selectedUids])
 
     const toggleMusician = (uid: string) => {
         setSelectedUids(prev =>
@@ -538,7 +556,8 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
 
                             <hr className="border-border my-2" />
 
-                            {/* 2. Print Mode / Audience */}
+                            {/* 2. Print Mode / Audience — signed-in only */}
+                            {isSignedIn && (
                             <PrintModeSelector
                                 printMode={printMode}
                                 setPrintMode={setPrintMode}
@@ -549,8 +568,9 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                 setSelectedUids={setSelectedUids}
                                 toggleMusician={toggleMusician}
                             />
+                            )}
 
-                            <hr className="border-border my-2" />
+                            {isSignedIn && <hr className="border-border my-2" />}
 
                             {/* 3. Header Metadata */}
                             <div className="space-y-2">
@@ -641,7 +661,7 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
                                     {printMode === "select-musicians" && selectedUids.length > 1 ? "Download ZIP" : "Download PDF"}
                                 </Button>
                             </div>
-                            {setlistId && (
+                            {setlistId && isSignedIn && (
                                 <Button
                                     variant="outline"
                                     className="w-full gap-2 text-muted-foreground"

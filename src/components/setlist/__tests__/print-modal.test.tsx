@@ -28,8 +28,11 @@ const mockProfile = {
     },
 }
 let currentProfile = mockProfile
+// Signed-out guests may print too (Daniel, 2026-09-10), so `user` has to be
+// switchable — the modal's band-management controls key off it.
+let currentUser: typeof mockUser | null = mockUser
 vi.mock("@/lib/auth-context", () => ({
-    useAuth: () => ({ user: mockUser, profile: currentProfile }),
+    useAuth: () => ({ user: currentUser, profile: currentProfile }),
 }))
 
 // Mock api-client
@@ -133,6 +136,7 @@ describe("PrintModal", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         currentProfile = mockProfile
+        currentUser = mockUser
         localStorage.clear()
     })
 
@@ -522,5 +526,44 @@ describe("PrintModal", () => {
                 vi.useRealTimers()
             }
         })
+    })
+})
+
+// ── Signed-out guest (Daniel, 2026-09-10: anyone may print) ──
+
+describe("PrintModal — signed-out guest", () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+        currentProfile = mockProfile
+        currentUser = null
+        localStorage.clear()
+    })
+
+    it("AC-1: a guest can still print — the modal and its download action render", () => {
+        render(<PrintModal {...defaultProps} />)
+        expect(screen.getByText("Print")).toBeDefined()
+        expect(screen.getByText("Download PDF")).toBeDefined()
+    })
+
+    it("AC-2: band administration is hidden — no per-musician modes, no emailing the band", () => {
+        render(<PrintModal {...defaultProps} />)
+        expect(screen.queryByTestId("print-mode-selector")).toBeNull()
+        expect(screen.queryByText("Email Packet Links to Band")).toBeNull()
+    })
+
+    it("AC-3: the roster is never subscribed to without a session", () => {
+        render(<PrintModal {...defaultProps} />)
+        expect(mockSubscribe).not.toHaveBeenCalled()
+    })
+
+    it("AC-4: a leader's saved per-musician mode on a shared iPad does not leak into a guest's print", () => {
+        localStorage.setItem(
+            "crc-print-selection",
+            JSON.stringify({ mode: "select-musicians", selectedUids: ["m-1", "m-2"] }),
+        )
+        render(<PrintModal {...defaultProps} />)
+        // Standard printout only — and the saved leader preference survives.
+        expect(screen.queryByTestId("print-mode-selector")).toBeNull()
+        expect(JSON.parse(localStorage.getItem("crc-print-selection")!).mode).toBe("select-musicians")
     })
 })

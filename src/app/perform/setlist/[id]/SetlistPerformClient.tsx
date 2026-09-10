@@ -159,13 +159,15 @@ export function SetlistPerformClient({
         }
     }, [activeSongIndex, setlistId, tracks])
 
-    const { user, isBandLeader, isAdmin } = useAuth()
-    // Printing is NOT a privilege (Daniel, 2026-09-10). Anyone signed in can
-    // print the setlist — the old `isMusician || isBandLeader || isAdmin`
-    // gate hid the button from every signed-in person without a role, which
-    // is exactly backwards for a band that needs paper. The only remaining
-    // condition is a session, because POST /api/setlist/print authenticates.
-    const canPrint = !!user
+    const { isBandLeader, isAdmin } = useAuth()
+    // Printing is NOT a privilege (Daniel, 2026-09-10) — not by role, and not
+    // by having an account. The old `isMusician || isBandLeader || isAdmin`
+    // gate hid the button from every signed-in person without a role, which is
+    // exactly backwards for a band that needs paper; a signed-out guest
+    // reading a public setlist needs it just as much. `/api/setlist/print`
+    // accepts anonymous callers (on a tighter rate-limit bucket), and the
+    // modal hides its band-management controls when there's no session.
+    const canPrint = true
 
     // live-director-gesture: the swap-chart / insert-song modals consume
     // `useLibraryStore.allFiles`. Perform routes don't otherwise hydrate

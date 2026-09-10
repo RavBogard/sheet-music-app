@@ -17,7 +17,17 @@ const schema = z.object({
 
 export const POST = createApiHandler(
     async (ctx) => {
-        const limited = await checkRateLimit(ctx.req, 'api')
+        // Printing is open to anyone (Daniel, 2026-09-10) — a guest musician
+        // reading a public setlist must be able to put it on paper without an
+        // account. Nothing new is exposed: the chart bytes this assembles are
+        // already served unauthenticated by `/api/drive/file/[fileId]`, and
+        // setlist contents are public by design.
+        //
+        // Anonymous callers get their own, much tighter bucket. A print is a
+        // 120s serverless job over every chart's bytes; the shared `api` tier
+        // (60/min) is fine keyed by uid but is an open cost lever keyed by IP.
+        const isAuthenticated = !!ctx.auth
+        const limited = await checkRateLimit(ctx.req, isAuthenticated ? 'api' : 'printAnon')
         if (limited) return limited
 
         const body = ctx.body! as unknown as PrintRequest
@@ -49,5 +59,5 @@ export const POST = createApiHandler(
             },
         })
     },
-    { schema }
+    { schema, requireAuth: false }
 )

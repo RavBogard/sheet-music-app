@@ -80,6 +80,7 @@ const limiterConfigs = {
     bridgeSetup: { max: 5, window: 60 },
     chart: { max: 600, window: 60 },
     telemetry: { max: 300, window: 60 },
+    printAnon: { max: 15, window: 60 },
 } as const
 
 const limiters = {
@@ -122,6 +123,23 @@ const limiters = {
      * v11.3-04 deferred TTFB RUM probe depends on.
      */
     telemetry: createLimiter(300, 60),
+    /**
+     * Anonymous printing: 15 req/min — `POST /api/setlist/print` when the
+     * caller has no session (Daniel, 2026-09-10: anyone may print). Signed-in
+     * callers stay on the shared `api` tier keyed by uid; this tier only
+     * covers the unauthenticated path, which is IP-keyed and therefore open
+     * to the internet.
+     *
+     * Deliberately far below `api`'s 60/min: a print is a 120s-maxDuration
+     * serverless job that fetches every chart's bytes and can run OCR-backed
+     * transposition, so an open 60/min bucket is a real cost lever. 15/min
+     * still absorbs a handful of guests printing at once behind the shul's
+     * single NAT (the sharing problem documented on the `chart` tier),
+     * because printing is a deliberate one-off action, not a per-chart fetch.
+     * Repeat identical requests mostly never reach the pipeline anyway —
+     * print-pipeline.ts serves them from the content-hash result cache.
+     */
+    printAnon: createLimiter(15, 60),
 }
 
 // In-memory fallbacks used when Redis is unavailable (fail-closed)
