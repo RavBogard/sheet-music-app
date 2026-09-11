@@ -32,10 +32,19 @@ import { getFirestore, initAdmin } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 
 import { getBatch, setBatchStatus, updateItem } from "./batch-store"
-import { mapUploadResultToItem, TERMINAL_ITEM_STATUSES } from "./batch-outcome"
+import {
+    mapUploadResultToItem,
+    recomputeCounts,
+    TERMINAL_ITEM_STATUSES,
+} from "./batch-outcome"
 import { deleteStaged, downloadStaged } from "./staged-storage"
 import { fetchDriveFileForUpload } from "./drive-folder"
-import type { BatchCounts, UploadBatchItem } from "./batch-types"
+import { BATCH_COLLECTION } from "./batch-types"
+import type {
+    BatchCounts,
+    UploadBatchDoc,
+    UploadBatchItem,
+} from "./batch-types"
 
 /** Event name the commit path sends and this function listens on. */
 export const IMPORT_BATCH_EVENT = "library/import-batch"
@@ -65,8 +74,14 @@ export interface BatchItemStepResult {
  * pipeline, map the outcome onto the item, stamp the org, release staged bytes.
  *
  * Returns the item as written. Throws only `Error("batch_not_found")` /
- * `Error("item_not_found")` — every upload-side failure is recorded ON the
- * item as `failed`, so one bad chart never aborts the batch.
+ * `Error("item_not_found")` — EVERY other failure, expected (a Drive 404, a
+ * duplicate, a dead staged object) or not (processChartUpload blowing up, a
+ * Firestore transaction error), is recorded ON the item instead of thrown.
+ *
+ * That containment is what keeps a batch from stranding: an error escaping
+ * here escapes the enclosing `step.run`, and after `retries: 2` the whole run
+ * dies with the batch still `processing` and no record of which chart broke.
+ * One bad chart must cost exactly one `failed` item.
  *
  * @param opts.force Re-run an already-terminal item and pass `force: true`
  *   through to `processChartUpload` (bypassing duplicate detection). This is
@@ -89,6 +104,44 @@ export async function processBatchItem(
     // committed must be a no-op, not a second import.
     if (TERMINAL_ITEM_STATUSES.has(item.status) && !force) return item
 
+    try {
+        return await importOneItem(db, batch, item, force)
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        logger.error(
+            `[import-batch] item ${batchId}/${itemId} threw; recording as failed:`,
+            message,
+        )
+        try {
+            return itemAfter(
+                await updateItem(db, batchId, itemId, {
+                    status: "failed",
+                    error: { code: "internal", message },
+                }),
+                itemId,
+            )
+        } catch {
+            // Firestore itself is unavailable — there is nowhere to record the
+            // failure, so let the original error surface. `onFailure` closes
+            // the batch out once Inngest gives up.
+            throw err
+        }
+    }
+}
+
+/**
+ * The item import proper. Split out of `processBatchItem` so the latter is
+ * purely "guard, contain, record" and this can read straight through.
+ */
+async function importOneItem(
+    db: FirebaseFirestore.Firestore,
+    batch: UploadBatchDoc & { batchId: string },
+    item: UploadBatchItem,
+    force: boolean,
+): Promise<UploadBatchItem> {
+    const { batchId } = batch
+    const { itemId } = item
+
     // ─── bytes ─────────────────────────────────────────────────────────────
     let buffer: Buffer
     let mimeType = item.mimeType
@@ -104,6 +157,7 @@ export async function processBatchItem(
                 await updateItem(db, batchId, itemId, {
                     status: "failed",
                     error: { code: fetched.code, message: fetched.message },
+                    parked: undefined,
                 }),
                 itemId,
             )
@@ -120,6 +174,7 @@ export async function processBatchItem(
                         code: "no_bytes",
                         message: "Item has neither staged bytes nor a Drive file id.",
                     },
+                    parked: undefined,
                 }),
                 itemId,
             )
@@ -134,9 +189,9 @@ export async function processBatchItem(
                     status: "failed",
                     error: {
                         code: "staged_bytes_missing",
-                        message:
-                            err instanceof Error ? err.message : String(err),
+                        message: err instanceof Error ? err.message : String(err),
                     },
+                    parked: undefined,
                 }),
                 itemId,
             )
@@ -144,15 +199,6 @@ export async function processBatchItem(
     }
 
     // ─── the canonical pipeline ────────────────────────────────────────────
-    // `UploadBatchItem` carries only `driveFileId`, but a drive-folder writer
-    // may have stashed the Drive provenance fields alongside it; pass them
-    // through when present so `library_index` gets the same md5/modifiedTime
-    // the cron drive-sync importer writes.
-    const driveExtras = item as Partial<{
-        md5Checksum: string
-        modifiedTime: string
-    }>
-
     const result = await processChartUpload({
         buffer,
         originalFileName,
@@ -166,11 +212,13 @@ export async function processBatchItem(
         driveMetadata: item.driveFileId
             ? {
                   driveFileId: item.driveFileId,
-                  ...(driveExtras.md5Checksum
-                      ? { md5Checksum: driveExtras.md5Checksum }
+                  // Populated by the Drive-folder listing; absent for a
+                  // dropzone item, and omitted rather than sent as undefined.
+                  ...(item.driveMd5Checksum
+                      ? { md5Checksum: item.driveMd5Checksum }
                       : {}),
-                  ...(driveExtras.modifiedTime
-                      ? { modifiedTime: driveExtras.modifiedTime }
+                  ...(item.driveModifiedTime
+                      ? { modifiedTime: item.driveModifiedTime }
                       : {}),
               }
             : undefined,
@@ -245,13 +293,34 @@ export async function runImportBatch(
         )
     }
 
-    const counts = await step.run("finish", async () => {
-        await setBatchStatus(db, batchId, "done", { finishedAt: new Date() })
-        const final = await getBatch(db, batchId)
-        if (!final) throw new Error("batch_not_found")
-        return final.counts
-    })
+    const counts = await step.run("finish", () => finalizeBatch(db, batchId))
     return counts as BatchCounts
+}
+
+/**
+ * Close a batch out: recompute `counts` from whatever the items actually say
+ * and write `done` + `finishedAt`.
+ *
+ * Called from the happy-path `finish` step AND from the function's `onFailure`
+ * handler, so a run that Inngest gave up on still leaves a readable batch
+ * rather than one parked in `processing` forever. Counts are recomputed here
+ * rather than trusted because a crashed run may have left the derived cache
+ * behind by one item.
+ */
+export async function finalizeBatch(
+    db: FirebaseFirestore.Firestore,
+    batchId: string,
+): Promise<BatchCounts> {
+    const batch = await getBatch(db, batchId)
+    if (!batch) throw new Error("batch_not_found")
+
+    const counts = recomputeCounts(batch.items)
+    await db.collection(BATCH_COLLECTION).doc(batchId).update({
+        status: "done",
+        finishedAt: new Date(),
+        counts,
+    })
+    return counts
 }
 
 /**
@@ -260,7 +329,31 @@ export async function runImportBatch(
  * MuseScore/HEIC converters inside it) against interactive single uploads.
  */
 export const importBatchJob = inngest.createFunction(
-    { id: "library-import-batch", concurrency: { limit: 3 }, retries: 2 },
+    {
+        id: "library-import-batch",
+        concurrency: { limit: 3 },
+        retries: 2,
+        /**
+         * Last resort. `processBatchItem` contains per-item errors, so getting
+         * here means something outside an item broke (Firestore unreachable
+         * during the initial read, the `finish` step failing, a run cancelled
+         * mid-flight). Whatever it was, the batch must not be left in
+         * `processing`: a UI polling that status would spin forever.
+         */
+        onFailure: async ({ event }) => {
+            const batchId = failedRunBatchId(event)
+            if (!batchId) return
+            initAdmin()
+            try {
+                await finalizeBatch(getFirestore(), batchId)
+            } catch (err) {
+                logger.error(
+                    `[import-batch] onFailure could not finalize ${batchId}:`,
+                    err,
+                )
+            }
+        },
+    },
     { event: IMPORT_BATCH_EVENT },
     async ({ event, step }) => {
         initAdmin()
@@ -269,3 +362,16 @@ export const importBatchJob = inngest.createFunction(
         return { batchId, counts }
     },
 )
+
+/**
+ * Dig the original `batchId` out of an `inngest/function.failed` event, whose
+ * `data.event` is the event that triggered the dead run.
+ */
+export function failedRunBatchId(failureEvent: unknown): string | null {
+    const original = (
+        failureEvent as {
+            data?: { event?: { data?: { batchId?: unknown } } }
+        } | null
+    )?.data?.event?.data?.batchId
+    return typeof original === "string" && original ? original : null
+}

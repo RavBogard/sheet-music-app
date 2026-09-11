@@ -73,6 +73,14 @@ export interface UploadBatchItem {
     stagedPath?: string
     /** Drive file id when the batch source is `drive-folder`. */
     driveFileId?: string
+    /**
+     * Drive provenance captured by the folder listing, passed straight through
+     * to `processChartUpload`'s `driveMetadata` so an imported row carries the
+     * same `driveMd5` / `driveModifiedTime` the cron drive-sync importer
+     * writes. Only ever set alongside `driveFileId`.
+     */
+    driveMd5Checksum?: string
+    driveModifiedTime?: string
     status: ItemStatus
     /** `library_index` id created on a successful import. */
     resultFileId?: string

@@ -92,7 +92,12 @@ vi.mock("@/inngest/client", () => ({
     },
 }))
 
-import { processBatchItem, runImportBatch } from "../import-batch-job"
+import {
+    failedRunBatchId,
+    finalizeBatch,
+    processBatchItem,
+    runImportBatch,
+} from "../import-batch-job"
 import { createBatch, addItems, getBatch, setBatchStatus } from "../batch-store"
 import { stagedObjectPath } from "../staged-storage"
 import {
@@ -322,6 +327,89 @@ describe("import-batch-job (emulator)", () => {
         expect(item.status).toBe("failed")
         expect(item.error?.code).toBe("staged_bytes_missing")
         expect(mockProcessChartUpload).not.toHaveBeenCalled()
+    })
+
+    it("records a thrown pipeline error as failed(internal) and still finishes the batch", async () => {
+        const { batchId, ids } = await seedBatch()
+        const boom = mockProcessChartUpload.getMockImplementation()!
+        mockProcessChartUpload.mockImplementation(
+            async (input: { title?: string; force?: boolean }) => {
+                if (input.title === "Gamma")
+                    throw new Error("pdf-lib exploded mid-parse")
+                return boom(input)
+            },
+        )
+
+        const counts = await runImportBatch(db(), batchId, inlineStep)
+
+        // One bad chart costs exactly one failed item — the run still completes.
+        expect(counts).toMatchObject({ imported: 1, parked: 1, failed: 1, pending: 0 })
+
+        const batch = await getBatch(db(), batchId)
+        expect(batch!.status).toBe("done")
+        expect(batch!.finishedAt).toBeTruthy()
+        expect(batch!.items[ids.gamma]).toMatchObject({
+            status: "failed",
+            error: { code: "internal", message: "pdf-lib exploded mid-parse" },
+        })
+        // The other two items were unaffected.
+        expect(batch!.items[ids.alpha].status).toBe("imported")
+        expect(batch!.items[ids.beta].status).toBe("parked")
+    })
+
+    it("clears the stale parked block when a forced re-run fails", async () => {
+        const { batchId, ids } = await seedBatch()
+        await runImportBatch(db(), batchId, inlineStep)
+        expect((await getBatch(db(), batchId))!.items[ids.beta].parked).toBeTruthy()
+
+        // The human forces the parked item; this time the pipeline rejects it.
+        mockProcessChartUpload.mockImplementation(async () => ({
+            ok: false,
+            status: 422,
+            error: "MuseScore conversion failed",
+            code: "convert_failed",
+        }))
+        const forced = await processBatchItem(db(), batchId, ids.beta, { force: true })
+
+        expect(forced.status).toBe("failed")
+        expect(forced.parked).toBeUndefined()
+
+        // And the field is really gone from the stored document, not just
+        // undefined on the returned object.
+        const raw = await db().collection(BATCH_COLLECTION).doc(batchId).get()
+        const storedBeta = (raw.data() as { items: Record<string, unknown> }).items[
+            ids.beta
+        ] as Record<string, unknown>
+        expect("parked" in storedBeta).toBe(false)
+        expect(storedBeta.error).toMatchObject({ code: "convert_failed" })
+        expect((await getBatch(db(), batchId))!.counts).toMatchObject({
+            imported: 1,
+            parked: 0,
+            failed: 2,
+        })
+    })
+
+    it("finalizeBatch closes out a batch left in processing", async () => {
+        const { batchId } = await seedBatch()
+        await setBatchStatus(db(), batchId, "processing")
+
+        const counts = await finalizeBatch(db(), batchId)
+
+        expect(counts).toMatchObject({ total: 3, pending: 3 })
+        const batch = await getBatch(db(), batchId)
+        expect(batch!.status).toBe("done")
+        expect(batch!.finishedAt).toBeTruthy()
+    })
+
+    it("failedRunBatchId reads the original event out of a function.failed event", () => {
+        expect(
+            failedRunBatchId({
+                name: "inngest/function.failed",
+                data: { event: { name: "library/import-batch", data: { batchId: "ub-1" } } },
+            }),
+        ).toBe("ub-1")
+        expect(failedRunBatchId({ data: {} })).toBeNull()
+        expect(failedRunBatchId(null)).toBeNull()
     })
 
     it("throws batch_not_found / item_not_found for unknown ids", async () => {

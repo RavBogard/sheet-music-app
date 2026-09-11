@@ -22,12 +22,24 @@ export const TERMINAL_ITEM_STATUSES: ReadonlySet<ItemStatus> = new Set<ItemStatu
  * - ok                 -> imported + resultFileId
  * - 409 `duplicate_*`  -> parked + the matched library row (Task 1 fields)
  * - anything else      -> failed + { code, message }
+ *
+ * Every patch names BOTH `parked` and `error`, clearing the one that does not
+ * apply. An item can be re-processed (a human forcing a parked item through,
+ * a retry of a failure), and `updateItem` merges patches onto the stored item —
+ * without the explicit clear, forcing a parked item that then fails would leave
+ * the stale `parked` block sitting next to the new `error`. `undefined` is how
+ * the store spells "remove this field"; see `batch-store.updateItem`.
  */
 export function mapUploadResultToItem(
     r: ProcessChartUploadResult,
 ): Partial<UploadBatchItem> {
     if (r.ok) {
-        return { status: "imported", resultFileId: r.fileId }
+        return {
+            status: "imported",
+            resultFileId: r.fileId,
+            parked: undefined,
+            error: undefined,
+        }
     }
     if (r.code === "duplicate_exact" || r.code === "duplicate_similar") {
         return {
@@ -38,9 +50,14 @@ export function mapUploadResultToItem(
                 matchedTitle: r.matchedTitle ?? "",
                 score: r.score,
             },
+            error: undefined,
         }
     }
-    return { status: "failed", error: { code: r.code, message: r.error } }
+    return {
+        status: "failed",
+        error: { code: r.code, message: r.error },
+        parked: undefined,
+    }
 }
 
 /**

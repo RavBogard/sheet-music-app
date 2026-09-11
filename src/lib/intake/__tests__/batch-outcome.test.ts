@@ -94,6 +94,56 @@ describe("mapUploadResultToItem", () => {
     })
 })
 
+describe("mapUploadResultToItem field clearing", () => {
+    // An item can be mapped more than once (a human forces a parked item, a
+    // failure is retried). `updateItem` merges patches, so each patch has to
+    // clear the sibling field explicitly or the stale one survives.
+    it("clears parked and error on an import", () => {
+        const patch = mapUploadResultToItem({
+            ok: true,
+            fileId: "file-123",
+            title: "Shalom Rav",
+            mimeType: "application/pdf",
+            storageUrl: "gs://x/library/file-123.pdf",
+            collection: "uploads",
+        })
+        expect("parked" in patch).toBe(true)
+        expect(patch.parked).toBeUndefined()
+        expect("error" in patch).toBe(true)
+        expect(patch.error).toBeUndefined()
+    })
+
+    it("clears error when parking", () => {
+        const patch = mapUploadResultToItem({
+            ok: false,
+            status: 409,
+            error: "Similar to Shalom Rav",
+            code: "duplicate_similar",
+            matchedFileId: "file-abc",
+            matchedTitle: "Shalom Rav",
+            score: 0.9,
+        })
+        expect(patch.parked?.matchedFileId).toBe("file-abc")
+        expect("error" in patch).toBe(true)
+        expect(patch.error).toBeUndefined()
+    })
+
+    it("clears parked when failing", () => {
+        const patch = mapUploadResultToItem({
+            ok: false,
+            status: 422,
+            error: "MuseScore conversion failed",
+            code: "convert_failed",
+        })
+        expect(patch.error).toEqual({
+            code: "convert_failed",
+            message: "MuseScore conversion failed",
+        })
+        expect("parked" in patch).toBe(true)
+        expect(patch.parked).toBeUndefined()
+    })
+})
+
 describe("recomputeCounts", () => {
     it("counts every bucket and folds the three in-flight statuses into pending", () => {
         const items: Record<string, UploadBatchItem> = {
