@@ -13,16 +13,22 @@ import { httpError } from "@/lib/http/error-envelope"
  * Batch chart intake — stuck-batch resume sweep.
  *
  * Runs every 10 minutes (Vercel cron config in vercel.json). `commit_upload_batch`
- * seals the batch in Firestore before queueing it, so an Inngest outage can
- * leave a `committed` doc nothing will ever process. This drains those: any
+ * seals the batch in Firestore before queueing it, so an executor outage (HTTP
+ * self-trigger or Inngest) can leave a `committed` doc nothing will ever process. This drains those: any
  * batch still `committed` five minutes after commit is re-sent.
  *
  * Auth: same CRON_SECRET / Bearer dance as the other crons.
  */
 
 function safeCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
+    // Compare BYTE lengths, not string lengths: `timingSafeEqual` throws on
+    // unequal-length buffers, and two equal-length strings can encode to
+    // different byte counts once either holds a non-ASCII character. A throw
+    // here would surface as a 500 on what is simply a wrong secret.
+    const left = Buffer.from(a)
+    const right = Buffer.from(b)
+    if (left.byteLength !== right.byteLength) return false
+    return timingSafeEqual(left, right)
 }
 
 export const dynamic = "force-dynamic"
