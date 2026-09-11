@@ -73,3 +73,8 @@ export const generatePdfJob = inngest.createFunction(
         return { success: true, url: downloadUrl }
     }
 )
+
+// Batch chart intake (2026-09-10). The function itself lives next to the batch
+// store in `src/lib/intake/` — re-exported here so the Inngest route keeps a
+// single import surface for every registered function.
+export { importBatchJob, IMPORT_BATCH_EVENT } from "@/lib/intake/import-batch-job"
