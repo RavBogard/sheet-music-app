@@ -68,7 +68,13 @@ export function loadDropzoneHtml(): string {
  *   known, for the polling fallback path.
  * - `domain` is the stable app origin (see `mcpAppsStableDomain`) so the GCS
  *   bucket's CORS rule can name one origin. Omitted when `MCP_PUBLIC_URL` is
- *   unset, because there is nothing stable to hash.
+ *   unset, because there is nothing stable to hash. DO NOT SET
+ *   `MCP_PUBLIC_URL` in production: Claude derives the app's sandbox origin by
+ *   hashing the CONNECTOR url, and our two tenants connect on two different
+ *   hosts (centralreform.live / brotherslazaroff.live), so one pinned domain
+ *   makes Claude refuse to render the drop zone for the other tenant. The
+ *   bucket's CORS rule allows any origin, so nothing needs the hint — see
+ *   docs/BATCH-INTAKE.md.
  *
  * NOTE on placement: per the MCP Apps spec, `csp` and `domain` are read from
  * the UI *resource*'s `_meta.ui` (the `resources/read` content item, with the

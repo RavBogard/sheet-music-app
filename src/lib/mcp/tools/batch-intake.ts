@@ -105,6 +105,12 @@ import type {
 export const MAX_CHUNK_BYTES = 3 * 1024 * 1024
 /** How many imported rows a `get_upload_batch` result carries by default. */
 export const MAX_IMPORTED_ROWS = 20
+/**
+ * How many staged objects `commit_upload_batch` stats concurrently. Ten keeps
+ * a 200-item batch's reconcile inside one MCP call without opening 200
+ * simultaneous Storage connections.
+ */
+const STAT_GROUP_SIZE = 10
 /** Default / ceiling for `list_parked_uploads`. */
 export const DEFAULT_PARKED_LIMIT = 50
 
@@ -486,69 +492,100 @@ export async function commitUploadBatch(
         (i) => i.status === "awaiting-bytes",
     )
 
-    for (let checked = 0; checked < awaiting.length; checked++) {
-        const item = awaiting[checked]
-        if (!item.stagedPath) {
-            await updateItem(store, batch.batchId, item.itemId, {
-                status: "failed",
-                error: {
-                    code: "bytes_missing",
-                    message: "Item was never given a staged object path.",
-                },
-            })
-            continue
-        }
+    // Stats run in parallel groups: a 200-item batch used to mean 200 serial
+    // Storage round-trips inside one MCP call. Firestore updates stay
+    // sequential — they are cheap next to the stat and each one recomputes
+    // `counts` transactionally.
+    type StatOutcome =
+        | { item: UploadBatchItem; stat: { exists: boolean; sizeBytes: number } }
+        | { item: UploadBatchItem; noPath: true }
+        | { item: UploadBatchItem; err: unknown }
 
-        let stat: { exists: boolean; sizeBytes: number }
-        try {
-            stat = await statStaged(item.stagedPath)
-        } catch (err) {
-            // Storage is unreachable. ABORT without sealing the batch: a
-            // half-reconciled commit would strand the unchecked items in
-            // `awaiting-bytes` inside a `committed` batch, where nothing ever
-            // looks at them again. The batch stays `open` and the operator
-            // retries — the items already promoted above stay promoted.
-            logger.warn("[batch-intake] staged stat failed during commit", {
+    let checked = 0
+    let outage: { item: UploadBatchItem; err: unknown } | null = null
+
+    for (let i = 0; i < awaiting.length && !outage; i += STAT_GROUP_SIZE) {
+        const group = awaiting.slice(i, i + STAT_GROUP_SIZE)
+        const outcomes: StatOutcome[] = await Promise.all(
+            group.map(async (item): Promise<StatOutcome> => {
+                if (!item.stagedPath) return { item, noPath: true }
+                try {
+                    return { item, stat: await statStaged(item.stagedPath) }
+                } catch (err) {
+                    return { item, err }
+                }
+            }),
+        )
+
+        for (const outcome of outcomes) {
+            if ("err" in outcome) {
+                // Storage is unreachable. Remember the first such item and
+                // stop after applying whatever DID complete — `checked`
+                // therefore counts real verdicts, never attempts.
+                outage ??= outcome
+                continue
+            }
+            const item = outcome.item
+            checked++
+            if ("noPath" in outcome) {
+                await updateItem(store, batch.batchId, item.itemId, {
+                    status: "failed",
+                    error: {
+                        code: "bytes_missing",
+                        message: "Item was never given a staged object path.",
+                    },
+                })
+                continue
+            }
+            const stat = outcome.stat
+            if (!stat.exists) {
+                await updateItem(store, batch.batchId, item.itemId, {
+                    status: "failed",
+                    error: {
+                        code: "bytes_missing",
+                        message: `No bytes were uploaded for ${item.fileName}.`,
+                    },
+                })
+                continue
+            }
+            if (stat.sizeBytes !== item.sizeBytes) {
+                await updateItem(store, batch.batchId, item.itemId, {
+                    status: "failed",
+                    error: {
+                        code: "size_mismatch",
+                        message: `Uploaded ${stat.sizeBytes} bytes for ${item.fileName}, expected ${item.sizeBytes}.`,
+                    },
+                })
+                continue
+            }
+            await updateItem(store, batch.batchId, item.itemId, { status: "staged" })
+        }
+    }
+
+    if (outage) {
+        // ABORT without sealing the batch: a half-reconciled commit would
+        // strand the unchecked items in `awaiting-bytes` inside a `committed`
+        // batch, where nothing ever looks at them again. The batch stays
+        // `open` and the operator retries — the items already promoted above
+        // stay promoted.
+        const { item, err } = outage
+        const detail = err instanceof Error ? err.message : String(err)
+        logger.warn("[batch-intake] staged stat failed during commit", {
+            batchId: batch.batchId,
+            itemId: item.itemId,
+            err: detail,
+        })
+        return richError(
+            "storage_unavailable",
+            `Could not verify uploaded bytes for ${item.fileName}: ${detail}. Batch ${batch.batchId} was left open and nothing was queued.`,
+            {
                 batchId: batch.batchId,
-                itemId: item.itemId,
-                err: err instanceof Error ? err.message : String(err),
-            })
-            return richError(
-                "storage_unavailable",
-                `Could not verify uploaded bytes for ${item.fileName}: ${
-                    err instanceof Error ? err.message : String(err)
-                }. Batch ${batch.batchId} was left open and nothing was queued.`,
-                {
-                    batchId: batch.batchId,
-                    checked,
-                    remaining: awaiting.length - checked,
-                    errorCode: 503,
-                },
-                "Storage was unreachable; call commit_upload_batch again.",
-            )
-        }
-
-        if (!stat.exists) {
-            await updateItem(store, batch.batchId, item.itemId, {
-                status: "failed",
-                error: {
-                    code: "bytes_missing",
-                    message: `No bytes were uploaded for ${item.fileName}.`,
-                },
-            })
-            continue
-        }
-        if (stat.sizeBytes !== item.sizeBytes) {
-            await updateItem(store, batch.batchId, item.itemId, {
-                status: "failed",
-                error: {
-                    code: "size_mismatch",
-                    message: `Uploaded ${stat.sizeBytes} bytes for ${item.fileName}, expected ${item.sizeBytes}.`,
-                },
-            })
-            continue
-        }
-        await updateItem(store, batch.batchId, item.itemId, { status: "staged" })
+                checked,
+                remaining: awaiting.length - checked,
+                errorCode: 503,
+            },
+            "Storage was unreachable; call commit_upload_batch again.",
+        )
     }
 
     await setBatchStatus(store, batch.batchId, "committed", {

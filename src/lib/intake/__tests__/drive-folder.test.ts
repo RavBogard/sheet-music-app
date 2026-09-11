@@ -7,6 +7,7 @@
  */
 import { describe, it, expect, vi } from "vitest"
 import {
+    escapeDriveQueryValue,
     listDriveFolderCharts,
     fetchDriveFileForUpload,
     deriveDriveUploadTyping,
@@ -212,6 +213,31 @@ describe("listDriveFolderCharts", () => {
 
         expect(res.candidates.map((c) => c.driveFileId)).toEqual(["a", "b"])
         expect(drive.listCalls).toEqual(["'root' in parents and trashed = false"])
+    })
+
+    it("escapes an apostrophe (and a backslash) in the folder id", () => {
+        // Drive query strings escape with a backslash. An unescaped
+        // apostrophe would terminate the quoted term mid-id.
+        expect(escapeDriveQueryValue("fol'der\\x")).toBe(
+            "fol\\'der\\\\x",
+        )
+        expect(escapeDriveQueryValue("plain-id")).toBe("plain-id")
+    })
+
+    it("interpolates the escaped folder id into the q string", async () => {
+        const listFilesByQuery = vi
+            .fn()
+            .mockResolvedValue({ files: [], nextPageToken: null })
+        const drive = { listFilesByQuery } as unknown as DriveLike
+
+        await listDriveFolderCharts(drive, "fol'der\\x", {
+            recursive: false,
+            max: 10,
+        })
+
+        expect(listFilesByQuery.mock.calls[0][0].q).toBe(
+            "'fol\\'der\\\\x' in parents and trashed = false",
+        )
     })
 
     it("follows nextPageToken", async () => {

@@ -33,6 +33,17 @@ export const MAX_DRIVE_FILE_BYTES = 25 * 1024 * 1024
 /** Deepest folder level `listDriveFolderCharts` will list (the root is 1). */
 export const MAX_FOLDER_DEPTH = 3
 
+/**
+ * Escape a value for interpolation inside a single-quoted Drive `q` term.
+ * Drive query strings escape with a backslash: a literal backslash doubles,
+ * and an apostrophe is prefixed with one. A Drive folder id never contains
+ * either today, but an unescaped apostrophe would break the whole query (or
+ * smuggle a second term into it), so the id is escaped rather than trusted.
+ */
+export function escapeDriveQueryValue(value: string): string {
+    return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")
+}
+
 /** Drive `files.list` field set the folder walk needs. */
 const LIST_FIELDS =
     "nextPageToken, files(id, name, mimeType, modifiedTime, parents, md5Checksum, size)"
@@ -231,7 +242,7 @@ export async function listDriveFolderCharts(
         let pageToken: string | undefined
         do {
             const page = await drive.listFilesByQuery({
-                q: `'${id}' in parents and trashed = false`,
+                q: `'${escapeDriveQueryValue(id)}' in parents and trashed = false`,
                 fields: LIST_FIELDS,
                 pageToken,
             })

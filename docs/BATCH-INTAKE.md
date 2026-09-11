@@ -169,13 +169,30 @@ node scripts/upload-batch.mjs <path>... \
 
 | Variable | What it does |
 | --- | --- |
-| `MCP_PUBLIC_URL` | Our public MCP URL, e.g. `https://centralreform.live/api/mcp`. Gives the drop-zone iframe a **stable** `ui.domain`, which is what lets the storage bucket's CORS rule and the Apps sandbox agree on an origin. Without it the drop zone still works, but the domain hint is omitted. |
+| `MCP_PUBLIC_URL` | **Do NOT set this.** See the warning below. |
 | `CRON_SECRET` | Already configured. Guards `/api/cron/import-batches-resume` like every other cron, AND — unless `INTAKE_RUN_SECRET` is set — the internal `/api/intake/run` executor route. |
 | `INTAKE_RUN_SECRET` | Optional. The bearer `/api/intake/run` demands, when it should rotate separately from cron. Falls back to `CRON_SECRET`. With neither configured the route refuses every request and nothing is processed. |
 | `INTAKE_EXECUTOR` | Optional, `http` (default) or `inngest`. See *The executor*. `inngest` is honoured only when `INNGEST_EVENT_KEY` is also set. |
-| `INTAKE_INTERNAL_BASE_URL` | Optional. The origin the run route calls itself back on. Defaults to `VERCEL_PROJECT_PRODUCTION_URL`, then `VERCEL_URL`, then `http://localhost:3000`. |
+| `INTAKE_INTERNAL_BASE_URL` | **Set in Vercel production to `https://centralreform.live`.** The origin the run route calls itself back on. It defaults to `VERCEL_PROJECT_PRODUCTION_URL`, then `VERCEL_URL`, then `http://localhost:3000` — but those are `*.vercel.app` hosts, which SSO deployment protection covers, so a self-chained request to one answers with the Vercel login page instead of running the batch. The custom domain is not protected, so pointing the executor at it is what makes self-chaining work in production. |
 | `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY` | Only for the opt-in Inngest executor. NOT set in production. |
 | `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_STORAGE_BUCKET` | Only needed locally, by `scripts/set-storage-cors.mjs`. |
+
+### Do not set `MCP_PUBLIC_URL` / `ui.domain`
+
+Claude serves an MCP App's iframe from an origin derived by **hashing the
+connector URL** — `<hash>.claudemcpcontent.com`. The two tenants connect to two
+different URLs:
+
+- `https://centralreform.live/api/mcp`
+- `https://brotherslazaroff.live/api/mcp`
+
+so they hash to two different `*.claudemcpcontent.com` origins. A `ui.domain`
+hint (which is all `MCP_PUBLIC_URL` produces) pins ONE of them, and Claude
+refuses to render the drop zone for the other tenant — a mismatch between the
+advertised domain and the sandbox origin is a hard refusal, not a warning.
+Leaving `MCP_PUBLIC_URL` unset lets each connector's own origin be derived, and
+the drop zone renders for both. The bucket's CORS rule already allows any
+origin (see below), so nothing else depends on the hint.
 
 ### Storage CORS
 
