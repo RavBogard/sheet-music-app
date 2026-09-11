@@ -2,13 +2,21 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import {
     processChartUpload,
-    musicMimeFromFileName,
     type LibraryCollection,
     type ProcessChartUploadError,
 } from "@/lib/library-upload"
 import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
 import { scrapeChart } from "@/lib/chart-scrape"
-import { DriveClient, driveSourceIsConvertible } from "@/lib/google-drive"
+import { DriveClient } from "@/lib/google-drive"
+// batch-chart-intake Task 3: the metadata → conversion-decision → bytes-fetch
+// sequence below used to be inlined here. It now lives in the intake helper so
+// `import_drive_folder` and its Inngest processor share one implementation.
+import {
+    DRIVE_FOLDER_MIME,
+    classifyDriveFailure,
+    deriveDriveUploadTyping,
+    fetchDriveFileForUpload,
+} from "@/lib/intake/drive-folder"
 import { safelyDeleteLibraryObject } from "@/lib/library/safely-delete-library-object"
 import {
     forbiddenRoleEnvelope,
@@ -309,21 +317,26 @@ function mapDriveError(
     driveFileId: string,
     op: "metadata" | "download",
 ): RichErrorEnvelope {
-    const e = err as { code?: number; status?: number; message?: string }
-    const statusCandidate =
-        typeof e?.code === "number"
-            ? e.code
-            : typeof e?.status === "number"
-              ? e.status
-              : null
-    const message = e?.message ?? String(err)
+    // Classification (404 / 403 / other) lives in the intake helper so this
+    // tool and the batch processor can never drift on what counts as
+    // "not found"; the prose below stays this tool's own contract.
+    const { code, message } = classifyDriveFailure(err)
+    return driveErrorEnvelope(code, message, driveFileId, op)
+}
 
-    const looksLike404 = statusCandidate === 404 || /not found|404/i.test(message)
-    const looksLike403 =
-        statusCandidate === 403 ||
-        /permission|forbidden|403|insufficientPermissions/i.test(message)
-
-    if (looksLike404) {
+/**
+ * The prose half of `mapDriveError`, reachable with an already-classified
+ * code — `fetchDriveFileForUpload` classifies internally and hands back a
+ * code + message rather than the raw error, so the byte-fetch stage maps
+ * through here to produce byte-identical envelopes.
+ */
+function driveErrorEnvelope(
+    code: "drive_not_found" | "drive_forbidden" | "drive_error",
+    message: string,
+    driveFileId: string,
+    op: "metadata" | "download",
+): RichErrorEnvelope {
+    if (code === "drive_not_found") {
         return richError(
             "drive_file_not_found",
             `Drive file ${driveFileId} not found.`,
@@ -331,7 +344,7 @@ function mapDriveError(
             "Verify the Drive id and that the file hasn't been deleted, moved out of a shared folder, or never existed.",
         )
     }
-    if (looksLike403) {
+    if (code === "drive_forbidden") {
         return richError(
             "drive_permission_denied",
             `Drive denied access to file ${driveFileId} for the service account.`,
@@ -531,11 +544,14 @@ export async function importChartFromDrive(
         return mapDriveError(err, driveFileId, "metadata")
     }
 
-    const driveMime = (metadata?.mimeType || "").toLowerCase()
+    // Shared typing decision (mime + filename + conversion kind) — identical
+    // for the dryRun branch, the real import below, and batch intake.
+    const typing = deriveDriveUploadTyping(driveFileId, metadata)
+    const driveMime = typing.driveMime
     // Cycle-5 C5C-015 — folder vs Docs branch. The pre-fix error told users
     // to "export to PDF" even when they passed a folder id, which is
     // nonsensical (folders aren't documents). Distinguish folders explicitly.
-    if (driveMime === "application/vnd.google-apps.folder") {
+    if (driveMime === DRIVE_FOLDER_MIME) {
         return richError(
             "drive_invalid_target",
             `Drive id ${driveFileId} points to a folder, not a chart file.`,
@@ -547,7 +563,7 @@ export async function importChartFromDrive(
     // source is server-side convertible to PDF. 'export' = native Google doc
     // (files.export); 'copy' = uploaded Office file (.docx etc, convert-on-
     // copy); null = not convertible. Folders are already handled above.
-    const conversion = driveSourceIsConvertible(driveMime)
+    const conversion = typing.conversion
     // A native Google type we CAN'T export to PDF (Forms, Sites, Maps, …):
     // keep the explicit export-first refusal. Convertible native docs fall
     // through to the conversion path below instead.
@@ -563,30 +579,15 @@ export async function importChartFromDrive(
         )
     }
 
-    const driveName = (metadata?.name || `drive-${driveFileId}`).trim()
+    const driveName = typing.driveName
     const title = normalizeChartTitle(
         args.title?.trim() || driveName.replace(/\.[^/.]+$/, ""),
     )
-    // Effective mime + filename for the upload pipeline:
-    //  - convertible (export/copy): the bytes WILL be PDF after conversion, so
-    //    type as application/pdf and swap the filename extension to .pdf.
-    //  - otherwise: existing logic. musicxml-health Phase 2: Drive often reports
-    //    .mxl/.musicxml/.mscz as application/octet-stream or omits the mime; the
-    //    old `driveMime || "application/pdf"` then mis-typed MusicXML as PDF, so
-    //    it routed to the PDF viewer in Perform instead of the SmartScoreViewer.
-    //    When Drive gave no usable mime AND the file name is a known music
-    //    extension, derive the music mime. Real PDFs/images (specific driveMime)
-    //    unaffected.
-    const mimeType =
-        conversion !== null
-            ? "application/pdf"
-            : !driveMime || driveMime === "application/octet-stream"
-              ? (musicMimeFromFileName(driveName) ?? (driveMime || "application/pdf"))
-              : driveMime
-    const originalFileName =
-        conversion !== null
-            ? `${driveName.replace(/\.[^/.]+$/, "")}.pdf`
-            : driveName
+    // Effective mime + filename for the upload pipeline — see
+    // `deriveDriveUploadTyping` for the (unchanged) convertible /
+    // octet-stream-MusicXML / trust-Drive branches.
+    const mimeType = typing.mimeType
+    const originalFileName = typing.originalFileName
     const predictedCollection: LibraryCollection = args.collection ?? "uploads"
 
     // ─── C5C-008 dryRun branch: probe, don't write ──────────────────────────
@@ -616,33 +617,39 @@ export async function importChartFromDrive(
         }
     }
 
-    let buffer: Buffer
-    try {
-        if (conversion !== null) {
-            // v11.3-02-01: convert server-side to PDF (export for native Google
-            // docs; convert-on-copy for uploaded Office files). The bytes never
-            // round-trip through the agent — Drive egress runs on the server.
-            const bytes = await drive.fetchAsPdf(driveFileId, driveMime)
-            buffer = Buffer.from(bytes)
-        } else {
-            const bytes = await drive.getFile(driveFileId)
-            // DriveClient returns arraybuffer (responseType: 'arraybuffer'); Node
-            // sees it as ArrayBuffer or Buffer depending on transport. Normalize.
-            buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes as ArrayBuffer)
-        }
-    } catch (err) {
+    // v11.3-02-01: convertible sources are converted server-side to PDF
+    // (files.export for native Google docs; convert-on-copy for uploaded
+    // Office files); everything else is downloaded raw. The bytes never
+    // round-trip through the agent — Drive egress runs on the server.
+    // `metadata` is passed through so the helper doesn't re-read it.
+    const fetched = await fetchDriveFileForUpload(drive, driveFileId, { metadata })
+    if (!fetched.ok) {
+        if (fetched.code === "empty_file")
+            return richError(
+                "empty_file",
+                `Drive file ${driveFileId} is empty.`,
+                { driveFileId, errorCode: 400 },
+            )
+        if (fetched.code === "unsupported_type")
+            // Unreachable in practice — the folder / non-convertible-native
+            // refusals above run first and carry richer guidance. Kept so the
+            // union is exhaustive.
+            return richError(
+                "drive_invalid_target",
+                fetched.message,
+                { driveFileId, mimeType: driveMime, errorCode: 400 },
+            )
         logger.warn(
-            `[import_chart_from_drive] bytes fetch failed for ${driveFileId}: ${err instanceof Error ? err.message : "Unknown error"}`,
+            `[import_chart_from_drive] bytes fetch failed for ${driveFileId}: ${fetched.message}`,
         )
-        return mapDriveError(err, driveFileId, "download")
+        return driveErrorEnvelope(
+            fetched.code,
+            fetched.message,
+            driveFileId,
+            "download",
+        )
     }
-
-    if (buffer.byteLength === 0)
-        return richError(
-            "empty_file",
-            `Drive file ${driveFileId} is empty.`,
-            { driveFileId, errorCode: 400 },
-        )
+    const buffer = fetched.buffer
 
     const result = await processChartUpload({
         buffer,
