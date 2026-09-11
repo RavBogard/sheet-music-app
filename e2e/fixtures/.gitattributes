@@ -1,0 +1,3 @@
+# Keep the tiny fixture PDFs byte-exact: CRLF conversion would shift the
+# xref offsets baked into them.
+*.pdf -text

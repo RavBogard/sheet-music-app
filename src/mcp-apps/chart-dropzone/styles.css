@@ -1,0 +1,338 @@
+/*
+ * Chart drop-zone — dense, Logic-Pro-track-list styling.
+ *
+ * Everything here is inlined into the single-file bundle: no @import, no
+ * external font/image URL. The MCP Apps sandbox CSP is deny-by-default, so a
+ * single external reference would render as a silent blank.
+ */
+
+:root {
+    /* #6366f1 is the brand indigo, but at 13px on white it only reaches
+       3.1:1 and white-on-#6366f1 only 3.6:1. #4f46e5 is the same hue one
+       step darker and clears 4.5:1 BOTH ways (text on white, white label on
+       the button), so it is the interactive token; #6366f1 survives as the
+       decorative hover border where contrast rules do not apply. */
+    --dz-accent: #4f46e5;
+    --dz-accent-soft: #6366f1;
+    --dz-on-accent: #ffffff;
+    --dz-parked: #b45309;
+    --dz-parked-bg: #fef3c7;
+    --dz-failed: #b91c1c;
+    --dz-failed-bg: #fee2e2;
+    --dz-imported: #15803d;
+    --dz-imported-bg: #dcfce7;
+    --dz-fg: #18181b;
+    --dz-muted: #71717a;
+    --dz-bg: #ffffff;
+    --dz-row: #fafafa;
+    --dz-border: #e4e4e7;
+    color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* On #18181b, #818cf8 reads at 6.6:1 — fine for text. Its use as a
+           BUTTON background flips the requirement onto the label, so the
+           label goes near-black (13.9:1) instead of white (2.98:1). */
+        --dz-accent: #818cf8;
+        --dz-accent-soft: #818cf8;
+        --dz-on-accent: #18181b;
+        --dz-parked: #fbbf24;
+        --dz-parked-bg: #3f2d09;
+        --dz-failed: #f87171;
+        --dz-failed-bg: #3f1212;
+        --dz-imported: #4ade80;
+        --dz-imported-bg: #0d2c19;
+        --dz-fg: #f4f4f5;
+        --dz-muted: #a1a1aa;
+        --dz-bg: #18181b;
+        --dz-row: #1f1f23;
+        --dz-border: #3f3f46;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+/* The renderer toggles `.hidden` via the attribute; `table { display: table }`
+   and friends must not out-rank it. */
+[hidden] {
+    display: none !important;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Geist, "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--dz-fg);
+    background: var(--dz-bg);
+}
+
+#root {
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 12px 12px;
+}
+
+.waiting {
+    color: var(--dz-muted);
+    margin: 0;
+    padding: 24px 0;
+}
+
+/* ---------- header ---------- */
+
+.dz-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--dz-border);
+    padding-bottom: 6px;
+}
+
+.dz-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.dz-batch {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--dz-muted);
+}
+
+/* ---------- drop target ---------- */
+
+.dz-drop {
+    border: 1.5px dashed var(--dz-border);
+    border-radius: 6px;
+    padding: 18px 12px;
+    text-align: center;
+    color: var(--dz-muted);
+    cursor: pointer;
+    background: transparent;
+    width: 100%;
+    font: inherit;
+    transition: border-color 0.12s ease, color 0.12s ease;
+}
+
+.dz-drop:hover {
+    border-color: var(--dz-accent-soft);
+    color: var(--dz-fg);
+}
+
+.dz-drop:focus-visible {
+    border-color: var(--dz-accent);
+    color: var(--dz-fg);
+    outline: 2px solid var(--dz-accent);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dz-drop {
+        transition: none;
+    }
+}
+
+.dz-drop[data-over="1"] {
+    border-color: var(--dz-accent);
+    border-style: solid;
+    color: var(--dz-fg);
+}
+
+.dz-drop-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+/* ---------- table ---------- */
+
+.dz-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.dz-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--dz-muted);
+    padding: 3px 6px;
+    border-bottom: 1px solid var(--dz-border);
+}
+
+.dz-table td {
+    padding: 3px 6px;
+    border-bottom: 1px solid var(--dz-border);
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+}
+
+.dz-table tr:nth-child(even) td {
+    background: var(--dz-row);
+}
+
+.dz-col-size,
+.dz-col-status {
+    width: 74px;
+}
+
+.dz-status {
+    font-weight: 600;
+}
+
+.dz-status[data-status="imported"] {
+    color: var(--dz-imported);
+}
+
+.dz-status[data-status="parked"] {
+    color: var(--dz-parked);
+}
+
+.dz-status[data-status="failed"],
+.dz-status[data-status="rejected"] {
+    color: var(--dz-failed);
+}
+
+.dz-status[data-status="uploading"],
+.dz-status[data-status="staged"],
+.dz-status[data-status="pending"] {
+    color: var(--dz-accent);
+}
+
+tr[data-status="imported"] td:first-child {
+    box-shadow: inset 2px 0 0 var(--dz-imported);
+}
+
+tr[data-status="parked"] td:first-child {
+    box-shadow: inset 2px 0 0 var(--dz-parked);
+}
+
+tr[data-status="failed"] td:first-child,
+tr[data-status="rejected"] td:first-child {
+    box-shadow: inset 2px 0 0 var(--dz-failed);
+}
+
+.dz-detail {
+    color: var(--dz-muted);
+    font-size: 12px;
+}
+
+/* Buttons live here, never in `.dz-detail`: that cell ellipsis-clips at
+   260px, and a clipped button cannot be clicked. */
+.dz-col-actions {
+    width: 1%;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    text-align: right;
+}
+
+/* ---------- inline resolve buttons ---------- */
+
+.dz-resolve {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.dz-chip {
+    font: inherit;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--dz-border);
+    background: var(--dz-parked-bg);
+    color: var(--dz-parked);
+    cursor: pointer;
+}
+
+.dz-chip:hover:not(:disabled) {
+    border-color: var(--dz-parked);
+}
+
+.dz-chip:focus-visible {
+    outline: 2px solid var(--dz-accent);
+    outline-offset: 2px;
+}
+
+.dz-chip:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* ---------- footer ---------- */
+
+.dz-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 6px;
+}
+
+.dz-totals {
+    color: var(--dz-muted);
+    font-size: 12px;
+}
+
+.dz-primary {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--dz-accent);
+    background: var(--dz-accent);
+    color: var(--dz-on-accent);
+    cursor: pointer;
+}
+
+.dz-primary:focus-visible {
+    outline: 2px solid var(--dz-accent);
+    outline-offset: 2px;
+}
+
+.dz-primary:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.dz-primary[hidden] {
+    display: none;
+}
+
+.dz-error[hidden] {
+    display: none !important;
+}
+
+.dz-error {
+    color: var(--dz-failed);
+    background: var(--dz-failed-bg);
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 12px;
+}
