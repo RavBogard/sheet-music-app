@@ -43,7 +43,18 @@ export interface RequestUrlsResult {
         requiredHeaders: Record<string, string>
         expiresAt: string
     }>
-    rejected: Array<{ fileName: string; reason: "unsupported_type" | "too_large" }>
+    /**
+     * Files no URL was minted for.
+     * - `unsupported_type` — the name/mime resolves to no chart format.
+     * - `too_large` — over the per-item byte cap.
+     * - `invalid_size` — `sizeBytes` was absent, not a number, or <= 0. Kept
+     *   distinct from `too_large` because the fix is different: the client has
+     *   to report the real byte length, not pick a smaller file.
+     */
+    rejected: Array<{
+        fileName: string
+        reason: "unsupported_type" | "too_large" | "invalid_size"
+    }>
 }
 
 export interface CommitBatchResult {

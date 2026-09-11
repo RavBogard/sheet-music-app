@@ -58,7 +58,27 @@ export async function signPut(
     return url
 }
 
-/** Existence + byte size of a staged object. `sizeBytes` is 0 when absent. */
+/**
+ * "Is this object gone?" — a 404 from the Storage client, whose shape varies
+ * by client version (numeric `code`, or only the message).
+ */
+function isNotFound(err: unknown): boolean {
+    if ((err as { code?: number })?.code === 404) return true
+    return (
+        err instanceof Error && /No such object|not exist|404/i.test(err.message)
+    )
+}
+
+/**
+ * Existence + byte size of a staged object. `sizeBytes` is 0 when absent.
+ *
+ * A `getMetadata` failure that is NOT a 404 is RETHROWN rather than reported as
+ * `{ exists: true, sizeBytes: 0 }`. Swallowing it would hand the commit path a
+ * confident "this object is zero bytes", which it would record as a permanent
+ * `size_mismatch` failure on a chart whose bytes are in fact fine — a transient
+ * Storage outage turned into data loss. The caller catches and asks the
+ * operator to retry instead.
+ */
 export async function statStaged(
     path: string,
 ): Promise<{ exists: boolean; sizeBytes: number }> {
@@ -68,8 +88,10 @@ export async function statStaged(
     try {
         const [meta] = await file.getMetadata()
         return { exists: true, sizeBytes: Number(meta.size ?? 0) || 0 }
-    } catch {
-        return { exists: true, sizeBytes: 0 }
+    } catch (err) {
+        // Swept between the exists() probe and the metadata read.
+        if (isNotFound(err)) return { exists: false, sizeBytes: 0 }
+        throw err
     }
 }
 
@@ -83,12 +105,9 @@ export async function deleteStaged(path: string): Promise<void> {
     try {
         await getIntakeBucket().file(path).delete()
     } catch (err) {
-        const code = (err as { code?: number })?.code
-        if (code === 404) return
-        // `delete({ ignoreNotFound })` isn't available on every client version;
-        // fall back to a message sniff so a swept object never fails cleanup.
-        if (err instanceof Error && /No such object|not exist|404/i.test(err.message))
-            return
+        // `delete({ ignoreNotFound })` isn't available on every client version,
+        // so `isNotFound` sniffs both shapes — a swept object never fails cleanup.
+        if (isNotFound(err)) return
         throw err
     }
 }

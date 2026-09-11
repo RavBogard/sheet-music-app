@@ -134,7 +134,7 @@ export function registerBatchIntakeTools(server: McpServer): void {
         "request_batch_upload_urls",
         {
             description:
-                "Mint signed upload URLs for files in an open batch. Metadata only — you pass file NAMES and SIZES, never bytes; the client PUTs each file's bytes straight to the returned uploadUrl with the given Content-Type header. At most 50 files per call (call again with the same batchId for more). Files whose type is not a supported chart format, or that exceed 25 MB, come back in `rejected` with a reason instead of failing the call." +
+                "Mint signed upload URLs for files in an open batch. Metadata only — you pass file NAMES and SIZES, never bytes; the client PUTs each file's bytes straight to the returned uploadUrl with the given Content-Type header. At most 50 files per call (call again with the same batchId for more), and at most 200 files in a batch. Files come back in `rejected` with a reason instead of failing the call: 'unsupported_type' (not a chart format), 'too_large' (over 25 MB), 'invalid_size' (sizeBytes missing or not a positive number)." +
                 DROPZONE_DRIVES_THIS,
             inputSchema: {
                 batchId: batchIdSchema,
@@ -158,7 +158,7 @@ export function registerBatchIntakeTools(server: McpServer): void {
                                 .int()
                                 .nonnegative()
                                 .describe(
-                                    "Exact byte length. Checked against the uploaded object at commit, so it must be the real size.",
+                                    "Exact byte length, greater than zero. Checked against the uploaded object at commit, so it must be the real size — a missing, non-numeric or zero value comes back in `rejected` with reason 'invalid_size'.",
                                 ),
                         }),
                     )

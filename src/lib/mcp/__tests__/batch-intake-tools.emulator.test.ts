@@ -35,6 +35,8 @@ vi.mock("@/lib/rate-limit", () => ({
 }))
 
 const stagedStore = new Map<string, Buffer>()
+/** path -> error thrown by that object's `getMetadata`, for the outage case. */
+const metadataFailures = new Map<string, Error>()
 const mockGetSignedUrl = vi.fn()
 const mockStagedFile = vi.fn((path: string) => ({
     getSignedUrl: mockGetSignedUrl,
@@ -43,6 +45,8 @@ const mockStagedFile = vi.fn((path: string) => ({
     },
     exists: async () => [stagedStore.has(path)],
     getMetadata: async () => {
+        const boom = metadataFailures.get(path)
+        if (boom) throw boom
         if (!stagedStore.has(path)) throw notFound()
         return [{ size: String(stagedStore.get(path)!.byteLength) }]
     },
@@ -126,9 +130,13 @@ import {
     requestBatchUploadUrls,
     resolveUploadItem,
 } from "../tools/batch-intake"
-import { getBatch, updateItem } from "@/lib/intake/batch-store"
+import { addItems, getBatch, updateItem } from "@/lib/intake/batch-store"
 import { stagedObjectPath } from "@/lib/intake/staged-storage"
-import { BATCH_COLLECTION } from "@/lib/intake/batch-types"
+import {
+    BATCH_COLLECTION,
+    MAX_ITEM_BYTES,
+    MAX_ITEMS_PER_BATCH,
+} from "@/lib/intake/batch-types"
 
 const ORG = "crc"
 const OTHER_ORG = "lazaroff"
@@ -180,6 +188,7 @@ describe("batch intake MCP tools (emulator)", () => {
         await db().collection("users").doc(STRANGER).set({ role: "musician" })
 
         stagedStore.clear()
+        metadataFailures.clear()
         driveFiles.length = 0
         mockGetSignedUrl.mockReset()
         mockGetSignedUrl.mockResolvedValue(["https://signed.example/put"])
@@ -277,6 +286,63 @@ describe("batch intake MCP tools (emulator)", () => {
         expect(r.rejected).toEqual([{ fileName: "huge.pdf", reason: "too_large" }])
     })
 
+    it("rejects a file whose declared size is missing or not positive", async () => {
+        const batch = ok(await openChartDropzone(LEADER, ORG, {}))
+        const r = ok(
+            await requestBatchUploadUrls(LEADER, ORG, {
+                batchId: batch.batchId,
+                files: [
+                    { fileName: "zero.pdf", sizeBytes: 0 },
+                    { fileName: "negative.pdf", sizeBytes: -1 },
+                    // A client that forgot the field entirely.
+                    { fileName: "absent.pdf" } as unknown as {
+                        fileName: string
+                        sizeBytes: number
+                    },
+                ],
+            }),
+        )
+
+        expect(r.items).toHaveLength(0)
+        expect(r.rejected).toEqual([
+            { fileName: "zero.pdf", reason: "invalid_size" },
+            { fileName: "negative.pdf", reason: "invalid_size" },
+            { fileName: "absent.pdf", reason: "invalid_size" },
+        ])
+        // Nothing was minted, so nothing was recorded.
+        expect((await getBatch(db(), batch.batchId))!.counts.total).toBe(0)
+    })
+
+    it("maps the 200-item ceiling to a 409 batch_full envelope", async () => {
+        const batch = ok(await openChartDropzone(LEADER, ORG, {}))
+        // Fill the batch through the store — the same transaction the tool
+        // relies on to enforce the cap authoritatively.
+        await addItems(
+            db(),
+            batch.batchId,
+            Array.from({ length: MAX_ITEMS_PER_BATCH }, (_, i) => ({
+                itemId: `it-seed${i}`,
+                fileName: `seed${i}.pdf`,
+                mimeType: "application/pdf",
+                sizeBytes: 1,
+                title: `seed${i}`,
+                status: "awaiting-bytes" as const,
+                updatedAt: new Date().toISOString(),
+            })),
+        )
+
+        const r = await requestBatchUploadUrls(LEADER, ORG, {
+            batchId: batch.batchId,
+            files: [{ fileName: "one-too-many.pdf", sizeBytes: 10 }],
+        })
+
+        expect(machineCode(r)).toBe("batch_full")
+        expect((r as { error: { code: number } }).error.code).toBe(409)
+        expect((await getBatch(db(), batch.batchId))!.counts.total).toBe(
+            MAX_ITEMS_PER_BATCH,
+        )
+    })
+
     it("refuses a request for someone else's batch with 403", async () => {
         const batch = ok(await openChartDropzone(LEADER, ORG, {}))
 
@@ -351,6 +417,45 @@ describe("batch intake MCP tools (emulator)", () => {
         const doc = await getBatch(db(), batchId)
         expect(doc!.items[a.itemId].status).toBe("failed")
         expect(doc!.items[a.itemId].error?.code).toBe("size_mismatch")
+    })
+
+    it("aborts without sealing the batch when Storage is unreachable mid-reconcile", async () => {
+        const { batchId, a, b } = await seedTwoItemBatch()
+        stagedStore.set(stagedObjectPath(batchId, a.itemId), Buffer.from("AAAAA"))
+        stagedStore.set(stagedObjectPath(batchId, b.itemId), Buffer.from("BBBBBBB"))
+        // B's metadata read blows up — A's has already been reconciled by then.
+        metadataFailures.set(
+            stagedObjectPath(batchId, b.itemId),
+            Object.assign(new Error("503 Service Unavailable"), { code: 503 }),
+        )
+
+        const r = await commitUploadBatch(LEADER, ORG, { batchId })
+
+        expect(machineCode(r)).toBe("storage_unavailable")
+        expect((r as { error: { code: number } }).error.code).toBe(503)
+        expect(r as unknown as { checked: number; remaining: number }).toMatchObject({
+            batchId,
+            checked: 1,
+            remaining: 1,
+        })
+        expect(mockEnqueue).not.toHaveBeenCalled()
+
+        // Batch left open; the reconciled item keeps its promotion and the
+        // unchecked one is still awaiting bytes, so a retry resumes cleanly.
+        const doc = await getBatch(db(), batchId)
+        expect(doc!.status).toBe("open")
+        expect(doc!.items[a.itemId].status).toBe("staged")
+        expect(doc!.items[b.itemId].status).toBe("awaiting-bytes")
+
+        // Retry once Storage is back: only the awaiting-bytes item is re-checked.
+        metadataFailures.clear()
+        const retry = ok(await commitUploadBatch(LEADER, ORG, { batchId }))
+        expect(retry.status).toBe("committed")
+        expect(retry.queued).toBe(true)
+        expect(retry.counts).toMatchObject({ total: 2, pending: 2, failed: 0 })
+        const after = await getBatch(db(), batchId)
+        expect(after!.items[a.itemId].status).toBe("staged")
+        expect(after!.items[b.itemId].status).toBe("staged")
     })
 
     it("is idempotent — a second commit reports counts with queued:false", async () => {
@@ -618,6 +723,42 @@ describe("batch intake MCP tools (emulator)", () => {
             dataBase64: "not base64!!",
         })
         expect(machineCode(r)).toBe("invalid_argument")
+    })
+
+    it("rejects a chunk larger than the 3 MB per-chunk cap", async () => {
+        const { batchId, a } = await seedTwoItemBatch()
+        const oversized = Buffer.alloc(3 * 1024 * 1024 + 1, 0x41)
+
+        const r = await appendBatchItemChunk(LEADER, ORG, {
+            batchId,
+            itemId: a.itemId,
+            chunkIndex: 0,
+            totalChunks: 1,
+            dataBase64: oversized.toString("base64"),
+        })
+
+        expect(machineCode(r)).toBe("payload_too_large")
+        // Nothing was written for a chunk that was refused.
+        expect(stagedStore.size).toBe(0)
+    })
+
+    it("rejects a chunk that would push the item past the 25 MB per-file cap", async () => {
+        const { batchId, a } = await seedTwoItemBatch()
+        // Stand in for ~25 MB of chunks already accepted, without sending them.
+        await updateItem(db(), batchId, a.itemId, {
+            ...({ receivedChunks: 9, chunkBytes: MAX_ITEM_BYTES - 4 } as object),
+        })
+
+        const r = await appendBatchItemChunk(LEADER, ORG, {
+            batchId,
+            itemId: a.itemId,
+            chunkIndex: 9,
+            totalChunks: 20,
+            dataBase64: Buffer.from("ABCDEFGH").toString("base64"),
+        })
+
+        expect(machineCode(r)).toBe("size_exceeds_cap")
+        expect(stagedStore.size).toBe(0)
     })
 
     // ─── import_drive_folder ─────────────────────────────────────────────

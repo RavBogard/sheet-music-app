@@ -334,6 +334,11 @@ export async function requestBatchUploadUrls(
     if (isRichError(batch)) return batch
     if (batch.status !== "open")
         return mapStoreError(new Error("batch_not_open"), args.batchId)
+    // Fast path only — it spares the caller a pointless round of signed-URL
+    // minting. `addItems` re-checks the ceiling INSIDE its transaction against
+    // the re-read document and throws `batch_full` there, so that transaction
+    // (not this read) is what actually enforces the cap under concurrency; the
+    // throw is mapped to the same envelope at the addItems call below.
     if (Object.keys(batch.items ?? {}).length + files.length > MAX_ITEMS_PER_BATCH)
         return mapStoreError(new Error("batch_full"), args.batchId)
 
@@ -364,7 +369,14 @@ export async function requestBatchUploadUrls(
             rejected.push({ fileName, reason: "unsupported_type" })
             continue
         }
-        if (!Number.isFinite(sizeBytes) || sizeBytes > MAX_ITEM_BYTES) {
+        // A missing / NaN / non-positive size is a CLIENT REPORTING bug, not an
+        // oversized file — and it must not be minted, because commit reconciles
+        // the uploaded object against this number.
+        if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+            rejected.push({ fileName, reason: "invalid_size" })
+            continue
+        }
+        if (sizeBytes > MAX_ITEM_BYTES) {
             rejected.push({ fileName, reason: "too_large" })
             continue
         }
@@ -466,8 +478,16 @@ export async function commitUploadBatch(
         return mapStoreError(new Error("batch_not_open"), args.batchId)
 
     // ─── reconcile staged bytes ──────────────────────────────────────────
-    for (const item of Object.values(batch.items ?? {})) {
-        if (item.status !== "awaiting-bytes") continue
+    // Only `awaiting-bytes` items are checked, which is what makes a retry
+    // after the Storage-outage abort below safe: items already promoted to
+    // `staged` (or already failed) are skipped, so the second pass picks up
+    // exactly where the first stopped.
+    const awaiting = Object.values(batch.items ?? {}).filter(
+        (i) => i.status === "awaiting-bytes",
+    )
+
+    for (let checked = 0; checked < awaiting.length; checked++) {
+        const item = awaiting[checked]
         if (!item.stagedPath) {
             await updateItem(store, batch.batchId, item.itemId, {
                 status: "failed",
@@ -479,7 +499,35 @@ export async function commitUploadBatch(
             continue
         }
 
-        const stat = await statStaged(item.stagedPath)
+        let stat: { exists: boolean; sizeBytes: number }
+        try {
+            stat = await statStaged(item.stagedPath)
+        } catch (err) {
+            // Storage is unreachable. ABORT without sealing the batch: a
+            // half-reconciled commit would strand the unchecked items in
+            // `awaiting-bytes` inside a `committed` batch, where nothing ever
+            // looks at them again. The batch stays `open` and the operator
+            // retries — the items already promoted above stay promoted.
+            logger.warn("[batch-intake] staged stat failed during commit", {
+                batchId: batch.batchId,
+                itemId: item.itemId,
+                err: err instanceof Error ? err.message : String(err),
+            })
+            return richError(
+                "storage_unavailable",
+                `Could not verify uploaded bytes for ${item.fileName}: ${
+                    err instanceof Error ? err.message : String(err)
+                }. Batch ${batch.batchId} was left open and nothing was queued.`,
+                {
+                    batchId: batch.batchId,
+                    checked,
+                    remaining: awaiting.length - checked,
+                    errorCode: 503,
+                },
+                "Storage was unreachable; call commit_upload_batch again.",
+            )
+        }
+
         if (!stat.exists) {
             await updateItem(store, batch.batchId, item.itemId, {
                 status: "failed",
