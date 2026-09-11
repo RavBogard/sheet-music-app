@@ -12,6 +12,7 @@ import {
     registerMintAdminBearerTools,
     registerRosterTools,
     registerObservabilityTools,
+    registerBatchIntakeTools,
 } from "@/lib/mcp/tools"
 import { wrapWithValidationRemap } from "@/lib/mcp/zod-envelope-remap"
 import { logger } from "@/lib/logger"
@@ -72,6 +73,7 @@ const baseHandler = createMcpHandler(
         registerMintAdminBearerTools(server)
         registerRosterTools(server)
         registerObservabilityTools(server)
+        registerBatchIntakeTools(server)
     },
     {
         serverInfo: { name: "centralreform-live", version: "1.0.0" },

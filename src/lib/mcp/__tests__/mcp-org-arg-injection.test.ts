@@ -7,6 +7,7 @@ import {
     registerChartUploadTools,
     registerRosterTools,
     registerObservabilityTools,
+    registerBatchIntakeTools,
 } from "../tools"
 
 /**
@@ -50,6 +51,7 @@ describe("v11-06-02 no-arg-injection: no MCP tool accepts a caller-suppliable or
         registerChartUploadTools(mockServer)
         registerRosterTools(mockServer)
         registerObservabilityTools(mockServer)
+        registerBatchIntakeTools(mockServer)
         return captured
     }
 

@@ -163,3 +163,33 @@ export async function assembleChunks(
 
     return { ok: true, sizeBytes: assembled.byteLength }
 }
+
+/**
+ * Strict RFC-4648 base64 decode.
+ *
+ * Copied from `library-upload-session.ts` (deliberate duplication: that module
+ * keeps it private and drags the whole single-upload session surface with it)
+ * so the batch chunk-append fallback validates bytes identically. `Buffer.from`
+ * never throws on malformed base64 — it silently truncates — so the format has
+ * to be checked before decoding, or a corrupted chunk lands as a short file.
+ */
+export function decodeBase64Strict(
+    s: string,
+): { ok: true; buffer: Buffer } | { ok: false; reason: string } {
+    const stripped = s.replace(/\s/g, "")
+    if (stripped.length === 0) return { ok: false, reason: "Decoded chunk is empty." }
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(stripped))
+        return {
+            ok: false,
+            reason: "dataBase64 must be standard base64 (RFC 4648). Got non-base64 characters.",
+        }
+    if (stripped.length % 4 !== 0)
+        return {
+            ok: false,
+            reason: "dataBase64 length must be a multiple of 4 (padded with '=').",
+        }
+    const buffer = Buffer.from(stripped, "base64")
+    if (buffer.byteLength === 0)
+        return { ok: false, reason: "Decoded chunk is empty." }
+    return { ok: true, buffer }
+}

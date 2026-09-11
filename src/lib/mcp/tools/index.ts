@@ -145,6 +145,7 @@ import { listBooksTool, lookupBookPageTool } from "./books"
 import { richError, liftLegacyErrorEnvelope } from "@/lib/mcp/error-envelopes"
 export { registerTestTokenTools } from "./test-tokens"
 export { registerMintAdminBearerTools } from "./mint-admin-bearer"
+export { registerBatchIntakeTools } from "./register-batch-intake"
 // v11-02-01: the caller-org resolution seam. v11-02-02 read tools consume it to
 // scope reads by tenant; re-exported so tools resolve org from the same import
 // site they use for uid. Imported locally too (a bare re-export isn't in-scope).

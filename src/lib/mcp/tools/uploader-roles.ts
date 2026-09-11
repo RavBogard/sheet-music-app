@@ -3,6 +3,7 @@ import {
     richError,
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
+import type { LibraryCollection } from "@/lib/library-upload"
 
 /**
  * Shared uploader role-gate helpers for the MCP chart/curation surface.
@@ -65,4 +66,36 @@ export function rateLimitEnvelope(reason: string): RichErrorEnvelope {
         undefined,
         "Retry after the cooldown window, or ask an admin to bypass via trusted-leader role.",
     )
+}
+
+/**
+ * Curated-catalog write gate. 'core' (the main CRC catalog), 'supplemental'
+ * (the Shireinu songbook) and 'nava' (the Nava Tehila corpus) are curated
+ * collections: only a trusted leader may file a chart into one. 'uploads' —
+ * and an unset collection, which defaults to it — is open to every
+ * upload-allowed caller.
+ *
+ * Returns the refusal envelope, or null when the write is permitted. Kept
+ * here beside the other shared gates so the single-upload session tools and
+ * batch intake can never drift on which collections are curated.
+ */
+export function curatedCatalogGate(
+    roles: UploaderRoles,
+    collection: LibraryCollection | undefined,
+): RichErrorEnvelope | null {
+    if (
+        (collection === "core" ||
+            collection === "supplemental" ||
+            collection === "nava") &&
+        !isTrustedLeader(roles)
+    ) {
+        return forbiddenRoleEnvelope({
+            callerRole: roles.role ?? null,
+            requiredRoles: ["admin", "band_leader"],
+            message: `Writing to the '${collection}' catalog requires an admin or band leader account.`,
+            hint: "Pick collection: 'uploads' (default) or ask an admin/band leader to add this to the curated catalog.",
+            context: { collection },
+        })
+    }
+    return null
 }
