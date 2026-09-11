@@ -75,7 +75,20 @@ vi.mock("@/lib/google-drive", async () => {
         await vi.importActual<typeof import("@/lib/google-drive")>(
             "@/lib/google-drive",
         )
-    return { ...actual, DriveClient: class {} }
+    return {
+        ...actual,
+        DriveClient: class {
+            async getFileMetadata(id: string) {
+                return { name: `${id}.pdf`, mimeType: "application/pdf" }
+            }
+            async getFile() {
+                return Buffer.from("drive bytes")
+            }
+            async fetchAsPdf() {
+                return Buffer.from("pdf bytes")
+            }
+        },
+    }
 })
 
 // The Inngest client must not try to reach the dev server from a unit test.
@@ -259,10 +272,11 @@ describe("import-batch-job (emulator)", () => {
         expect(gamma.status).toBe("failed")
         expect(gamma.error).toMatchObject({ code: "convert_failed" })
 
-        // Imported + failed release their staged bytes; parked keeps them so a
-        // human's `force` decision has something to re-import.
+        // Only the import releases its staged bytes. Parked AND failed keep
+        // theirs so a human's `force` decision has something to re-import —
+        // deleting a failed item's bytes would make the retry impossible.
         expect(stagedStore.has(stagedObjectPath(batchId, ids.alpha))).toBe(false)
-        expect(stagedStore.has(stagedObjectPath(batchId, ids.gamma))).toBe(false)
+        expect(stagedStore.has(stagedObjectPath(batchId, ids.gamma))).toBe(true)
         expect(stagedStore.has(stagedObjectPath(batchId, ids.beta))).toBe(true)
 
         // The org stamp lands only on the imported row.
@@ -317,6 +331,78 @@ describe("import-batch-job (emulator)", () => {
 
         const batch = await getBatch(db(), batchId)
         expect(batch!.counts).toMatchObject({ imported: 2, parked: 0, failed: 1 })
+    })
+
+    it("retries a failed item from its retained staged bytes", async () => {
+        const { batchId, ids } = await seedBatch()
+        await runImportBatch(db(), batchId, inlineStep)
+        expect(stagedStore.has(stagedObjectPath(batchId, ids.gamma))).toBe(true)
+
+        mockProcessChartUpload.mockClear()
+        mockProcessChartUpload.mockResolvedValue({
+            ok: true,
+            fileId: "lib-gamma-retried",
+            title: "Gamma",
+            mimeType: "application/pdf",
+            storageUrl: "gs://mock/library/lib-gamma-retried.pdf",
+            collection: "uploads",
+        })
+
+        const retried = await processBatchItem(db(), batchId, ids.gamma, {
+            force: true,
+        })
+        expect(retried.status).toBe("imported")
+        expect(retried.resultFileId).toBe("lib-gamma-retried")
+        // The retry succeeded, so now the bytes go.
+        expect(stagedStore.has(stagedObjectPath(batchId, ids.gamma))).toBe(false)
+    })
+
+    it("forwards Drive provenance into processChartUpload's driveMetadata", async () => {
+        const { batchId } = await createBatch(db(), {
+            ownerUid: OWNER,
+            orgId: ORG,
+            source: "drive-folder",
+            defaults: { collection: "uploads" },
+        })
+        const itemId = newItemId()
+        await addItems(db(), batchId, [
+            {
+                itemId,
+                fileName: "Hashkivenu.pdf",
+                mimeType: "application/pdf",
+                sizeBytes: 11,
+                title: "Hashkivenu",
+                driveFileId: "drive-1",
+                driveMd5Checksum: "d41d8cd98f00b204e9800998ecf8427e",
+                driveModifiedTime: "2026-09-01T12:00:00.000Z",
+                driveParents: ["folder-1"],
+                status: "pending",
+                updatedAt: new Date().toISOString(),
+            },
+        ])
+        await setBatchStatus(db(), batchId, "committed", { committedAt: new Date() })
+        mockProcessChartUpload.mockResolvedValue({
+            ok: true,
+            fileId: "lib-drive-1",
+            title: "Hashkivenu",
+            mimeType: "application/pdf",
+            storageUrl: "gs://mock/library/lib-drive-1.pdf",
+            collection: "uploads",
+        })
+
+        const item = await processBatchItem(db(), batchId, itemId)
+        expect(item.status).toBe("imported")
+        expect(mockProcessChartUpload).toHaveBeenCalledWith(
+            expect.objectContaining({
+                source: "drive-sync",
+                driveMetadata: {
+                    driveFileId: "drive-1",
+                    md5Checksum: "d41d8cd98f00b204e9800998ecf8427e",
+                    modifiedTime: "2026-09-01T12:00:00.000Z",
+                    parents: ["folder-1"],
+                },
+            }),
+        )
     })
 
     it("fails an item whose staged bytes are gone instead of throwing", async () => {

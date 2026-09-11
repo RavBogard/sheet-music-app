@@ -220,6 +220,9 @@ async function importOneItem(
                   ...(item.driveModifiedTime
                       ? { modifiedTime: item.driveModifiedTime }
                       : {}),
+                  ...(item.driveParents && item.driveParents.length > 0
+                      ? { parents: item.driveParents }
+                      : {}),
               }
             : undefined,
     })
@@ -232,10 +235,14 @@ async function importOneItem(
     }
 
     // ─── staged cleanup ────────────────────────────────────────────────────
-    // Parked items keep their bytes so a later `force` has something to import.
+    // Only terminal outcomes that can never be re-run release their bytes.
+    // Parked items keep them so a later `force` has something to import, and
+    // so do FAILED items: a failure is retryable (`resolve_upload_item` with
+    // action 'force'), and deleting the bytes would turn a transient pipeline
+    // error into a permanent `staged_bytes_missing`.
     if (
         item.stagedPath &&
-        (patch.status === "imported" || patch.status === "failed")
+        (patch.status === "imported" || patch.status === "skipped")
     ) {
         await deleteStaged(item.stagedPath).catch((err) =>
             logger.warn(

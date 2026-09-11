@@ -265,7 +265,7 @@ export function registerBatchIntakeTools(server: McpServer): void {
         "resolve_upload_item",
         {
             description:
-                "Record the user's decision about one parked upload. A parked row is a file the importer thinks already exists in the library. ASK THE USER FIRST, in plain language, then call this with their answer: 'force' imports it anyway as a separate chart (right for a genuine variant — different key, arrangement or composer), 'skip' discards the upload, 'bind' says the chart is already in the library as boundFileId (find that id with search_library) so you can bond the existing chart onto the setlist instead. 'skip' also works on a failed row to clear it.",
+                "Record the user's decision about one parked upload. A parked row is a file the importer thinks already exists in the library. ASK THE USER FIRST, in plain language, then call this with their answer: 'force' imports it anyway as a separate chart (right for a genuine variant — different key, arrangement or composer), 'skip' discards the upload, 'bind' says the chart is already in the library as boundFileId (find that id with search_library) so you can bond the existing chart onto the setlist instead. A FAILED row is retryable the same way: 'force' runs it through the pipeline again (use it once whatever broke is fixed), 'skip' clears it. 'bind' applies only to parked rows.",
             inputSchema: {
                 batchId: batchIdSchema,
                 itemId: z
@@ -275,7 +275,7 @@ export function registerBatchIntakeTools(server: McpServer): void {
                 action: z
                     .enum(["force", "skip", "bind"])
                     .describe(
-                        "'force' = import it anyway; 'skip' = discard it; 'bind' = it already exists in the library as boundFileId.",
+                        "'force' = import it anyway (also retries a failed row); 'skip' = discard it; 'bind' = it already exists in the library as boundFileId (parked rows only).",
                     ),
                 boundFileId: z
                     .string()

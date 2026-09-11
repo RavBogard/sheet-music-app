@@ -81,6 +81,8 @@ export interface UploadBatchItem {
      */
     driveMd5Checksum?: string
     driveModifiedTime?: string
+    /** Drive parent folder ids reported by the folder listing. */
+    driveParents?: string[]
     status: ItemStatus
     /** `library_index` id created on a successful import. */
     resultFileId?: string

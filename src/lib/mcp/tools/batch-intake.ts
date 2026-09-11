@@ -815,7 +815,8 @@ export interface ResolveUploadItemArgs {
  * Execute a human's decision about a parked (or failed) item.
  *
  * - `force` re-runs the canonical pipeline with duplicate detection off. This
- *   is why a parked item KEEPS its staged bytes.
+ *   is why a parked OR failed item KEEPS its staged bytes; a failed
+ *   drive-folder item has none and is re-fetched from Drive instead.
  * - `skip` drops the item and releases its bytes.
  * - `bind` records that the chart already exists in the library as
  *   `boundFileId` — the item is skipped, and Claude bonds that existing row
@@ -846,12 +847,17 @@ export async function resolveUploadItem(
     const item = batch.items?.[itemId]
     if (!item) return mapStoreError(new Error("item_not_found"), batchId)
 
+    // A failed item is retryable: its staged bytes are retained (a Drive-folder
+    // item has none and is re-fetched from Drive), so `force` re-runs it.
+    // `bind` stays parked-only — it answers a duplicate question, which is the
+    // only thing a park ever asks.
     const resolvable =
-        item.status === "parked" || (item.status === "failed" && action === "skip")
+        item.status === "parked" ||
+        (item.status === "failed" && (action === "force" || action === "skip"))
     if (!resolvable)
         return richError(
             "invalid_state",
-            `Item ${itemId} is '${item.status}'; only parked items can be forced or bound, and only parked or failed items can be skipped.`,
+            `Item ${itemId} is '${item.status}'; only parked or failed items can be forced or skipped, and only parked items can be bound.`,
             { batchId, itemId, status: item.status },
             "Call get_upload_batch to see which items need a decision.",
         )
@@ -1040,19 +1046,28 @@ export async function importDriveFolder(
     })
 
     const now = new Date().toISOString()
-    const items: UploadBatchItem[] = candidates.map((c) => ({
-        itemId: newItemId(),
-        fileName: c.name,
-        mimeType: resolveChartMime(c.name, c.mimeType) ?? c.mimeType,
-        sizeBytes: c.sizeBytes,
-        title: titleFromFileName(c.name),
-        driveFileId: c.driveFileId,
-        status: "pending",
-        updatedAt: now,
-        // Drive provenance the processor forwards into library_index.
-        ...(c.md5Checksum ? { md5Checksum: c.md5Checksum } : {}),
-        ...(c.modifiedTime ? { modifiedTime: c.modifiedTime } : {}),
-    }))
+    const items: UploadBatchItem[] = candidates.map((c) => {
+        // Built field-by-field rather than with a trailing spread: a spread of
+        // an object literal defeats TypeScript's excess-property check, which
+        // is exactly how the earlier `md5Checksum` / `modifiedTime` keys (the
+        // names `processBatchItem` does NOT read) shipped unnoticed.
+        const item: UploadBatchItem = {
+            itemId: newItemId(),
+            fileName: c.name,
+            mimeType: resolveChartMime(c.name, c.mimeType) ?? c.mimeType,
+            sizeBytes: c.sizeBytes,
+            title: titleFromFileName(c.name),
+            driveFileId: c.driveFileId,
+            status: "pending",
+            updatedAt: now,
+        }
+        // Drive provenance the processor forwards into library_index. Firestore
+        // rejects explicit `undefined`, so absent fields stay absent.
+        if (c.md5Checksum) item.driveMd5Checksum = c.md5Checksum
+        if (c.modifiedTime) item.driveModifiedTime = c.modifiedTime
+        if (c.parents && c.parents.length > 0) item.driveParents = c.parents
+        return item
+    })
 
     if (items.length > 0) {
         try {

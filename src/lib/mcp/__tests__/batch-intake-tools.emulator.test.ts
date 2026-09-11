@@ -618,12 +618,58 @@ describe("batch intake MCP tools (emulator)", () => {
         })
     })
 
-    it("refuses to force an item that is not parked", async () => {
+    it("refuses to force an item that is neither parked nor failed", async () => {
         const { batchId, a } = await seedTwoItemBatch()
         const r = await resolveUploadItem(LEADER, ORG, {
             batchId,
             itemId: a.itemId,
             action: "force",
+        })
+        expect(machineCode(r)).toBe("invalid_state")
+    })
+
+    it("forces a FAILED item back through the pipeline and imports it", async () => {
+        const { batchId, a } = await seedTwoItemBatch()
+        // A failed item keeps its staged bytes precisely so this retry works.
+        stagedStore.set(stagedObjectPath(batchId, a.itemId), Buffer.from("AAAAA"))
+        await updateItem(db(), batchId, a.itemId, {
+            status: "failed",
+            error: { code: "convert_failed", message: "MuseScore fell over" },
+        })
+        mockProcessChartUpload.mockResolvedValue({ ok: true, fileId: "lib-retried" })
+
+        const r = ok(
+            await resolveUploadItem(LEADER, ORG, {
+                batchId,
+                itemId: a.itemId,
+                action: "force",
+            }),
+        )
+
+        expect(r.status).toBe("imported")
+        expect(r.resultFileId).toBe("lib-retried")
+        expect(mockProcessChartUpload).toHaveBeenCalledTimes(1)
+
+        const doc = await getBatch(db(), batchId)
+        expect(doc!.items[a.itemId].status).toBe("imported")
+        expect(doc!.counts).toMatchObject({ imported: 1, failed: 0 })
+    })
+
+    it("still refuses to BIND a failed item", async () => {
+        const { batchId, a } = await seedTwoItemBatch()
+        await updateItem(db(), batchId, a.itemId, {
+            status: "failed",
+            error: { code: "convert_failed", message: "MuseScore fell over" },
+        })
+        await db().collection("library_index").doc("lib-existing").set({
+            title: "Shalom Rav",
+        })
+
+        const r = await resolveUploadItem(LEADER, ORG, {
+            batchId,
+            itemId: a.itemId,
+            action: "bind",
+            boundFileId: "lib-existing",
         })
         expect(machineCode(r)).toBe("invalid_state")
     })
@@ -770,6 +816,9 @@ describe("batch intake MCP tools (emulator)", () => {
                 name: "Hashkivenu.pdf",
                 mimeType: "application/pdf",
                 size: "1200",
+                md5Checksum: "d41d8cd98f00b204e9800998ecf8427e",
+                modifiedTime: "2026-09-01T12:00:00.000Z",
+                parents: ["folder-1"],
             },
             {
                 id: "drive-2",
@@ -853,6 +902,35 @@ describe("batch intake MCP tools (emulator)", () => {
             "Hashkivenu",
         )
         expect(mockEnqueue).toHaveBeenCalledWith(real.batchId)
+    })
+
+    it("stores Drive provenance under the keys processBatchItem reads", async () => {
+        seedDriveFolder()
+
+        const r = ok(
+            await importDriveFolder(LEADER, ORG, { folderId: "folder-1" }),
+        ) as { batchId: string }
+
+        const doc = await getBatch(db(), r.batchId)
+        const item = Object.values(doc!.items).find(
+            (i) => i.driveFileId === "drive-1",
+        )!
+        // The names here are load-bearing: `processBatchItem` forwards
+        // `driveMd5Checksum` / `driveModifiedTime` / `driveParents` into
+        // `processChartUpload`'s `driveMetadata`, and nothing reads a bare
+        // `md5Checksum` / `modifiedTime` off an item.
+        expect(item.driveMd5Checksum).toBe("d41d8cd98f00b204e9800998ecf8427e")
+        expect(item.driveModifiedTime).toBe("2026-09-01T12:00:00.000Z")
+        expect(item.driveParents).toEqual(["folder-1"])
+        expect(item).not.toHaveProperty("md5Checksum")
+        expect(item).not.toHaveProperty("modifiedTime")
+
+        // A file Drive reported no provenance for carries none.
+        const bare = Object.values(doc!.items).find(
+            (i) => i.driveFileId === "drive-2",
+        )!
+        expect(bare.driveMd5Checksum).toBeUndefined()
+        expect(bare.driveParents).toBeUndefined()
     })
 
     it("refuses a Drive folder import for a caller with no upload permission", async () => {
