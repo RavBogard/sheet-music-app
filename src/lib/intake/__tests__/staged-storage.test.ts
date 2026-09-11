@@ -8,6 +8,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
  */
 const store = new Map<string, Buffer>()
 const signedUrlCalls: Array<Record<string, unknown>> = []
+/** Set to make the next `getMetadata` throw — drives the outage cases. */
+let metadataFailure: Error | null = null
 const mockFile = vi.fn((p: string) => ({
     getSignedUrl: async (opts: Record<string, unknown>) => {
         signedUrlCalls.push(opts)
@@ -18,6 +20,7 @@ const mockFile = vi.fn((p: string) => ({
     },
     exists: async () => [store.has(p)],
     getMetadata: async () => {
+        if (metadataFailure) throw metadataFailure
         if (!store.has(p)) throw notFound()
         return [{ size: String(store.get(p)!.byteLength) }]
     },
@@ -64,6 +67,7 @@ describe("staged-storage", () => {
     beforeEach(() => {
         store.clear()
         signedUrlCalls.length = 0
+        metadataFailure = null
         mockFile.mockClear()
     })
 
@@ -103,6 +107,27 @@ describe("staged-storage", () => {
                 exists: false,
                 sizeBytes: 0,
             })
+        })
+
+        it("treats a 404 from getMetadata as absent (swept between the two calls)", async () => {
+            const path = stagedObjectPath(BATCH, ITEM)
+            store.set(path, Buffer.from("x"))
+            metadataFailure = notFound()
+
+            expect(await statStaged(path)).toEqual({ exists: false, sizeBytes: 0 })
+        })
+
+        it("RETHROWS a non-404 getMetadata failure instead of reporting 0 bytes", async () => {
+            // Reporting {exists:true, sizeBytes:0} here would make the commit
+            // path record a permanent `size_mismatch` on a chart whose bytes are
+            // fine — a transient outage turned into data loss.
+            const path = stagedObjectPath(BATCH, ITEM)
+            store.set(path, Buffer.from("twelve bytes"))
+            metadataFailure = Object.assign(new Error("503 Service Unavailable"), {
+                code: 503,
+            })
+
+            await expect(statStaged(path)).rejects.toThrow("503 Service Unavailable")
         })
     })
 
