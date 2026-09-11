@@ -13,6 +13,7 @@ import {
     dropzoneUiMeta,
     loadDropzoneHtml,
 } from "@/lib/mcp/apps/dropzone-resource"
+import type { OpenDropzoneArgs } from "./batch-intake"
 import {
     appendBatchItemChunk,
     commitUploadBatch,
@@ -109,6 +110,12 @@ export function registerBatchIntakeTools(server: McpServer): void {
             inputSchema: {
                 collection: collectionSchema,
                 tags: tagsSchema,
+                source: z
+                    .enum(["dropzone", "cli"])
+                    .optional()
+                    .describe(
+                        "How this batch's files will arrive. Leave unset in a conversation (the iframe is the 'dropzone' default); the CLI courier scripts/upload-batch.mjs passes 'cli' so the batch records where it came from.",
+                    ),
             },
             _meta: { ui: { resourceUri: DROPZONE_RESOURCE_URI } },
         },
@@ -117,7 +124,7 @@ export function registerBatchIntakeTools(server: McpServer): void {
                 await openChartDropzone(
                     uidFrom(extra as AuthExtra),
                     orgFrom(extra as AuthExtra),
-                    args as { collection?: never; tags?: string[] },
+                    args as OpenDropzoneArgs,
                 ),
             ),
     )
