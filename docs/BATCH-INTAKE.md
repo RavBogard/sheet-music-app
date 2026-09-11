@@ -63,6 +63,34 @@ The three curated catalogs are admin / band-leader only.
 
 ---
 
+## The executor
+
+The importer is a plain Vercel function that chains to itself. Committing a
+batch POSTs its id to `/api/intake/run`; that route answers `202` immediately
+and then keeps working inside `after()`, importing row after row. Four minutes
+in — 60 s under the function's 300 s ceiling — it stops, POSTs itself the same
+batch id, and exits. The next invocation picks up exactly where the last one
+stopped, because "where it got to" is the item statuses in Firestore, not
+anything held in memory. When no rows are left it closes the batch out as
+`done`.
+
+That is the DEFAULT, and it is what production runs: no queue service, no extra
+keys, and the batch document is always the truth.
+
+`INTAKE_EXECUTOR=inngest` switches to the original durable-step path instead —
+and only if `INNGEST_EVENT_KEY` is also set, so opting in on a deployment that
+has no Inngest credentials quietly stays on HTTP rather than failing to queue
+every batch. Production has never had those keys; the Inngest function stays
+registered and unused.
+
+Both paths are idempotent per row, so a duplicate trigger costs one wasted read
+and never a double import. That is what makes the safety net safe: every 10
+minutes `/api/cron/import-batches-resume` re-sends any batch still `committed`
+after 5 minutes AND any batch stuck in `processing` whose rows have not moved
+for 10 minutes — which is what a dropped self-chain looks like.
+
+---
+
 ## Parked items
 
 A row is **parked**, not imported, when it looks like something already in the
@@ -139,8 +167,11 @@ node scripts/upload-batch.mjs <path>... \
 | Variable | What it does |
 | --- | --- |
 | `MCP_PUBLIC_URL` | Our public MCP URL, e.g. `https://centralreform.live/api/mcp`. Gives the drop-zone iframe a **stable** `ui.domain`, which is what lets the storage bucket's CORS rule and the Apps sandbox agree on an origin. Without it the drop zone still works, but the domain hint is omitted. |
-| `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY` | The background importer. Already configured — batch intake reuses the existing Inngest app, it does not add a new one. |
-| `CRON_SECRET` | Already configured. Guards `/api/cron/import-batches-resume` like every other cron. |
+| `CRON_SECRET` | Already configured. Guards `/api/cron/import-batches-resume` like every other cron, AND — unless `INTAKE_RUN_SECRET` is set — the internal `/api/intake/run` executor route. |
+| `INTAKE_RUN_SECRET` | Optional. The bearer `/api/intake/run` demands, when it should rotate separately from cron. Falls back to `CRON_SECRET`. With neither configured the route refuses every request and nothing is processed. |
+| `INTAKE_EXECUTOR` | Optional, `http` (default) or `inngest`. See *The executor*. `inngest` is honoured only when `INNGEST_EVENT_KEY` is also set. |
+| `INTAKE_INTERNAL_BASE_URL` | Optional. The origin the run route calls itself back on. Defaults to `VERCEL_PROJECT_PRODUCTION_URL`, then `VERCEL_URL`, then `http://localhost:3000`. |
+| `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY` | Only for the opt-in Inngest executor. NOT set in production. |
 | `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_STORAGE_BUCKET` | Only needed locally, by `scripts/set-storage-cors.mjs`. |
 
 ### Storage CORS
@@ -170,8 +201,11 @@ firebase deploy --only firestore:rules,firestore:indexes --project crcmusicchart
 ```
 
 - Rules: `upload_batches/{batchId}` is `read, write: if false` — server-only.
-- Indexes: two composite indexes on `upload_batches`, one for
-  `list_parked_uploads`, one for the resume cron.
+- Indexes: two composite indexes on `upload_batches`. `list_parked_uploads`
+  needs its one. The `(status, committedAt)` one is kept but no longer required
+  by the resume sweep — that query is now a small `status in [...]` page
+  filtered in memory, because "newest item updatedAt" lives inside the items
+  map and Firestore cannot index it.
 
 ---
 
@@ -188,12 +222,20 @@ this and switches to sending the file to the server in slices on its own; it
 needs no input from you. If it is happening every time, the bucket's CORS rule
 is missing — run `scripts/set-storage-cors.mjs` (dry run first) and apply it.
 
-**A batch is stuck on `committed`.** It was sealed but the queue did not take
-it. `/api/cron/import-batches-resume` sweeps every 10 minutes and re-sends
-anything still `committed` after 5 minutes, so it resolves itself within ~10
-minutes. Nothing is lost in the meantime — the batch document is the record.
-Saying "commit that batch again" is also safe: a sealed batch just re-reports
-its counts.
+**A batch is stuck on `committed`.** It was sealed but the trigger did not land.
+`/api/cron/import-batches-resume` sweeps every 10 minutes and re-sends anything
+still `committed` after 5 minutes, so it resolves itself within ~10 minutes.
+Nothing is lost in the meantime — the batch document is the record. Saying
+"commit that batch again" is also safe: a sealed batch just re-reports its
+counts.
+
+**A batch is stuck on `processing`.** The self-chain dropped: an invocation
+finished its slice and could not reach the run route again, or was killed
+mid-slice. The same sweep catches it — a `processing` batch whose rows have not
+moved for 10 minutes is re-sent, and the new invocation resumes at the first row
+still pending. If it keeps happening, check `INTAKE_RUN_SECRET` / `CRON_SECRET`
+and look for `[intake-run]` lines in the Vercel logs; the run route returning
+401 to itself is the likeliest cause.
 
 **`list_parked_uploads` fails with `FAILED_PRECONDITION`.** The Firestore
 composite indexes are not deployed on the project. Run the
@@ -237,6 +279,47 @@ is indistinguishable from one imported by hand.
 | `C:\Users\dsbog\CentralReform.live\sheet-music-app\src\lib\mcp\tools\batch-intake.ts` |
 | `C:\Users\dsbog\CentralReform.live\sheet-music-app\src\lib\intake\` |
 | `C:\Users\dsbog\CentralReform.live\sheet-music-app\src\mcp-apps\README.md` |
+| `C:\Users\dsbog\CentralReform.live\sheet-music-app\src\app\api\intake\run\route.ts` |
 | `C:\Users\dsbog\CentralReform.live\sheet-music-app\src\app\api\cron\import-batches-resume\route.ts` |
 | `C:\Users\dsbog\CentralReform.live\sheet-music-app\firestore.rules` |
 | `C:\Users\dsbog\CentralReform.live\sheet-music-app\firestore.indexes.json` |
+
+---
+
+## UAT checklist
+
+Human-verify items that cannot be proven without a person at a real client.
+(PAUL is retired in this repo, so this list lives with the feature it belongs
+to rather than in a framework file.)
+
+| | |
+|---|---|
+| ⏳ | Pending — not yet checked |
+| ✅ | Verified working |
+| ❌ | Failed — needs follow-up |
+
+### ⏳ Drop zone in Claude Desktop (real client)
+
+Branch `feat/batch-chart-intake`. Needs a deploy plus
+`firebase deploy --only firestore:rules,firestore:indexes --project crcmusiccharts`
+and `node scripts/set-storage-cors.mjs --apply`.
+
+In **Claude Desktop**, connected to the centralreform.live MCP server, say:
+
+> open the chart dropzone
+
+Drop **5 mixed files, one of them a duplicate of a chart already in the
+library**. Confirm all of:
+
+1. The drop-zone **iframe renders** next to the conversation.
+2. The files **upload** (progress advances; no stall at 0%).
+3. At least one row comes back **parked**, naming the chart it matched.
+4. **Claude narrates** the outcome — it can say what imported and what is
+   parked, and acting on "import it anyway" / "skip it" / "that's the chart for
+   X" resolves the parked row.
+
+**If the iframe never renders:** that is the known Claude Desktop Apps risk, not
+a bug in this work. The companion path is the fallback spec — check Settings →
+Developer → Developer Mode is on, then fall back to
+`node scripts/upload-batch.mjs <files...>` or `import_drive_folder`, both of
+which take the identical path through the server. Record which happened.

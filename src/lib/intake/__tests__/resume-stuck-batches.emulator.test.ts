@@ -5,6 +5,7 @@ import { getFirestore } from "firebase-admin/firestore"
 const enqueueImportBatch = vi.fn(async (batchId: string) => ({
     ok: true as const,
     eventId: `evt-${batchId}`,
+    executor: "http" as const,
 }))
 
 vi.mock("../enqueue", () => ({
@@ -38,6 +39,7 @@ describe("resumeStuckBatches (emulator)", () => {
         batchId: string,
         status: BatchStatus,
         committedAt: Date | null,
+        items: Record<string, { itemId: string; status: string; updatedAt: string }> = {},
     ): Promise<void> {
         await db()
             .collection(BATCH_COLLECTION)
@@ -56,7 +58,7 @@ describe("resumeStuckBatches (emulator)", () => {
                     failed: 0,
                     skipped: 0,
                 },
-                items: {},
+                items,
                 createdAt: ago(60 * 60 * 1000),
                 expiresAt: new Date(Date.now() + 60 * 60 * 1000),
                 ...(committedAt ? { committedAt } : {}),
@@ -143,6 +145,60 @@ describe("resumeStuckBatches (emulator)", () => {
         const { resent } = await resumeStuckBatches(db())
         expect(resent).toEqual([])
         expect(enqueueImportBatch).toHaveBeenCalledTimes(1)
+    })
+
+
+    it("re-sends a processing batch whose items have gone stale", async () => {
+        // The HTTP executor chains invocation to invocation; a dropped chain
+        // leaves exactly this — `processing`, items outstanding, nobody coming
+        // back. 15 minutes of no item movement is the tell.
+        await seed("ub-stalled00000", "processing", ago(30 * 60 * 1000), {
+            "it-0001": {
+                itemId: "it-0001",
+                status: "pending",
+                updatedAt: ago(15 * 60 * 1000).toISOString(),
+            },
+        })
+
+        const { resent } = await resumeStuckBatches(db())
+        expect(resent).toEqual(["ub-stalled00000"])
+    })
+
+    it("leaves a processing batch alone while its items are still moving", async () => {
+        await seed("ub-livebatch00", "processing", ago(30 * 60 * 1000), {
+            "it-0001": {
+                itemId: "it-0001",
+                status: "imported",
+                updatedAt: ago(30 * 1000).toISOString(),
+            },
+            "it-0002": {
+                itemId: "it-0002",
+                status: "pending",
+                updatedAt: ago(45 * 1000).toISOString(),
+            },
+        })
+
+        const { resent } = await resumeStuckBatches(db())
+        expect(resent).toEqual([])
+        expect(enqueueImportBatch).not.toHaveBeenCalled()
+    })
+
+    it("falls back to committedAt for a processing batch no item has touched", async () => {
+        await seed("ub-nomoved0000", "processing", ago(30 * 60 * 1000))
+        await seed("ub-justnow0000", "processing", ago(60 * 1000))
+
+        const { resent } = await resumeStuckBatches(db())
+        expect(resent).toEqual(["ub-nomoved0000"])
+    })
+
+    it("gives a processing batch a longer grace window than a committed one", async () => {
+        // 7 minutes: past the committed window (5 min), inside the processing
+        // one (10 min) — a live slice may legitimately sit on one slow chart.
+        await seed("ub-committed07", "committed", ago(7 * 60 * 1000))
+        await seed("ub-processng07", "processing", ago(7 * 60 * 1000))
+
+        const { resent } = await resumeStuckBatches(db())
+        expect(resent).toEqual(["ub-committed07"])
     })
 
     it("returns an empty list when nothing is stuck", async () => {
