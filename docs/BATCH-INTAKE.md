@@ -107,6 +107,9 @@ node scripts/upload-batch.mjs <path>... \
 
 - A `<path>` is a file or a directory. A directory expands **one level** — no
   recursion, and dotfiles are skipped.
+- Two files with the **same name** in different folders are both uploaded; the
+  second is sent as `Adon Olam (2).pdf` so each one gets its own upload URL. The
+  plan table says so ("uploads as …") whenever a name is changed.
 - `--dry-run` prints the plan (which files, resolved to which type, and which
   are rejected and why) and makes **no network calls**. Always worth running
   first:
