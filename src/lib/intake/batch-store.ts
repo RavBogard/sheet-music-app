@@ -199,6 +199,9 @@ export async function listParkedForOrg(
         createdAt: string
     }>
 > {
+    // Requires the `upload_batches` composite index (orgId ASC, createdAt DESC,
+    // counts.parked ASC) in firestore.indexes.json — the emulator does not
+    // enforce composite indexes, so this only fails in a real project.
     const snap = await db
         .collection(BATCH_COLLECTION)
         .where("orgId", "==", orgId)
