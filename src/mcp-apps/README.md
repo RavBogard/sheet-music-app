@@ -31,6 +31,27 @@ deploy path. To stop it drifting from its sources the build stamps
 on line 1 and `dist-freshness.test.ts` recomputes it. **Edit a source, rerun
 the build, commit the dist file** — otherwise the unit test fails.
 
+## Accessibility / rendering notes
+
+- The chrome is built **once**; every later state change (a 2 s poll tick, a
+  chunk-progress update) **patches rows in place**, keyed by `rowId`. A full
+  rebuild would drop keyboard focus mid-decision. Anything focusable carries a
+  stable `data-focus-id`, and the renderer re-focuses that id if a structural
+  change ever does move focus. `e2e/chart-dropzone.spec.ts` asserts a chip
+  keeps focus across a poll tick.
+- The totals line is the live region (`role="status"`, `aria-live="polite"`,
+  `aria-atomic="true"`) and says terse things: "2 of 2 uploaded",
+  "Batch done: 1 imported, 1 parked, 0 failed". The error banner is a second
+  polite live region.
+- Resolve buttons live in their own Actions column, never inside the
+  ellipsis-clipped detail cell.
+- Contrast: the interactive accent is `#4f46e5` in light mode (>= 4.5:1 both as
+  13px text on white and as a button background under a white label);
+  `#6366f1` survives only as a decorative hover border. In dark mode the
+  accent is `#818cf8` and the primary button label goes near-black. Every
+  focusable control has a `:focus-visible` outline, and the drop target honours
+  `prefers-reduced-motion`.
+
 ## Hard constraints
 
 - **Nothing external.** The Apps sandbox serves the resource under a

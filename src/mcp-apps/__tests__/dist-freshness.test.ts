@@ -64,6 +64,16 @@ describe("chart-dropzone dist bundle", () => {
         expect(dist).toContain("__DROPZONE_TEST_HOST__")
     })
 
+    it("keeps the a11y hooks (live region, table label, focus ids)", () => {
+        // These are plain string literals in the renderer, so minification
+        // preserves them; losing one means an accessibility regression.
+        expect(dist).toContain("aria-live")
+        expect(dist).toContain("aria-atomic")
+        expect(dist).toContain("aria-label")
+        expect(dist).toContain("Upload batch files")
+        expect(dist).toContain("data-focus-id")
+    })
+
     it("pulls no server module into the browser bundle", () => {
         for (const forbidden of ["firebase-admin", "server-only", "next/server"]) {
             expect(dist, `dist bundle references ${forbidden}`).not.toContain(forbidden)

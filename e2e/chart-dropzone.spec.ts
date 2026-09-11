@@ -93,10 +93,10 @@ test("drops two charts, uploads them, and reports 1 imported / 1 parked", async 
         }
 
         let getCalls = 0
-        const done = () => ({
+        const settled = (status: string) => ({
             ok: true,
             batchId: open.batchId,
-            status: "done",
+            status,
             source: "dropzone",
             counts: { total: 2, pending: 0, imported: 1, parked: 1, failed: 0, skipped: 0 },
             createdAt: new Date().toISOString(),
@@ -179,7 +179,11 @@ test("drops two charts, uploads them, and reports 1 imported / 1 parked", async 
                                 imported: [],
                             })
                         }
-                        return wrap(done())
+                        // Tick 2 already carries the outcome but is still
+                        // `processing`, so polling continues while the parked
+                        // row shows its buttons — that is the focus-retention
+                        // window the next assertion needs.
+                        return wrap(settled(getCalls === 2 ? "processing" : "done"))
                     case "resolve_upload_item":
                         return wrap({
                             ok: true,
@@ -251,8 +255,30 @@ test("drops two charts, uploads them, and reports 1 imported / 1 parked", async 
 
     // 5. The parked row offers both decisions inline.
     const parkedRow = rows.nth(1)
-    await expect(parkedRow.getByRole("button", { name: "Keep both" })).toBeVisible()
+    const keepBoth = parkedRow.getByRole("button", { name: "Keep both" })
+    await expect(keepBoth).toBeVisible()
     await expect(parkedRow.getByRole("button", { name: "Skip" })).toBeVisible()
+
+    // 5b. A poll tick must NOT steal keyboard focus: the renderer patches rows
+    // in place instead of rebuilding the table.
+    const getCalls = async () =>
+        page.evaluate(
+            () =>
+                (
+                    window as unknown as {
+                        __DROPZONE_CALLS__: Array<{ name: string }>
+                    }
+                ).__DROPZONE_CALLS__.filter((c) => c.name === "get_upload_batch").length,
+        )
+    await keepBoth.focus()
+    const before = await getCalls()
+    await expect
+        .poll(getCalls, { timeout: 20_000 })
+        .toBeGreaterThan(before)
+    expect(
+        await page.evaluate(() => document.activeElement?.getAttribute("data-focus-id")),
+    ).toMatch(/:force$/)
+    await expect(keepBoth).toBeFocused()
 
     // 6. The model gets a short summary naming the outcome.
     const contexts = async () =>

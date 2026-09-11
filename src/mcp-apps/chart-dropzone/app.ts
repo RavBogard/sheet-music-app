@@ -190,39 +190,63 @@ function el<K extends keyof HTMLElementTagNameMap>(
     return node
 }
 
-function render(): void {
-    root.dataset.state = phase
-    root.textContent = ""
+/** Only write to the DOM when the text actually changed. */
+function setText(node: Node, text: string): void {
+    if (node.textContent !== text) node.textContent = text
+}
 
-    if (phase === "waiting" || !caps) {
-        root.appendChild(
-            el("p", { class: "waiting", id: "waiting" }, "Waiting for Claude…"),
-        )
-        if (banner) {
-            root.appendChild(
-                el("div", { class: "dz-error", "data-testid": "banner" }, banner),
-            )
-        }
-        return
-    }
+/**
+ * The chrome, built ONCE. Everything after that is patched in place — a poll
+ * tick every 2 s or a chunk-progress update must not blow away the DOM under
+ * somebody keyboard focus or scroll position.
+ */
+interface Shell {
+    banner: HTMLElement
+    input: HTMLInputElement
+    drop: HTMLButtonElement
+    table: HTMLTableElement
+    tbody: HTMLTableSectionElement
+    totals: HTMLElement
+    primary: HTMLButtonElement
+}
+
+interface RowNode {
+    tr: HTMLTableRowElement
+    status: HTMLElement
+    detail: HTMLTableCellElement
+    actions: HTMLTableCellElement
+    chips: { force: HTMLButtonElement; skip: HTMLButtonElement } | null
+}
+
+let shell: Shell | null = null
+const rowNodes = new Map<string, RowNode>()
+
+function mount(current: Caps): Shell {
+    root.textContent = ""
 
     const header = el("div", { class: "dz-header" })
     header.appendChild(el("h1", { class: "dz-title" }, "Chart drop-zone"))
     header.appendChild(
-        el("span", { class: "dz-batch", "data-testid": "batch-id" }, caps.batchId),
+        el("span", { class: "dz-batch", "data-testid": "batch-id" }, current.batchId),
     )
     root.appendChild(header)
 
-    if (banner) {
-        root.appendChild(el("div", { class: "dz-error", "data-testid": "banner" }, banner))
-    }
+    const bannerNode = el("div", {
+        class: "dz-error",
+        "data-testid": "banner",
+        role: "status",
+        "aria-live": "polite",
+        "aria-atomic": "true",
+    })
+    bannerNode.hidden = true
+    root.appendChild(bannerNode)
 
     const input = el("input", {
         type: "file",
         multiple: "",
         id: "dz-file-input",
         "data-testid": "file-input",
-        accept: caps.acceptedExtensions.join(","),
+        accept: current.acceptedExtensions.join(","),
     }) as HTMLInputElement
     input.addEventListener("change", () => {
         if (input.files) addFiles(Array.from(input.files))
@@ -230,128 +254,269 @@ function render(): void {
     })
     root.appendChild(input)
 
-    if (phase === "collecting") {
-        const drop = el(
-            "button",
-            { type: "button", class: "dz-drop", "data-testid": "drop-target" },
-            "Drop chart files here, or choose files",
-        )
-        drop.appendChild(
-            el(
-                "span",
-                { class: "dz-drop-hint" },
-                `${caps.acceptedExtensions.join(" ")} · up to ${fmtSize(caps.maxFileBytes)} each`,
-            ),
-        )
-        drop.addEventListener("click", () => input.click())
-        drop.addEventListener("dragover", (e) => {
-            e.preventDefault()
-            drop.dataset.over = "1"
-        })
-        drop.addEventListener("dragleave", () => {
-            delete drop.dataset.over
-        })
-        drop.addEventListener("drop", (e) => {
-            e.preventDefault()
-            delete drop.dataset.over
-            const dropped = (e as DragEvent).dataTransfer?.files
-            if (dropped) addFiles(Array.from(dropped))
-        })
-        root.appendChild(drop)
-    }
+    const drop = el(
+        "button",
+        {
+            type: "button",
+            class: "dz-drop",
+            "data-testid": "drop-target",
+            "data-focus-id": "drop-target",
+        },
+        "Drop chart files here, or choose files",
+    )
+    drop.appendChild(
+        el(
+            "span",
+            { class: "dz-drop-hint" },
+            `${current.acceptedExtensions.join(" ")} · up to ${fmtSize(current.maxFileBytes)} each`,
+        ),
+    )
+    drop.addEventListener("click", () => input.click())
+    drop.addEventListener("dragover", (e) => {
+        e.preventDefault()
+        drop.dataset.over = "1"
+    })
+    drop.addEventListener("dragleave", () => {
+        delete drop.dataset.over
+    })
+    drop.addEventListener("drop", (e) => {
+        e.preventDefault()
+        delete drop.dataset.over
+        const dropped = (e as DragEvent).dataTransfer?.files
+        if (dropped) addFiles(Array.from(dropped))
+    })
+    root.appendChild(drop)
 
-    if (rows.length) {
-        const table = el("table", { class: "dz-table", "data-testid": "rows" })
-        const thead = el("thead")
-        const hr = el("tr")
-        for (const [label, cls] of [
-            ["File", ""],
-            ["Size", "dz-col-size"],
-            ["Status", "dz-col-status"],
-            ["Detail", ""],
-        ] as const) {
-            hr.appendChild(el("th", cls ? { class: cls } : {}, label))
-        }
-        thead.appendChild(hr)
-        table.appendChild(thead)
-
-        const tbody = el("tbody")
-        for (const row of rows) tbody.appendChild(renderRow(row))
-        table.appendChild(tbody)
-        root.appendChild(table)
+    const table = el("table", {
+        class: "dz-table",
+        "data-testid": "rows",
+        "aria-label": "Upload batch files",
+    })
+    const thead = el("thead")
+    const hr = el("tr")
+    for (const [label, cls] of [
+        ["File", ""],
+        ["Size", "dz-col-size"],
+        ["Status", "dz-col-status"],
+        ["Detail", ""],
+        ["Actions", "dz-col-actions"],
+    ] as const) {
+        hr.appendChild(el("th", cls ? { class: cls } : {}, label))
     }
+    thead.appendChild(hr)
+    table.appendChild(thead)
+    const tbody = el("tbody")
+    table.appendChild(tbody)
+    table.hidden = true
+    root.appendChild(table)
 
     const footer = el("div", { class: "dz-footer" })
-    footer.appendChild(
-        el("span", { class: "dz-totals", "data-testid": "totals" }, totalsText()),
-    )
+    // The live region: terse, atomic, and the same text sighted users read.
+    const totals = el("span", {
+        class: "dz-totals",
+        "data-testid": "totals",
+        role: "status",
+        "aria-live": "polite",
+        "aria-atomic": "true",
+    })
+    footer.appendChild(totals)
 
     const primary = el("button", {
         type: "button",
         class: "dz-primary",
         "data-testid": "upload-button",
+        "data-focus-id": "upload-button",
     }) as HTMLButtonElement
-    const n = queuedRows().length
-    // One primary button. It only becomes a "Retry commit" in the dead-end
-    // state where bytes are staged but commit_upload_batch failed.
-    const staged = rows.filter((r) => r.status === "staged").length
-    primary.textContent =
-        n === 0 && staged > 0
-            ? `Retry commit (${staged} staged)`
-            : `Upload ${n} file${n === 1 ? "" : "s"}`
-    primary.disabled = (n === 0 && staged === 0) || phase !== "collecting"
-    primary.hidden = committed
     primary.addEventListener("click", () => {
         void startUpload()
     })
     footer.appendChild(primary)
     root.appendChild(footer)
+
+    return { banner: bannerNode, input, drop, table, tbody, totals, primary }
 }
 
-function renderRow(row: Row): HTMLTableRowElement {
+/** `data-focus-id` of whatever holds focus right now, if anything. */
+function activeFocusId(): string | null {
+    const active = document.activeElement as HTMLElement | null
+    return active?.dataset?.focusId ?? null
+}
+
+/** Put focus back on the node carrying `focusId`, if it still exists. */
+function restoreFocus(focusId: string | null): void {
+    if (!focusId) return
+    if (activeFocusId() === focusId) return
+    const target = root.querySelector<HTMLElement>(
+        `[data-focus-id="${CSS.escape(focusId)}"]`,
+    )
+    if (target && !(target as HTMLButtonElement).disabled) target.focus()
+}
+
+function render(): void {
+    root.dataset.state = phase
+
+    if (!caps) {
+        shell = null
+        rowNodes.clear()
+        root.textContent = ""
+        root.appendChild(
+            el("p", { class: "waiting", id: "waiting" }, "Waiting for Claude…"),
+        )
+        if (banner) {
+            root.appendChild(
+                el(
+                    "div",
+                    {
+                        class: "dz-error",
+                        "data-testid": "banner",
+                        role: "status",
+                        "aria-live": "polite",
+                        "aria-atomic": "true",
+                    },
+                    banner,
+                ),
+            )
+        }
+        return
+    }
+
+    const focusId = activeFocusId()
+    if (!shell) {
+        rowNodes.clear()
+        shell = mount(caps)
+    }
+
+    setText(shell.banner, banner)
+    shell.banner.hidden = !banner
+    shell.drop.hidden = phase !== "collecting"
+    shell.table.hidden = rows.length === 0
+
+    patchRows(shell.tbody)
+
+    setText(shell.totals, statusLine())
+
+    const n = queuedRows().length
+    // One primary button. It only becomes a "Retry commit" in the dead-end
+    // state where bytes are staged but commit_upload_batch failed.
+    const staged = rows.filter((r) => r.status === "staged").length
+    setText(
+        shell.primary,
+        n === 0 && staged > 0
+            ? `Retry commit (${staged} staged)`
+            : `Upload ${n} file${n === 1 ? "" : "s"}`,
+    )
+    shell.primary.disabled = (n === 0 && staged === 0) || phase !== "collecting"
+    shell.primary.hidden = committed
+
+    restoreFocus(focusId)
+}
+
+function patchRows(tbody: HTMLTableSectionElement): void {
+    const live = new Set<string>()
+    for (const row of rows) {
+        live.add(row.rowId)
+        let node = rowNodes.get(row.rowId)
+        if (!node) {
+            node = createRowNode(row)
+            rowNodes.set(row.rowId, node)
+            tbody.appendChild(node.tr)
+        }
+        patchRow(node, row)
+    }
+    for (const [rowId, node] of rowNodes) {
+        if (live.has(rowId)) continue
+        node.tr.remove()
+        rowNodes.delete(rowId)
+    }
+}
+
+function createRowNode(row: Row): RowNode {
     const tr = el("tr", { "data-status": row.status, "data-row": row.rowId })
     tr.appendChild(el("td", { title: row.fileName }, row.fileName))
     tr.appendChild(el("td", { class: "dz-col-size" }, fmtSize(row.sizeBytes)))
 
     const statusCell = el("td", { class: "dz-col-status" })
-    statusCell.appendChild(
-        el("span", { class: "dz-status", "data-status": row.status }, row.status),
-    )
+    const status = el("span", { class: "dz-status", "data-status": row.status }, row.status)
+    statusCell.appendChild(status)
     tr.appendChild(statusCell)
 
-    const detail = el("td", { class: "dz-detail", title: row.detail }, row.detail)
-    if (row.status === "parked") {
-        const group = el("span", { class: "dz-resolve" })
-        for (const [label, action] of [
-            ["Keep both", "force"],
-            ["Skip", "skip"],
-        ] as const) {
-            const btn = el(
-                "button",
-                { type: "button", class: "dz-chip", "data-action": action },
-                label,
-            ) as HTMLButtonElement
-            btn.disabled = !!row.resolving
-            btn.addEventListener("click", () => {
-                void resolveRow(row, action)
-            })
-            group.appendChild(btn)
-        }
-        detail.appendChild(group)
-    }
+    const detail = el("td", { class: "dz-detail" })
     tr.appendChild(detail)
-    return tr
+
+    // Resolve buttons get their OWN cell: `.dz-detail` ellipsis-clips a long
+    // matched title, and clipped buttons are unclickable.
+    const actions = el("td", { class: "dz-col-actions" })
+    tr.appendChild(actions)
+
+    return { tr, status, detail, actions, chips: null }
 }
 
-function totalsText(): string {
+function patchRow(node: RowNode, row: Row): void {
+    node.tr.dataset.status = row.status
+    node.status.dataset.status = row.status
+    setText(node.status, row.status)
+    setText(node.detail, row.detail)
+    node.detail.title = row.detail
+
+    if (row.status === "parked") {
+        if (!node.chips) {
+            const make = (label: string, action: "force" | "skip"): HTMLButtonElement => {
+                const btn = el(
+                    "button",
+                    {
+                        type: "button",
+                        class: "dz-chip",
+                        "data-action": action,
+                        "data-focus-id": `${row.rowId}:${action}`,
+                    },
+                    label,
+                ) as HTMLButtonElement
+                btn.addEventListener("click", () => {
+                    void resolveRow(row, action)
+                })
+                return btn
+            }
+            const group = el("span", { class: "dz-resolve" })
+            const chips = { force: make("Keep both", "force"), skip: make("Skip", "skip") }
+            group.appendChild(chips.force)
+            group.appendChild(chips.skip)
+            node.actions.appendChild(group)
+            node.chips = chips
+        }
+        node.chips.force.disabled = !!row.resolving
+        node.chips.skip.disabled = !!row.resolving
+    } else if (node.chips) {
+        node.actions.textContent = ""
+        node.chips = null
+    }
+}
+
+/**
+ * The live-region line. Terse on purpose — a screen reader reads it on every
+ * change, so it says what changed, not the whole table.
+ */
+function statusLine(): string {
     const c = tally()
-    const parts = [`${rows.length} file${rows.length === 1 ? "" : "s"}`]
-    if (c.imported) parts.push(`${c.imported} imported`)
-    if (c.parked) parts.push(`${c.parked} parked`)
-    if (c.failed) parts.push(`${c.failed} failed`)
-    if (c.skipped) parts.push(`${c.skipped} skipped`)
-    if (phase === "processing") parts.push("processing…")
-    return parts.join(" · ")
+    const total = rows.length
+    if (phase === "uploading") {
+        const settled = rows.filter(
+            (r) => r.status === "staged" || r.status === "failed" || r.status === "pending",
+        ).length
+        const attempted = rows.filter((r) => r.status !== "rejected").length
+        return `${settled} of ${attempted} uploaded`
+    }
+    if (phase === "processing") {
+        const pending = rows.filter((r) => r.status === "pending").length
+        return `Processing ${pending} of ${total} files…`
+    }
+    if (phase === "done") {
+        return `Batch done: ${c.imported} imported, ${c.parked} parked, ${c.failed} failed`
+    }
+    if (!total) return "No files yet"
+    const queued = queuedRows().length
+    const bits = [`${total} file${total === 1 ? "" : "s"}`, `${queued} ready to upload`]
+    if (c.failed) bits.push(`${c.failed} rejected`)
+    return bits.join(" · ")
 }
 
 function tally(): { imported: number; parked: number; failed: number; skipped: number } {

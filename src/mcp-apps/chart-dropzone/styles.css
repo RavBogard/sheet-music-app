@@ -7,7 +7,14 @@
  */
 
 :root {
-    --dz-accent: #6366f1;
+    /* #6366f1 is the brand indigo, but at 13px on white it only reaches
+       3.1:1 and white-on-#6366f1 only 3.6:1. #4f46e5 is the same hue one
+       step darker and clears 4.5:1 BOTH ways (text on white, white label on
+       the button), so it is the interactive token; #6366f1 survives as the
+       decorative hover border where contrast rules do not apply. */
+    --dz-accent: #4f46e5;
+    --dz-accent-soft: #6366f1;
+    --dz-on-accent: #ffffff;
     --dz-parked: #b45309;
     --dz-parked-bg: #fef3c7;
     --dz-failed: #b91c1c;
@@ -24,7 +31,12 @@
 
 @media (prefers-color-scheme: dark) {
     :root {
+        /* On #18181b, #818cf8 reads at 6.6:1 — fine for text. Its use as a
+           BUTTON background flips the requirement onto the label, so the
+           label goes near-black (13.9:1) instead of white (2.98:1). */
         --dz-accent: #818cf8;
+        --dz-accent-soft: #818cf8;
+        --dz-on-accent: #18181b;
         --dz-parked: #fbbf24;
         --dz-parked-bg: #3f2d09;
         --dz-failed: #f87171;
@@ -41,6 +53,12 @@
 
 * {
     box-sizing: border-box;
+}
+
+/* The renderer toggles `.hidden` via the attribute; `table { display: table }`
+   and friends must not out-rank it. */
+[hidden] {
+    display: none !important;
 }
 
 html,
@@ -110,11 +128,22 @@ body {
     transition: border-color 0.12s ease, color 0.12s ease;
 }
 
-.dz-drop:hover,
+.dz-drop:hover {
+    border-color: var(--dz-accent-soft);
+    color: var(--dz-fg);
+}
+
 .dz-drop:focus-visible {
     border-color: var(--dz-accent);
     color: var(--dz-fg);
-    outline: none;
+    outline: 2px solid var(--dz-accent);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dz-drop {
+        transition: none;
+    }
 }
 
 .dz-drop[data-over="1"] {
@@ -212,12 +241,21 @@ tr[data-status="rejected"] td:first-child {
     font-size: 12px;
 }
 
+/* Buttons live here, never in `.dz-detail`: that cell ellipsis-clips at
+   260px, and a clipped button cannot be clicked. */
+.dz-col-actions {
+    width: 1%;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    text-align: right;
+}
+
 /* ---------- inline resolve buttons ---------- */
 
 .dz-resolve {
     display: inline-flex;
     gap: 4px;
-    margin-left: 6px;
 }
 
 .dz-chip {
@@ -233,6 +271,11 @@ tr[data-status="rejected"] td:first-child {
 
 .dz-chip:hover:not(:disabled) {
     border-color: var(--dz-parked);
+}
+
+.dz-chip:focus-visible {
+    outline: 2px solid var(--dz-accent);
+    outline-offset: 2px;
 }
 
 .dz-chip:disabled {
@@ -264,8 +307,13 @@ tr[data-status="rejected"] td:first-child {
     border-radius: 5px;
     border: 1px solid var(--dz-accent);
     background: var(--dz-accent);
-    color: #ffffff;
+    color: var(--dz-on-accent);
     cursor: pointer;
+}
+
+.dz-primary:focus-visible {
+    outline: 2px solid var(--dz-accent);
+    outline-offset: 2px;
 }
 
 .dz-primary:disabled {
@@ -275,6 +323,10 @@ tr[data-status="rejected"] td:first-child {
 
 .dz-primary[hidden] {
     display: none;
+}
+
+.dz-error[hidden] {
+    display: none !important;
 }
 
 .dz-error {
