@@ -14,6 +14,7 @@ import {
     registerObservabilityTools,
     registerBatchIntakeTools,
     registerChartInboxTools,
+    registerAuthoredChartTools,
 } from "@/lib/mcp/tools"
 import { wrapWithValidationRemap } from "@/lib/mcp/zod-envelope-remap"
 import { logger } from "@/lib/logger"
@@ -76,6 +77,7 @@ const baseHandler = createMcpHandler(
         registerObservabilityTools(server)
         registerBatchIntakeTools(server)
         registerChartInboxTools(server)
+        registerAuthoredChartTools(server)
     },
     {
         serverInfo: { name: "centralreform-live", version: "1.0.0" },

@@ -139,6 +139,10 @@ This guide exists so the agent never recreates that failure shape.
 - Publish: `publish_setlist` (always preview first)
 - Verify: `verify_setlist_charts`, `get_chart_status`,
   `wait_for_setlist_change`
+- Chart YOU wrote in this chat → `create_chart` mode:'preview' (shows the
+  rendered page as an image; nothing saved) until the user approves, then
+  mode:'commit' with bondTo — ONLY on the user's word. Revisions: commit again
+  with revisionOf:<fileId>. Never ask the user to upload what you wrote.
 - Add chart FILES (any user, any device, no bytes through you): `get_chart_inbox`
   → hand the user the Drive folder link → `sync_chart_inbox` once they have
   dropped files. For a Drive folder they already have: `import_drive_folder`.
