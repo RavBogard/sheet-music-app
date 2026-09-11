@@ -150,8 +150,16 @@ interface Caps {
     maxFilesPerRequest: number
 }
 
+/** Poll cadence: tight for the first minute, then relaxed (see `pollUntilDone`). */
 const POLL_INTERVAL_MS = 2_000
+const POLL_SLOW_INTERVAL_MS = 5_000
+const POLL_FAST_WINDOW_MS = 60 * 1_000
 const POLL_DEADLINE_MS = 10 * 60 * 1_000
+/** A batch the cron has to pick up gets longer than the normal deadline. */
+const POLL_DEADLINE_QUEUED_MS = 15 * 60 * 1_000
+const QUEUED_BANNER =
+    "Queued — the server will pick this batch up within 10 minutes"
+
 const UPLOAD_CONCURRENCY = 3
 /** Server caps a chunk at 3 MB of base64; 1 MB of raw bytes stays well under. */
 const CHUNK_BYTES = 1024 * 1024
@@ -746,10 +754,15 @@ async function commitBatch(): Promise<void> {
     committed = true
     phase = "processing"
     render()
-    const result = unwrap<CommitBatchResult>(
-        await callTool("commit_upload_batch", { batchId: caps!.batchId }),
-    )
-    if (!result || !result.ok) {
+    const raw = await callTool("commit_upload_batch", { batchId: caps!.batchId })
+    const result = unwrap<CommitBatchResult>(raw)
+    // `queue_unavailable` is NOT a commit failure: the batch is sealed and the
+    // resume cron picks it up within 10 minutes. Returning to `collecting`
+    // here would invite a second commit of a batch that is already committed,
+    // so the app stays in `processing` and just polls for longer.
+    const queueUnavailable =
+        (!result || !result.ok) && machineCodeOf(raw) === "queue_unavailable"
+    if ((!result || !result.ok) && !queueUnavailable) {
         banner = "Commit failed — the batch was not queued."
         phase = "collecting"
         committed = false
@@ -762,14 +775,37 @@ async function commitBatch(): Promise<void> {
             row.detail = "queued for import"
         }
     }
+    if (queueUnavailable) banner = QUEUED_BANNER
     render()
-    await pollUntilDone()
+    await pollUntilDone(
+        queueUnavailable
+            ? { deadlineMs: POLL_DEADLINE_QUEUED_MS, idleBanner: QUEUED_BANNER }
+            : undefined,
+    )
 }
 
-async function pollUntilDone(): Promise<void> {
-    const deadline = Date.now() + POLL_DEADLINE_MS
+/** The `machine_code` of a rich-error envelope, or null for anything else. */
+function machineCodeOf(result: ToolResultLike | null | undefined): string | null {
+    const envelope = unwrap<{ error?: { machine_code?: unknown } }>(result)
+    const code = envelope?.error?.machine_code
+    return typeof code === "string" ? code : null
+}
+
+async function pollUntilDone(opts?: {
+    deadlineMs?: number
+    /** Banner to restore after each successful read (queued notice, usually). */
+    idleBanner?: string
+}): Promise<void> {
+    const deadlineMs = opts?.deadlineMs ?? POLL_DEADLINE_MS
+    const idleBanner = opts?.idleBanner ?? ""
+    const started = Date.now()
+    const deadline = started + deadlineMs
     for (;;) {
-        await sleep(POLL_INTERVAL_MS)
+        const interval =
+            Date.now() - started < POLL_FAST_WINDOW_MS
+                ? POLL_INTERVAL_MS
+                : POLL_SLOW_INTERVAL_MS
+        await sleep(Math.max(0, Math.min(interval, deadline - Date.now())))
         let batch: GetBatchResult | null = null
         try {
             batch = unwrap<GetBatchResult>(
@@ -779,10 +815,12 @@ async function pollUntilDone(): Promise<void> {
             banner = `Could not read batch status: ${message(err)}`
         }
         if (batch && batch.ok) {
-            banner = ""
+            banner = idleBanner
             applyBatch(batch)
             if (batch.status === "done") {
                 phase = "done"
+                // The queued notice has served its purpose once the batch lands.
+                banner = ""
                 render()
                 await publishSummary()
                 return
@@ -791,8 +829,9 @@ async function pollUntilDone(): Promise<void> {
         render()
         if (Date.now() > deadline) {
             phase = "done"
-            banner =
-                "Still processing after 10 minutes — ask Claude to run get_upload_batch for the final state."
+            banner = `Still processing after ${Math.round(
+                deadlineMs / 60_000,
+            )} minutes — ask Claude to run get_upload_batch for the final state.`
             render()
             await publishSummary()
             return

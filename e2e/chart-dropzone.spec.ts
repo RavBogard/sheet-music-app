@@ -317,6 +317,162 @@ test("drops two charts, uploads them, and reports 1 imported / 1 parked", async 
     )
 })
 
+test("treats commit's queue_unavailable as sealed and keeps polling", async ({
+    page,
+}) => {
+    puts = []
+
+    // `queue_unavailable` means the batch IS committed — only the Inngest
+    // hand-off failed, and the resume cron picks it up. The app must stay in
+    // the processing phase (never back to collecting, never a second commit)
+    // and keep polling until the batch reports done.
+    await page.addInitScript(() => {
+        const calls: Array<{ name: string; arguments: Record<string, unknown> }> = []
+        ;(window as unknown as Record<string, unknown>).__DROPZONE_CALLS__ = calls
+
+        const wrap = (payload: unknown, isError = false) => ({
+            structuredContent: payload,
+            content: [{ type: "text", text: JSON.stringify(payload) }],
+            isError,
+        })
+
+        const batchId = "ub-e2e0003"
+        let getCalls = 0
+
+        ;(window as unknown as Record<string, unknown>).__DROPZONE_TEST_HOST__ = {
+            onToolResult(cb: (r: unknown) => void) {
+                setTimeout(
+                    () =>
+                        cb(
+                            wrap({
+                                ok: true,
+                                batchId,
+                                expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+                                defaults: {},
+                                maxFileBytes: 25 * 1024 * 1024,
+                                acceptedExtensions: [".pdf"],
+                                maxFilesPerRequest: 50,
+                            }),
+                        ),
+                    0,
+                )
+            },
+            async callServerTool(req: {
+                name: string
+                arguments: Record<string, unknown>
+            }) {
+                calls.push({ name: req.name, arguments: req.arguments })
+                switch (req.name) {
+                    case "request_batch_upload_urls": {
+                        const files = req.arguments.files as Array<{ fileName: string }>
+                        return wrap({
+                            ok: true,
+                            items: files.map((f, i) => ({
+                                itemId: `it-${i + 1}`,
+                                fileName: f.fileName,
+                                uploadUrl: `${location.origin}/upload/it-${i + 1}`,
+                                method: "PUT",
+                                requiredHeaders: { "content-type": "application/pdf" },
+                                expiresAt: new Date(Date.now() + 900_000).toISOString(),
+                            })),
+                            rejected: [],
+                        })
+                    }
+                    case "commit_upload_batch":
+                        // The rich-error envelope the MCP tool really returns.
+                        return wrap(
+                            {
+                                ok: false,
+                                error: {
+                                    code: 503,
+                                    machine_code: "queue_unavailable",
+                                    message:
+                                        "Batch is committed but could not be queued.",
+                                },
+                                batchId,
+                                counts: {
+                                    total: 1,
+                                    pending: 1,
+                                    imported: 0,
+                                    parked: 0,
+                                    failed: 0,
+                                    skipped: 0,
+                                },
+                                hint: "A cron retries the queue every 10 minutes.",
+                            },
+                            true,
+                        )
+                    case "get_upload_batch": {
+                        getCalls += 1
+                        const done = getCalls >= 2
+                        return wrap({
+                            ok: true,
+                            batchId,
+                            status: done ? "done" : "committed",
+                            source: "dropzone",
+                            counts: {
+                                total: 1,
+                                pending: done ? 0 : 1,
+                                imported: done ? 1 : 0,
+                                parked: 0,
+                                failed: 0,
+                                skipped: 0,
+                            },
+                            createdAt: new Date().toISOString(),
+                            attention: [],
+                            imported: done
+                                ? [
+                                      {
+                                          itemId: "it-1",
+                                          title: "chart one",
+                                          resultFileId: "lib-new-1",
+                                      },
+                                  ]
+                                : [],
+                        })
+                    }
+                    default:
+                        throw new Error(`unexpected tool ${req.name}`)
+                }
+            },
+            async updateModelContext() {
+                return {}
+            },
+        }
+    })
+
+    await page.goto(origin)
+    await expect(page.getByTestId("batch-id")).toHaveText("ub-e2e0003")
+
+    await page.getByTestId("file-input").setInputFiles([join(FIXTURES, "chart-one.pdf")])
+    await page.getByTestId("upload-button").click()
+    await expect.poll(() => puts.length, { timeout: 15_000 }).toBe(1)
+
+    // The batch is sealed: the queued notice shows, the upload button is gone,
+    // and the app never falls back to the collecting phase.
+    await expect(page.getByTestId("banner")).toContainText(
+        "Queued — the server will pick this batch up within 10 minutes",
+    )
+    await expect(page.getByTestId("upload-button")).toBeHidden()
+
+    // Polling continues and the batch lands as done.
+    const rows = page.locator('[data-testid="rows"] tbody tr')
+    await expect(rows.nth(0).locator(".dz-status")).toHaveText("imported", {
+        timeout: 20_000,
+    })
+    await expect(page.getByTestId("totals")).toContainText("Batch done: 1 imported")
+    await expect(page.getByTestId("banner")).toBeHidden()
+
+    // Exactly one commit — a retry would double-seal a committed batch.
+    const commits = await page.evaluate(
+        () =>
+            (
+                window as unknown as { __DROPZONE_CALLS__: Array<{ name: string }> }
+            ).__DROPZONE_CALLS__.filter((c) => c.name === "commit_upload_batch").length,
+    )
+    expect(commits).toBe(1)
+})
+
 test("rejects an unsupported file without uploading it", async ({ page }) => {
     puts = []
     await page.addInitScript(() => {
