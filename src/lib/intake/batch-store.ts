@@ -134,6 +134,16 @@ export async function addItems(
  * Merge `patch` into one item, stamp its `updatedAt`, recompute `counts` and
  * write both. Returns the batch document as written.
  *
+ * A key present in `patch` with the value `undefined` REMOVES that field from
+ * the item — `mapUploadResultToItem` uses this to clear a stale `parked` block
+ * when a forced re-run of a parked item fails (and vice versa). The removal is
+ * real, not a `FieldValue.delete()` sentinel: `stripUndefined` drops the key
+ * from the merged item and the transaction rewrites the WHOLE `items` map, and
+ * `update()` replaces a map-valued field rather than deep-merging it, so a key
+ * that is absent from the new map is gone from the document. (The sentinel
+ * would not work here anyway — Firestore only accepts it at the top level of
+ * the update data, not nested inside a map value.)
+ *
  * Throws `Error("batch_not_found")` / `Error("item_not_found")`.
  */
 export async function updateItem(
