@@ -86,6 +86,15 @@ Share the folder with their Google account as **Editor** (Drive UI, or
 `permissions.create` with `supportsAllDrives: true`). Their app account must
 also be allowed to upload (admin / band_leader / musician role, or `canUpload`).
 
+### Cleaning up a test file
+
+`delete_chart` removes the library row only. To remove the Drive file the
+service account must **trash** it (`files.update {trashed:true}`,
+`supportsAllDrives:true`) — a fileOrganizer on a shared drive cannot
+hard-delete, and Drive answers that attempt with a misleading 404.
+Verified end to end 2026-09-11: drop → `sync_chart_inbox` → row in 5 s →
+`delete_chart` → trash.
+
 ### Health check
 
 `get_chart_inbox` shows `lastTickAt`, `lastError`, `consecutiveFailures`. If
