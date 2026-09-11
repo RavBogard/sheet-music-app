@@ -1,6 +1,7 @@
 import registryJson from "@/data/books/registry.json"
 import crcFriday from "@/data/books/crc-friday.json"
 import crcSaturday from "@/data/books/crc-saturday.json"
+import crcMachzor2008 from "@/data/books/crc-machzor-2008.json"
 import shabbatMaariv from "@/data/books/shabbat-maariv.json"
 import shabbatShacharit from "@/data/books/shabbat-shacharit.json"
 import shireiTshuvah from "@/data/books/shirei-tshuvah.json"
@@ -19,6 +20,7 @@ import type {
 const BOOK_FILES: Record<string, BookFile> = {
     "crc-friday": crcFriday as BookFile,
     "crc-saturday": crcSaturday as BookFile,
+    "crc-machzor-2008": crcMachzor2008 as BookFile,
     "shabbat-maariv": shabbatMaariv as BookFile,
     "shabbat-shacharit": shabbatShacharit as BookFile,
     "shirei-tshuvah": shireiTshuvah as BookFile,

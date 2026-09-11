@@ -14,6 +14,13 @@
         "source": "https://www.centralreform.org/wp-content/uploads/Saturday-Siddur.pdf"
     },
     {
+        "slug": "crc-machzor-2008",
+        "title": "CRC Machzor (2008)",
+        "tier": "pagemap",
+        "pages": 215,
+        "source": "shireishabbat research/current-siddurim/Machzor-2008.pdf (221-page scan; printed folios 1-215, PDF offset -6). Entries from the transcription-mz UNITS captures, spot-verified against the scan: Rosh Hashanah morning (38-92) plus Adon Olam (129). Folios 1-37 and 93-215 are captured but deliberately NOT mapped - 49 prayer names repeat across this volume's six services, so a whole-book pagemap keyed on bare names would resolve one name to several folios."
+    },
+    {
         "slug": "shabbat-maariv",
         "title": "Shirei Shabbat — Friday Night",
         "tier": "feed",

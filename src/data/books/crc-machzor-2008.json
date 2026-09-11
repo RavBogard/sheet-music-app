@@ -1,0 +1,493 @@
+{
+    "slug": "crc-machzor-2008",
+    "title": "CRC Machzor (2008)",
+    "tier": "pagemap",
+    "pages": 215,
+    "entries": [
+        {
+            "name": "Tallit Blessing",
+            "aliases": [
+                "Rosh Hashanah Morning Service",
+                "For Those Who Wear a Tallit",
+                "Tallit",
+                "Birkat Tallit"
+            ],
+            "page": 38
+        },
+        {
+            "name": "Hineih Mah Tov",
+            "aliases": [
+                "Hineh Mah Tov",
+                "Hinei Ma Tov",
+                "Hine Ma Tov",
+                "The Goodness of Gathering"
+            ],
+            "page": 39
+        },
+        {
+            "name": "Mah Tovu",
+            "aliases": [
+                "Ma Tovu",
+                "Mah Tovu Ohalecha",
+                "The Goodness of Our Sacred Places"
+            ],
+            "page": 39
+        },
+        {
+            "name": "Modeh Ani",
+            "aliases": [
+                "Modah Ani",
+                "Gratitude Upon Awakening"
+            ],
+            "page": 39
+        },
+        {
+            "name": "This Rosh Hashanah",
+            "aliases": [
+                "Sanctuary Needs"
+            ],
+            "page": 41
+        },
+        {
+            "name": "Birchot Hashachar",
+            "aliases": [
+                "Birkot Hashachar",
+                "Morning Blessings"
+            ],
+            "page": 42
+        },
+        {
+            "name": "Kol HaN'shamah",
+            "aliases": [
+                "Kol Haneshama",
+                "Hal'lu Yah",
+                "Halleluyah",
+                "Psalm 150"
+            ],
+            "page": 43
+        },
+        {
+            "name": "Psukei d'Zimrah",
+            "aliases": [
+                "P'sukei D'zimrah",
+                "Pesukei Dezimra",
+                "Verses of Praise",
+                "Opening Psalms"
+            ],
+            "page": 43
+        },
+        {
+            "name": "Reader's Kaddish",
+            "aliases": [
+                "Chatzi Kaddish",
+                "Half Kaddish",
+                "Hatzi Kaddish",
+                "Readers Kaddish"
+            ],
+            "page": 44
+        },
+        {
+            "name": "Bar'chu",
+            "aliases": [
+                "Barchu",
+                "Barekhu",
+                "Bar'khu",
+                "Call to Prayer"
+            ],
+            "page": 45
+        },
+        {
+            "name": "Yotzeir Or",
+            "aliases": [
+                "Yotzer Or",
+                "Light of Creation"
+            ],
+            "page": 45
+        },
+        {
+            "name": "Ahavah Rabah Ahavtanu",
+            "aliases": [
+                "Ahavah Rabbah",
+                "Ahavah Rabah",
+                "Ahava Raba",
+                "With Great Love We Are Loved"
+            ],
+            "page": 47
+        },
+        {
+            "name": "Sh'ma",
+            "aliases": [
+                "Shema",
+                "Sh'ma Yisrael",
+                "Kriyat Sh'ma",
+                "K'riat Shema"
+            ],
+            "page": 49
+        },
+        {
+            "name": "V'ahavta",
+            "aliases": [
+                "Veahavta",
+                "Vahavta",
+                "And You Shall Love"
+            ],
+            "page": 50
+        },
+        {
+            "name": "V'ahavta, cont.",
+            "aliases": [
+                "V'ahavta Continued",
+                "Ecologically-based Passages"
+            ],
+            "page": 51
+        },
+        {
+            "name": "Mi Chamochah",
+            "aliases": [
+                "Mi Chamocha",
+                "Mi Kamocha",
+                "Mi Khamokha"
+            ],
+            "page": 52
+        },
+        {
+            "name": "Avot v'Imahot",
+            "aliases": [
+                "Avot VImahot",
+                "Ancestors"
+            ],
+            "page": 53
+        },
+        {
+            "name": "T'filah",
+            "aliases": [
+                "Amidah",
+                "The Great Prayer",
+                "Adonai S'fatai",
+                "Adonai Sfatai",
+                "Tefilah"
+            ],
+            "page": 53
+        },
+        {
+            "name": "G'vurot",
+            "aliases": [
+                "Gvurot",
+                "Spiritual Strength"
+            ],
+            "page": 55
+        },
+        {
+            "name": "K'dushat Hayom",
+            "aliases": [
+                "Kdushat Hayom",
+                "K'dushat HaYom",
+                "This Holy Day"
+            ],
+            "page": 56
+        },
+        {
+            "name": "K'dushat Hayom Kavannah",
+            "aliases": [
+                "Kavannah for K'dushat Hayom"
+            ],
+            "page": 56
+        },
+        {
+            "name": "Un'taneh Tokef",
+            "aliases": [
+                "Untaneh Tokef",
+                "Unetaneh Tokef",
+                "B'Rosh Hashanah",
+                "B'Rosh Hashanah Yikateivun"
+            ],
+            "page": 57
+        },
+        {
+            "name": "K'dushah",
+            "aliases": [
+                "Kdushah",
+                "Kedushah",
+                "Holiness"
+            ],
+            "page": 58
+        },
+        {
+            "name": "K'dushah Kavannah",
+            "aliases": [
+                "Kavannah for K'dushah"
+            ],
+            "page": 58
+        },
+        {
+            "name": "Zochreinu",
+            "aliases": [
+                "Zochreinu L'Chayim",
+                "Remember Us"
+            ],
+            "page": 60
+        },
+        {
+            "name": "Avodah",
+            "aliases": [
+                "R'tzei",
+                "Retzei",
+                "For Purity in Service and Worship"
+            ],
+            "page": 61
+        },
+        {
+            "name": "Hoda'ah",
+            "aliases": [
+                "Hodaah",
+                "Modim",
+                "Modim Anachnu Lach",
+                "Gratitude"
+            ],
+            "page": 61
+        },
+        {
+            "name": "Sim Shalom",
+            "aliases": [
+                "B'sefer Chayim",
+                "Bsefer Chayim",
+                "B'seifer Chayim",
+                "Book of Life",
+                "Peace"
+            ],
+            "page": 62
+        },
+        {
+            "name": "Silent Meditation",
+            "aliases": [
+                "Yih'yu L'ratzon",
+                "Oseh Shalom",
+                "Acceptance of Prayer"
+            ],
+            "page": 63
+        },
+        {
+            "name": "Avinu Malkeinu",
+            "aliases": [
+                "Avinu Malkenu"
+            ],
+            "page": 64
+        },
+        {
+            "name": "Vay'hi Binso'a",
+            "aliases": [
+                "Vayhi Binsoa",
+                "Vay'hi Binso'a HaAron"
+            ],
+            "page": 64
+        },
+        {
+            "name": "Hakafot",
+            "aliases": [
+                "Rejoicing with the Torah",
+                "Torah Procession",
+                "L'cha Adonai HaGedulah",
+                "Rom'mu"
+            ],
+            "page": 66
+        },
+        {
+            "name": "Torah Procession Call",
+            "aliases": [
+                "Sh'ma Procession",
+                "Echad Eloheinu"
+            ],
+            "page": 66
+        },
+        {
+            "name": "Blessing Before the Torah Reading",
+            "aliases": [
+                "Blessing Before the Torah",
+                "Torah Blessing",
+                "Birkat HaTorah"
+            ],
+            "page": 67
+        },
+        {
+            "name": "Torah Reading 1",
+            "aliases": [
+                "Torah Reading Day 1",
+                "Genesis 21",
+                "Hagar and Ishmael"
+            ],
+            "page": 67
+        },
+        {
+            "name": "Torah Reading 2",
+            "aliases": [
+                "Torah Reading Day 2",
+                "Genesis 22",
+                "The Binding of Isaac",
+                "Akedah"
+            ],
+            "page": 70
+        },
+        {
+            "name": "Blessing Following the Torah Reading",
+            "aliases": [
+                "Blessing After the Torah"
+            ],
+            "page": 72
+        },
+        {
+            "name": "Mi Shebeirach",
+            "aliases": [
+                "Mi Sheberach",
+                "Healing Prayer"
+            ],
+            "page": 72
+        },
+        {
+            "name": "Blessing Before the Haftarah Reading",
+            "aliases": [
+                "Haftarah Blessing",
+                "Blessing Before the Haftarah"
+            ],
+            "page": 73
+        },
+        {
+            "name": "Haftarah Reading 1",
+            "aliases": [
+                "Haftarah Day 1",
+                "I Samuel",
+                "1 Samuel",
+                "Hannah"
+            ],
+            "page": 74
+        },
+        {
+            "name": "Haftarah Reading 2",
+            "aliases": [
+                "Haftarah Day 2",
+                "Jeremiah 31"
+            ],
+            "page": 77
+        },
+        {
+            "name": "Blessing Following the Haftarah Reading",
+            "aliases": [
+                "Blessing After the Haftarah"
+            ],
+            "page": 79
+        },
+        {
+            "name": "Shofar Service",
+            "aliases": [
+                "Seder Kriyat HaShofar",
+                "Shofar Blessings",
+                "Shehecheyanu"
+            ],
+            "page": 80
+        },
+        {
+            "name": "Malchuyot",
+            "aliases": [
+                "Malkhuyot",
+                "Sovereignty"
+            ],
+            "page": 81
+        },
+        {
+            "name": "Zichronot",
+            "aliases": [
+                "Zikhronot",
+                "Remembrance"
+            ],
+            "page": 81
+        },
+        {
+            "name": "Shofarot",
+            "aliases": [
+                "Shofrot"
+            ],
+            "page": 82
+        },
+        {
+            "name": "Prayer for Shalom",
+            "aliases": [
+                "Prayer for Peace"
+            ],
+            "page": 83
+        },
+        {
+            "name": "Prayer for the State of Israel",
+            "aliases": [
+                "Israel Prayer"
+            ],
+            "page": 84
+        },
+        {
+            "name": "Eitz Chayim",
+            "aliases": [
+                "Etz Chayim",
+                "Tree of Life",
+                "Eitz Chayim Hi"
+            ],
+            "page": 85
+        },
+        {
+            "name": "Hatikvah",
+            "aliases": [
+                "The Hope"
+            ],
+            "page": 85
+        },
+        {
+            "name": "Aleinu",
+            "aliases": [
+                "Adoration",
+                "Aleinu L'shabeiach"
+            ],
+            "page": 86
+        },
+        {
+            "name": "May the Memory",
+            "aliases": [
+                "Memorial Introduction"
+            ],
+            "page": 87
+        },
+        {
+            "name": "Mourner's Kaddish",
+            "aliases": [
+                "Kaddish Yatom",
+                "Mourners Kaddish",
+                "Kaddish"
+            ],
+            "page": 88
+        },
+        {
+            "name": "Benediction",
+            "aliases": [
+                "Closing Benediction"
+            ],
+            "page": 90
+        },
+        {
+            "name": "Shanah Tovah",
+            "aliases": [
+                "Shana Tova",
+                "May it be a Good Year"
+            ],
+            "page": 91
+        },
+        {
+            "name": "Closing Blessing",
+            "aliases": [],
+            "page": 92
+        },
+        {
+            "name": "Adon Olam",
+            "aliases": [
+                "Adon Olam Asher Malach",
+                "Cosmic Ruler"
+            ],
+            "page": 129
+        }
+    ]
+}
