@@ -171,6 +171,13 @@ export async function runBatchWithDeadline(
 
     let processed = 0
     for (const itemId of queued) {
+        // Checked BETWEEN items, never inside one: the budget assumes a single
+        // chart finishes inside the 60 s of headroom left under the route's
+        // maxDuration. That holds for the pipeline as it stands (the slowest
+        // step is a MuseScore/HEIC conversion on a ≤ 25 MB file), and if it ever
+        // stops holding the platform kills the invocation mid-item — which
+        // costs nothing but a re-import of that one item, because the batch is
+        // left `processing` and the resume cron sweeps it back up.
         if (Date.now() > opts.deadlineAt) break
         processed += 1
         try {

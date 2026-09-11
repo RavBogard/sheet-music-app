@@ -88,6 +88,17 @@ describe("POST /api/intake/run", () => {
         expect(runBatchWithDeadline).not.toHaveBeenCalled()
     })
 
+    it("401s on a same-length secret that encodes to a different byte length", async () => {
+        // "é" is one UTF-16 code unit and two UTF-8 bytes. Comparing string
+        // lengths would send unequal buffers into timingSafeEqual, which throws
+        // — a wrong secret must be a 401, never a 500.
+        process.env.INTAKE_RUN_SECRET = "run-secreta"
+        const res = await post({ token: "run-secret\u00e9" })
+
+        expect(res.status).toBe(401)
+        expect(runBatchWithDeadline).not.toHaveBeenCalled()
+    })
+
     it("500s and processes nothing when no secret is configured", async () => {
         delete process.env.INTAKE_RUN_SECRET
         delete process.env.CRON_SECRET

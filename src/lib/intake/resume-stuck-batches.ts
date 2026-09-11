@@ -28,10 +28,14 @@ import "server-only"
  * keeps retrying until the batch actually reaches `done`.
  *
  * The staleness test runs IN MEMORY over a small `status in [...]` page rather
- * than as an inequality query: "newest item updatedAt" is a value inside the
- * items map, which Firestore cannot index, and splitting it into a second
- * indexed field would add a write to every item mutation for a query that runs
- * six times an hour.
+ * than as an inequality query: a `processing` batch's clock is "newest item
+ * updatedAt", a value inside the items map, which Firestore cannot index, and
+ * splitting it into a second indexed field would add a write to every item
+ * mutation for a query that runs six times an hour. The page itself is still
+ * ordered by `committedAt`, so the `upload_batches` (status ASC, committedAt
+ * ASC) composite index in firestore.indexes.json is still required — the
+ * emulator does not enforce composite indexes, so a missing one only shows up
+ * against the real project.
  */
 
 import { logger } from "@/lib/logger"
@@ -39,7 +43,10 @@ import { BATCH_COLLECTION } from "./batch-types"
 import { enqueueImportBatch } from "./enqueue"
 
 export interface ResumeStuckBatchesOptions {
-    /** How long a batch may sit in `committed` before it counts as stuck. */
+    /**
+     * How long a batch may sit in `committed` — measured from `committedAt`,
+     * never from item stamps — before it counts as stuck.
+     */
     olderThanMs?: number
     /**
      * How long a `processing` batch may go without any item moving before it
@@ -75,20 +82,33 @@ function toMillis(value: unknown): number | null {
 }
 
 /**
- * When this batch last visibly moved: the newest item `updatedAt`, falling
- * back to `committedAt` for a batch no item has been touched in yet.
+ * When this batch last visibly moved — the clock the staleness test runs on.
  *
- * `null` means "no idea" — a doc with no stamp anywhere is left alone, because
- * there is no way to tell a stuck batch from one committed a second ago.
+ * The two statuses need DIFFERENT clocks:
+ *
+ * - `committed`: `committedAt`, and only that. Item `updatedAt` is stamped when
+ *   bytes are STAGED, which happens before the commit — a batch whose files
+ *   were dropped ten minutes ago and sealed thirty seconds ago has old item
+ *   stamps and is not stuck at all. Reading them here would re-send it
+ *   instantly, every sweep, for as long as it took the user to drop the files.
+ * - `processing`: the newest item `updatedAt`, because that IS the progress
+ *   signal — a live slice bumps an item every import — falling back to
+ *   `committedAt` for a batch no item has moved in yet.
+ *
+ * `null` means "no idea": a doc with no stamp is left alone, because there is
+ * no way to tell a stuck batch from one committed a second ago.
  */
 function lastProgressAt(data: FirebaseFirestore.DocumentData): number | null {
+    const committedAt = toMillis(data.committedAt)
+    if (data.status !== "processing") return committedAt
+
     const items = (data.items ?? {}) as Record<string, { updatedAt?: unknown }>
     let newest: number | null = null
     for (const item of Object.values(items)) {
         const ms = toMillis(item?.updatedAt)
         if (ms !== null && (newest === null || ms > newest)) newest = ms
     }
-    return newest ?? toMillis(data.committedAt)
+    return newest ?? committedAt
 }
 
 export async function resumeStuckBatches(
@@ -102,9 +122,16 @@ export async function resumeStuckBatches(
     } = options
     const now = Date.now()
 
+    // Ordered by `committedAt` so a project with more stuck batches than one
+    // page shows this sweep the oldest ones, not an arbitrary slice. Firestore
+    // treats `in` as an equality filter, so the existing
+    // `(status ASC, committedAt ASC)` composite index covers this query
+    // unchanged. The order-by also drops any doc missing `committedAt` — which
+    // is the same set the staleness test below would skip for having no clock.
     const snap = await db
         .collection(BATCH_COLLECTION)
         .where("status", "in", ["committed", "processing"])
+        .orderBy("committedAt", "asc")
         .limit(Math.max(SCAN_LIMIT, limit))
         .get()
 

@@ -148,6 +148,43 @@ describe("resumeStuckBatches (emulator)", () => {
     })
 
 
+    it("ignores item stamps on a committed batch — items are stamped at stage time", async () => {
+        // The realistic shape of a fresh commit: the user spent ten minutes
+        // dropping files (each stamped `staged` as it landed) and sealed the
+        // batch thirty seconds ago. Reading item stamps here would call that
+        // stuck and re-send it on every sweep.
+        await seed("ub-juststaged0", "committed", ago(30 * 1000), {
+            "it-0001": {
+                itemId: "it-0001",
+                status: "staged",
+                updatedAt: ago(10 * 60 * 1000).toISOString(),
+            },
+            "it-0002": {
+                itemId: "it-0002",
+                status: "staged",
+                updatedAt: ago(9 * 60 * 1000).toISOString(),
+            },
+        })
+
+        const { resent } = await resumeStuckBatches(db())
+        expect(resent).toEqual([])
+        expect(enqueueImportBatch).not.toHaveBeenCalled()
+    })
+
+    it("re-sends a committed batch on committedAt even when its items moved recently", async () => {
+        // The mirror image: a batch sealed ten minutes ago whose items were
+        // staged seconds before the seal. `committedAt` is the only clock.
+        await seed("ub-sealedold00", "committed", ago(10 * 60 * 1000), {
+            "it-0001": {
+                itemId: "it-0001",
+                status: "staged",
+                updatedAt: ago(10 * 60 * 1000 - 2000).toISOString(),
+            },
+        })
+
+        expect((await resumeStuckBatches(db())).resent).toEqual(["ub-sealedold00"])
+    })
+
     it("re-sends a processing batch whose items have gone stale", async () => {
         // The HTTP executor chains invocation to invocation; a dropped chain
         // leaves exactly this — `processing`, items outstanding, nobody coming

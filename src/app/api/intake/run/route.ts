@@ -34,8 +34,14 @@ export const dynamic = "force-dynamic"
 export const maxDuration = 300
 
 function safeCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    return timingSafeEqual(Buffer.from(a), Buffer.from(b))
+    // Compare BYTE lengths, not string lengths: `timingSafeEqual` throws on
+    // unequal-length buffers, and two strings of equal length can encode to
+    // different byte counts the moment either holds a non-ASCII character. A
+    // throw here would surface as a 500 on what is simply a wrong secret.
+    const left = Buffer.from(a)
+    const right = Buffer.from(b)
+    if (left.byteLength !== right.byteLength) return false
+    return timingSafeEqual(left, right)
 }
 
 export async function POST(req: NextRequest) {

@@ -204,11 +204,12 @@ firebase deploy --only firestore:rules,firestore:indexes --project crcmusicchart
 ```
 
 - Rules: `upload_batches/{batchId}` is `read, write: if false` — server-only.
-- Indexes: two composite indexes on `upload_batches`. `list_parked_uploads`
-  needs its one. The `(status, committedAt)` one is kept but no longer required
-  by the resume sweep — that query is now a small `status in [...]` page
-  filtered in memory, because "newest item updatedAt" lives inside the items
-  map and Firestore cannot index it.
+- Indexes: two composite indexes on `upload_batches`, one for
+  `list_parked_uploads`, one — `(status, committedAt)` — for the resume sweep,
+  which reads a `status in ["committed","processing"]` page ordered by
+  `committedAt` and then applies the staleness test in memory (a `processing`
+  batch's clock is the newest item `updatedAt`, which lives inside the items map
+  and cannot be indexed).
 
 ---
 
