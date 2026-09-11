@@ -46,6 +46,12 @@ export const env = createEnv({
         // Daniel configures it. Distinct from GOOGLE_DRIVE_ROOT_FOLDER_ID
         // (which the admin-triggered /api/library/sync mirror uses).
         DAVID_DRIVE_DROP_FOLDER_ID: z.string().optional(),
+        // Chart Inbox (2026-09-11). The shared Drive folder music directors and
+        // admins drop chart files into from any device; the drive-sync cron
+        // watches it (5 min) and the MCP `sync_chart_inbox` tool ticks it on
+        // demand. Takes precedence over DAVID_DRIVE_DROP_FOLDER_ID, which
+        // remains a fallback. See docs/CHART-INBOX.md.
+        CHART_INBOX_DRIVE_FOLDER_ID: z.string().optional(),
         // storage-phase2 (Storage→Drive byte-mirror). Dedicated Drive folder
         // (a Workspace Shared Drive) the nightly /api/cron/storage-backup
         // mirrors chart bytes into. MUST be distinct from
@@ -113,6 +119,7 @@ export const env = createEnv({
         BACKUP_BUCKET: process.env.BACKUP_BUCKET,
         GOOGLE_DRIVE_ROOT_FOLDER_ID: process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID,
         DAVID_DRIVE_DROP_FOLDER_ID: process.env.DAVID_DRIVE_DROP_FOLDER_ID,
+        CHART_INBOX_DRIVE_FOLDER_ID: process.env.CHART_INBOX_DRIVE_FOLDER_ID,
         CRC_BACKUP_DRIVE_FOLDER_ID: process.env.CRC_BACKUP_DRIVE_FOLDER_ID,
         GEMINI_API_KEY: process.env.GEMINI_API_KEY,
         MCP_ADMIN_TEST_SESSION_SECRET: process.env.MCP_ADMIN_TEST_SESSION_SECRET,

@@ -1,5 +1,10 @@
 # Batch chart intake
 
+> **Read `CHART-INBOX.md` first.** Since 2026-09-11 the way anyone adds chart
+> files is the shared **CRC Chart Inbox** Drive folder + `sync_chart_inbox`.
+> The in-chat drop-zone below is retained as a fallback surface only; it
+> requires a client that renders MCP Apps and did not for Daniel.
+
 Adding many charts to the library at once — from a folder on your computer, from
 a Google Drive folder, or from a terminal.
 

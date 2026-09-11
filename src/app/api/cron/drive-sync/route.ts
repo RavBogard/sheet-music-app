@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { runDriveSyncProd } from "@/lib/drive-sync/poller"
+import { resolveChartInboxFolderId } from "@/lib/drive-sync/inbox"
 import { logger } from "@/lib/logger"
 import { captureException } from "@/lib/error-reporting"
 import { env } from "@/env.mjs"
@@ -60,16 +61,18 @@ export async function GET(req: NextRequest) {
             )
         }
 
-        const parentFolderId = env.DAVID_DRIVE_DROP_FOLDER_ID
+        // Chart Inbox (CHART_INBOX_DRIVE_FOLDER_ID) with the legacy
+        // DAVID_DRIVE_DROP_FOLDER_ID as fallback — see src/lib/drive-sync/inbox.ts.
+        const parentFolderId = resolveChartInboxFolderId(env)
         if (!parentFolderId) {
             logger.info(
-                "[drive-sync] DAVID_DRIVE_DROP_FOLDER_ID unset — cron is dormant",
+                "[drive-sync] CHART_INBOX_DRIVE_FOLDER_ID unset — cron is dormant",
             )
             return NextResponse.json({
                 success: true,
                 watching: false,
                 reason:
-                    "DAVID_DRIVE_DROP_FOLDER_ID env var not configured — set in Vercel to enable.",
+                    "CHART_INBOX_DRIVE_FOLDER_ID env var not configured — set in Vercel to enable.",
             })
         }
 

@@ -139,6 +139,10 @@ This guide exists so the agent never recreates that failure shape.
 - Publish: `publish_setlist` (always preview first)
 - Verify: `verify_setlist_charts`, `get_chart_status`,
   `wait_for_setlist_change`
+- Add chart FILES (any user, any device, no bytes through you): `get_chart_inbox`
+  → hand the user the Drive folder link → `sync_chart_inbox` once they have
+  dropped files. For a Drive folder they already have: `import_drive_folder`.
+  Never ask a user to paste a file into the chat for upload.
 
 When in doubt, prefer `preview_publish` + `propose_setlist_changes` over
 their direct counterparts. The propose-confirm loop is the trust contract.
