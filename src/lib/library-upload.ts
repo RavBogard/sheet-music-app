@@ -162,6 +162,17 @@ export interface ProcessChartUploadError {
         | "duplicate_similar"
         | "convert_failed"
         | "server_error"
+    /**
+     * Batch-chart-intake (2026-09-10): on a `duplicate_exact` /
+     * `duplicate_similar` 409, identify WHICH existing `library_index` row
+     * this upload collided with, so a batch processor can show/link the
+     * match instead of just a name string. `score` is 1 for an exact
+     * nameLower match, or the fuzzy Levenshtein similarity (0..1) for a
+     * `duplicate_similar` match. Absent on every other code.
+     */
+    matchedFileId?: string
+    matchedTitle?: string
+    score?: number
 }
 
 export type ProcessChartUploadResult =
@@ -472,6 +483,9 @@ export async function processChartUpload(
                 status: 409,
                 code: "duplicate_exact",
                 error: `A chart with the same name ("${existingName}") already exists. Pass force: true to override if this is a legitimate variant.`,
+                matchedFileId: activeExactMatch.id,
+                matchedTitle: existingName,
+                score: 1,
             }
         }
     } else {
@@ -514,6 +528,9 @@ export async function processChartUpload(
                     status: 409,
                     code: "duplicate_similar",
                     error: `A chart with a similar name ("${existingName}") already exists in the library. Pass force: true to override if this is a legitimate variant.`,
+                    matchedFileId: doc.id,
+                    matchedTitle: existingName,
+                    score: similarity,
                 }
             }
         }
