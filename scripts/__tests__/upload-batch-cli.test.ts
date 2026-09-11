@@ -148,7 +148,7 @@ describe("parseArgs", () => {
         expect(a.dryRun).toBe(true)
     })
     it("defaults the endpoint to production", () => {
-        expect(parseArgs(["a.pdf"]).endpoint).toBe("https://centralreform.live/api/mcp")
+        expect(parseArgs(["a.pdf"]).endpoint).toBe("https://www.centralreform.live/api/mcp")
     })
     it("accepts --flag=value form", () => {
         const a = parseArgs(["--endpoint=https://x/api/mcp", "--bearer=tok"])
