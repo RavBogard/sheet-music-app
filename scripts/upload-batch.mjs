@@ -100,9 +100,18 @@ export function extOf(fileName) {
  * Directories expand one level (files only — a nested directory is ignored,
  * not descended into). Every resulting file lands in exactly one of:
  *
- *   accepted — `{ path, fileName, mimeType, sizeBytes }`
- *   rejected — `{ path, fileName, reason }` where reason is one of
+ *   accepted — `{ path, baseName, fileName, mimeType, sizeBytes }`
+ *   rejected — `{ path, baseName, fileName, reason }` where reason is one of
  *              `not_found`, `unsupported_type`, `too_large`, `empty`
+ *
+ * `baseName` is what the file is actually called on disk. `fileName` is what we
+ * send to the server, and it is made UNIQUE across the accepted set: two charts
+ * called `Adon Olam.pdf` in two different folders become `Adon Olam.pdf` and
+ * `Adon Olam (2).pdf`. That matters for correctness, not tidiness — the server
+ * echoes `fileName` back on every minted item and on every rejection, and it is
+ * the only handle we have for checking that a signed URL belongs to the file we
+ * are about to read. Duplicate names make that check meaningless and can send
+ * one file's bytes to another file's URL.
  *
  * Reads the filesystem for sizes but writes nothing and talks to nothing; the
  * unit test drives it straight against `e2e/fixtures`.
@@ -110,24 +119,61 @@ export function extOf(fileName) {
 export async function planFiles(paths) {
     const accepted = []
     const rejected = []
+    /** Lowercased upload names already handed out, for collision suffixing. */
+    const taken = new Set()
+
+    /** `Adon Olam.pdf` → `Adon Olam (2).pdf` → `Adon Olam (3).pdf` … */
+    function uniqueName(baseName) {
+        if (!taken.has(baseName.toLowerCase())) {
+            taken.add(baseName.toLowerCase())
+            return baseName
+        }
+        const ext = extOf(baseName)
+        const stem = ext ? baseName.slice(0, baseName.length - ext.length) : baseName
+        for (let n = 2; ; n += 1) {
+            const candidate = `${stem} (${n})${ext}`
+            if (!taken.has(candidate.toLowerCase())) {
+                taken.add(candidate.toLowerCase())
+                return candidate
+            }
+        }
+    }
 
     /** Classify one concrete file path. */
     async function classify(filePath, sizeBytes) {
-        const fileName = basename(filePath)
-        const mimeType = EXT_TO_MIME[extOf(fileName)]
+        const baseName = basename(filePath)
+        const mimeType = EXT_TO_MIME[extOf(baseName)]
         if (!mimeType) {
-            rejected.push({ path: filePath, fileName, reason: "unsupported_type" })
+            rejected.push({
+                path: filePath,
+                baseName,
+                fileName: baseName,
+                reason: "unsupported_type",
+            })
             return
         }
         if (sizeBytes === 0) {
-            rejected.push({ path: filePath, fileName, reason: "empty" })
+            rejected.push({ path: filePath, baseName, fileName: baseName, reason: "empty" })
             return
         }
         if (sizeBytes > MAX_FILE_BYTES) {
-            rejected.push({ path: filePath, fileName, reason: "too_large" })
+            rejected.push({
+                path: filePath,
+                baseName,
+                fileName: baseName,
+                reason: "too_large",
+            })
             return
         }
-        accepted.push({ path: filePath, fileName, mimeType, sizeBytes })
+        // Only accepted files consume an upload name — a rejected file is never
+        // sent, so it must not push its siblings' names along.
+        accepted.push({
+            path: filePath,
+            baseName,
+            fileName: uniqueName(baseName),
+            mimeType,
+            sizeBytes,
+        })
     }
 
     for (const raw of paths ?? []) {
@@ -136,7 +182,12 @@ export async function planFiles(paths) {
         try {
             info = await stat(p)
         } catch {
-            rejected.push({ path: p, fileName: basename(p), reason: "not_found" })
+            rejected.push({
+                path: p,
+                baseName: basename(p),
+                fileName: basename(p),
+                reason: "not_found",
+            })
             continue
         }
 
@@ -160,6 +211,56 @@ export async function planFiles(paths) {
     }
 
     return { accepted, rejected }
+}
+
+/**
+ * Pair each minted upload URL with the local file it belongs to.
+ *
+ * `request_batch_upload_urls` walks `files` IN ORDER and pushes each entry to
+ * exactly one of `items` (minted) or `rejected` — see `requestBatchUploadUrls`
+ * in src/lib/mcp/tools/batch-intake.ts. So both arrays preserve request order
+ * over their own subset, and replaying the request in order against the two
+ * queues reconstructs the mapping exactly.
+ *
+ * Matching by name alone is what this replaces: two files called `Adon Olam.pdf`
+ * in different folders would both resolve to the first entry, and one signed URL
+ * would receive the other file's bytes. `planFiles` now guarantees unique
+ * `fileName`s, so the echoed name is a genuine cross-check on the replay rather
+ * than the mechanism — if the server ever reordered, this throws instead of
+ * uploading the wrong bytes.
+ *
+ * Returns `[{ item, planned }]` for the minted entries, in request order.
+ */
+export function zipMintedItems(group, mintedItems, rejectedRows) {
+    const minted = [...(mintedItems ?? [])]
+    const rejected = [...(rejectedRows ?? [])]
+    const pairs = []
+
+    for (const planned of group) {
+        if (rejected.length > 0 && rejected[0]?.fileName === planned.fileName) {
+            rejected.shift()
+            continue
+        }
+        const item = minted.shift()
+        if (!item) {
+            throw new Error(
+                `request_batch_upload_urls returned fewer items than files (ran out at ${planned.fileName}) — refusing to upload rather than risk sending a file to the wrong URL.`,
+            )
+        }
+        if (item.fileName !== planned.fileName) {
+            throw new Error(
+                `request_batch_upload_urls returned items out of order (expected ${planned.fileName}, got ${item.fileName}) — refusing to upload rather than risk sending a file to the wrong URL.`,
+            )
+        }
+        pairs.push({ item, planned })
+    }
+
+    if (minted.length > 0) {
+        throw new Error(
+            `request_batch_upload_urls returned ${minted.length} item(s) more than were requested — refusing to upload.`,
+        )
+    }
+    return pairs
 }
 
 // ─── argv ────────────────────────────────────────────────────────────────────
@@ -271,7 +372,7 @@ export function unwrapToolResult(result) {
 }
 
 /** A single JSON-RPC session against the MCP endpoint. */
-class McpSession {
+export class McpSession {
     constructor(endpoint, bearer, fetchFn) {
         this.endpoint = endpoint
         this.bearer = bearer
@@ -317,12 +418,39 @@ class McpSession {
         return envelope.result
     }
 
+    /**
+     * Fire-and-forget JSON-RPC notification — no `id`, so there is no response
+     * to wait on. A notification answers 202 with an empty body on a compliant
+     * transport, and anything else is not worth failing the run over.
+     */
+    async notify(method, params) {
+        const headers = {
+            Authorization: `Bearer ${this.bearer}`,
+            Accept: "application/json, text/event-stream",
+            "Content-Type": "application/json",
+        }
+        if (this.sessionId) headers["mcp-session-id"] = this.sessionId
+        try {
+            await this.fetch(this.endpoint, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({ jsonrpc: "2.0", method, params }),
+            })
+        } catch {
+            // Deliberately swallowed — see the doc comment.
+        }
+    }
+
     async initialize() {
         await this.rpc("initialize", {
             protocolVersion: "2025-06-18",
             capabilities: {},
             clientInfo: { name: "upload-batch.mjs", version: "1" },
         })
+        // The handshake is not complete until the client acknowledges it. Our
+        // own transport does not insist, but a stricter one refuses every later
+        // `tools/call` on a session that never sent this.
+        await this.notify("notifications/initialized", {})
     }
 
     /** Call a tool and return its unwrapped payload; throws on a refusal. */
@@ -408,10 +536,17 @@ export async function main(argv = []) {
     )
     const planRows = [["file", "status", "detail"]]
     for (const f of plan.accepted) {
-        planRows.push([f.fileName, "accepted", `${f.mimeType} (${f.sizeBytes} bytes)`])
+        // Say so when a name collision renamed the upload, or the table would
+        // claim a file is called something it is not called on disk.
+        const renamed = f.fileName === f.baseName ? "" : ` — uploads as ${f.fileName}`
+        planRows.push([
+            f.baseName,
+            "accepted",
+            `${f.mimeType} (${f.sizeBytes} bytes)${renamed}`,
+        ])
     }
     for (const f of plan.rejected) {
-        planRows.push([f.fileName, "rejected", f.reason])
+        planRows.push([f.baseName, "rejected", f.reason])
     }
     stdout.write(`${renderTable(planRows)}\n`)
 
@@ -445,8 +580,6 @@ export async function main(argv = []) {
         stdout.write(`batch ${batchId} open (endpoint ${opts.endpoint})\n`)
 
         // ─── mint URLs, 50 files per call ────────────────────────────────
-        /** itemId → planned file. */
-        const byItemId = new Map()
         const uploads = []
         const serverRejected = []
         for (const group of chunk(plan.accepted, URL_GROUP_SIZE)) {
@@ -458,12 +591,9 @@ export async function main(argv = []) {
                     sizeBytes: f.sizeBytes,
                 })),
             })
-            for (const item of minted.items ?? []) {
-                // Match by name within this group — the tool echoes fileName back.
-                const planned = group.find((f) => f.fileName === item.fileName)
-                if (!planned) continue
-                byItemId.set(item.itemId, planned)
-                uploads.push({ item, planned })
+            // Positional replay, not a name lookup — see zipMintedItems.
+            for (const pair of zipMintedItems(group, minted.items, minted.rejected)) {
+                uploads.push(pair)
             }
             for (const r of minted.rejected ?? []) serverRejected.push(r)
         }
@@ -473,7 +603,15 @@ export async function main(argv = []) {
         }
 
         // ─── PUT the bytes, 3 at a time ──────────────────────────────────
-        const putFailures = []
+        //
+        // A failed PUT is NOT its own outcome: the item keeps its
+        // `awaiting-bytes` status, and commit turns that into a real
+        // `failed` / `bytes_missing` row on the server. So we record the HTTP
+        // detail against the itemId and later fold it into that one row —
+        // reporting it separately would show the same file twice and count it
+        // twice.
+        /** itemId → the PUT's HTTP detail, for rows that come back failed. */
+        const putFailures = new Map()
         await mapConcurrent(uploads, PUT_CONCURRENCY, async ({ item, planned }) => {
             const body = await readFile(planned.path)
             const res = await fetch(item.uploadUrl, {
@@ -483,10 +621,8 @@ export async function main(argv = []) {
             })
             if (!res.ok) {
                 const text = await res.text().catch(() => "")
-                putFailures.push({
-                    fileName: planned.fileName,
-                    detail: `PUT ${res.status} ${text.slice(0, 120)}`,
-                })
+                putFailures.set(item.itemId, `PUT ${res.status} ${text.slice(0, 120)}`)
+                stderr.write(`upload failed: ${planned.fileName} — PUT ${res.status}\n`)
                 return
             }
             stdout.write(`uploaded ${planned.fileName}\n`)
@@ -517,19 +653,32 @@ export async function main(argv = []) {
 
         // ─── report ──────────────────────────────────────────────────────
         const rows = [["file", "status", "detail"]]
+        /** itemIds the server reported as failed, so PUT detail is not double-counted. */
+        const serverFailedItemIds = new Set()
         for (const item of batch.items ?? []) {
             let detail = ""
             if (item.status === "imported") detail = item.resultFileId ?? ""
             else if (item.status === "parked")
                 detail = `${item.parked?.reason ?? "duplicate"} → ${item.parked?.matchedTitle ?? item.parked?.matchedFileId ?? ""}`
-            else if (item.status === "failed")
+            else if (item.status === "failed") {
+                serverFailedItemIds.add(item.itemId)
                 detail = `${item.error?.code ?? "error"}: ${item.error?.message ?? ""}`
+                // The server can only say "no bytes arrived". We know WHY.
+                const put = putFailures.get(item.itemId)
+                if (put) detail = `${detail} (${put})`
+            }
             rows.push([item.fileName, item.status, detail])
         }
-        for (const f of putFailures) rows.push([f.fileName, "failed", f.detail])
+        // A PUT failure the server did NOT turn into a failed row (commit never
+        // ran, or the batch was already sealed) still has to be reported — once.
+        for (const [itemId, detail] of putFailures) {
+            if (serverFailedItemIds.has(itemId)) continue
+            const planned = uploads.find((u) => u.item.itemId === itemId)?.planned
+            rows.push([planned?.fileName ?? itemId, "failed", detail])
+        }
         for (const r of serverRejected)
             rows.push([r.fileName, "rejected", r.reason ?? "unknown"])
-        for (const f of plan.rejected) rows.push([f.fileName, "rejected", f.reason])
+        for (const f of plan.rejected) rows.push([f.baseName, "rejected", f.reason])
 
         stdout.write(`\n${renderTable(rows)}\n`)
         const counts = batch.counts ?? {}
@@ -542,7 +691,12 @@ export async function main(argv = []) {
             )
         }
 
-        const failed = (counts.failed ?? 0) + putFailures.length
+        // Every PUT failure the server owns is already inside `counts.failed`;
+        // only the ones it never saw are added, so nothing is counted twice.
+        const unreportedPutFailures = [...putFailures.keys()].filter(
+            (id) => !serverFailedItemIds.has(id),
+        ).length
+        const failed = (counts.failed ?? 0) + unreportedPutFailures
         return failed === 0 ? EXIT_CODES.OK : EXIT_CODES.FAILED_ITEMS
     } catch (err) {
         stderr.write(`${err?.message ?? String(err)}\n`)
