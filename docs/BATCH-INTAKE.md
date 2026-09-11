@@ -129,7 +129,7 @@ no iframe (Claude Code on Windows, or by hand).
 node scripts/upload-batch.mjs <path>... \
   [--collection core|supplemental|uploads|nava] \
   [--bearer TOKEN] \
-  [--endpoint https://centralreform.live/api/mcp] \
+  [--endpoint https://www.centralreform.live/api/mcp] \
   [--dry-run]
 ```
 
@@ -173,7 +173,7 @@ node scripts/upload-batch.mjs <path>... \
 | `CRON_SECRET` | Already configured. Guards `/api/cron/import-batches-resume` like every other cron, AND — unless `INTAKE_RUN_SECRET` is set — the internal `/api/intake/run` executor route. |
 | `INTAKE_RUN_SECRET` | Optional. The bearer `/api/intake/run` demands, when it should rotate separately from cron. Falls back to `CRON_SECRET`. With neither configured the route refuses every request and nothing is processed. |
 | `INTAKE_EXECUTOR` | Optional, `http` (default) or `inngest`. See *The executor*. `inngest` is honoured only when `INNGEST_EVENT_KEY` is also set. |
-| `INTAKE_INTERNAL_BASE_URL` | **Set in Vercel production to `https://centralreform.live`.** The origin the run route calls itself back on. It defaults to `VERCEL_PROJECT_PRODUCTION_URL`, then `VERCEL_URL`, then `http://localhost:3000` — but those are `*.vercel.app` hosts, which SSO deployment protection covers, so a self-chained request to one answers with the Vercel login page instead of running the batch. The custom domain is not protected, so pointing the executor at it is what makes self-chaining work in production. |
+| `INTAKE_INTERNAL_BASE_URL` | **Set in Vercel production to `https://www.centralreform.live`** (the apex `centralreform.live` 307-redirects to `www`, and a redirect strips the bearer). The origin the run route calls itself back on. It defaults to `VERCEL_PROJECT_PRODUCTION_URL`, then `VERCEL_URL`, then `http://localhost:3000` — but those are `*.vercel.app` hosts, which SSO deployment protection covers, so a self-chained request to one answers with the Vercel login page instead of running the batch. The custom domain is not protected, so pointing the executor at it is what makes self-chaining work in production. |
 | `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY` | Only for the opt-in Inngest executor. NOT set in production. |
 | `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_STORAGE_BUCKET` | Only needed locally, by `scripts/set-storage-cors.mjs`. |
 
@@ -183,7 +183,7 @@ Claude serves an MCP App's iframe from an origin derived by **hashing the
 connector URL** — `<hash>.claudemcpcontent.com`. The two tenants connect to two
 different URLs:
 
-- `https://centralreform.live/api/mcp`
+- `https://www.centralreform.live/api/mcp`
 - `https://brotherslazaroff.live/api/mcp`
 
 so they hash to two different `*.claudemcpcontent.com` origins. A `ui.domain`

@@ -14,7 +14,7 @@
  *
  *     node scripts/upload-batch.mjs <path>... \
  *       [--collection core|supplemental|uploads|nava] \
- *       [--bearer TOKEN] [--endpoint https://centralreform.live/api/mcp] \
+ *       [--bearer TOKEN] [--endpoint https://www.centralreform.live/api/mcp] \
  *       [--dry-run]
  *
  * A <path> may be a file or a directory; a directory is expanded ONE level
@@ -41,7 +41,7 @@ import { fileURLToPath, pathToFileURL } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DEFAULT_ENV_FILE = resolve(__dirname, "..", ".env.local")
-const DEFAULT_ENDPOINT = "https://centralreform.live/api/mcp"
+const DEFAULT_ENDPOINT = "https://www.centralreform.live/api/mcp"
 
 /** Max files per `request_batch_upload_urls` call — the tool's own cap. */
 const URL_GROUP_SIZE = 50
