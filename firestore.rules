@@ -594,6 +594,20 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // UPLOAD BATCHES — server-only (Admin SDK)
+    // One doc per batch chart intake run (`upload_batches/{batchId}`), holding
+    // the item map, per-item status and the parked-duplicate decisions. Every
+    // reader and writer is server-side: the MCP batch-intake tools, the Inngest
+    // import processor, and /api/cron/import-batches-resume — all Admin SDK,
+    // which bypasses these rules. The drop-zone iframe never touches Firestore
+    // directly; it goes through the MCP tools, which do their own owner/org
+    // checks. So the client surface is closed end-to-end: a doc names staged
+    // Storage paths and library rows a duplicate matched against, and nothing
+    // in the browser has any reason to read or forge one.
+    match /upload_batches/{batchId} {
+      allow read, write: if false;
+    }
+
     // AI ENRICHMENT CONFIG (Cycle-3 NEW-3 — A3)
     // Daniel flips `autoApplyEnabled` and (optionally) tunes `threshold`
     // via Firebase Console; A4's review UI also reads this doc to render
