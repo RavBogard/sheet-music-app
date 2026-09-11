@@ -15,13 +15,19 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 
 const nextConfig: NextConfig = {
   turbopack: {},
-  serverExternalPackages: ['@google-cloud/vision', 'pdfjs-dist'],
+  serverExternalPackages: ['@google-cloud/vision', 'pdfjs-dist', '@sparticuz/chromium', 'puppeteer-core'],
   // W-01 Task 6: bundle .paul/AGENT-GUIDE.md into the MCP route's
   // serverless function so it can be read at runtime and injected into
   // the MCP server's `instructions` field. Without this, Next.js's file
   // tracer doesn't see the dynamic-path read and Vercel strips the file.
   outputFileTracingIncludes: {
     '/api/mcp': ['./.paul/AGENT-GUIDE.md'],
+    // Authored-chart renderer: the bundled DejaVu TTFs are read with fs at
+    // runtime, and @sparticuz/chromium unpacks its brotli'd binary from bin/.
+    '/api/render/chart': [
+      './src/lib/chart-render/fonts/**',
+      './node_modules/@sparticuz/chromium/bin/**',
+    ],
   },
   images: {
     remotePatterns: [
