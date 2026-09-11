@@ -214,7 +214,7 @@
         },
         {
           "fieldPath": "counts.parked",
-          "order": "ASCENDING"
+          "order": "DESCENDING"
         }
       ]
     },
