@@ -93,6 +93,7 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     // 403 — caller is authenticated but lacks the required role / scope
     forbidden: 403,
     forbidden_role: 403,
+    forbidden_scope: 403,
     forbidden_assignment: 403,
     not_a_test_uid: 403,
     not_authorized: 403,
