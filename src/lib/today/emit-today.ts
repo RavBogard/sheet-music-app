@@ -8,13 +8,8 @@ import { logger } from "@/lib/logger"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { buildTodayDoc, type TodaySetlistInput } from "./build-today"
-import {
-    TODAY_CACHE_CONTROL,
-    todayStoragePath,
-    type CongregationServiceTimes,
-    type CongregationStream,
-    type TodayDoc,
-} from "./types"
+import { readServicesFromConfig, readStreamFromConfig } from "./config"
+import { TODAY_CACHE_CONTROL, todayStoragePath, type TodayDoc } from "./types"
 
 /**
  * The I/O half of the `today.json` emitter: read published setlists + the
@@ -81,36 +76,6 @@ async function startFolioFor(
     }
 }
 
-function readServiceTimes(
-    config: Record<string, unknown> | null,
-): Record<string, CongregationServiceTimes> | null {
-    const raw = config?.services
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null
-    const out: Record<string, CongregationServiceTimes> = {}
-    for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-        if (!value || typeof value !== "object") continue
-        const row = value as Record<string, unknown>
-        if (typeof row.defaultStartLocal !== "string") continue
-        out[key] = {
-            label: typeof row.label === "string" ? row.label : key,
-            defaultStartLocal: row.defaultStartLocal,
-        }
-    }
-    return Object.keys(out).length ? out : null
-}
-
-function readStream(config: Record<string, unknown> | null): CongregationStream | null {
-    const raw = config?.stream
-    if (!raw || typeof raw !== "object") return null
-    const row = raw as Record<string, unknown>
-    if (typeof row.url !== "string" || !row.url.trim()) return null
-    const out: CongregationStream = { url: row.url.trim() }
-    if (typeof row.leadMinutes === "number" && row.leadMinutes >= 0) {
-        out.leadMinutes = row.leadMinutes
-    }
-    return out
-}
-
 /** Build the document for one org without writing it anywhere. */
 export async function buildToday(
     org: OrgId = DEFAULT_ORG_ID,
@@ -128,8 +93,8 @@ export async function buildToday(
     // startFolio only for the services that actually made it in.
     const shortlist = buildTodayDoc({
         setlists,
-        services: readServiceTimes(config as Record<string, unknown> | null),
-        stream: readStream(config as Record<string, unknown> | null),
+        services: readServicesFromConfig(config as Record<string, unknown> | null),
+        stream: readStreamFromConfig(config as Record<string, unknown> | null),
         now,
     })
     const wanted = new Set(shortlist.services.map((s) => s.setlistId))
@@ -140,8 +105,8 @@ export async function buildToday(
 
     return buildTodayDoc({
         setlists: setlists.map((s) => ({ ...s, startFolio: folios.get(s.id) ?? null })),
-        services: readServiceTimes(config as Record<string, unknown> | null),
-        stream: readStream(config as Record<string, unknown> | null),
+        services: readServicesFromConfig(config as Record<string, unknown> | null),
+        stream: readStreamFromConfig(config as Record<string, unknown> | null),
         now,
     })
 }

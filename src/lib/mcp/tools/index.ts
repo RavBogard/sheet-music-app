@@ -8,6 +8,7 @@ import {
     findSetlistsFromTemplate,
 } from "./setlists"
 import { getCongregationContext } from "./congregation"
+import { updateCongregationServices } from "./congregation-services"
 import {
     searchLibrary,
     getSong,
@@ -870,7 +871,7 @@ export function registerReadTools(server: McpServer): void {
         "get_congregation_context",
         {
             description:
-                "Get the congregation's standing context in one call so you don't have to be re-told it each authoring session: WHO the congregation is (name, location, the rabbi profiles, and the standing/core band roster) plus WHO has led recently. Use at the start of a weekly-setlist authoring session to ground yourself on the rabbis, the band, and the recent service cadence. Returns `congregation` (from the config/congregation doc; falls back to defaults with usingDefaults:true when absent) and `leadHistory` — the most-recent setlists each with the rabbi who led ('Led by'), the band that played, the service type, and dates. `historyLimit` (default 10, max 50) and `orderBy` ('eventDate' default = most-recent service day, or 'date' = doc write time) tune the history window. For the per-song Vocal Lead on a specific service, call get_setlist on that setlist id — this tool stays a single cheap read.",
+                "Get the congregation's standing context in one call so you don't have to be re-told it each authoring session: WHO the congregation is (name, location, the rabbi profiles, and the standing/core band roster) plus WHO has led recently. Use at the start of a weekly-setlist authoring session to ground yourself on the rabbis, the band, and the recent service cadence. Returns `congregation` (from the config/congregation doc; falls back to defaults with usingDefaults:true when absent) and `leadHistory` — the most-recent setlists each with the rabbi who led ('Led by'), the band that played, the service type, and dates. `historyLimit` (default 10, max 50) and `orderBy` ('eventDate' default = most-recent service day, or 'date' = doc write time) tune the history window. Also returns `services` (per-serviceType default start times, America/Chicago wall clock) and `stream` (the congregation's stream URL) — the two values the public today.json turns into a start time for the siddur reader and the stream overlays; both are null until an admin sets them with update_congregation_services. For the per-song Vocal Lead on a specific service, call get_setlist on that setlist id — this tool stays a single cheap read.",
             inputSchema: {
                 historyLimit: z
                     .number()
@@ -1145,6 +1146,70 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await deleteTemplate(uidFrom(extra), args.templateId, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "update_congregation_services",
+        {
+            description:
+                "Set the congregation's per-service default start times and its stream URL — the two values the public `today.json` needs to say what time tonight's service begins. `services` is a FULL REPLACEMENT map keyed by the setlist's `templateType` (e.g. {\"friday_night\": {\"label\": \"Erev Shabbat\", \"defaultStartLocal\": \"18:00\"}}); `defaultStartLocal` is a 24-hour America/Chicago WALL CLOCK time, so 6pm is '18:00' in July and in January — never a UTC instant. `stream` is {url, leadMinutes?} (https only; leadMinutes defaults to 5, how far before the service the stream goes live) — pass null to clear it. Omit either key to leave it untouched. STAGE THEN CONFIRM: `dryRun` defaults to TRUE and returns `{before, after, diff, changed}` without writing; call again with `dryRun:false` to commit. Admin only — these values are published to the siddur reader and the stream overlays. Nothing is seeded: a service with no configured start time simply emits no start time, which is better than a guessed one. Read the current values with get_congregation_context.",
+            inputSchema: {
+                services: z
+                    .record(
+                        z.string().min(1),
+                        z.object({
+                            label: z
+                                .string()
+                                .min(1)
+                                .max(80)
+                                .optional()
+                                .describe(
+                                    "Human name for this service kind, e.g. 'Erev Shabbat'. Defaults to the key.",
+                                ),
+                            defaultStartLocal: z
+                                .string()
+                                .describe(
+                                    "24-hour America/Chicago wall-clock start, `HH:mm` (e.g. '18:00').",
+                                ),
+                        }),
+                    )
+                    .optional()
+                    .describe(
+                        "Full replacement of the service-times map, keyed by templateType. Omit to leave it untouched; pass {} to clear it.",
+                    ),
+                stream: z
+                    .object({
+                        url: z
+                            .string()
+                            .min(1)
+                            .describe("Absolute https URL of the congregation's stream."),
+                        leadMinutes: z
+                            .number()
+                            .int()
+                            .min(0)
+                            .max(240)
+                            .optional()
+                            .describe(
+                                "How many minutes before the service the stream goes live. Default 5.",
+                            ),
+                    })
+                    .nullable()
+                    .optional()
+                    .describe(
+                        "The congregation's stream. Omit to leave it untouched; pass null to clear it.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Default TRUE — report the diff and write nothing. Pass false to commit.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await updateCongregationServices(uidFrom(extra), args, orgFrom(extra)),
+            ),
     )
 
     server.registerTool(

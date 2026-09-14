@@ -7,6 +7,8 @@ import { getAllSetlists } from "@/lib/server-setlists"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
+import { readServicesFromConfig, readStreamFromConfig } from "@/lib/today/config"
+import type { CongregationServiceTimes, CongregationStream } from "@/lib/today/types"
 
 /**
  * F3 — `get_congregation_context` MCP read tool.
@@ -106,6 +108,15 @@ export interface GetCongregationContextResult {
         /** Standing band roster from config.defaultMusicians. */
         coreMusicians: CoreMusician[]
         features: Record<string, boolean> | null
+        /**
+         * Per-serviceType default start times, keyed by `templateType`,
+         * America/Chicago wall clock. Null when none are configured — which
+         * means the public `today.json` emits no `startsAt`. Set them with
+         * `update_congregation_services`.
+         */
+        services: Record<string, CongregationServiceTimes> | null
+        /** The congregation's stream, when configured. */
+        stream: CongregationStream | null
         /** True when the `config/congregation` doc was absent and identity
          *  fields fell back to defaults. */
         usingDefaults: boolean
@@ -254,6 +265,8 @@ export async function getCongregationContext(
                 rabbis: buildRabbiProfiles(config),
                 coreMusicians: buildCoreMusicians(config),
                 features,
+                services: readServicesFromConfig(config),
+                stream: readStreamFromConfig(config),
                 usingDefaults,
             },
             leadHistory,
