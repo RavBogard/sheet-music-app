@@ -324,7 +324,15 @@ export const config = {
          *   they are public static files with no secrets, so they must bypass the
          *   proxy exactly like /manifest.json — otherwise an unauth landing fetch
          *   307s to /login (the app shell) and PWA install breaks. (BUG-6.)
+         * - today.json — the public, metadata-only service document the siddur
+         *   reader and the stream overlays fetch anonymously and cross-origin.
+         *   `vercel.json` rewrites it to /api/today, but that rewrite runs AFTER
+         *   this proxy, so without the exclusion an unauth fetch 307s to /login
+         *   and both consumers silently fall back to their calendars. Same
+         *   reasoning as manifest.json: a public document with no secrets must
+         *   not sit behind the session gate. (Caught against production
+         *   2026-09-14, before this line existed.)
          */
-        '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|logo.jpg|manifest(?:-[a-z0-9-]+)?\\.json|sw.js|workbox-.*|pdf\\.worker\\..*\\.mjs|.*\\.png$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|logo.jpg|today\\.json|manifest(?:-[a-z0-9-]+)?\\.json|sw.js|workbox-.*|pdf\\.worker\\..*\\.mjs|.*\\.png$).*)',
     ],
 }

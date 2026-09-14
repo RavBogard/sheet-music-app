@@ -291,4 +291,31 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
             expect(matchRe.test(path)).toBe(true)
         })
     })
+
+    // `/today.json` is the public, metadata-only service document the siddur
+    // reader and the stream overlays fetch anonymously and cross-origin.
+    // `vercel.json` rewrites it to /api/today, but that rewrite runs AFTER the
+    // proxy — so while the path was inside the matcher, an unauth fetch 307'd
+    // to /login and both consumers silently fell back to their own calendars.
+    // Caught against PRODUCTION on 2026-09-14, not by this suite, which is why
+    // the case is written down here now.
+    describe('today.json matcher exclusion', () => {
+        const matchRe = new RegExp(`^${config.matcher[0]}$`)
+
+        it('excludes /today.json from the proxy matcher', () => {
+            expect(matchRe.test('/today.json')).toBe(false)
+        })
+
+        it('escapes the dot — /todayXjson is NOT excluded', () => {
+            // A single-backslash `today\.json` in the source literal collapses
+            // to an unescaped `.` and would exclude any /todayXjson sibling.
+            expect(matchRe.test('/todayXjson')).toBe(true)
+        })
+
+        it('still MATCHES /api/today — the route itself is proxy-visible', () => {
+            // Only the rewritten public path bypasses; the API route keeps the
+            // proxy's security headers.
+            expect(matchRe.test('/api/today')).toBe(true)
+        })
+    })
 })
