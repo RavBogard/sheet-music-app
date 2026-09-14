@@ -21,6 +21,7 @@ import { sendSMS } from '@/lib/sms'
 import { rowOrg } from '@/lib/org/membership'
 import { logger } from '@/lib/logger'
 import { revalidatePath } from 'next/cache'
+import { emitToday } from '@/lib/today/emit-today'
 import { z } from 'zod'
 
 const musicianSchema = z.object({
@@ -333,6 +334,16 @@ export const POST = createApiHandler(
                 })
             }
             batch.commit().catch(err => logger.warn('[Publish] Email events write failed:', err))
+        }
+
+        // Regenerate the public today.json — the siddur reader and the stream
+        // overlays key off publish. Best-effort and awaited (not fire-and-
+        // forget): this route is serverless, so a floating promise can be
+        // frozen the moment the response is returned. emitToday never throws;
+        // a missing today.json costs a calendar hint, never a service.
+        const todayResult = await emitToday(rowOrg(setlist.orgId))
+        if (!todayResult.ok) {
+            logger.warn('[Publish] today.json emit failed (non-critical)', todayResult.error)
         }
 
         // Bust Next.js cache so listings reflect the new publishedAt snapshot

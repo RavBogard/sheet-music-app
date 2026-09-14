@@ -20,6 +20,7 @@ import { isTestUid } from "@/lib/test-isolation"
 import { rowOrg, rowOrgIds } from "@/lib/org/membership"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
+import { emitToday } from "@/lib/today/emit-today"
 import { logger } from "@/lib/logger"
 import {
     WRITE_RECEIPTS_COLLECTION,
@@ -908,6 +909,18 @@ export async function publishSetlist(
         result.version = commit.version
         result.wasAlreadyPublished = commit.wasPublished
         result.delivery.sms.skippedRepublish = commit.wasPublished
+    }
+
+    // Regenerate the public today.json. The reader and the overlays key off
+    // publish, so this is the moment the outside world learns what tonight is.
+    // Awaited rather than fire-and-forget: on Vercel serverless a floating
+    // promise can be frozen when the handler returns. emitToday never throws.
+    const todayEmit = await emitToday(org)
+    if (!todayEmit.ok) {
+        logger.warn("[mcp publish] today.json emit failed (non-blocking)", {
+            setlistId: args.setlistId,
+            error: todayEmit.error,
+        })
     }
 
     // Song-usage record — fire-and-forget; never fail publish on its account.

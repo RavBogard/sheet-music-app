@@ -65,6 +65,10 @@
         {
             "path": "/api/cron/import-batches-resume",
             "schedule": "*/10 * * * *"
+        },
+        {
+            "path": "/api/cron/emit-today",
+            "schedule": "0 10 * * *"
         }
     ]
 }
