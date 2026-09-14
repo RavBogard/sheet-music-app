@@ -32,6 +32,7 @@ const PROJECTIONS: Projection[] = [
             "performer",
             "description",
             "estimatedMinutes",
+            "fixed", // Perform mode collapses fixed-liturgy rows into a divider
         ],
         intentionallyDropped: {
             id: "Internal Firestore document id; QueueItem addresses tracks by array position and fileId, not the source doc id.",
@@ -86,6 +87,8 @@ const PROJECTIONS: Projection[] = [
             bpm: "PrintTrack has no field for it and print-pipeline.ts never reads track.bpm; tempo is not printed on the chart.",
             pageNumber:
                 "PrintTrack has no field for it; print-pipeline.ts never reads track.pageNumber, so multi-page targeting is not applied when printing.",
+            fixed:
+                "A Perform-mode display flag: fixed-liturgy rows collapse on the band's iPads. The rabbi's printed sheet deliberately carries EVERY row, fixed or not, so nothing downstream of print reads it.",
             unmatched: "Template-expansion UI badge only; irrelevant to a track that has an actual chart to print.",
         },
     },
@@ -134,6 +137,8 @@ const PROJECTIONS: Projection[] = [
             duration: "Free-text song-length string ('3:30'); the cover table prints estimatedMinutes for flow rows and nothing for songs.",
             bpm: "PrintTrack has no bpm field and print-pipeline draws no tempo cell on the cover table.",
             pageNumber: "Chart-internal page target for the PDF viewer; print-pipeline merges whole chart PDFs and never reads it.",
+            fixed:
+                "A Perform-mode display flag: fixed-liturgy rows collapse on the band's iPads. The rabbi's printed sheet deliberately carries EVERY row, fixed or not, so nothing downstream of print reads it.",
             unmatched: "Template-expansion UI badge only; meaningless once the track is being printed.",
         },
     },
@@ -172,6 +177,8 @@ const PROJECTIONS: Projection[] = [
             duration: "Free-text song-length string; PrintTrackPayload has no field for it and the cover table prints no song duration.",
             bpm: "PrintTrackPayload has no bpm field; tempo is a screen affordance (SetlistRow), not a printed one.",
             pageNumber: "Chart-internal page target for the PDF viewer; the packet merges whole chart PDFs.",
+            fixed:
+                "A Perform-mode display flag: fixed-liturgy rows collapse on the band's iPads. The rabbi's printed sheet deliberately carries EVERY row, fixed or not, so nothing downstream of print reads it.",
             unmatched: "Template-expansion UI badge only; not part of the printed packet.",
         },
     },
@@ -206,6 +213,8 @@ const PROJECTIONS: Projection[] = [
             duration: "Free-text song-length string; PrintTrack has no field for it.",
             bpm: "PrintTrack has no bpm field and the cover table draws no tempo cell.",
             pageNumber: "Chart-internal page target for the PDF viewer; the packet merges whole chart PDFs.",
+            fixed:
+                "A Perform-mode display flag: fixed-liturgy rows collapse on the band's iPads. The rabbi's printed sheet deliberately carries EVERY row, fixed or not, so nothing downstream of print reads it.",
             unmatched: "Template-expansion UI badge only; irrelevant to a packet being printed from a saved setlist.",
         },
     },
@@ -242,6 +251,8 @@ const PROJECTIONS: Projection[] = [
             duration: "Free-text song-length string; PrintTrack has no field for it.",
             bpm: "PrintTrack has no bpm field and the cover table draws no tempo cell.",
             pageNumber: "Chart-internal page target for the PDF viewer; the packet merges whole chart PDFs.",
+            fixed:
+                "A Perform-mode display flag: fixed-liturgy rows collapse on the band's iPads. The rabbi's printed sheet deliberately carries EVERY row, fixed or not, so nothing downstream of print reads it.",
             unmatched: "Template-expansion UI badge only; irrelevant to a packet being printed from a saved setlist.",
         },
     },

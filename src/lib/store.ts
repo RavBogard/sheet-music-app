@@ -20,6 +20,8 @@ export interface QueueItem {
     performer?: string
     description?: string
     estimatedMinutes?: number
+    /** Fixed-liturgy row — Perform mode collapses these by default. */
+    fixed?: boolean
 }
 
 export interface MusicState {

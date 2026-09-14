@@ -299,6 +299,34 @@ const templateTrackSchema = z.object({
     fileId: z.string().nullable().optional(),
     fileName: z.string().nullable().optional(),
     ...templateOutlineFields,
+    liturgyRefs: z
+        .record(
+            z.string().min(1),
+            z.object({
+                unitId: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(
+                        "Stable liturgical unit id (feed-tier books only). Get it from lookup_book_page.",
+                    ),
+                folio: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .describe("PRINTED page number in THAT book."),
+            }),
+        )
+        .optional()
+        .describe(
+            "Printed page of this moment in EACH book, keyed by book slug (list_books). A fixed-liturgy row sits at a different page in every book, so a template carries one entry per book and clone_setlist_from_template resolves the one matching the new setlist's `book`. Rows with no entry for that book clone with NO page number (reported in `unresolvedLiturgy`) rather than a page from the wrong siddur. Resolve each folio with lookup_book_page against that book.",
+        ),
+    fixed: z
+        .boolean()
+        .optional()
+        .describe(
+            "True for a fixed-liturgy row the congregation says every week straight from the book, with no chart. Perform mode collapses these on the band's iPads; the rabbi's printed service sheet still carries them.",
+        ),
 })
 
 /**
@@ -1123,7 +1151,7 @@ export function registerWriteTools(server: McpServer): void {
         "clone_setlist_from_template",
         {
             description:
-                "Create a new setlist from a template. The new setlist gets `sourceTemplateId` (snapshot of which template seeded it), the template's `templateType` + `serviceNotes` (unless `copyServiceNotes: false`), and one track row per `template.tracks[i]` (each with a fresh trackId, contiguous `order` from 0, version: 1, chart bonds copied verbatim). `newName` is required; `newEventDate` (YYYY-MM-DD or full ISO) is optional — pass null to leave the new setlist undated. The new setlist's `ownerId` is the caller. Returns `{setlistId, sourceTemplateId, trackCount, ownerId, ownerName, version:1}` plus `bondReviewCount` + `bondReviewRows` (parity with clone_setlist — template bonds copy verbatim, so this flags any cloned row whose title diverges from its bonded chart filename; each `bondReviewRows` entry carries `{position, trackId, fileId, chartFileName, overlapScore}` to target a swap_chart / review_chart_bonds follow-up). Admin + band_leader only. Trusted-leader rate-limit bypass.",
+                "Create a new setlist from a template. The new setlist gets `sourceTemplateId` (snapshot of which template seeded it), the template's `templateType` + `serviceNotes` (unless `copyServiceNotes: false`), and one track row per `template.tracks[i]` (each with a fresh trackId, contiguous `order` from 0, version: 1, chart bonds copied verbatim). `newName` is required; `newEventDate` (YYYY-MM-DD or full ISO) is optional — pass null to leave the new setlist undated. The new setlist's `ownerId` is the caller. Returns `{setlistId, sourceTemplateId, trackCount, ownerId, ownerName, version:1}` plus `book` (the slug stamped on the new setlist), `unresolvedLiturgy` (rows that carry per-book liturgy pages but none for THIS book — they land page-less rather than borrowing another book's page; fill them with lookup_book_page + update_track), and `bondReviewCount` + `bondReviewRows` (parity with clone_setlist — template bonds copy verbatim, so this flags any cloned row whose title diverges from its bonded chart filename; each `bondReviewRows` entry carries `{position, trackId, fileId, chartFileName, overlapScore}` to target a swap_chart / review_chart_bonds follow-up). Admin + band_leader only. Trusted-leader rate-limit bypass.",
             inputSchema: {
                 templateId: z
                     .string()
@@ -1145,6 +1173,14 @@ export function registerWriteTools(server: McpServer): void {
                     .optional()
                     .describe(
                         "If true (default), copy the template's serviceNotes onto the new setlist.",
+                    ),
+                book: z
+                    .string()
+                    .min(1)
+                    .nullable()
+                    .optional()
+                    .describe(
+                        "Book slug this service runs from (list_books). Stamped on the new setlist, and the key each template row's `liturgyRefs` resolves against — so the same template cloned for 'crc-friday' and for 'shabbat-maariv' yields each book's own printed pages. Omit it and rows carrying per-book refs clone with no page number.",
                     ),
             },
         },

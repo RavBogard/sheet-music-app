@@ -56,6 +56,7 @@ export function toQueueItem(track: SetlistTrack, index: number): QueueItem {
         performer: track.performer,
         description: track.description,
         estimatedMinutes: track.estimatedMinutes,
+        fixed: track.fixed,
     }
 }
 

@@ -14,6 +14,7 @@
 
 import { DriveFile, SetlistTrack, TrackType } from '@/types/models'
 import { ServiceContext } from './liturgical-calendar'
+import { resolveSlotLiturgyRef, type SlotLiturgyRefs } from './books/slot-liturgy'
 import Fuse from 'fuse.js'
 
 /** Wider context for template engine — accepts any template key as type, not just ServiceType */
@@ -50,6 +51,19 @@ export interface TemplateSlot {
     fileName?: string
     /** Which page of a multi-page PDF to open to (1-indexed) */
     pageNumber?: number
+    /**
+     * Printed page of this moment in each book the congregation uses, keyed by
+     * book slug. The clone resolves the entry for the setlist's own book into
+     * the track's single `liturgyRef`; a slot with no entry for that book
+     * produces a row with no page number rather than a wrong one.
+     */
+    liturgyRefs?: SlotLiturgyRefs
+    /**
+     * A fixed-liturgy row — the service says it every week and no chart is
+     * expected. Perform mode collapses these by default; the rabbi's service
+     * sheet prints them unchanged.
+     */
+    fixed?: boolean
 }
 
 // ── Shared Slot Sequences ──
@@ -410,12 +424,16 @@ function findBestMatch(
  * @param template - The liturgical template slots
  * @param library - All files in the library
  * @param context - Service context (date, parasha, holiday, rabbi)
+ * @param book - Book slug the service runs from. Slots carrying `liturgyRefs`
+ *               resolve their printed page for THIS book; omit it and fixed
+ *               rows simply carry no page number (never a wrong one).
  * @returns Pre-populated tracks ready for setlist creation
  */
 export function buildSetlistFromTemplate(
     template: TemplateSlot[],
     library: DriveFile[],
-    context: TemplateContext
+    context: TemplateContext,
+    book?: string
 ): SetlistTrack[] {
     const fuse = new Fuse(library, FUSE_OPTIONS)
     const usedFileIds = new Set<string>()
@@ -431,6 +449,15 @@ export function buildSetlistFromTemplate(
         // Determine effective type: new `type` field takes precedence over legacy `isHeader`
         const effectiveType: TrackType = slot.type || (slot.isHeader ? 'header' : 'song')
 
+        // Fixed-liturgy extras. An invalid ref is dropped rather than thrown:
+        // this path runs in the browser wizard, and a bad page in a template
+        // must not block the whole setlist. The MCP clone path refuses instead,
+        // which is where a template defect actually gets noticed and fixed.
+        const resolved = resolveSlotLiturgyRef(slot.liturgyRefs, book)
+        const liturgyExtras =
+            resolved.status === 'resolved' ? { liturgyRef: resolved.ref } : {}
+        const fixedExtras = slot.fixed ? { fixed: true as const } : {}
+
         // Headers become header tracks
         if (effectiveType === 'header') {
             let label = slot.label
@@ -441,6 +468,8 @@ export function buildSetlistFromTemplate(
                 id: crypto.randomUUID(),
                 title: label,
                 type: 'header',
+                ...fixedExtras,
+                ...liturgyExtras,
             })
             continue
         }
@@ -459,6 +488,8 @@ export function buildSetlistFromTemplate(
                         ? `Parashat ${context.parasha}`
                         : undefined
                 ),
+                ...fixedExtras,
+                ...liturgyExtras,
             })
             continue
         }
@@ -477,6 +508,8 @@ export function buildSetlistFromTemplate(
                 key: match.metadata?.key,
                 type: 'song',
                 ...(slot.pageNumber ? { pageNumber: slot.pageNumber } : {}),
+                ...fixedExtras,
+                ...liturgyExtras,
             })
         } else {
             // No match — create a placeholder track with the liturgical name.
@@ -488,6 +521,8 @@ export function buildSetlistFromTemplate(
                 type: 'song',
                 unmatched: true,
                 notes: `No matching file found. Search for: ${slot.queries.join(', ')}`,
+                ...fixedExtras,
+                ...liturgyExtras,
             })
         }
     }
@@ -526,6 +561,7 @@ export function convertSetlistToTemplate(tracks: SetlistTrack[]): TemplateSlot[]
             if (track.pageNumber) slot.pageNumber = track.pageNumber
         }
 
+        if (track.fixed) slot.fixed = true
         if (track.performer) slot.defaultPerformer = track.performer
         if (track.estimatedMinutes) slot.estimatedMinutes = track.estimatedMinutes
         if (track.description) slot.description = track.description

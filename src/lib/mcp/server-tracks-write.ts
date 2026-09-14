@@ -223,6 +223,8 @@ export interface AddTrackInput {
     description?: string
     estimatedMinutes?: number
     liturgyRef?: { book: string; unitId?: string; folio: number }
+    /** Fixed-liturgy row — see SetlistTrack.fixed. */
+    fixed?: boolean
     honors?: Array<{ name: string; note?: string }>
 }
 
@@ -296,6 +298,7 @@ export async function addTrack(
         if (input.description !== undefined) payload.description = sanitizeFreeformString(input.description)
         if (input.estimatedMinutes !== undefined) payload.estimatedMinutes = input.estimatedMinutes
         if (input.liturgyRef !== undefined) payload.liturgyRef = input.liturgyRef
+        if (input.fixed !== undefined) payload.fixed = input.fixed
         if (input.honors !== undefined) {
             const sanitizedHonors = sanitizeHonors(input.honors)
             if (sanitizedHonors !== undefined) payload.honors = sanitizedHonors
@@ -463,6 +466,8 @@ export interface UpdateTrackPatch {
     description?: string
     estimatedMinutes?: number
     liturgyRef?: { book: string; unitId?: string; folio: number }
+    /** Fixed-liturgy row — see SetlistTrack.fixed. */
+    fixed?: boolean
     honors?: Array<{ name: string; note?: string }>
 }
 
@@ -480,6 +485,7 @@ const UPDATABLE_FIELDS = [
     "description",
     "estimatedMinutes",
     "liturgyRef",
+    "fixed",
     "honors",
 ] as const
 
@@ -1534,6 +1540,8 @@ export interface BulkAddTrackInput {
     description?: string
     estimatedMinutes?: number
     liturgyRef?: { book: string; unitId?: string; folio: number }
+    /** Fixed-liturgy row — see SetlistTrack.fixed. */
+    fixed?: boolean
     honors?: Array<{ name: string; note?: string }>
 }
 
@@ -1739,6 +1747,7 @@ export async function bulkAddTracks(
         if (row.description !== undefined) payload.description = sanitizeFreeformString(row.description)
         if (row.estimatedMinutes !== undefined) payload.estimatedMinutes = row.estimatedMinutes
         if (row.liturgyRef !== undefined) payload.liturgyRef = row.liturgyRef
+        if (row.fixed !== undefined) payload.fixed = row.fixed
         if (row.honors !== undefined) {
             const sanitizedHonors = sanitizeHonors(row.honors)
             if (sanitizedHonors !== undefined) payload.honors = sanitizedHonors

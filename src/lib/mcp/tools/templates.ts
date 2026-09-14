@@ -17,6 +17,12 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { rowOrg } from "@/lib/mcp/org-context"
 import {
+    resolveSlotLiturgyRef,
+    type SlotLiturgyRefs,
+} from "@/lib/books/slot-liturgy"
+import { getRegistryEntry } from "@/lib/books/registry"
+import type { LiturgyRef } from "@/lib/books/types"
+import {
     auditBondedRows,
     toBondReviewRows,
     type BondReviewRow,
@@ -85,6 +91,16 @@ export interface TemplateTrack {
     description?: string | null
     estimatedMinutes?: number | null
     liturgyRef?: { book: string; unitId?: string; folio: number } | null
+    /**
+     * Printed page of this moment in EACH book the congregation uses, keyed by
+     * book slug. A fixed-liturgy row sits at a different page in every book, so
+     * the template cannot carry one `liturgyRef` — it carries one per book and
+     * `clone_setlist_from_template` resolves the entry for the new setlist's
+     * own `book` into the row's single `liturgyRef`.
+     */
+    liturgyRefs?: SlotLiturgyRefs | null
+    /** Fixed-liturgy row — see SetlistTrack.fixed. */
+    fixed?: boolean | null
 }
 
 async function ownerNameFor(db: DB, uid: string): Promise<string> {
@@ -147,6 +163,12 @@ function normalizeTemplateTrack(input: TemplateTrack | undefined): Record<string
         const v = (input as Record<string, unknown>)[field]
         if (v !== undefined && v !== null) row[field] = v
     }
+    // `liturgyRefs` is template-only — it never becomes a track field, so it is
+    // deliberately absent from COPYABLE_TRACK_FIELDS and carried here instead.
+    // Without this the field would be silently dropped on every template write,
+    // which is the exact failure the shared-list module exists to prevent.
+    const refs = (input as Record<string, unknown>).liturgyRefs
+    if (refs && typeof refs === "object") row.liturgyRefs = refs
     if (typeof row.title !== "string") row.title = ""
     if (typeof row.type !== "string") row.type = "song"
     return row
@@ -800,6 +822,13 @@ export interface CloneSetlistFromTemplateArgs {
      */
     newEventDate?: string | null
     copyServiceNotes?: boolean
+    /**
+     * Book slug the new service runs from (`list_books`). Stamped on the
+     * setlist, and the key every row's `liturgyRefs` is resolved against: the
+     * same Friday template cloned with `shabbat-maariv` and with `crc-friday`
+     * yields the same rows at each book's own printed pages.
+     */
+    book?: string | null
 }
 
 export interface CloneSetlistFromTemplateResult {
@@ -827,6 +856,26 @@ export interface CloneSetlistFromTemplateResult {
      * mismatch.
      */
     bondReviewRows: BondReviewRow[]
+    /**
+     * Rows that carry per-book liturgy references but none for this clone's
+     * `book` (or that were cloned with no book at all). They land with NO page
+     * number rather than a borrowed one — a page from the wrong siddur printed
+     * on the lectern sheet is the one failure this feature cannot afford. Fill
+     * them with `lookup_book_page` + `update_track`, or add the book to the
+     * template slot. Empty array when everything resolved.
+     */
+    unresolvedLiturgy: UnresolvedLiturgyRow[]
+    /** The book slug stamped on the new setlist, or null when none was given. */
+    book: string | null
+}
+
+export interface UnresolvedLiturgyRow {
+    /** 0-based position in the new setlist. */
+    position: number
+    trackId: string
+    title: string
+    /** Book slugs this slot DOES carry a page for. */
+    booksAvailable: string[]
 }
 
 export async function cloneSetlistFromTemplate(
@@ -882,6 +931,49 @@ export async function cloneSetlistFromTemplate(
         ? (template.tracks as Record<string, unknown>[])
         : []
 
+    // Resolve the per-book liturgy refs BEFORE the batch. A template slot with
+    // a page outside its book's range is a defect in the template, not in this
+    // clone — refuse the whole clone with the registry's own message rather
+    // than writing a setlist that is quietly missing page numbers.
+    const cloneBook =
+        typeof args.book === "string" && args.book.trim() ? args.book.trim() : null
+    if (cloneBook && !getRegistryEntry(cloneBook)) {
+        return richError(
+            "unknown_book",
+            `Unknown book '${cloneBook}'.`,
+            { book: cloneBook },
+            "Call list_books for valid slugs.",
+        )
+    }
+    // undefined → the row carries no per-book refs, so its legacy `liturgyRef`
+    // (if any) copies verbatim. null → it carries refs but none for this book.
+    const resolvedRefs: Array<LiturgyRef | null | undefined> = []
+    const unresolvedSlots: Array<{ position: number; booksAvailable: string[] }> = []
+    for (let i = 0; i < templateTracks.length; i++) {
+        const refs = (templateTracks[i] as Record<string, unknown>)
+            .liturgyRefs as SlotLiturgyRefs | undefined
+        if (!refs || typeof refs !== "object" || Object.keys(refs).length === 0) {
+            resolvedRefs.push(undefined)
+            continue
+        }
+        const res = resolveSlotLiturgyRef(refs, cloneBook)
+        if (res.status === "invalid") {
+            const title = (templateTracks[i] as Record<string, unknown>).title
+            return richError(
+                res.machineCode,
+                `Template row ${i} ('${typeof title === "string" ? title : ""}'): ${res.message}`,
+                { position: i, book: cloneBook, liturgyRefs: refs },
+                "Fix the template's liturgyRefs for this book (update_template), then clone again.",
+            )
+        }
+        if (res.status === "resolved") {
+            resolvedRefs.push(res.ref)
+        } else {
+            resolvedRefs.push(null)
+            unresolvedSlots.push({ position: i, booksAvailable: Object.keys(refs) })
+        }
+    }
+
     const ownerName = await ownerNameFor(db, uid)
     const newSetlistId = crypto.randomUUID()
     const copyServiceNotes = args.copyServiceNotes !== false
@@ -934,6 +1026,7 @@ export async function cloneSetlistFromTemplate(
         setlistPayload.eventDate = toTimestamp(args.newEventDate)
     }
 
+    if (cloneBook) setlistPayload.book = cloneBook
     if (typeof template.templateType === "string") {
         setlistPayload.templateType = template.templateType
     }
@@ -969,6 +1062,15 @@ export async function cloneSetlistFromTemplate(
         for (const field of COPYABLE_TRACK_FIELDS) {
             const v = (src as Record<CopyableTrackField, unknown>)[field]
             if (v !== undefined && v !== null) payload[field] = v
+        }
+        // A row with per-book refs is authoritative for this book: a resolved
+        // ref replaces any literal `liturgyRef` on the template row, and an
+        // unresolved one clears it. Never let a page meant for another book
+        // ride along.
+        const resolved = resolvedRefs[i]
+        if (resolved !== undefined) {
+            if (resolved === null) delete payload.liturgyRef
+            else payload.liturgyRef = resolved
         }
         if (typeof payload.title !== "string") payload.title = ""
         if (typeof payload.type !== "string") payload.type = "song"
@@ -1027,5 +1129,15 @@ export async function cloneSetlistFromTemplate(
         version: 1,
         bondReviewCount,
         bondReviewRows,
+        book: cloneBook,
+        unresolvedLiturgy: unresolvedSlots.map((u) => {
+            const src = templateTracks[u.position] as Record<string, unknown>
+            return {
+                position: u.position,
+                trackId: newTrackIds[u.position],
+                title: typeof src.title === "string" ? src.title : "",
+                booksAvailable: u.booksAvailable,
+            }
+        }),
     }
 }

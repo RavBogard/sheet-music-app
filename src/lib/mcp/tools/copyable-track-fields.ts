@@ -42,6 +42,7 @@ export const COPYABLE_TRACK_FIELDS = [
     "description",
     "estimatedMinutes",
     "liturgyRef",
+    "fixed",
 ] as const
 
 export type CopyableTrackField = (typeof COPYABLE_TRACK_FIELDS)[number]

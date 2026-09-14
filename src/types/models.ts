@@ -69,6 +69,13 @@ export interface SetlistTrack {
      */
     liturgyRef?: { book: string; unitId?: string; folio: number }
     /**
+     * A fixed-liturgy row: the service says it every week, straight from the
+     * book, and no chart is ever bonded to it. Set by the service templates so
+     * Perform mode can collapse the liturgy the band does not play from while
+     * the rabbi's printed sheet still carries every row.
+     */
+    fixed?: boolean
+    /**
      * Named congregants honored at this moment — "Rachel Cohen, birthday,
      * lights the candles". Free-text names; not linked to contacts. Printed
      * on the rabbi's service sheet. Never copied by templates or clone.
