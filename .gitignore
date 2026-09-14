@@ -94,3 +94,7 @@ scripts/.backfill-snapshots/
 
 # Nava ingest run artifact (contains local absolute paths)
 nava-ingest-manifest.json
+
+# Playwright MCP page snapshots — debug artifacts from a browser probe run,
+# never source. They were swept into a commit by a `git add -A` on 2026-09-14.
+.playwright-mcp/
