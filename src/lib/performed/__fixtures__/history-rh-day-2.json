@@ -1,0 +1,92 @@
+{
+    "_README": [
+        "Hand-written cue log for the real RH Day 2 service (setlist",
+        "2b2cc0f5-98d6-4549-9289-9cd8cbff5ff5, book crc-machzor-2008), used to",
+        "build the reconcile before Overlays' GET /api/history exists.",
+        "",
+        "It is faithful to the setlist's own rows: every book/folio below is a",
+        "page that setlist actually carries. That matters because the machzor is",
+        "a PAGEMAP book with no unit ids, so most of these cues can only be",
+        "matched on (book, folio) — and folio 39 is shared by THREE planned rows",
+        "(the 'Awakening' header, Modah / Modeh Ani, and Mah Tovu), which is the",
+        "ambiguity the matcher has to resolve rather than guess at.",
+        "",
+        "seq 4 is the audible: a cue carrying a unitId and momentId for a moment",
+        "the plan has no row for. seq 6 is a custom names panel with no identity",
+        "at all — it must be ignored entirely, not matched to anything."
+    ],
+    "rows": [
+        {
+            "seq": 1,
+            "at": "2026-09-13T14:12:04.000Z",
+            "action": "show",
+            "cueId": "cue-modeh",
+            "unitId": null,
+            "momentId": null,
+            "book": "crc-machzor-2008",
+            "folio": 39,
+            "source": "operator",
+            "serviceRef": "rh-day-2"
+        },
+        {
+            "seq": 2,
+            "at": "2026-09-13T14:15:31.000Z",
+            "action": "show",
+            "cueId": "cue-mah-tovu",
+            "unitId": null,
+            "momentId": null,
+            "book": "crc-machzor-2008",
+            "folio": 39,
+            "source": "operator",
+            "serviceRef": "rh-day-2"
+        },
+        {
+            "seq": 3,
+            "at": "2026-09-13T14:31:09.000Z",
+            "action": "show",
+            "cueId": "cue-barchu",
+            "unitId": null,
+            "momentId": null,
+            "book": "crc-machzor-2008",
+            "folio": 45,
+            "source": "operator",
+            "serviceRef": "rh-day-2"
+        },
+        {
+            "seq": 4,
+            "at": "2026-09-13T14:38:50.000Z",
+            "action": "show",
+            "cueId": "cue-oseh-shalom",
+            "unitId": "concluding.oseh-shalom@shabbat-maariv",
+            "momentId": "oseh-shalom",
+            "book": "crc-machzor-2008",
+            "folio": 63,
+            "source": "operator",
+            "serviceRef": "rh-day-2"
+        },
+        {
+            "seq": 5,
+            "at": "2026-09-13T14:44:12.000Z",
+            "action": "show",
+            "cueId": "cue-mi-chamocha",
+            "unitId": null,
+            "momentId": null,
+            "book": "crc-machzor-2008",
+            "folio": 52,
+            "source": "operator",
+            "serviceRef": "rh-day-2"
+        },
+        {
+            "seq": 6,
+            "at": "2026-09-13T14:51:00.000Z",
+            "action": "show",
+            "cueId": "cue-names-panel",
+            "unitId": null,
+            "momentId": null,
+            "book": null,
+            "folio": null,
+            "source": "operator",
+            "serviceRef": "rh-day-2"
+        }
+    ]
+}
