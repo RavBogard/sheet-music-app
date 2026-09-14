@@ -68,10 +68,16 @@ export function withScopedBearer(
             return unauthorized()
         }
 
+        // NEVER trust the doc's `allowedTools` verbatim — a tampered or
+        // future-written token doc must not be able to widen its own scope.
+        // Intersect with the code-side constant; an empty intersection falls
+        // back to the constant (the credential's definition), never to "all".
+        const declared = verified.allowedTools ?? []
+        const intersected = declared.filter((t) =>
+            (SETLIST_READER_TOOLS as readonly string[]).includes(t),
+        )
         const allowedTools =
-            verified.allowedTools && verified.allowedTools.length > 0
-                ? verified.allowedTools
-                : [...SETLIST_READER_TOOLS]
+            intersected.length > 0 ? intersected : [...SETLIST_READER_TOOLS]
 
         // Only POST carries a JSON-RPC body; GET/DELETE (transport plumbing)
         // have nothing to evaluate.

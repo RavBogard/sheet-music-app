@@ -233,7 +233,10 @@ export async function main(opts = {}) {
     }
     if (parsed.error) {
         stderr.write(`JSON-RPC error from ${endpoint}: ${JSON.stringify(parsed.error)}\n`)
-        return EXIT_CODES.NETWORK
+        // A JSON-RPC-layer error means the route ANSWERED and declined (auth,
+        // scope, unknown method) — a refusal, not a transport failure, so it
+        // exits 3 to match the docstring's contract.
+        return EXIT_CODES.REFUSED
     }
 
     const payload = extractToolPayload(parsed)

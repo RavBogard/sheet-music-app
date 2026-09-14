@@ -148,6 +148,27 @@ describe("evaluateScopedJsonRpc — tools/call", () => {
         },
     )
 
+    it("refuses unrecognised shapes with -32600 (fails closed)", () => {
+        for (const shape of [
+            null,
+            42,
+            "not-a-message",
+            { jsonrpc: "2.0", id: 1, result: { ok: true } },
+            { jsonrpc: "2.0", id: 1, method: 99 },
+        ]) {
+            const decision = evaluateScopedJsonRpc(shape, ALLOWED)
+            expect(decision.allow).toBe(false)
+            if (decision.allow) throw new Error("expected refusal")
+            const res = decision.response as {
+                id: unknown
+                error: { code: number; message: string }
+            }
+            expect(res.id).toBeNull()
+            expect(res.error.code).toBe(-32600)
+            expect(res.error.message).toBe("Invalid Request")
+        }
+    })
+
     it("refuses a tools/call with a missing name", () => {
         const decision = evaluateScopedJsonRpc(
             { jsonrpc: "2.0", id: 1, method: "tools/call", params: {} },
@@ -165,6 +186,17 @@ describe("evaluateScopedJsonRpc — batches", () => {
                 ALLOWED,
             ),
         ).toEqual({ allow: true })
+    })
+
+    it("refuses a batch member that is itself an array (fails closed)", () => {
+        const decision = evaluateScopedJsonRpc(
+            [call("list_setlists", 1), ["nested", "array"]],
+            ALLOWED,
+        )
+        expect(decision.allow).toBe(false)
+        if (decision.allow) throw new Error("expected refusal")
+        const arr = decision.response as Array<{ error?: { code: number } }>
+        expect(arr[1].error?.code).toBe(-32600)
     })
 
     it("refuses the whole batch when one entry is out of scope, answering every id", () => {

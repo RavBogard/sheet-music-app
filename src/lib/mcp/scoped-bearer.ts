@@ -78,6 +78,18 @@ function forbiddenScopeResult(tool: string, allowedTools: readonly string[]) {
     }
 }
 
+function invalidRequest() {
+    return {
+        jsonrpc: "2.0",
+        id: null,
+        error: {
+            code: -32600,
+            message: "Invalid Request",
+            data: { allowedTools: [...SETLIST_READER_TOOLS] },
+        },
+    }
+}
+
 function methodNotAvailable(id: unknown, method: string) {
     return {
         jsonrpc: "2.0",
@@ -93,17 +105,20 @@ function methodNotAvailable(id: unknown, method: string) {
 /**
  * Evaluate ONE JSON-RPC message. Returns `null` when the message is allowed,
  * or the refusal message to send in its place.
+ *
+ * FAILS CLOSED: anything we cannot positively recognise as an in-scope request
+ * — a non-object, a nested array, a message with no string `method` — is
+ * refused with `-32600 Invalid Request` rather than forwarded. A scoped
+ * credential must never reach the server through a shape this gate does not
+ * understand.
  */
 function evaluateOne(msg: unknown, allowedTools: readonly string[]): unknown | null {
     if (!msg || typeof msg !== "object" || Array.isArray(msg)) {
-        // Not a JSON-RPC message we understand — let the inner handler produce
-        // its own parse/validation error rather than inventing one here.
-        return null
+        return invalidRequest()
     }
     const m = msg as JsonRpcMessage
     const method = typeof m.method === "string" ? m.method : null
-    // A response (no method) is never a request we gate.
-    if (!method) return null
+    if (!method) return invalidRequest()
 
     // Notifications are fire-and-forget protocol traffic (initialized,
     // cancelled, progress). They carry no capability, so they pass.

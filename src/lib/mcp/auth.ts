@@ -1,6 +1,6 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
-import { hashToken } from "@/lib/mcp/tokens"
+import { hashToken, SETLIST_READER_PREFIX } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
@@ -161,6 +161,19 @@ export async function verifyBearer(req: Request): Promise<VerifiedBearer | Respo
     const allowedTools = Array.isArray(data.allowedTools)
         ? data.allowedTools.filter((t: unknown): t is string => typeof t === "string")
         : null
+
+    // Kind ⟺ prefix must agree in BOTH directions. A `setlist_reader` doc whose
+    // raw string lacks `crl_read_` would otherwise slip past the route's
+    // prefix-keyed gate and take the unscoped path; a `crl_read_` string on a
+    // doc of any other kind would claim scoped provenance it doesn't have.
+    // Either mismatch is a malformed/tampered credential — reject it.
+    if ((kind === "setlist_reader") !== raw.startsWith(SETLIST_READER_PREFIX)) {
+        logger.warn("[mcp-auth] bearer rejected: kind/prefix mismatch", {
+            tokenId: doc.id,
+            kind,
+        })
+        return unauthorized()
+    }
 
     return {
         uid: data.uid as string,
