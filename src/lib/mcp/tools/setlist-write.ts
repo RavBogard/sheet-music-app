@@ -317,6 +317,12 @@ export interface UpdateSetlistArgs {
      * lands in the same write as the rest of the patch.
      */
     book?: string
+    /**
+     * Wall-clock start for this one service, `HH:mm` America/Chicago. Overrides
+     * the per-serviceType default in the congregation config; read by
+     * `today.json`.
+     */
+    startsAtLocal?: string
     /** W-04 Plan 02 optimistic-concurrency gate (setlist-level version). */
     lastSeenVersion?: number
 }
@@ -360,6 +366,17 @@ export async function updateSetlist(
     if (args.rabbi !== undefined) patch.rabbi = args.rabbi
     if (args.serviceNotes !== undefined) patch.serviceNotes = args.serviceNotes
     if (args.book !== undefined) patch.book = args.book
+    if (args.startsAtLocal !== undefined) {
+        if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(args.startsAtLocal)) {
+            return richError(
+                "invalid_argument",
+                `startsAtLocal must be 24-hour HH:mm (got "${args.startsAtLocal}").`,
+                { startsAtLocal: args.startsAtLocal },
+                "Pass a wall-clock America/Chicago time, e.g. '18:00' for 6pm.",
+            )
+        }
+        patch.startsAtLocal = args.startsAtLocal
+    }
 
     const updateResult = await updateSetlistServerSide(
         args.id,

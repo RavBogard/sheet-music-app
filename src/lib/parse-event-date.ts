@@ -58,8 +58,16 @@ const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
 const NAIVE_DATETIME_RE =
     /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?$/
 
-/** Wall-clock-Chicago → UTC ms (DST-aware via `Intl.DateTimeFormat`). */
-function chicagoWallClockToUtcMs(
+/**
+ * Wall-clock-Chicago → UTC ms (DST-aware via `Intl.DateTimeFormat`).
+ *
+ * Exported for `src/lib/today/` — `today.json`'s `startsAt` is a congregation
+ * config time-of-day ("18:00") against a setlist's calendar day, which is the
+ * same wall-clock-Chicago→instant conversion this module already gets right,
+ * DST included. A second copy of this arithmetic is exactly how the 5am-service
+ * bug in the header got in.
+ */
+export function chicagoWallClockToUtcMs(
     year: number,
     month: number, // 1..12
     day: number,

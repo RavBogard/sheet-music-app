@@ -87,6 +87,8 @@ export type SetlistMetadataPatch = Partial<{
     serviceNotes: string
     /** Task 5 (liturgy outlines Phase 2) — see CreateSetlistInput.book. */
     book: string
+    /** `HH:mm` America/Chicago — see Setlist.startsAtLocal. */
+    startsAtLocal: string
 }>
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -252,6 +254,9 @@ export async function updateSetlistServerSide(
     }
     if (patch.book !== undefined) {
         mapped.book = patch.book
+    }
+    if (patch.startsAtLocal !== undefined) {
+        mapped.startsAtLocal = patch.startsAtLocal
     }
     if (patch.serviceType !== undefined) {
         mapped.templateType = patch.serviceType

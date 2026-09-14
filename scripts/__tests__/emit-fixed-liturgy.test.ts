@@ -1,5 +1,4 @@
 import { describe, it, expect } from "vitest"
-// @ts-expect-error — plain .mjs script, no types
 import { norm, stemOf, matchPagemap, buildProposal } from "../emit-fixed-liturgy.mjs"
 import { lookupBookPage } from "@/lib/books/lookup"
 import { getBook, listBooks } from "@/lib/books/registry"
@@ -91,10 +90,17 @@ describe("emit-fixed-liturgy — stemOf", () => {
     })
 })
 
+interface ServiceConfig {
+    feedBook: string
+    pagemapBook: string
+    stems: { stem: string; type?: string; note?: string }[]
+}
+
+/** The allow-list's own shape, narrowed once for the whole block. */
+const SERVICES = (allowlist as { services: Record<string, ServiceConfig> }).services
+
 describe("emit-fixed-liturgy — proposal order comes from the feed", () => {
-    const friday = (allowlist as Record<string, never> & {
-        services: Record<string, { stems: { stem: string }[]; feedBook: string; pagemapBook: string }>
-    }).services.friday
+    const friday = SERVICES.friday
 
     it("emits rows in the feed book's own unit order, never re-sorted by page", () => {
         const feed = getBook(friday.feedBook)!
@@ -120,11 +126,7 @@ describe("emit-fixed-liturgy — proposal order comes from the feed", () => {
         // The proposal's feed-side pages go straight into a template, so a
         // folio the registry would refuse must never leave this script.
         for (const key of ["friday", "saturday"] as const) {
-            const service = (
-                allowlist as unknown as {
-                    services: Record<string, { feedBook: string; pagemapBook: string; stems: { stem: string }[] }>
-                }
-            ).services[key]
+            const service = SERVICES[key]
             const feed = getBook(service.feedBook)!
             const pagemap = getBook(service.pagemapBook)!
             const { rows } = buildProposal(service, feed, pagemap)

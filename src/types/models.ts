@@ -135,6 +135,14 @@ export interface Setlist {
      * a rehearsal) behave exactly as before. See src/data/books/registry.json.
      */
     book?: string
+    /**
+     * Wall-clock start time for THIS service, `HH:mm` America/Chicago.
+     * Overrides the per-serviceType `defaultStartLocal` in the congregation
+     * config. Read by `today.json`; absent means "use the config's default",
+     * and if there is none, the emitted service simply carries no start time
+     * rather than a guessed midnight.
+     */
+    startsAtLocal?: string
     musicians?: SetlistMusician[] // Who's playing this service
     isTemplate?: boolean
     templateType?: 'shabbat_morning' | 'friday_night' | 'rosh_hashanah' | 'yom_kippur' | 'festival' | 'other'

@@ -1239,6 +1239,12 @@ export function registerWriteTools(server: McpServer): void {
                     .describe(
                         "Liturgy book slug used at this service (one book per service), e.g. 'crc-friday'. Call list_books for valid slugs. Page references on this setlist's rows resolve against it.",
                     ),
+                startsAtLocal: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "Wall-clock start time for THIS service, 24-hour `HH:mm` in America/Chicago (e.g. '18:00' for 6pm). Overrides the per-serviceType default start held in the congregation config. Read by the public today.json that the siddur reader and the stream overlays use, so set it when a service starts at an unusual time.",
+                    ),
                 lastSeenVersion: lastSeenVersionSchema.describe(
                     "Optional optimistic-concurrency gate: pass the setlist's `version` from your last get_setlist / list_setlists. The write rejects with `{error: 'stale_version', currentVersion, lastSeenVersion, hint, ...}` if it doesn't match — call get_setlist and retry.",
                 ),

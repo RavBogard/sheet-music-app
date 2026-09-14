@@ -34,6 +34,16 @@ export interface CongregationConfig {
         name: string
         instrument?: string
     }>
+    /**
+     * Per-serviceType default start times, keyed by the setlist's
+     * `templateType` (`friday_night`, `shabbat_morning`, …). `today.json`
+     * turns `eventDate` + `defaultStartLocal` into the instant the reader and
+     * Overlays show; a setlist's own `startsAtLocal` overrides it.
+     * `HH:mm`, America/Chicago wall clock.
+     */
+    services?: Record<string, { label: string; defaultStartLocal: string }>
+    /** The congregation's stream. `leadMinutes` defaults to 5. */
+    stream?: { url: string; leadMinutes?: number }
     scheduling?: {
         rabbiProfiles?: RabbiProfile[]
         defaultReminderHours?: number     // Hours before service to send reminder (default: 48)
