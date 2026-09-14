@@ -32,6 +32,9 @@ import { join, resolve } from "node:path"
 
 const DEFAULT_REPO = "C:/Users/dsbog/shireishabbat"
 const OUT_DIR = resolve(process.cwd(), "src", "data", "books")
+/** The moments artifact, produced by shireishabbat's build/tools/emit_moments.py. */
+const MOMENTS_FEED = "moments.json"
+const MOMENTS_OUT = join(OUT_DIR, "moments.json")
 const REGISTRY = join(OUT_DIR, "registry.json")
 const EXPECTED_SCHEMA_VERSION = 1
 
@@ -118,6 +121,144 @@ function trim(feed, vol, pages) {
     return { book: { slug: vol.slug, title: vol.title, tier: "feed", pages, units }, maxFolio }
 }
 
+/**
+ * A press pin with its licence marker removed.
+ *
+ * `.live` pins a printed volume as `6f61874-LICENSED`; the feed's own
+ * `printing.gitSha` carries the same string, and the moments producer copies it
+ * verbatim into `sources[].gitSha`. Normalising BOTH sides means the guard can
+ * never refuse over a marker that is present on one side only — the thing being
+ * compared is the commit.
+ */
+function bareSha(v) {
+    return typeof v === "string" ? v.replace(/-LICENSED$/, "") : v
+}
+
+/**
+ * Consume `dist-app/moments.json` into a trimmed `src/data/books/moments.json`.
+ *
+ * WHAT A MOMENT IS. One liturgical moment — Mi Chamocha — printed in several
+ * books at several pages. The artifact keys on the unit-id STEM, so a single
+ * moment gathers its occurrences across every book that prints it. That is what
+ * lets a setlist row survive a change of book: `momentForUnit` turns this book's
+ * unit into a moment, `occurrencesForMoment` finds that moment in the new one.
+ *
+ * NO TEXT, EVER. The artifact carries ids, display names, kinds and page
+ * numbers. Liturgical text never enters this repo, and the trim below keeps
+ * exactly three fields per occurrence, so nothing can arrive by accident.
+ *
+ * THE PIN GUARD. A printed volume's derived data generates from its press
+ * commit, never HEAD (R-0831-live-pagemap-1). The book snapshots in this repo
+ * were trimmed from feeds built at a specific commit; consuming a moments file
+ * built from a DIFFERENT commit would pair this repo's page numbers with another
+ * build's unit ids, silently. So every VOLUMES book's pin must equal the `gitSha`
+ * the artifact recorded for it, or the step refuses and writes nothing.
+ *
+ * Pure — no filesystem, so `scripts/__tests__/sync-books-moments.test.ts` can
+ * drive every branch from fixtures.
+ */
+export function trimMoments(artifact, volumes, knownBooks) {
+    if (artifact.schemaVersion !== EXPECTED_SCHEMA_VERSION) {
+        throw new Error(
+            `moments.json schemaVersion ${artifact.schemaVersion} != expected ${EXPECTED_SCHEMA_VERSION}.`,
+        )
+    }
+    const sources = Array.isArray(artifact.sources) ? artifact.sources : []
+    for (const vol of volumes) {
+        const src = sources.find((x) => x.book === vol.slug)
+        if (!src) {
+            throw new Error(
+                `moments.json carries no source row for '${vol.slug}'. ` +
+                    `This repo's ${vol.slug}.json was trimmed from that feed; refusing to pair them blind.`,
+            )
+        }
+        if (bareSha(src.gitSha) !== bareSha(vol.pin)) {
+            throw new Error(
+                `${vol.slug}: moments.json was built from ${JSON.stringify(src.gitSha)}, ` +
+                    `this repo pins ${JSON.stringify(vol.pin)}. Refusing — a printed volume's ` +
+                    `derived artifacts generate from its press commit, never HEAD ` +
+                    `(R-0831-live-pagemap-1).`,
+            )
+        }
+    }
+
+    // Occurrences in books this repo does not carry are dropped: `.live` cannot
+    // reference a page in a book with no registry entry, and keeping them would
+    // multiply the file for nothing.
+    const moments = []
+    let occurrenceCount = 0
+    for (const m of artifact.moments ?? []) {
+        const occurrences = []
+        for (const o of m.occurrences ?? []) {
+            if (!knownBooks.has(o.book)) continue
+            const folios = (o.folios ?? []).filter((f) => Number.isInteger(f))
+            occurrences.push({ book: o.book, unitId: o.unitId, folios })
+        }
+        if (occurrences.length === 0) continue
+        occurrenceCount += occurrences.length
+        moments.push({
+            id: m.id,
+            display: { en: m.display?.en ?? m.id },
+            kind: m.kind ?? null,
+            aliases: Array.isArray(m.aliases) ? m.aliases : [],
+            occurrences,
+        })
+    }
+    if (moments.length === 0) {
+        throw new Error(
+            "moments.json produced zero moments for the books this repo carries — " +
+                "that is a wrong artifact, not an empty one.",
+        )
+    }
+
+    return {
+        trimmed: {
+            schemaVersion: artifact.schemaVersion,
+            builtAt: artifact.builtAt ?? null,
+            sources: sources
+                .filter((x) => knownBooks.has(x.book))
+                .map((x) => ({ book: x.book, gitSha: x.gitSha, pinValue: x.pinValue ?? null })),
+            moments,
+        },
+        occurrenceCount,
+    }
+}
+
+function syncMoments(dist, dirName, check) {
+    const path = join(dist, MOMENTS_FEED)
+    if (!existsSync(path)) {
+        // Absence is a normal state: the artifact is gitignored in shireishabbat
+        // and only exists after a build there. Say so loudly and leave the
+        // committed file alone rather than emptying it.
+        console.log(
+            `\nmoments: ${MOMENTS_FEED} is not in ${dirName}/ — skipped; ` +
+                `src/data/books/moments.json left as it is.\n` +
+                `         Run build/build-app.sh in shireishabbat to produce it.`,
+        )
+        return
+    }
+    const knownBooks = new Set(
+        JSON.parse(readFileSync(REGISTRY, "utf8")).map((r) => r.slug),
+    )
+    const { trimmed, occurrenceCount } = trimMoments(
+        JSON.parse(readFileSync(path, "utf8")),
+        VOLUMES,
+        knownBooks,
+    )
+    const next = JSON.stringify(trimmed, null, 4) + "\n"
+    const prev = existsSync(MOMENTS_OUT) ? readFileSync(MOMENTS_OUT, "utf8") : null
+    if (!check) writeFileSync(MOMENTS_OUT, next, "utf8")
+    console.table([
+        {
+            artifact: "moments.json",
+            moments: trimmed.moments.length,
+            occurrences: occurrenceCount,
+            books: trimmed.sources.length,
+            drift: prev === null ? "new" : prev === next ? "none" : "DIFFERS",
+        },
+    ])
+}
+
 function main() {
     const repo = repoPath()
     const dirName = feedDirName()
@@ -150,7 +291,13 @@ function main() {
         })
     }
     console.table(summary)
+    syncMoments(dist, dirName, check)
     if (check) console.log(`\n--check: nothing written. Source ${dirName}/, pins verified, pages asserted.`)
 }
 
-main()
+// Importable for tests without running the sync: `main()` touches the
+// filesystem, `trimMoments` is pure.
+const invokedDirectly =
+    process.argv[1] &&
+    import.meta.url.endsWith(process.argv[1].replace(/\\/g, "/").split("/").pop())
+if (invokedDirectly) main()

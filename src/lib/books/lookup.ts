@@ -1,9 +1,18 @@
 import { getBook, getRegistryEntry } from "./registry"
+import { momentIdForUnit } from "./moments"
 
 export interface BookMatch {
     name: string
     folio: number
     unitId?: string
+    /**
+     * The liturgical MOMENT this unit belongs to, when the moments artifact
+     * knows it (feed-tier books only). Pass it through to a caller that may
+     * later re-resolve the row into a different book: the unit id is
+     * book-local, the moment id is not. Absent when the artifact has not been
+     * synced or does not cover this unit — never a reason to refuse a page.
+     */
+    momentId?: string
     confidence: "high" | "medium" | "low"
 }
 
@@ -75,6 +84,10 @@ export function lookupBookPage(book: string, query: string): LookupResult {
     if (file.tier === "feed") {
         for (const u of file.units ?? []) {
             consider(u.name, [u.name, u.id], u.folios[0], u.id)
+        }
+        for (const m of [...exact, ...partial]) {
+            const momentId = momentIdForUnit(m.unitId)
+            if (momentId) m.momentId = momentId
         }
     } else {
         for (const e of file.entries ?? []) {
