@@ -87,6 +87,10 @@ describe("verifyBearer", () => {
             tokenId: "tok1",
             parentTokenId: null,
             orgId: "crc",
+            // setlist_reader work: verifyBearer now also reports the token
+            // doc's `kind` + `allowedTools` (null on unscoped credentials).
+            kind: null,
+            allowedTools: null,
         })
         expect(mockUpdate).toHaveBeenCalledWith({ lastUsedAt: "SERVER_TS" })
     })

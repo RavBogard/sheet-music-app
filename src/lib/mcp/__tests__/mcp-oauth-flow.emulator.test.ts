@@ -142,6 +142,10 @@ describe("MCP OAuth flow (emulator)", () => {
             parentTokenId: null,
             // v11-02-01: createMcpToken stamps orgId; OAuth tokens default crc.
             orgId: "crc",
+            // setlist_reader work: verifyBearer now also reports the token
+            // doc's `kind` + `allowedTools` (null on unscoped credentials).
+            kind: null,
+            allowedTools: null,
         })
     })
 })

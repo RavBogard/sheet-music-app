@@ -51,6 +51,10 @@ describe("MCP token flow (emulator)", () => {
             parentTokenId: null,
             // v11-02-01: createMcpToken stamps orgId; default crc.
             orgId: "crc",
+            // setlist_reader work: verifyBearer now also reports the token
+            // doc's `kind` + `allowedTools` (null on unscoped credentials).
+            kind: null,
+            allowedTools: null,
         })
     })
 
@@ -81,6 +85,10 @@ describe("MCP token flow (emulator)", () => {
             parentTokenId: null,
             // v11-02-01: createMcpToken stamps orgId; default crc.
             orgId: "crc",
+            // setlist_reader work: verifyBearer now also reports the token
+            // doc's `kind` + `allowedTools` (null on unscoped credentials).
+            kind: null,
+            allowedTools: null,
         })
 
         expect(await revokeMcpToken("user-1", id)).toBe(true)

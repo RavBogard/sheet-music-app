@@ -10,6 +10,7 @@ import {
     registerChartUploadTools,
     registerTestTokenTools,
     registerMintAdminBearerTools,
+    registerSetlistReaderBearerTools,
     registerRosterTools,
     registerObservabilityTools,
     registerBatchIntakeTools,
@@ -17,6 +18,7 @@ import {
     registerAuthoredChartTools,
 } from "@/lib/mcp/tools"
 import { wrapWithValidationRemap } from "@/lib/mcp/zod-envelope-remap"
+import { withScopedBearer } from "@/lib/mcp/scoped-bearer-gate"
 import { logger } from "@/lib/logger"
 
 /**
@@ -73,6 +75,7 @@ const baseHandler = createMcpHandler(
         registerChartUploadTools(server)
         registerTestTokenTools(server)
         registerMintAdminBearerTools(server)
+        registerSetlistReaderBearerTools(server)
         registerRosterTools(server)
         registerObservabilityTools(server)
         registerBatchIntakeTools(server)
@@ -113,6 +116,12 @@ async function verifyToken(
             tokenId: result.tokenId,
             parentTokenId: result.parentTokenId,
             orgId: result.orgId,
+            // Scoped credentials (kind:"setlist_reader") carry an explicit
+            // tool allow-list; null on every full-access bearer. The
+            // withScopedBearer gate below is the enforcement point — these
+            // extras exist so tools can also read the caller's scope.
+            kind: result.kind,
+            allowedTools: result.allowedTools,
         },
     }
 }
@@ -134,6 +143,14 @@ const authedHandler = withMcpAuth(baseHandler, verifyToken, { required: true })
  * (route.ts may only export HTTP handlers per Next.js App Router
  * rules).
  */
-const fixZodErrors = wrapWithValidationRemap(authedHandler)
+/**
+ * `setlist_reader` gate (read-only, long-lived `crl_read_` credentials).
+ * Wrapped INSIDE the Zod remap so a refusal we emit here still flows through
+ * the same response pipeline, and so every allowed call keeps the existing
+ * validation-error contract. Non-`crl_read_` bearers pass straight through.
+ */
+const scopedHandler = withScopedBearer(authedHandler)
+
+const fixZodErrors = wrapWithValidationRemap(scopedHandler)
 
 export { fixZodErrors as GET, fixZodErrors as POST, fixZodErrors as DELETE }

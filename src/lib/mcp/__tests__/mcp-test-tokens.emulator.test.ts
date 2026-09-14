@@ -152,6 +152,10 @@ describe("MCP test tokens (emulator)", () => {
             parentTokenId: null,
             // v11-02-01: provisionTestAccount stamps orgId; test tokens default crc.
             orgId: "crc",
+            // setlist_reader work: verifyBearer now also reports the token
+            // doc's `kind` + `allowedTools` (null on unscoped credentials).
+            kind: "test",
+            allowedTools: null,
         })
 
         // Firebase Auth user exists, disabled
@@ -220,6 +224,10 @@ describe("MCP test tokens (emulator)", () => {
             parentTokenId: null,
             // v11-02-01: provisionTestAccount stamps orgId; test tokens default crc.
             orgId: "crc",
+            // setlist_reader work: verifyBearer now also reports the token
+            // doc's `kind` + `allowedTools` (null on unscoped credentials).
+            kind: "test",
+            allowedTools: null,
         })
 
         // Force expiry by writing ttlExpiresAt to the past on the bearer doc.

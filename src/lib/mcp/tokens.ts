@@ -16,6 +16,13 @@ import type { OrgId } from "@/lib/org/types"
 
 const COLLECTION = "mcpTokens"
 const TOKEN_PREFIX = "crl_live_"
+/**
+ * Prefix for long-lived, read-only service credentials (`kind:
+ * "setlist_reader"`). The prefix is load-bearing: the MCP route's scoped-bearer
+ * gate keys off it to decide whether a request needs allow-list enforcement, so
+ * non-`crl_read_` bearers take the existing path with zero extra reads.
+ */
+export const SETLIST_READER_PREFIX = "crl_read_"
 
 export interface McpTokenSummary {
     id: string
@@ -24,9 +31,13 @@ export interface McpTokenSummary {
     lastUsedAt: number | null
 }
 
-/** `crl_live_` + 32 random bytes, hex-encoded. */
-export function generateRawToken(): string {
-    return TOKEN_PREFIX + randomBytes(32).toString("hex")
+/**
+ * `<prefix>` + 32 random bytes, hex-encoded. Defaults to `crl_live_` — the
+ * existing full-access bearer shape, unchanged. Pass `SETLIST_READER_PREFIX`
+ * to mint a read-only service credential.
+ */
+export function generateRawToken(prefix: string = TOKEN_PREFIX): string {
+    return prefix + randomBytes(32).toString("hex")
 }
 
 /** sha256(rawToken), hex — the only form of the token ever persisted. */

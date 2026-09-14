@@ -39,6 +39,19 @@ export interface VerifiedBearer {
      * (unstamped) prod bearer keeps acting as CRC unchanged.
      */
     orgId: OrgId
+    /**
+     * Credential kind as stamped on the token doc — e.g. `"minted_admin"`,
+     * `"setlist_reader"`. `null` for root + legacy tokens that carry no `kind`.
+     * ADDITIVE: every existing caller destructures a subset, so this is
+     * behaviour-neutral for the full-access path.
+     */
+    kind: string | null
+    /**
+     * Tool allow-list for scoped credentials (`setlist_reader`). `null` means
+     * "unscoped" — the token may call every tool its role permits. The route's
+     * scoped-bearer gate is the only consumer today.
+     */
+    allowedTools: string[] | null
 }
 
 function unauthorized(): Response {
@@ -142,5 +155,19 @@ export async function verifyBearer(req: Request): Promise<VerifiedBearer | Respo
     const orgId: OrgId =
         typeof data.orgId === "string" && data.orgId ? data.orgId : DEFAULT_ORG_ID
 
-    return { uid: data.uid as string, tokenId: doc.id, parentTokenId, orgId }
+    // Scoped-credential fields (setlist_reader). Absent on every existing
+    // token doc → null, so the full-access path is unchanged.
+    const kind = typeof data.kind === "string" && data.kind ? data.kind : null
+    const allowedTools = Array.isArray(data.allowedTools)
+        ? data.allowedTools.filter((t: unknown): t is string => typeof t === "string")
+        : null
+
+    return {
+        uid: data.uid as string,
+        tokenId: doc.id,
+        parentTokenId,
+        orgId,
+        kind,
+        allowedTools,
+    }
 }
