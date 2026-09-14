@@ -9,6 +9,7 @@ import {
 } from "./setlists"
 import { getCongregationContext } from "./congregation"
 import { updateCongregationServices } from "./congregation-services"
+import { reconcileService } from "./performed"
 import {
     searchLibrary,
     getSong,
@@ -1146,6 +1147,45 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await deleteTemplate(uidFrom(extra), args.templateId, orgFrom(extra))),
+    )
+
+    server.registerTool(
+        "reconcile_service",
+        {
+            description:
+                "After a service: show what ACTUALLY happened beside what was planned, from the stream overlays' cue log. THE PLAN IS NEVER OVERWRITTEN. `dryRun` defaults to TRUE and returns a staged diff plus a copy-able chapter list, writing nothing; `dryRun:false` PROMOTES — it creates a NEW setlist named '<name> (as performed)' with each row's `performedAt` stamped from the cue that fired it, the skipped rows dropped and the audibles spliced in, and leaves the planned setlist exactly as it was. Row statuses: `performed` (a cue fired for it, or it sits between rows that fired), `reordered` (fired out of the planned sequence — both sides of a swap are flagged), `skipped` (it has a printed page AND the service demonstrably ran past it without a cue), `added` (a cue fired with no planned row — an audible; a prayer row is proposed with its page), `untracked` (the cue log cannot speak to it). READ `untracked` CAREFULLY when you report this: most of what a CRC band plays produces no graphic at all — band-only songs, headers, anything outside the stretch where cues fired — so untracked rows are NOT misses and must not be described as skipped or missing. A service with no cues at all comes back entirely untracked, which says nothing bad about the service. The history window defaults to 30 minutes before the setlist's eventDate through 4 hours after; pass `since`+`until` together to override. Admin + band_leader. Requires OVERLAYS_BASE_URL + OVERLAYS_HISTORY_TOKEN; without them the tool refuses cleanly and writes nothing.",
+            inputSchema: {
+                setlistId: z
+                    .string()
+                    .min(1)
+                    .describe("The PLANNED setlist to reconcile. It is never modified."),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Default TRUE — return the staged diff and write nothing. Pass false to create the 'as performed' version.",
+                    ),
+                chapterOffsetSeconds: z
+                    .number()
+                    .int()
+                    .optional()
+                    .describe(
+                        "Shift every chapter time by this many seconds. The stream almost always starts before the first cue fires, so this is the knob for lining the list up with the recording. Default 0.",
+                    ),
+                since: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "ISO instant — start of the cue-history window. Pass together with `until`, or omit both to use the service's own window.",
+                    ),
+                until: z
+                    .string()
+                    .optional()
+                    .describe("ISO instant — end of the cue-history window. Pass together with `since`."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(await reconcileService(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
