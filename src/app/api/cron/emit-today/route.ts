@@ -18,12 +18,16 @@ export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
 /**
- * GET /api/cron/emit-today — daily regeneration of the public `today.json`.
+ * GET /api/cron/emit-today — hourly regeneration of the public `today.json`.
  *
- * Publish already regenerates the document, so this cron exists for the
- * services nobody publishes today: a week rolls off, a service that was
- * deleted or unpublished disappears, and `generatedAt` stays honest. One run
- * per org, each writing only its own `public/today/<org>.json`.
+ * HOURLY, not daily, since R2-f (2026-09-15). It used to be daily because
+ * publish regenerated the document and the cron only had to roll the week
+ * over. R2-f removed the publish gate on the grounds that CRC never publishes
+ * — which also means the publish hook never fires, and this cron became the
+ * ONLY path by which a setlist Daniel authored this afternoon reaches the
+ * reader. A day of staleness was acceptable when publish was the live path; it
+ * is not when this is. One run per org, each writing only its own
+ * `public/today/<org>.json`.
  *
  * DOUBLE-START. Vercel can invoke a cron more than once for the same slot.
  * The repo has no shared lock to mirror — every other cron here relies on its

@@ -12,7 +12,7 @@ import { readServicesFromConfig, readStreamFromConfig } from "./config"
 import { TODAY_CACHE_CONTROL, todayStoragePath, type TodayDoc } from "./types"
 
 /**
- * The I/O half of the `today.json` emitter: read published setlists + the
+ * The I/O half of the `today.json` emitter: read the org's setlists + the
  * congregation config, hand them to the pure builder, write the result to a
  * public Storage object. See `build-today.ts` for what it decides and
  * `types.ts` for what may never appear in the output.
@@ -26,7 +26,7 @@ import { TODAY_CACHE_CONTROL, todayStoragePath, type TodayDoc } from "./types"
  * `server-setlists.ts`: order by the type-consistent `date`, serialize, and do
  * the event-day window in memory.
  */
-async function fetchPublishedSetlists(
+async function fetchSetlistsForToday(
     db: FirebaseFirestore.Firestore,
     org: OrgId,
 ): Promise<TodaySetlistInput[]> {
@@ -37,9 +37,10 @@ async function fetchPublishedSetlists(
         .limit(MAX_SETLIST_FETCH)
         .get()
 
+    // R2-f: no publish filter here. CRC never publishes; the window and the
+    // `isTest` exclusion (applied in the pure builder) are the whole gate.
     return snap.docs
         .map((d) => serializeSetlist(d.id, d.data()))
-        .filter((s: Record<string, unknown>) => !!s.publishedAt)
         .map((s: Record<string, unknown>) => s as unknown as TodaySetlistInput)
 }
 
@@ -85,7 +86,7 @@ export async function buildToday(
     const db = getFirestore()
 
     const [setlists, config] = await Promise.all([
-        fetchPublishedSetlists(db, org),
+        fetchSetlistsForToday(db, org),
         getServerCongregationConfig(org),
     ])
 

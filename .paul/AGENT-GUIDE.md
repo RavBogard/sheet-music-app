@@ -80,9 +80,11 @@ when there's a batch to review.
 ## Batch review pattern at end of authoring
 
 Anything you committed with `flags.length > 0` lives as an open
-`bond_flags` entry. At end-of-session, before `publish_setlist`:
+`bond_flags` entry. Walk them at end-of-session, before you hand the
+setlist back:
 
-1. Call `preview_publish(setlistId)`. If `recommendation` is
+1. Call `preview_publish(setlistId)`. Despite the name this is a
+   READINESS REPORT, not a publish step. If `recommendation` is
    `'review_first'`, you have flags to walk.
 2. Call `review_flagged_bonds(setlistId)`. Returns each open flag joined
    with the current track and up to 5 alternative songIds ranked by W-02
@@ -98,7 +100,15 @@ Anything you committed with `flags.length > 0` lives as an open
      doc that gives the preferred songId a +0.5 boost in future
      `search_library` calls.
 4. After the batch, call `preview_publish` again. If recommendation is
-   now `'publish'`, you're clear. Call `publish_setlist(setlistId)`.
+   now `'publish'`, you're clear — the setlist is done and you stop
+   there.
+
+**CRC does not use publish** (Daniel, 2026-09-15 — R2-f). A setlist is
+live the moment it exists: `/today.json`, the reader, Overlays and
+`/perform` all select by service date, never by `publishedAt`. Never
+tell Daniel a setlist needs publishing, and never call `publish_setlist`
+on your own initiative. It survives only as an optional marker for
+anyone who wants one; nothing downstream reads it.
 
 `record_bond_correction` is NOT the same as `update_track`. The former
 records the **rationale** for the change as a training signal; the
@@ -130,13 +140,14 @@ This guide exists so the agent never recreates that failure shape.
 ## Tool inventory cheat-sheet
 
 - Stage: `propose_setlist_changes`, `commit_staged_changes`
-- Preview: `preview_publish`
 - Flag / review / correct: `flag_bond`, `review_flagged_bonds`,
   `record_bond_correction`
 - Mutate rows: `update_track`, `swap_chart`, `bulk_update_tracks`,
   `reorder_setlist`, `remove_track`, `add_track_to_setlist`,
   `bulk_add_tracks`
-- Publish: `publish_setlist` (always preview first)
+- Readiness report: `preview_publish` (a report, not a publish)
+- Publish: `publish_setlist` — optional marker only; CRC does not use it
+  and nothing downstream reads it (R2-f)
 - Verify: `verify_setlist_charts`, `get_chart_status`,
   `wait_for_setlist_change`
 - Chart YOU wrote in this chat → `create_chart` mode:'preview' (shows the

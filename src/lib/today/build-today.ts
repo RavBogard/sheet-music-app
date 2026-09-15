@@ -28,6 +28,8 @@ export interface TodaySetlistInput {
     book?: unknown
     rabbi?: unknown
     publishedAt?: unknown
+    /** Test traffic (SEC-004 stamp). Never emitted. */
+    isTest?: unknown
     version?: unknown
     /** First `liturgyRef.folio` in track order, resolved by the caller. */
     startFolio?: number | null
@@ -85,12 +87,18 @@ export function startsAtFor(
 }
 
 /**
- * Build the document from published setlists.
+ * Build the document from the setlists CRC has authored.
  *
- * Selection: `publishedAt` present, `eventDate` parseable, and that event day
- * inside [start of today Chicago, +7 days]. Soonest first. Unpublished
- * setlists are never read — that is the ruling, and it is also what keeps a
- * half-authored service off the congregation's screens.
+ * Selection: `isTest` not true, `eventDate` parseable, and that event day
+ * inside [start of today Chicago, +7 days]. Soonest first.
+ *
+ * R2-f (Daniel, 2026-09-15): CRC DOES NOT USE PUBLISH. A setlist is live when
+ * it exists. The original publish gate was written to keep a half-authored
+ * service off the congregation's screens; in practice it kept EVERY service
+ * off them, because nothing here is ever published — all five Yom Kippur 5787
+ * setlists carry `publishedAt: null`, so `/today.json` answered 404 on the one
+ * week it was built for. The date is the gate now. `isTest` is the only
+ * exclusion, and it is the same one `/perform`'s public listing already uses.
  */
 export function buildTodayDoc(input: BuildTodayInput): TodayDoc {
     const nowMs = input.now.getTime()
@@ -100,8 +108,7 @@ export function buildTodayDoc(input: BuildTodayInput): TodayDoc {
     const rows: Array<{ ms: number; service: TodayService }> = []
 
     for (const row of input.setlists) {
-        const publishedAt = asString(row.publishedAt)
-        if (!publishedAt) continue
+        if (row.isTest === true) continue
 
         const rawEvent = asString(row.eventDate)
         if (!rawEvent) continue
@@ -126,7 +133,6 @@ export function buildTodayDoc(input: BuildTodayInput): TodayDoc {
             setlistId: row.id,
             name: asString(row.name) ?? "",
             eventDate,
-            publishedAt,
             version: typeof row.version === "number" ? row.version : 1,
         }
         if (serviceType) service.serviceType = serviceType
@@ -138,6 +144,8 @@ export function buildTodayDoc(input: BuildTodayInput): TodayDoc {
         }
         const rabbi = asString(row.rabbi)
         if (rabbi) service.rabbi = rabbi
+        const publishedAt = asString(row.publishedAt)
+        if (publishedAt) service.publishedAt = publishedAt
 
         const streamUrl = asString(input.stream?.url)
         if (streamUrl) {

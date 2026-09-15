@@ -151,9 +151,21 @@ describe("today.json (emulator)", () => {
         expect(s.version).toBe(7)
     })
 
-    it("an UNPUBLISHED setlist never appears", async () => {
+    // R2-f: CRC never publishes, so this is the ordinary case, not the edge.
+    it("a setlist that was never published still reaches today.json", async () => {
         await seedConfig()
-        const id = await seedSetlist("draft-1", { publishedAt: null })
+        const id = await seedSetlist("never-published-1", { publishedAt: null })
+        await seedTracks(id)
+
+        const doc = await buildToday("crc", NOW)
+        expect(doc.services.map((x) => x.setlistId)).toEqual([id])
+        expect(doc.services[0].startFolio).toBe(21)
+        expect(doc.services[0]).not.toHaveProperty("publishedAt")
+    })
+
+    it("a test setlist never appears", async () => {
+        await seedConfig()
+        const id = await seedSetlist("fixture-1", { isTest: true })
         await seedTracks(id)
 
         const doc = await buildToday("crc", NOW)

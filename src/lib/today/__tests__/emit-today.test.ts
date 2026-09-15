@@ -62,6 +62,7 @@ describe("buildTodayDoc — envelope", () => {
                     book: undefined,
                     rabbi: undefined,
                     startFolio: null,
+                    publishedAt: null,
                 }),
             ],
             services: null,
@@ -74,17 +75,42 @@ describe("buildTodayDoc — envelope", () => {
         expect(s).not.toHaveProperty("startFolio")
         expect(s).not.toHaveProperty("startsAt")
         expect(s).not.toHaveProperty("stream")
+        expect(s).not.toHaveProperty("publishedAt")
     })
 })
 
 describe("buildTodayDoc — selection", () => {
-    it("reads only PUBLISHED setlists", () => {
+    /**
+     * R2-f (Daniel, 2026-09-15): CRC does not use publish. A setlist is live
+     * when it exists. This test is the inverse of the one it replaced — the
+     * old gate is exactly why `/today.json` answered 404 through Yom Kippur
+     * week, when all five machzor setlists carried `publishedAt: null`.
+     */
+    it("reads setlists that were never published", () => {
         const doc = buildTodayDoc({
-            setlists: [setlist({ id: "draft", publishedAt: null })],
+            setlists: [setlist({ id: "never-published", publishedAt: null })],
             services: SERVICES,
             now: NOW,
         })
-        expect(doc.services).toEqual([])
+        expect(doc.services.map((s) => s.setlistId)).toEqual(["never-published"])
+        expect(doc.services[0]).not.toHaveProperty("publishedAt")
+    })
+
+    it("still carries publishedAt when a setlist happens to have one", () => {
+        const doc = buildTodayDoc({ setlists: [setlist()], services: SERVICES, now: NOW })
+        expect(doc.services[0].publishedAt).toBe("2026-09-15T15:12:00.000Z")
+    })
+
+    it("excludes test traffic, which is the only exclusion left", () => {
+        const doc = buildTodayDoc({
+            setlists: [
+                setlist({ id: "real" }),
+                setlist({ id: "fixture", isTest: true }),
+            ],
+            services: SERVICES,
+            now: NOW,
+        })
+        expect(doc.services.map((s) => s.setlistId)).toEqual(["real"])
     })
 
     it("keeps today through +7 days and drops what is outside", () => {

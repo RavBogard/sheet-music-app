@@ -2,8 +2,8 @@
  * `today.json` — the one place the family states "what tonight is".
  *
  * A small, public, METADATA-ONLY document describing the current and upcoming
- * services, derived from PUBLISHED setlists. Two consumers read it: the siddur
- * reader (it replaces the reader's hardcoded `CAL`) and Overlays (the default
+ * services, derived from the setlists CRC has authored. Two consumers read
+ * it: the siddur reader (it replaces the reader's hardcoded `CAL`) and Overlays (the default
  * "Today's order" and the scan card's book). Both keep working when the file
  * is absent, so nothing here is load-bearing for a service.
  *
@@ -49,8 +49,13 @@ export interface TodayService {
         /** Defaults to `stream.leadMinutes` (5) before `startsAt`. */
         startsAt?: string
     }
-    /** First-publish instant, ISO with `Z`. */
-    publishedAt: string
+    /**
+     * First-publish instant, ISO with `Z`. OPTIONAL since R2-f (2026-09-15):
+     * CRC does not use publish, so most services never carry one. Emitted when
+     * the setlist happens to have it; omitted otherwise. The reader's
+     * `calFrom()` never read this field, so omission changes nothing there.
+     */
+    publishedAt?: string
     /** The setlist's `version` at emit time. */
     version: number
 }
@@ -59,7 +64,7 @@ export interface TodayDoc {
     schemaVersion: 1
     /** Emit instant, ISO with `Z`. */
     generatedAt: string
-    /** Published setlists with `eventDate` today..+7d, soonest first. */
+    /** Setlists with `eventDate` today..+7d, soonest first; test rows excluded. */
     services: TodayService[]
 }
 

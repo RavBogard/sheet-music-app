@@ -68,7 +68,7 @@
         },
         {
             "path": "/api/cron/emit-today",
-            "schedule": "0 10 * * *"
+            "schedule": "0 * * * *"
         }
     ]
 }
