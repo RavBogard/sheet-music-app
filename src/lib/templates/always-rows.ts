@@ -44,6 +44,8 @@ interface FamilyFile {
     family: string
     book: string
     always: AlwaysRowJson[]
+    /** Moments CRC does some weeks and not others — `propose_service_frame`. */
+    sometimes?: string[]
 }
 
 const FAMILIES: Record<string, FamilyFile> = {
@@ -69,6 +71,34 @@ export interface AlwaysMergeResult {
 /** The family files this module knows. */
 export function alwaysRowFamilies(): string[] {
     return Object.keys(FAMILIES)
+}
+
+/**
+ * Which family's lists govern a setlist's `serviceType`.
+ *
+ * The site has four service types and Daniel ruled on two families. A
+ * b'nai mitzvah IS a Shabbat morning service with a simcha in the middle, and
+ * `kabbalat-shabbat` is the Friday evening service under its liturgical name —
+ * so they inherit, rather than each needing their own confirmed list. A type
+ * with no family (Shir Shabbat, a musical service that follows no booklet
+ * order) returns null and is offered nothing, which is correct.
+ */
+export function familyForServiceType(serviceType: string): string | null {
+    switch (serviceType) {
+        case "friday_night":
+        case "kabbalat-shabbat":
+            return "friday_night"
+        case "shabbat_morning":
+        case "bnei_mitzvah_saturday":
+            return "shabbat_morning"
+        default:
+            return null
+    }
+}
+
+/** Daniel's Sometimes moments for a family — candidates, never rows. */
+export function sometimesRowsFor(family: string): string[] {
+    return FAMILIES[family]?.sometimes ?? []
 }
 
 /** Daniel's Always rows for a family, in his confirmed order. */
@@ -119,8 +149,36 @@ function slotNamesMoment(
     return parts.some((p) => foldLiturgyName(p) === foldLiturgyName(canonical))
 }
 
-function isHeader(slot: TemplateSlot): boolean {
-    return slot.type === "header" || slot.isHeader === true
+/**
+ * How the merge reads and writes ONE row of whatever it is merging into.
+ *
+ * The merge logic is about labels, types and printed pages; it has no opinion
+ * about the rest of a row. Code templates carry `queries` and `topics`;
+ * Firestore templates carry `songId`, `fileId`, keys and vocal leads. Routing
+ * one through the other's type would drop half of it — a Saturday morning
+ * template losing every chart binding, quietly, to gain some page numbers —
+ * so the merge takes an adapter and keeps its hands off the row.
+ */
+export interface AlwaysMergeAdapter<T> {
+    labelOf(row: T): string
+    typeOf(row: T): string | undefined
+    /** The row, unchanged except that it now carries these pages. */
+    withRefs(row: T, refs: SlotLiturgyRefs): T
+    /** A brand-new fixed-liturgy row for a moment no base row named. */
+    make(label: string, type: string, refs?: SlotLiturgyRefs): T
+}
+
+const SLOT_ADAPTER: AlwaysMergeAdapter<TemplateSlot> = {
+    labelOf: (slot) => slot.label,
+    typeOf: (slot) => (slot.isHeader === true ? "header" : slot.type),
+    withRefs: (slot, refs) => ({ ...slot, liturgyRefs: refs }),
+    make: (label, type, refs) => ({
+        label,
+        type: type as TrackType,
+        queries: [],
+        fixed: true,
+        ...(refs ? { liturgyRefs: refs } : {}),
+    }),
 }
 
 /**
@@ -149,14 +207,29 @@ export function mergeAlwaysRows(
     base: TemplateSlot[],
     family: string,
 ): AlwaysMergeResult {
+    const merged = mergeAlwaysRowsWith(base, family, SLOT_ADAPTER)
+    return { slots: merged.rows, notes: merged.notes }
+}
+
+/** The same merge, against any row shape an adapter can read and write. */
+export function mergeAlwaysRowsWith<T>(
+    base: T[],
+    family: string,
+    adapter: AlwaysMergeAdapter<T>,
+): { rows: T[]; notes: AlwaysMergeNote[]; book: string | null } {
     const file = FAMILIES[family]
-    if (!file) return { slots: base, notes: [] }
+    if (!file) return { rows: base, notes: [], book: null }
+
+    const isHeader = (row: T) => {
+        const t = adapter.typeOf(row)
+        return t === "header" || t === "section"
+    }
 
     // Where each base slot sits in the booklet, for ORDERING only.
-    const slotFolio = base.map((slot) =>
-        isHeader(slot)
+    const slotFolio = base.map((row) =>
+        isHeader(row)
             ? undefined
-            : matchLiturgyTitle(file.book, slot.label).clear?.entry.folio,
+            : matchLiturgyTitle(file.book, adapter.labelOf(row)).clear?.entry.folio,
     )
 
     // Pass 1 — anchors, strictly forward.
@@ -166,11 +239,11 @@ export function mergeAlwaysRows(
     file.always.forEach((row, r) => {
         const aliases = spellingsFor(row, file.book)
         const at = base.findIndex(
-            (slot, i) =>
+            (candidate, i) =>
                 i >= scan &&
                 !anchored.has(i) &&
-                !isHeader(slot) &&
-                slotNamesMoment(slot.label, aliases, row.label),
+                !isHeader(candidate) &&
+                slotNamesMoment(adapter.labelOf(candidate), aliases, row.label),
         )
         if (at >= 0) {
             anchorOf.set(r, at)
@@ -180,7 +253,7 @@ export function mergeAlwaysRows(
     })
 
     // Pass 2 — emit.
-    const out: TemplateSlot[] = []
+    const out: T[] = []
     const notes: AlwaysMergeNote[] = []
     let cursor = 0
 
@@ -196,12 +269,12 @@ export function mergeAlwaysRows(
         if (at !== undefined) {
             emitBaseUpTo(at)
             const slot = base[at]
-            out.push(hasRefs ? { ...slot, liturgyRefs: refs } : { ...slot })
+            out.push(hasRefs ? adapter.withRefs(slot, refs) : slot)
             cursor = at + 1
             notes.push({
                 label: row.label,
                 outcome: "bound-to-slot",
-                slot: slot.label,
+                slot: adapter.labelOf(slot),
                 ...(hasRefs ? {} : { pageless: true }),
             })
             return
@@ -223,16 +296,9 @@ export function mergeAlwaysRows(
         }
         emitBaseUpTo(stop)
 
-        const inserted: TemplateSlot = {
-            label: row.label,
-            type: (row.type as TrackType) ?? "prayer",
-            queries: [],
-            fixed: true,
-        }
         // K'dushat HaYom (Saturday) is Always with no booklet page. It clones
         // page-less rather than borrowing a neighbour's number.
-        if (hasRefs) inserted.liturgyRefs = refs
-        out.push(inserted)
+        out.push(adapter.make(row.label, row.type ?? "prayer", hasRefs ? refs : undefined))
         notes.push({
             label: row.label,
             outcome: "inserted",
@@ -241,5 +307,5 @@ export function mergeAlwaysRows(
     })
 
     emitBaseUpTo(base.length)
-    return { slots: out, notes }
+    return { rows: out, notes, book: file.book }
 }

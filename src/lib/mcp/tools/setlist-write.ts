@@ -40,6 +40,10 @@ import type { OrgId } from "@/lib/org/types"
 import { parseEventDate } from "@/lib/parse-event-date"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { rebookRows, type RebookReport } from "@/lib/liturgy/rebook"
+import {
+    autoBindLiturgyRef,
+    type LiturgySuggestion,
+} from "@/lib/liturgy/bind-on-type"
 import type { LiturgyRef } from "@/lib/books/types"
 import { logger } from "@/lib/logger"
 import { isTestSetlist } from "@/types/models"
@@ -547,6 +551,16 @@ export interface AddTrackToSetlistOk {
      * Absent on a no-clamp insert.
      */
     warning?: string
+    /**
+     * Round 3 item 5 — what the liturgy matcher made of the row's title.
+     * `bound` when a page was written; `suggestions` when the matcher found
+     * real candidates but none safe enough to write unwatched. Absent when
+     * the row named nothing the booklet prints, which is most songs.
+     */
+    liturgy?: {
+        bound?: LiturgyRef
+        suggestions?: LiturgySuggestion[]
+    }
 }
 
 /**
@@ -659,6 +673,18 @@ export async function addTrackToSetlist(
         }
     }
 
+    // BIND ON TYPE (round 3, item 5). A row gains its page the moment it
+    // gains its name, so `propose_liturgy_bindings` stops being the only way a
+    // page ever arrives. An explicit `liturgyRef` from the caller always wins —
+    // an author-typed page is never second-guessed.
+    const auto = args.liturgyRef
+        ? { suggestions: [] }
+        : autoBindLiturgyRef(
+              typeof loaded.data.book === "string" ? loaded.data.book : null,
+              resolved.title,
+              type,
+          )
+
     const { trackId, order } = await addTrack(db, {
         setlistId: args.setlistId,
         type,
@@ -678,7 +704,7 @@ export async function addTrackToSetlist(
         performer: args.performer,
         description: args.description,
         estimatedMinutes: args.estimatedMinutes,
-        liturgyRef: args.liturgyRef,
+        liturgyRef: args.liturgyRef ?? auto.ref,
         honors: args.honors,
     })
 
@@ -700,6 +726,8 @@ export async function addTrackToSetlist(
         order,
         track: { id: trackId, ...trackData },
     }
+    if (auto.ref) result.liturgy = { bound: auto.ref }
+    else if (auto.suggestions.length) result.liturgy = { suggestions: auto.suggestions }
     // C7I3-003: surface silent position clamping. addTrack treats any
     // position outside [0, existing.length] as "append" — without this
     // warning, callers who passed `position: 999` had no way to know
@@ -725,7 +753,9 @@ export async function updateSetlistTrack(
     args: UpdateTrackArgs,
     org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
-    { ok: true; track: Record<string, unknown> } | RichErrorEnvelope | ToolEnvelopeError
+    | { ok: true; track: Record<string, unknown>; liturgy?: { bound?: LiturgyRef; suggestions?: LiturgySuggestion[] } }
+    | RichErrorEnvelope
+    | ToolEnvelopeError
 > {
     initAdmin()
     const db = getFirestore()
@@ -761,11 +791,44 @@ export async function updateSetlistTrack(
             )
     }
 
+    // BIND ON TYPE (round 3, item 5) — a RENAME is the other moment a row can
+    // acquire an identity, and the one that matters most: Daniel fixes a
+    // spelling, and the page follows the new name.
+    //
+    // Only onto a row that has NO ref. A row already carrying one keeps it,
+    // exactly as `propose_liturgy_bindings` does, because a page on a row was
+    // put there by an author and a rename is not evidence that it was wrong.
+    // Re-deciding it here would silently move a number on a lectern sheet.
+    let liturgy: { bound?: LiturgyRef; suggestions?: LiturgySuggestion[] } | undefined
+    const patch = { ...args.patch }
+    if (typeof patch.title === "string" && patch.title.trim() && !patch.liturgyRef) {
+        const snap = await db.collection("tracks").doc(args.trackId).get()
+        const existing = (snap.data() as Record<string, unknown>) ?? {}
+        const hasRef = !!existing.liturgyRef && typeof existing.liturgyRef === "object"
+        if (!hasRef) {
+            const auto = autoBindLiturgyRef(
+                typeof loaded.data.book === "string" ? loaded.data.book : null,
+                patch.title,
+                typeof patch.type === "string"
+                    ? patch.type
+                    : typeof existing.type === "string"
+                      ? existing.type
+                      : "song",
+            )
+            if (auto.ref) {
+                patch.liturgyRef = auto.ref
+                liturgy = { bound: auto.ref }
+            } else if (auto.suggestions.length) {
+                liturgy = { suggestions: auto.suggestions }
+            }
+        }
+    }
+
     const result = await updateTrack(
         db,
         args.setlistId,
         args.trackId,
-        args.patch,
+        patch,
         // Re-bond paths look up the new song to refresh the row's fileName
         // (else the row's fileName drifts behind the chart at the new
         // fileId), and the row's title (NOTE-1) when it wasn't customized.
@@ -782,7 +845,7 @@ export async function updateSetlistTrack(
         },
         args.lastSeenVersion,
     )
-    if (result.ok) return { ok: true, track: result.track }
+    if (result.ok) return { ok: true, track: result.track, ...(liturgy ? { liturgy } : {}) }
     if ("kind" in result) return result.envelope
     return richError(
         "update_track_failed",

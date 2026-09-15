@@ -137,6 +137,39 @@ What should have happened:
 
 This guide exists so the agent never recreates that failure shape.
 
+## Pages, and the three lists
+
+Every row can carry a `liturgyRef` — the printed page of that moment in the
+service's book. Ruling 8: the LEGACY CRC booklets (`crc-friday`,
+`crc-saturday`) govern pages until a Shirei volume for that service is
+released. Rows get their pages three ways, and you rarely have to do anything.
+
+- **On type.** `add_track_to_setlist` and `update_track` match the title you
+  wrote against the lookup and bind it themselves, reporting `liturgy.bound`.
+  An ambiguous title writes nothing and comes back as `liturgy.suggestions` —
+  those are for the user to settle, not for you to pick from. The browser does
+  the same thing after a title edit.
+- **In a batch.** `propose_liturgy_bindings` catches up a whole setlist or
+  template. `dryRun` defaults true; a real run writes the clear matches and
+  only the `accept` rows. Nothing is created, removed or reordered — bind,
+  don't add.
+- **From the template.** `merge_always_rows_into_template` puts Daniel's
+  ALWAYS rows into a Firestore template: a moment already there as a song slot
+  gains its pages and keeps its chart; a moment nothing named becomes a
+  `fixed: true` row.
+
+Daniel marked each moment of a family Always, Sometimes or Never.
+`propose_service_frame` offers the SOMETIMES ones for a specific service —
+Rosh Chodesh, Prayer for the State of Israel, Hatikvah — booklet-paged only,
+never one the setlist already names. It is the one tool that may add a row the
+author did not type, so it adds only what comes back in `accept`. Never rows
+are never offered; they exist so the system still knows what the name means.
+
+Two rules hold everywhere. **A page is never overwritten** — a row that
+already has one had it put there by an author. **A page is never guessed** —
+when the match is merely plausible, the tool says so and waits. A wrong number
+on the rabbi's sheet is read aloud from the lectern with nothing to catch it.
+
 ## Tool inventory cheat-sheet
 
 - Stage: `propose_setlist_changes`, `commit_staged_changes`
@@ -145,6 +178,9 @@ This guide exists so the agent never recreates that failure shape.
 - Mutate rows: `update_track`, `swap_chart`, `bulk_update_tracks`,
   `reorder_setlist`, `remove_track`, `add_track_to_setlist`,
   `bulk_add_tracks`
+- Pages: `propose_liturgy_bindings` (batch),
+  `merge_always_rows_into_template` (template),
+  `propose_service_frame` (the Sometimes offer) — all `dryRun` by default
 - Readiness report: `preview_publish` (a report, not a publish)
 - Publish: `publish_setlist` — optional marker only; CRC does not use it
   and nothing downstream reads it (R2-f)

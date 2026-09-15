@@ -5,8 +5,8 @@ import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { getTracksForSetlist } from "@/lib/server-tracks"
-import { validateLiturgyRef } from "@/lib/books/registry"
 import { liturgyLookup } from "@/lib/liturgy/lookup"
+import { BINDABLE_ROW_TYPES, writableLiturgyRef } from "@/lib/liturgy/bind-on-type"
 import { matchLiturgyTitle, type LiturgyMatch } from "@/lib/liturgy/match"
 import { logger } from "@/lib/logger"
 
@@ -34,9 +34,6 @@ import { logger } from "@/lib/logger"
  */
 
 type DB = FirebaseFirestore.Firestore
-
-/** Row types that can name a liturgical moment. Headers and notes cannot. */
-const BINDABLE_TYPES = new Set(["song", "prayer", "reading", "transition"])
 
 export interface ProposeLiturgyBindingsArgs {
     setlistId?: string
@@ -102,37 +99,6 @@ function bindingOf(m: LiturgyMatch, rowId: string, title: string): ProposedBindi
         confidence: m.score,
         via: m.via,
     }
-}
-
-/**
- * The ref that may actually be written, or null.
- *
- * Two things are being respected here, and they pull against each other.
- *
- * A page is only writable if it has a page in THIS book: `validateLiturgyRef`
- * is the guard that keeps a wrong number off a lectern sheet, and an
- * identity-only match is reported rather than written with a borrowed number.
- *
- * And a unit id belongs to the book that defines it. The legacy booklets are
- * pagemaps with no units at all, so `crc-friday` cannot carry
- * `shma.barchu@shabbat-maariv` however true that identity is — the registry
- * refuses it, correctly. The proposal still REPORTS the unit id, because that
- * is the identity Daniel is confirming and it is what a later book switch
- * re-resolves on; the write just drops it and keeps the page. When the Shirei
- * volume for a service is released and becomes the book, the same match will
- * carry its unit id through unchanged.
- */
-function writableRef(
-    book: string,
-    b: ProposedBinding,
-): { book: string; unitId?: string; folio: number } | null {
-    if (typeof b.folio !== "number") return null
-    if (b.unitId) {
-        const withId = { book, unitId: b.unitId, folio: b.folio }
-        if (validateLiturgyRef(withId).ok) return withId
-    }
-    const pageOnly = { book, folio: b.folio }
-    return validateLiturgyRef(pageOnly).ok ? pageOnly : null
 }
 
 async function rowsForSetlist(db: DB, id: string, org: OrgId): Promise<Row[] | null> {
@@ -228,7 +194,7 @@ export async function proposeLiturgyBindings(
     const skipped: Array<{ rowId: string; title: string; reason: string }> = []
 
     for (const row of rows) {
-        if (!BINDABLE_TYPES.has(row.type)) {
+        if (!BINDABLE_ROW_TYPES.has(row.type)) {
             skipped.push({
                 rowId: row.id,
                 title: row.title,
@@ -302,7 +268,7 @@ export async function proposeLiturgyBindings(
 
     let written = 0
     for (const b of toWrite) {
-        const ref = writableRef(book, b)
+        const ref = writableLiturgyRef(book, b.folio, b.unitId)
         if (!ref) continue
         try {
             if (setlistId) {
@@ -314,7 +280,7 @@ export async function proposeLiturgyBindings(
                     const tracks = [...((snap.data()?.tracks as unknown[]) ?? [])]
                     const i = Number(b.rowId)
                     if (!tracks[i]) return
-                    // The SAME ref `writableRef` validated, minus the `book`
+                    // The SAME ref `writableLiturgyRef` validated, minus the `book`
                     // key the map supplies. Writing the matched unit id here
                     // regardless would be worse than useless: the legacy
                     // booklets define no units, so `resolveSlotLiturgyRef`

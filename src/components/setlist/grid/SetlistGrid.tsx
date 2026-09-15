@@ -728,10 +728,31 @@ export interface SetlistGridProps {
     confirmDelete?: (info: ConfirmInfo) => Promise<boolean>
 }
 
+/**
+ * Round 3, item 5 — ask the server what the row's new name means.
+ *
+ * The grid writes through the sync engine straight to Firestore, so there is
+ * no server in the write path to do the matching; this is a separate, tiny
+ * ask, fired after the title is already saved. Its answer is ignored on
+ * purpose: the row is correct without a page number, and the batch
+ * `propose_liturgy_bindings` sweeps up anything an offline iPad missed.
+ * Nothing here may ever block, slow or revert an edit.
+ */
+function requestLiturgyBind(setlistId: string, docId: string): void {
+    if (typeof fetch !== 'function') return
+    void fetch('/api/liturgy/bind-row', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setlistId, trackId: docId }),
+        keepalive: true,
+    }).catch(() => {})
+}
+
 async function commitTrackPatchImpl(
     docId: string,
     patch: Record<string, unknown>,
     expectedUpdatedAt?: number,
+    setlistId?: string,
 ): Promise<void> {
     // v50-06-01: `expectedUpdatedAt` flows in from the cell's `row.original
     // .updatedAt`, surfacing real two-writer races to the engine via
@@ -751,6 +772,16 @@ async function commitTrackPatchImpl(
         },
         { undoKey: `tracks:${docId}:${fields}` },
     )
+    // A title is the only field that can tell us which moment the row is.
+    // A caller that already set the page itself is left alone.
+    if (
+        setlistId &&
+        typeof patch.title === 'string' &&
+        patch.title.trim() &&
+        patch.liturgyRef === undefined
+    ) {
+        requestLiturgyBind(setlistId, docId)
+    }
 }
 
 /**
@@ -1408,7 +1439,8 @@ export function SetlistGrid({
             handleCellKeyDown,
             setlistLeads,
             onDeleteRow: (track) => void handleDeleteRow(track),
-            onCommitTrackPatch: commitTrackPatchImpl,
+            onCommitTrackPatch: (docId, patch, expectedUpdatedAt) =>
+                commitTrackPatchImpl(docId, patch, expectedUpdatedAt, setlistId),
             onBindChart: (track, sel) => void handleBindChart(track, sel),
             setlistIdForPropagation: setlistId,
             selectedIds: selection.selectedIds,
@@ -1751,7 +1783,14 @@ export function SetlistGrid({
                             void handleContextDuplicate(id)
                         }
                         onContextDelete={handleContextDelete}
-                        onCommitTrackPatch={commitTrackPatchImpl}
+                        onCommitTrackPatch={(docId, patch, expectedUpdatedAt) =>
+                            commitTrackPatchImpl(
+                                docId,
+                                patch,
+                                expectedUpdatedAt,
+                                setlistId,
+                            )
+                        }
                         onDeleteRow={(track) => void handleDeleteRow(track)}
                     />
                 )}

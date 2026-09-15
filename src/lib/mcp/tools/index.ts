@@ -68,6 +68,8 @@ import {
     cloneSetlistFromTemplate,
 } from "./templates"
 import { proposeLiturgyBindings } from "./liturgy-bindings"
+import { mergeAlwaysRowsIntoTemplate } from "./template-always-rows"
+import { proposeServiceFrame } from "./service-frame"
 import {
     listMonitorBuses,
     getMix,
@@ -1108,6 +1110,68 @@ export function registerWriteTools(server: McpServer): void {
     )
 
     server.registerTool(
+        "merge_always_rows_into_template",
+        {
+            description:
+                "Merge Daniel's ALWAYS rows for a family into a Firestore template (A-W3″). The four setlistTemplates docs are overrides that get_template prefers over the code defaults, so this is what a clone actually sees. A moment the template already carries as a song slot gains `liturgyRefs` and keeps everything else — its chart, key, vocal lead and position; only a moment NO row named becomes a new `fixed: true` row, deletable per service. Rows are added for Always moments and nothing else (the one narrowing of bind-don't-add). `dryRun` defaults TRUE and returns the whole merged track list plus a row-by-row account (`notes`: bound-to-slot vs inserted, and which slot). Families: friday_night, shabbat_morning — the two Daniel confirmed; bnei_mitzvah_saturday and kabbalat-shabbat inherit those. Admin + band_leader only.",
+            inputSchema: {
+                templateId: z.string().min(1).describe("Template from list_templates."),
+                family: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Whose Always list to merge: 'friday_night' or 'shabbat_morning'. A b'nai mitzvah template takes shabbat_morning.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe("Default true. Returns the merged list and writes nothing."),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await mergeAlwaysRowsIntoTemplate(uidFrom(extra), args, orgFrom(extra)),
+            ),
+    )
+
+    server.registerTool(
+        "propose_service_frame",
+        {
+            description:
+                "Offer the SOMETIMES moments for a service — the ones CRC does some weeks and not others (Rosh Chodesh, Prayer for the State of Israel, Hatikvah, Birkat Hagomeil). Daniel marked every moment of a family Always / Sometimes / Never; Always rows arrive with the template and Never rows are never offered, so this is the third list and the only place a row may appear that the author did not type — and only because he named it back in `accept`. Booklet-paged entries ONLY: a moment this service's book does not print is not offered, because a page number from another book is worse than no row. A moment the setlist already names, under any spelling the lookup knows, is not offered twice. `dryRun` defaults TRUE and returns `{candidates, skipped}` with each candidate's printed page and the row index it would land at, in page order. A real run adds ONLY the accepted labels, as `fixed: true` prayer rows carrying the page. Admin + band_leader only.",
+            inputSchema: {
+                setlistId: z.string().min(1).describe("Setlist to offer moments for."),
+                book: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe("Defaults to the setlist's own book. Pages come from here."),
+                family: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(
+                        "Defaults to the family behind the setlist's serviceType: friday_night or shabbat_morning.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe("Default true. Returns the offer and writes nothing."),
+                accept: z
+                    .array(z.string().min(1))
+                    .optional()
+                    .describe(
+                        "Labels Daniel confirmed, from `candidates`. Only meaningful with dryRun:false. A moment not named here is not added.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await proposeServiceFrame(uidFrom(extra), args, orgFrom(extra)),
+            ),
+    )
+
+    server.registerTool(
         "get_template",
         {
             description:
@@ -1418,7 +1482,7 @@ export function registerWriteTools(server: McpServer): void {
         "add_track_to_setlist",
         {
             description:
-                "Add one row to a setlist. Row types: 'song' (pass songId to pull title/key/vocal-lead from the library AND bond the song's chart so it renders on the row, or pass an explicit title for a free-text row), 'header' (section break with a title), 'reading' (Torah / scripture / D'var / responsive reading — title required), 'prayer' (silent or responsive prayer — title required), 'transition' (instrumental/transition moment), or 'note' (free-text annotation). position is a 0-based insert index; omit it to append at the end. Admins and band leaders may add tracks — band_leader may add to setlists owned by others (collaborate), but only the owner or admin may delete the setlist itself (see delete_setlist).",
+                "Add one row to a setlist. Row types: 'song' (pass songId to pull title/key/vocal-lead from the library AND bond the song's chart so it renders on the row, or pass an explicit title for a free-text row), 'header' (section break with a title), 'reading' (Torah / scripture / D'var / responsive reading — title required), 'prayer' (silent or responsive prayer — title required), 'transition' (instrumental/transition moment), or 'note' (free-text annotation). position is a 0-based insert index; omit it to append at the end. Admins and band leaders may add tracks — band_leader may add to setlists owned by others (collaborate), but only the owner or admin may delete the setlist itself (see delete_setlist). BINDS ON TYPE: when the setlist names a `book` with a liturgy lookup (crc-friday, crc-saturday) and the row can name a moment (song/prayer/reading/transition), the title is matched against Daniel's confirmed spellings and the row's `liturgyRef` is written automatically — reported back as `liturgy.bound`. An ambiguous or merely plausible title writes NOTHING and comes back as `liturgy.suggestions` for you to resolve; a row you pass an explicit `liturgyRef` for, or that already carries one, is never touched.",
             inputSchema: addTrackToSetlistFields,
         },
         async (args, extra) => jsonResult(await addTrackToSetlist(uidFrom(extra), args, orgFrom(extra))),
@@ -1528,7 +1592,7 @@ export function registerWriteTools(server: McpServer): void {
         "update_track",
         {
             description:
-                "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink) and optionally move it to a new position. Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Pass `position` to move the row in place (closes the 'must call reorder_setlist with the full ordered id list to move one row' gap). Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). Unbonding: pass `songId: null` to clear the chart (songId + fileId + fileName) while keeping the row, its title/key/position/notes, and dropping the chart from the setlist's fileIds aggregate — no need to delete + re-add a free-text row. Returns the post-update row. Admins and band leaders only. Every successful write bumps the setlist's `version` and echoes the row back; chain the returned `version` into the next call's `lastSeenVersion` rather than re-reading a stale get_setlist value. Pass `lastSeenVersion` (the track's `version` from your last get_setlist) for W-04 optimistic concurrency: rejects with `{error: 'stale_version', currentVersion, ...}` if another writer changed THIS track first, or `{error: 'track_not_found', setlistVersion, ...}` if the row was deleted out from under you.",
+                "Update one track's metadata on a setlist (key, vocal lead, title, notes, type, bonded songId, referenceLink) and optionally move it to a new position. Preserves trackId — unlike remove+add — so external references stay valid. Only fields you pass in `patch` get updated; omitted fields are untouched. Pass `position` to move the row in place (closes the 'must call reorder_setlist with the full ordered id list to move one row' gap). Re-bonding: passing a new `songId` updates `fileId` automatically (the library is keyed by Drive file id). Unbonding: pass `songId: null` to clear the chart (songId + fileId + fileName) while keeping the row, its title/key/position/notes, and dropping the chart from the setlist's fileIds aggregate — no need to delete + re-add a free-text row. Returns the post-update row. Admins and band leaders only. Every successful write bumps the setlist's `version` and echoes the row back; chain the returned `version` into the next call's `lastSeenVersion` rather than re-reading a stale get_setlist value. Pass `lastSeenVersion` (the track's `version` from your last get_setlist) for W-04 optimistic concurrency: rejects with `{error: 'stale_version', currentVersion, ...}` if another writer changed THIS track first, or `{error: 'track_not_found', setlistVersion, ...}` if the row was deleted out from under you. BINDS ON TYPE: when the setlist names a `book` with a liturgy lookup (crc-friday, crc-saturday) and the row can name a moment (song/prayer/reading/transition), the title is matched against Daniel's confirmed spellings and the row's `liturgyRef` is written automatically — reported back as `liturgy.bound`. An ambiguous or merely plausible title writes NOTHING and comes back as `liturgy.suggestions` for you to resolve; a row you pass an explicit `liturgyRef` for, or that already carries one, is never touched.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 trackId: z
