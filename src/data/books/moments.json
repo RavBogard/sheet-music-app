@@ -1,45 +1,45 @@
 {
     "schemaVersion": 1,
-    "builtAt": "2026-09-15T12:57:46Z",
+    "builtAt": "2026-09-15T23:08:35Z",
     "sources": [
         {
             "book": "crc-erev-rh",
-            "gitSha": "d86de56-LICENSED",
+            "gitSha": "fb5f347-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-kol-nidre",
-            "gitSha": "d86de56-LICENSED",
+            "gitSha": "fb5f347-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-yizkor",
-            "gitSha": "d86de56-LICENSED",
+            "gitSha": "fb5f347-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-yk-morning",
-            "gitSha": "d86de56-LICENSED",
+            "gitSha": "fb5f347-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-neilah",
-            "gitSha": "d86de56-LICENSED",
+            "gitSha": "fb5f347-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-rh-morning",
-            "gitSha": "d86de56-LICENSED",
+            "gitSha": "fb5f347-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "shabbat-maariv",
-            "gitSha": "d86de56-LICENSED",
+            "gitSha": "fb5f347-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "shabbat-shacharit",
-            "gitSha": "d86de56-LICENSED",
+            "gitSha": "fb5f347-LICENSED",
             "pinValue": "HEAD"
         },
         {
@@ -1218,6 +1218,30 @@
                     "folios": [
                         116,
                         117
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "brosh-hashanah",
+            "display": {
+                "en": "B’rosh Hashanah"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.brosh-hashanah@crc-rh-morning",
+                    "folios": [
+                        57
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.brosh-hashanah@crc-yk-morning",
+                    "folios": [
+                        148
                     ]
                 }
             ]
@@ -2668,20 +2692,6 @@
             "aliases": [],
             "occurrences": [
                 {
-                    "book": "crc-machzor-2008",
-                    "unitId": "amidah.kdushat-hayom@crc-rh-morning",
-                    "folios": [
-                        56
-                    ]
-                },
-                {
-                    "book": "crc-machzor-2008",
-                    "unitId": "amidah.kdushat-hayom@crc-yk-morning",
-                    "folios": [
-                        147
-                    ]
-                },
-                {
                     "book": "shabbat-maariv",
                     "unitId": "amidah.kdushat-hayom@shabbat-maariv",
                     "folios": [
@@ -2725,23 +2735,6 @@
                         156,
                         157,
                         158
-                    ]
-                }
-            ]
-        },
-        {
-            "id": "kdushat-hayom-kavannah",
-            "display": {
-                "en": "Kdushat Hayom Kavannah"
-            },
-            "kind": "kavannah",
-            "aliases": [],
-            "occurrences": [
-                {
-                    "book": "crc-machzor-2008",
-                    "unitId": "amidah.kdushat-hayom-kavannah@crc-rh-morning",
-                    "folios": [
-                        56
                     ]
                 }
             ]
@@ -5167,7 +5160,7 @@
         {
             "id": "untaneh-tokef",
             "display": {
-                "en": "Untaneh Tokef"
+                "en": "Un’taneh Tokef"
             },
             "kind": "prayer",
             "aliases": [],
@@ -5176,14 +5169,14 @@
                     "book": "crc-machzor-2008",
                     "unitId": "amidah.untaneh-tokef@crc-rh-morning",
                     "folios": [
-                        57
+                        56
                     ]
                 },
                 {
                     "book": "crc-machzor-2008",
                     "unitId": "amidah.untaneh-tokef@crc-yk-morning",
                     "folios": [
-                        148
+                        147
                     ]
                 },
                 {
@@ -5194,6 +5187,23 @@
                         75,
                         76,
                         77
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "untaneh-tokef-kavannah",
+            "display": {
+                "en": "Un’taneh Tokef Kavannah"
+            },
+            "kind": "kavannah",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.untaneh-tokef-kavannah@crc-rh-morning",
+                    "folios": [
+                        56
                     ]
                 }
             ]
