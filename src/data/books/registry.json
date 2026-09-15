@@ -31,8 +31,8 @@
         "slug": "shabbat-shacharit",
         "title": "Shirei Shabbat — Shabbat Morning",
         "tier": "feed",
-        "pages": 144,
-        "source": "shireishabbat dist/shabbat-shacharit-feed.json"
+        "pages": 146,
+        "source": "shireishabbat dist/shabbat-shacharit-feed.json @8ab7be6 (ALPHA DRAFT, not a printed volume; folios never published — Ruling 8, 2026-09-15). pages = last FOLIO number, measured as physical pages minus the build's constant folio offset: the 8ab7be6 screen PDF (dist/shirei-shabbat-shacharit.pdf) is 153 physical pages and every folio/phys pair in that feed carries offset 7, so 153-7 = 146. Was recorded 144 — that is 151-7, the figure belonging to the dist-app 7d2cbcc+dirty build, whose units differ from the snapshot here in 59 of 94 rows. Mixed provenance; the snapshot's own last unit (seasonal.shehecheyanu, folio 145) fell outside it. Re-record by hand when the volume is rebuilt at its pin."
     },
     {
         "slug": "shirei-tshuvah",

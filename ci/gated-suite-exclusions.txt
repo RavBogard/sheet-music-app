@@ -34,12 +34,17 @@
 # WHAT IS LEFT IS THE REAL DEBT. Both remaining files are red for a reason
 # that is NOT a bug in the test, and each leaves this list in its own wave:
 #
-#   registry.test.ts — TWO tests, `:175` (declared-count side) and `:119`
-#   (accept side, no literal, derived from the books' own data). Both catch
-#   the same class-2 defect: `seasonal.shehecheyanu@shabbat-shacharit` carries
-#   folio 145 against a declared `pages: 144`. Leaves when
-#   R-0904-live-cw-27's folio is answered from a PRINTED page — that value is
-#   machzor/corpus's, not a lane's.
+#   registry.test.ts — REMOVED 2026-09-15 (live-integration). The two tests
+#   caught a real class-2 defect: `seasonal.shehecheyanu@shabbat-shacharit`
+#   on folio 145 against a declared `pages: 144`. R-0904-live-cw-27 held the
+#   line open pending "a PRINTED page", but Ruling 8 (2026-09-15) settles that
+#   there is no printed page to wait for: `shabbat-shacharit` is an ALPHA
+#   DRAFT and its folios are never published. The number was answered from the
+#   build instead — the snapshot came from `dist/` @8ab7be6, whose screen PDF
+#   is 153 physical pages at a constant folio offset of 7, so the last folio is
+#   146, and 144 was the figure belonging to a DIFFERENT build (dist-app
+#   7d2cbcc+dirty, 59 of 94 unit rows apart). registry.json now records 146
+#   with that provenance, and the file is green in the gated run.
 #
 #   sync-engine-songs-mirror.test.ts — Scenario 1, left red under the
 #   GREEN-REPAIR order's own STOP clause: every Drive shortcut is dropped at
@@ -54,5 +59,4 @@
 # out-of-scope file and is deliberately NOT on this list (R-0904-live-cw-10 —
 # an order names its file in full; so does an exclusion).
 
-src/lib/books/__tests__/registry.test.ts
 src/lib/__tests__/sync-engine-songs-mirror.test.ts
