@@ -73,6 +73,7 @@ export const POST = createApiHandler(
             book,
             typeof track.title === "string" ? track.title : "",
             typeof track.type === "string" ? track.type : "song",
+            typeof setlist.templateType === "string" ? setlist.templateType : null,
         )
         if (!auto.ref) {
             return NextResponse.json({
@@ -83,7 +84,10 @@ export const POST = createApiHandler(
         }
 
         try {
-            await trackRef.update({ liturgyRef: auto.ref })
+            await trackRef.update({
+                liturgyRef: auto.ref,
+                ...(auto.momentId ? { momentId: auto.momentId } : {}),
+            })
         } catch (err) {
             // The row is saved and correct; only the page is missing. Say so
             // and let the batch sweep catch it rather than failing an edit.

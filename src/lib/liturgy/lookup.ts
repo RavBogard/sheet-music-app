@@ -4,10 +4,16 @@ import fixedMaariv from "@/data/templates/fixed-liturgy.shabbat-maariv.json"
 import fixedShacharit from "@/data/templates/fixed-liturgy.shabbat-shacharit.json"
 import pagemapFriday from "@/data/books/crc-friday.json"
 import pagemapSaturday from "@/data/books/crc-saturday.json"
+import pagemapMachzor from "@/data/books/crc-machzor-2008.json"
 import rowsFriday from "@/data/templates/template-rows.friday.json"
 import rowsSaturday from "@/data/templates/template-rows.saturday.json"
 import { foldLiturgyName } from "./fold"
 import { bindsToName, confirmedBindings } from "./confirmed"
+import {
+    bookServiceFor,
+    machzorServices,
+    SERVICE_SCOPED_BOOKS,
+} from "@/lib/books/machzor-services"
 
 /**
  * The liturgy LOOKUP TABLE — name to identity, per book.
@@ -75,6 +81,8 @@ interface PagemapEntry {
     name: string
     aliases: string[]
     page: number
+    service?: string
+    unitId?: string
 }
 
 const FIXED: Record<string, FixedFile> = {
@@ -88,6 +96,19 @@ const PAGEMAPS: Record<string, PagemapEntry[]> = {
     "crc-friday": (pagemapFriday as { entries: PagemapEntry[] }).entries,
     "crc-saturday": (pagemapSaturday as { entries: PagemapEntry[] }).entries,
 }
+
+/**
+ * The 2008 machzor, which has no confirmed-rows file and needs none.
+ *
+ * The Shabbat booklets got a sitting because Daniel had to rule which of HIS
+ * spellings meant which printed moment. The machzor arrives already decided:
+ * every entry came from a capture that carries both the printed page and the
+ * feed's own unit id, so identity and page are in the data and there is
+ * nothing for a ruling to settle. What there IS, uniquely, is six services in
+ * one volume — so this book's table is built per service, and a table is only
+ * ever asked for with a service in hand.
+ */
+const MACHZOR_ENTRIES = (pagemapMachzor as { entries: PagemapEntry[] }).entries
 
 /** The family files that carry Daniel's `settings` rulings, by book. */
 const SETTINGS_FILES = [rowsFriday, rowsSaturday] as unknown as Array<{
@@ -133,7 +154,33 @@ function addAlias(entry: LiturgyLookupEntry, alias: string | null | undefined) {
     entry.aliases.push(trimmed)
 }
 
-function buildTable(book: string): LiturgyLookupEntry[] {
+/** One service of a service-scoped pagemap, as a lookup table. */
+function buildServiceTable(book: string, service: string): LiturgyLookupEntry[] {
+    const entries: LiturgyLookupEntry[] = []
+    for (const pm of MACHZOR_ENTRIES) {
+        if (pm.service !== service) continue
+        const entry: LiturgyLookupEntry = {
+            book,
+            label: pm.name,
+            folio: pm.page,
+            aliases: [],
+            // `pagemap`, not `confirmed`: nobody ruled on these spellings. They
+            // are what the printed volume and its capture say, which for this
+            // book is the whole of the evidence there is.
+            source: "pagemap",
+        }
+        if (pm.unitId) entry.unitId = pm.unitId
+        addAlias(entry, pm.name)
+        for (const a of pm.aliases) addAlias(entry, a)
+        entries.push(entry)
+    }
+    return entries
+}
+
+function buildTable(book: string, service?: string | null): LiturgyLookupEntry[] {
+    if (SERVICE_SCOPED_BOOKS.has(book)) {
+        return service ? buildServiceTable(book, service) : []
+    }
     const file = FIXED[book]
     if (!file) return []
     const paired = file.pairedBook
@@ -330,21 +377,47 @@ function applyConfirmed(book: string, entries: LiturgyLookupEntry[]): void {
 
 /** Confirmed spellings that could not be placed. Built lazily with the tables. */
 export function confirmedBindingProblems(): ConfirmedBindingProblem[] {
-    for (const book of liturgyLookupBooks()) liturgyLookup(book)
+    for (const book of Object.keys(FIXED)) liturgyLookup(book)
     return PROBLEMS
 }
 
 const TABLES = new Map<string, LiturgyLookupEntry[]>()
 
-/** The lookup table for one book. Empty array for a book with no table. */
-export function liturgyLookup(book: string): LiturgyLookupEntry[] {
-    if (!TABLES.has(book)) TABLES.set(book, buildTable(book))
-    return TABLES.get(book) as LiturgyLookupEntry[]
+/**
+ * The lookup table for one book, narrowed to one service where the book prints
+ * several. Empty array for a book with no table.
+ *
+ * For `crc-machzor-2008` a service is REQUIRED and is never inferred from
+ * nothing: `bookServiceFor` supplies Rosh Hashanah morning when the caller
+ * knows no better, which is the same default the page lookup uses. Asking for
+ * this book with an unrecognised service returns an empty table rather than
+ * the wrong service's pages.
+ */
+export function liturgyLookup(
+    book: string,
+    service?: string | null,
+): LiturgyLookupEntry[] {
+    const scope = SERVICE_SCOPED_BOOKS.has(book)
+        ? (service ?? bookServiceFor(book, null))
+        : null
+    const key = scope ? `${book}|${scope}` : book
+    if (!TABLES.has(key)) TABLES.set(key, buildTable(book, scope))
+    return TABLES.get(key) as LiturgyLookupEntry[]
 }
 
 /** Books this table covers. */
 export function liturgyLookupBooks(): string[] {
-    return Object.keys(FIXED)
+    return [...Object.keys(FIXED), ...SERVICE_SCOPED_BOOKS]
+}
+
+/** Every (book, service) pair that has a table. */
+export function liturgyLookupScopes(): Array<{ book: string; service: string | null }> {
+    return [
+        ...Object.keys(FIXED).map((book) => ({ book, service: null })),
+        ...[...SERVICE_SCOPED_BOOKS].flatMap((book) =>
+            machzorServices().map((service) => ({ book, service })),
+        ),
+    ]
 }
 
 /**

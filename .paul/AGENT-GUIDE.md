@@ -141,8 +141,9 @@ This guide exists so the agent never recreates that failure shape.
 
 Every row can carry a `liturgyRef` — the printed page of that moment in the
 service's book. Ruling 8: the LEGACY CRC booklets (`crc-friday`,
-`crc-saturday`) govern pages until a Shirei volume for that service is
-released. Rows get their pages three ways, and you rarely have to do anything.
+`crc-saturday`, `crc-machzor-2008`) govern pages until a Shirei volume for that
+service is released. Rows get their pages three ways, and you rarely have to do
+anything.
 
 - **On type.** `add_track_to_setlist` and `update_track` match the title you
   wrote against the lookup and bind it themselves, reporting `liturgy.bound`.
@@ -164,6 +165,24 @@ Rosh Chodesh, Prayer for the State of Israel, Hatikvah — booklet-paged only,
 never one the setlist already names. It is the one tool that may add a row the
 author did not type, so it adds only what comes back in `accept`. Never rows
 are never offered; they exist so the system still knows what the name means.
+
+**The machzor is one book and six services.** `crc-machzor-2008` is the whole
+printed 2008 volume, pages 1–215, and it prints Erev Rosh Hashanah, RH morning,
+Kol Nidre, YK morning, Yizkor and Neilah back to back. Names repeat across them
+— Bar'chu is on 9, 45, 100 and 136 — so every lookup against this book narrows
+to ONE service first, taken from the setlist's `templateType`. You do not pass
+anything: the tools read it. A setlist with no recognisable service type gets
+Rosh Hashanah morning, which is what the book meant before the rest of it was
+mapped. Regenerate the pagemap with `node scripts/emit-machzor-book.mjs` when
+shireishabbat rebuilds its feeds; every page in it comes from a capture, so
+never hand-edit one.
+
+**`momentId` is the join key.** A bound row also gains `momentId` — the moment
+behind its unit id, which unlike the unit id is not book-local. It is what
+survives a change of book, and it is the only thing Overlays' cue log can be
+matched on for a machzor service, where `.live` says `crc-machzor-2008 p.100`
+and Overlays says `crc-kol-nidre folio 8` about the same Bar'chu. Nothing types
+it and nothing renders it.
 
 Two rules hold everywhere. **A page is never overwritten** — a row that
 already has one had it put there by an author. **A page is never guessed** —

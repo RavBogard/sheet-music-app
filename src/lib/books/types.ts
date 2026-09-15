@@ -42,6 +42,23 @@ export interface PageMapEntry {
     aliases: string[]
     /** Printed page number. */
     page: number
+    /**
+     * The service within the book this entry belongs to, for a volume that
+     * prints several (`crc-machzor-2008`). A name repeats across services at
+     * different pages — Bar'chu prints at 9, 45, 100 and 136 — so a lookup in
+     * such a book narrows to one service before it ranks anything. Absent in
+     * a single-service book, where the whole book is the scope.
+     */
+    service?: string
+    /**
+     * The AR-3 unit id of the feed unit this printed page was captured from.
+     *
+     * A pagemap has no units of its own, and this does not make it a feed: the
+     * PAGE still governs (Ruling 8, the legacy booklet governs page numbers).
+     * The id is identity — it is what turns a row into a `momentId`, which is
+     * the only thing the cue log can be matched on for a machzor service.
+     */
+    unitId?: string
 }
 
 export interface BookFile {

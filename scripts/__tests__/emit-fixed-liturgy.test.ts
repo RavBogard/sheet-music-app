@@ -29,9 +29,24 @@ describe("emit-fixed-liturgy — norm() parity with lookup.ts", () => {
             expect(book?.entries, `${slug} has entries`).toBeTruthy()
 
             for (const entry of book!.entries!) {
+                // A book that prints several services resolves within one of
+                // them (`crc-machzor-2008` — Bar'chu is on 9, 45, 100 and
+                // 136). Parity is a claim about the two matchers, not about
+                // the scope, so both are given the same one: the library by
+                // `service`, the script by a book narrowed to that service's
+                // entries. Comparing a scoped matcher against an unscoped one
+                // would only ever restate that the scope exists.
+                const scoped = entry.service
+                    ? {
+                          ...book!,
+                          entries: book!.entries!.filter(
+                              (e) => e.service === entry.service,
+                          ),
+                      }
+                    : book
                 for (const name of [entry.name, ...entry.aliases]) {
-                    const script = matchPagemap(book, name)
-                    const lib = lookupBookPage(slug, name)
+                    const script = matchPagemap(scoped, name)
+                    const lib = lookupBookPage(slug, name, { service: entry.service })
                     expect(lib.ok).toBe(true)
                     if (!lib.ok) continue
 

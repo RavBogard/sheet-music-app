@@ -1,4 +1,6 @@
+import { bookServiceFor } from "@/lib/books/machzor-services"
 import { validateLiturgyRef } from "@/lib/books/registry"
+import { momentIdForUnit } from "@/lib/books/moments"
 import type { LiturgyRef } from "@/lib/books/types"
 import { liturgyLookup } from "./lookup"
 import { matchLiturgyTitle } from "./match"
@@ -43,6 +45,12 @@ export interface LiturgySuggestion {
 export interface AutoBindResult {
     /** Safe to write. Absent unless the matcher was clear AND the page is real. */
     ref?: LiturgyRef
+    /**
+     * The moment the matched unit belongs to. Written beside `liturgyRef`, and
+     * absent whenever the moments artifact does not know the unit — a row with
+     * a page and no moment is a normal row, not a broken one.
+     */
+    momentId?: string
     /** Real candidates, none of them safe alone. Show, never write. */
     suggestions: LiturgySuggestion[]
 }
@@ -63,14 +71,15 @@ export function writableLiturgyRef(
     book: string,
     folio: number | null | undefined,
     unitId?: string | null,
+    service?: string | null,
 ): LiturgyRef | null {
     if (typeof folio !== "number") return null
     if (unitId) {
         const withId: LiturgyRef = { book, unitId, folio }
-        if (validateLiturgyRef(withId).ok) return withId
+        if (validateLiturgyRef(withId, { service }).ok) return withId
     }
     const pageOnly: LiturgyRef = { book, folio }
-    return validateLiturgyRef(pageOnly).ok ? pageOnly : null
+    return validateLiturgyRef(pageOnly, { service }).ok ? pageOnly : null
 }
 
 /**
@@ -84,13 +93,22 @@ export function autoBindLiturgyRef(
     book: string | null | undefined,
     title: string | null | undefined,
     type: string | null | undefined,
+    /**
+     * The setlist's `templateType`. For a book that prints several services it
+     * is what decides which service's pages a name may resolve to, and passing
+     * it is not optional in spirit: without it a Kol Nidre row would bind
+     * against Rosh Hashanah morning, which is a wrong page and not a missing
+     * one.
+     */
+    templateType?: string | null,
 ): AutoBindResult {
     if (!book || typeof book !== "string") return NOTHING
     if (!BINDABLE_ROW_TYPES.has(type ?? "song")) return NOTHING
     if (typeof title !== "string" || !title.trim()) return NOTHING
-    if (!liturgyLookup(book).length) return NOTHING
+    const service = bookServiceFor(book, templateType ?? null)
+    if (!liturgyLookup(book, service).length) return NOTHING
 
-    const m = matchLiturgyTitle(book, title)
+    const m = matchLiturgyTitle(book, title, service)
     const suggestions = m.plausible.map((p) => ({
         label: p.entry.label,
         folio: p.entry.folio ?? null,
@@ -104,9 +122,11 @@ export function autoBindLiturgyRef(
         book,
         m.clear.entry.folio,
         m.clear.entry.unitId,
+        service,
     )
+    const momentId = momentIdForUnit(m.clear.entry.unitId) ?? undefined
     // A clear match on a moment the book does not print is not a failure and
     // not a suggestion either — the row is correctly identified and correctly
     // page-less. Saying nothing is the truthful outcome.
-    return ref ? { ref, suggestions } : { suggestions }
+    return ref ? { ref, momentId, suggestions } : { suggestions }
 }

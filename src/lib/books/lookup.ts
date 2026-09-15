@@ -1,10 +1,13 @@
 import { getBook, getRegistryEntry } from "./registry"
 import { momentIdForUnit } from "./moments"
+import { bookServiceFor, SERVICE_SCOPED_BOOKS } from "./machzor-services"
 
 export interface BookMatch {
     name: string
     folio: number
     unitId?: string
+    /** The service inside the book this page belongs to, when the book has several. */
+    service?: string
     /**
      * The liturgical MOMENT this unit belongs to, when the moments artifact
      * knows it (feed-tier books only). Pass it through to a caller that may
@@ -43,7 +46,11 @@ const MAX_MATCHES = 8
  * Substring matches are 'medium' alone, 'low' when there are several — which
  * is the signal for the caller to stop and ask Daniel rather than guess a page.
  */
-export function lookupBookPage(book: string, query: string): LookupResult {
+export function lookupBookPage(
+    book: string,
+    query: string,
+    opts?: { service?: string | null; templateType?: string | null },
+): LookupResult {
     const entry = getRegistryEntry(book)
     if (!entry) {
         return {
@@ -61,6 +68,16 @@ export function lookupBookPage(book: string, query: string): LookupResult {
         }
     }
 
+    // A book that prints several services resolves within ONE of them. Without
+    // that narrowing, "Bar'chu" in `crc-machzor-2008` is four exact hits on
+    // four pages — which the ranking below correctly calls ambiguous, and
+    // which is why five of this volume's six services went unmapped for four
+    // days. `bookServiceFor` falls back to Rosh Hashanah morning, the answer
+    // this book gave for its whole life before the rest of it was mapped.
+    const scope = SERVICE_SCOPED_BOOKS.has(book)
+        ? (opts?.service ?? bookServiceFor(book, opts?.templateType ?? null))
+        : null
+
     const q = norm(query)
     if (!q) return { ok: true, matches: [], totalMatches: 0, truncated: false }
 
@@ -72,12 +89,16 @@ export function lookupBookPage(book: string, query: string): LookupResult {
         candidates: string[],
         folio: number,
         unitId?: string,
+        service?: string,
     ) => {
         const normed = candidates.map(norm)
+        const base: BookMatch = { name, folio, confidence: "high" }
+        if (unitId) base.unitId = unitId
+        if (service) base.service = service
         if (normed.some((c) => c === q)) {
-            exact.push({ name, folio, unitId, confidence: "high" })
+            exact.push(base)
         } else if (normed.some((c) => c.includes(q) || q.includes(c))) {
-            partial.push({ name, folio, unitId, confidence: "medium" })
+            partial.push({ ...base, confidence: "medium" })
         }
     }
 
@@ -85,14 +106,18 @@ export function lookupBookPage(book: string, query: string): LookupResult {
         for (const u of file.units ?? []) {
             consider(u.name, [u.name, u.id], u.folios[0], u.id)
         }
-        for (const m of [...exact, ...partial]) {
-            const momentId = momentIdForUnit(m.unitId)
-            if (momentId) m.momentId = momentId
-        }
     } else {
         for (const e of file.entries ?? []) {
-            consider(e.name, [e.name, ...e.aliases], e.page)
+            if (scope && e.service !== scope) continue
+            consider(e.name, [e.name, ...e.aliases], e.page, e.unitId, e.service)
         }
+    }
+    // A moment id is what survives a change of book, and a machzor row's only
+    // route to the cue log. It comes from the unit id whichever tier supplied
+    // that id, so this runs after both branches rather than inside one.
+    for (const m of [...exact, ...partial]) {
+        const momentId = momentIdForUnit(m.unitId)
+        if (momentId) m.momentId = momentId
     }
 
     if (exact.length > 1) {

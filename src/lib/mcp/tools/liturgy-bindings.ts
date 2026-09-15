@@ -6,6 +6,8 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { liturgyLookup } from "@/lib/liturgy/lookup"
+import { bookServiceFor } from "@/lib/books/machzor-services"
+import { momentIdForUnit } from "@/lib/books/moments"
 import { BINDABLE_ROW_TYPES, writableLiturgyRef } from "@/lib/liturgy/bind-on-type"
 import { matchLiturgyTitle, type LiturgyMatch } from "@/lib/liturgy/match"
 import { logger } from "@/lib/logger"
@@ -101,13 +103,17 @@ function bindingOf(m: LiturgyMatch, rowId: string, title: string): ProposedBindi
     }
 }
 
-async function rowsForSetlist(db: DB, id: string, org: OrgId): Promise<Row[] | null> {
+async function rowsForSetlist(
+    db: DB,
+    id: string,
+    org: OrgId,
+): Promise<{ rows: Row[]; templateType: string | null } | null> {
     const doc = await db.collection("setlists").doc(id).get()
     if (!doc.exists) return null
     const data = doc.data() as Record<string, unknown>
     if (rowOrg(data.orgId) !== org) return null
     const tracks = await getTracksForSetlist(db, id, data)
-    return tracks.map((t) => {
+    const rows = tracks.map((t) => {
         const row = t as Record<string, unknown>
         return {
             id: t.id,
@@ -116,6 +122,10 @@ async function rowsForSetlist(db: DB, id: string, org: OrgId): Promise<Row[] | n
             hasRef: !!row.liturgyRef && typeof row.liturgyRef === "object",
         }
     })
+    return {
+        rows,
+        templateType: typeof data.templateType === "string" ? data.templateType : null,
+    }
 }
 
 async function rowsForTemplate(db: DB, id: string, org: OrgId): Promise<Row[] | null> {
@@ -162,29 +172,41 @@ export async function proposeLiturgyBindings(
             "Pass a book slug from list_books — the pages come from that book.",
         )
     }
-    if (!liturgyLookup(book).length) {
-        return richError(
-            "no_lookup_for_book",
-            `No liturgy lookup table exists for '${book}'.`,
-            { book },
-            "Tables exist for crc-friday, crc-saturday, shabbat-maariv and shabbat-shacharit. A book with no table cannot be bound against; nothing is guessed.",
-        )
-    }
-
     initAdmin()
     const db = getFirestore()
     const editor = await assertEditor(db, uid)
     if (!editor.ok) return editor
 
-    const rows = setlistId
+    const loaded = setlistId
         ? await rowsForSetlist(db, setlistId, org)
-        : await rowsForTemplate(db, templateId as string, org)
-    if (!rows) {
+        : await rowsForTemplate(db, templateId as string, org).then((r) =>
+              r ? { rows: r, templateType: null } : null,
+          )
+    if (!loaded) {
         return richError(
             setlistId ? "setlist_not_found" : "template_not_found",
             `${setlistId ? "Setlist" : "Template"} '${setlistId ?? templateId}' was not found.`,
             { setlistId: setlistId ?? null, templateId: templateId ?? null },
             "Verify the id via list_setlists / list_templates.",
+        )
+    }
+    const { rows, templateType } = loaded
+
+    // A book that prints several services binds within ONE of them, decided by
+    // the setlist's own `templateType`. Without that the four Bar'chus of the
+    // 2008 machzor are one ambiguous name; with it each service's Bar'chu is
+    // the only one there is. A template has no service, so a service-scoped
+    // book cannot be bound from one — which is correct: the machzor templates
+    // do not exist.
+    const service = bookServiceFor(book, templateType)
+    if (!liturgyLookup(book, service).length) {
+        return richError(
+            "no_lookup_for_book",
+            service
+                ? `No liturgy lookup table exists for '${book}' service '${service}'.`
+                : `No liturgy lookup table exists for '${book}'.`,
+            { book, service, templateType },
+            "Tables exist for crc-friday, crc-saturday, shabbat-maariv, shabbat-shacharit, and crc-machzor-2008 per service. A book with no table cannot be bound against; nothing is guessed.",
         )
     }
 
@@ -218,7 +240,7 @@ export async function proposeLiturgyBindings(
             continue
         }
 
-        const m = matchLiturgyTitle(book, row.title)
+        const m = matchLiturgyTitle(book, row.title, service)
         if (m.clear) {
             bound.push(bindingOf(m.clear, row.id, row.title))
         } else if (m.plausible.length) {
@@ -268,11 +290,17 @@ export async function proposeLiturgyBindings(
 
     let written = 0
     for (const b of toWrite) {
-        const ref = writableLiturgyRef(book, b.folio, b.unitId)
+        const ref = writableLiturgyRef(book, b.folio, b.unitId, service)
         if (!ref) continue
+        // The moment travels with the page. It is what the cue log can be
+        // matched on, and for a machzor service it is the ONLY thing that can.
+        const momentId = momentIdForUnit(b.unitId)
         try {
             if (setlistId) {
-                await db.collection("tracks").doc(b.rowId).update({ liturgyRef: ref })
+                await db
+                    .collection("tracks")
+                    .doc(b.rowId)
+                    .update({ liturgyRef: ref, ...(momentId ? { momentId } : {}) })
             } else {
                 const docRef = db.collection("setlistTemplates").doc(templateId as string)
                 await db.runTransaction(async (tx) => {

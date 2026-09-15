@@ -683,6 +683,9 @@ export async function addTrackToSetlist(
               typeof loaded.data.book === "string" ? loaded.data.book : null,
               resolved.title,
               type,
+              typeof loaded.data.templateType === "string"
+                  ? loaded.data.templateType
+                  : null,
           )
 
     const { trackId, order } = await addTrack(db, {
@@ -693,6 +696,7 @@ export async function addTrackToSetlist(
         bpm: resolved.bpm,
         leadMusician: resolved.leadMusician,
         referenceLink: args.referenceLink,
+        ...(auto.momentId ? { momentId: auto.momentId } : {}),
         songId: args.songId,
         // The library catalog is keyed by Drive file id, so a song's id IS its
         // chart file id — bond it as the track's fileId so the chart renders.
@@ -814,9 +818,13 @@ export async function updateSetlistTrack(
                     : typeof existing.type === "string"
                       ? existing.type
                       : "song",
+                typeof loaded.data.templateType === "string"
+                    ? loaded.data.templateType
+                    : null,
             )
             if (auto.ref) {
                 patch.liturgyRef = auto.ref
+                if (auto.momentId) patch.momentId = auto.momentId
                 liturgy = { bound: auto.ref }
             } else if (auto.suggestions.length) {
                 liturgy = { suggestions: auto.suggestions }

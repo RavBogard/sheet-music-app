@@ -8,6 +8,8 @@ import { foldLiturgyName, liturgyLookup } from "@/lib/liturgy/lookup"
 import { matchLiturgyTitle } from "@/lib/liturgy/match"
 import { sometimesRowsFor, familyForServiceType } from "@/lib/templates/always-rows"
 import { writableLiturgyRef } from "@/lib/liturgy/bind-on-type"
+import { bookServiceFor } from "@/lib/books/machzor-services"
+import { momentIdForUnit } from "@/lib/books/moments"
 import type { LiturgyRef } from "@/lib/books/types"
 
 /**
@@ -102,7 +104,14 @@ export async function proposeServiceFrame(
             "Set the service's book with update_setlist, or pass `book`. Pages come from the book; without one there is nothing to offer.",
         )
     }
-    if (!liturgyLookup(book).length) {
+    const serviceType =
+        typeof loaded.data.serviceType === "string" ? loaded.data.serviceType : ""
+    const templateType =
+        typeof loaded.data.templateType === "string" ? loaded.data.templateType : null
+    // A service-scoped book resolves within one of its services; see
+    // `@/lib/books/machzor-services`.
+    const service = bookServiceFor(book, templateType)
+    if (!liturgyLookup(book, service).length) {
         return richError(
             "no_lookup_for_book",
             `No liturgy lookup table exists for '${book}'.`,
@@ -111,8 +120,6 @@ export async function proposeServiceFrame(
         )
     }
 
-    const serviceType =
-        typeof loaded.data.serviceType === "string" ? loaded.data.serviceType : ""
     const family = args.family?.trim() || familyForServiceType(serviceType)
     const sometimes = family ? sometimesRowsFor(family) : []
     if (!sometimes.length) {
@@ -125,7 +132,7 @@ export async function proposeServiceFrame(
     }
 
     const tracks = await getTracksForSetlist(db, setlistId, loaded.data)
-    const table = liturgyLookup(book)
+    const table = liturgyLookup(book, service)
 
     // Every spelling the setlist already uses, and where each printed row sits.
     const present = new Set<string>()
@@ -134,7 +141,7 @@ export async function proposeServiceFrame(
         const title = typeof t.title === "string" ? t.title : ""
         const row = t as unknown as Record<string, unknown>
         const ref = row.liturgyRef as { folio?: number } | undefined
-        const m = matchLiturgyTitle(book, title).clear
+        const m = matchLiturgyTitle(book, title, service).clear
         if (m) for (const a of m.entry.aliases) present.add(foldLiturgyName(a))
         else present.add(foldLiturgyName(title))
         rowFolio.push(typeof ref?.folio === "number" ? ref.folio : m?.entry.folio)
@@ -197,14 +204,16 @@ export async function proposeServiceFrame(
     // Late pages first, so each insert index stays valid as rows appear above.
     for (const c of [...candidates].sort((a, b) => b.folio - a.folio)) {
         if (!wanted.has(foldLiturgyName(c.label))) continue
-        const ref = writableLiturgyRef(book, c.folio, c.unitId)
+        const ref = writableLiturgyRef(book, c.folio, c.unitId, service)
         if (!ref) continue
+        const momentId = momentIdForUnit(c.unitId)
         const { trackId, order } = await addTrack(db, {
             setlistId,
             type: "prayer",
             title: c.label,
             position: c.position,
             liturgyRef: ref,
+            ...(momentId ? { momentId } : {}),
             fixed: true,
         })
         added.push({ label: c.label, trackId, order, liturgyRef: ref })

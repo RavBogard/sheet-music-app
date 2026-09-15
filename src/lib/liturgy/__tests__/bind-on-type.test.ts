@@ -40,7 +40,29 @@ describe("autoBindLiturgyRef", () => {
     it("binds nothing without a book, a title, or a lookup table", () => {
         expect(autoBindLiturgyRef(null, "Mi Chamocha", "song").ref).toBeUndefined()
         expect(autoBindLiturgyRef("crc-friday", "   ", "song").ref).toBeUndefined()
-        expect(autoBindLiturgyRef("crc-machzor-2008", "Mi Chamocha", "song").ref).toBeUndefined()
+        expect(autoBindLiturgyRef("shirei-tshuvah", "Mi Chamocha", "song").ref).toBeUndefined()
+    })
+
+    it("binds a machzor row against its own service, never another's", () => {
+        // Without the service the four Bar'chus of this one printed volume are
+        // one ambiguous name. `templateType` is what makes each service's
+        // Bar'chu the only one there is.
+        const kn = autoBindLiturgyRef("crc-machzor-2008", "Bar'chu", "prayer", "kol-nidre")
+        expect(kn.ref).toEqual({
+            book: "crc-machzor-2008",
+            unitId: "emaariv.barchu@crc-kol-nidre",
+            folio: 100,
+        })
+        expect(kn.momentId).toBe("barchu")
+
+        const alt = autoBindLiturgyRef("crc-machzor-2008", "Bar'chu", "prayer", "kol-nidre-alt")
+        expect(alt.ref?.folio).toBe(100)
+
+        const yk = autoBindLiturgyRef("crc-machzor-2008", "Bar'chu", "prayer", "yom-kippur-morning")
+        expect(yk.ref?.folio).toBe(136)
+
+        const neilah = autoBindLiturgyRef("crc-machzor-2008", "Bar'chu", "prayer", "neilah")
+        expect(neilah.ref).toBeUndefined()
     })
 
     it("reports candidates and writes nothing when the name is ambiguous", () => {

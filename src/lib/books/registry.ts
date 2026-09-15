@@ -5,6 +5,7 @@ import crcMachzor2008 from "@/data/books/crc-machzor-2008.json"
 import shabbatMaariv from "@/data/books/shabbat-maariv.json"
 import shabbatShacharit from "@/data/books/shabbat-shacharit.json"
 import shireiTshuvah from "@/data/books/shirei-tshuvah.json"
+import { bookServiceFor, SERVICE_SCOPED_BOOKS } from "./machzor-services"
 import type {
     BookFile,
     BookRegistryEntry,
@@ -57,36 +58,74 @@ export function getRegistryEntry(slug: string): BookRegistryEntry | undefined {
  * book file is absent or carries no page data at all (never tighten a range on
  * missing data — that would block real authoring).
  */
-const folioFloorCache = new Map<string, number>()
+const folioRangeCache = new Map<string, { floor: number; ceiling: number | null }>()
 
-export function bookFolioFloor(slug: string): number {
-    const cached = folioFloorCache.get(slug)
+/**
+ * The printed pages a book — or one service inside a book — actually reaches.
+ *
+ * `service` narrows it. `crc-machzor-2008` prints six services back to back,
+ * and Kol Nidre's pages are 93–127; accepting 38 there is accepting a Rosh
+ * Hashanah morning page on a Kol Nidre sheet. The whole-book range stays the
+ * answer when no service is named, because that is what an unscoped caller
+ * has always meant.
+ */
+function folioRange(slug: string, service?: string | null): { floor: number; ceiling: number | null } {
+    const key = service ? `${slug}|${service}` : slug
+    const cached = folioRangeCache.get(key)
     if (cached !== undefined) return cached
     const book = getBook(slug)
     let min = Infinity
+    let max = 0
     if (book?.entries) {
         for (const e of book.entries) {
-            if (Number.isInteger(e.page)) min = Math.min(min, e.page)
+            if (service && e.service !== service) continue
+            if (!Number.isInteger(e.page)) continue
+            min = Math.min(min, e.page)
+            max = Math.max(max, e.page)
         }
     }
     if (book?.units) {
         for (const u of book.units) {
             for (const f of u.folios) {
-                if (Number.isInteger(f)) min = Math.min(min, f)
+                if (!Number.isInteger(f)) continue
+                min = Math.min(min, f)
+                max = Math.max(max, f)
             }
         }
     }
-    const floor = Number.isFinite(min) && min >= 1 ? min : 1
-    folioFloorCache.set(slug, floor)
-    return floor
+    const range = {
+        floor: Number.isFinite(min) && min >= 1 ? min : 1,
+        // A service's LAST page is a real ceiling; a book's is not — a printed
+        // book continues past its last prayer, and the registry's `pages` is
+        // the authority there.
+        ceiling: service && max > 0 ? max : null,
+    }
+    folioRangeCache.set(key, range)
+    return range
+}
+
+export function bookFolioFloor(slug: string): number {
+    return folioRange(slug).floor
 }
 
 /**
  * Validate a liturgyRef against the registry before it is written to a track.
  * A wrong page number reaching the rabbi's sheet is the one failure mode this
  * feature cannot afford, so every write goes through here.
+ *
+ * `service` narrows a book that prints several (`crc-machzor-2008`). Every
+ * binding path knows the setlist's service and passes it, which makes the
+ * accepted range TIGHTER than it has ever been — a Kol Nidre row may carry
+ * 93–127 and nothing else. An unscoped call still gets the whole volume,
+ * because that is what it has always meant and there is no caller left to
+ * surprise; note that the whole volume now begins at page 1 rather than 38,
+ * which is simply true of the book and was only ever an artifact of five
+ * services being unmapped.
  */
-export function validateLiturgyRef(ref: LiturgyRef): LiturgyRefValidation {
+export function validateLiturgyRef(
+    ref: LiturgyRef,
+    opts?: { service?: string | null },
+): LiturgyRefValidation {
     const entry = getRegistryEntry(ref.book)
     if (!entry) {
         return {
@@ -95,11 +134,13 @@ export function validateLiturgyRef(ref: LiturgyRef): LiturgyRefValidation {
             message: `Unknown book '${ref.book}'. Known books: ${REGISTRY.map((b) => b.slug).join(", ")}.`,
         }
     }
-    const floor = bookFolioFloor(entry.slug)
+    const service = SERVICE_SCOPED_BOOKS.has(entry.slug) ? (opts?.service ?? null) : null
+    const range = folioRange(entry.slug, service)
+    const ceiling = range.ceiling ?? entry.pages
     if (
         !Number.isInteger(ref.folio) ||
-        ref.folio < floor ||
-        ref.folio > entry.pages
+        ref.folio < range.floor ||
+        ref.folio > ceiling
     ) {
         return {
             ok: false,
@@ -108,19 +149,41 @@ export function validateLiturgyRef(ref: LiturgyRef): LiturgyRefValidation {
             // used to read "(1–102)" for crc-saturday regardless of the book's
             // real first page, which coached the caller toward re-submitting a
             // Friday page number under the Saturday book.
-            message: `Page ${ref.folio} is outside '${entry.slug}' (${floor}–${entry.pages}).`,
+            message: service
+                ? `Page ${ref.folio} is outside '${entry.slug}' service '${service}' (${range.floor}–${ceiling}).`
+                : `Page ${ref.folio} is outside '${entry.slug}' (${range.floor}–${ceiling}).`,
         }
     }
     if (ref.unitId) {
         const book = getBook(ref.book)
-        const known = book?.units?.some((u) => u.id === ref.unitId)
+        // A pagemap has no `units`, but a service-scoped one captured the unit
+        // id each printed page came from, and that id is the row's only route
+        // to a `momentId`. Refusing it would have refused the identity while
+        // keeping the page — exactly backwards.
+        const known =
+            book?.units?.some((u) => u.id === ref.unitId) ||
+            book?.entries?.some(
+                (e) =>
+                    e.unitId === ref.unitId && (!service || e.service === service),
+            )
         if (!known) {
             return {
                 ok: false,
                 machineCode: "unknown_unit_id",
-                message: `Unit '${ref.unitId}' is not in book '${ref.book}'.`,
+                message: service
+                    ? `Unit '${ref.unitId}' is not in book '${ref.book}' service '${service}'.`
+                    : `Unit '${ref.unitId}' is not in book '${ref.book}'.`,
             }
         }
     }
     return { ok: true }
+}
+
+/** The service a book's pagemap would scope to for this setlist type. */
+export function serviceScopeFor(
+    book: string | null | undefined,
+    templateType: string | null | undefined,
+): string | null {
+    if (!book || !SERVICE_SCOPED_BOOKS.has(book)) return null
+    return bookServiceFor(book, templateType)
 }

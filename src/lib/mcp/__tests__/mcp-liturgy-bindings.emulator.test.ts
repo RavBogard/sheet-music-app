@@ -206,11 +206,26 @@ describe("MCP propose_liturgy_bindings (emulator)", () => {
     })
 
     it("refuses a book with no lookup table rather than guessing", async () => {
+        // `shirei-tshuvah` is a released feed volume with no confirmed-rows
+        // file and no pagemap — nothing to bind against. This used to name
+        // `crc-machzor-2008`, which now has a table per service (R4-c).
+        const res = await proposeLiturgyBindings(ADMIN, {
+            setlistId: SETLIST,
+            book: "shirei-tshuvah",
+        })
+        expect("error" in res && res.error?.machine_code).toBe("no_lookup_for_book")
+    })
+
+    it("binds a machzor setlist inside its own service", async () => {
+        // The fixture setlist carries no machzor `templateType`, so the book
+        // falls back to Rosh Hashanah morning — the answer it gave before the
+        // other five services were mapped. What matters is that it resolves at
+        // all, and within one service.
         const res = await proposeLiturgyBindings(ADMIN, {
             setlistId: SETLIST,
             book: "crc-machzor-2008",
         })
-        expect("error" in res && res.error?.machine_code).toBe("no_lookup_for_book")
+        expect("error" in res).toBe(false)
     })
 
     it("refuses both ids, or neither", async () => {

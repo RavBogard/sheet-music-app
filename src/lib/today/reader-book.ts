@@ -25,26 +25,10 @@
  * semantics changes: the page still comes from the legacy booklet.
  */
 
-/**
- * The printed 2008 machzor, split the way the reader shelves it. Keyed by the
- * setlist's `templateType` — which is the service, and the service is exactly
- * what picks the volume.
- */
-const MACHZOR_BY_SERVICE: Readonly<Record<string, string>> = Object.freeze({
-    "erev-rosh-hashanah": "crc-erev-rh",
-    "rosh-hashanah-evening": "crc-erev-rh",
-    "rosh_hashanah_evening": "crc-erev-rh",
-    "rosh-hashanah-morning": "crc-rh-morning",
-    "rosh_hashanah_morning": "crc-rh-morning",
-    "kol-nidre": "crc-kol-nidre",
-    "kol-nidre-alt": "crc-kol-nidre",
-    "yom_kippur_kol_nidre": "crc-kol-nidre",
-    "yom-kippur-morning": "crc-yk-morning",
-    "yom_kippur_morning": "crc-yk-morning",
-    "yizkor": "crc-yizkor",
-    "neilah": "crc-neilah",
-    "yom_kippur_afternoon": "crc-neilah",
-})
+import {
+    machzorServiceFor,
+    machzorServices,
+} from "@/lib/books/machzor-services"
 
 /** Books that map to one reader volume whatever the service is. */
 const BY_BOOK: Readonly<Record<string, string>> = Object.freeze({
@@ -65,13 +49,16 @@ export function readerBookFor(
     const direct = BY_BOOK[book]
     if (direct) return direct
     if (book !== "crc-machzor-2008") return null
-    if (!serviceType) return null
-    return MACHZOR_BY_SERVICE[serviceType] ?? null
+    // One table, shared with the page scoping (`@/lib/books/machzor-services`):
+    // the reader's per-service volumes and the pagemap's services are the same
+    // six divisions of the same printed book, so they cannot be allowed to
+    // drift apart.
+    return machzorServiceFor(serviceType)
 }
 
 /** Every reader volume this table can name. Exported for the tests' benefit. */
 export function readerBookTargets(): string[] {
     return [
-        ...new Set([...Object.values(BY_BOOK), ...Object.values(MACHZOR_BY_SERVICE)]),
+        ...new Set([...Object.values(BY_BOOK), ...machzorServices()]),
     ].sort()
 }
