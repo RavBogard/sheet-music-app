@@ -7,6 +7,12 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/errors"
 import { renderServiceSheetPdf, type ServiceSheetTrack } from "@/lib/pdf/service-sheet-pdf"
 import { getRegistryEntry } from "@/lib/books/registry"
 import { logger } from "@/lib/logger"
+import {
+    isPrintRowMode,
+    rowsForSection,
+    sectionsFor,
+    type PrintRowMode,
+} from "@/lib/print/row-mode"
 import { readLeaderRole, gigPacketBucket } from "./library-download"
 
 /**
@@ -114,6 +120,12 @@ function toHonors(v: unknown): ServiceSheetTrack["honors"] {
 
 export interface GenerateServiceSheetArgs {
     setlistId: string
+    /**
+     * Which rows to print. Default `full` — this is the rabbi's sheet, and a
+     * service sheet that dropped every unsung moment would be useless on the
+     * shtender. See `src/lib/print/row-mode.ts`.
+     */
+    rows?: PrintRowMode
 }
 
 export interface GenerateServiceSheetOk {
@@ -130,6 +142,9 @@ export interface GenerateServiceSheetOk {
     pageCount: number
     setlistName: string
     trackCount: number
+    /** Which rows were printed, and how many landed in each section. */
+    rows: PrintRowMode
+    sections: Array<{ section: "music" | "full"; trackCount: number }>
 }
 
 export async function generateServiceSheet(
@@ -179,26 +194,74 @@ export async function generateServiceSheet(
 
     const tracks = await getTracksForSetlist(db, args.setlistId, setlistData)
 
-    const bytes = await renderServiceSheetPdf({
-        setlistName,
-        eventDate,
-        rabbi,
-        book,
-        bookTitle,
-        tracks: tracks.map((t) => {
-            const row = t as unknown as Record<string, unknown>
-            return {
-                id: t.id,
-                title: toStringOrUndef(row.title),
-                type: toStringOrUndef(row.type),
-                performer: toStringOrUndef(row.performer),
-                leadMusician: toStringOrUndef(row.leadMusician),
-                description: toStringOrUndef(row.description),
-                liturgyRef: toLiturgyRef(row.liturgyRef),
-                honors: toHonors(row.honors),
-            } satisfies ServiceSheetTrack
-        }),
-    })
+    const mode: PrintRowMode = isPrintRowMode(args.rows) ? args.rows : "full"
+    const sections = sectionsFor(mode)
+    const LABELS: Record<"music" | "full", string> = {
+        full: "Order of service",
+        music: "Music only",
+    }
+
+    const toSheetTrack = (t: (typeof tracks)[number]): ServiceSheetTrack => {
+        const row = t as unknown as Record<string, unknown>
+        return {
+            id: t.id,
+            title: toStringOrUndef(row.title),
+            type: toStringOrUndef(row.type),
+            performer: toStringOrUndef(row.performer),
+            leadMusician: toStringOrUndef(row.leadMusician),
+            description: toStringOrUndef(row.description),
+            liturgyRef: toLiturgyRef(row.liturgyRef),
+            honors: toHonors(row.honors),
+        } satisfies ServiceSheetTrack
+    }
+
+    // The filter runs on the RAW rows, not the sheet rows: `fileId` decides
+    // whether a row is the band's and the sheet's own track type does not
+    // carry it (deliberately — the sheet draws no chart column).
+    const perSection = sections.map((section) => ({
+        section,
+        rows: rowsForSection(
+            tracks.map((t) => {
+                const row = t as unknown as Record<string, unknown>
+                return {
+                    track: t,
+                    type: toStringOrUndef(row.type) ?? null,
+                    fileId: toStringOrUndef(row.fileId) ?? null,
+                }
+            }),
+            section,
+        ),
+    }))
+
+    const rendered = await Promise.all(
+        perSection.map(({ section, rows }) =>
+            renderServiceSheetPdf({
+                setlistName,
+                eventDate,
+                rabbi,
+                book,
+                bookTitle,
+                sectionLabel: sections.length > 1 ? LABELS[section] : undefined,
+                tracks: rows.map((r) => toSheetTrack(r.track)),
+            }),
+        ),
+    )
+
+    // One document, whatever the mode. `both` is two sections of one sheet
+    // rather than two files: it is meant to be picked up off a printer in one
+    // handful, and a second attachment is a second thing to lose.
+    let bytes: Uint8Array
+    if (rendered.length === 1) {
+        bytes = rendered[0]
+    } else {
+        const merged = await PDFDocument.create()
+        for (const part of rendered) {
+            const src = await PDFDocument.load(part)
+            const pages = await merged.copyPages(src, src.getPageIndices())
+            for (const pg of pages) merged.addPage(pg)
+        }
+        bytes = await merged.save()
+    }
 
     const pageCount = (await PDFDocument.load(bytes)).getPageCount()
     const buffer = Buffer.from(bytes)
@@ -275,5 +338,10 @@ export async function generateServiceSheet(
         pageCount,
         setlistName,
         trackCount: tracks.length,
+        rows: mode,
+        sections: perSection.map((p) => ({
+            section: p.section,
+            trackCount: p.rows.length,
+        })),
     }
 }

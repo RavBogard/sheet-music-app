@@ -37,6 +37,13 @@ export interface ServiceSheetInput {
     rabbi?: string
     book?: string
     bookTitle?: string
+    /**
+     * Names this section when the document has more than one ("Order of
+     * service", "Music only"). Absent for a single-section sheet, which is
+     * every sheet that existed before `rows` — a lone section with a label
+     * saying so would be noise.
+     */
+    sectionLabel?: string
     tracks: ServiceSheetTrack[]
 }
 
@@ -122,7 +129,12 @@ export async function renderServiceSheetPdf(
     }
     y -= 4
 
-    const meta = [clean(input.eventDate), clean(input.rabbi), clean(input.bookTitle) || clean(input.book)]
+    const meta = [
+        clean(input.sectionLabel),
+        clean(input.eventDate),
+        clean(input.rabbi),
+        clean(input.bookTitle) || clean(input.book),
+    ]
         .filter(Boolean)
         .join("   ·   ")
     if (meta) {

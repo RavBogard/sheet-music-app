@@ -8,6 +8,9 @@ import { getTracksForSetlist } from "@/lib/server-tracks"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
 import { renderTextChartToPdf } from "@/lib/pdf/text-chart-pdf"
+import { renderServiceSheetPdf } from "@/lib/pdf/service-sheet-pdf"
+import { getRegistryEntry } from "@/lib/books/registry"
+import { isPrintRowMode, type PrintRowMode } from "@/lib/print/row-mode"
 
 /**
  * MCP chart-download tool — return one chart's bytes (base64) + mimeType so
@@ -238,6 +241,19 @@ export function _setGigPacketMaxBytesForTest(n: number | null): void {
 
 export interface GenerateGigPacketArgs {
     setlistId: string
+    /**
+     * Which rows the packet carries. Default `music` — this is the band's
+     * paper, and twenty spoken liturgy rows between charts is noise on a
+     * music stand.
+     *
+     * `full` and `both` both prepend the rabbi's order of service, every row
+     * with its page, ahead of the charts. They are the same document here and
+     * that is deliberate rather than an oversight: in a gig packet the charts
+     * ARE the music section, so a third form would differ from `full` only by
+     * repeating the running order twice. The response says which sections it
+     * actually produced.
+     */
+    rows?: PrintRowMode
 }
 
 export interface MissingChartEntry {
@@ -261,6 +277,9 @@ export interface GenerateGigPacketResult {
     storagePath: string
     sizeBytes: number
     pageCount: number
+    /** Which rows were asked for, and the sections actually produced. */
+    rows: PrintRowMode
+    sections: Array<"order" | "charts">
     /** Source setlist name (e.g. "5/15 -- Shir Shabbat"). */
     setlistTitle: string
     /** PDF document title — matches the embedded PDF /Title metadata. */
@@ -327,10 +346,60 @@ export async function generateGigPacket(
         )
     }
 
+    const mode: PrintRowMode = isPrintRowMode(args.rows) ? args.rows : "music"
+    const sections: Array<"order" | "charts"> = mode === "music"
+        ? ["charts"]
+        : ["order", "charts"]
+
     const packetTitle = `${setlistTitle} — Gig Packet`
     const mergedPdf = await PDFDocument.create()
     mergedPdf.setTitle(packetTitle)
     mergedPdf.setSubject("CRC Music Books gig packet")
+
+    // The order of service, ahead of the charts, when asked for. Rendered by
+    // the rabbi-sheet renderer so the two documents cannot drift apart: one
+    // layout, one place to fix it. A failure here costs the order pages and
+    // never the packet — the band's charts are the thing that must arrive.
+    if (sections.includes("order")) {
+        try {
+            const orderBytes = await renderServiceSheetPdf({
+                setlistName: setlistTitle,
+                bookTitle: typeof setlistData.book === "string"
+                    ? getRegistryEntry(setlistData.book)?.title
+                    : undefined,
+                book: typeof setlistData.book === "string" ? setlistData.book : undefined,
+                sectionLabel: "Order of service",
+                tracks: tracks.map((t) => {
+                    const row = t as unknown as Record<string, unknown>
+                    return {
+                        id: t.id,
+                        title: typeof row.title === "string" ? row.title : undefined,
+                        type: typeof row.type === "string" ? row.type : undefined,
+                        performer: typeof row.performer === "string" ? row.performer : undefined,
+                        leadMusician:
+                            typeof row.leadMusician === "string" ? row.leadMusician : undefined,
+                        liturgyRef:
+                            row.liturgyRef && typeof row.liturgyRef === "object"
+                                ? (row.liturgyRef as {
+                                      book: string
+                                      unitId?: string
+                                      folio: number
+                                  })
+                                : undefined,
+                    }
+                }),
+            })
+            const src = await PDFDocument.load(orderBytes)
+            const pages = await mergedPdf.copyPages(src, src.getPageIndices())
+            for (const pg of pages) mergedPdf.addPage(pg)
+        } catch (err) {
+            logger.warn("[mcp] gig packet order section failed — charts still sent", {
+                setlistId: args.setlistId,
+                err: err instanceof Error ? err.message : String(err),
+            })
+            sections.splice(sections.indexOf("order"), 1)
+        }
+    }
 
     const missingCharts: MissingChartEntry[] = []
     let appendedCount = 0
@@ -508,6 +577,8 @@ export async function generateGigPacket(
 
     return {
         ok: true,
+        rows: mode,
+        sections,
         downloadUrl,
         expiresAt: new Date(expiresAtMs).toISOString(),
         storagePath: path,

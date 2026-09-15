@@ -3537,13 +3537,19 @@ export function registerChartUploadTools(server: McpServer): void {
         "generate_gig_packet",
         {
             description:
-                "Assemble a setlist's bonded charts into one merged PDF the band can print — returns a 10-minute Firebase Storage signed download URL (`downloadUrl`, `expiresAt`, `sizeBytes`, `pageCount`, `storagePath`). Inline base64 was retired in cycle-1 F-012: a real Friday packet is 200KB+ which blew past the ~25KB MCP wire/token budget. Iterates tracks in performance order; each bonded row contributes its pages (PDF copied page-by-page; JPEG/PNG embedded as full-page images; scraped text/plain charts rendered as monospaced pages). Charts that can't be embedded (HEIC, MusicXML/MuseScore, missing bytes, unsupported types) appear on a 'Missing Charts' appendix page AND in the response's `missingCharts[]` so the caller knows what to follow up on. Hard 20 MB merged-PDF cap; if exceeded, the tool returns the standardized error envelope (`{ok:false, error:'packet_too_large', message, sizeBytes, maxBytes, hint}`) suggesting sections or individual download_chart calls. Use this when the user wants 'the packet for Friday', 'print the whole setlist', or 'send the band their music for the week'. The download URL expires fast — fetch it promptly or re-call to mint a fresh one.",
+                "Assemble a setlist's bonded charts into one merged PDF the band can print — returns a 10-minute Firebase Storage signed download URL (`downloadUrl`, `expiresAt`, `sizeBytes`, `pageCount`, `storagePath`). Inline base64 was retired in cycle-1 F-012: a real Friday packet is 200KB+ which blew past the ~25KB MCP wire/token budget. Iterates tracks in performance order; each bonded row contributes its pages (PDF copied page-by-page; JPEG/PNG embedded as full-page images; scraped text/plain charts rendered as monospaced pages). Charts that can't be embedded (HEIC, MusicXML/MuseScore, missing bytes, unsupported types) appear on a 'Missing Charts' appendix page AND in the response's `missingCharts[]` so the caller knows what to follow up on. Hard 20 MB merged-PDF cap; if exceeded, the tool returns the standardized error envelope (`{ok:false, error:'packet_too_large', message, sizeBytes, maxBytes, hint}`) suggesting sections or individual download_chart calls. Use this when the user wants 'the packet for Friday', 'print the whole setlist', or 'send the band their music for the week'. Pass `rows:'full'` to put the rabbi's order of service in front of the charts. The download URL expires fast — fetch it promptly or re-call to mint a fresh one.",
             inputSchema: {
                 setlistId: z
                     .string()
                     .min(1)
                     .describe(
                         "Setlist id (from list_setlists or create_setlist). Every bonded track on the setlist contributes to the packet, in performance order.",
+                    ),
+                rows: z
+                    .enum(["music", "full", "both"])
+                    .optional()
+                    .describe(
+                        "Which rows the packet carries. Default 'music' — charts only, which is what the band wants on a stand. 'full' and 'both' prepend the rabbi's order of service (every row with its printed page) ahead of the charts; they are the same document here, because in a gig packet the charts ARE the music section. The response echoes `rows` and lists the `sections` actually produced.",
                     ),
             },
         },
@@ -3555,13 +3561,19 @@ export function registerChartUploadTools(server: McpServer): void {
         "generate_service_sheet",
         {
             description:
-                "Render the RABBI's printed service sheet for a setlist — the order of the service, the printed page number in that day's siddur/machzor for each row (from liturgyRef), who leads/performs each moment, and named honors. This is the paper that goes on the shtender for the rabbi to read from; it deliberately omits charts, keys and BPM — use generate_gig_packet instead for the band's charts. Returns a 10-minute Firebase Storage signed download URL (`downloadUrl`, `expiresAt`, `sizeBytes`, `pageCount`, `storagePath`). Works for any setlist: rows with no page reference (no liturgyRef) simply print without a page number, and a setlist with no `book` set still produces a sheet. Use this when the rabbi or an assistant says 'make the service sheet', 'print the order of service', or 'give me the page numbers for Friday'. LATIN CHARACTERS ONLY: the sheet's font cannot print Hebrew, so any Hebrew in a row title, description or honoree name comes out as '?' — transliterate before authoring, and warn the rabbi if a row already carries Hebrew.",
+                "Render the RABBI's printed service sheet for a setlist — the order of the service, the printed page number in that day's siddur/machzor for each row (from liturgyRef), who leads/performs each moment, and named honors. This is the paper that goes on the shtender for the rabbi to read from; it deliberately omits charts, keys and BPM — use generate_gig_packet instead for the band's charts. Returns a 10-minute Firebase Storage signed download URL (`downloadUrl`, `expiresAt`, `sizeBytes`, `pageCount`, `storagePath`). Works for any setlist: rows with no page reference (no liturgyRef) simply print without a page number, and a setlist with no `book` set still produces a sheet. Use this when the rabbi or an assistant says 'make the service sheet', 'print the order of service', or 'give me the page numbers for Friday'. Pass `rows:'music'` for just the sung pieces, or `rows:'both'` for one pdf carrying the full order and then the music. LATIN CHARACTERS ONLY: the sheet's font cannot print Hebrew, so any Hebrew in a row title, description or honoree name comes out as '?' — transliterate before authoring, and warn the rabbi if a row already carries Hebrew.",
             inputSchema: {
                 setlistId: z
                     .string()
                     .min(1)
                     .describe(
                         "Setlist id (from list_setlists or create_setlist). Every row on the setlist appears on the sheet in performance order.",
+                    ),
+                rows: z
+                    .enum(["music", "full", "both"])
+                    .optional()
+                    .describe(
+                        "Which rows to print. Default 'full' — this is the rabbi's sheet and a service sheet missing every unsung moment is useless on the shtender. 'music' prints only rows with a chart or typed `song`. 'both' prints ONE pdf with two labelled sections, the full order then the music. No row is ever hidden from anyone; this is a choice about a printout.",
                     ),
             },
         },
