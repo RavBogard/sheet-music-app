@@ -168,6 +168,45 @@ function pairPage(curated, units) {
 const SPELLING_VARIANTS = [[/haftarah/gi, "Haftorah"]]
 
 /**
+ * UNIT IDS A RULING RETIRED.
+ *
+ * The identity guard below refuses when a unit the previous book knew about is
+ * absent from the new one, because that is how a curated page disappears
+ * silently. But a ruling can legitimately END an id: R5-a and R6-a each found
+ * two adjacent units in one capture wearing each other's names, and correcting
+ * that renames the unit rather than moving it. The id that was wrong stops
+ * existing.
+ *
+ * So the guard does not get loosened; it gets a list. A retirement is accepted
+ * only when it is written here WITH the ruling that made it and the id the unit
+ * became, and only when that successor is actually present in the new book. An
+ * unlisted disappearance is still a refusal, and a listed retirement whose
+ * successor never arrived is still a refusal — otherwise this list would be the
+ * loophole the guard exists to prevent.
+ *
+ * Unlike RULINGS, these lines do not die: the retirement is a permanent fact
+ * about the previous book's ids. They only need attention if a retired id comes
+ * BACK, which the script reports.
+ */
+const RETIRED_UNITS = [
+    {
+        // R5-a: the capture filed p.147's unit (Un'taneh Tokef) under the name
+        // printed on it, "K'dushat Hayom", and p.148's B'rosh Hashanah under
+        // "Un'taneh Tokef". shireishabbat 95a9836 corrected both.
+        unitId: "amidah.kdushat-hayom@crc-yk-morning",
+        became: "amidah.untaneh-tokef@crc-yk-morning",
+        ruling: "R5-a",
+    },
+    {
+        // R6-a: the identical misfiling one service earlier, at pp.56 / 57–58.
+        // shireishabbat 10d3a58 corrected it the same way.
+        unitId: "amidah.kdushat-hayom@crc-rh-morning",
+        became: "amidah.untaneh-tokef@crc-rh-morning",
+        ruling: "R6-a",
+    },
+]
+
+/**
  * DANIEL'S RULINGS, applied on top of the capture.
  *
  * This is the one place a page or a name does not come straight from the feed,
@@ -184,18 +223,13 @@ const SPELLING_VARIANTS = [[/haftarah/gi, "Haftorah"]]
  */
 const RULINGS = {
     /**
-     * R5-a — Un'taneh Tokef is p.147. The capture files p.148's unit under the
-     * name: 148 is B'rosh Hashanah, which the feed does not yet model as its
-     * own unit. Splitting it is shireishabbat's half of round 5; until then the
-     * page is the part .live can be right about, and David's typed 147 stands.
+     * Empty, and that is the intended end state. R5-a lived here for one round
+     * — Un'taneh Tokef p.147 against a capture that said 148 — and the capture
+     * now says 147 itself (shireishabbat 95a9836), so the override reported
+     * "matches the capture, delete it" and was deleted. See RETIRED_UNITS for
+     * the permanent half of that correction.
      */
-    page: [
-        {
-            unitId: "amidah.untaneh-tokef@crc-yk-morning",
-            page: 147,
-            ruling: "R5-a",
-        },
-    ],
+    page: [],
     /**
      * R5-d — the volume prints Shehecheyanu twice in Kol Nidre, at 97 and 99,
      * and the feed gives both units the same `shortName`. Daniel ruled the bare
@@ -208,6 +242,34 @@ const RULINGS = {
             name: "Shehecheyanu",
             unitId: "erev-yk.erev-maariv-shehecheyanu@crc-kol-nidre",
             ruling: "R5-d",
+        },
+        /**
+         * R6-a — `crc-rh-morning`'s curated names were verified against the
+         * printed pages, and the ruling moves the prayers between those pages:
+         * Un'taneh Tokef is p.56 (whose title bar prints "K'dushat Hayom", the
+         * misfiling that caused all of this) and B'rosh Hashanah is p.57. The
+         * feed already names both correctly; these two lines re-home the
+         * curated names and aliases that were pinned to the old arrangement, so
+         * the pair ends up shaped exactly like the same correction in
+         * `crc-yk-morning`, where the capture produced it unaided.
+         *
+         * Order matters and is deliberate: Un'taneh Tokef is claimed first, so
+         * p.57 sheds it and falls back to its own B'rosh Hashanah alias before
+         * the second line confirms that as its ruled name.
+         */
+        {
+            service: "crc-rh-morning",
+            name: "Un'taneh Tokef",
+            also: ["Unetaneh Tokef"],
+            unitId: "amidah.untaneh-tokef@crc-rh-morning",
+            ruling: "R6-a",
+        },
+        {
+            service: "crc-rh-morning",
+            name: "B'rosh Hashanah",
+            also: ["B'Rosh Hashanah", "B'Rosh Hashanah Yikateivun"],
+            unitId: "amidah.brosh-hashanah@crc-rh-morning",
+            ruling: "R6-a",
         },
     ],
 }
@@ -263,6 +325,7 @@ function main() {
     const orphaned = []
     const ruledApplied = []
     const ruledMoot = []
+    const retiredApplied = []
     let maxFolio = 0
 
     for (const { service, feed } of SERVICES) {
@@ -393,31 +456,55 @@ function main() {
             delete e.derived
         }
 
-        // A name Daniel ruled to one of two units that share it. The owner takes
-        // the bare name; whoever else is wearing it in this service falls back
-        // to its own full feed name, which the feed keeps unique. Without this
-        // the collision pass below would leave both — correctly, but the
-        // lookup then stops as ambiguous on a name that has an answer.
+        // A name Daniel ruled to one unit of a service. The owner takes the
+        // bare name; whoever else is wearing it falls back to its own next
+        // name, which the feed keeps unique. Without this the collision pass
+        // below would leave both — correctly, but the lookup then stops as
+        // ambiguous on a name that has an answer.
+        //
+        // `also` carries the name's VARIANTS with it. A curated entry's aliases
+        // were curated for the unit that sat on its page, and a ruling that
+        // renames units in place leaves them describing the wrong prayer:
+        // "Unetaneh Tokef" is not norm-equal to "Un'taneh Tokef", so nothing
+        // mechanical moves it, and it would go on pointing at the page the
+        // ruling just emptied. Which variant names which prayer is not a
+        // judgement a matcher should make, so it is recorded here as data with
+        // the ruling that settles it.
         for (const r of RULINGS.name.filter((r) => r.service === service)) {
             const owner = mine.find((e) => e.unitId === r.unitId)
             if (!owner) throw new Error(`${r.ruling}: no unit '${r.unitId}' in ${service}.`)
-            const k = norm(r.name)
+            const claimed = [r.name, ...(r.also ?? [])]
+            const claimedKeys = new Set(claimed.map(norm))
+            const isClaimed = (s) => claimedKeys.has(norm(s))
+
             for (const e of mine) {
-                if (e === owner || norm(e.name) !== k) continue
-                const fallback = e.aliases.find((a) => norm(a) !== k)
-                if (!fallback) {
+                if (e === owner) continue
+                if (!isClaimed(e.name) && !e.aliases.some(isClaimed)) continue
+                const kept = [e.name, ...e.aliases].filter((s) => !isClaimed(s))
+                if (!kept.length) {
                     throw new Error(
-                        `${r.ruling}: '${e.unitId}' has no other name to fall back to.`,
+                        `${r.ruling}: '${e.unitId}' has no name left once ` +
+                            `${claimed.map((c) => `'${c}'`).join(", ")} go to ${r.unitId}.`,
                     )
                 }
-                e.aliases = [e.name, ...e.aliases].filter((a) => a !== fallback && norm(a) !== k)
-                e.name = fallback
-                ruledApplied.push(`${r.ruling} ${service}: '${r.name}' -> p.${owner.page}`)
+                e.name = kept[0]
+                e.aliases = kept.slice(1)
+                ruledApplied.push(
+                    `${r.ruling} ${service}: '${r.name}' p.${e.page} -> p.${owner.page} ` +
+                        `(p.${e.page} is now '${e.name}')`,
+                )
             }
-            if (norm(owner.name) !== k) {
-                owner.aliases = [owner.name, ...owner.aliases].filter((a) => norm(a) !== k)
-                owner.name = r.name
-            }
+
+            const ownerKept = [r.name, owner.name, ...owner.aliases, ...(r.also ?? [])]
+            const seen = new Set()
+            const deduped = ownerKept.filter((s) => {
+                const k = norm(s)
+                if (seen.has(k)) return false
+                seen.add(k)
+                return true
+            })
+            owner.name = deduped[0]
+            owner.aliases = deduped.slice(1)
         }
 
         for (const [page, left] of extraByPage) {
@@ -442,12 +529,40 @@ function main() {
     // not move, so check identity: every unit the previous file knew about is
     // still in this one.
     const nowByUnit = new Set(entries.map((e) => e.unitId))
-    const lost = (prev.entries ?? [])
-        .filter((e) => e.unitId && !nowByUnit.has(e.unitId))
-        .map((e) => `${e.unitId} ('${e.name}' p.${e.page})`)
+    const lost = []
+    for (const e of prev.entries ?? []) {
+        if (!e.unitId || nowByUnit.has(e.unitId)) continue
+        const retired = RETIRED_UNITS.find((r) => r.unitId === e.unitId)
+        if (!retired) {
+            lost.push(`${e.unitId} ('${e.name}' p.${e.page})`)
+        } else if (!nowByUnit.has(retired.became)) {
+            // The retirement says this id became another one. If the successor
+            // is not here either, the unit really did vanish and the ruling is
+            // not cover for it.
+            lost.push(
+                `${e.unitId} ('${e.name}' p.${e.page}) — listed as retired by ${retired.ruling} ` +
+                    `into ${retired.became}, but that successor is absent too`,
+            )
+        } else {
+            retiredApplied.push(
+                `${retired.ruling} ${e.unitId} ('${e.name}' p.${e.page}) -> ${retired.became} ` +
+                    `(p.${entries.find((x) => x.unitId === retired.became)?.page})`,
+            )
+        }
+    }
     if (lost.length) {
         throw new Error(
             `${lost.length} units in the previous book are absent from this one: ${lost.join("; ")}.`,
+        )
+    }
+    // A retired id that came back means the capture reverted or the list is
+    // wrong about what happened. Either way somebody must look.
+    const resurrected = RETIRED_UNITS.filter((r) => nowByUnit.has(r.unitId))
+    if (resurrected.length) {
+        throw new Error(
+            `${resurrected.length} unit id(s) listed as retired are present in the new feeds: ` +
+                `${resurrected.map((r) => `${r.unitId} (${r.ruling})`).join("; ")}. ` +
+                `Either the capture reverted or the retirement is wrong — resolve by hand.`,
         )
     }
 
@@ -518,6 +633,10 @@ function main() {
         `aliases pruned ${prunedAliases}, entries ${entries.length} (was ${prev.entries.length}), pages ${recorded.pages}, ` +
             `maxFolio ${maxFolio}, drift ${before === next ? "none" : "DIFFERS"}`,
     )
+    if (retiredApplied.length) {
+        console.log(`\nRULED ID RETIREMENTS ACCEPTED (${retiredApplied.length}):`)
+        for (const r of retiredApplied) console.log("  " + r)
+    }
     if (ruledApplied.length) {
         console.log(`\nRULINGS APPLIED (${ruledApplied.length}):`)
         for (const r of ruledApplied) console.log("  " + r)

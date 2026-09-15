@@ -10,6 +10,7 @@ import {
     PLAUSIBLE_SCORE,
     matchLiturgyTitle,
 } from "../match"
+import machzor from "../../../data/books/crc-machzor-2008.json"
 
 /**
  * A-W3' — the liturgy lookup table and its matcher.
@@ -201,6 +202,56 @@ describe("matchLiturgyTitle — what it refuses", () => {
         const m = matchLiturgyTitle("crc-machzor-2008", "Un'taneh Tokef", "crc-yk-morning")
         expect(m.clear?.entry.folio).toBe(147)
         expect(m.clear?.entry.unitId).toBe("amidah.untaneh-tokef@crc-yk-morning")
+    })
+
+    it("puts Rosh Hashanah morning's Un'taneh Tokef on p.56, not 57 (R6-a)", () => {
+        // The identical misfiling one service earlier: p.56 prints the title
+        // bar "K'dushat Hayom" over U'nitaneh tokef, and p.57 prints B'rosh
+        // Hashanah under no title at all. The curated names were verified
+        // against the pages and so moved with them.
+        const m = matchLiturgyTitle("crc-machzor-2008", "Un'taneh Tokef", "crc-rh-morning")
+        expect(m.clear?.entry.folio).toBe(56)
+        expect(m.clear?.entry.unitId).toBe("amidah.untaneh-tokef@crc-rh-morning")
+
+        // The variant spelling has to follow it. Nothing mechanical moves this
+        // one — "unetaneh" does not fold to "untaneh" — so if the ruling's
+        // `also` list is ever dropped, it silently points at the empty page.
+        expect(
+            matchLiturgyTitle("crc-machzor-2008", "Unetaneh Tokef", "crc-rh-morning").clear?.entry
+                .folio,
+        ).toBe(56)
+
+        // And the title actually printed on 56 still finds 56.
+        expect(
+            matchLiturgyTitle("crc-machzor-2008", "K'dushat Hayom", "crc-rh-morning").clear?.entry
+                .folio,
+        ).toBe(56)
+    })
+
+    it("gives B'rosh Hashanah its own page in both services (R5-a, R6-a)", () => {
+        // It was never its own unit before; it was the second half of whatever
+        // Un'taneh Tokef was wearing. Both books now have it.
+        const rh = matchLiturgyTitle("crc-machzor-2008", "B'rosh Hashanah", "crc-rh-morning")
+        expect(rh.clear?.entry.folio).toBe(57)
+        expect(rh.clear?.entry.unitId).toBe("amidah.brosh-hashanah@crc-rh-morning")
+
+        const yk = matchLiturgyTitle("crc-machzor-2008", "B'rosh Hashanah", "crc-yk-morning")
+        expect(yk.clear?.entry.folio).toBe(148)
+        expect(yk.clear?.entry.unitId).toBe("amidah.brosh-hashanah@crc-yk-morning")
+    })
+
+    it("has retired K'dushat Hayom as a unit of its own in both services", () => {
+        // The retirement is the permanent half of R5-a and R6-a. The NAME must
+        // still resolve — it is printed on both pages — but no entry may carry
+        // the retired unit id, or a row bound to it would look bound and join
+        // to nothing.
+        const ids = machzor.entries.map((e) => e.unitId)
+        expect(ids).not.toContain("amidah.kdushat-hayom@crc-rh-morning")
+        expect(ids).not.toContain("amidah.kdushat-hayom@crc-yk-morning")
+        expect(
+            matchLiturgyTitle("crc-machzor-2008", "K'dushat Hayom", "crc-yk-morning").clear?.entry
+                .folio,
+        ).toBe(147)
     })
 
     it("resolves Kol Nidre's Shehecheyanu to the first of the two (R5-d)", () => {

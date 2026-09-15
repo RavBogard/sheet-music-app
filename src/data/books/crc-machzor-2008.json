@@ -464,15 +464,6 @@
             "unitId": "amidah.gvurot@crc-rh-morning"
         },
         {
-            "name": "K'dushat Hayom",
-            "aliases": [
-                "This Holy Day"
-            ],
-            "page": 56,
-            "service": "crc-rh-morning",
-            "unitId": "amidah.kdushat-hayom@crc-rh-morning"
-        },
-        {
             "name": "K'dushat Hayom Kavannah",
             "aliases": [
                 "Kavannah for K'dushat Hayom",
@@ -485,13 +476,22 @@
         {
             "name": "Un'taneh Tokef",
             "aliases": [
-                "Unetaneh Tokef",
-                "B'Rosh Hashanah",
+                "K'dushat Hayom",
+                "This Holy Day",
+                "Unetaneh Tokef"
+            ],
+            "page": 56,
+            "service": "crc-rh-morning",
+            "unitId": "amidah.untaneh-tokef@crc-rh-morning"
+        },
+        {
+            "name": "B'rosh Hashanah",
+            "aliases": [
                 "B'Rosh Hashanah Yikateivun"
             ],
             "page": 57,
             "service": "crc-rh-morning",
-            "unitId": "amidah.untaneh-tokef@crc-rh-morning"
+            "unitId": "amidah.brosh-hashanah@crc-rh-morning"
         },
         {
             "name": "K'dushah",
@@ -1277,18 +1277,20 @@
             "unitId": "amidah.gvurot@crc-yk-morning"
         },
         {
-            "name": "K'dushat Hayom",
-            "aliases": [],
-            "page": 147,
-            "service": "crc-yk-morning",
-            "unitId": "amidah.kdushat-hayom@crc-yk-morning"
-        },
-        {
             "name": "Untaneh Tokef",
-            "aliases": [],
+            "aliases": [
+                "K'dushat Hayom"
+            ],
             "page": 147,
             "service": "crc-yk-morning",
             "unitId": "amidah.untaneh-tokef@crc-yk-morning"
+        },
+        {
+            "name": "B’rosh Hashanah",
+            "aliases": [],
+            "page": 148,
+            "service": "crc-yk-morning",
+            "unitId": "amidah.brosh-hashanah@crc-yk-morning"
         },
         {
             "name": "K’dushah",
