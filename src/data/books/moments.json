@@ -1,15 +1,45 @@
 {
     "schemaVersion": 1,
-    "builtAt": "2026-09-15T12:46:31Z",
+    "builtAt": "2026-09-15T12:57:46Z",
     "sources": [
         {
+            "book": "crc-erev-rh",
+            "gitSha": "d86de56-LICENSED",
+            "pinValue": "HEAD"
+        },
+        {
+            "book": "crc-kol-nidre",
+            "gitSha": "d86de56-LICENSED",
+            "pinValue": "HEAD"
+        },
+        {
+            "book": "crc-yizkor",
+            "gitSha": "d86de56-LICENSED",
+            "pinValue": "HEAD"
+        },
+        {
+            "book": "crc-yk-morning",
+            "gitSha": "d86de56-LICENSED",
+            "pinValue": "HEAD"
+        },
+        {
+            "book": "crc-neilah",
+            "gitSha": "d86de56-LICENSED",
+            "pinValue": "HEAD"
+        },
+        {
+            "book": "crc-rh-morning",
+            "gitSha": "d86de56-LICENSED",
+            "pinValue": "HEAD"
+        },
+        {
             "book": "shabbat-maariv",
-            "gitSha": "8cc8d9a+dirty-LICENSED",
+            "gitSha": "d86de56-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "shabbat-shacharit",
-            "gitSha": "8cc8d9a+dirty-LICENSED",
+            "gitSha": "d86de56-LICENSED",
             "pinValue": "HEAD"
         },
         {
@@ -19,6 +49,23 @@
         }
     ],
     "moments": [
+        {
+            "id": "a-new-year",
+            "display": {
+                "en": "A New Year"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-rh.a-new-year@crc-erev-rh",
+                    "folios": [
+                        8
+                    ]
+                }
+            ]
+        },
         {
             "id": "adon-olam",
             "display": {
@@ -67,6 +114,20 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.ahavah-rabbah@crc-rh-morning",
+                    "folios": [
+                        47
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.ahavah-rabbah@crc-yk-morning",
+                    "folios": [
+                        138
+                    ]
+                },
+                {
                     "book": "shabbat-shacharit",
                     "unitId": "shma.ahavah-rabbah@shabbat-shacharit",
                     "folios": [
@@ -94,6 +155,20 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emaariv.ahavat-olam@crc-erev-rh",
+                    "folios": [
+                        11
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emaariv.ahavat-olam@crc-kol-nidre",
+                    "folios": [
+                        102
+                    ]
+                },
+                {
                     "book": "shabbat-maariv",
                     "unitId": "shma.ahavat-olam@shabbat-maariv",
                     "folios": [
@@ -105,6 +180,40 @@
                     "unitId": "emaariv.ahavat-olam@rh1-maariv",
                     "folios": [
                         5
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "al-cheit",
+            "display": {
+                "en": "Al Cheit"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.al-cheit@crc-kol-nidre",
+                    "folios": [
+                        116
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "al-cheit-al-cheit",
+            "display": {
+                "en": "Al Cheit Al Cheit"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "vidui.al-cheit-al-cheit@crc-yk-morning",
+                    "folios": [
+                        155
                     ]
                 }
             ]
@@ -122,6 +231,34 @@
                 "Aleynu"
             ],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.aleinu@crc-erev-rh",
+                    "folios": [
+                        29
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.aleinu@crc-kol-nidre",
+                    "folios": [
+                        121
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.aleinu@crc-neilah",
+                    "folios": [
+                        201
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.aleinu@crc-rh-morning",
+                    "folios": [
+                        86
+                    ]
+                },
                 {
                     "book": "shabbat-maariv",
                     "unitId": "concluding.aleinu@shabbat-maariv",
@@ -166,6 +303,30 @@
             ]
         },
         {
+            "id": "amidah-avinu-malkeinu",
+            "display": {
+                "en": "Amidah Avinu Malkeinu"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.amidah-avinu-malkeinu@crc-rh-morning",
+                    "folios": [
+                        64
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.amidah-avinu-malkeinu@crc-yk-morning",
+                    "folios": [
+                        160
+                    ]
+                }
+            ]
+        },
+        {
             "id": "ana-bkoach",
             "display": {
                 "en": "Ana B’koach"
@@ -179,6 +340,23 @@
                     "folios": [
                         14,
                         15
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "ashamnu",
+            "display": {
+                "en": "Ashamnu"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.ashamnu@crc-neilah",
+                    "folios": [
+                        198
                     ]
                 }
             ]
@@ -283,6 +461,20 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.avinu-malkeinu@crc-erev-rh",
+                    "folios": [
+                        27
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.avinu-malkeinu@crc-kol-nidre",
+                    "folios": [
+                        119
+                    ]
+                },
+                {
                     "book": "shirei-tshuvah",
                     "unitId": "amidah.avinu-malkeinu@rh-shacharit",
                     "folios": [
@@ -311,6 +503,34 @@
                 "Retzeh"
             ],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.avodah@crc-erev-rh",
+                    "folios": [
+                        22
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.avodah@crc-kol-nidre",
+                    "folios": [
+                        112
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.avodah@crc-rh-morning",
+                    "folios": [
+                        61
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.avodah@crc-yk-morning",
+                    "folios": [
+                        151
+                    ]
+                },
                 {
                     "book": "shabbat-maariv",
                     "unitId": "amidah.avodah@shabbat-maariv",
@@ -359,6 +579,34 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.avot-vimahot@crc-erev-rh",
+                    "folios": [
+                        18
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.avot-vimahot@crc-kol-nidre",
+                    "folios": [
+                        109
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.avot-vimahot@crc-rh-morning",
+                    "folios": [
+                        53
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.avot-vimahot@crc-yk-morning",
+                    "folios": [
+                        144
+                    ]
+                },
+                {
                     "book": "shabbat-maariv",
                     "unitId": "amidah.avot-vimahot@shabbat-maariv",
                     "folios": [
@@ -400,6 +648,74 @@
             ]
         },
         {
+            "id": "awakening-birchot-hashachar",
+            "display": {
+                "en": "Awakening Birchot Hashachar"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shacharit-yk.awakening-birchot-hashachar@crc-yk-morning",
+                    "folios": [
+                        132
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "awakening-esah-einai",
+            "display": {
+                "en": "Awakening Esah Einai"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shacharit-yk.awakening-esah-einai@crc-yk-morning",
+                    "folios": [
+                        132
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "awakening-mah-tovu",
+            "display": {
+                "en": "Awakening Mah Tovu"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shacharit-yk.awakening-mah-tovu@crc-yk-morning",
+                    "folios": [
+                        131
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "awakening-modeh-ani",
+            "display": {
+                "en": "Awakening Modeh Ani"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shacharit-yk.awakening-modeh-ani@crc-yk-morning",
+                    "folios": [
+                        129
+                    ]
+                }
+            ]
+        },
+        {
             "id": "az-yashir",
             "display": {
                 "en": "Az Yashir"
@@ -428,6 +744,34 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emaariv.barchu@crc-erev-rh",
+                    "folios": [
+                        9
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emaariv.barchu@crc-kol-nidre",
+                    "folios": [
+                        100
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.barchu@crc-rh-morning",
+                    "folios": [
+                        45
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.barchu@crc-yk-morning",
+                    "folios": [
+                        136
+                    ]
+                },
                 {
                     "book": "shabbat-maariv",
                     "unitId": "shma.barchu@shabbat-maariv",
@@ -494,6 +838,54 @@
             ]
         },
         {
+            "id": "bedtime-shma-fragment",
+            "display": {
+                "en": "Bedtime Shma Fragment"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.bedtime-shma-fragment@crc-kol-nidre",
+                    "folios": [
+                        127
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "benediction",
+            "display": {
+                "en": "Benediction"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.benediction@crc-erev-rh",
+                    "folios": [
+                        35
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "havdalah.benediction@crc-neilah",
+                    "folios": [
+                        209
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.benediction@crc-rh-morning",
+                    "folios": [
+                        90
+                    ]
+                }
+            ]
+        },
+        {
             "id": "birchot-hashachar",
             "display": {
                 "en": "Birchot Hashachar"
@@ -501,6 +893,13 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "awakening.birchot-hashachar@crc-rh-morning",
+                    "folios": [
+                        42
+                    ]
+                },
                 {
                     "book": "shabbat-shacharit",
                     "unitId": "awakening.birchot-hashachar@shabbat-shacharit",
@@ -610,6 +1009,23 @@
             ]
         },
         {
+            "id": "blessing-after",
+            "display": {
+                "en": "Blessing After"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "haftarah.blessing-after@crc-rh-morning",
+                    "folios": [
+                        79
+                    ]
+                }
+            ]
+        },
+        {
             "id": "blessing-after-the-hallel",
             "display": {
                 "en": "Blessing after the Hallel"
@@ -635,6 +1051,20 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.blessing-after-the-torah@crc-rh-morning",
+                    "folios": [
+                        72
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.blessing-after-the-torah@crc-yk-morning",
+                    "folios": [
+                        168
+                    ]
+                },
+                {
                     "book": "shabbat-shacharit",
                     "unitId": "torah.blessing-after-the-torah@shabbat-shacharit",
                     "folios": [
@@ -647,6 +1077,23 @@
                     "unitId": "torah.blessing-after-the-torah@rh-shacharit",
                     "folios": [
                         105
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "blessing-before",
+            "display": {
+                "en": "Blessing Before"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "haftarah.blessing-before@crc-rh-morning",
+                    "folios": [
+                        73
                     ]
                 }
             ]
@@ -700,6 +1147,20 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.blessing-before-the-torah@crc-rh-morning",
+                    "folios": [
+                        67
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.blessing-before-the-torah@crc-yk-morning",
+                    "folios": [
+                        163
+                    ]
+                },
                 {
                     "book": "shabbat-shacharit",
                     "unitId": "torah.blessing-before-the-torah@shabbat-shacharit",
@@ -762,6 +1223,23 @@
             ]
         },
         {
+            "id": "bsamim",
+            "display": {
+                "en": "Bsamim"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "havdalah.bsamim@crc-neilah",
+                    "folios": [
+                        206
+                    ]
+                }
+            ]
+        },
+        {
             "id": "called-to-the-torah",
             "display": {
                 "en": "Called to the Torah"
@@ -779,6 +1257,35 @@
             ]
         },
         {
+            "id": "candle-blessing",
+            "display": {
+                "en": "Candle Blessing"
+            },
+            "kind": "prayer",
+            "aliases": [
+                "Candle Lighting",
+                "Hadlakat Neirot",
+                "Hadlakat Nerot",
+                "L'hadlik Neir Shel Shabbat"
+            ],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-rh.candle-blessing@crc-erev-rh",
+                    "folios": [
+                        2
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-yk.candle-blessing@crc-kol-nidre",
+                    "folios": [
+                        96
+                    ]
+                }
+            ]
+        },
+        {
             "id": "chatzi-kaddish",
             "display": {
                 "en": "Chatzi Kaddish"
@@ -786,6 +1293,27 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.chatzi-kaddish@crc-kol-nidre",
+                    "folios": [
+                        108
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "psukei.chatzi-kaddish@crc-rh-morning",
+                    "folios": [
+                        44
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shacharit-yk.chatzi-kaddish@crc-yk-morning",
+                    "folios": [
+                        135
+                    ]
+                },
                 {
                     "book": "shabbat-maariv",
                     "unitId": "shma.chatzi-kaddish@shabbat-maariv",
@@ -824,6 +1352,91 @@
             ]
         },
         {
+            "id": "closing-blessing",
+            "display": {
+                "en": "Closing Blessing"
+            },
+            "kind": "prayer",
+            "aliases": [
+                "Birkat Kohanim",
+                "Priestly Blessing",
+                "Threefold Benediction",
+                "Y'varechecha",
+                "Yevarechecha"
+            ],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.closing-blessing@crc-erev-rh",
+                    "folios": [
+                        37
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.closing-blessing@crc-kol-nidre",
+                    "folios": [
+                        127
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "havdalah.closing-blessing@crc-neilah",
+                    "folios": [
+                        211
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.closing-blessing@crc-rh-morning",
+                    "folios": [
+                        92
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.closing-blessing@crc-yk-morning",
+                    "folios": [
+                        178
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "closing-ritual",
+            "display": {
+                "en": "Closing Ritual"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.closing-ritual@crc-neilah",
+                    "folios": [
+                        205
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "concluding-adon-olam",
+            "display": {
+                "en": "Concluding Adon Olam"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shacharit-yk.concluding-adon-olam@crc-yk-morning",
+                    "folios": [
+                        129
+                    ]
+                }
+            ]
+        },
+        {
             "id": "counting-the-omer",
             "display": {
                 "en": "Counting the Omer"
@@ -837,6 +1450,30 @@
                     "folios": [
                         62,
                         63
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "ecological-passages",
+            "display": {
+                "en": "Ecological Passages"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.ecological-passages@crc-erev-rh",
+                    "folios": [
+                        15
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.ecological-passages@crc-kol-nidre",
+                    "folios": [
+                        105
                     ]
                 }
             ]
@@ -917,6 +1554,23 @@
             ]
         },
         {
+            "id": "eish",
+            "display": {
+                "en": "Eish"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "havdalah.eish@crc-neilah",
+                    "folios": [
+                        207
+                    ]
+                }
+            ]
+        },
+        {
             "id": "eitz-chayim",
             "display": {
                 "en": "Eitz Chayim"
@@ -947,6 +1601,23 @@
             ]
         },
         {
+            "id": "el-malei-rachamim",
+            "display": {
+                "en": "El Malei Rachamim"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "yizkor.el-malei-rachamim@crc-yizkor",
+                    "folios": [
+                        184
+                    ]
+                }
+            ]
+        },
+        {
             "id": "el-na-rfa-na",
             "display": {
                 "en": "El Na R’fa Na"
@@ -959,6 +1630,23 @@
                     "unitId": "torah.el-na-rfa-na@shabbat-shacharit",
                     "folios": [
                         73
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "eliyahu-hanavi",
+            "display": {
+                "en": "Eliyahu Hanavi"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "havdalah.eliyahu-hanavi@crc-neilah",
+                    "folios": [
+                        208
                     ]
                 }
             ]
@@ -1035,6 +1723,47 @@
             ]
         },
         {
+            "id": "emaariv-hashkivenu",
+            "display": {
+                "en": "Emaariv Hashkivenu"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.emaariv-hashkivenu@crc-erev-rh",
+                    "folios": [
+                        17
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.emaariv-hashkivenu@crc-kol-nidre",
+                    "folios": [
+                        107
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "emamidah-chatzi-kaddish",
+            "display": {
+                "en": "Emamidah Chatzi Kaddish"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emaariv.emamidah-chatzi-kaddish@crc-erev-rh",
+                    "folios": [
+                        9
+                    ]
+                }
+            ]
+        },
+        {
             "id": "emet-vemunah",
             "display": {
                 "en": "Emet v’Emunah"
@@ -1086,6 +1815,105 @@
             ]
         },
         {
+            "id": "erev-maariv-shehecheyanu",
+            "display": {
+                "en": "Erev Maariv Shehecheyanu"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-rh.erev-maariv-shehecheyanu@crc-erev-rh",
+                    "folios": [
+                        2
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-yk.erev-maariv-shehecheyanu@crc-kol-nidre",
+                    "folios": [
+                        97
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "erev-maariv-shehecheyanu-2",
+            "display": {
+                "en": "Erev Maariv Shehecheyanu 2"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-yk.erev-maariv-shehecheyanu-2@crc-kol-nidre",
+                    "folios": [
+                        99
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "erev-rh-sermon",
+            "display": {
+                "en": "Erev Rh Sermon"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.erev-rh-sermon@crc-erev-rh",
+                    "folios": [
+                        29
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "erev-yk-sermon",
+            "display": {
+                "en": "Erev Yk Sermon"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.erev-yk-sermon@crc-kol-nidre",
+                    "folios": [
+                        120
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "esah-einai",
+            "display": {
+                "en": "Esah Einai"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-rh.esah-einai@crc-erev-rh",
+                    "folios": [
+                        7
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "yizkor.esah-einai@crc-yizkor",
+                    "folios": [
+                        180
+                    ]
+                }
+            ]
+        },
+        {
             "id": "festival-kiddush",
             "display": {
                 "en": "Festival Kiddush"
@@ -1094,12 +1922,36 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.festival-kiddush@crc-erev-rh",
+                    "folios": [
+                        34
+                    ]
+                },
+                {
                     "book": "shabbat-maariv",
                     "unitId": "seasonal.festival-kiddush@shabbat-maariv",
                     "folios": [
                         63,
                         64,
                         65
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "for-our-transgressions",
+            "display": {
+                "en": "For Our Transgressions"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-yk.for-our-transgressions@crc-kol-nidre",
+                    "folios": [
+                        97
                     ]
                 }
             ]
@@ -1133,6 +1985,23 @@
             ]
         },
         {
+            "id": "god-of-awesome-deeds",
+            "display": {
+                "en": "God Of Awesome Deeds"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.god-of-awesome-deeds@crc-neilah",
+                    "folios": [
+                        203
+                    ]
+                }
+            ]
+        },
+        {
             "id": "gvurot",
             "display": {
                 "en": "G’vurot"
@@ -1140,6 +2009,34 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.gvurot@crc-erev-rh",
+                    "folios": [
+                        20
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.gvurot@crc-kol-nidre",
+                    "folios": [
+                        111
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.gvurot@crc-rh-morning",
+                    "folios": [
+                        55
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.gvurot@crc-yk-morning",
+                    "folios": [
+                        146
+                    ]
+                },
                 {
                     "book": "shabbat-maariv",
                     "unitId": "amidah.gvurot@shabbat-maariv",
@@ -1174,6 +2071,40 @@
                     "unitId": "mincha.gvurot@rh1-mincha",
                     "folios": [
                         151
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "haftarah-blessing-after",
+            "display": {
+                "en": "Haftarah Blessing After"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.haftarah-blessing-after@crc-yk-morning",
+                    "folios": [
+                        173
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "haftarah-blessing-before",
+            "display": {
+                "en": "Haftarah Blessing Before"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.haftarah-blessing-before@crc-yk-morning",
+                    "folios": [
+                        170
                     ]
                 }
             ]
@@ -1214,6 +2145,44 @@
                         113,
                         114,
                         115
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "haftarah-reading-yk-morning",
+            "display": {
+                "en": "Haftarah Reading Yk Morning"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.haftarah-reading-yk-morning@crc-yk-morning",
+                    "folios": [
+                        171
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "hakafot",
+            "display": {
+                "en": "Hakafot"
+            },
+            "kind": "prayer",
+            "aliases": [
+                "Hakafah",
+                "Rejoicing with the Torah",
+                "Torah Procession"
+            ],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.hakafot@crc-rh-morning",
+                    "folios": [
+                        66
                     ]
                 }
             ]
@@ -1267,6 +2236,51 @@
                     "folios": [
                         12,
                         13
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "hatikvah",
+            "display": {
+                "en": "Hatikvah"
+            },
+            "kind": "prayer",
+            "aliases": [
+                "Ha-Tikvah",
+                "Hatikva",
+                "The Hope"
+            ],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.hatikvah@crc-rh-morning",
+                    "folios": [
+                        85
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.hatikvah@crc-yk-morning",
+                    "folios": [
+                        176
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "hayom",
+            "display": {
+                "en": "Hayom"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.hayom@crc-yk-morning",
+                    "folios": [
+                        177
                     ]
                 }
             ]
@@ -1338,6 +2352,27 @@
             ]
         },
         {
+            "id": "hineih-mah-tov",
+            "display": {
+                "en": "Hineih Mah Tov"
+            },
+            "kind": "prayer",
+            "aliases": [
+                "Hineh Ma Tov",
+                "Hineh Mah Tov",
+                "Hinei Ma Tov"
+            ],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "awakening.hineih-mah-tov@crc-rh-morning",
+                    "folios": [
+                        39
+                    ]
+                }
+            ]
+        },
+        {
             "id": "hineni",
             "display": {
                 "en": "Hineni"
@@ -1346,10 +2381,61 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-rh.hineni@crc-erev-rh",
+                    "folios": [
+                        3
+                    ]
+                },
+                {
                     "book": "shirei-tshuvah",
                     "unitId": "awakening.hineni@rh-shacharit",
                     "folios": [
                         41
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "hodaah",
+            "display": {
+                "en": "Hoda-ah"
+            },
+            "kind": "prayer",
+            "aliases": [
+                "Gratitude",
+                "Hoda-ah",
+                "Hodaah",
+                "Modim",
+                "Modim Anachnu Lach"
+            ],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.hodaah@crc-erev-rh",
+                    "folios": [
+                        23
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.hodaah@crc-kol-nidre",
+                    "folios": [
+                        112
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.hodaah@crc-rh-morning",
+                    "folios": [
+                        61
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.hodaah@crc-yk-morning",
+                    "folios": [
+                        151
                     ]
                 }
             ]
@@ -1492,6 +2578,20 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.kdushah@crc-rh-morning",
+                    "folios": [
+                        58
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.kdushah@crc-yk-morning",
+                    "folios": [
+                        149
+                    ]
+                },
+                {
                     "book": "shabbat-shacharit",
                     "unitId": "amidah.kdushah@shabbat-shacharit",
                     "folios": [
@@ -1514,6 +2614,23 @@
                     "folios": [
                         152,
                         153
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "kdushah-kavannah",
+            "display": {
+                "en": "Kedushah Kavannah"
+            },
+            "kind": "kavannah",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.kdushah-kavannah@crc-rh-morning",
+                    "folios": [
+                        58
                     ]
                 }
             ]
@@ -1550,6 +2667,20 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.kdushat-hayom@crc-rh-morning",
+                    "folios": [
+                        56
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.kdushat-hayom@crc-yk-morning",
+                    "folios": [
+                        147
+                    ]
+                },
                 {
                     "book": "shabbat-maariv",
                     "unitId": "amidah.kdushat-hayom@shabbat-maariv",
@@ -1599,6 +2730,23 @@
             ]
         },
         {
+            "id": "kdushat-hayom-kavannah",
+            "display": {
+                "en": "Kdushat Hayom Kavannah"
+            },
+            "kind": "kavannah",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.kdushat-hayom-kavannah@crc-rh-morning",
+                    "folios": [
+                        56
+                    ]
+                }
+            ]
+        },
+        {
             "id": "kiddush",
             "display": {
                 "en": "Kiddush"
@@ -1638,6 +2786,23 @@
                     "folios": [
                         107,
                         108
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "kol-nidre",
+            "display": {
+                "en": "Kol Nidre"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-yk.kol-nidre@crc-kol-nidre",
+                    "folios": [
+                        98
                     ]
                 }
             ]
@@ -1687,6 +2852,23 @@
             ]
         },
         {
+            "id": "lchah-dodi",
+            "display": {
+                "en": "Lchah Dodi"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shabbat.lchah-dodi@crc-neilah",
+                    "folios": [
+                        213
+                    ]
+                }
+            ]
+        },
+        {
             "id": "lighting-the-candles",
             "display": {
                 "en": "Lighting the Candles"
@@ -1704,6 +2886,23 @@
             ]
         },
         {
+            "id": "lshanah-tovah",
+            "display": {
+                "en": "Lshanah Tovah"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "havdalah.lshanah-tovah@crc-neilah",
+                    "folios": [
+                        212
+                    ]
+                }
+            ]
+        },
+        {
             "id": "maariv-aravim",
             "display": {
                 "en": "Ma’ariv Aravim"
@@ -1711,6 +2910,20 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emaariv.maariv-aravim@crc-erev-rh",
+                    "folios": [
+                        10
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emaariv.maariv-aravim@crc-kol-nidre",
+                    "folios": [
+                        100
+                    ]
+                },
                 {
                     "book": "shabbat-maariv",
                     "unitId": "shma.maariv-aravim@shabbat-maariv",
@@ -1737,6 +2950,13 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "awakening.mah-tovu@crc-rh-morning",
+                    "folios": [
+                        39
+                    ]
+                },
+                {
                     "book": "shabbat-shacharit",
                     "unitId": "awakening.mah-tovu@shabbat-shacharit",
                     "folios": [
@@ -1762,11 +2982,94 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shofar.malchuyot@crc-rh-morning",
+                    "folios": [
+                        81
+                    ]
+                },
+                {
                     "book": "shirei-tshuvah",
                     "unitId": "shofar.malchuyot@rh-shacharit",
                     "folios": [
                         121,
                         122
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "matzanu-mnuchah",
+            "display": {
+                "en": "Matzanu M'nuchah"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shacharit-yk.matzanu-mnuchah@crc-yk-morning",
+                    "folios": [
+                        134
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "may-the-door",
+            "display": {
+                "en": "May the Door"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-rh.may-the-door@crc-erev-rh",
+                    "folios": [
+                        1
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "may-the-memory",
+            "display": {
+                "en": "May the Memory"
+            },
+            "kind": "prayer",
+            "aliases": [
+                "May the Memory of Good People Bless Our Days",
+                "Zecher Tzadik Livracha",
+                "Zeicher Tzadik Livrachah"
+            ],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.may-the-memory@crc-erev-rh",
+                    "folios": [
+                        31
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.may-the-memory@crc-kol-nidre",
+                    "folios": [
+                        123
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.may-the-memory@crc-rh-morning",
+                    "folios": [
+                        87
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "yizkor.may-the-memory@crc-yizkor",
+                    "folios": [
+                        183
                     ]
                 }
             ]
@@ -1790,6 +3093,40 @@
             ]
         },
         {
+            "id": "memorial-reading-1",
+            "display": {
+                "en": "Memorial Reading 1"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "yizkor.memorial-reading-1@crc-yizkor",
+                    "folios": [
+                        180
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "memorial-reading-2",
+            "display": {
+                "en": "Memorial Reading 2"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "yizkor.memorial-reading-2@crc-yizkor",
+                    "folios": [
+                        182
+                    ]
+                }
+            ]
+        },
+        {
             "id": "mi-chamocha",
             "display": {
                 "en": "Mi Chamocha"
@@ -1797,6 +3134,34 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.mi-chamocha@crc-erev-rh",
+                    "folios": [
+                        16
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.mi-chamocha@crc-kol-nidre",
+                    "folios": [
+                        106
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.mi-chamocha@crc-rh-morning",
+                    "folios": [
+                        52
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.mi-chamocha@crc-yk-morning",
+                    "folios": [
+                        143
+                    ]
+                },
                 {
                     "book": "shabbat-maariv",
                     "unitId": "shma.mi-chamocha@shabbat-maariv",
@@ -1844,6 +3209,20 @@
             ],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.mi-shebeirach-healing@crc-rh-morning",
+                    "folios": [
+                        72
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.mi-shebeirach-healing@crc-yk-morning",
+                    "folios": [
+                        169
+                    ]
+                },
+                {
                     "book": "shabbat-maariv",
                     "unitId": "concluding.mi-shebeirach-healing@shabbat-maariv",
                     "folios": [
@@ -1864,6 +3243,23 @@
                     "folios": [
                         105,
                         106
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "miryam-hanviah",
+            "display": {
+                "en": "Miryam Hanviah"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "havdalah.miryam-hanviah@crc-neilah",
+                    "folios": [
+                        208
                     ]
                 }
             ]
@@ -1898,6 +3294,13 @@
                 "Modeh Ani"
             ],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "awakening.modeh-ani@crc-rh-morning",
+                    "folios": [
+                        39
+                    ]
+                },
                 {
                     "book": "shabbat-shacharit",
                     "unitId": "awakening.modeh-ani@shabbat-shacharit",
@@ -1971,6 +3374,34 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.mourners-kaddish@crc-erev-rh",
+                    "folios": [
+                        32
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.mourners-kaddish@crc-kol-nidre",
+                    "folios": [
+                        124
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.mourners-kaddish@crc-rh-morning",
+                    "folios": [
+                        88
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "yizkor.mourners-kaddish@crc-yizkor",
+                    "folios": [
+                        185
+                    ]
+                },
+                {
                     "book": "shabbat-maariv",
                     "unitId": "concluding.mourners-kaddish@shabbat-maariv",
                     "folios": [
@@ -2013,6 +3444,176 @@
             ]
         },
         {
+            "id": "neila-ashrei",
+            "display": {
+                "en": "Neila Ashrei"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.neila-ashrei@crc-neilah",
+                    "folios": [
+                        187
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "neila-avinu-malkeinu",
+            "display": {
+                "en": "Neila Avinu Malkeinu"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.neila-avinu-malkeinu@crc-neilah",
+                    "folios": [
+                        195
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "neila-avot-vimahot",
+            "display": {
+                "en": "Neila Avot Vimahot"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.neila-avot-vimahot@crc-neilah",
+                    "folios": [
+                        189
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "neila-chatzi-kaddish",
+            "display": {
+                "en": "Neila Chatzi Kaddish"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.neila-chatzi-kaddish@crc-neilah",
+                    "folios": [
+                        188
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "neila-gvurot",
+            "display": {
+                "en": "Neila Gvurot"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.neila-gvurot@crc-neilah",
+                    "folios": [
+                        191
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "neila-kdushah",
+            "display": {
+                "en": "Neila Kdushah"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.neila-kdushah@crc-neilah",
+                    "folios": [
+                        192
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "neila-sim-shalom",
+            "display": {
+                "en": "Neila Sim Shalom"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.neila-sim-shalom@crc-neilah",
+                    "folios": [
+                        194
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "niggun",
+            "display": {
+                "en": "Niggun"
+            },
+            "kind": "prayer",
+            "aliases": [
+                "Nigun",
+                "Opening Niggun"
+            ],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-rh.niggun@crc-erev-rh",
+                    "folios": [
+                        3
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-yk.niggun@crc-kol-nidre",
+                    "folios": [
+                        95
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.niggun@crc-kol-nidre",
+                    "folios": [
+                        126
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "night-descends",
+            "display": {
+                "en": "Night Descends"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.night-descends@crc-neilah",
+                    "folios": [
+                        200
+                    ]
+                }
+            ]
+        },
+        {
             "id": "nishmat-kol-chai",
             "display": {
                 "en": "Nishmat Kol Chai"
@@ -2040,6 +3641,40 @@
             ]
         },
         {
+            "id": "opening-prayer",
+            "display": {
+                "en": "Opening Prayer"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-yk.opening-prayer@crc-kol-nidre",
+                    "folios": [
+                        94
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "opening-psalms",
+            "display": {
+                "en": "Opening Psalms"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "psukei.opening-psalms@crc-rh-morning",
+                    "folios": [
+                        43
+                    ]
+                }
+            ]
+        },
+        {
             "id": "parting",
             "display": {
                 "en": "Havdalah"
@@ -2053,6 +3688,75 @@
                     "folios": [
                         173,
                         174,
+                        175
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "pitchu-li",
+            "display": {
+                "en": "Pitchu Li"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.pitchu-li@crc-neilah",
+                    "folios": [
+                        199
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "prayer-for-shalom",
+            "display": {
+                "en": "Prayer for Shalom"
+            },
+            "kind": "prayer",
+            "aliases": [
+                "Adon Hashalom",
+                "Prayer for Peace",
+                "Sim Shalom Bein Amcha Yisraeil"
+            ],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.prayer-for-shalom@crc-rh-morning",
+                    "folios": [
+                        83
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.prayer-for-shalom@crc-yk-morning",
+                    "folios": [
+                        174
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "prayer-for-state-of-israel",
+            "display": {
+                "en": "Prayer For State Of Israel"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.prayer-for-state-of-israel@crc-rh-morning",
+                    "folios": [
+                        84
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.prayer-for-state-of-israel@crc-yk-morning",
+                    "folios": [
                         175
                     ]
                 }
@@ -2324,6 +4028,23 @@
             ]
         },
         {
+            "id": "psalm-23",
+            "display": {
+                "en": "Psalm 23"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "yizkor.psalm-23@crc-yizkor",
+                    "folios": [
+                        181
+                    ]
+                }
+            ]
+        },
+        {
             "id": "psalm-27",
             "display": {
                 "en": "Psalm 27"
@@ -2587,6 +4308,40 @@
             ]
         },
         {
+            "id": "reading-1",
+            "display": {
+                "en": "Reading 1"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "haftarah.reading-1@crc-rh-morning",
+                    "folios": [
+                        74
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "reading-2",
+            "display": {
+                "en": "Reading 2"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "haftarah.reading-2@crc-rh-morning",
+                    "folios": [
+                        77
+                    ]
+                }
+            ]
+        },
+        {
             "id": "remember-us-for-life",
             "display": {
                 "en": "Remember Us for Life"
@@ -2615,6 +4370,40 @@
             ]
         },
         {
+            "id": "remembrance",
+            "display": {
+                "en": "Remembrance"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "yizkor.remembrance@crc-yizkor",
+                    "folios": [
+                        184
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "rh-morning-sanctuary-needs",
+            "display": {
+                "en": "Rh Morning Sanctuary Needs"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "awakening.rh-morning-sanctuary-needs@crc-rh-morning",
+                    "folios": [
+                        41
+                    ]
+                }
+            ]
+        },
+        {
             "id": "rise-and-come",
             "display": {
                 "en": "Rise and Come"
@@ -2638,6 +4427,74 @@
                         135,
                         136,
                         137
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "sacred-assembly",
+            "display": {
+                "en": "Sacred Assembly"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-rh.sacred-assembly@crc-erev-rh",
+                    "folios": [
+                        7
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "selichot-thirteen-qualities",
+            "display": {
+                "en": "Selichot Thirteen Qualities"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "vidui.selichot-thirteen-qualities@crc-yk-morning",
+                    "folios": [
+                        159
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "separation",
+            "display": {
+                "en": "Separation"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "havdalah.separation@crc-neilah",
+                    "folios": [
+                        207
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "service",
+            "display": {
+                "en": "Service"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shofar.service@crc-rh-morning",
+                    "folios": [
+                        80
                     ]
                 }
             ]
@@ -2673,6 +4530,20 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.shalom-rav@crc-erev-rh",
+                    "folios": [
+                        24
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.shalom-rav@crc-kol-nidre",
+                    "folios": [
+                        113
+                    ]
+                },
+                {
                     "book": "shabbat-maariv",
                     "unitId": "amidah.shalom-rav@shabbat-maariv",
                     "folios": [
@@ -2685,6 +4556,37 @@
                     "unitId": "emamidah.shalom-rav@rh1-maariv",
                     "folios": [
                         26
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shanah-tovah",
+            "display": {
+                "en": "Shanah Tovah"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "econcluding.shanah-tovah@crc-erev-rh",
+                    "folios": [
+                        36
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "havdalah.shanah-tovah@crc-neilah",
+                    "folios": [
+                        210
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.shanah-tovah@crc-rh-morning",
+                    "folios": [
+                        91
                     ]
                 }
             ]
@@ -2728,6 +4630,23 @@
             ]
         },
         {
+            "id": "shma-koleinu",
+            "display": {
+                "en": "Sh'ma Koleinu"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.shma-koleinu@crc-kol-nidre",
+                    "folios": [
+                        118
+                    ]
+                }
+            ]
+        },
+        {
             "id": "shma-procession-call",
             "display": {
                 "en": "Shma Procession Call"
@@ -2735,6 +4654,20 @@
             "kind": "call",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.shma-procession-call@crc-rh-morning",
+                    "folios": [
+                        66
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.shma-procession-call@crc-yk-morning",
+                    "folios": [
+                        162
+                    ]
+                },
                 {
                     "book": "shabbat-shacharit",
                     "unitId": "torah.shma-procession-call@shabbat-shacharit",
@@ -2786,11 +4719,42 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shofar.shofarot@crc-rh-morning",
+                    "folios": [
+                        82
+                    ]
+                },
+                {
                     "book": "shirei-tshuvah",
                     "unitId": "shofar.shofarot@rh-shacharit",
                     "folios": [
                         129,
                         130
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "silent-meditation",
+            "display": {
+                "en": "Silent Meditation"
+            },
+            "kind": "meditation",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.silent-meditation@crc-erev-rh",
+                    "folios": [
+                        26
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "vidui.silent-meditation@crc-yk-morning",
+                    "folios": [
+                        154
                     ]
                 }
             ]
@@ -2803,6 +4767,20 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.sim-shalom@crc-rh-morning",
+                    "folios": [
+                        62
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.sim-shalom@crc-yk-morning",
+                    "folios": [
+                        152
+                    ]
+                },
                 {
                     "book": "shabbat-shacharit",
                     "unitId": "amidah.sim-shalom@shabbat-shacharit",
@@ -2861,6 +4839,82 @@
             ]
         },
         {
+            "id": "tallit",
+            "display": {
+                "en": "Tallit"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-yk.tallit@crc-kol-nidre",
+                    "folios": [
+                        93
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "rh-morning.tallit@crc-rh-morning",
+                    "folios": [
+                        38
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "yizkor.tallit@crc-yizkor",
+                    "folios": [
+                        179
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shacharit-yk.tallit@crc-yk-morning",
+                    "folios": [
+                        128
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "tfilah-opener",
+            "display": {
+                "en": "Tfilah Opener"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.tfilah-opener@crc-erev-rh",
+                    "folios": [
+                        18
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.tfilah-opener@crc-kol-nidre",
+                    "folios": [
+                        108
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.tfilah-opener@crc-rh-morning",
+                    "folios": [
+                        53
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.tfilah-opener@crc-yk-morning",
+                    "folios": [
+                        144
+                    ]
+                }
+            ]
+        },
+        {
             "id": "the-shma",
             "display": {
                 "en": "The Sh’ma"
@@ -2868,6 +4922,34 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.the-shma@crc-erev-rh",
+                    "folios": [
+                        12
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.the-shma@crc-kol-nidre",
+                    "folios": [
+                        103
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.the-shma@crc-rh-morning",
+                    "folios": [
+                        49
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.the-shma@crc-yk-morning",
+                    "folios": [
+                        140
+                    ]
+                },
                 {
                     "book": "shabbat-maariv",
                     "unitId": "shma.the-shma@shabbat-maariv",
@@ -2954,6 +5036,30 @@
             ]
         },
         {
+            "id": "torah-eitz-chayim",
+            "display": {
+                "en": "Torah Eitz Chayim"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.torah-eitz-chayim@crc-rh-morning",
+                    "folios": [
+                        85
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "concluding.torah-eitz-chayim@crc-yk-morning",
+                    "folios": [
+                        176
+                    ]
+                }
+            ]
+        },
+        {
             "id": "torah-reading-day-1",
             "display": {
                 "en": "Torah Reading Day 1"
@@ -2961,6 +5067,13 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.torah-reading-day-1@crc-rh-morning",
+                    "folios": [
+                        67
+                    ]
+                },
                 {
                     "book": "shirei-tshuvah",
                     "unitId": "torah.torah-reading-day-1@rh1",
@@ -2982,6 +5095,13 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.torah-reading-day-2@crc-rh-morning",
+                    "folios": [
+                        70
+                    ]
+                },
+                {
                     "book": "shirei-tshuvah",
                     "unitId": "torah.torah-reading-day-2@rh2",
                     "folios": [
@@ -2994,6 +5114,57 @@
             ]
         },
         {
+            "id": "torah-reading-yk-day1",
+            "display": {
+                "en": "Torah Reading Yk Day1"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.torah-reading-yk-day1@crc-yk-morning",
+                    "folios": [
+                        163
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "torah-reading-yk-day2",
+            "display": {
+                "en": "Torah Reading Yk Day2"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.torah-reading-yk-day2@crc-yk-morning",
+                    "folios": [
+                        165
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "tshuvah-reading",
+            "display": {
+                "en": "Tshuvah Reading"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shacharit-yk.tshuvah-reading@crc-yk-morning",
+                    "folios": [
+                        134
+                    ]
+                }
+            ]
+        },
+        {
             "id": "untaneh-tokef",
             "display": {
                 "en": "Untaneh Tokef"
@@ -3001,6 +5172,20 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.untaneh-tokef@crc-rh-morning",
+                    "folios": [
+                        57
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.untaneh-tokef@crc-yk-morning",
+                    "folios": [
+                        148
+                    ]
+                },
                 {
                     "book": "shirei-tshuvah",
                     "unitId": "amidah.untaneh-tokef@rh-shacharit",
@@ -3076,6 +5261,34 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.vahavta@crc-erev-rh",
+                    "folios": [
+                        14
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.vahavta@crc-kol-nidre",
+                    "folios": [
+                        104
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.vahavta@crc-rh-morning",
+                    "folios": [
+                        50
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.vahavta@crc-yk-morning",
+                    "folios": [
+                        141
+                    ]
+                },
+                {
                     "book": "shirei-tshuvah",
                     "unitId": "shma.vahavta@rh-shacharit",
                     "folios": [
@@ -3095,6 +5308,20 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.vahavta-tzitzit@crc-rh-morning",
+                    "folios": [
+                        51
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.vahavta-tzitzit@crc-yk-morning",
+                    "folios": [
+                        142
+                    ]
+                },
                 {
                     "book": "shabbat-maariv",
                     "unitId": "shma.vahavta-tzitzit@shabbat-maariv",
@@ -3208,6 +5435,20 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.vayhi-binsoa@crc-rh-morning",
+                    "folios": [
+                        64
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "torah.vayhi-binsoa@crc-yk-morning",
+                    "folios": [
+                        160
+                    ]
+                },
+                {
                     "book": "shabbat-shacharit",
                     "unitId": "torah.vayhi-binsoa@shabbat-shacharit",
                     "folios": [
@@ -3226,6 +5467,37 @@
             ]
         },
         {
+            "id": "vidui",
+            "display": {
+                "en": "Vidui"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.vidui@crc-kol-nidre",
+                    "folios": [
+                        115
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "neilah.vidui@crc-neilah",
+                    "folios": [
+                        197
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "vidui.vidui@crc-yk-morning",
+                    "folios": [
+                        153
+                    ]
+                }
+            ]
+        },
+        {
             "id": "vshamru",
             "display": {
                 "en": "V’shamru"
@@ -3233,6 +5505,13 @@
             "kind": "prayer",
             "aliases": [],
             "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shabbat.vshamru@crc-neilah",
+                    "folios": [
+                        215
+                    ]
+                },
                 {
                     "book": "shabbat-maariv",
                     "unitId": "shma.vshamru@shabbat-maariv",
@@ -3292,6 +5571,40 @@
             ]
         },
         {
+            "id": "we-remember-them",
+            "display": {
+                "en": "We Remember Them"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "yizkor.we-remember-them@crc-yizkor",
+                    "folios": [
+                        183
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "yahrzeit-candles",
+            "display": {
+                "en": "Yahrzeit Candles"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "erev-yk.yahrzeit-candles@crc-kol-nidre",
+                    "folios": [
+                        96
+                    ]
+                }
+            ]
+        },
+        {
             "id": "yaknehaz",
             "display": {
                 "en": "Yaknehaz"
@@ -3304,6 +5617,23 @@
                     "unitId": "addendum.yaknehaz@rh-shabbat",
                     "folios": [
                         182
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "yayin",
+            "display": {
+                "en": "Yayin"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "havdalah.yayin@crc-neilah",
+                    "folios": [
+                        206
                     ]
                 }
             ]
@@ -3396,6 +5726,44 @@
             ]
         },
         {
+            "id": "yihyu-lratzon-oseh-shalom",
+            "display": {
+                "en": "Yihyu Lratzon Oseh Shalom"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.yihyu-lratzon-oseh-shalom@crc-erev-rh",
+                    "folios": [
+                        26
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.yihyu-lratzon-oseh-shalom@crc-kol-nidre",
+                    "folios": [
+                        114
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.yihyu-lratzon-oseh-shalom@crc-rh-morning",
+                    "folios": [
+                        63
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "vidui.yihyu-lratzon-oseh-shalom@crc-yk-morning",
+                    "folios": [
+                        155
+                    ]
+                }
+            ]
+        },
+        {
             "id": "yishtabach",
             "display": {
                 "en": "Yishtabach"
@@ -3437,6 +5805,20 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.yotzer-or@crc-rh-morning",
+                    "folios": [
+                        45
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shma.yotzer-or@crc-yk-morning",
+                    "folios": [
+                        136
+                    ]
+                },
+                {
                     "book": "shabbat-shacharit",
                     "unitId": "shma.yotzer-or@shabbat-shacharit",
                     "folios": [
@@ -3469,11 +5851,42 @@
             "aliases": [],
             "occurrences": [
                 {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shofar.zichronot@crc-rh-morning",
+                    "folios": [
+                        81
+                    ]
+                },
+                {
                     "book": "shirei-tshuvah",
                     "unitId": "shofar.zichronot@rh-shacharit",
                     "folios": [
                         125,
                         126
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "zochreinu",
+            "display": {
+                "en": "Zochreinu"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "emamidah.zochreinu@crc-erev-rh",
+                    "folios": [
+                        21
+                    ]
+                },
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "amidah.zochreinu@crc-rh-morning",
+                    "folios": [
+                        60
                     ]
                 }
             ]

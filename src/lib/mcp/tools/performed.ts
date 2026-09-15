@@ -92,6 +92,7 @@ async function loadPlan(
             type: typeof d.data.type === "string" ? d.data.type : "song",
             liturgyRef:
                 (d.data.liturgyRef as PlannedRow["liturgyRef"] | undefined) ?? null,
+            momentId: typeof d.data.momentId === "string" ? d.data.momentId : null,
         })),
         order: docs.map((d) => d.id),
     }

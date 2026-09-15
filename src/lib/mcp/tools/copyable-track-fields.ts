@@ -42,6 +42,11 @@ export const COPYABLE_TRACK_FIELDS = [
     "description",
     "estimatedMinutes",
     "liturgyRef",
+    // The moment travels with the row. A clone that kept the page and dropped
+    // the moment would keep the thing that is book-specific and lose the thing
+    // that is not — which is precisely backwards for a clone, whose whole
+    // purpose is to survive into a different service.
+    "momentId",
     "fixed",
 ] as const
 

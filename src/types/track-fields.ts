@@ -43,6 +43,7 @@ export const TRACK_FIELDS = [
     "pageNumber",
     "unmatched",
     "liturgyRef",
+    "momentId",
     "fixed",
     "honors",
 ] as const

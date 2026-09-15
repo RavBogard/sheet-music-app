@@ -171,7 +171,7 @@ function bareSha(v) {
  * Pure — no filesystem, so `scripts/__tests__/sync-books-moments.test.ts` can
  * drive every branch from fixtures.
  */
-export function trimMoments(artifact, volumes, knownBooks) {
+export function trimMoments(artifact, volumes, knownBooks, remap = (o) => o) {
     if (artifact.schemaVersion !== EXPECTED_SCHEMA_VERSION) {
         throw new Error(
             `moments.json schemaVersion ${artifact.schemaVersion} != expected ${EXPECTED_SCHEMA_VERSION}.`,
@@ -203,8 +203,13 @@ export function trimMoments(artifact, volumes, knownBooks) {
     let occurrenceCount = 0
     for (const m of artifact.moments ?? []) {
         const occurrences = []
-        for (const o of m.occurrences ?? []) {
+        const seen = new Set()
+        for (const raw of m.occurrences ?? []) {
+            const o = remap(raw)
+            if (!o) continue
             if (!knownBooks.has(o.book)) continue
+            if (seen.has(`${o.book}|${o.unitId}`)) continue
+            seen.add(`${o.book}|${o.unitId}`)
             const folios = (o.folios ?? []).filter((f) => Number.isInteger(f))
             occurrences.push({ book: o.book, unitId: o.unitId, folios })
         }
@@ -230,11 +235,51 @@ export function trimMoments(artifact, volumes, knownBooks) {
             schemaVersion: artifact.schemaVersion,
             builtAt: artifact.builtAt ?? null,
             sources: sources
-                .filter((x) => knownBooks.has(x.book))
+                .filter((x) => knownBooks.has(x.book) || MACHZOR_VOLUMES.has(x.book))
                 .map((x) => ({ book: x.book, gitSha: x.gitSha, pinValue: x.pinValue ?? null })),
             moments,
         },
         occurrenceCount,
+    }
+}
+
+/**
+ * The six per-service feeds that ARE the one printed 2008 machzor.
+ *
+ * shireishabbat models them as six volumes because a davener davens from one
+ * service; `.live` registers the printed object, which is one book. Neither is
+ * wrong (R2-e), and the mapping between them is what lets a machzor row reach
+ * a moment id at all — without it every occurrence in these six is dropped as
+ * "a book this repo does not carry", and a Kol Nidre row has no identity the
+ * cue log could ever be matched on.
+ */
+const MACHZOR_VOLUMES = new Set([
+    "crc-erev-rh",
+    "crc-rh-morning",
+    "crc-kol-nidre",
+    "crc-yk-morning",
+    "crc-yizkor",
+    "crc-neilah",
+])
+const MACHZOR_BOOK = "crc-machzor-2008"
+
+/**
+ * Fold a machzor volume's occurrence into the printed book.
+ *
+ * THE FOLIO IS REPLACED, NOT KEPT. The feed's `folios` are that service
+ * booklet's own numbering — Kol Nidre's Bar'chu is folio 8 there and page 100
+ * in the printed volume. Carrying the booklet number under the printed book's
+ * slug would be a wrong page wearing a right name, so the page comes from
+ * `crc-machzor-2008.json`, which took it from the same capture's
+ * `printedFolio`. A unit the pagemap does not know is dropped rather than
+ * guessed.
+ */
+function machzorRemapper(printedPageByUnitId) {
+    return (o) => {
+        if (!MACHZOR_VOLUMES.has(o.book)) return o
+        const page = printedPageByUnitId.get(o.unitId)
+        if (!Number.isInteger(page)) return null
+        return { book: MACHZOR_BOOK, unitId: o.unitId, folios: [page] }
     }
 }
 
@@ -254,10 +299,18 @@ function syncMoments(dist, dirName, check) {
     const knownBooks = new Set(
         JSON.parse(readFileSync(REGISTRY, "utf8")).map((r) => r.slug),
     )
+    const machzorPath = join(OUT_DIR, `${MACHZOR_BOOK}.json`)
+    const printedPageByUnitId = new Map()
+    if (existsSync(machzorPath)) {
+        for (const e of JSON.parse(readFileSync(machzorPath, "utf8")).entries ?? []) {
+            if (e.unitId && Number.isInteger(e.page)) printedPageByUnitId.set(e.unitId, e.page)
+        }
+    }
     const { trimmed, occurrenceCount } = trimMoments(
         JSON.parse(readFileSync(path, "utf8")),
         VOLUMES,
         knownBooks,
+        machzorRemapper(printedPageByUnitId),
     )
     const next = JSON.stringify(trimmed, null, 4) + "\n"
     const prev = existsSync(MOMENTS_OUT) ? readFileSync(MOMENTS_OUT, "utf8") : null

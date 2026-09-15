@@ -35,6 +35,8 @@ const PROJECTIONS: Projection[] = [
             "fixed", // Perform mode collapses fixed-liturgy rows into a divider
         ],
         intentionallyDropped: {
+            momentId:
+                "A JOIN KEY, not a rendered field: it is what the cue log and a change of book are matched on. Nothing on this surface reads it, and the page it implies is already carried by liturgyRef.",
             id: "Internal Firestore document id; QueueItem addresses tracks by array position and fileId, not the source doc id.",
             orgId: "Tenant-scope identifier for Firestore rules; irrelevant to the client-side performance queue.",
             fileName:
@@ -77,6 +79,8 @@ const PROJECTIONS: Projection[] = [
             "honors", // carried on PrintTrack; the cover table draws no honors cell (the rabbi's service sheet owns that lens)
         ],
         intentionallyDropped: {
+            momentId:
+                "A JOIN KEY, not a rendered field: it is what the cue log and a change of book are matched on. Nothing on this surface reads it, and the page it implies is already carried by liturgyRef.",
             id: "Internal Firestore document id; the print pipeline addresses tracks by fileId, not the source doc id.",
             orgId: "Tenant-scope identifier for Firestore rules; irrelevant to PDF rendering.",
             audioFileId: "Print pipeline renders paper charts only; it has no notion of the linked audio file.",
@@ -129,6 +133,8 @@ const PROJECTIONS: Projection[] = [
             "honors",
         ],
         intentionallyDropped: {
+            momentId:
+                "A JOIN KEY, not a rendered field: it is what the cue log and a change of book are matched on. Nothing on this surface reads it, and the page it implies is already carried by liturgyRef.",
             id: "Internal Firestore document id; the wire payload addresses tracks by array position and the pipeline by fileId.",
             orgId: "Tenant scope lives at the top of the request (PrintRequest.org, resolved once per job from the host header), never per track.",
             audioFileId: "Print renders paper charts only; the linked audio file has no printed representation.",
@@ -169,6 +175,8 @@ const PROJECTIONS: Projection[] = [
             "honors",
         ],
         intentionallyDropped: {
+            momentId:
+                "A JOIN KEY, not a rendered field: it is what the cue log and a change of book are matched on. Nothing on this surface reads it, and the page it implies is already carried by liturgyRef.",
             id: "Read, but only as the lookup key into trackTranspositions / trackIncludedIds; PrintTrackPayload has no id field so it is not sent.",
             orgId: "Tenant scope is resolved server-side from the x-org-id header by POST /api/setlist/print; a client-sent value is overwritten.",
             audioFileId: "Print renders paper charts only; the linked audio file has no printed representation.",
@@ -204,6 +212,8 @@ const PROJECTIONS: Projection[] = [
             "transposition",
         ],
         intentionallyDropped: {
+            momentId:
+                "A JOIN KEY, not a rendered field: it is what the cue log and a change of book are matched on. Nothing on this surface reads it, and the page it implies is already carried by liturgyRef.",
             id: "Internal Firestore document id; PrintTrack addresses tracks by fileId.",
             orgId: "Resolved once per request from the SETLIST's orgId into PrintRequest.org (per-org print footer); a per-track copy would be redundant.",
             audioFileId: "Print renders paper charts only; the linked audio file has no printed representation.",
@@ -238,6 +248,8 @@ const PROJECTIONS: Projection[] = [
             "transposition", // the track's own value only; no musician profile on this surface
         ],
         intentionallyDropped: {
+            momentId:
+                "A JOIN KEY, not a rendered field: it is what the cue log and a change of book are matched on. Nothing on this surface reads it, and the page it implies is already carried by liturgyRef.",
             id: "Internal Firestore document id; PrintTrack addresses tracks by fileId.",
             orgId: "Resolved once per request from the SETLIST's orgId into PrintRequest.org (per-org print footer); a per-track copy would be redundant.",
             fileName:

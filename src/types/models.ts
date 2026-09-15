@@ -75,6 +75,21 @@ export interface SetlistTrack {
      */
     liturgyRef?: { book: string; unitId?: string; folio: number; stale?: boolean }
     /**
+     * The liturgical MOMENT this row is about — the layer above a unit id.
+     *
+     * A unit id is book-local (`shma.barchu@crc-kol-nidre`); a moment id is
+     * not (`barchu`). That difference is the whole point: it is what lets this
+     * row survive a change of book, and it is the ONLY thing Overlays' cue log
+     * can be matched on for a machzor service, where .live says
+     * `crc-machzor-2008 p.100` and Overlays says `crc-kol-nidre folio 8` about
+     * the same Bar'chu.
+     *
+     * Derived at bind time from `liturgyRef.unitId`, and absent whenever the
+     * moments artifact does not know the unit — never a reason to refuse a
+     * page, and never a thing a caller types.
+     */
+    momentId?: string
+    /**
      * A fixed-liturgy row: the service says it every week, straight from the
      * book, and no chart is ever bonded to it. Set by the service templates so
      * Perform mode can collapse the liturgy the band does not play from while

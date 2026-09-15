@@ -223,6 +223,8 @@ export interface AddTrackInput {
     description?: string
     estimatedMinutes?: number
     liturgyRef?: { book: string; unitId?: string; folio: number }
+    /** The moment behind `liturgyRef.unitId`, derived at bind time. */
+    momentId?: string
     /** Fixed-liturgy row — see SetlistTrack.fixed. */
     fixed?: boolean
     honors?: Array<{ name: string; note?: string }>
@@ -298,6 +300,7 @@ export async function addTrack(
         if (input.description !== undefined) payload.description = sanitizeFreeformString(input.description)
         if (input.estimatedMinutes !== undefined) payload.estimatedMinutes = input.estimatedMinutes
         if (input.liturgyRef !== undefined) payload.liturgyRef = input.liturgyRef
+        if (input.momentId !== undefined) payload.momentId = input.momentId
         if (input.fixed !== undefined) payload.fixed = input.fixed
         if (input.honors !== undefined) {
             const sanitizedHonors = sanitizeHonors(input.honors)
@@ -466,6 +469,8 @@ export interface UpdateTrackPatch {
     description?: string
     estimatedMinutes?: number
     liturgyRef?: { book: string; unitId?: string; folio: number }
+    /** The moment behind `liturgyRef.unitId` — see SetlistTrack.momentId. */
+    momentId?: string
     /** Fixed-liturgy row — see SetlistTrack.fixed. */
     fixed?: boolean
     honors?: Array<{ name: string; note?: string }>
@@ -485,6 +490,7 @@ const UPDATABLE_FIELDS = [
     "description",
     "estimatedMinutes",
     "liturgyRef",
+    "momentId",
     "fixed",
     "honors",
 ] as const

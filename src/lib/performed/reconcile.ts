@@ -1,5 +1,6 @@
 import { bareStem } from "@/lib/mcp/title-specificity"
 import { momentIdForUnit } from "@/lib/books/moments"
+import { historyInstant } from "./types"
 import type { Chapter, Diff, DiffRow, HistoryRow, MatchBasis, RowStatus } from "./types"
 
 /**
@@ -28,6 +29,13 @@ export interface PlannedRow {
     title: string
     type?: string | null
     liturgyRef?: { book: string; unitId?: string; folio: number } | null
+    /**
+     * The row's stored moment, written at bind time. Preferred over deriving
+     * one from the unit id: a row bound before the moments artifact covered
+     * its book still carries the unit, and a row whose book has since changed
+     * still carries the moment.
+     */
+    momentId?: string | null
 }
 
 const NO_GRAPHIC_TYPES = new Set(["header", "note"])
@@ -43,7 +51,7 @@ function hasIdentity(r: HistoryRow): boolean {
 
 /** The moment a planned row is about, when anything says so. */
 function plannedMoment(row: PlannedRow): string | null {
-    return momentIdForUnit(row.liturgyRef?.unitId ?? null)
+    return row.momentId ?? momentIdForUnit(row.liturgyRef?.unitId ?? null)
 }
 
 /** The moment a history row is about, directly or via its unit. */
@@ -175,7 +183,7 @@ export function reconcile(
         if (hit) {
             base.status = reordered.has(i) ? "reordered" : "performed"
             base.basis = hit.basis
-            base.performedAt = hit.cue.at
+            base.performedAt = historyInstant(hit.cue.at) ?? undefined
             base.seq = hit.cue.seq
             if (base.status === "reordered") {
                 base.note = "Fired out of the planned sequence."
@@ -231,7 +239,7 @@ export function reconcile(
                           folio: cue.folio as number,
                       }
                     : null,
-            performedAt: cue.at,
+            performedAt: historyInstant(cue.at) ?? undefined,
             seq: cue.seq,
             basis: "none",
             note: "Audible — fired with no planned row.",
