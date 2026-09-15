@@ -37,9 +37,21 @@ describe("session-role sign/verify", () => {
     it("rejects tampered signature", async () => {
         const { signRoleCookie, verifyRoleCookie } = await import("@/lib/session-role")
         const signed = (await signRoleCookie("u-1", "musician"))!
-        // flip a char in the signature segment
+        // Flip a char in the signature segment — the FIRST one, deliberately.
+        //
+        // This used to rewrite the last two characters, which is unsound and
+        // failed about once in 270 runs. An HMAC-SHA256 signature is 32 bytes,
+        // so base64url is 43 characters and 43 % 4 == 3: the final character
+        // carries only the top two bits of the last byte and its low four bits
+        // are don't-care. Whenever the signature's second-to-last character was
+        // already the replacement character, only those don't-care bits moved,
+        // the tampered string decoded to the SAME 32 bytes, and verification
+        // correctly succeeded — a green product failing a red test.
+        //
+        // The first character has no don't-care bits: it is the top six bits of
+        // byte zero. Changing it always changes what is verified.
         const [payload, sig] = signed.split(".")
-        const tamperedSig = sig.slice(0, -2) + (sig.slice(-2) === "aa" ? "bb" : "aa")
+        const tamperedSig = (sig[0] === "A" ? "B" : "A") + sig.slice(1)
         const verified = await verifyRoleCookie(`${payload}.${tamperedSig}`)
         expect(verified).toBeNull()
     })
