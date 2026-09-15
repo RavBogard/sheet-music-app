@@ -789,6 +789,160 @@ export interface CleanupAllResult {
     aggregate: Record<string, number>
 }
 
+export interface CleanupAllToolArgs extends CleanupAllArgs {
+    /** Default TRUE. Returns the plan and deletes nothing. */
+    dryRun?: boolean
+    /** Required alongside `dryRun:false`. */
+    force?: boolean
+}
+
+export interface CleanupAllPlan {
+    dryRun: true
+    prefix: string | null
+    /** Test uids this sweep would revoke, with their owned data. */
+    wouldRevoke: string[]
+    /**
+     * `isTest:true` setlists owned by a REAL uid, swept by flag. Only a
+     * prefix-less sweep touches these, so it is 0 whenever `prefix` is set.
+     */
+    wouldSweepFlaggedSetlists: number
+    removed: 0
+    hint: string
+}
+
+/**
+ * `cleanup_all_test_data` with the F-05 gate in front of it.
+ *
+ * The tool is the nuclear option — it revokes every test-namespaced user in
+ * the project and cascade-deletes what they own — and it took exactly one
+ * argument, `prefix`. An agent calling it with `{uidPrefix, dryRun:true}`,
+ * believing both words meant something, got neither: unknown keys were
+ * dropped, the sweep ran unscoped, and the "dry run" deleted a live setlist
+ * and every other instance's fixtures with it. That happened on 2026-09-15,
+ * to me.
+ *
+ * So: `dryRun` defaults TRUE and returns the plan, `dryRun:false` needs
+ * `force:true`, and the tool's schema now names `dryRun` and `force` so a
+ * caller reaching for them finds them instead of having them swallowed. The
+ * sibling `sweep_orphan_test_data` has had exactly this shape all along;
+ * this is the standing rule, not a new idea.
+ *
+ * The enumeration deliberately reuses the sweep's own predicate rather than
+ * re-deriving it. A plan that scopes differently from the run it previews is
+ * worse than no plan.
+ */
+export async function cleanupAllTestData(
+    callerUid: string,
+    args: CleanupAllToolArgs = {},
+): Promise<CleanupAllResult | CleanupAllPlan | ReturnType<typeof envelope>> {
+    const dryRun = args.dryRun !== false
+    if (!dryRun && args.force !== true) {
+        return envelope(
+            "force_required",
+            "cleanup_all_test_data with dryRun:false requires force:true. Nothing was deleted.",
+            { prefix: args.prefix ?? null },
+            "Read the plan first (call with no arguments, or with `prefix`), then re-call with `dryRun:false, force:true`.",
+        )
+    }
+    if (!dryRun) return cleanupAllTestDataCore(callerUid, { prefix: args.prefix })
+    return planCleanupAllTestData(callerUid, { prefix: args.prefix })
+}
+
+/**
+ * The uids a sweep would touch, and the scope that decided them.
+ *
+ * One function so the PLAN and the RUN can never disagree about what is in
+ * scope — a preview that scopes differently from the sweep it previews is
+ * worse than no preview.
+ */
+async function enumerateSweepTargets(prefix: string | undefined): Promise<{
+    fullPrefix: string | null
+    indexUids: Set<string>
+    orphanAuthUids: string[]
+}> {
+    const fullPrefix = prefix ? `${TEST_UID_PREFIX}${prefix}-` : null
+    const matchesPrefix = (uid: string): boolean =>
+        fullPrefix === null ? uid.startsWith(TEST_UID_PREFIX) : uid.startsWith(fullPrefix)
+
+    const db = getFirestore()
+    // Walk the index AND any orphaned Auth users (defense-in-depth: if a
+    // revoke partially failed and left an Auth user without an index doc,
+    // we still sweep it).
+    const indexSnap = await db.collection(MCP_TEST_USERS).get()
+    const indexUids = new Set(indexSnap.docs.map((d) => d.id).filter(matchesPrefix))
+
+    // Walk Auth pages for test-* uids. listUsers is paginated; we'll cap
+    // at a reasonable depth to avoid pathological loops.
+    const auth = getAuth()
+    let pageToken: string | undefined
+    const orphanAuthUids: string[] = []
+    for (let i = 0; i < 20; i++) {
+        const result = await auth.listUsers(1000, pageToken)
+        for (const u of result.users) {
+            if (matchesPrefix(u.uid) && !indexUids.has(u.uid)) {
+                orphanAuthUids.push(u.uid)
+            }
+        }
+        if (!result.pageToken) break
+        pageToken = result.pageToken
+    }
+    return { fullPrefix, indexUids, orphanAuthUids }
+}
+
+/** What `cleanup_all_test_data` would remove. Reads only. */
+async function planCleanupAllTestData(
+    callerUid: string,
+    args: CleanupAllArgs,
+): Promise<CleanupAllPlan | ReturnType<typeof envelope>> {
+    initAdmin()
+    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
+    if (!isTrustedLeader) {
+        return envelope(
+            "forbidden_role",
+            "cleanup_all_test_data requires admin or band_leader role.",
+            { callerRole: callerRole ?? null, requiredRoles: ["admin", "band_leader"] },
+            "Sign in as admin/band_leader, or ask one to run cleanup for you.",
+        )
+    }
+    if (args.prefix !== undefined && !UID_PREFIX_RE.test(args.prefix)) {
+        return envelope(
+            "invalid_uid_prefix",
+            "prefix must be lowercase alphanumeric with single hyphens, 1-32 chars, no leading/trailing or consecutive hyphens.",
+            { requestedPrefix: args.prefix },
+            "Pass the same value used as `uidPrefix` at create_test_account time.",
+        )
+    }
+
+    const { fullPrefix, indexUids, orphanAuthUids } = await enumerateSweepTargets(
+        args.prefix,
+    )
+    const wouldRevoke = [...indexUids, ...orphanAuthUids].sort()
+
+    // The owner-independent isTest flag-sweep only runs in full-sweep mode,
+    // so the plan counts it only when the run would do it.
+    let wouldSweepFlaggedSetlists = 0
+    if (fullPrefix === null) {
+        const db = getFirestore()
+        const flagged = await db
+            .collection("setlists")
+            .where("isTest", "==", true)
+            .get()
+        wouldSweepFlaggedSetlists = flagged.size
+    }
+
+    return {
+        dryRun: true,
+        prefix: args.prefix ?? null,
+        wouldRevoke,
+        wouldSweepFlaggedSetlists,
+        removed: 0,
+        hint:
+            fullPrefix === null
+                ? "No prefix: this would sweep EVERY test account in the project, including other sessions'. Pass `prefix` to scope it. Re-call with `dryRun:false, force:true` to run it."
+                : "Re-call with `dryRun:false, force:true` to run it.",
+    }
+}
+
 export async function cleanupAllTestDataCore(
     callerUid: string,
     args: CleanupAllArgs = {},
@@ -818,34 +972,10 @@ export async function cleanupAllTestDataCore(
     // `test-<prefix>-` — full match prefix including the leading `test-`.
     // Falsy means "sweep every test-namespaced uid". Used as a string
     // predicate; never echoed back so trailing hyphen is just join-glue.
-    const fullPrefix = args.prefix ? `${TEST_UID_PREFIX}${args.prefix}-` : null
-    const matchesPrefix = (uid: string): boolean =>
-        fullPrefix === null ? uid.startsWith(TEST_UID_PREFIX) : uid.startsWith(fullPrefix)
-
     const db = getFirestore()
-    // Walk the index AND any orphaned Auth users (defense-in-depth: if a
-    // revoke partially failed and left an Auth user without an index doc,
-    // we still sweep it).
-    const indexSnap = await db.collection(MCP_TEST_USERS).get()
-    const indexUids = new Set(
-        indexSnap.docs.map((d) => d.id).filter(matchesPrefix),
+    const { fullPrefix, indexUids, orphanAuthUids } = await enumerateSweepTargets(
+        args.prefix,
     )
-
-    // Walk Auth pages for test-* uids. listUsers is paginated; we'll cap
-    // at a reasonable depth to avoid pathological loops.
-    const auth = getAuth()
-    let pageToken: string | undefined
-    const orphanAuthUids: string[] = []
-    for (let i = 0; i < 20; i++) {
-        const result = await auth.listUsers(1000, pageToken)
-        for (const u of result.users) {
-            if (matchesPrefix(u.uid) && !indexUids.has(u.uid)) {
-                orphanAuthUids.push(u.uid)
-            }
-        }
-        if (!result.pageToken) break
-        pageToken = result.pageToken
-    }
 
     // Order the sweep so the CALLER (if they're a test user) is revoked
     // LAST. Belt-and-braces — `revokeTestAccountUnchecked` skips the
@@ -1423,7 +1553,7 @@ export function registerTestTokenTools(server: McpServer): void {
         "cleanup_all_test_data",
         {
             description:
-                "Nuclear option — revoke every test-namespaced user in the project and cascade-delete their owned data. Walks the mcpTestUsers index AND Firebase Auth (for orphaned test-* users without an index doc, defense-in-depth). Returns per-collection aggregate counts + per-uid failures. Admin + band_leader only. Pass `prefix` to scope the sweep to one instance namespace — only uids starting with `test-<prefix>-` are touched, so parallel cowork instances don't cross-contaminate.",
+                "Nuclear option — revoke every test-namespaced user in the project and cascade-delete their owned data. Walks the mcpTestUsers index AND Firebase Auth (for orphaned test-* users without an index doc, defense-in-depth). Returns per-collection aggregate counts + per-uid failures. Admin + band_leader only. Pass `prefix` to scope the sweep to one instance namespace — only uids starting with `test-<prefix>-` are touched, so parallel cowork instances don't cross-contaminate. DEFAULTS TO `dryRun:true` (F-05): the plan comes back with `wouldRemove` and nothing is deleted. A real sweep needs `dryRun:false, force:true`. The argument NAME is `prefix`, not `uidPrefix` — an unrecognised argument is REFUSED rather than ignored, because a delete tool that quietly drops the argument you thought was scoping it is how an inspection becomes a sweep.",
             inputSchema: {
                 prefix: z
                     .string()
@@ -1434,10 +1564,22 @@ export function registerTestTokenTools(server: McpServer): void {
                     .describe(
                         "Limit the sweep to uids starting with `test-<prefix>-`. Pass the same value used as `uidPrefix` at create_test_account time. Omit to sweep every test user in the project.",
                     ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Default TRUE. Returns what the sweep would remove and deletes nothing.",
+                    ),
+                force: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Required alongside `dryRun:false`. Without it the real sweep is refused and the plan is returned instead.",
+                    ),
             },
         },
         async (args, extra) => {
-            const result = await cleanupAllTestDataCore(uidFrom(extra), args)
+            const result = await cleanupAllTestData(uidFrom(extra), args)
             return jsonResult(result)
         },
     )
