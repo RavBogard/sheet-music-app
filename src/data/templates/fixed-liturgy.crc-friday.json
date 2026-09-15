@@ -1,0 +1,443 @@
+{
+  "schemaVersion": 1,
+  "book": "crc-friday",
+  "service": "Erev Shabbat / Friday evening",
+  "pairedBook": "shabbat-maariv",
+  "confirmedBy": "Daniel",
+  "confirmedAt": "2026-09-15T01:45:50Z",
+  "source": "work/fixed-liturgy-proposal.json (2026-09-14T21:56Z) + rulings 2026-09-15",
+  "note": "Row order is the confirmed service order for this service and is identical in both of its book files. shabbat-maariv is an alpha draft: its unitId is binding identity, its folio is provisional and must not be published. crc-friday is the legacy CRC booklet and governs page numbers until a Shirei volume for this service is released. A row without a ref for a book clones page-less for setlists in that book.",
+  "rows": [
+    {
+      "label": "Lighting the Candles",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "kabbalat.lighting-the-candles@shabbat-maariv",
+          "folio": 3
+        },
+        "crc-friday": {
+          "folio": 5
+        }
+      }
+    },
+    {
+      "label": "Shalom Aleichem",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "kabbalat.shalom-aleichem@shabbat-maariv",
+          "folio": 4
+        },
+        "crc-friday": {
+          "folio": 6
+        }
+      }
+    },
+    {
+      "label": "L’cha Dodi",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "kabbalat.lcha-dodi@shabbat-maariv",
+          "folio": 15
+        },
+        "crc-friday": {
+          "folio": 8
+        }
+      }
+    },
+    {
+      "label": "Bar’chu",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.barchu@shabbat-maariv",
+          "folio": 21
+        },
+        "crc-friday": {
+          "folio": 10
+        }
+      }
+    },
+    {
+      "label": "Ma’ariv Aravim",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.maariv-aravim@shabbat-maariv",
+          "folio": 22
+        },
+        "crc-friday": {
+          "folio": 12
+        }
+      }
+    },
+    {
+      "label": "Ahavat Olam",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.ahavat-olam@shabbat-maariv",
+          "folio": 23
+        },
+        "crc-friday": {
+          "folio": 13
+        }
+      }
+    },
+    {
+      "label": "The Sh’ma",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.the-shma@shabbat-maariv",
+          "folio": 24
+        },
+        "crc-friday": {
+          "folio": 15
+        }
+      }
+    },
+    {
+      "label": "V’ahavta & Tzitzit",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.vahavta-tzitzit@shabbat-maariv",
+          "folio": 24
+        },
+        "crc-friday": {
+          "folio": 16
+        }
+      }
+    },
+    {
+      "label": "Emet v’Emunah",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.emet-vemunah@shabbat-maariv",
+          "folio": 28
+        }
+      }
+    },
+    {
+      "label": "Mi Chamocha",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.mi-chamocha@shabbat-maariv",
+          "folio": 28
+        },
+        "crc-friday": {
+          "folio": 18
+        }
+      }
+    },
+    {
+      "label": "Hashkivenu",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.hashkivenu@shabbat-maariv",
+          "folio": 30
+        },
+        "crc-friday": {
+          "folio": 20
+        }
+      }
+    },
+    {
+      "label": "V’shamru",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.vshamru@shabbat-maariv",
+          "folio": 32
+        },
+        "crc-friday": {
+          "folio": 21
+        }
+      }
+    },
+    {
+      "label": "Chatzi Kaddish",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.chatzi-kaddish@shabbat-maariv",
+          "folio": 33
+        },
+        "crc-friday": {
+          "folio": 22
+        }
+      }
+    },
+    {
+      "label": "The Silent Amidah",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.the-silent-amidah@shabbat-maariv",
+          "folio": 34
+        },
+        "crc-friday": {
+          "folio": 23
+        }
+      }
+    },
+    {
+      "label": "Avot v’Imahot",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.avot-vimahot@shabbat-maariv",
+          "folio": 35
+        },
+        "crc-friday": {
+          "folio": 24
+        }
+      }
+    },
+    {
+      "label": "G’vurot",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.gvurot@shabbat-maariv",
+          "folio": 36
+        },
+        "crc-friday": {
+          "folio": 26
+        }
+      }
+    },
+    {
+      "label": "K’dushat HaShem",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.kdushat-hashem@shabbat-maariv",
+          "folio": 37
+        },
+        "crc-friday": {
+          "folio": 27
+        }
+      }
+    },
+    {
+      "label": "K’dushat HaYom",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.kdushat-hayom@shabbat-maariv",
+          "folio": 37
+        },
+        "crc-friday": {
+          "folio": 27
+        }
+      }
+    },
+    {
+      "label": "Avodah",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.avodah@shabbat-maariv",
+          "folio": 39
+        },
+        "crc-friday": {
+          "folio": 28
+        }
+      }
+    },
+    {
+      "label": "Modim",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.modim@shabbat-maariv",
+          "folio": 40
+        },
+        "crc-friday": {
+          "folio": 29
+        }
+      }
+    },
+    {
+      "label": "Shalom Rav",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.shalom-rav@shabbat-maariv",
+          "folio": 41
+        },
+        "crc-friday": {
+          "folio": 30
+        }
+      }
+    },
+    {
+      "label": "Elohai N’tzor",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.elohai-ntzor@shabbat-maariv",
+          "folio": 42
+        },
+        "crc-friday": {
+          "folio": 31
+        }
+      }
+    },
+    {
+      "label": "Vayechulu",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.vayechulu@shabbat-maariv",
+          "folio": 43
+        }
+      }
+    },
+    {
+      "label": "Me’ein Sheva",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.meein-sheva@shabbat-maariv",
+          "folio": 44
+        }
+      }
+    },
+    {
+      "label": "Kaddish Shalem",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.kaddish-shalem@shabbat-maariv",
+          "folio": 46
+        }
+      }
+    },
+    {
+      "label": "Mi Shebeirach — Healing",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "concluding.mi-shebeirach-healing@shabbat-maariv",
+          "folio": 49
+        },
+        "crc-friday": {
+          "folio": 34
+        }
+      }
+    },
+    {
+      "label": "Aleinu",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "concluding.aleinu@shabbat-maariv",
+          "folio": 50
+        },
+        "crc-friday": {
+          "folio": 38
+        }
+      }
+    },
+    {
+      "label": "Mourner’s Kaddish",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "concluding.mourners-kaddish@shabbat-maariv",
+          "folio": 52
+        },
+        "crc-friday": {
+          "folio": 41
+        }
+      }
+    },
+    {
+      "label": "Adon Olam",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "concluding.adon-olam@shabbat-maariv",
+          "folio": 55
+        },
+        "crc-friday": {
+          "folio": 43
+        }
+      }
+    },
+    {
+      "label": "Priestly Blessing",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "concluding.priestly-blessing@shabbat-maariv",
+          "folio": 54
+        },
+        "crc-friday": {
+          "folio": 45
+        }
+      }
+    },
+    {
+      "label": "Kiddush",
+      "type": "prayer",
+      "fixed": true,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "seasonal.kiddush@shabbat-maariv",
+          "folio": 68
+        },
+        "crc-friday": {
+          "folio": 46
+        }
+      }
+    }
+  ],
+  "bookletEntryNotes": {
+    "1:Lighting the Candles": "crc-friday entry “Candle Blessing” p.5",
+    "7:The Sh’ma": "crc-friday entry “Kriyat Sh'ma” p.15",
+    "8:V’ahavta & Tzitzit": "crc-friday entry “V'ahavta” p.16",
+    "14:The Silent Amidah": "crc-friday entry “T'filah” p.23",
+    "17:K’dushat HaShem": "crc-friday entry “K'dushat Hasheim” p.27",
+    "26:Mi Shebeirach — Healing": "crc-friday entry “Mi Shebeirach” p.34"
+  },
+  "openOrderQuestions": []
+}

@@ -133,9 +133,19 @@ describe('Template structure', () => {
         expect(readings.length).toBe(0)
     })
 
+    /**
+     * Fixed-liturgy rows are exempt, and deliberately so (A-W3", 2026-09-15).
+     * The invariant exists so an AUTHORED flow slot is not blank in the
+     * editor. A row cloned from Daniel's Always list means its page, not its
+     * duration: nobody has timed Avot v'Imahot, and inventing a minute for
+     * each of the twenty-one of them would quietly add a third of an hour to
+     * every Friday night's estimate. Its performer is likewise genuinely
+     * mixed — the congregation for most, the rabbi for the Priestly Blessing
+     * — and unknown is more use than a confident wrong answer.
+     */
     it('service flow slots have performer and estimatedMinutes', () => {
         const flowSlots = FRIDAY_NIGHT_TEMPLATE.filter(s =>
-            s.type && ['reading', 'prayer', 'transition'].includes(s.type)
+            !s.fixed && s.type && ['reading', 'prayer', 'transition'].includes(s.type)
         )
         for (const slot of flowSlots) {
             expect(slot.defaultPerformer, `${slot.label} has no performer`).toBeTruthy()

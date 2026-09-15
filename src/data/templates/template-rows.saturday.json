@@ -1,0 +1,462 @@
+{
+  "schemaVersion": 1,
+  "family": "shabbat_morning",
+  "book": "crc-saturday",
+  "confirmedBy": "Daniel",
+  "confirmedAt": "2026-09-15T02:25:40Z",
+  "note": "Always rows for this family in service order; clone adds them as fixed rows (deletable per service). A row that names a moment the template already carries as a song slot is not duplicated - the song slot takes the liturgyRefs. Sometimes rows are what propose_service_frame offers; Never rows stay in the lookup for identity only; Setting rows are settings/translations of another moment and bind to it.",
+  "always": [
+    {
+      "label": "Modeh Ani",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 2,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "awakening.modeh-ani@shabbat-shacharit",
+          "folio": 2
+        },
+        "crc-saturday": {
+          "folio": 51
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Birchot HaShachar",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 6,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "awakening.birchot-hashachar@shabbat-shacharit",
+          "folio": 5
+        },
+        "crc-saturday": {
+          "folio": 53
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "P'sukei D'zimrah",
+      "type": "prayer",
+      "source": "booklet-only",
+      "bookletPage": 55,
+      "bookletAliases": [
+        "Psukei D'zimrah",
+        "Pesukei Dezimra",
+        "Verses of Praise"
+      ],
+      "liturgyRefs": {
+        "crc-saturday": {
+          "folio": 55
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Bar’chu",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 14,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "shma.barchu@shabbat-shacharit",
+          "folio": 29
+        },
+        "crc-saturday": {
+          "folio": 59
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "The Sh’ma",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 17,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "shma.the-shma@shabbat-shacharit",
+          "folio": 39
+        },
+        "crc-saturday": {
+          "folio": 63
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "V’ahavta & Tzitzit",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 18,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "shma.vahavta-tzitzit@shabbat-shacharit",
+          "folio": 39
+        },
+        "crc-saturday": {
+          "folio": 65
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Mi Chamocha",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 20,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "shma.mi-chamocha@shabbat-shacharit",
+          "folio": 44
+        },
+        "crc-saturday": {
+          "folio": 68
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Avot v’Imahot",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 21,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "amidah.avot-vimahot@shabbat-maariv",
+          "folio": 49
+        },
+        "crc-saturday": {
+          "folio": 71
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "G’vurot",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 22,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "amidah.gvurot@shabbat-maariv",
+          "folio": 50
+        },
+        "crc-saturday": {
+          "folio": 73
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Kedushah",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 23,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "amidah.kedushah@shabbat-shacharit",
+          "folio": 51
+        },
+        "crc-saturday": {
+          "folio": 74
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "K’dushat HaYom",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 24,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "amidah.kdushat-hayom@shabbat-shacharit",
+          "folio": 54
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Avodah",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 25,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "amidah.avodah@shabbat-maariv",
+          "folio": 56
+        },
+        "crc-saturday": {
+          "folio": 77
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Modim",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 26,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "amidah.modim@shabbat-maariv",
+          "folio": 57
+        },
+        "crc-saturday": {
+          "folio": 78
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Sim Shalom",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 28,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "amidah.sim-shalom@shabbat-shacharit",
+          "folio": 61
+        },
+        "crc-saturday": {
+          "folio": 79
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Hakafot",
+      "type": "prayer",
+      "source": "booklet-only",
+      "bookletPage": 83,
+      "bookletAliases": [
+        "Hakafah",
+        "Torah Procession",
+        "Rejoicing with the Torah"
+      ],
+      "liturgyRefs": {
+        "crc-saturday": {
+          "folio": 83
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Blessing Before the Torah",
+      "type": "reading",
+      "source": "confirmed-order",
+      "order": 33,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "torah.blessing-before-the-torah@shabbat-shacharit",
+          "folio": 71
+        },
+        "crc-saturday": {
+          "folio": 84
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Reading of the Torah",
+      "type": "prayer",
+      "source": "booklet-only",
+      "bookletPage": 84,
+      "bookletAliases": [
+        "Torah Reading",
+        "Kriat HaTorah",
+        "Parashah"
+      ],
+      "liturgyRefs": {
+        "crc-saturday": {
+          "folio": 84
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Blessing After the Torah",
+      "type": "reading",
+      "source": "confirmed-order",
+      "order": 34,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "torah.blessing-after-the-torah@shabbat-shacharit",
+          "folio": 71
+        },
+        "crc-saturday": {
+          "folio": 84
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Mi Shebeirach — Healing",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 35,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "torah.mi-shebeirach-healing@shabbat-shacharit",
+          "folio": 72
+        },
+        "crc-saturday": {
+          "folio": 86
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Eitz Chayim",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 40,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "torah.eitz-chayim@shabbat-shacharit",
+          "folio": 81
+        },
+        "crc-saturday": {
+          "folio": 90
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Mourner’s Kaddish",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 43,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "concluding.mourners-kaddish@shabbat-maariv",
+          "folio": 89
+        },
+        "crc-saturday": {
+          "folio": 96
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Birkat Kohanim",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 46,
+      "liturgyRefs": {
+        "shabbat-shacharit": {
+          "unitId": "concluding.birkat-kohanim@shabbat-shacharit",
+          "folio": 93
+        },
+        "crc-saturday": {
+          "folio": 100
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Kiddush",
+      "type": "prayer",
+      "source": "booklet-only",
+      "bookletPage": 101,
+      "bookletAliases": [
+        "Shabbat Morning Kiddush",
+        "Kiddush for Shabbat Day"
+      ],
+      "liturgyRefs": {
+        "crc-saturday": {
+          "folio": 101
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Motzi",
+      "type": "prayer",
+      "source": "booklet-only",
+      "bookletPage": 101,
+      "bookletAliases": [
+        "Hamotzi",
+        "Ha-Motzi",
+        "Motzi Lechem",
+        "Blessing over Bread"
+      ],
+      "liturgyRefs": {
+        "crc-saturday": {
+          "folio": 101
+        }
+      },
+      "note": null
+    }
+  ],
+  "sometimes": [
+    "Hareini",
+    "Elohai N’shamah",
+    "Lev Tahor",
+    "Mah Tovu",
+    "Eilu D’varim",
+    "Hineh Mah Tov",
+    "Hodu",
+    "Ashrei",
+    "Psalm 150",
+    "Chatzi Kaddish",
+    "Yotzer Or",
+    "Ahavah Rabbah",
+    "Emet v’Yatziv",
+    "Elohai N’tzor",
+    "Sh’ma",
+    "V’zot HaTorah",
+    "Haftarah Blessing",
+    "Blessings After the Haftarah",
+    "Aleinu",
+    "Adon Olam",
+    "As We Bless",
+    "Siyahamba",
+    "T'filah",
+    "V'shamru",
+    "Olam Chesed Yibaneh",
+    "Concluding the T'filah",
+    "Oseh Shalom",
+    "Rosh Chodesh",
+    "Birkat Hagomeil",
+    "T'filat Haderech",
+    "Reading of the Haftarah",
+    "Prayer for Shalom",
+    "Prayer for the State of Israel",
+    "Hatikvah",
+    "May the Memory"
+  ],
+  "never": [
+    "Nishmat Kol Chai",
+    "Birkat Kohanim",
+    "Ein Kamocha",
+    "L’cha Adonai HaGedulah",
+    "Y’halelu",
+    "Ein Keloheinu",
+    "Kaddish Shalem",
+    "The One"
+  ],
+  "settings": [
+    {
+      "label": "Thou Shalt Love",
+      "of": "setting of V'ahavta — Daniel 2026-09-15"
+    },
+    {
+      "label": "Sanctuary",
+      "of": "setting of Adonai S'fatai (Amidah opening) — Daniel 2026-09-15"
+    },
+    {
+      "label": "El Na R'fa Na Lah/Lo",
+      "of": "setting of Mi Shebeirach — Daniel 2026-09-15"
+    },
+    {
+      "label": "Bayom Hahu",
+      "of": "reading; translation of Aleinu — Daniel 2026-09-15"
+    }
+  ],
+  "unruled": []
+}

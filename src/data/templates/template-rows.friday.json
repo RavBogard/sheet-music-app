@@ -1,0 +1,399 @@
+{
+  "schemaVersion": 1,
+  "family": "friday_night",
+  "book": "crc-friday",
+  "confirmedBy": "Daniel",
+  "confirmedAt": "2026-09-15T02:25:40Z",
+  "note": "Always rows for this family in service order; clone adds them as fixed rows (deletable per service). A row that names a moment the template already carries as a song slot is not duplicated - the song slot takes the liturgyRefs. Sometimes rows are what propose_service_frame offers; Never rows stay in the lookup for identity only; Setting rows are settings/translations of another moment and bind to it.",
+  "always": [
+    {
+      "label": "Lighting the Candles",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 1,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "kabbalat.lighting-the-candles@shabbat-maariv",
+          "folio": 3
+        },
+        "crc-friday": {
+          "folio": 5
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Shalom Aleichem",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 2,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "kabbalat.shalom-aleichem@shabbat-maariv",
+          "folio": 4
+        },
+        "crc-friday": {
+          "folio": 6
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "L’cha Dodi",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 3,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "kabbalat.lcha-dodi@shabbat-maariv",
+          "folio": 15
+        },
+        "crc-friday": {
+          "folio": 8
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Bar’chu",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 4,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.barchu@shabbat-maariv",
+          "folio": 21
+        },
+        "crc-friday": {
+          "folio": 10
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "The Sh’ma",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 7,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.the-shma@shabbat-maariv",
+          "folio": 24
+        },
+        "crc-friday": {
+          "folio": 15
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "V’ahavta & Tzitzit",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 8,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.vahavta-tzitzit@shabbat-maariv",
+          "folio": 24
+        },
+        "crc-friday": {
+          "folio": 16
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Mi Chamocha",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 10,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.mi-chamocha@shabbat-maariv",
+          "folio": 28
+        },
+        "crc-friday": {
+          "folio": 18
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Hashkivenu",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 11,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.hashkivenu@shabbat-maariv",
+          "folio": 30
+        },
+        "crc-friday": {
+          "folio": 20
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "V’shamru",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 12,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.vshamru@shabbat-maariv",
+          "folio": 32
+        },
+        "crc-friday": {
+          "folio": 21
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Chatzi Kaddish",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 13,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "shma.chatzi-kaddish@shabbat-maariv",
+          "folio": 33
+        },
+        "crc-friday": {
+          "folio": 22
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Avot v’Imahot",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 15,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.avot-vimahot@shabbat-maariv",
+          "folio": 35
+        },
+        "crc-friday": {
+          "folio": 24
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "G’vurot",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 16,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.gvurot@shabbat-maariv",
+          "folio": 36
+        },
+        "crc-friday": {
+          "folio": 26
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "K’dushat HaShem",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 17,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.kdushat-hashem@shabbat-maariv",
+          "folio": 37
+        },
+        "crc-friday": {
+          "folio": 27
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "K’dushat HaYom",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 18,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.kdushat-hayom@shabbat-maariv",
+          "folio": 37
+        },
+        "crc-friday": {
+          "folio": 27
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Avodah",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 19,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.avodah@shabbat-maariv",
+          "folio": 39
+        },
+        "crc-friday": {
+          "folio": 28
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Modim",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 20,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.modim@shabbat-maariv",
+          "folio": 40
+        },
+        "crc-friday": {
+          "folio": 29
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Shalom Rav",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 21,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "amidah.shalom-rav@shabbat-maariv",
+          "folio": 41
+        },
+        "crc-friday": {
+          "folio": 30
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Aleinu",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 27,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "concluding.aleinu@shabbat-maariv",
+          "folio": 50
+        },
+        "crc-friday": {
+          "folio": 38
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Mourner’s Kaddish",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 28,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "concluding.mourners-kaddish@shabbat-maariv",
+          "folio": 52
+        },
+        "crc-friday": {
+          "folio": 41
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Priestly Blessing",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 30,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "concluding.priestly-blessing@shabbat-maariv",
+          "folio": 54
+        },
+        "crc-friday": {
+          "folio": 45
+        }
+      },
+      "note": null
+    },
+    {
+      "label": "Kiddush",
+      "type": "prayer",
+      "source": "confirmed-order",
+      "order": 31,
+      "liturgyRefs": {
+        "shabbat-maariv": {
+          "unitId": "seasonal.kiddush@shabbat-maariv",
+          "folio": 68
+        },
+        "crc-friday": {
+          "folio": 46
+        }
+      },
+      "note": null
+    }
+  ],
+  "sometimes": [
+    "Ma’ariv Aravim",
+    "Ahavat Olam",
+    "Emet v’Emunah",
+    "Elohai N’tzor",
+    "Mi Shebeirach — Healing",
+    "Adon Olam",
+    "Hareini",
+    "House of Prayer",
+    "Hineih Mah Tov",
+    "Candle Lighting Song",
+    "As We Bless",
+    "Siyahamba",
+    "Olam Chesed Yibaneh",
+    "Rosh Chodesh",
+    "Prayer for Shalom",
+    "Prayer for the State of Israel",
+    "Hatikvah",
+    "May the Memory",
+    "Motzi",
+    "Awaken, Arise"
+  ],
+  "never": [
+    "The Silent Amidah",
+    "Vayechulu",
+    "Me’ein Sheva",
+    "Kaddish Shalem",
+    "Niggun",
+    "Yom Zeh L'Yisrael",
+    "The One"
+  ],
+  "settings": [
+    {
+      "label": "Thou Shalt Love",
+      "of": "setting of V'ahavta — Daniel 2026-09-15"
+    },
+    {
+      "label": "Sanctuary",
+      "of": "setting of Adonai S'fatai (Amidah opening) — Daniel 2026-09-15"
+    },
+    {
+      "label": "El Na R'fa Na Lah/Lo",
+      "of": "setting of Mi Shebeirach — Daniel 2026-09-15"
+    },
+    {
+      "label": "Bayom Hahu",
+      "of": "reading; translation of Aleinu — Daniel 2026-09-15"
+    }
+  ],
+  "unruled": [],
+  "notes": {
+    "Awaken, Arise": "Randy-only, sometimes — Daniel 2026-09-15"
+  }
+}

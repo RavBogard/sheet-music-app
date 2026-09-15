@@ -15,6 +15,7 @@
 import { DriveFile, SetlistTrack, TrackType } from '@/types/models'
 import { ServiceContext } from './liturgical-calendar'
 import { resolveSlotLiturgyRef, type SlotLiturgyRefs } from './books/slot-liturgy'
+import { mergeAlwaysRows } from './templates/always-rows'
 import Fuse from 'fuse.js'
 
 /** Wider context for template engine — accepts any template key as type, not just ServiceType */
@@ -85,7 +86,7 @@ const CLOSING_SLOTS: TemplateSlot[] = [
 
 // ── Template Definitions ──
 
-export const FRIDAY_NIGHT_TEMPLATE: TemplateSlot[] = [
+const BASE_FRIDAY_NIGHT_TEMPLATE: TemplateSlot[] = [
     { label: 'Welcome & Announcements', type: 'note', queries: [], defaultPerformer: 'Rabbi', estimatedMinutes: 3 },
     { label: 'Candle Lighting', type: 'song', queries: ['candle lighting', 'hadlakat nerot', 'candle bless'] },
     { label: 'Kabbalat Shabbat', type: 'header', queries: [] },
@@ -125,7 +126,7 @@ export const SHIR_SHABBAT_TEMPLATE: TemplateSlot[] = [
     { label: 'Oneg', type: 'transition', queries: [], defaultPerformer: 'Congregation', estimatedMinutes: 2, description: 'Shabbat celebration' },
 ]
 
-export const SHABBAT_MORNING_TEMPLATE: TemplateSlot[] = [
+const BASE_SHABBAT_MORNING_TEMPLATE: TemplateSlot[] = [
     { label: 'Birchot HaShachar', type: 'header', queries: [] },
     { label: 'Modeh Ani / Morning Blessings', type: 'song', queries: ['modeh ani', 'morning bless', 'nisim b\'chol'] },
     { label: 'P\'sukei D\'zimra', type: 'header', queries: [] },
@@ -150,6 +151,24 @@ export const SHABBAT_MORNING_TEMPLATE: TemplateSlot[] = [
     { label: 'Adon Olam / Ein Keloheinu', type: 'song', queries: ['adon olam', 'ein keloheinu', 'ain keloheinu'] },
     { label: 'Kiddush', type: 'transition', queries: [], defaultPerformer: 'Rabbi', estimatedMinutes: 2, description: 'Blessing over wine and challah' },
 ]
+
+/**
+ * A-W3" — Daniel's Always rows, merged in.
+ *
+ * The arrays above are the BASE: the band's shape of the service, song slots
+ * with search queries. What ships is that base with the moments Daniel marked
+ * Always for the family folded in — bound onto a song slot where the template
+ * already names the moment, inserted as a fixed row where it does not. See
+ * `src/lib/templates/always-rows.ts`; the Always list is his, not derived.
+ *
+ * Only these two families have a confirmed list. Shir Shabbat, b'nai mitzvah
+ * and the holiday stubs are untouched: no list, no rows.
+ */
+export const FRIDAY_NIGHT_TEMPLATE: TemplateSlot[] =
+    mergeAlwaysRows(BASE_FRIDAY_NIGHT_TEMPLATE, 'friday_night').slots
+
+export const SHABBAT_MORNING_TEMPLATE: TemplateSlot[] =
+    mergeAlwaysRows(BASE_SHABBAT_MORNING_TEMPLATE, 'shabbat_morning').slots
 
 const BNEI_MITZVAH_CEREMONY_SLOTS: TemplateSlot[] = [
     { label: "B'nei Mitzvah Ceremony", type: 'header', queries: [] },
