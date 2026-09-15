@@ -29,6 +29,16 @@ describe("the machzor service table", () => {
         expect(machzorServiceFor(null)).toBeNull()
     })
 
+    it("keeps BOTH Rosh Hashanah morning types on the printed machzor's pages", () => {
+        // R4-d sends `rosh-hashanah-morning` to Shirei Tshuvah on the reader's
+        // SHELF. It must not follow it here: Ruling 8 says the legacy booklet
+        // governs the page until the Shirei volume is released, and a released
+        // volume is a second book, never a replacement. A page scope that drifted
+        // with the shelf would put a Shirei folio on a row holding the machzor.
+        expect(machzorServiceFor("rosh-hashanah-morning")).toBe("crc-rh-morning")
+        expect(bookServiceFor(BOOK, "rosh-hashanah-morning")).toBe("crc-rh-morning")
+    })
+
     it("falls back to Rosh Hashanah morning, and only for this book", () => {
         // What the book meant for its whole life before the rest of it was
         // mapped. Changing that answer would have been a regression dressed

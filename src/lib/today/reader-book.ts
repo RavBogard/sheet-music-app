@@ -37,6 +37,28 @@ const BY_BOOK: Readonly<Record<string, string>> = Object.freeze({
 })
 
 /**
+ * R4-d — the one place the reader's shelf and the page scope diverge, ruled.
+ *
+ * Daniel, 2026-09-15: Rosh Hashanah morning on the reader is the legacy
+ * machzor volume (`crc-rh-morning`) for the regular services, and **Shirei
+ * Tshuvah** for the alternative service and for Second Day. In `.live`'s
+ * vocabulary those are the setlists typed `rosh-hashanah-morning`;
+ * `rosh-hashanah-day` is the regular one.
+ *
+ * This is a shelf decision, not a page decision, and the difference matters.
+ * Ruling 8 stands: the legacy booklet governs the page until the corresponding
+ * Shirei volume is released, and a released volume is added as a SECOND book,
+ * never a replacement. So the pagemap keeps scoping `rosh-hashanah-morning` to
+ * the printed machzor's RH-morning section — `machzor-services.ts` is
+ * unchanged — and only what the reader opens changes here. A row on one of
+ * those setlists still carries a 2008-machzor page, because that is the book
+ * in the room.
+ */
+const READER_OVERRIDE: Readonly<Record<string, string>> = Object.freeze({
+    "rosh-hashanah-morning": "shirei-tshuvah",
+})
+
+/**
  * The reader's volume for a service, or null when there is nothing honest to
  * say. Null is a normal answer: the reader then falls back exactly as it does
  * for a service with no `readerBook` at all.
@@ -49,16 +71,23 @@ export function readerBookFor(
     const direct = BY_BOOK[book]
     if (direct) return direct
     if (book !== "crc-machzor-2008") return null
-    // One table, shared with the page scoping (`@/lib/books/machzor-services`):
-    // the reader's per-service volumes and the pagemap's services are the same
-    // six divisions of the same printed book, so they cannot be allowed to
-    // drift apart.
+    // R4-d first: one ruled exception, above.
+    if (serviceType && READER_OVERRIDE[serviceType]) return READER_OVERRIDE[serviceType]
+    // Otherwise one table, shared with the page scoping
+    // (`@/lib/books/machzor-services`): the reader's per-service volumes and
+    // the pagemap's services are the same six divisions of the same printed
+    // book, so they cannot be allowed to drift apart by accident. They may
+    // only diverge where Daniel has ruled they diverge.
     return machzorServiceFor(serviceType)
 }
 
 /** Every reader volume this table can name. Exported for the tests' benefit. */
 export function readerBookTargets(): string[] {
     return [
-        ...new Set([...Object.values(BY_BOOK), ...machzorServices()]),
+        ...new Set([
+            ...Object.values(BY_BOOK),
+            ...Object.values(READER_OVERRIDE),
+            ...machzorServices(),
+        ]),
     ].sort()
 }

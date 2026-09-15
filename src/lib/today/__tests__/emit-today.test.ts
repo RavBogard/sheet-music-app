@@ -240,6 +240,27 @@ describe("buildTodayDoc — readerBook", () => {
         }
     })
 
+    it("sends the two Rosh Hashanah morning types to different shelves (R4-d)", () => {
+        // Daniel, 2026-09-15: the regular RH morning service opens the legacy
+        // machzor volume; the alternative service and Second Day — the setlists
+        // typed `rosh-hashanah-morning` — open Shirei Tshuvah, the one released
+        // volume. The PAGE is the legacy booklet's on both, which is why this
+        // only shows up in `readerBook` and never in `book` or a folio.
+        const cases: Array<[string, string]> = [
+            ["rosh-hashanah-day", "crc-rh-morning"],
+            ["rosh-hashanah-morning", "shirei-tshuvah"],
+        ]
+        for (const [templateType, expected] of cases) {
+            const doc = buildTodayDoc({
+                setlists: [setlist({ book: "crc-machzor-2008", templateType })],
+                services: SERVICES,
+                now: NOW,
+            })
+            expect(doc.services[0].book, templateType).toBe("crc-machzor-2008")
+            expect(doc.services[0].readerBook, templateType).toBe(expected)
+        }
+    })
+
     it("maps the two legacy booklets whatever the service is", () => {
         const doc = buildTodayDoc({
             setlists: [
