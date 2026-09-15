@@ -33,6 +33,24 @@ describe("public reader chart allowlist", () => {
         delete process.env.READER_PUBLIC_CHARTS_ENABLED
     })
 
+    /**
+     * The production variable was set carrying a trailing CRLF
+     * (`"false\r\n"`, 2026-09-07). It reads false either way — the risk this
+     * pins is the other direction: the day it is deliberately set to `true` the
+     * same way, an untrimmed compare would leave the switch off with no signal
+     * to whoever flipped it.
+     */
+    it("reads the switch through surrounding whitespace, in both directions", () => {
+        process.env.READER_PUBLIC_CHARTS_ENABLED = "false\r\n"
+        expect(publicReaderChartDefinition(definition.unitId)).toBeNull()
+        process.env.READER_PUBLIC_CHARTS_ENABLED = " true\r\n"
+        expect(publicReaderChartDefinition(definition.unitId)).toEqual(definition)
+        process.env.READER_PUBLIC_CHARTS_ENABLED = "TRUE"
+        expect(publicReaderChartDefinition(definition.unitId)).toBeNull()
+        process.env.READER_PUBLIC_CHARTS_ENABLED = "1"
+        expect(publicReaderChartDefinition(definition.unitId)).toBeNull()
+    })
+
     it("is default-off and enables only the exact Modeh pilot unit", () => {
         expect(publicReaderChartDefinition(definition.unitId)).toBeNull()
         process.env.READER_PUBLIC_CHARTS_ENABLED = "true"

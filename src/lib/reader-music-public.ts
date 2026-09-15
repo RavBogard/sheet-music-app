@@ -59,9 +59,18 @@ export const MAX_PUBLIC_READER_CHART_BYTES = 4 * 1024 * 1024
 /**
  * Deployment kill switch. It is intentionally default-off; the exact
  * crosswalk still has to carry `publicReaderStatus: "approved"` when on.
+ *
+ * TRIMMED, on evidence. The production variable currently reads `"false\r\n"`
+ * — a trailing CRLF was baked into the value when it was set on 2026-09-07.
+ * It is false either way today, so nothing is public. But an untrimmed compare
+ * means the day someone deliberately turns this ON the same way, the value
+ * arrives as `"true\r\n"`, the switch silently stays OFF, and the person who
+ * flipped it has no signal at all. A switch that cannot be trusted to obey is
+ * worse than a strict one: only the exact word `true` enables, whitespace
+ * around it does not change what was meant.
  */
 export function publicReaderChartsEnabled(): boolean {
-    return process.env.READER_PUBLIC_CHARTS_ENABLED === "true"
+    return (process.env.READER_PUBLIC_CHARTS_ENABLED ?? "").trim() === "true"
 }
 
 export function publicReaderChartDefinition(
