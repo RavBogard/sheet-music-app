@@ -33,9 +33,10 @@ describe("foldLiturgyName", () => {
 })
 
 describe("the lookup table", () => {
-    it("covers the four confirmed books", () => {
+    it("covers the four confirmed books, and the machzor per service", () => {
         expect(liturgyLookupBooks().sort()).toEqual([
             "crc-friday",
+            "crc-machzor-2008",
             "crc-saturday",
             "shabbat-maariv",
             "shabbat-shacharit",
@@ -152,10 +153,42 @@ describe("matchLiturgyTitle — what it refuses", () => {
     })
 
     it("returns nothing for a book with no table, rather than a default", () => {
-        expect(matchLiturgyTitle("crc-machzor-2008", "Bar'chu")).toEqual({
+        // `shirei-tshuvah` is a released FEED volume with no confirmed-rows
+        // file and no pagemap, so it has no table of this kind at all.
+        expect(matchLiturgyTitle("shirei-tshuvah", "Bar'chu")).toEqual({
             clear: null,
             plausible: [],
         })
+    })
+
+    it("resolves a machzor name inside its own service and nowhere else", () => {
+        // The reason five of this volume's six services went unmapped: the
+        // 2008 machzor prints Bar'chu four times. Scoped, each service has
+        // exactly one, and the answer is never a guess between them.
+        expect(
+            matchLiturgyTitle("crc-machzor-2008", "Bar'chu", "crc-rh-morning").clear
+                ?.entry.folio,
+        ).toBe(45)
+        expect(
+            matchLiturgyTitle("crc-machzor-2008", "Bar'chu", "crc-kol-nidre").clear
+                ?.entry.folio,
+        ).toBe(100)
+        expect(
+            matchLiturgyTitle("crc-machzor-2008", "Bar'chu", "crc-yk-morning").clear
+                ?.entry.folio,
+        ).toBe(136)
+        // Unscoped keeps the answer this book gave for its whole life.
+        expect(matchLiturgyTitle("crc-machzor-2008", "Bar'chu").clear?.entry.folio).toBe(45)
+        // A service the volume does not print has no table, not a fallback.
+        expect(
+            matchLiturgyTitle("crc-machzor-2008", "Bar'chu", "crc-nonesuch").clear,
+        ).toBeNull()
+    })
+
+    it("carries the unit id a machzor page was captured from", () => {
+        const m = matchLiturgyTitle("crc-machzor-2008", "Kol Nidre", "crc-kol-nidre")
+        expect(m.clear?.entry.folio).toBe(98)
+        expect(m.clear?.entry.unitId).toBe("erev-yk.kol-nidre@crc-kol-nidre")
     })
 
     it("refuses a compound title whose halves name two different moments", () => {
@@ -205,5 +238,49 @@ describe("matchLiturgyTitle — what it refuses", () => {
         for (const p of m.plausible) {
             expect(p.score).toBeGreaterThanOrEqual(PLAUSIBLE_SCORE)
         }
+    })
+})
+
+describe("a near match has to be explainable word by word", () => {
+    // The 2008 machzor prints the Torah reading on p.163 and the haftarah on
+    // p.171. As strings, "Torah Reading" and "Haftorah Reading" are 81%
+    // identical — over the clear line — so the matcher bound one to the other's
+    // page. Levenshtein over a whole phrase cannot tell a misspelling from a
+    // different word; taking the phrase apart can.
+    it("refuses Torah for Haftorah, at eight pages' distance", () => {
+        const m = matchLiturgyTitle("crc-machzor-2008", "Torah Reading", "crc-yk-morning")
+        expect(m.clear?.entry.folio).not.toBe(171)
+        // The volume prints two Torah readings and the row names neither, so
+        // "nothing, here are the candidates" is the right answer.
+        expect(m.plausible.map((p) => p.entry.folio).sort()).toEqual([163, 165])
+    })
+
+    it("still forgives a real misspelling", () => {
+        expect(matchLiturgyTitle("crc-friday", "Barechu").clear?.entry.label).toBe("Bar’chu")
+    })
+
+    it("forgives one letter in a short Hebrew word", () => {
+        // "Esa Einai" for "Esah Einai" — one h, and a flat percentage would
+        // have called 75% of a four-letter word a different word.
+        const m = matchLiturgyTitle("crc-machzor-2008", "Esa Einai", "crc-yizkor")
+        expect(m.clear?.entry.folio).toBe(180)
+    })
+
+    it("treats the same words in another order as the same name", () => {
+        // The feed calls it "Haftarah Blessing Before"; its own short name is
+        // "Blessing Before the Haftarah Reading"; David writes "Blessing
+        // Before Haftorah". Word order carries no meaning in a prayer's name.
+        const m = matchLiturgyTitle(
+            "crc-machzor-2008",
+            "Blessing Before Haftorah",
+            "crc-yk-morning",
+        )
+        expect(m.clear?.entry.folio).toBe(170)
+        expect(m.clear?.how).toBe("permuted")
+        expect(m.clear?.score).toBe(95)
+    })
+
+    it("does not call a single word a permutation of itself", () => {
+        expect(matchLiturgyTitle("crc-friday", "Bar'chu").clear?.how).toBe("exact")
     })
 })

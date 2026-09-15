@@ -33,7 +33,7 @@ export interface LiturgyMatch {
     entry: LiturgyLookupEntry
     /** The alias that produced the score — what to show Daniel. */
     via: string
-    how: "exact" | "near" | "contains"
+    how: "exact" | "permuted" | "near" | "contains"
 }
 
 export interface LiturgyMatchResult {
@@ -91,6 +91,68 @@ function tokenRunCoverage(a: string, b: string): number | null {
     return short.length / long.length
 }
 
+/**
+ * The same words in a different order.
+ *
+ * The machzor feeds name one moment several ways — "Haftarah Blessing Before"
+ * and "Blessing Before the Haftarah Reading" are the same unit — and David
+ * writes "Blessing Before Haftorah". Word order carries no meaning in a
+ * prayer's name, so an identical multiset of words is near-certain identity,
+ * while character-level similarity between those three strings is low enough
+ * to miss entirely. Single-word names are excluded: for them a permutation IS
+ * an exact match, already handled.
+ */
+function isPermutation(a: string, b: string): boolean {
+    const at = a.split(" ").filter(Boolean).sort()
+    const bt = b.split(" ").filter(Boolean).sort()
+    if (at.length < 2 || at.length !== bt.length) return false
+    return at.every((t, i) => t === bt[i])
+}
+
+/**
+ * Can this near match be explained word by word?
+ *
+ * `near` is for a MISSPELLING, and character-level Levenshtein over a whole
+ * phrase cannot tell a misspelling from a different word. "Torah Reading" and
+ * "Haftorah Reading" are 81% identical as strings and eight printed pages and
+ * one aliyah apart — the Torah reading is p.163, the haftarah p.171 — and the
+ * matcher bound the first to the second. So a near match now has to survive
+ * being taken apart: every substantive word on one side must be matched by an
+ * identical or near-identical word on the other. "Barechu"/"Bar'chu" survives;
+ * "Torah"/"Haftorah" does not, because those are two words, not one word typed
+ * badly. Short words (under four characters) are ignored — "the", "of", "mi"
+ * decide nothing.
+ *
+ * A percentage is the wrong ruler for a SHORT word: one edit in "Esah" is 25%
+ * of it, so "Esa Einai" and "Esah Einai" — the same name, one h — would fail a
+ * flat 80%. Up to five characters a single edit is therefore enough on its own.
+ * Three edits never are, at any length, which is what keeps Torah out of
+ * Haftorah.
+ */
+function sameWord(a: string, b: string): boolean {
+    if (similarity(a, b) * 100 >= CLEAR_SCORE) return true
+    return Math.max(a.length, b.length) <= 5 && levenshteinDistance(a, b) <= 1
+}
+
+function nearIsExplainable(a: string, b: string): boolean {
+    const left = a.split(" ").filter(Boolean)
+    const right = b.split(" ").filter(Boolean)
+    for (const t of [...left]) {
+        const i = right.indexOf(t)
+        if (i < 0) continue
+        left.splice(left.indexOf(t), 1)
+        right.splice(i, 1)
+    }
+    for (const t of [...left]) {
+        const i = right.findIndex((o) => sameWord(t, o))
+        if (i < 0) continue
+        left.splice(left.indexOf(t), 1)
+        right.splice(i, 1)
+    }
+    const substantive = (w: string) => w.length >= 4
+    return !left.some(substantive) && !right.some(substantive)
+}
+
 function scoreAgainst(folded: string, alias: string): LiturgyMatch["how"] | null {
     const target = foldLiturgyName(alias)
     if (!target) return null
@@ -98,10 +160,12 @@ function scoreAgainst(folded: string, alias: string): LiturgyMatch["how"] | null
     if (folded.length < MIN_FUZZY_LENGTH || target.length < MIN_FUZZY_LENGTH) {
         return null
     }
+    if (isPermutation(folded, target)) return "permuted"
     if (
         folded.length >= MIN_NEAR_LENGTH &&
         target.length >= MIN_NEAR_LENGTH &&
-        similarity(folded, target) * 100 >= CLEAR_SCORE
+        similarity(folded, target) * 100 >= CLEAR_SCORE &&
+        nearIsExplainable(folded, target)
     ) {
         return "near"
     }
@@ -109,8 +173,12 @@ function scoreAgainst(folded: string, alias: string): LiturgyMatch["how"] | null
     return null
 }
 
+/** A permutation is identity, but not quite the certainty of an exact fold. */
+const PERMUTED_SCORE = 95
+
 function valueOf(folded: string, alias: string, how: LiturgyMatch["how"]): number {
     if (how === "exact") return 100
+    if (how === "permuted") return PERMUTED_SCORE
     const raw = similarity(folded, foldLiturgyName(alias)) * 100
     if (how === "near") return Math.round(raw)
     // Containment: how much of the longer name the shorter one covers, in
@@ -124,12 +192,12 @@ function valueOf(folded: string, alias: string, how: LiturgyMatch["how"]): numbe
     )
 }
 
-function rank(book: string, title: string): LiturgyMatch[] {
+function rank(book: string, title: string, service?: string | null): LiturgyMatch[] {
     const folded = foldLiturgyName(title)
     if (!folded) return []
 
     const best = new Map<LiturgyLookupEntry, LiturgyMatch>()
-    for (const entry of liturgyLookup(book)) {
+    for (const entry of liturgyLookup(book, service)) {
         for (const alias of entry.aliases) {
             const how = scoreAgainst(folded, alias)
             if (!how) continue
@@ -229,13 +297,14 @@ function assemble(ranked: LiturgyMatch[]): LiturgyMatchResult {
 export function matchLiturgyTitle(
     book: string,
     title: string,
+    service?: string | null,
 ): LiturgyMatchResult {
     const empty: LiturgyMatchResult = { clear: null, plausible: [] }
     if (typeof title !== "string") return empty
     if (!foldLiturgyName(title)) return empty
     if (isRuledUnbound(book, title)) return empty
 
-    const whole = assemble(rank(book, title))
+    const whole = assemble(rank(book, title, service))
     if (whole.clear) return whole
 
     // A row's title here is very often a CHART FILE NAME — `Shema (major).pdf`,
@@ -248,7 +317,7 @@ export function matchLiturgyTitle(
     const stem = bareStem(title)
     const stemmed = stem && foldLiturgyName(stem) !== foldLiturgyName(title)
         ? assemble(
-              rank(book, stem).map((m) => ({
+              rank(book, stem, service).map((m) => ({
                   ...m,
                   score: Math.max(0, m.score - COMPOUND_PENALTY),
               })),
@@ -261,7 +330,7 @@ export function matchLiturgyTitle(
 
     const byEntry = new Map<LiturgyLookupEntry, LiturgyMatch>()
     for (const part of parts) {
-        for (const m of rank(book, part)) {
+        for (const m of rank(book, part, service)) {
             const score = Math.max(0, m.score - COMPOUND_PENALTY)
             const current = byEntry.get(m.entry)
             if (!current || score > current.score) {
