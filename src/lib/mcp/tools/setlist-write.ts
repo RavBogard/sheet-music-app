@@ -42,6 +42,7 @@ import { getTracksForSetlist } from "@/lib/server-tracks"
 import { rebookRows, type RebookReport } from "@/lib/liturgy/rebook"
 import {
     autoBindLiturgyRef,
+    momentIdForRef,
     type LiturgySuggestion,
 } from "@/lib/liturgy/bind-on-type"
 import type { LiturgyRef } from "@/lib/books/types"
@@ -696,7 +697,12 @@ export async function addTrackToSetlist(
         bpm: resolved.bpm,
         leadMusician: resolved.leadMusician,
         referenceLink: args.referenceLink,
-        ...(auto.momentId ? { momentId: auto.momentId } : {}),
+        // Derived either way: from the match when the row bound itself, or
+        // from the unit the caller's own reference names.
+        ...(() => {
+            const moment = auto.momentId ?? momentIdForRef(args.liturgyRef)
+            return moment ? { momentId: moment } : {}
+        })(),
         songId: args.songId,
         // The library catalog is keyed by Drive file id, so a song's id IS its
         // chart file id — bond it as the track's fileId so the chart renders.
@@ -830,6 +836,12 @@ export async function updateSetlistTrack(
                 liturgy = { suggestions: auto.suggestions }
             }
         }
+    }
+    // A page the caller typed still gets to say what it is about. The ref is
+    // untouched — only the join key follows it.
+    if (patch.liturgyRef && !patch.momentId) {
+        const moment = momentIdForRef(patch.liturgyRef)
+        if (moment) patch.momentId = moment
     }
 
     const result = await updateTrack(

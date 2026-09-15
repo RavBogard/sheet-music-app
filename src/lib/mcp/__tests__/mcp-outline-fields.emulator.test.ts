@@ -170,6 +170,45 @@ describe("outline fields survive the MCP write path (emulator)", () => {
         })
     })
 
+    // R5-b and R5-c: Daniel ruled two typed pages wrong and had them
+    // corrected. The correction goes through this path, and a row that names a
+    // unit must come out of it with its join key — otherwise a page fixed by
+    // hand is a row the cue log cannot match, which is the exact hole
+    // `momentId` was added to close.
+    it("derives momentId from a liturgyRef the caller typed, on update and on add", async () => {
+        const setlistId = await newSetlist()
+        const ref = {
+            book: "crc-machzor-2008",
+            unitId: "erev-yk.kol-nidre@crc-kol-nidre",
+            folio: 98,
+        }
+
+        const added = await addTrackToSetlist(ADMIN, {
+            setlistId,
+            title: "Kol Nidre",
+            type: "prayer",
+            liturgyRef: ref,
+        })
+        const trackId = (added as { trackId: string }).trackId
+        expect((await db().collection("tracks").doc(trackId).get()).data()).toMatchObject({
+            liturgyRef: ref,
+            momentId: "kol-nidre",
+        })
+
+        // And on a row that had none: the page moves, identity follows it.
+        const plain = await addTrackToSetlist(ADMIN, {
+            setlistId,
+            title: "Something With No Page",
+            type: "prayer",
+        })
+        const plainId = (plain as { trackId: string }).trackId
+        await updateSetlistTrack(ADMIN, { setlistId, trackId: plainId, patch: { liturgyRef: ref } })
+        expect((await db().collection("tracks").doc(plainId).get()).data()).toMatchObject({
+            liturgyRef: ref,
+            momentId: "kol-nidre",
+        })
+    })
+
     it("leaves outline fields untouched when the patch omits them", async () => {
         const setlistId = await newSetlist()
         const added = await addTrackToSetlist(ADMIN, {

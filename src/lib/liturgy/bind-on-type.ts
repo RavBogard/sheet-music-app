@@ -130,3 +130,23 @@ export function autoBindLiturgyRef(
     // page-less. Saying nothing is the truthful outcome.
     return ref ? { ref, momentId, suggestions } : { suggestions }
 }
+
+/**
+ * The moment a page an AUTHOR typed is about.
+ *
+ * `momentId` is derived, never authored — it is a join key, and a key someone
+ * can type is a key that can be wrong. But the derivation was only wired into
+ * the automatic bind, so a row whose page arrived by hand carried a `unitId`
+ * and no moment, and the cue log could not match it. That is the case Daniel's
+ * R5-b and R5-c corrections are: a page changed deliberately, on a row that
+ * names a real unit.
+ *
+ * So identity follows the reference wherever the reference comes from. The
+ * page is still entirely the author's; this only says what the page is about.
+ */
+export function momentIdForRef(
+    ref: { unitId?: string | null } | null | undefined,
+): string | undefined {
+    if (!ref?.unitId) return undefined
+    return momentIdForUnit(ref.unitId) ?? undefined
+}
