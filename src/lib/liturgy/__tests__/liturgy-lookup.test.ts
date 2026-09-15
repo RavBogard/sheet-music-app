@@ -165,6 +165,31 @@ describe("matchLiturgyTitle — what it refuses", () => {
         )
     })
 
+    it("sees through a chart file name to the moment", () => {
+        // `.live` rows are very often named after the chart file. The
+        // extension is packaging and the clarifier names an arrangement;
+        // neither changes which page the congregation turns to.
+        for (const [title, folio] of [
+            ["Shema (major).pdf", 15],
+            ["Barchu (walkdown)", 10],
+            ["Mourner's Kaddish.musicxml", 41],
+            ["Eitz Chayim - Weisenberg", undefined],
+        ] as const) {
+            const m = matchLiturgyTitle("crc-friday", title)
+            if (folio === undefined) {
+                expect(m.clear?.entry.folio, title).toBeUndefined()
+            } else {
+                expect(m.clear?.entry.folio, title).toBe(folio)
+            }
+        }
+    })
+
+    it("still refuses a file name that names two moments", () => {
+        const m = matchLiturgyTitle("crc-friday", "Mi Chamocha Ana B'Koach.pdf")
+        expect(m.clear).toBeNull()
+        expect(m.plausible.map((p) => p.entry.label)).toContain("Mi Chamocha")
+    })
+
     it("binds a compound title whose halves agree", () => {
         const m = matchLiturgyTitle("crc-friday", "Aleinu / Adoration")
         expect(m.clear?.entry.label).toBe("Aleinu")

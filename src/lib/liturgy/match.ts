@@ -1,4 +1,5 @@
 import { levenshteinDistance } from "@/lib/string-utils"
+import { bareStem } from "@/lib/mcp/title-specificity"
 import {
     foldLiturgyName,
     liturgyLookup,
@@ -56,7 +57,10 @@ const MIN_FUZZY_LENGTH = 3
 const MIN_NEAR_LENGTH = 6
 /** A containment hit can never reach the clear band. See the note above. */
 const CONTAINMENT_CEILING = 70
-/** A compound title's part is evidence about the whole, but weaker. */
+/**
+ * A title stripped down to its stem, or one half of a compound, is evidence
+ * about the whole title but weaker than the whole title matching outright.
+ */
 const COMPOUND_PENALTY = 5
 
 function similarity(a: string, b: string): number {
@@ -215,8 +219,26 @@ export function matchLiturgyTitle(
     const whole = assemble(rank(book, title))
     if (whole.clear) return whole
 
+    // A row's title here is very often a CHART FILE NAME — `Shema (major).pdf`,
+    // `Barchu (walkdown)`, `Eitz Chayim - Weisenberg`. The extension is
+    // packaging and the clarifier names an arrangement, and neither changes
+    // which page of the booklet the congregation turns to. `bareStem` is the
+    // repo's existing answer to exactly this (it is what `library_index`
+    // stores), so reuse it rather than inventing a second normalizer that
+    // would drift from it.
+    const stem = bareStem(title)
+    const stemmed = stem && foldLiturgyName(stem) !== foldLiturgyName(title)
+        ? assemble(
+              rank(book, stem).map((m) => ({
+                  ...m,
+                  score: Math.max(0, m.score - COMPOUND_PENALTY),
+              })),
+          )
+        : null
+    if (stemmed?.clear) return stemmed
+
     const parts = compoundParts(title)
-    if (!parts.length) return whole
+    if (!parts.length) return stemmed ?? whole
 
     const byEntry = new Map<LiturgyLookupEntry, LiturgyMatch>()
     for (const part of parts) {
@@ -227,6 +249,10 @@ export function matchLiturgyTitle(
                 byEntry.set(m.entry, { ...m, score })
             }
         }
+    }
+    for (const m of stemmed?.plausible ?? []) {
+        const current = byEntry.get(m.entry)
+        if (!current || m.score > current.score) byEntry.set(m.entry, m)
     }
     const ranked = [...byEntry.values()].sort((a, b) => b.score - a.score)
     const clearCount = ranked.filter((m) => m.score >= CLEAR_SCORE).length
