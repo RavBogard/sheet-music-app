@@ -66,8 +66,14 @@ export interface SetlistTrack {
      * the book registry (src/data/books) so nothing at render time depends
      * on an external repo. `unitId` is an AR-3 stable id and is present only
      * for feed-tier books.
+     *
+     * `stale` means the service changed book and this page could not be found
+     * in the new one (A-W4'). The number is kept rather than blanked — it is
+     * still a true page of the book named in `book`, and some of these were
+     * typed by hand — but nothing should present it as this service's page
+     * until someone resolves it.
      */
-    liturgyRef?: { book: string; unitId?: string; folio: number }
+    liturgyRef?: { book: string; unitId?: string; folio: number; stale?: boolean }
     /**
      * A fixed-liturgy row: the service says it every week, straight from the
      * book, and no chart is ever bonded to it. Set by the service templates so

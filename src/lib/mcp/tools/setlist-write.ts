@@ -38,6 +38,10 @@ import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { parseEventDate } from "@/lib/parse-event-date"
+import { getTracksForSetlist } from "@/lib/server-tracks"
+import { rebookRows, type RebookReport } from "@/lib/liturgy/rebook"
+import type { LiturgyRef } from "@/lib/books/types"
+import { logger } from "@/lib/logger"
 import { isTestSetlist } from "@/types/models"
 import {
     WRITE_RECEIPTS_COLLECTION,
@@ -342,6 +346,8 @@ export async function updateSetlist(
               serviceType: string | null
               serviceNotes: string | null
           }
+          /** Present only when the book changed. See `rebookRows`. */
+          rebook?: RebookReport & { from: string; to: string }
       }
     | RichErrorEnvelope
     | ToolEnvelopeError
@@ -378,6 +384,16 @@ export async function updateSetlist(
         patch.startsAtLocal = args.startsAtLocal
     }
 
+    // A-W4' — the book is changing, so every page on every row is now about a
+    // book nobody is holding. Read the rows BEFORE the write so a failure
+    // halfway leaves the metadata and the pages agreeing with each other.
+    const previousBook =
+        typeof (loaded.data as Record<string, unknown>)?.book === "string"
+            ? ((loaded.data as Record<string, unknown>).book as string)
+            : null
+    const bookChanged =
+        args.book !== undefined && !!args.book && args.book !== previousBook
+
     const updateResult = await updateSetlistServerSide(
         args.id,
         patch,
@@ -393,6 +409,49 @@ export async function updateSetlist(
             { setlistId: args.id },
             "Verify the id via list_setlists.",
         )
+    }
+
+    let rebook: (RebookReport & { from: string; to: string }) | undefined
+    if (bookChanged && args.book) {
+        const tracks = await getTracksForSetlist(db, args.id, loaded.data)
+        const plan = rebookRows(
+            tracks.map((t) => {
+                const row = t as unknown as Record<string, unknown>
+                return {
+                    id: t.id,
+                    title: typeof t.title === "string" ? t.title : "",
+                    liturgyRef: (row.liturgyRef as LiturgyRef | undefined) ?? null,
+                }
+            }),
+            args.book,
+        )
+        for (const wRow of plan.writes) {
+            try {
+                await db
+                    .collection("tracks")
+                    .doc(wRow.rowId)
+                    .update({
+                        liturgyRef: wRow.stale
+                            ? { ...wRow.ref, stale: true }
+                            : wRow.ref,
+                    })
+            } catch (err) {
+                // A page that cannot be rewritten keeps the one it had. The
+                // book change is the caller's request and still stands; a
+                // failed page update is reported, never a failed update.
+                logger.warn("[update_setlist] re-resolve write failed", {
+                    setlistId: args.id,
+                    rowId: wRow.rowId,
+                    err: err instanceof Error ? err.message : String(err),
+                })
+            }
+        }
+        rebook = {
+            from: previousBook ?? "",
+            to: args.book,
+            resolved: plan.resolved,
+            unresolved: plan.unresolved,
+        }
     }
 
     // G-11: echo the post-update state so callers don't need a follow-up
@@ -428,6 +487,7 @@ export async function updateSetlist(
             serviceType: str(updated?.templateType ?? updated?.serviceType),
             serviceNotes: str(updated?.serviceNotes),
         },
+        ...(rebook ? { rebook } : {}),
     }
 }
 

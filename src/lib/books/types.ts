@@ -60,6 +60,11 @@ export interface LiturgyRef {
     book: string
     unitId?: string
     folio: number
+    /**
+     * The service changed book and this page could not be found in the new
+     * one (A-W4'). Kept, not blanked, and never presented as current.
+     */
+    stale?: boolean
 }
 
 export type LiturgyRefValidation =
