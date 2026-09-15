@@ -204,6 +204,16 @@ const RETIRED_UNITS = [
         became: "amidah.untaneh-tokef@crc-rh-morning",
         ruling: "R6-a",
     },
+    {
+        // R6-h: the kavannah on the same page 56 was named for the prayer the
+        // capture thought was there. Once R6-a decided p.56 is Un'taneh Tokef,
+        // the kavannah introducing it is the Un'taneh Tokef kavannah — the
+        // third id that ruling ends, ruled separately because renaming a
+        // kavannah is a naming decision and not a page decision.
+        unitId: "amidah.kdushat-hayom-kavannah@crc-rh-morning",
+        became: "amidah.untaneh-tokef-kavannah@crc-rh-morning",
+        ruling: "R6-h",
+    },
 ]
 
 /**
@@ -270,6 +280,23 @@ const RULINGS = {
             also: ["B'Rosh Hashanah", "B'Rosh Hashanah Yikateivun"],
             unitId: "amidah.brosh-hashanah@crc-rh-morning",
             ruling: "R6-a",
+        },
+        /*
+         * R6-h — the kavannah on the same p.56 was named for the prayer the
+         * capture thought was printed there, so R6-a stranded it: the id moved
+         * to `untaneh-tokef-kavannah` while the curated name still said
+         * "K'dushat Hayom Kavannah". Both names point at p.56 either way, so
+         * nothing resolved wrongly; what was wrong is the book asserting as
+         * PRIMARY a name the ruling retired. The old names stay as aliases —
+         * the owner never loses what it had — and "Kavannah for Un'taneh
+         * Tokef" is minted to match p.58's "Kavannah for K'dushah".
+         */
+        {
+            service: "crc-rh-morning",
+            name: "Un'taneh Tokef Kavannah",
+            also: ["Kavannah for Un'taneh Tokef", "Un’taneh Tokef Kavannah"],
+            unitId: "amidah.untaneh-tokef-kavannah@crc-rh-morning",
+            ruling: "R6-h",
         },
     ],
 }

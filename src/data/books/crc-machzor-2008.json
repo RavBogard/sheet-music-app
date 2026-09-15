@@ -464,25 +464,29 @@
             "unitId": "amidah.gvurot@crc-rh-morning"
         },
         {
-            "name": "K'dushat Hayom Kavannah",
-            "aliases": [
-                "Kavannah for K'dushat Hayom",
-                "Hayom Kavannah"
-            ],
-            "page": 56,
-            "service": "crc-rh-morning",
-            "unitId": "amidah.kdushat-hayom-kavannah@crc-rh-morning"
-        },
-        {
             "name": "Un'taneh Tokef",
             "aliases": [
                 "K'dushat Hayom",
                 "This Holy Day",
-                "Unetaneh Tokef"
+                "Unetaneh Tokef",
+                "Tokef"
             ],
             "page": 56,
             "service": "crc-rh-morning",
             "unitId": "amidah.untaneh-tokef@crc-rh-morning"
+        },
+        {
+            "name": "Un'taneh Tokef Kavannah",
+            "aliases": [
+                "K'dushat Hayom Kavannah",
+                "Kavannah for K'dushat Hayom",
+                "Hayom Kavannah",
+                "Tokef Kavannah",
+                "Kavannah for Un'taneh Tokef"
+            ],
+            "page": 56,
+            "service": "crc-rh-morning",
+            "unitId": "amidah.untaneh-tokef-kavannah@crc-rh-morning"
         },
         {
             "name": "B'rosh Hashanah",

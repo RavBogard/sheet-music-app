@@ -240,6 +240,33 @@ describe("matchLiturgyTitle — what it refuses", () => {
         expect(yk.clear?.entry.unitId).toBe("amidah.brosh-hashanah@crc-yk-morning")
     })
 
+    it("moves the p.56 kavannah to the prayer it introduces (R6-h)", () => {
+        // R6-a decided what is printed on 56; R6-h decides what the kavannah
+        // ON 56 is called, which is a separate question and got its own
+        // ruling. The page never moved — both names have always meant 56 —
+        // so the thing under test is the id and the primary name.
+        const m = matchLiturgyTitle("crc-machzor-2008", "Un'taneh Tokef Kavannah", "crc-rh-morning")
+        expect(m.clear?.entry.folio).toBe(56)
+        expect(m.clear?.entry.unitId).toBe("amidah.untaneh-tokef-kavannah@crc-rh-morning")
+
+        // The retired name stays an alias. A setlist typed before the ruling
+        // must keep resolving, and it resolves to the same page it always did.
+        expect(
+            matchLiturgyTitle("crc-machzor-2008", "K'dushat Hayom Kavannah", "crc-rh-morning").clear
+                ?.entry.folio,
+        ).toBe(56)
+
+        // The kavannah and the prayer share a page, so the only thing keeping
+        // them apart is the name. Neither may swallow the other's id.
+        expect(
+            matchLiturgyTitle("crc-machzor-2008", "Un'taneh Tokef", "crc-rh-morning").clear?.entry
+                .unitId,
+        ).toBe("amidah.untaneh-tokef@crc-rh-morning")
+
+        const ids = machzor.entries.map((e) => e.unitId)
+        expect(ids).not.toContain("amidah.kdushat-hayom-kavannah@crc-rh-morning")
+    })
+
     it("has retired K'dushat Hayom as a unit of its own in both services", () => {
         // The retirement is the permanent half of R5-a and R6-a. The NAME must
         // still resolve — it is printed on both pages — but no entry may carry
