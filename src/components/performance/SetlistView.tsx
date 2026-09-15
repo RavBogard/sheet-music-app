@@ -1,9 +1,11 @@
 "use client"
 
-import { useMemo } from "react"
+import React, { useMemo, useState } from "react"
 import { SetlistTrack } from "@/types/models"
 import { SetlistRow } from "./SetlistRow"
 import { LiveDirectorGesture } from "./LiveDirectorGesture"
+import { LiturgyRunDivider } from "./LiturgyRunDivider"
+import { liturgyRuns, runFolios } from "./liturgy-runs"
 
 export interface SetlistViewProps {
     tracks: SetlistTrack[]
@@ -22,6 +24,12 @@ export interface SetlistViewProps {
      * single-chart probe view).
      */
     setlistId?: string
+    /**
+     * Fold the fixed-liturgy rows the band never plays from into one divider
+     * per stretch. Per-device (`useLiturgyCollapse`), default on. Never
+     * changes what is in the setlist — only what this screen draws.
+     */
+    collapseLiturgy?: boolean
 }
 
 export function SetlistView({
@@ -34,12 +42,80 @@ export function SetlistView({
     onLeaderSetPosition,
     serviceNotes,
     setlistId,
+    collapseLiturgy = false,
 }: SetlistViewProps) {
     // Memoize transposed keys computation (pure function, keyed on tracks + transposition)
     const _transpositionKey = useMemo(
         () => `${tracks.map((t) => t.key || "").join(",")}-${defaultTransposition}`,
         [tracks, defaultTransposition]
     )
+
+    // Which stretches of fixed liturgy are folded, and which the reader has
+    // opened. Expansion is per run and deliberately NOT persisted: opening one
+    // stretch to check a page is a thing you do once, and a tablet that
+    // remembered every such tap would drift back to the unfolded list nobody
+    // asked for.
+    const runs = useMemo(
+        () => (collapseLiturgy ? liturgyRuns(tracks) : []),
+        [collapseLiturgy, tracks],
+    )
+    const [openRuns, setOpenRuns] = useState<Set<number>>(() => new Set())
+    const runByStart = useMemo(() => new Map(runs.map((r) => [r.start, r])), [runs])
+    const toggleRun = (start: number) =>
+        setOpenRuns((prev) => {
+            const next = new Set(prev)
+            if (next.has(start)) next.delete(start)
+            else next.add(start)
+            return next
+        })
+
+    const renderRow = (track: SetlistTrack, index: number) => {
+        // Long-press → live-director sheet wires per-row when the viewer is a
+        // band_leader/admin AND we know the setlistId (insert writes need it).
+        // Headers + tracks without an id (mid-hydration) skip the wrapper —
+        // there's no Firestore doc to mutate yet.
+        const gestureEligible =
+            isLeader && !!setlistId && !!track.id && track.type !== "header"
+        if (!gestureEligible) {
+            return (
+                <SetlistRow
+                    key={track.id || `track-${index}`}
+                    track={track}
+                    index={index}
+                    isCurrentPosition={index === currentTrackIndex}
+                    defaultTransposition={defaultTransposition}
+                    isPublicView={isPublicView}
+                    isLeader={isLeader}
+                    onSongTap={() => onSongTap(index)}
+                    onLeaderSetPosition={() => onLeaderSetPosition(index)}
+                />
+            )
+        }
+        return (
+            <LiveDirectorGesture
+                key={track.id}
+                enabled
+                track={track}
+                trackIndex={index}
+                setlistTracks={tracks}
+                setlistId={setlistId!}
+            >
+                {({ handlers }) => (
+                    <SetlistRow
+                        track={track}
+                        index={index}
+                        isCurrentPosition={index === currentTrackIndex}
+                        defaultTransposition={defaultTransposition}
+                        isPublicView={isPublicView}
+                        isLeader={isLeader}
+                        onSongTap={() => onSongTap(index)}
+                        onLeaderSetPosition={() => onLeaderSetPosition(index)}
+                        gestureHandlers={handlers}
+                    />
+                )}
+            </LiveDirectorGesture>
+        )
+    }
 
     return (
         <div className="flex-1 overflow-y-auto w-full">
@@ -52,53 +128,45 @@ export function SetlistView({
                 )}
 
                 {/* Single flat scrollable list */}
-                {tracks.map((track, index) => {
-                    // Long-press → live-director sheet wires per-row when the
-                    // viewer is a band_leader/admin AND we know the setlistId
-                    // (insert writes need it). Headers + tracks without an id
-                    // (mid-hydration) skip the wrapper — there's no Firestore
-                    // doc to mutate yet.
-                    const gestureEligible =
-                        isLeader && !!setlistId && !!track.id && track.type !== "header"
-                    const row = (
-                        <SetlistRow
-                            key={track.id || `track-${index}`}
-                            track={track}
-                            index={index}
-                            isCurrentPosition={index === currentTrackIndex}
-                            defaultTransposition={defaultTransposition}
-                            isPublicView={isPublicView}
-                            isLeader={isLeader}
-                            onSongTap={() => onSongTap(index)}
-                            onLeaderSetPosition={() => onLeaderSetPosition(index)}
-                        />
-                    )
-                    if (!gestureEligible) return row
-                    return (
-                        <LiveDirectorGesture
-                            key={track.id}
-                            enabled
-                            track={track}
-                            trackIndex={index}
-                            setlistTracks={tracks}
-                            setlistId={setlistId!}
-                        >
-                            {({ handlers }) => (
-                                <SetlistRow
-                                    track={track}
-                                    index={index}
-                                    isCurrentPosition={index === currentTrackIndex}
-                                    defaultTransposition={defaultTransposition}
-                                    isPublicView={isPublicView}
-                                    isLeader={isLeader}
-                                    onSongTap={() => onSongTap(index)}
-                                    onLeaderSetPosition={() => onLeaderSetPosition(index)}
-                                    gestureHandlers={handlers}
-                                />
-                            )}
-                        </LiveDirectorGesture>
-                    )
-                })}
+                {(() => {
+                    const out: React.ReactNode[] = []
+                    for (let index = 0; index < tracks.length; index++) {
+                        const run = runByStart.get(index)
+                        if (run) {
+                            const expanded = openRuns.has(run.start)
+                            out.push(
+                                <LiturgyRunDivider
+                                    key={`liturgy-divider-${run.start}`}
+                                    labels={run.indexes.map((i) => tracks[i].title ?? "")}
+                                    folios={runFolios(tracks, run)}
+                                    expanded={expanded}
+                                    onToggle={() => toggleRun(run.start)}
+                                    controls={`liturgy-run-${run.start}`}
+                                />,
+                            )
+                            if (!expanded) {
+                                index = run.indexes[run.indexes.length - 1]
+                                continue
+                            }
+                            // Opened: the run's rows sit inside the region the
+                            // divider names, so `aria-expanded`/`aria-controls`
+                            // point at something real for a screen reader.
+                            out.push(
+                                <div
+                                    key={`liturgy-run-${run.start}`}
+                                    id={`liturgy-run-${run.start}`}
+                                    className="flex flex-col"
+                                >
+                                    {run.indexes.map((i) => renderRow(tracks[i], i))}
+                                </div>,
+                            )
+                            index = run.indexes[run.indexes.length - 1]
+                            continue
+                        }
+                        out.push(renderRow(tracks[index], index))
+                    }
+                    return out
+                })()}
 
                 {tracks.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">

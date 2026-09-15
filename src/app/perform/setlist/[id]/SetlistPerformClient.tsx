@@ -23,7 +23,7 @@
 import { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
-import { Loader2, ArrowLeft, Music, Users, Pencil, Printer } from "lucide-react"
+import { Loader2, ArrowLeft, Music, Users, Pencil, Printer, ListCollapse, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSetlistPerformance } from "@/hooks/use-setlist-performance"
 import { usePerformEntryPrecache } from "@/hooks/use-perform-entry-precache"
@@ -35,6 +35,8 @@ import { SaveOfflineButton } from "@/components/performance/SaveOfflineButton"
 import { KeepAwakeToggle } from "@/components/performance/KeepAwakeToggle"
 import { KeepAwakeAutoArm } from "@/components/performance/keep-awake-context"
 import { bookTitle } from "@/lib/books/titles"
+import { useLiturgyCollapse } from "@/hooks/use-liturgy-collapse"
+import { liturgyRuns } from "@/components/performance/liturgy-runs"
 import { shouldShowFatalSetlistError } from "./perform-error-gate"
 import type { Setlist, SetlistTrack } from "@/types/models"
 
@@ -131,6 +133,16 @@ export function SetlistPerformClient({
         return idx
     })
     const [showPrintModal, setShowPrintModal] = useState(false)
+    // Per-device (`crc.perform.liturgy-collapsed`), default collapsed. The
+    // control only appears when this service actually has fixed-liturgy rows
+    // to fold — a Camp Sabra setlist of eight songs should not grow a button
+    // that does nothing.
+    const { collapsed: liturgyCollapsed, setCollapsed: setLiturgyCollapsed } =
+        useLiturgyCollapse()
+    const foldableLiturgyRows = liturgyRuns(tracks).reduce(
+        (n, run) => n + run.indexes.length,
+        0,
+    )
 
     // c11-fix-perform-track-position-in-url (M3-009): mirror `activeSongIndex`
     // into the URL via `window.history.replaceState` so an iPad refresh /
@@ -288,6 +300,29 @@ export function SetlistPerformClient({
                         runs on mount; this CTA force-caches with progress). Shown to
                         everyone performing — offline resilience isn't role-gated. */}
                     {songFileIds.length > 0 && <SaveOfflineButton fileIds={songFileIds} />}
+                    {foldableLiturgyRows > 0 && (
+                        <Button
+                            onClick={() => setLiturgyCollapsed(!liturgyCollapsed)}
+                            size="sm"
+                            variant="ghost"
+                            aria-pressed={liturgyCollapsed}
+                            aria-label={
+                                liturgyCollapsed
+                                    ? `Show ${foldableLiturgyRows} liturgy rows`
+                                    : `Hide ${foldableLiturgyRows} liturgy rows`
+                            }
+                            className="h-11 min-w-11 gap-1.5 text-muted-foreground cursor-pointer"
+                        >
+                            {liturgyCollapsed ? (
+                                <List className="h-4 w-4" />
+                            ) : (
+                                <ListCollapse className="h-4 w-4" />
+                            )}
+                            <span className="text-xs hidden sm:inline">
+                                {liturgyCollapsed ? "Liturgy" : "Songs only"}
+                            </span>
+                        </Button>
+                    )}
                     {canPrint && (
                         <Button onClick={() => setShowPrintModal(true)} size="sm" variant="ghost" aria-label="Print setlist" className="h-11 min-w-11 gap-1.5 text-muted-foreground">
                             <Printer className="h-4 w-4" />
@@ -341,6 +376,7 @@ export function SetlistPerformClient({
                 onLeaderSetPosition={setCurrentPosition}
                 serviceNotes={serviceNotes}
                 setlistId={setlistId}
+                collapseLiturgy={liturgyCollapsed}
             />
 
             {/* PDF overlay: renders on top of setlist when a song is tapped */}
