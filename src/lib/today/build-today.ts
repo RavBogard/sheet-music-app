@@ -1,4 +1,5 @@
 import { chicagoWallClockToUtcMs } from "@/lib/parse-event-date"
+import { readerBookFor } from "./reader-book"
 import {
     DEFAULT_STREAM_LEAD_MINUTES,
     TODAY_WINDOW_DAYS,
@@ -139,6 +140,8 @@ export function buildTodayDoc(input: BuildTodayInput): TodayDoc {
         if (startsAt) service.startsAt = startsAt
         const book = asString(row.book)
         if (book) service.book = book
+        const readerBook = readerBookFor(book, serviceType)
+        if (readerBook) service.readerBook = readerBook
         if (typeof row.startFolio === "number" && Number.isInteger(row.startFolio)) {
             service.startFolio = row.startFolio
         }

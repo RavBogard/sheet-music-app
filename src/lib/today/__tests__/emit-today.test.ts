@@ -76,6 +76,7 @@ describe("buildTodayDoc — envelope", () => {
         expect(s).not.toHaveProperty("startsAt")
         expect(s).not.toHaveProperty("stream")
         expect(s).not.toHaveProperty("publishedAt")
+        expect(s).not.toHaveProperty("readerBook")
     })
 })
 
@@ -210,6 +211,77 @@ describe("buildTodayDoc — start times", () => {
         expect(startsAtFor("2026-09-18", "25:00")).toBeNull()
         expect(startsAtFor("2026-09-18", "6pm")).toBeNull()
         expect(startsAtFor("2026-09-18", null)).toBeNull()
+    })
+})
+
+/**
+ * R2-e — the book-slug crosswalk. See `src/lib/today/reader-book.ts` for why
+ * the two vocabularies differ and why that is not a bug in either of them.
+ */
+describe("buildTodayDoc — readerBook", () => {
+    it("splits the one printed machzor by service, the way the reader shelves it", () => {
+        const cases: Array<[string, string]> = [
+            ["kol-nidre", "crc-kol-nidre"],
+            ["kol-nidre-alt", "crc-kol-nidre"],
+            ["yom-kippur-morning", "crc-yk-morning"],
+            ["yizkor", "crc-yizkor"],
+            ["neilah", "crc-neilah"],
+        ]
+        for (const [serviceType, expected] of cases) {
+            const doc = buildTodayDoc({
+                setlists: [
+                    setlist({ book: "crc-machzor-2008", templateType: serviceType }),
+                ],
+                services: SERVICES,
+                now: NOW,
+            })
+            expect(doc.services[0].book, serviceType).toBe("crc-machzor-2008")
+            expect(doc.services[0].readerBook, serviceType).toBe(expected)
+        }
+    })
+
+    it("maps the two legacy booklets whatever the service is", () => {
+        const doc = buildTodayDoc({
+            setlists: [
+                setlist({ id: "f", book: "crc-friday" }),
+                setlist({ id: "s", book: "crc-saturday", templateType: "bnei_mitzvah_saturday" }),
+            ],
+            services: SERVICES,
+            now: NOW,
+        })
+        const byId = Object.fromEntries(
+            doc.services.map((x) => [x.setlistId, x.readerBook]),
+        )
+        expect(byId).toEqual({
+            f: "legacy-shabbat-evening",
+            s: "legacy-shabbat-morning",
+        })
+    })
+
+    it("NEVER names a draft volume, which is the easy wrong answer", () => {
+        // `shabbat-maariv` and `shabbat-shacharit` are the only two slugs both
+        // vocabularies already share, and Ruling 8 forbids surfacing either.
+        for (const book of ["shabbat-maariv", "shabbat-shacharit"]) {
+            const doc = buildTodayDoc({
+                setlists: [setlist({ book })],
+                services: SERVICES,
+                now: NOW,
+            })
+            expect(doc.services[0].book, book).toBe(book)
+            expect(doc.services[0], book).not.toHaveProperty("readerBook")
+        }
+    })
+
+    it("says nothing rather than guessing, for a machzor service it does not know", () => {
+        const doc = buildTodayDoc({
+            setlists: [
+                setlist({ book: "crc-machzor-2008", templateType: "friday_night" }),
+                setlist({ id: "b", book: "crc-machzor-2008", templateType: undefined }),
+            ],
+            services: SERVICES,
+            now: NOW,
+        })
+        for (const s of doc.services) expect(s).not.toHaveProperty("readerBook")
     })
 })
 
@@ -371,6 +443,7 @@ describe("forbidden-key guard", () => {
             "rabbi",
             "stream",
             "publishedAt",
+            "readerBook",
             "version",
         ]
         for (const s of doc.services) {

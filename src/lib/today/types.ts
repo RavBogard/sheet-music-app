@@ -40,6 +40,17 @@ export interface TodayService {
     startsAt?: string
     /** Book slug the service runs from (`list_books`). Omitted when unset. */
     book?: string
+    /**
+     * The same paper, named the way the READER shelves it (R2-e, 2026-09-15).
+     *
+     * Additive and advisory. `.live` registers the whole printed 2008 machzor
+     * as one book; the reader splits it into per-service volumes because a
+     * davener is davening from exactly one service. Neither naming is wrong,
+     * and this field is the sentence between them — see
+     * `src/lib/today/reader-book.ts`. The reader consults it only when `book`
+     * is off its shelf, and never names a draft volume.
+     */
+    readerBook?: string
     /** First `liturgyRef.folio` in track order. Omitted when no row has one. */
     startFolio?: number
     /** The rabbi leading ("Led by"). Omitted when unset. */

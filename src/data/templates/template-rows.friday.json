@@ -46,7 +46,7 @@
       "liturgyRefs": {
         "shabbat-maariv": {
           "unitId": "kabbalat.lcha-dodi@shabbat-maariv",
-          "folio": 15
+          "folio": 16
         },
         "crc-friday": {
           "folio": 8
@@ -62,7 +62,7 @@
       "liturgyRefs": {
         "shabbat-maariv": {
           "unitId": "shma.barchu@shabbat-maariv",
-          "folio": 21
+          "folio": 22
         },
         "crc-friday": {
           "folio": 10
@@ -78,7 +78,7 @@
       "liturgyRefs": {
         "shabbat-maariv": {
           "unitId": "shma.the-shma@shabbat-maariv",
-          "folio": 24
+          "folio": 25
         },
         "crc-friday": {
           "folio": 15
@@ -94,7 +94,7 @@
       "liturgyRefs": {
         "shabbat-maariv": {
           "unitId": "shma.vahavta-tzitzit@shabbat-maariv",
-          "folio": 24
+          "folio": 25
         },
         "crc-friday": {
           "folio": 16
@@ -110,7 +110,7 @@
       "liturgyRefs": {
         "shabbat-maariv": {
           "unitId": "shma.mi-chamocha@shabbat-maariv",
-          "folio": 28
+          "folio": 29
         },
         "crc-friday": {
           "folio": 18
@@ -126,7 +126,7 @@
       "liturgyRefs": {
         "shabbat-maariv": {
           "unitId": "shma.hashkivenu@shabbat-maariv",
-          "folio": 30
+          "folio": 31
         },
         "crc-friday": {
           "folio": 20
@@ -238,7 +238,7 @@
       "liturgyRefs": {
         "shabbat-maariv": {
           "unitId": "amidah.avodah@shabbat-maariv",
-          "folio": 39
+          "folio": 38
         },
         "crc-friday": {
           "folio": 28
@@ -254,7 +254,7 @@
       "liturgyRefs": {
         "shabbat-maariv": {
           "unitId": "amidah.modim@shabbat-maariv",
-          "folio": 40
+          "folio": 39
         },
         "crc-friday": {
           "folio": 29
@@ -270,7 +270,7 @@
       "liturgyRefs": {
         "shabbat-maariv": {
           "unitId": "amidah.shalom-rav@shabbat-maariv",
-          "folio": 41
+          "folio": 40
         },
         "crc-friday": {
           "folio": 30
@@ -286,7 +286,7 @@
       "liturgyRefs": {
         "shabbat-maariv": {
           "unitId": "concluding.aleinu@shabbat-maariv",
-          "folio": 50
+          "folio": 49
         },
         "crc-friday": {
           "folio": 38
@@ -302,7 +302,7 @@
       "liturgyRefs": {
         "shabbat-maariv": {
           "unitId": "concluding.mourners-kaddish@shabbat-maariv",
-          "folio": 52
+          "folio": 51
         },
         "crc-friday": {
           "folio": 41
@@ -318,7 +318,7 @@
       "liturgyRefs": {
         "shabbat-maariv": {
           "unitId": "concluding.priestly-blessing@shabbat-maariv",
-          "folio": 54
+          "folio": 53
         },
         "crc-friday": {
           "folio": 45
@@ -334,7 +334,7 @@
       "liturgyRefs": {
         "shabbat-maariv": {
           "unitId": "seasonal.kiddush@shabbat-maariv",
-          "folio": 68
+          "folio": 67
         },
         "crc-friday": {
           "folio": 46

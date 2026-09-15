@@ -3,13 +3,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 /**
  * Part E — the moment accessors.
  *
- * `src/data/books/moments.json` ships EMPTY: the artifact is gitignored in the
- * producing repo and only exists after a build there. So this file has two
- * halves — the empty-file contract (which is what production runs today, and
- * which every caller must survive), and the loaded behaviour, driven by mocking
- * the data module so the round-trip is tested without waiting on another repo's
- * build.
+ * `src/data/books/moments.json` is POPULATED as of 2026-09-15 (R2-b dropped
+ * the draft press pin, `sync:books` accepted the rebuilt `dist-app/`, and 136
+ * moments landed). It used to ship empty, because the artifact is gitignored
+ * in the producing repo and only exists after a build there.
+ *
+ * Both states are still tested, and the empty one is not vestigial: the
+ * artifact can go missing again the next time the producing repo is rebuilt
+ * from scratch, and no caller may lose a page number over it. Both halves are
+ * driven by mocking the data module, so neither depends on what happens to be
+ * checked in today.
  */
+
+const EMPTY = { schemaVersion: 1, builtAt: null, sources: [], moments: [] }
 
 const FIXTURE = {
     schemaVersion: 1,
@@ -49,10 +55,10 @@ const FIXTURE = {
     ],
 }
 
-describe("moments — the shipped (empty) file", () => {
+describe("moments — an empty or absent artifact", () => {
     beforeEach(() => {
         vi.resetModules()
-        vi.doUnmock("@/data/books/moments.json")
+        vi.doMock("@/data/books/moments.json", () => ({ default: EMPTY }))
     })
 
     it("answers null / [] for everything, and says it is not loaded", async () => {
@@ -72,8 +78,30 @@ describe("moments — the shipped (empty) file", () => {
         const res = lookupBookPage("shabbat-maariv", "Mi Chamocha")
         expect(res.ok).toBe(true)
         if (!res.ok) return
-        expect(res.matches[0].folio).toBe(28)
+        // The page itself is NOT pinned here. `shabbat-maariv` is an alpha
+        // draft whose folios move on every rebuild — that is exactly why
+        // Ruling 8 forbids publishing them. What must hold is that a page
+        // comes back at all, and that no moment id is invented.
+        expect(typeof res.matches[0].folio).toBe("number")
         expect(res.matches[0].momentId).toBeUndefined()
+    })
+})
+
+describe("moments — the artifact this repo actually ships", () => {
+    beforeEach(() => {
+        vi.resetModules()
+        vi.doUnmock("@/data/books/moments.json")
+    })
+
+    it("is loaded, and maps a real unit id onto its shared moment", async () => {
+        const m = await import("../moments")
+        expect(m.momentsLoaded()).toBe(true)
+        expect(m.listMoments().length).toBeGreaterThan(0)
+        const moment = m.momentForUnit("shma.mi-chamocha@shabbat-maariv")
+        expect(moment).not.toBeNull()
+        // The point of a moment: the same prayer, found in another book.
+        const books = (moment?.occurrences ?? []).map((o) => o.book)
+        expect(books).toContain("shirei-tshuvah")
     })
 })
 

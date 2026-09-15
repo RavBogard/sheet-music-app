@@ -93,18 +93,18 @@
             ]
         },
         {
+            "id": "emamidah.the-silent-amidah@rh1-maariv",
+            "name": "The Amidah",
+            "folios": [
+                15
+            ]
+        },
+        {
             "id": "emamidah.avot-vimahot@rh1-maariv",
             "name": "Avot v’Imahot",
             "folios": [
                 15,
                 16
-            ]
-        },
-        {
-            "id": "emamidah.the-silent-amidah@rh1-maariv",
-            "name": "The Amidah",
-            "folios": [
-                15
             ]
         },
         {
@@ -395,18 +395,18 @@
             ]
         },
         {
+            "id": "amidah.the-silent-amidah@rh-shacharit",
+            "name": "The Amidah",
+            "folios": [
+                71
+            ]
+        },
+        {
             "id": "amidah.avot-vimahot@rh-shacharit",
             "name": "Avot v’Imahot",
             "folios": [
                 71,
                 72
-            ]
-        },
-        {
-            "id": "amidah.the-silent-amidah@rh-shacharit",
-            "name": "The Amidah",
-            "folios": [
-                71
             ]
         },
         {
@@ -512,15 +512,15 @@
             ]
         },
         {
-            "id": "torah.shma-procession-call@rh-shacharit",
-            "name": "Sh’ma",
+            "id": "torah.taking-out-the-torah@rh-shacharit",
+            "name": "The Thirteen Attributes",
             "folios": [
                 94
             ]
         },
         {
-            "id": "torah.taking-out-the-torah@rh-shacharit",
-            "name": "The Thirteen Attributes",
+            "id": "torah.shma-procession-call@rh-shacharit",
+            "name": "Sh’ma",
             "folios": [
                 94
             ]
@@ -533,15 +533,15 @@
             ]
         },
         {
-            "id": "torah.blessing-before-the-torah@rh-shacharit",
-            "name": "Blessing Before the Torah",
+            "id": "torah.called-to-the-torah@rh-shacharit",
+            "name": "Called to the Torah",
             "folios": [
                 96
             ]
         },
         {
-            "id": "torah.called-to-the-torah@rh-shacharit",
-            "name": "Called to the Torah",
+            "id": "torah.blessing-before-the-torah@rh-shacharit",
+            "name": "Blessing Before the Torah",
             "folios": [
                 96
             ]
@@ -550,7 +550,10 @@
             "id": "torah.torah-reading-day-1@rh1",
             "name": "Torah Reading · Day 1",
             "folios": [
-                97
+                97,
+                98,
+                99,
+                100
             ]
         },
         {
@@ -558,6 +561,8 @@
             "name": "Torah Reading · Day 2",
             "folios": [
                 101,
+                102,
+                103,
                 104
             ]
         },
@@ -577,15 +582,15 @@
             ]
         },
         {
-            "id": "torah.blessing-before-the-haftarah@rh-shacharit",
-            "name": "Haftarah Blessing",
+            "id": "torah.vzot-hatorah@rh-shacharit",
+            "name": "Hagbah",
             "folios": [
                 107
             ]
         },
         {
-            "id": "torah.vzot-hatorah@rh-shacharit",
-            "name": "Hagbah",
+            "id": "torah.blessing-before-the-haftarah@rh-shacharit",
+            "name": "Haftarah Blessing",
             "folios": [
                 107
             ]
@@ -595,6 +600,9 @@
             "name": "Haftarah · Day 1",
             "folios": [
                 108,
+                109,
+                110,
+                111,
                 112
             ]
         },
@@ -602,7 +610,9 @@
             "id": "torah.haftarah-day-2@rh2",
             "name": "Haftarah · Day 2",
             "folios": [
-                113
+                113,
+                114,
+                115
             ]
         },
         {
@@ -614,15 +624,15 @@
             ]
         },
         {
-            "id": "torah.uvnucho-yomar@rh-shacharit",
-            "name": "Uv’nucho Yomar",
+            "id": "torah.yhalelu@rh-shacharit",
+            "name": "Y’halelu",
             "folios": [
                 118
             ]
         },
         {
-            "id": "torah.yhalelu@rh-shacharit",
-            "name": "Y’halelu",
+            "id": "torah.uvnucho-yomar@rh-shacharit",
+            "name": "Uv’nucho Yomar",
             "folios": [
                 118
             ]
@@ -762,18 +772,18 @@
             ]
         },
         {
+            "id": "mincha.the-silent-amidah@rh1-mincha",
+            "name": "The Amidah",
+            "folios": [
+                149
+            ]
+        },
+        {
             "id": "mincha.avot-vimahot@rh1-mincha",
             "name": "Avot v’Imahot",
             "folios": [
                 149,
                 150
-            ]
-        },
-        {
-            "id": "mincha.the-silent-amidah@rh1-mincha",
-            "name": "The Amidah",
-            "folios": [
-                149
             ]
         },
         {

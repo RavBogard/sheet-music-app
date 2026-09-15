@@ -15,7 +15,7 @@
       "liturgyRefs": {
         "shabbat-shacharit": {
           "unitId": "awakening.hareini@shabbat-shacharit",
-          "folio": 11
+          "folio": 12
         },
         "crc-saturday": {
           "folio": 50
@@ -247,7 +247,7 @@
       "liturgyRefs": {
         "shabbat-shacharit": {
           "unitId": "shma.vahavta-tzitzit@shabbat-shacharit",
-          "folio": 39
+          "folio": 40
         },
         "crc-saturday": {
           "folio": 65
@@ -261,7 +261,7 @@
       "liturgyRefs": {
         "shabbat-shacharit": {
           "unitId": "shma.emet-vyatziv@shabbat-shacharit",
-          "folio": 43
+          "folio": 44
         },
         "crc-saturday": {
           "folio": 67
@@ -275,7 +275,7 @@
       "liturgyRefs": {
         "shabbat-shacharit": {
           "unitId": "shma.mi-chamocha@shabbat-shacharit",
-          "folio": 44
+          "folio": 45
         },
         "crc-saturday": {
           "folio": 68
@@ -289,7 +289,7 @@
       "liturgyRefs": {
         "shabbat-shacharit": {
           "unitId": "amidah.avot-vimahot@shabbat-maariv",
-          "folio": 49
+          "folio": 50
         },
         "crc-saturday": {
           "folio": 71
@@ -303,7 +303,7 @@
       "liturgyRefs": {
         "shabbat-shacharit": {
           "unitId": "amidah.gvurot@shabbat-maariv",
-          "folio": 50
+          "folio": 51
         },
         "crc-saturday": {
           "folio": 73
@@ -316,8 +316,8 @@
       "fixed": true,
       "liturgyRefs": {
         "shabbat-shacharit": {
-          "unitId": "amidah.kedushah@shabbat-shacharit",
-          "folio": 51
+          "unitId": "amidah.kdushah@shabbat-shacharit",
+          "folio": 52
         },
         "crc-saturday": {
           "folio": 74
@@ -342,7 +342,7 @@
       "liturgyRefs": {
         "shabbat-shacharit": {
           "unitId": "amidah.avodah@shabbat-maariv",
-          "folio": 56
+          "folio": 57
         },
         "crc-saturday": {
           "folio": 77
@@ -356,7 +356,7 @@
       "liturgyRefs": {
         "shabbat-shacharit": {
           "unitId": "amidah.modim@shabbat-maariv",
-          "folio": 57
+          "folio": 58
         },
         "crc-saturday": {
           "folio": 78
@@ -370,7 +370,7 @@
       "liturgyRefs": {
         "shabbat-shacharit": {
           "unitId": "amidah.birkat-kohanim@shabbat-shacharit",
-          "folio": 59
+          "folio": 61
         }
       }
     },
@@ -381,7 +381,7 @@
       "liturgyRefs": {
         "shabbat-shacharit": {
           "unitId": "amidah.sim-shalom@shabbat-shacharit",
-          "folio": 61
+          "folio": 62
         },
         "crc-saturday": {
           "folio": 79
@@ -395,7 +395,7 @@
       "liturgyRefs": {
         "shabbat-shacharit": {
           "unitId": "amidah.elohai-ntzor@shabbat-maariv",
-          "folio": 62
+          "folio": 63
         },
         "crc-saturday": {
           "folio": 80
@@ -518,7 +518,7 @@
       "liturgyRefs": {
         "shabbat-shacharit": {
           "unitId": "torah.blessings-after-the-haftarah@shabbat-shacharit",
-          "folio": 75
+          "folio": 74
         },
         "crc-saturday": {
           "folio": 89

@@ -2,11 +2,11 @@
     "slug": "shabbat-shacharit",
     "title": "Shirei Shabbat — Shabbat Morning",
     "tier": "feed",
-    "pages": 146,
+    "pages": 144,
     "units": [
         {
             "id": "awakening.modeh-ani@shabbat-shacharit",
-            "name": "Modeh Ani",
+            "name": "Modah / Modeh Ani",
             "folios": [
                 2
             ]
@@ -31,8 +31,7 @@
             "id": "awakening.elohai-nshamah@shabbat-shacharit",
             "name": "Elohai N’shamah",
             "folios": [
-                4,
-                5
+                4
             ]
         },
         {
@@ -65,7 +64,6 @@
             "id": "awakening.hareini@shabbat-shacharit",
             "name": "Hareini",
             "folios": [
-                11,
                 12
             ]
         },
@@ -73,7 +71,8 @@
             "id": "awakening.hineh-mah-tov@shabbat-shacharit",
             "name": "Hineh Mah Tov",
             "folios": [
-                12
+                12,
+                13
             ]
         },
         {
@@ -109,6 +108,7 @@
             "id": "psukei.psalm-92@shabbat-shacharit",
             "name": "Psalm 92",
             "folios": [
+                16,
                 17,
                 18
             ]
@@ -179,7 +179,8 @@
                 33,
                 34,
                 35,
-                36
+                36,
+                37
             ]
         },
         {
@@ -187,7 +188,8 @@
             "name": "Ahavah Rabbah",
             "folios": [
                 37,
-                38
+                38,
+                39
             ]
         },
         {
@@ -201,26 +203,25 @@
             "id": "shma.vahavta-tzitzit@shabbat-shacharit",
             "name": "V’ahavta & Tzitzit",
             "folios": [
-                39,
                 40,
                 41,
                 42,
-                43
+                43,
+                44
             ]
         },
         {
             "id": "shma.emet-vyatziv@shabbat-shacharit",
             "name": "Emet v’Yatziv",
             "folios": [
-                43,
-                44
+                44,
+                45
             ]
         },
         {
             "id": "shma.mi-chamocha@shabbat-shacharit",
             "name": "Mi Chamocha",
             "folios": [
-                44,
                 45,
                 46,
                 47,
@@ -231,32 +232,32 @@
             "id": "amidah.we-open-our-lips@shabbat-maariv",
             "name": "We Open Our Lips",
             "folios": [
-                48
+                49
             ]
         },
         {
             "id": "amidah.avot-vimahot@shabbat-maariv",
             "name": "Avot v’Imahot",
             "folios": [
-                49,
-                50
+                50,
+                51
             ]
         },
         {
             "id": "amidah.gvurot@shabbat-maariv",
             "name": "G’vurot",
             "folios": [
-                50,
-                51
+                51,
+                52
             ]
         },
         {
-            "id": "amidah.kedushah@shabbat-shacharit",
+            "id": "amidah.kdushah@shabbat-shacharit",
             "name": "Kedushah",
             "folios": [
-                51,
                 52,
-                53
+                53,
+                54
             ]
         },
         {
@@ -265,68 +266,69 @@
             "folios": [
                 54,
                 55,
-                56
+                56,
+                57
             ]
         },
         {
             "id": "amidah.avodah@shabbat-maariv",
             "name": "Avodah",
             "folios": [
-                56,
-                57
+                57,
+                58
             ]
         },
         {
             "id": "amidah.modim@shabbat-maariv",
             "name": "Modim",
             "folios": [
-                57,
                 58,
-                59
+                59,
+                60
             ]
         },
         {
             "id": "amidah.birkat-kohanim@shabbat-shacharit",
             "name": "Birkat Kohanim",
             "folios": [
-                59,
-                60
+                61
             ]
         },
         {
             "id": "amidah.sim-shalom@shabbat-shacharit",
             "name": "Sim Shalom",
             "folios": [
-                61
+                62
             ]
         },
         {
             "id": "amidah.elohai-ntzor@shabbat-maariv",
             "name": "Elohai N’tzor",
             "folios": [
-                62,
-                63
+                63,
+                64
             ]
         },
         {
             "id": "torah.ein-kamocha@shabbat-shacharit",
             "name": "Ein Kamocha",
             "folios": [
-                65
+                65,
+                66
             ]
         },
         {
             "id": "torah.vayhi-binsoa@shabbat-shacharit",
             "name": "Vay’hi Binso’a",
             "folios": [
-                66
+                66,
+                67
             ]
         },
         {
             "id": "torah.av-harachamim@shabbat-shacharit",
             "name": "Av HaRachamim",
             "folios": [
-                66,
                 67,
                 68,
                 69
@@ -387,8 +389,7 @@
             "id": "torah.vzot-hatorah@shabbat-shacharit",
             "name": "V’zot HaTorah",
             "folios": [
-                73,
-                74
+                73
             ]
         },
         {
@@ -402,6 +403,7 @@
             "id": "torah.blessings-after-the-haftarah@shabbat-shacharit",
             "name": "Blessings After the Haftarah",
             "folios": [
+                74,
                 75,
                 76
             ]
@@ -481,227 +483,250 @@
             "id": "concluding.adon-olam@shabbat-maariv",
             "name": "Adon Olam",
             "folios": [
-                94,
-                95
+                94
             ]
         },
         {
             "id": "concluding.yigdal@shabbat-shacharit",
             "name": "Yigdal",
             "folios": [
-                96,
-                97,
-                98
+                95,
+                96
             ]
         },
         {
             "id": "hallel.blessing-before-the-hallel@shabbat-shacharit",
             "name": "Blessing before the Hallel",
             "folios": [
-                99
+                97
             ]
         },
         {
             "id": "hallel.psalm-113@shabbat-shacharit",
             "name": "Psalm 113",
             "folios": [
-                99,
-                100
+                97,
+                98
             ]
         },
         {
             "id": "hallel.psalm-114@shabbat-shacharit",
             "name": "Psalm 114",
             "folios": [
-                100,
-                101
+                98,
+                99
             ]
         },
         {
             "id": "hallel.psalm-115@shabbat-shacharit",
             "name": "Psalm 115",
             "folios": [
-                101,
-                102
+                99,
+                100
             ]
         },
         {
             "id": "hallel.psalm-116@shabbat-shacharit",
             "name": "Psalm 116",
             "folios": [
-                103,
-                104
+                101,
+                102
             ]
         },
         {
             "id": "hallel.psalm-117@shabbat-shacharit",
             "name": "Psalm 117",
             "folios": [
-                105
+                102,
+                103
             ]
         },
         {
             "id": "hallel.psalm-118@shabbat-shacharit",
             "name": "Psalm 118",
             "folios": [
-                105,
-                106,
-                107,
-                108
+                103,
+                104,
+                105
             ]
         },
         {
             "id": "hallel.blessing-after-the-hallel@shabbat-shacharit",
             "name": "Blessing after the Hallel",
             "folios": [
-                108,
-                109
+                106
             ]
         },
         {
             "id": "hallel.kiddusha-rabbah@shabbat-shacharit",
             "name": "Kiddusha Rabbah",
             "folios": [
-                111,
-                112,
-                113
+                107,
+                108
             ]
         },
         {
             "id": "reserve.baruch-sheamar@shabbat-shacharit",
             "name": "Baruch She’amar",
             "folios": [
-                113,
-                114
+                109,
+                110
             ]
         },
         {
             "id": "reserve.hodu-davids-song@shabbat-shacharit",
             "name": "Hodu — David’s Song",
             "folios": [
-                114,
-                115,
-                116
+                110,
+                111,
+                112
             ]
         },
         {
             "id": "reserve.psalm-100@shabbat-shacharit",
             "name": "Psalm 100",
             "folios": [
-                116
+                112
             ]
         },
         {
             "id": "reserve.mizmor-shir@shabbat-shacharit",
             "name": "Mizmor Shir",
             "folios": [
-                117
+                112,
+                113
             ]
         },
         {
             "id": "reserve.psalm-91@shabbat-shacharit",
             "name": "Psalm 91",
             "folios": [
-                118,
-                119
+                113,
+                114
             ]
         },
         {
             "id": "reserve.psalm-92@shabbat-shacharit",
             "name": "Psalm 92",
             "folios": [
-                119,
-                120
+                114,
+                115
             ]
         },
         {
             "id": "reserve.psalm-93@shabbat-shacharit",
             "name": "Psalm 93",
             "folios": [
-                120
+                115,
+                116
             ]
         },
         {
             "id": "reserve.psalm-84@shabbat-shacharit",
             "name": "Psalm 84",
             "folios": [
-                120,
-                121
+                116,
+                117
             ]
         },
         {
             "id": "reserve.yehi-chevod@shabbat-shacharit",
             "name": "Yehi Chevod",
             "folios": [
-                121,
-                122,
-                123
+                117,
+                118,
+                119
             ]
         },
         {
             "id": "reserve.ashrei@shabbat-shacharit",
             "name": "Ashrei",
             "folios": [
-                123,
-                124,
-                125
+                119,
+                120,
+                121
             ]
         },
         {
             "id": "reserve.psalm-146@shabbat-shacharit",
             "name": "Psalm 146",
             "folios": [
-                125,
-                126
+                121,
+                122
             ]
         },
         {
             "id": "reserve.psalm-147@shabbat-shacharit",
             "name": "Psalm 147",
             "folios": [
-                126,
-                127,
-                128
+                122,
+                123,
+                124
             ]
         },
         {
             "id": "reserve.psalm-148@shabbat-shacharit",
             "name": "Psalm 148",
             "folios": [
-                128,
-                129,
-                130
+                124,
+                125,
+                126
             ]
         },
         {
             "id": "reserve.psalm-149@shabbat-shacharit",
             "name": "Psalm 149",
             "folios": [
-                130,
-                131
+                126,
+                127
             ]
         },
         {
             "id": "reserve.psalm-150@shabbat-shacharit",
             "name": "Psalm 150",
             "folios": [
-                131
+                127
             ]
         },
         {
             "id": "reserve.az-yashir@shabbat-shacharit",
             "name": "Az Yashir",
             "folios": [
-                131,
-                132,
-                133,
-                134,
-                135
+                127,
+                128,
+                129,
+                130,
+                131
             ]
         },
         {
             "id": "reserve.nishmat-kol-chai@shabbat-shacharit",
             "name": "Nishmat Kol Chai",
+            "folios": [
+                131,
+                132,
+                133
+            ]
+        },
+        {
+            "id": "reserve.shochein-ad@shabbat-shacharit",
+            "name": "Shochein Ad",
+            "folios": [
+                133,
+                134
+            ]
+        },
+        {
+            "id": "reserve.yishtabach@shabbat-shacharit",
+            "name": "Yishtabach",
+            "folios": [
+                134,
+                135
+            ]
+        },
+        {
+            "id": "seasonal.rise-and-come@shabbat-shacharit",
+            "name": "Rise and Come",
             "folios": [
                 135,
                 136,
@@ -709,32 +734,25 @@
             ]
         },
         {
-            "id": "reserve.shochein-ad@shabbat-shacharit",
-            "name": "Shochein Ad",
+            "id": "seasonal.for-the-miracles@shabbat-shacharit",
+            "name": "For the Miracles",
             "folios": [
                 137,
-                138
-            ]
-        },
-        {
-            "id": "reserve.yishtabach@shabbat-shacharit",
-            "name": "Yishtabach",
-            "folios": [
                 138,
                 139
             ]
         },
         {
-            "id": "seasonal.rise-and-come@shabbat-shacharit",
-            "name": "Rise and Come",
+            "id": "seasonal.in-the-days-of-mordechai@shabbat-shacharit",
+            "name": "In the Days of Mordechai",
             "folios": [
                 139,
                 140
             ]
         },
         {
-            "id": "seasonal.for-the-miracles@shabbat-shacharit",
-            "name": "For the Miracles",
+            "id": "seasonal.remember-us-for-life@shabbat-shacharit",
+            "name": "Remember Us for Life",
             "folios": [
                 140,
                 141,
@@ -742,26 +760,10 @@
             ]
         },
         {
-            "id": "seasonal.in-the-days-of-mordechai@shabbat-shacharit",
-            "name": "In the Days of Mordechai",
-            "folios": [
-                142,
-                143
-            ]
-        },
-        {
-            "id": "seasonal.remember-us-for-life@shabbat-shacharit",
-            "name": "Remember Us for Life",
-            "folios": [
-                143,
-                144
-            ]
-        },
-        {
             "id": "seasonal.shehecheyanu@shabbat-shacharit",
             "name": "Shehecheyanu",
             "folios": [
-                145
+                143
             ]
         }
     ]

@@ -20,9 +20,17 @@
  *
  *   2. It must not read an unpinned build. `dist/` is whatever was last built
  *      locally; `dist-app/` is the licensed carrier a printed volume was
- *      pressed from. Each volume pins the `printing.gitSha` it may be
+ *      pressed from. A PRINTED volume pins the `printing.gitSha` it may be
  *      regenerated from, and a mismatch is a hard refusal — a printed volume's
  *      pin is its press commit, never HEAD.
+ *
+ *      An ALPHA DRAFT has no press commit to pin to, and pinning one anyway
+ *      was backwards: it froze the two Shabbat drafts at the commit they
+ *      happened to be at and refused every later build of them, including the
+ *      one that answers the folio-145 question. Ruling 8 (2026-09-15) settles
+ *      which books are which — Shirei Tshuvah is the only released volume —
+ *      and R2-b drops the pin for `shabbat-maariv` and `shabbat-shacharit`
+ *      accordingly. The guard stays armed where it means something.
  *
  * Usage: npm run sync:books [-- --repo <path>] [--feed-dir <name>] [--check]
  *        --check writes nothing and reports drift instead.
@@ -46,13 +54,16 @@ const VOLUMES = [
         slug: "shabbat-maariv",
         feed: "shabbat-maariv-feed.json",
         title: "Shirei Shabbat — Friday Night",
-        pin: "6f61874-LICENSED",
+        // Alpha draft, not a printed volume (Ruling 8 / R2-b). No press commit
+        // exists, so there is nothing honest to pin to.
+        pin: null,
     },
     {
         slug: "shabbat-shacharit",
         feed: "shabbat-shacharit-feed.json",
         title: "Shirei Shabbat — Shabbat Morning",
-        pin: "6f61874-LICENSED",
+        // Alpha draft — see shabbat-maariv above.
+        pin: null,
     },
     {
         slug: "shirei-tshuvah",
@@ -91,8 +102,9 @@ function trim(feed, vol, pages) {
 
     // V2 — the pin. A printed volume is regenerated from its press commit or
     // not at all. This is what stops an unpinned build reaching src/data/books.
+    // A draft (`pin: null`) has no press commit and is regenerated freely.
     const sha = feed.printing?.gitSha ?? null
-    if (sha !== vol.pin) {
+    if (vol.pin !== null && sha !== vol.pin) {
         throw new Error(
             `${vol.slug}: feed is built from ${JSON.stringify(sha)}, pinned to ${JSON.stringify(vol.pin)}. ` +
                 `Refusing to regenerate a pinned volume from an unpinned build (R-0831-live-pagemap-1).`,
@@ -151,8 +163,10 @@ function bareSha(v) {
  * commit, never HEAD (R-0831-live-pagemap-1). The book snapshots in this repo
  * were trimmed from feeds built at a specific commit; consuming a moments file
  * built from a DIFFERENT commit would pair this repo's page numbers with another
- * build's unit ids, silently. So every VOLUMES book's pin must equal the `gitSha`
- * the artifact recorded for it, or the step refuses and writes nothing.
+ * build's unit ids, silently. So every PINNED book's pin must equal the `gitSha`
+ * the artifact recorded for it, or the step refuses and writes nothing. A draft
+ * (`pin: null`, R2-b) still needs a source row — pairing blind is the thing
+ * being refused, and that is true of a draft too — but its sha is free.
  *
  * Pure — no filesystem, so `scripts/__tests__/sync-books-moments.test.ts` can
  * drive every branch from fixtures.
@@ -172,7 +186,7 @@ export function trimMoments(artifact, volumes, knownBooks) {
                     `This repo's ${vol.slug}.json was trimmed from that feed; refusing to pair them blind.`,
             )
         }
-        if (bareSha(src.gitSha) !== bareSha(vol.pin)) {
+        if (vol.pin !== null && bareSha(src.gitSha) !== bareSha(vol.pin)) {
             throw new Error(
                 `${vol.slug}: moments.json was built from ${JSON.stringify(src.gitSha)}, ` +
                     `this repo pins ${JSON.stringify(vol.pin)}. Refusing — a printed volume's ` +
