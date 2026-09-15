@@ -1,0 +1,1042 @@
+{
+  "confirmedBy": "Daniel",
+  "confirmedAt": "2026-09-15T14:36:19Z",
+  "rule": "Every spelling not explicitly ruled on the page is confirmed at its default (Daniel, 2026-09-15). A binding writes {book, folio} to rows carrying that spelling in the four templates and in setlists with eventDate in the future; history untouched.",
+  "books": {
+    "crc-friday": {
+      "bind": [
+        {
+          "title": "Hinei Mah Tov (Folk) - Hinei Mah Tov (Dropkin) - Hinei Mah Tov (Jacobson-Drozi).pdf",
+          "also": [],
+          "bindsTo": "Hineih Mah Tov",
+          "folio": 4,
+          "source": "clear (explicit)"
+        },
+        {
+          "title": "Hine Ma Tov",
+          "also": [],
+          "bindsTo": "Hineih Mah Tov",
+          "folio": 4,
+          "source": "clear (explicit)"
+        },
+        {
+          "title": "Shalom Aleichem (Goldfarb)",
+          "also": [],
+          "bindsTo": "Shalom Aleichem",
+          "folio": 6,
+          "source": "clear (explicit)"
+        },
+        {
+          "title": "Shalom alechem (Goldfarb).pdf",
+          "also": [],
+          "bindsTo": "Shalom Aleichem",
+          "folio": 6,
+          "source": "clear (explicit)"
+        },
+        {
+          "title": "Shalom Alechem (avishai)",
+          "also": [],
+          "bindsTo": "Shalom Aleichem",
+          "folio": 6,
+          "source": "clear (explicit)"
+        },
+        {
+          "title": "Lecha Dodi",
+          "also": [],
+          "bindsTo": "L’cha Dodi",
+          "folio": 8,
+          "source": "clear (explicit)"
+        },
+        {
+          "title": "Lecha dodi (Yerushalmi).pdf",
+          "also": [],
+          "bindsTo": "L’cha Dodi",
+          "folio": 8,
+          "source": "clear (explicit)"
+        },
+        {
+          "title": "L'Cha Dodi (nava)",
+          "also": [],
+          "bindsTo": "L’cha Dodi",
+          "folio": 8,
+          "source": "clear (default)"
+        },
+        {
+          "title": "L'cha Dodi (Taubman)",
+          "also": [],
+          "bindsTo": "L’cha Dodi",
+          "folio": 8,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Barchu (walkdown)",
+          "also": [],
+          "bindsTo": "Bar’chu",
+          "folio": 10,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Barechu",
+          "also": [],
+          "bindsTo": "Bar’chu",
+          "folio": 10,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Barechu (Walkdown)",
+          "also": [],
+          "bindsTo": "Bar’chu",
+          "folio": 10,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Barchu (Friedman).pdf",
+          "also": [],
+          "bindsTo": "Bar’chu",
+          "folio": 10,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Maariv Arevim",
+          "also": [],
+          "bindsTo": "Ma’ariv Aravim",
+          "folio": 12,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Shema (major).pdf",
+          "also": [],
+          "bindsTo": "The Sh’ma",
+          "folio": 15,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Shema",
+          "also": [],
+          "bindsTo": "The Sh’ma",
+          "folio": 15,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Sh'ma Yisrael",
+          "also": [],
+          "bindsTo": "The Sh’ma",
+          "folio": 15,
+          "source": "clear (default)"
+        },
+        {
+          "title": "V'ahavta",
+          "also": [
+            "V'Ahavta"
+          ],
+          "bindsTo": "V’ahavta & Tzitzit",
+          "folio": 16,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Mi Chamocha",
+          "also": [],
+          "bindsTo": "Mi Chamocha",
+          "folio": 18,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Mi chamocha (Moshav).pdf",
+          "also": [],
+          "bindsTo": "Mi Chamocha",
+          "folio": 18,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Hashkiveinu (Shomreinu)",
+          "also": [],
+          "bindsTo": "Hashkivenu",
+          "folio": 20,
+          "source": "clear (default)"
+        },
+        {
+          "title": "V'shamru",
+          "also": [],
+          "bindsTo": "V’shamru",
+          "folio": 21,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Chatzi Kaddish",
+          "also": [],
+          "bindsTo": "Chatzi Kaddish",
+          "folio": 22,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Shalom Rav (Klepper-Freelander).pdf",
+          "also": [],
+          "bindsTo": "Shalom Rav",
+          "folio": 30,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Shalom Rav",
+          "also": [],
+          "bindsTo": "Shalom Rav",
+          "folio": 30,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Silent Prayer",
+          "also": [],
+          "bindsTo": "Elohai N’tzor",
+          "folio": 31,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Mishebeirach",
+          "also": [],
+          "bindsTo": "Mi Shebeirach — Healing",
+          "folio": 34,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Mourner's Kaddish",
+          "also": [],
+          "bindsTo": "Mourner’s Kaddish",
+          "folio": 41,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Adon Olam (Folk)",
+          "also": [],
+          "bindsTo": "Adon Olam",
+          "folio": 43,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Adon Olam (Hitman-Ben-Hur / Dobin / Shehecheyanu)",
+          "also": [],
+          "bindsTo": "Adon Olam",
+          "folio": 43,
+          "source": "clear (default)"
+        },
+        {
+          "title": "erev shel lcha dodi",
+          "also": [
+            "Erev Shel L'cha Dodi"
+          ],
+          "bindsTo": "L’cha Dodi",
+          "folio": 8,
+          "source": "needs-you (default)",
+          "note": null
+        },
+        {
+          "title": "Adonai sfatai (trad)",
+          "also": [],
+          "bindsTo": "Adonai S'fatai (Amidah opening; booklet entry 'Sanctuary')",
+          "folio": 23,
+          "source": "needs-you (default)",
+          "note": null
+        },
+        {
+          "title": "L'Cha Dodi Dmin .pdf",
+          "also": [],
+          "bindsTo": "L’cha Dodi",
+          "folio": 8,
+          "source": "needs-you (default)",
+          "note": null
+        },
+        {
+          "title": "Lecha Dodi Lincoln_s Nigun.pdf",
+          "also": [],
+          "bindsTo": "L’cha Dodi",
+          "folio": 8,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Barchu Walkdown",
+          "also": [],
+          "bindsTo": "Bar’chu",
+          "folio": 10,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Bar'chu — Am I Awake",
+          "also": [],
+          "bindsTo": "Bar’chu",
+          "folio": 10,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Mi Chamocha — 'Shut Up and Dance' mashup",
+          "also": [],
+          "bindsTo": "Mi Chamocha",
+          "folio": 18,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Silent Amidah",
+          "also": [],
+          "bindsTo": "The Silent Amidah",
+          "folio": 23,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Adon Olam — 'I Want It That Way'",
+          "also": [],
+          "bindsTo": "Adon Olam",
+          "folio": 43,
+          "source": "needs-you (explicit)",
+          "note": null
+        }
+      ],
+      "leaveUnbound": [
+        {
+          "title": "Mi Chamocha Ana B'Koach.pdf",
+          "reason": "left unbound",
+          "note": null
+        },
+        {
+          "title": "C-Saw Niggun Score",
+          "reason": "left unbound",
+          "note": null
+        },
+        {
+          "title": "Od Yavo Shalom Aleinu",
+          "reason": "left unbound",
+          "note": null
+        },
+        {
+          "title": "Niggun → Silent Amidah",
+          "reason": "left unbound",
+          "note": null
+        }
+      ],
+      "noMatchNote": "",
+      "noMatchTitles": [
+        "Dvar torah",
+        "Mizmor l_David D.pdf",
+        "Mizmor Shiru Ladonai.pdf",
+        "Shiru L_Adonai Shir Shabbat.pdf",
+        "Mizmor Shiru Ladonai",
+        "Shalom Alechem Shir Shabbat.pdf",
+        "Twilight (D Goldenberg)",
+        "Yedid Nefesh",
+        "Adonai Sifatai",
+        "Bina in G",
+        "Dodi Li",
+        "Hallelujah Riff",
+        "Lechu Goldman",
+        "What a Wonderful World (Louis Armstrong)",
+        "B'tzelem Elohim",
+        "David Melech Yisrael",
+        "dodi li (sher)",
+        "Hava Nagilah",
+        "Lechu Goldman.pdf",
+        "Mississippi Goddam (Nina Simone)",
+        "Mizmor L'David ",
+        "Mizmor LeDavid",
+        "One Day",
+        "Oseh Shalom (camp)",
+        "roadto",
+        "Shiru L'Adonai",
+        "Shiru Ladonai (Neimark-Gumer)",
+        "Strange Fruit (Billie Holiday)",
+        "Take Me Home, Country Roads",
+        "Wagon Wheel",
+        "Wonderwall"
+      ]
+    },
+    "crc-saturday": {
+      "bind": [
+        {
+          "title": "Modah Ani",
+          "also": [],
+          "bindsTo": "Modeh Ani",
+          "folio": 51,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Modeh ani - Keira",
+          "also": [],
+          "bindsTo": "Modeh Ani",
+          "folio": 51,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Modeh ani - Klepper.pdf",
+          "also": [],
+          "bindsTo": "Modeh Ani",
+          "folio": 51,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Modeh Ani",
+          "also": [],
+          "bindsTo": "Modeh Ani",
+          "folio": 51,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Modeh ani - Klepper",
+          "also": [],
+          "bindsTo": "Modeh Ani",
+          "folio": 51,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Elohai neshama - Pourmorady",
+          "also": [],
+          "bindsTo": "Elohai N’shamah",
+          "folio": 51,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Elohai neshama - Pourmorady.pdf",
+          "also": [],
+          "bindsTo": "Elohai N’shamah",
+          "folio": 51,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Birchot HaShachar",
+          "also": [],
+          "bindsTo": "Birchot HaShachar",
+          "folio": 53,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Hinei Mah Tov",
+          "also": [],
+          "bindsTo": "Hineh Mah Tov",
+          "folio": 53,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Psukei d'zimrah",
+          "also": [
+            "Psukei D'Zimrah"
+          ],
+          "bindsTo": "P'sukei D'zimrah",
+          "folio": 55,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Psukei d_zimrah",
+          "also": [],
+          "bindsTo": "P'sukei D'zimrah",
+          "folio": 55,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Chatzi Kaddish",
+          "also": [],
+          "bindsTo": "Chatzi Kaddish",
+          "folio": 58,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Barchu (Friedman)",
+          "also": [],
+          "bindsTo": "Bar’chu",
+          "folio": 59,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Barchu",
+          "also": [],
+          "bindsTo": "Bar’chu",
+          "folio": 59,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Barchu (Siegel).pdf",
+          "also": [],
+          "bindsTo": "Bar’chu",
+          "folio": 59,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Yotzeir or - Klepper",
+          "also": [],
+          "bindsTo": "Yotzer Or",
+          "folio": 60,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Ahava raba / V'haeirneinu",
+          "also": [],
+          "bindsTo": "Ahavah Rabbah",
+          "folio": 61,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Ahava raba (echo)",
+          "also": [],
+          "bindsTo": "Ahavah Rabbah",
+          "folio": 61,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Ahavah Rabah",
+          "also": [],
+          "bindsTo": "Ahavah Rabbah",
+          "folio": 61,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Ahava raba",
+          "also": [
+            "Ahava Raba"
+          ],
+          "bindsTo": "Ahavah Rabbah",
+          "folio": 61,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Ahava raba (echo).pdf",
+          "also": [],
+          "bindsTo": "Ahavah Rabbah",
+          "folio": 61,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Shema ",
+          "also": [
+            "Shema"
+          ],
+          "bindsTo": "The Sh’ma",
+          "folio": 63,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Shema (major)",
+          "also": [],
+          "bindsTo": "The Sh’ma",
+          "folio": 63,
+          "source": "clear (default)"
+        },
+        {
+          "title": "V'ahavta",
+          "also": [],
+          "bindsTo": "V’ahavta & Tzitzit",
+          "folio": 65,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Mi chamocha (Moshav)",
+          "also": [],
+          "bindsTo": "Mi Chamocha",
+          "folio": 68,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Mi chamocha (6-8)",
+          "also": [],
+          "bindsTo": "Mi Chamocha",
+          "folio": 68,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Mi chamocha E (Moshav)",
+          "also": [],
+          "bindsTo": "Mi Chamocha",
+          "folio": 68,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Mi chamocha (Moshav).pdf",
+          "also": [],
+          "bindsTo": "Mi Chamocha",
+          "folio": 68,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Mi Camocha",
+          "also": [],
+          "bindsTo": "Mi Chamocha",
+          "folio": 68,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Mi chamocha (6-8).pdf",
+          "also": [],
+          "bindsTo": "Mi Chamocha",
+          "folio": 68,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Avot v'Imahot",
+          "also": [
+            "Avot V'Imahot"
+          ],
+          "bindsTo": "Avot v’Imahot",
+          "folio": 71,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Gevurot",
+          "also": [],
+          "bindsTo": "G’vurot",
+          "folio": 73,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Kedusha",
+          "also": [],
+          "bindsTo": "Kedushah",
+          "folio": 74,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Kedushah",
+          "also": [],
+          "bindsTo": "Kedushah",
+          "folio": 74,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Kedusha (Em)",
+          "also": [],
+          "bindsTo": "Kedushah",
+          "folio": 74,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Veshamru",
+          "also": [],
+          "bindsTo": "V'shamru",
+          "folio": 76,
+          "source": "clear (default)"
+        },
+        {
+          "title": "V_shamru_(trad)",
+          "also": [],
+          "bindsTo": "V'shamru",
+          "folio": 76,
+          "source": "clear (default)"
+        },
+        {
+          "title": "V'Shamru (Old Skool).pdf",
+          "also": [],
+          "bindsTo": "V'shamru",
+          "folio": 76,
+          "source": "clear (default)"
+        },
+        {
+          "title": "V'Shamru",
+          "also": [],
+          "bindsTo": "V'shamru",
+          "folio": 76,
+          "source": "clear (default)"
+        },
+        {
+          "title": "V_shamru_(trad).pdf",
+          "also": [],
+          "bindsTo": "V'shamru",
+          "folio": 76,
+          "source": "clear (default)"
+        },
+        {
+          "title": "V'Shamru (Old Skool)",
+          "also": [],
+          "bindsTo": "V'shamru",
+          "folio": 76,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Avodah",
+          "also": [],
+          "bindsTo": "Avodah",
+          "folio": 77,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Hoda'ah",
+          "also": [],
+          "bindsTo": "Modim",
+          "folio": 78,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Sim Shalom (Silver)",
+          "also": [],
+          "bindsTo": "Sim Shalom",
+          "folio": 79,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Sim_shalom.pdf",
+          "also": [],
+          "bindsTo": "Sim Shalom",
+          "folio": 79,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Sim_shalom",
+          "also": [],
+          "bindsTo": "Sim Shalom",
+          "folio": 79,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Oseh shalom - Nava tehila",
+          "also": [
+            "Oseh Shalom (Nava Tehila)"
+          ],
+          "bindsTo": "Oseh Shalom",
+          "folio": 82,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Oseh shalom (camp)",
+          "also": [],
+          "bindsTo": "Oseh Shalom",
+          "folio": 82,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Oseh Shalom",
+          "also": [],
+          "bindsTo": "Oseh Shalom",
+          "folio": 82,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Oseh shalom - Nava tehila.pdf",
+          "also": [],
+          "bindsTo": "Oseh Shalom",
+          "folio": 82,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Hakafah",
+          "also": [],
+          "bindsTo": "Hakafot",
+          "folio": 83,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Torah Reading",
+          "also": [],
+          "bindsTo": "Reading of the Torah",
+          "folio": 84,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Mi shebeirach",
+          "also": [
+            "Mi Shebeirach"
+          ],
+          "bindsTo": "Mi Shebeirach — Healing",
+          "folio": 86,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Haftarah",
+          "also": [],
+          "bindsTo": "Reading of the Haftarah",
+          "folio": 89,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Eitz chayim - Weisenberg",
+          "also": [],
+          "bindsTo": "Eitz Chayim",
+          "folio": 90,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Eitz chayim",
+          "also": [],
+          "bindsTo": "Eitz Chayim",
+          "folio": 90,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Eitz chayim - Weisenberg.pdf",
+          "also": [],
+          "bindsTo": "Eitz Chayim",
+          "folio": 90,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Aleinu",
+          "also": [],
+          "bindsTo": "Aleinu",
+          "folio": 93,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Mourner's Kaddish",
+          "also": [],
+          "bindsTo": "Mourner’s Kaddish",
+          "folio": 96,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Adon Olam",
+          "also": [],
+          "bindsTo": "Adon Olam",
+          "folio": 98,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Closing Blessing",
+          "also": [],
+          "bindsTo": "Birkat Kohanim",
+          "folio": null,
+          "source": "clear (default)"
+        },
+        {
+          "title": "Ma tovu / Hinei ma tov ",
+          "also": [],
+          "bindsTo": "Mah Tovu",
+          "folio": 52,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Adonai sfatai (ah na na)",
+          "also": [],
+          "bindsTo": "Adonai S'fatai (Amidah opening; booklet entry 'Sanctuary')",
+          "folio": 70,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Adonai S'fatai (trad)",
+          "also": [
+            "Adonai sfatai (trad)"
+          ],
+          "bindsTo": "Adonai S'fatai (Amidah opening; booklet entry 'Sanctuary')",
+          "folio": 70,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Hakafah — Mizmor Shiru Ladonai",
+          "also": [],
+          "bindsTo": "Hakafot",
+          "folio": 83,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Ma tovu_Hinei ma tov - trad",
+          "also": [],
+          "bindsTo": "Hineh Mah Tov",
+          "folio": 53,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Eitz chayim   Weisenberg",
+          "also": [],
+          "bindsTo": "Eitz Chayim",
+          "folio": 90,
+          "source": "needs-you (default)",
+          "note": null
+        },
+        {
+          "title": "Barchu Am I Awake leadsheet.pdf",
+          "also": [],
+          "bindsTo": "Bar’chu",
+          "folio": 59,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Modah Ani G#m",
+          "also": [],
+          "bindsTo": "Modeh Ani",
+          "folio": 51,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Hallelujah Jam",
+          "also": [],
+          "bindsTo": "Psalm 150",
+          "folio": 56,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Modah_Ani_Halpert_chart",
+          "also": [],
+          "bindsTo": "Modeh Ani",
+          "folio": 51,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Bar'chu — Am I Awake",
+          "also": [],
+          "bindsTo": "Bar’chu",
+          "folio": 59,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Sh'ma (Sabra)",
+          "also": [],
+          "bindsTo": "Sh’ma",
+          "folio": 83,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "sanctuary chords (1)",
+          "also": [],
+          "bindsTo": "Adonai S'fatai (Amidah opening; booklet entry 'Sanctuary')",
+          "folio": 70,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "eits chayim hi tree of life chords (1)",
+          "also": [],
+          "bindsTo": "Eitz Chayim",
+          "folio": 90,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Adonai S'fatai",
+          "also": [],
+          "bindsTo": "Adonai S'fatai (Amidah opening; booklet entry 'Sanctuary')",
+          "folio": 70,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Dressing the Torah — Etz Chayim",
+          "also": [],
+          "bindsTo": "Eitz Chayim",
+          "folio": 90,
+          "source": "needs-you (default)",
+          "note": null
+        },
+        {
+          "title": "Kiddush and Motzi",
+          "also": [],
+          "bindsTo": "Kiddush",
+          "folio": 101,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Oseh Shalom — Camp Version",
+          "also": [],
+          "bindsTo": "Oseh Shalom",
+          "folio": 82,
+          "source": "needs-you (explicit)",
+          "note": null
+        },
+        {
+          "title": "Mi chamocha (Moshav) morning.pdf",
+          "also": [],
+          "bindsTo": "Mi Chamocha",
+          "folio": 68,
+          "source": "needs-you (default)",
+          "note": null
+        },
+        {
+          "title": "Barchu Walkdown",
+          "also": [],
+          "bindsTo": "Bar’chu",
+          "folio": 59,
+          "source": "needs-you (default)",
+          "note": null
+        },
+        {
+          "title": "Hakafah — Russian Sher No 3",
+          "also": [],
+          "bindsTo": "Hakafot",
+          "folio": 83,
+          "source": "needs-you (explicit)",
+          "note": null
+        }
+      ],
+      "leaveUnbound": [
+        {
+          "title": "Leslie Cohen’s Hallelujah (unmatched)",
+          "reason": "left unbound",
+          "note": null
+        },
+        {
+          "title": "Leslie Cohen’s Hallelujah",
+          "reason": "left unbound",
+          "note": null
+        },
+        {
+          "title": "Od Yavo Shalom Aleinu",
+          "reason": "left unbound",
+          "note": null
+        }
+      ],
+      "noMatchNote": "",
+      "noMatchTitles": [
+        "Fiddley Tune",
+        "Rtsei",
+        "Drash",
+        "olam_chesed_chord_chart_Cm",
+        "Simon Tov",
+        "Bminor_simpletune.pdf",
+        "Keddusha",
+        "Nigun 1",
+        "Road to...",
+        "Ve Imru Amen Choir",
+        "Adonai s_fatai (chant).pdf",
+        "Aliyah #1",
+        "Aliyah #2 — Grandparents",
+        "Aliyah #3 — Noa, Bat Mitzvah!",
+        "Aliyah #4 — Gavi",
+        "Aliyah #5 — Aunts and Uncles",
+        "Aliyah #6 — Karen and Daniel",
+        "Aliyah #7 — Ezra, Bar Mitzvah!",
+        "Birchot Havdalah (Friedman) - Hamavdil Bein Kodesh-Shavu-A Tov.pdf",
+        "Birchot Havdalah (Friedman) / Hamavdil",
+        "Blessing from Morah Val Toskin to both twins",
+        "Board Presentation to both twins",
+        "Eili Eili (Zahavi) - Eit Dodim (Oriental Folk) - Elijah Rock (Spiritual).pdf",
+        "El Maleh Rahamim",
+        "Fiddley Tune.pdf",
+        "Hagbah",
+        "Hashkivenu (Randy)",
+        "Hava Nagilah",
+        "Hine Ma Tov (Sabra, C) — band chart",
+        "Intro Music",
+        "Kedusha Em.pdf",
+        "L_chi_Lach__Friedman_",
+        "Ma'ariv Aravim (evening chant)",
+        "newtune july2026",
+        "Niggun   Full Score",
+        "Nigun # 5",
+        "Nigun 1 (DG)",
+        "Open the Ark",
+        "Opening the Ark",
+        "Outro (after closing blessing)",
+        "Parent Blessing — music playing",
+        "Passing 2 Torahs — on the floor",
+        "Russian Sher No 3",
+        "Shalom Rav (klepper)",
+        "Shehecheyanu__Pik_alone",
+        "Shir Shabbazz (DG mando tune)",
+        "shirshabbat",
+        "Siman Tov u'Mazal Tov",
+        "Speech #1 — Noa",
+        "Speech #2 — Ezra",
+        "This Land is Your Land",
+        "This Land Is Your Land Hora Nigun ",
+        "Undress the Torah",
+        "Welcoming + Tallit talk",
+        "Yizkor Prayers",
+        "Yotser Or — English"
+      ]
+    }
+  }
+}

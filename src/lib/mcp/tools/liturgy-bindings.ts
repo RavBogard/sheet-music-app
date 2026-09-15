@@ -314,14 +314,20 @@ export async function proposeLiturgyBindings(
                     const tracks = [...((snap.data()?.tracks as unknown[]) ?? [])]
                     const i = Number(b.rowId)
                     if (!tracks[i]) return
+                    // The SAME ref `writableRef` validated, minus the `book`
+                    // key the map supplies. Writing the matched unit id here
+                    // regardless would be worse than useless: the legacy
+                    // booklets define no units, so `resolveSlotLiturgyRef`
+                    // would call the entry invalid and every clone would come
+                    // out with no page at all — the template would look bound
+                    // and the setlist would not be.
+                    const { book: _book, ...entry } = ref
                     tracks[i] = {
                         ...(tracks[i] as Record<string, unknown>),
                         liturgyRefs: {
                             ...(((tracks[i] as Record<string, unknown>)
                                 .liturgyRefs as Record<string, unknown>) ?? {}),
-                            [book]: b.unitId
-                                ? { unitId: b.unitId, folio: b.folio }
-                                : { folio: b.folio },
+                            [book]: entry,
                         },
                     }
                     tx.update(docRef, { tracks })

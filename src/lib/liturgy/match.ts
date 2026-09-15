@@ -5,6 +5,7 @@ import {
     liturgyLookup,
     type LiturgyLookupEntry,
 } from "./lookup"
+import { confirmedUnbound } from "./confirmed"
 
 /**
  * Match a row TITLE against the liturgy lookup for one book.
@@ -159,6 +160,23 @@ function rank(book: string, title: string): LiturgyMatch[] {
     })
 }
 
+/**
+ * Did Daniel rule this spelling stays unbound?
+ *
+ * The strongest ruling on the page: he saw the candidate and said no. A
+ * niggun, "Od Yavo Shalom Aleinu", "Mi Chamocha Ana B'Koach" — the last is
+ * the reason the STEM is checked too, because stripping it to "Mi Chamocha"
+ * is exactly the inference he refused. Nothing below re-derives a match he
+ * has already declined.
+ */
+function isRuledUnbound(book: string, title: string): boolean {
+    const unbound = confirmedUnbound(book)
+    if (!unbound.size) return false
+    if (unbound.has(foldLiturgyName(title))) return true
+    const stem = bareStem(title)
+    return !!stem && unbound.has(foldLiturgyName(stem))
+}
+
 /** Split a compound slot title: `Modeh Ani / Morning Blessings`. */
 function compoundParts(title: string): string[] {
     const parts = title
@@ -215,6 +233,7 @@ export function matchLiturgyTitle(
     const empty: LiturgyMatchResult = { clear: null, plausible: [] }
     if (typeof title !== "string") return empty
     if (!foldLiturgyName(title)) return empty
+    if (isRuledUnbound(book, title)) return empty
 
     const whole = assemble(rank(book, title))
     if (whole.clear) return whole

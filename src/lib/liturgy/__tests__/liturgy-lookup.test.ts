@@ -90,11 +90,12 @@ describe("the lookup table", () => {
     })
 
     it("reports a setting whose target it could not resolve", () => {
-        // Not an assertion that the list is empty — it is not. "Sanctuary" is
-        // ruled a setting of Adonai S'fatai, which no confirmed row names, and
-        // saying so out loud is the point of the function.
-        const labels = unresolvedSettings().map((s) => s.label)
-        expect(labels).toContain("Sanctuary")
+        // "Sanctuary" used to be the standing example: ruled a setting of
+        // Adonai S'fatai, which no confirmed row named. Daniel's binding
+        // rulings of 2026-09-15 supplied the moment — the booklet prints it
+        // under the setting's own name — so the list is empty now, and an
+        // entry appearing in it again means a spelling of his will not bind.
+        expect(unresolvedSettings()).toEqual([])
     })
 })
 
@@ -185,9 +186,13 @@ describe("matchLiturgyTitle — what it refuses", () => {
     })
 
     it("still refuses a file name that names two moments", () => {
+        // It used to come back with Mi Chamocha among the candidates for
+        // Daniel to judge. He judged it, on 2026-09-15, and said leave it
+        // unbound — so the candidate is gone too. Offering it again would be
+        // re-asking a question he has answered.
         const m = matchLiturgyTitle("crc-friday", "Mi Chamocha Ana B'Koach.pdf")
         expect(m.clear).toBeNull()
-        expect(m.plausible.map((p) => p.entry.label)).toContain("Mi Chamocha")
+        expect(m.plausible).toEqual([])
     })
 
     it("binds a compound title whose halves agree", () => {
