@@ -75,3 +75,46 @@ describe("patchHasChange — object-valued field comparison", () => {
         expect(patchHasChange(existing, patch)).toBe(true)
     })
 })
+
+describe("patchHasChange — the pages a template carries", () => {
+    it("sees a patch that changes ONLY the printed pages", () => {
+        // `liturgyRefs` is template-only and so absent from
+        // COPYABLE_TRACK_FIELDS, which is what the whole-list loop walks. A
+        // pages-only patch therefore read as "no change" and was skipped
+        // without a write — the write that puts a page on the rabbi's sheet.
+        const existing = { tracks: [{ title: "Bar'chu", type: "prayer" }] }
+        const patch = {
+            tracks: [
+                {
+                    title: "Bar'chu",
+                    type: "prayer",
+                    liturgyRefs: { "crc-friday": { folio: 10 } },
+                },
+            ],
+        }
+        expect(patchHasChange(existing, patch)).toBe(true)
+    })
+
+    it("still sees no change when the pages are identical", () => {
+        const row = {
+            title: "Bar'chu",
+            type: "prayer",
+            liturgyRefs: { "crc-friday": { folio: 10 } },
+        }
+        expect(patchHasChange({ tracks: [row] }, { tracks: [{ ...row }] })).toBe(false)
+    })
+
+    it("sees a page that moved", () => {
+        const before = {
+            tracks: [
+                { title: "Bar'chu", type: "prayer", liturgyRefs: { "crc-friday": { folio: 10 } } },
+            ],
+        }
+        const after = {
+            tracks: [
+                { title: "Bar'chu", type: "prayer", liturgyRefs: { "crc-friday": { folio: 11 } } },
+            ],
+        }
+        expect(patchHasChange(before, after)).toBe(true)
+    })
+})

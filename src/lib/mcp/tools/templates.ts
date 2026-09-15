@@ -312,6 +312,16 @@ export async function getTemplate(
                       ;(row as Record<string, unknown>)[field] = v
                   }
               }
+              // `liturgyRefs` is template-only and so deliberately absent from
+              // COPYABLE_TRACK_FIELDS — the same omission `normalizeTemplateTrack`
+              // works around on the way IN. It was missing on the way out, so a
+              // template could carry a printed page for every row and read back
+              // with none: the pages were in Firestore and invisible to anyone
+              // asking the server what the template says.
+              const refs = t.liturgyRefs
+              if (refs && typeof refs === "object") {
+                  row.liturgyRefs = refs as TemplateTrack["liturgyRefs"]
+              }
               return row
           })
         : []
@@ -509,6 +519,12 @@ export function patchHasChange(
                 if (!fieldValuesEqual(a[field], (b as Record<string, unknown>)[field])) {
                     return true
                 }
+            }
+            // Same omission, same consequence in the other direction: a patch
+            // that changes ONLY the printed pages read as "no change" and was
+            // skipped without a write.
+            if (!fieldValuesEqual(a.liturgyRefs, (b as Record<string, unknown>).liturgyRefs)) {
+                return true
             }
         }
     }
