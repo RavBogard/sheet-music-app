@@ -6,7 +6,7 @@ import type { HistoryRow } from "./types"
 /**
  * Read Overlays' bounded cue history.
  *
- * `GET ${OVERLAYS_BASE_URL}/api/history?since&until`, bearer
+ * `GET ${OVERLAYS_BASE_URL}/api/history?since=<ms>&until=<ms>`, bearer
  * `OVERLAYS_HISTORY_TOKEN`. The token is a SENSITIVE env var and is never
  * logged, never echoed into an error, and never returned to a caller — the
  * same discipline Overlays applies to `CRC_LIVE_READ_TOKEN` on its side.
@@ -31,10 +31,30 @@ export type HistoryResult =
     | { ok: false; code: string; message: string }
 
 export interface FetchHistoryArgs {
-    /** ISO instant, inclusive. */
+    /** ISO instant, inclusive. Sent as epoch milliseconds — see below. */
     since: string
     /** ISO instant, exclusive. */
     until: string
+}
+
+/**
+ * EPOCH MILLISECONDS ON THE WIRE.
+ *
+ * The cue-log contract is `?since=<ms>&until=<ms>` — `PLAN-CODE-LIVE-
+ * INTEGRATION-2026-09-14.md` Part D, verbatim, describing the endpoint as
+ * built. This client was sending ISO strings, which Overlays answers 400.
+ * Measured on production 2026-09-15, the first time both env vars were set
+ * and a real call could be made: the credential was accepted and the request
+ * shape refused. The fixture-driven tests could not have caught it — a
+ * fixture has no opinion about a query string.
+ *
+ * ISO stays the interface, because every caller here holds instants, not
+ * numbers, and a number in an argument called `since` is the kind of thing
+ * that gets a time zone wrong later.
+ */
+function epochMs(iso: string): string | null {
+    const ms = Date.parse(iso)
+    return Number.isFinite(ms) ? String(ms) : null
 }
 
 /** Present only when both the base URL and the token are configured. */
@@ -70,8 +90,17 @@ export async function fetchHistory(args: FetchHistoryArgs): Promise<HistoryResul
             message: "OVERLAYS_BASE_URL is not a URL.",
         }
     }
-    url.searchParams.set("since", args.since)
-    url.searchParams.set("until", args.until)
+    const since = epochMs(args.since)
+    const until = epochMs(args.until)
+    if (!since || !until) {
+        return {
+            ok: false,
+            code: "history_bad_window",
+            message: "since/until must be parseable instants.",
+        }
+    }
+    url.searchParams.set("since", since)
+    url.searchParams.set("until", until)
 
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
