@@ -61,6 +61,12 @@ export interface AlwaysMergeNote {
     slot?: string
     /** Daniel marked it Always but no book prints it — it clones page-less. */
     pageless?: boolean
+    /**
+     * The base row naming this moment sat EARLIER than Daniel's order puts it.
+     * It keeps its place and gains its pages there; nothing was inserted and
+     * nothing moved. The two orders simply disagree.
+     */
+    inPlace?: boolean
 }
 
 export interface AlwaysMergeResult {
@@ -235,15 +241,15 @@ export function mergeAlwaysRowsWith<T>(
     // Pass 1 — anchors, strictly forward.
     const anchorOf = new Map<number, number>()
     const anchored = new Set<number>()
+    const aliasesOf = file.always.map((row) => spellingsFor(row, file.book))
     let scan = 0
     file.always.forEach((row, r) => {
-        const aliases = spellingsFor(row, file.book)
         const at = base.findIndex(
             (candidate, i) =>
                 i >= scan &&
                 !anchored.has(i) &&
                 !isHeader(candidate) &&
-                slotNamesMoment(adapter.labelOf(candidate), aliases, row.label),
+                slotNamesMoment(adapter.labelOf(candidate), aliasesOf[r], row.label),
         )
         if (at >= 0) {
             anchorOf.set(r, at)
@@ -252,20 +258,73 @@ export function mergeAlwaysRowsWith<T>(
         }
     })
 
+    // Pass 1b — anchors BEHIND the scan point, taken in place.
+    //
+    // Strictly-forward anchoring is what keeps a late moment from being pulled
+    // back into an earlier block, but on its own it manufactures duplicates: the
+    // Friday template prints Chatzi Kaddish before Bar'chu and Daniel's order
+    // has it after, so by the time the merge reached his Chatzi Kaddish the
+    // template's own was behind the scan point and unreachable — and the merge
+    // added a second one. A template gaining a duplicate row is the exact
+    // failure this module promises not to cause.
+    //
+    // A backward anchor never MOVES anything. The base row stays where the
+    // template put it and gains its pages there; nothing is inserted. The two
+    // orders disagree about where Chatzi Kaddish goes, and a disagreement about
+    // order is not a reason to print the moment twice.
+    const inPlace = new Map<number, number>()
+    file.always.forEach((row, r) => {
+        if (anchorOf.has(r)) return
+        const at = base.findIndex(
+            (candidate, i) =>
+                !anchored.has(i) &&
+                !isHeader(candidate) &&
+                slotNamesMoment(adapter.labelOf(candidate), aliasesOf[r], row.label),
+        )
+        if (at >= 0) {
+            inPlace.set(r, at)
+            anchored.add(at)
+        }
+    })
+
+    // Pages a base row gains where it already stands.
+    const refsAt = new Map<number, SlotLiturgyRefs>()
+    for (const [r, at] of inPlace) {
+        const refs = (file.always[r].liturgyRefs ?? {}) as SlotLiturgyRefs
+        if (Object.keys(refs).length) refsAt.set(at, refs)
+    }
+
     // Pass 2 — emit.
     const out: T[] = []
     const notes: AlwaysMergeNote[] = []
     let cursor = 0
 
     const emitBaseUpTo = (limit: number) => {
-        while (cursor < limit) out.push(base[cursor++])
+        while (cursor < limit) {
+            const refs = refsAt.get(cursor)
+            const row = base[cursor]
+            out.push(refs ? adapter.withRefs(row, refs) : row)
+            cursor++
+        }
     }
 
     file.always.forEach((row, r) => {
         const refs = (row.liturgyRefs ?? {}) as SlotLiturgyRefs
         const hasRefs = Object.keys(refs).length > 0
-        const at = anchorOf.get(r)
 
+        const behind = inPlace.get(r)
+        if (behind !== undefined) {
+            notes.push({
+                label: row.label,
+                outcome: "bound-to-slot",
+                slot: adapter.labelOf(base[behind]),
+                inPlace: true,
+                ...(hasRefs ? {} : { pageless: true }),
+            })
+            return
+        }
+
+        const at = anchorOf.get(r)
         if (at !== undefined) {
             emitBaseUpTo(at)
             const slot = base[at]

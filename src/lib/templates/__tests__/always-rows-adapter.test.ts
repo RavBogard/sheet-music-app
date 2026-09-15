@@ -111,3 +111,39 @@ describe("families and their Sometimes lists", () => {
         expect(sometimesRowsFor("no_such_family")).toEqual([])
     })
 })
+
+describe("a base row that sits earlier than Daniel's order", () => {
+    it("gains its pages in place instead of being duplicated", () => {
+        // The Friday template prints Chatzi Kaddish before Bar'chu; Daniel's
+        // Always order has it after V'shamru. Strictly-forward anchoring alone
+        // could not see the template's own row any more and added a second.
+        const base: Row[] = [
+            { title: "Chatzi Kaddish", type: "prayer" },
+            { title: "Barechu", type: "prayer", songId: "chart-2" },
+        ]
+        const out = mergeAlwaysRowsWith(base, "friday_night", adapter)
+        const kaddish = out.rows.filter(
+            (r) => r.title.toLowerCase() === "chatzi kaddish",
+        )
+        expect(kaddish).toHaveLength(1)
+        expect(kaddish[0].liturgyRefs?.["crc-friday"]?.folio).toBe(22)
+        // It did not move: still ahead of Bar'chu, where the template put it.
+        const titles = out.rows.map((r) => r.title)
+        expect(titles.indexOf("Chatzi Kaddish")).toBeLessThan(titles.indexOf("Barechu"))
+        expect(
+            out.notes.find((n) => n.slot === "Chatzi Kaddish")?.inPlace,
+        ).toBe(true)
+    })
+
+    it("still refuses to pull a later moment back into an earlier block", () => {
+        // The reason forward-only anchoring exists: "Avot" is a booklet alias
+        // of the Amidah's opening AND half of a Torah-service slot thirteen
+        // pages later. A compound half may only match the canonical name.
+        const base: Row[] = [
+            { title: "Avot / Torah Processional", type: "song" },
+        ]
+        const out = mergeAlwaysRowsWith(base, "shabbat_morning", adapter)
+        const torahSlot = out.rows.find((r) => r.title === "Avot / Torah Processional")
+        expect(torahSlot?.liturgyRefs?.["crc-saturday"]?.folio).not.toBe(71)
+    })
+})
