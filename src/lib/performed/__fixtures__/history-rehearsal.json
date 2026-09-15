@@ -1,0 +1,69 @@
+{
+ "workspace": "rehearsal",
+ "window": {
+  "rows": 2000,
+  "days": 14
+ },
+ "rows": [
+  {
+   "seq": 9,
+   "at": 1789420709619,
+   "action": "history_cleared",
+   "cueId": null,
+   "unitId": null,
+   "momentId": null,
+   "book": null,
+   "folio": null,
+   "source": "control",
+   "serviceRef": null
+  },
+  {
+   "seq": 10,
+   "at": 1789420709649,
+   "action": "in",
+   "cueId": "efa9fad4-f7d5-4091-a708-82103028861b",
+   "unitId": null,
+   "momentId": null,
+   "book": null,
+   "folio": null,
+   "source": "control",
+   "serviceRef": null
+  },
+  {
+   "seq": 11,
+   "at": 1789420709662,
+   "action": "out",
+   "cueId": "efa9fad4-f7d5-4091-a708-82103028861b",
+   "unitId": null,
+   "momentId": null,
+   "book": null,
+   "folio": null,
+   "source": "control",
+   "serviceRef": null
+  },
+  {
+   "seq": 12,
+   "at": 1789420709673,
+   "action": "cut",
+   "cueId": null,
+   "unitId": null,
+   "momentId": null,
+   "book": null,
+   "folio": null,
+   "source": "control",
+   "serviceRef": null
+  },
+  {
+   "seq": 13,
+   "at": 1789420709683,
+   "action": "clear",
+   "cueId": null,
+   "unitId": null,
+   "momentId": null,
+   "book": null,
+   "folio": null,
+   "source": "control",
+   "serviceRef": null
+  }
+ ]
+}

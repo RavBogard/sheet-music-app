@@ -16,8 +16,19 @@
 export interface HistoryRow {
     /** Monotonic sequence within the service. */
     seq: number
-    /** ISO instant the cue was accepted. */
-    at: string
+    /**
+     * When the cue was accepted: EPOCH MILLISECONDS on the wire, and an ISO
+     * instant is accepted too.
+     *
+     * Overlays sends a number — `lib/service-history.ts` types the row as
+     * `at:number` and validates it with a safe-integer check, and the captured
+     * `history-rehearsal.json` shows `"at": 1789420709619`. This side required
+     * a string, so `isHistoryRow` rejected EVERY row silently and
+     * `reconcile_service` answered "no cues were logged" for a service that had
+     * logged them all. Both shapes are accepted here and normalised once, at
+     * the boundary, by `historyInstant`.
+     */
+    at: string | number
     action: string
     cueId?: string | null
     /** Book-local AR-3 unit id, when the cue carried one. */
@@ -85,6 +96,21 @@ export interface Diff {
     ignoredRows: number
     /** Total history rows considered. */
     historyRows: number
+}
+
+/**
+ * The instant a history row carries, as an ISO string, or null.
+ *
+ * One place converts, so nothing downstream has to know which shape arrived
+ * and no second `Date.parse` of a number can silently produce 1970.
+ */
+export function historyInstant(at: string | number | null | undefined): string | null {
+    if (typeof at === "number") {
+        return Number.isFinite(at) ? new Date(at).toISOString() : null
+    }
+    if (typeof at !== "string") return null
+    const ms = Date.parse(at)
+    return Number.isFinite(ms) ? new Date(ms).toISOString() : null
 }
 
 /** A chapter line for a recording description: `mm:ss  Title`. */

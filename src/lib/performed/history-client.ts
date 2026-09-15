@@ -26,6 +26,34 @@ import type { HistoryRow } from "./types"
 const TIMEOUT_MS = 5_000
 const MAX_BYTES = 256 * 1024
 
+/**
+ * Overlays answers at most `MAX_HISTORY_PAGE` (500) rows and hands back
+ * `nextAfter` when more exist. A Yom Kippur morning is four hours of cues and
+ * goes past 500 easily, and a truncated log reads as "the second half of the
+ * service was skipped" — the single most misleading thing this feature could
+ * say. So the client follows the cursor.
+ *
+ * Bounded, like everything else here: eight pages is 4,000 rows, past the
+ * relay's own 2,000-row window, so the cap can only ever be reached by a
+ * server that is not advancing its cursor.
+ */
+const MAX_PAGES = 8
+
+/**
+ * The workspace these credentials are supposed to read.
+ *
+ * Overlays is multi-workspace and the response says which one answered.
+ * Reconciling a rehearsal workspace's cues against a CRC setlist would produce
+ * a confident, detailed, entirely fictional account of a service — so the
+ * workspace is checked rather than assumed, and a mismatch is a refusal.
+ *
+ * Read per call, not at module load: this runs on serverless, where a module
+ * outlives the environment it was first imported under.
+ */
+function expectedWorkspace(): string {
+    return process.env.OVERLAYS_WORKSPACE || "crc"
+}
+
 export type HistoryResult =
     | { ok: true; rows: HistoryRow[]; truncated: false }
     | { ok: false; code: string; message: string }
@@ -62,10 +90,26 @@ export function historyConfigured(): boolean {
     return !!(process.env.OVERLAYS_BASE_URL && process.env.OVERLAYS_HISTORY_TOKEN)
 }
 
+/**
+ * EPOCH MILLISECONDS, AND ISO TOO.
+ *
+ * `lib/service-history.ts` on the Overlays side types the row as `at:number`
+ * and validates it with a safe-integer check; the captured response in
+ * `work/handoffs/cue-log/history-rehearsal.json` shows `"at": 1789420709619`.
+ * This function required a string, so it rejected every row Overlays has ever
+ * sent, `rows` came back empty, and `reconcile_service` reported "no cues were
+ * logged" — indistinguishable from a service nobody cued. The fixtures could
+ * not have caught it: a fixture has no opinion about the wire.
+ *
+ * ISO is still accepted. It costs one clause and it means a future Overlays
+ * that switches to instants does not silently empty this again.
+ */
 function isHistoryRow(v: unknown): v is HistoryRow {
     if (!v || typeof v !== "object") return false
     const r = v as Record<string, unknown>
-    return typeof r.seq === "number" && typeof r.at === "string"
+    if (typeof r.seq !== "number") return false
+    if (typeof r.at === "number") return Number.isFinite(r.at)
+    return typeof r.at === "string" && Number.isFinite(Date.parse(r.at))
 }
 
 export async function fetchHistory(args: FetchHistoryArgs): Promise<HistoryResult> {
@@ -80,9 +124,9 @@ export async function fetchHistory(args: FetchHistoryArgs): Promise<HistoryResul
         }
     }
 
-    let url: URL
+    let base_url: URL
     try {
-        url = new URL("/api/history", base)
+        base_url = new URL("/api/history", base)
     } catch {
         return {
             ok: false,
@@ -99,64 +143,105 @@ export async function fetchHistory(args: FetchHistoryArgs): Promise<HistoryResul
             message: "since/until must be parseable instants.",
         }
     }
-    url.searchParams.set("since", since)
-    url.searchParams.set("until", until)
 
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
     try {
-        const res = await fetch(url, {
-            method: "GET",
-            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-            // Following a redirect would hand the bearer to whatever host the
-            // redirect names. There is no legitimate redirect on this endpoint.
-            redirect: "error",
-            cache: "no-store",
-            signal: controller.signal,
-        })
+        const rows: HistoryRow[] = []
+        let after: number | null = null
+        let pages = 0
 
-        if (!res.ok) {
-            // Status only — a body from a service we are authenticating to can
-            // echo back headers, and this string reaches a tool result.
-            return {
-                ok: false,
-                code: "history_http_error",
-                message: `Overlays /api/history returned ${res.status}.`,
+        for (;;) {
+            const url = new URL(base_url)
+            url.searchParams.set("since", since)
+            url.searchParams.set("until", until)
+            if (after !== null) url.searchParams.set("after", String(after))
+
+            const res = await fetch(url, {
+                method: "GET",
+                headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+                // Following a redirect would hand the bearer to whatever host
+                // the redirect names. There is no legitimate redirect here.
+                redirect: "error",
+                cache: "no-store",
+                signal: controller.signal,
+            })
+
+            if (!res.ok) {
+                // Status only — a body from a service we are authenticating to
+                // can echo back headers, and this string reaches a tool result.
+                return {
+                    ok: false,
+                    code: "history_http_error",
+                    message: `Overlays /api/history returned ${res.status}.`,
+                }
             }
+
+            const text = await readCapped(res)
+            if (text === null) {
+                return {
+                    ok: false,
+                    code: "history_too_large",
+                    message: `Overlays /api/history returned more than ${MAX_BYTES} bytes.`,
+                }
+            }
+
+            let parsed: unknown
+            try {
+                parsed = JSON.parse(text)
+            } catch {
+                return {
+                    ok: false,
+                    code: "history_bad_json",
+                    message: "Overlays /api/history did not return JSON.",
+                }
+            }
+
+            const body = Array.isArray(parsed)
+                ? null
+                : ((parsed as Record<string, unknown> | null) ?? null)
+            const raw = Array.isArray(parsed) ? parsed : (body?.rows ?? null)
+            if (!Array.isArray(raw)) {
+                return {
+                    ok: false,
+                    code: "history_bad_shape",
+                    message: "Overlays /api/history returned neither an array nor {rows:[…]}.",
+                }
+            }
+
+            // Whose cues these are. Checked on every page, because a cursor is
+            // a fresh request and nothing guarantees the second one lands in
+            // the same place as the first.
+            const expected = expectedWorkspace()
+            const workspace = typeof body?.workspace === "string" ? body.workspace : null
+            if (workspace && workspace !== expected) {
+                return {
+                    ok: false,
+                    code: "history_wrong_workspace",
+                    message: `Overlays /api/history answered for workspace '${workspace}', not '${expected}'.`,
+                }
+            }
+
+            for (const r of raw) if (isHistoryRow(r)) rows.push(r)
+
+            pages += 1
+            const next = body?.nextAfter
+            if (typeof next !== "number" || !Number.isFinite(next)) break
+            if (next === after) break
+            if (pages >= MAX_PAGES) {
+                // Say so rather than quietly returning a partial service: a
+                // half-read cue log reads as "the rest was skipped".
+                logger.warn("[performed] history paging cap reached", { pages })
+                return {
+                    ok: false,
+                    code: "history_too_many_pages",
+                    message: `Overlays /api/history did not finish within ${MAX_PAGES} pages.`,
+                }
+            }
+            after = next
         }
 
-        const text = await readCapped(res)
-        if (text === null) {
-            return {
-                ok: false,
-                code: "history_too_large",
-                message: `Overlays /api/history returned more than ${MAX_BYTES} bytes.`,
-            }
-        }
-
-        let parsed: unknown
-        try {
-            parsed = JSON.parse(text)
-        } catch {
-            return {
-                ok: false,
-                code: "history_bad_json",
-                message: "Overlays /api/history did not return JSON.",
-            }
-        }
-
-        const raw = Array.isArray(parsed)
-            ? parsed
-            : ((parsed as Record<string, unknown> | null)?.rows ?? null)
-        if (!Array.isArray(raw)) {
-            return {
-                ok: false,
-                code: "history_bad_shape",
-                message: "Overlays /api/history returned neither an array nor {rows:[…]}.",
-            }
-        }
-
-        const rows = raw.filter(isHistoryRow).sort((a, b) => a.seq - b.seq)
+        rows.sort((a, b) => a.seq - b.seq)
         return { ok: true, rows, truncated: false }
     } catch (err) {
         const aborted = err instanceof Error && err.name === "AbortError"
