@@ -314,3 +314,110 @@ export async function downloadFromStoragePath(
         return { success: false, reason: 'network', message: (err as Error).message || 'Storage download failed' }
     }
 }
+
+export interface ExactStorageDownload {
+    buffer: Buffer
+    contentType: string
+    generation: string
+    sizeBytes: number
+}
+
+/**
+ * Read one immutable GCS generation at an exact, already-authorized path.
+ *
+ * Public serving must never use the candidate-path resolver: that resolver is
+ * deliberately fuzzy for private legacy recovery.  Here we inspect metadata
+ * first, reject the wrong generation/MIME/size before opening a stream, then
+ * enforce the same byte ceiling while consuming the provider stream.  The
+ * generation is also attached to the File handle and its request precondition,
+ * so an overwrite between metadata and download cannot substitute new bytes.
+ */
+export async function downloadExactStorageGeneration(args: {
+    path: string
+    generation: string
+    contentType: string
+    expectedSizeBytes: number
+    maxBytes: number
+}): Promise<StorageResult<ExactStorageDownload>> {
+    try {
+        if (
+            !args.path ||
+            !/^[1-9][0-9]*$/.test(args.generation) ||
+            !Number.isSafeInteger(args.expectedSizeBytes) ||
+            args.expectedSizeBytes <= 0 ||
+            !Number.isSafeInteger(args.maxBytes) ||
+            args.maxBytes <= 0 ||
+            args.expectedSizeBytes > args.maxBytes
+        ) {
+            return {
+                success: false,
+                reason: 'invalid_input',
+                message: 'Invalid exact-generation download contract',
+            }
+        }
+
+        const bucket = getBucket()
+        const file = bucket.file(args.path, {
+            generation: args.generation,
+            preconditionOpts: { ifGenerationMatch: args.generation },
+        })
+        const [metadata] = await file.getMetadata()
+        const generation = String(metadata.generation ?? '')
+        const sizeBytes = Number(metadata.size)
+        const contentType = (metadata.contentType ?? '').split(';', 1)[0]!.trim().toLowerCase()
+        if (
+            generation !== args.generation ||
+            !Number.isSafeInteger(sizeBytes) ||
+            sizeBytes !== args.expectedSizeBytes ||
+            sizeBytes <= 0 ||
+            sizeBytes > args.maxBytes ||
+            contentType !== args.contentType
+        ) {
+            return {
+                success: false,
+                reason: 'invalid_input',
+                message: 'Exact storage metadata does not match publication manifest',
+            }
+        }
+
+        const chunks: Buffer[] = []
+        let total = 0
+        const stream = file.createReadStream({ validation: 'crc32c' })
+        for await (const raw of stream) {
+            const chunk = Buffer.isBuffer(raw) ? raw : Buffer.from(raw as Uint8Array)
+            total += chunk.byteLength
+            if (total > args.maxBytes || total > args.expectedSizeBytes) {
+                stream.destroy(new Error('Exact storage object exceeded byte limit'))
+                return {
+                    success: false,
+                    reason: 'invalid_input',
+                    message: 'Exact storage object exceeded byte limit',
+                }
+            }
+            chunks.push(chunk)
+        }
+        if (total !== args.expectedSizeBytes) {
+            return {
+                success: false,
+                reason: 'invalid_input',
+                message: 'Exact storage object size changed during download',
+            }
+        }
+        return {
+            success: true,
+            data: {
+                buffer: Buffer.concat(chunks, total),
+                contentType,
+                generation,
+                sizeBytes,
+            },
+        }
+    } catch (err) {
+        const code = (err as { code?: number | string } | null)?.code
+        return {
+            success: false,
+            reason: code === 404 ? 'not_found' : 'network',
+            message: (err as Error).message || 'Exact storage download failed',
+        }
+    }
+}
