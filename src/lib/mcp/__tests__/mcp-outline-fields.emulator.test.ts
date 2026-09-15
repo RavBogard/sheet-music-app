@@ -364,6 +364,14 @@ describe("outline fields survive the MCP write path (emulator)", () => {
                 key: "Am",
             })
             const trackId = (added as { trackId: string }).trackId
+            // The row arrives ALREADY bound: this setlist names crc-friday and
+            // "Mi Chamocha" is a spelling Daniel confirmed, so add_track binds
+            // it to p.18 on the way in (round 3, bind on type). What this test
+            // is about is that a REFUSED patch changes nothing, so the check is
+            // that the ref is exactly what it was — not that there isn't one.
+            const before = (await db().collection("tracks").doc(trackId).get()).data()
+                ?.liturgyRef
+            expect(before).toEqual({ book: "crc-friday", folio: 18 })
 
             const res = await updateSetlistTrack(ADMIN, {
                 setlistId,
@@ -377,7 +385,7 @@ describe("outline fields survive the MCP write path (emulator)", () => {
 
             const doc = await db().collection("tracks").doc(trackId).get()
             expect(doc.data()).toMatchObject({ key: "Am", title: "Mi Chamocha" })
-            expect(doc.data()?.liturgyRef).toBeUndefined()
+            expect(doc.data()?.liturgyRef).toEqual(before)
         })
 
         // Positive control: a valid feed-tier ref with a REAL unitId must
