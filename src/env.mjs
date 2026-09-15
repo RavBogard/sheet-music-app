@@ -28,6 +28,10 @@ export const env = createEnv({
         GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
         UPSTASH_REDIS_REST_URL: z.string().optional(),
         UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+        // The same REST url and token under the names the Vercel marketplace
+        // integration provisions them as. See `src/lib/upstash-env.ts`.
+        KV_REST_API_URL: z.string().optional(),
+        KV_REST_API_TOKEN: z.string().optional(),
         RESEND_API_KEY: z.string().optional(),
         RESEND_FROM_EMAIL: z.string().email().optional(),
         RESEND_WEBHOOK_SECRET: z.string().optional(),
@@ -109,6 +113,8 @@ export const env = createEnv({
         NEXT_PUBLIC_GOOGLE_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
         UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
         UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
+        KV_REST_API_URL: process.env.KV_REST_API_URL,
+        KV_REST_API_TOKEN: process.env.KV_REST_API_TOKEN,
         RESEND_API_KEY: process.env.RESEND_API_KEY,
         RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
         BRIDGE_ALERT_EMAIL: process.env.BRIDGE_ALERT_EMAIL,

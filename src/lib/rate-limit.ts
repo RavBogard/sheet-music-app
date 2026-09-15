@@ -1,6 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
 import { logger } from "@/lib/logger"
+import { upstashRestCredentials } from "@/lib/upstash-env"
 import { NextRequest, NextResponse } from "next/server"
 
 // In-memory fallback for development or if Redis is not configured
@@ -54,11 +55,10 @@ class InMemoryRateLimiter {
 type LimiterLike = { limit(key: string): Promise<{ success: boolean; limit: number; remaining: number; reset: number }> }
 
 function createLimiter(maxRequests: number, windowSec: number): LimiterLike {
-    const url = process.env.UPSTASH_REDIS_REST_URL
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN
+    const creds = upstashRestCredentials()
 
-    if (url && token) {
-        const redis = new Redis({ url, token })
+    if (creds) {
+        const redis = new Redis({ url: creds.url, token: creds.token })
         return new Ratelimit({
             redis,
             limiter: Ratelimit.slidingWindow(maxRequests, `${windowSec} s`),

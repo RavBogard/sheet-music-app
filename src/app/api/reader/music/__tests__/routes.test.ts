@@ -149,6 +149,10 @@ describe("anonymous public reader-chart routes", () => {
         vi.stubEnv("VERCEL", "1")
         vi.stubEnv("UPSTASH_REDIS_REST_URL", "")
         vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "")
+        // The marketplace pair is the same store under another name; a dev
+        // machine that has it would otherwise take the distributed path here.
+        vi.stubEnv("KV_REST_API_URL", "")
+        vi.stubEnv("KV_REST_API_TOKEN", "")
         delete process.env.READER_PUBLIC_CHARTS_ENABLED
         mocks.rateLimit.mockResolvedValue({ allowed: false, status: 503 })
 
@@ -306,6 +310,10 @@ describe("anonymous public reader-chart routes", () => {
         vi.stubEnv("VERCEL", "1")
         vi.stubEnv("UPSTASH_REDIS_REST_URL", "")
         vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "")
+        // The marketplace pair is the same store under another name; a dev
+        // machine that has it would otherwise take the distributed path here.
+        vi.stubEnv("KV_REST_API_URL", "")
+        vi.stubEnv("KV_REST_API_TOKEN", "")
         mocks.rateLimit.mockResolvedValue({ allowed: false, status: 503 })
 
         const selection = await selectMusic(selectionRequest())

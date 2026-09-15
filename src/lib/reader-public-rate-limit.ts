@@ -2,6 +2,7 @@ import { isIP } from "node:net"
 
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
+import { upstashRestCredentials } from "@/lib/upstash-env"
 
 export type PublicReaderLimitTier = "selection" | "chart"
 
@@ -72,9 +73,9 @@ let distributed:
     | null = null
 
 function distributedLimiters(): { selection: Limiter; chart: Limiter } | null {
-    const url = process.env.UPSTASH_REDIS_REST_URL?.trim()
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim()
-    if (!url || !token) return null
+    const creds = upstashRestCredentials()
+    if (!creds) return null
+    const { url, token } = creds
     if (distributed?.url === url && distributed.token === token) return distributed
     const redis = new Redis({ url, token })
     distributed = {
