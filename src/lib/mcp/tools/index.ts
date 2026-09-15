@@ -67,6 +67,7 @@ import {
     deleteTemplate,
     cloneSetlistFromTemplate,
 } from "./templates"
+import { proposeLiturgyBindings } from "./liturgy-bindings"
 import {
     listMonitorBuses,
     getMix,
@@ -1049,6 +1050,61 @@ export function registerWriteTools(server: McpServer): void {
         },
         async (args, extra) =>
             jsonResult(await listTemplates(uidFrom(extra), args, orgFrom(extra))),
+    )
+
+    // ── A-W3' — bind, don't add ─────────────────────────────────────────
+    // Ruling 2 as Daniel reinterpreted it 2026-09-15. Every row he authored
+    // gains its liturgical identity by NAME MATCH against the lookup table.
+    // The row count in equals the row count out, always.
+
+    server.registerTool(
+        "propose_liturgy_bindings",
+        {
+            description:
+                "Propose a liturgyRef (unit id + printed page) for every unbound row of a setlist or template, by matching the row's TITLE against the liturgy lookup for `book`. Bind, don't add: no row is created, removed or reordered — the row count is unchanged. Returns `{bound, plausible, unmatched, skipped}`. `bound` is safe to write (an exact or near spelling, unambiguous); `plausible` is real candidates that need Daniel — show him the alternatives and pass his picks back in `accept`. Headers are NEVER bound (a header is a sign, not a moment), and a row that already carries a liturgyRef is never overwritten. `dryRun` defaults TRUE and writes nothing. A real run (`dryRun:false`) writes `bound` plus only the `accept` rows, and only where the page validates against the registry — an identity-only match with no page in this book is reported, never written with a borrowed number. Lookup tables exist for crc-friday, crc-saturday, shabbat-maariv and shabbat-shacharit; any other book is refused rather than guessed at. Admin + band_leader only.",
+            inputSchema: {
+                setlistId: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe("Setlist to bind. Pass exactly one of setlistId or templateId."),
+                templateId: z
+                    .string()
+                    .min(1)
+                    .optional()
+                    .describe(
+                        "Template to bind (from list_templates). Rows are addressed by their index in `tracks`, and a real run writes `liturgyRefs[book]` — templates carry one page per book.",
+                    ),
+                book: z
+                    .string()
+                    .min(1)
+                    .describe(
+                        "Book slug whose pages to resolve (list_books). Ruling 8: the LEGACY booklet governs page numbers — crc-friday, crc-saturday — until a Shirei volume for that service is released.",
+                    ),
+                dryRun: z
+                    .boolean()
+                    .optional()
+                    .describe("Default true. Returns the whole proposal and writes nothing."),
+                accept: z
+                    .array(
+                        z.object({
+                            rowId: z.string().min(1),
+                            unitId: z
+                                .string()
+                                .min(1)
+                                .describe("The unit id (or label) Daniel picked from that row's alternatives."),
+                        }),
+                    )
+                    .optional()
+                    .describe(
+                        "Plausible rows Daniel confirmed, as rowId -> unitId. Only meaningful with dryRun:false. A row not named here stays unbound however confident it looked.",
+                    ),
+            },
+        },
+        async (args, extra) =>
+            jsonResult(
+                await proposeLiturgyBindings(uidFrom(extra), args, orgFrom(extra)),
+            ),
     )
 
     server.registerTool(
