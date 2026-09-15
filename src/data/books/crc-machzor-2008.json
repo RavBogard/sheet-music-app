@@ -920,10 +920,8 @@
             "unitId": "erev-yk.kol-nidre@crc-kol-nidre"
         },
         {
-            "name": "Shehecheyanu",
-            "aliases": [
-                "Erev Maariv Shehecheyanu 2"
-            ],
+            "name": "Erev Maariv Shehecheyanu 2",
+            "aliases": [],
             "page": 99,
             "service": "crc-kol-nidre",
             "unitId": "erev-yk.erev-maariv-shehecheyanu-2@crc-kol-nidre"
@@ -1288,7 +1286,7 @@
         {
             "name": "Untaneh Tokef",
             "aliases": [],
-            "page": 148,
+            "page": 147,
             "service": "crc-yk-morning",
             "unitId": "amidah.untaneh-tokef@crc-yk-morning"
         },

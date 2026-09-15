@@ -191,6 +191,32 @@ describe("matchLiturgyTitle — what it refuses", () => {
         expect(m.clear?.entry.unitId).toBe("erev-yk.kol-nidre@crc-kol-nidre")
     })
 
+    // R5-a and R5-d, ruled by Daniel on 2026-09-15 against the printed book.
+    // Both are recorded in `scripts/emit-machzor-book.mjs` as RULINGS and reach
+    // the data by regeneration, never by hand; these assertions are what says
+    // the ruling survived the next regeneration.
+    it("puts Un'taneh Tokef on p.147, where the book prints it (R5-a)", () => {
+        // The capture files p.148's unit under this name — 148 is B'rosh
+        // Hashanah. David typed 147 and the ruling agrees with him.
+        const m = matchLiturgyTitle("crc-machzor-2008", "Un'taneh Tokef", "crc-yk-morning")
+        expect(m.clear?.entry.folio).toBe(147)
+        expect(m.clear?.entry.unitId).toBe("amidah.untaneh-tokef@crc-yk-morning")
+    })
+
+    it("resolves Kol Nidre's Shehecheyanu to the first of the two (R5-d)", () => {
+        // The volume really does print it at 97 and 99, and the feed gives both
+        // units the same short name. Before the ruling this was two exact hits
+        // and a refusal — correct, but it has an answer.
+        const m = matchLiturgyTitle("crc-machzor-2008", "Shehecheyanu", "crc-kol-nidre")
+        expect(m.clear?.entry.folio).toBe(97)
+        expect(m.clear?.entry.unitId).toBe("erev-yk.erev-maariv-shehecheyanu@crc-kol-nidre")
+        // The second one is still reachable, by its own full name.
+        expect(
+            matchLiturgyTitle("crc-machzor-2008", "Erev Maariv Shehecheyanu 2", "crc-kol-nidre")
+                .clear?.entry.folio,
+        ).toBe(99)
+    })
+
     it("refuses a compound title whose halves name two different moments", () => {
         const m = matchLiturgyTitle("crc-saturday", "Adon Olam / Ein Keloheinu")
         expect(m.clear).toBeNull()

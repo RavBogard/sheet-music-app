@@ -168,6 +168,51 @@ function pairPage(curated, units) {
 const SPELLING_VARIANTS = [[/haftarah/gi, "Haftorah"]]
 
 /**
+ * DANIEL'S RULINGS, applied on top of the capture.
+ *
+ * This is the one place a page or a name does not come straight from the feed,
+ * and it exists because the capture can be wrong about the printed book and
+ * Daniel can read the printed book. A ruling is not a hand-typed page: it is a
+ * decision, recorded with its id, that the generator applies deterministically
+ * so a regeneration never loses it.
+ *
+ * EVERY ENTRY HERE IS MEANT TO DIE. When shireishabbat corrects the capture,
+ * the override stops changing anything and the script says so on stdout —
+ * "matches the capture, delete it" — which is the signal to remove the line.
+ * That is why an override that agrees with the feed is reported rather than
+ * silently passing.
+ */
+const RULINGS = {
+    /**
+     * R5-a — Un'taneh Tokef is p.147. The capture files p.148's unit under the
+     * name: 148 is B'rosh Hashanah, which the feed does not yet model as its
+     * own unit. Splitting it is shireishabbat's half of round 5; until then the
+     * page is the part .live can be right about, and David's typed 147 stands.
+     */
+    page: [
+        {
+            unitId: "amidah.untaneh-tokef@crc-yk-morning",
+            page: 147,
+            ruling: "R5-a",
+        },
+    ],
+    /**
+     * R5-d — the volume prints Shehecheyanu twice in Kol Nidre, at 97 and 99,
+     * and the feed gives both units the same `shortName`. Daniel ruled the bare
+     * name to the first. The loser keeps its own full feed name, so the name
+     * resolves to one page instead of stopping as ambiguous.
+     */
+    name: [
+        {
+            service: "crc-kol-nidre",
+            name: "Shehecheyanu",
+            unitId: "erev-yk.erev-maariv-shehecheyanu@crc-kol-nidre",
+            ruling: "R5-d",
+        },
+    ],
+}
+
+/**
  * A leading qualifier the feed adds and nobody says out loud.
  *
  * Inside the Neilah booklet every unit is called "Neila something", because
@@ -216,6 +261,8 @@ function main() {
     const report = []
     const folded = []
     const orphaned = []
+    const ruledApplied = []
+    const ruledMoot = []
     let maxFolio = 0
 
     for (const { service, feed } of SERVICES) {
@@ -232,6 +279,17 @@ function main() {
         let fromFeed = 0
         const units = data.units ?? []
         for (const u of units) {
+            const ruled = RULINGS.page.find((r) => r.unitId === u.id)
+            if (ruled) {
+                if (u.printedFolio === ruled.page) {
+                    ruledMoot.push(`${ruled.ruling} ${u.id} p.${ruled.page}`)
+                } else {
+                    ruledApplied.push(
+                        `${ruled.ruling} ${u.id}: capture ${u.printedFolio} -> ruled ${ruled.page}`,
+                    )
+                    u.printedFolio = ruled.page
+                }
+            }
             if (!Number.isInteger(u.printedFolio)) {
                 throw new Error(
                     `${service}: unit '${u.id}' carries no printedFolio. Every page must come ` +
@@ -335,6 +393,33 @@ function main() {
             delete e.derived
         }
 
+        // A name Daniel ruled to one of two units that share it. The owner takes
+        // the bare name; whoever else is wearing it in this service falls back
+        // to its own full feed name, which the feed keeps unique. Without this
+        // the collision pass below would leave both — correctly, but the
+        // lookup then stops as ambiguous on a name that has an answer.
+        for (const r of RULINGS.name.filter((r) => r.service === service)) {
+            const owner = mine.find((e) => e.unitId === r.unitId)
+            if (!owner) throw new Error(`${r.ruling}: no unit '${r.unitId}' in ${service}.`)
+            const k = norm(r.name)
+            for (const e of mine) {
+                if (e === owner || norm(e.name) !== k) continue
+                const fallback = e.aliases.find((a) => norm(a) !== k)
+                if (!fallback) {
+                    throw new Error(
+                        `${r.ruling}: '${e.unitId}' has no other name to fall back to.`,
+                    )
+                }
+                e.aliases = [e.name, ...e.aliases].filter((a) => a !== fallback && norm(a) !== k)
+                e.name = fallback
+                ruledApplied.push(`${r.ruling} ${service}: '${r.name}' -> p.${owner.page}`)
+            }
+            if (norm(owner.name) !== k) {
+                owner.aliases = [owner.name, ...owner.aliases].filter((a) => norm(a) !== k)
+                owner.name = r.name
+            }
+        }
+
         for (const [page, left] of extraByPage) {
             for (const e of left) orphaned.push(`p.${page} ${e.name}`)
         }
@@ -348,6 +433,21 @@ function main() {
             `${orphaned.length} curated entries matched no feed page and would be dropped: ` +
                 `${orphaned.join("; ")}. Resolve by hand — a verified page is never discarded ` +
                 `by a regeneration.`,
+        )
+    }
+
+    // The page-keyed pairing above cannot see an entry whose page no longer has
+    // any unit on it — a ruling that MOVES a unit empties its old page, and the
+    // curated entry sitting there would vanish without a word. Identity does
+    // not move, so check identity: every unit the previous file knew about is
+    // still in this one.
+    const nowByUnit = new Set(entries.map((e) => e.unitId))
+    const lost = (prev.entries ?? [])
+        .filter((e) => e.unitId && !nowByUnit.has(e.unitId))
+        .map((e) => `${e.unitId} ('${e.name}' p.${e.page})`)
+    if (lost.length) {
+        throw new Error(
+            `${lost.length} units in the previous book are absent from this one: ${lost.join("; ")}.`,
         )
     }
 
@@ -418,6 +518,16 @@ function main() {
         `aliases pruned ${prunedAliases}, entries ${entries.length} (was ${prev.entries.length}), pages ${recorded.pages}, ` +
             `maxFolio ${maxFolio}, drift ${before === next ? "none" : "DIFFERS"}`,
     )
+    if (ruledApplied.length) {
+        console.log(`\nRULINGS APPLIED (${ruledApplied.length}):`)
+        for (const r of ruledApplied) console.log("  " + r)
+    }
+    if (ruledMoot.length) {
+        console.log(
+            `\nRULINGS THAT NOW MATCH THE CAPTURE (${ruledMoot.length}) — delete them from RULINGS:`,
+        )
+        for (const r of ruledMoot) console.log("  " + r)
+    }
     if (folded.length) {
         console.log(`\nCURATED SECOND NAMES FOLDED IN AS ALIASES (${folded.length}):`)
         for (const f of folded) console.log("  " + f)
