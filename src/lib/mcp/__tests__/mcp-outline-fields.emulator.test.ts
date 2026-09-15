@@ -122,6 +122,32 @@ describe("outline fields survive the MCP write path (emulator)", () => {
         })
     })
 
+    it("surfaces momentId and fixed through get_setlist", async () => {
+        // The read view is hand-maintained, and the same omission has now bitten
+        // three fields: pageNumber, liturgyRef, and momentId — which was written
+        // to 28 Yom Kippur rows and read back absent from every one of them.
+        const setlistId = await newSetlist()
+        const added = await addTrackToSetlist(ADMIN, {
+            setlistId,
+            title: "Kol Nidre",
+            type: "prayer",
+            liturgyRef: { book: "crc-machzor-2008", folio: 98 },
+        })
+        expect(added).toMatchObject({ ok: true })
+        await updateSetlistTrack(ADMIN, {
+            setlistId,
+            trackId: (added as { trackId: string }).trackId,
+            patch: { momentId: "kol-nidre", fixed: true },
+        })
+
+        const sl = await getSetlist(ADMIN, { id: setlistId })
+        expect(sl?.tracks[0]).toMatchObject({
+            momentId: "kol-nidre",
+            fixed: true,
+            liturgyRef: { book: "crc-machzor-2008", folio: 98 },
+        })
+    })
+
     it("updates outline fields through update_track's patch allowlist", async () => {
         const setlistId = await newSetlist()
         const added = await addTrackToSetlist(ADMIN, { setlistId, title: "Mi Chamocha", type: "prayer" })

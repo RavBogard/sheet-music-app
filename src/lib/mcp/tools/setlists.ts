@@ -210,6 +210,14 @@ export async function getSetlist(
                     row.liturgyRef && typeof row.liturgyRef === "object"
                         ? row.liturgyRef
                         : null,
+                // Same failure class again, and the comment above already
+                // names it: a hand-maintained read view silently omitting a
+                // field the write path stores. `momentId` was written to 28
+                // Yom Kippur rows and read back as absent from every one of
+                // them; `fixed` decides whether Perform folds a row away and
+                // could not be seen from here at all.
+                momentId: typeof row.momentId === "string" ? row.momentId : null,
+                fixed: row.fixed === true ? true : undefined,
                 honors: Array.isArray(row.honors) ? row.honors : null,
                 version: typeof row.version === "number" ? row.version : undefined,
                 lastModifiedAt:
