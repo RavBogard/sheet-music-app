@@ -28,6 +28,14 @@ export default defineConfig({
         // so we don't paper over real perf regressions but don't flake on
         // first-run JAR downloads or CI cold-cache.
         testTimeout: 30000,
+        // ...and the same cushion for HOOKS, which is where the emulator
+        // round-trips actually happen: every `beforeAll` here seeds documents
+        // and mints rules contexts. Left at vitest's 10s default, a full
+        // 93-file run put 12 files over it while all 12 pass in isolation
+        // (round 8, measured) — a contention ceiling reported as 12 failures,
+        // which is the opposite of what a gate should say. The test bodies
+        // keep their own 30s, so a genuinely slow assertion still shows up.
+        hookTimeout: 30000,
         include: [
             'src/**/*.emulator.test.ts',
             'src/**/*.emulator.test.tsx',
