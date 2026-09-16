@@ -737,7 +737,7 @@
             ],
             "page": 80,
             "service": "crc-rh-morning",
-            "unitId": "shofar.service@crc-rh-morning"
+            "unitId": "shofar.shofar-service@crc-rh-morning"
         },
         {
             "name": "Malchuyot",

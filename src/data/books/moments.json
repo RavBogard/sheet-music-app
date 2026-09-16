@@ -1,45 +1,45 @@
 {
     "schemaVersion": 1,
-    "builtAt": "2026-09-15T23:08:35Z",
+    "builtAt": "2026-09-16T16:17:10Z",
     "sources": [
         {
             "book": "crc-erev-rh",
-            "gitSha": "fb5f347-LICENSED",
+            "gitSha": "e5a87e3-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-kol-nidre",
-            "gitSha": "fb5f347-LICENSED",
+            "gitSha": "e5a87e3-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-yizkor",
-            "gitSha": "fb5f347-LICENSED",
+            "gitSha": "e5a87e3-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-yk-morning",
-            "gitSha": "fb5f347-LICENSED",
+            "gitSha": "e5a87e3-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-neilah",
-            "gitSha": "fb5f347-LICENSED",
+            "gitSha": "e5a87e3-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-rh-morning",
-            "gitSha": "fb5f347-LICENSED",
+            "gitSha": "e5a87e3-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "shabbat-maariv",
-            "gitSha": "fb5f347-LICENSED",
+            "gitSha": "e5a87e3-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "shabbat-shacharit",
-            "gitSha": "fb5f347-LICENSED",
+            "gitSha": "e5a87e3-LICENSED",
             "pinValue": "HEAD"
         },
         {
@@ -72,7 +72,9 @@
                 "en": "Adon Olam"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Adon Olam Asher Malach"
+            ],
             "occurrences": [
                 {
                     "book": "shabbat-maariv",
@@ -152,7 +154,9 @@
                 "en": "Ahavat Olam"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Ahavat Olam Beit Yisrael"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -576,7 +580,10 @@
                 "en": "Avot v’Imahot"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Avot V’imahot",
+                "Avot v'Imahot"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -742,7 +749,10 @@
                 "en": "Bar’chu"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Barchu",
+                "Bar’chu"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -891,7 +901,10 @@
                 "en": "Birchot Hashachar"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Birkot Hashachar",
+                "Morning Blessings"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -1104,7 +1117,9 @@
                 "en": "Haftarah Blessing"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Haftarah Blessing"
+            ],
             "occurrences": [
                 {
                     "book": "shabbat-shacharit",
@@ -2031,7 +2046,10 @@
                 "en": "G’vurot"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Gvurot",
+                "G’vurot"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -2315,7 +2333,10 @@
                 "en": "Hayom Harat Olam · Malchuyot"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Hayom Harat Olam · Shofarot",
+                "Hayom Harat Olam · Zichronot"
+            ],
             "occurrences": [
                 {
                     "book": "shirei-tshuvah",
@@ -2430,6 +2451,7 @@
                 "Gratitude",
                 "Hoda-ah",
                 "Hodaah",
+                "Hoda’ah",
                 "Modim",
                 "Modim Anachnu Lach"
             ],
@@ -2599,7 +2621,9 @@
                 "en": "K’dushah"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "K’dushah"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -2689,7 +2713,10 @@
                 "en": "K’dushat HaYom"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Kdushat Hayom",
+                "K’dushat HaYom"
+            ],
             "occurrences": [
                 {
                     "book": "shabbat-maariv",
@@ -2745,7 +2772,10 @@
                 "en": "Kiddush"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Kiddush for Shabbat Day",
+                "Shabbat Morning Kiddush"
+            ],
             "occurrences": [
                 {
                     "book": "shabbat-maariv",
@@ -2901,7 +2931,11 @@
                 "en": "Ma’ariv Aravim"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Ma'ariv Aravim",
+                "Maariv Aravim",
+                "Ma’ariv Aravim"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -2940,7 +2974,10 @@
                 "en": "Mah Tovu"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Ma Tovu",
+                "Mah Tovu Ohalecha"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -3197,6 +3234,8 @@
             "kind": "prayer",
             "aliases": [
                 "Healing Prayer",
+                "Mi Shebeirach Healing",
+                "Mi Shebeirach — Healing",
                 "Mi Sheberach",
                 "Mi Shebeyrach"
             ],
@@ -3364,7 +3403,10 @@
                 "en": "Mourner’s Kaddish"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Mourners Kaddish",
+                "Mourner’s Kaddish"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -4476,23 +4518,6 @@
             ]
         },
         {
-            "id": "service",
-            "display": {
-                "en": "Service"
-            },
-            "kind": "prayer",
-            "aliases": [],
-            "occurrences": [
-                {
-                    "book": "crc-machzor-2008",
-                    "unitId": "shofar.service@crc-rh-morning",
-                    "folios": [
-                        80
-                    ]
-                }
-            ]
-        },
-        {
             "id": "shalom-aleichem",
             "display": {
                 "en": "Shalom Aleichem"
@@ -4520,7 +4545,9 @@
                 "en": "Shalom Rav"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Abundant Peace"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -4645,7 +4672,10 @@
                 "en": "Shma Procession Call"
             },
             "kind": "call",
-            "aliases": [],
+            "aliases": [
+                "Sh’ma",
+                "Sh’ma Procession Call"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -4699,6 +4729,23 @@
                     "folios": [
                         133,
                         134
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "shofar-service",
+            "display": {
+                "en": "Shofar Service"
+            },
+            "kind": "prayer",
+            "aliases": [],
+            "occurrences": [
+                {
+                    "book": "crc-machzor-2008",
+                    "unitId": "shofar.shofar-service@crc-rh-morning",
+                    "folios": [
+                        80
                     ]
                 }
             ]
@@ -4758,7 +4805,10 @@
                 "en": "Sim Shalom"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Grant Peace",
+                "Sim Shalom Tovah Uvrachah"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -4803,7 +4853,9 @@
                 "en": "Tahor Lev"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Tahor Lev"
+            ],
             "occurrences": [
                 {
                     "book": "shabbat-shacharit",
@@ -4913,7 +4965,9 @@
                 "en": "The Sh’ma"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "The Sh’ma"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -5058,7 +5112,9 @@
                 "en": "Torah Reading Day 1"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Torah Reading · Day 1"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -5085,7 +5141,9 @@
                 "en": "Torah Reading Day 2"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Torah Reading · Day 2"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -5163,7 +5221,9 @@
                 "en": "Un’taneh Tokef"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Un’taneh Tokef"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -5268,7 +5328,10 @@
                 "en": "V’ahavta"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Vahavta",
+                "V’ahavta"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -5316,7 +5379,9 @@
                 "en": "V’ahavta & Tzitzit"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "V’ahavta & Tzitzit"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -5442,7 +5507,9 @@
                 "en": "Vayhi Binsoa"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "Vay’hi Binso’a"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -5513,7 +5580,9 @@
                 "en": "V’shamru"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "V’shamru"
+            ],
             "occurrences": [
                 {
                     "book": "crc-machzor-2008",
@@ -5545,7 +5614,9 @@
                 "en": "V’zot HaTorah"
             },
             "kind": "prayer",
-            "aliases": [],
+            "aliases": [
+                "V’zot HaTorah"
+            ],
             "occurrences": [
                 {
                     "book": "shabbat-shacharit",

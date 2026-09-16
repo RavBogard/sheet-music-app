@@ -226,6 +226,17 @@ const RETIRED_UNITS = [
         became: "amidah.untaneh-tokef-kavannah@crc-rh-morning",
         ruling: "R6-h",
     },
+    {
+        // R9-b: the unit's own stem gave the moments artifact the id `service`
+        // — correct, unique, and meaningless three words away from the unit it
+        // came from. Round 8 bound two rows to it and flagged the name up; the
+        // corpus renamed the unit rather than special-case the derivation, so
+        // the successor carries its own word. shireishabbat e5a87e3. The page
+        // does not move: 80 before, 80 after.
+        unitId: "shofar.service@crc-rh-morning",
+        became: "shofar.shofar-service@crc-rh-morning",
+        ruling: "R9-b",
+    },
 ]
 
 /**
