@@ -29,9 +29,21 @@
  * supplies names only where there was no curated entry to keep.
  *
  * Usage: node scripts/emit-machzor-book.mjs [--repo <path>] [--check]
+ *
+ * ONE BUILD, TWO PRODUCTS (round 8, item 3). `dist-app/` emits both the
+ * per-service feeds this script reads and the `moments.json` that
+ * `sync-books.mjs` reads, and `moments.json`'s machzor occurrences are
+ * remapped through the pages THIS file writes. Regenerating one and not the
+ * other leaves the join key asserting pages the book no longer prints — which
+ * is what happened between rounds 6 and 7, silently, because a stale moments
+ * artifact answering "I don't know that unit" is indistinguishable from a
+ * unit that genuinely has no moment. So this script ends by running
+ * `sync-books.mjs --check` and NAMING the drift. It still does not write it:
+ * one script, one output file.
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs"
 import { join, resolve } from "node:path"
+import { spawnSync } from "node:child_process"
 
 const DEFAULT_REPO = "C:/Users/dsbog/shireishabbat"
 const FEED_DIR = "dist-app"
@@ -297,6 +309,23 @@ const RULINGS = {
             also: ["Kavannah for Un'taneh Tokef", "Un’taneh Tokef Kavannah"],
             unitId: "amidah.untaneh-tokef-kavannah@crc-rh-morning",
             ruling: "R6-h",
+        },
+        /*
+         * R8-b — "The Great Aleinu" is what the band writes on the setlist for
+         * the Aleinu at p.86, and no mechanical fold reaches it from "Aleinu":
+         * the extra words are not a qualifier this script strips, and the
+         * lookup scored it 53 — plausible, unbindable, a row that sat empty
+         * while the page it wanted was right there. Which of a band's names
+         * belong to which printed page is Daniel's to say, so it is recorded
+         * here as data with the ruling that settles it. The page does not move
+         * and the primary name does not change; the entry only GAINS the name.
+         */
+        {
+            service: "crc-rh-morning",
+            name: "Aleinu",
+            also: ["The Great Aleinu"],
+            unitId: "concluding.aleinu@crc-rh-morning",
+            ruling: "R8-b",
         },
     ],
 }
@@ -685,6 +714,39 @@ function main() {
         console.log("no within-service name collisions")
     }
     if (check) console.log("\n--check: nothing written.")
+    reportMomentsDrift(repo)
+}
+
+/**
+ * Name a stale `moments.json`, so it is never silent again.
+ *
+ * `sync-books.mjs --check` writes nothing; it reports whether the committed
+ * moments artifact still matches what the same pinned build plus the book this
+ * script just wrote would produce. Anything but `none` means the join key and
+ * the printed pages have parted company, and `npm run sync:books` is owed.
+ */
+function reportMomentsDrift(repo) {
+    const script = resolve(process.cwd(), "scripts", "sync-books.mjs")
+    const run = spawnSync(process.execPath, [script, "--check", "--repo", repo], {
+        encoding: "utf8",
+    })
+    if (run.status !== 0) {
+        console.log(
+            `\nMOMENTS ARTIFACT: could not be checked — sync-books.mjs --check exited ` +
+                `${run.status}. Run \`npm run sync:books -- --check\` and read it.`,
+        )
+        if (run.stderr) console.log(String(run.stderr).trimEnd())
+        return
+    }
+    const line = (String(run.stdout).split("\n").find((l) => l.includes("moments.json")) ?? "").trim()
+    const drift = /'(none|new|DIFFERS)'/.exec(line)?.[1] ?? null
+    console.log(`\nMOMENTS ARTIFACT (sync-books.mjs --check): ${line || "no row reported"}`)
+    console.log(
+        drift === "none"
+            ? "  moments.json agrees with this book. Nothing owed."
+            : "  moments.json DOES NOT agree with this book. Run `npm run sync:books` — " +
+                  "one build, two products, and the join key is the other one.",
+    )
 }
 
 main()

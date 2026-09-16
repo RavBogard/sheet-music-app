@@ -321,9 +321,23 @@ function syncMoments(dist, dirName, check) {
             moments: trimmed.moments.length,
             occurrences: occurrenceCount,
             books: trimmed.sources.length,
-            drift: prev === null ? "new" : prev === next ? "none" : "DIFFERS",
+            drift: drift(prev, next),
         },
     ])
+}
+
+/**
+ * Drift, ignoring the line endings git gave the working copy.
+ *
+ * This script writes LF. On a Windows checkout `core.autocrlf` hands the
+ * working copy back with CRLF, so a byte compare calls a file DIFFERS that is
+ * identical in every commit either version would produce. That false alarm now
+ * reaches a reader — `emit-machzor-book.mjs` ends by printing this verdict —
+ * so the comparison is on content, which is the thing anyone actually means.
+ */
+function drift(prev, next) {
+    if (prev === null) return "new"
+    return prev.replace(/\r\n/g, "\n") === next ? "none" : "DIFFERS"
 }
 
 function main() {
@@ -354,7 +368,7 @@ function main() {
             units: book.units.length,
             maxFolio,
             pages: book.pages,
-            drift: prev === null ? "new" : prev === next ? "none" : "DIFFERS",
+            drift: drift(prev, next),
         })
     }
     console.table(summary)
