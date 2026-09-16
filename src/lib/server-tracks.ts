@@ -61,7 +61,18 @@ export async function getTracksForSetlist(
     // .paul/research/v11-5-05-02-f4-bl-key-probe.md).
     await enrichMissingFromLibraryIndex(db, rows)
 
-    rows.sort((a, b) => a.order - b.order)
+    // R11-b: the author's order, and a TIE-BREAK that matches every other
+    // reader of this collection. Production `order` is legacy-dirty — two
+    // setlists carry duplicate values (measured 2026-09-16) — and a sort on
+    // `order` alone leaves those rows in whatever sequence the query happened
+    // to return. Firestore's own `orderBy("order")` (the `today.json` emitter)
+    // implicitly appends `__name__`, and `addTrack`/`updateTrack` sort
+    // `order || id` before renumbering, so id is already the canonical
+    // tie-break everywhere that decides anything. Matching it here means the
+    // rows Perform, the service sheet and the Overlays payload show are the
+    // same rows in the same sequence an insert will later compact to — a tied
+    // pair cannot appear to swap places because a different surface read it.
+    rows.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
     return rows
 }
 

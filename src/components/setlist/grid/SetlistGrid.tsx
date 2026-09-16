@@ -988,7 +988,17 @@ export function SetlistGrid({
             getDb()
                 .tracks.where('setlistId')
                 .equals(setlistId)
-                .sortBy('order'),
+                // R11-b: `order`, then id. Duplicate `order` values exist in
+                // production, and `sortBy('order')` alone would leave a tied
+                // pair in index order here and in Firestore's order on the
+                // server — two surfaces, two sequences, for rows nobody moved.
+                // Same tie-break as `getTracksForSetlist` and `addTrack`.
+                .toArray()
+                .then((rows) =>
+                    rows.sort(
+                        (a, b) => a.order - b.order || String(a.id).localeCompare(String(b.id)),
+                    ),
+                ),
         [setlistId],
     ) as LocalTrack[] | undefined
 
