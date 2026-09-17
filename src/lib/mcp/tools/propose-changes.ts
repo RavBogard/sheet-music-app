@@ -492,7 +492,7 @@ export async function commitStagedChanges(
                         ? ((d.data() as { fileId: string }).fileId as string)
                         : undefined,
             }))
-            .sort((a, b) => a.order - b.order)
+            .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
         const byId = new Map(existing.map((t) => [t.id, t]))
 
         // Validate every proposal can resolve against the live track set

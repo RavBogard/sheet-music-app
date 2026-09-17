@@ -271,8 +271,12 @@ async function promote(
     const cloneId = cloned.setlistId
     const snap = await db.collection("tracks").where("setlistId", "==", cloneId).get()
     const cloneDocs = snap.docs
-        .map((d) => ({ ref: d.ref, order: Number((d.data() as { order?: unknown }).order) || 0 }))
-        .sort((a, b) => a.order - b.order)
+        .map((d) => ({
+            ref: d.ref,
+            id: d.id,
+            order: Number((d.data() as { order?: unknown }).order) || 0,
+        }))
+        .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
 
     const batch = db.batch()
     const nowIso = new Date().toISOString()

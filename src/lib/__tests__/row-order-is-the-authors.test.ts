@@ -186,6 +186,20 @@ describe("R11-b writers: identity work never writes order", () => {
         expect(src.indexOf("if (dryRun) return result")).toBeLessThan(src.indexOf("await addTrack(db, {"))
     })
 
+    it("every sort over stored rows breaks the tie by id, not by luck", () => {
+        const files = [
+            "lib/server-tracks.ts",
+            "lib/mcp/server-tracks-write.ts",
+            "lib/mcp/tools/clone-setlist.ts",
+            "lib/mcp/tools/performed.ts",
+            "lib/mcp/tools/propose-changes.ts",
+        ]
+        for (const rel of files) {
+            const bare = SRC(rel).match(/a\.order - b\.order\)/g)
+            expect(bare, `${rel} sorts rows on order alone`).toBeNull()
+        }
+    })
+
     it("the today.json emitter asks Firestore for stored order", () => {
         expect(SRC("lib/today/emit-today.ts")).toContain('.orderBy("order", "asc")')
     })

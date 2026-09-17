@@ -219,7 +219,7 @@ export async function cloneSetlist(
             const order = typeof data.order === "number" ? data.order : 0
             return { id: d.id, data, order }
         })
-        .sort((a, b) => a.order - b.order)
+        .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
 
     const ownerName = await ownerNameFor(db, uid)
     const newSetlistId = crypto.randomUUID()

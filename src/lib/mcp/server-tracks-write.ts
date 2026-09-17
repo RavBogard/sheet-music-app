@@ -799,7 +799,7 @@ export async function updateTrack(
                     type: data.type,
                 }
             })
-            allTracks.sort((a, b) => a.order - b.order)
+            allTracks.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
         }
 
         // Writes (transaction's write-phase). Build the target row's
@@ -2067,7 +2067,12 @@ export async function removeTrack(
                 type: data.type,
             }
         })
-        existing.sort((a, b) => a.order - b.order)
+        // R11-b: `order`, then id — the same canonical sequence addTrack uses.
+        // This sort decides the re-pack, so with duplicate `order` values (2 of
+        // 84 setlists, measured 2026-09-16) a bare sort would let a delete pick
+        // an arbitrary winner and write the permutation down. Every reader and
+        // every writer of this collection now breaks the tie the same way.
+        existing.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
         const remaining = existing.filter((t) => t.id !== trackId)
 
         // Writes — delete the target + re-pack siblings + setlist patch.
