@@ -1,0 +1,1545 @@
+{
+  "confirmedBy": "Daniel",
+  "confirmedAt": "2026-09-15T14:36:19Z",
+  "families": [
+    {
+      "family": "B'nai mitzvah",
+      "setlists": 6,
+      "decision": "refresh",
+      "rows": [
+        {
+          "n": 1,
+          "row": "Fiddley Tune",
+          "in": "4/6",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 2,
+          "row": "INTRO",
+          "in": "3/6",
+          "type": "section",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 3,
+          "row": "Modeh ani - Klepper",
+          "in": "3/6",
+          "type": "song",
+          "bound": "Modeh Ani",
+          "page": "51",
+          "chart": "yes"
+        },
+        {
+          "n": 4,
+          "row": "Psukei d'zimrah",
+          "in": "5/6",
+          "type": "song",
+          "bound": "P'sukei D'zimrah",
+          "page": "55",
+          "chart": "yes"
+        },
+        {
+          "n": 5,
+          "row": "Ma tovu / Hinei ma tov",
+          "in": "4/6",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 6,
+          "row": "Barchu (Friedman)",
+          "in": "5/6",
+          "type": "song",
+          "bound": "Bar’chu",
+          "page": "59",
+          "chart": "yes"
+        },
+        {
+          "n": 7,
+          "row": "shema and Blessings",
+          "in": "3/6",
+          "type": "section",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 8,
+          "row": "Ahava raba / V'haeirneinu",
+          "in": "3/6",
+          "type": "song",
+          "bound": "Ahavah Rabbah",
+          "page": "61",
+          "chart": "yes"
+        },
+        {
+          "n": 9,
+          "row": "Mi chamocha (Moshav)",
+          "in": "5/6",
+          "type": "song",
+          "bound": "Mi Chamocha",
+          "page": "68",
+          "chart": "yes"
+        },
+        {
+          "n": 10,
+          "row": "Adonai sfatai (ah na na)",
+          "in": "5/6",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 11,
+          "row": "Amidah",
+          "in": "3/6",
+          "type": "section",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 12,
+          "row": "V'Shamru (Old Skool)",
+          "in": "3/6",
+          "type": "song",
+          "bound": "V'shamru",
+          "page": "76",
+          "chart": "yes"
+        },
+        {
+          "n": 13,
+          "row": "Kedusha",
+          "in": "4/6",
+          "type": "song",
+          "bound": "Kedushah",
+          "page": "74",
+          "chart": "yes"
+        },
+        {
+          "n": 14,
+          "row": "Sim Shalom (Silver)",
+          "in": "5/6",
+          "type": "song",
+          "bound": "Sim Shalom",
+          "page": "79",
+          "chart": "yes"
+        },
+        {
+          "n": 15,
+          "row": "Rtsei",
+          "in": "3/6",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 16,
+          "row": "Oseh shalom - Nava tehila",
+          "in": "5/6",
+          "type": "song",
+          "bound": "Oseh Shalom",
+          "page": "82",
+          "chart": "yes"
+        },
+        {
+          "n": 17,
+          "row": "Hakafah — Mizmor Shiru Ladonai",
+          "in": "3/6",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 18,
+          "row": "Hakafah",
+          "in": "3/6",
+          "type": "song",
+          "bound": "Hakafot",
+          "page": "83",
+          "chart": "no"
+        },
+        {
+          "n": 19,
+          "row": "Torah Service",
+          "in": "3/6",
+          "type": "section",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 20,
+          "row": "Mi shebeirach",
+          "in": "5/6",
+          "type": "song",
+          "bound": "Mi Shebeirach — Healing",
+          "page": "86",
+          "chart": "yes"
+        },
+        {
+          "n": 21,
+          "row": "Eitz chayim - Weisenberg",
+          "in": "5/6",
+          "type": "song",
+          "bound": "Eitz Chayim",
+          "page": "90",
+          "chart": "yes"
+        }
+      ],
+      "dropped": [],
+      "note": null
+    },
+    {
+      "family": "Camp Sabra (Friday)",
+      "setlists": 2,
+      "decision": "keep",
+      "rows": [
+        {
+          "n": 1,
+          "row": "Hine Ma Tov",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Hineih Mah Tov",
+          "page": "4",
+          "chart": "yes"
+        },
+        {
+          "n": 2,
+          "row": "Oseh Shalom (camp)",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 3,
+          "row": "L'cha Dodi (Taubman)",
+          "in": "1/2",
+          "type": "song",
+          "bound": "L’cha Dodi",
+          "page": "8",
+          "chart": "yes"
+        },
+        {
+          "n": 4,
+          "row": "B'tzelem Elohim",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 5,
+          "row": "Bar'chu — Am I Awake",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 6,
+          "row": "Take Me Home, Country Roads",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 7,
+          "row": "Sh'ma Yisrael",
+          "in": "1/2",
+          "type": "song",
+          "bound": "The Sh’ma",
+          "page": "15",
+          "chart": "yes"
+        },
+        {
+          "n": 8,
+          "row": "Od Yavo Shalom Aleinu",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 9,
+          "row": "V'ahavta",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "V’ahavta & Tzitzit",
+          "page": "16",
+          "chart": "no"
+        },
+        {
+          "n": 10,
+          "row": "Mi Chamocha — 'Shut Up and Dance' mashup",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 11,
+          "row": "Wonderwall",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 12,
+          "row": "Hashkiveinu (Shomreinu)",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Hashkivenu",
+          "page": "20",
+          "chart": "yes"
+        },
+        {
+          "n": 13,
+          "row": "Wagon Wheel",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 14,
+          "row": "V'shamru",
+          "in": "1/2",
+          "type": "song",
+          "bound": "V’shamru",
+          "page": "21",
+          "chart": "yes"
+        },
+        {
+          "n": 15,
+          "row": "Niggun → Silent Amidah",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 16,
+          "row": "One Day",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 17,
+          "row": "Silent Amidah",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 18,
+          "row": "Shalom Rav",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Shalom Rav",
+          "page": "30",
+          "chart": "yes"
+        },
+        {
+          "n": 19,
+          "row": "Mourner's Kaddish",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "Mourner’s Kaddish",
+          "page": "41",
+          "chart": "no"
+        },
+        {
+          "n": 20,
+          "row": "David Melech Yisrael",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 21,
+          "row": "Adon Olam — 'I Want It That Way'",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 22,
+          "row": "Hava Nagilah",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 23,
+          "row": "Oseh Shalom → opens the Shabbat Players dinner set (not in the service). Mi Shebeirach → done Saturday morning.",
+          "in": "1/2",
+          "type": "note",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        }
+      ],
+      "dropped": [],
+      "note": null
+    },
+    {
+      "family": "Camp Sabra (Saturday)",
+      "setlists": 1,
+      "decision": "keep",
+      "rows": [
+        {
+          "n": 1,
+          "row": "Bminor_simpletune.pdf",
+          "in": "1/1",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 2,
+          "row": "Fiddley Tune",
+          "in": "1/1",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 3,
+          "row": "Modeh ani - Klepper.pdf",
+          "in": "1/1",
+          "type": "song",
+          "bound": "Modeh Ani",
+          "page": "51",
+          "chart": "yes"
+        },
+        {
+          "n": 4,
+          "row": "Hine Ma Tov (Sabra, C) — band chart",
+          "in": "1/1",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 5,
+          "row": "Psukei d_zimrah",
+          "in": "1/1",
+          "type": "song",
+          "bound": "P'sukei D'zimrah",
+          "page": "55",
+          "chart": "yes"
+        },
+        {
+          "n": 6,
+          "row": "Chatzi Kaddish",
+          "in": "1/1",
+          "type": "prayer",
+          "bound": "Chatzi Kaddish",
+          "page": "58",
+          "chart": "no"
+        },
+        {
+          "n": 7,
+          "row": "Bar'chu — Am I Awake",
+          "in": "1/1",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 8,
+          "row": "Ahava raba (echo)",
+          "in": "1/1",
+          "type": "song",
+          "bound": "Ahavah Rabbah",
+          "page": "61",
+          "chart": "yes"
+        },
+        {
+          "n": 9,
+          "row": "Sh'ma (Sabra)",
+          "in": "1/1",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 10,
+          "row": "Mi chamocha E (Moshav)",
+          "in": "1/1",
+          "type": "prayer",
+          "bound": "Mi Chamocha",
+          "page": "68",
+          "chart": "no"
+        },
+        {
+          "n": 11,
+          "row": "Mi chamocha (Moshav).pdf",
+          "in": "1/1",
+          "type": "song",
+          "bound": "Mi Chamocha",
+          "page": "68",
+          "chart": "yes"
+        },
+        {
+          "n": 12,
+          "row": "Adonai S'fatai (trad)",
+          "in": "1/1",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 13,
+          "row": "sanctuary chords (1)",
+          "in": "1/1",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 14,
+          "row": "Avot v'Imahot",
+          "in": "1/1",
+          "type": "prayer",
+          "bound": "Avot v’Imahot",
+          "page": "71",
+          "chart": "no"
+        },
+        {
+          "n": 15,
+          "row": "Gevurot",
+          "in": "1/1",
+          "type": "prayer",
+          "bound": "G’vurot",
+          "page": "73",
+          "chart": "no"
+        },
+        {
+          "n": 16,
+          "row": "V_shamru_(trad)",
+          "in": "1/1",
+          "type": "song",
+          "bound": "V'shamru",
+          "page": "76",
+          "chart": "yes"
+        },
+        {
+          "n": 17,
+          "row": "Hoda'ah",
+          "in": "1/1",
+          "type": "prayer",
+          "bound": "Modim",
+          "page": "78",
+          "chart": "no"
+        },
+        {
+          "n": 18,
+          "row": "Eitz chayim   Weisenberg",
+          "in": "1/1",
+          "type": "prayer",
+          "bound": "Eitz Chayim",
+          "page": "90",
+          "chart": "no"
+        },
+        {
+          "n": 19,
+          "row": "Hakafah",
+          "in": "1/1",
+          "type": "transition",
+          "bound": "Hakafot",
+          "page": "83",
+          "chart": "no"
+        },
+        {
+          "n": 20,
+          "row": "Drash",
+          "in": "1/1",
+          "type": "reading",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 21,
+          "row": "Oseh shalom - Nava tehila",
+          "in": "1/1",
+          "type": "song",
+          "bound": "Oseh Shalom",
+          "page": "82",
+          "chart": "yes"
+        },
+        {
+          "n": 22,
+          "row": "Torah Reading",
+          "in": "1/1",
+          "type": "reading",
+          "bound": "Reading of the Torah",
+          "page": "84",
+          "chart": "no"
+        },
+        {
+          "n": 23,
+          "row": "Mi shebeirach",
+          "in": "1/1",
+          "type": "song",
+          "bound": "Mi Shebeirach — Healing",
+          "page": "86",
+          "chart": "yes"
+        },
+        {
+          "n": 24,
+          "row": "Announcements",
+          "in": "1/1",
+          "type": "note",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 25,
+          "row": "Closing Blessing",
+          "in": "1/1",
+          "type": "prayer",
+          "bound": "Birkat Kohanim",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 26,
+          "row": "eits chayim hi tree of life chords (1)",
+          "in": "1/1",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 27,
+          "row": "Hava Nagilah",
+          "in": "1/1",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 28,
+          "row": "Russian Sher No 3",
+          "in": "1/1",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        }
+      ],
+      "dropped": [],
+      "note": null
+    },
+    {
+      "family": "Friday night",
+      "setlists": 2,
+      "decision": "keep",
+      "rows": [
+        {
+          "n": 1,
+          "row": "Shalom alechem (Goldfarb).pdf",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Shalom Aleichem",
+          "page": "6",
+          "chart": "yes"
+        },
+        {
+          "n": 2,
+          "row": "Hallelujah Riff",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 3,
+          "row": "Yedid Nefesh",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 4,
+          "row": "Mizmor Shiru Ladonai",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 5,
+          "row": "Hinei Mah Tov (Folk) - Hinei Mah Tov (Dropkin) - Hinei Mah Tov (Jacobson-Drozi).pdf",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Hineih Mah Tov",
+          "page": "4",
+          "chart": "yes"
+        },
+        {
+          "n": 6,
+          "row": "Shiru Ladonai (Neimark-Gumer)",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 7,
+          "row": "Mizmor LeDavid",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 8,
+          "row": "Lecha Dodi",
+          "in": "1/2",
+          "type": "song",
+          "bound": "L’cha Dodi",
+          "page": "8",
+          "chart": "no"
+        },
+        {
+          "n": 9,
+          "row": "Barchu (Friedman).pdf",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Bar’chu",
+          "page": "10",
+          "chart": "yes"
+        },
+        {
+          "n": 10,
+          "row": "Chatzi Kaddish",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "Chatzi Kaddish",
+          "page": "22",
+          "chart": "no"
+        },
+        {
+          "n": 11,
+          "row": "Barechu (Walkdown)",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "Bar’chu",
+          "page": "10",
+          "chart": "yes"
+        },
+        {
+          "n": 12,
+          "row": "Maariv Arevim",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Ma’ariv Aravim",
+          "page": "12",
+          "chart": "yes"
+        },
+        {
+          "n": 13,
+          "row": "Shema",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "The Sh’ma",
+          "page": "15",
+          "chart": "no"
+        },
+        {
+          "n": 14,
+          "row": "V'Ahavta",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "V’ahavta & Tzitzit",
+          "page": "16",
+          "chart": "no"
+        },
+        {
+          "n": 15,
+          "row": "Mi chamocha (Moshav).pdf",
+          "in": "2/2",
+          "type": "song",
+          "bound": "Mi Chamocha",
+          "page": "18",
+          "chart": "yes"
+        },
+        {
+          "n": 16,
+          "row": "Adonai Sifatai",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 17,
+          "row": "Shalom Rav (Klepper-Freelander).pdf",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Shalom Rav",
+          "page": "30",
+          "chart": "yes"
+        },
+        {
+          "n": 18,
+          "row": "Mishebeirach",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Mi Shebeirach — Healing",
+          "page": "34",
+          "chart": "yes"
+        },
+        {
+          "n": 19,
+          "row": "Adon Olam (Folk)",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Adon Olam",
+          "page": "43",
+          "chart": "yes"
+        }
+      ],
+      "dropped": [],
+      "note": null
+    },
+    {
+      "family": "Shabbat morning",
+      "setlists": 7,
+      "decision": "refresh",
+      "rows": [
+        {
+          "n": 1,
+          "row": "Fiddley Tune",
+          "in": "6/7",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 2,
+          "row": "INTRO",
+          "in": "4/7",
+          "type": "section",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 3,
+          "row": "Modeh ani - Klepper",
+          "in": "4/7",
+          "type": "song",
+          "bound": "Modeh Ani",
+          "page": "51",
+          "chart": "yes"
+        },
+        {
+          "n": 4,
+          "row": "Ma tovu / Hinei ma tov",
+          "in": "7/7",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 5,
+          "row": "Psukei d'zimrah",
+          "in": "4/7",
+          "type": "song",
+          "bound": "P'sukei D'zimrah",
+          "page": "55",
+          "chart": "yes"
+        },
+        {
+          "n": 6,
+          "row": "shema and Blessings",
+          "in": "4/7",
+          "type": "section",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 7,
+          "row": "Mi chamocha (Moshav)",
+          "in": "5/7",
+          "type": "song",
+          "bound": "Mi Chamocha",
+          "page": "68",
+          "chart": "yes"
+        },
+        {
+          "n": 8,
+          "row": "Amidah",
+          "in": "4/7",
+          "type": "section",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 9,
+          "row": "Adonai sfatai (ah na na)",
+          "in": "6/7",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 10,
+          "row": "Veshamru",
+          "in": "5/7",
+          "type": "song",
+          "bound": "V'shamru",
+          "page": "76",
+          "chart": "yes"
+        },
+        {
+          "n": 11,
+          "row": "Sim Shalom (Silver)",
+          "in": "5/7",
+          "type": "song",
+          "bound": "Sim Shalom",
+          "page": "79",
+          "chart": "yes"
+        },
+        {
+          "n": 12,
+          "row": "Oseh shalom - Nava tehila",
+          "in": "5/7",
+          "type": "song",
+          "bound": "Oseh Shalom",
+          "page": "82",
+          "chart": "yes"
+        },
+        {
+          "n": 13,
+          "row": "Hakafah",
+          "in": "4/7",
+          "type": "transition",
+          "bound": "Hakafot",
+          "page": "83",
+          "chart": "no"
+        },
+        {
+          "n": 14,
+          "row": "Torah Service",
+          "in": "4/7",
+          "type": "section",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 15,
+          "row": "Mi shebeirach",
+          "in": "7/7",
+          "type": "song",
+          "bound": "Mi Shebeirach — Healing",
+          "page": "86",
+          "chart": "yes"
+        },
+        {
+          "n": 16,
+          "row": "Eitz chayim - Weisenberg",
+          "in": "7/7",
+          "type": "song",
+          "bound": "Eitz Chayim",
+          "page": "90",
+          "chart": "yes"
+        }
+      ],
+      "dropped": [],
+      "note": null
+    },
+    {
+      "family": "Shir Shabbat",
+      "setlists": 5,
+      "decision": "refresh",
+      "rows": [
+        {
+          "n": 1,
+          "row": "Shiru L_Adonai Shir Shabbat.pdf",
+          "in": "4/5",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 2,
+          "row": "Mizmor Shiru Ladonai.pdf",
+          "in": "5/5",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 3,
+          "row": "Mizmor l_David D.pdf",
+          "in": "4/5",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 4,
+          "row": "L'Cha Dodi Dmin .pdf",
+          "in": "3/5",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 5,
+          "row": "erev shel lcha dodi",
+          "in": "4/5",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 6,
+          "row": "Dvar torah",
+          "in": "5/5",
+          "type": "reading",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 7,
+          "row": "Barchu (walkdown)",
+          "in": "4/5",
+          "type": "song",
+          "bound": "Bar’chu",
+          "page": "10",
+          "chart": "no"
+        },
+        {
+          "n": 8,
+          "row": "Shema (major).pdf",
+          "in": "5/5",
+          "type": "song",
+          "bound": "The Sh’ma",
+          "page": "15",
+          "chart": "yes"
+        },
+        {
+          "n": 9,
+          "row": "V'ahavta",
+          "in": "4/5",
+          "type": "reading",
+          "bound": "V’ahavta & Tzitzit",
+          "page": "16",
+          "chart": "no"
+        },
+        {
+          "n": 10,
+          "row": "Mi Chamocha Ana B'Koach.pdf",
+          "in": "4/5",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 11,
+          "row": "Adonai sfatai (trad)",
+          "in": "4/5",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 12,
+          "row": "Silent Prayer",
+          "in": "4/5",
+          "type": "prayer",
+          "bound": "Elohai N’tzor",
+          "page": "31",
+          "chart": "no"
+        }
+      ],
+      "dropped": [],
+      "note": null
+    },
+    {
+      "family": "Special Shabbat",
+      "setlists": 2,
+      "decision": "keep",
+      "rows": [
+        {
+          "n": 1,
+          "row": "INTRO",
+          "in": "1/2",
+          "type": "section",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 2,
+          "row": "Fiddley Tune",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 3,
+          "row": "Modeh ani - Klepper",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Modeh Ani",
+          "page": "51",
+          "chart": "yes"
+        },
+        {
+          "n": 4,
+          "row": "Hallelujah Jam",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 5,
+          "row": "Ma tovu / Hinei ma tov",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 6,
+          "row": "Modah Ani G#m",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 7,
+          "row": "Birchot Havdalah (Friedman) - Hamavdil Bein Kodesh-Shavu-A Tov.pdf",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 8,
+          "row": "Psukei d'zimrah",
+          "in": "1/2",
+          "type": "song",
+          "bound": "P'sukei D'zimrah",
+          "page": "55",
+          "chart": "yes"
+        },
+        {
+          "n": 9,
+          "row": "shema and Blessings",
+          "in": "1/2",
+          "type": "section",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 10,
+          "row": "Psukei d_zimrah",
+          "in": "1/2",
+          "type": "song",
+          "bound": "P'sukei D'zimrah",
+          "page": "55",
+          "chart": "yes"
+        },
+        {
+          "n": 11,
+          "row": "Chatzi Kaddish",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "Chatzi Kaddish",
+          "page": "58",
+          "chart": "no"
+        },
+        {
+          "n": 12,
+          "row": "Barchu Am I Awake leadsheet.pdf",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 13,
+          "row": "Barchu Walkdown",
+          "in": "1/2",
+          "type": "transition",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 14,
+          "row": "Ahava raba / V'haeirneinu",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Ahavah Rabbah",
+          "page": "61",
+          "chart": "yes"
+        },
+        {
+          "n": 15,
+          "row": "Ahava Raba",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Ahavah Rabbah",
+          "page": "61",
+          "chart": "yes"
+        },
+        {
+          "n": 16,
+          "row": "Shema",
+          "in": "1/2",
+          "type": "song",
+          "bound": "The Sh’ma",
+          "page": "63",
+          "chart": "yes"
+        },
+        {
+          "n": 17,
+          "row": "Mi chamocha (6-8)",
+          "in": "2/2",
+          "type": "song",
+          "bound": "Mi Chamocha",
+          "page": "68",
+          "chart": "yes"
+        },
+        {
+          "n": 18,
+          "row": "Amidah",
+          "in": "1/2",
+          "type": "section",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 19,
+          "row": "Adonai sfatai (trad)",
+          "in": "2/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 20,
+          "row": "Avot v'Imahot",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "Avot v’Imahot",
+          "page": "71",
+          "chart": "no"
+        },
+        {
+          "n": 21,
+          "row": "Gevurot",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "G’vurot",
+          "page": "73",
+          "chart": "no"
+        },
+        {
+          "n": 22,
+          "row": "Kedusha",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Kedushah",
+          "page": "74",
+          "chart": "yes"
+        },
+        {
+          "n": 23,
+          "row": "Keddusha",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 24,
+          "row": "V_shamru_(trad).pdf",
+          "in": "1/2",
+          "type": "song",
+          "bound": "V'shamru",
+          "page": "76",
+          "chart": "yes"
+        },
+        {
+          "n": 25,
+          "row": "Oseh shalom - Nava tehila",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Oseh Shalom",
+          "page": "82",
+          "chart": "yes"
+        },
+        {
+          "n": 26,
+          "row": "Rtsei",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 27,
+          "row": "Hakafah",
+          "in": "1/2",
+          "type": "transition",
+          "bound": "Hakafot",
+          "page": "83",
+          "chart": "no"
+        },
+        {
+          "n": 28,
+          "row": "Drash",
+          "in": "1/2",
+          "type": "reading",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 29,
+          "row": "olam_chesed_chord_chart_Cm",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 30,
+          "row": "Torah Reading",
+          "in": "1/2",
+          "type": "reading",
+          "bound": "Reading of the Torah",
+          "page": "84",
+          "chart": "no"
+        },
+        {
+          "n": 31,
+          "row": "Torah Service",
+          "in": "1/2",
+          "type": "section",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 32,
+          "row": "Nigun # 5",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 33,
+          "row": "Yizkor Prayers",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 34,
+          "row": "Mi shebeirach",
+          "in": "2/2",
+          "type": "song",
+          "bound": "Mi Shebeirach — Healing",
+          "page": "86",
+          "chart": "yes"
+        },
+        {
+          "n": 35,
+          "row": "L_chi_Lach__Friedman_",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 36,
+          "row": "El Maleh Rahamim",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 37,
+          "row": "Eitz chayim - Weisenberg",
+          "in": "2/2",
+          "type": "song",
+          "bound": "Eitz Chayim",
+          "page": "90",
+          "chart": "yes"
+        },
+        {
+          "n": 38,
+          "row": "Eili Eili (Zahavi) - Eit Dodim (Oriental Folk) - Elijah Rock (Spiritual).pdf",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 39,
+          "row": "Shehecheyanu__Pik_alone",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 40,
+          "row": "Mourner's Kaddish",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "Mourner’s Kaddish",
+          "page": "96",
+          "chart": "no"
+        },
+        {
+          "n": 41,
+          "row": "Aleinu",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Aleinu",
+          "page": "93",
+          "chart": "no"
+        },
+        {
+          "n": 42,
+          "row": "Closing Blessing",
+          "in": "1/2",
+          "type": "prayer",
+          "bound": "Birkat Kohanim",
+          "page": "",
+          "chart": "no"
+        },
+        {
+          "n": 43,
+          "row": "Adon Olam",
+          "in": "1/2",
+          "type": "song",
+          "bound": "Adon Olam",
+          "page": "98",
+          "chart": "yes"
+        },
+        {
+          "n": 44,
+          "row": "Simon Tov",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "yes"
+        },
+        {
+          "n": 45,
+          "row": "Leslie Cohen’s Hallelujah (unmatched)",
+          "in": "1/2",
+          "type": "song",
+          "bound": "",
+          "page": "",
+          "chart": "no"
+        }
+      ],
+      "dropped": [],
+      "note": null
+    }
+  ]
+}

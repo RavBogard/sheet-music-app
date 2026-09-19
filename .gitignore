@@ -98,3 +98,22 @@ nava-ingest-manifest.json
 # Playwright MCP page snapshots — debug artifacts from a browser probe run,
 # never source. They were swept into a commit by a `git add -A` on 2026-09-14.
 .playwright-mcp/
+
+# One-shot scratch files that used to sit tracked at the repo root. They were
+# removed on 2026-09-19 (audit item (f)); these lines stop them coming back.
+/test-zod.js
+/test-db.ts
+/test-query.ts
+/check-storage.ts
+/drive-test.ts
+/pure.js
+/pure.ts
+/out.json
+/hyphen_check.txt
+/underscore_check.txt
+/outputs/
+bridge/inno.exe
+bridge/builder_debug.txt
+
+# Local git recovery scratch — index locks and junk the CLI parked here.
+/_to_delete/

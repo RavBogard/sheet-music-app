@@ -1,21 +1,25 @@
-> **PRODUCER TRANSITION — Daniel, 2026-09-05.** Daniel is Executive Producer;
-> Codex is Producer and may code, delegate, and integrate. Read the canonical
-> [Producer agreement](C:/Users/dsbog/shireishabbat/PRODUCER.md)
-> (on another mount: shireishabbat/PRODUCER.md). It supersedes conflicting PROCESS
-> instructions below, including vision dispatch, advisory-only Codex, unlimited
-> standing, and per-tool decision privileges. Content/edition/licensing safeguards
-> remain. Current workers finish/checkpoint their bounded operation, report to
-> Producer, then stop taking old orders. Posted notice is not an acknowledgment.
-> Queue: shireishabbat/ops/tasks/; legacy STATUS is transition intake.
-
 # CLAUDE.md — sheet-music-app (centralreform.live)
 
-> **FAMILY POLICY — read before anything else (rule 12, R-0901-vision-4).** This repo is the
-> music/setlist SATELLITE of a three-repo family worked in parallel by multiple Claude instances
-> under multiple accounts. The law is `~/shireishabbat/COORDINATION.md` (see the stub
-> `COORDINATION.md` beside this file). The family baton board is `~/shireishabbat/STATUS.md`:
-> the moment work here reads or writes liturgy data or another family repo, open a row there
-> with path claims. Every commit carries a `Lane: <slug> (<surface>)` trailer (rule 13).
+## Governance (R-0919-audit-8)
+
+Each Claude Code session is **executor and producer for this repo**. It measures its own
+expectations, writes its own task record and return, and deploys to production when the work
+looks ready. There is no producer to report to, no board row to open before starting, and no
+approval checkpoint between a finished change and a deploy. This is the model the 2026-09-14
+master plan set; the 2026-09-19 audit made it the only one.
+
+Orders and returns live in `docs/planning/<date>-<topic>/`, tracked in git. The repo root keeps
+`README`, `CLAUDE`, `AGENTS`, `CHANGELOG`, `COORDINATION` and the config — nothing else.
+
+Working notes, returns and commit messages are in plain language: say what happened and what is
+worth noticing. Commits no longer carry a `Lane:` trailer.
+
+Subagents run on **Opus or Sonnet** (R-0919-audit-9) — surveying, drafting and checking. The top
+tier is not used for subagents.
+
+The family coordination law is canonical at `~/shireishabbat/COORDINATION.md` (see the stub
+`COORDINATION.md` beside this file). It is rewritten to this one model. The `STATUS.md` baton
+board is retired: work here does not open a row before touching liturgy data.
 
 ## What this is
 
@@ -26,36 +30,45 @@ congregation's fleet of iPads, which must be bulletproof; nothing is fixable liv
 so reliability comes from self-healing and pre-service checks, never from alerts during a
 service.
 
-## Division of labor (rule 9, applied here)
+**Brothers Lazaroff is a live second tenant** (`brotherslazaroff.live`, gigs). Multi-tenancy is
+in production: a change to a shared surface — Firestore rules, a query, an emitted file — is a
+change to both tenants, and the emulator tests assert both.
 
-Fable Cowork = vision/policy sittings with Daniel. Opus Cowork = analysis, verification,
-preparing changes. **Code = execution: verify, commit, push — all git is Code's here.** A
-vision-level question found mid-execution routes to a Cowork sitting, never settled in-flight.
+## Git in this tree
 
-## Git in this tree (rule 8 addendum, R-0901-vision-4)
-
-- **Git runs HOST-SIDE, by Code, only.** Readouts through the Cowork mount are untrusted here:
+- **Git runs HOST-SIDE only.** Readouts through a mounted copy of this tree are untrusted:
   ~1,900 phantom CRLF whole-file modifications and multi-minute `status` timeouts, one of which
-  returned a false clean (AUDIT-FAMILY-2026-09-01.md). Cowork treats this mount as files-only.
-- The branch of record is `master`. `origin/main` is stale (April) — resolution is a FOR DANIEL
-  question in `../HANDOFF-CODE-SATELLITE-ADOPTION-2026-09-01.md`; until he rules, do not push
-  `main` anywhere.
-- Commit trailer: `Lane: <slug> (<surface>)`.
+  returned a false clean (`docs/planning/archive/AUDIT-FAMILY-2026-09-01.md`). Treat a mount as
+  files-only.
+- The branch of record is `master`, and it is the only branch of record. **There is no `main`
+  branch here, local or remote** — `origin/HEAD` points at `origin/master`. The old "`origin/main`
+  is stale (April), FOR DANIEL" question was resolved by deletion; it is not an open question and
+  nothing should be pushed to `main`.
 
-## Family data this repo consumes (rules 5–6)
+## Family data this repo consumes
 
 `src/data/books/*.json` — the book/pagemap registry. A PRINTED volume's registry rows generate
 from its press commit, never HEAD (R-0831-live-pagemap-1); page call runs on the PRINTED
 edition's numbers (R-0901-vision-2). Never hand-edit a derived registry row — regenerate from
-the producer (`shireishabbat/build/tools/emit_live_books.py`). Known standing issue, recorded on
-the family board and PARKED by Daniel (R-0901-cont-1 §3): the deployed registry has served
-`shirei-tshuvah` at 248pp against the printed 202/204 — a stale deploy. Do not chase it outside
-a family row.
+the producer (`shireishabbat/build/tools/emit_live_books.py`). Known standing issue, PARKED by
+Daniel (R-0901-cont-1 §3): the deployed registry has served `shirei-tshuvah` at 248pp against
+the printed 202/204 — a stale deploy.
+
+## Standing constraints
+
+- **No liturgical text in this repo.** Ids, names and page numbers only. Chart bytes never leave
+  it except through the approved public-reader grant (`docs/READER-PUBLIC-CHART-BOUNDARY.md`).
+- **Row order is the author's** (R11-b, 2026-09-16). Nothing re-sorts, inserts or deletes a row
+  on an existing setlist outside an explicit author action.
+- **Publish is retired** (R-0919-audit-3). Nothing was ever published; `today.json` emits from
+  unpublished setlists. Do not re-add it in any form. Telling the band is its own action —
+  `/api/setlist/notify-band`.
+- **Never propose which setting or melody the band plays.**
+- Non-family agent frameworks (CARL, PAUL, Gemini/GSD) are RETIRED here: if you find their config
+  active, that is a defect.
 
 ## Development posture
 
-Daniel is keeping development here QUIET for now (R-0901-cont-1 §3). Policy adoption and hygiene
-proceed under R-0901-vision-4; the handoff-to-this-repo about what the family built, and the
-integration plan, come later and take their own family row and ruling. Non-family agent
-frameworks (CARL, PAUL, Gemini/GSD) are RETIRED here (rule 14): if you find their config active,
-that is a defect — see the adoption order.
+Active. The 2026-09-14 integration program and the 2026-09-19 audit both run here; the earlier
+"keeping development QUIET" posture (R-0901-cont-1 §3) is superseded. Current work is in
+`docs/planning/2026-09-19-audit/`.

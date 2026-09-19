@@ -1,0 +1,973 @@
+{
+  "recordedAt": "2026-09-15T02:26:04Z",
+  "artifact": "Fixed Liturgy Rulings (claude.ai artifact Y7ioUagWqw3Vfo7oii4k94)",
+  "rulings": {
+    "tmplx.saturday.070.tfilah": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.saturday.084.readingofthetorah": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.friday.30": {
+      "choice": "always",
+      "note": null
+    },
+    "tmplx.saturday.082.osehshalom": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "dup.hodaah": {
+      "choice": "merge",
+      "note": null
+    },
+    "tmplx.friday.040.bayomhahu": {
+      "choice": "setting",
+      "note": "reading; translation of Aleinu — Daniel 2026-09-15"
+    },
+    "tmpl.saturday.10": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.saturday.05": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "dup.kdushah": {
+      "choice": "merge",
+      "note": null
+    },
+    "tmplx.saturday.076.vshamru": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.friday.31": {
+      "choice": "always",
+      "note": null
+    },
+    "fl.crc-saturday.17": {
+      "choice": "accept",
+      "note": null
+    },
+    "tmpl.saturday.15": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "fl.crc-saturday.38": {
+      "choice": "map",
+      "note": null
+    },
+    "tmpl.saturday.09": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.friday.19": {
+      "choice": "always",
+      "note": null
+    },
+    "fl.crc-saturday.16": {
+      "choice": "map",
+      "note": null
+    },
+    "tmpl.friday.11": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.friday.20": {
+      "choice": "always",
+      "note": null
+    },
+    "fl.crc-saturday.39": {
+      "choice": "pageless",
+      "note": null
+    },
+    "fl.crc-saturday.37": {
+      "choice": "accept",
+      "note": null
+    },
+    "tmplx.friday.010.aswebless": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "fl.crc-saturday.44": {
+      "choice": "reject",
+      "note": null
+    },
+    "dup.maariv": {
+      "choice": "merge",
+      "note": null
+    },
+    "tmplx.saturday.063.theone": {
+      "choice": "never",
+      "note": null
+    },
+    "tmpl.saturday.36": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.friday.023.sanctuary": {
+      "choice": "setting",
+      "note": "setting of Adonai S'fatai (Amidah opening) — Daniel 2026-09-15"
+    },
+    "tmpl.friday.28": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.26": {
+      "choice": "always",
+      "note": null
+    },
+    "tmplx.friday.037.hatikvah": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.saturday.101.motzi": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.01": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.saturday.41": {
+      "choice": "never",
+      "note": null
+    },
+    "tmplx.saturday.085.roshchodesh": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.saturday.12": {
+      "choice": "never",
+      "note": null
+    },
+    "tmpl.saturday.13": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "fl.crc-friday.30": {
+      "choice": "booklet",
+      "note": null
+    },
+    "tmpl.saturday.28": {
+      "choice": "always",
+      "note": null
+    },
+    "fl.crc-friday.07": {
+      "choice": "accept",
+      "note": null
+    },
+    "tmpl.friday.01": {
+      "choice": "always",
+      "note": null
+    },
+    "tmplx.saturday.059.aswebless": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.friday.017.thoushaltlove": {
+      "choice": "setting",
+      "note": "setting of V'ahavta — Daniel 2026-09-15"
+    },
+    "tmpl.saturday.17": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.18": {
+      "choice": "always",
+      "note": null
+    },
+    "tmplx.saturday.069.siyahamba": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "fl.crc-saturday.12": {
+      "choice": "reject",
+      "note": null
+    },
+    "tmpl.friday.21": {
+      "choice": "always",
+      "note": null
+    },
+    "tmplx.friday.004.houseofprayer": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.friday.004.niggun": {
+      "choice": "never",
+      "note": null
+    },
+    "fl.crc-saturday.10": {
+      "choice": "pageless",
+      "note": null
+    },
+    "tmpl.saturday.31": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.saturday.34": {
+      "choice": "always",
+      "note": null
+    },
+    "fl.shabbat-shacharit.shared-units": {
+      "choice": "intentional",
+      "note": null
+    },
+    "tmplx.friday.033.roshchodesh": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.saturday.070.sanctuary": {
+      "choice": "setting",
+      "note": "setting of Adonai S'fatai (Amidah opening) — Daniel 2026-09-15"
+    },
+    "fl.crc-saturday.30": {
+      "choice": "map",
+      "note": null
+    },
+    "fl.crc-friday.26": {
+      "choice": "accept",
+      "note": null
+    },
+    "tmpl.saturday.25": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.friday.07": {
+      "choice": "always",
+      "note": null
+    },
+    "fl.crc-friday.09": {
+      "choice": "pageless",
+      "note": null
+    },
+    "tmplx.saturday.087.elnarfanalahlo": {
+      "choice": "setting",
+      "note": "setting of Mi Shebeirach — Daniel 2026-09-15"
+    },
+    "tmpl.friday.29": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "fl.crc-friday.14": {
+      "choice": "accept",
+      "note": null
+    },
+    "tmplx.saturday.095.bayomhahu": {
+      "choice": "setting",
+      "note": "reading; translation of Aleinu — Daniel 2026-09-15"
+    },
+    "tmpl.saturday.32": {
+      "choice": "never",
+      "note": null
+    },
+    "tmplx.saturday.066.thoushaltlove": {
+      "choice": "setting",
+      "note": "setting of V'ahavta — Daniel 2026-09-15"
+    },
+    "tmplx.saturday.055.psukeidzimrah": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.38": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "fl.crc-friday.08": {
+      "choice": "accept",
+      "note": null
+    },
+    "tmpl.saturday.20": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.friday.22": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "fl.crc-saturday.41": {
+      "choice": "pageless",
+      "note": null
+    },
+    "tmpl.friday.15": {
+      "choice": "always",
+      "note": null
+    },
+    "tmplx.saturday.089.readingofthehaftarah": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.saturday.14": {
+      "choice": "always",
+      "note": null
+    },
+    "fl.crc-saturday.18": {
+      "choice": "accept",
+      "note": null
+    },
+    "tmplx.friday.007.yomzehlyisrael": {
+      "choice": "never",
+      "note": null
+    },
+    "tmplx.saturday.083.hakafot": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.02": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.friday.03": {
+      "choice": "always",
+      "note": null
+    },
+    "partc": {
+      "choice": "1",
+      "note": null
+    },
+    "tmpl.friday.09": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "fl.crc-friday.01": {
+      "choice": "map",
+      "note": null
+    },
+    "dup.mishebeirach": {
+      "choice": "merge",
+      "note": null
+    },
+    "tmpl.saturday.35": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.19": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.friday.06": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.friday.003.hareini": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.saturday.16": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.saturday.42": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "fl.crc-saturday.31": {
+      "choice": "p83",
+      "note": null
+    },
+    "fl.crc-saturday.28": {
+      "choice": "booklet",
+      "note": null
+    },
+    "fl.crc-saturday.24": {
+      "choice": "pageless",
+      "note": null
+    },
+    "tmpl.friday.18": {
+      "choice": "always",
+      "note": null
+    },
+    "tmplx.saturday.092.hatikvah": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.saturday.44": {
+      "choice": "never",
+      "note": null
+    },
+    "tmplx.saturday.082.concludingthetfilah": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.saturday.24": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.45": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.friday.036.prayerforthestateofisrae": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.friday.05": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.friday.047.motzi": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.saturday.23": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.friday.25": {
+      "choice": "never",
+      "note": null
+    },
+    "fl.crc-saturday.08": {
+      "choice": "booklet",
+      "note": null
+    },
+    "tmpl.saturday.33": {
+      "choice": "always",
+      "note": null
+    },
+    "fl.crc-friday.17": {
+      "choice": "map",
+      "note": null
+    },
+    "tmpl.saturday.04": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.saturday.101.kiddush": {
+      "choice": "always",
+      "note": null
+    },
+    "fl.crc-friday.23": {
+      "choice": "pageless",
+      "note": null
+    },
+    "tmpl.saturday.30": {
+      "choice": "never",
+      "note": null
+    },
+    "tmpl.friday.27": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.11": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.friday.02": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.37": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.friday.019.siyahamba": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.friday.23": {
+      "choice": "never",
+      "note": null
+    },
+    "tmpl.friday.04": {
+      "choice": "always",
+      "note": null
+    },
+    "fl.crc-friday.24": {
+      "choice": "pageless",
+      "note": null
+    },
+    "tmpl.friday.24": {
+      "choice": "never",
+      "note": null
+    },
+    "fl.crc-saturday.09": {
+      "choice": "accept",
+      "note": null
+    },
+    "tmpl.friday.12": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.friday.13": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.27": {
+      "choice": "never",
+      "note": null
+    },
+    "tmpl.saturday.46": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.03": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.friday.035.prayerforshalom": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.friday.031.olamchesedyibaneh": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "fl.crc-saturday.32": {
+      "choice": "pageless",
+      "note": null
+    },
+    "tmplx.saturday.090.prayerforshalom": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.friday.004.hineihmahtov": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "fl.crc-saturday.35": {
+      "choice": "accept",
+      "note": null
+    },
+    "tmplx.saturday.079.olamchesedyibaneh": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.saturday.087.birkathagomeil": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.friday.08": {
+      "choice": "always",
+      "note": null
+    },
+    "tmplx.saturday.088.tfilathaderech": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.friday.16": {
+      "choice": "always",
+      "note": null
+    },
+    "fl.crc-saturday.06": {
+      "choice": "booklet",
+      "note": null
+    },
+    "tmpl.saturday.39": {
+      "choice": "never",
+      "note": null
+    },
+    "tmpl.saturday.29": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.saturday.21": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.06": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.08": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.friday.014.theone": {
+      "choice": "never",
+      "note": null
+    },
+    "fl.crc-saturday.34": {
+      "choice": "map",
+      "note": null
+    },
+    "tmpl.friday.10": {
+      "choice": "always",
+      "note": null
+    },
+    "fl.crc-saturday.33": {
+      "choice": "map",
+      "note": null
+    },
+    "tmplx.friday.004.candlelightingsong": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.saturday.40": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.friday.14": {
+      "choice": "never",
+      "note": null
+    },
+    "tmpl.friday.17": {
+      "choice": "always",
+      "note": null
+    },
+    "tmpl.saturday.22": {
+      "choice": "always",
+      "note": null
+    },
+    "fl.crc-saturday.birkat-kohanim-twice": {
+      "choice": "concluding",
+      "note": "superseded 2026-09-15: never inside the Amidah at CRC; concluding row only"
+    },
+    "fl.crc-saturday.03": {
+      "choice": "booklet",
+      "note": null
+    },
+    "tmpl.saturday.07": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmpl.saturday.43": {
+      "choice": "always",
+      "note": null
+    },
+    "tmplx.saturday.092.prayerforthestateofisrae": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.friday.041.maythememory": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "fl.crc-friday.25": {
+      "choice": "reject",
+      "note": null
+    },
+    "tmplx.friday.034.elnarfanalahlo": {
+      "choice": "setting",
+      "note": "setting of Mi Shebeirach — Daniel 2026-09-15"
+    },
+    "fl.crc-saturday.46": {
+      "choice": "booklet",
+      "note": null
+    },
+    "tmpl.friday.26": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.saturday.096.maythememory": {
+      "choice": "sometimes",
+      "note": null
+    },
+    "tmplx.friday.008.awakenarise": {
+      "choice": "sometimes",
+      "note": "Randy-only, sometimes — Daniel 2026-09-15"
+    }
+  },
+  "items": {
+    "fl.crc-friday.01": {
+      "title": "Lighting the Candles",
+      "kind": "absent",
+      "section": "fl-crc-friday"
+    },
+    "fl.crc-friday.07": {
+      "title": "The Sh’ma",
+      "kind": "ambiguous",
+      "section": "fl-crc-friday"
+    },
+    "fl.crc-friday.08": {
+      "title": "V’ahavta & Tzitzit",
+      "kind": "ambiguous",
+      "section": "fl-crc-friday"
+    },
+    "fl.crc-friday.09": {
+      "title": "Emet v’Emunah",
+      "kind": "absent",
+      "section": "fl-crc-friday"
+    },
+    "fl.crc-friday.14": {
+      "title": "The Silent Amidah",
+      "kind": "ambiguous",
+      "section": "fl-crc-friday"
+    },
+    "fl.crc-friday.17": {
+      "title": "K’dushat HaShem",
+      "kind": "absent",
+      "section": "fl-crc-friday"
+    },
+    "fl.crc-friday.23": {
+      "title": "Vayechulu",
+      "kind": "absent",
+      "section": "fl-crc-friday"
+    },
+    "fl.crc-friday.24": {
+      "title": "Me’ein Sheva",
+      "kind": "absent",
+      "section": "fl-crc-friday"
+    },
+    "fl.crc-friday.25": {
+      "title": "Kaddish Shalem",
+      "kind": "ambiguous",
+      "section": "fl-crc-friday"
+    },
+    "fl.crc-friday.26": {
+      "title": "Mi Shebeirach — Healing",
+      "kind": "ambiguous",
+      "section": "fl-crc-friday"
+    },
+    "fl.crc-friday.30": {
+      "title": "Adon Olam",
+      "kind": "order",
+      "section": "fl-crc-friday"
+    },
+    "fl.crc-saturday.03": {
+      "title": "Elohai N’shamah",
+      "kind": "order",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.06": {
+      "title": "Hareini",
+      "kind": "order",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.08": {
+      "title": "Lev Tahor",
+      "kind": "order",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.09": {
+      "title": "Hodu",
+      "kind": "ambiguous",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.10": {
+      "title": "Ashrei",
+      "kind": "absent",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.12": {
+      "title": "Nishmat Kol Chai",
+      "kind": "ambiguous",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.16": {
+      "title": "Ahavah Rabbah",
+      "kind": "absent",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.17": {
+      "title": "The Sh’ma",
+      "kind": "ambiguous",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.18": {
+      "title": "V’ahavta & Tzitzit",
+      "kind": "ambiguous",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.24": {
+      "title": "K’dushat HaYom",
+      "kind": "absent",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.28": {
+      "title": "Sim Shalom",
+      "kind": "order",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.30": {
+      "title": "Ein Kamocha",
+      "kind": "absent",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.31": {
+      "title": "Sh’ma",
+      "kind": "order",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.32": {
+      "title": "L’cha Adonai HaGedulah",
+      "kind": "absent",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.33": {
+      "title": "Blessing Before the Torah",
+      "kind": "absent",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.34": {
+      "title": "Blessing After the Torah",
+      "kind": "absent",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.35": {
+      "title": "Mi Shebeirach — Healing",
+      "kind": "ambiguous",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.37": {
+      "title": "Haftarah Blessing",
+      "kind": "ambiguous",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.38": {
+      "title": "Blessings After the Haftarah",
+      "kind": "ambiguous",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.39": {
+      "title": "Y’halelu",
+      "kind": "absent",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.41": {
+      "title": "Ein Keloheinu",
+      "kind": "absent",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.44": {
+      "title": "Kaddish Shalem",
+      "kind": "ambiguous",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.46": {
+      "title": "Adon Olam",
+      "kind": "order",
+      "section": "fl-crc-saturday"
+    },
+    "fl.shabbat-shacharit.shared-units": {
+      "title": "Nine morning rows carry evening (@shabbat-maariv) unit ids",
+      "kind": "question",
+      "section": "fl-crc-saturday"
+    },
+    "fl.crc-saturday.birkat-kohanim-twice": {
+      "title": "Birkat Kohanim appears twice (Amidah row 27, concluding row 45), both at booklet p.100",
+      "kind": "question",
+      "section": "fl-crc-saturday"
+    }
+  },
+  "templateRowLabels": {
+    "friday": {
+      "tmpl.friday.01": "Lighting the Candles",
+      "tmpl.friday.02": "Shalom Aleichem",
+      "tmpl.friday.03": "L’cha Dodi",
+      "tmpl.friday.04": "Bar’chu",
+      "tmpl.friday.05": "Ma’ariv Aravim",
+      "tmpl.friday.06": "Ahavat Olam",
+      "tmpl.friday.07": "The Sh’ma",
+      "tmpl.friday.08": "V’ahavta & Tzitzit",
+      "tmpl.friday.09": "Emet v’Emunah",
+      "tmpl.friday.10": "Mi Chamocha",
+      "tmpl.friday.11": "Hashkivenu",
+      "tmpl.friday.12": "V’shamru",
+      "tmpl.friday.13": "Chatzi Kaddish",
+      "tmpl.friday.14": "The Silent Amidah",
+      "tmpl.friday.15": "Avot v’Imahot",
+      "tmpl.friday.16": "G’vurot",
+      "tmpl.friday.17": "K’dushat HaShem",
+      "tmpl.friday.18": "K’dushat HaYom",
+      "tmpl.friday.19": "Avodah",
+      "tmpl.friday.20": "Modim",
+      "tmpl.friday.21": "Shalom Rav",
+      "tmpl.friday.22": "Elohai N’tzor",
+      "tmpl.friday.23": "Vayechulu",
+      "tmpl.friday.24": "Me’ein Sheva",
+      "tmpl.friday.25": "Kaddish Shalem",
+      "tmpl.friday.26": "Mi Shebeirach — Healing",
+      "tmpl.friday.27": "Aleinu",
+      "tmpl.friday.28": "Mourner’s Kaddish",
+      "tmpl.friday.29": "Adon Olam",
+      "tmpl.friday.30": "Priestly Blessing",
+      "tmpl.friday.31": "Kiddush",
+      "tmplx.friday.003.hareini": "Hareini",
+      "tmplx.friday.004.niggun": "Niggun",
+      "tmplx.friday.004.houseofprayer": "House of Prayer",
+      "tmplx.friday.004.hineihmahtov": "Hineih Mah Tov",
+      "tmplx.friday.004.candlelightingsong": "Candle Lighting Song",
+      "tmplx.friday.007.yomzehlyisrael": "Yom Zeh L'Yisrael",
+      "tmplx.friday.008.awakenarise": "Awaken, Arise",
+      "tmplx.friday.010.aswebless": "As We Bless",
+      "tmplx.friday.014.theone": "The One",
+      "tmplx.friday.017.thoushaltlove": "Thou Shalt Love",
+      "tmplx.friday.019.siyahamba": "Siyahamba",
+      "tmplx.friday.023.sanctuary": "Sanctuary",
+      "tmplx.friday.031.olamchesedyibaneh": "Olam Chesed Yibaneh",
+      "tmplx.friday.033.roshchodesh": "Rosh Chodesh",
+      "tmplx.friday.034.elnarfanalahlo": "El Na R'fa Na Lah/Lo",
+      "tmplx.friday.035.prayerforshalom": "Prayer for Shalom",
+      "tmplx.friday.036.prayerforthestateofisrae": "Prayer for the State of Israel",
+      "tmplx.friday.037.hatikvah": "Hatikvah",
+      "tmplx.friday.040.bayomhahu": "Bayom Hahu",
+      "tmplx.friday.041.maythememory": "May the Memory",
+      "tmplx.friday.047.motzi": "Motzi"
+    },
+    "saturday": {
+      "tmpl.saturday.01": "Hareini",
+      "tmpl.saturday.02": "Modeh Ani",
+      "tmpl.saturday.03": "Elohai N’shamah",
+      "tmpl.saturday.04": "Lev Tahor",
+      "tmpl.saturday.05": "Mah Tovu",
+      "tmpl.saturday.06": "Birchot HaShachar",
+      "tmpl.saturday.07": "Eilu D’varim",
+      "tmpl.saturday.08": "Hineh Mah Tov",
+      "tmpl.saturday.09": "Hodu",
+      "tmpl.saturday.10": "Ashrei",
+      "tmpl.saturday.11": "Psalm 150",
+      "tmpl.saturday.12": "Nishmat Kol Chai",
+      "tmpl.saturday.13": "Chatzi Kaddish",
+      "tmpl.saturday.14": "Bar’chu",
+      "tmpl.saturday.15": "Yotzer Or",
+      "tmpl.saturday.16": "Ahavah Rabbah",
+      "tmpl.saturday.17": "The Sh’ma",
+      "tmpl.saturday.18": "V’ahavta & Tzitzit",
+      "tmpl.saturday.19": "Emet v’Yatziv",
+      "tmpl.saturday.20": "Mi Chamocha",
+      "tmpl.saturday.21": "Avot v’Imahot",
+      "tmpl.saturday.22": "G’vurot",
+      "tmpl.saturday.23": "Kedushah",
+      "tmpl.saturday.24": "K’dushat HaYom",
+      "tmpl.saturday.25": "Avodah",
+      "tmpl.saturday.26": "Modim",
+      "tmpl.saturday.27": "Birkat Kohanim",
+      "tmpl.saturday.28": "Sim Shalom",
+      "tmpl.saturday.29": "Elohai N’tzor",
+      "tmpl.saturday.30": "Ein Kamocha",
+      "tmpl.saturday.31": "Sh’ma",
+      "tmpl.saturday.32": "L’cha Adonai HaGedulah",
+      "tmpl.saturday.33": "Blessing Before the Torah",
+      "tmpl.saturday.34": "Blessing After the Torah",
+      "tmpl.saturday.35": "Mi Shebeirach — Healing",
+      "tmpl.saturday.36": "V’zot HaTorah",
+      "tmpl.saturday.37": "Haftarah Blessing",
+      "tmpl.saturday.38": "Blessings After the Haftarah",
+      "tmpl.saturday.39": "Y’halelu",
+      "tmpl.saturday.40": "Eitz Chayim",
+      "tmpl.saturday.41": "Ein Keloheinu",
+      "tmpl.saturday.42": "Aleinu",
+      "tmpl.saturday.43": "Mourner’s Kaddish",
+      "tmpl.saturday.44": "Kaddish Shalem",
+      "tmpl.saturday.45": "Adon Olam",
+      "tmpl.saturday.46": "Birkat Kohanim",
+      "tmplx.saturday.055.psukeidzimrah": "P'sukei D'zimrah",
+      "tmplx.saturday.059.aswebless": "As We Bless",
+      "tmplx.saturday.063.theone": "The One",
+      "tmplx.saturday.066.thoushaltlove": "Thou Shalt Love",
+      "tmplx.saturday.069.siyahamba": "Siyahamba",
+      "tmplx.saturday.070.tfilah": "T'filah",
+      "tmplx.saturday.070.sanctuary": "Sanctuary",
+      "tmplx.saturday.076.vshamru": "V'shamru",
+      "tmplx.saturday.079.olamchesedyibaneh": "Olam Chesed Yibaneh",
+      "tmplx.saturday.082.concludingthetfilah": "Concluding the T'filah",
+      "tmplx.saturday.082.osehshalom": "Oseh Shalom",
+      "tmplx.saturday.083.hakafot": "Hakafot",
+      "tmplx.saturday.084.readingofthetorah": "Reading of the Torah",
+      "tmplx.saturday.085.roshchodesh": "Rosh Chodesh",
+      "tmplx.saturday.087.elnarfanalahlo": "El Na R'fa Na Lah/Lo",
+      "tmplx.saturday.087.birkathagomeil": "Birkat Hagomeil",
+      "tmplx.saturday.088.tfilathaderech": "T'filat Haderech",
+      "tmplx.saturday.089.readingofthehaftarah": "Reading of the Haftarah",
+      "tmplx.saturday.090.prayerforshalom": "Prayer for Shalom",
+      "tmplx.saturday.092.prayerforthestateofisrae": "Prayer for the State of Israel",
+      "tmplx.saturday.092.hatikvah": "Hatikvah",
+      "tmplx.saturday.095.bayomhahu": "Bayom Hahu",
+      "tmplx.saturday.096.maythememory": "May the Memory",
+      "tmplx.saturday.101.kiddush": "Kiddush",
+      "tmplx.saturday.101.motzi": "Motzi"
+    }
+  }
+}

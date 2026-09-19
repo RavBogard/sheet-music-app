@@ -80,6 +80,43 @@ export const env = createEnv({
         // NOT prodRequired: an unset value disables the surface, which is
         // the safe default. Never reaches the MCP tool registry surface.
         MCP_ADMIN_TEST_SESSION_SECRET: z.string().optional(),
+
+        // ── Declared by the 2026-09-19 audit, item (e) ──────────────────────
+        // Each of these was read from raw `process.env` in `src/` and declared
+        // nowhere. All have a safe fallback, which is exactly the problem: a
+        // misconfiguration used to surface as quiet wrong behaviour at first
+        // use rather than as a failure at boot. Optional, because the fallback
+        // is legitimate — declaring them buys the boot-time check and one
+        // honest list of what this app reads.
+
+        /** CORS allow-list for the Drive/library file routes. Falls back to the two CRC origins. */
+        ALLOWED_ORIGINS: z.string().optional(),
+        /** Origin added to the MCP dropzone's CSP `connect-src`. Unset: only storage.googleapis.com is allowed. */
+        MCP_PUBLIC_URL: z.string().optional(),
+        /** Local Chrome binary for chart rendering in dev. Unset: the bundled @sparticuz/chromium is used. */
+        CHART_RENDER_CHROME_PATH: z.string().optional(),
+        /** Which Overlays workspace the cue log must report. Unset: "crc". A mismatch refuses the reconcile. */
+        OVERLAYS_WORKSPACE: z.string().optional(),
+        /** Overlays API base for the performed-history client. */
+        OVERLAYS_BASE_URL: z.string().optional(),
+        /** Bearer for the Overlays history API. Unset: history reads are unauthenticated and will fail. */
+        OVERLAYS_HISTORY_TOKEN: z.string().optional(),
+        /** Org whose charts the public reader endpoint serves. Unset: DEFAULT_ORG_ID. */
+        READER_MUSIC_ORG_ID: z.string().optional(),
+        /** Master switch for the public reader chart endpoint. Unset: off. */
+        READER_PUBLIC_CHARTS_ENABLED: z.string().optional(),
+        /** CORS allow-list for the public reader chart endpoint. */
+        READER_MUSIC_ALLOWED_ORIGINS: z.string().optional(),
+        /** Brothers Lazaroff's own From address. Unset: the CRC address is used for both tenants. */
+        RESEND_FROM_EMAIL_BROSLAZ: z.string().optional(),
+        /** Twilio credentials for setlist SMS. Unset: SMS degrades to a no-op. */
+        TWILIO_ACCOUNT_SID: z.string().optional(),
+        TWILIO_AUTH_TOKEN: z.string().optional(),
+        TWILIO_PHONE_NUMBER: z.string().optional(),
+        /** Monitor-bridge service account. Unset: the bridge cannot mint its own credentials. */
+        BRIDGE_SA_CLIENT_EMAIL: z.string().optional(),
+        BRIDGE_SA_PRIVATE_KEY: z.string().optional(),
+        BRIDGE_SA_PRIVATE_KEY_ID: z.string().optional(),
     },
     client: {
         NEXT_PUBLIC_FIREBASE_API_KEY: z.string().min(1, "Firebase API key is required"),
@@ -91,6 +128,14 @@ export const env = createEnv({
         NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: z.string().optional(),
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().optional(),
         NEXT_PUBLIC_GOOGLE_API_KEY: z.string().optional(),
+
+        // ── Declared by the 2026-09-19 audit, item (e) ──────────────────────
+        /** Absolute base for links in push/email. Unset: the prod domain is hardcoded, which is wrong on a preview deploy. */
+        NEXT_PUBLIC_BASE_URL: z.string().optional(),
+        /** Web-push VAPID key. Unset: push enrollment silently no-ops and no device ever registers. */
+        NEXT_PUBLIC_FIREBASE_VAPID_KEY: z.string().optional(),
+        /** Sentry browser DSN. Unset: no client-side error reporting. */
+        NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
     },
     runtimeEnv: {
         FIREBASE_SERVICE_ACCOUNT_KEY: process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
@@ -129,6 +174,25 @@ export const env = createEnv({
         CRC_BACKUP_DRIVE_FOLDER_ID: process.env.CRC_BACKUP_DRIVE_FOLDER_ID,
         GEMINI_API_KEY: process.env.GEMINI_API_KEY,
         MCP_ADMIN_TEST_SESSION_SECRET: process.env.MCP_ADMIN_TEST_SESSION_SECRET,
+        ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
+        MCP_PUBLIC_URL: process.env.MCP_PUBLIC_URL,
+        CHART_RENDER_CHROME_PATH: process.env.CHART_RENDER_CHROME_PATH,
+        OVERLAYS_WORKSPACE: process.env.OVERLAYS_WORKSPACE,
+        OVERLAYS_BASE_URL: process.env.OVERLAYS_BASE_URL,
+        OVERLAYS_HISTORY_TOKEN: process.env.OVERLAYS_HISTORY_TOKEN,
+        READER_MUSIC_ORG_ID: process.env.READER_MUSIC_ORG_ID,
+        READER_PUBLIC_CHARTS_ENABLED: process.env.READER_PUBLIC_CHARTS_ENABLED,
+        READER_MUSIC_ALLOWED_ORIGINS: process.env.READER_MUSIC_ALLOWED_ORIGINS,
+        RESEND_FROM_EMAIL_BROSLAZ: process.env.RESEND_FROM_EMAIL_BROSLAZ,
+        TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
+        TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
+        TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
+        BRIDGE_SA_CLIENT_EMAIL: process.env.BRIDGE_SA_CLIENT_EMAIL,
+        BRIDGE_SA_PRIVATE_KEY: process.env.BRIDGE_SA_PRIVATE_KEY,
+        BRIDGE_SA_PRIVATE_KEY_ID: process.env.BRIDGE_SA_PRIVATE_KEY_ID,
+        NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+        NEXT_PUBLIC_FIREBASE_VAPID_KEY: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+        NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
     },
     skipValidation: !!process.env.SKIP_ENV_VALIDATION,
     emptyStringAsUndefined: true,
