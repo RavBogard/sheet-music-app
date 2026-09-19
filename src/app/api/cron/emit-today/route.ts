@@ -79,6 +79,20 @@ async function claimLock(db: FirebaseFirestore.Firestore): Promise<boolean> {
     }
 }
 
+/** Firestore Timestamp, Date or ISO string → epoch ms, or null. */
+function toMillis(value: unknown): number | null {
+    if (value == null) return null
+    if (value instanceof Date) return value.getTime()
+    if (typeof value === "object" && typeof (value as { toMillis?: unknown }).toMillis === "function") {
+        return (value as { toMillis: () => number }).toMillis()
+    }
+    if (typeof value === "string") {
+        const ms = Date.parse(value)
+        return Number.isFinite(ms) ? ms : null
+    }
+    return null
+}
+
 /**
  * Do not re-send the same outstanding problem more often than this. A problem
  * of a different shape always sends immediately.
@@ -129,13 +143,11 @@ async function alertIfUnhealthy(
         }
 
         const prevSignature = typeof prev?.signature === "string" ? prev.signature : ""
-        const prevNotified = prev?.lastNotifiedAt as { toMillis?: () => number } | undefined
-        const prevNotifiedMs =
-            prevNotified && typeof prevNotified.toMillis === "function"
-                ? prevNotified.toMillis()
-                : typeof prev?.lastNotifiedAt === "string"
-                  ? Date.parse(prev.lastNotifiedAt as string)
-                  : null
+        // Firestore hands this back as a Timestamp; a Date or an ISO string is
+        // what a test or a hand-written row looks like. Accept all three —
+        // failing to read it would mean re-notifying every 15 minutes, which
+        // is the failure this guard exists to prevent.
+        const prevNotifiedMs = toMillis(prev?.lastNotifiedAt)
         const sameProblem = prevSignature === verdict.signature
         const suppressed =
             sameProblem &&
