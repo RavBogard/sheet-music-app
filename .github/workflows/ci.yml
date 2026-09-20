@@ -280,13 +280,18 @@ jobs:
 
       - run: npm ci
 
+      # Two comparisons, not one. `--strict` fails on this repo's own drift
+      # (a page or a pin moved through our trim) AND on the producer's own
+      # `moments_agree.py`, which travels inside the artifact and compares
+      # moment ids, unit ids and pairs directly. The second is the one that
+      # catches our trim being wrong, which the first structurally cannot.
       - name: Compare moments.json and the book snapshots with dist-app
         shell: bash
         env:
           SHIREISHABBAT_ARTIFACT_TOKEN: ${{ secrets.SHIREISHABBAT_ARTIFACT_TOKEN }}
         run: |
           if [ -z "$SHIREISHABBAT_ARTIFACT_TOKEN" ]; then
-            echo "::warning title=Moments agreement not checked::SHIREISHABBAT_ARTIFACT_TOKEN is not set, so this run did NOT compare against the producer. Add a PAT with actions:read on RavBogard/ShireiShabbat."
+            echo "::warning title=Moments agreement not checked::SHIREISHABBAT_ARTIFACT_TOKEN is not set, so this run did NOT compare against the producer and did NOT run the corpus's own moments_agree.py. Add a PAT with actions:read on RavBogard/ShireiShabbat."
             exit 0
           fi
           npm run sync:books -- --from-latest --check --strict
