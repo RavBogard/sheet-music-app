@@ -3,6 +3,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 
+import { useAuth } from '@/lib/auth-context'
 import { logger } from '@/lib/logger'
 import { applyEdit as defaultApplyEdit } from '@/lib/local/write'
 import { getDb } from '@/lib/local/schema'
@@ -78,6 +79,7 @@ export function SetlistGridHydrator({
     subscribeSongsLibrary = defaultSubscribeSongsLibrary,
 }: SetlistGridHydratorProps) {
     void _primeSongsLibrary
+    const { user } = useAuth()
     const [hydration, setHydration] = useState<'pending' | 'done'>('pending')
     /** v50-07-03 fire-once guard. Lazy-hydration is a one-shot migration
      *  cascade per mount; React effect dependency churn must not retrigger
@@ -277,11 +279,24 @@ export function SetlistGridHydrator({
     // setlist sync v5.0 promised. Closes the v50-06-02 'theirs' staleness
     // gap automatically: after a 'theirs' resolution the listener delivers
     // the winner's payload + updatedAt, restoring local-row freshness.
+    //
+    // SIGNED OUT, DO NOT SUBSCRIBE (R-0919-audit-2, 2026-09-20). The listener
+    // runs a tracks query (`where("setlistId","==",…)`), and `list` on
+    // /tracks now requires sign-in. A signed-out Perform view that mounts it
+    // gets one `Missing or insufficient permissions` per load and nothing
+    // else: the rows it is watching for can never arrive, because a
+    // signed-out visitor is not a leader and there is no cross-leader edit to
+    // see. The page itself is unaffected either way — it renders from the
+    // server slice and /api/setlists/{id}/tracks — so this changes no pixel.
+    // What it changes is the console during a service: a denied subscription
+    // that retries looks exactly like a real fault to whoever opens the
+    // inspector on an iPad at 7pm, and that is the wrong thing to hand them.
     useEffect(() => {
         if (hydration !== 'done') return
+        if (!user) return
         const stop = startSnapshotListener({ setlistId, db: getDb() })
         return stop
-    }, [hydration, setlistId, startSnapshotListener])
+    }, [hydration, setlistId, startSnapshotListener, user])
 
     // v50-07-03 (Option C Hybrid Lazy Hydration): on first edit-open of a
     // legacy setlist, fan out the embedded `tracks[]` into the top-level

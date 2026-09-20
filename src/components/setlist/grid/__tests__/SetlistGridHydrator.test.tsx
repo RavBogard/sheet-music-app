@@ -46,6 +46,26 @@ vi.mock('@/lib/songs/subscribe', () => ({
     subscribeSongsLibrary: vi.fn(() => () => {}),
 }))
 
+// R-0919-audit-2 (2026-09-20): the snapshot listener now mounts only for a
+// signed-in reader, because its tracks query is denied signed out. Tests
+// default to a signed-in user; the signed-out case sets `mockUser = null`
+// and asserts the listener never mounts.
+let mockUser: { uid: string } | null = { uid: 'leader-1' }
+vi.mock('@/lib/auth-context', () => ({
+    useAuth: () => ({
+        user: mockUser,
+        profile: null,
+        cachedUser: null,
+        loading: false,
+        isAdmin: false,
+        isBandLeader: true,
+        isMusician: false,
+        isMember: true,
+        isSoundEngineer: false,
+        canUpload: false,
+    }),
+}))
+
 import { SetlistGridHydrator } from '../SetlistGridHydrator'
 
 const SETLIST_ID = 'set-hyd-1'
@@ -647,7 +667,7 @@ describe('SetlistGridHydrator', () => {
     // v50-06-03: hydrator mounts the snapshot listener after hydration
     // completes, and unmounts it on cleanup. Wiring-only — listener
     // behavior is covered by snapshot-listener.test.ts.
-    it('starts the snapshot listener after hydration; unsubscribes on unmount', async () => {
+    it('starts the snapshot listener after hydration when signed in; unsubscribes on unmount', async () => {
         const stopFn = vi.fn()
 
         const startFn = vi.fn((_opts: any) => stopFn)
@@ -676,6 +696,77 @@ describe('SetlistGridHydrator', () => {
 
         unmount()
         expect(stopFn).toHaveBeenCalledTimes(1)
+    })
+
+    // R-0919-audit-2 (2026-09-20). `list` on /tracks requires sign-in, so a
+    // signed-out Perform view that mounted this listener would get one
+    // `Missing or insufficient permissions` per load and nothing it could
+    // use — there is no cross-leader edit for an anonymous reader to see.
+    // The page renders from the server slice and the public tracks route
+    // either way; this asserts we stop asking for what we cannot have.
+    //
+    // THIS TEST CARRIES ITS OWN POSITIVE CONTROL, on purpose. A bare
+    // "assert it was never called" passes for two very different reasons:
+    // because sign-out suppressed the listener, or because the render never
+    // got as far as subscribing. Those are indistinguishable from the
+    // assertion, and the second one would keep passing if the gate were
+    // deleted. So the signed-in case runs FIRST, in the same file under the
+    // same load, and must mount the listener before the signed-out case is
+    // allowed to mean anything.
+    //
+    // The waits are explicit and generous for the same reason the emulator
+    // config documents a contention ceiling: the first version of this test
+    // used findByTestId's 1s default, passed alone and in its own directory,
+    // and failed in the full 402-file suite. A negative assertion behind a
+    // short wait is a test that reports machine load as a code defect.
+    it('does NOT start the snapshot listener when signed out', async () => {
+        const previous = mockUser
+        try {
+            // ── Positive control: signed in, the listener mounts. ──
+            mockUser = { uid: 'leader-1' }
+            const stopIn = vi.fn()
+            const startIn = vi.fn((_opts: any) => stopIn)
+            const signedIn = render(
+                <SetlistGridHydrator
+                    setlistId={SETLIST_ID}
+                    initialSetlist={makeSetlist(1_700_000_000_000)}
+                    initialTracks={[]}
+                    startSnapshotListener={startIn}
+                />,
+            )
+            await waitFor(() => expect(startIn).toHaveBeenCalledTimes(1), {
+                timeout: 15_000,
+            })
+            signedIn.unmount()
+            cleanup()
+
+            // ── The case under test: signed out, same harness. ──
+            mockUser = null
+            const stopOut = vi.fn()
+            const startOut = vi.fn((_opts: any) => stopOut)
+            const signedOut = render(
+                <SetlistGridHydrator
+                    setlistId={SETLIST_ID}
+                    initialSetlist={makeSetlist(1_700_000_000_000)}
+                    initialTracks={[]}
+                    startSnapshotListener={startOut}
+                />,
+            )
+
+            // Hydration must actually COMPLETE before the assertion means
+            // anything — the control above proves that subscribing happens
+            // strictly after this same point.
+            await signedOut.findByTestId('setlist-grid-empty-state', undefined, {
+                timeout: 15_000,
+            })
+
+            expect(startOut).not.toHaveBeenCalled()
+
+            signedOut.unmount()
+            expect(stopOut).not.toHaveBeenCalled()
+        } finally {
+            mockUser = previous
+        }
     })
 
     // v60-13-06: content-hash dedup. The hydrator's hydrate() effect runs once
