@@ -61,6 +61,15 @@ Pages still load complete and correct from the ISR slice and
 page simply does not change by itself while it sits open. A signed-in device is
 unaffected and still updates live.
 
+**A blank setlist is NOT an acceptable consequence, and was one (2026-09-20).**
+The same denied `list` also stopped the local store from being filled, and the
+Perform view trusted that store once it resolved — so a signed-out device
+opening a service it had not already cached rendered the correct setlist for an
+instant and then replaced it with "No tracks yet". Fixed in `41cfac1e`: the
+local store wins only when it has rows, and the server-rendered frame stands
+otherwise. Do not reintroduce "once it resolves, even to empty, trust it" — the
+premise that made it safe was removed on 2026-09-19.
+
 **R-0919-audit-19 (Daniel, 2026-09-20): no replacement path.** Some fleet iPads
 are signed in, and none is in active use at the moment. Correct loads without
 auto-refresh are acceptable for signed-out readers. Do not build a poll against

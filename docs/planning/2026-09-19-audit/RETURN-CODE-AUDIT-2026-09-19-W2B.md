@@ -6,7 +6,67 @@ Wave: Wave 2, round two — after the rulings addendums and the published `dist-
 
 ---
 
-## The four things Daniel must see
+## The five things Daniel must see
+
+### 0. The one that mattered: signed-out Perform was blanking setlists, and it is fixed
+
+Found at 17:10 on 2026-09-20, checking `Yom Kippur Morning — September 21`
+signed out, the night before the service. The page rendered **"No tracks yet"**
+while `/api/setlists/{id}/tracks` returned all 35 rows and the server's own HTML
+contained them. `41cfac1e` fixes it; verified live.
+
+**What a signed-out reader saw.** The correct service for an instant, then an
+empty page. Not an error, not a spinner — an empty setlist that looked
+authoritative.
+
+**Why.** `useSetlistPerformance` trusted the local store "once it resolves, even
+to `[]`". That was safe only while a signed-out client could FILL that store,
+which it did through an anonymous `tracks` snapshot listener. R-0919-audit-2
+closed that on 2026-09-19: reading a setlist's rows is a Firestore `list`, and
+`list` now requires sign-in. So signed out, the local store is never filled, the
+live query resolves to `[]`, and it overwrote a correct server render.
+
+**Every signed-out device opening a service it had not already cached.** Kol
+Nidre looked fine all evening only because the device checking it had those rows
+from an earlier visit — which is exactly how this hid. The first page I checked
+after the rules went live was one I had already opened.
+
+**It is the same bug Daniel reported in UAT on 2026-05-13**, named in a comment
+in the very file that reintroduced it. It came back by a different route: not by
+skipping the listener, but by the listener no longer being allowed to succeed.
+
+**The fix.** The local store wins when it HAS rows — that is the live path, and
+it is what keeps a mid-service edit appearing on a signed-in device. When it has
+none, the server frame stands. The tradeoff is written into the file: if an
+author deletes every row while a device holds a server frame, that device shows
+the old rows until it reloads. Rare, deliberate (R11-b), and weighed against a
+certain blank page for every signed-out reader. On the band's surface,
+stale-until-reload beats empty.
+
+Two more of the same root cause went with it:
+
+- **`SetlistDrawer`** read the local store and returned early when it was empty,
+  so signed out, tapping a setlist in the drawer did nothing at all, silently.
+  It now falls back to `fetchTracksForSetlistClient`, the path built for exactly
+  this.
+- **The listener that can no longer succeed is no longer mounted signed out.**
+  It bought a guaranteed permission denial and a console error on every Perform
+  load — which is what surfaced as the *"Sync paused — Firestore disconnected"*
+  toast. Signed-in devices still subscribe and still update live.
+
+**Verified on the deployed build**, signed out, `Yom Kippur Morning`: 21 songs ·
+35 items, every row in the author's order, charts cached 21/21, **0 console
+errors** (7 warnings, all font preloads), and no toast.
+
+**What this says about the audit.** R-0919-audit-2 was correct — an anonymous
+caller could enumerate every track of both tenants, and that had to close. But
+the ruling was applied to the rules without anyone tracing what still depended
+on the permission being there. The Wave 2 return recorded one consequence (no
+live updates for signed-out devices) and called it acceptable. This was a second
+consequence, in the same mechanism, and it was not acceptable at all. **A rules
+change wants a search for every client that reads through the permission, not
+just a check that the pages still load** — and they did still load, for anyone
+whose device had been there before.
 
 ### 1. The MCP account is still `member`. (i) and (j) are still blocked, and the ruling says to say so rather than work around it.
 
