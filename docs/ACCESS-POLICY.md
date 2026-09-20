@@ -41,6 +41,35 @@
 > Perform mode for one file. Encoded as ✅. Daniel: veto if wrong, especially
 > re: recordings (copyright comfort).
 
+## `get` vs `list`, and what a signed-out iPad stopped getting (R-0919-audit-2, R-0919-audit-19)
+
+Every ✅ above still holds: a signed-out reader opens a setlist, opens Perform,
+follows a texted deep link, and sees everything the table says they see. What
+changed on 2026-09-19 is the **verb**, not the row.
+
+`allow read` grants two different things. `get` is one document by id — the
+thing a deep link does. `list` is a query over the whole collection — the thing
+an enumeration does, and the thing an anonymous Firestore *subscription* does.
+R-0919-audit-2 split them on `setlists` and `tracks`: `get` stays open so old
+anonymous links keep working, `list` now requires sign-in.
+
+**The consequence, which the audit did not call out and which is recorded here
+so nobody rediscovers it as a bug:** a signed-out device no longer receives live
+updates. The old anonymous `tracks` subscription was a `list`, so it is denied.
+Pages still load complete and correct from the ISR slice and
+`/api/setlists/{id}/tracks`, and a reload always gets the current rows — the
+page simply does not change by itself while it sits open. A signed-in device is
+unaffected and still updates live.
+
+**R-0919-audit-19 (Daniel, 2026-09-20): no replacement path.** Some fleet iPads
+are signed in, and none is in active use at the moment. Correct loads without
+auto-refresh are acceptable for signed-out readers. Do not build a poll against
+the public route for this.
+
+Still open, and not closed by the above: the *download* half of the anonymous
+chart surface — `/api/drive/file/[fileId]` and `/api/library/file/[id]` — see
+`READER-PUBLIC-CHART-BOUNDARY.md`.
+
 ## Write & control surfaces
 
 | Resource | Anon | Member | Musician | Leader (other org) | Leader (this org) | Admin |
