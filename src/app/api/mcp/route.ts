@@ -1,156 +1,29 @@
-import fs from "node:fs"
-import path from "node:path"
-import { createMcpHandler, withMcpAuth } from "mcp-handler"
-import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js"
-import { verifyBearer } from "@/lib/mcp/auth"
-import {
-    registerReadTools,
-    registerWriteTools,
-    registerMonitorTools,
-    registerChartUploadTools,
-    registerTestTokenTools,
-    registerMintAdminBearerTools,
-    registerSetlistReaderBearerTools,
-    registerRosterTools,
-    registerObservabilityTools,
-    registerBatchIntakeTools,
-    registerChartInboxTools,
-    registerAuthoredChartTools,
-} from "@/lib/mcp/tools"
-import { wrapWithValidationRemap } from "@/lib/mcp/zod-envelope-remap"
-import { withScopedBearer } from "@/lib/mcp/scoped-bearer-gate"
-import { logger } from "@/lib/logger"
+import { buildMcpHandler } from "@/lib/mcp/build-handler"
 
 /**
  * MCP route — connects Claude (Desktop / web / Code) to centralreform.live.
  *
- * Endpoint: POST/GET /api/mcp (basePath '/api' → mcp-handler derives '/api/mcp').
- * Auth: per-user `crl_live_` bearer tokens via verifyBearer (NOT Firebase ID
- * tokens). withMcpAuth runs the verifier, stashes the resolved uid on
- * AuthInfo.extra, and the tool handlers read it from there.
+ * Endpoint: POST/GET /api/mcp (basePath '/api' → mcp-handler derives
+ * '/api/mcp'). This URL is in Daniel's Claude Desktop config and does not
+ * change.
  *
- * Phase 4a: read tools (list_setlists, get_setlist, search_library, get_song).
- * Phase 4b: write tools (create_setlist, update_setlist, add_track_to_setlist,
- * reorder_setlist, remove_track) — owner-scoped to the caller's own setlists.
+ * Auth: per-user `crl_live_` bearer tokens via verifyBearer (NOT Firebase ID
+ * tokens). See `@/lib/mcp/build-handler` — every server shares one builder so
+ * an auth or response-shape fix cannot land on one surface and miss the other.
+ *
+ * THIS IS THE AUTHORING SURFACE (audit item (p), 2026-09-20). It carries the
+ * week's work: setlists, tracks, templates, books, roster, library search,
+ * chart upload, monitor mixing. Backfills, dedupe and salvage, bond review,
+ * the AI enrichment queue, bridge housekeeping, observability dumps, test
+ * accounts and credential minting moved to the ops server at `/api/ops/mcp`.
+ *
+ * Nothing changed about who may call what. Every tool kept its own gate; this
+ * is about the menu an agent picks from, which was 144 items long for "add Kol
+ * Nidre to Friday". The split is one table — `@/lib/mcp/surfaces`.
  */
 
 export const maxDuration = 60
 
-/**
- * W-01 Task 6: surface `.paul/AGENT-GUIDE.md` to MCP clients via the
- * server's `instructions` field. Claude Desktop displays this on connect
- * so the agent knows the propose → confirm → commit policy without
- * waiting for the operator to spell it out. Read once at module load
- * (handler factory is invoked at cold start; the guide doesn't change
- * inside a single function instance).
- *
- * Lookup walks up from cwd to find `.paul/AGENT-GUIDE.md` because the
- * file lives one directory above `src/` in the deployed bundle. Failure
- * is non-fatal — the server still boots, just without the guide.
- */
-function loadAgentGuide(): string | undefined {
-    try {
-        // Vercel runs from the project root; locally `next dev` does too.
-        // `.paul/` is checked into the repo and packaged.
-        const candidates = [
-            path.join(process.cwd(), ".paul", "AGENT-GUIDE.md"),
-            path.join(process.cwd(), "sheet-music-app", ".paul", "AGENT-GUIDE.md"),
-        ]
-        for (const p of candidates) {
-            if (fs.existsSync(p)) return fs.readFileSync(p, "utf8")
-        }
-    } catch (err) {
-        logger.warn("[mcp] failed to load AGENT-GUIDE.md for instructions", err)
-    }
-    return undefined
-}
+const handler = buildMcpHandler("authoring", "/api")
 
-const agentGuide = loadAgentGuide()
-
-const baseHandler = createMcpHandler(
-    (server) => {
-        registerReadTools(server)
-        registerWriteTools(server)
-        registerMonitorTools(server)
-        registerChartUploadTools(server)
-        registerTestTokenTools(server)
-        registerMintAdminBearerTools(server)
-        registerSetlistReaderBearerTools(server)
-        registerRosterTools(server)
-        registerObservabilityTools(server)
-        registerBatchIntakeTools(server)
-        registerChartInboxTools(server)
-        registerAuthoredChartTools(server)
-    },
-    {
-        serverInfo: { name: "centralreform-live", version: "1.0.0" },
-        ...(agentGuide ? { instructions: agentGuide } : {}),
-    },
-    {
-        basePath: "/api",
-        disableSse: true,
-        verboseLogs: false,
-    },
-)
-
-async function verifyToken(
-    req: Request,
-    bearerToken?: string,
-): Promise<AuthInfo | undefined> {
-    if (!bearerToken) return undefined
-    const result = await verifyBearer(req)
-    if (result instanceof Response) return undefined
-    return {
-        token: bearerToken,
-        clientId: result.uid,
-        scopes: [],
-        // tokenId + parentTokenId are forwarded so admin-only tools
-        // (mint_admin_bearer) can enforce root-only minting from the
-        // caller's token identity. uid is the only field every other
-        // tool reads today; orgId (v11-02-01) is forwarded so read/write
-        // tools can resolve the caller's tenant via orgFrom(extra) —
-        // currently always "crc" (behavior-neutral) until v11-02-02/03
-        // consume it for read filtering + write stamping.
-        extra: {
-            uid: result.uid,
-            tokenId: result.tokenId,
-            parentTokenId: result.parentTokenId,
-            orgId: result.orgId,
-            // Scoped credentials (kind:"setlist_reader") carry an explicit
-            // tool allow-list; null on every full-access bearer. The
-            // withScopedBearer gate below is the enforcement point — these
-            // extras exist so tools can also read the caller's scope.
-            kind: result.kind,
-            allowedTools: result.allowedTools,
-        },
-    }
-}
-
-const authedHandler = withMcpAuth(baseHandler, verifyToken, { required: true })
-
-/**
- * F-02 (2026-05-16 bugstomp) + F-02-regression (v6 2026-05-16): Zod
- * validation failures from inputSchema surface as JSON-RPC `-32602`
- * protocol errors BEFORE our tool handler runs, so a try/catch inside
- * the handler can't translate them. Fix at the Response layer.
- *
- * `wrapWithValidationRemap` handles both `application/json` JSON-RPC
- * bodies AND `text/event-stream` SSE-framed responses (which is what
- * mcp-handler's WebStandardStreamableHTTPServerTransport actually
- * returns for tool calls — the v5 fix only handled JSON and silently
- * no-op'd for every real tool invocation). The wrapper + transforms
- * live in src/lib/mcp/zod-envelope-remap.ts so they're unit-testable
- * (route.ts may only export HTTP handlers per Next.js App Router
- * rules).
- */
-/**
- * `setlist_reader` gate (read-only, long-lived `crl_read_` credentials).
- * Wrapped INSIDE the Zod remap so a refusal we emit here still flows through
- * the same response pipeline, and so every allowed call keeps the existing
- * validation-error contract. Non-`crl_read_` bearers pass straight through.
- */
-const scopedHandler = withScopedBearer(authedHandler)
-
-const fixZodErrors = wrapWithValidationRemap(scopedHandler)
-
-export { fixZodErrors as GET, fixZodErrors as POST, fixZodErrors as DELETE }
+export { handler as GET, handler as POST, handler as DELETE }
