@@ -590,7 +590,7 @@ describe('T1.4: modal title adapts to error kinds', () => {
     })
 })
 
-describe.skip('ReconciliationProvider — WCAG AA (jest-axe)', () => {
+describe('ReconciliationProvider — WCAG AA (jest-axe)', () => {
     beforeEach(async () => {
         await resetDbForTests()
         setMockState('idle')

@@ -62,7 +62,6 @@ import { useGridSelection } from '@/hooks/use-grid-selection'
 import { cn } from '@/lib/utils'
 
 import { AddBar, type NonSongTrackType } from './AddBar'
-import { BatchActionBar, type BulkSetPatch } from './BatchActionBar'
 import { ChartBindDialog } from './ChartBindDialog'
 import { ChartBindPopover, type ChartBindSelection } from './ChartBindPopover'
 import { ChartCell } from './cells/ChartCell'
@@ -1201,88 +1200,6 @@ export function SetlistGrid({
     const selectedTracks = useMemo(
         () => rows.filter((r) => selection.selectedIds.has(r.id)),
         [rows, selection.selectedIds],
-    )
-
-    const handleBulkSet = useCallback(
-        async (patch: BulkSetPatch) => {
-            if (selectedTracks.length === 0) return
-
-            // Map the toolbar patch (which uses LocalTrack field names) into
-            // the applyEdit shape; same fields, but cast to the writeable
-            // record type the engine accepts.
-            const writePatch: Record<string, unknown> = {}
-            if (patch.type !== undefined) writePatch.type = patch.type
-            if (patch.key !== undefined) writePatch.key = patch.key
-            if (patch.leadMusician !== undefined)
-                writePatch.leadMusician = patch.leadMusician
-            if (Object.keys(writePatch).length === 0) return
-
-            // Snapshot prevDocs BEFORE the writes so we can push a
-            // composite undo entry post-write. selectedTracks holds the
-            // current state from the live query at this point.
-            const prevDocs = selectedTracks.map((t) => ({ ...t }))
-
-            await Promise.all(
-                selectedTracks.map((t) =>
-                    applyEdit(
-                        {
-                            op: 'update',
-                            collection: 'tracks',
-                            docId: t.id,
-                            patch: writePatch,
-                            expectedUpdatedAt: t.updatedAt,
-                        },
-                        { withoutUndo: true },
-                    ),
-                ),
-            )
-
-            // Sticky-memory propagation for fields that route through the
-            // helper (key / lead / bpm). Toolbar only emits key + lead in V1;
-            // bpm path is reserved for future toolbar growth.
-            const helperPatch: TrackDefaults = {}
-            if (patch.key !== undefined) helperPatch.key = patch.key
-            if (patch.leadMusician !== undefined)
-                helperPatch.lead = patch.leadMusician
-            if (Object.keys(helperPatch).length > 0) {
-                const uniqueSongIds = new Set(
-                    selectedTracks
-                        .map((t) => t.songId)
-                        .filter((id): id is string => Boolean(id)),
-                )
-                for (const songId of uniqueSongIds) {
-                    propagateTrackEditToSong(songId, helperPatch, setlistId)
-                }
-            }
-            // Selection preserved across bulk-set per spec — user can keep
-            // editing other fields on the same set.
-
-            // Push ONE composite undo entry (not N — bulk-set is one
-            // user-perceived action). Read the post-write state for newDoc
-            // snapshots.
-            const db = getDb()
-            const newDocs = await Promise.all(
-                selectedTracks.map(
-                    async (t) =>
-                        (await db.tracks.get(t.id)) as
-                            | UndoableDoc
-                            | undefined,
-                ),
-            )
-            useUndoStore.getState().pushEntry({
-                kind: 'composite',
-                label: `Bulk-set ${Object.keys(writePatch).join(', ')} on ${selectedTracks.length} rows`,
-                entries: selectedTracks.map((t, i) => ({
-                    op: 'update' as const,
-                    collection: 'tracks' as const,
-                    docId: t.id,
-                    prevDoc: prevDocs[i] as UndoableDoc,
-                    newDoc: newDocs[i],
-                })),
-                ts: Date.now(),
-            })
-        },
-        [selectedTracks, setlistId],
     )
 
     const handleBulkDelete = useCallback(async () => {

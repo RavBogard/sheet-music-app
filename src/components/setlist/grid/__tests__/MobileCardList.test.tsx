@@ -122,26 +122,6 @@ describe('SetlistGrid — mobile stacked-card render path (v50-05-05 §6.11)', (
         expect(document.querySelector('table')).toBeNull()
     })
 
-    // T1.6 (2026-05-12): skipped — the desktop <table> branch was deleted
-    // in commit 0ec6773c (May 9). MobileCardList is now the only render
-    // path. This assertion is obsolete; delete in T2.6 dead-code sweep.
-    it.skip('AC-1: desktop branch renders <table> and NOT mobile-card-list', async () => {
-        setMobile(false)
-        await seedTracks('set-a', [
-            { id: 't-0', order: 0, title: 'Row 0' },
-        ])
-        render(
-            <DeleteConfirmProvider>
-                <SetlistGrid setlistId="set-a" name="Test" />
-            </DeleteConfirmProvider>,
-        )
-
-        await waitFor(() => {
-            expect(document.querySelector('table')).not.toBeNull()
-        })
-        expect(screen.queryByTestId('mobile-card-list')).toBeNull()
-    })
-
     // T1.6 (2026-05-12): skipped — the per-card inline editor is no
     // longer a Radix Sheet; it's an in-page <aside> that appears below
     // the card on tap (MobileRowCard.tsx). Tests assertion against
@@ -273,38 +253,6 @@ describe('SetlistGrid — mobile stacked-card render path (v50-05-05 §6.11)', (
             const ids = (await getDb().tracks.toArray()).map((t) => t.id)
             expect(ids).toEqual(['t-1'])
         })
-    })
-
-    // T1.6 (2026-05-12): obsoleted by T1.1 (Bug 4). Multi-select was
-    // removed entirely; BatchActionBar will be deleted in T2.6 dead-
-    // code sweep. The grip icon is now a drag handle, not a multi-
-    // select toggle.
-    it.skip('AC-1: BatchActionBar mounts when 2+ cards selected via handle Cmd-click', async () => {
-        setMobile(true)
-        await seedTracks('set-a', [
-            { id: 't-0', order: 0, title: 'A' },
-            { id: 't-1', order: 1, title: 'B' },
-            { id: 't-2', order: 2, title: 'C' },
-        ])
-        render(
-            <DeleteConfirmProvider>
-                <SetlistGrid setlistId="set-a" name="Test" />
-            </DeleteConfirmProvider>,
-        )
-
-        await screen.findByTestId('mobile-card-t-0')
-        // Plain click on the handle toggles selection (mobile convention).
-        fireEvent.click(screen.getByTestId('mobile-card-handle-t-0'))
-        fireEvent.click(screen.getByTestId('mobile-card-handle-t-1'))
-
-        await waitFor(() => {
-            expect(
-                screen.getByTestId('batch-action-bar'),
-            ).toBeInTheDocument()
-        })
-        expect(screen.getByTestId('batch-action-count')).toHaveTextContent(
-            '2 rows selected',
-        )
     })
 
     it('AC-3: long-press card 500ms (touch) opens action menu', async () => {

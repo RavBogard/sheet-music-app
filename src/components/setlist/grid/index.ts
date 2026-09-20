@@ -4,11 +4,6 @@ export {
     type SetlistGridHydratorProps,
 } from './SetlistGridHydrator'
 export {
-    BatchActionBar,
-    type BatchActionBarProps,
-    type BulkSetPatch,
-} from './BatchActionBar'
-export {
     ChartBindPopover,
     type ChartBindPopoverProps,
     type ChartBindSelection,
