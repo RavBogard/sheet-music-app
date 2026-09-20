@@ -131,8 +131,17 @@ export function useSetlistPerformance(
     // comment claiming "the page itself renders an error for public users"
     // was never true — the page renders the regular empty-state ("No tracks
     // yet"), which is what Daniel UAT 2026-05-13 reported as the bug.
+    //
+    // SIGNED OUT, DO NOT SUBSCRIBE (R-0919-audit-2, 2026-09-20). The v60-12-01
+    // note above is now out of date: `tracks/*` is no longer open to public
+    // LIST, so mounting this for a signed-out reader buys a guaranteed
+    // permission denial and a console error on every Perform load. The rows
+    // such a reader sees come from the SSR frame and
+    // `/api/setlists/{id}/tracks` instead. A signed-in device still subscribes
+    // and still updates live.
     useEffect(() => {
         if (!setlistId) return
+        if (!user) return
         try {
             const stop = startSnapshotListener({
                 setlistId,
@@ -145,7 +154,7 @@ export function useSetlistPerformance(
                 err,
             )
         }
-    }, [setlistId, startSnapshotListener])
+    }, [setlistId, startSnapshotListener, user])
 
     // Tracks: live-query Dexie, sorted by order. dexie-react-hooks returns
     // undefined while the query is in flight, [] when it resolves with no
@@ -173,10 +182,36 @@ export function useSetlistPerformance(
         () => getTracksForSetlistClient(dexieTracks, setlistData ?? undefined),
         [dexieTracks, setlistData],
     )
+    //
+    // AN EMPTY DEXIE MUST NOT BLANK A GOOD SERVER RENDER (2026-09-20).
+    //
+    // The line above used to read "once Dexie resolves, even to [], we trust
+    // its result". That held only while a signed-out client could populate
+    // Dexie, which it did through an anonymous `tracks` snapshot listener.
+    // R-0919-audit-2 closed that on 2026-09-19: reading a setlist's rows is a
+    // Firestore `list`, and `list` now requires sign-in. So on a signed-out
+    // device Dexie is never filled, the live query resolves to [], and a page
+    // the server rendered CORRECTLY and completely was replaced, a tick later,
+    // by "No tracks yet" — the exact bug the v60-12-01 comment above says
+    // Daniel reported in UAT on 2026-05-13.
+    //
+    // Found on 2026-09-20 on `Yom Kippur Morning — September 21`, signed out,
+    // the night before the service: the API returned all 35 rows and the SSR
+    // HTML contained them, and the page showed an empty state.
+    //
+    // So: Dexie wins when it HAS rows — that is the live path, and it is what
+    // keeps a mid-service edit appearing on a signed-in device. When it has
+    // none, the SSR frame stands.
+    //
+    // The tradeoff, stated plainly: if an author deletes every row of a
+    // setlist while a device holds an SSR frame, that device keeps showing the
+    // old rows until it reloads. That is a rare, deliberate authoring action
+    // (R11-b — nothing removes a row outside an explicit author action),
+    // weighed against a guaranteed blank page for every signed-out reader
+    // opening a service their device has not cached. On the band's surface,
+    // stale-until-reload beats empty.
     const tracks: SetlistTrack[] =
-        dexieTracks === undefined && initial?.tracks?.length
-            ? initial.tracks
-            : liveTracks
+        liveTracks.length > 0 ? liveTracks : (initial?.tracks ?? liveTracks)
 
     const name: string =
         setlistData?.name || initial?.setlist?.name || "Untitled"

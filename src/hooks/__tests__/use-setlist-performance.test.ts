@@ -346,12 +346,14 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
     expect(stopFn).toHaveBeenCalledTimes(1)
   })
 
-  it('v60-12-01: DOES mount the snapshot listener for unauthenticated public sessions', () => {
-    // Contract reversal: prior to v60-12-01, this test asserted the listener
-    // was SKIPPED for public users because firestore.rules required isMember()
-    // to read tracks/{trackId}. v60-12-01 opened tracks/* to public read —
-    // Daniel UAT 2026-05-13 reported incognito perform view showed "No tracks
-    // yet" because the listener was skipped and Dexie never got populated.
+  it('does NOT mount the snapshot listener for unauthenticated public sessions (R-0919-audit-2)', () => {
+    // Contract reversal, twice over. Before v60-12-01 the listener was skipped
+    // for public users; v60-12-01 mounted it because `tracks/*` had been opened
+    // to public read. R-0919-audit-2 (2026-09-19) closed that again — reading a
+    // setlist's rows is a Firestore `list`, and `list` now requires sign-in —
+    // so mounting it signed out buys a guaranteed permission denial and a
+    // console error on every Perform load. Signed-out rows come from the SSR
+    // frame and /api/setlists/{id}/tracks instead.
     mockUseAuth.mockReturnValue({
       user: null,
       isAdmin: false,
@@ -369,10 +371,57 @@ describe('useSetlistPerformance (v5h-01-04: Dexie-backed)', () => {
       useSetlistPerformance(SETLIST_ID, { startSnapshotListener: startFn }),
     )
 
-    expect(startFn).toHaveBeenCalledTimes(1)
-    expect(startFn).toHaveBeenCalledWith(
-      expect.objectContaining({ setlistId: SETLIST_ID }),
+    expect(startFn).not.toHaveBeenCalled()
+  })
+
+  it('AN EMPTY DEXIE DOES NOT BLANK A GOOD SERVER RENDER (2026-09-20)', async () => {
+    // The regression this guards against, found signed out on `Yom Kippur
+    // Morning — September 21` the night before the service: the server
+    // rendered all 35 rows, the public API returned all 35 rows, and the page
+    // showed "No tracks yet" a tick after hydration.
+    //
+    // Cause: the hook trusted Dexie "once it resolves, even to []". That held
+    // only while a signed-out client could FILL Dexie, via an anonymous
+    // snapshot listener that R-0919-audit-2 denied. Signed out, Dexie is now
+    // always empty, so every signed-out reader opening a service their device
+    // had not cached got a blank setlist.
+    mockUseAuth.mockReturnValue({
+      user: null,
+      isAdmin: false,
+      isBandLeader: false,
+    })
+    mockUseSafeFirestoreSync.mockReturnValue({
+      data: null,
+      loading: false,
+      error: null,
+    })
+
+    const ssrTracks = [
+      { id: 't-1', setlistId: SETLIST_ID, order: 0, title: 'Mah Tovu' },
+      { id: 't-2', setlistId: SETLIST_ID, order: 1, title: 'Modeh Ani' },
+    ] as never
+
+    const { result } = renderHook(() =>
+      useSetlistPerformance(SETLIST_ID, {
+        startSnapshotListener: vi.fn(() => () => {}),
+        initial: {
+          setlist: { id: SETLIST_ID, name: 'Yom Kippur Morning' } as never,
+          tracks: ssrTracks,
+        },
+      }),
     )
+
+    // Let the Dexie live query resolve — to [], because nothing can fill it.
+    await waitFor(() => {
+      expect(result.current.tracks.map((t) => t.title)).toEqual([
+        'Mah Tovu',
+        'Modeh Ani',
+      ])
+    })
+
+    // And it must STAY that way, not flicker to empty on a later tick.
+    await new Promise((r) => setTimeout(r, 50))
+    expect(result.current.tracks).toHaveLength(2)
   })
 
   // UNAUTH-009 (cycle-4 supplement) — SSR-primed initial frame

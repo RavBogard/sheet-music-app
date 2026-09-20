@@ -14,7 +14,7 @@ import { useState, useEffect, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { logger } from "@/lib/logger"
 import { getDb } from "@/lib/local/schema"
-import { getTracksForSetlistClient } from "@/lib/client-tracks"
+import { getTracksForSetlistClient, fetchTracksForSetlistClient } from "@/lib/client-tracks"
 
 /**
  * A single queue row inside the perform-nav drawer. Extracted from the
@@ -231,6 +231,17 @@ export function SetlistDrawer() {
                 .equals(setlist.id)
                 .sortBy("order")
             resolvedTracks = getTracksForSetlistClient(dexieTracks, setlist)
+            // AN EMPTY DEXIE IS NOT AN EMPTY SETLIST (2026-09-20). Signed out,
+            // nothing fills Dexie any more — R-0919-audit-2 made reading a
+            // setlist's rows a `list`, which now requires sign-in. Without this
+            // fallback, tapping a setlist in the drawer did nothing at all for
+            // a signed-out reader, silently, because of the length check below.
+            // `fetchTracksForSetlistClient` is the path built for exactly this:
+            // signed out it asks /api/setlists/{id}/tracks, which answers for
+            // the one setlist it is given.
+            if (resolvedTracks.length === 0) {
+                resolvedTracks = await fetchTracksForSetlistClient(setlist.id, setlist)
+            }
         } catch (err) {
             logger.error("[SetlistDrawer] failed to read tracks for setlist", err)
             return
