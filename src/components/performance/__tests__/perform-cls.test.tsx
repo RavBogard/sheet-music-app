@@ -75,18 +75,24 @@ vi.mock("@/lib/firestore-helpers", () => ({
 }))
 
 describe("/perform CLS — sign-in card slot reservation (BUG-2, web-vitals /perform CLS cell)", () => {
+    // Two upcoming services so the list sections are present and would be the
+    // thing pushed down by a late card mount.
+    //
+    // These arrive as the SSR slice, not through the subscription. That is how
+    // /perform/page.tsx calls this component, and since R-0919-audit-2 it is
+    // the only way a signed-out visitor gets rows at all — collection-wide
+    // `list` needs sign-in now. It also makes the CLS question sharper: the
+    // list is on screen for the whole authLoading window, so a sign-in card
+    // mounting late is exactly the shift this file is about.
+    const SEED = [
+        { id: "up-1", name: "Shabbat Morning", eventDate: "2099-01-02T10:00:00Z", trackCount: 5, songCount: 5 },
+        { id: "up-2", name: "Erev Shabbat", eventDate: "2099-01-03T18:00:00Z", trackCount: 7, songCount: 7 },
+    ] as never
+
     beforeEach(() => {
         vi.clearAllMocks()
-        // Two upcoming services so the list sections are present and would be
-        // the thing pushed down by a late card mount.
         mockSubscribe.mockImplementation((cb: (...args: any[]) => any) => {
-            cb(
-                [
-                    { id: "up-1", name: "Shabbat Morning", eventDate: "2099-01-02T10:00:00Z", trackCount: 5, songCount: 5 },
-                    { id: "up-2", name: "Erev Shabbat", eventDate: "2099-01-03T18:00:00Z", trackCount: 7, songCount: 7 },
-                ],
-                false,
-            )
+            cb(SEED, false)
             return vi.fn()
         })
     })
@@ -94,7 +100,7 @@ describe("/perform CLS — sign-in card slot reservation (BUG-2, web-vitals /per
     it("reserves the sign-in card slot during authLoading for an expected-anon visitor (no prior cachedUser)", async () => {
         mockUseAuth.mockReturnValue({ user: null, loading: true, signIn: mockSignIn, cachedUser: null })
         const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
-        render(<PublicSetlistListing />)
+        render(<PublicSetlistListing initialSetlists={SEED} />)
 
         // Slot reserved (height held) so the lists below don't move when the
         // real card mounts; the real card is NOT shown yet (no flash).
@@ -119,7 +125,7 @@ describe("/perform CLS — sign-in card slot reservation (BUG-2, web-vitals /per
             cachedUser: { uid: "u1", displayName: "Aviva" },
         })
         const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
-        render(<PublicSetlistListing />)
+        render(<PublicSetlistListing initialSetlists={SEED} />)
 
         // Authed-returner layout is unchanged from before the fix: no card, no
         // reserve → nothing above the lists to later collapse and shift them.
@@ -135,7 +141,7 @@ describe("/perform CLS — sign-in card slot reservation (BUG-2, web-vitals /per
     it("swaps the reserved slot for the real card on anon resolve (replace, not append-above)", async () => {
         mockUseAuth.mockReturnValue({ user: null, loading: false, signIn: mockSignIn, cachedUser: null })
         const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
-        render(<PublicSetlistListing />)
+        render(<PublicSetlistListing initialSetlists={SEED} />)
 
         // Real card present, reserved placeholder gone — the card occupies the
         // slot the placeholder held, so the lists do not move.

@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { headers } from "next/headers"
 import { getServerCongregationConfig } from "@/lib/server-auth"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
@@ -42,10 +43,19 @@ export default async function LoginPage() {
                         {/* v11.1-05: the band's real wordmark replaces the plain text title. */}
                         {wordmarkUrl ? (
                             <h1 className="drop-shadow-[0_2px_16px_rgba(0,0,0,0.6)]">
-                                { }
-                                <img
+                                {/* Same treatment as the CRC logo below: this
+                                    is the LCP element on this tenant, so it is
+                                    preloaded and sized rather than discovered
+                                    mid-parse. `h-auto` keeps the intrinsic
+                                    ratio; the width/height are the box to
+                                    reserve, not a crop. */}
+                                <Image
                                     src={wordmarkUrl}
                                     alt={shortName}
+                                    width={320}
+                                    height={96}
+                                    priority
+                                    sizes="(max-width: 640px) 100vw, 20rem"
                                     className="w-full max-w-[20rem] h-auto"
                                 />
                             </h1>
@@ -110,10 +120,23 @@ export default async function LoginPage() {
                 <div className="flex flex-col items-center gap-4">
                     <div className="relative">
                         <div className="absolute inset-0 rounded-full bg-brand/15 blur-xl scale-150" aria-hidden="true" />
-                        { }
-                        <img
+                        {/* Audit item (i): this is /login's LCP element, and it
+                            was a raw <img> pointing at public/logo.jpg — 574 KB
+                            of JPEG painted into a 96px circle, with no
+                            dimensions and no priority, which is the whole of
+                            the ~9s LCP p75. next/image resizes and re-encodes
+                            it to the size actually drawn, and `priority`
+                            preloads it instead of leaving it to be discovered
+                            when the parser reaches this tag. The explicit
+                            width/height also reserve the box, so the text
+                            beneath no longer moves when it lands. */}
+                        <Image
                             src={logoUrl}
                             alt={shortName}
+                            width={96}
+                            height={96}
+                            priority
+                            sizes="96px"
                             className="relative h-24 w-24 rounded-full border-2 border-border/60 object-cover shadow-lg shadow-brand/10"
                         />
                     </div>

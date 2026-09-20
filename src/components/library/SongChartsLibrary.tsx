@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LibrarySkeleton } from "./LibrarySkeleton"
+import { ROW_ESTIMATE_PX, ROW_GAP_PX } from "./row-metrics"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useRouter } from "next/navigation"
 import { useMusicStore, FileType } from "@/lib/store"
@@ -52,16 +53,9 @@ type LibraryTab = "core" | "supplemental" | "nava" | "uploads" | "audio"
  */
 const SEARCH_DEBOUNCE_MS = 180
 
-/**
- * Estimated row height in px (content min-h-11 = 44px + py-1.5 ×2 = 12px,
- * plus the 8px inter-row gap the old `gap-2` grid provided). Only a seed —
- * every mounted row is measured for real via `measureElement`, so wrapped
- * long titles keep their true height and nothing about row density changes.
- */
-const ROW_ESTIMATE_PX = 64
-
-/** Matches the `gap-2` (0.5rem) the non-virtualized grid used between rows. */
-const ROW_GAP_PX = 8
+// Row geometry lives in `row-metrics.ts` so the skeleton draws the same shape
+// this virtualizer estimates. They used to be written separately and drifted,
+// which is what /library's CLS was (audit item (i)).
 
 function isAudioFile(f: DriveFile) {
     return f.mimeType.startsWith('audio/') ||

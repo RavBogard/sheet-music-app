@@ -79,6 +79,7 @@ import type { Setlist } from '@/types/models'
 
 import { EmptyState } from './EmptyState'
 import { MobileCardList } from './MobileCardList'
+import { SetlistRowsSkeleton } from './SetlistRowsSkeleton'
 import { SetlistGridTopBar } from './SetlistGridTopBar'
 import { SetlistMetaEditSheet } from './SetlistMetaEditSheet'
 
@@ -1770,7 +1771,18 @@ export function SetlistGrid({
                     handleDragHandleClick) are now dead and will be removed
                     in the T2.6 dead-code sweep. */}
 
-                {showEmpty ? (
+                {isLoading ? (
+                    // Reserve the rows' height instead of rendering an empty
+                    // list that a full service then pushes down the page
+                    // (audit item (i): CLS p75 0.58 on this route).
+                    <SetlistRowsSkeleton
+                        trackCount={
+                            typeof liveSetlist?.trackCount === 'number'
+                                ? (liveSetlist.trackCount as number)
+                                : undefined
+                        }
+                    />
+                ) : showEmpty ? (
                     <EmptyState
                         onMakeNextWeeks={handleClone}
                         onAddSong={triggerAddOpen}

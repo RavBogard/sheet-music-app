@@ -91,27 +91,30 @@ describe("Public View", () => {
             // Dynamically import the page component
             const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
 
-            mockSubscribeToPublicSetlists.mockImplementation((callback: (...args: any[]) => any) => {
-                callback([
-                    {
-                        id: "setlist-1",
-                        name: "Shabbat Morning Service",
-                        eventDate: "2026-03-14T10:00:00Z",
-                        tracks: [{ id: "t1", title: "Song 1" }, { id: "t2", title: "Song 2" }],
-                        trackCount: 2,
-                    },
-                    {
-                        id: "setlist-2",
-                        name: "Friday Night Service",
-                        eventDate: "2026-03-13T18:00:00Z",
-                        tracks: [{ id: "t3", title: "Song 3" }],
-                        trackCount: 1,
-                    },
-                ], false)
-                return vi.fn() // unsubscribe
-            })
-
-            render(<PublicSetlistListing />)
+            // R-0919-audit-2: a signed-out visitor no longer subscribes —
+            // collection-wide `list` requires sign-in now. The rows arrive as
+            // the ISR page's server-rendered slice, which is exactly how
+            // /perform/page.tsx has always called this component.
+            render(
+                <PublicSetlistListing
+                    initialSetlists={[
+                        {
+                            id: "setlist-1",
+                            name: "Shabbat Morning Service",
+                            eventDate: "2026-03-14T10:00:00Z",
+                            tracks: [{ id: "t1", title: "Song 1" }, { id: "t2", title: "Song 2" }],
+                            trackCount: 2,
+                        },
+                        {
+                            id: "setlist-2",
+                            name: "Friday Night Service",
+                            eventDate: "2026-03-13T18:00:00Z",
+                            tracks: [{ id: "t3", title: "Song 3" }],
+                            trackCount: 1,
+                        },
+                    ] as never}
+                />,
+            )
 
             expect(screen.getByText("Shabbat Morning Service")).toBeDefined()
             expect(screen.getByText("Friday Night Service")).toBeDefined()
@@ -120,20 +123,19 @@ describe("Public View", () => {
         it("links setlists to /perform/setlist/{id}", async () => {
             const { PublicSetlistListing } = await import("@/components/performance/PublicSetlistListing")
 
-            mockSubscribeToPublicSetlists.mockImplementation((callback: (...args: any[]) => any) => {
-                callback([
-                    {
-                        id: "setlist-abc",
-                        name: "Test Setlist",
-                        eventDate: "2026-03-14T10:00:00Z",
-                        tracks: [],
-                        trackCount: 0,
-                    },
-                ], false)
-                return vi.fn()
-            })
-
-            render(<PublicSetlistListing />)
+            render(
+                <PublicSetlistListing
+                    initialSetlists={[
+                        {
+                            id: "setlist-abc",
+                            name: "Test Setlist",
+                            eventDate: "2026-03-14T10:00:00Z",
+                            tracks: [],
+                            trackCount: 0,
+                        },
+                    ] as never}
+                />,
+            )
 
             const link = screen.getByRole("link", { name: /Test Setlist/i })
             expect(link).toBeDefined()
@@ -398,12 +400,11 @@ describe("Public View", () => {
                 { id: "past-2", name: "Past 2", eventDate: "2000-01-02T10:00:00Z", tracks: [], trackCount: 0 },
             ]
 
-            mockSubscribeToPublicSetlists.mockImplementation((callback: (...args: any[]) => any) => {
-                callback([...past, ...upcoming], false)
-                return vi.fn()
-            })
-
-            render(<PublicSetlistListing />)
+            render(
+                <PublicSetlistListing
+                    initialSetlists={[...past, ...upcoming] as never}
+                />,
+            )
 
             // Each setlist card is a Link (role=link); the Google button is a
             // button, the QR stub a div — so links == rendered service rows.
