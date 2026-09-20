@@ -262,9 +262,30 @@ console during a service: a denied subscription that retries looks exactly like
 a real fault to whoever opens the inspector on an iPad at 7pm, and that is the
 wrong thing to hand them.
 
-Covered by a test that asserts the listener does **not** mount signed out, and
-drains hydration first so a pass means "signed out" rather than "never got far
-enough to subscribe".
+Covered by a test that asserts the listener does **not** mount signed out. It
+carries its own positive control — the signed-in case runs first, in the same
+file under the same load, and must mount the listener before the signed-out
+case is allowed to mean anything. Verified by removing the gate: red without
+it, green with it.
+
+**Committed, deliberately not pushed** — `f0f63a7e82`. Pushing deploys, and it
+is Kol Nidre tonight. The Wave 1 code and rules shipped and were verified in a
+signed-out browser hours ago; this one is console noise with no effect on a
+single pixel, and master and production are in sync right now, which is the
+state to be in going into a service.
+
+**GATE: held the push of `f0f63a7e82` — proceeded because the change is
+cosmetic and tonight is Kol Nidre. Push it after Yom Kippur.**
+
+### One thing owed on it
+
+The full 402-file suite has **not** been re-run green since this change. Two
+attempts were stopped by the harness for system memory pressure, not for any
+failure, and it declined to restart them. What is known: the run that did
+complete showed exactly one failure and the passed count unchanged at 4795,
+which identifies the failure as this change's own new test — since fixed, and
+the file (21 tests) and the whole `setlist/grid/__tests__` directory (17 files,
+157 tests) both pass. **Re-run `npx vitest run` before pushing it.**
 
 ---
 
