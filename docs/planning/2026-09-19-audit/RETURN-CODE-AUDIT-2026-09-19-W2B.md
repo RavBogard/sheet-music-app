@@ -75,7 +75,7 @@ I did not build it: it needs Daniel's eyes on about 20 name pairs first.
 | R-0919-audit-19 — signed-out Perform live-update | **DONE (recorded)** | `docs/ACCESS-POLICY.md` |
 | **(i)** web vitals, **(j)** review queue | **BLOCKED** | account role, see above |
 | **(p)** split the MCP tool surface | not started | surveyed in W2 |
-| **(q)** iPad Perform skips | not started | triaged in W2 |
+| **(q)** iPad Perform skips | **DONE** | see below — the premise needed correcting first |
 
 ---
 
@@ -216,6 +216,128 @@ the reader's edition dropped, or is it a name only Daniel can bridge?*
 Once those are settled, the crosswalk is mechanical and testable, and every
 Friday and Saturday row reaches a moment id for the first time.
 
+## (q) — the skips, and what the count was actually measuring
+
+The handoff reads: *"64 skipped tests, concentrated in `e2e/stress-ipad.spec.ts`
+(4), `perform-ipad-offline.spec.ts` (4) … The surface the band depends on is
+where the skips are."* The second sentence does not follow from the first, and
+checking it was the useful part of this item.
+
+**Of the 42 `test.skip` calls across `e2e/`, 40 are conditional guards, not
+quarantined tests.** They read `test.skip(<condition>, <reason>)` and fire only
+when you run the wrong Playwright project or without a credential:
+
+- the iPad specs self-skip unless `--project=ipad-webkit` (or `-landscape`) —
+  a WebKit-viewport assertion is meaningless on chromium;
+- `perform-ipad-deep.spec.ts` skips without `MCP_BEARER`, which it needs to
+  mint test users and seed fixtures;
+- `role-gate-matrix.spec.ts` confines itself to chromium because the assertions
+  are server-side and every extra viewport multiplies cost without adding
+  signal.
+
+Run `--project=ipad-webkit` and they run. They are specs doing their job, counted
+as debt by a runner that reports a guard as a skip. **The band's surface is not
+where the untested holes were.**
+
+The 2 unconditional ones are both in `authoring-stress.spec.ts`, and both skip at
+runtime only when an affordance is missing, with a note that a separate affordance
+test files that finding. That is a deliberate don't-double-report, not a hole.
+
+**The real debt was in the unit tests, and it was worse than a count of skips
+suggests** — not because tests were skipped, but because of which test was.
+
+### The editor has had no accessibility coverage since May
+
+`SetlistGrid.a11y.test.tsx` was the WCAG AA audit for the setlist editor. The
+whole file — 513 lines, including the nested sticky-right ChartCell block — sat
+under one `describe.skip`, quarantined on 2026-05-20 because it drove the desktop
+TanStack-table DOM that `0ec6773c` deleted. The note said it needed "a
+from-scratch card-DOM a11y suite". Nobody wrote one. So from May until today the
+surface Daniel authors on had **no automated accessibility check at all**, and the
+fact was sitting inside a skip count.
+
+**Written: `MobileCardList.a11y.test.tsx`, 5 tests against the DOM that ships.**
+Four states an author actually reaches — a service of song rows, a service with
+section headers and chartless rows, an empty setlist, and the list's own naming —
+plus the drag handle, which gets its own assertion because `MobileCardList` wires
+dnd-kit's `KeyboardSensor`, and that sensor is reachable only through a focusable,
+*named* control. An unnamed handle takes reorder away from anyone not using a
+pointer, and does it silently.
+
+**Proved non-vacuous — and the first attempt to prove it failed usefully.**
+Removing the handle's `aria-label` turned the handle test red, as intended. But
+the three axe cases stayed green, which is exactly what a vacuous suite looks
+like. Rather than accept that, I checked jest-axe against a known violation
+(`image-alt`) to confirm the harness fires at all, then injected that same
+violation into the card list: both populated axe cases went red, and the
+empty-state case correctly stayed green because no card renders in it. The audits
+do see the card DOM.
+
+### Dead code removed, with the evidence for calling it dead
+
+`BatchActionBar` was imported by `SetlistGrid` and **never rendered** — multi-select
+was removed in T1.1 (2026-05-12) and the component was left for a "T2.6 dead-code
+sweep" that never happened. Its own test file carried the line *"Skipped rather
+than deleted to preserve the assertions for historical reference"*, which is what
+git is for.
+
+Deleted: the component, its skipped test, its `index.ts` export, and
+`handleBulkSet` — an 80-line callback in `SetlistGrid` with no remaining caller.
+`SetlistGrid.selection.test.tsx` went with them; its own header says *"Delete the
+whole file in T2.6"*, and multi-select is not coming back, so there is nothing to
+rewrite it against.
+
+`ReconciliationProvider.test.tsx` had a `describe.skip` on its WCAG AA block with
+**no stated reason at all**. The provider is live and the rest of the file runs.
+Un-skipped it: 19 tests pass, including the 3 axe cases. It had been skipped for
+nothing.
+
+### What the sweep still owes
+
+The T2.6 sweep is not finished, and this return should say so rather than imply
+otherwise. `useGridSelection`, `selection.selectedIds`, `handleDragHandleClick`,
+`selectedTracks` and `handleBulkDelete` are all still in `SetlistGrid.tsx`.
+
+**They are genuinely dead, and that is a measurement rather than a guess:**
+`selectedIds` and `onDragHandleClick` are declared on the TanStack `TableMeta`
+interface — the meta for the table `0ec6773c` deleted — and `MobileCardListProps`
+carries neither. Nothing can put a row into the selection set, so the bulk-delete
+branch in `handleContextDelete` (which requires `size >= 2`) is unreachable and
+every delete already falls through to `handleDeleteRow`.
+
+I stopped there deliberately. Removing it is behaviour-preserving on that
+evidence, but it is ~150 lines threaded through the authoring surface, it is its
+own tracked item, and it is not what (q) asked for.
+
+**GATE: did not finish the T2.6 selection sweep — proceeded because (q)'s bar is
+the disposition of each skip, because the dead subsystem is provably unreachable
+rather than misbehaving, and because a refactor of the band's authoring surface
+deserves its own change instead of riding along with a test cleanup.**
+
+### Disposition of every remaining skip
+
+| where | count | disposition |
+|---|---|---|
+| `e2e/*` conditional guards | 40 | **Not debt.** Run `--project=ipad-webkit`, or set `MCP_BEARER`, and they run. |
+| `e2e/authoring-stress.spec.ts` | 2 | **Not debt.** Runtime guard; the affordance test files the finding. |
+| `src/__tests__/login-*.test.ts` | 3 | **Not debt.** `describe.skipIf(!buildPresent)` — they run after a build. |
+| `html-to-pdf.test.ts` | 1 | **Not debt.** Needs a real Chromium binary (`CHART_RENDER_CHROME_PATH`); production self-tests via `?selftest=1`. |
+| `MobileCardList.test.tsx` | 5 | Needs a rewrite against the inline edit pane (the Radix Sheet it asserts is gone) and against `chart-bind-dialog` (which replaced the anchored popover). Title-on-blur, delete-from-pane and the mobile bind all still exist — only the DOM moved. |
+| `SetlistGrid.dnd.test.tsx` | 3 | Needs a card-DOM rewrite of the delete path. The other 4 tests in the file (pure `computeReorderUpdates`) run and pass. |
+| `SetlistGrid.edit.test.tsx` | whole file | Needs a card-edit suite, not a port: there is no inter-cell keyboard nav left to assert, because the card pane commits on blur. |
+| `SetlistGrid.contextmenu.test.tsx` | whole file | Needs a card-DOM rewrite against `mobile-card-context-menu-*`. |
+| `SetlistGrid.undo.test.tsx` | whole file | Needs undo driven through the card edit pane. `useUndoStore` is live and `MobileCardList` writes undo entries, so the behaviour exists and is untested. |
+
+**The keep-awake half is Daniel's and is not claimed here.**
+`docs/IPAD-KEEP-AWAKE-ACCEPTANCE.md` is a seven-step manual protocol still marked
+outstanding hardware verification, and `src/hooks/use-wake-lock.ts` records a
+Yizkor-service failure (2026-05-23) and a three-month misdiagnosis. It needs an
+iPad afternoon. No automated test substitutes for it, and this session does not
+pretend otherwise.
+
+**Net: the repo's skip count goes 69 → 31**, and more to the point, the editor
+has an accessibility audit again.
+
 ## R-0919-audit-15 — notify band stays MCP-only
 
 `src/components/setlist/NotifyBandDialog.tsx` (386 lines) and its test (153
@@ -240,7 +362,8 @@ it — the download half of the anonymous chart surface.
 |---|---|
 | `npx tsc --noEmit` | clean |
 | `npx vitest run scripts/__tests__/` | 15 files, 222 tests, 0 failed |
-| `npx vitest run` (whole suite) | **402 files passed, 4813 tests passed, 0 failed** (6 files / 69 tests skipped) |
+| `npx vitest run` (whole suite, before (q)) | 402 files passed, 4813 tests passed, 0 failed (69 skipped) |
+| `npx vitest run` (whole suite, after (q)) | **403 files passed, 4821 tests passed, 0 failed** (31 skipped) |
 | `npm run test:emulator` | **94 files, 1308 tests, 0 failed** |
 
 **The first whole-suite run was not green, and the reason is worth writing
