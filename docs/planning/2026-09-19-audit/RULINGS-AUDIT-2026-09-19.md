@@ -155,3 +155,33 @@ shirei-tshuvah-web.
 - Brothers Lazaroff is a live second tenant on sheet-music-app (`brotherslazaroff.live`, gigs). Multi-tenancy
   is in production; "family as a product" remains not-now.
 - Vercel bills nothing (Hobby); the Overlays budget question is Neon only.
+## Addendum — rulings after Wave 2 (Daniel, 2026-09-20)
+
+### R-0919-audit-14 — "Returning the Torah" is page 90
+The printed CRC Saturday booklet prints it on p.90. .live's pagemap (p.90) is right; the reader's feed
+(p.89) is wrong. Fix at the source: shireishabbat's legacy-shabbat-morning folio map carries p.90 and the
+reader re-syncs (or hand-carries with the same discipline as the id carries until the round-trip lands).
+.live's Wave 2 items (n) and (o) are unblocked: run the normalized Friday/Saturday name comparison as a report.
+
+### R-0919-audit-15 — Notify band stays MCP-only
+No button in the setlist UI. Delete the unwired `NotifyBandDialog` and its test. `notify_band` /
+`preview_notify_band` remain the way to tell the band. sheet-music-app.
+
+### R-0919-audit-16 — Neilah offline fallback: dropped
+`today.json` routes Neilah. No `when` claim, no reader affordance, no registry change. The reader's and
+shireishabbat's DEFERRED lines on this are closed.
+
+### R-0919-audit-17 — CRC Music MCP connector for Code sessions is live
+Daniel authorized it 2026-09-20. .live's (j) review-queue clearing and the web-vitals re-measurement proceed.
+If a tool still answers `403 forbidden_role … callerRole: "member"`, that is the account's role, not the
+connector: stop and report it rather than working around it.
+
+### Status notes carried with this addendum
+- shireishabbat's `publish-app-surface` job has produced a `dist-app` artifact (run 35518946924, 2026-09-20,
+  after `check.sh` began exiting 0). The reader's and .live's Wave 2 items (l) and (m) are no longer blocked.
+- The feed round-trip DESIGN return (`RETURN-CODE-FEED-ROUNDTRIP-DESIGN-2026-09-20.md`, shireishabbat) is
+  awaiting Daniel's yes/no on "does the source own presentation?" Wave 3 in shireishabbat and the reader
+  waits on that answer.
+- shireishabbat's canonical `moments_agree.py` cannot read Overlays' flat `pairs` shape; Overlays wrote its
+  own checker (`6123afa`). One of the two should learn the other's shape — a Wave 2 seam item for whichever
+  repo picks it up first; the source repo's checker is the canonical one.
