@@ -196,8 +196,8 @@ describe("MCP contacts (emulator)", () => {
 
     // ─── AC-4: preview_publish surfaces the org's saved contacts ────────────
 
-    it("AC-4: preview_publish returns the caller-org's savedContacts (and not another org's)", async () => {
-        // A publishable crc setlist.
+    it("AC-4: preview_notify_band returns the caller-org's savedContacts (and not another org's)", async () => {
+        // A crc setlist the band can be told about.
         await db().collection("setlists").doc("sl-crc").set({
             name: "Shabbat Morning",
             ownerId: ADMIN,
@@ -220,7 +220,9 @@ describe("MCP contacts (emulator)", () => {
         expect(r.savedContacts.map((c) => c.name)).toEqual(["CRC Guest"])
         expect(r.savedContacts.map((c) => c.name)).not.toContain("BL Guest")
         // savedContacts is informational — recommendation gate unaffected.
-        expect(r.recommendation).toBe("publish")
+        // R-0919-audit-3: the verdict value is "send", not "publish". Publish
+        // is retired; the preview still gates, it just says what it means.
+        expect(r.recommendation).toBe("send")
     })
 
     // ─── find_contact (v11.7-04) ────────────────────────────────────────────
