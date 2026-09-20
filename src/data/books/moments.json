@@ -1,45 +1,45 @@
 {
     "schemaVersion": 1,
-    "builtAt": "2026-09-16T16:17:10Z",
+    "builtAt": "2026-09-20T16:00:47Z",
     "sources": [
         {
             "book": "crc-erev-rh",
-            "gitSha": "e5a87e3-LICENSED",
+            "gitSha": "5667022-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-kol-nidre",
-            "gitSha": "e5a87e3-LICENSED",
+            "gitSha": "5667022-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-yizkor",
-            "gitSha": "e5a87e3-LICENSED",
+            "gitSha": "5667022-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-yk-morning",
-            "gitSha": "e5a87e3-LICENSED",
+            "gitSha": "5667022-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-neilah",
-            "gitSha": "e5a87e3-LICENSED",
+            "gitSha": "5667022-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "crc-rh-morning",
-            "gitSha": "e5a87e3-LICENSED",
+            "gitSha": "5667022-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "shabbat-maariv",
-            "gitSha": "e5a87e3-LICENSED",
+            "gitSha": "5667022-LICENSED",
             "pinValue": "HEAD"
         },
         {
             "book": "shabbat-shacharit",
-            "gitSha": "e5a87e3-LICENSED",
+            "gitSha": "5667022-LICENSED",
             "pinValue": "HEAD"
         },
         {

@@ -33,10 +33,21 @@
  *      accordingly. The guard stays armed where it means something.
  *
  * Usage: npm run sync:books [-- --repo <path>] [--feed-dir <name>] [--check]
- *        --check writes nothing and reports drift instead.
+ *        npm run sync:books -- --from-latest [--check]
+ *        npm run sync:books -- --from-run <runId>
+ *        npm run sync:books -- --from-url <artifact zip url>
+ *
+ *        --check       writes nothing and reports drift instead.
+ *        --from-*      reads shireishabbat's published `dist-app` artifact
+ *                      instead of a local checkout, so a book or moments
+ *                      update is not blocked on Daniel's laptop having run a
+ *                      Typst build. Needs SHIREISHABBAT_ARTIFACT_TOKEN. The
+ *                      fetched copy goes through the identical trim and the
+ *                      identical pin guard; see scripts/ops/lib/fetch-dist-app.mjs.
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs"
 import { join, resolve } from "node:path"
+import { fetchDistApp } from "./lib/fetch-dist-app.mjs"
 
 const DEFAULT_REPO = "C:/Users/dsbog/shireishabbat"
 const OUT_DIR = resolve(process.cwd(), "src", "data", "books")
@@ -78,9 +89,29 @@ function flag(name) {
     return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : null
 }
 
+const isStrict = () => process.argv.includes("--strict")
 const repoPath = () => flag("--repo") ?? DEFAULT_REPO
 const feedDirName = () => flag("--feed-dir") ?? DEFAULT_FEED_DIR
 const isCheck = () => process.argv.includes("--check")
+
+/**
+ * Where the feeds come from this run: a local checkout, or the published
+ * artifact. Returns the same shape either way — a directory that looks like
+ * `dist-app/`, and a cleanup to call when the sync is done.
+ */
+async function openSource() {
+    const fromUrl = flag("--from-url")
+    const fromRun = flag("--from-run")
+    const fromLatest = process.argv.includes("--from-latest")
+    if (fromUrl || fromRun || fromLatest) {
+        const slug = flag("--repo-slug") ?? undefined
+        const { dir, cleanup } = await fetchDistApp({ fromUrl, fromRun, slug })
+        const where = fromUrl ? "--from-url" : fromRun ? `run ${fromRun}` : "the newest published artifact"
+        return { dist: dir, dirName: `dist-app (${where})`, cleanup }
+    }
+    const dist = join(repoPath(), feedDirName())
+    return { dist, dirName: feedDirName(), cleanup: () => {} }
+}
 
 /** The printed page count for a volume, from the authoritative registry. */
 function recordedPages(registry, slug) {
@@ -315,15 +346,43 @@ function syncMoments(dist, dirName, check) {
     const next = JSON.stringify(trimmed, null, 4) + "\n"
     const prev = existsSync(MOMENTS_OUT) ? readFileSync(MOMENTS_OUT, "utf8") : null
     if (!check) writeFileSync(MOMENTS_OUT, next, "utf8")
+    const verdict = momentsDrift(prev, next)
     console.table([
         {
             artifact: "moments.json",
             moments: trimmed.moments.length,
             occurrences: occurrenceCount,
             books: trimmed.sources.length,
-            drift: drift(prev, next),
+            drift: verdict,
         },
     ])
+    return verdict
+}
+
+/**
+ * Drift in moments.json, told apart from provenance.
+ *
+ * Every rebuild of the producer stamps a new `builtAt`, and an UNPINNED book's
+ * `gitSha` moves with every commit there. Neither of those changes which
+ * moment is printed on which page. Calling them DIFFERS would make the CI
+ * agreement check red on every producer commit and worthless inside a week, so
+ * the verdict separates the two: `DIFFERS` means a moment or an occurrence
+ * moved — the thing that reaches the band as a wrong page — and `provenance`
+ * means only the stamp moved.
+ *
+ * The pin guard is untouched and sits upstream of this. `trimMoments` already
+ * refuses outright when a PINNED volume's sha does not match, and that refusal
+ * is a throw, not a verdict to be weighed here.
+ */
+export function momentsDrift(prev, next) {
+    if (prev === null) return "new"
+    if (drift(prev, next) === "none") return "none"
+    try {
+        const material = (s) => JSON.stringify(JSON.parse(s).moments ?? null)
+        return material(prev) === material(next) ? "provenance" : "DIFFERS"
+    } catch {
+        return "DIFFERS"
+    }
 }
 
 /**
@@ -340,23 +399,29 @@ function drift(prev, next) {
     return prev.replace(/\r\n/g, "\n") === next ? "none" : "DIFFERS"
 }
 
-function main() {
-    const repo = repoPath()
-    const dirName = feedDirName()
-    const dist = join(repo, dirName)
+async function main() {
+    const { dist, dirName, cleanup } = await openSource()
     if (!existsSync(dist)) {
-        console.error(`shireishabbat ${dirName}/ not found at ${dist}. Pass --repo <path>.`)
-        process.exit(1)
+        cleanup()
+        throw new Error(
+            `shireishabbat ${dirName}/ not found at ${dist}. Pass --repo <path>, or --from-latest to ` +
+                "read the published artifact instead of a local checkout.",
+        )
     }
+    try {
+        run(dist, dirName)
+    } finally {
+        cleanup()
+    }
+}
+
+function run(dist, dirName) {
     const registry = JSON.parse(readFileSync(REGISTRY, "utf8"))
     const check = isCheck()
     const summary = []
     for (const vol of VOLUMES) {
         const feedPath = join(dist, vol.feed)
-        if (!existsSync(feedPath)) {
-            console.error(`missing feed: ${feedPath}`)
-            process.exit(1)
-        }
+        if (!existsSync(feedPath)) throw new Error(`missing feed: ${feedPath}`)
         const pages = recordedPages(registry, vol.slug)
         const { book, maxFolio } = trim(JSON.parse(readFileSync(feedPath, "utf8")), vol, pages)
         const outPath = join(OUT_DIR, `${vol.slug}.json`)
@@ -372,8 +437,26 @@ function main() {
         })
     }
     console.table(summary)
-    syncMoments(dist, dirName, check)
+    const momentsVerdict = syncMoments(dist, dirName, check)
     if (check) console.log(`\n--check: nothing written. Source ${dirName}/, pins verified, pages asserted.`)
+
+    // (l) The agreement check. Without --strict this script reports drift and
+    // leaves the judgement to whoever ran it. With --strict a disagreement is
+    // a failed build, which is the point of running it in CI: drift between
+    // this repo's moments.json and the producer's artifact reaches the band as
+    // a wrong page otherwise, and a wrong page mid-service is not fixable.
+    if (isStrict()) {
+        const bad = summary.filter((r) => r.drift === "DIFFERS").map((r) => r.slug)
+        if (momentsVerdict === "DIFFERS") bad.push("moments.json")
+        if (bad.length) {
+            throw new Error(
+                `--strict: ${bad.join(", ")} disagree with ${dirName}. ` +
+                    "Re-run `npm run sync:books -- --from-latest` and commit the result, or find out why " +
+                    "the producer moved a page.",
+            )
+        }
+        console.log(`--strict: this repo agrees with ${dirName}.`)
+    }
 }
 
 // Importable for tests without running the sync: `main()` touches the
@@ -381,4 +464,9 @@ function main() {
 const invokedDirectly =
     process.argv[1] &&
     import.meta.url.endsWith(process.argv[1].replace(/\\/g, "/").split("/").pop())
-if (invokedDirectly) main()
+if (invokedDirectly) {
+    main().catch((err) => {
+        console.error(err.message)
+        process.exit(1)
+    })
+}

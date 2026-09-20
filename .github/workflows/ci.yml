@@ -245,6 +245,52 @@ jobs:
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY || 'test-key' }}
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'test.firebaseapp.com' }}
 
+  # (l) THE MOMENTS AGREEMENT CHECK — 2026-09-20, audit Wave 2.
+  #
+  # `src/data/books/moments.json` is a trim of shireishabbat's artifact. If the
+  # producer moves a moment to another page and this repo does not re-sync, the
+  # drift does not fail anything — it surfaces on an iPad, mid-service, as a
+  # page number that is wrong, and nothing is fixable live. This job compares
+  # the two and fails the build instead.
+  #
+  # PROVENANCE IS NOT DRIFT. `--strict` fails on a moved moment or occurrence,
+  # not on a new `builtAt` or a moved unpinned `gitSha`; see `momentsDrift` in
+  # scripts/ops/sync-books.mjs. A check that went red on every producer commit
+  # would be ignored within a week.
+  #
+  # THE TOKEN. `dist-app` is the licensed carrier behind shireishabbat's
+  # `publish-app-surface` job, so this needs a PAT with `actions:read` there —
+  # this workflow's own GITHUB_TOKEN is scoped to this repo. Until
+  # SHIREISHABBAT_ARTIFACT_TOKEN is set, the job warns and passes rather than
+  # painting every unrelated PR red for a setup gap. The warning is the visible
+  # part; do not read a green tick here as agreement until the secret exists.
+  books-agree:
+    name: Books Agree With Producer
+    needs: changes
+    if: needs.changes.outputs.substantive == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Compare moments.json and the book snapshots with dist-app
+        shell: bash
+        env:
+          SHIREISHABBAT_ARTIFACT_TOKEN: ${{ secrets.SHIREISHABBAT_ARTIFACT_TOKEN }}
+        run: |
+          if [ -z "$SHIREISHABBAT_ARTIFACT_TOKEN" ]; then
+            echo "::warning title=Moments agreement not checked::SHIREISHABBAT_ARTIFACT_TOKEN is not set, so this run did NOT compare against the producer. Add a PAT with actions:read on RavBogard/ShireiShabbat."
+            exit 0
+          fi
+          npm run sync:books -- --from-latest --check --strict
+
   e2e-smoke:
     name: E2E Smoke (Playwright)
     runs-on: ubuntu-latest
