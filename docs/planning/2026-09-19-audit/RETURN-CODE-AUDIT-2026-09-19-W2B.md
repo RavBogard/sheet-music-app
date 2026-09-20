@@ -6,7 +6,7 @@ Wave: Wave 2, round two — after the rulings addendums and the published `dist-
 
 ---
 
-## The three things Daniel must see
+## The four things Daniel must see
 
 ### 1. The MCP account is still `member`. (i) and (j) are still blocked, and the ruling says to say so rather than work around it.
 
@@ -61,6 +61,22 @@ app treats as the printed booklet. That is exactly the error
 crosswalk, the way `crc-machzor-2008` already works — not a feed registration.**
 I did not build it: it needs Daniel's eyes on about 20 name pairs first.
 
+### 4. Your Claude Desktop connector's tool list changed. Nothing you can do got taken away.
+
+Audit item (p) split the MCP surface. `/api/mcp` — the URL in your config — is
+unchanged and still the one to leave connected. What changed is that it now
+lists **97 tools instead of 145**: the backfills, dedupe and salvage, bond
+review, the AI enrichment queue, bridge restarts, observability dumps, test
+accounts and credential minting moved to a second server.
+
+**If you reach for one of those and it is not in the menu, add a second
+connector pointing at `/api/ops/mcp`.** Same bearer, same account, same admin
+gates — the ops tools were all admin-gated before and still are. This is a menu
+change, not a permission change.
+
+The reason it was worth doing: an agent asked to "add Kol Nidre to Friday" was
+choosing from a list that had `cleanup_all_test_data` in it.
+
 ---
 
 ## What shipped
@@ -74,7 +90,7 @@ I did not build it: it needs Daniel's eyes on about 20 name pairs first.
 | R-0919-audit-15 — notify band stays MCP-only | **DONE** | `NotifyBandDialog.tsx` + its test deleted |
 | R-0919-audit-19 — signed-out Perform live-update | **DONE (recorded)** | `docs/ACCESS-POLICY.md` |
 | **(i)** web vitals, **(j)** review queue | **BLOCKED** | account role, see above |
-| **(p)** split the MCP tool surface | not started | surveyed in W2 |
+| **(p)** split the MCP tool surface | **DONE** (retirement half blocked) | `src/lib/mcp/surfaces.ts`, `/api/ops/mcp` |
 | **(q)** iPad Perform skips | **DONE** | see below — the premise needed correcting first |
 
 ---
@@ -215,6 +231,137 @@ the reader's edition dropped, or is it a name only Daniel can bridge?*
 
 Once those are settled, the crosswalk is mechanical and testable, and every
 Friday and Saturday row reaches a moment id for the first time.
+
+## (p) — splitting the 145-tool surface
+
+The problem is **choice, not access**. Every Claude Desktop connect handed the
+agent a 145-item menu to pick from for "add Kol Nidre to Friday". Every ops tool
+in that menu is already admin-gated and most are `dryRun`-default, so nothing
+here is a permission fix; it is about what an agent has to read past to find the
+tool Daniel meant.
+
+**Shipped: two servers, one builder, one table.**
+
+- `/api/mcp` — the authoring surface. **Unchanged URL**, because that is what is
+  in Daniel's Claude Desktop config. 97 tools.
+- `/api/ops/mcp` — the ops surface. 48 tools. Connect it as a second connector
+  when you need it.
+
+The live server lists **145** tools today, not the 144 the handoff counted — one
+has been added since the audit — so the split is 97 / 48. Every one of the 48 ops
+names was checked against the live `tools/list` before shipping: none is a typo,
+which matters because a misspelled name would silently filter nothing and leave
+the tool on both servers.
+
+### The plan's number does not follow from the plan's categories
+
+The handoff asks for "a default authoring server of roughly 40 (setlists,
+tracks, templates, books, roster, library search, monitor)". Counted, those
+named categories are:
+
+| category | tools |
+|---|---|
+| read — setlists, books, library search | 12 |
+| setlist / template / track core + contacts | 36 |
+| chart upload | 14 |
+| monitor mixing (bridge housekeeping removed) | 12 |
+| roster | 11 |
+| batch intake | 7 |
+| chart inbox | 2 |
+| authored chart | 1 |
+| library entry edit | 1 |
+| **total** | **96** |
+
+Forty is reachable only by moving things Daniel uses most weeks — the roster, or
+chart upload, or the monitor mix — onto a second connector, which would be a
+worse surface than the one being fixed. **So this implements the categories and
+reports the count: 97 authoring, 48 ops.** If Daniel wants nearer 40, the next
+cut is chart upload (14) and batch intake (7) onto a third "intake" surface,
+and that is his call, not mine to guess.
+
+### How it is built, and why not the obvious way
+
+The obvious implementation is to carve `registerWriteTools` in two and move
+handlers between files. That is a large mechanical diff across the authoring
+surface to express something that is really one table, and every line of it is
+a chance to drop a tool.
+
+Instead, `forSurface(server, surface)` wraps the `McpServer` in a proxy that
+filters `registerTool` and passes everything else straight through. The
+registration code is untouched; the entire decision is 48 names in
+`src/lib/mcp/surfaces.ts` with the reasoning next to them, readable in one
+screen and arguable in review.
+
+The list is an explicit **ops** list, not an explicit authoring list, so a newly
+added tool defaults to authoring — where almost every new tool belongs, and
+where a misplacement is visible immediately instead of silently missing.
+
+`src/lib/mcp/build-handler.ts` now holds what `route.ts` used to: the guide
+loading, `verifyToken`, `withMcpAuth`, the scoped-bearer gate and the Zod
+envelope remap. Both routes call it. That is the point of one builder — an auth
+fix or a response-shape fix cannot land on one surface and miss the other.
+
+### What this is not
+
+**It is not a privilege boundary and must not be read as one.** The same
+`crl_live_` bearer reaches both servers, and every tool keeps the gate it
+already had. A caller who could not run a backfill still cannot. The handoff
+says "an ops server behind its own bearer"; a distinct bearer *kind* would mean
+adding to the credential schema and to `verifyBearer`, which is a change to the
+auth surface and deserves its own decision rather than riding along with a menu
+split. **GATE: shipped the surface split without a separate ops bearer kind —
+proceeded because the tools' own admin gates are the actual enforcement, and
+inventing a new credential kind silently inside a refactor is the wrong way to
+change an auth surface.**
+
+The ops server carries its own `instructions` rather than `.paul/AGENT-GUIDE.md`.
+The authoring guide is about staging a service and confirming before committing;
+none of that describes a backfill, and handing it to an ops agent would be
+telling it the wrong thing confidently.
+
+### What is on ops
+
+Backfills and one-shot migrations (8) · dedupe and salvage (3) · bond review (5)
+· AI enrichment calibration and review queue (10) · bridge housekeeping (7) ·
+observability (3) · test accounts and fixture cleanup (6) · credential minting
+and revocation (6).
+
+Two placements worth arguing with, so they are written down rather than buried:
+
+- **`edit_library_entry` stayed on authoring** while the rest of the enrichment
+  set went to ops. Editing a library row is authoring; triaging what the AI
+  suggested is not.
+- **The live mixing surface stayed on authoring** — `list_monitor_buses`,
+  `get_mix`, `set_send_level`, `set_bus_fader` and the rest. A sound engineer
+  touches those during a service. Restarting the bridge is not something anyone
+  does with the band on stage, so `bridge_*` went to ops.
+
+### Not done: retiring the completed backfills
+
+The handoff wants `backfill_content_hash`, `backfill_heal_metadata`,
+`backfill_track_mimetype`, `backfill_library_index`,
+`backfill_setlist_test_flag` and `seed_legacy_dedupe_run` **retired** rather than
+moved — "after confirming each has run against both tenants."
+
+That confirmation is a read of production data on both tenants, and every tool
+that could establish it is admin-gated. This session's account is `member`. So
+the same block that holds (i) and (j) holds this: **they are parked on the ops
+surface rather than deleted, because deleting a migration tool on the assumption
+it already ran is exactly the kind of guess this repo does not make.** When the
+account is elevated, confirming and deleting them is a small change.
+
+That is also why the done-when is not fully met: "the retired ones appear on
+neither" cannot be true yet. They appear on ops.
+
+### Tests
+
+`src/lib/mcp/__tests__/surfaces.test.ts`, 11 tests. The risk in a split is not a
+tool on the wrong server — it is a tool on **neither**, unnoticed until Daniel
+reaches for it mid-week. So the assertions are about the partition itself: every
+tool on exactly one surface, nothing on both, nothing dropped, an unknown tool
+defaulting to authoring, the proxy passing non-`registerTool` properties
+through, and the ops list holding at exactly 48 (which also catches a duplicate
+quietly changing the count).
 
 ## (q) — the skips, and what the count was actually measuring
 
