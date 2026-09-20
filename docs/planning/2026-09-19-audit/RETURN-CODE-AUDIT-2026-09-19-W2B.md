@@ -104,22 +104,86 @@ from `e5a87e3-LICENSED` to `80de868-LICENSED`. **Not one moment and not one
 occurrence changed.** The regenerated file is committed, so the repo now
 records that it consumed the published artifact rather than a laptop build.
 
-### 3. The Friday/Saturday pagemaps and the reader's feeds do not share a page-numbering base. (n) cannot be done the way the handoff describes it.
+### 3. CORRECTED — I got (n) wrong. The feeds and the pagemaps DO share the printed numbering base, and they agree 79 out of 80.
 
-This is the (o) comparison the plan asked for, and it turned up something
-bigger than a one-page disagreement. See the full report below. The short
-version: `crc-friday` is pages 3–47 of the printed CRC booklet and
-`legacy-shabbat-evening` is folios 1–55 of the reader's own typesetting of the
-same service. They are two editions, not two copies. The offset between them
-is not constant — it drifts from `+1` to `−8` across Friday and from `+48` to
-`+38` across Saturday.
+**What this section said before, and why it was wrong.** It said `crc-friday`
+and `legacy-shabbat-evening` were two editions with no shared numbering base,
+that the offset between them drifted from `+1` to `−8`, and that registering
+the feeds as feed-tier books would file reader-edition folios under a printed
+booklet's slug. On that reasoning I declined to do (n) as the handoff
+describes it.
 
-So registering those feeds as feed-tier books "alongside the pagemaps", which
-is what (n) says to do, would put the reader edition's folios under a slug the
-app treats as the printed booklet. That is exactly the error
-`machzorRemapper` exists to prevent, one book over. **(n) needs a name-keyed
-crosswalk, the way `crc-machzor-2008` already works — not a feed registration.**
-I did not build it: it needs Daniel's eyes on about 20 name pairs first.
+I had read the wrong field. Each feed unit carries **two** numbers:
+`folios`, the reader edition's own page positions, and `printedFolio`, the
+number printed in the CRC booklet. I measured `folios` — 1–55 for Friday,
+1–63 for Saturday — and concluded the editions were unrelated. `printedFolio`
+was in the same unit object the whole time: **2–48 for Friday, 50–101 for
+Saturday**, which are the printed booklet's own ranges. There is no drifting
+offset. There is no second edition problem. I compared the wrong column and
+wrote the conclusion up with confidence.
+
+`shireishabbat-ba` flagged it from its side and gave measurements. I checked
+them against `dist-app/` here rather than taking them, and every number holds:
+
+| feed | units | with id | with `printedFolio` | `printedFolio` range | duplicate ids | outside the pagemap |
+|---|---|---|---|---|---|---|
+| `legacy-shabbat-evening` | 78 | 78 | 78 | 2–48 | none | none (`crc-friday` declares 48) |
+| `legacy-shabbat-morning` | 96 | 96 | 95 | 50–101 | none | none (`crc-saturday` declares 102) |
+
+Then the test that actually settles it — match feed units to pagemap entries
+by name and alias, and compare `printedFolio` against `page`:
+
+- **Friday: 34 matched, 34 agree, 0 disagree.**
+- **Saturday: 46 matched, 45 agree, 1 disagree.**
+
+**79 of 80 exact agreements is a shared numbering base.** My claim that there
+wasn't one was not a close call that went the wrong way; it was disproven by
+the data I already had.
+
+**The one disagreement is not a disagreement either.** It is "Returning the
+Torah" — feed p.89, pagemap p.90 — and it is the same p.90/p.89 item the plan
+has a STOP on. The two repos were never talking about the same thing:
+
+- the feed has `torah.returning-the-torah` at p.**89** (the ark rubric) *and*
+  `torah.eitz-chayim` at p.**90**;
+- this repo's pagemap has one entry, `Eitz Chayim` at p.**90**, carrying
+  `"Returning the Torah"` in its `aliases`.
+
+So the feed's p.90 `Eitz Chayim` and our p.90 `Eitz Chayim` agree exactly. The
+"disagreement" is our alias reaching across to a different unit one page away —
+the Torah is carried back while Eitz Chayim is sung. Keyed on ids instead of
+display titles, **the two corpora agree 80 out of 80.**
+
+**The alias should stay.** It is over-broad for a corpus comparison and right
+for what this repo does: if Daniel writes "Returning the Torah" on a setlist he
+means the song the band plays, which is Eitz Chayim on p.90, not a silent
+rubric. The defect is in comparing by display title, not in the alias. **No
+page number in this repo needs changing, and the printed fact still stays
+Daniel's** under the plan's STOP.
+
+**Where (n) stands now.** The objection I raised is withdrawn, and the shape the
+handoff described is sound: the feeds can be registered alongside the pagemaps,
+because `printedFolio` is the printed booklet's own number. Two things are
+worth knowing before it happens:
+
+- It is a **gain in resolution, not a translation** — 78 feed units against
+  `crc-friday`'s 48 entries, 96 against `crc-saturday`'s 62. Registration adds
+  page-callable detail that does not exist today.
+- **`legacy-slichot` must not be registered this way.** Confirmed here: all 8
+  of its units carry no `printedFolio` at all, because Selichot is a separate
+  handout with no printed original. Its compile is its book. This matches the
+  existing exclusion already written into the `crc-machzor-2008` registry note.
+
+**I have not registered them, and that is a timing call, not a technical one.**
+Registry rows regenerate from the producer, so this is producer-side emission
+plus a sync here — and it lands on `lookup_book_page`, which is a band-facing
+surface, the evening before Yom Kippur morning. The volumes involved
+(`crc-friday`, `crc-saturday`) are not the ones tomorrow's service calls
+against; that is `crc-machzor-2008`. There is no deadline on added resolution
+and there is one on not disturbing tomorrow. **GATE: registering the legacy
+Shabbat feeds as feed-tier books — proceeded to verify and document, held the
+registry change until after Yom Kippur, because it changes page-call results on
+the band's surface and nothing needs it before then.**
 
 ### 4. Your Claude Desktop connector's tool list changed. Nothing you can do got taken away.
 
@@ -224,6 +288,29 @@ check gets ignored. **Do not read a green tick on that job as agreement until
 the secret is set.** That is the one soft spot in this item and it is deliberate.
 
 ## (o) and (n) — the normalized name comparison
+
+> **CORRECTED 2026-09-20, after the section was written — read item 3 above
+> first.** Two things below are wrong, both from the same cause: this comparison
+> keyed on **display titles** and read the feed's **`folios`** field (the reader
+> edition's own page positions) instead of **`printedFolio`** (the number in the
+> printed booklet). Re-run on `printedFolio` and keyed on ids, the two corpora
+> agree **80 of 80**, and the "no shared numbering base" conclusion is withdrawn.
+> The "third number, 49" noted in the next paragraph is a reader-edition folio,
+> not a third opinion about a printed page. What stands from this section is the
+> method's value and the ~20 pairs still wanting Daniel's eyes; what falls is its
+> verdict on (n).
+>
+> **This also has a consequence in the other direction, and somebody should
+> catch it before it is acted on.** R-0919-audit-14 concluded that `.live` is
+> right and "the fix belongs in shireishabbat's `legacy-shabbat-morning` folio
+> map". On the id-keyed comparison there is nothing there to fix: that feed
+> already carries `torah.eitz-chayim` at p.**90**, agreeing with us exactly, and
+> its p.**89** `torah.returning-the-torah` is a *different unit* — the ark
+> rubric, one page earlier because the Torah is carried back while Eitz Chayim
+> is sung. The two repos were compared through an alias of ours that spans both.
+> **Acting on R-0919-audit-14 as written would move a number that is already
+> correct.** Reported to `shireishabbat-ba`; the printed fact itself remains
+> Daniel's under the plan's STOP.
 
 R-0919-audit-14 settled the page: the printed CRC Saturday booklet prints
 "Returning the Torah" on **p.90**, `.live`'s pagemap is right, and the fix
@@ -656,3 +743,69 @@ subprocess are injected.
 
 The moments agreement was also verified **against the real artifact**, not only
 against fixtures: downloaded run `35518946924` and re-derived every book.
+
+## The agreement check is now the producer's, not ours (R-0920-code-21)
+
+`shireishabbat` published `dist-app/tools/moments_agree.py` — the canonical
+agreement check, travelling inside the artifact so the definition of "these two
+copies agree" lives with the corpus instead of being reimplemented here. CI now
+runs it.
+
+**Why this was worth taking, given `--strict` already existed.** The two checks
+cannot catch the same class of error. `momentsDrift` compares what this repo
+just regenerated against what it held before — it sees a page or a pin move,
+but only ever *through this repo's own `trimMoments`*. If that trim were wrong,
+drift reads `none` and the repo agrees with itself indefinitely. `moments_agree.py`
+compares semantics directly — moment ids, unit ids, `(momentId, unitId)` pairs —
+keyed on the unit id's service suffix, which is why filing all six High Holy Day
+volumes under `crc-machzor-2008` reads as a naming difference rather than a
+disagreement. It is the check that can find our trim wrong. Both now run under
+`--strict`.
+
+Current verdict, against the local `dist-app`:
+
+> `OK moments/agree — moments-shaped copy agrees over 18 shared service(s):`
+> `225 moment id(s), 453 unit id(s), 453 pair(s)`
+
+It also names the gap (n) would close: five services the producer carries that
+our `moments.json` does not — `bm-maariv`, `bm-shacharit`,
+`legacy-shabbat-evening`, `legacy-shabbat-morning`, `legacy-slichot`.
+
+### A false pass found while wiring it, and worth writing down
+
+Handed a path **inside a git work tree**, the checker compares that repo's
+**committed HEAD** rather than the file on disk, and says so in a note. That is
+sound for its own purpose — a repo is answerable for what it committed — and
+wrong for ours, because sync's whole job is to check what it *just regenerated*,
+before it is committed.
+
+Measured, not reasoned: with a moment id deliberately corrupted in the working
+tree, `moments_agree.py` reported **`OK`** against HEAD. Only this repo's own
+`momentsDrift` failed the gate. Had the corruption been in the trim rather than
+in the file, nothing would have caught it and the run would have been green.
+
+Fixed by copying the bytes to a temp file outside any work tree before handing
+them over. The same corruption then fails with the exact id named:
+
+> `FAIL moments/agree — moment ids (shared services) — 1 id present in moments.json and absent here`
+> `a-new-year-BOGUS`
+
+Both checks now fail the gate on that input, and the reasoning is written into
+`sync-books.mjs` so it does not get "simplified" back.
+
+### Tests
+
+Four added to `scripts/__tests__/sync-books-artifact.test.ts` (20 → 24). They
+guard `WANTED`, which is the quiet failure mode here: a well-meant trim of that
+list ("we don't read `moments-pairs.json` anywhere") would stop unpacking the
+checker, and `--strict` would silently go back to this repo agreeing with itself
+while still passing. They assert the checker and its pairs index are asked for,
+that the feeds/moments/books still are, that **no PDF ever is** — the licensed
+bytes stay in the zip — and that every wanted name reaches `unzip`.
+
+### Still dormant in CI
+
+`SHIREISHABBAT_ARTIFACT_TOKEN` is still unset, so the `Books Agree With
+Producer` job continues to emit a `::warning` and pass without comparing. It now
+says both things it skipped. Setting that secret is still Daniel's, and it is
+the one thing standing between this gate and being real on every push.

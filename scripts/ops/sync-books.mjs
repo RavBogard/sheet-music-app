@@ -475,6 +475,14 @@ async function main() {
  * is committed, so it copies the bytes to a temp file outside any work tree. The
  * same corruption then fails with the exact id named. Do not "simplify" this
  * back to passing MOMENTS_OUT directly.
+ *
+ * THE WORKAROUND HAS AN EXPIRY. Reported upstream 2026-09-20; shireishabbat
+ * is adding a first-class `--tree` flag that compares the working tree, and
+ * a self-test fixture (clean HEAD, corrupt tree) that proves it bites. HEAD
+ * stays their default deliberately — a verdict that changes with no commit
+ * is not a measurement, and it is what keeps a peer's in-flight edit from
+ * failing their gate. Once an artifact arrives carrying `--tree`, pass it
+ * and drop the temp copy.
  */
 function momentsAgree(dist, dirName) {
   // `unzip -j` flattens, the `tar` fallback does not. Accept either shape.
