@@ -213,10 +213,12 @@ Normalize the imported scripture to NFC (text-preserving; 685 mark-order finding
 volumes). Verify byte-for-byte that only ordering changes and that page counts do not move. shireishabbat.
 
 ### Git housekeeping — Daniel: "whatever you recommend"
-- **TBI: connect the Vercel Git integration** to `tbi-overlays` on the same repo and branch as CRC, with
-  TBI's own env. One push then moves both congregations together and `RELEASE-STATE.md`'s two-sha
-  discipline retires. Overlays session does the Vercel side if it can; otherwise it writes the three-click
-  instruction for Daniel.
+- **TBI: keep the CLI release — correction, 2026-09-20.** The Git-integration recommendation is withdrawn: TBI
+  deploys from a staged, allowlisted source tree that `scripts/deploy-workspaces.mjs` builds, not from the raw
+  repo, so a plain Git integration on `tbi-overlays` would deploy the wrong tree. Keep
+  `node scripts/deploy-workspaces.mjs --commit <sha> --confirm-production` as the release and the two-sha
+  record in `RELEASE-STATE.md`. If the Overlays session can make the staging a Vercel build step cheaply,
+  it may propose that as a Wave 2 item; otherwise this stands.
 - **Keep `C:\Users\dsbog\crc-overlays`.** It is the git database (`.git/`) that the `crc-overlays-vercel`
   worktree runs on; deleting it would break the worktree. It is fast-forwarded; treat it as the repo's home,
   not a working folder. Do not open Code sessions in it.
