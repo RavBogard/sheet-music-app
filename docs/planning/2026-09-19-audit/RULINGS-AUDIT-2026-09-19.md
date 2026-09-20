@@ -185,3 +185,40 @@ connector: stop and report it rather than working around it.
 - shireishabbat's canonical `moments_agree.py` cannot read Overlays' flat `pairs` shape; Overlays wrote its
   own checker (`6123afa`). One of the two should learn the other's shape — a Wave 2 seam item for whichever
   repo picks it up first; the source repo's checker is the canonical one.
+
+## Addendum 2 — rulings after the round-two returns (Daniel, 2026-09-20)
+
+### R-0919-audit-18 — Feed round-trip: the source owns presentation. Approved as designed.
+`RETURN-CODE-FEED-ROUNDTRIP-DESIGN-2026-09-20.md` is approved as written: one-time export of the reader's
+467 authored presentation values into shireishabbat's Typst source; after that the reader's `books/` is a
+pure build product the reader never edits; provenance splits into `printing.source` (producer only) and
+`printing.carry` (reader's sync, `edits: 0` as a release gate). No sidecar. Wave 3 is released in
+shireishabbat and the reader. The reader finishes its owed green suite and push first.
+
+### R-0919-audit-19 — Signed-out Perform live-update: no replacement needed
+Some fleet iPads are signed in and none is actively used these days. Correct loads without auto-refresh
+for signed-out readers is acceptable. Record it in the .live docs; do not build a replacement path.
+
+### R-0919-audit-20 — JPS declaration: declare
+Add `licensed-paths.json` rows for the two tracked files carrying JPS 2023 text verbatim (R-0920-code-8).
+Tracked-and-declared is the posture R-0902-vision-3 set; this closes the gap. shireishabbat.
+
+### R-0919-audit-21 — Masoretic paragraph markers: strip
+When the HTML entities (`&thinsp;`, `&nbsp;`, 88 occurrences) are fixed in the three `crc-yk-morning`
+source files, the `{פ}` and `{ס}` markers are stripped, not printed. Hebrew text itself is edited only as
+surgical string replacements. shireishabbat.
+
+### R-0919-audit-22 — NFC normalization: approved
+Normalize the imported scripture to NFC (text-preserving; 685 mark-order findings; bytes move in three
+volumes). Verify byte-for-byte that only ordering changes and that page counts do not move. shireishabbat.
+
+### Git housekeeping — Daniel: "whatever you recommend"
+- **TBI: connect the Vercel Git integration** to `tbi-overlays` on the same repo and branch as CRC, with
+  TBI's own env. One push then moves both congregations together and `RELEASE-STATE.md`'s two-sha
+  discipline retires. Overlays session does the Vercel side if it can; otherwise it writes the three-click
+  instruction for Daniel.
+- **Keep `C:\Users\dsbog\crc-overlays`.** It is the git database (`.git/`) that the `crc-overlays-vercel`
+  worktree runs on; deleting it would break the worktree. It is fast-forwarded; treat it as the repo's home,
+  not a working folder. Do not open Code sessions in it.
+- **Reader landmark: "Books".** Revert "Services" to "Books" — it matches the app's own vocabulary
+  (`books/`, `books.json`, the shelf of books). One attribute.
