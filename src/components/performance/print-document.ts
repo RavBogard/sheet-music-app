@@ -52,7 +52,7 @@ const MAX_PAGE_PX = 3000
 /**
  * Render every page of a PDF blob to a bitmap using the app's existing
  * pdf.js (via react-pdf, so the worker version matches the one
- * `scripts/copy-pdf-worker.js` stages in `public/`).
+ * `scripts/ops/copy-pdf-worker.js` stages in `public/`).
  *
  * The `workerSrc` write is UNCONDITIONAL on purpose — react-pdf's barrel
  * assigns the truthy placeholder `'pdf.worker.mjs'` at module load, so an

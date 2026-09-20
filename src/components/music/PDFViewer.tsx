@@ -18,7 +18,7 @@ import { desiredWorkerSrc, ensureOfflineWorkerReady } from '@/lib/pdf-worker-off
 import { shouldStartRenderWatchdog, isRotateScaleResize, computeFitPageWidth } from './pdf-viewer-state'
 
 // Configure PDF.js worker — use local copy from public/ (copied by
-// scripts/copy-pdf-worker.js during postinstall + build). Local worker
+// scripts/ops/copy-pdf-worker.js during postinstall + build). Local worker
 // eliminates CDN dependency and guarantees version match with react-pdf's
 // bundled pdfjs-dist.
 //

@@ -28,10 +28,10 @@ import {
 } from "../tools/setlist-write"
 
 /**
- * W-01 Tasks 3 + 4 + 5 — preview_publish wrapper, flag/review/record loop.
+ * W-01 Tasks 3 + 4 + 5 — preview_notify_band wrapper, flag/review/record loop.
  *
  * Covers:
- *   AC-5: preview_publish reformats publish_setlist({dryRun:true}) into
+ *   AC-5: preview_notify_band reformats notify_band({dryRun:true}) into
  *         {chartHealth, audience, snapshotDiff, flaggedBonds, recommendation}.
  *   AC-6: flag → review → record_bond_correction round-trip writes the
  *         audit doc, bumps library_index counters, deletes the flag.
@@ -41,11 +41,11 @@ import {
  * Runs only via `npm run test:emulator`.
  */
 
-// Stub the chart-health probe (publish_setlist calls it via getChartHealth)
+// Stub the chart-health probe (notify_band calls it via getChartHealth)
 // so it doesn't go to the network. Status is decided per-fileId via the
 // `__charts` registry below. Mock must be defined here so it applies to
-// all dynamic imports — publish_setlist imports getChartHealth at the
-// module top, so the mock has to register before publish_setlist loads.
+// all dynamic imports — notify_band imports getChartHealth at the
+// module top, so the mock has to register before notify_band loads.
 const __charts: Record<
     string,
     "ok" | "missing" | "unreachable" | "needs_storage_sync"
@@ -71,7 +71,7 @@ vi.mock("@/lib/file-fetcher", async () => {
         },
     }
 })
-// Skip the actual notification fan-out — publish_setlist dryRun bails
+// Skip the actual notification fan-out — notify_band dryRun bails
 // before sending anyway, but mocking these surfaces makes the test
 // hermetic from email/push/SMS providers.
 vi.mock("@/lib/email", () => ({
@@ -180,9 +180,9 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
         for (const k of Object.keys(__charts)) delete __charts[k]
     })
 
-    // ─── AC-5: preview_publish ──────────────────────────────────────────────
+    // ─── AC-5: preview_notify_band ──────────────────────────────────────────────
 
-    it("AC-5: preview_publish reformats the dryRun envelope and recommends 'publish' on clean state", async () => {
+    it("AC-5: preview_notify_band reformats the dryRun envelope and recommends 'send' on clean state", async () => {
         const setlistId = await newSetlist({ templateType: "shabbat-morning" })
         await addBondedTrack(setlistId, "Oseh Shalom", "song-oseh")
         __charts["song-oseh"] = "ok"
@@ -193,7 +193,7 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
         expect((r.chartHealth as { bondedCount: number }).bondedCount).toBe(1)
         expect((r.chartHealth as { okCount: number }).okCount).toBe(1)
         expect((r.chartHealth as { missingCount: number }).missingCount).toBe(0)
-        // b5 followup: needsSyncCount mirrors publish_setlist.chartHealth +
+        // b5 followup: needsSyncCount mirrors notify_band.chartHealth +
         // verify_setlist_charts' NEW-5 field; zero on clean state.
         expect(
             (r.chartHealth as { needsSyncCount: number }).needsSyncCount,
@@ -204,10 +204,10 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
                 .band_leader,
         ).toBe(1)
         expect(r.flaggedBonds).toBe(0)
-        expect(r.recommendation).toBe("publish")
+        expect(r.recommendation).toBe("send")
     })
 
-    it("AC-5: preview_publish returns 'hard_block' when any chart is missing", async () => {
+    it("AC-5: preview_notify_band returns 'hard_block' when any chart is missing", async () => {
         const setlistId = await newSetlist()
         await addBondedTrack(setlistId, "Hashkivenu", "song-broken")
         __charts["song-broken"] = "missing"
@@ -215,8 +215,8 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
         const r = (await previewPublish(ADMIN, { setlistId })) as unknown as Record<string, unknown>
 
         expect((r.chartHealth as { missingCount: number }).missingCount).toBe(1)
-        // F-006: preview_publish exposes the same `unhealthy[]` field name as
-        // publish_setlist (renamed from the original `details[]`).
+        // F-006: preview_notify_band exposes the same `unhealthy[]` field name as
+        // notify_band (renamed from the original `details[]`).
         expect(
             (
                 r.chartHealth as {
@@ -229,7 +229,7 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
         expect(r.recommendation).toBe("hard_block")
     })
 
-    it("b5 followup: preview_publish surfaces needsSyncCount; recommendation stays 'publish' (chart still serves)", async () => {
+    it("b5 followup: preview_notify_band surfaces needsSyncCount; recommendation stays 'publish' (chart still serves)", async () => {
         // Cycle-3 b5 micro followup. A Drive-only chart serves via the
         // file-fetcher's Drive fallback, so the preview's recommendation
         // gate does NOT escalate — needsSyncCount is observability, not a
@@ -257,10 +257,10 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
         expect(ch.unreachableCount).toBe(0)
         // needs_storage_sync is NOT unhealthy.
         expect(ch.unhealthy).toEqual([])
-        expect(r.recommendation).toBe("publish")
+        expect(r.recommendation).toBe("send")
     })
 
-    it("AC-5: preview_publish returns 'review_first' when flagged bonds exist", async () => {
+    it("AC-5: preview_notify_band returns 'review_first' when flagged bonds exist", async () => {
         const setlistId = await newSetlist()
         const trackId = await addBondedTrack(setlistId, "Adon Olam", "song-adon")
         __charts["song-adon"] = "ok"
@@ -276,7 +276,7 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
         expect(r.recommendation).toBe("review_first")
     })
 
-    it("AC-5: snapshotDiff lists added / removed rows vs. previous publishedSnapshot", async () => {
+    it("AC-5: snapshotDiff lists added / removed rows vs. what the band was last told", async () => {
         const setlistId = await newSetlist()
         await addBondedTrack(setlistId, "Kept Song", "song-kept")
         await addBondedTrack(setlistId, "Newly Added", "song-new")
@@ -286,7 +286,7 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
             .doc(setlistId)
             .update({
                 publishedAt: new Date(),
-                publishedSnapshot: [
+                lastNotifiedSnapshot: [
                     { title: "Kept Song", key: "", fileId: "song-kept" },
                     { title: "Removed Song", key: "", fileId: "song-gone" },
                 ],
@@ -356,7 +356,7 @@ describe("W-01 Tasks 3+4+5 — preview/flag/review/record (emulator)", () => {
             recommendation: string
         }
         expect(r.unbondedSongCount).toBe(0)
-        expect(r.recommendation).toBe("publish")
+        expect(r.recommendation).toBe("send")
     })
 
     it("BUG-4: missing-chart hard_block takes precedence over unbonded-song review_first", async () => {

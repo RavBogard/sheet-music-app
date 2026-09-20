@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { trimMoments } from "../sync-books.mjs"
+import { trimMoments } from "../ops/sync-books.mjs"
 
 /**
  * Part E — consuming `moments.json`.

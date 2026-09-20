@@ -3,8 +3,8 @@
   "version": "11.7.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/update-build-info.js && node scripts/copy-pdf-worker.js && next dev",
-    "build": "node scripts/update-build-info.js && node scripts/copy-pdf-worker.js && next build --webpack",
+    "dev": "node scripts/ops/update-build-info.js && node scripts/ops/copy-pdf-worker.js && next dev",
+    "build": "node scripts/ops/update-build-info.js && node scripts/ops/copy-pdf-worker.js && next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
@@ -17,9 +17,9 @@
     "test:gated": "vitest run --config vitest.gated.config.ts",
     "test:ci": "vitest run && playwright test",
     "analyze": "cross-env ANALYZE=true next build --webpack",
-    "check:types": "node scripts/check-types-sync.js",
-    "postinstall": "node scripts/copy-pdf-worker.js",
-    "sync:books": "node scripts/sync-books.mjs",
+    "check:types": "node scripts/ops/check-types-sync.js",
+    "postinstall": "node scripts/ops/copy-pdf-worker.js",
+    "sync:books": "node scripts/ops/sync-books.mjs",
     "build:mcp-apps": "vite build --config src/mcp-apps/vite.config.ts"
   },
   "dependencies": {

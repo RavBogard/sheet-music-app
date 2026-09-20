@@ -3,7 +3,7 @@
     "The fixed-liturgy ALLOW-LIST. Which liturgical moments are 'fixed' — said",
     "every week straight from the book, with no chart expected — for each of the",
     "two weekly services. This file says WHICH; the ORDER comes from the feed",
-    "book itself (scripts/emit-fixed-liturgy.mjs walks units[] in feed order),",
+    "book itself (scripts/ops/emit-fixed-liturgy.mjs walks units[] in feed order),",
     "so nothing here is a remembered sequence.",
     "",
     "`stem` is a unit id with its @book suffix removed, because the same moment",

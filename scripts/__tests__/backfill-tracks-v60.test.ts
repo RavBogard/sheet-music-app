@@ -4,13 +4,13 @@ import {
     FIELD_DELETE_SENTINEL,
     type MigrationDoc,
     type MigrationFirestore,
-} from '../migrate-v50'
+} from '../migrations/2026-04-26/migrate-v50'
 import {
     runBackfill,
     classifyAction,
     computeDenormFields,
     BACKFILL_LIMIT,
-} from '../backfill-tracks-v60'
+} from '../migrations/2026-05-13/backfill-tracks-v60'
 
 // -------------------------------------------------------------------------
 // In-memory MigrationFirestore fake — ported from bootstrap-songs.test.ts

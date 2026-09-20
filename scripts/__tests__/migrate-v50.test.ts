@@ -5,7 +5,7 @@ import {
     type MigrationDoc,
     type MigrationFirestore,
     runMigration,
-} from '../migrate-v50'
+} from '../migrations/2026-04-26/migrate-v50'
 
 class FakeFirestore implements MigrationFirestore {
     docs = new Map<string, Record<string, unknown>>()

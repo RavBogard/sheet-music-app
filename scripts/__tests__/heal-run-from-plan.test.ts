@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { PDFDocument } from "pdf-lib"
 
-import { stripFirstPage, parseMatchedPairs } from "../heal-run-from-plan"
+import { stripFirstPage, parseMatchedPairs } from "../migrations/2026-05-20/heal-run-from-plan"
 
 async function makePdf(pages: number): Promise<Uint8Array> {
     const doc = await PDFDocument.create()

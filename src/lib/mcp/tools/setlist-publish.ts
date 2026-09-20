@@ -20,7 +20,6 @@ import { isTestUid } from "@/lib/test-isolation"
 import { rowOrg, rowOrgIds } from "@/lib/org/membership"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
-import { emitToday } from "@/lib/today/emit-today"
 import { logger } from "@/lib/logger"
 import {
     WRITE_RECEIPTS_COLLECTION,
@@ -909,17 +908,12 @@ export async function publishSetlist(
         result.delivery.sms.skippedRenotify = commit.wasNotifiedBefore
     }
 
-    // Regenerate the public today.json. The reader and the overlays key off
-    // publish, so this is the moment the outside world learns what tonight is.
-    // Awaited rather than fire-and-forget: on Vercel serverless a floating
-    // promise can be frozen when the handler returns. emitToday never throws.
-    const todayEmit = await emitToday(org)
-    if (!todayEmit.ok) {
-        logger.warn("[mcp publish] today.json emit failed (non-blocking)", {
-            setlistId: args.setlistId,
-            error: todayEmit.error,
-        })
-    }
+    // No today.json emit here. It used to sit on this path because the reader
+    // and the overlays "keyed off publish" — but publish never fired, which is
+    // how today.json came to be a cron artifact in practice and then in name
+    // (R2-f, then R-0919-audit-3). /api/cron/emit-today owns the file now,
+    // runs every 15 minutes and checks its own work; a second writer on a
+    // user action was only a way for the two to disagree.
 
     // Song-usage record — fire-and-forget; never fail publish on its account.
     const eventDateRaw = setlist.eventDate ?? setlist.date
@@ -945,7 +939,7 @@ export async function publishSetlist(
         type: t.type,
     }))
     void recordSongUsage(args.setlistId, setlistName, eventDate, usageTracks).catch(
-        (err) => logger.warn("[mcp publish] song-usage record failed", err),
+        (err) => logger.warn("[mcp notify_band] song-usage record failed", err),
     )
 
     // In-app notifications + FCM push to uid-bearing recipients.
@@ -975,7 +969,7 @@ export async function publishSetlist(
                 await batch.commit()
                 result.delivery.inApp.sent += chunk.length
             } catch (err) {
-                logger.warn("[mcp publish] in-app batch failed", err)
+                logger.warn("[mcp notify_band] in-app batch failed", err)
                 result.delivery.inApp.failed += chunk.length
             }
         }
@@ -992,7 +986,7 @@ export async function publishSetlist(
             result.delivery.push.sent = pushResult?.sent ?? 0
             result.delivery.push.failed = pushResult?.failed ?? 0
         } catch (err) {
-            logger.warn("[mcp publish] FCM push failed", err)
+            logger.warn("[mcp notify_band] FCM push failed", err)
             result.delivery.push.failed = uidRecipients.length
         }
     }
@@ -1053,7 +1047,7 @@ export async function publishSetlist(
             result.delivery.email.sent = emailResult.sent
             result.delivery.email.failed = emailResult.failed
         } catch (err) {
-            logger.warn("[mcp publish] email send failed", err)
+            logger.warn("[mcp notify_band] email send failed", err)
             result.delivery.email.failed = emailTargets.length
         }
     }
@@ -1071,7 +1065,7 @@ export async function publishSetlist(
                 )
                 result.delivery.sms.sent++
             } catch (err) {
-                logger.warn("[mcp publish] SMS failed", { uid: r.uid, err })
+                logger.warn("[mcp notify_band] SMS failed", { uid: r.uid, err })
                 result.delivery.sms.failed++
             }
         }
@@ -1093,7 +1087,7 @@ export async function publishSetlist(
                 recipientNames: recipients.map((r) => r.name),
             },
         })
-        .catch((err) => logger.warn("[mcp publish] audit log failed", err))
+        .catch((err) => logger.warn("[mcp notify_band] audit log failed", err))
 
     if (receiptRef) {
         // Strip undefined optional recipient fields before persisting; the

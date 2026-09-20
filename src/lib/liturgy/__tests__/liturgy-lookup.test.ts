@@ -193,7 +193,7 @@ describe("matchLiturgyTitle — what it refuses", () => {
     })
 
     // R5-a and R5-d, ruled by Daniel on 2026-09-15 against the printed book.
-    // Both are recorded in `scripts/emit-machzor-book.mjs` as RULINGS and reach
+    // Both are recorded in `scripts/ops/emit-machzor-book.mjs` as RULINGS and reach
     // the data by regeneration, never by hand; these assertions are what says
     // the ruling survived the next regeneration.
     it("puts Un'taneh Tokef on p.147, where the book prints it (R5-a)", () => {

@@ -18,6 +18,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
  * v60-12-01 opened public read on tracks/{trackId}; writes remain
  * locked to band-leader/admin.
  *
+ * AMENDED 2026-09-19 (R-0919-audit-2). That fix was right about the problem
+ * and too broad in the remedy: `allow read: if true` granted `list` as well
+ * as `get`, so it also let anyone query the whole collection, both tenants.
+ * The rule is now split — `get` public, `list` signed-in — and the signed-out
+ * Perform view reads its rows through /api/setlists/{setlistId}/tracks
+ * instead. Scenario B below was inverted to match; everything Daniel's 2026-05-13
+ * UAT was about (open the link, see the tracks) still works.
+ *
  * This suite is the safety net. Firestore rules edits are high-blast-radius
  * (a typo can lock out production). The 8 scenarios cover the read-write
  * matrix for unauthenticated / member-only / band-leader / admin contexts.
@@ -74,12 +82,21 @@ describe('v60-12-01 firestore.rules tracks/{trackId}', () => {
         await assertSucceeds(unauth.collection('tracks').doc('track-0').get())
     })
 
-    it('Scenario B: unauthenticated query (where setlistId == X) SUCCEEDS and returns all 3 docs', async () => {
+    it('Scenario B: unauthenticated query (where setlistId == X) is now DENIED', async () => {
+        // Inverted by R-0919-audit-2 (2026-09-19). This test used to assert
+        // the query succeeded, which is exactly the hole that was closed: a
+        // `where` clause does not make a query anything other than a `list`,
+        // and the rule cannot see the filter — so allowing it allowed
+        // enumerating every track of every setlist of both tenants.
+        //
+        // The capability itself did not go away. Signed-out Perform gets these
+        // rows from /api/setlists/{setlistId}/tracks, which is public and
+        // rate-limited and can only answer for the one setlist it is given.
+        // Single-document `get` below is untouched and still public.
         const unauth = testEnv.unauthenticatedContext().firestore()
-        const snap = await assertSucceeds(
+        await assertFails(
             unauth.collection('tracks').where('setlistId', '==', 'setlist-1').get(),
         )
-        expect((snap as { size: number }).size).toBe(3)
     })
 
     it('Scenario C: unauthenticated CREATE on tracks/{trackId} is REJECTED', async () => {

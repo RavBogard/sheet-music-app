@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { norm, stemOf, matchPagemap, buildProposal } from "../emit-fixed-liturgy.mjs"
+import { norm, stemOf, matchPagemap, buildProposal } from "../ops/emit-fixed-liturgy.mjs"
 import { lookupBookPage } from "@/lib/books/lookup"
 import { getBook, listBooks } from "@/lib/books/registry"
 import allowlist from "../fixed-liturgy.json"

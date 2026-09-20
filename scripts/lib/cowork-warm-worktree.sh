@@ -4,7 +4,7 @@
 # Sourceable helpers for setup-cowork-worktree.sh — the parts with branching
 # logic worth a regression test. Mirrors the sourceable pattern of
 # scripts/lib/unshallow-current-repo.sh so the same code runs inside the
-# setup script AND inside scripts/test-setup-cowork-worktree.sh.
+# setup script AND inside scripts/dev/test-setup-cowork-worktree.sh.
 #
 # Why this exists: cycle-12 run-1 graded the entire offline+stickiness probe
 # matrix NOT-RUN because the cowork sandbox had no node_modules / no

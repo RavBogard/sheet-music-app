@@ -28,7 +28,7 @@ import { DEFAULT_ORG_ID, ORGS } from "@/lib/org/registry"
  *    untouched fields.
  *
  * The logic lives here (db-injected) so it is emulator-testable; the prod
- * runner `scripts/backfill-orgid-v11.mjs` is a thin wrapper over the same rules.
+ * runner `scripts/migrations/2026-06-08/backfill-orgid-v11.mjs` is a thin wrapper over the same rules.
  */
 
 type DB = FirebaseFirestore.Firestore

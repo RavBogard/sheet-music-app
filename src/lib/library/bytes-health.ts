@@ -21,7 +21,7 @@
  *     fileId-anchored shape (`library/{fileId}` exact OR
  *     `library/{fileId}.${ext}`). One prefix listing per row catches all four
  *     known extensions (`.pdf` / `.xml` / `.mp3` / no-extension) — same
- *     shape `scripts/probe-gcs-versions-wider-blast.mjs` already validates.
+ *     shape `scripts/dev/probe-gcs-versions-wider-blast.mjs` already validates.
  *   - the helper computes a `verdict` so the cron route's Sentry-level
  *     decision is testable in isolation. Dispatch thresholds:
  *       missingCount == 0                                → 'healthy' (silent)

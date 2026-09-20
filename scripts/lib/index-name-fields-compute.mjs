@@ -1,7 +1,7 @@
 /**
  * Pure-JS mirror of `src/lib/library/recompute-index-name-fields.ts` (and its
  * dep `src/lib/mcp/title-specificity.ts`) — used by
- * `scripts/backfill-library-normalizedname.mjs` to compute the four W-02
+ * `scripts/migrations/2026-05-25/backfill-library-normalizedname.mjs` to compute the four W-02
  * derivative fields (nameLower / normalizedName / stem / titleSpecificity)
  * without pulling the Next.js path-alias / TS toolchain into the .mjs ops
  * script.

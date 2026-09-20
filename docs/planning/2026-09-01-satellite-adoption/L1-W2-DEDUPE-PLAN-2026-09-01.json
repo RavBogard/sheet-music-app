@@ -1,0 +1,1288 @@
+{
+ "scanned": 876,
+ "groupsFound": 84,
+ "wouldMark": 85,
+ "committed": 0,
+ "songsMirrored": 0,
+ "groups": [
+  {
+   "normalizedName": "bsefer chayim  hashiveinu",
+   "kept": {
+    "fileId": "1-7s6O5YGk5noWiVhtktHwpr7SHOq8_09",
+    "name": "B'sefer chayim & Hashiveinu.pdf",
+    "uploadedAt": "2024-10-08T19:15:48.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-8396793f-f74b-4361-a4a8-fa0a5bf1903a",
+     "name": "B'sefer chayim & Hashiveinu",
+     "uploadedAt": "2026-05-16T13:06:17.273Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "mi shebeirach",
+   "kept": {
+    "fileId": "1-GuL3x3yXCj4CpUieKyqriSYLIewYBW8",
+    "name": "Mi Shebeirach.pdf",
+    "uploadedAt": "2024-09-19T04:59:49.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-ef1dda28-cf3e-4220-b993-0ec12830b78a",
+     "name": "Mi Shebeirach",
+     "uploadedAt": "2026-05-16T13:00:56.689Z"
+    },
+    {
+     "fileId": "1r2V2tJnZauBVhuiDC2zjLLb3iyhAw8Nj",
+     "name": "Mi shebeirach.pdf",
+     "uploadedAt": "2025-05-06T18:53:03.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "shema major",
+   "kept": {
+    "fileId": "1-NNEkYLm4R7PJ7ttd1HVVQ55FYqps5fT",
+    "name": "Shema (major).pdf",
+    "uploadedAt": "2025-07-08T16:53:49.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "19XVik7nlDmoUr8CcBJbjDsecLuqInQ_Z",
+     "name": "Shema (major).pdf",
+     "uploadedAt": "2025-05-06T17:59:42.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "may it be a good year full score",
+   "kept": {
+    "fileId": "1-aabMnNguIMwqICh3Yd5OOESSsX1YD1H",
+    "name": "May it be a Good Year - Full Score.pdf",
+    "uploadedAt": "2025-08-19T15:26:13.259Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-9f340d8c-5d20-40f0-9dec-8ef39ede84af",
+     "name": "May it be a Good Year - Full Score",
+     "uploadedAt": "2026-05-16T13:02:38.758Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "hashiveinu",
+   "kept": {
+    "fileId": "1-nZdkk3WmzecIti5rgOKG5Km7kditRSP",
+    "name": "Hashiveinu.pdf",
+    "uploadedAt": "2024-10-09T22:40:54.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-37349a71-aa52-4e6f-9b5b-aaf35b1d28cc",
+     "name": "Hashiveinu",
+     "uploadedAt": "2026-05-16T13:01:44.703Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "zochrenu lehayim full score",
+   "kept": {
+    "fileId": "10_OkoTpn-27dVH3IEwtJXeC3L4rJsSs0",
+    "name": "zochrenu Lehayim - Full Score.pdf",
+    "uploadedAt": "2024-09-11T19:16:48.177Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-5d633068-bfc9-4b74-af9a-9beff3c2fd25",
+     "name": "zochrenu Lehayim - Full Score",
+     "uploadedAt": "2026-05-16T13:03:49.795Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "yedid nefesh",
+   "kept": {
+    "fileId": "11hnNdTgFcqqmK1ExZYEeM3HqqHLfC28y",
+    "name": "Yedid Nefesh.pdf",
+    "uploadedAt": "2025-11-14T17:49:06.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1p32ui1nyleLqmLU0On2pkOQSUlgJRUEE",
+     "name": "Yedid Nefesh.pdf",
+     "uploadedAt": "2025-11-14T17:49:06.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "barchu am i awake  full score",
+   "kept": {
+    "fileId": "12jOqCRu1d3CMEqEXhIlvtH6fISPb8_kU",
+    "name": "Barchu (Am I Awake ) - Full Score.pdf",
+    "uploadedAt": "2025-06-14T14:50:19.878Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-85b75ced-5571-4900-89b9-df2099513430",
+     "name": "Barchu (Am I Awake ) - Full Score",
+     "uploadedAt": "2026-05-16T13:01:06.150Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "od yavo shalom aleinu",
+   "kept": {
+    "fileId": "13aYPTWGNeCpbOFk4CjccIWKvADcRvCNg",
+    "name": "Od Yavo Shalom Aleinu.pdf",
+    "uploadedAt": "2025-10-31T19:18:45.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-4f05ce1a-62e9-41f6-8050-46d256a0bff0",
+     "name": "Od Yavo Shalom Aleinu",
+     "uploadedAt": "2026-06-04T19:24:42.506Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "aleinu trad full score",
+   "kept": {
+    "fileId": "14SMDmqaXkzSH_pAKYQ86cekbY7Doelfm",
+    "name": "Aleinu- trad - Full Score.pdf",
+    "uploadedAt": "2023-07-28T12:40:53.867Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-37b1583d-b062-481c-92ce-9f68efa6f5e1",
+     "name": "Aleinu- trad - Full Score",
+     "uploadedAt": "2026-05-16T13:02:30.546Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "avinu malkeinu trad choir em",
+   "kept": {
+    "fileId": "16hgfPydSNfbuAbTMWVRncQCJkwlxlMDB",
+    "name": "Avinu Malkeinu_trad_Choir_Em.pdf",
+    "uploadedAt": "2025-08-11T15:24:08.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1r6EerKdaIfJmaS4kdwLNA5rWeSnF56uk",
+     "name": "Avinu Malkeinu_trad_Choir_Em.pdf",
+     "uploadedAt": "2025-08-11T13:42:08.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "kedusha compact",
+   "kept": {
+    "fileId": "17WKpAjPPT6E8D2VpRgiwNEy9V48BtwhR",
+    "name": "Kedusha (compact).pdf",
+    "uploadedAt": "2023-08-22T18:36:20.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-27952415-e4ae-43ab-a3d4-0dbdec30def3",
+     "name": "Kedusha (compact)",
+     "uploadedAt": "2026-05-16T13:04:34.968Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "niggun 3 part choral score",
+   "kept": {
+    "fileId": "18ip_oBzFOZmb6qwYHcHUerGvKlWLS9ZU",
+    "name": "Niggun 3 part choral score.pdf",
+    "uploadedAt": "2025-08-01T20:39:56.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1YuXOp7krlxedG4OGIXmIDWv55LZNRIlL",
+     "name": "Niggun 3 part choral score.pdf",
+     "uploadedAt": "2025-08-11T13:39:11.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "shiru l adonai shir shabbat",
+   "kept": {
+    "fileId": "19E8aTettqSQO1ZVtVhXCPfUJw1dw0f3G",
+    "name": "Shiru L_Adonai Shir Shabbat.pdf",
+    "uploadedAt": "2025-11-14T19:16:56.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1AIwCXDw1mGHm_uhaoJfbpkri-ibzOLI4",
+     "name": "Shiru L_Adonai Shir Shabbat.pdf",
+     "uploadedAt": "2025-11-14T19:16:56.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "rtzei full score",
+   "kept": {
+    "fileId": "19HZjTlXx_pXGMy3VV5k-o71vIB6amI9S",
+    "name": "R'tzei - Full Score.pdf",
+    "uploadedAt": "2023-08-10T14:48:27.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-2ecf9cad-4998-41d9-a024-388ce278168e",
+     "name": "R'tzei - Full Score",
+     "uploadedAt": "2026-05-16T13:05:18.026Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "unetaneh tokef 4 parts",
+   "kept": {
+    "fileId": "19JE0aPISEwHYTC5RtieFX1EOVdYTP-yV",
+    "name": "Unetaneh_Tokef 4 parts.pdf",
+    "uploadedAt": "2025-08-11T13:39:13.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1t120h-tSRphOOwemf0tu5_j2j58ErazM",
+     "name": "Unetaneh_Tokef 4 parts.pdf",
+     "uploadedAt": "2025-08-11T15:46:28.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "shalom alechem shir shabbat",
+   "kept": {
+    "fileId": "1BLARziE-ImWCPWDoU8utX5Cu7Jm4mxxJ",
+    "name": "Shalom Alechem Shir Shabbat.pdf",
+    "uploadedAt": "2025-11-14T19:43:56.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1SH9vxGsFfIJ4mU_FaAaIX13hThwuqfH5",
+     "name": "Shalom Alechem Shir Shabbat.pdf",
+     "uploadedAt": "2025-11-14T19:43:56.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "oseh shalom sp",
+   "kept": {
+    "fileId": "1BQ-zjhN7hoUCooF02Z1mawgtMZJ_EfEM",
+    "name": "Oseh shalom (S&P).pdf",
+    "uploadedAt": "2025-07-08T16:54:33.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1G4DJBRKB_DwZXJ7yqeQVkRR-5-R7EvU9",
+     "name": "Oseh shalom (S&P).pdf",
+     "uploadedAt": "2025-05-06T18:51:47.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "modeh ani f minor",
+   "kept": {
+    "fileId": "1BfwOSMZIDkTfRrjMDRBpz8B9qAZAdJh9",
+    "name": "Modeh_Ani F minor.pdf",
+    "uploadedAt": "2024-09-30T21:13:48.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-a60b0dce-daa8-4231-b743-724bd69962e1",
+     "name": "Modeh_Ani F minor",
+     "uploadedAt": "2026-05-16T13:06:21.777Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "hineni rosenblatt",
+   "kept": {
+    "fileId": "1Bquaq3tlSoRAovWcCkynShUuepgEgYZ_",
+    "name": "Hineni Rosenblatt.pdf",
+    "uploadedAt": "2025-09-23T19:02:31.707Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-4830f298-d4aa-43e9-b34d-ce5cd2faea44",
+     "name": "Hineni Rosenblatt",
+     "uploadedAt": "2026-05-16T13:06:02.371Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "lecha dodi lincoln s nigun",
+   "kept": {
+    "fileId": "1CKCIpT3q8q4257D2i6klXsRl8GFWpJee",
+    "name": "Lecha Dodi Lincoln_s Nigun.pdf",
+    "uploadedAt": "2025-12-07T17:41:22.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1VbcRGqSXF28Kf4DWdddpeQ9ANcV8W5CL",
+     "name": "Lecha Dodi Lincoln_s Nigun.pdf",
+     "uploadedAt": "2025-12-07T17:41:22.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "dodi li",
+   "kept": {
+    "fileId": "1D-rUMfhk4pinIQX97bYMi_rsKaNoS9s4",
+    "name": "Dodi Li.pdf",
+    "uploadedAt": "2026-05-15T21:52:17.858Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-11a3e3a1-a0ac-4a12-8bc7-f33c7aa30716",
+     "name": "Dodi Li",
+     "uploadedAt": "2026-05-15T21:58:53.408Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "bina in g",
+   "kept": {
+    "fileId": "1EPzxHjEkvvHnIQm7L98X4hl8DvuJFHQh",
+    "name": "Bina in G.pdf",
+    "uploadedAt": "2026-05-15T17:17:29.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-7fb95fac-c0cf-4cb1-91a3-6e5828c212b8",
+     "name": "Bina in G",
+     "uploadedAt": "2026-05-15T17:56:51.148Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "mi chamocha traditional full score",
+   "kept": {
+    "fileId": "1EhNYnQc4YBzD_vtTZRunaNW2dhS57E0s",
+    "name": "Mi Chamocha Traditional - Full Score.pdf",
+    "uploadedAt": "2023-08-23T22:20:43.078Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-94650195-4b51-4e80-b4f1-ee8c7b0a80f5",
+     "name": "Mi Chamocha Traditional - Full Score",
+     "uploadedAt": "2026-05-16T13:00:26.816Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "mizmor l david d",
+   "kept": {
+    "fileId": "1EiJJKn3ZmsWnXVYiEjMHQmR17t0ByDbG",
+    "name": "Mizmor l_David D.pdf",
+    "uploadedAt": "2025-11-14T18:31:16.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1yJjdDZ1ivU0if-T-d_uCYkH1rEIH-xs3",
+     "name": "Mizmor l_David D.pdf",
+     "uploadedAt": "2025-11-14T18:31:16.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "avinu malkeinu full score",
+   "kept": {
+    "fileId": "1Gtp4pR3MGaRK7ZjjX4Rtmjg2anfvoEsN",
+    "name": "Avinu Malkeinu - Full Score.pdf",
+    "uploadedAt": "2023-07-28T12:40:53.872Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-001c4dd1-6eb2-4977-91ad-6380f535c6f7",
+     "name": "Avinu Malkeinu - Full Score",
+     "uploadedAt": "2026-05-16T13:05:22.839Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "avinu malkeynu janowski full score",
+   "kept": {
+    "fileId": "1J6H_F6Ba02_rMRQEJbi_lBbMXCBag6SQ",
+    "name": "Avinu Malkeynu Janowski - Full Score.pdf",
+    "uploadedAt": "2023-07-28T12:40:53.868Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-c01f4494-6c6a-4de5-a9ea-9b2e9c8572ff",
+     "name": "Avinu Malkeynu Janowski - Full Score",
+     "uploadedAt": "2026-05-16T13:02:06.834Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "candle blessing full score",
+   "kept": {
+    "fileId": "1K6ENNHsN324AcZmC6tFLLSdAKSpSyqF1",
+    "name": "Candle Blessing - Full Score.pdf",
+    "uploadedAt": "2023-08-23T16:45:41.975Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-d403d74e-026b-4596-8d7b-9bc91bbee7e8",
+     "name": "Candle Blessing - Full Score",
+     "uploadedAt": "2026-05-16T13:00:42.635Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "hayom teamtzeinu full score",
+   "kept": {
+    "fileId": "1K6cAZSsAcxurLVyHjW3MKCpfZzseE5kQ",
+    "name": "Hayom teamtzeinu - Full Score.pdf",
+    "uploadedAt": "2023-07-10T18:30:38.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-5aced51b-a5dd-4126-a64a-4d71198f8c5f",
+     "name": "Hayom teamtzeinu - Full Score",
+     "uploadedAt": "2026-05-16T13:03:58.098Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "untaneh tokef full score",
+   "kept": {
+    "fileId": "1KV7ImMQF2i82sfPj9wvCnsZWZWo1SGlS",
+    "name": "Un'taneh Tokef - Full Score.pdf",
+    "uploadedAt": "2023-08-23T16:45:41.986Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-cd9c2d9c-ce6c-4cb5-8ce8-dc60e3b863b4",
+     "name": "Un'taneh Tokef - Full Score",
+     "uploadedAt": "2026-05-16T13:02:26.064Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "barchu friedman",
+   "kept": {
+    "fileId": "1LPfmwfa8On5YHco9nC-dt5IyWk7QO4gV",
+    "name": "Barchu (Friedman).pdf",
+    "uploadedAt": "2025-07-08T15:43:07.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1b9n_WsSuXkjbAgYcnK1M9XVTHNOalKAq",
+     "name": "Barchu (Friedman).pdf",
+     "uploadedAt": "2025-07-19T02:08:23.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "veshamru",
+   "kept": {
+    "fileId": "1Mqje155L1D2TpfeoLycAL_pxEs04epFw",
+    "name": "Veshamru.pdf",
+    "uploadedAt": "2025-05-03T19:20:24.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1VcD-E7ZKj48zN-20JaJT2MOLB-5WSkpR",
+     "name": "Veshamru.pdf",
+     "uploadedAt": "2025-07-08T16:52:50.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "dis trust full score",
+   "kept": {
+    "fileId": "1NhFwI5Bf91gSuCiONrIAj-SttN6GEG3u",
+    "name": "Dis Trust - Full Score.pdf",
+    "uploadedAt": "2023-08-30T19:58:42.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-74891fe8-e20d-4ab5-a72b-0c1eb79b241a",
+     "name": "Dis Trust - Full Score",
+     "uploadedAt": "2026-05-16T13:03:23.256Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "avinu malkeinu",
+   "kept": {
+    "fileId": "1NqqJXEfTW1_B0sWBlcqAM4paZJOOmLuk",
+    "name": "Avinu Malkeinu.pdf",
+    "uploadedAt": "2024-09-19T05:57:22.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-a0e12ee5-2e0f-48e2-a2f4-597f1aebd5af",
+     "name": "Avinu Malkeinu",
+     "uploadedAt": "2026-05-16T13:03:40.037Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "tfilah adonai sfatai full score",
+   "kept": {
+    "fileId": "1Nz7ih3xr6Wb2XMeZZgrLJDCq_NoNAz7v",
+    "name": "T'filah Adonai s'fatai - Full Score.pdf",
+    "uploadedAt": "2023-08-23T16:45:41.983Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-d25724b8-5799-4e07-8ff1-1908d0fa6ca8",
+     "name": "T'filah Adonai s'fatai - Full Score",
+     "uploadedAt": "2026-05-16T13:04:06.783Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "aleinu",
+   "kept": {
+    "fileId": "1Q27iTstQskArSk4-kHFfN0ZnQjV7Oau8",
+    "name": "Aleinu - .pdf",
+    "uploadedAt": "2023-07-07T15:22:29.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-a469ceba-603c-4fa6-8273-3213771b3222",
+     "name": "Aleinu -",
+     "uploadedAt": "2026-05-16T13:04:30.961Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "nigun  5",
+   "kept": {
+    "fileId": "1R7lq5sBnwIH6WxZda_IshPjTpAtN30tJ",
+    "name": "Nigun # 5.PDF",
+    "uploadedAt": "2024-09-24T03:31:45.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-0e1c11d4-a798-4cfa-82b6-18e6547f897f",
+     "name": "Nigun # 5",
+     "uploadedAt": "2026-05-16T13:03:31.688Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "sim shalom full score",
+   "kept": {
+    "fileId": "1RBpYbHvv44QhjezUIkQgWPN0nnel3zuy",
+    "name": "Sim Shalom - Full Score.pdf",
+    "uploadedAt": "2023-07-28T12:40:53.874Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-8bf896c5-b260-478d-95b7-d6437f350cf1",
+     "name": "Sim Shalom - Full Score",
+     "uploadedAt": "2026-05-16T13:01:10.582Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "mi chamocha shur",
+   "kept": {
+    "fileId": "1RQzrqpgVhkcL3tvBWGCYUIhtPNhF1Fnr",
+    "name": "Mi chamocha shur.pdf",
+    "uploadedAt": "2025-09-23T19:04:46.639Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-fc56515c-2557-4efa-b387-49e9a0343191",
+     "name": "Mi chamocha shur",
+     "uploadedAt": "2026-05-16T13:05:57.897Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "mi shebeirach jazz",
+   "kept": {
+    "fileId": "1TCP25KtpY0BZ1ixLPMSkhT7_HdFNW7IL",
+    "name": "Mi_shebeirach jazz.pdf",
+    "uploadedAt": "2025-09-23T19:05:00.362Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-3b09195c-68ea-4ccc-966f-728eb4369449",
+     "name": "Mi_shebeirach jazz",
+     "uploadedAt": "2026-05-16T13:05:53.587Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "mi chamochah full score",
+   "kept": {
+    "fileId": "1TJwxurV4SgcpM58SG9x6hQ8e7cY6Yp9T",
+    "name": "Mi Chamochah - Full Score.pdf",
+    "uploadedAt": "2023-07-07T15:22:29.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-851993d0-452c-422c-9fed-e1a0f694066e",
+     "name": "Mi Chamochah - Full Score",
+     "uploadedAt": "2026-05-16T13:01:01.450Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "sim shalom jim",
+   "kept": {
+    "fileId": "1U9Ku90io-9lvaPNt6_vDv1rxjTLZaEGc",
+    "name": "Sim Shalom (Jim).pdf",
+    "uploadedAt": "2023-08-22T18:37:32.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-f5a32ac0-2836-4db5-b4e7-5ae7058ed6e5",
+     "name": "Sim Shalom (Jim)",
+     "uploadedAt": "2026-05-16T13:05:34.812Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "om ney dm full score",
+   "kept": {
+    "fileId": "1UC0SmGpSLTNyH998kCfMaJzcZPkSOATA",
+    "name": "Om-Ney Dm - Full Score.pdf",
+    "uploadedAt": "2023-09-01T17:15:25.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-46aa6c3e-32f9-43ff-8c90-b1d5ca4a8b3d",
+     "name": "Om-Ney Dm - Full Score",
+     "uploadedAt": "2026-05-16T13:03:27.303Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "modeh ani ma tovu psukei full score",
+   "kept": {
+    "fileId": "1V2T04NsfROLjyEDOvAc0F3Bz_Tc20Kzi",
+    "name": "Modeh Ani Ma Tovu P'sukei - Full Score.pdf",
+    "uploadedAt": "2023-08-23T16:45:41.978Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-d904e39d-1acf-4b9f-86b6-0a8a1bc6ba87",
+     "name": "Modeh Ani Ma Tovu P'sukei - Full Score",
+     "uploadedAt": "2026-05-16T13:04:45.092Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "yihyu leratzon full score",
+   "kept": {
+    "fileId": "1VFVL-HAEa1XHVcqTPiIV-_DSlOdg4M2V",
+    "name": "Yihyu Leratzon - Full Score.pdf",
+    "uploadedAt": "2023-07-28T12:40:53.857Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-7acc4962-c361-429a-b384-b5ac2024d6bc",
+     "name": "Yihyu Leratzon - Full Score",
+     "uploadedAt": "2026-05-16T13:02:42.881Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "hashkiveinu full score",
+   "kept": {
+    "fileId": "1VmpBREQWoux2gOCAeMzNPlZ1VWLCWQdf",
+    "name": "Hashkiveinu - Full Score.pdf",
+    "uploadedAt": "2023-08-10T14:48:27.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-b6350b58-b1dd-4119-800a-0398062c2ee2",
+     "name": "Hashkiveinu - Full Score",
+     "uploadedAt": "2026-05-16T13:00:37.871Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "shalom alechem goldfarb",
+   "kept": {
+    "fileId": "1W3mVu5MmsLklXhhh6WpQe5KrCr71Z6iJ",
+    "name": "Shalom alechem (Goldfarb).pdf",
+    "uploadedAt": "2025-10-10T02:15:34.888Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1fDW83DxtZgoTEVABabdxi7lzopNx-Hnx",
+     "name": "Shalom alechem (Goldfarb).pdf",
+     "uploadedAt": "2026-01-04T01:30:14.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "kedushah full score",
+   "kept": {
+    "fileId": "1WJag4LEVyYDL2YxvWxiDBM5zgTzOgfAm",
+    "name": "KEDUSHAH - Full Score.pdf",
+    "uploadedAt": "2023-07-07T15:22:29.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-4c3e871b-f2bf-42d7-97eb-46cc9e41085a",
+     "name": "KEDUSHAH - Full Score",
+     "uploadedAt": "2026-05-16T13:04:26.872Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "may the door full score",
+   "kept": {
+    "fileId": "1WdIXm5jTtgtcBcQC_MggjybIGfP2b604",
+    "name": "May the Door - Full Score.pdf",
+    "uploadedAt": "2025-09-16T16:23:59.669Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-e9f04fbf-1294-4f18-9961-9554c14be072",
+     "name": "May the Door - Full Score",
+     "uploadedAt": "2026-05-16T13:01:39.985Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "vshamru",
+   "kept": {
+    "fileId": "1WusU1xlwOKQvKu2kemrowh6oZ16S9UeR",
+    "name": "V'Shamru.pdf",
+    "uploadedAt": "2024-10-10T02:21:58.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-140cf129-9420-43bd-9c67-5d4094b87e05",
+     "name": "V'Shamru",
+     "uploadedAt": "2026-05-16T13:02:52.690Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "avodah retzei",
+   "kept": {
+    "fileId": "1X9O_4wIudGORlU9rZ-i2Ub7zN4tBhLt-",
+    "name": "Avodah Retzei.pdf",
+    "uploadedAt": "2024-09-19T04:59:33.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-a76bf9a6-64ec-45f1-b05b-3572eacc00bd",
+     "name": "Avodah Retzei",
+     "uploadedAt": "2026-05-16T13:03:35.835Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "bsefer chayim full score",
+   "kept": {
+    "fileId": "1ZPh6Ge2WUl21w2sL7gq0rf1q3396QL07",
+    "name": "B'sefer Chayim - Full Score.pdf",
+    "uploadedAt": "2023-08-23T16:45:42.006Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-8d6d5a21-3951-40a2-b207-d9d88a481011",
+     "name": "B'sefer Chayim - Full Score",
+     "uploadedAt": "2026-05-16T13:04:22.770Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "shalom rav full score",
+   "kept": {
+    "fileId": "1ZvsnHlvqAirjvpbWJ1FWAM2IgEuLbPOO",
+    "name": "Shalom Rav - Full Score.pdf",
+    "uploadedAt": "2023-08-23T16:45:41.971Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-83a208d3-6b48-431d-b90c-f4d67ef1ed02",
+     "name": "Shalom Rav - Full Score",
+     "uploadedAt": "2026-05-16T13:05:49.403Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "eitz chayim and hashiveinu full score",
+   "kept": {
+    "fileId": "1av4wG0mTcKSjYTwKWbDoynvNrFdwSCrW",
+    "name": "Eitz Chayim and HashiVeinu - Full Score.pdf",
+    "uploadedAt": "2023-07-07T15:22:29.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-4b37c905-257e-45f8-b319-6d88bd978fa1",
+     "name": "Eitz Chayim and HashiVeinu - Full Score",
+     "uploadedAt": "2026-05-16T13:04:02.574Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "mah tovu full score",
+   "kept": {
+    "fileId": "1cFzp0F-TbCdUFtjJwJ6yPCxQi9IIkpR7",
+    "name": "Mah Tovu - Full Score.pdf",
+    "uploadedAt": "2023-07-28T12:40:53.870Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-999b47bc-eaba-4a06-b1b4-0fe52b6b8d87",
+     "name": "Mah Tovu - Full Score",
+     "uploadedAt": "2026-05-16T13:05:02.432Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "vshamru old skool",
+   "kept": {
+    "fileId": "1cqxulkFHUjA0-w6tmUwK6t4TnPgLWbpx",
+    "name": "V'Shamru (Old Skool).pdf",
+    "uploadedAt": "2024-10-09T22:41:57.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-a22cfc06-b187-4464-95fa-b81264af6374",
+     "name": "V'Shamru (Old Skool)",
+     "uploadedAt": "2026-05-16T13:03:10.139Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "barechu trad choir c",
+   "kept": {
+    "fileId": "1dS-0aYsqxyxS5DIqs4iP521Obwgh7yLL",
+    "name": "Barechu_trad_Choir_C.pdf",
+    "uploadedAt": "2025-08-05T15:30:58.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1v1aFYuQ57HHoILQWcT_rtv3zhMWq2IR9",
+     "name": "Barechu_trad_Choir_C.pdf",
+     "uploadedAt": "2025-08-11T13:39:12.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "niggun full score",
+   "kept": {
+    "fileId": "1e36kWrER7lDRLjCe1n_YGXlGKq15CMz2",
+    "name": "Niggun - Full Score.pdf",
+    "uploadedAt": "2023-07-07T15:22:29.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-ece4da1e-9488-4f7d-86a5-a1e6f7cc7709",
+     "name": "Niggun - Full Score",
+     "uploadedAt": "2026-05-16T12:45:24.401Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "c saw niggun score",
+   "kept": {
+    "fileId": "1eBRJoo2uNWzEG-Hu4kejU0GRPzVQdd1V",
+    "name": "C-Saw Niggun Score.pdf",
+    "uploadedAt": "2025-05-06T16:28:40.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1w6SuGzU6pTpzMk-hGdfsq6dDEJSxivoH",
+     "name": "C-Saw Niggun Score.pdf",
+     "uploadedAt": "2025-05-06T16:28:40.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "eitz chayim old skool",
+   "kept": {
+    "fileId": "1ecPTYaPCPkHuqdZrPKFLVCQWgeCXPus6",
+    "name": "Eitz Chayim (Old Skool).pdf",
+    "uploadedAt": "2024-10-09T22:42:22.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-a059e0d5-e919-466a-9e83-757af222f042",
+     "name": "Eitz Chayim (Old Skool)",
+     "uploadedAt": "2026-05-16T13:03:05.714Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "benediction full score",
+   "kept": {
+    "fileId": "1edX7GlHavLu4fvYHkSg0HQ_ftYhfOMuK",
+    "name": "Benediction - Full Score.pdf",
+    "uploadedAt": "2023-08-27T22:43:25.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-41215e9c-e02e-466a-b761-e846bef7e81a",
+     "name": "Benediction - Full Score",
+     "uploadedAt": "2026-05-16T13:02:02.523Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "ma tovu crc 2",
+   "kept": {
+    "fileId": "1eyarxSuTHi7r-LedbgJ7jxG5cL4f8ukb",
+    "name": "Ma Tovu (CRC) 2.pdf",
+    "uploadedAt": "2023-08-26T01:12:24.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-841f0a0c-fda6-464e-853a-81124e7026d7",
+     "name": "Ma Tovu (CRC) 2",
+     "uploadedAt": "2026-05-16T13:04:53.987Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "adon olam",
+   "kept": {
+    "fileId": "upload-7853815f-6c11-47ec-a2b5-cfde2d5021f8",
+    "name": "Adon Olam",
+    "uploadedAt": "2026-06-27T03:43:38.648Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1gTZdh60yL9zN6zhQmbBeK7n-zxMxoshkZwHqwpYN99k",
+     "name": "Adon Olam",
+     "uploadedAt": "2024-03-27T14:16:41.686Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "barchu walkdown",
+   "kept": {
+    "fileId": "1i3jy2Co3gNHsnzDXyEvrLpE249lD-KhS",
+    "name": "Bar'chu Walkdown.pdf",
+    "uploadedAt": "2026-05-21T14:26:16.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-046649f0-1c68-4586-b021-964bb84c3228",
+     "name": "Barchu Walkdown",
+     "uploadedAt": "2026-05-22T22:01:52.059Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "berosh hashanah yikateivun full score",
+   "kept": {
+    "fileId": "1j9UHSajBGbP_YLqrHygy6Tv3PkvSD_tu",
+    "name": "Berosh Hashanah Yikateivun - Full Score.pdf",
+    "uploadedAt": "2023-08-10T14:48:27.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-3bd3bd0e-0a1f-49c9-9eaa-6204ba4aa864",
+     "name": "Berosh Hashanah Yikateivun - Full Score",
+     "uploadedAt": "2026-05-16T13:03:53.970Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "lchai olamim full score 1",
+   "kept": {
+    "fileId": "1ljIZkOUyUrFE3Djvv1j0-WnWcziorwyV",
+    "name": "L'chai Olamim - Full Score (1).pdf",
+    "uploadedAt": "2023-03-02T02:34:21.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-8fc96cb9-2802-4a29-a35b-b2fd970d7441",
+     "name": "L'chai Olamim - Full Score (1)",
+     "uploadedAt": "2026-05-16T13:04:49.150Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "esa einai full score",
+   "kept": {
+    "fileId": "1m9IrT8SHyVU9nM5jbYXVMu75EG0Mo1a4",
+    "name": "Esa Einai - Full Score.pdf",
+    "uploadedAt": "2025-09-16T16:26:41.104Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-79b1b827-67e0-4a62-8f96-1c06459a6fb3",
+     "name": "Esa Einai - Full Score",
+     "uploadedAt": "2026-05-16T13:01:35.760Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "avinu shebashamayim",
+   "kept": {
+    "fileId": "1n8ur933csmrxPJYKZn2cFtFNwRac7PWZ",
+    "name": "Avinu Shebashamayim.pdf",
+    "uploadedAt": "2024-10-10T02:03:16.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-fb3dde53-498a-48d6-9a76-330a47c6dd9f",
+     "name": "Avinu Shebashamayim",
+     "uploadedAt": "2026-05-16T13:02:57.219Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "shalom rav",
+   "kept": {
+    "fileId": "upload-bac3a36d-3bef-482d-a971-1b5014b5dc56",
+    "name": "Shalom_rav",
+    "uploadedAt": "2026-05-16T13:14:41.632Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1nM6XI_TvFX85mZe3el19-g6TYXZ5KwtE",
+     "name": "Shalom Rav.pdf",
+     "uploadedAt": "2026-05-18T13:54:55.839Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "veshameru full score",
+   "kept": {
+    "fileId": "1nmHWbmh67h4YF8QVTz8hofgrP-4WTL3a",
+    "name": "Veshameru - Full Score.pdf",
+    "uploadedAt": "2023-07-28T12:40:53.874Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-f16a45fd-5dc5-4595-8e2a-f33fb93304f6",
+     "name": "Veshameru - Full Score",
+     "uploadedAt": "2026-05-16T13:01:27.215Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "mi chamocha moshav morning",
+   "kept": {
+    "fileId": "1oOys8D12_uDOG_2vcssAq8k5PLf4ZhBQ",
+    "name": "Mi chamocha (Moshav) morning.pdf",
+    "uploadedAt": "2025-08-05T17:39:13.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-36867efb-694d-4ee9-884d-b90d0518cf11",
+     "name": "Mi chamocha (Moshav) morning",
+     "uploadedAt": "2026-05-16T13:06:13.153Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "oseh shalom camp",
+   "kept": {
+    "fileId": "1orCw2GbmC7QzDFQnNeK1hyA83Kh9B6XR",
+    "name": "Oseh shalom (camp).pdf",
+    "uploadedAt": "2025-05-06T19:09:27.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1wNTlj3sB2Z3Zra7jhYlniuGcHpxnuEWk",
+     "name": "Oseh shalom (camp).pdf",
+     "uploadedAt": "2025-07-08T16:54:40.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "avodah ritzei full score",
+   "kept": {
+    "fileId": "1q8kGn48kh9CXdJPmm4i6g_wx67Zl8GHB",
+    "name": "Avodah Ritzei - Full Score.pdf",
+    "uploadedAt": "2023-08-23T16:45:41.976Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-34597f8e-9c4c-4ca7-805b-9005ff4446d8",
+     "name": "Avodah Ritzei - Full Score",
+     "uploadedAt": "2026-05-16T13:05:14.053Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "achot ketana",
+   "kept": {
+    "fileId": "1qHPm7jPm6uqwBzm5MMy3ypdQZwzmAh4k",
+    "name": "Achot ketana.pdf",
+    "uploadedAt": "2024-09-19T04:59:24.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-823b20aa-c36f-4163-aab7-a1487a7526f0",
+     "name": "Achot ketana",
+     "uploadedAt": "2026-05-16T13:02:15.343Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "barchu full score",
+   "kept": {
+    "fileId": "1qdX4_IHvHKX5sKfaHRo6sU4vymTmE12d",
+    "name": "Barchu - Full Score.pdf",
+    "uploadedAt": "2023-07-10T18:30:38.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-0dd9f521-b336-47a4-b69b-f0da52090237",
+     "name": "Barchu - Full Score",
+     "uploadedAt": "2026-05-16T13:05:45.024Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "v shamru trad",
+   "kept": {
+    "fileId": "1r2GLfKEj0PZSPn0XbPO9sXfmzhJfcRTu",
+    "name": "V_shamru_(trad).pdf",
+    "uploadedAt": "2025-07-19T02:09:41.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "1v6a8TfMdNjaz-HzGPnVmOB-BI3u0q_zz",
+     "name": "V_shamru_(trad).pdf",
+     "uploadedAt": "2025-07-08T16:52:59.000Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "veal kulam full score",
+   "kept": {
+    "fileId": "1rmxBzOdjhutYWB_HGxuCJnBR8ieSu--_",
+    "name": "Ve'al kulam - Full Score.pdf",
+    "uploadedAt": "2023-07-28T12:40:53.885Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-dcd07426-ebdf-4241-876e-50792c8cd271",
+     "name": "Ve'al kulam - Full Score",
+     "uploadedAt": "2026-05-16T13:01:57.811Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "refa tziri",
+   "kept": {
+    "fileId": "1sv7fGYEciwW6XbS10f3XKOE31iytS9hB",
+    "name": "Refa Tziri.pdf",
+    "uploadedAt": "2024-10-10T00:37:27.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-3053a7a6-0923-4e9a-8f7a-258572c70821",
+     "name": "Refa Tziri",
+     "uploadedAt": "2026-05-16T13:02:34.731Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "bsefer chayim",
+   "kept": {
+    "fileId": "1tIet97g6zgIt-uCu-HrBRcj1tmXj_6ep",
+    "name": "B'sefer chayim.pdf",
+    "uploadedAt": "2024-10-09T22:41:14.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-58e533f7-cfab-448a-9582-c7349dbecd8b",
+     "name": "B'sefer chayim",
+     "uploadedAt": "2026-05-16T13:03:01.385Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "oseh shalom nava tehila",
+   "kept": {
+    "fileId": "1u2g0w4OLjbL5JfjACyL_3kDzUZpaGjng",
+    "name": "Oseh shalom - Nava tehila.pdf",
+    "uploadedAt": "2025-09-16T18:09:54.109Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-ed61baf1-fccf-4f22-a4fe-666acaffc2ad",
+     "name": "Oseh Shalom (Nava Tehila)",
+     "uploadedAt": "2026-08-18T16:28:17.306Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "mi shebeirach full score",
+   "kept": {
+    "fileId": "1ut9fS0F6yHsKvgaAzkNXqDSshHjjesN-",
+    "name": "Mi Shebeirach - Full Score.pdf",
+    "uploadedAt": "2022-10-18T20:24:20.298Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-bd6496ab-bc68-40b8-8393-0ade288ecfa8",
+     "name": "Mi Shebeirach - Full Score",
+     "uploadedAt": "2026-05-16T13:01:15.045Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "come healing full score",
+   "kept": {
+    "fileId": "1w1cwgilpMxe-KGQCDOc7RjoyaS91hgTI",
+    "name": "Come Healing - Full Score.pdf",
+    "uploadedAt": "2022-10-26T17:55:30.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-6a08e2b5-36c5-46b9-b6d3-e4db666133e4",
+     "name": "Come Healing - Full Score",
+     "uploadedAt": "2026-05-16T13:04:18.500Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "mi chamocha compact",
+   "kept": {
+    "fileId": "1xGM06NwCC3Nk4ZdiFZz6hYI9yR-fNvEw",
+    "name": "Mi Chamocha (compact).pdf",
+    "uploadedAt": "2023-08-22T18:37:52.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-e61f04fc-fa83-4a95-ac95-efde2db89b73",
+     "name": "Mi Chamocha (compact)",
+     "uploadedAt": "2026-05-16T13:00:33.092Z"
+    }
+   ]
+  },
+  {
+   "normalizedName": "twilight",
+   "kept": {
+    "fileId": "1xYt6Mp1Ica-2C_VYS2mw_cfhxo3dMkg_",
+    "name": "twilight.pdf",
+    "uploadedAt": "2026-05-15T19:53:00.000Z"
+   },
+   "duplicates": [
+    {
+     "fileId": "upload-aa8d0c3d-bd6f-4a3d-966c-d6082d21b011",
+     "name": "Twilight",
+     "uploadedAt": "2026-08-29T14:32:57.602Z"
+    }
+   ]
+  }
+ ],
+ "dryRun": true,
+ "threshold": 0.85,
+ "coverage": {
+  "total": 891,
+  "eligible": 876,
+  "scanned": 876,
+  "filteredOut": {
+   "byStatus": {
+    "duplicate": 15
+   },
+   "byCollection": {},
+   "byOther": {}
+  }
+ }
+}

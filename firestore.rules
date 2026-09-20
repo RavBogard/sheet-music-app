@@ -133,9 +133,27 @@ service cloud.firestore {
     // v4.0: All setlists are public among band members — no private/public
     // distinction for access control beyond role-gating.
     match /setlists/{setlistId} {
-      // 1. READ: All users (public)
-      // Restored public read access so the /perform dashboard works for unsigned-in users.
-      allow read: if true;
+      // 1. READ: one document by id is public; listing the collection is not.
+      //
+      // R-0919-audit-2 (2026-09-19). `allow read: if true` at collection level
+      // grants BOTH `get` and `list`, and `list` is a whole-collection query —
+      // so anyone, signed out, could enumerate every setlist of every tenant
+      // in one request. Splitting the verb keeps the thing that surface
+      // actually needs and drops the thing nobody asked for:
+      //
+      //   get  — an anonymous /perform link carries a setlist id and reads
+      //          that one document. Old links keep working. This stays public
+      //          deliberately: a musician who cannot open the setlist they are
+      //          meant to play is a service-block.
+      //   list — the signed-out /perform landing used to subscribe to the
+      //          collection. It now renders the ISR page's server-rendered
+      //          slice instead (PublicSetlistListing), and paging goes through
+      //          /api/setlists/page, which is public and rate-limited.
+      //
+      // Applies to both tenants. Cross-tenant separation is a separate
+      // concern and is enforced on writes below.
+      allow get: if true;
+      allow list: if isSignedIn();
 
       // 2. CREATE: Any signed-in user, must set ownerId to self
       //    v11-01-04: + org-scope (orgId, if set, must be the caller's tenant).
@@ -170,7 +188,14 @@ service cloud.firestore {
     // band-leader/admin authentication. Audit: 2026-05-13 — Daniel UAT
     // reported "No tracks yet" on incognito perform view.
     match /tracks/{trackId} {
-      allow read: if true;
+      // R-0919-audit-2: same split as `setlists` above, same reason. Reading
+      // one track by id stays public; querying the collection
+      // (`where("setlistId","==",…)`, which is what the Perform view needs)
+      // requires sign-in. Signed-out Perform gets those rows from
+      // /api/setlists/{setlistId}/tracks — public, rate-limited, Admin SDK,
+      // and scoped to the one setlist whose id the caller already has.
+      allow get: if true;
+      allow list: if isSignedIn();
       // v11-01-04: + org-scope write isolation (read stays public for /perform).
       allow create: if isSignedIn() && (isBandLeader() || isAdmin()) && orgCreateOk();
       allow update: if isSignedIn() && (isBandLeader() || isAdmin()) && callerCanWriteExistingOrg() && orgUpdateOk();

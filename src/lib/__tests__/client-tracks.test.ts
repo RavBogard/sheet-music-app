@@ -11,8 +11,19 @@ vi.mock('firebase/firestore', () => ({
     where: vi.fn((field, op, value) => ({ __where: { field, op, value } })),
     getDocs: (...args: unknown[]) => mockGetDocs(...args),
 }))
+// R-0919-audit-2: `auth.currentUser` now decides which path
+// fetchTracksForSetlistClient takes. Signed IN by default here, so the
+// existing Firestore-direct cases below keep exercising the Firestore branch;
+// the signed-out suite at the bottom flips it.
+// vi.hoisted, because vi.mock is lifted above ordinary top-level consts.
+const { mockAuth } = vi.hoisted(() => ({
+    mockAuth: { currentUser: { uid: 'signed-in-user' } } as {
+        currentUser: { uid: string } | null
+    },
+}))
 vi.mock('@/lib/firebase', () => ({
     db: { __mockDb: true },
+    auth: mockAuth,
     getDb: vi.fn(async () => ({ __mockDb: true })),
     subscribeWithDb: vi.fn((setup: (db: unknown) => (() => void) | void) => {
         const u = setup({ __mockDb: true })
@@ -77,6 +88,7 @@ describe('v60-08-01 getTracksForSetlistClient (pure function)', () => {
 describe('v60-08-01 fetchTracksForSetlistClient (Firestore-direct)', () => {
     beforeEach(() => {
         mockGetDocs.mockReset()
+        mockAuth.currentUser = { uid: 'signed-in-user' }
     })
 
     it('returns sorted top-level tracks from Firestore', async () => {
@@ -124,5 +136,106 @@ describe('v60-08-01 fetchTracksForSetlistClient (Firestore-direct)', () => {
 
         expect(mockGetDocs).toHaveBeenCalledTimes(1)
         expect(out).toEqual([])
+    })
+})
+
+/**
+ * R-0919-audit-2 — the signed-out path.
+ *
+ * A signed-out client cannot run the `tracks` query any more: collection-wide
+ * `list` requires sign-in, because `allow read: if true` let anyone enumerate
+ * every track of both tenants. The rows still have to reach a band member who
+ * opened a /perform link without logging in — which on a service morning is
+ * the normal case — so they come from /api/setlists/{id}/tracks instead.
+ */
+describe('R-0919-audit-2 fetchTracksForSetlistClient (signed out)', () => {
+    const fetchMock = vi.fn()
+
+    beforeEach(() => {
+        mockGetDocs.mockReset()
+        fetchMock.mockReset()
+        mockAuth.currentUser = null
+        vi.stubGlobal('fetch', fetchMock)
+    })
+
+    it('goes to the public endpoint instead of querying Firestore', async () => {
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+                found: true,
+                tracks: [
+                    { id: 't2', setlistId: 's1', order: 1, title: 'B' },
+                    { id: 't1', setlistId: 's1', order: 0, title: 'A' },
+                ],
+            }),
+        })
+
+        const out = await fetchTracksForSetlistClient('s1', { hydrated: true })
+
+        expect(fetchMock).toHaveBeenCalledTimes(1)
+        expect(fetchMock.mock.calls[0][0]).toBe('/api/setlists/s1/tracks')
+        // Never touched Firestore — that query would have been denied.
+        expect(mockGetDocs).not.toHaveBeenCalled()
+        expect(out.map((t) => t.id)).toEqual(['t1', 't2'])
+    })
+
+    it('escapes the setlist id in the url', async () => {
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ found: true, tracks: [] }),
+        })
+        await fetchTracksForSetlistClient('a b/c', null)
+        expect(fetchMock.mock.calls[0][0]).toBe('/api/setlists/a%20b%2Fc/tracks')
+    })
+
+    it('breaks an order tie by document id, like every other reader (R11-b)', async () => {
+        // Two rows sharing `order` exist on real setlists (2 of 84, measured
+        // 2026-09-16). A bare numeric sort would let this reader and the
+        // server disagree about which comes first.
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+                found: true,
+                tracks: [
+                    { id: 'tb', setlistId: 's1', order: 1, title: 'B' },
+                    { id: 'ta', setlistId: 's1', order: 1, title: 'A' },
+                ],
+            }),
+        })
+
+        const out = await fetchTracksForSetlistClient('s1', null)
+        expect(out.map((t) => t.id)).toEqual(['ta', 'tb'])
+    })
+
+    it('returns an empty list for a setlist the server does not have', async () => {
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ found: false, tracks: [] }),
+        })
+        expect(await fetchTracksForSetlistClient('gone', null)).toEqual([])
+    })
+
+    it('falls back to Firestore when the endpoint fails', async () => {
+        // Signed out that query will be denied and we end up with nothing
+        // either way — but a musician mid-service is better served by one more
+        // attempt than by a certain blank screen.
+        fetchMock.mockRejectedValueOnce(new Error('offline'))
+        mockGetDocs.mockResolvedValueOnce({
+            docs: [
+                { id: 't1', data: () => ({ setlistId: 's1', order: 0, title: 'A' }) },
+            ],
+        })
+
+        const out = await fetchTracksForSetlistClient('s1', null)
+        expect(mockGetDocs).toHaveBeenCalledTimes(1)
+        expect(out.map((t) => t.id)).toEqual(['t1'])
+    })
+
+    it('falls back to Firestore on a non-ok response', async () => {
+        fetchMock.mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+        mockGetDocs.mockResolvedValueOnce({ docs: [] })
+
+        expect(await fetchTracksForSetlistClient('s1', null)).toEqual([])
+        expect(mockGetDocs).toHaveBeenCalledTimes(1)
     })
 })

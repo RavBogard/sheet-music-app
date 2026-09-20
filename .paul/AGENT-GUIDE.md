@@ -173,7 +173,7 @@ Kol Nidre, YK morning, Yizkor and Neilah back to back. Names repeat across them
 to ONE service first, taken from the setlist's `templateType`. You do not pass
 anything: the tools read it. A setlist with no recognisable service type gets
 Rosh Hashanah morning, which is what the book meant before the rest of it was
-mapped. Regenerate the pagemap with `node scripts/emit-machzor-book.mjs` when
+mapped. Regenerate the pagemap with `node scripts/ops/emit-machzor-book.mjs` when
 shireishabbat rebuilds its feeds; every page in it comes from a capture, so
 never hand-edit one.
 

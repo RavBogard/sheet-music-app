@@ -4,8 +4,8 @@ import {
     FIELD_DELETE_SENTINEL,
     type MigrationDoc,
     type MigrationFirestore,
-} from '../migrate-v50'
-import { runScrub } from '../scrub-livestate'
+} from '../migrations/2026-04-26/migrate-v50'
+import { runScrub } from '../migrations/2026-04-27/scrub-livestate'
 
 class FakeFirestore implements MigrationFirestore {
     docs = new Map<string, Record<string, unknown>>()

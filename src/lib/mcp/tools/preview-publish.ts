@@ -27,14 +27,14 @@ import { isSongType } from "@/lib/setlist-track-count"
  *                         (isSongType) with NO chart bond (fileId AND songId
  *                         both null). These render blank in Perform but are
  *                         invisible to `chartHealth` (which only probes BONDED
- *                         rows), so the preview gate was reporting "publish"
+ *                         rows), so the preview gate was reporting "send"
  *                         for a setlist with blank song rows. Non-song rows
  *                         (header/reading/prayer/transition/note) are
  *                         intentionally chart-less and NOT counted.
  *   - `recommendation`  — derived gate:
  *                         "hard_block"   any chart status is "missing"/"shortcut_unresolved"
  *                         "review_first" flaggedBonds > 0 OR unbondedSongCount > 0
- *                         "publish"      otherwise (clean)
+ *                         "send"         otherwise (clean)
  *
  * Recommendation is advisory only — the operator still has to call
  * `notify_band` to actually send. `unreachable` charts intentionally do
@@ -133,7 +133,7 @@ export interface PreviewPublishResult {
         email: string | null
         phone: string | null
     }>
-    recommendation: "publish" | "review_first" | "hard_block"
+    recommendation: "send" | "review_first" | "hard_block"
 }
 
 export async function previewPublish(
@@ -245,7 +245,7 @@ export async function previewPublish(
             ? "hard_block"
             : flaggedBonds > 0 || unbondedSongCount > 0
               ? "review_first"
-              : "publish"
+              : "send"
 
     return {
         ok: true,

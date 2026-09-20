@@ -4,7 +4,7 @@ import {
     normalizeForMatch,
     matchOrphans,
     type OrphanRow,
-} from "../heal-orphans-from-local"
+} from "../migrations/2026-05-20/heal-orphans-from-local"
 
 describe("normalizeForMatch", () => {
     it("drops extension, lowercases, strips non-alphanumerics", () => {

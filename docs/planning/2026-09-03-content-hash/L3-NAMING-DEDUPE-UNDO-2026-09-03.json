@@ -1,0 +1,105 @@
+{
+  "authority": "Daniel at the keyboard, 2026-09-03 02:3xZ: restore both text/plain stubs; for identical bytes under different names, hide the one that is not named properly.",
+  "executor": "live (Code)",
+  "measuredAt": "2026-09-03T02:3xZ",
+  "note": "Prior state captured BEFORE any write. There is no un-mark tool; this file is the only reversal path. Every pair below was confirmed byte-identical by sha256 of the decoded chart bytes, not by fileSize.",
+  "restores": [
+    {
+      "fileId": "upload-046649f0-1c68-4586-b021-964bb84c3228",
+      "name": "Barchu Walkdown",
+      "mimeType": "text/plain",
+      "fileSize": 164,
+      "priorStatus": "duplicate",
+      "priorDedupedAt": "2026-09-02T01:18:47.456Z",
+      "songsDocPriorStatus": "duplicate",
+      "newStatus": "active",
+      "bondedSetlists": 4,
+      "why": "text/plain and application/pdf are two renderings, not two uploads (rule shipped at 9933d2abef). This row is bonded to 4 live setlists while marked duplicate."
+    },
+    {
+      "fileId": "upload-4f05ce1a-62e9-41f6-8050-46d256a0bff0",
+      "name": "Od Yavo Shalom Aleinu",
+      "mimeType": "text/plain",
+      "fileSize": 260,
+      "priorStatus": "duplicate",
+      "priorDedupedAt": "2026-09-02T01:18:47.456Z",
+      "songsDocPriorStatus": "duplicate",
+      "newStatus": "active",
+      "bondedSetlists": 0,
+      "why": "same rule as above"
+    }
+  ],
+  "hides": [
+    {
+      "fileId": "1e36kWrER7lDRLjCe1n_YGXlGKq15CMz2",
+      "name": "Niggun - Full Score.pdf",
+      "priorStatus": null,
+      "priorStatusFieldAbsent": true,
+      "songsDocPriorStatus": null,
+      "canonicalFileId": "1DYQ4IZXCMjtCIzxCD2lkLEofO5q-sf6r",
+      "canonicalName": "Niggun - Bonia Full Score",
+      "sha256": "60ebf618c0f4",
+      "fileSize": 49551,
+      "bondedSetlists": 0,
+      "canonicalBondedSetlists": 1,
+      "why": "generic name; the kept row identifies the tune (Bonia) and is the bonded one"
+    },
+    {
+      "fileId": "1xYt6Mp1Ica-2C_VYS2mw_cfhxo3dMkg_",
+      "name": "twilight.pdf",
+      "priorStatus": null,
+      "priorStatusFieldAbsent": true,
+      "songsDocPriorStatus": null,
+      "canonicalFileId": "upload-7131ee81-97e9-4064-8d7c-cb07b9370063",
+      "canonicalName": "Twilight (D Goldenberg)",
+      "sha256": "bc8f6890ecc9",
+      "fileSize": 29132,
+      "bondedSetlists": 0,
+      "canonicalBondedSetlists": 4,
+      "why": "bare lowercase filename; the kept row is titled and credited, and is the bonded one"
+    },
+    {
+      "fileId": "upload-4c33f063-4039-4620-9ed8-36088fe464d1",
+      "name": "Hashkivenu (Randy) (1)",
+      "priorStatus": "active",
+      "priorStatusFieldAbsent": false,
+      "songsDocPriorStatus": "active",
+      "canonicalFileId": "1Zj5951AvRUwUdE8FeBuqMj1u615u3q84",
+      "canonicalName": "Hashkivenu (Randy)",
+      "sha256": "f853ccf2c368",
+      "fileSize": 22443,
+      "bondedSetlists": 1,
+      "canonicalBondedSetlists": 0,
+      "why": "the '(1)' suffix is an accidental re-upload. NOTE: this hidden row is the bonded one; bond still resolves (get_chart_status ok) and bytes are identical, so Perform is unaffected."
+    },
+    {
+      "fileId": "11985wRgE09raY4usgF5Y6lIErTyoKKch",
+      "name": "gminor_spirits.pdf",
+      "priorStatus": null,
+      "priorStatusFieldAbsent": true,
+      "songsDocPriorStatus": null,
+      "canonicalFileId": "upload-c189b527-2979-4218-bf3f-213102e52aa9",
+      "canonicalName": "G-minor Spirits",
+      "sha256": "939c2ec458a6",
+      "fileSize": 42729,
+      "bondedSetlists": 0,
+      "canonicalBondedSetlists": 0,
+      "why": "raw filename form; kept row is the human title. Pair previously named in R-0901-live-cw-4 §6."
+    },
+    {
+      "fileId": "1PYUlbQY0hweTHW2Qrc7Xn3_9vlHaUtee",
+      "name": "Bminor_simpletune.pdf",
+      "priorStatus": null,
+      "priorStatusFieldAbsent": true,
+      "songsDocPriorStatus": null,
+      "canonicalFileId": "upload-98157dc6-c3c8-49a2-b4e1-be7249e89423",
+      "canonicalName": "B-minor Simple Tune",
+      "sha256": "2e5a99141e91",
+      "fileSize": 39599,
+      "bondedSetlists": 4,
+      "canonicalBondedSetlists": 0,
+      "why": "raw filename form; kept row is the human title. Pair previously named in R-0901-live-cw-4 §6. NOTE: this hidden row is the bonded one; bond still resolves and bytes are identical, so Perform is unaffected."
+    }
+  ],
+  "reversal": "To undo a hide: set library_index/{fileId}.status back to priorStatus (or DELETE the status field where priorStatusFieldAbsent is true), delete dedupedAt and canonicalFileId, and mirror status into songs/{fileId}. To undo a restore: set status back to 'duplicate' and restore priorDedupedAt in both docs."
+}

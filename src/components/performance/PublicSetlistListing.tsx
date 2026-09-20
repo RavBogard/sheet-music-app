@@ -66,14 +66,33 @@ export function PublicSetlistListing({ initialSetlists }: PublicSetlistListingPr
     // longer hardcodes "CRC Music". Same org seam the subscription scope uses.
     const orgName = getOrgBranding(org).shortName
 
+    // R-0919-audit-2: the live subscription is a Firestore `list` over the
+    // whole `setlists` collection, and collection-wide `list` now requires
+    // sign-in. Signed out, we keep the server-rendered slice the ISR page
+    // already handed us (`initialSetlists`) — the page revalidates every 60
+    // seconds, so it is never more than a minute stale, which is well inside
+    // what a band member needs when they open a link on the way in.
+    //
+    // This is the whole reason the SSR seed exists; before this change it was
+    // a first-paint optimisation over a subscription that would then take
+    // over. Now it is the signed-out path.
+    //
+    // Erring public, as the file header says: if auth is still resolving we do
+    // NOT clear the list. A musician missing the setlist they are meant to
+    // play is a service-block; showing a slightly stale one is not.
     useEffect(() => {
+        if (authLoading) return
+        if (!user) {
+            setLoading(false)
+            return
+        }
         const service = createSetlistService(null, null)
         const unsub = service.subscribeToAllSetlists((data) => {
             setSetlists(data)
             setLoading(false)
         }, undefined, org)
         return () => unsub()
-    }, [org])
+    }, [org, user, authLoading])
 
     // Split into UPCOMING (eventDate >= today@00:00, soonest first) and PAST
     // (most-recent first; undated trailing), mirroring the authed /setlists

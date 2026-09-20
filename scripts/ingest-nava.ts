@@ -30,7 +30,7 @@
  * the same PDFs under album names — 44 of 185 picks are pure duplicates).
  *
  * Writes go through the DEPLOYED MCP surface (request_chart_upload_url → PUT
- * signed URL → finalize_chart_upload), matching `scripts/heal-run-from-plan.ts`.
+ * signed URL → finalize_chart_upload), matching `scripts/migrations/2026-05-20/heal-run-from-plan.ts`.
  * finalize_chart_upload runs the bytes through `processChartUpload` server-side,
  * so this gets the full pipeline without importing the `server-only` libs that
  * can't resolve outside Next's bundler.

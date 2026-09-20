@@ -1,6 +1,6 @@
 /**
  * Parity test — `scripts/lib/index-name-fields-compute.mjs` (pure-JS mirror,
- * used by `scripts/backfill-library-normalizedname.mjs`) MUST produce
+ * used by `scripts/migrations/2026-05-25/backfill-library-normalizedname.mjs`) MUST produce
  * byte-for-byte identical output to the canonical TS helper at
  * `src/lib/library/recompute-index-name-fields.ts` (which in turn drives
  * `src/lib/library-upload.ts:490-495` PCU writes).
