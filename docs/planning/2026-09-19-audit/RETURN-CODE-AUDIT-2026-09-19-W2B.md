@@ -353,6 +353,46 @@ account is elevated, confirming and deleting them is a small change.
 That is also why the done-when is not fully met: "the retired ones appear on
 neither" cannot be true yet. They appear on ops.
 
+### Verified against production, not against the build
+
+The done-when is "a fresh Claude Desktop connect to the authoring server lists
+around 40 tools, the ops server lists the rest". A compiling build does not
+establish that, so both deployed endpoints were asked for their real
+`tools/list` with a `crl_live_` bearer:
+
+```
+api/mcp        97 tools
+api/ops/mcp    48 tools
+on BOTH servers: 0
+union: 145      (baseline before the split: 145)
+```
+
+The union matching the baseline exactly is the assertion that matters: a typo in
+the ops list would have left a tool on both servers and pushed the union past
+145, and a dropped tool would have pulled it under. Neither happened. Spot-checked
+that `backfill_content_hash`, `bridge_restart`, `cleanup_all_test_data` and
+`mint_admin_bearer` are on ops and that no `backfill_*`, `bridge_restart` or
+`cleanup_all_test_data` remains on authoring.
+
+`initialize` on both confirms they are distinct servers carrying the right
+briefing:
+
+```
+api/mcp        name=centralreform-live      instructions=11983 chars  ("# Agent Guide — centralreform.live MCP…")
+api/ops/mcp    name=centralreform-live-ops  instructions=714 chars    ("# centralreform.live — OPS surface…")
+```
+
+That first line was worth checking rather than assuming. `next.config.ts` traces
+`.paul/AGENT-GUIDE.md` into `/api/mcp`'s serverless bundle, and this change moved
+the file read out of `route.ts` and into the shared builder. The tracer keys on
+the route path rather than the module, so the guide still bundles — but if it had
+not, the authoring server would have come up silently guideless, and only a live
+`initialize` would have shown it.
+
+The number the done-when asks for is 40 and the honest answer is 97; the
+reasoning is above. Everything else in the clause holds: the ops server lists the
+rest, and the two lists are disjoint.
+
 ### Tests
 
 `src/lib/mcp/__tests__/surfaces.test.ts`, 11 tests. The risk in a split is not a
