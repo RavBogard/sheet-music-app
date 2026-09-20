@@ -1,5 +1,22 @@
 name: Build Bridge Installer
 
+# Builds the Electron bridge with electron-builder (NSIS) and attaches the
+# installer to the release. This mirrors `npm run dist` in bridge/ exactly —
+# the local procedure in bridge/README.md and the CI build produce the same
+# artifacts out of bridge/release/:
+#
+#   CentralReform-Bridge-Setup-<version>.exe   the installer
+#   ...exe.blockmap                            differential-update index
+#   latest.yml                                 what electron-updater polls
+#
+# electron-updater needs latest.yml (and the blockmap) next to the exe on the
+# release, or installed bridges will never see the update. All three are
+# uploaded together.
+#
+# The build is unsigned — there is no code-signing certificate for this app.
+# Windows SmartScreen will warn on first run of a new version; that is expected
+# and is what the operator sees today with locally built installers too.
+
 on:
   release:
     types: [published]
@@ -22,23 +39,28 @@ jobs:
         working-directory: bridge
         run: npm ci
 
-      - name: Build TypeScript
+      # `npm run dist` is `tsc && npx electron-builder --win`. `--publish never`
+      # stops electron-builder from uploading to GitHub on its own; the upload
+      # steps below do it, so there is one place that decides what ships.
+      - name: Build installer
         working-directory: bridge
-        run: npx tsc
-
-      - name: Package as exe
-        working-directory: bridge
-        run: npx @yao-pkg/pkg dist/launcher.js --target node20-win-x64 --output dist/CentralReform-Bridge.exe --compress GZip
+        run: npm run dist -- --publish never
 
       - name: Upload to release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: bridge/dist/CentralReform-Bridge.exe
+          files: |
+            bridge/release/CentralReform-Bridge-Setup-*.exe
+            bridge/release/CentralReform-Bridge-Setup-*.exe.blockmap
+            bridge/release/latest.yml
 
       - name: Upload as artifact (manual builds)
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: CentralReform-Bridge
-          path: bridge/dist/CentralReform-Bridge.exe
+          name: CentralReform-Bridge-Setup
+          path: |
+            bridge/release/CentralReform-Bridge-Setup-*.exe
+            bridge/release/CentralReform-Bridge-Setup-*.exe.blockmap
+            bridge/release/latest.yml

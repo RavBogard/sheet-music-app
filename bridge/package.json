@@ -36,11 +36,17 @@
       "ui/**/*",
       "node_modules/**/*"
     ],
-    "extraResources": [],
+    "extraResources": [
+      {
+        "from": "watchdog",
+        "to": "watchdog"
+      }
+    ],
     "win": {
       "target": "nsis"
     },
     "nsis": {
+      "artifactName": "CentralReform-Bridge-Setup-${version}.${ext}",
       "oneClick": true,
       "perMachine": false,
       "allowToChangeInstallationDirectory": false,

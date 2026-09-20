@@ -21,10 +21,20 @@ dies, this brings it back within a minute without anyone touching anything.
 
 ## Step 1 — put the script on the PC
 
+The installer already put these files on the PC. They are in the bridge's
+install folder under `resources\watchdog` — the quickest way there is to
+right-click the **CR Bridge** Start-menu shortcut → Open file location →
+right-click the shortcut → Properties → Open File Location, then open
+`resources\watchdog`.
+
 1. Make a folder: `C:\CRC\watchdog`
    (Open File Explorer, go to `C:\`, right-click → New → Folder, name it `CRC`;
    open it and make another folder inside called `watchdog`.)
 2. Copy **`bridge-watchdog.ps1`** into `C:\CRC\watchdog\`.
+
+Copy it out to `C:\CRC\watchdog` rather than pointing the task at the install
+folder: the bridge auto-updates itself, and a copy living outside the install
+tree cannot be disturbed by an update.
 
 If you put it somewhere else, use that path everywhere below instead.
 
@@ -134,26 +144,24 @@ No. It checks the process list first, and the single-instance lock is the backst
 
 ---
 
-## Note for developers: folding this into the installer later
+## Note for developers: how far the installer goes
 
-Not done here, and **the installer config was deliberately not modified**.
+The installer **ships these files** and stops there. `bridge/package.json` has
+`extraResources: [{ "from": "watchdog", "to": "watchdog" }]`, so a fresh install
+puts `bridge-watchdog.ps1`, `CRC-Bridge-Watchdog.xml` and this file into
+`$INSTDIR\resources\watchdog`. That is a packaging-only change — nothing runs at
+install time that didn't before.
 
-The bridge packages with electron-builder → NSIS (`bridge/package.json` →
-`build.nsis`, `oneClick: true`, `perMachine: false`, with a custom
-`include: "build/installer.nsh"` hook already declared). When someone wants the
-watchdog installed automatically:
-
-1. Ship the two files as `extraResources` so they land in the install tree:
-   ```json
-   "extraResources": [{ "from": "watchdog", "to": "watchdog" }]
-   ```
-2. In the existing `build/installer.nsh`, add to the `customInstall` macro a
-   `schtasks /Create ... /F` line pointing at
-   `$INSTDIR\resources\watchdog\bridge-watchdog.ps1`, and to `customUnInstall` a
-   matching `schtasks /Delete /TN "CRC Bridge Watchdog" /F`.
-3. Keep `/RU` empty in the installer context so the task inherits the installing
-   user — `perMachine: false` means the installer already runs as that user, which
-   is the account the task must run as.
+The installer does **not** create the scheduled task, and that is deliberate.
+Creating it would mean adding a `schtasks /Create` call to the `customInstall`
+macro in `build/installer.nsh` and a matching `schtasks /Delete` to
+`customUnInstall` — installer code that runs on every venue PC, that can only be
+tested by actually installing, and that fails silently when it goes wrong. The
+one-time manual step above is five minutes and is visible when it fails. If
+someone does automate it later: keep `/RU` empty in the installer context so the
+task inherits the installing user (`perMachine: false` means the installer
+already runs as that account), and point the task at a copy outside `$INSTDIR`,
+because an auto-update rewrites the install tree.
 
 Do NOT run the watchdog task as SYSTEM. The bridge is a tray app that reads its
 credentials and its persisted machine ID from the user's `AppData`; a
