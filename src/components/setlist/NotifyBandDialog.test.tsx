@@ -2,11 +2,11 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type Mock }
 import "@testing-library/jest-dom/vitest"
 import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { PublishDialog } from "./PublishDialog"
+import { NotifyBandDialog } from "./NotifyBandDialog"
 import type { SetlistMusician } from "@/types/models"
 
 /**
- * v11.4-01 (D8 item 2): the PublishDialog recipient picker governs ALL
+ * v11.4-01 (D8 item 2): the NotifyBandDialog recipient picker governs ALL
  * channels (in-app + push + email), not just email. These assert:
  *  - default: all assigned musicians selected → posted to every channel (AC-5)
  *  - deselecting a musician removes them from BOTH `musicians[]` (in-app/push)
@@ -55,9 +55,9 @@ const MUSICIANS: SetlistMusician[] = [
     { name: "Cara", email: "cara@example.com", uid: "u-cara" },
 ]
 
-function renderDialog(overrides: Partial<React.ComponentProps<typeof PublishDialog>> = {}) {
+function renderDialog(overrides: Partial<React.ComponentProps<typeof NotifyBandDialog>> = {}) {
     return render(
-        <PublishDialog
+        <NotifyBandDialog
             isOpen
             onClose={vi.fn()}
             setlistId="set-1"
@@ -85,8 +85,8 @@ function okResponse() {
 }
 
 function postedBody() {
-    const call = mockApiFetch.mock.calls.find((c) => c[0] === "/api/setlist/publish")
-    if (!call) throw new Error("apiFetch was not called for /api/setlist/publish")
+    const call = mockApiFetch.mock.calls.find((c) => c[0] === "/api/setlist/notify-band")
+    if (!call) throw new Error("apiFetch was not called for /api/setlist/notify-band")
     return JSON.parse((call[1] as { body: string }).body) as {
         musicians: SetlistMusician[]
         emailRecipients: { name: string; email: string; uid?: string }[]
@@ -100,13 +100,13 @@ beforeEach(() => {
 
 afterEach(() => cleanup())
 
-describe("PublishDialog recipient picker (v11.4-01 D8 item 2)", () => {
+describe("NotifyBandDialog recipient picker (v11.4-01 D8 item 2)", () => {
     it("AC-5: default = all musicians selected → posts every musician on all channels", async () => {
         const user = userEvent.setup()
         renderDialog()
 
         expect(screen.getByText("3 musicians assigned")).toBeInTheDocument()
-        await user.click(screen.getByRole("button", { name: "Publish & Notify" }))
+        await user.click(screen.getByRole("button", { name: "Notify band" }))
 
         await waitFor(() => expect(mockApiFetch).toHaveBeenCalled())
         const body = postedBody()
@@ -126,7 +126,7 @@ describe("PublishDialog recipient picker (v11.4-01 D8 item 2)", () => {
         expect(bob).toHaveAttribute("aria-checked", "false")
         expect(screen.getByText(/2 will be notified/)).toBeInTheDocument()
 
-        await user.click(screen.getByRole("button", { name: "Publish & Notify" }))
+        await user.click(screen.getByRole("button", { name: "Notify band" }))
         await waitFor(() => expect(mockApiFetch).toHaveBeenCalled())
 
         const body = postedBody()

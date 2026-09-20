@@ -79,7 +79,6 @@ import type { Setlist } from '@/types/models'
 
 import { EmptyState } from './EmptyState'
 import { MobileCardList } from './MobileCardList'
-import { PublishedSnapshotDriftBanner } from './PublishedSnapshotDriftBanner'
 import { SetlistGridTopBar } from './SetlistGridTopBar'
 import { SetlistMetaEditSheet } from './SetlistMetaEditSheet'
 
@@ -1770,11 +1769,6 @@ export function SetlistGrid({
                     hook and its derived state (selectedTracks, handleBulk*,
                     handleDragHandleClick) are now dead and will be removed
                     in the T2.6 dead-code sweep. */}
-
-                <PublishedSnapshotDriftBanner
-                    liveSetlist={liveSetlist}
-                    tracks={tracks}
-                />
 
                 {showEmpty ? (
                     <EmptyState

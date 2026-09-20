@@ -255,7 +255,7 @@ export interface ImportChartFromDriveArgs {
      * Storage/Firestore. Returns the predicted shape so callers (supervisor
      * agents, Claude Desktop preview) can inspect a planned import before
      * committing. Pairs with the dryRun support on bulk_update_tracks /
-     * publish_setlist / reconcile_library. Per
+     * notify_band / reconcile_library. Per
      * [[feedback_dryrun_is_observability]], dryRun is observability and
      * does NOT require force.
      */

@@ -56,10 +56,11 @@ vi.mock("@/lib/file-fetcher", () => ({
 import { publishSetlist } from "../tools/setlist-publish"
 
 /**
- * MCP publish_setlist against the Firebase emulator.
+ * MCP notify_band against the Firebase emulator.
  *
  * Covers the contract from the 2026-05-15 cowork report (publish/notify gap):
- *  - Snapshot + publishedAt + lastNotifiedAt write on first publish
+ *  - Snapshot + lastNotifiedAt write the first time the band is told
+ *    (publishedAt is never written — Publish was retired, R-0919-audit-3)
  *  - Re-publish refreshes snapshot but skips SMS (cost control)
  *  - Default-audience recipient derivation: band roles minus caller
  *  - audience='all' adds members
@@ -69,7 +70,7 @@ import { publishSetlist } from "../tools/setlist-publish"
  *  - Auth gate: non-leader denied
  *  - Each delivery channel (in-app, push, email, SMS) called with expected args
  */
-describe("MCP publish_setlist (emulator)", () => {
+describe("MCP notify_band (emulator)", () => {
     let app: App
     const ADMIN = "rabbi-daniel"
     const LEADER = "david-leader"
@@ -289,12 +290,12 @@ describe("MCP publish_setlist (emulator)", () => {
         })
         const setlist = (await db().collection("setlists").doc(id).get()).data()!
         expect(setlist.name).toBe("Newer editor title")
-        expect(setlist.publishedSnapshot).toBeUndefined()
+        expect(setlist.lastNotifiedSnapshot).toBeUndefined()
         expect((await db().collection("mcp_write_receipts").get()).empty).toBe(true)
         expect(mockEmailAllMembers).not.toHaveBeenCalled()
     })
 
-    it("happy path: first-publish writes snapshot + publishedAt + lastNotifiedAt and fans out across all channels", async () => {
+    it("happy path: the first send writes snapshot + lastNotifiedAt, never publishedAt, and fans out across all channels", async () => {
         const id = "set-pub-1"
         await seedPublishableSetlist(id)
 
@@ -322,7 +323,7 @@ describe("MCP publish_setlist (emulator)", () => {
         expect("ok" in r && r.ok).toBe(true)
         if (!("ok" in r) || !r.ok) return
 
-        expect(r.wasAlreadyPublished).toBe(false)
+        expect(r.wasNotifiedBefore).toBe(false)
         expect(r.dryRun).toBe(false)
         // Explicit audience: LEADER + MUSICIAN_1 + MUSICIAN_2 + NONLEADER.
         expect(r.recipientCount).toBe(4)
@@ -336,10 +337,11 @@ describe("MCP publish_setlist (emulator)", () => {
             "Mi Chamocha",
         ])
 
-        // Firestore state: publishedAt + snapshot now persisted.
+        // Firestore state: the notification snapshot is persisted, and
+        // publishedAt is never written — Publish was retired (R-0919-audit-3).
         const post = (await db().collection("setlists").doc(id).get()).data()!
-        expect(post.publishedAt).toBeTruthy()
-        expect(post.publishedSnapshot).toHaveLength(2)
+        expect(post.publishedAt).toBeUndefined()
+        expect(post.lastNotifiedSnapshot).toHaveLength(2)
         expect(post.lastNotifiedAt).toBeTruthy()
         // version-echo NOTE (v6 bugstomp): a real publish bumps the setlist
         // version (Plan 03) and surfaces the post-bump value so callers can
@@ -382,7 +384,7 @@ describe("MCP publish_setlist (emulator)", () => {
         expect(mockSendSMS).toHaveBeenCalledTimes(1)
         expect(mockSendSMS.mock.calls[0][0]).toBe("+15551234567")
         expect(r.delivery.sms.sent).toBe(1)
-        expect(r.delivery.sms.skippedRepublish).toBe(false)
+        expect(r.delivery.sms.skippedRenotify).toBe(false)
 
         // Song-usage recorded (fire-and-forget; awaited in the test only to
         // confirm it was invoked).
@@ -403,13 +405,13 @@ describe("MCP publish_setlist (emulator)", () => {
     it("re-publish refreshes snapshot + lastNotifiedAt but skips SMS", async () => {
         const id = "set-pub-republish"
         await seedPublishableSetlist(id)
-        // Mark already-published
+        // Mark the band as already told once
         await db()
             .collection("setlists")
             .doc(id)
             .update({
-                publishedAt: new Date("2026-05-10T00:00:00Z"),
-                publishedSnapshot: [{ title: "Old", key: "", fileId: "x" }],
+                lastNotifiedAt: new Date("2026-05-10T00:00:00Z"),
+                lastNotifiedSnapshot: [{ title: "Old", key: "", fileId: "x" }],
             })
 
         // v11.4-01: explicit recipients required on real publish. MUSICIAN_1
@@ -422,14 +424,14 @@ describe("MCP publish_setlist (emulator)", () => {
         expect("ok" in r && r.ok).toBe(true)
         if (!("ok" in r) || !r.ok) return
 
-        expect(r.wasAlreadyPublished).toBe(true)
-        expect(r.delivery.sms.skippedRepublish).toBe(true)
+        expect(r.wasNotifiedBefore).toBe(true)
+        expect(r.delivery.sms.skippedRenotify).toBe(true)
         expect(r.delivery.sms.sent).toBe(0)
         expect(mockSendSMS).not.toHaveBeenCalled()
 
         // Snapshot replaced with the fresh one
         const post = (await db().collection("setlists").doc(id).get()).data()!
-        expect((post.publishedSnapshot as Array<{ title: string }>).map((s) => s.title))
+        expect((post.lastNotifiedSnapshot as Array<{ title: string }>).map((s) => s.title))
             .toEqual(["Oseh Shalom", "Mi Chamocha"])
     })
 
@@ -450,8 +452,8 @@ describe("MCP publish_setlist (emulator)", () => {
         expect(mockRecordSongUsage).not.toHaveBeenCalled()
         // No Firestore mutations
         const post = (await db().collection("setlists").doc(id).get()).data()!
-        expect(post.publishedAt).toBeFalsy()
-        expect(post.publishedSnapshot).toBeUndefined()
+        expect(post.publishedAt).toBeUndefined()
+        expect(post.lastNotifiedSnapshot).toBeUndefined()
         // version-echo NOTE (v6 bugstomp): dryRun surfaces the current
         // setlist version unchanged (no bump on dry-run). This seed
         // intentionally omits `version` to represent a pre-W-04 doc; the
@@ -577,9 +579,9 @@ describe("MCP publish_setlist (emulator)", () => {
             hint: expect.stringContaining("force: true"),
         })
 
-        // Setlist was NOT mutated — no publishedAt write on refusal.
+        // Setlist was NOT mutated on refusal.
         const post = (await db().collection("setlists").doc(id).get()).data()!
-        expect(post.publishedAt).toBeFalsy()
+        expect(post.publishedAt).toBeUndefined()
         expect(mockSendPushToUsers).not.toHaveBeenCalled()
         expect(mockEmailAllMembers).not.toHaveBeenCalled()
     })
@@ -609,7 +611,7 @@ describe("MCP publish_setlist (emulator)", () => {
         expect(r.chartHealth.bondedCount).toBe(2)
         expect(r.chartHealth.okCount).toBe(1)
         // F-006: chartHealth carries aggregate counts so the caller doesn't
-        // have to filter `unhealthy[]` themselves; same shape preview_publish
+        // have to filter `unhealthy[]` themselves; same shape preview_notify_band
         // returns.
         expect(r.chartHealth.missingCount).toBe(1)
         expect(r.chartHealth.unreachableCount).toBe(0)
@@ -624,7 +626,7 @@ describe("MCP publish_setlist (emulator)", () => {
         // Setlist actually got published — the force flag means "yes, ship
         // the broken charts, the band will deal".
         const post = (await db().collection("setlists").doc(id).get()).data()!
-        expect(post.publishedAt).toBeTruthy()
+        expect(post.publishedAt).toBeUndefined()
     })
 
     it("dryRun on an unhealthy setlist returns the preview without force (F-01 → F-05)", async () => {
@@ -666,7 +668,7 @@ describe("MCP publish_setlist (emulator)", () => {
 
         // Nothing was dispatched and the setlist was NOT mutated.
         const post = (await db().collection("setlists").doc(id).get()).data()!
-        expect(post.publishedAt).toBeFalsy()
+        expect(post.publishedAt).toBeUndefined()
         expect(mockSendPushToUsers).not.toHaveBeenCalled()
         expect(mockEmailAllMembers).not.toHaveBeenCalled()
     })
@@ -737,7 +739,7 @@ describe("MCP publish_setlist (emulator)", () => {
 
         // Publish actually went through — no refuse, no force needed.
         const post = (await db().collection("setlists").doc(id).get()).data()!
-        expect(post.publishedAt).toBeTruthy()
+        expect(post.publishedAt).toBeUndefined()
     })
 
     // ── Cycle-7 Lane 1 — Convergence A: owner-shape gates ────────────────────
@@ -1020,8 +1022,8 @@ describe("MCP publish_setlist (emulator)", () => {
 
             // No setlist write — publishedAt/version untouched.
             const post = (await db().collection("setlists").doc(id).get()).data()!
-            expect(post.publishedAt).toBeFalsy()
-            expect(post.publishedSnapshot).toBeUndefined()
+            expect(post.publishedAt).toBeUndefined()
+            expect(post.lastNotifiedSnapshot).toBeUndefined()
             expect(post.version).toBeUndefined()
             // No notification fan-out on any channel. (The guard returns
             // before the commit phase, so no in-app notification writes occur
@@ -1047,7 +1049,7 @@ describe("MCP publish_setlist (emulator)", () => {
             expect(r.recipientCount).toBeGreaterThan(0)
             // No write, no dispatch.
             const post = (await db().collection("setlists").doc(id).get()).data()!
-            expect(post.publishedAt).toBeFalsy()
+            expect(post.publishedAt).toBeUndefined()
             expect(mockEmailAllMembers).not.toHaveBeenCalled()
             expect(mockSendPushToUsers).not.toHaveBeenCalled()
             expect(mockSendSMS).not.toHaveBeenCalled()
@@ -1078,7 +1080,7 @@ describe("MCP publish_setlist (emulator)", () => {
 
             // Real publish wrote the setlist.
             const post = (await db().collection("setlists").doc(id).get()).data()!
-            expect(post.publishedAt).toBeTruthy()
+            expect(post.publishedAt).toBeUndefined()
 
             // Email went to exactly the two explicit recipients.
             expect(mockEmailAllMembers).toHaveBeenCalledTimes(1)
@@ -1106,7 +1108,7 @@ describe("MCP publish_setlist (emulator)", () => {
             expect(r.recipientCount).toBe(0)
             // Still publishes (snapshot write) but sends to nobody.
             const post = (await db().collection("setlists").doc(id).get()).data()!
-            expect(post.publishedAt).toBeTruthy()
+            expect(post.publishedAt).toBeUndefined()
             expect(mockEmailAllMembers).not.toHaveBeenCalled()
             expect(mockSendPushToUsers).not.toHaveBeenCalled()
         })

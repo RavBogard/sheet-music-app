@@ -1591,7 +1591,7 @@ export function registerTestTokenTools(server: McpServer): void {
 // the test-tokens scope boundary (`.coord/shared/decisions.md` 2026-05-17).
 //
 // TODO(test-tokens-followup):
-//   - publish_setlist: default-exclude test-* uids from recipient derivation
+//   - notify_band: default-exclude test-* uids from recipient derivation
 //     (src/lib/mcp/tools/setlist-publish.ts).
 //   - list_setlists / search_library: default-hide setlists owned by test-*
 //     uids unless `includeTestData: true` is passed.

@@ -28,7 +28,6 @@ export interface TodaySetlistInput {
     startsAtLocal?: unknown
     book?: unknown
     rabbi?: unknown
-    publishedAt?: unknown
     /** Test traffic (SEC-004 stamp). Never emitted. */
     isTest?: unknown
     version?: unknown
@@ -147,8 +146,6 @@ export function buildTodayDoc(input: BuildTodayInput): TodayDoc {
         }
         const rabbi = asString(row.rabbi)
         if (rabbi) service.rabbi = rabbi
-        const publishedAt = asString(row.publishedAt)
-        if (publishedAt) service.publishedAt = publishedAt
 
         const streamUrl = asString(input.stream?.url)
         if (streamUrl) {

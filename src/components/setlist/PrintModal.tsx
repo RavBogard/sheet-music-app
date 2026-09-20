@@ -33,7 +33,7 @@ interface SavedSelection {
 type PendingPacketAction = "download" | "email"
 
 /**
- * Match preview_publish's unbonded-song boundary: an absent type is the
+ * Match preview_notify_band's unbonded-song boundary: an absent type is the
  * backward-compatible song default, while explicit service-flow rows are
  * intentionally chartless. The print pipeline needs fileId bytes, so a song
  * row without one would otherwise disappear from a full packet silently.

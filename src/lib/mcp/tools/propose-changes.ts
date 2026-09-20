@@ -50,7 +50,7 @@ import {
  *    success.
  *
  * Out of scope for this slice (deferred to follow-up W-01 tasks):
- *  - `preview_publish` (Task 3 — preview_publish wrapper)
+ *  - `preview_notify_band` (Task 3 — preview_notify_band wrapper)
  *  - `flag_bond` / `review_flagged_bonds` (Task 4)
  *  - `record_bond_correction` (Task 5)
  *  - AGENT-GUIDE.md + MCP server instructions injection (Task 6)

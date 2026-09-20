@@ -16,20 +16,21 @@ import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 import { SetlistMusician } from "@/types/models"
 
-interface PublishDialogProps {
+interface NotifyBandDialogProps {
     isOpen: boolean
     onClose: () => void
     setlistId: string
     setlistName: string
     songCount: number
     musicians?: SetlistMusician[]
-    isPublished?: boolean
-    onPublished?: () => void
+    /** Has the band already been told about this setlist once? */
+    wasNotifiedBefore?: boolean
+    onNotified?: () => void
 }
 
-interface PublishResult {
+interface NotifyResult {
     success: boolean
-    wasAlreadyPublic: boolean
+    wasNotifiedBefore: boolean
     notified: number
     musicianCount: number
     emailed: number
@@ -38,9 +39,9 @@ interface PublishResult {
     usageRecorded: number
 }
 
-export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCount, musicians = [], isPublished, onPublished }: PublishDialogProps) {
-    const [publishing, setPublishing] = useState(false)
-    const [result, setResult] = useState<PublishResult | null>(null)
+export function NotifyBandDialog({ isOpen, onClose, setlistId, setlistName, songCount, musicians = [], wasNotifiedBefore, onNotified }: NotifyBandDialogProps) {
+    const [sending, setSending] = useState(false)
+    const [result, setResult] = useState<NotifyResult | null>(null)
     const [emailError, setEmailError] = useState<string | null>(null)
     const [resending, setResending] = useState(false)
     // v11.4-01 (D8 item 2): recipient picker. `selected` is the set of
@@ -52,9 +53,9 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
         () => new Set(musicians.map((_, i) => i)),
     )
     const [note, setNote] = useState("")
-    const defaultSubject = isPublished
+    const defaultSubject = wasNotifiedBefore
         ? `🔄 ${setlistName} — Setlist Updated`
-        : `🎵 ${setlistName} — Setlist Published`
+        : `🎵 ${setlistName} — Setlist`
     const [subject, setSubject] = useState(defaultSubject)
 
     // Sync subject default + reset selection to all-selected when the dialog
@@ -81,9 +82,9 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
         })
     }, [])
 
-    const handlePublish = async () => {
+    const handleNotify = async () => {
         if (noMusicians || selectedCount === 0) return
-        setPublishing(true)
+        setSending(true)
         try {
             // v11.4-01 (D8 item 2): the selected set IS the recipient set for
             // ALL channels. Post only selected musicians as `musicians`
@@ -94,7 +95,7 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
             const emailRecipients = selectedMusicians
                 .map(m => ({ name: m.name, email: m.email, uid: m.uid }))
 
-            const response = await apiFetch('/api/setlist/publish', {
+            const response = await apiFetch('/api/setlist/notify-band', {
                 method: 'POST',
                 body: JSON.stringify({
                     setlistId,
@@ -107,31 +108,31 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
 
             if (!response.ok) {
                 const err = await response.json()
-                throw new Error(err.error || 'Failed to publish')
+                throw new Error(err.error || 'Failed to notify the band')
             }
 
-            const data: PublishResult = await response.json()
+            const data: NotifyResult = await response.json()
             setResult(data)
             setEmailError(data.emailError || null)
-            onPublished?.()
+            onNotified?.()
 
             if (data.emailError) {
-                toast.warning('Published! But email delivery failed', {
+                toast.warning('Band notified, but email delivery failed', {
                     description: data.emailError,
                     duration: 8000,
                 })
             } else {
-                toast.success(data.wasAlreadyPublic ? 'Re-notified!' : 'Published!', {
+                toast.success(data.wasNotifiedBefore ? 'Band re-notified' : 'Band notified', {
                     description: `${data.musicianCount} musicians · ${data.emailed}/${data.emailTargets} emailed · ${data.usageRecorded} songs indexed`,
                 })
             }
         } catch (err) {
-            logger.error('[PublishDialog] Error:', err)
-            toast.error('Failed to publish', {
+            logger.error('[NotifyBandDialog] Error:', err)
+            toast.error('Failed to notify the band', {
                 description: err instanceof Error ? err.message : 'Unknown error',
             })
         } finally {
-            setPublishing(false)
+            setSending(false)
         }
     }
 
@@ -154,7 +155,7 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
             })
             setEmailError(null)
         } catch (err) {
-            logger.error('[PublishDialog] Resend error:', err)
+            logger.error('[NotifyBandDialog] Resend error:', err)
             toast.error('Failed to resend emails', {
                 description: err instanceof Error ? err.message : 'Unknown error',
             })
@@ -179,12 +180,12 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                 {!result ? (
                     <>
                         <DialogHeader>
-                            <DialogTitle>{isPublished ? 'Update & Notify' : 'Publish & Notify'}</DialogTitle>
+                            <DialogTitle>{wasNotifiedBefore ? 'Notify band again' : 'Notify band'}</DialogTitle>
                             <DialogDescription className="text-base pt-2">
-                                {isPublished ? (
-                                    <>Re-notify band about <span className="font-semibold text-foreground">&ldquo;{setlistName}&rdquo;</span></>
+                                {wasNotifiedBefore ? (
+                                    <>Tell the band again about <span className="font-semibold text-foreground">&ldquo;{setlistName}&rdquo;</span></>
                                 ) : (
-                                    <>Publish <span className="font-semibold text-foreground">&ldquo;{setlistName}&rdquo;</span></>
+                                    <>Tell the band about <span className="font-semibold text-foreground">&ldquo;{setlistName}&rdquo;</span></>
                                 )}
                             </DialogDescription>
                         </DialogHeader>
@@ -192,7 +193,7 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                         <div className="space-y-4 py-4">
                             <div className="flex items-center gap-3 text-sm">
                                 <Check className="h-4 w-4 text-green-500 shrink-0" />
-                                <span>{isPublished ? 'Already visible to all members' : 'Make visible to all members'}</span>
+                                <span>Every setlist is already visible to the band — this sends the notification.</span>
                             </div>
 
                             {/* Musician list with email toggles */}
@@ -202,7 +203,7 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                                     <div>
                                         <p className="font-medium text-amber-700 dark:text-amber-400">No musicians assigned</p>
                                         <p className="text-xs text-muted-foreground mt-0.5">
-                                            Go back and add musicians to this setlist before publishing.
+                                            Go back and add musicians to this setlist before notifying.
                                         </p>
                                     </div>
                                 </div>
@@ -262,11 +263,11 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                             {/* Email subject */}
                             {!noMusicians && (
                                 <div className="space-y-1.5">
-                                    <label htmlFor="publish-subject" className="text-xs font-medium text-muted-foreground">
+                                    <label htmlFor="notify-subject" className="text-xs font-medium text-muted-foreground">
                                         Email subject
                                     </label>
                                     <input
-                                        id="publish-subject"
+                                        id="notify-subject"
                                         type="text"
                                         value={subject}
                                         onChange={(e) => setSubject(e.target.value)}
@@ -278,11 +279,11 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                             {/* Custom note */}
                             {!noMusicians && (
                                 <div className="space-y-1.5">
-                                    <label htmlFor="publish-note" className="text-xs font-medium text-muted-foreground">
+                                    <label htmlFor="notify-note" className="text-xs font-medium text-muted-foreground">
                                         Add a note to the email <span className="text-muted-foreground/50">(optional)</span>
                                     </label>
                                     <textarea
-                                        id="publish-note"
+                                        id="notify-note"
                                         value={note}
                                         onChange={(e) => setNote(e.target.value.slice(0, 2000))}
                                         placeholder="e.g. Please review Lecha Dodi — new arrangement this week"
@@ -304,23 +305,23 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                         </div>
 
                         <DialogFooter>
-                            <Button variant="outline" onClick={handleClose} disabled={publishing}>
+                            <Button variant="outline" onClick={handleClose} disabled={sending}>
                                 Cancel
                             </Button>
-                            <Button onClick={handlePublish} disabled={publishing || noMusicians || selectedCount === 0}>
-                                {publishing ? (
+                            <Button onClick={handleNotify} disabled={sending || noMusicians || selectedCount === 0}>
+                                {sending ? (
                                     <>
                                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Publishing...
+                                        Sending...
                                     </>
                                 ) : noMusicians ? (
                                     'Assign Musicians First'
                                 ) : selectedCount === 0 ? (
                                     'Select at least one'
-                                ) : isPublished ? (
+                                ) : wasNotifiedBefore ? (
                                     'Update & Notify'
                                 ) : (
-                                    'Publish & Notify'
+                                    'Notify band'
                                 )}
                             </Button>
                         </DialogFooter>
@@ -330,7 +331,7 @@ export function PublishDialog({ isOpen, onClose, setlistId, setlistName, songCou
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
                                 <Check className="h-5 w-5 text-green-500" />
-                                {result.wasAlreadyPublic ? 'Re-notified!' : 'Published!'}
+                                {result.wasNotifiedBefore ? 'Band re-notified' : 'Band notified'}
                             </DialogTitle>
                         </DialogHeader>
 

@@ -30,7 +30,7 @@ import {
 } from "@/lib/mcp/write-receipts"
 
 /**
- * MCP publish_setlist — send the setlist to the band via MCP, mirroring
+ * MCP notify_band — tell the band about a setlist via MCP, mirroring
  * the in-app `/api/setlist/publish` flow's snapshot + multi-channel
  * fan-out so an MCP-published setlist is operationally identical to a
  * UI-published one.
@@ -39,7 +39,7 @@ import {
  * explicit `recipients[]` — it never fans out to an implicitly-derived
  * generic roster (that implicit fan-out was the v11.2 BUG-9 blast class).
  * When `recipients` is undefined, a real publish refuses with
- * `recipients_required`; only `dryRun`/`preview_publish` auto-derive the
+ * `recipients_required`; only `dryRun`/`preview_notify_band` auto-derive the
  * default org-scoped candidate audience (roles {admin, band_leader,
  * musician}, scoped to the setlist's org, minus the caller) so the caller
  * can review it and then re-publish with an explicit set. `member`-only
@@ -51,8 +51,8 @@ import {
  *   - Email: emailAllMembers via Resend; honors user.email; supports note + subject overrides.
  *   - SMS: sendSMS for users with `musicianProfile.notificationPreferences.sms === true` AND a phone — first-publish only (re-publish skips SMS to control cost).
  *
- * Side effects on the setlist doc: `publishedAt` (first publish only),
- * `publishedSnapshot` (song-row title/key/fileId list), `lastNotifiedAt`,
+ * Side effects on the setlist doc:
+ * `lastNotifiedSnapshot` (song-row title/key/fileId list), `lastNotifiedAt`,
  * `updatedAt`. A history audit entry is written to setlists/{id}/history.
  *
  * dryRun=true returns the would-publish plan without writing anything or
@@ -122,7 +122,7 @@ export interface PublishSetlistResult {
     ok: true
     setlistId: string
     setlistName: string
-    wasAlreadyPublished: boolean
+    wasNotifiedBefore: boolean
     dryRun: boolean
     recipientCount: number
     recipients: Array<{
@@ -136,7 +136,7 @@ export interface PublishSetlistResult {
         inApp: { sent: number; failed: number }
         push: { sent: number; failed: number }
         email: { sent: number; failed: number }
-        sms: { sent: number; failed: number; skippedRepublish: boolean }
+        sms: { sent: number; failed: number; skippedRenotify: boolean }
     }
     snapshot: Array<{ title: string; key: string; fileId: string }>
     /**
@@ -154,7 +154,7 @@ export interface PublishSetlistResult {
      * `unhealthy[]` is the subset with status missing/unreachable — same set
      * the publish refused on (or `force: true` bypassed). Aggregate counts
      * (`missingCount`, `unreachableCount`) save the caller from filtering
-     * `unhealthy[]` themselves; same shape preview_publish returns (F-006).
+     * `unhealthy[]` themselves; same shape preview_notify_band returns (F-006).
      *
      * Cycle-3 b5 followup: `needsSyncCount` matches a1's NEW-5 field on
      * `VerifySetlistChartsResult` — rows where Drive has the bytes but
@@ -373,7 +373,7 @@ export async function publishSetlist(
         )
     }
     const receiptId = idempotencyKey
-        ? writeReceiptId("publish_setlist", callerUid, org, idempotencyKey)
+        ? writeReceiptId("notify_band", callerUid, org, idempotencyKey)
         : undefined
     const receiptRef = receiptId
         ? db.collection(WRITE_RECEIPTS_COLLECTION).doc(receiptId)
@@ -399,7 +399,7 @@ export async function publishSetlist(
             if (prior.inputHash !== inputHash) {
                 return richError(
                     "idempotency_key_reused",
-                    "This idempotencyKey was already used for a different publish_setlist payload.",
+                    "This idempotencyKey was already used for a different notify_band payload.",
                     { idempotencyKey, receiptId },
                     "Use the original payload to retrieve its receipt, or mint a new key for a deliberate re-publish.",
                 )
@@ -642,7 +642,7 @@ export async function publishSetlist(
     if (args.recipients === undefined) {
         // v11.4-01 (D8 item 1 / tenancy invariant 3 = the v11.2 BUG-9 blast
         // class): a REAL publish must NEVER fan out to an implicitly-derived
-        // generic roster. Refuse and point the caller at preview_publish,
+        // generic roster. Refuse and point the caller at preview_notify_band,
         // which (via dryRun) still surfaces the default org-scoped candidate
         // audience for review. dryRun itself stays observable — it falls
         // through to resolveDefaultRecipients below so the candidate set is
@@ -652,12 +652,12 @@ export async function publishSetlist(
         if (!args.dryRun) {
             return richError(
                 "recipients_required",
-                "Explicit recipient selection is required — a publish never fans out to a generic roster (D8 item 1). Call preview_publish (or publish_setlist with dryRun:true) to review the default org-scoped audience, then re-call publish_setlist with an explicit recipients[].",
+                "Explicit recipient selection is required — a notification never fans out to a generic roster (D8 item 1). Call preview_notify_band (or notify_band with dryRun:true) to review the default org-scoped audience, then re-call notify_band with an explicit recipients[].",
                 {
                     errorCode: 400,
                     setlistId: args.setlistId,
                 },
-                "Run preview_publish to see the default org-scoped audience, then pass that set (or a subset) as recipients[] on the real publish.",
+                "Run preview_notify_band to see the default org-scoped audience, then pass that set (or a subset) as recipients[] on the real send.",
             )
         }
         recipients = await resolveDefaultRecipients(
@@ -734,7 +734,7 @@ export async function publishSetlist(
 
     const setlistName =
         (typeof setlist.name === "string" && setlist.name) || args.setlistId
-    const wasPublished = !!setlist.publishedAt
+    const wasNotifiedBefore = !!setlist.lastNotifiedAt
 
     // version-echo: the version we have in `setlist` (read at line 281)
     // is correct for dryRun (unchanged) and the pre-commit baseline for
@@ -745,7 +745,7 @@ export async function publishSetlist(
         ok: true,
         setlistId: args.setlistId,
         setlistName,
-        wasAlreadyPublished: wasPublished,
+        wasNotifiedBefore: wasNotifiedBefore,
         dryRun: !!args.dryRun,
         recipientCount: recipients.length,
         recipients: recipients.map((r) => ({
@@ -758,7 +758,7 @@ export async function publishSetlist(
             inApp: { sent: 0, failed: 0 },
             push: { sent: 0, failed: 0 },
             email: { sent: 0, failed: 0 },
-            sms: { sent: 0, failed: 0, skippedRepublish: wasPublished },
+            sms: { sent: 0, failed: 0, skippedRenotify: wasNotifiedBefore },
         },
         snapshot,
         version: preCommitVersion,
@@ -769,10 +769,10 @@ export async function publishSetlist(
     }
 
     if (args.dryRun) {
-        logger.info("[mcp] publish_setlist dry-run", {
+        logger.info("[mcp] notify_band dry-run", {
             setlistId: args.setlistId,
             recipientCount: recipients.length,
-            wasPublished,
+            wasNotifiedBefore,
         })
         return result
     }
@@ -783,7 +783,7 @@ export async function publishSetlist(
     // post-publish version as its `lastSeenVersion`.
     if (receiptRef && idempotencyKey && inputHash) {
         const claim = await db.runTransaction<
-            | { kind: "claimed"; version: number; wasPublished: boolean }
+            | { kind: "claimed"; version: number; wasNotifiedBefore: boolean }
             | { kind: "replay"; result: PublishSetlistResult }
             | { kind: "conflict" }
             | { kind: "in_progress" }
@@ -810,7 +810,7 @@ export async function publishSetlist(
             // Chart health, recipients, and the published snapshot were all
             // derived from preCommitVersion. If an editor wins the race while
             // those checks run, do not publish that stale view or overwrite
-            // the editor's newer publishedSnapshot metadata.
+            // the editor's newer lastNotifiedSnapshot metadata.
             if (liveVersion !== preCommitVersion) {
                 return {
                     kind: "stale",
@@ -823,11 +823,10 @@ export async function publishSetlist(
                     }),
                 }
             }
-            const liveWasPublished = !!liveSetlist.publishedAt
+            const liveWasNotified = !!liveSetlist.lastNotifiedAt
             const version = liveVersion + 1
             tx.update(setlistRef, {
-                ...(liveWasPublished ? {} : { publishedAt: FieldValue.serverTimestamp() }),
-                publishedSnapshot: snapshot,
+                lastNotifiedSnapshot: snapshot,
                 lastNotifiedAt: FieldValue.serverTimestamp(),
                 updatedAt: FieldValue.serverTimestamp(),
                 version: FieldValue.increment(1),
@@ -835,7 +834,7 @@ export async function publishSetlist(
                 lastModifiedBy: callerUid,
             })
             tx.create(receiptRef, {
-                tool: "publish_setlist",
+                tool: "notify_band",
                 uid: callerUid,
                 orgId: org,
                 idempotencyKey,
@@ -843,12 +842,12 @@ export async function publishSetlist(
                 state: "in_progress",
                 createdAt: FieldValue.serverTimestamp(),
             } satisfies StoredWriteReceipt<PublishSetlistResult>)
-            return { kind: "claimed", version, wasPublished: liveWasPublished }
+            return { kind: "claimed", version, wasNotifiedBefore: liveWasNotified }
         })
         if (claim.kind === "conflict") {
             return richError(
                 "idempotency_key_reused",
-                "This idempotencyKey was already used for a different publish_setlist payload.",
+                "This idempotencyKey was already used for a different notify_band payload.",
                 { idempotencyKey, receiptId },
                 "Use the original payload to retrieve its receipt, or mint a new key for a deliberate re-publish.",
             )
@@ -864,11 +863,11 @@ export async function publishSetlist(
         if (claim.kind === "stale") return claim.envelope
         if (claim.kind === "replay") return claim.result
         result.version = claim.version
-        result.wasAlreadyPublished = claim.wasPublished
-        result.delivery.sms.skippedRepublish = claim.wasPublished
+        result.wasNotifiedBefore = claim.wasNotifiedBefore
+        result.delivery.sms.skippedRenotify = claim.wasNotifiedBefore
     } else {
         const commit = await db.runTransaction<
-            | { kind: "committed"; version: number; wasPublished: boolean }
+            | { kind: "committed"; version: number; wasNotifiedBefore: boolean }
             | { kind: "stale"; envelope: StaleVersionEnvelope }
         >(async (tx) => {
             const liveSnap = await tx.get(setlistRef)
@@ -889,10 +888,9 @@ export async function publishSetlist(
                     }),
                 }
             }
-            const liveWasPublished = !!liveSetlist.publishedAt
+            const liveWasNotified = !!liveSetlist.lastNotifiedAt
             tx.update(setlistRef, {
-                ...(liveWasPublished ? {} : { publishedAt: FieldValue.serverTimestamp() }),
-                publishedSnapshot: snapshot,
+                lastNotifiedSnapshot: snapshot,
                 lastNotifiedAt: FieldValue.serverTimestamp(),
                 updatedAt: FieldValue.serverTimestamp(),
                 version: FieldValue.increment(1),
@@ -902,13 +900,13 @@ export async function publishSetlist(
             return {
                 kind: "committed",
                 version: liveVersion + 1,
-                wasPublished: liveWasPublished,
+                wasNotifiedBefore: liveWasNotified,
             }
         })
         if (commit.kind === "stale") return commit.envelope
         result.version = commit.version
-        result.wasAlreadyPublished = commit.wasPublished
-        result.delivery.sms.skippedRepublish = commit.wasPublished
+        result.wasNotifiedBefore = commit.wasNotifiedBefore
+        result.delivery.sms.skippedRenotify = commit.wasNotifiedBefore
     }
 
     // Regenerate the public today.json. The reader and the overlays key off
@@ -1061,7 +1059,7 @@ export async function publishSetlist(
     }
 
     // SMS — first-publish only, opt-in users only, matches HTTP route policy.
-    if (!result.wasAlreadyPublished) {
+    if (!result.wasNotifiedBefore) {
         const origin =
             process.env.NEXT_PUBLIC_BASE_URL || "https://centralreform.live"
         for (const r of recipients) {
@@ -1089,7 +1087,7 @@ export async function publishSetlist(
             userName: "mcp",
             timestamp: FieldValue.serverTimestamp(),
             details: {
-                wasAlreadyPublished: wasPublished,
+                wasNotifiedBefore: wasNotifiedBefore,
                 source: "mcp",
                 recipientCount: recipients.length,
                 recipientNames: recipients.map((r) => r.name),
@@ -1112,7 +1110,7 @@ export async function publishSetlist(
 
     logger.info("[mcp] setlist published", {
         setlistId: args.setlistId,
-        wasPublished,
+        wasNotifiedBefore,
         recipientCount: recipients.length,
         emailed: result.delivery.email.sent,
     })

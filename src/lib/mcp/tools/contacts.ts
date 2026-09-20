@@ -10,7 +10,7 @@ import type { OrgId } from "@/lib/org/types"
  * v11.4-03 (D8 item 3) — contacts: a leader's address book of remembered
  * ad-hoc recipients (people with NO account — name + email/phone). Org-scoped,
  * leader-gated. Sending to a contact reuses the existing publish path (pass it
- * as a `recipients[]` entry on publish_setlist); these tools only persist +
+ * as a `recipients[]` entry on notify_band); these tools only persist +
  * surface them. SMS is held this milestone — `phone` is stored for the future.
  */
 

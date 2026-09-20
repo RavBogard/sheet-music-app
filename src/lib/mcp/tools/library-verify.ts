@@ -21,7 +21,7 @@ import {
  *  - `get_chart_status(fileId)` — single-file probe. Metadata only; no
  *     bytes pulled, so it's cheap to call from a bond-validation loop.
  *  - `verify_setlist_charts(setlistId)` — fan-out probe of every bonded
- *     track on a setlist. Used by `publish_setlist`'s pre-flight check
+ *     track on a setlist. Used by `notify_band`'s pre-flight check
  *     and exposed directly so the agent can ask "what's broken?" before
  *     publishing.
  *

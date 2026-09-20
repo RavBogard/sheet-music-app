@@ -7,9 +7,9 @@ import { getTracksForSetlist } from "@/lib/server-tracks"
 import { isSongType } from "@/lib/setlist-track-count"
 
 /**
- * W-01 Task 3 — preview_publish wrapper.
+ * W-01 Task 3 — preview_notify_band wrapper.
  *
- * Thin reformatter over `publish_setlist({dryRun: true})` for the chat-native
+ * Thin reformatter over `notify_band({dryRun: true})` for the chat-native
  * confirm-before-send loop. The publish dryRun already does the expensive
  * work (chart-health pre-flight, recipient resolution, snapshot build); this
  * tool tightens the envelope into the four signals an agent needs to say
@@ -17,7 +17,7 @@ import { isSongType } from "@/lib/setlist-track-count"
  *
  *   - `chartHealth`     — pre-flight rendering status per row + summary.
  *   - `audience`        — count + role breakdown of who will be notified.
- *   - `snapshotDiff`    — what changed vs. the last `publishedSnapshot`
+ *   - `snapshotDiff`    — what changed since the band was last told
  *                         (added / removed / modified tracks). Empty on a
  *                         first publish.
  *   - `flaggedBonds`    — open `bond_flags` docs awaiting batch review
@@ -37,9 +37,9 @@ import { isSongType } from "@/lib/setlist-track-count"
  *                         "publish"      otherwise (clean)
  *
  * Recommendation is advisory only — the operator still has to call
- * `publish_setlist` to actually send. `unreachable` charts intentionally do
+ * `notify_band` to actually send. `unreachable` charts intentionally do
  * NOT hard_block (transient network failures); only definitive "missing"
- * does. This mirrors publish_setlist's pre-flight refusal semantics:
+ * does. This mirrors notify_band's pre-flight refusal semantics:
  * publish refuses on either missing or unreachable, but for the preview
  * gate we want the agent to surface unreachable to the operator without
  * blocking it — the operator may know the chart is fine and just want to
@@ -50,7 +50,7 @@ import { isSongType } from "@/lib/setlist-track-count"
 
 export interface PreviewPublishArgs {
     setlistId: string
-    /** Audience preset forwarded to publish_setlist. */
+    /** Audience preset forwarded to notify_band. */
     audience?: "band" | "all"
 }
 
@@ -58,14 +58,14 @@ export interface PreviewPublishResult {
     ok: true
     setlistId: string
     setlistName: string
-    wasAlreadyPublished: boolean
+    wasNotifiedBefore: boolean
     chartHealth: {
         bondedCount: number
         okCount: number
         missingCount: number
         unreachableCount: number
         /**
-         * Cycle-3 b5 followup: parity with publish_setlist's chartHealth +
+         * Cycle-3 b5 followup: parity with notify_band's chartHealth +
          * verify_setlist_charts' NEW-5 field. Rows where Drive has the bytes
          * but Storage doesn't yet — chart serves, but the row is mid-resolve.
          * Surfaced here so a preview can flag pending Drive→Storage syncs
@@ -73,7 +73,7 @@ export interface PreviewPublishResult {
          */
         needsSyncCount: number
         /**
-         * Cycle-3 BUG-002. Parity with publish_setlist's chartHealth field.
+         * Cycle-3 BUG-002. Parity with notify_band's chartHealth field.
          * Bonded tracks whose source-of-truth mime is the Drive shortcut
          * sentinel; `generate_gig_packet` drops these and they count as
          * un-renderable. Pre-fix the per-row probe returned ok.
@@ -81,7 +81,7 @@ export interface PreviewPublishResult {
         shortcutUnresolvedCount: number
         /**
          * Per-row report for charts that aren't ok. Same shape + field name as
-         * `publish_setlist({dryRun:true}).chartHealth.unhealthy` (F-006 unify).
+         * `notify_band({dryRun:true}).chartHealth.unhealthy` (F-006 unify).
          */
         unhealthy: Array<{
             trackId: string
@@ -124,7 +124,7 @@ export interface PreviewPublishResult {
      * v11.4-03 (D8 item 3): the org's saved ad-hoc contacts (remembered
      * recipients with no app account). INFORMATIONAL — surfaced so the agent
      * can offer them as recipients; does NOT affect the recommendation gate.
-     * To actually notify one, pass it as a `recipients` entry on publish_setlist.
+     * To actually notify one, pass it as a `recipients` entry on notify_band.
      * Org-scoped to the caller's tenant. Empty when none saved.
      */
     savedContacts: Array<{
@@ -155,7 +155,7 @@ export async function previewPublish(
     initAdmin()
     const db = getFirestore()
 
-    // Delegate the heavy lifting to publish_setlist's dryRun path. It owns
+    // Delegate the heavy lifting to notify_band's dryRun path. It owns
     // auth, rate limiting, chart-health pre-flight, snapshot generation,
     // and recipient resolution. Per F-05 (2026-05-16 bugstomp), dryRun is
     // observability — it never refuses on the chart-health gate, so this
@@ -176,7 +176,7 @@ export async function previewPublish(
     }
     const published = dry as PublishSetlistResult
 
-    // ── Snapshot diff vs. the last `publishedSnapshot` on the setlist doc.
+    // ── Snapshot diff vs. the last `lastNotifiedSnapshot` on the setlist doc.
     // The doc lives in the same `setlists/{id}` row publish writes; the
     // dryRun's `snapshot` field is the would-publish state.
     const setlistSnap = await db
@@ -232,7 +232,7 @@ export async function previewPublish(
     // the caller-org wall already enforced above via publishSetlist).
     const savedContacts = await loadSavedContacts(db, org)
 
-    // ── Recommendation gate. publish_setlist's chartHealth carries the
+    // ── Recommendation gate. notify_band's chartHealth carries the
     // aggregate counts directly post-F-006, so we just pass them through.
     // BUG-002: shortcut_unresolved is also a hard_block — gig packet drops
     // those rows so publishing means the band sees a broken chart.
@@ -251,7 +251,7 @@ export async function previewPublish(
         ok: true,
         setlistId: args.setlistId,
         setlistName: published.setlistName,
-        wasAlreadyPublished: published.wasAlreadyPublished,
+        wasNotifiedBefore: published.wasNotifiedBefore,
         chartHealth: {
             bondedCount: published.chartHealth.bondedCount,
             okCount: published.chartHealth.okCount,
@@ -307,7 +307,7 @@ function readPublishedSnapshot(
     setlist: Record<string, unknown> | undefined,
 ): SnapshotRow[] {
     if (!setlist) return []
-    const raw = setlist.publishedSnapshot
+    const raw = setlist.lastNotifiedSnapshot
     if (!Array.isArray(raw)) return []
     return raw
         .map((r) => {

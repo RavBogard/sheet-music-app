@@ -29,7 +29,6 @@ function setlist(over: Partial<TodaySetlistInput> = {}): TodaySetlistInput {
         eventDate: "2026-09-18T17:00:00.000Z", // Fri 18 Sep, noon Chicago
         book: "shabbat-maariv",
         rabbi: "Rabbi Daniel Bogard",
-        publishedAt: "2026-09-15T15:12:00.000Z",
         version: 7,
         startFolio: 2,
         ...over,
@@ -62,7 +61,6 @@ describe("buildTodayDoc — envelope", () => {
                     book: undefined,
                     rabbi: undefined,
                     startFolio: null,
-                    publishedAt: null,
                 }),
             ],
             services: null,
@@ -83,23 +81,22 @@ describe("buildTodayDoc — envelope", () => {
 describe("buildTodayDoc — selection", () => {
     /**
      * R2-f (Daniel, 2026-09-15): CRC does not use publish. A setlist is live
-     * when it exists. This test is the inverse of the one it replaced — the
-     * old gate is exactly why `/today.json` answered 404 through Yom Kippur
-     * week, when all five machzor setlists carried `publishedAt: null`.
+     * when it exists. That gate is exactly why `/today.json` answered 404
+     * through Yom Kippur week, when all five machzor setlists carried
+     * `publishedAt: null`.
+     *
+     * R-0919-audit-3 finished the job: the field is gone, and `today.json`
+     * never carries it. The assertion stays because it is the regression
+     * guard — if a publish concept ever comes back, this is where it shows.
      */
-    it("reads setlists that were never published", () => {
+    it("reads every setlist, and never emits a publishedAt", () => {
         const doc = buildTodayDoc({
-            setlists: [setlist({ id: "never-published", publishedAt: null })],
+            setlists: [setlist({ id: "never-published" })],
             services: SERVICES,
             now: NOW,
         })
         expect(doc.services.map((s) => s.setlistId)).toEqual(["never-published"])
         expect(doc.services[0]).not.toHaveProperty("publishedAt")
-    })
-
-    it("still carries publishedAt when a setlist happens to have one", () => {
-        const doc = buildTodayDoc({ setlists: [setlist()], services: SERVICES, now: NOW })
-        expect(doc.services[0].publishedAt).toBe("2026-09-15T15:12:00.000Z")
     })
 
     it("excludes test traffic, which is the only exclusion left", () => {
@@ -197,7 +194,6 @@ describe("buildTodayDoc — start times", () => {
             setlists: [
                 setlist({
                     eventDate: "2026-12-18T18:00:00.000Z",
-                    publishedAt: "2026-12-10T00:00:00.000Z",
                 }),
             ],
             services: SERVICES,

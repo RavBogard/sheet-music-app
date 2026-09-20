@@ -52,11 +52,11 @@ describe('Rate limit key extraction', () => {
     })
 })
 
-describe('POST /api/setlist/publish', () => {
+describe('POST /api/setlist/notify-band', () => {
     let POST: (req: import('next/server').NextRequest) => Promise<Response>
 
     beforeAll(async () => {
-        const mod = await import('@/app/api/setlist/publish/route')
+        const mod = await import('@/app/api/setlist/notify-band/route')
         POST = mod.POST
     })
 
@@ -74,7 +74,7 @@ describe('POST /api/setlist/publish', () => {
     it('rejects unauthenticated requests with 401', async () => {
         firebaseAdminMock.verifyIdToken.mockResolvedValue(null as never)
 
-        const res = await POST(makeReq('/api/setlist/publish', {
+        const res = await POST(makeReq('/api/setlist/notify-band', {
             method: 'POST',
             body: { setlistId: 'test' },
         }))
@@ -85,7 +85,7 @@ describe('POST /api/setlist/publish', () => {
     it('allows band leaders to publish (uses token claims, not Firestore fetch)', async () => {
         mockAuth('band_leader')
 
-        const res = await POST(makeReq('/api/setlist/publish', {
+        const res = await POST(makeReq('/api/setlist/notify-band', {
             method: 'POST',
             token: 'valid-token',
             body: {
@@ -110,7 +110,7 @@ describe('POST /api/setlist/publish', () => {
             isMember: true,
         } as never)
 
-        const res = await POST(makeReq('/api/setlist/publish', {
+        const res = await POST(makeReq('/api/setlist/notify-band', {
             method: 'POST',
             token: 'valid-token',
             body: { setlistId: 'test', musicians: [{ name: 'Alice', uid: 'u1', email: 'alice@test.com' }], emailRecipients: [] },

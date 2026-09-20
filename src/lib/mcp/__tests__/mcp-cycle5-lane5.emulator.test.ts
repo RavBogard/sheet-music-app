@@ -50,7 +50,7 @@ import { publishSetlist } from "../tools/setlist-publish"
 /**
  * Cycle-5 fixes Lane 5 — coverage for the read/shape changes that don't
  * already live in a tool-specific emulator file:
- *  - list_setlists publishedAt field + sort discriminant (C5C-010 + C5C-011)
+ *  - list_setlists sort discriminant (C5C-010)
  *  - publish_setlist default-audience test-* filter (C5C-005)
  *  - list_service_personnel new MCP tool (C5C-014)
  *  - get_ai_config provider discriminant + post-Gemini-swap key shape
@@ -109,16 +109,15 @@ describe("Cycle-5 Lane 5 — list_setlists / publish / service-personnel / ai-co
         await drop("tracks")
     })
 
-    // ─── C5C-010 + C5C-011: list_setlists sort + publishedAt ─────────────
+    // ─── C5C-010: list_setlists sort ─────────────────────────────────────
 
-    describe("C5C-010 + C5C-011 — list_setlists sort + publishedAt", () => {
+    describe("C5C-010 — list_setlists sort", () => {
         async function seedSetlist(
             id: string,
             opts: {
                 name: string
                 date: Date
                 eventDate: Date
-                publishedAt?: string | null
             },
         ) {
             const payload: Record<string, unknown> = {
@@ -131,35 +130,9 @@ describe("Cycle-5 Lane 5 — list_setlists / publish / service-personnel / ai-co
                 trackCount: 0,
                 isTest: false,
             }
-            if (opts.publishedAt !== undefined) {
-                payload.publishedAt =
-                    opts.publishedAt === null ? null : opts.publishedAt
-            }
             await db().collection("setlists").doc(id).set(payload)
         }
 
-        it("publishedAt surfaces on the row (ISO string or null)", async () => {
-            await seedSetlist("s-published", {
-                name: "Published",
-                date: new Date("2026-05-01T10:00:00Z"),
-                eventDate: new Date("2026-05-15T19:00:00Z"),
-                publishedAt: "2026-05-10T12:00:00.000Z",
-            })
-            await seedSetlist("s-unpublished", {
-                name: "Unpublished",
-                date: new Date("2026-05-02T10:00:00Z"),
-                eventDate: new Date("2026-05-16T19:00:00Z"),
-            })
-
-            const rows = (await listSetlists(ADMIN, {})) as Array<{
-                id: string
-                publishedAt: string | null
-            }>
-            expect(Array.isArray(rows)).toBe(true)
-            const byId = new Map(rows.map((r) => [r.id, r]))
-            expect(byId.get("s-published")?.publishedAt).toBe("2026-05-10T12:00:00.000Z")
-            expect(byId.get("s-unpublished")?.publishedAt).toBeNull()
-        })
 
         it("default sort orders by date desc (recent_write back-compat)", async () => {
             await seedSetlist("s-old-doc-future-event", {

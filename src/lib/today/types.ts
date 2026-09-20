@@ -60,13 +60,6 @@ export interface TodayService {
         /** Defaults to `stream.leadMinutes` (5) before `startsAt`. */
         startsAt?: string
     }
-    /**
-     * First-publish instant, ISO with `Z`. OPTIONAL since R2-f (2026-09-15):
-     * CRC does not use publish, so most services never carry one. Emitted when
-     * the setlist happens to have it; omitted otherwise. The reader's
-     * `calFrom()` never read this field, so omission changes nothing there.
-     */
-    publishedAt?: string
     /** The setlist's `version` at emit time. */
     version: number
 }

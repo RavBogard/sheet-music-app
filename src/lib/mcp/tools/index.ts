@@ -577,7 +577,7 @@ export function registerReadTools(server: McpServer): void {
         "list_setlists",
         {
             description:
-                "List the user's setlists, newest first. Use when the user asks about their upcoming or recent services/gigs. Dates are ISO strings; trackCount counts every row including section headers. Each row carries `publishedAt: string | null` (ISO timestamp of first publish, null for never-published). Optional from/to filter by service date. `sort:'recent_write'` (default — backward-compat, orders by the doc's write timestamp) vs. `sort:'recent_event'` (orders by service `eventDate` desc — David's 'next service to plan' lookup). For larger archives, paging via `offset` is supported up to the 200-record fetch cap — past that, slice with `from`/`to` instead.",
+                "List the user's setlists, newest first. Use when the user asks about their upcoming or recent services/gigs. Dates are ISO strings; trackCount counts every row including section headers. Optional from/to filter by service date. `sort:'recent_write'` (default — backward-compat, orders by the doc's write timestamp) vs. `sort:'recent_event'` (orders by service `eventDate` desc — David's 'next service to plan' lookup). For larger archives, paging via `offset` is supported up to the 200-record fetch cap — past that, slice with `from`/`to` instead.",
             inputSchema: {
                 from: z
                     .string()
@@ -1668,10 +1668,10 @@ export function registerWriteTools(server: McpServer): void {
     )
 
     server.registerTool(
-        "publish_setlist",
+        "notify_band",
         {
             description:
-                "Publish a setlist to the band — snapshots song-row state, marks the setlist as published, and fans out notifications across in-app, FCM push, email, and SMS (SMS only on first publish, opt-in users only). Equivalent to clicking the in-app Publish button. Use when the user says \"send the setlist to the band\", \"publish tonight's service\", \"notify everyone\". By default, recipients are every active admin / band_leader / musician account (excluding the publisher); pass `audience: 'all'` to include `member` accounts, or pass an explicit `recipients` array to override entirely. A `recipients` entry is one of two kinds: an account holder (`uid` → in-app + push + SMS) or an ad-hoc person with no app account (`name` + `email` → email only); reuse a leader's remembered ad-hoc people via their saved contacts (`list_contacts` / `create_contact`, surfaced as `preview_publish.savedContacts`). `note` adds a free-text message above the song list in the email; `subject` overrides the email subject. `dryRun: true` returns the would-publish recipient set + snapshot without writing or sending — preview the blast before pulling the trigger. Re-publishing a setlist that was already published refreshes the snapshot + re-fans-out in-app/push/email but skips SMS (cost control). For a transport retry of a REAL publish, reuse the same caller-minted `idempotencyKey`; omit/use a new key for a deliberate re-publish. Admins and band leaders only.",
+                "Tell the band about a setlist — fans out notifications across in-app, FCM push, email and SMS (SMS the first time only, opt-in users only). This does NOT change who can see the setlist: every setlist is already visible to the band the moment it exists. Publishing was retired 2026-09-19 (R-0919-audit-3) and this tool is what is left of it, named for what it does. Use when the user says \"send the setlist to the band\", \"tell everyone about tonight's service\", \"notify the band\". By default, recipients are every active admin / band_leader / musician account (excluding the publisher); pass `audience: 'all'` to include `member` accounts, or pass an explicit `recipients` array to override entirely. A `recipients` entry is one of two kinds: an account holder (`uid` → in-app + push + SMS) or an ad-hoc person with no app account (`name` + `email` → email only); reuse a leader's remembered ad-hoc people via their saved contacts (`list_contacts` / `create_contact`, surfaced as `preview_notify_band.savedContacts`). `note` adds a free-text message above the song list in the email; `subject` overrides the email subject. `dryRun: true` returns the would-notify recipient set + snapshot without writing or sending — preview the blast before pulling the trigger. Notifying a band that was already told refreshes the snapshot and re-fans-out in-app/push/email but skips SMS (cost control). For a transport retry of a REAL send, reuse the same caller-minted `idempotencyKey`; omit or use a new key for a deliberate second send. Admins and band leaders only.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 recipients: z
@@ -1685,7 +1685,7 @@ export function registerWriteTools(server: McpServer): void {
                     )
                     .optional()
                     .describe(
-                        "Explicit recipient list. If omitted, auto-derives from active band roles (see `audience`). Each entry is one of two kinds: (1) an account holder — pass `uid` (receives in-app + push + SMS) and optionally `email`; or (2) an ad-hoc recipient with NO app account — pass `name` + `email` (email only). Reuse a leader's saved contacts (from `list_contacts` / `create_contact`) by passing each as a `{name, email}` entry here; `preview_publish` returns them as `savedContacts`. Note: the publisher's own uid is filtered out of the final fanout EVEN when listed explicitly — you don't get a publish notification for the publish you just sent. If you call `publish_setlist({recipients: [{uid: self}]})` you'll see `recipientCount: 0` and `delivery.inApp.sent: 0`; that's intentional, not a bug.",
+                        "Explicit recipient list. If omitted, auto-derives from active band roles (see `audience`). Each entry is one of two kinds: (1) an account holder — pass `uid` (receives in-app + push + SMS) and optionally `email`; or (2) an ad-hoc recipient with NO app account — pass `name` + `email` (email only). Reuse a leader's saved contacts (from `list_contacts` / `create_contact`) by passing each as a `{name, email}` entry here; `preview_notify_band` returns them as `savedContacts`. Note: the sender's own uid is filtered out of the final fanout EVEN when listed explicitly — you don't get a notification for the one you just sent. If you call `notify_band({recipients: [{uid: self}]})` you'll see `recipientCount: 0` and `delivery.inApp.sent: 0`; that's intentional, not a bug.",
                     ),
                 audience: z
                     .enum(["band", "all"])
@@ -1709,7 +1709,7 @@ export function registerWriteTools(server: McpServer): void {
                     .boolean()
                     .optional()
                     .describe(
-                        "If true, returns the would-publish recipient list + snapshot + chart-health pre-flight report without writing or sending. Useful to confirm the blast list AND that every bonded chart will render before committing. chartHealth carries `{bondedCount, okCount, missingCount, unreachableCount, unhealthy[]}` — same shape preview_publish returns (F-006 unified).",
+                        "If true, returns the would-notify recipient list + snapshot + chart-health pre-flight report without writing or sending. Useful to confirm the blast list AND that every bonded chart will render before committing. chartHealth carries `{bondedCount, okCount, missingCount, unreachableCount, unhealthy[]}` — same shape preview_notify_band returns (F-006 unified).",
                     ),
                 force: z
                     .boolean()
@@ -1843,17 +1843,17 @@ export function registerWriteTools(server: McpServer): void {
     )
 
     server.registerTool(
-        "preview_publish",
+        "preview_notify_band",
         {
             description:
-                "W-01 — PREVIEW a publish before pulling the trigger. Wraps publish_setlist({dryRun: true}) and reformats the response into the four signals the agent needs for chat-native confirm: chartHealth (`{bondedCount, okCount, missingCount, unreachableCount, unhealthy[]}` — same shape publish_setlist returns post-F-006), audience (recipient count + role breakdown across admin/band_leader/musician/member), snapshotDiff vs. the last `publishedSnapshot` (added / removed / modified track rows), flaggedBonds (count of open bond_flags awaiting review via review_flagged_bonds), and `recommendation`: 'hard_block' if any chart status is 'missing' (the band would 404), 'review_first' if flaggedBonds > 0 (walk them first via review_flagged_bonds + record_bond_correction), 'publish' otherwise. Use this between the propose→commit cycle and the actual publish_setlist call. Read-only — no writes, no notifications, no rate-limited charge.",
+                "PREVIEW a band notification before sending it. Wraps notify_band({dryRun: true}) and reformats the response into the four signals needed for a chat-native confirm: chartHealth (`{bondedCount, okCount, missingCount, unreachableCount, unhealthy[]}` — same shape notify_band returns), audience (recipient count + role breakdown across admin/band_leader/musician/member), snapshotDiff against what the band was last told (added / removed / modified track rows), flaggedBonds (count of open bond_flags awaiting review via review_flagged_bonds), and `recommendation`: 'hard_block' if any chart status is 'missing' (the band would 404), 'review_first' if flaggedBonds > 0 (walk them first via review_flagged_bonds + record_bond_correction), 'send' otherwise. Use this between the propose→commit cycle and the actual notify_band call. Read-only — no writes, no notifications, no rate-limited charge.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 audience: z
                     .enum(["band", "all"])
                     .optional()
                     .describe(
-                        "Audience preset forwarded to publish_setlist. 'band' (default) = admin + band_leader + musician. 'all' = + member accounts.",
+                        "Audience preset forwarded to notify_band. 'band' (default) = admin + band_leader + musician. 'all' = + member accounts.",
                     ),
             },
         },
@@ -1866,7 +1866,7 @@ export function registerWriteTools(server: McpServer): void {
         "list_contacts",
         {
             description:
-                "List your saved contacts — remembered ad-hoc recipients (people with no app account, just a name + email/phone) for this org. Use to offer reusable recipients when publishing. To actually send to one, pass it as a `recipients` entry (name + email) on publish_setlist.",
+                "List your saved contacts — remembered ad-hoc recipients (people with no app account, just a name + email/phone) for this org. Use to offer reusable recipients when notifying the band. To actually send to one, pass it as a `recipients` entry (name + email) on notify_band.",
             inputSchema: {},
         },
         async (_args, extra) =>
@@ -1901,7 +1901,7 @@ export function registerWriteTools(server: McpServer): void {
         "create_contact",
         {
             description:
-                "Remember an ad-hoc recipient for next time — a person the system has no account for (e.g. a guest musician or a parent). Saves a contact (name + email and/or phone) scoped to your org. Use this after a publish where the leader wanted to email someone who isn't a band member, so you don't have to retype them next week. Deduplicates by email (returns the existing contact instead of a duplicate). Does NOT send anything — to notify a contact, pass it as a `recipients` entry on publish_setlist.",
+                "Remember an ad-hoc recipient for next time — a person the system has no account for (e.g. a guest musician or a parent). Saves a contact (name + email and/or phone) scoped to your org. Use this after a send where the leader wanted to email someone who isn't a band member, so you don't have to retype them next week. Deduplicates by email (returns the existing contact instead of a duplicate). Does NOT send anything — to notify a contact, pass it as a `recipients` entry on notify_band.",
             inputSchema: {
                 name: z.string().min(1).describe("Display name, e.g. 'Jane Cohen'"),
                 email: z
@@ -1997,7 +1997,7 @@ export function registerWriteTools(server: McpServer): void {
         "verify_setlist_charts",
         {
             description:
-                "HEAD-check every bonded chart on a setlist in parallel and return per-row health (ok / missing / unreachable / unbonded). Use BEFORE publish_setlist to catch broken bonds — publish_setlist runs this same check internally and refuses by default if anything is broken. Use AFTER bulk_add_tracks to confirm every new bond is renderable. Returns `rows[]` with trackId, title, songId, fileId, and per-row health; plus aggregate counts (bondedCount, okCount, missingCount, unreachableCount, orphanedMarked). Pass `markOrphaned: true` to also persist `status: 'orphaned'` on every catalog row whose underlying file was definitively missing — those rows then drop out of search_library by default. Read-only otherwise; cheap, no byte transfer.",
+                "HEAD-check every bonded chart on a setlist in parallel and return per-row health (ok / missing / unreachable / unbonded). Use BEFORE notify_band to catch broken bonds — notify_band runs this same check internally and refuses by default if anything is broken. Use AFTER bulk_add_tracks to confirm every new bond is renderable. Returns `rows[]` with trackId, title, songId, fileId, and per-row health; plus aggregate counts (bondedCount, okCount, missingCount, unreachableCount, orphanedMarked). Pass `markOrphaned: true` to also persist `status: 'orphaned'` on every catalog row whose underlying file was definitively missing — those rows then drop out of search_library by default. Read-only otherwise; cheap, no byte transfer.",
             inputSchema: {
                 setlistId: z.string().min(1).describe("Setlist id"),
                 markOrphaned: z

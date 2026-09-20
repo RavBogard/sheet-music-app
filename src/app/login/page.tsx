@@ -152,7 +152,7 @@ export default async function LoginPage() {
                     from Lane 6's global Footer.tsx — that surface is for
                     authed pages; /login is unauth and never renders the
                     global Footer. SMS-Consent is required because the app
-                    sends SMS notifications on publish_setlist. */}
+                    sends SMS notifications on notify_band. */}
                 <nav aria-label="Legal" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <a href="/privacy" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Privacy</a>
                     <a href="/terms" className="underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none">Terms</a>

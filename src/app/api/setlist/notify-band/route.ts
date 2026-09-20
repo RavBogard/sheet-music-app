@@ -1,11 +1,32 @@
 /**
- * POST /api/setlist/publish
+ * POST /api/setlist/notify-band
  *
- * Publishes a setlist and triggers notifications:
- * 1. Stamp publishedAt + snapshot
- * 2. Record song usage (fire-and-forget)
- * 3. In-app notifications to assigned musicians with accounts
- * 4. Email notifications to all assigned musicians
+ * Tell the band about a setlist. This was `/api/setlist/publish` until the
+ * 2026-09-19 audit retired Publish (R-0919-audit-3).
+ *
+ * WHY IT SURVIVED THE RETIREMENT. The ruling was made on the fact that nothing
+ * has ever been published — all 13 recent setlists carry `publishedAt: null`,
+ * and `today.json` emits from unpublished setlists regardless. That is true of
+ * the STAMP. It was not true of the route: this is also the only path that
+ * reaches web push and SMS. `resend-email` and `email-packets` send email
+ * only; `notify-updated` writes an in-app notification to the whole roster and
+ * nothing else. Deleting this route would have quietly removed two channels
+ * the band actually receives on.
+ *
+ * So the stamp, the snapshot and the word "publish" are gone, and what is left
+ * is named for what it does:
+ * 1. Record song usage (fire-and-forget)
+ * 2. In-app notifications to the selected musicians who have accounts
+ * 3. Web push to the same set
+ * 4. Email to the selected recipients
+ * 5. SMS to those who opted in
+ *
+ * `lastNotifiedAt` stays on the setlist doc — it is a notification fact ("when
+ * did we last tell the band"), not a publish fact.
+ *
+ * There is no `today.json` emit here any more. The cron owns that file and
+ * runs every 15 minutes with a staleness check behind it; a second writer on
+ * a user action was a way for the two to disagree.
  */
 
 import { NextResponse } from 'next/server'
@@ -21,7 +42,6 @@ import { sendSMS } from '@/lib/sms'
 import { rowOrg } from '@/lib/org/membership'
 import { logger } from '@/lib/logger'
 import { revalidatePath } from 'next/cache'
-import { emitToday } from '@/lib/today/emit-today'
 import { z } from 'zod'
 
 const musicianSchema = z.object({
@@ -95,7 +115,7 @@ export const POST = createApiHandler(
         // setlists, the embedded `setlist.tracks[]` is stale (engine writes
         // through top-level `tracks/{id}` only); helper queries the live
         // source. Cast preserves the narrow shape used by downstream
-        // consumers (publishedSnapshot, recordSongUsage, email body).
+        // consumers (recordSongUsage, the email body).
         const tracks = (await getTracksForSetlist(db, setlistId, setlist)) as Array<{
             fileId?: string; title: string; key?: string; type?: string
         }>
@@ -104,32 +124,20 @@ export const POST = createApiHandler(
             return NextResponse.json({ error: 'Setlist must have at least one song with a linked chart' }, { status: 400 })
         }
 
-        // Step 1: Publish (stamp publishedAt + snapshot for change detection).
+        // Step 1: record that the band was told, and when.
+        //
         // Intentionally skips the concurrent-edit precondition used by
-        // updateSetlist — publish is a user-initiated action that bumps a
-        // snapshot + notification state; it's OK if it races with a recent
-        // edit (the snapshot captures whatever tracks are in the doc right now).
-        // We still advance `updatedAt` so open editors see the change.
-        const songTracks = tracks.filter((t: { type?: string }) => !t.type || t.type === 'song')
-        const publishedSnapshot = songTracks.map((t: { title: string; key?: string; fileId?: string }) => ({
-            title: t.title, key: t.key || '', fileId: t.fileId || ''
-        }))
-        const wasPublished = !!setlist.publishedAt
-        if (!wasPublished) {
-            await setlistRef.update({
-                publishedAt: FieldValue.serverTimestamp(),
-                publishedSnapshot,
-                lastNotifiedAt: FieldValue.serverTimestamp(),
-                updatedAt: FieldValue.serverTimestamp(),
-            })
-        } else {
-            // Re-notify: update snapshot and timestamp
-            await setlistRef.update({
-                publishedSnapshot,
-                lastNotifiedAt: FieldValue.serverTimestamp(),
-                updatedAt: FieldValue.serverTimestamp(),
-            })
-        }
+        // updateSetlist — telling the band is a user-initiated action, and it
+        // is fine for it to race with a recent edit. `updatedAt` still
+        // advances so open editors see the change.
+        //
+        // `wasNotifiedBefore` is what governs SMS below: the first time the
+        // band is told we text; a re-notify does not, for cost.
+        const wasNotifiedBefore = !!setlist.lastNotifiedAt
+        await setlistRef.update({
+            lastNotifiedAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+        })
 
         // Get event date
         const eventDate = setlist.eventDate?.toDate?.() || setlist.date?.toDate?.() || new Date()
@@ -139,7 +147,7 @@ export const POST = createApiHandler(
         // Step 2: Record song usage (fire-and-forget)
         const usagePromise = recordSongUsage(setlistId, setlistName, eventDate, tracks)
             .catch(err => {
-                logger.warn('[Publish] Song usage recording failed:', err)
+                logger.warn('[NotifyBand] Song usage recording failed:', err)
                 return { recorded: 0, skipped: 0 }
             })
 
@@ -167,7 +175,7 @@ export const POST = createApiHandler(
                 batch.commit()
                     .then(() => { inAppResults.sent += chunk.length })
                     .catch(err => {
-                        logger.warn('[Publish] In-app notification batch failed:', err)
+                        logger.warn('[NotifyBand] In-app notification batch failed:', err)
                         inAppResults.failed += chunk.length
                     })
             )
@@ -187,7 +195,7 @@ export const POST = createApiHandler(
                     pushResults.failed = result?.failed ?? 0
                 })
                 .catch(err => {
-                    logger.warn('[Publish] FCM push failed:', err)
+                    logger.warn('[NotifyBand] FCM push failed:', err)
                     pushResults.failed = pushUids.length
                 })
             : Promise.resolve()
@@ -260,7 +268,7 @@ export const POST = createApiHandler(
                 emailRecipients, setlistId, setlistName, eventDateStr,
                 publisherName, songNames, origin, combinedNote, publishSubject, org
             ).catch(err => {
-                logger.warn('[Publish] Email sending failed:', err)
+                logger.warn('[NotifyBand] Email sending failed:', err)
                 return { sent: 0, failed: 0, errors: [], messageIds: [], error: err instanceof Error ? err.message : String(err) }
             })
             : Promise.resolve({ sent: 0, failed: 0, errors: [] as string[], messageIds: [] as Array<{ email: string; messageId: string }> })
@@ -269,7 +277,7 @@ export const POST = createApiHandler(
         // Only for initial publish, not re-publish (to control SMS costs)
         const smsResults = { sent: 0, failed: 0 }
         const smsPromises: Promise<void>[] = []
-        if (!wasPublished) {
+        if (!wasNotifiedBefore) {
             for (const musician of registeredMusicians) {
                 try {
                     const userData = userDataMap.get(musician.uid!)
@@ -281,13 +289,13 @@ export const POST = createApiHandler(
                             sendSMS(phone, `CRC Music: "${setlistName}" for ${eventDateStr} has been published. View it at ${origin}/perform/setlist/${setlistId}`)
                                 .then(() => { smsResults.sent++ })
                                 .catch(err => {
-                                    logger.warn(`[Publish] SMS failed for ${musician.uid}:`, err)
+                                    logger.warn(`[NotifyBand] SMS failed for ${musician.uid}:`, err)
                                     smsResults.failed++
                                 })
                         )
                     }
                 } catch (e) {
-                    logger.warn(`[Publish] SMS pref check failed for ${musician.uid}:`, e)
+                    logger.warn(`[NotifyBand] SMS pref check failed for ${musician.uid}:`, e)
                     smsResults.failed++
                 }
             }
@@ -301,11 +309,11 @@ export const POST = createApiHandler(
             userName: ctx.auth.email || 'unknown',
             timestamp: FieldValue.serverTimestamp(),
             details: {
-                wasAlreadyPublished: wasPublished,
+                wasNotifiedBefore,
                 musicianCount: musicians.length,
                 musicianNames: musicians.map(m => m.name),
             },
-        }).catch(err => logger.warn('[Publish] Audit log failed:', err))
+        }).catch(err => logger.warn('[NotifyBand] Audit log failed:', err))
 
         // Wait for usage + email + all notification results
         const [usageResult, emailResult] = await Promise.all([usagePromise, emailPromise])
@@ -333,31 +341,25 @@ export const POST = createApiHandler(
                     timestamp: FieldValue.serverTimestamp(),
                 })
             }
-            batch.commit().catch(err => logger.warn('[Publish] Email events write failed:', err))
+            batch.commit().catch(err => logger.warn('[NotifyBand] Email events write failed:', err))
         }
 
-        // Regenerate the public today.json — the siddur reader and the stream
-        // overlays key off publish. Best-effort and awaited (not fire-and-
-        // forget): this route is serverless, so a floating promise can be
-        // frozen the moment the response is returned. emitToday never throws;
-        // a missing today.json costs a calendar hint, never a service.
-        const todayResult = await emitToday(rowOrg(setlist.orgId))
-        if (!todayResult.ok) {
-            logger.warn('[Publish] today.json emit failed (non-critical)', todayResult.error)
-        }
+        // No today.json emit here. The cron at /api/cron/emit-today owns that
+        // file, runs every 15 minutes and checks its own work; a second writer
+        // on a user action was only a way for the two to disagree.
 
-        // Bust Next.js cache so listings reflect the new publishedAt snapshot
+        // Bust Next.js cache so listings reflect the new notification state
         try {
             revalidatePath('/setlists')
             revalidatePath(`/setlists/${setlistId}`)
             revalidatePath(`/perform/setlist/${setlistId}`)
         } catch (e) {
-            logger.warn('[Publish] Cache revalidation failed (non-critical)', e)
+            logger.warn('[NotifyBand] Cache revalidation failed (non-critical)', e)
         }
 
         return NextResponse.json({
             success: true,
-            wasAlreadyPublished: wasPublished,
+            wasNotifiedBefore,
             notified: registeredMusicians.length, // in-app only (excludes publisher)
             musicianCount: musicians.length,
             emailed,

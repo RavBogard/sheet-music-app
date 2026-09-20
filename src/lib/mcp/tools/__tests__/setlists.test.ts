@@ -48,18 +48,15 @@ describe("listSetlists", () => {
         ])
     })
 
-    it("returns id/name/dates/trackCount/publishedAt, including songCount only when present", async () => {
+    it("returns id/name/dates/trackCount, including songCount only when present", async () => {
         const r = (await listSetlists("u", {})) as unknown as Array<Record<string, unknown>>
         expect(r).toHaveLength(3)
-        // Cycle-5 C5C-011 — publishedAt always surfaces (null when the
-        // source row has no publishedAt field).
         expect(r[0]).toEqual({
             id: "a",
             name: "Shabbat 5/24",
             date: "2026-05-20T00:00:00.000Z",
             eventDate: "2026-05-24T00:00:00.000Z",
             trackCount: 12,
-            publishedAt: null,
         })
         expect(r[1].songCount).toBe(8)
         expect("songCount" in r[0]).toBe(false)
@@ -170,23 +167,6 @@ describe("listSetlists", () => {
         })
     })
 
-    it("Cycle-5 C5C-011 — publishedAt ISO strings round-trip when present on the row", async () => {
-        mockGetAllSetlists.mockResolvedValueOnce([
-            {
-                id: "p1",
-                name: "Published",
-                date: "2026-05-20T00:00:00.000Z",
-                eventDate: "2026-05-24T00:00:00.000Z",
-                trackCount: 8,
-                publishedAt: "2026-05-22T12:00:00.000Z",
-            },
-        ])
-        const r = (await listSetlists("u", {})) as Array<{
-            id: string
-            publishedAt: string | null
-        }>
-        expect(r[0].publishedAt).toBe("2026-05-22T12:00:00.000Z")
-    })
 
     it("rejects an unparseable `from` / `to` with the rich validation envelope (G-14 / MCP-003)", async () => {
         // Cycle-2 REG-001b: errors return the canonical rich envelope

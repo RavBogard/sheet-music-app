@@ -44,14 +44,6 @@ interface SetlistSummary {
      *  lastSeenVersion on subsequent writes for optimistic concurrency
      *  (Plan 02 enforces; Plan 01 stamps only). */
     version?: number
-    /**
-     * Cycle-5 C5C-011 — ISO timestamp of the first publish, or `null` for
-     * never-published setlists. Sourced from the `publishedAt` field that
-     * `publish_setlist` first-writes via `FieldValue.serverTimestamp()` and
-     * leaves untouched on subsequent re-publishes. Cheap to expose since
-     * `serializeSetlist` already carries it on the row.
-     */
-    publishedAt: string | null
 }
 
 // Cycle-2 REG-001b: every error returns the canonical rich envelope.
@@ -134,7 +126,6 @@ export async function listSetlists(
                 date: isoOf(row.date),
                 eventDate: isoOf(row.eventDate),
                 trackCount: typeof row.trackCount === "number" ? row.trackCount : 0,
-                publishedAt: isoOf(row.publishedAt),
             }
             if (typeof row.songCount === "number") summary.songCount = row.songCount
             if (typeof row.version === "number") summary.version = row.version

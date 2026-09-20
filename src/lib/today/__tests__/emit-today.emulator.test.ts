@@ -90,7 +90,6 @@ describe("today.json (emulator)", () => {
                 rabbi: "Rabbi Daniel Bogard",
                 date: Timestamp.fromDate(new Date("2026-09-14T12:00:00.000Z")),
                 eventDate: Timestamp.fromDate(new Date("2026-09-18T17:00:00.000Z")),
-                publishedAt: Timestamp.fromDate(new Date("2026-09-15T15:12:00.000Z")),
                 version: 7,
                 trackCount: 2,
                 ...over,
