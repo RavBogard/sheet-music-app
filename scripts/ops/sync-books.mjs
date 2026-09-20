@@ -478,10 +478,51 @@ function momentsAgree(dist, dirName) {
     }
 }
 
-/** Does this artifact's checker take `--tree`? Older ones do not. */
+/**
+ * Does this artifact's checker read the working tree when asked?
+ *
+ * Ask the tool, in the order it prefers to be asked.
+ *
+ * `--capabilities` (R-0920-code-22) prints one parseable line and exits 0 —
+ * `moments_agree capabilities=1 reads=head,tree flags=... ` — and is declared
+ * APPEND-ONLY upstream: fields may be added, a name already printed never
+ * changes meaning, and `capabilities=1` versions the line rather than the
+ * script. So a consumer that understands line version 1 keeps working against
+ * every later copy. We read `reads=` and look for `tree` in it, deliberately
+ * NOT for the `--tree` string, so a growing flag list never brings us back here.
+ *
+ * The `--help` fallback is for the copies already published, which have `--tree`
+ * but not `--capabilities`. It is the weaker test on purpose: grepping help text
+ * makes someone's prose into a contract they never declared, which is exactly
+ * what `--capabilities` exists to replace. It goes away when the last artifact
+ * without a capabilities line does.
+ *
+ * Anything older than both answers false and takes the temp-copy path, which is
+ * correct rather than merely safe: a tool with no `--tree` cannot be asked the
+ * question, so the copy outside the work tree is the only way to ask it.
+ */
 function supportsTree(python, tool) {
+    const caps = spawnSync(python, [tool, "--capabilities"], { encoding: "utf8" })
+    const capsOut = `${caps.stdout ?? ""}${caps.stderr ?? ""}`
+    if (caps.status === 0 && capsOut.includes("capabilities=")) return capabilityReadsTree(capsOut)
     const help = spawnSync(python, [tool, "--help"], { encoding: "utf8" })
     return `${help.stdout ?? ""}${help.stderr ?? ""}`.includes("--tree")
+}
+
+/**
+ * Parse `reads=` out of a capabilities line and say whether `tree` is in it.
+ *
+ * Pure, and exported so the suite can hold the contract without a Python
+ * interpreter or an artifact: the fields around `reads=` are expected to grow,
+ * and the parse has to survive that.
+ */
+export function capabilityReadsTree(text) {
+    const reads = /(?:^|\s)reads=([^\s]*)/.exec(text ?? "")
+    if (!reads) return false
+    return reads[1]
+        .split(",")
+        .map((m) => m.trim())
+        .includes("tree")
 }
 
 function report(r, dirName, how) {

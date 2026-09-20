@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { momentsDrift } from "../ops/sync-books.mjs"
+import { momentsDrift, capabilityReadsTree } from "../ops/sync-books.mjs"
 import {
     ARTIFACT_NAME,
     apiBase,
@@ -225,5 +225,51 @@ describe("WANTED — the producer's own agreement check has to be unpacked to ru
             return { status: 0 }
         }) as never)
         for (const w of WANTED) expect(seen).toContain(w)
+    })
+})
+
+/**
+ * `--capabilities` is declared APPEND-ONLY upstream (R-0920-code-22): fields may
+ * be added, a printed name never changes meaning, and `capabilities=1` versions
+ * the line rather than the script. That promise is only worth anything if this
+ * side actually parses it that way — reading `reads=` for `tree` rather than
+ * matching the `--tree` string or the field order. These hold that end of it.
+ */
+describe("capabilityReadsTree — parse the declared line, not the prose around it", () => {
+    const LIVE =
+        "moments_agree capabilities=1 reads=head,tree flags=--tree,--head,--consumers,--if-present," +
+        "--self-test,--capabilities consumer_shapes=moments,pairs,feeds compares=unit_ids,moment_ids," +
+        "moment_unit_pairs,source_owned_values source_owned_fields=printedFolio,caption " +
+        "empty_string_is_a_value=yes local_consumer_default=committed_head"
+
+    it("reads tree out of the line shireishabbat actually prints", () => {
+        expect(capabilityReadsTree(LIVE)).toBe(true)
+    })
+
+    it("says no when the tool only reads head", () => {
+        expect(capabilityReadsTree("moments_agree capabilities=1 reads=head flags=--head")).toBe(false)
+    })
+
+    it("survives fields being appended, which is the whole promise", () => {
+        expect(capabilityReadsTree("moments_agree capabilities=1 reads=head,tree,blob later=1 more=2")).toBe(true)
+    })
+
+    it("survives reads= moving in the line", () => {
+        expect(capabilityReadsTree("moments_agree capabilities=1 x=1 y=2 reads=tree,head")).toBe(true)
+    })
+
+    it("does not mistake the flag list for the capability", () => {
+        // A tool that lists --tree but does not declare reading the tree is not
+        // one we hand an in-repo path to. This is the whole reason not to grep.
+        expect(capabilityReadsTree("moments_agree capabilities=1 reads=head flags=--tree,--head")).toBe(false)
+    })
+
+    it("does not match a field that merely ends in reads=", () => {
+        expect(capabilityReadsTree("moments_agree capabilities=1 spreads=head,tree")).toBe(false)
+    })
+
+    it("says no on an empty or absent line rather than throwing", () => {
+        expect(capabilityReadsTree("")).toBe(false)
+        expect(capabilityReadsTree(undefined as never)).toBe(false)
     })
 })

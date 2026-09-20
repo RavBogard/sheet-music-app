@@ -845,3 +845,50 @@ it is mine rather than a style change.
 The lesson is small and worth keeping: a formatter with no config in the repo is
 not a tidy-up, it is a decision about house style, made silently and at whatever
 scale the file happens to be.
+
+### Detecting the flag without making help text a contract
+
+Asking `--help` whether the tool takes `--tree` works, and it quietly turns
+somebody's prose into an interface. Raised it as a note rather than a request;
+shireishabbat added **`--capabilities`**, one parseable line that exits 0:
+
+```
+moments_agree capabilities=1 reads=head,tree flags=--tree,--head,... local_consumer_default=committed_head
+```
+
+Declared **append-only** upstream: fields may be added, a printed name never
+changes meaning, and `capabilities=1` versions the line rather than the script —
+so a consumer that understands line version 1 keeps working against every later
+copy. `supportsTree` now asks `--capabilities` first and reads **`reads=`** for
+`tree`, deliberately not matching the `--tree` string, so a growing flag list
+never brings anyone back here. `--help` remains as the fallback for the copies
+already published, which have the flag but not the line, and it goes away when
+the last such artifact does.
+
+**Four paths, all exercised against real data or a stub that shells to the real
+tool**, because detection is the kind of thing that silently stops detecting:
+
+| the tool says | takes |
+|---|---|
+| no `--tree`, no `--capabilities` (today's published artifact) | temp copy |
+| `--tree`, no `--capabilities` (shireishabbat's `build/` copy) | `--tree` via help fallback |
+| `reads=head,tree` | `--tree` |
+| `reads=head` **while listing `--tree` in `flags=`** | temp copy |
+
+The last row is the one worth having. A tool that lists the flag but does not
+declare reading the tree is not one to hand an in-repo path to, and it is exactly
+the case a `--help` grep gets wrong. Seven unit tests hold the parse — appended
+fields, reordered fields, `spreads=` not matching `reads=`, empty input — since
+the append-only promise is only worth something if this side parses it that way.
+
+**The guarantee this side now leans on, made explicit upstream.** We treat a
+`--capabilities` line that exits 0 but omits `reads=` as "does not read the
+tree", and fall back to copying. That is the conservative reading — a temp copy
+is always correct, only slower — but it would silently downgrade every careful
+consumer if `reads=` were ever dropped for something richer. A silent downgrade
+is the same species as the false pass this all started with. Raised it as
+something to decide rather than inherit; shireishabbat made `reads=` **permanent
+and required**, with an assertion that refuses to print a capabilities line at
+all rather than print one missing it, and a self-test requiring that every flag
+advertised in `flags=` actually parses. The promise is enforced where it is made
+rather than where it is relied on, which is the right side for it to live on.
