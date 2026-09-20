@@ -196,9 +196,19 @@ describe("runBatchWithDeadline (emulator)", () => {
 
         // The first item alone overruns the budget; items 2 and 3 are handed to
         // the next invocation.
+        //
+        // THE NUMBERS ARE LARGE ON PURPOSE (2026-09-20). `runBatchWithDeadline`
+        // reads the batch and writes `processing` BEFORE the loop, and the loop
+        // checks the deadline before item 1 (`http-executor.ts:181`). With a
+        // 40ms budget and an 80ms item, those two Firestore round-trips spent
+        // the whole budget whenever the machine was busy, the loop broke before
+        // item 1, and the test failed as `processed: 0, remaining: 3` — which
+        // reads like a broken executor and is really a stopwatch losing a race.
+        // Seen once in a whole-suite run and never in isolation. Same assertion,
+        // same semantics, ~35x the headroom.
         mockProcessChartUpload.mockImplementationOnce(
             async (input: { title?: string }) => {
-                await sleep(80)
+                await sleep(3000)
                 return {
                     ok: true,
                     fileId: `lib-${input.title}`,
@@ -211,7 +221,7 @@ describe("runBatchWithDeadline (emulator)", () => {
         )
 
         const res = await runBatchWithDeadline(db(), batchId, {
-            deadlineAt: Date.now() + 40,
+            deadlineAt: Date.now() + 1500,
             retrigger,
         })
 
@@ -229,8 +239,9 @@ describe("runBatchWithDeadline (emulator)", () => {
         const retrigger = vi.fn(async () => {
             throw new Error("run route unreachable")
         })
+        // Same headroom as the test above, for the same reason.
         mockProcessChartUpload.mockImplementationOnce(async () => {
-            await sleep(80)
+            await sleep(3000)
             return {
                 ok: true,
                 fileId: "lib-one",
@@ -242,7 +253,7 @@ describe("runBatchWithDeadline (emulator)", () => {
         })
 
         const res = await runBatchWithDeadline(db(), batchId, {
-            deadlineAt: Date.now() + 40,
+            deadlineAt: Date.now() + 1500,
             retrigger,
         })
 
