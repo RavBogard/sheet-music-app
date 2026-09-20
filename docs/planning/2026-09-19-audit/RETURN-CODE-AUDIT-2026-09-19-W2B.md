@@ -784,8 +784,25 @@ tree, `moments_agree.py` reported **`OK`** against HEAD. Only this repo's own
 `momentsDrift` failed the gate. Had the corruption been in the trim rather than
 in the file, nothing would have caught it and the run would have been green.
 
-Fixed by copying the bytes to a temp file outside any work tree before handing
-them over. The same corruption then fails with the exact id named:
+Reported upstream, and shireishabbat shipped **`--tree`** the same day
+(R-0920-code-22) — the supported way to ask the other question — carrying this
+finding as a permanent self-test fixture: a repo with a clean HEAD and a corrupt
+working tree, exit 0 under the default and exit 1 under `--tree`. HEAD stays
+their default, correctly: a verdict that moves with no commit and no push is not
+a measurement, and it is what keeps a peer's in-flight edit from failing their
+gate. We are simply the caller that wants the other question.
+
+`momentsAgree` therefore asks the tool whether it takes `--tree` and uses it
+when it does, rather than carrying a comment telling a future reader to switch
+over. The temp-copy fallback stays for artifacts that predate the flag and
+retires on contact with the next published build.
+
+**Both paths are verified against real data, because both exist today** — the
+published `dist-app` has no `--tree` and takes the fallback; shireishabbat's
+`build/` copy has it and takes the flag. Clean, both agree over 18 services. With
+a moment id corrupted in the working tree, both fail and name the id — which is
+the one that matters for the `--tree` path, since that path hands over the
+in-repo path directly and would be the false pass if the flag did not work:
 
 > `FAIL moments/agree — moment ids (shared services) — 1 id present in moments.json and absent here`
 > `a-new-year-BOGUS`
@@ -809,3 +826,22 @@ bytes stay in the zip — and that every wanted name reaches `unzip`.
 Producer` job continues to emit a `::warning` and pass without comparing. It now
 says both things it skipped. Setting that secret is still Daniel's, and it is
 the one thing standing between this gate and being real on every push.
+
+### One I made and had to undo: an accidental reformat
+
+`48dcf051` also reformatted three files it had no business reformatting. I ran
+`npx prettier --write` to tidy three `console.log` strings. This repo has **no
+prettier config and no prettier dependency** — npx fetched it — so it applied
+prettier's defaults over the house style (4-space, no semicolons) and turned a
+focused change into **787 insertions and 520 deletions** across ~1,200 lines, of
+which perhaps 140 were the actual change.
+
+Undone in `fde9d611`: the three files restored to their pre-commit state and the
+change re-applied by hand, now **136 insertions and 4 deletions** — what the diff
+should have been for a reader to review. Noted here because anyone diffing
+`scripts/` across those two commits will see churn that no one decided on, and
+it is mine rather than a style change.
+
+The lesson is small and worth keeping: a formatter with no config in the repo is
+not a tidy-up, it is a decision about house style, made silently and at whatever
+scale the file happens to be.
