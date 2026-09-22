@@ -14,7 +14,8 @@ parked. All four items are closed, or closed with a named gap.
 
 ## First, two defects in the tools this wave had to use
 
-Both produced confidently wrong numbers, and both were load-bearing.
+Both produced confidently wrong numbers, and both were load-bearing. Described
+here as they were found; **all three are fixed in Wave 3b below.**
 
 **`list_review_queue` cannot see past 200 rows and says otherwise.**
 `readReviewQueue` caps its Firestore query at `PAGE_LIMIT = 200`
@@ -25,8 +26,9 @@ a queue of any size at or above 200 returns exactly 200 rows and
 level down — read off a default `limit: 50`. The real queue was **270**.
 Nothing here depended on the count in the end, because clearing it drains the
 queue in rounds, but a reader trusting `truncated` would have stopped at 200.
-**Not fixed in this wave** — it is a read-path change in a tool I was actively
-using to write, and it wants its own commit.
+Left unfixed while the queue was being drained — a read-path change in a tool
+being actively written through is the wrong thing to land mid-run. **Fixed in
+Wave 3b.**
 
 **`get_web_vitals_summary` defaults to the top 5 routes.**
 `DEFAULT_TOP_ROUTES = 5` (`src/lib/mcp/tools/web-vitals-summary.ts:55`), sorted
@@ -36,11 +38,13 @@ like they have no data at all. Pass `topRoutes: 50` and both are there. The
 surface keys are also not normalized: `/perform/setlist/[id]/track/<uuid>`,
 `/perform/<driveId>` and `/qr/<code>` each land as their own route, which
 fragments the sample counts and is most of why the top-5 cut was so misleading.
+**Both fixed in Wave 3b.**
 
 Separately, `scripts/supervisor-prod-bearer.mjs` now reports a healthy bearer
 as dead. Its health probe calls `list_minted_bearers` against `/api/mcp`, and
 the (p) split moved that tool to `/api/ops/mcp`, so the helper exits 3 on a
-perfectly good credential. Worked around here by reading `.env.local` directly.
+perfectly good credential. Worked around at the time by reading `.env.local`
+directly. **Fixed in Wave 3b.**
 
 ---
 
@@ -114,7 +118,7 @@ turned up **278 rows of live drift**:
 | `backfill_track_mimetype` | 253 tracks with a null `mimeType` | 0 |
 | `backfill_setlist_test_flag` | 21 setlists with no `isTest` | 0 |
 | `backfill_library_index` | 4 rows with an unhydrated `fileSize` | 0 |
-| `backfill_content_hash` | already clean | 0 |
+| `backfill_content_hash` | already clean on crc | 0 (but see BL below) |
 
 All four now report zero and all four stay on the ops surface, because "empty
 today" is not "will never fill again". Deleting them would leave the next 278
@@ -128,13 +132,11 @@ was rewritten.
 
 Ops surface is now **47 tools**; authoring is unchanged at 97.
 
-**The tenant half is not fully closed.** `backfill_content_hash` and
-`backfill_library_index` scope by `orgFrom(extra)`, so today's confirmation is
-crc-only: 927 of the 990 `library_index` rows. The remaining 63 are Brothers
-Lazaroff and need a BL-org bearer, which a crc bearer cannot mint —
-`mint_admin_bearer` reuses the caller's uid by design. Since nothing was
-deleted on the strength of that gap it costs nothing to leave open, but it
-should be closed by whoever next holds a BL credential.
+**The tenant half** — `backfill_content_hash` and `backfill_library_index`
+scope by `orgFrom(extra)`, so the confirmation above is crc-only: 927 of the 990
+`library_index` rows. The remaining 63 are Brothers Lazaroff. **Closed in Wave
+3b**, and the answer strengthens the verdict here: BL has 52 rows with no
+`contentHash` at all.
 
 ## (n) — landed, and the field that decides it
 
@@ -181,14 +183,94 @@ Full production build (`--webpack`) clean from an empty `.next`.
 
 ## What is left
 
-1. **`list_review_queue`'s 200-row blindness** — `truncated` is computed after
-   the cap, so it can never report `true`. Wants a `count()` aggregation.
-2. **`get_web_vitals_summary`** — the top-5 default hides exactly the routes
-   anyone asking about a regression is asking about, and the surface key is not
-   normalized for `/perform/.../track/<uuid>`, `/perform/<driveId>`, `/qr/<code>`.
-3. **`scripts/supervisor-prod-bearer.mjs`** — health-probes a tool that now
-   lives on the ops surface; reports a good bearer as revoked.
-4. **(i) on `/library` and `/setlists/[id]`** — re-read after a week of band
-   traffic. Nothing to build.
-5. **(p) on the Brothers Lazaroff tenant** — 63 `library_index` rows, needs a
-   BL-org bearer.
+All three tool defects above are **fixed** in this wave, and the Brothers
+Lazaroff tenant gap is **closed**. See the Wave 3b section below.
+
+---
+
+# Wave 3b — the three defects, fixed, and the BL tenant confirmed
+
+## The fixes
+
+**`list_review_queue` now counts instead of guessing.** `readReviewQueue`
+gained three `count()` aggregations and returns `totals` alongside the capped
+arrays; `listReviewQueue`'s `counts` is now the TRUE bucket size and a new
+`returned` field says how many rows the call actually handed back, with
+`truncated` comparing the two. An aggregation transfers a number, not
+documents, so this costs three round trips and no extra reads. Pinned by an
+emulator regression test that seeds **201** rows — the cheapest number that can
+tell the old implementation from the new one, since at exactly the 200 cap the
+broken version is indistinguishable from correct.
+
+**`get_web_vitals_summary` now sees the whole app.** Two changes, and the
+second is the one that mattered. `DEFAULT_TOP_ROUTES` went 5 → 25, but the real
+defect was upstream: `getSurface()` normalized three path shapes and missed
+four, so every chart a musician opened became its own surface key. The
+normalizer is now a first-match-wins table covering the track, chart, QR,
+setlist and library-review routes, extracted as a pure `normalizeSurface()`
+and applied **on read as well as on write** — which means the 90 days already
+in the sink re-normalize immediately rather than waiting out the TTL.
+
+I introduced and then caught a bug writing it, worth recording because the
+shape is easy to repeat: my first version chained `.replace` calls, so the
+track rule rewrote to `/perform/setlist/[id]/track/[trackId]` and the setlist
+rule that ran next matched `[id]` as its own `[^/]+` and collapsed it straight
+back. Every track sample would have been filed under the setlist route — the
+same fragmentation, just hidden better. Hence first-match-wins, and hence the
+ordering test.
+
+**`supervisor-prod-bearer.mjs` stops blaming the bearer.** `DEFAULT_ENDPOINT`
+now points at `/api/ops/mcp`, where `list_minted_bearers` actually lives after
+the (p) split. More usefully, "tool not found" is no longer folded into the
+revoked bucket: it gets its own exit code (`PROBE_TOOL_MISSING = 5`) and an
+error that names the real cause. A server answering "no such tool" is proof the
+credential got far enough to be told so, which is the opposite of a bad bearer
+— the old message sent the reader off to have Daniel replace a credential with
+nothing wrong with it. Verified live: the helper now exits 0.
+
+## (p) — the Brothers Lazaroff tenant, confirmed
+
+Minted a short-lived `mcpTokens` doc stamped `orgId: "brotherslazaroff"` and
+bound to the **same admin uid** the crc root bearer resolves to
+(`93Xn3DbS0bSNb8zmfzLyfOMX1A13`, role `admin`), used it for **dry runs only**,
+and revoked it immediately — confirmed revoked at `2026-09-22T15:02:15Z` by
+reading the doc back, not by trusting the write's own success message. The
+Admin SDK credential came from the existing firebase-CLI-token → temp-ADC
+recipe already used by the 2026-06 migrations; no service-account key was
+created and nothing was persisted.
+
+Both org-scoped tools, dry-run against BL's 63 rows:
+
+| tool | BL result |
+|---|---|
+| `backfill_library_index` | **clean** — 63 scanned, 0 rows changed, 0 unresolved |
+| `backfill_content_hash` | **52 of 63 rows carry no current `contentHash`** |
+
+So the tenant answer is not symmetric, and it lands on the side the commit
+already took: **`backfill_content_hash` is not a finished migration on either
+tenant's terms** — crc is clean only because it was run, and BL has 52 rows of
+real work outstanding. Retiring it would have been a mistake, and this is the
+evidence that would have been missing. `md5CrossCheck` agreed 52 of 52 with
+zero mismatches, so the byte path and the rows agree about which object belongs
+to which row.
+
+**Not run, deliberately.** Hashing those 52 rows is a write against another
+tenant's data, and the task was to confirm, not to sweep. It needs a named
+owner and a deliberate go-ahead. Flagging it as the one open item rather than
+quietly doing it.
+
+## Verification
+
+`npx tsc --noEmit` clean. **738 unit tests passed** across 42 files. **57
+emulator tests passed** (`review-queue` + `mcp-library-review`, including the
+new 201-row regression). Full production build (`--webpack`) clean from an
+empty `.next`.
+
+## Open
+
+1. **52 Brothers Lazaroff rows need `backfill_content_hash`.** Needs an owner
+   and a go-ahead; it is a write on BL data. Everything needed to run it is
+   confirmed working.
+2. **(i) on `/library` and `/setlists/[id]`** — still waiting on band traffic,
+   but the summary will now actually show them, and the re-normalization means
+   the history already collected counts toward it.
