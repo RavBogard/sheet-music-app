@@ -1,6 +1,7 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { Timestamp } from "firebase-admin/firestore"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
+import { normalizeSurface } from "@/lib/web-vitals"
 
 /**
  * Cycle-7-fixes Lane 4 sub-task I (C7I4-005) — admin-only read surface
@@ -52,7 +53,18 @@ const DEFAULT_SINCE_DAYS = 7
 const MAX_SINCE_DAYS = 90
 const DEFAULT_MAX_DOCS = 20_000
 const HARD_MAX_DOCS = 100_000
-const DEFAULT_TOP_ROUTES = 5
+/**
+ * Enough to cover every real route this app has.
+ *
+ * It was 5, sorted by sample count, which is a reasonable default only if the
+ * route keys are already routes. They were not — unnormalized ids meant 40-odd
+ * keys — and the effect was that the three routes audit item (i) is about
+ * (`/library`, `/setlists/[id]`, `/login`) all sat below the cut. A caller
+ * asking "did the CLS fix work?" got a summary that omitted the routes it
+ * asked about and said nothing about having omitted them. With the surface key
+ * normalized the whole app fits well inside this.
+ */
+const DEFAULT_TOP_ROUTES = 25
 
 async function loadCallerRole(uid: string): Promise<string | undefined> {
     const db = getFirestore()
@@ -164,9 +176,15 @@ export async function getWebVitalsSummary(
 
     for (const d of docs) {
         const data = d.data() as Record<string, unknown>
+        // Re-normalized on READ, not just trusted as stored. The reporter's
+        // normalizer missed the track, chart and QR routes until 2026-09-22,
+        // so most of the rows in the sink carry a raw id as their surface —
+        // one key per chart opened. Collapsing them here makes the history
+        // already collected countable instead of leaving it to age out over
+        // the sink's 90-day TTL.
         const surface =
             typeof data.surface === "string" && data.surface.trim()
-                ? data.surface
+                ? normalizeSurface(data.surface)
                 : "(unknown)"
         const metric = data.metric
         const value = data.value

@@ -43,16 +43,54 @@ function detectDeviceType(): WebVitalReport["deviceType"] {
     return "desktop"
 }
 
+/**
+ * Ordered most-specific-first, and matched FIRST-WINS rather than applied as a
+ * chain. A chain of `.replace` calls is wrong here and was: the track rule
+ * rewrites to `/perform/setlist/[id]/track/[trackId]`, and the setlist rule
+ * that ran next matched `[id]` as its own `[^/]+` and collapsed it straight
+ * back to `/perform/setlist/[id]`. Every track sample would have been filed
+ * under the setlist route.
+ */
+const SURFACE_ROUTES: ReadonlyArray<readonly [RegExp, string]> = [
+    [
+        /^\/perform\/setlist\/[^/]+\/track\/[^/]+/,
+        "/perform/setlist/[id]/track/[trackId]",
+    ],
+    [/^\/perform\/setlist\/[^/]+/, "/perform/setlist/[id]"],
+    // Drive ids and `upload-<uuid>` alike. Anchored with a following segment
+    // so bare `/perform`, which is its own route, is left alone.
+    [/^\/perform\/[^/]+/, "/perform/[fileId]"],
+    [/^\/qr\/[^/]+/, "/qr/[code]"],
+    [/^\/setlists\/[^/]+/, "/setlists/[id]"],
+    [/^\/manage\/library-review\/[^/]+/, "/manage/library-review/[id]"],
+]
+
+/**
+ * Collapse a pathname onto its ROUTE, so `surface` counts a route rather than
+ * a visit.
+ *
+ * This used to normalize three shapes and miss four, and the ones it missed
+ * are the high-traffic ones: every chart a musician opened became its own
+ * surface. On a 30-day read that produced 40-odd route keys of which ~35 were
+ * single tracks, each with 2–6 samples, while the routes anyone was actually
+ * asking about sat below the summary's top-N cut with their samples split
+ * across a dozen keys. The rules are ordered most-specific-first — the track
+ * rule has to run before the setlist rule or it never matches.
+ *
+ * Exported and pure so the SUMMARY can apply it too: rows already in the sink
+ * carry the raw ids, and re-normalizing on read is what makes the 90 days of
+ * history already collected legible instead of waiting for it to age out.
+ */
+export function normalizeSurface(path: string): string {
+    for (const [pattern, route] of SURFACE_ROUTES) {
+        if (pattern.test(path)) return route
+    }
+    return path
+}
+
 function getSurface(): string {
     if (typeof window === "undefined") return "(server)"
-    const path = window.location.pathname
-    // Normalize dynamic segments so cardinality of `surface` stays bounded.
-    // /setlists/abc123 → /setlists/[id]
-    // /perform/setlist/xyz → /perform/setlist/[id]
-    return path
-        .replace(/\/setlists\/[^/]+/g, "/setlists/[id]")
-        .replace(/\/perform\/setlist\/[^/]+/g, "/perform/setlist/[id]")
-        .replace(/\/manage\/library-review\/[^/]+/g, "/manage/library-review/[id]")
+    return normalizeSurface(window.location.pathname)
 }
 
 function send(report: WebVitalReport): void {
