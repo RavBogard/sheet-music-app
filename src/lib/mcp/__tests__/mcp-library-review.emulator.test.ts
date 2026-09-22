@@ -725,4 +725,68 @@ describe("MCP library-review tools — cycle-3 a5 (emulator)", () => {
         if (!("aiReview" in after)) throw new Error("expected success")
         expect(after.aiReview).toEqual([])
     })
+
+    /**
+     * The 200-row blindness. `readReviewQueue` caps its Firestore query at
+     * PAGE_LIMIT = 200, and `truncated` used to be computed by comparing the
+     * returned array against that ALREADY-CAPPED array — so it could never be
+     * true, whatever the real size. A live queue of 270 reported
+     * `counts: 200, truncated: false`, and the handoff that read it recorded
+     * "50+ rows" off a default limit of 50.
+     *
+     * 201 rows is the cheapest number that can tell the two implementations
+     * apart: at exactly the cap the old code is indistinguishable from correct.
+     */
+    describe("counts past the page cap (regression)", () => {
+        it("reports the TRUE total and truncated:true when the queue exceeds PAGE_LIMIT", async () => {
+            const batchSize = 50
+            for (let start = 0; start < 201; start += batchSize) {
+                const batch = db().batch()
+                for (let i = start; i < Math.min(start + batchSize, 201); i++) {
+                    batch.set(db().collection("library_index").doc(`bulk-${i}`), {
+                        name: `bulk-${i}`,
+                        nameLower: `bulk-${i}`,
+                        collection: "uploads",
+                        mimeType: "application/pdf",
+                        fileSize: 1000,
+                        source: "drive-sync",
+                        status: "active",
+                        enrichmentStatus: "review_pending",
+                        aiSuggestion: suggestion(),
+                        aiReviewTriggers: ["low_confidence"],
+                        enrichmentRanAt: "2026-05-18T00:00:00Z",
+                    })
+                }
+                await batch.commit()
+            }
+
+            const r = await listReviewQueue(ADMIN, {
+                kind: "enrichment",
+                status: "review_pending",
+                limit: 200,
+            })
+            if (!("ok" in r) || r.ok !== true) throw new Error("expected ok result")
+
+            // The page is capped...
+            expect(r.aiReview.length).toBe(200)
+            expect(r.returned.aiReview).toBe(200)
+            // ...but the count is the truth, and it says so.
+            expect(r.counts.aiReview).toBe(201)
+            expect(r.truncated).toBe(true)
+        })
+
+        it("says truncated:false only when the page really is the whole queue", async () => {
+            await seedReviewRow("only-one")
+            const r = await listReviewQueue(ADMIN, {
+                kind: "enrichment",
+                status: "review_pending",
+                limit: 200,
+            })
+            if (!("ok" in r) || r.ok !== true) throw new Error("expected ok result")
+            expect(r.counts.aiReview).toBe(1)
+            expect(r.returned.aiReview).toBe(1)
+            expect(r.truncated).toBe(false)
+        })
+    })
+
 })

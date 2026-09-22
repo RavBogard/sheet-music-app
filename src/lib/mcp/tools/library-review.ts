@@ -174,11 +174,18 @@ export interface ListReviewQueueResult {
     aiReview: AiReviewRow[]
     aiFailed: AiFailedRow[]
     importFailures: ImportFailureRow[]
+    /** TRUE bucket sizes, independent of `limit` and of PAGE_LIMIT. */
     counts: {
         aiReview: number
         aiFailed: number
         importFailures: number
         total: number
+    }
+    /** How many rows THIS call returned, per bucket. */
+    returned: {
+        aiReview: number
+        aiFailed: number
+        importFailures: number
     }
     config: ReviewQueueResult["config"]
     /** True when any bucket was truncated by the caller's `limit`. */
@@ -239,10 +246,25 @@ export async function listReviewQueue(
         const aiFailed = showAiFailed ? failedSource.slice(0, limit) : []
         const importFailures = showImport ? importSource.slice(0, limit) : []
 
+        // TRUE bucket sizes. `reviewSource` is already capped by
+        // `readReviewQueue`'s own PAGE_LIMIT, so comparing against IT could
+        // never report truncation above that cap: a queue of 270 returned 200
+        // rows and `truncated: false`, and a caller that trusted it stopped
+        // 70 rows early. The totals come from `count()` aggregations upstream
+        // and are independent of both caps.
+        const reviewTotal =
+            showAiReview && status !== "failed" ? full.totals.aiReview : 0
+        const failedTotal =
+            showAiFailed && status !== "review_pending" ? full.totals.aiFailed : 0
+        const importTotal =
+            showImport && status !== "review_pending"
+                ? full.totals.importFailures
+                : 0
+
         const truncated =
-            (showAiReview && reviewSource.length > aiReview.length) ||
-            (showAiFailed && failedSource.length > aiFailed.length) ||
-            (showImport && importSource.length > importFailures.length)
+            reviewTotal > aiReview.length ||
+            failedTotal > aiFailed.length ||
+            importTotal > importFailures.length
 
         return {
             ok: true,
@@ -251,14 +273,20 @@ export async function listReviewQueue(
             aiReview,
             aiFailed,
             importFailures,
+            // What EXISTS, not what this page returned — the question a caller
+            // deciding "am I done?" is actually asking.
             counts: {
+                aiReview: reviewTotal,
+                aiFailed: failedTotal,
+                importFailures: importTotal,
+                total: reviewTotal + failedTotal + importTotal,
+            },
+            // What this call actually handed back, so the two can be compared
+            // without inferring one from the other.
+            returned: {
                 aiReview: aiReview.length,
                 aiFailed: aiFailed.length,
                 importFailures: importFailures.length,
-                total:
-                    aiReview.length +
-                    aiFailed.length +
-                    importFailures.length,
             },
             config: full.config,
             truncated,

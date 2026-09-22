@@ -126,6 +126,21 @@ export interface ReviewQueueResult {
     aiReview: AiReviewRow[]
     aiFailed: AiFailedRow[]
     importFailures: ImportFailureRow[]
+    /**
+     * TRUE bucket sizes, counted server-side and independent of `PAGE_LIMIT`.
+     *
+     * The arrays above are capped at `PAGE_LIMIT`. Before these existed, the
+     * only count a caller could form was the length of an already-capped
+     * array, so a queue of 270 reported 200 and every "is it empty yet?" and
+     * "was it truncated?" answer downstream was derived from a number that
+     * could not exceed the cap. These come from `count()` aggregations, which
+     * read no documents.
+     */
+    totals: {
+        aiReview: number
+        aiFailed: number
+        importFailures: number
+    }
     /** Calibration banner — A4 surfaces `autoApplyEnabled:false` to the operator. */
     config: {
         autoApplyEnabled: boolean
@@ -184,6 +199,23 @@ export async function readReviewQueue(
         db.collection("aiEnrichmentRetryQueue").limit(PAGE_LIMIT * 2).get(),
         db.collection("chartImportQueue").limit(PAGE_LIMIT).get(),
         db.collection("aiConfig").doc("autoApplyEnabled").get(),
+    ])
+
+    // The true sizes, counted rather than inferred from the capped arrays
+    // above. `count()` is an aggregation: it transfers a number, not documents,
+    // so this is three cheap round trips and no extra reads.
+    const [reviewTotal, failedTotal, importTotal] = await Promise.all([
+        db
+            .collection("library_index")
+            .where("enrichmentStatus", "==", "review_pending")
+            .count()
+            .get(),
+        db
+            .collection("library_index")
+            .where("enrichmentStatus", "==", "failed")
+            .count()
+            .get(),
+        db.collection("chartImportQueue").count().get(),
     ])
 
     // Hydrate duplicate_candidates titles in one batched read.
@@ -316,6 +348,11 @@ export async function readReviewQueue(
         aiReview,
         aiFailed,
         importFailures,
+        totals: {
+            aiReview: reviewTotal.data().count,
+            aiFailed: failedTotal.data().count,
+            importFailures: importTotal.data().count,
+        },
         config: {
             autoApplyEnabled: configData.enabled === true,
             threshold:
