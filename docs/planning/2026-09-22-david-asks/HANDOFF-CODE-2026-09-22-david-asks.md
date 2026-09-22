@@ -1,0 +1,85 @@
+# HANDOFF-CODE-2026-09-22 — CentralReform.live (sheet-music-app): David's four asks
+
+Executor: a Claude Code (Opus) session opened on this repo
+Status: open
+Verified-against: paths checked in the `3abade1715` snapshot (2026-09-16). Audit Waves 1–3 have shipped since (Firestore get/list split, Publish retired into `notify_band`, MCP split into `/api/mcp` with 97 authoring tools and `/api/ops/mcp` with 47 ops tools, legacy Shabbat feeds registered as feed-tier books, 15-minute `today.json` cron). Where those waves may have moved a file, this handoff says "verify in repo".
+Rulings: `RULINGS-AUDIT-2026-09-19.md` (docs/planning/2026-09-19-audit/) still applies.
+Source: Daniel's conversation with David Lazaroff (Saturday band leader at CRC; owner of the Brothers Lazaroff tenant), 2026-09-22. Daniel: "one handoff"; "nothing is happening right now — we can change the products live."
+Subagents: Opus and Sonnet only (R-0919-audit-9). Repeat this line in any sub-order you write.
+Process: you are executor and producer for this repo. Measure your own expectations, write your own return, deploy when it looks ready. Do not wait for a board row or a producer.
+
+## Before anything
+
+1. `git pull` on `master`. Read `docs/planning/2026-09-19-audit/RETURN-CODE-AUDIT-2026-09-19-W3.md` (and W1/W2 if you need the history) so you know what the waves actually changed. In particular: the new signed-out setlist/tracks server route that R-0919-audit-2 required, and the 2026-09-20 Perform regression in which the local store blanked a setlist. Item 4 touches exactly that path.
+2. Confirm your MCP connections: `/api/mcp` (authoring) and `/api/ops/mcp` (ops) both answer with an admin bearer, for `crc` and for `brotherslazaroff`. Item 3 needs `dedupe_library`, `undo_dedupe_group`, `mark_chart_status` and `find_setlists_referencing_chart` — check which of the two servers each one now lives on.
+3. Create `docs/planning/2026-09-22-david-asks/` and commit this handoff into it. The duplicates report for item 3 will be placed there too.
+
+Do the items in order. Each one is its own deploy.
+
+---
+
+## Wave 1 — setlist editing (items 1–3)
+
+### 1. Chart preview while bonding
+
+- [ ] **Show page 1 of every candidate inside the bond picker.** Today the picker shows only title and metadata, so David leaves the setlist to find out which chart a candidate is. Add a page-1 thumbnail beside each candidate: on hover (desktop) or tap on a preview control (iPad), with a tap to enlarge to a full-page view that closes back to the picker with the selection intact. **Reuse the Perform render path rather than writing a second PDF renderer:** `src/components/performance/PDFOverlay.tsx` already fetches chart bytes from `/api/drive/file/<id>` (lines 251 and 317) and resolves cached bytes; build the thumbnail from the same fetch and pdf.js setup, first page only. Render lazily — only the candidates on screen — and cancel the fetch when the candidate scrolls away or the picker closes. A 40-candidate picker must not fetch 40 PDFs.
+  Where: `src/components/setlist/grid/ChartBindDialog.tsx`, `ChartBindPopover.tsx`, `ChartPickerItemContent.tsx` (each candidate row), and `src/components/setlist/modals/AddSongsModal.tsx` (the "+ add song" path — give it the same preview). Verify in repo that these are still the picker components.
+  Done when: in setlist edit, page 1 of any candidate can be seen and enlarged without leaving the page, in both pickers; non-PDF candidates (images, Google Docs) show whatever PerformOverlay shows for them or a plain "no preview" state, never a spinner that never ends; a component test proves only visible rows fetch; an e2e spec on `ipad-webkit` opens the picker, taps a preview, enlarges it and closes it.
+
+### 2. Tenant-scoped "+" and search
+
+**The finding, verified in the snapshot.** The display route is already org-scoped: `src/app/api/library/list/route.ts:34-38,91-93` filters `library_index` rows by the host org unless an **admin** passes `allSites=true` (`src/hooks/use-library.ts:15-26`). But the bond picker does not read that route. `ChartBindDialog.tsx:73` reads songs out of the local Dexie store, and that store is filled from **the whole `songs` collection with no org filter** — `src/lib/songs/subscribe.ts:36` (`onSnapshot(collection(firestoreDb,'songs'))`) and `src/lib/songs/prime.ts:39` (`getDocs(collection(firestoreDb,'songs'))`). And `firestore.rules` lets any member of any tenant read every song (`match /songs/{songId} { allow read: if isMember(); }`, around line 187). That is almost certainly why Brothers Lazaroff's picker shows CRC charts. A second possible path: if David's account is an admin and the "All sites" switch is on, `AddSongsModal` will also show CRC rows by design. Check both and say which one David was hitting.
+
+- [ ] **(2a) Scope the songs store to the current org.** Filter `subscribe.ts` and `prime.ts` by `orgId == currentOrg` (current org from `useOrg()` / the proxy's `x-org-id`; see `src/lib/org/`). Legacy CRC rows carry no `orgId` and are treated as `crc` by `rowOrg()` (`src/lib/org/membership.ts`), so a plain `where('orgId','==','crc')` would drop them — handle the missing-field case the way `rowOrg` does (for example, two queries for CRC, or a backfill of `orgId` onto CRC songs first; `scripts/backfill-orgid-v11.mjs` is the precedent). Then tighten the `songs` read rule to the caller's tenant, in the same shape the `orgCreateOk()` / `orgUpdateOk()` helpers already use for writes. Clear or re-prime the local store when the org changes so an iPad that has seen CRC data does not keep showing it.
+- [ ] **(2b) Default the picker to the current org, with an explicit opt-in to more.** Both pickers default to the current org only. An admin-only "include other sites" control stays available and is off by default every time the picker opens (do not remember it across opens).
+- [ ] **(2c) CRC: default to core, with collection chips.** On CRC the picker opens on **core**, with chips for the other collections `library_index` carries: `core | supplemental | nava | uploads` (`src/lib/library/ai-enrichment.ts:115`, `src/lib/library/library-events.ts:48`). **"Shireinu" is the `supplemental` collection** — the library UI already labels it that way (`src/components/library/SearchOverlay.tsx:124`, `ScraperModal.tsx:443`, and `SongChartsLibrary.tsx:498-499`, which also says Brothers Lazaroff omits that tab). Use the same labels as the library page so the two surfaces agree. On Brothers Lazaroff show only the collections that tenant actually has; do not show a Shireinu chip there.
+- [ ] **(2d) MCP `search_library` takes the same `collection` argument.** Add an optional `collection` (`core | supplemental | nava | uploads | all`), default `all`, and keep the existing org filter. Update the tool description so the agent knows "Shireinu" means `supplemental`. `list_library` already takes a collection filter; match its spelling.
+  Done when: signed in to `brotherslazaroff.live`, both pickers and `search_library` return only Brothers Lazaroff charts by default (count equals `list_library` for that tenant); signed in to CRC, the picker opens on core with four chips and the Shireinu chip shows exactly the `supplemental` rows; an emulator test proves a Brothers Lazaroff member cannot read a CRC `songs` doc and a CRC member cannot read a Brothers Lazaroff one; the admin "include other sites" control still returns both.
+
+### 3. Duplicates — gated on the report
+
+A read-only agent is writing `DUPLICATES-REPORT-2026-09-22.md` (LIKELY and POSSIBLE groups with ids, per tenant). It will be placed in `docs/planning/2026-09-22-david-asks/`. **Do not start this item until that file exists.** If it is not there when you reach item 3, skip to item 4 and come back.
+
+- [ ] **(3a) Mark the LIKELY groups through the existing dedupe path.** For each LIKELY group: the survivor is the row referenced by the most setlists (use `find_setlists_referencing_chart` on each id and count; if tied, prefer the one `dedupe_library`'s canonical pick would choose — active, real bytes, bonded, earliest). Re-point every setlist bond from the losers to the survivor (`swap_chart` does this for one row and preserves notes, lead and position — reuse its logic; do not re-sort or move any row, R11-b). Then mark the losers `duplicate` with `mark_chart_status`, making sure a `dedupeRuns/{runId}` undo record exists (the machinery `dedupe_library` writes and `undo_dedupe_group` reverses — `src/lib/mcp/tools/undo-dedupe.ts`). Run the whole thing dry first and put the plan in the return before committing. Verify in repo whether `mark_chart_status` writes an undo record by itself; if it does not, go through `dedupe_library`'s write path or add the record, so every mark is reversible.
+- [ ] **(3b) Leave the POSSIBLE groups alone.** For each POSSIBLE group, render page 1 of every member side by side (the item-1 thumbnail code, or `/api/render/chart`-style PNGs) and put them in the return with ids, titles, collections and setlist counts, so Daniel and David can decide by looking.
+- [ ] **(3c) STOP on the Brothers Lazaroff "You're My Heaven (Tonight)" pair.** Do not mark either row. Put both first pages side by side in the return and wait for Daniel to name the canonical one.
+  Done when: no LIKELY group has more than one `active` row; `find_setlists_referencing_chart` on every retired id returns no setlists; every mark has an undo run id listed in the return; the POSSIBLE groups and the "You're My Heaven (Tonight)" pair appear in the return with their pages rendered and nothing marked.
+
+---
+
+## Wave 2 — mid-service swap on the iPad (item 4)
+
+**What David needs.** In Perform on Saturday the rabbi sometimes calls a different tune. The band leader should be able to swap, say, the Bar'chu row for another Bar'chu in two taps, and every iPad on that setlist follows. **The app offers candidates; it never recommends one.** No ranking by popularity, recency, key, or anything else that amounts to a musical suggestion.
+
+**Read before you write a line.** The Perform data path is the most fragile code in this repo and it broke on 2026-09-20. The pieces, as of the snapshot (verify in repo; W1 changed them): `src/hooks/use-setlist-performance.ts` (line 173 calls `getTracksForSetlistClient` from `src/lib/client-tracks.ts`); `src/app/perform/setlist/[id]/SetlistPerformClient.tsx`; the live track listener in `src/lib/sync/snapshot-listener.ts:126,178` (`where('setlistId','==',…)`); the signed-out server route W1 added for R-0919-audit-2; and the local Dexie store under `src/lib/local/`. The rule that came out of 09-20: **an empty or partial result from any source must never overwrite a populated setlist on screen.** The overrides layer below must be additive on top of the tracks the page already has — if the overrides doc is missing, unreadable or slow, the planned setlist renders exactly as it does today.
+
+- [ ] **(4a) Swap control, band leader and admin only.** A "Swap" control on each chart-bearing Perform row, visible only to `band_leader` or `admin` (custom claim `role`; `firestore.rules:17-27` defines `isAdmin()` and `isBandLeader()`, which includes admin; verify the client-side role check in `src/lib/auth` / the existing role hooks in repo). Tapping it opens a sheet with three sections, in this order and **unranked within each** (alphabetical by title, then collection):
+  1. **Same liturgical moment** — charts bonded to the row's moment. Resolve the moment from the row's `momentId`, or from `liturgyRef.unitId` via `momentIdForUnit()` / `momentForUnit()` in `src/lib/books/moments.ts` (backed by `src/data/books/moments.json`), falling back to `lookupBookPage()` in `src/lib/books/lookup.ts`. Then list the library charts whose own moment binding matches (verify in repo where chart↔moment bindings now live — L3 may not have landed, in which case this section comes from other setlist rows bound to the same moment and their charts).
+  2. **Same title stem** — library rows whose `bareStem(title)` (`src/lib/mcp/title-specificity.ts:143`) equals this row's.
+  3. **Search** — a free text box over the current org's library (the item-2 scoped search).
+  Show the planned chart at the top of the sheet, labelled as the plan. Each candidate shows the item-1 page-1 thumbnail. Selecting one is the second tap.
+- [ ] **(4b) Tonight only, by default.** Write the swap to a new per-setlist doc — for example `setlists/{setlistId}/performance/overrides` (name to taste) — holding `{ [rowId]: { fileId, songId, title, key, swappedBy, swappedAt } }` and `eventDate`. **The saved setlist and its `tracks` docs are not touched.** Overrides are ignored (and may be deleted by a cron) once the setlist's `eventDate` has passed in America/Chicago, and a "Reset to plan" control clears them all. An optional "Also save to setlist" checkbox in the sheet, off by default, performs a normal `swap_chart`-equivalent edit instead. Firestore rules: read with the same posture as the setlist (get public per R-0919-audit-2 if signed-out iPads must see it; otherwise signed-in); write `band_leader`/`admin` of that setlist's org only, closed field set, like the `monitor-live/commands/pending` rule.
+- [ ] **(4c) Propagation.** Signed-in iPads subscribe to the overrides doc with the same kind of listener that already follows the tracks, and apply overrides on top of the planned rows. A swap on one iPad appears on the others within seconds without reload. Signed-out iPads pick it up on their next load through the signed-out server route (R-0919-audit-2: get stays public, list is signed-in) — extend that route to return the overrides with the tracks. If an iPad currently has the swapped row open in the PDF view, switch the chart under it without closing Perform or losing the page position of other rows.
+- [ ] **(4d) Record every swap as a deviation.** Each swap (and each undo) writes a record — for example `setlists/{setlistId}/performedDeviations/{id}` with `{rowId, plannedFileId, performedFileId, at, by}` — and `reconcile_service` (`src/lib/mcp/tools/performed.ts`, `src/lib/performed/reconcile.ts`) reads it, so the as-performed version shows the tune actually played even when no graphic was cued. Show on the setlist edit page, for a row with an active override: "Tonight: <title> (planned: <title>)".
+- [ ] **(4e) Undo.** Undo is picking the planned chart from the same sheet (it is always listed first). That removes the override entry for the row and writes a deviation record for the undo.
+  Done when: in an e2e spec with two signed-in `ipad-webkit` contexts on one setlist, a band leader swaps a row on one and the other shows the new chart within 5 seconds without reload; a musician-role account sees no Swap control; the saved `tracks` docs are byte-identical before and after the swap (assert it); the setlist page shows "Tonight: X (planned: Y)"; "Reset to plan" and undo both restore the plan on both iPads; a signed-out context sees the swap after reload; the day after `eventDate` the override no longer applies; `reconcile_service` on a fixture history reports the swapped tune; and the Perform regression tests from 09-20 still pass, plus one new test where the overrides doc fails to load and the planned setlist still renders in full.
+
+---
+
+## Return
+
+Write `RETURN-CODE-2026-09-22-david-asks.md` in `docs/planning/2026-09-22-david-asks/`, appended after each item: the checklist above with PASS/FAIL per line, the shas deployed, the tail of `npm test`, `npm run test:emulator`, `npx tsc --noEmit`, `npm run build` and the e2e specs you added. Daniel and David must see specifically:
+- for item 2, which path was leaking CRC charts into Brothers Lazaroff (the songs store, the admin All-sites switch, or both) and the before/after counts per tenant;
+- for item 3, the dry-run plan, the committed marks with their undo run ids, the POSSIBLE groups with first pages side by side, and the "You're My Heaven (Tonight)" pair waiting on Daniel;
+- for item 4, a short screen recording or screenshot pair of the swap appearing on the second iPad, and the one-paragraph instruction David needs ("tap Swap on the row, pick the chart; Reset to plan puts it back").
+
+## Do not
+
+- Do not rank, order by preference, or badge any candidate in the swap sheet or the bond picker — no "most used", "recent", "suggested", or key-based ordering. The app offers; the band leader chooses.
+- Do not edit the saved setlist when a swap is made unless "Also save to setlist" is checked. Do not re-sort, move, insert or delete any row (R11-b).
+- Do not re-add Publish in any form (R-0919-audit-3); notifying the band stays `notify_band`.
+- Do not change the shape of `today.json`.
+- Do not make any change to Overlays.
+- Do not let an empty or partial fetch replace a populated setlist on the Perform screen (the 09-20 regression).
+- Do not mark the Brothers Lazaroff "You're My Heaven (Tonight)" pair, or any POSSIBLE group, without Daniel's word.
+- Do not propose which setting or melody the band plays.
