@@ -84,6 +84,41 @@ const VOLUMES = [
         title: "Shirei Tshuvah — Rosh Hashanah",
         pin: "21417d9-LICENSED",
     },
+    // Audit item (n) — the two ordinary-Shabbat booklets. `crc-friday` and
+    // `crc-saturday` are pagemaps with folios but no unit ids, so no row in
+    // them reaches a moment and nothing joins to the cue log. These feeds
+    // carry the ids, and they are registered ALONGSIDE those pagemaps rather
+    // than replacing them: 78 units against 48 entries, 96 against 62, which
+    // is a gain in resolution, not a translation.
+    //
+    // `folioSource: "printedFolio"` is the whole correctness of this pair.
+    // The feed's own `folios` are the READER edition's positions — they
+    // restart at 1 and run to 55 and 63 — while `printedFolio` is the number
+    // in the printed CRC booklet. They disagree on 73 of 78 evening units and
+    // all 95 morning units that carry both, so trimming `folios` here would
+    // file reader pages under a printed book's slug: a wrong page wearing a
+    // right name, the same class of error `machzorRemapper` exists to stop.
+    //
+    // `pin: null` — the feed builds `7f34b63+dirty-LICENSED`, which is not an
+    // honest press commit to pin to (same reasoning as the Shabbat drafts).
+    //
+    // `legacy-slichot` is deliberately NOT here: all 8 of its units carry no
+    // `printedFolio` at all, because Selichot is a separate handout with no
+    // printed original. Its compile is its book.
+    {
+        slug: "legacy-shabbat-evening",
+        feed: "legacy-shabbat-evening-feed.json",
+        title: "CRC Kabbalat Shabbat (feed)",
+        pin: null,
+        folioSource: "printedFolio",
+    },
+    {
+        slug: "legacy-shabbat-morning",
+        feed: "legacy-shabbat-morning-feed.json",
+        title: "CRC Shabbat Morning (feed)",
+        pin: null,
+        folioSource: "printedFolio",
+    },
 ]
 
 function flag(name) {
@@ -125,7 +160,7 @@ function recordedPages(registry, slug) {
     return entry.pages
 }
 
-function trim(feed, vol, pages) {
+export function trim(feed, vol, pages) {
     if (feed.schemaVersion !== EXPECTED_SCHEMA_VERSION) {
         throw new Error(
             `${vol.slug}: feed schemaVersion ${feed.schemaVersion} != expected ${EXPECTED_SCHEMA_VERSION}. ` +
@@ -144,15 +179,32 @@ function trim(feed, vol, pages) {
         )
     }
 
+    // Which field on the unit is the printed page. Default is the feed's own
+    // `folios`; a volume whose feed renumbers for a reader edition declares
+    // `folioSource: "printedFolio"` and is trimmed from that instead. See the
+    // legacy-shabbat entries in VOLUMES for why this is not cosmetic.
+    const usePrinted = vol.folioSource === "printedFolio"
     const units = []
     let maxFolio = 0
+    let droppedNoFolio = 0
     for (const u of feed.units ?? []) {
-        const folios = (u.folios ?? []).filter((f) => Number.isInteger(f)).sort((a, b) => a - b)
-        if (folios.length === 0) continue
+        const raw = usePrinted ? [u.printedFolio] : (u.folios ?? [])
+        const folios = raw.filter((f) => Number.isInteger(f)).sort((a, b) => a - b)
+        if (folios.length === 0) {
+            // A unit with no printed page is DROPPED, never guessed — the one
+            // morning frontmatter unit is exactly this case.
+            if (usePrinted) droppedNoFolio++
+            continue
+        }
         for (const f of folios) if (f > maxFolio) maxFolio = f
         units.push({ id: u.id, name: u.name ?? u.id, folios })
     }
     if (units.length === 0) throw new Error(`${vol.slug}: feed produced zero units`)
+    if (usePrinted && droppedNoFolio > 0) {
+        console.log(
+            `         ${vol.slug}: ${droppedNoFolio} unit(s) carry no printedFolio and were dropped.`,
+        )
+    }
 
     // V1 — `pages` is asserted, never computed. An identity that stays true as
     // a book changes: the last prayer cannot fall past the last printed page.
@@ -316,6 +368,32 @@ function machzorRemapper(printedPageByUnitId) {
     }
 }
 
+/**
+ * Replace a legacy-Shabbat occurrence's folios with the printed booklet page.
+ *
+ * Same principle as `machzorRemapper`, one step shorter. Those two feeds carry
+ * BOTH numbers on every unit: `folios` is the reader edition's own position
+ * (restarting at 1) and `printedFolio` is the number in the printed CRC
+ * booklet. The moments producer emits `folios`, so an occurrence arrives here
+ * carrying the reader page — which disagrees with the printed one on 73 of 78
+ * evening units and all 95 morning units that have both. Carrying that number
+ * under a book the app pages by printed number is a wrong page wearing a right
+ * name, so it is replaced here. A unit with no `printedFolio` is dropped
+ * rather than guessed.
+ *
+ * Unlike the machzor the BOOK is unchanged: these are registered as their own
+ * feed-tier books alongside the `crc-friday` / `crc-saturday` pagemaps, not
+ * folded into them.
+ */
+export function legacyPrintedRemapper(printedFolioByBookUnit, books) {
+    return (o) => {
+        if (!books.has(o.book)) return o
+        const page = printedFolioByBookUnit.get(`${o.book}|${o.unitId}`)
+        if (!Number.isInteger(page)) return null
+        return { book: o.book, unitId: o.unitId, folios: [page] }
+    }
+}
+
 function syncMoments(dist, dirName, check) {
     const path = join(dist, MOMENTS_FEED)
     if (!existsSync(path)) {
@@ -339,11 +417,28 @@ function syncMoments(dist, dirName, check) {
             if (e.unitId && Number.isInteger(e.page)) printedPageByUnitId.set(e.unitId, e.page)
         }
     }
+    // The printed-page map for the legacy Shabbat books, read from the FEEDS
+    // rather than from this repo's trimmed copies: under `--check` nothing has
+    // been written, so the trimmed copy on disk may be the stale one.
+    const legacyVols = VOLUMES.filter((v) => v.folioSource === "printedFolio")
+    const legacyBooks = new Set(legacyVols.map((v) => v.slug))
+    const printedFolioByBookUnit = new Map()
+    for (const vol of legacyVols) {
+        const feedPath = join(dist, vol.feed)
+        if (!existsSync(feedPath)) continue
+        for (const u of JSON.parse(readFileSync(feedPath, "utf8")).units ?? []) {
+            if (u.id && Number.isInteger(u.printedFolio)) {
+                printedFolioByBookUnit.set(`${vol.slug}|${u.id}`, u.printedFolio)
+            }
+        }
+    }
+    const machzor = machzorRemapper(printedPageByUnitId)
+    const legacy = legacyPrintedRemapper(printedFolioByBookUnit, legacyBooks)
     const { trimmed, occurrenceCount } = trimMoments(
         JSON.parse(readFileSync(path, "utf8")),
         VOLUMES,
         knownBooks,
-        machzorRemapper(printedPageByUnitId),
+        (o) => (legacyBooks.has(o.book) ? legacy(o) : machzor(o)),
     )
     const next = JSON.stringify(trimmed, null, 4) + "\n"
     const prev = existsSync(MOMENTS_OUT) ? readFileSync(MOMENTS_OUT, "utf8") : null

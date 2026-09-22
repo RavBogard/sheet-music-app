@@ -40,5 +40,19 @@
         "tier": "feed",
         "pages": 184,
         "source": "shireishabbat feed @21417d9 (licensed lane = the PRINTED press form, 188pp); folios verified 0-disagreement against out-shirei-tshuvah-2026-08-29-21417d9-PRESS.pdf; PRINTED EDITION, frozen — regenerate only if reprinted (R-0831-live-pagemap-1)"
+    },
+    {
+        "slug": "legacy-shabbat-evening",
+        "title": "CRC Kabbalat Shabbat (feed)",
+        "tier": "feed",
+        "pages": 48,
+        "source": "shireishabbat dist-app/legacy-shabbat-evening-feed.json. Audit item (n). FOLIOS ARE `printedFolio`, NOT the feed's `folios`: the reader edition renumbers from 1 and runs to 55, while `printedFolio` (2-48) is the number in the printed CRC Friday booklet — the same numbering `crc-friday` carries. 73 of 78 units disagree between the two fields, so taking `folios` would file reader pages under a printed book's slug. Registered ALONGSIDE the `crc-friday` pagemap, not replacing it: 78 feed units against the pagemap's 48 entries is a gain in resolution. The two corpora were checked id-keyed and agree 80/80 on the pages they share."
+    },
+    {
+        "slug": "legacy-shabbat-morning",
+        "title": "CRC Shabbat Morning (feed)",
+        "tier": "feed",
+        "pages": 102,
+        "source": "shireishabbat dist-app/legacy-shabbat-morning-feed.json. Audit item (n). FOLIOS ARE `printedFolio` (50-101), the printed CRC Saturday booklet's own numbering, which continues the Friday booklet; the feed's `folios` restart at 1 and run to 63 and disagree on all 95 units carrying both. `pages` is 102 to match the `crc-saturday` pagemap, NOT the feed's `printing.pages` (54), which counts the reader edition. One unit (frontmatter) carries no `printedFolio` and is dropped rather than guessed. Registered ALONGSIDE the `crc-saturday` pagemap: 96 feed units against 62 pagemap entries."
     }
 ]

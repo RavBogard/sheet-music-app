@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { trimMoments } from "../ops/sync-books.mjs"
+import { trim, trimMoments, legacyPrintedRemapper } from "../ops/sync-books.mjs"
 
 /**
  * Part E — consuming `moments.json`.
@@ -172,5 +172,85 @@ describe("trimMoments — what reaches this repo", () => {
             "shabbat-shacharit",
             "shirei-tshuvah",
         ])
+    })
+})
+
+/**
+ * (n) — the legacy Shabbat booklets, and the one field that decides whether
+ * they are right.
+ *
+ * These two feeds carry BOTH numbers on every unit: `folios` is the reader
+ * edition's own position and `printedFolio` is the number in the printed CRC
+ * booklet. They disagree on 73 of 78 evening units and all 95 morning units
+ * that carry both, so trimming the wrong field files a reader page under a
+ * printed book's slug — a wrong page wearing a right name. These tests pin the
+ * choice so a later refactor cannot quietly swap it back.
+ */
+describe("(n) legacy Shabbat books — printedFolio, not folios", () => {
+    const feed = (units: unknown[]) => ({
+        schemaVersion: 1,
+        printing: { gitSha: "7f34b63+dirty-LICENSED" },
+        units,
+    })
+    const vol = {
+        slug: "legacy-shabbat-morning",
+        title: "CRC Shabbat Morning (feed)",
+        pin: null,
+        folioSource: "printedFolio" as const,
+    }
+
+    it("takes printedFolio and ignores the reader edition's folios", () => {
+        const { book } = trim(
+            feed([{ id: "awakening.hareini@x", name: "Hareini", folios: [3], printedFolio: 50 }]),
+            vol,
+            102,
+        )
+        expect(book.units).toEqual([{ id: "awakening.hareini@x", name: "Hareini", folios: [50] }])
+    })
+
+    it("drops a unit with no printedFolio rather than guessing one", () => {
+        const { book } = trim(
+            feed([
+                { id: "a@x", name: "A", folios: [1], printedFolio: 50 },
+                { id: "frontmatter@x", name: "Front", folios: [1, 2] },
+            ]),
+            vol,
+            102,
+        )
+        expect(book.units.map((u: { id: string }) => u.id)).toEqual(["a@x"])
+    })
+
+    it("still asserts pages against the PRINTED number, so a reader folio cannot pass", () => {
+        expect(() =>
+            trim(feed([{ id: "a@x", name: "A", folios: [1], printedFolio: 103 }]), vol, 102),
+        ).toThrow(/past the recorded 102 printed pages/)
+    })
+
+    it("a volume without folioSource is untouched — it still reads folios", () => {
+        const { book } = trim(
+            feed([{ id: "a@x", name: "A", folios: [7], printedFolio: 99 }]),
+            { slug: "shabbat-maariv", title: "t", pin: null },
+            69,
+        )
+        expect(book.units[0].folios).toEqual([7])
+    })
+
+    it("the remapper replaces an occurrence's folios with the printed page", () => {
+        const remap = legacyPrintedRemapper(
+            new Map([["legacy-shabbat-morning|u1", 90]]),
+            new Set(["legacy-shabbat-morning"]),
+        )
+        expect(remap({ book: "legacy-shabbat-morning", unitId: "u1", folios: [42] })).toEqual({
+            book: "legacy-shabbat-morning",
+            unitId: "u1",
+            folios: [90],
+        })
+    })
+
+    it("drops an occurrence whose unit has no printed page, and passes other books through", () => {
+        const remap = legacyPrintedRemapper(new Map(), new Set(["legacy-shabbat-morning"]))
+        expect(remap({ book: "legacy-shabbat-morning", unitId: "ghost", folios: [42] })).toBeNull()
+        const other = { book: "shirei-tshuvah", unitId: "u1", folios: [5] }
+        expect(remap(other)).toBe(other)
     })
 })

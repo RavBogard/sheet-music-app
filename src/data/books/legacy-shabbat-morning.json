@@ -1,0 +1,673 @@
+{
+    "slug": "legacy-shabbat-morning",
+    "title": "CRC Shabbat Morning (feed)",
+    "tier": "feed",
+    "pages": 102,
+    "units": [
+        {
+            "id": "frontmatter.how-to-use@legacy-shabbat-morning",
+            "name": "How to Use",
+            "folios": [
+                50
+            ]
+        },
+        {
+            "id": "awakening.hareini@legacy-shabbat-morning",
+            "name": "Hareini",
+            "folios": [
+                50
+            ]
+        },
+        {
+            "id": "awakening.modeh-ani@legacy-shabbat-morning",
+            "name": "Modeh Ani",
+            "folios": [
+                51
+            ]
+        },
+        {
+            "id": "awakening.elohai-nshamah@legacy-shabbat-morning",
+            "name": "Elohai N’shamah",
+            "folios": [
+                51
+            ]
+        },
+        {
+            "id": "awakening.tahor-lev@legacy-shabbat-morning",
+            "name": "Tahor Lev",
+            "folios": [
+                51
+            ]
+        },
+        {
+            "id": "awakening.mah-tovu-kavannah@legacy-shabbat-morning",
+            "name": "Mah Tovu Kavannah",
+            "folios": [
+                52
+            ]
+        },
+        {
+            "id": "awakening.mah-tovu@legacy-shabbat-morning",
+            "name": "Mah Tovu",
+            "folios": [
+                52
+            ]
+        },
+        {
+            "id": "awakening.hineh-mah-tov@legacy-shabbat-morning",
+            "name": "Hineh Mah Tov",
+            "folios": [
+                53
+            ]
+        },
+        {
+            "id": "awakening.birchot-hashachar-kavannah@legacy-shabbat-morning",
+            "name": "Birchot Hashachar Kavannah",
+            "folios": [
+                53
+            ]
+        },
+        {
+            "id": "awakening.birchot-hashachar@legacy-shabbat-morning",
+            "name": "Birchot Hashachar",
+            "folios": [
+                53
+            ]
+        },
+        {
+            "id": "awakening.hodu@legacy-shabbat-morning",
+            "name": "Hodu",
+            "folios": [
+                54
+            ]
+        },
+        {
+            "id": "psukei.opening-rubric@legacy-shabbat-morning",
+            "name": "Opening Rubric",
+            "folios": [
+                55
+            ]
+        },
+        {
+            "id": "psukei.psalm-91@legacy-shabbat-morning",
+            "name": "Psalm 91",
+            "folios": [
+                55
+            ]
+        },
+        {
+            "id": "psukei.psalm-92@legacy-shabbat-morning",
+            "name": "Psalm 92",
+            "folios": [
+                55
+            ]
+        },
+        {
+            "id": "psukei.ashrei-opening@legacy-shabbat-morning",
+            "name": "Ashrei Opening",
+            "folios": [
+                55
+            ]
+        },
+        {
+            "id": "psukei.kol-hanshamah@legacy-shabbat-morning",
+            "name": "Kol Han’shamah",
+            "folios": [
+                55
+            ]
+        },
+        {
+            "id": "psukei.psalm-150@legacy-shabbat-morning",
+            "name": "Psalm 150",
+            "folios": [
+                56
+            ]
+        },
+        {
+            "id": "psukei.awakening-eilu-dvarim@legacy-shabbat-morning",
+            "name": "Awakening Eilu D’varim",
+            "folios": [
+                57
+            ]
+        },
+        {
+            "id": "psukei.awakening-heschel-racism@legacy-shabbat-morning",
+            "name": "Awakening Heschel — Racism",
+            "folios": [
+                57
+            ]
+        },
+        {
+            "id": "psukei.awakening-sukkat-shalom@legacy-shabbat-morning",
+            "name": "Awakening Sukkat Shalom",
+            "folios": [
+                57
+            ]
+        },
+        {
+            "id": "psukei.chatzi-kaddish@legacy-shabbat-morning",
+            "name": "Chatzi Kaddish",
+            "folios": [
+                58
+            ]
+        },
+        {
+            "id": "psukei.chatzi-kaddish-kavannah@legacy-shabbat-morning",
+            "name": "Chatzi Kaddish Kavannah",
+            "folios": [
+                58
+            ]
+        },
+        {
+            "id": "shma.as-we-bless@legacy-shabbat-morning",
+            "name": "As We Bless",
+            "folios": [
+                59
+            ]
+        },
+        {
+            "id": "shma.barchu@legacy-shabbat-morning",
+            "name": "Bar’chu",
+            "folios": [
+                59
+            ]
+        },
+        {
+            "id": "shma.barchu-kavannah@legacy-shabbat-morning",
+            "name": "Bar’chu Kavannah",
+            "folios": [
+                59
+            ]
+        },
+        {
+            "id": "shma.mah-rabu-chant@legacy-shabbat-morning",
+            "name": "Mah Rabu Chant",
+            "folios": [
+                60
+            ]
+        },
+        {
+            "id": "shma.yotzer-or@legacy-shabbat-morning",
+            "name": "Yotzer Or",
+            "folios": [
+                60
+            ]
+        },
+        {
+            "id": "shma.yotzer-or-interpretation@legacy-shabbat-morning",
+            "name": "Yotzer Or Interpretation",
+            "folios": [
+                61
+            ]
+        },
+        {
+            "id": "shma.ahavah-rabbah@legacy-shabbat-morning",
+            "name": "Ahavah Rabbah",
+            "folios": [
+                61
+            ]
+        },
+        {
+            "id": "shma.unending-love@legacy-shabbat-morning",
+            "name": "Unending Love",
+            "folios": [
+                62
+            ]
+        },
+        {
+            "id": "shma.echad-yachid@legacy-shabbat-morning",
+            "name": "Echad Yachid",
+            "folios": [
+                63
+            ]
+        },
+        {
+            "id": "shma.kriyat-shma-teaching@legacy-shabbat-morning",
+            "name": "Kriyat Sh’ma Teaching",
+            "folios": [
+                63
+            ]
+        },
+        {
+            "id": "shma.kriyat-shma-kavannah@legacy-shabbat-morning",
+            "name": "Kriyat Sh’ma Kavannah",
+            "folios": [
+                63
+            ]
+        },
+        {
+            "id": "shma.the-shma@legacy-shabbat-morning",
+            "name": "The Sh’ma",
+            "folios": [
+                64
+            ]
+        },
+        {
+            "id": "shma.vahavta@legacy-shabbat-morning",
+            "name": "V’ahavta",
+            "folios": [
+                65
+            ]
+        },
+        {
+            "id": "shma.emet-kavannah@legacy-shabbat-morning",
+            "name": "Emet Kavannah",
+            "folios": [
+                65
+            ]
+        },
+        {
+            "id": "shma.thou-shalt-love@legacy-shabbat-morning",
+            "name": "Thou Shalt Love",
+            "folios": [
+                66
+            ]
+        },
+        {
+            "id": "shma.vahavta-interpretation@legacy-shabbat-morning",
+            "name": "V’ahavta Interpretation",
+            "folios": [
+                66
+            ]
+        },
+        {
+            "id": "shma.emet-vyatziv@legacy-shabbat-morning",
+            "name": "Emet V’yatziv",
+            "folios": [
+                67
+            ]
+        },
+        {
+            "id": "shma.mi-chamocha-kavannah@legacy-shabbat-morning",
+            "name": "Mi Chamocha Kavannah",
+            "folios": [
+                68
+            ]
+        },
+        {
+            "id": "shma.mi-chamocha@legacy-shabbat-morning",
+            "name": "Mi Chamocha",
+            "folios": [
+                68
+            ]
+        },
+        {
+            "id": "shma.siyahamba@legacy-shabbat-morning",
+            "name": "Siyahamba",
+            "folios": [
+                69
+            ]
+        },
+        {
+            "id": "amidah.tfilah-kavannah@legacy-shabbat-morning",
+            "name": "T’filah Kavannah",
+            "folios": [
+                70
+            ]
+        },
+        {
+            "id": "amidah.sanctuary@legacy-shabbat-morning",
+            "name": "Sanctuary",
+            "folios": [
+                70
+            ]
+        },
+        {
+            "id": "amidah.we-open-our-lips@legacy-shabbat-morning",
+            "name": "We Open Our Lips",
+            "folios": [
+                70
+            ]
+        },
+        {
+            "id": "amidah.avot-vimahot@legacy-shabbat-morning",
+            "name": "Avot V’imahot",
+            "folios": [
+                71
+            ]
+        },
+        {
+            "id": "amidah.avot-interpretation@legacy-shabbat-morning",
+            "name": "Avot Interpretation",
+            "folios": [
+                72
+            ]
+        },
+        {
+            "id": "amidah.gvurot@legacy-shabbat-morning",
+            "name": "G’vurot",
+            "folios": [
+                73
+            ]
+        },
+        {
+            "id": "amidah.kdushah-kavannah@legacy-shabbat-morning",
+            "name": "Kedushah Kavannah",
+            "folios": [
+                74
+            ]
+        },
+        {
+            "id": "amidah.kdushah@legacy-shabbat-morning",
+            "name": "Kedushah",
+            "folios": [
+                74
+            ]
+        },
+        {
+            "id": "amidah.vshamru-kavannah@legacy-shabbat-morning",
+            "name": "V’shamru Kavannah",
+            "folios": [
+                76
+            ]
+        },
+        {
+            "id": "amidah.vshamru@legacy-shabbat-morning",
+            "name": "V’shamru",
+            "folios": [
+                76
+            ]
+        },
+        {
+            "id": "amidah.avodah@legacy-shabbat-morning",
+            "name": "Avodah",
+            "folios": [
+                77
+            ]
+        },
+        {
+            "id": "amidah.modim@legacy-shabbat-morning",
+            "name": "Modim",
+            "folios": [
+                78
+            ]
+        },
+        {
+            "id": "amidah.reflection-on-gratitude@legacy-shabbat-morning",
+            "name": "Reflection on Gratitude",
+            "folios": [
+                79
+            ]
+        },
+        {
+            "id": "amidah.sim-shalom@legacy-shabbat-morning",
+            "name": "Sim Shalom",
+            "folios": [
+                79
+            ]
+        },
+        {
+            "id": "amidah.olam-chesed-yibaneh@legacy-shabbat-morning",
+            "name": "Olam Chesed Yibaneh",
+            "folios": [
+                79
+            ]
+        },
+        {
+            "id": "amidah.elohai-ntzor@legacy-shabbat-morning",
+            "name": "Elohai N’tzor",
+            "folios": [
+                80
+            ]
+        },
+        {
+            "id": "amidah.the-nineteen-blessings@legacy-shabbat-morning",
+            "name": "The Nineteen Blessings",
+            "folios": [
+                81
+            ]
+        },
+        {
+            "id": "amidah.concluding-the-tfilah@legacy-shabbat-morning",
+            "name": "Concluding the T’filah",
+            "folios": [
+                82
+            ]
+        },
+        {
+            "id": "amidah.oseh-shalom@legacy-shabbat-morning",
+            "name": "Oseh Shalom",
+            "folios": [
+                82
+            ]
+        },
+        {
+            "id": "torah.shma-procession-call@legacy-shabbat-morning",
+            "name": "Sh’ma Procession Call",
+            "folios": [
+                83
+            ]
+        },
+        {
+            "id": "torah.hakafot@legacy-shabbat-morning",
+            "name": "Hakafot",
+            "folios": [
+                83
+            ]
+        },
+        {
+            "id": "torah.blessing-before-the-torah@legacy-shabbat-morning",
+            "name": "Blessing Before the Torah",
+            "folios": [
+                84
+            ]
+        },
+        {
+            "id": "torah.reading-of-the-torah@legacy-shabbat-morning",
+            "name": "Reading of the Torah",
+            "folios": [
+                84
+            ]
+        },
+        {
+            "id": "torah.blessing-after-the-torah@legacy-shabbat-morning",
+            "name": "Blessing After the Torah",
+            "folios": [
+                84
+            ]
+        },
+        {
+            "id": "torah.vzot-hatorah@legacy-shabbat-morning",
+            "name": "V’zot HaTorah",
+            "folios": [
+                84
+            ]
+        },
+        {
+            "id": "torah.blessing-the-new-month@legacy-shabbat-morning",
+            "name": "Blessing the New Month",
+            "folios": [
+                85
+            ]
+        },
+        {
+            "id": "torah.mi-shebeirach-healing@legacy-shabbat-morning",
+            "name": "Mi Shebeirach — Healing",
+            "folios": [
+                86
+            ]
+        },
+        {
+            "id": "torah.mi-shebeirach-congregation@legacy-shabbat-morning",
+            "name": "Mi Shebeirach — Congregation",
+            "folios": [
+                86
+            ]
+        },
+        {
+            "id": "torah.el-na-rfa-na@legacy-shabbat-morning",
+            "name": "El Na R’fa Na",
+            "folios": [
+                87
+            ]
+        },
+        {
+            "id": "torah.birkat-hagomel@legacy-shabbat-morning",
+            "name": "Birkat Hagomel",
+            "folios": [
+                87
+            ]
+        },
+        {
+            "id": "torah.tfilat-haderech@legacy-shabbat-morning",
+            "name": "T’filat Haderech",
+            "folios": [
+                88
+            ]
+        },
+        {
+            "id": "torah.blessing-before-the-haftarah@legacy-shabbat-morning",
+            "name": "Blessing Before the Haftarah",
+            "folios": [
+                88
+            ]
+        },
+        {
+            "id": "torah.haftarah-reading@legacy-shabbat-morning",
+            "name": "Haftarah Reading",
+            "folios": [
+                89
+            ]
+        },
+        {
+            "id": "torah.blessings-after-the-haftarah@legacy-shabbat-morning",
+            "name": "Blessings After the Haftarah",
+            "folios": [
+                89
+            ]
+        },
+        {
+            "id": "torah.returning-the-torah@legacy-shabbat-morning",
+            "name": "Returning the Torah",
+            "folios": [
+                89
+            ]
+        },
+        {
+            "id": "torah.eitz-chayim@legacy-shabbat-morning",
+            "name": "Eitz Chayim",
+            "folios": [
+                90
+            ]
+        },
+        {
+            "id": "torah.prayer-for-shalom@legacy-shabbat-morning",
+            "name": "Prayer for Shalom",
+            "folios": [
+                90
+            ]
+        },
+        {
+            "id": "torah.shalom-spiral@legacy-shabbat-morning",
+            "name": "Shalom Spiral",
+            "folios": [
+                91
+            ]
+        },
+        {
+            "id": "torah.prayer-for-israel@legacy-shabbat-morning",
+            "name": "Prayer for Israel",
+            "folios": [
+                92
+            ]
+        },
+        {
+            "id": "torah.hatikvah@legacy-shabbat-morning",
+            "name": "Hatikvah",
+            "folios": [
+                92
+            ]
+        },
+        {
+            "id": "concluding.shechinah-meditation@legacy-shabbat-morning",
+            "name": "Shechinah Meditation",
+            "folios": [
+                93
+            ]
+        },
+        {
+            "id": "concluding.aleinu-kavannah@legacy-shabbat-morning",
+            "name": "Aleinu Kavannah",
+            "folios": [
+                93
+            ]
+        },
+        {
+            "id": "concluding.aleinu@legacy-shabbat-morning",
+            "name": "Aleinu",
+            "folios": [
+                93
+            ]
+        },
+        {
+            "id": "concluding.on-that-day-reading@legacy-shabbat-morning",
+            "name": "On That Day — Reading",
+            "folios": [
+                95
+            ]
+        },
+        {
+            "id": "concluding.bayom-hahu@legacy-shabbat-morning",
+            "name": "Bayom Hahu",
+            "folios": [
+                95
+            ]
+        },
+        {
+            "id": "concluding.may-the-memory@legacy-shabbat-morning",
+            "name": "May the Memory",
+            "folios": [
+                96
+            ]
+        },
+        {
+            "id": "concluding.mourners-kaddish-kavannah@legacy-shabbat-morning",
+            "name": "Mourner’s Kaddish Kavannah",
+            "folios": [
+                96
+            ]
+        },
+        {
+            "id": "concluding.mourners-kaddish@legacy-shabbat-morning",
+            "name": "Mourner’s Kaddish",
+            "folios": [
+                96
+            ]
+        },
+        {
+            "id": "concluding.adon-olam@legacy-shabbat-morning",
+            "name": "Adon Olam",
+            "folios": [
+                98
+            ]
+        },
+        {
+            "id": "concluding.priestly-blessing-kavannah@legacy-shabbat-morning",
+            "name": "Priestly Blessing Kavannah",
+            "folios": [
+                100
+            ]
+        },
+        {
+            "id": "concluding.priestly-blessing@legacy-shabbat-morning",
+            "name": "Priestly Blessing",
+            "folios": [
+                100
+            ]
+        },
+        {
+            "id": "concluding.kiddush@legacy-shabbat-morning",
+            "name": "Kiddush",
+            "folios": [
+                101
+            ]
+        },
+        {
+            "id": "concluding.hamotzi@legacy-shabbat-morning",
+            "name": "Hamotzi",
+            "folios": [
+                101
+            ]
+        }
+    ]
+}

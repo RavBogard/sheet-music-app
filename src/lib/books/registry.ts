@@ -5,6 +5,8 @@ import crcMachzor2008 from "@/data/books/crc-machzor-2008.json"
 import shabbatMaariv from "@/data/books/shabbat-maariv.json"
 import shabbatShacharit from "@/data/books/shabbat-shacharit.json"
 import shireiTshuvah from "@/data/books/shirei-tshuvah.json"
+import legacyShabbatEvening from "@/data/books/legacy-shabbat-evening.json"
+import legacyShabbatMorning from "@/data/books/legacy-shabbat-morning.json"
 import { bookServiceFor, SERVICE_SCOPED_BOOKS } from "./machzor-services"
 import type {
     BookFile,
@@ -25,6 +27,12 @@ const BOOK_FILES: Record<string, BookFile> = {
     "shabbat-maariv": shabbatMaariv as BookFile,
     "shabbat-shacharit": shabbatShacharit as BookFile,
     "shirei-tshuvah": shireiTshuvah as BookFile,
+    // (n) — the unit-carrying feeds for the two ordinary-Shabbat booklets.
+    // Their folios are the PRINTED booklet pages (`printedFolio`), so they
+    // share the numbering of the `crc-friday` / `crc-saturday` pagemaps they
+    // sit alongside rather than replacing.
+    "legacy-shabbat-evening": legacyShabbatEvening as BookFile,
+    "legacy-shabbat-morning": legacyShabbatMorning as BookFile,
 }
 
 const REGISTRY = registryJson as BookRegistryEntry[]
