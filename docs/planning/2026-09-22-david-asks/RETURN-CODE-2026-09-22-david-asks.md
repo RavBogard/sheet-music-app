@@ -145,6 +145,158 @@ Test data: the e2e accounts were revoked in `afterAll` and took their setlists w
 them. `sweep_orphan_test_data` dry run finds 0 orphans, `list_test_accounts` is
 empty, and no `ZZ` setlist remains.
 
-## Item 4: temporary swap (in progress)
+## Item 4: swap a chart for tonight (deployed)
 
-Not yet deployed; recorded here when it ships.
+**For David:** In Perform, tap **Swap** on the row, then pick the chart. Every iPad
+on the setlist follows within seconds. To go back, tap Swap again and pick the chart
+marked "Planned" at the top, or tap **Reset to plan** to put every row back. The
+saved setlist is not changed unless you tick "Also save to setlist".
+
+**What changed** (`b047151b`):
+- **Swap control.** Each chart-bearing Perform row has a Swap button for band leaders
+  and admins only; musicians and signed-out iPads never see it. It appears only when
+  the setlist has a service date.
+- **The sheet**, in this order:
+  - **Planned** comes first, labelled as the plan. Picking it is undo.
+  - **Same moment**: charts that other rows bound to the same liturgical moment use.
+    There is no chart↔moment binding in the library yet, so the evidence is setlist
+    rows with that `momentId` or the moment's unit ids, intersected with this site's
+    library.
+  - **Same title**: the `bareStem` matches.
+  - **Search**: over this site's library, which is scoped the same way as item 2.
+  - Every section is alphabetical by title, then collection, then id. There is no
+    ranking, badge, count, recency or key ordering. Each candidate shows the item-1
+    page-1 thumbnail.
+  - **"Also save to setlist"** is off by default. When it is ticked, the existing
+    permanent `swapTrackChart` edit runs instead, and any swap already on that row is
+    cleared first so it cannot sit over the new plan.
+- **The plan is never written by a swap.** `tracks/*` and `setlists/{id}` stay
+  untouched. The e2e checks this: `get_setlist` tracks are identical before and after,
+  byte for byte.
+- **Propagation:**
+  - Signed-in iPads listen to the overrides doc, the same way they follow the tracks.
+  - Signed-out iPads get the overrides in the server-rendered frame, and from
+    `/api/setlists/{id}/tracks`, on their next load. **They do not follow live.**
+    No anonymous realtime access was added (addendum §4).
+  - An iPad with the swapped row open in the chart view switches the chart under it.
+    Other rows are unaffected; Perform stores no per-row page position.
+- **Setlist edit page:** a swapped row shows "Tonight: X (planned: Y)".
+- **Expiry:**
+  - An override applies only while the setlist's service day (America/Chicago) is
+    today or later, and only if the doc was written for that same day. A setlist
+    re-dated for a later service does not inherit the old swaps.
+  - A date-only `eventDate` is that calendar day, never UTC midnight.
+  - A missing or invalid date means no override applies, and no Swap control shows.
+  - Open devices re-check once a minute.
+
+### Schema, for reuse in the Overlays bridge
+
+`setlists/{setlistId}/performance/overrides`:
+
+```
+{ rows: { [trackId]: { fileId, songId, title, key|null, mimeType|null,
+                       plannedFileId|null, swappedBy, swappedAt } },
+  eventDay: "YYYY-MM-DD",  // America/Chicago service day
+  rev: int,                // +1 per commit, enforced by the rules
+  updatedAt: ms, updatedBy: uid }
+```
+
+`setlists/{setlistId}/performedDeviations/{eventDay}-{rev:6}-{trackId}` is
+append-only:
+
+```
+{ rowId, kind: "swap"|"undo"|"reset",
+  plannedFileId, plannedTitle,   // the plan
+  beforeFileId, beforeTitle,     // what the row showed just before
+  performedFileId, performedTitle, // what it shows after (the plan's, for undo/reset)
+  at: ms, by: uid, eventDay, rev }
+```
+
+- **Read path:**
+  - The effective chart is `applyTonight(plannedRows, overridesDoc, eventDayOf(setlist.eventDate), now)`
+    in `src/lib/performance/tonight.ts`. It is pure, and the web, SSR, API and
+    reconcile all use it.
+  - It never adds, removes or reorders rows. Only a swapped row's
+    fileId/songId/title/key/mimeType change, and the row gains
+    `tonight: {plannedFileId, plannedTitle, swappedAt}`.
+  - If the doc is missing, malformed, unreadable, slow, for another day or past its
+    day, the result is the plan unchanged.
+- **Consistency:**
+  - Every swap, undo and reset is one Firestore transaction: it reads the overrides,
+    plans the write, and sets the overrides plus deviations.
+  - **Stale:** if the row no longer shows what the operator saw, nothing is written
+    and the sheet says what it shows now.
+  - **Noop:** asking for what the row already shows writes nothing, so a retry after a
+    lost acknowledgement does not add a second event.
+  - The rules enforce all of this:
+    - `rev` must equal the previous rev + 1.
+    - Each deviation must land in the same commit as the overrides rev it names
+      (`getAfter`).
+    - Deviations are create-only, and deviation ids are deterministic.
+    - The field set is closed, and `updatedBy`/`by` must equal the caller.
+    - Writers are band leaders and admins of the setlist's tenant (unstamped = crc).
+    - Overrides can be read by any signed-in user; deviations only by the tenant's
+      leaders.
+    - Deletes are server-only; a later cron may clear past days. None exists yet.
+- **Reconcile:**
+  - `reconcile_service` replays the deviations for the service day with
+    `replayDeviations`.
+  - Each planned row gains `chart: {source:"band-swap", plannedFileId, plannedTitle,
+    performedFileId, performedTitle, swapped, sequence[], events}` next to the cue
+    evidence, which is untouched. `diff.chartSwaps` counts rows that ended on a
+    swapped chart.
+  - A row the cue log matched keeps its cue basis and timestamp, and gains the chart.
+    A repeated cue for the same prayer cannot cancel a swap.
+  - A swapped row with no cue (skipped or untracked by cues alone) becomes
+    `performed` with basis `chartSwap`, because the chart choice is the evidence.
+  - A→B→C→plan and Reset end on the plan (`swapped:false`), keep the full sequence,
+    and nothing claims an override is still active.
+  - The promoted "(as performed)" clone re-bonds swapped rows to the chart actually
+    played. That is on the clone only; the plan is never written.
+  - Nothing here reaches Overlays; a chart swap is not overlay evidence (addendum
+    "Temporary swaps and history").
+
+### Checks and release
+
+- Code `b047151b` is live (`/api/version` 11.7.0). The Firestore rules were released
+  afterwards with `firebase deploy --only firestore:rules --project crcmusiccharts`,
+  code first and rules second.
+- Local, before the commit:
+  - tsc clean.
+  - Lint: 0 errors (6 pre-existing warnings).
+  - Build exit 0.
+  - Emulator: 96 files / 1327 tests. The tonight rules are 10/10, including a 12-row
+    reset in one commit.
+  - Unit: 4922 passed / 34 skipped / 1 load flake (route-auth), which passes alone.
+    The item-4 tests are 69/69.
+- **Production two-iPad e2e** (`e2e/tonight-swap-ipad.spec.ts`, ipad-webkit, a minted
+  band leader and a minted musician). Four runs:
+  - **Verified on production.** Run 3 reached the undo step:
+    - The leader swapped in two taps, with "Also save to setlist" off by default.
+    - The musician's row followed within 5 s with no reload and showed the tonight note.
+    - The musician has no Swap control.
+    - `get_setlist` tracks were byte-identical before and after.
+    - A signed-out context saw the swap after a reload and had no Swap control.
+    - The setlist page showed "Tonight: X (planned: Y)".
+  - **Run 1: the leader's own row did not update** within the default 5 s check,
+    while the musician's did. That page logged "Could not reach Cloud Firestore
+    backend" right after its sign-in reload. In run 3 the leader followed in 16 ms.
+    - Follow-up, not shipped: after a successful commit, the hook should adopt the
+      committed doc when its rev is newer, so the leader who swapped always sees it even
+      while their listen stream reconnects. The transaction already returns the doc.
+  - **Run 3: a test bug, now fixed.** The Swap button's label names the chart now
+    showing, so the locator for undo has to use the swapped title.
+  - **Run 4, after the fix:** sign-in in the test harness failed in both contexts
+    (session-cookie sync "Load failed", Firestore offline) before any swap. So undo and
+    reset on production are **not yet e2e-verified**. They are covered by unit tests
+    (A→B→C→plan, multi-row reset) and the emulator rules test (a 12-row reset in one
+    commit).
+  - The item-1 preview regression (`chart-preview-ipad.spec.ts`) failed twice this
+    session:
+    - An empty library list right after sign-in.
+    - Once, a navigation redirected to /library.
+    - Both look like the same sign-in instability. Rerun it after the reboot before
+      calling item 1's regression green.
+- **Owed:** a clean production rerun of both specs, and real-iPad acceptance, which
+  automated tests cannot claim.
+

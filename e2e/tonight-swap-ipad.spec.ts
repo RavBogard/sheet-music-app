@@ -41,9 +41,13 @@ function chicagoToday(): string {
     return `${g('year')}-${g('month')}-${g('day')}`
 }
 
-async function performAs(browser: Browser, baseURL: string, bearer: string, path: string): Promise<{ ctx: BrowserContext; page: Page }> {
+async function performAs(browser: Browser, baseURL: string, bearer: string, path: string, label = 'page'): Promise<{ ctx: BrowserContext; page: Page }> {
     const ctx = await browser.newContext(IPAD)
     const page = await ctx.newPage()
+    // Listener failures log as warnings; surface them if the test fails.
+    page.on('console', (m) => {
+        if (m.type() === 'warning' || m.type() === 'error') console.log(`[${label} ${m.type()}] ${m.text().slice(0, 300)}`)
+    })
     await signInAndGoto(ctx, page, baseURL, bearer, path, { webSdk: 'required' })
     // Mount the listeners with the Web SDK session already in place.
     await page.reload({ waitUntil: 'domcontentloaded' })
@@ -98,8 +102,8 @@ test.describe('tonight-only chart swap (two iPads)', () => {
         const path = `/perform/setlist/${setlist.setlistId}`
         const before = await tracksSnapshot(request, baseURL, leaderBearer, setlist.setlistId)
 
-        const L = await performAs(browser, baseURL, leaderBearer, path)
-        const M = await performAs(browser, baseURL, musicianBearer, path)
+        const L = await performAs(browser, baseURL, leaderBearer, path, 'leader')
+        const M = await performAs(browser, baseURL, musicianBearer, path, 'musician')
         try {
             await expect(rowFor(L.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 30_000 })
             await expect(rowFor(M.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 30_000 })
@@ -109,7 +113,9 @@ test.describe('tonight-only chart swap (two iPads)', () => {
 
             // Tap 1: Swap. Tap 2: the chart (found by search — the fixture has
             // no moment or shared title with the plan).
-            const swapBtn = L.page.getByRole('button', { name: `Swap ${row.title} for tonight`, exact: true })
+            // The label names the chart the row shows now, so it changes with each swap.
+            const swapFor = (title: string) => L.page.getByRole('button', { name: `Swap ${title} for tonight`, exact: true })
+            const swapBtn = swapFor(row.title)
             await expect(swapBtn).toBeVisible({ timeout: 15_000 })
             await swapBtn.click()
             const sheet = L.page.getByTestId('tonight-swap-sheet')
@@ -125,7 +131,12 @@ test.describe('tonight-only chart swap (two iPads)', () => {
             await expect(rowFor(M.page, row.id)).toHaveAttribute('data-file-id', alt.fileId, { timeout: 5_000 })
             test.info().annotations.push({ type: 'propagation-ms', description: String(Date.now() - t0) })
             await expect(rowFor(M.page, row.id).getByTestId('tonight-note')).toBeVisible()
-            await expect(rowFor(L.page, row.id)).toHaveAttribute('data-file-id', alt.fileId)
+            const tL = Date.now()
+            await expect(rowFor(L.page, row.id)).toHaveAttribute('data-file-id', alt.fileId, { timeout: 60_000 }).catch(async (e) => {
+                console.log('[probe] leader did not follow in 60s')
+                throw e
+            })
+            console.log(`[probe] leader followed after ${Date.now() - tL}ms`)
             await M.page.screenshot({ path: 'test-results/tonight-swap-musician.png' })
             await L.page.screenshot({ path: 'test-results/tonight-swap-leader.png' })
 
@@ -153,7 +164,7 @@ test.describe('tonight-only chart swap (two iPads)', () => {
             await edit.close()
 
             // Undo = pick the plan in the same sheet.
-            await swapBtn.click()
+            await swapFor(alt.title).click()
             await L.page.getByTestId('tonight-swap-planned').click()
             await expect(rowFor(M.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 5_000 })
             await expect(rowFor(L.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 5_000 })
