@@ -52,30 +52,99 @@ Found on the way:
   handoff says no recency ordering in the bond picker; removing a Daniel-built
   feature is his call.
 
-## Where this session stopped (resting point, 2026-09-22)
+## Item 2: pickers scoped to the site (deployed)
 
-- **Item 2** (tenant scope): surveyed, not yet coded. Evidence so far: all 990
-  `songs` docs carry `orgId` (927 crc, 63 brotherslazaroff), matching
-  `library_index` exactly, so a plain `where('orgId','==',hostOrg)` is correct on
-  current data. The leak is the unscoped client query plus `songs` read rule
-  `isMember()`. David (uid `HTks9a8Y…`) is **admin with orgIds [crc,
-  brotherslazaroff]**, as are almost all users — so rules alone cannot stop the
-  leak; the client must scope to the HOST org. Writers that can create an
-  unstamped songs doc: Drive-sync mirror (`sync-engine.ts buildSongsMirrorPayload`),
-  archive/rename routes, `chart-heal.ts`. Pickers also show 101 `duplicate` rows
-  (they filter only `archived`). Chips need `collection`, which songs docs lack —
-  plan is to join from the host-scoped library listing by id.
-- **Item 3** (duplicates): read Astra's `DUPLICATES-REVIEW-ASTRA.md`. Hash
-  revalidation (read-only, `library_index.contentHash` sha256):
-  L1 V'Shamru — same size, **different hashes → not a duplicate, move to POSSIBLE**;
-  L2 Avinu Malkeinu — **identical hash**, eligible; L3 and L4 — different hashes →
-  POSSIBLE. You're My Heaven pair identical, **hold stands**. By the handoff's tie
-  rule (1 setlist each) L2's survivor is `upload-a73d8721…` (active, Storage bytes,
-  has uploadedAt), not the report's Janowski pick. Still to do before any
-  mutation: re-hash both L2 files from live bytes, dry-run `swap_chart` + 
-  `mark_chart_status` (it writes its own `dedupeRuns` undo record and refuses bonded
-  rows). **No mutation has been made.** P2's second id resolves to
-  `1r2GLfKEj0PZSPn0XbPO9sXfmzhJfcRTu`.
-- **Item 4**: design read (Perform path, live-director swap, reconcile), not coded.
-- Test setlists `ZZ Chart Preview UAT — …` were created by the e2e runs under
-  minted test accounts (revoked in afterAll); sweep with the ops test-data tools.
+**What leaked.** All three pickers read the device's local `songs` table, which the
+songs listener filled with an unscoped `collection('songs')` query. The `songs`
+read rule was `isMember()`, and nearly every account (David's included) is a member
+of both `crc` and `brotherslazaroff`. So on brotherslazaroff.live the picker listed
+**907 rows, 844 of them CRC charts**. Nothing else leaked. The admin All-sites
+switch belongs to the /library page, and the legacy `AddSongsModal` is not mounted.
+
+**What changed** (`4a622288`):
+- The songs listener subscribes to `where('orgId','==',hostOrg)`, where the host org
+  comes from `useOrg()` (the site being served), not the account's memberships. It
+  also drops any delivered row from another org.
+- The table is scoped to site and account. A device that last served another site or
+  account starts empty. On first run an old device keeps its own-site rows and loses
+  the foreign ones. A delivery that arrives after unsubscribe writes nothing.
+- Every writer that creates a `songs` doc now stamps its `orgId`: the Drive-sync
+  mirror, the archive and rename routes, and chart-heal. The 990 existing docs
+  already carried it: 927 crc and 63 BL, matching `library_index`.
+- Rules: a songs read needs `isMember()` and the doc's org in the caller's orgs.
+  Admins pass; a doc with no orgId counts as `crc`. This is defence in depth. The
+  host-org client query is what actually scopes, because membership is not scope.
+- Pickers hide `archived`, `duplicate` and `orphaned` rows; before, they hid
+  `archived` only, and 101 duplicates showed.
+- Collection chips appear only where the site has two or more collections. CRC gets
+  CRC Charts, Shireinu, Nava Tehilah and Uploads, starting on CRC Charts; tap the
+  active chip to lift the filter. BL has one collection, so it gets no chip bar.
+- Admins get an "Other sites" switch, off each time the picker opens. It lists other
+  tenants' charts in their own group.
+- MCP `search_library` takes `collection` (`core` | `supplemental` (Shireinu) |
+  `nava` | `uploads`).
+
+| Check | Result |
+|---|---|
+| BL picker, account in both tenants | 907 rows before → **63** after, equal to BL `list_library.total` |
+| CRC picker | 907 rows before (84 BL rows plus duplicates) → **744** across all collections |
+| e2e `chart-picker-tenant.spec.ts` against brotherslazaroff.live, band leader in both orgs | **passed**: Library count = `list_library.total`, no chip bar, no Other sites |
+| e2e `chart-preview-ipad.spec.ts` against centralreform.live (item 1 regression) | **passed** |
+| live `search_library` "Lecha" | 12 unfiltered (core, nava, supplemental); `core` → 5 core; `supplemental` → 1 |
+| Emulator: songs tenant rules 6/6, orgscope 20/20, search filter 15/15; full emulator suite 95 files / 1317 tests | passed |
+| Unit suite | 4884 passed / 31 skipped. Three failures under full-suite load only (text-score-viewer, a Recent-group wait, one new scope wait); all pass alone. The two waits in files this item touched got longer timeouts. |
+| `tsc`, lint, build | clean (lint: the two pre-existing warnings) |
+| Rules | deployed after the code: `firebase deploy --only firestore:rules` released |
+
+## Item 3: duplicates (applied where verified)
+
+Revalidated against current bytes, per Astra's review. The report's LIKELY label rested
+on file sizes. Each chart was fetched through `/api/drive/file` and hashed (sha256),
+and page renders were compared. Renders are in the git-ignored
+`out/david-asks/pages/<group>.png` and were not committed; chart content stays out
+of the repo.
+
+| Group | Evidence | Disposition |
+|---|---|---|
+| **L1** V'Shamru: `1WusU1xlwOKQvKu2kemrowh6oZ16S9UeR` plain, **0** setlists / `1cqxulkFHUjA0-w6tmUwK6t4TnPgLWbpx` Old Skool, **4** setlists | bytes differ (sha daf1af8a / e907cbc0) but every page renders pixel-identical at 150 dpi and the text layer is identical; the difference is the PDF creation timestamp | **merged**. Survivor Old Skool (most setlists). The plain row had no bonds to move. |
+| **L2** Avinu Malkeinu (Janowski): `upload-a73d8721-3f66-4b3c-aac8-295717ffabdc` / `1J6H_F6Ba02_rMRQEJbi_lBbMXCBag6SQ` | **byte-identical**, sha e5122eac…, 2 pages | **merged**. Tie at 1 setlist each; canonical rule picks `upload-a73d8721` (active, Storage bytes, has uploadedAt), not the report's pick. |
+| **L3** Summertime, C lead | different bytes and text (408 vs 392 words) | **kept both** → POSSIBLE |
+| **L4** Modah Ani (Halpert) G#m | different bytes and text (218 vs 199 words) | **kept both** → POSSIBLE |
+| **You're My Heaven (Tonight)** `upload-13f00526…` / `upload-e992b170…` (plus PDF `upload-4351dd4a…`) | the two text charts are byte-identical (660a1a58) | **untouched**. Daniel's canonical-row hold stands; the PDF is a separate format. |
+
+**Dry run** (plan before commit):
+1. `mark_chart_status` L1 plain → `duplicate`, canonical Old Skool: plan OK, no bonds.
+2. `mark_chart_status` L2 loser → refused `mark_refused_row_is_bonded`, naming its one
+   bond: *Erev Rosh Hashanah — September 11*, setlist `5ae5595e-405e-4a05-a3fb-0185c907615a`,
+   track `3ef98d6e-a300-49f3-a0b1-e0b36d058e47` (order 23). So the swap comes first.
+
+**Committed** (2026-09-22 ~19:28Z):
+
+| Step | Undo |
+|---|---|
+| `swap_chart` track `3ef98d6e…` → `upload-a73d8721…`, `syncMetadata:false`. Title, order 23, notes and lead unchanged; fileName is now the survivor's. | swap back to `1J6H_F6Ba02_rMRQEJbi_lBbMXCBag6SQ`; the full pre-swap row is saved in `out/david-asks/l2-setlist-before.json` |
+| `mark_chart_status` `1J6H_F6Ba02_…` → duplicate | `undo_dedupe_group` **`human-mark-2026-09-22T19-28-40-114Z-1J6H_F6Ba02_`** |
+| `mark_chart_status` `1WusU1xl…` → duplicate | `undo_dedupe_group` **`human-mark-2026-09-22T19-28-45-346Z-1WusU1xlwOKQ`** |
+
+Verification: `find_setlists_referencing_chart` returns **0** on both retired ids.
+Neither group has more than one active row. Both marks mirrored into `songs`, so the
+pickers hide them.
+
+**POSSIBLE groups, unmarked.** Full ids were resolved (P2's second id is
+`1r2GLfKEj0PZSPn0XbPO9sXfmzhJfcRTu`), and page 1 of every group is rendered side by
+side. No pair among L3, L4 and P1–P16 is byte-identical. P6's two rows share text,
+but one is a 164-byte text chart and the other a PDF, so they are different formats.
+P16's morning words differ, as the report says. All of these are for Daniel and
+none is marked:
+L3, L4, P1 Shalom Rav, P2 V'shamru, P3 Hava Nagilah, P4 Elohai N'shamah, P5 Eil Malei,
+P6 Bar'chu Walkdown, P7 Modah Ani, P8 L'cha Dodi (Nava), P9 L'cha Dodi (Ben Barak),
+P10 Yedid Nefesh, P11 Hal'luyah, P12 Modeh Ani, P13 Shehecheyanu, P14 Friend of the
+Devil, P15 Hinei Mah Tov, P16 Mi Chamocha.
+
+Test data: the e2e accounts were revoked in `afterAll` and took their setlists with
+them. `sweep_orphan_test_data` dry run finds 0 orphans, `list_test_accounts` is
+empty, and no `ZZ` setlist remains.
+
+## Item 4: temporary swap (in progress)
+
+Not yet deployed; recorded here when it ships.
