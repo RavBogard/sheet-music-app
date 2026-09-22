@@ -120,8 +120,9 @@ describe('ChartBindPopover', () => {
             expect(screen.getByTestId('chart-bind-popover')).toBeInTheDocument()
         })
 
-        // Title split from composer; both render as separate nodes.
-        expect(screen.getAllByText('Hashkivenu').length).toBeGreaterThan(0)
+        // Title split from composer; both render as separate nodes. (The
+        // list mounts with the popover, so wait for its query.)
+        expect((await screen.findAllByText('Hashkivenu')).length).toBeGreaterThan(0)
         const composer = screen.getAllByText('Klepper-Freelander')[0]
         expect(composer).toBeInTheDocument()
         expect(composer.className).toContain('text-muted-foreground')

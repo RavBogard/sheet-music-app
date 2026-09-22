@@ -61,6 +61,20 @@ export interface ChartPickerListProps {
     children?: ReactNode
 }
 
+/**
+ * Probe-harness only (NEXT_PUBLIC_PROBE_HARNESS_AUTH, the flag that already
+ * gates the Web-SDK sign-in bridge in src/lib/firebase.ts): a short ring of
+ * what the list's query did, so the iPad e2e spec can say why a list is
+ * empty. No-op everywhere else.
+ */
+function probeNote(entry: Record<string, unknown>) {
+    if (process.env.NEXT_PUBLIC_PROBE_HARNESS_AUTH !== '1' || typeof window === 'undefined') return
+    const w = window as unknown as { __chartPickerProbe__?: unknown[] }
+    const ring = (w.__chartPickerProbe__ ??= [])
+    ring.push({ at: Date.now(), ...entry })
+    if (ring.length > 60) ring.splice(0, ring.length - 60)
+}
+
 /** Rows a picker may offer: not archived, not a non-chart artifact. */
 export function isPickableSong(s: LocalSong): boolean {
     return s.status !== 'archived' && !isJunkLibraryRow({ name: s.title, status: s.status })
@@ -106,10 +120,21 @@ export function ChartPickerList({
     // arrive the live query carries on as before.
     const [emptyRetry, setEmptyRetry] = useState(0)
     const songs = useLiveQuery(
-        () => getDb().songs.filter(isPickableSong).toArray(),
+        async () => {
+            const t0 = Date.now()
+            try {
+                const rows = await getDb().songs.filter(isPickableSong).toArray()
+                probeNote({ ok: rows.length, ms: Date.now() - t0 })
+                return rows
+            } catch (err) {
+                probeNote({ err: String(err), ms: Date.now() - t0 })
+                throw err
+            }
+        },
         [emptyRetry],
         [] as LocalSong[],
     )
+    probeNote({ render: (songs ?? []).length, retry: emptyRetry })
     const isEmpty = (songs ?? []).length === 0
     useEffect(() => {
         if (!isEmpty) return
