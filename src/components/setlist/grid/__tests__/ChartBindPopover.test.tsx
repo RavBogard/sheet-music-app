@@ -376,8 +376,9 @@ describe('ChartBindPopover v53-02-01: Recent section', () => {
         await userEvent.click(screen.getByTestId('chart-cell'))
         await screen.findByTestId('chart-bind-popover')
 
+        // The list mounts with the popover; wait for its query first.
+        expect(await screen.findByText('Library', undefined, { timeout: 5000 })).toBeInTheDocument()
         expect(screen.queryByText('Recent')).not.toBeInTheDocument()
-        expect(screen.getByText('Library')).toBeInTheDocument()
     })
 
     it('renders Recent group with all entries when count is under the cap', async () => {

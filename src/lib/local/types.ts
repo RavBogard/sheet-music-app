@@ -56,9 +56,10 @@ export interface LocalSong {
     defaults?: SongDefaults
     recent?: SongRecentEntry[]
     /** v60-09-01: archive flag mirrored from library_index/{id}.status.
-     *  Picker filters `status !== 'archived'`; missing status reads as
+     *  The mirror also carries 'duplicate' (101 rows, 2026-09-22), which the
+     *  pickers hide too (picker-scope.ts). Missing status reads as
      *  active (backward compat with v54-01-01 bootstrap docs). */
-    status?: 'active' | 'archived'
+    status?: 'active' | 'archived' | 'duplicate' | 'orphaned'
     updatedAt?: number
     [key: string]: unknown
 }

@@ -42,6 +42,8 @@ export async function mintTestAccount(
         label?: string
         /** Default 4h; clamp ≤ 24h. */
         ttlSec?: number
+        /** Tenant memberships; the bearer acts in orgIds[0]. Omit for crc-only. */
+        orgIds?: Array<'crc' | 'brotherslazaroff'>
     },
 ): Promise<MintedTestAccount> {
     const result = await mcpCallOrThrow<{
@@ -53,6 +55,7 @@ export async function mintTestAccount(
         role: args.role,
         label: args.label ?? `b6-uat ${new Date().toISOString()}`,
         ttlSec: args.ttlSec ?? 60 * 60, // 1h — UAT runs fast
+        ...(args.orgIds ? { orgIds: args.orgIds } : {}),
     })
     return {
         uid: result.uid,

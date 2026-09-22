@@ -72,6 +72,12 @@ service cloud.firestore {
     // CRC, whose claimless leaders default to ['crc']). Admins exempt. Used to
     // wall band_leader CLIENT reads that the app layer also filters (defense in
     // depth — the rules wall survives an app-filter bypass).
+    function songOrgReadOk(res) {
+      return isAdmin()
+        || (('orgId' in res.data)
+          ? res.data.orgId in callerOrgs()
+          : 'crc' in callerOrgs());
+    }
     function orgReadOk(res) {
       return isAdmin()
         || !('orgId' in res.data)
@@ -209,7 +215,12 @@ service cloud.firestore {
     // v5h-01-02 fix (E): added alongside tracks for the same default-deny
     // reason — sticky-memory writes were also being rejected silently.
     match /songs/{songId} {
-      allow read: if isMember();
+      // David's ask 2 (2026-09-22): READ-ISOLATION by tenant. A member reads
+      // only songs of an org they belong to; an unstamped (legacy) doc is crc,
+      // matching rowOrg and callerCanWriteExistingOrg. Admins exempt. The
+      // pickers additionally query the HOST org only (membership alone never
+      // narrowed them: most accounts belong to both tenants).
+      allow read: if isMember() && songOrgReadOk(resource);
       // v11-01-04: + org-scope write isolation.
       allow create: if isSignedIn() && (isBandLeader() || isAdmin()) && orgCreateOk();
       allow update: if isSignedIn() && (isBandLeader() || isAdmin()) && orgUpdateOk();

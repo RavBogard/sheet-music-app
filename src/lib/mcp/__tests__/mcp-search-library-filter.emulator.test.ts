@@ -272,4 +272,34 @@ describe("MCP search_library — F-007 / F-024 non-chart filter (emulator)", () 
         expect((row as unknown as Record<string, unknown>).mimeType).toBeUndefined()
         expect((row as unknown as Record<string, unknown>).name).toBeUndefined()
     })
+
+
+    it("David ask 2: collection narrows to one section; default and 'all' do not", async () => {
+        const rows: Array<[string, string, string | undefined]> = [
+            ["c-core", "Hashkivenu (core)", "core"],
+            ["c-legacy", "Hashkivenu (legacy)", undefined],
+            ["c-supp", "Hashkivenu (Shireinu)", "supplemental"],
+            ["c-nava", "Hashkivenu (Nava)", "nava"],
+            ["c-up", "Hashkivenu (upload)", "uploads"],
+        ]
+        for (const [id, title, collection] of rows) {
+            await seedSong(id, title)
+            await seedIndex(id, {
+                name: title + ".pdf",
+                mimeType: "application/pdf",
+                status: "active",
+                ...(collection ? { collection } : {}),
+            })
+        }
+        const ids = async (collection?: "core" | "supplemental" | "nava" | "uploads" | "all") =>
+            (await searchLibrary(ANY_UID, { query: "hashkivenu", ...(collection ? { collection } : {}) }))
+                .map((r) => r.id)
+                .sort()
+        expect(await ids()).toEqual(["c-core", "c-legacy", "c-nava", "c-supp", "c-up"])
+        expect(await ids("all")).toEqual(["c-core", "c-legacy", "c-nava", "c-supp", "c-up"])
+        expect(await ids("core")).toEqual(["c-core", "c-legacy"])
+        expect(await ids("supplemental")).toEqual(["c-supp"])
+        expect(await ids("nava")).toEqual(["c-nava"])
+        expect(await ids("uploads")).toEqual(["c-up"])
+    })
 })

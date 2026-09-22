@@ -8,7 +8,11 @@ import { logger } from '@/lib/logger'
 import { applyEdit as defaultApplyEdit } from '@/lib/local/write'
 import { getDb } from '@/lib/local/schema'
 import { primeSongsLibrary as defaultPrimeSongsLibrary } from '@/lib/songs/prime'
-import { subscribeSongsLibrary as defaultSubscribeSongsLibrary } from '@/lib/songs/subscribe'
+import {
+    subscribeSongsLibrary as defaultSubscribeSongsLibrary,
+    type SubscribeSongsLibraryOptions,
+} from '@/lib/songs/subscribe'
+import { useOrg } from '@/lib/org/org-context'
 import { captureSyncFailure } from '@/lib/sync/sentry-capture'
 import type {
     EditDescriptor,
@@ -65,7 +69,7 @@ export interface SetlistGridHydratorProps {
     /** Test-seam (v60-09-01): lets unit tests assert library subscription
      *  starts once-per-mount without booting Firestore. Defaults to the
      *  production subscribeSongsLibrary export. */
-    subscribeSongsLibrary?: () => () => void
+    subscribeSongsLibrary?: (opts?: SubscribeSongsLibraryOptions) => () => void
 }
 
 export function SetlistGridHydrator({
@@ -421,15 +425,19 @@ export function SetlistGridHydrator({
     // mount per Hydrator instance via songsSubscribeRef; clean unsubscribe
     // on unmount. Server-authoritative reads — direct db.songs.put inside
     // the helper, never through the engine (no circular writes).
+    // David's ask 2 (2026-09-22): scoped to the HOST org (this site), and
+    // re-subscribed when the org or the signed-in account changes.
+    const hostOrg = useOrg()
+    const songsUid = user?.uid ?? null
     useEffect(() => {
         if (hydration !== 'done') return
         if (songsSubscribeRef.current) return
-        songsSubscribeRef.current = subscribeSongsLibrary()
+        songsSubscribeRef.current = subscribeSongsLibrary({ orgId: hostOrg, uid: songsUid })
         return () => {
             songsSubscribeRef.current?.()
             songsSubscribeRef.current = null
         }
-    }, [hydration, subscribeSongsLibrary])
+    }, [hydration, subscribeSongsLibrary, hostOrg, songsUid])
 
     // v54-01-03: trackCount reconciler. v50-05 moved tracks from the embedded
     // `setlists/{id}.tracks[]` array into a top-level `tracks/{id}` collection,

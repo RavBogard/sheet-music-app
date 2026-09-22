@@ -118,6 +118,9 @@ export const GET = createApiHandler(
                     metadata: data.metadata || null,
                     collection: data.collection || 'core',
                     status: (data.status as string) || 'active',
+                    // David's ask 2: the pickers' admin "include other sites"
+                    // group labels each row with its site.
+                    orgId: rowOrg(data.orgId),
                     ...(statusFilter === 'archived' ? {
                         archivedAt: data.archivedAt || null,
                         archivedBy: data.archivedBy || null,

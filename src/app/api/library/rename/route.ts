@@ -1,3 +1,4 @@
+import { rowOrg } from "@/lib/org/membership"
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
 import { createApiHandler } from "@/lib/api-wrapper"
@@ -108,6 +109,9 @@ export const PATCH = createApiHandler(
                     title: trimmed,
                     normalizedTitle: trimmed.toLowerCase(),
                     updatedAt: Date.now(),
+                    // The pickers read songs/* by orgId; if this set creates
+                    // the doc, it must carry the row's tenant.
+                    orgId: rowOrg(docSnap.data()?.orgId),
                 },
                 { merge: true },
             ),

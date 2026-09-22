@@ -18,7 +18,7 @@ const mockWhere1 = vi.fn(() => ({ select: mockSelect, where: mockWhere2 }))
 const mockFirestoreLocal = {
     collection: vi.fn((name: string) => ({
         doc: vi.fn(() => ({
-            get: vi.fn(async () => ({ exists: docExists })),
+            get: vi.fn(async () => ({ exists: docExists, data: () => ({ orgId: "crc" }) })),
             update: mockUpdate,
             // v60-09-01: songs/{fileId} mirror writes go through .set() with merge.
             set: name === 'songs' ? mockSongsSet : vi.fn(),

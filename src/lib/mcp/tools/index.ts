@@ -789,6 +789,12 @@ export function registerReadTools(server: McpServer): void {
                     .describe(
                         "If true, include non-chart artifacts (audio files, spreadsheets, Drive folders, dotfiles like .DS_Store) that the in-app library and list_library hide. Default false.",
                     ),
+                collection: z
+                    .enum(["core", "supplemental", "nava", "uploads", "all"])
+                    .optional()
+                    .describe(
+                        "Library collection to search (default 'all'). Same spelling as list_library. 'supplemental' is the collection the app labels \"Shireinu\" — pass it when the user says Shireinu. 'core' is the CRC Charts collection (every row not supplemental/nava/uploads, including legacy rows with no collection). 'nava' is Nava Tehila. Results stay limited to the caller's org either way.",
+                    ),
                 includeUnbindable: z
                     .boolean()
                     .optional()

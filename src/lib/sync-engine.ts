@@ -1,4 +1,5 @@
 
+import { rowOrg } from '@/lib/org/membership'
 import crypto from 'crypto'
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { DriveClient } from "@/lib/google-drive"
@@ -31,6 +32,7 @@ function buildSongsMirrorPayload(
     fileId: string,
     rawName: string,
     existsInLibrary: boolean,
+    orgId: string,
 ): Record<string, unknown> {
     const title = rawName.trim() // caller has already guarded against empty
     const payload: Record<string, unknown> = {
@@ -38,6 +40,11 @@ function buildSongsMirrorPayload(
         title,
         normalizedTitle: title.toLowerCase(),
         fileId,
+        // David's ask 2 (2026-09-22): the chart pickers now read songs/* with
+        // `where('orgId','==',hostOrg)`, and a query for 'crc' cannot match a
+        // doc with no orgId. Stamp the library row's tenant (unstamped Drive
+        // rows are crc, as rowOrg reads them).
+        orgId,
     }
     if (!existsInLibrary) {
         payload.createdAt = Date.now()
@@ -160,6 +167,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
             modifiedTime: string | null
             storageCopiedAt: string | null
             storageFailed: boolean | null
+            orgId: string | null
         }>()
         for (const doc of existingSnapshot.docs) {
             const data = doc.data()
@@ -167,6 +175,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                 modifiedTime: data?.modifiedTime || null,
                 storageCopiedAt: data?.storageCopiedAt || null,
                 storageFailed: data?.storageFailed || null,
+                orgId: typeof data?.orgId === 'string' ? data.orgId : null,
             })
         }
 
@@ -297,7 +306,12 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                     const songsRef = db.collection('songs').doc(file.id)
                     songsBatch.set(
                         songsRef,
-                        buildSongsMirrorPayload(file.id, rawName, existingDocs.has(file.id)),
+                        buildSongsMirrorPayload(
+                            file.id,
+                            rawName,
+                            existingDocs.has(file.id),
+                            rowOrg(existingDocs.get(file.id)?.orgId),
+                        ),
                         { merge: true },
                     )
                 }

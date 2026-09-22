@@ -301,6 +301,13 @@ export interface SearchLibraryArgs {
      * +0.5 ranking boost. W-02 learning-loop output.
      */
     contextKey?: string
+    /**
+     * David's ask 2 (2026-09-22): one library collection, or `all` (default).
+     * Same spelling as list_library. "Shireinu" is `supplemental`. `core` is
+     * every row that is not supplemental/nava/uploads, including legacy rows
+     * with no collection field. A row with no library_index entry is core.
+     */
+    collection?: "core" | "supplemental" | "nava" | "uploads" | "all"
 }
 
 /**
@@ -346,6 +353,9 @@ interface LibraryW02Fields {
      *  defaulted: an absent library_index status must stay `undefined` so
      *  the caller can fall back, never a fabricated "active" (§1(b)). */
     status?: string
+    /** David's ask 2: library_index.collection, normalized the way
+     *  list_library reads it (anything else is core). */
+    collection?: "core" | "supplemental" | "nava" | "uploads"
 }
 
 /**
@@ -447,6 +457,12 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
                 // value joins as undefined so the gate can fall back to the
                 // songs mirror for that row instead of inventing a status.
                 status: typeof data.status === "string" ? data.status : undefined,
+                collection:
+                    data.collection === "supplemental" ||
+                    data.collection === "nava" ||
+                    data.collection === "uploads"
+                        ? data.collection
+                        : "core",
             })
         }
         return map
@@ -608,6 +624,10 @@ export async function searchLibrary(
                         })(),
                 )
                 if (!hit) return false
+            }
+            if (args.collection && args.collection !== "all") {
+                const c = w02Map.get(s.id)?.collection ?? "core"
+                if (c !== args.collection) return false
             }
             if (key && s.key?.toLowerCase() !== key) return false
             if (args.bpmMin !== undefined && (s.bpm === undefined || s.bpm < args.bpmMin)) {

@@ -1,3 +1,4 @@
+import { rowOrg } from "@/lib/org/membership"
 import "server-only"
 import {
     uploadToStorage,
@@ -184,7 +185,7 @@ export async function healChartBytes(
         await db
             .collection("songs")
             .doc(fileId)
-            .set({ status: "active" }, { merge: true })
+            .set({ status: "active", orgId: rowOrg(rowData.orgId) }, { merge: true })
     } catch (err) {
         // Compensating-delete: roll Storage back so we never leave a reverse
         // orphan (bytes-without-index-update). force:true is correct here —
