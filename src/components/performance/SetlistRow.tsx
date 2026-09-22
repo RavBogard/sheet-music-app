@@ -1,14 +1,15 @@
 "use client"
 
-import { FileMusic, ChevronRight, User } from "lucide-react"
+import { FileMusic, ChevronRight, User, Replace } from "lucide-react"
 import { SetlistTrack } from "@/types/models"
 import { getTransposedKeyName } from "@/lib/music-math"
 import { displayChartTitle } from "@/lib/format/chart-title"
 import { cn } from "@/lib/utils"
 import type { UseLongPressBag } from "@/hooks/use-long-press"
+import type { WithTonight } from "@/lib/performance/tonight"
 
 export interface SetlistRowProps {
-    track: SetlistTrack
+    track: WithTonight<SetlistTrack>
     index: number
     isCurrentPosition: boolean
     defaultTransposition: number
@@ -26,6 +27,12 @@ export interface SetlistRowProps {
      * `openableNonSong` chevron rows (gesture only applies to song rows).
      */
     gestureHandlers?: UseLongPressBag
+    /**
+     * David's ask 4: opens the Swap-for-tonight sheet. Passed only for a
+     * band_leader/admin on a chart-bearing row with a service day; absent
+     * means no Swap control at all (musicians, public iPads).
+     */
+    onSwapTap?: () => void
 }
 
 export function SetlistRow({
@@ -38,6 +45,7 @@ export function SetlistRow({
     isLeader,
     onLeaderSetPosition,
     gestureHandlers,
+    onSwapTap,
 }: SetlistRowProps) {
     const isSong = !track.type || track.type === "song"
     const isHeader = track.type === "header"
@@ -311,10 +319,13 @@ export function SetlistRow({
         handleClick()
     }
 
-    return (
+    const rowEl = (
         <div
             role="button"
             tabIndex={0}
+            data-testid="perform-row"
+            data-row-id={track.id}
+            data-file-id={track.fileId ?? ""}
             aria-label={openableNonSong ? `Open chart: ${title}` : undefined}
             onClick={composedClick}
             onKeyDown={(e) => {
@@ -341,7 +352,37 @@ export function SetlistRow({
                     : "cursor-default"
             )}
         >
-            {songContent}
+            {track.tonight ? (
+                <div className="flex-1 min-w-0">
+                    {songContent}
+                    {/* Everyone sees that tonight differs from the plan. */}
+                    <p data-testid="tonight-note" className="text-xs text-amber-800 dark:text-amber-300 truncate mt-0.5">
+                        Tonight · planned: {displayChartTitle(track.tonight.plannedTitle)}
+                    </p>
+                </div>
+            ) : (
+                songContent
+            )}
+        </div>
+    )
+
+    if (!onSwapTap) return rowEl
+    return (
+        <div className="flex items-stretch">
+            <div className="flex-1 min-w-0">{rowEl}</div>
+            <button
+                type="button"
+                data-testid="tonight-swap-button"
+                aria-label={`Swap ${title} for tonight`}
+                onClick={(e) => {
+                    e.stopPropagation()
+                    onSwapTap()
+                }}
+                className="shrink-0 w-14 min-h-11 flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold text-muted-foreground hover:bg-muted active:bg-muted/80 border-l border-border/40 [touch-action:manipulation]"
+            >
+                <Replace className="h-4 w-4" aria-hidden="true" />
+                Swap
+            </button>
         </div>
     )
 }

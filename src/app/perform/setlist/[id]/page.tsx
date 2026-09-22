@@ -39,13 +39,14 @@ export default async function SetlistPerformPage({
     params: Promise<{ id: string }>
 }) {
     const { id } = await params
-    const { setlist, tracks } = await fetchInitialFrame(id)
+    const { setlist, tracks, overrides } = await fetchInitialFrame(id)
 
     return (
         <SetlistPerformClient
             setlistId={id}
             initialSetlist={setlist}
             initialTracks={tracks}
+            initialOverrides={overrides ?? null}
         />
     )
 }

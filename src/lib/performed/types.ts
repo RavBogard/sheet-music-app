@@ -67,7 +67,29 @@ export type RowStatus =
     | "untracked"
 
 /** How a planned row was matched to the cue log (or why it was not). */
-export type MatchBasis = "momentId" | "liturgyRef" | "title" | "bracketed" | "none"
+export type MatchBasis = "momentId" | "liturgyRef" | "title" | "bracketed" | "chartSwap" | "none"
+
+/**
+ * The band's chart choice for a row, rebuilt from
+ * `setlists/{id}/performedDeviations` (David's ask 4). This is a DIFFERENT
+ * kind of evidence from the cue log: a musician deliberately choosing a chart
+ * for tonight, not a graphic firing. Both are kept, side by side; neither
+ * overwrites the other. A cue that fired for the row's prayer says nothing
+ * about which tune was sung, so it can never cancel a swap.
+ */
+export interface ChartChoice {
+    source: "band-swap"
+    plannedFileId: string | null
+    plannedTitle: string
+    performedFileId: string | null
+    performedTitle: string
+    /** True when the row ended the service on a chart other than the plan's. */
+    swapped: boolean
+    /** Every chart the row showed, in order, starting from the plan. */
+    sequence: Array<{ fileId: string | null; title: string }>
+    /** Swap / undo / reset events recorded for the row. */
+    events: number
+}
 
 export interface DiffRow {
     status: RowStatus
@@ -85,6 +107,8 @@ export interface DiffRow {
     basis: MatchBasis
     /** Human sentence for the staged view. */
     note?: string
+    /** The band's chart choice, when any swap was recorded for this row. */
+    chart?: ChartChoice
 }
 
 export interface Diff {
@@ -96,6 +120,8 @@ export interface Diff {
     ignoredRows: number
     /** Total history rows considered. */
     historyRows: number
+    /** Rows that ended the service on a swapped chart. */
+    chartSwaps: number
 }
 
 /**

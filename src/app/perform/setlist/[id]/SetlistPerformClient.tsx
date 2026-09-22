@@ -39,6 +39,10 @@ import { useLiturgyCollapse } from "@/hooks/use-liturgy-collapse"
 import { liturgyRuns } from "@/components/performance/liturgy-runs"
 import { shouldShowFatalSetlistError } from "./perform-error-gate"
 import type { Setlist, SetlistTrack } from "@/types/models"
+import type { OverridesDoc } from "@/lib/performance/tonight"
+import { commitTonightReset } from "@/lib/performance/tonight-client"
+import { logger } from "@/lib/logger"
+import { TonightSwapSheet } from "@/components/performance/TonightSwapSheet"
 
 const PrintModal = dynamic(
     () => import("@/components/setlist/PrintModal").then(m => m.PrintModal),
@@ -62,6 +66,8 @@ export interface SetlistPerformClientProps {
     setlistId: string
     initialSetlist: Setlist | null
     initialTracks: SetlistTrack[]
+    /** Tonight's swaps as the server read them (David's ask 4). */
+    initialOverrides?: OverridesDoc | null
     /**
      * c11-fix-perform-track-position-in-url (M3-009): when the page is
      * entered via `/perform/setlist/<id>/track/<trackId>`, seed
@@ -77,10 +83,14 @@ export function SetlistPerformClient({
     setlistId,
     initialSetlist,
     initialTracks,
+    initialOverrides = null,
     initialTrackId,
 }: SetlistPerformClientProps) {
     const {
         tracks,
+        plannedTracks,
+        tonightOverrides,
+        serviceDay,
         name,
         serviceNotes,
         loading,
@@ -100,7 +110,9 @@ export function SetlistPerformClient({
         requestWakeLock,
         releaseWakeLock,
     } = useSetlistPerformance(setlistId, {
-        initial: initialSetlist ? { setlist: initialSetlist, tracks: initialTracks } : null,
+        initial: initialSetlist
+            ? { setlist: initialSetlist, tracks: initialTracks, overrides: initialOverrides }
+            : null,
     })
 
     const [activeSongIndex, setActiveSongIndex] = useState<number | null>(() => {
@@ -171,7 +183,9 @@ export function SetlistPerformClient({
         }
     }, [activeSongIndex, setlistId, tracks])
 
-    const { isBandLeader, isAdmin } = useAuth()
+    const { isBandLeader, isAdmin, user } = useAuth()
+    const [swapIndex, setSwapIndex] = useState<number | null>(null)
+    const [resetBusy, setResetBusy] = useState(false)
     // Printing is NOT a privilege (Daniel, 2026-09-10) — not by role, and not
     // by having an account. The old `isMusician || isBandLeader || isAdmin`
     // gate hid the button from every signed-in person without a role, which is
@@ -365,6 +379,41 @@ export function SetlistPerformClient({
             {/* live-director-gesture library hydration (leader-only) */}
             {isLeaderRole && <LibraryHydrator />}
 
+            {/* David's ask 4: tonight-only swaps differ from the plan. */}
+            {isLeader && user && serviceDay && tonightOverrides && Object.keys(tonightOverrides.rows).length > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2 border-b border-border/50 text-sm">
+                    <span className="flex-1 text-amber-800 dark:text-amber-300">
+                        {Object.keys(tonightOverrides.rows).length} row{Object.keys(tonightOverrides.rows).length === 1 ? "" : "s"} swapped for tonight
+                    </span>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        data-testid="tonight-reset"
+                        className="h-11"
+                        disabled={resetBusy}
+                        onClick={async () => {
+                            setResetBusy(true)
+                            try {
+                                await commitTonightReset(setlistId, {
+                                    planned: Object.fromEntries(
+                                        plannedTracks.map((t) => [t.id, { fileId: t.fileId ?? null, title: t.title }]),
+                                    ),
+                                    by: user.uid,
+                                    at: Date.now(),
+                                    eventDay: serviceDay,
+                                })
+                            } catch (err) {
+                                logger.warn("[perform] Reset to plan failed", err)
+                            } finally {
+                                setResetBusy(false)
+                            }
+                        }}
+                    >
+                        Reset to plan
+                    </Button>
+                </div>
+            )}
+
             {/* Setlist content */}
             <SetlistView
                 tracks={tracks}
@@ -377,7 +426,23 @@ export function SetlistPerformClient({
                 serviceNotes={serviceNotes}
                 setlistId={setlistId}
                 collapseLiturgy={liturgyCollapsed}
+                onSwapTap={isLeader && user && serviceDay ? (index) => setSwapIndex(index) : undefined}
             />
+
+            {swapIndex !== null && tracks[swapIndex] && serviceDay && (() => {
+                const shown = tracks[swapIndex]
+                const planned = plannedTracks.find((t) => t.id === shown.id) ?? shown
+                return (
+                    <TonightSwapSheet
+                        open
+                        onOpenChange={(o) => { if (!o) setSwapIndex(null) }}
+                        setlistId={setlistId}
+                        track={shown}
+                        planned={planned}
+                        serviceDay={serviceDay}
+                    />
+                )
+            })()}
 
             {/* PDF overlay: renders on top of setlist when a song is tapped */}
             {activeSongIndex !== null && tracks[activeSongIndex] && (

@@ -36,6 +36,8 @@ export interface MobileRowCardProps {
     onContextDelete: () => void
     onCommit?: (patch: Partial<LocalTrack>) => Promise<void> | void
     onDeleteRow?: () => void
+    /** David's ask 4: the chart swapped in for tonight, when one applies. */
+    tonightTitle?: string
 }
 
 /**
@@ -63,6 +65,7 @@ export function MobileRowCard({
     onContextDelete,
     onCommit,
     onDeleteRow,
+    tonightTitle,
 }: MobileRowCardProps) {
     const [title, setTitle] = useState(String(track.title ?? ''))
     const [key, setKey] = useState(String(track.key ?? ''))
@@ -287,6 +290,11 @@ export function MobileRowCard({
                                     </span>
                                 )}
                             </span>
+                            {tonightTitle && (
+                                <span data-testid="tonight-edit-note" className="truncate text-xs font-medium text-amber-800 dark:text-amber-300">
+                                    Tonight: {tonightTitle} (planned: {track.title})
+                                </span>
+                            )}
                         </div>
 
                         <div className="flex items-center gap-3 shrink-0">

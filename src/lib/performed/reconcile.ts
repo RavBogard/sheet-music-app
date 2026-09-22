@@ -2,6 +2,7 @@ import { bareStem } from "@/lib/mcp/title-specificity"
 import { momentIdForUnit } from "@/lib/books/moments"
 import { historyInstant } from "./types"
 import type { Chapter, Diff, DiffRow, HistoryRow, MatchBasis, RowStatus } from "./types"
+import type { RowChartHistory } from "@/lib/performance/tonight"
 
 /**
  * Reconcile a planned setlist against Overlays' cue log.
@@ -127,6 +128,8 @@ export function reconcile(
     setlistId: string,
     planned: PlannedRow[],
     history: HistoryRow[],
+    /** Tonight's chart swaps per track id (`replayDeviations`). Optional. */
+    chartHistory?: ReadonlyMap<string, RowChartHistory>,
 ): Diff {
     const cues = [...history].sort((a, b) => a.seq - b.seq)
     const usable = cues.filter(hasIdentity)
@@ -167,6 +170,7 @@ export function reconcile(
 
     const rows: DiffRow[] = []
     const counts = emptyCounts()
+    let chartSwaps = 0
 
     planned.forEach((row, i) => {
         const hit = matched.get(i)
@@ -216,6 +220,38 @@ export function reconcile(
             base.note = "Band-only — no graphic, and no cue nearby."
         }
 
+        // The band's chart choice (David's ask 4) sits BESIDE the cue
+        // evidence. A row the band swapped to another chart for tonight was
+        // deliberately played from that chart: when the cue log alone would
+        // call it skipped or say nothing, the swap is the evidence. A row the
+        // cue log already matched keeps its cue basis and timestamp — the
+        // chart choice is added, never substituted, and a cue for the same
+        // prayer text cannot cancel it.
+        const h = chartHistory?.get(row.trackId)
+        if (h) {
+            base.chart = {
+                source: "band-swap",
+                plannedFileId: h.plannedFileId,
+                plannedTitle: h.plannedTitle || row.title,
+                performedFileId: h.finalFileId,
+                performedTitle: h.finalTitle,
+                swapped: h.swapped,
+                sequence: h.sequence,
+                events: h.events,
+            }
+            if (h.swapped) {
+                chartSwaps += 1
+                const played = `Band played ${h.finalTitle || "another chart"} (planned: ${h.plannedTitle || row.title}).`
+                if (base.status === "skipped" || base.status === "untracked") {
+                    base.status = "performed"
+                    base.basis = "chartSwap"
+                    base.note = `${played} No cue fired for it; the chart choice is the evidence.`
+                } else {
+                    base.note = base.note ? `${base.note} ${played}` : played
+                }
+            }
+        }
+
         counts[base.status] += 1
         rows.push(base)
     })
@@ -256,6 +292,7 @@ export function reconcile(
         counts,
         ignoredRows: cues.length - usable.length,
         historyRows: cues.length,
+        chartSwaps,
     }
 }
 

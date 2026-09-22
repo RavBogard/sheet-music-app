@@ -13,6 +13,14 @@ import { cloneSetlist } from "./clone-setlist"
 import { fetchHistory, historyConfigured } from "@/lib/performed/history-client"
 import { chapters as buildChapters, reconcile, type PlannedRow } from "@/lib/performed/reconcile"
 import type { Diff, DiffRow } from "@/lib/performed/types"
+import {
+    DEVIATIONS_COLLECTION,
+    eventDayOf,
+    parseDeviation,
+    replayDeviations,
+    type Deviation,
+    type RowChartHistory,
+} from "@/lib/performance/tonight"
 
 /**
  * `reconcile_service` — what actually happened, beside what was planned.
@@ -98,7 +106,40 @@ async function loadPlan(
     }
 }
 
+/**
+ * The band's recorded chart choices for this service (David's ask 4): the
+ * append-only `performedDeviations`, replayed per row for the service day.
+ * A read failure is an empty map — reconciliation then speaks only to cues.
+ */
+async function loadChartHistory(
+    db: DB,
+    setlistId: string,
+    eventDay: string | null,
+): Promise<Map<string, RowChartHistory>> {
+    if (!eventDay) return new Map()
+    try {
+        const snap = await db
+            .collection("setlists")
+            .doc(setlistId)
+            .collection(DEVIATIONS_COLLECTION)
+            .where("eventDay", "==", eventDay)
+            .get()
+        const devs = snap.docs.map((d) => parseDeviation(d.data())).filter((d): d is Deviation => d !== null)
+        return replayDeviations(devs, eventDay)
+    } catch (err) {
+        logger.warn(`[reconcile_service] deviations unreadable for ${setlistId}`, err)
+        return new Map()
+    }
+}
+
 function summarize(diff: Diff, configured: boolean): string {
+    const swaps = diff.chartSwaps
+        ? ` ${diff.chartSwaps} row${diff.chartSwaps === 1 ? "" : "s"} ended on a chart the band swapped in for tonight; each row's \`chart\` names the planned and the played chart.`
+        : ""
+    return summarizeCues(diff, configured) + swaps
+}
+
+function summarizeCues(diff: Diff, configured: boolean): string {
     const c = diff.counts
     if (diff.historyRows === 0) {
         return configured
@@ -210,7 +251,12 @@ export async function reconcileService(
         )
     }
 
-    const diff = reconcile(args.setlistId, plan.rows, history.rows)
+    const chartHistory = await loadChartHistory(
+        db,
+        args.setlistId,
+        eventDayOf(setlist.eventDate ?? setlist.date),
+    )
+    const diff = reconcile(args.setlistId, plan.rows, history.rows, chartHistory)
     const chapterLines = buildChapters(diff, args.chapterOffsetSeconds ?? 0).map((c) => c.line)
     const summary = summarize(diff, historyConfigured())
 
@@ -295,9 +341,20 @@ async function promote(
             batch.delete(target.ref)
             removed.add(row.plannedPosition)
             rowsRemoved += 1
-        } else if (row.performedAt) {
-            batch.update(target.ref, { performedAt: row.performedAt, lastModifiedAt: nowIso })
-            rowsStamped += 1
+        } else {
+            const patch: Record<string, unknown> = {}
+            if (row.performedAt) patch.performedAt = row.performedAt
+            // The performed version carries the tune actually played: a row
+            // the band swapped for tonight is re-bonded, on the CLONE only.
+            if (row.chart?.swapped && row.chart.performedFileId) {
+                patch.fileId = row.chart.performedFileId
+                patch.songId = row.chart.performedFileId
+                patch.title = row.chart.performedTitle || row.title
+            }
+            if (Object.keys(patch).length > 0) {
+                batch.update(target.ref, { ...patch, lastModifiedAt: nowIso })
+                rowsStamped += 1
+            }
         }
     }
 

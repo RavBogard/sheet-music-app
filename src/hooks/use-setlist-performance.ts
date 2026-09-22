@@ -20,9 +20,18 @@ import {
 import { Setlist, SetlistTrack, SetlistMusician } from "@/types/models"
 import { MusicianProfile } from "@/types/models"
 import { toISOString } from "@/lib/firestore-helpers"
+import { applyTonight, eventDayOf, overridesApply, type OverridesDoc, type WithTonight } from "@/lib/performance/tonight"
+import { subscribeTonight as defaultSubscribeTonight } from "@/lib/performance/tonight-client"
 
 interface UseSetlistPerformanceReturn {
-    tracks: SetlistTrack[]
+    /** The rows to show: the plan with tonight's swaps laid over it. */
+    tracks: WithTonight<SetlistTrack>[]
+    /** The plan alone, exactly as authored. */
+    plannedTracks: SetlistTrack[]
+    /** Tonight's overrides doc when it applies now, else null. */
+    tonightOverrides: OverridesDoc | null
+    /** The service day (America/Chicago) or null when the setlist has none. */
+    serviceDay: string | null
     name: string
     serviceNotes: string | null
     loading: boolean
@@ -68,7 +77,11 @@ interface UseSetlistPerformanceOpts {
     initial?: {
         setlist: Setlist | null
         tracks: SetlistTrack[]
+        /** Tonight's overrides as the server read them (signed-out reload path). */
+        overrides?: OverridesDoc | null
     } | null
+    /** Test-seam for the overrides listener. */
+    subscribeTonight?: typeof defaultSubscribeTonight
 }
 
 /**
@@ -210,8 +223,44 @@ export function useSetlistPerformance(
     // weighed against a guaranteed blank page for every signed-out reader
     // opening a service their device has not cached. On the band's surface,
     // stale-until-reload beats empty.
-    const tracks: SetlistTrack[] =
+    const plannedTracks: SetlistTrack[] =
         liveTracks.length > 0 ? liveTracks : (initial?.tracks ?? liveTracks)
+
+    // TONIGHT-ONLY SWAPS (David's ask 4, 2026-09-22). An additive layer over
+    // the rows above: the overrides doc can only change the chart fields of
+    // rows the plan already has. Missing, unreadable, slow, from another
+    // service day, or past the day in America/Chicago → the plan, unchanged.
+    // Signed-in devices follow the doc live; a signed-out device has what the
+    // server read on load (no anonymous realtime access).
+    const subscribeTonight = opts.subscribeTonight ?? defaultSubscribeTonight
+    const [liveOverrides, setLiveOverrides] = useState<OverridesDoc | null | undefined>(undefined)
+    useEffect(() => {
+        setLiveOverrides(undefined)
+        if (!setlistId || !user) return
+        try {
+            return subscribeTonight(
+                setlistId,
+                (d) => setLiveOverrides(d),
+                (err) => logger.warn(`[useSetlistPerformance] overrides unavailable for ${setlistId}; showing the plan`, err),
+            )
+        } catch (err) {
+            logger.warn(`[useSetlistPerformance] overrides listener failed for ${setlistId}`, err)
+        }
+    }, [setlistId, user, subscribeTonight])
+    const overridesDoc = liveOverrides !== undefined ? liveOverrides : (initial?.overrides ?? null)
+    // Re-evaluate once a minute so a device left open past midnight drops
+    // yesterday's swaps without a reload.
+    const [now, setNow] = useState(() => Date.now())
+    useEffect(() => {
+        const t = setInterval(() => setNow(Date.now()), 60_000)
+        return () => clearInterval(t)
+    }, [])
+    const serviceDay = eventDayOf(setlistData?.eventDate ?? initial?.setlist?.eventDate)
+    const tonightOverrides = overridesApply(overridesDoc, serviceDay, now) ? overridesDoc : null
+    const tracks: WithTonight<SetlistTrack>[] = useMemo(
+        () => applyTonight(plannedTracks, tonightOverrides, serviceDay, now),
+        [plannedTracks, tonightOverrides, serviceDay, now],
+    )
 
     const name: string =
         setlistData?.name || initial?.setlist?.name || "Untitled"
@@ -287,6 +336,9 @@ export function useSetlistPerformance(
 
     return {
         tracks,
+        plannedTracks,
+        tonightOverrides,
+        serviceDay,
         name,
         serviceNotes,
         loading,

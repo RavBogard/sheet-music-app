@@ -46,6 +46,8 @@ export interface MobileCardListProps {
     ) => Promise<void>
     /** Single-row delete (called when Sheet's Delete button fires). */
     onDeleteRow: (track: LocalTrack) => void
+    /** David's ask 4: row id → the chart swapped in for tonight. */
+    tonightByRowId?: Record<string, string>
 }
 
 /**
@@ -80,6 +82,7 @@ export function MobileCardList({
     onContextDelete,
     onCommitTrackPatch,
     onDeleteRow,
+    tonightByRowId,
 }: MobileCardListProps) {
     const [editingTrackId, setEditingTrackId] = useState<string | null>(null)
 
@@ -175,6 +178,7 @@ export function MobileCardList({
                                 key={track.id}
                                 track={track}
                                 isEditing={isEditing}
+                                tonightTitle={tonightByRowId?.[track.id]}
                                 onTap={() =>
                                     setEditingTrackId(
                                         isEditing ? null : track.id,

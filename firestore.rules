@@ -448,6 +448,59 @@ service cloud.firestore {
       allow update, delete: if false; // Immutable once written
     }
 
+    // TONIGHT-ONLY CHART SWAPS (David's ask 4, 2026-09-22).
+    // `setlists/{id}/performance/overrides` holds tonight's swaps, laid over
+    // the planned rows on every iPad; the plan (`tracks/*`) is never written.
+    // Read: signed-in only. Signed-out iPads get the overrides through the
+    // server-rendered frame and `/api/setlists/{id}/tracks` on reload — no
+    // anonymous realtime access. Write: band_leader/admin of the setlist's
+    // tenant, closed field set, and `rev` must advance by exactly one — the
+    // stale-write guard that makes two leaders' simultaneous swaps serialise.
+    // Delete is server-only (a cron may clear past service days).
+    function setlistOrgOf(setlistId) {
+      return get(/databases/$(database)/documents/setlists/$(setlistId)).data.get('orgId', 'crc');
+    }
+    function canLeadSetlist(setlistId) {
+      return isSignedIn() && isBandLeader()
+        && (isAdmin() || setlistOrgOf(setlistId) in callerOrgs());
+    }
+    function overridesShapeOk() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['rows', 'eventDay', 'rev', 'updatedAt', 'updatedBy'])
+        && d.keys().hasAll(['rows', 'eventDay', 'rev', 'updatedAt', 'updatedBy'])
+        && d.rows is map && d.rows.size() <= 300
+        && d.eventDay is string && d.eventDay.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.rev is int && d.updatedAt is number
+        && d.updatedBy == request.auth.uid;
+    }
+    match /setlists/{setlistId}/performance/{docId} {
+      allow get: if isSignedIn() && docId == 'overrides';
+      allow list: if false;
+      allow create: if docId == 'overrides' && canLeadSetlist(setlistId)
+                    && overridesShapeOk() && request.resource.data.rev >= 1;
+      allow update: if docId == 'overrides' && canLeadSetlist(setlistId)
+                    && overridesShapeOk() && request.resource.data.rev == resource.data.rev + 1;
+      allow delete: if false;
+    }
+    // One append-only record per swap / undo / reset. It must be written in
+    // the same commit as the overrides doc it describes (`getAfter` rev
+    // match), so the log cannot drift from what the iPads were shown.
+    match /setlists/{setlistId}/performedDeviations/{eventId} {
+      allow read: if canLeadSetlist(setlistId);
+      allow create: if canLeadSetlist(setlistId)
+                    && request.resource.data.keys().hasOnly(['rowId', 'kind', 'plannedFileId', 'plannedTitle', 'beforeFileId', 'beforeTitle', 'performedFileId', 'performedTitle', 'at', 'by', 'eventDay', 'rev'])
+                    && request.resource.data.keys().hasAll(['rowId', 'kind', 'at', 'by', 'eventDay', 'rev'])
+                    && request.resource.data.rowId is string
+                    && request.resource.data.kind in ['swap', 'undo', 'reset']
+                    && request.resource.data.by == request.auth.uid
+                    && request.resource.data.at is number
+                    && request.resource.data.rev is int
+                    && request.resource.data.eventDay is string
+                    && getAfter(/databases/$(database)/documents/setlists/$(setlistId)/performance/overrides).data.rev == request.resource.data.rev
+                    && getAfter(/databases/$(database)/documents/setlists/$(setlistId)/performance/overrides).data.eventDay == request.resource.data.eventDay;
+      allow update, delete: if false;
+    }
+
     // AUDIT LOGS — Server writes via Admin SDK, Admins read
     match /auditLogs/{logId} {
       allow read: if isAdmin();

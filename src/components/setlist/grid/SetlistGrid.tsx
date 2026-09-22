@@ -28,6 +28,7 @@ import {
     useReactTable,
 } from '@tanstack/react-table'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useTonightTitles } from '@/hooks/use-tonight-overrides'
 import { Copy, Edit3, Music, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -1599,6 +1600,9 @@ export function SetlistGrid({
             ? (lastSignalRef.current = addOpenSignal)
             : addOpenSignal
 
+    // David's ask 4: rows swapped for tonight in Perform show it here.
+    const tonightTitles = useTonightTitles(setlistId, liveSetlist?.eventDate ?? null)
+
     return (
         <div
             data-testid="setlist-grid"
@@ -1710,6 +1714,7 @@ export function SetlistGrid({
                     <MobileCardList
                         setlistId={setlistId}
                         tracks={rows}
+                        tonightByRowId={tonightTitles}
                         onContextEditRow={handleContextEditRow}
                         onContextBindChart={handleContextBindChart}
                         onContextDuplicate={(id) =>

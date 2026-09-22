@@ -30,6 +30,8 @@ export interface SetlistViewProps {
      * changes what is in the setlist — only what this screen draws.
      */
     collapseLiturgy?: boolean
+    /** David's ask 4: open the Swap-for-tonight sheet for a row. Leader-only. */
+    onSwapTap?: (index: number) => void
 }
 
 export function SetlistView({
@@ -43,6 +45,7 @@ export function SetlistView({
     serviceNotes,
     setlistId,
     collapseLiturgy = false,
+    onSwapTap,
 }: SetlistViewProps) {
     // Memoize transposed keys computation (pure function, keyed on tracks + transposition)
     const _transpositionKey = useMemo(
@@ -76,6 +79,11 @@ export function SetlistView({
         // there's no Firestore doc to mutate yet.
         const gestureEligible =
             isLeader && !!setlistId && !!track.id && track.type !== "header"
+        // Swap is for chart-bearing rows only, and only when the page wired it.
+        const swapTap =
+            onSwapTap && isLeader && !!track.id && track.type !== "header" && !!track.fileId
+                ? () => onSwapTap(index)
+                : undefined
         if (!gestureEligible) {
             return (
                 <SetlistRow
@@ -88,6 +96,7 @@ export function SetlistView({
                     isLeader={isLeader}
                     onSongTap={() => onSongTap(index)}
                     onLeaderSetPosition={() => onLeaderSetPosition(index)}
+                    onSwapTap={swapTap}
                 />
             )
         }
@@ -111,6 +120,7 @@ export function SetlistView({
                         onSongTap={() => onSongTap(index)}
                         onLeaderSetPosition={() => onLeaderSetPosition(index)}
                         gestureHandlers={handlers}
+                        onSwapTap={swapTap}
                     />
                 )}
             </LiveDirectorGesture>

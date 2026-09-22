@@ -5,6 +5,7 @@ import { getTracksForSetlist } from "@/lib/server-tracks"
 import { httpError } from "@/lib/http/error-envelope"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import { readTonightOverrides } from "@/lib/performance/tonight-server"
 
 /**
  * GET /api/setlists/{setlistId}/tracks — a setlist's rows, for a signed-out
@@ -85,7 +86,12 @@ export async function GET(
         // R11-b: `order`, then id. `getTracksForSetlist` does not sort.
         tracks.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
 
-        return NextResponse.json({ found: true, tracks })
+        // Tonight's swaps (David's ask 4) ride along for a signed-out reader,
+        // who has no realtime access to the overrides doc; the client lays
+        // them over `tracks`, which stay exactly the plan.
+        const overrides = await readTonightOverrides(db, setlistId)
+
+        return NextResponse.json({ found: true, tracks, overrides })
     } catch (error: unknown) {
         logger.warn("[setlists/tracks] fetch failed:", error)
         return httpError(
