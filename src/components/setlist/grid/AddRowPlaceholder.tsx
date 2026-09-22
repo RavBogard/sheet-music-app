@@ -1,33 +1,19 @@
 'use client'
 
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from 'cmdk'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { FileText, Plus } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { CommandGroup, CommandItem } from 'cmdk'
+import { Plus } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
-import { getDb } from '@/lib/local/schema'
-import type { LocalSong } from '@/lib/local/types'
 import { cn } from '@/lib/utils'
 
+import { ChartPickerList } from './ChartPickerList'
 import { TouchOrPopover } from './TouchOrPopover'
 
 /**
- * v53-03-01: cap on the Recent CommandGroup. Mirrors v53-02 ChartBindPopover
- * (Daniel weekly-cycle workflow — "90% same week to week" — top-5 most-recent
- * picks dominate the signal; full alphabetical Library remains one keystroke
- * away). Reads existing v50-04 SongRecentEntry.performedAt; NO Dexie schema
- * bump. AddRowPlaceholder is the picker rendered by AddBar's primary "+ Song"
- * CTA (v53-03-01); it is no longer mounted standalone by SetlistGrid.
+ * v53-03-01: the picker rendered by AddBar's primary "+ Song" CTA. Its list
+ * body (Recent + Library, page-1 thumbnails) is the shared ChartPickerList;
+ * this component adds the Custom "Create new track called …" row.
  */
-const RECENT_LIMIT = 5
-
 export interface AddRowPlaceholderProps {
     /** Insert a new row populated from a known library song. */
     onPickSong: (song: { id: string; title: string }) => void
@@ -49,40 +35,6 @@ export function AddRowPlaceholder({
     useEffect(() => {
         if (autoOpen) setOpen(true)
     }, [autoOpen])
-
-    // v60-09-01: archive filter mirrors ChartBindPopover — archived songs
-    // disappear from both Recent and Library cmdk groups; missing-status
-    // bootstrap docs pass through as active.
-    const songs = useLiveQuery(
-        () =>
-            getDb()
-                .songs.filter((s) => s.status !== 'archived')
-                .toArray(),
-        [],
-        [] as LocalSong[],
-    )
-
-    // v53-03-01: derive Recent + Library arrays — same shape as v53-02
-    // ChartBindPopover. Recent: filter recent[] non-empty, sort by
-    // recent[0].performedAt desc, slice 5. Library: full alphabetical.
-    // cmdk's filter narrows BOTH groups against the typed input via
-    // shouldFilter loop.
-    const { recentSongs, librarySongs } = useMemo(() => {
-        const list = songs ?? []
-        const librarySongs = list
-            .slice()
-            .sort((a, b) => a.title.localeCompare(b.title))
-        const recentSongs = list
-            .filter((s) => Array.isArray(s.recent) && s.recent.length > 0)
-            .slice()
-            .sort(
-                (a, b) =>
-                    (b.recent?.[0]?.performedAt ?? 0) -
-                    (a.recent?.[0]?.performedAt ?? 0),
-            )
-            .slice(0, RECENT_LIMIT)
-        return { recentSongs, librarySongs }
-    }, [songs])
 
     const close = () => {
         setOpen(false)
@@ -156,93 +108,36 @@ export function AddRowPlaceholder({
                     </button>
                 }
             >
-                <Command shouldFilter loop>
-                    <CommandInput
-                        value={filter}
-                        onValueChange={setFilter}
-                        placeholder="Type a song title…"
-                        className="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
-                        onKeyDown={(e) => {
-                            if (e.key === 'Escape') {
-                                e.preventDefault()
-                                close()
-                            }
-                        }}
-                    />
-                    <CommandList className="max-h-72 overflow-y-auto py-1">
-                        <CommandEmpty className="px-3 py-2 text-sm text-muted-foreground">
-                            No matches.
-                        </CommandEmpty>
-                        {recentSongs.length > 0 && (
-                            <CommandGroup heading="Recent">
-                                {recentSongs.map((song) => (
-                                    <CommandItem
-                                        key={`recent-${song.id}`}
-                                        value={song.title}
-                                        onSelect={() =>
-                                            handlePick({
-                                                id: song.id,
-                                                title: song.title,
-                                            })
-                                        }
-                                        className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
-                                    >
-                                        <FileText
-                                            aria-hidden
-                                            className="h-3.5 w-3.5 text-muted-foreground/70"
-                                        />
-                                        <span className="truncate">
-                                            {song.title}
-                                        </span>
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        )}
-                        {librarySongs.length > 0 && (
-                            <CommandGroup heading="Library">
-                                {librarySongs.map((song) => (
-                                    <CommandItem
-                                        key={song.id}
-                                        value={song.title}
-                                        onSelect={() =>
-                                            handlePick({
-                                                id: song.id,
-                                                title: song.title,
-                                            })
-                                        }
-                                        className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
-                                    >
-                                        <FileText
-                                            aria-hidden
-                                            className="h-3.5 w-3.5 text-muted-foreground/70"
-                                        />
-                                        <span className="truncate">
-                                            {song.title}
-                                        </span>
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        )}
-                        {filter.trim().length > 0 && (
-                            <CommandGroup heading="Custom">
-                                <CommandItem
-                                    value={`__create__${filter}`}
-                                    onSelect={handleFreeText}
-                                    className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
-                                >
-                                    <Plus
-                                        aria-hidden
-                                        className="h-3.5 w-3.5 text-muted-foreground/70"
-                                    />
-                                    <span>
-                                        Create new track called “
-                                        {filter.trim()}”
-                                    </span>
-                                </CommandItem>
-                            </CommandGroup>
-                        )}
-                    </CommandList>
-                </Command>
+                <ChartPickerList
+                    filter={filter}
+                    onFilterChange={setFilter}
+                    onPick={handlePick}
+                    onEscape={close}
+                    inputAriaLabel="Add a song"
+                    placeholder="Type a song title…"
+                    inputClassName="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
+                    listClassName="max-h-72 overflow-y-auto py-1"
+                    itemClassName="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
+                >
+                    {filter.trim().length > 0 && (
+                        <CommandGroup heading="Custom">
+                            <CommandItem
+                                value={`__create__${filter}`}
+                                onSelect={handleFreeText}
+                                className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15"
+                            >
+                                <Plus
+                                    aria-hidden
+                                    className="h-3.5 w-3.5 text-muted-foreground/70"
+                                />
+                                <span>
+                                    Create new track called “
+                                    {filter.trim()}”
+                                </span>
+                            </CommandItem>
+                        </CommandGroup>
+                    )}
+                </ChartPickerList>
             </TouchOrPopover>
         </div>
     )

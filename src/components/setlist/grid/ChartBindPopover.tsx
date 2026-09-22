@@ -1,29 +1,15 @@
 'use client'
 
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from 'cmdk'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState, type ReactNode } from 'react'
-
-import { getDb } from '@/lib/local/schema'
-import type { LocalSong } from '@/lib/local/types'
-import { isJunkLibraryRow } from '@/lib/library/junk-filter'
+import { useState, type ReactNode } from 'react'
 
 import { TouchOrPopover } from './TouchOrPopover'
-import { ChartPickerItemContent } from './ChartPickerItemContent'
+import { ChartPickerList } from './ChartPickerList'
 
 /**
- * v53-02-01: cap on the Recent CommandGroup. Daniel's stated workflow
- * ("90% same week to week") makes the top-5 recent picks the dominant
- * signal; deeper history lives in the alphabetical Library group.
+ * v53-02-01 in-cell chart picker. The list body (Recent + Library, page-1
+ * thumbnails, archive/junk filtering) lives in ChartPickerList, shared with
+ * ChartBindDialog and AddRowPlaceholder.
  */
-const RECENT_LIMIT = 5
 
 export interface ChartBindSelection {
     songId: string
@@ -68,52 +54,6 @@ export function ChartBindPopover({
         onOpenChange?.(next)
     }
 
-    // v60-09-01: archive filter — `status !== 'archived'` keeps the predicate
-    // inside the Dexie worker and excludes archived rows from cmdk filter
-    // surface, Recent group, and Library group uniformly. Missing-status docs
-    // (v54-01-01 bootstrap) pass through as active.
-    // v11.5-04-02: also drop test/junk rows via the shared pure predicate. The
-    // Dexie songs mirror only carries title + status, so this catches .DS_Store
-    // and audio/office-by-name; test-uid rows (no uploadedBy here) are cleared
-    // by deletion, not this filter — browse is the primary, fully-fielded gate.
-    const songs = useLiveQuery(
-        () =>
-            getDb()
-                .songs.filter(
-                    (s) =>
-                        s.status !== 'archived' &&
-                        !isJunkLibraryRow({ name: s.title, status: s.status }),
-                )
-                .toArray(),
-        [],
-        [] as LocalSong[],
-    )
-
-    // v53-02-01: derive TWO arrays from the source list — `recentSongs`
-    // (capped, sorted by `recent[0].performedAt` desc) and `librarySongs`
-    // (full alphabetical). Both render as separate CommandGroups so
-    // Daniel's most-recently-used picks float to the top while the full
-    // library remains one cmdk filter-keystroke away. No dedup penalty:
-    // a song appearing in BOTH groups is the Apple-Music / Spotify
-    // "Recently Played + Library" pattern (acceptable; cmdk's filter
-    // narrows both groups in lockstep).
-    const { recentSongs, librarySongs } = useMemo(() => {
-        const list = songs ?? []
-        const librarySongs = list
-            .slice()
-            .sort((a, b) => a.title.localeCompare(b.title))
-        const recentSongs = list
-            .filter((s) => Array.isArray(s.recent) && s.recent.length > 0)
-            .slice()
-            .sort(
-                (a, b) =>
-                    (b.recent?.[0]?.performedAt ?? 0) -
-                    (a.recent?.[0]?.performedAt ?? 0),
-            )
-            .slice(0, RECENT_LIMIT)
-        return { recentSongs, librarySongs }
-    }, [songs])
-
     const close = () => {
         setOpen(false)
         setFilter('')
@@ -140,74 +80,18 @@ export function ChartBindPopover({
             contentTestId="chart-bind-popover"
             trigger={children}
         >
-            <Command shouldFilter loop>
-                <CommandInput
-                    value={filter}
-                    onValueChange={setFilter}
-                    placeholder="Search the library…"
-                    aria-label={inputAriaLabel}
-                    className="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
-                    onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                            e.preventDefault()
-                            close()
-                        }
-                    }}
-                />
-                <CommandList className="max-h-72 overflow-y-auto py-1">
-                    <CommandEmpty className="px-3 py-2 text-sm text-muted-foreground">
-                        No matches.
-                    </CommandEmpty>
-                    {recentSongs.length > 0 && (
-                        <CommandGroup heading="Recent">
-                            {recentSongs.map((song) => (
-                                <CommandItem
-                                    key={`recent-${song.id}`}
-                                    value={song.title}
-                                    onSelect={() =>
-                                        handlePick({
-                                            id: song.id,
-                                            title: song.title,
-                                        })
-                                    }
-                                    data-current={
-                                        song.id === currentSongId
-                                            ? 'true'
-                                            : undefined
-                                    }
-                                    className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15 data-[current=true]:text-indigo-300"
-                                >
-                                    <ChartPickerItemContent song={song} />
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    )}
-                    {librarySongs.length > 0 && (
-                        <CommandGroup heading="Library">
-                            {librarySongs.map((song) => (
-                                <CommandItem
-                                    key={song.id}
-                                    value={song.title}
-                                    onSelect={() =>
-                                        handlePick({
-                                            id: song.id,
-                                            title: song.title,
-                                        })
-                                    }
-                                    data-current={
-                                        song.id === currentSongId
-                                            ? 'true'
-                                            : undefined
-                                    }
-                                    className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15 data-[current=true]:text-indigo-300"
-                                >
-                                    <ChartPickerItemContent song={song} />
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    )}
-                </CommandList>
-            </Command>
+            <ChartPickerList
+                filter={filter}
+                onFilterChange={setFilter}
+                onPick={handlePick}
+                onEscape={close}
+                currentSongId={currentSongId}
+                inputAriaLabel={inputAriaLabel}
+                placeholder="Search the library…"
+                inputClassName="w-full bg-transparent px-3 py-2 text-sm outline-none border-b border-white/10"
+                listClassName="max-h-72 overflow-y-auto py-1"
+                itemClassName="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm aria-selected:bg-indigo-500/15 data-[current=true]:text-indigo-300"
+            />
         </TouchOrPopover>
     )
 }

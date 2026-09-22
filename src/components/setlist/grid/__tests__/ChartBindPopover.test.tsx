@@ -85,7 +85,9 @@ describe('ChartBindPopover', () => {
         await waitFor(() => {
             expect(screen.getByTestId('chart-bind-popover')).toBeInTheDocument()
         })
-        expect(screen.getByText('Adon Olam')).toBeInTheDocument()
+        // The list body mounts with the popover, so its live query resolves
+        // just after open.
+        expect(await screen.findByText('Adon Olam')).toBeInTheDocument()
         expect(screen.getByText('Lecha Dodi')).toBeInTheDocument()
     })
 

@@ -1,15 +1,6 @@
 'use client'
 
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from 'cmdk'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useState } from 'react'
 
 import {
     Dialog,
@@ -18,9 +9,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import { getDb } from '@/lib/local/schema'
-import type { LocalSong } from '@/lib/local/types'
-import { ChartPickerItemContent } from './ChartPickerItemContent'
+import { ChartPickerList } from './ChartPickerList'
 
 /**
  * v54-02-01 (Bug 3 fix, 2026-05-12): centered command dialog for binding a
@@ -36,12 +25,9 @@ import { ChartPickerItemContent } from './ChartPickerItemContent'
  * overlays — open a centered command dialog.
  *
  * The cmdk body (Recent + Library groups, fuzzy filter, currentSongId
- * highlight) is preserved verbatim from ChartBindPopover so the
- * keyboarding / a11y story is unchanged.
+ * highlight, page-1 thumbnails) is the shared ChartPickerList, so the
+ * keyboarding / a11y story matches ChartBindPopover exactly.
  */
-
-/** v53-02-01 cap on Recent group — top-5 most-recent picks. */
-const RECENT_LIMIT = 5
 
 export interface ChartBindSelection {
     songId: string
@@ -69,33 +55,6 @@ export function ChartBindDialog({
     onBind,
 }: ChartBindDialogProps) {
     const [filter, setFilter] = useState('')
-
-    const songs = useLiveQuery(
-        () => getDb().songs.toArray(),
-        [],
-        [] as LocalSong[],
-    )
-
-    // v60-09-01: per-open re-prime deleted. The continuous subscribeSongsLibrary
-    // listener installed by SetlistGridHydrator keeps Dexie live with all
-    // songs/* mutations across devices, making the on-open refresh redundant.
-
-    const { recentSongs, librarySongs } = useMemo(() => {
-        const list = songs ?? []
-        const librarySongs = list
-            .slice()
-            .sort((a, b) => a.title.localeCompare(b.title))
-        const recentSongs = list
-            .filter((s) => Array.isArray(s.recent) && s.recent.length > 0)
-            .slice()
-            .sort(
-                (a, b) =>
-                    (b.recent?.[0]?.performedAt ?? 0) -
-                    (a.recent?.[0]?.performedAt ?? 0),
-            )
-            .slice(0, RECENT_LIMIT)
-        return { recentSongs, librarySongs }
-    }, [songs])
 
     const close = () => {
         onOpenChange(false)
@@ -125,75 +84,19 @@ export function ChartBindDialog({
                         Pick a song from your library to attach to this track.
                     </DialogDescription>
                 </DialogHeader>
-                <Command shouldFilter loop>
-                    <CommandInput
-                        value={filter}
-                        onValueChange={setFilter}
-                        placeholder="Search the library…"
-                        aria-label={inputAriaLabel}
-                        className="w-full bg-transparent px-4 py-2 text-sm outline-none border-t border-b border-white/10"
-                        autoFocus
-                        onKeyDown={(e) => {
-                            if (e.key === 'Escape') {
-                                e.preventDefault()
-                                close()
-                            }
-                        }}
-                    />
-                    <CommandList className="max-h-80 overflow-y-auto py-1">
-                        <CommandEmpty className="px-4 py-3 text-sm text-muted-foreground">
-                            No matches.
-                        </CommandEmpty>
-                        {recentSongs.length > 0 && (
-                            <CommandGroup heading="Recent">
-                                {recentSongs.map((song) => (
-                                    <CommandItem
-                                        key={`recent-${song.id}`}
-                                        value={song.title}
-                                        onSelect={() =>
-                                            handlePick({
-                                                id: song.id,
-                                                title: song.title,
-                                            })
-                                        }
-                                        data-current={
-                                            song.id === currentSongId
-                                                ? 'true'
-                                                : undefined
-                                        }
-                                        className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm aria-selected:bg-indigo-500/15 data-[current=true]:text-indigo-300"
-                                    >
-                                        <ChartPickerItemContent song={song} />
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        )}
-                        {librarySongs.length > 0 && (
-                            <CommandGroup heading="Library">
-                                {librarySongs.map((song) => (
-                                    <CommandItem
-                                        key={song.id}
-                                        value={song.title}
-                                        onSelect={() =>
-                                            handlePick({
-                                                id: song.id,
-                                                title: song.title,
-                                            })
-                                        }
-                                        data-current={
-                                            song.id === currentSongId
-                                                ? 'true'
-                                                : undefined
-                                        }
-                                        className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm aria-selected:bg-indigo-500/15 data-[current=true]:text-indigo-300"
-                                    >
-                                        <ChartPickerItemContent song={song} />
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        )}
-                    </CommandList>
-                </Command>
+                <ChartPickerList
+                    filter={filter}
+                    onFilterChange={setFilter}
+                    onPick={handlePick}
+                    onEscape={close}
+                    currentSongId={currentSongId}
+                    inputAriaLabel={inputAriaLabel}
+                    placeholder="Search the library…"
+                    inputClassName="w-full bg-transparent px-4 py-2 text-sm outline-none border-t border-b border-white/10"
+                    listClassName="max-h-80 overflow-y-auto py-1"
+                    itemClassName="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm aria-selected:bg-indigo-500/15 data-[current=true]:text-indigo-300"
+                    autoFocus
+                />
             </DialogContent>
         </Dialog>
     )
