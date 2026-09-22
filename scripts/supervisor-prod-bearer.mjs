@@ -20,7 +20,8 @@
  *     stderr, and the next prod probe uses `Authorization: Bearer $BEARER`.
  *
  *  3. The helper first verifies the bearer is healthy by calling
- *     `list_minted_bearers` on the live MCP endpoint. If the bearer is
+ *     `list_minted_bearers` on the live OPS MCP endpoint (audit item (p) moved
+ *     the credential tools there). If the bearer is
  *     revoked / expired / network-broken / missing, it exits with a non-zero
  *     code AND a one-line stderr message explaining exactly what Daniel
  *     needs to do.
@@ -42,6 +43,8 @@
  *   3  — bearer rejected by the live MCP route (HTTP 401 OR rich-envelope
  *        refusal). Ask Daniel for a fresh root.
  *   4  — network error / unexpected HTTP / unparseable response.
+ *   5  — the endpoint does not carry the probe tool. A bug in this script's
+ *        endpoint constant, never a problem with the bearer.
  *
  * Anti-leak rule (per dispatch §"Out of scope"): the bearer is NEVER written
  * to stderr, NEVER logged, NEVER captured in Sentry. Stdout is the single
@@ -56,7 +59,17 @@ import { fileURLToPath, pathToFileURL } from "node:url"
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const DEFAULT_ENDPOINT = "https://www.centralreform.live/api/mcp"
+/**
+ * The OPS surface, because that is where `list_minted_bearers` lives.
+ *
+ * Audit item (p) split the tool surface in two and moved the credential tools
+ * to `/api/ops/mcp`. This helper kept probing `/api/mcp`, got back "Tool
+ * list_minted_bearers not found", and reported a perfectly good bearer as
+ * revoked — sending the reader off to ask Daniel to mint a replacement for a
+ * credential that had nothing wrong with it. The same `crl_live_` bearer
+ * reaches both surfaces, so probing ops validates the credential for either.
+ */
+const DEFAULT_ENDPOINT = "https://www.centralreform.live/api/ops/mcp"
 const DEFAULT_ENV_FILE = resolve(__dirname, "..", ".env.local")
 const ENV_KEY = "SUPERVISOR_PROD_BEARER"
 const BEARER_PREFIX = "crl_live_"
@@ -66,6 +79,14 @@ export const EXIT_CODES = Object.freeze({
     MISSING_ENV: 2,
     REVOKED: 3,
     NETWORK: 4,
+    /**
+     * The probe tool is not on the endpoint we asked. This is a fault in THIS
+     * SCRIPT's assumptions, not in the bearer, and it gets its own code
+     * because the two demand opposite responses: a revoked bearer needs Daniel
+     * to mint a new one, a moved tool needs one line changed here. Conflating
+     * them is exactly what happened when the ops split landed.
+     */
+    PROBE_TOOL_MISSING: 5,
 })
 
 /**
@@ -232,6 +253,18 @@ export async function probeBearer(bearer, opts = {}) {
     const result = parsed.result
     if (!result || result.isError === true) {
         const detail = JSON.stringify(result?.content ?? result ?? null).slice(0, 400)
+        // "Tool not found" is NOT a bad bearer. The server answered, and it
+        // answered about the tool, which means the credential got far enough
+        // to be told so. Say that instead of blaming the bearer.
+        if (/not found|unknown tool|-32602/i.test(detail)) {
+            return {
+                error:
+                    `${endpoint} does not carry the probe tool 'list_minted_bearers': ${detail} — ` +
+                    `this is a stale endpoint in supervisor-prod-bearer.mjs, NOT a bad bearer. ` +
+                    `Find which surface the tool moved to and update DEFAULT_ENDPOINT.`,
+                exitCode: EXIT_CODES.PROBE_TOOL_MISSING,
+            }
+        }
         return {
             error: `MCP refused list_minted_bearers (bearer likely revoked or wrong-role): ${detail} — ask Daniel to mint a fresh root bearer + paste into .env.local, then re-run.`,
             exitCode: EXIT_CODES.REVOKED,

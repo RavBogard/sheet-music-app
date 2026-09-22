@@ -260,3 +260,71 @@ describe("main", () => {
         expect(err.get()).toMatch(/ask Daniel to mint/)
     })
 })
+
+/**
+ * The ops-split regression. Audit item (p) moved `list_minted_bearers` to
+ * `/api/ops/mcp`; this helper kept probing `/api/mcp`, and the resulting
+ * "Tool not found" fell into the revoked bucket — so a healthy credential was
+ * reported as revoked, with instructions to go ask Daniel to replace it.
+ *
+ * The server answering "no such tool" is proof the bearer got far enough to be
+ * told so, which is the opposite of a bad bearer.
+ */
+describe("probeBearer — a moved tool is not a bad bearer", () => {
+    const notFoundBody = JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        result: {
+            isError: true,
+            content: [
+                { type: "text", text: "MCP error -32602: Tool list_minted_bearers not found" },
+            ],
+        },
+    })
+
+    it("exits PROBE_TOOL_MISSING, not REVOKED, when the tool is absent", async () => {
+        const r = await probeBearer("crl_live_x", {
+            fetch: stubFetch({ status: 200, body: notFoundBody }),
+        })
+        expect(r.exitCode).toBe(EXIT_CODES.PROBE_TOOL_MISSING)
+        expect(r.exitCode).not.toBe(EXIT_CODES.REVOKED)
+    })
+
+    it("blames the endpoint rather than telling anyone to mint a new bearer", async () => {
+        const r = await probeBearer("crl_live_x", {
+            fetch: stubFetch({ status: 200, body: notFoundBody }),
+        })
+        expect(r.error).toMatch(/NOT a bad bearer/)
+        expect(r.error).not.toMatch(/mint a fresh root bearer/)
+    })
+
+    it("still calls a genuine refusal revoked", async () => {
+        const refused = JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            result: {
+                isError: true,
+                content: [{ type: "text", text: "forbidden_role: admin required" }],
+            },
+        })
+        const r = await probeBearer("crl_live_x", {
+            fetch: stubFetch({ status: 200, body: refused }),
+        })
+        expect(r.exitCode).toBe(EXIT_CODES.REVOKED)
+    })
+
+    it("probes the ops surface by default, where the tool actually lives", async () => {
+        let seen = ""
+        await probeBearer("crl_live_x", {
+            fetch: async (url: string) => {
+                seen = url
+                return {
+                    status: 200,
+                    headers: { get: () => "application/json" },
+                    text: async () => OK_RPC_BODY,
+                }
+            },
+        })
+        expect(seen).toBe("https://www.centralreform.live/api/ops/mcp")
+    })
+})
