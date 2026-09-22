@@ -56,10 +56,16 @@ test.describe('chart-bind picker page-1 preview (iPad)', () => {
         if (!baseURL || !setlist) throw new Error('seed failed')
         test.skip(!pdf, 'no active PDF in the library to preview')
 
+        // Sign the Web SDK in on a neutral page first, then open the setlist,
+        // so the songs listener mounts already authenticated — the order a
+        // real iPad has. (Signing in after the setlist page mounted leaves its
+        // listener denied, and reloading that page raises a sync conflict.)
         await loginAsTestUser(context, baseURL, leaderBearer)
-        await page.goto(`/setlists/${setlist.setlistId}`, { waitUntil: 'domcontentloaded' })
+        await page.goto('/library', { waitUntil: 'domcontentloaded' })
         const { customToken } = await loginAsTestUser(context, baseURL, leaderBearer)
-        await signInWebSdk(page, customToken ?? '', { required: false })
+        const web = await signInWebSdk(page, customToken ?? '', { required: false })
+        test.skip(!web.signedIn, 'Web-SDK sign-in bridge unavailable: the Dexie-backed picker cannot fill')
+        await page.goto(`/setlists/${setlist.setlistId}`, { waitUntil: 'domcontentloaded' })
 
         await expect(page.getByTestId('mobile-card-list')).toBeVisible({ timeout: 30_000 })
         await page.locator('[aria-label="ZZ Preview Row. Tap to edit."]').first().click()
@@ -68,6 +74,8 @@ test.describe('chart-bind picker page-1 preview (iPad)', () => {
 
         const input = page.locator('input[cmdk-input]')
         await expect(input).toBeVisible({ timeout: 10_000 })
+        // The songs listener fills the list; wait for it before searching.
+        await expect(page.locator('[cmdk-item]').first()).toBeVisible({ timeout: 20_000 })
         const query = pdf!.name.replace(/\.pdf$/i, '')
         await input.fill(query)
 

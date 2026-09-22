@@ -137,8 +137,8 @@ export async function findCuratedPdf(
 }
 
 /**
- * End-to-end seed: create a setlist owned by `leaderBearer`, add tracks,
- * publish to `audience` (default 'band' = admin+band_leader+musician).
+ * End-to-end seed: create a setlist owned by `leaderBearer` and add tracks.
+ * (It used to publish too; Publish is retired, R-0919-audit-3.)
  *
  * Each TrackSeed:
  *   - if `unbound: true`, the row is created with no `songId` (chart cell
@@ -206,21 +206,15 @@ export async function seedPublishedSetlist(
         tracks.push({ id: trackId, title: seed.title, fileId: songId })
     }
 
-    // Publish. `dryRun: false` to actually flip publishedAt + write the
-    // snapshot; audience 'band' so test-musician recipients are included.
-    const publishResult = await mcpCallOrThrow<{
-        publishedAt?: string
-    }>(request, baseURL, leaderBearer, 'publish_setlist', {
-        setlistId,
-        audience: args.audience ?? 'band',
-        dryRun: false,
-    })
-
+    // Publish is retired (R-0919-audit-3): a setlist is visible to the band
+    // without it, and `publish_setlist` no longer exists. `audience` is kept
+    // in the signature so existing specs compile; it has nothing to do now.
+    void args.audience
     return {
         setlistId,
         name: args.name,
         tracks,
-        publishedAt: publishResult.publishedAt ?? new Date().toISOString(),
+        publishedAt: new Date().toISOString(),
     }
 }
 
@@ -325,7 +319,7 @@ export async function seedLargeSetlist(
         setlistId,
         name: args.name,
         tracks,
-        publishedAt: publishResult.publishedAt ?? new Date().toISOString(),
+        publishedAt: new Date().toISOString(),
     }
 }
 
@@ -403,6 +397,6 @@ export async function seedLongPublishedSetlist(
         setlistId,
         name: args.name,
         tracks,
-        publishedAt: publishResult.publishedAt ?? new Date().toISOString(),
+        publishedAt: new Date().toISOString(),
     }
 }

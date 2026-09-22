@@ -1,3 +1,4 @@
+import { surfaceFor } from '../../src/lib/mcp/surfaces'
 import type { APIRequestContext } from '@playwright/test'
 
 /**
@@ -30,7 +31,10 @@ export async function mcpCall<T = unknown>(
     tool: string,
     args: Record<string, unknown> = {},
 ): Promise<McpEnvelope<T>> {
-    const res = await request.post(`${baseURL}/api/mcp`, {
+    // Since the (p) split the ops tools (create_test_account, revoke_…,
+    // cleanup_…) answer only on /api/ops/mcp; route by the server's own list.
+    const endpoint = surfaceFor(tool) === 'ops' ? '/api/ops/mcp' : '/api/mcp'
+    const res = await request.post(`${baseURL}${endpoint}`, {
         headers: {
             'Authorization': `Bearer ${bearer}`,
             'Content-Type': 'application/json; charset=utf-8',

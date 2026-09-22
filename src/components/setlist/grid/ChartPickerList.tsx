@@ -10,7 +10,7 @@ import {
     CommandList,
 } from 'cmdk'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useContext, useMemo, type ReactNode } from 'react'
+import { useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { useLibrary } from '@/hooks/use-library'
 import { useLibraryStore } from '@/lib/library-store'
@@ -36,6 +36,9 @@ import { openHighlightedChartPreview } from './ChartThumb'
 
 /** v53-02-01 cap on Recent group — top-5 most-recent picks. */
 export const RECENT_LIMIT = 5
+
+/** How often an empty list re-reads Dexie while its picker is open. */
+export const EMPTY_RETRY_MS = 1000
 
 export interface ChartPickerSong {
     id: string
@@ -95,11 +98,24 @@ export function ChartPickerList({
 }: ChartPickerListProps) {
     const hasQueryClient = useContext(QueryClientContext) != null
 
+    // A picker opened on a cold device (first visit, the songs listener still
+    // filling Dexie) could read the table empty and then never hear about the
+    // rows that landed after — seen on the band's iPad surface in WebKit,
+    // 2026-09-22: 990 rows in Dexie, "No matches." on screen until reopened.
+    // So while the list is empty, re-run the query once a second; once rows
+    // arrive the live query carries on as before.
+    const [emptyRetry, setEmptyRetry] = useState(0)
     const songs = useLiveQuery(
         () => getDb().songs.filter(isPickableSong).toArray(),
-        [],
+        [emptyRetry],
         [] as LocalSong[],
     )
+    const isEmpty = (songs ?? []).length === 0
+    useEffect(() => {
+        if (!isEmpty) return
+        const t = setTimeout(() => setEmptyRetry((n) => n + 1), EMPTY_RETRY_MS)
+        return () => clearTimeout(t)
+    }, [isEmpty, emptyRetry])
 
     const libraryFiles = useLibraryStore((s) => s.allFiles)
     const mimeById = useMemo(() => {
