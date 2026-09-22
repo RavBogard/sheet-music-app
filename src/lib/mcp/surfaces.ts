@@ -35,17 +35,32 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
  * instead of silently missing.
  */
 export const OPS_TOOLS: ReadonlySet<string> = new Set([
-    // Backfills and one-shot migrations. Each ran once against a corpus; none
-    // is part of a week. The handoff wants these RETIRED rather than moved,
-    // once each is confirmed to have run against both tenants — that
-    // confirmation needs admin reads this session's account does not have, so
-    // they are parked here rather than deleted on an assumption.
+    // Backfills and hygiene sweeps. The handoff wanted all six RETIRED as
+    // completed one-shots. Confirmed 2026-09-22 with an admin bearer, and the
+    // premise only held for one of them:
+    //
+    //   - `seed_legacy_dedupe_run` WAS a true one-shot — it imported the
+    //     09-01 undo artifact into `dedupeRuns/legacy-2026-09-01`. That record
+    //     exists and carries its 83 prior-status rows, and the source JSON is
+    //     no longer in the repo. RETIRED; the helper and its tests stay.
+    //   - The other four are NOT finished migrations, they are RECURRING
+    //     hygiene sweeps. Run that same day they found live drift:
+    //     track_mimetype healed 253 tracks, setlist_test_flag 21 setlists,
+    //     library_index 4 rows. Deleting them would leave the next 278 rows of
+    //     drift with no remedy, so they stay.
+    //   - `backfill_heal_metadata` was mis-classified by the handoff: it takes
+    //     a required `fileId` and repairs one file. It is not a sweep and has
+    //     no "completed" state to confirm.
+    //
+    // Tenant note: content_hash and library_index are org-scoped via
+    // `orgFrom(extra)`, and the confirmation above covers the crc tenant only
+    // (927 of 990 library_index rows). The 63 Brothers Lazaroff rows need a
+    // BL-org bearer, which is not mintable from a crc one.
     "backfill_content_hash",
     "backfill_heal_metadata",
     "backfill_track_mimetype",
     "backfill_library_index",
     "backfill_setlist_test_flag",
-    "seed_legacy_dedupe_run",
     "archive_nonchart_artifacts",
     "reconcile_library",
 

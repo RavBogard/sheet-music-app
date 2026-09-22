@@ -17,7 +17,7 @@ import {
     dedupeLibraryIndex,
     backfillLibraryIndex,
 } from "./library"
-import { undoDedupeGroup, seedLegacyDedupeRun } from "./undo-dedupe"
+import { undoDedupeGroup } from "./undo-dedupe"
 import { markChartStatus } from "./mark-chart-status"
 import { backfillContentHash } from "./backfill-content-hash"
 import { searchChartText } from "./chart-text-search"
@@ -2154,50 +2154,6 @@ export function registerWriteTools(server: McpServer): void {
         async (args, extra) =>
             jsonResult(
                 await markChartStatus(uidFrom(extra), args, orgFrom(extra)),
-            ),
-    )
-
-    server.registerTool(
-        "seed_legacy_dedupe_run",
-        {
-            description:
-                "Admin-only ONE-TIME import: turn the hand-written `L1-W2-DEDUPE-UNDO-2026-09-01.json` artifact into a real `dedupeRuns/legacy-2026-09-01` record, so `undo_dedupe_group` can reach the 09-01 sweep's rows from inside the system instead of from a JSON file in another repository. The rows are passed IN rather than read from disk — that file lives in the CentralReform.live repo root and is never deployed with the app. Each row's `priorStatus` is preserved verbatim: of the 85 rows, 67 were `active` and 18 were `archived`, and it is exactly those 18 that make a default-to-`active` restore unsafe. What this tool REFUSES to do is invent records for rows the file does not cover: marked rows absent from the file get NO record and are returned in `markedWithNoRecord` as a population — 20 such rows exist [measured exhaustively over all 891 catalog rows, 2026-09-03; the order estimated 15], most of them the 09-03 naming-dedupe run's work, which recorded nothing. Rows in the file that are NOT `duplicate` today are still recorded but reported in `noLongerMarked`, because restoring them would be a no-op and the operator should know which. F-05: `dryRun` reports the whole shape — histogram, coverage gaps, both populations — without writing, and never needs `force`. Returns `{runId, seeded, stillMarked, noLongerMarked[], markedWithNoRecord[], priorStatusHistogram, dryRun}`.",
-            inputSchema: {
-                rows: z
-                    .array(
-                        z.object({
-                            fileId: z.string(),
-                            name: z.string(),
-                            priorStatus: z.string(),
-                            canonicalFileId: z.string(),
-                            canonicalName: z.string().optional(),
-                        }),
-                    )
-                    .describe(
-                        "The parsed contents of `L1-W2-DEDUPE-UNDO-2026-09-01.json` — 85 rows of `{fileId, name, priorStatus, canonicalFileId, canonicalName}`. Pass the file verbatim; `priorStatus` is recorded as given and is the value a later restore will use.",
-                    ),
-                dryRun: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "When true, reports the record it WOULD write plus both coverage populations, without writing. F-05: does not require force.",
-                    ),
-                force: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "Required for the real write. Pair with `dryRun: false`.",
-                    ),
-            },
-        },
-        async (args, extra) =>
-            jsonResult(
-                await seedLegacyDedupeRun(
-                    uidFrom(extra),
-                    args.rows,
-                    { dryRun: args.dryRun, force: args.force },
-                    orgFrom(extra),
-                ),
             ),
     )
 

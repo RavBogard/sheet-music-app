@@ -124,19 +124,22 @@ describe("forSurface — registration is filtered, nothing else is", () => {
 
 describe("OPS_TOOLS — the list itself", () => {
     it("has no duplicates and is not accidentally empty or enormous", () => {
-        expect(OPS_TOOLS.size).toBe(48)
+        expect(OPS_TOOLS.size).toBe(47)
     })
 
-    it("contains every backfill the handoff names for retirement", () => {
+    it("keeps the hygiene sweeps that still find live drift", () => {
         for (const t of [
             "backfill_content_hash",
             "backfill_heal_metadata",
             "backfill_track_mimetype",
             "backfill_library_index",
             "backfill_setlist_test_flag",
-            "seed_legacy_dedupe_run",
         ]) {
             expect(OPS_TOOLS.has(t), t).toBe(true)
         }
+    })
+
+    it("has retired the one true one-shot", () => {
+        expect(OPS_TOOLS.has("seed_legacy_dedupe_run")).toBe(false)
     })
 })
