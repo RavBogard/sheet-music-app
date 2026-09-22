@@ -254,10 +254,35 @@ evidence that would have been missing. `md5CrossCheck` agreed 52 of 52 with
 zero mismatches, so the byte path and the rows agree about which object belongs
 to which row.
 
-**Not run, deliberately.** Hashing those 52 rows is a write against another
-tenant's data, and the task was to confirm, not to sweep. It needs a named
-owner and a deliberate go-ahead. Flagging it as the one open item rather than
-quietly doing it.
+### The BL run — authorized, owned, done
+
+Daniel authorized it after the confirmation; this session was the single named
+owner and ran it once. A second ephemeral BL token was minted the same way,
+used, and revoked (`revokedAt` read back at `2026-09-22T15:13:29Z`).
+
+Re-confirmed the plan against current state before writing, rather than
+trusting the earlier dry run: unchanged at 52 rows, 0 failures, md5 cross-check
+52 of 52 agreed.
+
+| | scanned | read | hashed | alreadyCurrent | failed | remaining |
+|---|---|---|---|---|---|---|
+| dry run | 63 | 52 | 0 | 11 | 0 | 0 |
+| **apply** | 63 | 52 | **52** | 11 | **0** | 0 |
+| verify | 63 | **0** | 0 | **63** | 0 | 0 |
+
+`md5CrossCheck` held at **52 applicable, 52 claimed, 52 agreed, 0 mismatched**
+on every pass — the byte path and the rows agree about which object belongs to
+which row, which is the tool's own stop condition and it never tripped. The
+verify pass reads nothing and hashes nothing, so the run is complete and
+idempotent. **Both tenants are now fully hashed.**
+
+**One finding falls out of it, and it is Daniel's call, not mine.** With the
+hashes in place the byte-identity lane can see BL for the first time, and it
+reports one cluster: two rows, both `active`, both named *You're My Heaven
+(Tonight)*, byte-identical. That is a real duplicate in the Brothers Lazaroff
+library. The lane is REPORT-ONLY by design — every mark decided by bytes is
+Daniel's, per cluster — so nothing was marked. Worth a look before it is
+cloned into a setlist twice.
 
 ## Verification
 
@@ -268,9 +293,14 @@ empty `.next`.
 
 ## Open
 
-1. **52 Brothers Lazaroff rows need `backfill_content_hash`.** Needs an owner
-   and a go-ahead; it is a write on BL data. Everything needed to run it is
-   confirmed working.
+1. **One byte-identical pair in the Brothers Lazaroff library** — two `active`
+   rows of *You're My Heaven (Tonight)*. Reported, not marked; deciding which
+   is canonical is Daniel's.
 2. **(i) on `/library` and `/setlists/[id]`** — still waiting on band traffic,
-   but the summary will now actually show them, and the re-normalization means
-   the history already collected counts toward it.
+   but the summary now shows them by default, and re-normalizing on read means
+   the history already collected counts toward it. Confirmed after the fix
+   deployed: `/login` appears again but its post-deploy samples are FCP/TTFB/INP
+   with still no RUM LCP, so the synthetic 584 ms measurement remains the
+   evidence there; `/setlists/[id]` still has no post-fix samples.
+
+Nothing else from this audit is outstanding.
