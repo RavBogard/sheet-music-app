@@ -26,22 +26,70 @@ import {
 } from "./tonight"
 
 /**
+ * Docs this tab committed, per setlist, and the subscribers to tell. A leader's
+ * own listen stream can be tens of seconds behind their write while it
+ * reconnects (seen on production, 2026-09-22), so the doc the committed
+ * transaction wrote is shown at once rather than waiting for the echo.
+ */
+const committed = new Map<string, OverridesDoc>()
+const committedSubs = new Map<string, Set<(doc: OverridesDoc) => void>>()
+
+function adoptCommitted(setlistId: string, doc: OverridesDoc) {
+    const prev = committed.get(setlistId)
+    if (prev && prev.rev >= doc.rev) return
+    committed.set(setlistId, doc)
+    for (const fn of committedSubs.get(setlistId) ?? []) fn(doc)
+}
+
+/**
  * Follow the overrides doc. `onDoc(null)` for a missing or malformed doc.
  * A read failure (offline, denied, signed out) reports through `onError`
  * and the caller keeps showing the plan — never an empty setlist.
+ *
+ * Every write bumps `rev` by one (the rules enforce it, across service days
+ * too), so the newest known doc wins: a doc this tab committed shows at once,
+ * and a listener snapshot older than it is not shown over it.
  */
 export function subscribeTonight(
     setlistId: string,
     onDoc: (doc: OverridesDoc | null) => void,
     onError: (err: unknown) => void,
 ): Unsubscribe {
-    return subscribeWithDb((db) =>
+    let shownRev = -1
+    const show = (doc: OverridesDoc | null) => {
+        const rev = doc?.rev ?? 0
+        const mine = committed.get(setlistId)
+        if (mine && mine.rev > rev) {
+            if (shownRev >= mine.rev) return
+            shownRev = mine.rev
+            onDoc(mine)
+            return
+        }
+        shownRev = rev
+        onDoc(doc)
+    }
+    const onCommitted = (doc: OverridesDoc) => {
+        if (doc.rev <= shownRev) return
+        shownRev = doc.rev
+        onDoc(doc)
+    }
+    let subs = committedSubs.get(setlistId)
+    if (!subs) committedSubs.set(setlistId, (subs = new Set()))
+    subs.add(onCommitted)
+    const mine = committed.get(setlistId)
+    if (mine) onCommitted(mine)
+
+    const unsubscribe = subscribeWithDb((db) =>
         onSnapshot(
             doc(db, "setlists", setlistId, OVERRIDES_COLLECTION, OVERRIDES_DOC_ID),
-            (snap) => onDoc(snap.exists() ? parseOverridesDoc(snap.data()) : null),
+            (snap) => show(snap.exists() ? parseOverridesDoc(snap.data()) : null),
             onError,
         ),
     )
+    return () => {
+        subs!.delete(onCommitted)
+        unsubscribe()
+    }
 }
 
 async function commit(
@@ -50,7 +98,7 @@ async function commit(
 ): Promise<WritePlan> {
     const db = await getDb()
     const ref = doc(db, "setlists", setlistId, OVERRIDES_COLLECTION, OVERRIDES_DOC_ID)
-    return runTransaction(db, async (tx) => {
+    const plan = await runTransaction(db, async (tx) => {
         const snap = await tx.get(ref)
         const plan = build(snap.exists() ? parseOverridesDoc(snap.data()) : null)
         if (plan.kind !== "write") return plan
@@ -60,6 +108,9 @@ async function commit(
         }
         return plan
     })
+    // Only after the commit resolved: the rules accepted exactly this doc.
+    if (plan.kind === "write") adoptCommitted(setlistId, plan.next)
+    return plan
 }
 
 /** Swap one row for tonight, or undo it (choice = the planned chart / null). */

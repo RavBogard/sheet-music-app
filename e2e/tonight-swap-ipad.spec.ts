@@ -104,6 +104,16 @@ test.describe('tonight-only chart swap (two iPads)', () => {
 
         const L = await performAs(browser, baseURL, leaderBearer, path, 'leader')
         const M = await performAs(browser, baseURL, musicianBearer, path, 'musician')
+        // Failure evidence: the server's overrides state and each page's Web SDK user.
+        const probe = async (at: string) => {
+            const r = await request.get(`${baseURL}/api/setlists/${setlist!.setlistId}/tracks`)
+            const body = (await r.json().catch(() => null)) as { overrides?: { rev?: number; rows?: Record<string, { fileId?: string }> } | null } | null
+            const who = (p: Page) =>
+                p.evaluate(() => (window as unknown as { __c7_auth_for_probes__?: { auth?: { currentUser?: { uid?: string } | null } } }).__c7_auth_for_probes__?.auth?.currentUser?.uid ?? null).catch(() => 'n/a')
+            await L.page.screenshot({ path: `test-results/tonight-probe-${at}-leader.png` }).catch(() => {})
+            await M.page.screenshot({ path: `test-results/tonight-probe-${at}-musician.png` }).catch(() => {})
+            console.log(`[probe ${at}] server rev=${body?.overrides?.rev ?? 'none'} row=${body?.overrides?.rows?.[row.id]?.fileId ?? 'none'} leaderUser=${await who(L.page)} musicianUser=${await who(M.page)}`)
+        }
         try {
             await expect(rowFor(L.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 30_000 })
             await expect(rowFor(M.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 30_000 })
@@ -116,7 +126,10 @@ test.describe('tonight-only chart swap (two iPads)', () => {
             // The label names the chart the row shows now, so it changes with each swap.
             const swapFor = (title: string) => L.page.getByRole('button', { name: `Swap ${title} for tonight`, exact: true })
             const swapBtn = swapFor(row.title)
-            await expect(swapBtn).toBeVisible({ timeout: 15_000 })
+            await expect(swapBtn).toBeVisible({ timeout: 15_000 }).catch(async (e) => {
+                await probe('swap-button')
+                throw e
+            })
             await swapBtn.click()
             const sheet = L.page.getByTestId('tonight-swap-sheet')
             await expect(sheet).toBeVisible()
@@ -128,14 +141,17 @@ test.describe('tonight-only chart swap (two iPads)', () => {
 
             // The other iPad follows within 5 seconds, no reload.
             const t0 = Date.now()
-            await expect(rowFor(M.page, row.id)).toHaveAttribute('data-file-id', alt.fileId, { timeout: 5_000 })
+            await expect(rowFor(M.page, row.id)).toHaveAttribute('data-file-id', alt.fileId, { timeout: 5_000 }).catch(async (e) => {
+                // Tell a write that never landed apart from a listener that never delivered.
+                await probe('swap')
+                throw e
+            })
             test.info().annotations.push({ type: 'propagation-ms', description: String(Date.now() - t0) })
             await expect(rowFor(M.page, row.id).getByTestId('tonight-note')).toBeVisible()
             const tL = Date.now()
-            await expect(rowFor(L.page, row.id)).toHaveAttribute('data-file-id', alt.fileId, { timeout: 60_000 }).catch(async (e) => {
-                console.log('[probe] leader did not follow in 60s')
-                throw e
-            })
+            // The leader who swapped sees it at once: the page adopts the doc its
+            // own transaction committed instead of waiting for the listen echo.
+            await expect(rowFor(L.page, row.id)).toHaveAttribute('data-file-id', alt.fileId, { timeout: 5_000 })
             console.log(`[probe] leader followed after ${Date.now() - tL}ms`)
             await M.page.screenshot({ path: 'test-results/tonight-swap-musician.png' })
             await L.page.screenshot({ path: 'test-results/tonight-swap-leader.png' })
@@ -166,7 +182,10 @@ test.describe('tonight-only chart swap (two iPads)', () => {
             // Undo = pick the plan in the same sheet.
             await swapFor(alt.title).click()
             await L.page.getByTestId('tonight-swap-planned').click()
-            await expect(rowFor(M.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 5_000 })
+            await expect(rowFor(M.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 5_000 }).catch(async (e) => {
+                await probe('undo')
+                throw e
+            })
             await expect(rowFor(L.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 5_000 })
 
             // Swap again, then Reset to plan.

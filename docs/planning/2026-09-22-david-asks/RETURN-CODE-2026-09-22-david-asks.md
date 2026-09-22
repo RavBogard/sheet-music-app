@@ -300,3 +300,106 @@ append-only:
 - **Owed:** a clean production rerun of both specs, and real-iPad acceptance, which
   automated tests cannot claim.
 
+
+## Item 4 follow-up: reruns after the reboot, and the leader-row fix (committed, not deployed)
+
+Assignment C2-DAVID-4 revision 2. Production stayed on `b047151b` (11.7.0)
+throughout. Nothing was deployed.
+
+### Production reruns
+
+- **Item-1 preview regression** (`chart-preview-ipad.spec.ts`): **green**, 2 of 2
+  runs (39 s, 34 s). The earlier empty-library failures did not recur.
+- **Swap spec** (`tonight-swap-ipad.spec.ts`): 9 runs against production.
+  - **Musician iPad:** both the swap and the undo arrived within 5 s in runs 3, 5
+    and 6. The signed-out reload and the setlist-page note passed again. The saved
+    tracks were byte-identical.
+  - **Leader-row lag, reproduced (a product bug).** In runs 5 and 6 the leader's own
+    row took about 30 s (30048 ms and 30108 ms) to show their own swap. After undo,
+    the leader's row missed its 5 s check. Run 3 showed 19 ms, so the lag is
+    intermittent, not constant.
+  - **Reset to plan on production: still not e2e-verified.** Every run stopped
+    before the reset step. That includes two runs with the leader's waits
+    temporarily raised to 60 s (the change was reverted and is not committed).
+- **Harness vs product.**
+  - The "Session cookie sync … Load failed" and "auth/network-request-failed"
+    warnings are harness noise. The spec's `page.reload()` cancels the in-flight
+    `/api/auth/session` POST. A standalone probe showed:
+    - the Web SDK user comes back within about 10 s of the reload;
+    - `/api/auth/session` then returns 200;
+    - the session stays signed in for more than 60 s.
+  - The remaining failures are **Firestore delivery stalls** in Playwright WebKit on
+    Windows. Evidence from the new `probe()` in the spec:
+    - Runs 4, 7 and 8: the leader was signed in, but the Firestore profile (the
+      role) never loaded, so the nav showed only "Setlists" and there was no Swap
+      control. This is the same shape as the earlier empty-library failures.
+    - Run 9: the server had `rev=1` with the swapped chart, and both pages were
+      signed in, yet the musician's listener did not deliver it within 5 s.
+  - Whether real iPads see these stalls is **unknown**. Automated runs cannot tell.
+    Real-iPad acceptance is still owed.
+
+### The fix (`src/lib/performance/tonight-client.ts`)
+
+- **What changed.** When `runTransaction` resolves with a `write` plan, the client
+  adopts `plan.next`: the exact doc the rules accepted. `subscribeTonight` merges
+  those committed docs with its listener, and it never shows a lower `rev` than one
+  it has already shown.
+- **How the merge behaves:**
+  - The leader who swapped sees the swap, undo or reset at once, even while their
+    listen stream is behind.
+  - A late snapshot from before the commit cannot move the row back.
+  - A newer doc from another leader (higher `rev`) still wins.
+  - `rev` goes up by one on every write, and the rules enforce that across service
+    days too. So "higher rev wins" is safe.
+- **What stays the same:**
+  - Role checks and rules are unchanged, and a doc is adopted only after the commit
+    resolved.
+  - Stale, noop and failed commits adopt nothing.
+  - Expiry: `overridesApply` / `applyTonight` still gate every render.
+  - Saved-plan: `tracks/*` and `setlists/{id}` are still never written.
+  - Both `useSetlistPerformance` and `useTonightTitles` get the fix through
+    `subscribeTonight`, and their APIs are unchanged.
+- **Scope limit.** This fixes only the committing tab. A stall on *another* iPad's
+  listener (run 9) is not addressed. That is Firestore transport, and the
+  signed-out reload path is the fallback.
+- **Tests.** `src/lib/performance/__tests__/tonight-client.test.ts`, 8 new tests:
+  - adopt on commit with no echo;
+  - no step back on a late pre-commit snapshot;
+  - undo and reset shown at once;
+  - another leader's newer doc wins;
+  - stale and noop adopt nothing;
+  - a late mount starts from the committed doc;
+  - a failed commit keeps the plan;
+  - unsubscribe stops delivery.
+- **Spec changes** (`e2e/tonight-swap-ipad.spec.ts`):
+  - The leader's post-swap wait is back to 5 s, which is the acceptance bar for the
+    fix.
+  - On failure, `probe()` logs the server's overrides rev and row, and each page's
+    Web SDK uid, and saves screenshots of both pages.
+
+### Checks for the commit
+
+- tsc: clean.
+- Lint: 0 errors. There are 12 warnings, none in touched files.
+- Unit tests: 414 files and 4934 tests passed, 31 skipped, 0 failed. The tonight
+  tests are 39/39.
+- Build: exit 0, with `SKIP_ENV_VALIDATION=1`. This checkout's `.env.local` holds
+  only the harness keys, so env validation fails without it. The generated
+  `src/build-info.json` was restored.
+- Emulator rules tests: not rerun, because the rules are unchanged.
+- No browser check of the fix yet. It needs a deployment, and a local build cannot
+  serve against production without the Firebase env.
+
+### Remaining gaps
+
+- **After Astra reviews:** deploy (code only; no rules change), then rerun
+  `tonight-swap-ipad.spec.ts` on production. The leader row should now pass at 5 s.
+  Reset still needs its first production pass.
+- **Real-iPad acceptance** (two devices), including a check for listener stalls on
+  a non-committing iPad.
+- **Test-data residue.** `revoke_test_account` deletes the seeded test setlists but
+  not their `performance/overrides` and `performedDeviations` subcollections. Every
+  e2e run leaves a few small orphaned docs that nothing reads. The cleanup tool
+  needs a recursive delete. Not changed here.
+- **Holds unchanged:** You're My Heaven and the uncertain duplicates are untouched.
+  There is still no ranking, no Publish, no notifications and no Overlays edits.
