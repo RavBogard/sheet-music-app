@@ -26,6 +26,7 @@ import { installListenTrace, readTrace, type TraceEvent } from './helpers/listen
  * Run (against prod, after deploy):
  *   PLAYWRIGHT_USE_REMOTE=1 PLAYWRIGHT_BASE_URL=https://www.centralreform.live \
  *   MCP_BEARER=crl_live_... npx playwright test e2e/tonight-swap-ipad.spec.ts --project=ipad-webkit
+ * Transport comparison: the same with --project=chromium --workers=1.
  */
 
 const MCP_BEARER = process.env.MCP_BEARER ?? ''
@@ -136,7 +137,7 @@ async function saveTraces(pages: { who: string; page: Page }[], name: string) {
         const ev = await readTrace(page)
         out.push({ who, ev })
         fs.mkdirSync('test-results', { recursive: true })
-        fs.writeFileSync(`test-results/${name}-${who}.json`, JSON.stringify(ev, null, 1))
+        fs.writeFileSync(`test-results/${name}-${test.info().project.name}-${who}.json`, JSON.stringify(ev, null, 1))
     }
     return out
 }
@@ -145,7 +146,8 @@ async function saveTraces(pages: { who: string; page: Page }[], name: string) {
 test.describe('tonight-only chart swap (two iPads)', () => {
     test.skip(!MCP_BEARER, 'needs MCP_BEARER (admin)')
     test.beforeEach(({}, testInfo) => {
-        test.skip(!testInfo.project.name.startsWith('ipad-webkit'), 'ipad-webkit only')
+        // chromium: the transport comparison (same assertions, Blink's fetch streams).
+        test.skip(!testInfo.project.name.startsWith('ipad-webkit') && testInfo.project.name !== 'chromium', 'ipad-webkit or chromium only')
     })
 
     let leaderBearer = ''

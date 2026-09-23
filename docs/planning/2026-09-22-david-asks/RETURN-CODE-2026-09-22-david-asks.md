@@ -687,3 +687,117 @@ Expected outcomes:
 - **Cleanup.** Each worker's afterAll revoked its own minted accounts and logged
   no errors. The known orphaned overrides/deviations docs remain, and I added no
   broader delete.
+
+## C2 transport comparison: Chromium (run 13)
+
+One run, 00:53–00:54 CDT on 2026-09-23. Production `/api/version` was `264761fe`. The
+only code change is test-only: the spec now also runs on the `chromium` project, and
+trace filenames include the project name. No product, transport, rules or deploy
+change, and no retry.
+
+### Run settings, compared with run 12
+
+| | Run 12 | Run 13 |
+|---|---|---|
+| Project | `ipad-webkit` (Playwright WebKit, Windows) | `chromium` (Desktop Chrome device, 820×1180, touch, isMobile) |
+| Workers | 2 (both tests at once, 4 contexts open) | 1 (`--workers=1`; tests in order, 2 contexts at a time) |
+| Timing of the two views | one after the other (leader numbers were an artifact) | at the same time |
+
+Unchanged from run 12: the 5 s pass threshold, the 30 s late window, the
+assertions and the trace.
+
+### Result: 2 passed, every delivery within 5 s
+
+| Step | Musician | Leader |
+|---|---|---|
+| swap1 | 872 ms | 872 ms |
+| undo | 1888 ms | 1888 ms |
+| swap2 | 367 ms | 367 ms |
+| reset | 364 ms | 364 ms |
+
+- These are Playwright's measurements. It polls, and each step's clock starts at the
+  click, so the in-page numbers are smaller. For example, on undo the musician's
+  DOM changed about 1.09 s after the click.
+- The server confirmed each write: revs 1, 2, 3 and 4, each commit returning 200 in
+  130–300 ms.
+- Sign-in and online state stayed healthy, with no listen errors or causes.
+
+### Doc frame, marker and DOM (from the saved in-page traces)
+
+| | Doc frame to marker | Marker to DOM |
+|---|---|---|
+| Run 12 WebKit musician | 30.0 s on 4 of 5 frames. The exception was the reset (0 ms, same frame). | 29–72 ms |
+| Run 13 Chromium musician | 0–1 ms on 4 of 4 frames | 38–54 ms |
+| Run 12 WebKit leader | 30.0 s on 2 of 5 frames. The leader's own-commit adoption hid these. | n/a |
+| Run 13 Chromium leader | 0 ms on 4 of 4 frames | n/a |
+
+- **Doc frame to marker** is the gap between the overrides doc frame reaching the
+  stream and the global consistency marker arriving.
+- **Marker to DOM** is the gap between that marker and the row's DOM changing.
+
+On Chromium, the doc and its marker reached the page in the same stream read. In the
+WebKit run, the doc arrived about 0.3 s after the commit, but the marker arrived only
+when the next frame (the ~30 s noop) pushed it through. On both browsers the SDK and
+the UI changed the row about 50 ms after the marker, so the UI never ignored an
+update that had arrived.
+
+This supports H2: the Playwright WebKit build's fetch stream holds back the trailing
+small frame until more data arrives. It does not support H1, a backend that sends
+the marker late: on Chromium, the same backend's marker arrived with the doc every
+time.
+
+Limits:
+- This is one run on each side, and the settings differed (workers, context count).
+- Playwright's WebKit on Windows is not Safari on iPadOS. Its networking stack is
+  different, so nothing here shows whether real iPads hold back the frame.
+
+### Reset and saved plan
+
+- **The reset test did not create its own override this time.** It ran on the same
+  worker, after the propagation test, with the same `beforeAll` setlist. Its setup
+  found the server already holding the test-owned override left by swap2 (rev 3, the
+  test chart). That is the spec's "unless this setlist already has one" branch. It
+  then checked that both views showed the override (4 ms and 3 ms) before Reset.
+- **After Reset:** both views showed the plan in 364 ms, which passes. The server
+  cleared the override at rev 4, the Reset control disappeared, and the saved plan
+  was byte-identical.
+- **Propagation test:**
+  - the saved plan was unchanged before and after;
+  - the signed-out reload showed the swap;
+  - the setlist note passed;
+  - the musician had no Swap control.
+
+### Other observations
+
+- **Musician console warning.** Chromium logged "[alert-store] globalAlert
+  subscription failed: Missing or insufficient permissions" twice. Run 12's WebKit
+  log didn't show it. It doesn't affect the tonight rows, and I didn't investigate.
+- **Cleanup.** `afterAll` revoked the minted accounts and logged no errors. No
+  broader delete.
+- **Tool rejections:** none.
+
+### Bounded implementation proposal (not implemented)
+
+If root accepts H2 as the working cause, the smallest product change is one
+Firestore transport setting, `experimentalForceLongPolling: true`.
+- It goes in the `initializeFirestore` settings in `src/lib/firebase.ts`, in both
+  the persistent and memory-cache branches.
+- It could be limited to WebKit user agents so Chromium keeps streaming.
+- The code comments call the current transport "WebChannel". A code comment
+  mentioned earlier says the app once used long polling.
+
+Acceptance for that change:
+- Run this traced spec on `ipad-webkit` with one worker. Every doc frame's marker
+  should arrive within 1 s, with all deliveries under 5 s on both views.
+- Run the spec on `chromium` with no regression.
+- The leader's own-commit adoption must still hold.
+- Real two-iPad hardware remains the arbiter for Safari.
+
+Cost and risk to review:
+- Long polling means more HTTP round trips and battery use on the iPads.
+- The login-bundle and import-graph tests read Firestore chunk signatures, so they
+  need a check.
+
+The alternative is a real-iPad check before any change. If real Safari delivers
+promptly, the WebKit-on-Windows delay is harness-only, and the fix should go in the
+harness, not the product.
