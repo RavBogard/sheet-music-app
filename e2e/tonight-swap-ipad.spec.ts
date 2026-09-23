@@ -147,12 +147,13 @@ test.describe('tonight-only chart swap (two iPads)', () => {
                 throw e
             })
             test.info().annotations.push({ type: 'propagation-ms', description: String(Date.now() - t0) })
+            console.log(`[timing] swap: musician followed after ${Date.now() - t0}ms`)
             await expect(rowFor(M.page, row.id).getByTestId('tonight-note')).toBeVisible()
             const tL = Date.now()
             // The leader who swapped sees it at once: the page adopts the doc its
             // own transaction committed instead of waiting for the listen echo.
             await expect(rowFor(L.page, row.id)).toHaveAttribute('data-file-id', alt.fileId, { timeout: 5_000 })
-            console.log(`[probe] leader followed after ${Date.now() - tL}ms`)
+            console.log(`[timing] swap: leader showed it ${Date.now() - tL}ms after the musician`)
             await M.page.screenshot({ path: 'test-results/tonight-swap-musician.png' })
             await L.page.screenshot({ path: 'test-results/tonight-swap-leader.png' })
 
@@ -182,11 +183,17 @@ test.describe('tonight-only chart swap (two iPads)', () => {
             // Undo = pick the plan in the same sheet.
             await swapFor(alt.title).click()
             await L.page.getByTestId('tonight-swap-planned').click()
+            const tU = Date.now()
+            await expect(rowFor(L.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 5_000 }).catch(async (e) => {
+                await probe('undo-leader')
+                throw e
+            })
+            console.log(`[timing] undo: leader after ${Date.now() - tU}ms`)
             await expect(rowFor(M.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 5_000 }).catch(async (e) => {
                 await probe('undo')
                 throw e
             })
-            await expect(rowFor(L.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 5_000 })
+            console.log(`[timing] undo: musician after ${Date.now() - tU}ms`)
 
             // Swap again, then Reset to plan.
             await swapBtn.click()
@@ -194,9 +201,19 @@ test.describe('tonight-only chart swap (two iPads)', () => {
             await L.page.locator(`[data-testid="tonight-swap-candidate"][data-file-id="${alt.fileId}"]`).click({ timeout: 30_000 })
             await expect(rowFor(M.page, row.id)).toHaveAttribute('data-file-id', alt.fileId, { timeout: 5_000 })
             await L.page.getByTestId('tonight-reset').click()
-            await expect(rowFor(M.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 5_000 })
-            await expect(rowFor(L.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 5_000 })
+            const tR = Date.now()
+            await expect(rowFor(L.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 5_000 }).catch(async (e) => {
+                await probe('reset-leader')
+                throw e
+            })
+            console.log(`[timing] reset: leader after ${Date.now() - tR}ms`)
+            await expect(rowFor(M.page, row.id)).toHaveAttribute('data-file-id', planned, { timeout: 5_000 }).catch(async (e) => {
+                await probe('reset')
+                throw e
+            })
+            console.log(`[timing] reset: musician after ${Date.now() - tR}ms`)
             await expect(L.page.getByTestId('tonight-reset')).toHaveCount(0)
+            console.log('[timing] reset complete: plan on both iPads, Reset control gone')
 
             expect(await tracksSnapshot(request, baseURL, leaderBearer, setlist.setlistId)).toBe(before)
         } finally {

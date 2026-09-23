@@ -493,3 +493,76 @@ lifetime case). Against the revision, 17 of 17 pass.
 - No browser check yet. It needs the deploy, which is held for review. After an
   accepted review: deploy code only, then run `tonight-swap-ipad.spec.ts` on
   production, including the first reset pass.
+
+## C2-RELEASE-VERIFY revision 1: gate, release, production e2e
+
+### Full-suite gate: green
+
+This was a single serial run, not a retry: `npx vitest run --maxWorkers=1
+--no-file-parallelism` at `264761fe`.
+
+- Files: 414 passed and 3 skipped, of 417.
+- Tests: 4943 passed, 31 skipped, 0 failed.
+- Time: 1837 s, exit 0.
+
+The 9 parallel-run failures did not reproduce serially, which fits the load
+hypothesis. The log is kept locally in the session scratchpad and is not
+committed.
+
+### Release: code only
+
+- Before the push, `origin/master` was `6384d6b2`. `HEAD` had only the reviewed
+  `00bf5ff8` and `264761fe` on top of it.
+- Pushed `6384d6b2..264761fe` to master. GitHub printed "2 of 2 required status
+  checks are expected" and accepted the push; nothing was rejected or bypassed.
+- Production `/api/version` at 20:08 CDT: sha `264761fe8a9e…`, version 11.7.0.
+- No Firestore rules deploy.
+
+### Production e2e: `tonight-swap-ipad.spec.ts`
+
+All runs used ipad-webkit, simulated iPads in Playwright, not hardware.
+
+This commit adds test-only timing logs to the spec for swap, undo and reset. There
+are two runs; I stopped there rather than retry until green.
+
+| Step | Run 10 | Run 11 |
+|---|---|---|
+| Musician has no Swap control | pass | pass |
+| Leader swap: musician follows | **fail**: server rev 1 had the swap, musician still showed the plan at 5 s | pass, 167 ms |
+| Leader's own row after the swap | showed the swap by the probe, although its Firestore logged "client is offline" | pass, 33 ms after the musician |
+| Saved plan byte-identical | not reached | pass |
+| Signed-out iPad after reload | not reached | pass |
+| Setlist page "Tonight: X (planned: Y)" | not reached | pass |
+| Undo: leader / musician | not reached | pass, 467 ms / 481 ms |
+| Second swap: musician follows | not reached | **fail**: the leader showed it (so the commit was accepted), musician still showed the plan at 5 s |
+| Reset to plan | not reached | not reached |
+
+**Reading.**
+
+- The leader-row fix works in the browser on production. In both runs the
+  committing leader showed its own swap at once, including when that page's
+  Firestore connection was offline.
+- The failures are on the musician, the iPad that does not commit.
+  - In both runs, its listener stayed open (no "overrides unavailable" error) but
+    did not deliver an accepted write within 5 s.
+  - Run 9 showed the same thing on the pre-release code (`b047151b`). So this
+    release did not introduce it, and this release does not address it.
+  - The musician's subscription path in `264761fe` shows any rev above the one
+    shown, so its logic cannot drop rev 3 after rev 2. The failing step came
+    right after a delivered rev 2.
+- Whether real iPads stall like this is unknown. It is either Playwright-WebKit
+  Firestore behavior on this Windows host or a real listener stall. Only hardware
+  can separate them.
+
+**Cleanup.** Both runs revoked their minted accounts in `afterAll` with no errors.
+As before, `revoke_test_account` leaves the deleted test setlists' `overrides` and
+`performedDeviations` docs orphaned. I added no broader delete.
+
+### Still owed
+
+- **Reset to plan on production**: still not reached in any run.
+- **Non-committing iPad latency.** Two of three post-release swaps reached the
+  musician within 5 s (runs 10 and 11); one did not. Needs a real-iPad check or a
+  decision on a diagnostic run. For example, measure how long the musician takes
+  rather than failing at 5 s, reported separately and not as a relaxed pass.
+- **Real two-iPad hardware acceptance.**
