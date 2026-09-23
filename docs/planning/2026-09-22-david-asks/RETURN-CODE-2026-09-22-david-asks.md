@@ -783,8 +783,11 @@ Firestore transport setting, `experimentalForceLongPolling: true`.
 - It goes in the `initializeFirestore` settings in `src/lib/firebase.ts`, in both
   the persistent and memory-cache branches.
 - It could be limited to WebKit user agents so Chromium keeps streaming.
-- The code comments call the current transport "WebChannel". A code comment
-  mentioned earlier says the app once used long polling.
+- History: `src/lib/firebase.ts:73` says long polling was enabled before, to
+  suppress AbortError console noise on SDK versions before 12.5. It was dropped
+  for the default streaming transport at 12.9. `src/proxy.ts:48` already allows
+  the long-poll transport's `cleardot.gif` beacon.
+- Reverting this is a transport change, so it needs a reviewed product packet.
 
 Acceptance for that change:
 - Run this traced spec on `ipad-webkit` with one worker. Every doc frame's marker
