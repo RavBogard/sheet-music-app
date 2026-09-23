@@ -10,7 +10,7 @@
 
 import { doc, onSnapshot, runTransaction } from "firebase/firestore"
 
-import { getDb, subscribeWithDb, type Unsubscribe } from "@/lib/firebase"
+import { auth, getDb, subscribeWithDb, type Unsubscribe } from "@/lib/firebase"
 import {
     DEVIATIONS_COLLECTION,
     OVERRIDES_COLLECTION,
@@ -26,68 +26,104 @@ import {
 } from "./tonight"
 
 /**
- * Docs this tab committed, per setlist, and the subscribers to tell. A leader's
- * own listen stream can be tens of seconds behind their write while it
- * reconnects (seen on production, 2026-09-22), so the doc the committed
- * transaction wrote is shown at once rather than waiting for the echo.
+ * Live subscriptions per setlist, so the tab that commits a swap / undo / reset
+ * shows the doc its own transaction wrote at once instead of waiting for the
+ * listen echo (tens of seconds behind on production, 2026-09-22).
+ *
+ * Nothing is cached. A committed doc goes only to subscriptions that are open
+ * when the commit resolves and were opened by the user who committed it, and
+ * only while that user is still the one signed in. That transaction read and
+ * wrote the doc as this user, so it is data this session may already see. A
+ * later mount, another account and a signed-out page learn it from the
+ * listener (or the server-rendered frame), under the rules as before.
  */
-const committed = new Map<string, OverridesDoc>()
-const committedSubs = new Map<string, Set<(doc: OverridesDoc) => void>>()
+type CommittedSub = { uid: string; take: (doc: OverridesDoc) => void }
+const committedSubs = new Map<string, Set<CommittedSub>>()
 
-function adoptCommitted(setlistId: string, doc: OverridesDoc) {
-    const prev = committed.get(setlistId)
-    if (prev && prev.rev >= doc.rev) return
-    committed.set(setlistId, doc)
-    for (const fn of committedSubs.get(setlistId) ?? []) fn(doc)
+const signedInUid = (): string | null => auth?.currentUser?.uid ?? null
+
+function adoptCommitted(setlistId: string, uid: string, doc: OverridesDoc) {
+    // Signed out or switched account while the commit was in flight.
+    if (signedInUid() !== uid) return
+    for (const sub of committedSubs.get(setlistId) ?? []) {
+        if (sub.uid === uid) sub.take(doc)
+    }
 }
 
 /**
  * Follow the overrides doc. `onDoc(null)` for a missing or malformed doc.
  * A read failure (offline, denied, signed out) reports through `onError`
- * and the caller keeps showing the plan — never an empty setlist.
+ * and the caller keeps showing the plan — never an empty setlist. After a
+ * failure the subscription shows nothing more, not even this tab's commits.
  *
  * Every write bumps `rev` by one (the rules enforce it, across service days
- * too), so the newest known doc wins: a doc this tab committed shows at once,
- * and a listener snapshot older than it is not shown over it.
+ * too; Reset to plan is a write with no rows), so a doc older than one already
+ * shown is never shown over it, whichever path either came by. A missing doc
+ * from the listener means the doc is gone and the plan shows, except while
+ * this tab's own commit is still ahead of the listener: then it is the stream
+ * catching up from before the write. Nothing deletes the doc today (delete is
+ * server-only and no server path does it).
  */
 export function subscribeTonight(
     setlistId: string,
     onDoc: (doc: OverridesDoc | null) => void,
     onError: (err: unknown) => void,
 ): Unsubscribe {
-    let shownRev = -1
-    const show = (doc: OverridesDoc | null) => {
-        const rev = doc?.rev ?? 0
-        const mine = committed.get(setlistId)
-        if (mine && mine.rev > rev) {
-            if (shownRev >= mine.rev) return
-            shownRev = mine.rev
-            onDoc(mine)
+    let shownRev = -1 // nothing shown yet; 0 = the plan (no doc)
+    let aheadOfListener: number | null = null // rev of an adopted commit not yet delivered
+    let closed = false
+    const show = (d: OverridesDoc | null) => {
+        shownRev = d?.rev ?? 0
+        onDoc(d)
+    }
+    const fromListener = (d: OverridesDoc | null) => {
+        if (closed) return
+        if (d === null) {
+            if (aheadOfListener !== null || shownRev === 0) return
+            show(null)
             return
         }
-        shownRev = rev
-        onDoc(doc)
+        if (aheadOfListener !== null && d.rev >= aheadOfListener) aheadOfListener = null
+        if (d.rev <= shownRev) return
+        show(d)
     }
-    const onCommitted = (doc: OverridesDoc) => {
-        if (doc.rev <= shownRev) return
-        shownRev = doc.rev
-        onDoc(doc)
+
+    const uid = signedInUid()
+    const sub: CommittedSub | null = uid
+        ? {
+              uid,
+              take: (d) => {
+                  if (closed || d.rev <= shownRev) return
+                  aheadOfListener = d.rev
+                  show(d)
+              },
+          }
+        : null
+    const leave = () => {
+        closed = true
+        if (!sub) return
+        const subs = committedSubs.get(setlistId)
+        subs?.delete(sub)
+        if (subs?.size === 0) committedSubs.delete(setlistId)
     }
-    let subs = committedSubs.get(setlistId)
-    if (!subs) committedSubs.set(setlistId, (subs = new Set()))
-    subs.add(onCommitted)
-    const mine = committed.get(setlistId)
-    if (mine) onCommitted(mine)
+    if (sub) {
+        let subs = committedSubs.get(setlistId)
+        if (!subs) committedSubs.set(setlistId, (subs = new Set()))
+        subs.add(sub)
+    }
 
     const unsubscribe = subscribeWithDb((db) =>
         onSnapshot(
             doc(db, "setlists", setlistId, OVERRIDES_COLLECTION, OVERRIDES_DOC_ID),
-            (snap) => show(snap.exists() ? parseOverridesDoc(snap.data()) : null),
-            onError,
+            (snap) => fromListener(snap.exists() ? parseOverridesDoc(snap.data()) : null),
+            (err) => {
+                leave()
+                onError(err)
+            },
         ),
     )
     return () => {
-        subs!.delete(onCommitted)
+        leave()
         unsubscribe()
     }
 }
@@ -96,6 +132,7 @@ async function commit(
     setlistId: string,
     build: (current: OverridesDoc | null) => WritePlan,
 ): Promise<WritePlan> {
+    const uid = signedInUid()
     const db = await getDb()
     const ref = doc(db, "setlists", setlistId, OVERRIDES_COLLECTION, OVERRIDES_DOC_ID)
     const plan = await runTransaction(db, async (tx) => {
@@ -109,7 +146,7 @@ async function commit(
         return plan
     })
     // Only after the commit resolved: the rules accepted exactly this doc.
-    if (plan.kind === "write") adoptCommitted(setlistId, plan.next)
+    if (plan.kind === "write" && uid) adoptCommitted(setlistId, uid, plan.next)
     return plan
 }
 

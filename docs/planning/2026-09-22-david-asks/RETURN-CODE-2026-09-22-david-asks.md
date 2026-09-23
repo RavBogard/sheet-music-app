@@ -403,3 +403,93 @@ throughout. Nothing was deployed.
   needs a recursive delete. Not changed here.
 - **Holds unchanged:** You're My Heaven and the uncertain duplicates are untouched.
   There is still no ranking, no Publish, no notifications and no Overlays edits.
+
+## Item 4 follow-up: Astra's 21:56 review of 00bf5ff8 (revised, not deployed)
+
+Both review points were real defects in 00bf5ff8. The revision is a new commit on
+top of it; 00bf5ff8 itself is unchanged. Nothing is pushed or deployed.
+
+### 1. Revision ordering
+
+- **Defect confirmed.** In `show()`, any listener doc at or above this tab's
+  committed rev set `shownRev` unconditionally. So after this tab's rev 2 and
+  another leader's rev 4, a delayed rev 3 was shown: a step back.
+- **Fix.** One rule for both paths (listener and own commit): a doc whose rev is
+  not above the highest rev already shown is never shown.
+- **Deletion.** A missing (or malformed) doc from the listener shows the plan, and
+  the next doc at any rev shows again (a recreated doc starts at rev 1). The one
+  exception is while this tab's own adopted commit is still ahead of the listener.
+  There a missing doc is the stream catching up from before the write, which is
+  the case that caused the 30 s lag.
+- **Reset to plan** is a normal write (rev + 1, no rows), not a deletion, so it
+  goes through the ordinary rule.
+- **Known edge, documented in code.** If the server deleted the doc while this
+  tab's commit was still ahead of the listener, the tab would keep showing its
+  commit until the next write. No code path deletes the doc today: the rules allow
+  delete only from the server, and no server path does it.
+
+### 2. Cache and session lifetime
+
+- **Defect confirmed.** 00bf5ff8 kept the last committed doc per setlist in a
+  module-level map that outlived every subscription. A later subscription,
+  including one opened after sign-out or by another account in the same tab, got
+  it at once, before any authorized listener delivery.
+- **Fix: nothing is cached.** The module keeps only the set of open subscriptions.
+  A committed doc goes to a subscription only when all of these hold:
+  - the subscription is open when the commit resolves;
+  - it was opened by the same Firebase uid that started the commit;
+  - that uid is still the one signed in when the commit resolves.
+- **Why showing it before the listener's first delivery is still appropriate.**
+  The committing transaction itself read and wrote this doc as this user, under
+  the rules (read: signed in; write: band leader or admin of the setlist's
+  tenant). So the doc is data this session may already see; nothing crosses a
+  session boundary. Tenant does not gate reads of this doc, and a tenant or
+  account change resubscribes through the hook's `user` dependency.
+- **Sign-out, account change, unmount.** The subscription closes and leaves the
+  set. A commit resolving afterwards reaches nobody, then or later.
+- **Read failure (for example permission-denied).** The subscription closes and
+  shows nothing more, not even its own commits. The caller keeps showing the plan
+  or the server-rendered frame, as before.
+- **Signed-out behavior is unchanged.** There is no realtime access and no
+  adoption; the frame from the server shows on reload.
+
+### Tests
+
+`tonight-client.test.ts` now has 17 tests: the original 8, with the late-mount
+case inverted to "nothing is cached", plus 9 new ones:
+
+- rev 2 (own) → rev 4 (other) → delayed rev 3 and a late rev 2 echo: the page shows
+  revs 1, 2, 4;
+- a commit resolving below a newer listener doc is not shown;
+- a real deletion shows the plan, and a recreated rev 1 shows again;
+- Reset to plan is a newer write, not a deletion;
+- a commit resolving after unsubscribe reaches nobody;
+- sign-out or account switch mid-commit adopts nothing;
+- another account's open subscription never gets this user's commit;
+- a signed-out subscription follows the listener only;
+- after a read failure, nothing more is shown.
+
+Against 00bf5ff8's client, 8 of the 17 fail (the ordering, deletion and every
+lifetime case). Against the revision, 17 of 17 pass.
+
+### Checks for the revision
+
+- tsc: clean.
+- Lint: 0 errors. There are 12 warnings, all pre-existing and none in touched files.
+- Focused: `tonight-client.test.ts` 17/17. The tonight hook tests passed in the full
+  run.
+- Full unit run: 4910 passed, 9 failed, 55 skipped, across 417 files (12 files
+  failed).
+  - None of the failing files touches this change or imports the tonight client.
+  - Rerun alone, 10 of the 12 files passed. The other 2 (`text-score-viewer`,
+    `SetlistGridHydrator`) each failed a different test that time, then both passed
+    (33/33) on a second rerun.
+  - So these are load or order flakes, most likely the Dexie
+    "DatabaseClosedError" seen in the reruns, and not regressions. The same suite
+    had 0 failures at 00bf5ff8.
+- Build: exit 0, with `SKIP_ENV_VALIDATION=1`. The regenerated
+  `src/build-info.json` was restored and is not committed.
+- Rules: unchanged, so the emulator tests were not rerun.
+- No browser check yet. It needs the deploy, which is held for review. After an
+  accepted review: deploy code only, then run `tonight-swap-ipad.spec.ts` on
+  production, including the first reset pass.
