@@ -566,3 +566,124 @@ As before, `revoke_test_account` leaves the deleted test setlists' `overrides` a
   decision on a diagnostic run. For example, measure how long the musician takes
   rather than failing at 5 s, reported separately and not as a relaxed pass.
 - **Real two-iPad hardware acceptance.**
+
+## C2 musician propagation diagnostic and independent reset (run 12)
+
+Production 264761fe (11.7.0), ipad-webkit on Windows, simulated browser iPads,
+not hardware. One bounded run, 20:34–20:36 CDT, no retry. There was no product
+code change, no rules change and no deploy.
+
+### Tally, reconciled (post-release, the musician iPad that did not commit)
+
+The earlier line "two of three post-release swaps" was wrong: it counted the undo
+as a swap. The corrected counts:
+
+| Kind | Run 10 | Run 11 | Run 12 | Within 5 s |
+|---|---|---|---|---|
+| Swap | fail | swap 1 pass (167 ms), swap 2 fail | swap 1 fail (30.4 s), swap 2 fail (30.3 s) | 1 of 5 |
+| Undo | not reached | pass (481 ms) | fail (30.3 s) | 1 of 2 |
+| Reset | not reached | not reached | pass (UI 293 ms, measured 397 ms) | 1 of 1 |
+
+The run 12 delays are measured, and each is recorded as a failure. The leader
+(the iPad that committed) showed every step within 0.3 s: swap 1 at 294 ms, undo
+at 227 ms, swap 2 at 217 ms and reset at 231 ms.
+
+In run 12, Playwright reported the leader at about 30.6 s for both swaps. That is
+a measurement artifact: the spec timed the second iPad only after the first iPad's
+wait ended. The in-page trace has the correct values. The spec now times both
+iPads concurrently. That change is test-only and has not been re-run.
+
+Run 12 ran the two tests in parallel (two workers, `fullyParallel`), so four
+signed-in iPads were open at once. Earlier runs had one test and two iPads.
+
+### What the trace shows
+
+Instrumentation was test-only:
+- `e2e/helpers/listen-trace.ts`, injected with `addInitScript`;
+- it summarizes the Firestore fetch/XHR traffic and polls the row DOM every 50 ms;
+- it records no URLs, headers or raw bodies, and a secret scan of the saved traces
+  was clean.
+
+The traces are in the local scratchpad (`run12-traces/`).
+
+For every musician step, the timeline was as follows:
+
+1. **The server accepted the write.** The leader's commit returned 200 in
+   100–180 ms, and a server probe showed the new rev.
+2. **The data reached the musician's listen stream on time.** The overrides doc
+   with the new rev arrived 0.1–0.3 s after the commit: swap 1 at rev 1, undo at
+   rev 2, swap 2 at rev 3.
+3. **The Firestore SDK did not raise a snapshot for that doc until the next
+   global consistency marker arrived.** That marker is a `targetChange` with no
+   type or targetIds and a readTime, and it arrived about 30 s later together with
+   the stream's `noop` heartbeat.
+4. **The musician's row changed 40–70 ms after that marker, every time.** The UI
+   never ignored a snapshot that had arrived.
+
+Pass and fail follow the marker exactly:
+- When a marker followed the doc promptly, delivery was quick. In the reset step
+  the doc and marker came in one 835-byte read, and the UI changed 40 ms later.
+- When no marker followed, the doc waited for the ~30 s heartbeat.
+
+The leader's own listener shows the same thing: at 8.55 s it got a marker and
+then the doc, and the next marker came at 38.55 s. That is the original ~30 s
+leader-row lag, which 00bf5ff8 now hides by adopting the leader's own commit.
+
+The session stayed healthy throughout:
+- auth: the test user was present on both iPads the whole time;
+- `navigator.onLine` was true, with no offline, online or visibility events;
+- there were no listen-stream errors, aborts or target `cause`s;
+- the listen stream rotated normally at about 70 s with nothing lost;
+- the idle Write stream aborted at about 61 s on both iPads, after the steps, and
+  does not bear on this.
+
+`fromCache` and `hasPendingWrites` cannot be observed without product code. The
+evidence above fits the SDK holding the doc in its watch aggregator, without
+raising any snapshot, until a consistent point.
+
+### Classification
+
+The classification is "snapshot arrived late", at the level of SDK events. The
+write was accepted, and the UI did not ignore anything.
+
+The trace alone cannot tell apart two ways the ~30 s marker delay could arise:
+- **H1.** The backend sends the consistency marker late, only at its heartbeat.
+- **H2.** WebKit's fetch-stream reader receives the trailing small frame (the
+  126-byte marker) late, until more bytes such as the next noop push it through.
+  The "one frame behind" pattern fits this: a marker appears just ahead of each
+  doc, and the doc's own marker waits. The app uses the default streaming
+  transport; `firebase.ts` notes that long polling used to be enabled.
+
+H2 would matter for real iPads, which also run WebKit.
+
+### Recommendation
+
+The evidence does not yet identify a concrete fix. The next check should settle
+H1 against H2, still with no product change:
+- run the same traced spec once on a Chromium project (not WebKit) against
+  production;
+- and/or run a real two-iPad check.
+
+Expected outcomes:
+- If the Chromium musician gets markers promptly, the problem is on the WebKit
+  transport side. The candidate fix is then a transport setting (auto-detected or
+  forced long polling), made as a reviewed product packet.
+- If Chromium also waits ~30 s, the delay is on the backend or listen-stream side.
+  That calls for a product decision, not a speculative fallback.
+
+### Other results in run 12
+
+- **Independent reset test.** It set up its own override (the server held rev 1
+  with the test chart) and waited for both iPads to show it. The musician waited
+  29.2 s for that setup, which was not scored. After Reset:
+  - the leader showed the plan in 392 ms and the musician in 397 ms, both passing;
+  - the server override was cleared at rev 2, and the Reset control disappeared;
+  - the saved plan was byte-identical.
+- **In the propagation test:**
+  - the saved plan was unchanged;
+  - the signed-out reload showed the swap;
+  - the setlist note passed;
+  - the musician had no Swap control.
+- **Cleanup.** Each worker's afterAll revoked its own minted accounts and logged
+  no errors. The known orphaned overrides/deviations docs remain, and I added no
+  broader delete.
