@@ -33,6 +33,14 @@ import { logger } from "@/lib/logger"
  * shows the section. Rows that already carry a `liturgyRef`: an author-typed
  * page is never overwritten by a guess. And anything the matcher would not
  * bind on its own — see `src/lib/liturgy/match.ts` for the three refusals.
+ *
+ * IDENTIFY, NEVER MOVE (audit item 5). A setlist row that already has a page
+ * in `book` but no unit id can still gain the id — `identified` — when its
+ * title matches clearly AND the match is on that exact page AND a writable id
+ * exists for it. The page, and every other key on the ref, is untouched: the
+ * real run writes `liturgyRef.unitId` and the derived `momentId`, nothing
+ * else. This is how `crc-saturday` rows authored before the legacy feeds were
+ * registered get the identity Overlays joins on.
  */
 
 type DB = FirebaseFirestore.Firestore
@@ -78,10 +86,23 @@ export interface ProposeLiturgyBindingsResult {
     /** Rows that need Daniel: real candidates, none of them safe alone. */
     plausible: PlausibleBinding[]
     unmatched: UnmatchedRow[]
+    /**
+     * Rows that already carry a page in `book` and gain only its unit id.
+     * Always safe to write: the page is the row's own and does not change.
+     */
+    identified: IdentifiedRow[]
     /** Rows skipped and why — headers, notes, and rows already bound. */
     skipped: Array<{ rowId: string; title: string; reason: string }>
     /** Written only on a real run. */
     written?: number
+}
+
+export interface IdentifiedRow {
+    rowId: string
+    title: string
+    unitId: string
+    folio: number
+    label: string
 }
 
 interface Row {
@@ -89,6 +110,20 @@ interface Row {
     title: string
     type: string
     hasRef: boolean
+    /** A setlist row's existing ref, when it is one this run could identify. */
+    ref?: { book: string; folio: number; unitId?: string; stale?: boolean }
+}
+
+function readRef(v: unknown): Row["ref"] {
+    if (!v || typeof v !== "object") return undefined
+    const r = v as Record<string, unknown>
+    if (typeof r.book !== "string" || typeof r.folio !== "number") return undefined
+    return {
+        book: r.book,
+        folio: r.folio,
+        ...(typeof r.unitId === "string" ? { unitId: r.unitId } : {}),
+        ...(r.stale === true ? { stale: true } : {}),
+    }
 }
 
 function bindingOf(m: LiturgyMatch, rowId: string, title: string): ProposedBinding {
@@ -120,6 +155,7 @@ async function rowsForSetlist(
             title: typeof t.title === "string" ? t.title : "",
             type: typeof row.type === "string" ? row.type : "song",
             hasRef: !!row.liturgyRef && typeof row.liturgyRef === "object",
+            ref: readRef(row.liturgyRef),
         }
     })
     return {
@@ -145,6 +181,28 @@ async function rowsForTemplate(db: DB, id: string, org: OrgId): Promise<Row[] | 
                 (!!row.liturgyRefs && typeof row.liturgyRefs === "object"),
         }
     })
+}
+
+/**
+ * The unit id an already-paged row can gain, or null. Every condition is a
+ * refusal to move a number: same book, a page that is not stale, no id yet, a
+ * CLEAR title match on that very page, and an id the registry accepts there.
+ */
+function identify(row: Row, book: string, service: string | null): IdentifiedRow | null {
+    const ref = row.ref
+    if (!ref || ref.book !== book || ref.unitId || ref.stale) return null
+    if (!row.title.trim()) return null
+    const m = matchLiturgyTitle(book, row.title, service)
+    if (!m.clear || m.clear.entry.folio !== ref.folio) return null
+    const writable = writableLiturgyRef(book, ref.folio, m.clear.entry.unitId, service)
+    if (!writable?.unitId || writable.folio !== ref.folio) return null
+    return {
+        rowId: row.id,
+        title: row.title,
+        unitId: writable.unitId,
+        folio: ref.folio,
+        label: m.clear.entry.label,
+    }
 }
 
 export async function proposeLiturgyBindings(
@@ -213,6 +271,7 @@ export async function proposeLiturgyBindings(
     const bound: ProposedBinding[] = []
     const plausible: PlausibleBinding[] = []
     const unmatched: UnmatchedRow[] = []
+    const identified: IdentifiedRow[] = []
     const skipped: Array<{ rowId: string; title: string; reason: string }> = []
 
     for (const row of rows) {
@@ -228,6 +287,11 @@ export async function proposeLiturgyBindings(
             continue
         }
         if (row.hasRef) {
+            const ident = identify(row, book, service)
+            if (ident) {
+                identified.push(ident)
+                continue
+            }
             skipped.push({
                 rowId: row.id,
                 title: row.title,
@@ -268,6 +332,7 @@ export async function proposeLiturgyBindings(
         bound,
         plausible,
         unmatched,
+        identified,
         skipped,
     }
     if (dryRun) return result
@@ -289,6 +354,24 @@ export async function proposeLiturgyBindings(
     }
 
     let written = 0
+    for (const r of identified) {
+        try {
+            const momentId = momentIdForUnit(r.unitId)
+            await db
+                .collection("tracks")
+                .doc(r.rowId)
+                .update({
+                    "liturgyRef.unitId": r.unitId,
+                    ...(momentId ? { momentId } : {}),
+                })
+            written++
+        } catch (err) {
+            logger.warn("[propose_liturgy_bindings] identify write failed", {
+                rowId: r.rowId,
+                err: err instanceof Error ? err.message : String(err),
+            })
+        }
+    }
     for (const b of toWrite) {
         const ref = writableLiturgyRef(book, b.folio, b.unitId, service)
         if (!ref) continue

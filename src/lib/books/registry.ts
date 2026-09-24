@@ -8,6 +8,7 @@ import shireiTshuvah from "@/data/books/shirei-tshuvah.json"
 import legacyShabbatEvening from "@/data/books/legacy-shabbat-evening.json"
 import legacyShabbatMorning from "@/data/books/legacy-shabbat-morning.json"
 import { bookServiceFor, SERVICE_SCOPED_BOOKS } from "./machzor-services"
+import { isCompanionUnit } from "./companion"
 import type {
     BookFile,
     BookRegistryEntry,
@@ -173,7 +174,11 @@ export function validateLiturgyRef(
             book?.entries?.some(
                 (e) =>
                     e.unitId === ref.unitId && (!service || e.service === service),
-            )
+            ) ||
+            // `crc-friday` / `crc-saturday` take their ids from the legacy feed
+            // that shares their printed numbering — and only a unit printed
+            // on this very page, so an id can never carry a row to another one.
+            isCompanionUnit(ref.book, ref.unitId, ref.folio)
         if (!known) {
             return {
                 ok: false,

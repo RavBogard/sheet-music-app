@@ -21,13 +21,25 @@ describe("autoBindLiturgyRef", () => {
         expect(autoBindLiturgyRef("crc-saturday", "Mi Chamocha", "song").ref?.folio).toBe(68)
     })
 
-    it("does not carry a unit id the book does not define", () => {
-        // The legacy booklets are pagemaps with no units. The identity is real
-        // and is still reported by the matcher; the REF keeps the page alone,
-        // or the registry would refuse the whole thing and the row would end
-        // up with no page at all.
-        const ref = autoBindLiturgyRef("crc-friday", "Bar'chu", "song").ref
-        expect(ref).toEqual({ book: "crc-friday", folio: 10 })
+    it("carries the companion feed's unit when it prints on the same page", () => {
+        // The legacy booklets are pagemaps with no units, but the legacy feed
+        // numbers its units by the same printed pages. The draft id the
+        // matcher reports is swapped for that feed's unit — never a draft id,
+        // which the registry would refuse along with the page.
+        const auto = autoBindLiturgyRef("crc-friday", "Bar'chu", "song")
+        expect(auto.ref).toEqual({
+            book: "crc-friday",
+            unitId: "shma.barchu@legacy-shabbat-evening",
+            folio: 10,
+        })
+        expect(auto.momentId).toBe("barchu")
+    })
+
+    it("keeps the page alone when no companion unit prints on it", () => {
+        // Friday's Mi Chamocha is p.18; the moments artifact has no
+        // legacy-evening unit for that moment, so nothing is guessed.
+        const ref = autoBindLiturgyRef("crc-friday", "Mi Chamocha", "song").ref
+        expect(ref).toEqual({ book: "crc-friday", folio: 18 })
         expect(ref).not.toHaveProperty("unitId")
     })
 
@@ -103,9 +115,30 @@ describe("writableLiturgyRef", () => {
         expect(writableLiturgyRef("no-such-book", 10)).toBeNull()
     })
 
-    it("keeps the page when the unit id is not the book's to hold", () => {
+    it("swaps a draft unit id for the companion unit on the same page", () => {
         expect(
             writableLiturgyRef("crc-friday", 10, "shma.barchu@shabbat-maariv"),
-        ).toEqual({ book: "crc-friday", folio: 10 })
+        ).toEqual({
+            book: "crc-friday",
+            unitId: "shma.barchu@legacy-shabbat-evening",
+            folio: 10,
+        })
+    })
+
+    it("keeps the page when the companion unit is on a different page", () => {
+        // Bar'chu is Friday p.10. A row that says p.11 keeps p.11 and gets no
+        // id: an id may never carry a row to another page.
+        expect(
+            writableLiturgyRef("crc-friday", 11, "shma.barchu@shabbat-maariv"),
+        ).toEqual({ book: "crc-friday", folio: 11 })
+        expect(
+            writableLiturgyRef("crc-friday", 11, "shma.barchu@legacy-shabbat-evening"),
+        ).toEqual({ book: "crc-friday", folio: 11 })
+    })
+
+    it("keeps the page when the unit id is no book's to hold", () => {
+        expect(
+            writableLiturgyRef("crc-saturday", 51, "shma.barchu@shabbat-maariv"),
+        ).toEqual({ book: "crc-saturday", folio: 51 })
     })
 })

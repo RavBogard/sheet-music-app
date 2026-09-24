@@ -231,3 +231,56 @@ describe("feed-tier book snapshots", () => {
         })).toEqual({ ok: true })
     })
 })
+
+/**
+ * Audit item 5 (n): a booklet row may carry the unit id of the legacy feed that
+ * prints the booklet's own pages — on that page and no other.
+ */
+describe("validateLiturgyRef — companion feed units on a booklet", () => {
+    it("accepts a legacy-feed unit on the page it prints", () => {
+        expect(
+            validateLiturgyRef({
+                book: "crc-saturday",
+                unitId: "awakening.modeh-ani@legacy-shabbat-morning",
+                folio: 51,
+            }),
+        ).toEqual({ ok: true })
+        expect(
+            validateLiturgyRef({
+                book: "crc-friday",
+                unitId: "shma.barchu@legacy-shabbat-evening",
+                folio: 10,
+            }),
+        ).toEqual({ ok: true })
+    })
+
+    it("refuses the same unit on another page", () => {
+        expect(
+            validateLiturgyRef({
+                book: "crc-saturday",
+                unitId: "awakening.modeh-ani@legacy-shabbat-morning",
+                folio: 52,
+            }),
+        ).toMatchObject({ ok: false, machineCode: "unknown_unit_id" })
+    })
+
+    it("refuses the other booklet's feed", () => {
+        expect(
+            validateLiturgyRef({
+                book: "crc-friday",
+                unitId: "awakening.modeh-ani@legacy-shabbat-morning",
+                folio: 10,
+            }),
+        ).toMatchObject({ ok: false, machineCode: "unknown_unit_id" })
+    })
+
+    it("still refuses a draft-feed id on a booklet", () => {
+        expect(
+            validateLiturgyRef({
+                book: "crc-friday",
+                unitId: "shma.barchu@shabbat-maariv",
+                folio: 10,
+            }),
+        ).toMatchObject({ ok: false, machineCode: "unknown_unit_id" })
+    })
+})

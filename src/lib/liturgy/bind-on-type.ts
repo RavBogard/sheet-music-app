@@ -1,5 +1,6 @@
 import { bookServiceFor } from "@/lib/books/machzor-services"
 import { validateLiturgyRef } from "@/lib/books/registry"
+import { companionUnitFor } from "@/lib/books/companion"
 import { momentIdForUnit } from "@/lib/books/moments"
 import type { LiturgyRef } from "@/lib/books/types"
 import { liturgyLookup } from "./lookup"
@@ -63,9 +64,11 @@ const NOTHING: AutoBindResult = { suggestions: [] }
  * A unit id belongs to the book that defines it. The legacy booklets are
  * pagemaps with no units at all, so `crc-friday` cannot carry
  * `shma.barchu@shabbat-maariv` however true that identity is — the registry
- * refuses it, correctly, and the page is kept alone. When the Shirei volume
- * for a service is released and becomes the book, the same match carries its
- * unit id through unchanged.
+ * refuses it, correctly. What it CAN carry is the same moment's unit in the
+ * legacy feed that prints the booklet's own pages (`@/lib/books/companion`),
+ * when that unit is on this row's page; otherwise the page is kept alone.
+ * When the Shirei volume for a service is released and becomes the book, the
+ * same match carries its unit id through unchanged.
  */
 export function writableLiturgyRef(
     book: string,
@@ -74,6 +77,7 @@ export function writableLiturgyRef(
     service?: string | null,
 ): LiturgyRef | null {
     if (typeof folio !== "number") return null
+    unitId = companionUnitFor(book, folio, unitId) ?? unitId
     if (unitId) {
         const withId: LiturgyRef = { book, unitId, folio }
         if (validateLiturgyRef(withId, { service }).ok) return withId
