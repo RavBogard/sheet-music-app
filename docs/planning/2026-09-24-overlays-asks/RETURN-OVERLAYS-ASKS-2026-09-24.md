@@ -118,3 +118,9 @@ say 64. "The One" (Echad Yachid) stays at p.63. As a result the Sh'ma crosswalks
 `shma.the-shma@legacy-shabbat-morning`, and Saturday coverage goes from 33 to 34 of 38. The ruling is
 appended to `shireishabbat/liturgy-map/DECISIONS-LOG.md` but **not committed**: that file also holds
 the print session's uncommitted R-0922-print-13..20, and committing it would carry them too.
+
+Production rows corrected to p.64 with `shma.the-shma@legacy-shabbat-morning` (momentId `the-shma`)
+[measured: `get_setlist` / `get_template` before and after, 2026-09-24]: Ha'azinu 9/19 "Sh'ma (major)",
+Nitzavim-Vayeilech 9/5 "Shema (major)", template "Randy Shabbat morning" row 8, and template "B'nai Mitzvah
+service" row 9. Row counts and order are unchanged; nothing else changed. Those were the only rows on
+`crc-saturday` p.63 across all 87 setlists and 4 templates.
