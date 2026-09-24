@@ -64,6 +64,10 @@ the printed 202/204 — a stale deploy.
   unpublished setlists. Do not re-add it in any form. Telling the band is its own action —
   `/api/setlist/notify-band`.
 - **Never propose which setting or melody the band plays.**
+- **Overlays reads setlists through `setlist_reader`** (`prepare_service_from_setlist`). Do not rename
+  or retype these without telling Overlays first: setlist `id, name, date, eventDate, tracks[]`; track
+  `id, order, title, type, songId, notes, liturgyRef {book, folio, unitId?}`, `momentId`. Adding
+  fields is fine. See `docs/planning/2026-09-24-overlays-asks/`.
 - Non-family agent frameworks (CARL, PAUL, Gemini/GSD) are RETIRED here: if you find their config
   active, that is a defect.
 
