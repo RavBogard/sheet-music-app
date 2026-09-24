@@ -78,13 +78,13 @@ describe("autoBindLiturgyRef", () => {
     })
 
     it("reports candidates and writes nothing when the name is ambiguous", () => {
-        // Saturday prints a Sh'ma in the Sh'ma and its blessings at p.63 and
+        // Saturday prints a Sh'ma in the Sh'ma and its blessings at p.64 (R-0924-overlays-1) and
         // another in the Torah procession at p.83. Both are exact; that is
         // ambiguity, not confidence, and the row waits for a human.
         const out = autoBindLiturgyRef("crc-saturday", "Sh'ma", "song")
         expect(out.ref).toBeUndefined()
         const pages = out.suggestions.map((s) => s.folio)
-        expect(pages).toContain(63)
+        expect(pages).toContain(64)
         expect(pages).toContain(83)
     })
 

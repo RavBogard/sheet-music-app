@@ -108,3 +108,13 @@ Overlays first. Three notes:
 `npx tsc --noEmit` is clean. The full `vitest run` passes: 4,954 tests, 31 skipped. The
 `mcp-liturgy-bindings` and `mcp-outline-fields` emulator suites pass: 33 tests. Deployed
 `0ac23889`, confirmed by `/api/version`, before the production run.
+
+## Addendum — the Sh'ma is p.64 (R-0924-overlays-1)
+
+Daniel, 2026-09-24: the printed Saturday booklet shows the Sh'ma on **p.64**, not 63. The `crc-saturday`
+pagemap entry "Kriyat Sh'ma", row 17 "The Sh'ma" in `fixed-liturgy.crc-saturday.json`,
+`fixed-liturgy.shabbat-shacharit.json` and `template-rows.saturday.json`, and both booklet notes now
+say 64. "The One" (Echad Yachid) stays at p.63. As a result the Sh'ma crosswalks to
+`shma.the-shma@legacy-shabbat-morning`, and Saturday coverage goes from 33 to 34 of 38. The ruling is
+appended to `shireishabbat/liturgy-map/DECISIONS-LOG.md` but **not committed**: that file also holds
+the print session's uncommitted R-0922-print-13..20, and committing it would carry them too.

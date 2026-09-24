@@ -128,12 +128,12 @@ describe("matchLiturgyTitle — what it refuses", () => {
         const nishmat = matchLiturgyTitle("crc-saturday", "Nishmat")
         expect(nishmat.clear).toBeNull()
 
-        // Two entries spelled Sh'ma on two different pages: p.63 in the Sh'ma
+        // Two entries spelled Sh'ma on two different pages: p.64 in the Sh'ma
         // block, p.83 in the Torah procession. Neither may win silently.
         const shma = matchLiturgyTitle("crc-saturday", "Sh'ma")
         expect(shma.clear).toBeNull()
         expect(shma.plausible.map((p) => p.entry.folio)).toEqual(
-            expect.arrayContaining([63, 83]),
+            expect.arrayContaining([64, 83]),
         )
     })
 
