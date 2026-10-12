@@ -62,3 +62,12 @@ describe("golden: house chart HTML via create_chart", () => {
         expect(html).toContain('<div class="ft"><span>Left</span><span>Right</span></div>')
     })
 })
+
+describe("testshul: house chart footer reads tenant config", () => {
+    it("a testshul chart carries the tenant footer", async () => {
+        primeTestOrg()
+        const html = await renderedHtml("testshul")
+        expect(html).toContain('<div class="ft"><span>Test Shul Tehila</span><span>testshul.vercel.app</span></div>')
+        expect(html).not.toContain("Central Reform Congregation")
+    })
+})

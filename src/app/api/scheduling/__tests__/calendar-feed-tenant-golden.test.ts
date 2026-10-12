@@ -141,3 +141,19 @@ describe("golden: calendar feed for crc and BL", () => {
         expect(disposition).toBe(GOLDEN_DISPOSITION)
     })
 })
+
+describe("testshul: calendar feed reads tenant config", () => {
+    it("carries the tenant identity and Asia/Jerusalem", async () => {
+        primeTestOrg()
+        const { body, disposition } = await feed("testshul")
+        const lines = body.split("\r\n")
+        expect(lines).toContain("PRODID:-//Test Shul Music//Musician Schedule//EN")
+        expect(lines).toContain(String.raw`X-WR-CALNAME:Test Shul Music - Alex\, Player`)
+        expect(lines).toContain("X-WR-TIMEZONE:Asia/Jerusalem")
+        expect(lines).toContain("UID:testshul-as-1@testshul.vercel.app")
+        expect(lines).toContain("LOCATION:Test Shul Tehila")
+        expect(body).not.toContain("CRC")
+        expect(body).not.toContain("Central Reform Congregation")
+        expect(disposition).toBe('attachment; filename="testshul-schedule-tok12345.ics"')
+    })
+})

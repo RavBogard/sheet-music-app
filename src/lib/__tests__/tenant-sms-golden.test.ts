@@ -82,3 +82,14 @@ describe("golden: scheduling SMS bodies for crc and BL", () => {
         expect(await renderAll("brotherslazaroff")).toEqual(GOLDEN)
     })
 })
+
+describe("testshul: SMS venue word reads tenant config", () => {
+    it("uses the tenant abbreviation", async () => {
+        primeTestOrg()
+        const out = await renderAll("testshul")
+        expect(out.confirmed).toContain(" at TST on Friday, March 13")
+        expect(out.pending).toContain(" at TST on Friday, March 13")
+        expect(out.reminder).toBe('Reminder: TST service "Friday Night Set" on Friday, March 13. You\'re playing on Bass. Setlist: https://example.test/schedule')
+        expect(out.cancelled).toBe('Hi Alex, your TST service assignment for "Friday Night Set" on Friday, March 13 has been cancelled.')
+    })
+})

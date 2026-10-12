@@ -6,6 +6,9 @@
  */
 
 import { logger } from '@/lib/logger'
+import { DEFAULT_ORG_ID } from '@/lib/org/registry'
+import { orgString } from '@/lib/org/strings'
+import type { OrgId } from '@/lib/org/types'
 
 interface TwilioMessageResponse {
     sid: string
@@ -92,8 +95,11 @@ export async function sendSchedulingAssignmentSMS(params: {
     status: 'pending' | 'confirmed'
     scheduleUrl: string
     newSongs?: string[]
+    /** Multi-tenant phase 1: the assignment's org → venue word. Default crc. */
+    org?: OrgId
 }): Promise<{ ok: boolean; error?: string }> {
     const { musicianName, setlistName, eventDate, instrument, status, scheduleUrl, newSongs } = params
+    const venue = orgString(params.org ?? DEFAULT_ORG_ID, 'sms.venueShort')
     const firstName = musicianName.split(' ')[0]
 
     const instrumentText = instrument ? ` on ${instrument}` : ''
@@ -101,8 +107,8 @@ export async function sendSchedulingAssignmentSMS(params: {
         ? ` New songs: ${newSongs.slice(0, 3).join(', ')}${newSongs.length > 3 ? ` +${newSongs.length - 3} more` : ''}.`
         : ''
     const body = status === 'confirmed'
-        ? `Hi ${firstName}! You're confirmed to play${instrumentText} at CRC on ${eventDate} for "${setlistName}".${newSongsText} View schedule: ${scheduleUrl}`
-        : `Hi ${firstName}, you're scheduled to play${instrumentText} at CRC on ${eventDate} for "${setlistName}".${newSongsText} Please confirm: ${scheduleUrl}`
+        ? `Hi ${firstName}! You're confirmed to play${instrumentText} at ${venue} on ${eventDate} for "${setlistName}".${newSongsText} View schedule: ${scheduleUrl}`
+        : `Hi ${firstName}, you're scheduled to play${instrumentText} at ${venue} on ${eventDate} for "${setlistName}".${newSongsText} Please confirm: ${scheduleUrl}`
 
     return sendSMS(params.to, body)
 }
@@ -117,11 +123,14 @@ export async function sendSchedulingReminderSMS(params: {
     eventDate: string
     instrument?: string
     scheduleUrl: string
+    /** Multi-tenant phase 1: the assignment's org → venue word. Default crc. */
+    org?: OrgId
 }): Promise<{ ok: boolean; error?: string }> {
     const firstName = params.musicianName.split(' ')[0]
     const instrumentText = params.instrument ? ` on ${params.instrument}` : ''
+    const venue = orgString(params.org ?? DEFAULT_ORG_ID, 'sms.venueShort')
 
-    const body = `Reminder: CRC service "${params.setlistName}" on ${params.eventDate}. You're playing${instrumentText}. Setlist: ${params.scheduleUrl}`
+    const body = `Reminder: ${venue} service "${params.setlistName}" on ${params.eventDate}. You're playing${instrumentText}. Setlist: ${params.scheduleUrl}`
 
     return sendSMS(params.to, body)
 }
@@ -134,9 +143,12 @@ export async function sendSchedulingCancellationSMS(params: {
     musicianName: string
     setlistName: string
     eventDate: string
+    /** Multi-tenant phase 1: the assignment's org → venue word. Default crc. */
+    org?: OrgId
 }): Promise<{ ok: boolean; error?: string }> {
     const firstName = params.musicianName.split(' ')[0]
-    const body = `Hi ${firstName}, your CRC service assignment for "${params.setlistName}" on ${params.eventDate} has been cancelled.`
+    const venue = orgString(params.org ?? DEFAULT_ORG_ID, 'sms.venueShort')
+    const body = `Hi ${firstName}, your ${venue} service assignment for "${params.setlistName}" on ${params.eventDate} has been cancelled.`
 
     return sendSMS(params.to, body)
 }

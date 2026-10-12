@@ -9,6 +9,7 @@ import { Resend } from 'resend'
 import { logger } from '@/lib/logger'
 import { getEmailBranding, getOrgBranding } from '@/lib/org/branding'
 import { DEFAULT_ORG_ID } from '@/lib/org/registry'
+import { orgString } from '@/lib/org/strings'
 import type { OrgId } from '@/lib/org/types'
 
 let resend: Resend | null = null
@@ -353,8 +354,11 @@ export async function sendTaskAssignmentEmail(params: {
   taskTitle: string
   taskDescription?: string
   taskUrl: string
+  /** Multi-tenant phase 1: the setlist's org → footer and from-name. Default crc. */
+  org?: OrgId
 }): Promise<{ ok: boolean; reason?: string }> {
   const client = getResend()
+  const org = params.org ?? DEFAULT_ORG_ID
   if (!client) return { ok: false, reason: 'RESEND_API_KEY not configured' }
 
   try {
@@ -392,7 +396,7 @@ export async function sendTaskAssignmentEmail(params: {
   </tr>
   <tr>
     <td style="padding:16px 32px;background:#fafafa;border-top:1px solid #eee;">
-      <p style="margin:0;color:#999;font-size:12px;text-align:center;">CRC Music — Central Reform Congregation</p>
+      <p style="margin:0;color:#999;font-size:12px;text-align:center;">${escapeHtml(orgString(org, 'email.notificationFooter'))}</p>
     </td>
   </tr>
 </table>
@@ -400,7 +404,7 @@ export async function sendTaskAssignmentEmail(params: {
 </html>`
 
     const sendPayload: any = {
-      from: `CRC Music <${getFromEmail()}>`,
+      from: `${orgString(org, 'email.notificationFromName')} <${getFromEmail()}>`,
       to: params.to,
       subject: `Task Assigned: ${params.taskTitle}`,
       html,
@@ -437,8 +441,11 @@ export async function sendTaskCompletionEmail(params: {
   setlistName: string
   taskTitle: string
   taskUrl: string
+  /** Multi-tenant phase 1: the setlist's org → footer and from-name. Default crc. */
+  org?: OrgId
 }): Promise<{ ok: boolean; reason?: string }> {
   const client = getResend()
+  const org = params.org ?? DEFAULT_ORG_ID
   if (!client) return { ok: false, reason: 'RESEND_API_KEY not configured' }
 
   try {
@@ -474,7 +481,7 @@ export async function sendTaskCompletionEmail(params: {
   </tr>
   <tr>
     <td style="padding:16px 32px;background:#fafafa;border-top:1px solid #eee;">
-      <p style="margin:0;color:#999;font-size:12px;text-align:center;">CRC Music — Central Reform Congregation</p>
+      <p style="margin:0;color:#999;font-size:12px;text-align:center;">${escapeHtml(orgString(org, 'email.notificationFooter'))}</p>
     </td>
   </tr>
 </table>
@@ -482,7 +489,7 @@ export async function sendTaskCompletionEmail(params: {
 </html>`
 
     const { error } = await client.emails.send({
-      from: `CRC Music <${getFromEmail()}>`,
+      from: `${orgString(org, 'email.notificationFromName')} <${getFromEmail()}>`,
       to: params.to,
       subject: `Task Completed: ${params.taskTitle}`,
       html,

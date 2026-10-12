@@ -94,3 +94,27 @@ describe("golden: task + scheduling emails render today's text for crc and BL", 
         expect(lastPayload().html).toContain(">CRC Music — Central Reform Congregation</p>")
     })
 })
+
+describe("testshul: emails read tenant config", () => {
+    it("task assignment + completion carry the tenant from-name and footer", async () => {
+        primeTestOrg()
+        await sendTaskAssignmentEmail({ ...assignment, org: "testshul" })
+        expect(lastPayload().from).toBe("Test Shul Music <noreply@centralreform.live>")
+        expect(lastPayload().html).toContain(">Test Shul Music — Test Shul Tehila</p>")
+        expect(lastPayload().html).not.toContain("CRC")
+        await sendTaskCompletionEmail({ ...completion, org: "testshul" })
+        expect(lastPayload().from).toBe("Test Shul Music <noreply@centralreform.live>")
+        expect(lastPayload().html).toContain(">Test Shul Music — Test Shul Tehila</p>")
+    })
+    it("scheduling email names the tenant as the venue", async () => {
+        primeTestOrg()
+        await sendSchedulingEmail({ ...scheduling, status: "pending", org: "testshul" })
+        const p = lastPayload()
+        expect(p.from).toBe("Test Shul Music <noreply@centralreform.live>")
+        expect(p.html).toContain("for an upcoming service at Test Shul Tehila.")
+        expect(p.html).toContain(">Test Shul Music — Test Shul Tehila</p>")
+        expect(p.html).not.toContain("Central Reform")
+        await sendSchedulingEmail({ ...scheduling, status: "cancelled", org: "testshul" })
+        expect(lastPayload().html).toContain("upcoming service at Test Shul Tehila has been cancelled.")
+    })
+})

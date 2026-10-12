@@ -105,3 +105,12 @@ describe("golden: notify-band publish SMS", () => {
         expect(await notify("brotherslazaroff")).toBe(GOLDEN)
     })
 })
+
+describe("testshul: publish SMS prefix reads tenant config", () => {
+    it("a testshul setlist texts with the tenant prefix", async () => {
+        primeTestOrg()
+        expect(await notify("testshul")).toBe(
+            'Test Shul Music: "Friday Night Set" for March 13, 2026 has been published. View it at https://centralreform.live/perform/setlist/sl-1',
+        )
+    })
+})
