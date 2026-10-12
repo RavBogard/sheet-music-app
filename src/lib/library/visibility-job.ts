@@ -298,3 +298,26 @@ export async function recomputeRowVisibilitySafe(fileId: string, opts: Visibilit
         logger.warn(`[visibility] row ${fileId} not stamped`, e)
     }
 }
+
+/**
+ * For a NEW chart (upload, Drive sync, MCP create): stamp it only when its
+ * collection is shared or assigned, so a chart dropped into a shared collection
+ * is visible to the same tenants at once. A chart in a private collection is
+ * left exactly as before phase 5 (its visibility derives to owner-only).
+ * Never throws.
+ */
+export async function stampNewChartIfShared(fileId: string, opts: VisibilityJobDeps = {}): Promise<boolean> {
+    try {
+        const { db } = resolve({ ...opts, bucket: null })
+        const snap = await db.collection("library_index").doc(fileId).get()
+        if (!snap.exists) return false
+        const row = snap.data() as VisibilityRow
+        const stamp = await stampFor(db, collectionIdOf({ ...row, collectionId: undefined }), ownerOf(row))
+        if (stamp.visibleToOrgs.length <= 1 && stamp.libraryOrgs.length <= 1) return false
+        await recomputeRowVisibility(fileId, { ...opts, collectionId: stamp.collectionId })
+        return true
+    } catch (e) {
+        logger.warn(`[visibility] new chart ${fileId} not stamped`, e)
+        return false
+    }
+}

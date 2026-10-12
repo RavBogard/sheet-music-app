@@ -41,6 +41,7 @@ import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
 // not this module.
 import { applySongMetadata } from "@/lib/mcp/tools/song-metadata"
 import type { OrgId } from "@/lib/org/types"
+import { stampNewChartIfShared } from "@/lib/library/visibility-job"
 
 /**
  * Shared library-upload pipeline. The single server-side codepath that:
@@ -857,6 +858,10 @@ export async function processChartUpload(
             )
         }
     }
+
+    // Multi-tenant phase 5: a chart uploaded into a SHARED collection is
+    // visible to the same tenants at once (no-op for private collections).
+    await stampNewChartIfShared(fileId, { db })
 
     stage("complete")
 

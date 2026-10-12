@@ -6,6 +6,10 @@ import {
 } from "@/lib/firebase-storage"
 import { safelyDeleteLibraryObject } from "@/lib/library/safely-delete-library-object"
 import { logger } from "@/lib/logger"
+import type { OrgId } from "@/lib/org/types"
+import { writeAccess } from "@/lib/library/visibility-server"
+import { recomputeRowVisibilitySafe } from "@/lib/library/visibility-job"
+import { auditSharedBytesReplaced } from "@/lib/library/shared-bytes-audit"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { bareStem, titleSpecificity } from "@/lib/mcp/title-specificity"
 import {
@@ -87,6 +91,13 @@ export async function healChartBytes(
     buffer: Buffer,
     mimeType: string,
     salvagedFrom: string,
+    /**
+     * Multi-tenant phase 5: the caller's tenant. Byte replacement is a WRITE, so
+     * only the owner may do it: a chart the caller can see but not own is
+     * refused with `not_owner`, one it cannot see with `row_not_found`.
+     * Omitted (internal callers that already own the row): no check.
+     */
+    callerOrg?: OrgId,
 ): Promise<HealChartBytesOk | RichErrorEnvelope> {
     const storagePath = `library/${fileId}${inferChartExt(mimeType)}`
 
@@ -97,6 +108,16 @@ export async function healChartBytes(
     // shared helper is self-contained (one cheap get per heal).
     const rowSnap = await db.collection("library_index").doc(fileId).get()
     const rowData = rowSnap.data() ?? {}
+
+    if (callerOrg !== undefined) {
+        const access = await writeAccess(rowSnap.exists ? rowData : null, callerOrg, fileId, db)
+        if (access.kind === "not_owner") {
+            return richError("not_owner", access.message, { fileId, ownerOrgId: access.ownerOrgId }, `Use it in your setlists as it is; only ${access.ownerName} can change it.`)
+        }
+        if (access.kind === "not_visible") {
+            return richError("row_not_found", `library_index row "${fileId}" not found.`, { fileId })
+        }
+    }
 
     // ─── Storage upload + read-verify ──────────────────────────────────────
     try {
@@ -251,6 +272,19 @@ export async function healChartBytes(
             `[healChartBytes] library.row.created emit failed (non-fatal): ${emitErr instanceof Error ? emitErr.message : String(emitErr)}`,
         )
     }
+
+    // Multi-tenant phase 5: the upload rewrote the object's metadata (orgId
+    // only), so put the visibility back; and a shared chart's new bytes reach
+    // every tenant that uses it at once, so the replacement is audited.
+    await recomputeRowVisibilitySafe(fileId, { db })
+    await auditSharedBytesReplaced(db, {
+        fileId,
+        row: rowData,
+        actorUid: uid,
+        via: "claude",
+        source: salvagedFrom,
+        after: { mimeType, fileSize: buffer.byteLength },
+    })
 
     return { ok: true, storagePath, sizeBytes: buffer.byteLength }
 }

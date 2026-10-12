@@ -5,6 +5,8 @@ import {
     getStorageObjectSize,
 } from "@/lib/firebase-storage"
 import { safelyDeleteLibraryObject } from "@/lib/library/safely-delete-library-object"
+import { recomputeRowVisibilitySafe } from "@/lib/library/visibility-job"
+import { auditSharedBytesReplaced } from "@/lib/library/shared-bytes-audit"
 import { getChartHealth } from "@/lib/file-fetcher"
 import { DriveClient } from "@/lib/google-drive"
 import { logger } from "@/lib/logger"
@@ -519,6 +521,8 @@ async function commitResolvedBytes(
         reconciledAt: nowIso,
         driveFileId: fileId,
     }
+    // Phase 5: the row as it was, for the shared-bytes audit below.
+    const rowBefore = (await db.collection("library_index").doc(fileId).get().catch(() => null))?.data() ?? {}
     try {
         await db.collection("library_index").doc(fileId).set(patch, { merge: true })
     } catch (err) {
@@ -544,6 +548,17 @@ async function commitResolvedBytes(
             error: `Firestore merge-update failed: ${err instanceof Error ? err.message : String(err)}`,
         }
     }
+    // Phase 5: the upload reset the object's metadata to orgId only; restore
+    // its visibility, and audit new bytes on a chart other tenants can see.
+    await recomputeRowVisibilitySafe(fileId, { db })
+    await auditSharedBytesReplaced(db, {
+        fileId,
+        row: rowBefore,
+        actorUid: actorUid ?? "reconcile_library",
+        via: "claude",
+        source: "reconcile",
+        after: { mimeType, fileSize: buffer.byteLength },
+    })
     return { ok: true, sizeBytes: buffer.byteLength }
 }
 
