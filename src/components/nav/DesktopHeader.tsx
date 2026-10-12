@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect, useRef } from "react"
-import { Search, UserCircle, LogOut, Settings, CloudOff, ShieldAlert } from "lucide-react"
+import { Search, UserCircle, LogOut, Settings, CloudOff, ShieldAlert, Building2 } from "lucide-react"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,11 +28,13 @@ import { AppNavigationProps } from "./AppNavigation"
 export function DesktopHeader(props: AppNavigationProps) {
     const pathname = usePathname()
     const router = useRouter()
-    const { user, profile, role, isMember: authIsMember, isBandLeader: authIsBandLeader, signIn, signOut } = useAuth()
+    const { user, profile, role, isMember: authIsMember, isBandLeader: authIsBandLeader, isPlatformOwner: authIsPlatformOwner, signIn, signOut } = useAuth()
     
     // Use server overrides to prevent UI flashing
     const isMember = authIsMember || !!props.serverIsMember
     const isBandLeader = authIsBandLeader || !!props.serverIsBandLeader
+    // Multi-tenant phase 4: the platform console link, for the platform owner only.
+    const isPlatformOwner = !!authIsPlatformOwner || !!props.serverIsPlatformOwner
 
     const { allFiles } = useLibraryStore()
     // Start background sync if logged in
@@ -231,6 +233,13 @@ export function DesktopHeader(props: AppNavigationProps) {
                                             </Link>
                                         </DropdownMenuItem>
                                     </>
+                                )}
+                                {isPlatformOwner && (
+                                    <DropdownMenuItem asChild className="hover:bg-accent cursor-pointer">
+                                        <Link href="/platform">
+                                            <Building2 className="mr-2 h-4 w-4 text-brand" /> Platform
+                                        </Link>
+                                    </DropdownMenuItem>
                                 )}
                                 <DropdownMenuSeparator className="bg-border" />
                                 <DropdownMenuItem className="text-red-500 hover:bg-red-500/10 cursor-pointer" onClick={() => signOut()}>
