@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger"
 import { BASE_URL } from "@/lib/constants"
 import { peekOrgConfig } from "@/lib/org/config-cache"
 import { codeOrgConfig } from "@/lib/org/config-code"
+import { getOrgConfig } from "@/lib/org/get-org-config"
 import { coerceOrgId } from "@/lib/org/registry"
 import { orgString } from "@/lib/org/strings"
 
@@ -34,7 +35,8 @@ export async function GET(
         }
 
         const org = coerceOrgId(req.headers.get('x-org-id'))
-        const orgConfig = peekOrgConfig(org) ?? codeOrgConfig(org) ?? codeOrgConfig('crc')!
+        // Loading primes the synchronous orgString reads below.
+        const orgConfig = (await getOrgConfig(org).catch(() => null)) ?? peekOrgConfig(org) ?? codeOrgConfig(org) ?? codeOrgConfig('crc')!
         const product = escapeICalText(orgString(org, 'feed.productName'))
         const uidPrefix = orgString(org, 'feed.uidPrefix')
         const uidDomain = orgString(org, 'feed.uidDomain')
