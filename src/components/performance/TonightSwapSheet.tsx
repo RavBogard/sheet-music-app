@@ -21,6 +21,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Input } from "@/components/ui/input"
 import { ChartThumb } from "@/components/setlist/grid/ChartThumb"
 import { useAuth } from "@/lib/auth-context"
+import { useSharedCollections } from "@/hooks/use-shared-collections"
+import { SHARED_COPY } from "@/lib/library/shared-collections"
 import { useLibraryStore } from "@/lib/library-store"
 import { useOrg } from "@/lib/org/org-context"
 import { getMoment, momentIdForUnit } from "@/lib/books/moments"
@@ -92,6 +94,24 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
                 query,
             }),
         [allFiles, planned.fileId, planned.title, momentIds, query],
+    )
+
+    // Phase 5: collections other tenants share — opt-in chips, off until
+    // switched on, remembered per user. Their rows come after the site's own
+    // in every section, labelled with the owner.
+    const shared = useSharedCollections()
+    const sharedSections = useMemo(
+        () =>
+            shared.chipRows.length === 0
+                ? null
+                : swapCandidates({
+                      allFiles: shared.chipRows,
+                      plannedFileId: planned.fileId,
+                      plannedTitle: planned.title,
+                      momentFileIds: momentIds,
+                      query,
+                  }),
+        [shared.chipRows, planned.fileId, planned.title, momentIds, query],
     )
 
     const showingFileId = track.fileId ?? null
@@ -169,6 +189,20 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
         />
     )
 
+    const sharedRow = (f: DriveFile, section: string) => (
+        <CandidateRow
+            key={`${section}-shared-${f.id}`}
+            fileId={f.id}
+            title={candidateTitle(f)}
+            detail={[SHARED_COPY.fromOwner(shared.owner(f.orgId ?? "")), f.metadata?.key].filter(Boolean).join(" · ")}
+            sharedFrom={f.orgId}
+            mimeType={f.mimeType}
+            showing={f.id === showingFileId}
+            disabled={busy}
+            onPick={() => pick({ fileId: f.id, title: candidateTitle(f), file: f })}
+        />
+    )
+
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
@@ -205,11 +239,17 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
                         )}
                     </Section>
 
-                    {sections.moment.length > 0 && (
-                        <Section label="Same moment">{sections.moment.map((f) => row(f, "moment"))}</Section>
+                    {sections.moment.length + (sharedSections?.moment.length ?? 0) > 0 && (
+                        <Section label="Same moment">
+                            {sections.moment.map((f) => row(f, "moment"))}
+                            {sharedSections?.moment.map((f) => sharedRow(f, "moment"))}
+                        </Section>
                     )}
-                    {sections.stem.length > 0 && (
-                        <Section label="Same title">{sections.stem.map((f) => row(f, "stem"))}</Section>
+                    {sections.stem.length + (sharedSections?.stem.length ?? 0) > 0 && (
+                        <Section label="Same title">
+                            {sections.stem.map((f) => row(f, "stem"))}
+                            {sharedSections?.stem.map((f) => sharedRow(f, "stem"))}
+                        </Section>
                     )}
 
                     <Section label="Search">
@@ -232,12 +272,36 @@ export function TonightSwapSheet({ open, onOpenChange, setlistId, track, planned
                                 </button>
                             )}
                         </div>
-                        {query.trim() && sections.search.length === 0 && (
+                        {shared.chips.length > 0 && (
+                            <div
+                                role="group"
+                                aria-label={SHARED_COPY.chipGroupLabel}
+                                className="flex flex-wrap items-center gap-2 px-4 pb-2"
+                            >
+                                {shared.chips.map((c) => (
+                                    <button
+                                        key={c.id}
+                                        type="button"
+                                        aria-pressed={c.on}
+                                        aria-label={SHARED_COPY.chipAria(c.label, c.owner)}
+                                        data-testid="swap-shared-chip"
+                                        data-shared-collection={c.id}
+                                        onClick={() => shared.toggle(c.id)}
+                                        className="min-h-11 rounded-full border border-dashed border-border px-4 text-sm text-muted-foreground [touch-action:manipulation] aria-pressed:border-solid aria-pressed:border-brand/30 aria-pressed:bg-brand/15 aria-pressed:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                                    >
+                                        {c.label}
+                                        <span className="ml-1.5 text-xs text-muted-foreground">{SHARED_COPY.fromOwner(c.owner)}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {query.trim() && sections.search.length + (sharedSections?.search.length ?? 0) === 0 && (
                             <p className="px-4 py-2 text-sm text-muted-foreground">
                                 {allFiles.length === 0 ? "The library is still loading." : "No charts match."}
                             </p>
                         )}
                         {sections.search.map((f) => row(f, "search"))}
+                        {sharedSections?.search.map((f) => sharedRow(f, "search"))}
                     </Section>
                 </div>
 
@@ -280,6 +344,7 @@ function CandidateRow({
     disabled,
     onPick,
     testId,
+    sharedFrom,
 }: {
     fileId: string
     title: string
@@ -289,6 +354,8 @@ function CandidateRow({
     disabled: boolean
     onPick: () => void
     testId?: string
+    /** Owner tenant of a shared chart (data hook for tests and probes). */
+    sharedFrom?: string
 }) {
     return (
         <li className="flex items-center gap-3 px-4 border-b border-border/40 min-h-14">
@@ -297,6 +364,7 @@ function CandidateRow({
                 type="button"
                 data-testid={testId ?? "tonight-swap-candidate"}
                 data-file-id={fileId}
+                data-shared-from={sharedFrom}
                 disabled={disabled || showing}
                 aria-label={showing ? `${title}, showing now` : `Swap to ${title}`}
                 onClick={onPick}

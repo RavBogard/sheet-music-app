@@ -61,6 +61,12 @@ export interface LocalSong {
      *  active (backward compat with v54-01-01 bootstrap docs). */
     status?: 'active' | 'archived' | 'duplicate' | 'orphaned'
     updatedAt?: number
+    /** Owning tenant (no orgId = crc). */
+    orgId?: string
+    /** Multi-tenant phase 5: set on rows shared from another tenant (library_index fields). */
+    visibleToOrgs?: string[]
+    collection?: string
+    collectionId?: string
     [key: string]: unknown
 }
 

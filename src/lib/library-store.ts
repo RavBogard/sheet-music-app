@@ -15,7 +15,16 @@ const FUSE_OPTIONS = {
 }
 
 interface LibraryState {
+    /** Own rows (the host-scoped library list) plus the shared section rows. */
     allFiles: DriveFile[]
+    /** The host-scoped library list as last hydrated. */
+    ownFiles: DriveFile[]
+    /**
+     * Multi-tenant phase 5: rows another tenant owns that feed one of this
+     * tenant's own sections (CRC's "Nava Tehilah" tab after the nava move).
+     * Empty unless something is shared that way; then allFiles = own + these.
+     */
+    sharedSectionFiles: DriveFile[]
     displayedFiles: DriveFile[]
     loading: boolean // Indicates if filtering is happening
     initialized: boolean
@@ -26,6 +35,19 @@ interface LibraryState {
 
     setFilter: (query: string) => void
     hydrate: (files: DriveFile[]) => void
+    setSharedSectionFiles: (files: DriveFile[]) => void
+}
+
+function sameFiles(a: DriveFile[], b: DriveFile[]): boolean {
+    if (a.length !== b.length) return false
+    return a.every((f, i) => f.id === b[i].id && f.name === b[i].name && f.displayName === b[i].displayName && f.status === b[i].status)
+}
+
+/** Own rows win on an id clash; shared section rows the own list lacks are added. */
+function mergeFiles(own: DriveFile[], shared: DriveFile[]): DriveFile[] {
+    if (shared.length === 0) return own
+    const ids = new Set(own.map(f => f.id))
+    return [...own, ...shared.filter(f => !ids.has(f.id))]
 }
 
 function applyFiles(files: DriveFile[]) {
@@ -45,6 +67,8 @@ function applyFiles(files: DriveFile[]) {
 
 export const useLibraryStore = create<LibraryState>((set, get) => ({
     allFiles: [],
+    ownFiles: [],
+    sharedSectionFiles: [],
     displayedFiles: [],
     loading: false,
     initialized: false,
@@ -52,7 +76,21 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     _fuseIndex: null,
 
     // Called by React Query hook to sync data to local ephemeral state
-    hydrate: (files: DriveFile[]) => set(applyFiles(files)),
+    hydrate: (files: DriveFile[]) =>
+        set({ ownFiles: files, ...applyFiles(mergeFiles(files, get().sharedSectionFiles)) }),
+
+    setSharedSectionFiles: (files: DriveFile[]) => {
+        const { ownFiles, sharedSectionFiles, initialized, searchQuery } = get()
+        if (sameFiles(files, sharedSectionFiles)) return
+        const next = applyFiles(mergeFiles(ownFiles, files))
+        set({
+            sharedSectionFiles: files,
+            ...next,
+            // Do not flip the page out of its skeleton before the own list lands.
+            initialized,
+        })
+        if (searchQuery) get().setFilter(searchQuery)
+    },
 
     setFilter: (query) => {
         const { allFiles, _fuseIndex } = get()

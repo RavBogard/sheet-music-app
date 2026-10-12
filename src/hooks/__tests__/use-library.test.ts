@@ -32,9 +32,14 @@ vi.mock('@/lib/auth-context', () => ({
 }))
 
 vi.mock('@/lib/library-store', () => ({
-  useLibraryStore: vi.fn((selector: (s: { hydrate: typeof mockHydrate }) => unknown) =>
-    selector({ hydrate: mockHydrate })
+  useLibraryStore: vi.fn((selector: (s: { hydrate: typeof mockHydrate; setSharedSectionFiles: () => void }) => unknown) =>
+    selector({ hydrate: mockHydrate, setSharedSectionFiles: () => {} })
   ),
+}))
+
+// Phase 5 shared section rows have their own tests (shared-collections.test.tsx).
+vi.mock('@/hooks/use-shared-collections', () => ({
+  useSharedSectionRows: () => [],
 }))
 
 vi.mock('@/lib/library-cache', () => ({

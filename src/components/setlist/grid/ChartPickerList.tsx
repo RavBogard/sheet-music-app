@@ -13,10 +13,17 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { useLibrary } from '@/hooks/use-library'
+import { useSharedCollections } from '@/hooks/use-shared-collections'
 import { useAuth } from '@/lib/auth-context'
 import { auth } from '@/lib/firebase'
 import { useLibraryStore } from '@/lib/library-store'
 import { isJunkLibraryRow } from '@/lib/library/junk-filter'
+import {
+    SHARED_COPY,
+    isSharedPickable,
+    isVisibilitySectionRow,
+    sharedTitle,
+} from '@/lib/library/shared-collections'
 import { getDb } from '@/lib/local/schema'
 import type { LocalSong } from '@/lib/local/types'
 import { useOrg } from '@/lib/org/org-context'
@@ -208,7 +215,17 @@ export function ChartPickerList({
         async () => {
             const t0 = Date.now()
             try {
-                const rows = await getDb().songs.filter((row) => isPickableFor(row, hostOrg)).toArray()
+                // Own rows, plus (phase 5, ruling 6) rows another tenant owns
+                // that feed one of this site's own sections — CRC's Nava
+                // Tehilah charts after the nava move — so the list is the same
+                // before and after. Other shared rows wait behind their chip.
+                const rows = await getDb()
+                    .songs.filter(
+                        (row) =>
+                            isPickableFor(row, hostOrg) ||
+                            (isSharedPickable(row, hostOrg) && isVisibilitySectionRow(row, hostOrg)),
+                    )
+                    .toArray()
                 probeNote({ ok: rows.length, ms: Date.now() - t0 })
                 return rows
             } catch (err) {
@@ -247,6 +264,9 @@ export function ChartPickerList({
     const chips = useMemo(() => chipsFor(songs ?? [], collectionById), [songs, collectionById])
     const activeCollection = chips.length > 0 ? collection : null
     const otherSites = useOtherSites(isAdmin && otherSitesOn, hostOrg)
+    // Phase 5: collections other tenants share with this one — opt-in chips,
+    // off until switched on, remembered per user.
+    const shared = useSharedCollections()
 
     const { recentSongs, librarySongs } = useMemo(
         () =>
@@ -286,7 +306,7 @@ export function ChartPickerList({
                     }
                 }}
             />
-            {(chips.length > 0 || isAdmin) && (
+            {(chips.length > 0 || isAdmin || shared.chips.length > 0) && (
                 <div
                     role="group"
                     aria-label="Library collection"
@@ -309,6 +329,21 @@ export function ChartPickerList({
                             </button>
                         )
                     })}
+                    {shared.chips.map((c) => (
+                        <button
+                            key={c.id}
+                            type="button"
+                            aria-pressed={c.on}
+                            aria-label={SHARED_COPY.chipAria(c.label, c.owner)}
+                            title={SHARED_COPY.fromOwner(c.owner)}
+                            data-testid="picker-shared-chip"
+                            data-shared-collection={c.id}
+                            onClick={() => shared.toggle(c.id)}
+                            className="rounded-full border border-dashed border-white/15 px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground aria-pressed:border-solid aria-pressed:border-indigo-400/50 aria-pressed:bg-indigo-500/15 aria-pressed:text-foreground [@media(pointer:coarse)]:py-1.5"
+                        >
+                            {c.label}
+                        </button>
+                    ))}
                     {isAdmin && (
                         <button
                             type="button"
@@ -330,6 +365,35 @@ export function ChartPickerList({
                 )}
                 {librarySongs.length > 0 && (
                     <CommandGroup heading="Library">{librarySongs.map((s) => renderItem(s, ''))}</CommandGroup>
+                )}
+                {shared.chipRows.length > 0 && (
+                    <CommandGroup heading={SHARED_COPY.sharedHeading}>
+                        {shared.chipRows.map((row) => {
+                            const title = sharedTitle(row)
+                            const owner = SHARED_COPY.fromOwner(shared.owner(row.orgId))
+                            return (
+                                <CommandItem
+                                    key={`shared-${row.id}`}
+                                    value={`${title} ${owner}`}
+                                    onSelect={() => onPick({ id: row.id, title })}
+                                    data-current={row.id === currentSongId ? 'true' : undefined}
+                                    data-shared-owner={row.orgId}
+                                    className={itemClassName}
+                                >
+                                    <ChartPickerItemContent
+                                        song={{ id: row.id, title, normalizedTitle: title.toLowerCase() }}
+                                        mimeType={row.mimeType}
+                                    />
+                                    <span className="ml-auto shrink-0 rounded border border-white/10 px-1.5 text-[10px] text-muted-foreground">
+                                        {owner}
+                                    </span>
+                                </CommandItem>
+                            )
+                        })}
+                    </CommandGroup>
+                )}
+                {shared.failed && (
+                    <p className="px-4 py-2 text-xs text-muted-foreground">{SHARED_COPY.loadFailed}</p>
                 )}
                 {otherSitesOn && otherSites.rows.length > 0 && (
                     <CommandGroup heading="Other sites">

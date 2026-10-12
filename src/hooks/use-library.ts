@@ -6,6 +6,8 @@ import { useEffect } from "react"
 import { useLibraryStore } from "@/lib/library-store"
 import { useAuth } from "@/lib/auth-context"
 import { listenForCacheInvalidation } from "@/lib/library-cache"
+import { useSharedSectionRows } from "@/hooks/use-shared-collections"
+import { invalidateSharedCache } from "@/lib/library/shared-source"
 
 /**
  * Fetches the library files from the API.
@@ -65,6 +67,16 @@ export function useLibrary(force = false, collection = 'all', allSites = false) 
         }
     }, [data?.files, hydrate])
 
+    // Multi-tenant phase 5: rows another tenant owns that feed one of this
+    // tenant's own sections (CRC's nava tab after the move) join the store,
+    // so every surface that reads it (library page, pickers, Swap sheet) sees
+    // the section unchanged. Empty — and so a no-op — until something is shared.
+    const sectionRows = useSharedSectionRows()
+    const setSharedSectionFiles = useLibraryStore(s => s.setSharedSectionFiles)
+    useEffect(() => {
+        setSharedSectionFiles(sectionRows)
+    }, [sectionRows, setSharedSectionFiles])
+
     // v45-07: subscribe to cross-tab library invalidation. When another tab
     // uploads a file, it broadcasts on the `library-cache` channel; we invalidate
     // our react-query cache so the next render refetches.
@@ -89,6 +101,7 @@ export function useLibrary(force = false, collection = 'all', allSites = false) 
                 return
             }
             queryClient.invalidateQueries({ queryKey: ['library'] })
+            invalidateSharedCache()
         }))
         return unsub
     }, [user, queryClient])

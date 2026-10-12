@@ -33,7 +33,7 @@ import type { DriveFile } from '@/types/models'
 import { ChartBindPopover } from '../ChartBindPopover'
 import { ChartCell } from '../cells/ChartCell'
 
-export const GOLDEN_ROWS = [
+const GOLDEN_ROWS = [
     { id: 'c1', title: 'Adon Olam (Friedman)', orgId: 'crc', collection: 'core' },
     { id: 'c2', title: 'Barchu (Sulzer)', orgId: 'crc', collection: 'core' },
     { id: 'c3', title: 'Hashkivenu (Shireinu)', orgId: 'crc', collection: 'supplemental' },

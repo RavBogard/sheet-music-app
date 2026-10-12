@@ -20,6 +20,12 @@ export interface DriveFile {
     mimeType: string
     parents?: string[]
     collection?: KnownCollection
+    /** Owning tenant (the library list carries it; no orgId = crc). */
+    orgId?: string
+    /** Multi-tenant phase 5: `${ownerOrgId}__${collection}`, and the tenants that may see the row. */
+    collectionId?: string
+    visibleToOrgs?: string[]
+    status?: string
     webContentLink?: string
     thumbnailLink?: string
     metadata?: {
