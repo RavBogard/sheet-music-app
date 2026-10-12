@@ -10,6 +10,7 @@
  *   const auth = await requireAuth(req, 'member')  // Member+ (member, leader, admin)
  */
 
+import { hasViewAsCookie, isWriteMethod } from "@/lib/org/view-as"
 import { NextRequest, NextResponse } from "next/server"
 import { initAdmin, verifyIdToken } from "@/lib/firebase-admin"
 import { DecodedIdToken } from "firebase-admin/auth"
@@ -174,6 +175,16 @@ export async function requireAuth(
                 },
             )
         }
+    }
+
+    // Multi-tenant phase 4: "View as this tenant" is read-only for the platform owner.
+    if (access.po && isWriteMethod(req.method) && hasViewAsCookie(req.headers.get("cookie"))) {
+        throw httpError(
+            403,
+            "read_only_view",
+            "You are viewing this tenant read-only. Stop viewing to make changes.",
+            { errorCode: 403 },
+        )
     }
 
     return {

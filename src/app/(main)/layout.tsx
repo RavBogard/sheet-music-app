@@ -1,4 +1,5 @@
 import { Footer } from "@/components/Footer"
+import { ViewAsBanner } from "@/components/platform/ViewAsBanner"
 import { AppNavigation } from "@/components/nav/AppNavigation"
 import { AuthedQueryProvider } from "@/components/authed-query-provider"
 import { LazyClientComponents } from "@/components/layout/LazyClientComponents"
@@ -39,6 +40,7 @@ export default async function MainLayout({
                     - Mobile: pt-16 to clear top mobile header + pb-24 to clear bottom tab bar
                     - Desktop: pt-20 to clear top sticky header
                 */}
+                <ViewAsBanner />
                 <main id="main-content" className="flex-1 pt-16 pb-24 md:pt-20 md:pb-0">
                     <PageTransition>
                         {children}

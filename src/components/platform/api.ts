@@ -50,15 +50,15 @@ export const platformApi = {
     updateTenant: (orgId: string, patch: Partial<OrgConfigInput>, dryRun: boolean) =>
         call<WriteResult<OrgConfig>>(withDry(t(orgId), dryRun), json("PATCH", { patch })),
     setFeatures: (orgId: string, features: Partial<OrgConfig["features"]>, dryRun: boolean) =>
-        call<WriteResult<OrgConfig["features"]>>(withDry(`${t(orgId)}/features`, dryRun), json("POST", { features })),
+        call<WriteResult<OrgConfig["features"]>>(withDry(`${t(orgId)}/features`, dryRun), json("PATCH", { features })),
     setStatus: (orgId: string, status: OrgConfig["status"], dryRun: boolean) =>
-        call<WriteResult<OrgConfig["status"]>>(withDry(`${t(orgId)}/status`, dryRun), json("POST", { status })),
+        call<WriteResult<OrgConfig["status"]>>(withDry(`${t(orgId)}/status`, dryRun), json("PATCH", { status })),
 
     listMembers: (orgId: string) => call<TenantMember[]>(`${t(orgId)}/members`),
     setMemberRole: (orgId: string, who: { uid?: string; email?: string }, role: Exclude<TenantRole, "denied">, dryRun: boolean) =>
         call<WriteResult<TenantMember>>(withDry(`${t(orgId)}/members`, dryRun), json("POST", { ...who, role })),
     removeMember: (orgId: string, uid: string, dryRun: boolean) =>
-        call<WriteResult<TenantMember>>(withDry(`${t(orgId)}/members`, dryRun), json("DELETE", { uid })),
+        call<WriteResult<TenantMember>>(withDry(`${t(orgId)}/members?uid=${encodeURIComponent(uid)}`, dryRun), { method: "DELETE" }),
     listInvites: (orgId: string) => call<Invite[]>(`${t(orgId)}/invites`),
     invite: (orgId: string, email: string, role: Invite["role"], dryRun: boolean) =>
         call<WriteResult<Invite>>(withDry(`${t(orgId)}/invites`, dryRun), json("POST", { email, role })),

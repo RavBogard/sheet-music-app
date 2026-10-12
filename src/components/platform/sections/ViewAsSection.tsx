@@ -32,12 +32,12 @@ export function ViewAsSection({ detail }: { detail: TenantDetail }) {
         <PlatformCard
             id="view-as"
             title="View as this tenant"
-            description="Opens the tenant's address in a new tab. You are signed in there as yourself, and viewing is read-only."
+            description="Opens the tenant's address in a new tab, signed in as yourself and read-only, with a banner. Stop viewing from the banner."
         >
             <div className="flex flex-wrap gap-2">
                 {primary ? (
                     <Button asChild variant="outline">
-                        <a href={`https://${primary}`} target="_blank" rel="noreferrer">
+                        <a href={`https://${primary}/?viewAs=1`} target="_blank" rel="noreferrer">
                             <ExternalLink className="w-4 h-4 mr-1.5" /> Open {primary}
                         </a>
                     </Button>

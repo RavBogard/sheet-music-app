@@ -80,7 +80,7 @@ describe("Tenant page: Identity", () => {
 describe("Tenant page: Features and Status", () => {
     it("switches preview then apply", async () => {
         const F = /^\/api\/platform\/tenants\/mtprobe\/features$/
-        const f = base([["POST", F, () => ({ body: dryResult([{ path: "mixer", before: false, after: true }]) })]])
+        const f = base([["PATCH", F, () => ({ body: dryResult([{ path: "mixer", before: false, after: true }]) })]])
         const user = userEvent.setup()
         render(<TenantPage orgId="mtprobe" />)
         await loaded()
@@ -89,15 +89,15 @@ describe("Tenant page: Features and Status", () => {
         await user.click(within(s).getByRole("switch", { name: "Mixer" }))
         await user.click(within(s).getByRole("button", { name: "Save features" }))
         await within(s).findByTestId("diff-preview")
-        expect(f.find("POST", F)[0].query.get("dryRun")).toBe("1")
-        expect((f.find("POST", F)[0].body as { features: { mixer: boolean } }).features.mixer).toBe(true)
+        expect(f.find("PATCH", F)[0].query.get("dryRun")).toBe("1")
+        expect((f.find("PATCH", F)[0].body as { features: { mixer: boolean } }).features.mixer).toBe(true)
         await user.click(within(s).getByRole("button", { name: "Apply" }))
-        await waitFor(() => expect(f.find("POST", F)[1]?.query.get("dryRun")).toBe("0"))
+        await waitFor(() => expect(f.find("PATCH", F)[1]?.query.get("dryRun")).toBe("0"))
     })
 
     it("suspending asks for confirmation naming the tenant", async () => {
         const S = /^\/api\/platform\/tenants\/mtprobe\/status$/
-        const f = base([["POST", S, () => ({ body: dryResult([{ path: "status", before: "active", after: "suspended" }]) })]])
+        const f = base([["PATCH", S, () => ({ body: dryResult([{ path: "status", before: "active", after: "suspended" }]) })]])
         const user = userEvent.setup()
         render(<TenantPage orgId="mtprobe" />)
         await loaded()
@@ -106,11 +106,11 @@ describe("Tenant page: Features and Status", () => {
         await user.click(await within(s).findByRole("button", { name: "Suspend" }))
         const dialog = await screen.findByRole("alertdialog")
         expect(within(dialog).getByText("Suspend Probe Tenant?")).toBeTruthy()
-        expect(f.find("POST", S)).toHaveLength(1)
+        expect(f.find("PATCH", S)).toHaveLength(1)
         await user.click(within(dialog).getByRole("button", { name: "Suspend Probe Tenant" }))
-        await waitFor(() => expect(f.find("POST", S)).toHaveLength(2))
-        expect(f.find("POST", S)[1].query.get("dryRun")).toBe("0")
-        expect(f.find("POST", S)[1].body).toEqual({ status: "suspended" })
+        await waitFor(() => expect(f.find("PATCH", S)).toHaveLength(2))
+        expect(f.find("PATCH", S)[1].query.get("dryRun")).toBe("0")
+        expect(f.find("PATCH", S)[1].body).toEqual({ status: "suspended" })
     })
 })
 
@@ -190,7 +190,7 @@ describe("Tenant page: People", () => {
         expect(f.find("DELETE", M)[0].query.get("dryRun")).toBe("1")
         await user.click(within(dialog).getByRole("button", { name: "Remove" }))
         await waitFor(() => expect(f.find("DELETE", M)[1]?.query.get("dryRun")).toBe("0"))
-        expect(f.find("DELETE", M)[1].body).toEqual({ uid: "u1" })
+        expect(f.find("DELETE", M)[1].query.get("uid")).toBe("u1")
     })
 
     it("invite admin: preview, create, then the link to copy", async () => {
@@ -275,7 +275,7 @@ describe("Tenant page: Collections and View as", () => {
         await loaded()
         const s = section("View as this tenant")
         const open = within(s).getByRole("link", { name: /Open mtprobe.vercel.app/ })
-        expect(open.getAttribute("href")).toBe("https://mtprobe.vercel.app")
+        expect(open.getAttribute("href")).toBe("https://mtprobe.vercel.app/?viewAs=1")
         expect(open.getAttribute("target")).toBe("_blank")
         await user.selectOptions(within(s).getByRole("combobox", { name: "Key lasts" }), "15")
         await user.click(within(s).getByRole("button", { name: "Make view key" }))

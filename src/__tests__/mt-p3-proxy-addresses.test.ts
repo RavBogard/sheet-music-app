@@ -303,3 +303,17 @@ describe("host list client", () => {
         expect(waited).toBeLessThan(2500)
     })
 })
+
+describe("multi-tenant phase 4: ?viewAs switches the read-only view cookie", () => {
+    beforeEach(() => vi.stubEnv("VERCEL_ENV", "production"))
+    it("?viewAs=1 sets a host-only cookie and redirects to the clean URL; ?viewAs=0 clears it", async () => {
+        const on = await proxy(req("www.centralreform.live", "/setlists?viewAs=1&x=2"))
+        expect(on.status).toBeGreaterThanOrEqual(300)
+        expect(on.headers.get("location")).toBe("https://www.centralreform.live/setlists?x=2")
+        const set = on.headers.get("set-cookie") ?? ""
+        expect(set).toContain("__view_as=1")
+        expect(set.toLowerCase()).not.toContain("domain=")
+        const off = await proxy(req("www.centralreform.live", "/?viewAs=0"))
+        expect(off.headers.get("set-cookie") ?? "").toMatch(/__view_as=;|__view_as=$|Max-Age=0/i)
+    })
+})
