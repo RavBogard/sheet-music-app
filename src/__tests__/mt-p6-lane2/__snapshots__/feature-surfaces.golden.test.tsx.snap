@@ -1,0 +1,195 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`phase 6 golden: flag-touched surfaces as they render today > brotherslazaroff / admin 1`] = `
+{
+  "desktopNav": [
+    "Setlists -> /setlists",
+    "Schedule -> /schedule",
+    "Library -> /library",
+    "Monitor -> /monitor",
+  ],
+  "drawer": [
+    "Dashboard -> /",
+    "Setlists -> /setlists",
+    "Schedule -> /schedule",
+    "Library -> /library",
+    "Monitor -> /monitor",
+    "Settings -> /settings",
+    "Manage -> /manage",
+  ],
+  "emailPacketsButton": true,
+  "librarySyncCard": true,
+  "manageTabs": [
+    "People",
+    "Library",
+    "Sound",
+    "Audit",
+  ],
+  "openSetlistGoesTo": "/setlists",
+  "performMonitorButtons": 2,
+  "schedulingNotificationToggles": [
+    "Email",
+    "SMS",
+    "Push",
+  ],
+  "tabBar": [
+    "Search songs",
+    "Open setlist",
+    "Schedule",
+    "Monitor",
+  ],
+}
+`;
+
+exports[`phase 6 golden: flag-touched surfaces as they render today > brotherslazaroff / musician 1`] = `
+{
+  "desktopNav": [
+    "Setlists -> /setlists",
+    "Schedule -> /schedule",
+    "Library -> /library",
+  ],
+  "drawer": [
+    "Dashboard -> /",
+    "Setlists -> /setlists",
+    "Schedule -> /schedule",
+    "Library -> /library",
+    "Settings -> /settings",
+  ],
+  "emailPacketsButton": true,
+  "librarySyncCard": true,
+  "manageTabs": [
+    "People",
+    "Library",
+    "Sound",
+  ],
+  "openSetlistGoesTo": "/setlists",
+  "performMonitorButtons": 2,
+  "schedulingNotificationToggles": [
+    "Email",
+    "SMS",
+    "Push",
+  ],
+  "tabBar": [
+    "Search songs",
+    "Open setlist",
+    "Schedule",
+  ],
+}
+`;
+
+exports[`phase 6 golden: flag-touched surfaces as they render today > brotherslazaroff / signedOut 1`] = `
+{
+  "desktopNav": [
+    "Setlists -> /perform",
+  ],
+  "drawer": [
+    "Dashboard -> /",
+    "Setlists -> /perform",
+  ],
+  "emailPacketsButton": false,
+  "openSetlistGoesTo": "/perform",
+  "performMonitorButtons": 2,
+  "tabBar": [
+    "Search songs",
+    "Open setlist",
+    "Schedule",
+  ],
+}
+`;
+
+exports[`phase 6 golden: flag-touched surfaces as they render today > crc / admin 1`] = `
+{
+  "desktopNav": [
+    "Setlists -> /setlists",
+    "Schedule -> /schedule",
+    "Library -> /library",
+    "Monitor -> /monitor",
+  ],
+  "drawer": [
+    "Dashboard -> /",
+    "Setlists -> /setlists",
+    "Schedule -> /schedule",
+    "Library -> /library",
+    "Monitor -> /monitor",
+    "Settings -> /settings",
+    "Manage -> /manage",
+  ],
+  "emailPacketsButton": true,
+  "librarySyncCard": true,
+  "manageTabs": [
+    "People",
+    "Library",
+    "Sound",
+    "Audit",
+  ],
+  "openSetlistGoesTo": "/setlists",
+  "performMonitorButtons": 2,
+  "schedulingNotificationToggles": [
+    "Email",
+    "SMS",
+    "Push",
+  ],
+  "tabBar": [
+    "Search songs",
+    "Open setlist",
+    "Schedule",
+    "Monitor",
+  ],
+}
+`;
+
+exports[`phase 6 golden: flag-touched surfaces as they render today > crc / musician 1`] = `
+{
+  "desktopNav": [
+    "Setlists -> /setlists",
+    "Schedule -> /schedule",
+    "Library -> /library",
+  ],
+  "drawer": [
+    "Dashboard -> /",
+    "Setlists -> /setlists",
+    "Schedule -> /schedule",
+    "Library -> /library",
+    "Settings -> /settings",
+  ],
+  "emailPacketsButton": true,
+  "librarySyncCard": true,
+  "manageTabs": [
+    "People",
+    "Library",
+    "Sound",
+  ],
+  "openSetlistGoesTo": "/setlists",
+  "performMonitorButtons": 2,
+  "schedulingNotificationToggles": [
+    "Email",
+    "SMS",
+    "Push",
+  ],
+  "tabBar": [
+    "Search songs",
+    "Open setlist",
+    "Schedule",
+  ],
+}
+`;
+
+exports[`phase 6 golden: flag-touched surfaces as they render today > crc / signedOut 1`] = `
+{
+  "desktopNav": [
+    "Setlists -> /perform",
+  ],
+  "drawer": [
+    "Dashboard -> /",
+    "Setlists -> /perform",
+  ],
+  "emailPacketsButton": false,
+  "openSetlistGoesTo": "/perform",
+  "performMonitorButtons": 2,
+  "tabBar": [
+    "Search songs",
+    "Open setlist",
+    "Schedule",
+  ],
+}
+`;
