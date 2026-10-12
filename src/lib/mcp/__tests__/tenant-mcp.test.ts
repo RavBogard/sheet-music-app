@@ -66,9 +66,16 @@ import { createTenantDispatcher, tokenOrgOf, type TenantMcpPlan } from "@/lib/mc
 import { renderTenantGuide } from "@/lib/mcp/agent-guide"
 import { testshulConfig } from "./helpers/testshul-config"
 
-const BEFORE = JSON.parse(
+const P4_BEFORE = JSON.parse(
     fs.readFileSync(path.join(__dirname, "fixtures", "p4-authoring-tools-before.json"), "utf8"),
 ) as { crc: string[]; brotherslazaroff: string[] }
+// Multi-tenant phase 5 adds the two tenant-admin collection tools to every
+// tenant's authoring list (registered last, after the authored-chart tools).
+const P5_ADDED = ["create_collection", "set_collection_sharing"]
+const BEFORE = {
+    crc: [...P4_BEFORE.crc, ...P5_ADDED],
+    brotherslazaroff: [...P4_BEFORE.brotherslazaroff, ...P5_ADDED],
+}
 
 const GOLDEN_CRC = fs
     .readFileSync(

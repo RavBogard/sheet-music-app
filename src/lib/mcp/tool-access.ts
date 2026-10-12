@@ -186,6 +186,8 @@ export const WRITE_TOOLS: ReadonlySet<string> = new Set([
     "remove_tenant_member",
     "invite_tenant_admin",
     "set_collection_sharing",
+    // phase 5: tenant-admin authoring tool (set_collection_sharing shares the name with the platform tool)
+    "create_collection",
     "assign_collection",
     "mint_tenant_view_bearer",
 ])

@@ -15,6 +15,7 @@ import {
     registerBatchIntakeTools,
     registerChartInboxTools,
     registerAuthoredChartTools,
+    registerCollectionAdminTools,
 } from "@/lib/mcp/tools"
 import { wrapWithValidationRemap } from "@/lib/mcp/zod-envelope-remap"
 import { withScopedBearer } from "@/lib/mcp/scoped-bearer-gate"
@@ -118,6 +119,7 @@ function createSurfaceHandler(
             registerBatchIntakeTools(server)
             registerChartInboxTools(server)
             registerAuthoredChartTools(server)
+            registerCollectionAdminTools(server)
         },
         {
             serverInfo: {

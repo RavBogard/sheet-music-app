@@ -154,6 +154,7 @@ export { registerMintAdminBearerTools } from "./mint-admin-bearer"
 export { registerSetlistReaderBearerTools } from "./setlist-reader-bearer"
 export { registerBatchIntakeTools } from "./register-batch-intake"
 export { registerChartInboxTools } from "./register-chart-inbox"
+export { registerCollectionAdminTools } from "./collections-admin"
 export { registerAuthoredChartTools } from "./register-authored-chart"
 // v11-02-01: the caller-org resolution seam. v11-02-02 read tools consume it to
 // scope reads by tenant; re-exported so tools resolve org from the same import
