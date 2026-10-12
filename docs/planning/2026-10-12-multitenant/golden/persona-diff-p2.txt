@@ -1,0 +1,61 @@
+crcAdmin       list templates where orgId==crc                    {"ok":true,"n":0}  →  {"ok":true,"n":3}
+crcAdmin       list songs where orgId==bl                         {"ok":true,"n":82}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcAdmin       list setlistTemplates where orgId==bl              {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcAdmin       list contacts where orgId==bl                      {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcAdmin       list recordings where orgId==bl                    {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcAdmin       list scheduling_history where orgId==bl            {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcAdmin       list templates where orgId==bl                     {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcAdmin       storage read bl chart                              {"ok":true,"status":200}  →  {"ok":false,"status":403}
+crcAdmin       create+delete setlist stamped bl                   {"ok":true,"deleted":true}  →  {"ok":false,"status":403}
+crcAdmin       list songs (no filter)                             {"ok":true,"n":300}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcAdmin       list contacts (no filter)                          {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcAdmin       list scheduling_assignments (no filter)            {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcAdmin       list users                                         {"ok":true,"n":38}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcAdmin       get own crc membership                             {"ok":false,"status":403}  →  {"ok":true,"exists":true}
+crcBandLeader  list templates where orgId==crc                    {"ok":true,"n":0}  →  {"ok":true,"n":3}
+crcBandLeader  list setlistTemplates where orgId==bl              {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcBandLeader  list recordings where orgId==bl                    {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcBandLeader  list templates where orgId==bl                     {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcBandLeader  storage read bl chart                              {"ok":true,"status":200}  →  {"ok":false,"status":403}
+crcBandLeader  list songs (no filter)                             {"ok":true,"n":300}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcBandLeader  list contacts (no filter)                          {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcBandLeader  list scheduling_assignments (no filter)            {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcBandLeader  list users                                         {"ok":true,"n":38}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcBandLeader  get own crc membership                             {"ok":false,"status":403}  →  {"ok":true,"exists":true}
+crcMusician    list templates where orgId==crc                    {"ok":true,"n":0}  →  {"ok":true,"n":3}
+crcMusician    list recordings where orgId==bl                    {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcMusician    list templates where orgId==bl                     {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcMusician    storage read bl chart                              {"ok":true,"status":200}  →  {"ok":false,"status":403}
+crcMusician    list songs (no filter)                             {"ok":true,"n":300}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcMusician    get own crc membership                             {"ok":false,"status":403}  →  {"ok":true,"exists":true}
+crcMember      list templates where orgId==crc                    {"ok":true,"n":0}  →  {"ok":true,"n":3}
+crcMember      list recordings where orgId==bl                    {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcMember      list templates where orgId==bl                     {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcMember      storage read bl chart                              {"ok":true,"status":200}  →  {"ok":false,"status":403}
+crcMember      list songs (no filter)                             {"ok":true,"n":300}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcMember      get own crc membership                             {"ok":false,"status":403}  →  {"ok":true,"exists":true}
+crcPending     list templates where orgId==crc                    {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcPending     storage read crc chart                             {"ok":true,"status":200}  →  {"ok":false,"status":403}
+crcPending     create+delete setlist stamped crc                  {"ok":true,"deleted":true}  →  {"ok":false,"status":403}
+crcPending     list templates where orgId==bl                     {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+crcPending     storage read bl chart                              {"ok":true,"status":200}  →  {"ok":false,"status":403}
+crcPending     get config/defaults                                {"ok":true,"exists":true}  →  {"ok":false,"status":403}
+crcPending     get config/monitor                                 {"ok":true,"exists":true}  →  {"ok":false,"status":403}
+crcPending     get own crc membership                             {"ok":false,"status":403}  →  {"ok":true,"exists":true}
+blBandLeader   list setlistTemplates where orgId==crc             {"ok":true,"n":4}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+blBandLeader   list recordings where orgId==crc                   {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+blBandLeader   list templates where orgId==crc                    {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+blBandLeader   storage read crc chart                             {"ok":true,"status":200}  →  {"ok":false,"status":403}
+blBandLeader   list contacts (no filter)                          {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+blBandLeader   list scheduling_assignments (no filter)            {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+blBandLeader   list users                                         {"ok":true,"n":38}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+blBandLeader   get config/defaults                                {"ok":true,"exists":true}  →  {"ok":false,"status":403}
+blBandLeader   get config/monitor                                 {"ok":true,"exists":true}  →  {"ok":false,"status":403}
+blBandLeader   get own crc membership                             {"ok":false,"status":403}  →  {"ok":true,"exists":false}
+blMusician     list recordings where orgId==crc                   {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+blMusician     list templates where orgId==crc                    {"ok":true,"n":0}  →  {"ok":false,"status":403,"code":"PERMISSION_DENIED"}
+blMusician     storage read crc chart                             {"ok":true,"status":200}  →  {"ok":false,"status":403}
+blMusician     get config/defaults                                {"ok":true,"exists":true}  →  {"ok":false,"status":403}
+blMusician     get config/monitor                                 {"ok":true,"exists":true}  →  {"ok":false,"status":403}
+blMusician     get own crc membership                             {"ok":false,"status":403}  →  {"ok":true,"exists":false}
+60 difference(s)
