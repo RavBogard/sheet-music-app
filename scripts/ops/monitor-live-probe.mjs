@@ -216,6 +216,8 @@ async function mcpCall(token, name, toolArgs) {
 }
 
 // ─── service-time guard (CRC: Fri eve + Shabbat morning, America/Chicago) ─────
+// CRC-only on purpose: this probes CRC's mixer, so its service windows are
+// CRC's zone, not a per-tenant one (multi-tenant phase 1).
 
 function serviceWindowNow(now = new Date()) {
     // Compute weekday + hour in America/Chicago without extra deps.

@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { coerceOrgId } from "@/lib/org/registry"
 import { rowOrg } from "@/lib/org/membership"
+import { scopeRowsToTenant } from "@/lib/org/tenant-query"
 
 /**
  * GET /api/scheduling/history — Get scheduling history and analytics.
@@ -19,8 +20,13 @@ export const GET = createApiHandler(
         const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200)
         const musicianUid = url.searchParams.get('musicianUid')
 
-        // Get history entries
-        let query: FirebaseFirestore.Query = db.collection('scheduling_history')
+        // Get history entries. Multi-tenant phase 1: the latest `limit` rows OF
+        // THIS TENANT — queried by orgId for every tenant but crc, whose
+        // untagged rows keep the legacy latest-N-then-filter read until phase 2
+        // stamps them (scopeRowsToTenant).
+        let query: FirebaseFirestore.Query = scopeRowsToTenant(
+            db.collection('scheduling_history') as FirebaseFirestore.Query, org,
+        )
             .orderBy('recordedAt', 'desc')
             .limit(limit)
 
@@ -33,8 +39,10 @@ export const GET = createApiHandler(
             .filter(d => rowOrg(d.data().orgId) === org)
             .map(d => ({ id: d.id, ...d.data() }))
 
-        // Compute basic analytics from recent assignments
-        const assignmentsSnap = await db.collection('scheduling_assignments')
+        // Compute basic analytics from this tenant's recent assignments
+        const assignmentsSnap = await scopeRowsToTenant(
+            db.collection('scheduling_assignments') as FirebaseFirestore.Query, org,
+        )
             .orderBy('assignedAt', 'desc')
             .limit(500)
             .get()

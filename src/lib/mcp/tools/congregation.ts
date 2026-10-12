@@ -8,6 +8,7 @@ import { getOrgConfig } from "@/lib/org/get-org-config"
 import { peekOrgConfig } from "@/lib/org/config-cache"
 import { codeOrgConfig } from "@/lib/org/config-code"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { orgTimeZone } from "@/lib/org/locale"
 import type { OrgId } from "@/lib/org/types"
 import { readServicesFromConfig, readStreamFromConfig } from "@/lib/today/config"
 import type { CongregationServiceTimes, CongregationStream } from "@/lib/today/types"
@@ -113,8 +114,14 @@ export interface GetCongregationContextResult {
         coreMusicians: CoreMusician[]
         features: Record<string, boolean> | null
         /**
-         * Per-serviceType default start times, keyed by `templateType`,
-         * America/Chicago wall clock. Null when none are configured — which
+         * Multi-tenant phase 1: the tenant's IANA time zone (`locale.timeZone`,
+         * e.g. "America/Chicago"). Every wall-clock time below and every naive
+         * `eventDate` the write tools accept is read in this zone.
+         */
+        timeZone: string
+        /**
+         * Per-serviceType default start times, keyed by `templateType`, in the
+         * tenant's wall clock (`timeZone`). Null when none are configured — which
          * means the public `today.json` emits no `startsAt`. Set them with
          * `update_congregation_services`.
          */
@@ -221,10 +228,11 @@ export async function getCongregationContext(
         // services, not CRC's). Crc-safe — v11-01-03's backfill stamped every CRC
         // setlist with orgId='crc' and the (orgId,date) composite index backs the
         // equality-filter + orderBy pair (see getAllSetlists, server-setlists.ts).
-        const [configRaw, setlists, congregationDefaults] = await Promise.all([
+        const [configRaw, setlists, congregationDefaults, orgConfig] = await Promise.all([
             getServerCongregationConfig(org),
             getAllSetlists({ limit: historyLimit, orderBy, org }),
             congregationDefaultsFor(org),
+            getOrgConfig(org).catch(() => null),
         ])
 
         const config = (configRaw as Record<string, unknown> | null) ?? null
@@ -270,6 +278,7 @@ export async function getCongregationContext(
                 rabbis: buildRabbiProfiles(config),
                 coreMusicians: buildCoreMusicians(config),
                 features,
+                timeZone: orgConfig?.locale.timeZone ?? orgTimeZone(org),
                 services: readServicesFromConfig(config),
                 stream: readStreamFromConfig(config),
                 usingDefaults,

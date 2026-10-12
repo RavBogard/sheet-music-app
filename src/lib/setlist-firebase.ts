@@ -21,7 +21,7 @@ import {
     type DocumentReference,
 } from "firebase/firestore";
 import type { OrgId } from "@/lib/org/types";
-import { coerceOrgId } from "@/lib/org/registry";
+import { coerceOrgId, DEFAULT_ORG_ID } from "@/lib/org/registry";
 import { rowOrg } from "@/lib/org/membership";
 
 /**
@@ -303,19 +303,15 @@ export function createSetlistService(userId: string | null, userName?: string | 
             }
         },
 
-        // Subscribe to setlists. v11-04-01: tenant scoping is OPT-IN via `org` —
-        // when an OrgId is passed (the public /perform listing always passes the
-        // current tenant from `useOrg()`), the live query is restricted with
+        // Subscribe to setlists. v11-04-01: the live query is restricted with
         // `where('orgId','==',org)` so a tenant's surface never shows another
-        // tenant's setlists after hydration. When omitted (authed dashboard /
-        // drawer / add-to-setlist callers, pending org-wiring in v11-04-03), the
-        // query stays cross-tenant — behavior-identical to before this change.
-        subscribeToAllSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void, org?: OrgId) {
+        // tenant's setlists after hydration. Every caller passes its tenant
+        // (useOrg()). Multi-tenant phase 1: an omitted org now means crc rather
+        // than every tenant's latest 50 — no caller omits it.
+        subscribeToAllSetlists(callback: (setlists: Setlist[], fromCache: boolean) => void, onError?: (error: Error) => void, org: OrgId = DEFAULT_ORG_ID) {
             return subscribeWithDb((db) => {
                 const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
-                const q = org
-                    ? query(collectionRef, where("orgId", "==", org), orderBy("date", "desc"), limit(50))
-                    : query(collectionRef, orderBy("date", "desc"), limit(50));
+                const q = query(collectionRef, where("orgId", "==", org), orderBy("date", "desc"), limit(50));
 
                 return onSnapshot(q, {
                     next: (snapshot) => {
@@ -470,7 +466,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // (key, bpm, vocal lead) from the source setlist.
         async cloneSetlist(source: Setlist, targetDate: Date): Promise<string> {
             try {
-                const context = await getFullServiceContext(targetDate)
+                const context = await getFullServiceContext(targetDate, rowOrg(source.orgId))
                 const name = generateSetlistName(context)
 
                 // v60-08-01: source tracks fetched from top-level collection;

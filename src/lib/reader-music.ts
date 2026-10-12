@@ -1,4 +1,5 @@
 import type { LocalTrack } from "@/lib/local/types"
+import { dayInZone, orgTimeZone } from "@/lib/org/locale"
 
 export interface ReaderMusicCrosswalk {
     orgId: string
@@ -76,7 +77,7 @@ export function readerMusicEventInstant(
 }
 
 function readerMusicLastUsedDate(
-    setlist: Pick<ReaderMusicSetlist, "eventDate" | "date">,
+    setlist: Pick<ReaderMusicSetlist, "eventDate" | "date" | "orgId">,
     usedAt: number,
 ): string {
     const eventMs = instant(setlist.eventDate)
@@ -84,14 +85,9 @@ function readerMusicLastUsedDate(
     if (typeof raw === "string" && /^\d{4}-\d{2}-\d{2}(?:$|T)/.test(raw)) {
         return raw.slice(0, 10)
     }
-    const parts = new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/Chicago",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-    }).formatToParts(new Date(usedAt))
-    const part = (type: string) => parts.find((p) => p.type === type)?.value ?? ""
-    return `${part("year")}-${part("month")}-${part("day")}`
+    // Multi-tenant phase 1: the calendar day in the setlist's tenant's zone
+    // (selection already requires setlist.orgId === crosswalk.orgId).
+    return dayInZone(usedAt, orgTimeZone(setlist.orgId))
 }
 
 function exactString(value: unknown): string | null {

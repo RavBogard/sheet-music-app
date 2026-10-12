@@ -4,6 +4,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getFullServiceContext, getNextFriday, getNextSaturday } from "@/lib/liturgical-calendar"
 import { getTemplate } from "@/lib/liturgical-templates"
 import { getTracksForSetlist } from "@/lib/server-tracks"
+import { coerceOrgId } from "@/lib/org/registry"
 import { Setlist, SetlistTrack } from "@/types/models"
 
 type SetlistWithTracks = Setlist & {
@@ -14,6 +15,8 @@ export const GET = createApiHandler(
     async (ctx) => {
         const { searchParams } = new URL(ctx.req.url)
         const type = searchParams.get('type') || 'friday_night'
+        // Multi-tenant phase 1: parasha per the host tenant's calendar.
+        const org = coerceOrgId(ctx.req.headers.get('x-org-id'))
 
         if (!initAdmin()) {
             return NextResponse.json(
@@ -42,7 +45,7 @@ export const GET = createApiHandler(
                 targetDate = getNextFriday(baseDate)
             }
 
-            const context = await getFullServiceContext(targetDate)
+            const context = await getFullServiceContext(targetDate, org)
             columns.push({
                 id: `col_${i}`,
                 date: targetDate.toISOString(),

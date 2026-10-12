@@ -159,7 +159,7 @@ export interface Setlist {
      */
     book?: string
     /**
-     * Wall-clock start time for THIS service, `HH:mm` America/Chicago.
+     * Wall-clock start time for THIS service, `HH:mm`, the tenant's local time.
      * Overrides the per-serviceType `defaultStartLocal` in the congregation
      * config. Read by `today.json`; absent means "use the config's default",
      * and if there is none, the emitted service simply carries no start time

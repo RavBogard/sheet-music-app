@@ -254,7 +254,7 @@ export async function reconcileService(
     const chartHistory = await loadChartHistory(
         db,
         args.setlistId,
-        eventDayOf(setlist.eventDate ?? setlist.date),
+        eventDayOf(setlist.eventDate ?? setlist.date, org),
     )
     const diff = reconcile(args.setlistId, plan.rows, history.rows, chartHistory)
     const chapterLines = buildChapters(diff, args.chapterOffsetSeconds ?? 0).map((c) => c.line)

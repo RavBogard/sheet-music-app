@@ -882,7 +882,7 @@ export function registerReadTools(server: McpServer): void {
         "get_congregation_context",
         {
             description:
-                "Get the congregation's standing context in one call so you don't have to be re-told it each authoring session: WHO the congregation is (name, location, the rabbi profiles, and the standing/core band roster) plus WHO has led recently. Use at the start of a weekly-setlist authoring session to ground yourself on the rabbis, the band, and the recent service cadence. Returns `congregation` (from the config/congregation doc; falls back to defaults with usingDefaults:true when absent) and `leadHistory` — the most-recent setlists each with the rabbi who led ('Led by'), the band that played, the service type, and dates. `historyLimit` (default 10, max 50) and `orderBy` ('eventDate' default = most-recent service day, or 'date' = doc write time) tune the history window. Also returns `services` (per-serviceType default start times, America/Chicago wall clock) and `stream` (the congregation's stream URL) — the two values the public today.json turns into a start time for the siddur reader and the stream overlays; both are null until an admin sets them with update_congregation_services. For the per-song Vocal Lead on a specific service, call get_setlist on that setlist id — this tool stays a single cheap read.",
+                "Get the congregation's standing context in one call so you don't have to be re-told it each authoring session: WHO the congregation is (name, location, the rabbi profiles, and the standing/core band roster) plus WHO has led recently. Use at the start of a weekly-setlist authoring session to ground yourself on the rabbis, the band, and the recent service cadence. Returns `congregation` (from the config/congregation doc; falls back to defaults with usingDefaults:true when absent) and `leadHistory` — the most-recent setlists each with the rabbi who led ('Led by'), the band that played, the service type, and dates. `historyLimit` (default 10, max 50) and `orderBy` ('eventDate' default = most-recent service day, or 'date' = doc write time) tune the history window. Also returns `timeZone` (the tenant's IANA time zone), `services` (per-serviceType default start times, wall clock in the tenant's local time) and `stream` (the congregation's stream URL) — the two values the public today.json turns into a start time for the siddur reader and the stream overlays; both are null until an admin sets them with update_congregation_services. For the per-song Vocal Lead on a specific service, call get_setlist on that setlist id — this tool stays a single cheap read.",
             inputSchema: {
                 historyLimit: z
                     .number()
@@ -1319,7 +1319,7 @@ export function registerWriteTools(server: McpServer): void {
         "update_congregation_services",
         {
             description:
-                "Set the congregation's per-service default start times and its stream URL — the two values the public `today.json` needs to say what time tonight's service begins. `services` is a FULL REPLACEMENT map keyed by the setlist's `templateType` (e.g. {\"friday_night\": {\"label\": \"Erev Shabbat\", \"defaultStartLocal\": \"18:00\"}}); `defaultStartLocal` is a 24-hour America/Chicago WALL CLOCK time, so 6pm is '18:00' in July and in January — never a UTC instant. `stream` is {url, leadMinutes?} (https only; leadMinutes defaults to 5, how far before the service the stream goes live) — pass null to clear it. Omit either key to leave it untouched. STAGE THEN CONFIRM: `dryRun` defaults to TRUE and returns `{before, after, diff, changed}` without writing; call again with `dryRun:false` to commit. Admin only — these values are published to the siddur reader and the stream overlays. Nothing is seeded: a service with no configured start time simply emits no start time, which is better than a guessed one. Read the current values with get_congregation_context.",
+                "Set the congregation's per-service default start times and its stream URL — the two values the public `today.json` needs to say what time tonight's service begins. `services` is a FULL REPLACEMENT map keyed by the setlist's `templateType` (e.g. {\"friday_night\": {\"label\": \"Erev Shabbat\", \"defaultStartLocal\": \"18:00\"}}); `defaultStartLocal` is a 24-hour WALL CLOCK time in the tenant's local time, so 6pm is '18:00' in July and in January — never a UTC instant. `stream` is {url, leadMinutes?} (https only; leadMinutes defaults to 5, how far before the service the stream goes live) — pass null to clear it. Omit either key to leave it untouched. STAGE THEN CONFIRM: `dryRun` defaults to TRUE and returns `{before, after, diff, changed}` without writing; call again with `dryRun:false` to commit. Admin only — these values are published to the siddur reader and the stream overlays. Nothing is seeded: a service with no configured start time simply emits no start time, which is better than a guessed one. Read the current values with get_congregation_context.",
             inputSchema: {
                 services: z
                     .record(
@@ -1336,7 +1336,7 @@ export function registerWriteTools(server: McpServer): void {
                             defaultStartLocal: z
                                 .string()
                                 .describe(
-                                    "24-hour America/Chicago wall-clock start, `HH:mm` (e.g. '18:00').",
+                                    "24-hour wall-clock start in the tenant's local time, `HH:mm` (e.g. '18:00').",
                                 ),
                         }),
                     )
@@ -1475,7 +1475,7 @@ export function registerWriteTools(server: McpServer): void {
                     .string()
                     .optional()
                     .describe(
-                        "Wall-clock start time for THIS service, 24-hour `HH:mm` in America/Chicago (e.g. '18:00' for 6pm). Overrides the per-serviceType default start held in the congregation config. Read by the public today.json that the siddur reader and the stream overlays use, so set it when a service starts at an unusual time.",
+                        "Wall-clock start time for THIS service, 24-hour `HH:mm` in the tenant's local time (e.g. '18:00' for 6pm). Overrides the per-serviceType default start held in the congregation config. Read by the public today.json that the siddur reader and the stream overlays use, so set it when a service starts at an unusual time.",
                     ),
                 lastSeenVersion: lastSeenVersionSchema.describe(
                     "Optional optimistic-concurrency gate: pass the setlist's `version` from your last get_setlist / list_setlists. The write rejects with `{error: 'stale_version', currentVersion, lastSeenVersion, hint, ...}` if it doesn't match — call get_setlist and retry.",

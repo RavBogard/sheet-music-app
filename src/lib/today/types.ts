@@ -28,7 +28,7 @@ export interface TodayService {
     name: string
     /** The setlist's `templateType`, e.g. "friday_night". Omitted when unset. */
     serviceType?: string
-    /** Calendar day of the service, America/Chicago, `YYYY-MM-DD`. */
+    /** Calendar day of the service in the tenant's time zone, `YYYY-MM-DD`. */
     eventDate: string
     /**
      * Instant the service starts, ISO with `Z`. Derived from `eventDate` plus
@@ -75,7 +75,7 @@ export interface TodayDoc {
 /** Per-serviceType start times and the stream URL, from the congregation config. */
 export interface CongregationServiceTimes {
     label: string
-    /** `HH:mm`, America/Chicago wall clock. */
+    /** `HH:mm`, the tenant's wall clock (America/Chicago for CRC). */
     defaultStartLocal: string
 }
 
