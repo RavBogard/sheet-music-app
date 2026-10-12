@@ -16,7 +16,9 @@ import { isTestUid } from "@/lib/test-isolation"
 import { setMembership } from "@/lib/org/memberships-write"
 import { readTenantRole } from "@/lib/org/access"
 import { orgFrom } from "@/lib/mcp/org-context"
-import { DEFAULT_ORG_ID, ORGS, isKnownOrg } from "@/lib/org/registry"
+import { DEFAULT_ORG_ID, ORGS } from "@/lib/org/registry"
+import { orgExists } from "@/lib/org/org-exists"
+import { OrgIdSchema } from "@/lib/org/config-schema"
 import type { OrgId } from "@/lib/org/types"
 
 /**
@@ -220,14 +222,15 @@ export async function provisionTestAccount(
 
     // F-8: optional org-membership provisioning. `explicitOrgIds` is null when
     // omitted so the default path stays byte-equivalent to pre-F-8 (no orgIds
-    // claim/field written; token orgId = DEFAULT_ORG_ID). Defense-in-depth: the
-    // Zod enum already bounds the values, but a direct HTTP-endpoint call could
-    // bypass it — refuse unknown orgs here too (mirrors the role guard).
+    // claim/field written; token orgId = DEFAULT_ORG_ID). The Zod schema only
+    // checks the id's shape; a tenant must exist (compiled, or an `orgs/{id}`
+    // config that resolves — multi-tenant phase 3), and a direct
+    // HTTP-endpoint call could bypass the schema, so refuse unknown orgs here.
     const explicitOrgIds: OrgId[] | null =
         args.orgIds && args.orgIds.length > 0 ? args.orgIds : null
     if (explicitOrgIds) {
         for (const o of explicitOrgIds) {
-            if (!isKnownOrg(o)) {
+            if (!(await orgExists(o))) {
                 return envelope(
                     "invalid_org_id",
                     `Unknown org id '${o}'. Refusing to provision a test account for a non-existent tenant.`,
@@ -235,7 +238,7 @@ export async function provisionTestAccount(
                         requestedOrgIds: args.orgIds,
                         knownOrgs: Object.keys(ORGS),
                     },
-                    `Pick from: ${Object.keys(ORGS).join(", ")}.`,
+                    `Pick from: ${Object.keys(ORGS).join(", ")}, or another tenant id that exists in orgs.`,
                 )
             }
         }
@@ -1479,11 +1482,11 @@ export const createTestAccountSchema = {
             "Opt-in browser sign-in. When true, the account is provisioned ENABLED (disabled:false) and the result includes a one-time `loginUrl` — a 5-min, single-use custom-token link (`/test-login?code=…`) that signs a browser/harness in as this persona with real Firebase Web SDK auth + the normal app session cookie. Default (omitted) keeps disabled:true (UI cannot sign in; MCP-bearer path only). role='admin' is still refused. The loginUrl is shown ONCE.",
         ),
     orgIds: z
-        .array(z.enum(Object.keys(ORGS) as [OrgId, ...OrgId[]]))
+        .array(OrgIdSchema)
         .min(1)
         .optional()
         .describe(
-            `Org memberships to provision (default ['${DEFAULT_ORG_ID}']). Set this to stress a specific tenant's role boundaries — e.g. ['brotherslazaroff'] for a BL-only test account, or ['crc','brotherslazaroff'] for a cross-tenant authoring account. Written to the user doc + Auth claims (orgIds); the bearer token's authoring org pins to orgIds[0]. Known orgs: ${Object.keys(ORGS).join(", ")}. Omit for a crc-only account (byte-equivalent to the prior behavior).`,
+            `Org memberships to provision (default ['${DEFAULT_ORG_ID}']). Set this to stress a specific tenant's role boundaries — e.g. ['brotherslazaroff'] for a BL-only test account, or ['crc','brotherslazaroff'] for a cross-tenant authoring account. Written to the user doc + Auth claims (orgIds); the bearer token's authoring org pins to orgIds[0]. Known orgs: ${Object.keys(ORGS).join(", ")}, plus any tenant that exists in orgs. Omit for a crc-only account (byte-equivalent to the prior behavior).`,
         ),
 }
 

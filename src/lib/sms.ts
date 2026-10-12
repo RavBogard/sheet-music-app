@@ -9,6 +9,7 @@ import { logger } from '@/lib/logger'
 import { DEFAULT_ORG_ID } from '@/lib/org/registry'
 import { orgString } from '@/lib/org/strings'
 import type { OrgId } from '@/lib/org/types'
+import { primeTenantConfig } from '@/lib/org/org-exists'
 
 interface TwilioMessageResponse {
     sid: string
@@ -99,6 +100,7 @@ export async function sendSchedulingAssignmentSMS(params: {
     org?: OrgId
 }): Promise<{ ok: boolean; error?: string }> {
     const { musicianName, setlistName, eventDate, instrument, status, scheduleUrl, newSongs } = params
+    await primeTenantConfig(params.org)
     const venue = orgString(params.org ?? DEFAULT_ORG_ID, 'sms.venueShort')
     const firstName = musicianName.split(' ')[0]
 
@@ -128,6 +130,7 @@ export async function sendSchedulingReminderSMS(params: {
 }): Promise<{ ok: boolean; error?: string }> {
     const firstName = params.musicianName.split(' ')[0]
     const instrumentText = params.instrument ? ` on ${params.instrument}` : ''
+    await primeTenantConfig(params.org)
     const venue = orgString(params.org ?? DEFAULT_ORG_ID, 'sms.venueShort')
 
     const body = `Reminder: ${venue} service "${params.setlistName}" on ${params.eventDate}. You're playing${instrumentText}. Setlist: ${params.scheduleUrl}`
@@ -147,6 +150,7 @@ export async function sendSchedulingCancellationSMS(params: {
     org?: OrgId
 }): Promise<{ ok: boolean; error?: string }> {
     const firstName = params.musicianName.split(' ')[0]
+    await primeTenantConfig(params.org)
     const venue = orgString(params.org ?? DEFAULT_ORG_ID, 'sms.venueShort')
     const body = `Hi ${firstName}, your ${venue} service assignment for "${params.setlistName}" on ${params.eventDate} has been cancelled.`
 

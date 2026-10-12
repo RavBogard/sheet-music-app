@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import { createApiHandler, apiError } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { initAdmin } from "@/lib/firebase-admin"
-import { coerceOrgId, isKnownOrg } from "@/lib/org/registry"
+import { coerceOrgId } from "@/lib/org/registry"
+import { orgExists } from "@/lib/org/org-exists"
 import { listTenantMembers } from "@/lib/org/access"
 
 /**
@@ -64,7 +65,7 @@ export const GET = createApiHandler(
         const asked = new URL(ctx.req.url).searchParams.get("tenant")
         if (asked && asked !== tenant) {
             if (!ctx.auth.po) return apiError("Only the platform owner may read another tenant's people", 403, "FORBIDDEN_TENANT")
-            if (!isKnownOrg(asked)) return apiError(`Unknown tenant '${asked}'`, 400, "UNKNOWN_TENANT")
+            if (!(await orgExists(asked))) return apiError(`Unknown tenant '${asked}'`, 400, "UNKNOWN_TENANT")
             tenant = asked
         }
 

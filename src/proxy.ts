@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { SESSION_ROLE_COOKIE, verifyRoleCookie } from '@/lib/session-role'
 import { httpError } from '@/lib/http/error-envelope'
-import { resolveOrgIdByDomain } from '@/lib/org/registry'
+import { resolveRequestOrg } from '@/lib/org/host-resolution'
+import { getHostList } from '@/lib/org/host-list-client'
+import { noSuchSiteResponse } from '@/lib/org/no-such-site'
 import { tenantRoleFromClaims } from '@/lib/org/membership-types'
 
 // Base64Url decode for Edge Runtime without Buffer
@@ -119,6 +121,27 @@ export async function proxy(request: NextRequest) {
     const roleCookie = request.cookies.get(SESSION_ROLE_COOKIE)?.value
     const ua = request.headers.get('user-agent') || ''
 
+    // Multi-tenant phase 3: resolve the request host to a tenant FIRST, before
+    // any other short-circuit. Order (src/lib/org/host-resolution.ts): the
+    // compiled CRC/BL map → the project's own Vercel URLs (crc) → the address
+    // list (/api/org-hosts, memoised 60 s, ≤1.5 s wait, last good list kept on
+    // failure) → not production (preview / localhost → crc) → "no such site".
+    // An unknown or suspended production address never falls back to CRC;
+    // only server-to-server paths with their own secret (cron, webhooks,
+    // inngest, intake, bridge redemption) keep resolving to crc there.
+    const resolution = await resolveRequestOrg(
+        {
+            host: request.headers.get('host') ?? request.nextUrl.hostname,
+            pathname,
+            vercelEnv: process.env.VERCEL_ENV,
+        },
+        () => getHostList(request.nextUrl.origin),
+    )
+    if (resolution.orgId === null) {
+        return noSuchSiteResponse(pathname, request.method)
+    }
+    const orgId = resolution.orgId
+
     // Cycle-5 C5B-017 — `/login` is a Next.js page (GET-only). A POST
     // hits Next's default 405 with an empty body and no `Allow` header,
     // which is hostile to programmatic callers probing for a sign-in
@@ -151,15 +174,11 @@ export async function proxy(request: NextRequest) {
     const requestHeaders = new Headers(request.headers)
     requestHeaders.set('x-nonce', nonce)
 
-    // v11-03-01: resolve the request host to a tenant org at the Edge and
-    // forward it as `x-org-id` (same RSC-readable request-header seam as the
-    // nonce above). `resolveOrgIdByDomain` is pure (no Firestore) → Edge-safe,
-    // strips a leading `www.`, and falls back to the default org (crc) for
-    // centralreform.live / localhost / *.vercel.app / unknown hosts. The
-    // unconditional `.set()` overwrites any client-supplied `x-org-id` copied
-    // by `new Headers(request.headers)` — the Edge is the authoritative source.
+    // v11-03-01: forward the tenant resolved above as `x-org-id` (same
+    // RSC-readable request-header seam as the nonce). The unconditional
+    // `.set()` overwrites any client-supplied `x-org-id` copied by
+    // `new Headers(request.headers)` — the proxy is the only setter.
     // Placed before every passthrough/rewrite return so all routes carry it.
-    const orgId = resolveOrgIdByDomain(request.headers.get('host') ?? request.nextUrl.hostname)
     requestHeaders.set('x-org-id', orgId)
 
     const isPublicRoute =

@@ -1,4 +1,5 @@
 import type { Org, OrgId } from "@/lib/org/types"
+import { isValidOrgId } from "@/lib/org/org-id"
 
 /**
  * Default tenant for any unmatched host, AND the backward-compat membership
@@ -29,6 +30,12 @@ export function getOrg(orgId: string): Org | undefined {
     return ORGS[orgId]
 }
 
+/**
+ * True only for the COMPILED tenants (crc, brotherslazaroff). Multi-tenant
+ * phase 3: a tenant created in `orgs/{id}` is not "known" here — callers that
+ * mean "a tenant that exists" use `orgExists` (src/lib/org/org-exists.ts), and
+ * callers that mean "a well-formed id" use `isValidOrgId` (org-id.ts).
+ */
 export function isKnownOrg(orgId: string): boolean {
     return Object.prototype.hasOwnProperty.call(ORGS, orgId)
 }
@@ -36,7 +43,13 @@ export function isKnownOrg(orgId: string): boolean {
 /**
  * Coerce a raw `x-org-id` header value (an ALREADY-RESOLVED org id set by the
  * Edge proxy, e.g. "brotherslazaroff") into a typed OrgId, falling back to
- * DEFAULT_ORG_ID for missing/unknown values.
+ * DEFAULT_ORG_ID for missing/malformed values.
+ *
+ * Multi-tenant phase 3: any well-formed id (OrgIdSchema's pattern) is
+ * accepted, not just the compiled tenants — the proxy is the only setter of
+ * `x-org-id` (an unconditional overwrite) and it only sets ids it resolved
+ * from the compiled table or the address list, so a third tenant's id must
+ * survive here instead of turning into crc downstream.
  *
  * NOTE: this is NOT resolveOrgIdByDomain — that one maps a *host* like
  * "www.brotherslazaroff.live" to an org. The proxy already did that and put the
@@ -45,7 +58,7 @@ export function isKnownOrg(orgId: string): boolean {
  * was the v11-03-01 bug.
  */
 export function coerceOrgId(value: string | null | undefined): OrgId {
-    return value && isKnownOrg(value) ? (value as OrgId) : DEFAULT_ORG_ID
+    return isValidOrgId(value) ? value : DEFAULT_ORG_ID
 }
 
 /**
@@ -68,14 +81,24 @@ export function congregationDocId(org: OrgId): string {
  * Phase v11-03; this is just the lookup the middleware will call.
  */
 export function resolveOrgIdByDomain(host: string | null | undefined): OrgId {
-    if (!host) return DEFAULT_ORG_ID
+    return compiledOrgIdForHost(host) ?? DEFAULT_ORG_ID
+}
+
+/**
+ * Multi-tenant phase 3, step (a) of the proxy's host resolution: the compiled
+ * CRC/BL map only. Same normalisation as resolveOrgIdByDomain (lowercase, no
+ * port, leading `www.` stripped) but returns null instead of defaulting, so
+ * the proxy can go on to the project's own Vercel URLs and the address list.
+ */
+export function compiledOrgIdForHost(host: string | null | undefined): OrgId | null {
+    if (!host) return null
     let h = host.trim().toLowerCase()
-    if (!h) return DEFAULT_ORG_ID
+    if (!h) return null
     const colon = h.indexOf(":")
     if (colon !== -1) h = h.slice(0, colon)
     if (h.startsWith("www.")) h = h.slice(4)
     for (const org of Object.values(ORGS)) {
         if (org.domain === h) return org.id
     }
-    return DEFAULT_ORG_ID
+    return null
 }

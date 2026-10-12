@@ -13,6 +13,7 @@ import { logger } from '@/lib/logger'
 import { DEFAULT_ORG_ID } from '@/lib/org/registry'
 import { orgString } from '@/lib/org/strings'
 import type { OrgId } from '@/lib/org/types'
+import { primeTenantConfig } from '@/lib/org/org-exists'
 
 let resend: Resend | null = null
 
@@ -62,6 +63,7 @@ export async function sendSchedulingEmail(params: SchedulingEmailParams): Promis
     if (!client) return { ok: false, reason: 'RESEND_API_KEY not configured' }
 
     const org = params.org ?? DEFAULT_ORG_ID
+    await primeTenantConfig(org)
     const venueName = escapeHtml(orgString(org, 'email.venueName'))
 
     try {

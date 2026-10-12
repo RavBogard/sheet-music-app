@@ -24,6 +24,7 @@ import type { OrgId } from "@/lib/org/types"
  * pure getters (getOrgBranding, label, …) consult.
  */
 export const ORG_CONFIG_TTL_MS = 60_000
+export const ORG_CONFIG_MEMORY_MAX = 200
 export const orgConfigTag = (orgId: OrgId) => `org-config:${orgId}`
 
 export type OrgConfigSource = "code" | "firestore"
@@ -68,7 +69,17 @@ export async function getOrgConfig(orgId: OrgId): Promise<OrgConfig | null> {
                 logger.error(`[org-config] read orgs/${orgId} failed:`, err)
             }
             config = fromDb ?? codeOrgConfig(orgId)
+            // Multi-tenant phase 3: coerceOrgId accepts any well-formed id, and
+            // a few unproxied public paths (robots, sitemap, today.json) read a
+            // client-sent x-org-id, so bound the map rather than let random ids
+            // grow it. Oldest entries go first (Map keeps insertion order).
+            memory.delete(orgId)
             memory.set(orgId, { at: Date.now(), config })
+            while (memory.size > ORG_CONFIG_MEMORY_MAX) {
+                const oldest = memory.keys().next().value
+                if (oldest === undefined) break
+                memory.delete(oldest)
+            }
         }
     }
     if (config) primeOrgConfig(config)

@@ -43,9 +43,18 @@ describe("coerceOrgId (x-org-id header value → OrgId)", () => {
         expect(coerceOrgId("brotherslazaroff")).toBe("brotherslazaroff")
         expect(coerceOrgId("crc")).toBe("crc")
     })
-    it("falls back to crc for unknown / missing values", () => {
+    it("passes through any well-formed tenant id (multi-tenant phase 3: the proxy is the only setter)", () => {
+        expect(coerceOrgId("nope")).toBe("nope")
+        expect(coerceOrgId("testshul")).toBe("testshul")
+        expect(coerceOrgId("nava-tehila")).toBe("nava-tehila")
+    })
+    it("falls back to crc for malformed / missing values", () => {
         expect(coerceOrgId("brotherslazaroff.live")).toBe(DEFAULT_ORG_ID) // a DOMAIN is not an org id
-        expect(coerceOrgId("nope")).toBe(DEFAULT_ORG_ID)
+        expect(coerceOrgId("Nava")).toBe(DEFAULT_ORG_ID)
+        expect(coerceOrgId("-bad")).toBe(DEFAULT_ORG_ID)
+        expect(coerceOrgId("a")).toBe(DEFAULT_ORG_ID)
+        expect(coerceOrgId("x".repeat(41))).toBe(DEFAULT_ORG_ID)
+        expect(coerceOrgId("crc/../x")).toBe(DEFAULT_ORG_ID)
         expect(coerceOrgId(null)).toBe(DEFAULT_ORG_ID)
         expect(coerceOrgId(undefined)).toBe(DEFAULT_ORG_ID)
         expect(coerceOrgId("")).toBe(DEFAULT_ORG_ID)

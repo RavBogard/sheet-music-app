@@ -21,6 +21,7 @@ import {
 } from "@/lib/request-id"
 import { httpError } from "@/lib/http/error-envelope"
 import { coerceOrgId } from "@/lib/org/registry"
+import { primeTenantConfig } from "@/lib/org/org-exists"
 import type { OrgId } from "@/lib/org/types"
 import { getTenantAccess, type TenantAccess } from "@/lib/org/access"
 import { asTenantRole, tenantRoleFromClaims } from "@/lib/org/membership-types"
@@ -140,6 +141,10 @@ export async function requireAuth(
     // migrated → today's tenant-blind claim role (legacyClaims). The platform
     // owner (platform/owners) is admin everywhere; SUPER_ADMIN_UID is retired.
     const orgId = coerceOrgId(req.headers.get("x-org-id"))
+    // Multi-tenant phase 3: prime the host tenant's config so synchronous
+    // orgString / getOrgBranding reads in the handler see a third tenant's
+    // values. Cached 60 s; never throws.
+    await primeTenantConfig(orgId)
     let access: TenantAccess
     try {
         access = await getTenantAccess(decoded.uid, orgId, {
