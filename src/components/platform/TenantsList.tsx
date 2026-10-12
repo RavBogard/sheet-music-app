@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import type { TenantSummary } from "@/lib/platform/tenants"
 import { errorText, platformApi } from "./api"
 import { ErrorLine, FEATURE_LABELS, StatusChip } from "./shared"
+import { PlatformKeyCard } from "./PlatformKeyCard"
 
 export function TenantsList() {
     const [tenants, setTenants] = useState<TenantSummary[] | null>(null)
@@ -75,6 +76,7 @@ export function TenantsList() {
                     </table>
                 </div>
             )}
+            <PlatformKeyCard />
         </div>
     )
 }

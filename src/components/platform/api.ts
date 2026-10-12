@@ -78,6 +78,8 @@ export const platformApi = {
         const qs = p.toString()
         return call<PlatformAuditEntry[]>(`/api/platform/activity${qs ? `?${qs}` : ""}`)
     },
+    mintPlatformToken: (label: string) =>
+        call<{ id: string; token: string }>("/api/platform/tokens", json("POST", { label })),
     viewBearer: (orgId: string, minutes: number) =>
         call<{ token: string; tokenId: string; expiresAt: string }>("/api/platform/view-bearer", json("POST", { orgId, minutes })),
 
