@@ -89,7 +89,9 @@ const publicExactRoutes = [
 // /qr/*          — QR code sign-in flow (used *before* having a session)
 // /.well-known/* — OAuth discovery metadata; Claude Desktop/web fetch these
 //                  unauthenticated to find the MCP authorization server
-const publicPrefixes = ['/perform', '/qr', '/.well-known']
+// /invite/*      — tenant invitation links (multi-tenant phase 4): the page
+//                  signs the person in itself, like /qr
+const publicPrefixes = ['/perform', '/qr', '/.well-known', '/invite']
 
 // Vestigial paths — these used to be the catch-all defaults the proxy
 // matcher couldn't avoid, and Next.js answered them with either a 307→/login
