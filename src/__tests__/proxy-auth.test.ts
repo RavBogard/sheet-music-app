@@ -119,6 +119,51 @@ describe('Edge Middleware (proxy.ts) Auth Routing', () => {
         expect(res.headers.get('location')).toBeNull()
     })
 
+    describe('multi-tenant P2: role in the host tenant', () => {
+        const hostReq = (host: string, path: string, cookies: Record<string, string>) => {
+            const req = new NextRequest(new URL(`http://${host}${path}`), { headers: { host } })
+            for (const [k, v] of Object.entries(cookies)) req.cookies.set(k, v)
+            return req
+        }
+        const BL = 'brotherslazaroff.live'
+        const CRC = 'centralreform.live'
+
+        it('m-claims: /manage follows m[host org], not the legacy role claim', async () => {
+            const token = createSessionToken({ uid: 'u1', role: 'admin', m: { crc: 'ad', brotherslazaroff: 'mu' } })
+            const crc = await proxy(hostReq(CRC, '/manage/settings', { __session: token }))
+            expect(crc.headers.get('x-middleware-rewrite')).toBeNull()
+            const bl = await proxy(hostReq(BL, '/manage/settings', { __session: token }))
+            expect(bl.headers.get('x-middleware-rewrite')).toBe(`http://${BL}/unauthorized`)
+        })
+
+        it('po claim is admin on any host', async () => {
+            const token = createSessionToken({ uid: 'u1', po: true, m: { crc: 'ad' } })
+            const bl = await proxy(hostReq(BL, '/manage/settings', { __session: token }))
+            expect(bl.headers.get('x-middleware-rewrite')).toBeNull()
+        })
+
+        it('ignores a companion cookie signed for another org (or pre-P2, no org)', async () => {
+            const prev = process.env.SESSION_ROLE_SECRET
+            process.env.SESSION_ROLE_SECRET = 'proxy-test-secret-abcdefghijkl'
+            try {
+                const { signRoleCookie, SESSION_ROLE_COOKIE } = await import('@/lib/session-role')
+                const token = createSessionToken({ uid: 'u1', m: { brotherslazaroff: 'me' } })
+                const crcAdminCookie = (await signRoleCookie('u1', 'admin', 'crc'))!
+                const bl = await proxy(hostReq(BL, '/manage/settings', { __session: token, [SESSION_ROLE_COOKIE]: crcAdminCookie }))
+                expect(bl.headers.get('x-middleware-rewrite')).toBe(`http://${BL}/unauthorized`)
+                const legacyCookie = (await signRoleCookie('u1', 'admin'))!
+                const bl2 = await proxy(hostReq(BL, '/manage/settings', { __session: token, [SESSION_ROLE_COOKIE]: legacyCookie }))
+                expect(bl2.headers.get('x-middleware-rewrite')).toBe(`http://${BL}/unauthorized`)
+                const blCookie = (await signRoleCookie('u1', 'band_leader', 'brotherslazaroff'))!
+                const bl3 = await proxy(hostReq(BL, '/manage/settings', { __session: token, [SESSION_ROLE_COOKIE]: blCookie }))
+                expect(bl3.headers.get('x-middleware-rewrite')).toBeNull()
+            } finally {
+                if (prev === undefined) delete process.env.SESSION_ROLE_SECRET
+                else process.env.SESSION_ROLE_SECRET = prev
+            }
+        })
+    })
+
     it('allows "member" users to access /library but blocks them from /admin', async () => {
         const token = createSessionToken({ role: 'member' })
 

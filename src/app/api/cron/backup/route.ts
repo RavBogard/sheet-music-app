@@ -1,3 +1,4 @@
+import { tenantRoleFromClaims } from "@/lib/org/membership-types"
 import { NextRequest, NextResponse } from "next/server"
 import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -76,7 +77,9 @@ export async function POST(req: NextRequest) {
         const { getAuth } = await import("firebase-admin/auth")
         const decoded = await getAuth().verifyIdToken(token)
 
-        if (!decoded.role || decoded.role !== 'admin') {
+        // Multi-tenant P2 (design §3.4): platform owner or crc admin (`m.crc`);
+        // a pre-P2 token (no `m`) keeps the legacy role-claim check.
+        if (tenantRoleFromClaims(decoded as unknown as Record<string, unknown>, 'crc') !== 'admin') {
             return NextResponse.json({ error: "Admin access required" }, { status: 403 })
         }
 

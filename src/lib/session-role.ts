@@ -13,6 +13,8 @@ export const SESSION_ROLE_MAX_AGE = 60 * 60 * 24 * 14 // 14 days, matches Fireba
 interface RolePayload {
     uid: string
     role: string | null
+    /** Multi-tenant P2: the tenant (host org) this role is for. */
+    org?: string
     iat: number
     exp: number
 }
@@ -20,6 +22,8 @@ interface RolePayload {
 export interface VerifiedRole {
     uid: string
     role: string | null
+    /** Multi-tenant P2: tenant the role was signed for; null on pre-P2 cookies. */
+    org: string | null
 }
 
 // --- base64url helpers (Edge-compatible: no Buffer) ---
@@ -67,6 +71,7 @@ async function getKey(): Promise<CryptoKey | null> {
 export async function signRoleCookie(
     uid: string,
     role: string | null,
+    org?: string | null,
 ): Promise<string | null> {
     // v4.3 P10-01: fail loud on Vercel Production, graceful elsewhere.
     // Silent-null-in-prod was the footgun that caused the 2026-04-15 lockout.
@@ -87,6 +92,7 @@ export async function signRoleCookie(
     if (!key) return null
     const iat = Math.floor(Date.now() / 1000)
     const payload: RolePayload = { uid, role, iat, exp: iat + SESSION_ROLE_MAX_AGE }
+    if (org) payload.org = org
     const payloadB64 = b64urlEncodeString(JSON.stringify(payload))
     const sigBuf = await crypto.subtle.sign(
         "HMAC",
@@ -148,5 +154,6 @@ export async function verifyRoleCookie(
     const now = Math.floor(Date.now() / 1000)
     if (payload.exp < now) return null
     const role = typeof payload.role === "string" ? payload.role : null
-    return { uid: payload.uid, role }
+    const org = typeof payload.org === "string" && payload.org ? payload.org : null
+    return { uid: payload.uid, role, org }
 }

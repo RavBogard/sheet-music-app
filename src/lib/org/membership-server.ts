@@ -2,6 +2,7 @@ import { logger } from "@/lib/logger"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { getOrgIdsFromClaims } from "@/lib/org/membership"
+import { sortTenants } from "@/lib/org/legacy-membership-map"
 
 /**
  * v11-05-05: SERVER-ONLY org membership resolvers. Split out of membership.ts so
@@ -14,15 +15,37 @@ import { getOrgIdsFromClaims } from "@/lib/org/membership"
  */
 
 /**
- * Server-side: resolve a user's org memberships from their Auth custom claims.
- * Never throws on a missing user — returns [DEFAULT_ORG_ID] and warns. Firebase
- * Admin is lazy-imported so this module stays import-safe in pure unit tests.
+ * Server-side: the tenants a user is an APPROVED member of (multi-tenant P2:
+ * memberships with role ∉ {pending, denied}, crc first). Transition: a person
+ * not migrated yet (no users/{uid}.membershipsMigratedAt and no memberships)
+ * resolves from their Auth `orgIds` claim exactly as before (missing → crc).
+ * Never throws on a missing user — returns [DEFAULT_ORG_ID] and warns.
+ * Firebase Admin is lazy-imported so this module stays import-safe in pure
+ * unit tests.
  */
 export async function getUserOrgIds(uid: string): Promise<OrgId[]> {
-    const { initAdmin, getAuth } = await import("@/lib/firebase-admin")
-    if (!initAdmin()) return [DEFAULT_ORG_ID]
+    const fa = await import("@/lib/firebase-admin")
+    if (!fa.initAdmin()) return [DEFAULT_ORG_ID]
     try {
-        const user = await getAuth().getUser(uid)
+        const db = fa.getFirestore()
+        const [mems, userSnap] = await Promise.all([
+            db.collection("memberships").where("uid", "==", uid).get(),
+            db.collection("users").doc(uid).get(),
+        ])
+        const migrated = userSnap.exists && !!userSnap.data()?.membershipsMigratedAt
+        if (migrated || !mems.empty) {
+            const approved = mems.docs
+                .map((d) => d.data() as { tenantId?: string; role?: string })
+                .filter((m) => typeof m.tenantId === "string" && m.role !== "pending" && m.role !== "denied" && !!m.role)
+                .map((m) => m.tenantId as OrgId)
+            return sortTenants(approved)
+        }
+    } catch {
+        // membership read failed → the pre-P2 claim rule below
+        logger.warn("[org] getUserOrgIds: membership read failed; using the orgIds claim", { uid })
+    }
+    try {
+        const user = await fa.getAuth().getUser(uid)
         return getOrgIdsFromClaims(user.customClaims as Record<string, unknown> | undefined)
     } catch {
         logger.warn("[org] getUserOrgIds: user lookup failed; defaulting to crc", { uid })
@@ -48,6 +71,17 @@ export async function resolveMintOrg(
     uid: string,
     requestedOrg: OrgId | null | undefined,
 ): Promise<OrgId> {
+    // Multi-tenant P2: the platform owner mints for the host it connected
+    // through. Everyone else: the host if they are an approved member there,
+    // else (kept in P2; phase 4 removes it) their first tenant.
+    if (requestedOrg) {
+        try {
+            const { isPlatformOwner } = await import("@/lib/org/access")
+            if (await isPlatformOwner(uid)) return requestedOrg
+        } catch {
+            // owner lookup failure → ordinary member rules
+        }
+    }
     const orgs = await getUserOrgIds(uid)
     if (requestedOrg && orgs.includes(requestedOrg)) return requestedOrg
     return orgs[0] ?? DEFAULT_ORG_ID

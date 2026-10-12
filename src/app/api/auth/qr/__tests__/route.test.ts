@@ -264,14 +264,16 @@ describe("PUT /api/auth/qr — approval role gate (WS-21)", () => {
         expect(mockUpdate).not.toHaveBeenCalled()
     })
 
-    // AC-3 — claim already allowed → short-circuit; the user doc is NOT read.
-    it("approves on a present role claim without reading the user doc (short-circuit)", async () => {
+    // AC-3 — claim already allowed → approve. Multi-tenant P2: the users doc is
+    // read once as part of the host-tenant membership lookup, never again for
+    // the legacy fallback.
+    it("approves on a present role claim with no extra user-doc read", async () => {
         mockVerifyIdToken.mockResolvedValue({ uid: "u4", role: "musician", name: "Claimed", email: "c@example.com" })
 
         const res = await PUT(makePutReq("good-token"))
         expect(res.status).toBe(200)
         const body = await res.json()
         expect(body.success).toBe(true)
-        expect(mockUserDoc).not.toHaveBeenCalled()
+        expect(mockUserDoc).toHaveBeenCalledTimes(1)
     })
 })

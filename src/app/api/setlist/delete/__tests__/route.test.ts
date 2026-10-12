@@ -14,6 +14,7 @@ const queryResults: Record<string, DocsFactory> = {}
 
 const batchDeleteSpy = vi.fn()
 const recursiveDeleteSpy = vi.fn(async () => undefined)
+const historyAddSpy = vi.fn(async (_entry: Record<string, unknown>) => ({ id: "h-1" }))
 
 function makeQuery(factory: DocsFactory) {
     const whereMock = () => ({
@@ -37,6 +38,7 @@ const mockFirestore = {
             return {
                 doc: (_id: string) => ({
                     id: _id,
+                    collection: (_sub: string) => ({ add: historyAddSpy }),
                     // v4.4 SEC-006: owner check — return ownerId matching test auth uid
                     get: async () => ({
                         exists: setlistExists,
@@ -271,5 +273,14 @@ describe("POST /api/setlist/delete — D01 cascade", () => {
         })
         expect(json.errors).toEqual([])
         expect(recursiveDeleteSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it("multi-tenant P2: writes the 'deleted' history entry server-side, after the recursive delete", async () => {
+        mockAuth("band_leader")
+        const res = await POST(makeReq("/api/setlist/delete", { method: "POST", token: "valid", body: { setlistId: "s-1" } }))
+        expect(res.status).toBe(200)
+        expect(historyAddSpy).toHaveBeenCalledTimes(1)
+        expect(historyAddSpy.mock.calls[0][0]).toMatchObject({ action: "deleted", userId: "user-1", userName: "user@example.com" })
+        expect(recursiveDeleteSpy.mock.invocationCallOrder[0]).toBeLessThan(historyAddSpy.mock.invocationCallOrder[0])
     })
 })

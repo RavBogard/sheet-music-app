@@ -13,6 +13,7 @@ import { generateRawToken, hashToken } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
 import { liftLegacyErrorEnvelope } from "@/lib/mcp/errors"
 import { isTestUid } from "@/lib/test-isolation"
+import { setMembership } from "@/lib/org/memberships-write"
 import { DEFAULT_ORG_ID, ORGS, isKnownOrg } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 
@@ -277,13 +278,6 @@ export async function provisionTestAccount(
             { uid, detail: String((err as Error)?.message ?? err) },
         )
     }
-    await auth.setCustomUserClaims(uid, {
-        role: args.role,
-        ...(soundEngineer ? { soundEngineer: true } : {}),
-        // F-8: only stamp orgIds when explicitly requested — getOrgIdsFromClaims
-        // treats a missing claim as [crc], so the omitted path needs no claim.
-        ...(explicitOrgIds ? { orgIds: explicitOrgIds } : {}),
-    })
 
     // 2. Firestore user doc — picked up by every gate that reads users/{uid}.
     await db.collection(USERS).doc(uid).set({
@@ -300,6 +294,22 @@ export async function provisionTestAccount(
         createdAt: FieldValue.serverTimestamp(),
         ttlExpiresAt: Timestamp.fromMillis(expiresAtMs),
     })
+
+    // 2b. Multi-tenant P2: one membership per requested tenant (default crc),
+    //     written after the users doc so its migration marker and legacy
+    //     mirrors survive; claims are rebuilt from them (never a bare legacy
+    //     `role` claim — design §3.7). Claims become {m, role, orgIds[, se,
+    //     soundEngineer]}.
+    for (const org of resolvedOrgIds) {
+        await setMembership({
+            orgId: org,
+            uid,
+            role: args.role,
+            soundEngineer,
+            actorUid: callerUid,
+            reason: "test-account",
+        })
+    }
 
     // 3. Mint the bearer. Hashed-only persistence, raw is shown ONCE.
     const rawToken = generateRawToken()

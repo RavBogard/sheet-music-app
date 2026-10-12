@@ -52,10 +52,14 @@ vi.mock("@/lib/firebase-admin", () => ({
     getFirestore: () => ({
         collection: (name: string) => ({
             doc: (id: string) => ({
+                // Multi-tenant P2: no memberships/platform docs here → the
+                // users-doc role decides (unmigrated, legacy path).
                 get: async () =>
                     name === "users"
                         ? mockGetUserDoc(id)
-                        : mockGetTestUserDoc(id),
+                        : name === "memberships" || name === "platform"
+                          ? { exists: false, data: () => undefined }
+                          : mockGetTestUserDoc(id),
             }),
         }),
     }),

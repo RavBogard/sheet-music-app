@@ -3,6 +3,7 @@ import { timingSafeEqual } from "crypto"
 import { getStorage } from "firebase-admin/storage"
 import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
+import { checkIdentityConsistency, type IdentityConsistency } from "@/lib/org/identity-consistency"
 import { env } from "@/env.mjs"
 import { captureException, captureMessage } from "@/lib/error-reporting"
 import {
@@ -34,21 +35,16 @@ const BRIDGE_X32_DISCONNECT_ALARM_MS = 5 * 60 * 1000
 const BRIDGE_ERRCOUNT_DELTA_THRESHOLD = 5
 
 /**
- * v4.3 C02 — Admin-role consistency check + PGR-03 storage-backup staleness alarm.
+ * v4.3 C02 — identity consistency check + PGR-03 storage-backup staleness alarm.
  *
- * firestore.rules grants admin access via EITHER a custom claim
- * (`token.role == 'admin'`) OR membership in `config/admins.uids`.
- * The two paths can drift: if setCustomUserClaims fails silently
- * during an admin promotion, the user keeps `config/admins` access
- * but not the claim — and vice versa. Both paths work in isolation,
- * so the drift can go unnoticed until a role check in the claim-only
- * path breaks.
- *
- * This cron runs daily and logs a warning if any uid in
- * config/admins.uids doesn't have the 'admin' custom claim. Read-
- * only; does NOT auto-repair (a drift is a signal something in the
- * promotion flow failed and should be investigated, not silently
- * papered over).
+ * Multi-tenant phase 2: config/admins is retired. Rights come from
+ * server-written memberships (and platform/owners for the platform owner);
+ * the claims the rules read (`m`, `se`, `po`) are rebuilt from them. A failed
+ * rebuild would leave a token granting something the memberships do not, so
+ * this cron compares the two daily (src/lib/org/identity-consistency.ts) and
+ * also reports accounts not yet migrated / still without `m`. Read-only; does
+ * NOT auto-repair (a drift is a signal something failed and should be
+ * investigated, not silently papered over).
  *
  * PGR-03 (added 2026-05-23) folds a `storageBackupHealth` check into
  * the same response.  The storage-phase2 daily backup cron writes its
@@ -133,44 +129,40 @@ export async function GET(req: NextRequest) {
         const db = getFirestore()
         const auth = getAuth()
 
-        const adminsDoc = await db.collection("config").doc("admins").get()
-        const uids = (adminsDoc.data()?.uids ?? []) as string[]
-
-        const drift: Array<{ uid: string; reason: string }> = []
-        if (Array.isArray(uids) && uids.length > 0) {
-            for (const uid of uids) {
-                try {
-                    const user = await auth.getUser(uid)
-                    const claimRole = (user.customClaims as { role?: string } | undefined)?.role
-                    if (claimRole !== "admin") {
-                        drift.push({ uid, reason: `claim.role=${claimRole ?? "missing"}` })
-                    }
-                } catch (e) {
-                    drift.push({
-                        uid,
-                        reason: `getUser failed: ${e instanceof Error ? e.message : String(e)}`,
-                    })
-                }
-            }
+        // Multi-tenant P2 (design §3.4): config/admins is retired; the identity
+        // check compares platform/owners with `po` claims and each account's
+        // memberships with its `m`/`se` claims, and reports accounts not yet
+        // migrated or still without `m` (the transition fallback's population).
+        let identity: IdentityConsistency | "unavailable" = "unavailable"
+        let drift: Array<{ uid: string; reason: string }> = []
+        try {
+            identity = await checkIdentityConsistency(db, auth)
+            drift = identity.drift
+        } catch (e) {
+            logger.warn(
+                `[admin-consistency] identity check failed: ${e instanceof Error ? e.message : String(e)}`,
+            )
         }
+        const checked = identity === "unavailable" ? 0 : identity.checked
 
         if (drift.length > 0) {
             logger.warn(
-                `[admin-consistency] drift detected across ${drift.length}/${uids.length} bootstrap-admin uids: ${JSON.stringify(drift)}`,
+                `[admin-consistency] identity drift across ${drift.length}/${checked} accounts: ${JSON.stringify(drift)}`,
             )
-            // PGR-03: admin-claim drift is an un-surfaced alert signal — a
-            // failed promotion otherwise lives only in logs. Route it to
+            // PGR-03: claim drift is an un-surfaced alert signal — route it to
             // Sentry so it reaches Daniel.
             captureMessage(
-                `[admin-consistency] claim drift across ${drift.length}/${uids.length} bootstrap-admin uids`,
+                `[admin-consistency] claim drift across ${drift.length}/${checked} accounts`,
                 {
                     source: "cron",
                     location: "admin-consistency",
                     extra: { drift },
                 },
             )
-        } else if (uids.length > 0) {
-            logger.info(`[admin-consistency] clean (${uids.length} uids)`)
+        } else if (identity !== "unavailable") {
+            logger.info(
+                `[admin-consistency] identity clean (${checked} accounts; ${identity.unmigrated.length} unmigrated, ${identity.withoutM.length} without m)`,
+            )
         }
 
         // Bootstrap stamp — first time admin-consistency ever tick'd. Acts as a
@@ -194,8 +186,15 @@ export async function GET(req: NextRequest) {
         const bridgeHealth = await readAndAlertBridgeHealth(db, Date.now())
 
         return NextResponse.json({
-            checked: uids.length,
+            checked,
             drift,
+            ...(identity === "unavailable"
+                ? { identity: "unavailable" }
+                : {
+                      owners: identity.owners,
+                      unmigrated: identity.unmigrated,
+                      withoutM: identity.withoutM,
+                  }),
             storageBackupHealth,
             libraryBytesHealth,
             bridgeHealth,

@@ -1159,15 +1159,17 @@ describe("MCP test tokens (emulator)", () => {
         })
     })
 
-    it("orgIds omitted is byte-equivalent to crc default (no claim/field; token crc)", async () => {
+    it("orgIds omitted → a crc membership; claims rebuilt from it (multi-tenant P2); token crc", async () => {
         const result = await provisionTestAccount(ADMIN_UID, { role: "musician" })
         if ("error" in result) throw new Error("mint failed")
         expect(result.orgIds).toEqual(["crc"])
 
-        const userSnap = await db().collection("users").doc(result.uid).get()
-        expect(userSnap.data()?.orgIds).toBeUndefined() // no field written
+        // P2: claims come only from memberships (design §3.7), so the default
+        // path now carries m + the legacy orgIds mirror instead of no claim.
+        const memberships = await db().collection("memberships").where("uid", "==", result.uid).get()
+        expect(memberships.docs.map((d) => `${d.get("tenantId")}:${d.get("role")}`)).toEqual(["crc:musician"])
         const authUser = await getAuth().getUser(result.uid)
-        expect(authUser.customClaims?.orgIds).toBeUndefined() // no claim written
+        expect(authUser.customClaims).toEqual({ m: { crc: "mu" }, role: "musician", orgIds: ["crc"] })
         const tokenSnap = await db()
             .collection("mcpTokens")
             .where("testUid", "==", result.uid)

@@ -1,33 +1,40 @@
 /**
  * POST /api/admin/set-sound-engineer
  *
- * Toggles the soundEngineer flag for a user.
- * Updates both Firestore profile and Firebase Auth custom claims
- * so Firestore rules can check the claim.
+ * Toggles a person's sound-engineer flag IN ONE TENANT (multi-tenant phase 2,
+ * design §3.4): the flag lives on memberships/{tenant}__{uid}; claims (`se`,
+ * legacy `soundEngineer`) and the users-doc mirror are rebuilt from it.
  *
- * Body: { targetUserId: string, soundEngineer: boolean }
- * Requires band_leader role or above.
+ * Body: { targetUserId: string, soundEngineer: boolean, tenant?: OrgId (default host) }
+ * Requires band_leader or above in `tenant` (platform owner anywhere); the
+ * target must have a membership there.
  */
 
 import { NextResponse } from "next/server"
-import { createApiHandler } from "@/lib/api-wrapper"
+import { createApiHandler, apiError } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { getAuth } from "firebase-admin/auth"
-import { logger } from "@/lib/logger"
+import { httpError } from "@/lib/http/error-envelope"
+import { isKnownOrg } from "@/lib/org/registry"
+import { getTenantAccess, hasTenantRole } from "@/lib/org/access"
+import { membershipId, asTenantRole } from "@/lib/org/membership-types"
+import { ensureMembershipsMigrated, setMembership } from "@/lib/org/memberships-write"
 import { z } from "zod"
 
 const schema = z.object({
     targetUserId: z.string().min(1),
     soundEngineer: z.boolean(),
+    tenant: z.string().min(1).optional(),
 })
 
 export const POST = createApiHandler(
     async (ctx) => {
-        const limited = await checkRateLimit(ctx.req, 'api')
+        const limited = await checkRateLimit(ctx.req, "api")
         if (limited) return limited
 
         const { targetUserId, soundEngineer } = ctx.body!
+        const tenant = ctx.body!.tenant ?? ctx.auth.orgId
+        if (!isKnownOrg(tenant)) return apiError(`Unknown tenant '${tenant}'`, 400, "UNKNOWN_TENANT")
 
         if (!initAdmin()) {
             return NextResponse.json(
@@ -35,25 +42,33 @@ export const POST = createApiHandler(
                 { status: 500 },
             )
         }
-        const db = getFirestore()
-        const fbAuth = getAuth()
-
-        // Update Firestore profile
-        await db.collection("users").doc(targetUserId).update({ soundEngineer })
-
-        // Update custom claims
-        try {
-            const user = await fbAuth.getUser(targetUserId)
-            const currentClaims = user.customClaims || {}
-            await fbAuth.setCustomUserClaims(targetUserId, {
-                ...currentClaims,
-                soundEngineer,
+        const caller = tenant === ctx.auth.orgId ? ctx.auth.access : await getTenantAccess(ctx.auth.uid, tenant)
+        if (!hasTenantRole(caller, "band_leader")) {
+            return httpError(403, "forbidden_role", "Requires band_leader role", {
+                errorCode: 403,
+                callerRole: caller.effectiveRole ?? null,
+                requiredRole: "band_leader",
+                tenant,
             })
-        } catch (claimErr) {
-            logger.warn(`[SetSoundEngineer] Failed to update claims for ${targetUserId}:`, claimErr)
         }
 
-        return NextResponse.json({ success: true, soundEngineer })
+        await ensureMembershipsMigrated(targetUserId)
+        const snap = await getFirestore().collection("memberships").doc(membershipId(tenant, targetUserId)).get()
+        const role = snap.exists ? asTenantRole(snap.get("role")) : null
+        if (!role) return apiError("This person is not a member of this tenant", 404, "NOT_A_MEMBER")
+
+        await setMembership({
+            orgId: tenant,
+            uid: targetUserId,
+            role,
+            soundEngineer,
+            actorUid: ctx.auth.uid,
+            actorEmail: ctx.auth.email,
+            reason: "sound-engineer",
+        })
+
+        return NextResponse.json({ success: true, soundEngineer, tenant })
     },
-    { role: 'band_leader', schema }
+    // band leader in the HOST tenant first (as before P2), then in `tenant`.
+    { role: "band_leader", schema },
 )
