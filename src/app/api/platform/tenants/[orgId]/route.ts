@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { apiError, createApiHandler } from "@/lib/api-wrapper"
 import { getTenant, updateTenant } from "@/lib/platform/tenants"
-import { actorOf, dryRunFrom, jsonBody, platformErrorResponse, refuseUnlessPo } from "@/lib/platform/platform-http"
+import { actorOf, dryRunFrom, jsonBody, platformErrorResponse, refuseUnlessPo, unwrap } from "@/lib/platform/platform-http"
 
 /**
  * GET   /api/platform/tenants/{orgId}                → TenantDetail (404 if none)
@@ -26,7 +26,7 @@ export const PATCH = createApiHandler<{ orgId: string }>(async (ctx) => {
     const body = await jsonBody(ctx.req)
     if (body instanceof NextResponse) return body
     try {
-        return NextResponse.json(await updateTenant(ctx.params!.orgId, body, { actor: actorOf(ctx.auth), dryRun: dryRunFrom(ctx.req) }))
+        return NextResponse.json(await updateTenant(ctx.params!.orgId, unwrap(body, "patch"), { actor: actorOf(ctx.auth), dryRun: dryRunFrom(ctx.req) }))
     } catch (e) {
         return platformErrorResponse(e)
     }

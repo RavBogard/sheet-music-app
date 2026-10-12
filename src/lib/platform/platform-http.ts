@@ -50,3 +50,15 @@ export function platformErrorResponse(e: unknown): NextResponse {
     if (e instanceof PlatformError) return apiError(e.message, STATUS[e.kind], `PLATFORM_${e.kind.toUpperCase()}`, e.details)
     return addressErrorResponse(e)
 }
+
+/**
+ * Accept both `{<key>: {...}}` (what the console sends) and the bare object.
+ * Only a body whose ONLY key is `key` is unwrapped.
+ */
+export function unwrap<T>(body: T, key: string): T {
+    if (body && typeof body === "object" && !Array.isArray(body)) {
+        const keys = Object.keys(body as object)
+        if (keys.length === 1 && keys[0] === key) return (body as Record<string, unknown>)[key] as T
+    }
+    return body
+}

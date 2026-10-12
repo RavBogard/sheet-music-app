@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { setTenantFeatures } from "@/lib/platform/tenants"
-import { actorOf, dryRunFrom, jsonBody, platformErrorResponse, refuseUnlessPo } from "@/lib/platform/platform-http"
+import { actorOf, dryRunFrom, jsonBody, platformErrorResponse, refuseUnlessPo, unwrap } from "@/lib/platform/platform-http"
 
 /**
  * PATCH /api/platform/tenants/{orgId}/features[?dryRun=false]
@@ -16,7 +16,7 @@ export const PATCH = createApiHandler<{ orgId: string }>(async (ctx) => {
     if (body instanceof NextResponse) return body
     try {
         return NextResponse.json(
-            await setTenantFeatures(ctx.params!.orgId, body as Record<string, boolean>, { actor: actorOf(ctx.auth), dryRun: dryRunFrom(ctx.req) }),
+            await setTenantFeatures(ctx.params!.orgId, unwrap(body, "features") as Record<string, boolean>, { actor: actorOf(ctx.auth), dryRun: dryRunFrom(ctx.req) }),
         )
     } catch (e) {
         return platformErrorResponse(e)
