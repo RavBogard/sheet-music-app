@@ -136,6 +136,25 @@ export const POST = createApiHandler(
             errors.push(`setlist: ${msg}`)
         }
 
+        // 7) Multi-tenant P2 (design §1.2): the 'deleted' history entry is
+        // written here with the Admin SDK — the browser's own write is refused
+        // by the rules once the parent setlist is gone. Written AFTER the
+        // recursive delete so it survives it, exactly where the browser's
+        // entry used to land. Best-effort, like every other phase.
+        try {
+            const { FieldValue } = await import("firebase-admin/firestore")
+            const token = ctx.auth.token as unknown as Record<string, unknown> | undefined
+            await setlistRef.collection("history").add({
+                action: "deleted",
+                userId: ctx.auth.uid,
+                userName: (typeof token?.name === "string" && token.name) || ctx.auth.email || "Unknown",
+                timestamp: FieldValue.serverTimestamp(),
+            })
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e)
+            logger.warn(`[setlist/delete] history entry failed for ${setlistId}: ${msg}`)
+        }
+
         logger.info(
             `[setlist/delete] ${setlistId} — assignments=${assignments} tasks=${tasks} notifications=${notifications} tracks=${tracks} errors=${errors.length}`,
         )
