@@ -1,6 +1,5 @@
 import { AppNavigation } from "@/components/nav/AppNavigation"
-import { headers } from "next/headers"
-import { coerceOrgId } from "@/lib/org/registry"
+import { requestOrg } from "@/lib/org/request-org"
 import { getOrgBranding } from "@/lib/org/branding"
 
 /**
@@ -22,7 +21,7 @@ export default async function SetlistPerformLayout({
 }: {
     children: React.ReactNode
 }) {
-    const orgId = coerceOrgId((await headers()).get("x-org-id"))
+    const orgId = (await requestOrg()).orgId
     const branding = getOrgBranding(orgId)
 
     return (

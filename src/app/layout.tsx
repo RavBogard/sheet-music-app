@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { OrgProvider } from "@/lib/org/org-context"
 import { coerceOrgId } from "@/lib/org/registry"
 import { getOrgBranding } from "@/lib/org/branding"
+import { getOrgConfig } from "@/lib/org/get-org-config"
 import { ClientProviders } from "@/components/client-providers"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { Toaster } from "sonner"
@@ -47,6 +48,7 @@ const zillaSlab = Zilla_Slab({
 // entry mirrors these strings exactly; covered by branding.test.ts).
 export async function generateMetadata(): Promise<Metadata> {
   const orgId = coerceOrgId((await headers()).get("x-org-id"));
+  await getOrgConfig(orgId);
   const b = getOrgBranding(orgId);
   return {
     metadataBase: new URL(b.baseUrl),
@@ -109,6 +111,9 @@ export default async function RootLayout({
   // coerceOrgId validates it (unknown/missing → crc); do NOT pass it through
   // resolveOrgIdByDomain, which expects a host, not an org id.
   const orgId = coerceOrgId(headersList.get("x-org-id"));
+  // Multi-tenant phase 1: resolve (and prime) the tenant config before any
+  // descendant reads a tenant value; OrgProvider hands it to the browser.
+  const orgConfig = await getOrgConfig(orgId);
   // v11-03-02: Brothers Lazaroff is a dark+photographic band identity → force
   // dark so the `.dark[data-org="brotherslazaroff"]` navy tokens always apply.
   // CRC's forceDark is false → undefined → next-themes system behavior unchanged.
@@ -132,7 +137,7 @@ export default async function RootLayout({
           Skip to main content
         </a>
         <div className="bg-noise" />
-        <OrgProvider orgId={orgId}>
+        <OrgProvider orgId={orgId} config={orgConfig}>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"

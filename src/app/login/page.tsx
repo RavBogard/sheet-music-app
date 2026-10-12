@@ -1,8 +1,7 @@
 import Image from "next/image"
-import { headers } from "next/headers"
 import { getServerCongregationConfig } from "@/lib/server-auth"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
-import { coerceOrgId } from "@/lib/org/registry"
+import { requestOrg } from "@/lib/org/request-org"
 import { getOrgBranding } from "@/lib/org/branding"
 import LoginClient from "./LoginClient"
 
@@ -27,7 +26,7 @@ export default async function LoginPage() {
     // branch below is unchanged (getServerCongregationConfig path). LoginClient,
     // the legal nav, and noscript are kept identical so auth + GDPR/SMS
     // compliance never regress per tenant.
-    const orgId = coerceOrgId((await headers()).get("x-org-id"))
+    const orgId = (await requestOrg()).orgId
     if (orgId === "brotherslazaroff") {
         const { shortName, tagline, wordmarkUrl } = getOrgBranding(orgId)
         return (
