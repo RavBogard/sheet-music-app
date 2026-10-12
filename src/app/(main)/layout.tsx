@@ -29,6 +29,7 @@ export default async function MainLayout({
                     serverIsMember={user?.isMember || false}
                     serverIsBandLeader={user?.isBandLeader || false}
                     serverIsAuthed={!!user}
+                    serverIsPlatformOwner={user?.po || false}
                     serverOrgShortName={branding.shortName}
                     serverLogoUrl={branding.logoUrl}
                     serverWordmarkUrl={branding.wordmarkUrl}

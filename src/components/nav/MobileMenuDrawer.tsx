@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
     Home, Library, ListMusic, Radio, Settings,
-    ShieldAlert, FileText, LogOut, User, CalendarDays,
+    ShieldAlert, FileText, LogOut, User, CalendarDays, Building2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -31,7 +31,7 @@ interface MenuItem {
 
 export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) {
     const pathname = usePathname()
-    const { user, profile, role, isMember, isBandLeader, signOut } = useAuth()
+    const { user, profile, role, isMember, isBandLeader, isPlatformOwner, signOut } = useAuth()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const congregation = useCongregation()
 
@@ -67,6 +67,8 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
     const secondaryItems: MenuItem[] = [
         { label: "Settings", href: "/settings", icon: Settings, show: !!user },
         { label: "Manage", href: "/manage", icon: ShieldAlert, show: isBandLeader },
+        // Multi-tenant phase 4: platform owner only.
+        { label: "Platform", href: "/platform", icon: Building2, show: !!isPlatformOwner },
     ]
 
     const tertiaryItems: MenuItem[] = [
