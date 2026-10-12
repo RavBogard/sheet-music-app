@@ -174,10 +174,24 @@ describe("firestore.rules users/{uid} self-writes (multi-tenant P0)", () => {
         await assertSucceeds(me().collection("users").doc(UID).update({ role: "pending", displayName: "Q" }))
     })
 
-    it("an admin can still write another user's role (set-role is server-side; admin client path unchanged)", async () => {
+    // Multi-tenant P2: there is no client path to another user's document any
+    // more — set-role and memberships are server-side (Admin SDK). Neither a
+    // tenant admin nor the platform owner may write it from the browser, and
+    // only the platform owner may read it.
+    it("a tenant admin can neither write nor read another user's doc (set-role is server-side)", async () => {
         await seedPending()
-        const admin = testEnv.authenticatedContext("admin-1", { role: "admin" }).firestore()
-        await assertSucceeds(admin.collection("users").doc(UID).update({ role: "musician" }))
+        for (const claims of [{ role: "admin" }, { m: { crc: "ad" } }]) {
+            const admin = testEnv.authenticatedContext("admin-1", claims).firestore()
+            await assertFails(admin.collection("users").doc(UID).update({ role: "musician" }))
+            await assertFails(admin.collection("users").doc(UID).get())
+        }
+    })
+
+    it("the platform owner may read another user's doc but not write it", async () => {
+        await seedPending()
+        const po = testEnv.authenticatedContext("owner", { po: true }).firestore()
+        await assertSucceeds(po.collection("users").doc(UID).get())
+        await assertFails(po.collection("users").doc(UID).update({ role: "musician" }))
     })
 
     it("subcollections stay self-writable (songPreferences, preferences)", async () => {

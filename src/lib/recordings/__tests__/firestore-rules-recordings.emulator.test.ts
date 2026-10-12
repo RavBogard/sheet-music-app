@@ -61,6 +61,7 @@ describe('v70-02-01 firestore.rules recordings/{recordingId}', () => {
                 notes: 'Randy, 2024 rehearsal',
                 createdAt: Date.now(),
                 createdBy: 'leader-uid',
+                orgId: 'crc',
             })
         })
     })
@@ -75,10 +76,10 @@ describe('v70-02-01 firestore.rules recordings/{recordingId}', () => {
         await assertSucceeds(member.collection('recordings').doc('rec-1').get())
     })
 
-    it('Scenario C: member query (where songId == X) SUCCEEDS and returns the recording', async () => {
+    it('Scenario C: member query (R1 shape: where orgId == own, songId == X) SUCCEEDS and returns the recording', async () => {
         const member = testEnv.authenticatedContext('member-uid', { role: 'member' }).firestore()
         const snap = await assertSucceeds(
-            member.collection('recordings').where('songId', '==', 'song-1').get(),
+            member.collection('recordings').where('orgId', '==', 'crc').where('songId', '==', 'song-1').get(),
         )
         expect((snap as { size: number }).size).toBe(1)
     })
@@ -132,6 +133,7 @@ describe('v70-02-01 firestore.rules recordings/{recordingId}', () => {
                 storagePath: 'recordings/leader-rec.mp3',
                 createdAt: Date.now(),
                 createdBy: 'leader-uid',
+                orgId: 'crc',
             }),
         )
     })
@@ -155,7 +157,27 @@ describe('v70-02-01 firestore.rules recordings/{recordingId}', () => {
                 storagePath: 'recordings/admin-rec.mp3',
                 createdAt: Date.now(),
                 createdBy: 'admin-uid',
+                orgId: 'crc',
             }),
         )
+    })
+
+    // Multi-tenant P2: creates must stamp orgId; tenant admin is not a bypass.
+    it("Scenario K (P2): an unstamped create is REJECTED (creates must stamp orgId)", async () => {
+        const leader = testEnv.authenticatedContext("leader-uid", { role: "band_leader" }).firestore()
+        await assertFails(
+            leader.collection("recordings").doc("unstamped-rec").set({ songId: "song-1", title: "X", createdAt: Date.now() }),
+        )
+    })
+
+    it("Scenario L (P2): a crc admin cannot create or read another tenant's recording; po can", async () => {
+        await testEnv.withSecurityRulesDisabled(async (ctx) => {
+            await ctx.firestore().collection("recordings").doc("rec-bl").set({ songId: "s", title: "BL", orgId: "brotherslazaroff", createdAt: 1 })
+        })
+        const admin = testEnv.authenticatedContext("admin-uid", { m: { crc: "ad" } }).firestore()
+        await assertFails(admin.collection("recordings").doc("rec-bl").get())
+        await assertFails(admin.collection("recordings").doc("x").set({ songId: "s", title: "x", orgId: "brotherslazaroff", createdAt: 1 }))
+        const po = testEnv.authenticatedContext("po-uid", { po: true }).firestore()
+        await assertSucceeds(po.collection("recordings").doc("rec-bl").get())
     })
 })
