@@ -31,13 +31,14 @@ export const POST = createApiHandler(
         const limited = await checkRateLimit(ctx.req, "api")
         if (limited) return limited
 
-        // v11.1-02-01: stamp the token with the tenant the user CONNECTED
-        // THROUGH — the Edge-resolved `x-org-id` for this request's host,
-        // validated against the user's orgIds membership (fallback: primary
-        // org, default crc). Lets a multi-org leader self-mint a broslaz bearer
-        // from the broslaz host; host org (not a body arg) keeps v11-06-02 intact.
+        // Multi-tenant phase 4: the token is for the tenant of the address the
+        // user is on (Edge-resolved x-org-id), only. No approved membership
+        // there → 403 with a plain message; no fall-back to another tenant of
+        // theirs. Platform owner exempt. Host, not a body arg (v11-06-02).
         const hostOrg = coerceOrgId(ctx.req.headers.get("x-org-id"))
-        const orgId = await resolveMintOrg(ctx.auth.uid, hostOrg)
+        const decision = await resolveMintOrg(ctx.auth.uid, hostOrg)
+        if (!decision.ok) return NextResponse.json({ error: decision.message }, { status: 403 })
+        const orgId = decision.orgId
         const { id, rawToken } = await createMcpToken(ctx.auth.uid, ctx.body!.label, orgId)
         return NextResponse.json({ id, token: rawToken })
     },

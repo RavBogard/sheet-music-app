@@ -194,7 +194,7 @@ describe("tenant dispatcher cache", () => {
     }
     function authed(orgId?: string): Request {
         const r = new Request("http://localhost/api/mcp", { method: "POST" })
-        if (orgId !== undefined) (r as Request & { auth?: unknown }).auth = { extra: { orgId } }
+        if (orgId !== undefined) Object.assign(r, { auth: { extra: { orgId } } })
         return r
     }
 

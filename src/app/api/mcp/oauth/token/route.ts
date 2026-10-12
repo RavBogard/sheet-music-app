@@ -97,15 +97,22 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const client = await getClient(clientId)
     const label = `Claude OAuth — ${client?.clientName ?? clientId}`
-    // v11.1-02-01: stamp the OAuth-minted bearer with the tenant the user
-    // CONNECTED THROUGH — the Edge-resolved `x-org-id` for this request's host
-    // (brotherslazaroff.live → brotherslazaroff; www.centralreform.live → crc),
-    // validated against the user's orgIds membership. A multi-org leader gets a
-    // broslaz bearer by connecting Claude Desktop to the broslaz MCP URL; a
-    // user not in the host's org falls back to their primary org (no escalation).
-    // Host org, not a request arg → v11-06-02 no-arg-injection invariant intact.
-    const hostOrg = coerceOrgId(req.headers.get("x-org-id"))
-    const orgId = await resolveMintOrg(authCode.uid, hostOrg)
+    // Multi-tenant phase 4: mint for the tenant recorded in the code at
+    // /authorize (the address the person connected through), and only that
+    // tenant. A code from before phase 4 carries none; this request's host
+    // tenant stands in. No approved membership there → refused, never a token
+    // for some other tenant of theirs. Host, not a request arg (v11-06-02).
+    const requestedOrg = authCode.orgId ? coerceOrgId(authCode.orgId) : coerceOrgId(req.headers.get("x-org-id"))
+    const decision = await resolveMintOrg(authCode.uid, requestedOrg)
+    if (!decision.ok) {
+        logger.warn("[mcp-oauth] token refused: not a member of the address's tenant", {
+            clientId,
+            uid: authCode.uid,
+            orgId: requestedOrg,
+        })
+        return oauthError("access_denied", 403, decision.message)
+    }
+    const orgId = decision.orgId
     const { id, rawToken } = await createMcpToken(authCode.uid, label, orgId)
     logger.info("[mcp-oauth] access token issued", { clientId, uid: authCode.uid, tokenId: id })
 
