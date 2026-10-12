@@ -1,0 +1,1492 @@
+{
+  "crc.list_library.default": {
+    "rows": [
+      {
+        "fileId": "c-core-1",
+        "name": "Adon Olam (Klepper)",
+        "collection": "core",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": "2025-01-02T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": "G",
+        "bpm": 92,
+        "tags": [],
+        "status": "active",
+        "stem": "adon olam",
+        "titleSpecificity": 0.8,
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null,
+        "siblingsInCatalog": 1
+      },
+      {
+        "fileId": "c-sup-1",
+        "name": "Hashkivenu (Shireinu)",
+        "collection": "supplemental",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": "Em",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-up-1",
+        "name": "L'Cha Dodi (Nava)",
+        "collection": "uploads",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": "C",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-nava-1",
+        "name": "Lakh Amar Libi",
+        "collection": "nava",
+        "mimeType": "application/pdf",
+        "fileSize": 120000,
+        "uploadedAt": "2025-03-01T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": "Am",
+        "bpm": null,
+        "tags": [
+          "nava"
+        ],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-nava-2",
+        "name": "Niggun Tishrei",
+        "collection": "nava",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": "2025-03-02T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": "Dm",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-core-2",
+        "name": "Oseh Shalom",
+        "collection": null,
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": "2025-01-03T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": "D",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      }
+    ],
+    "total": 6,
+    "offset": 0,
+    "limit": 200,
+    "coverage": {
+      "total": 11,
+      "eligible": 10,
+      "scanned": 6,
+      "filteredOut": {
+        "byStatus": {
+          "archived": 2,
+          "duplicate": 1,
+          "orphaned": 1
+        },
+        "byCollection": {},
+        "byOther": {
+          "non_chart": 1
+        }
+      }
+    },
+    "enrichmentCoverage": {
+      "byStatus": {
+        "pending": 0,
+        "review_pending": 0,
+        "enriched": 0,
+        "failed": 0,
+        "human_curated": 0,
+        "human_rejected": 0,
+        "unenriched": 6
+      },
+      "pendingEnrichmentCount": 6
+    }
+  },
+  "crc.list_library.core": {
+    "rows": [
+      {
+        "fileId": "c-core-1",
+        "name": "Adon Olam (Klepper)",
+        "collection": "core",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": "2025-01-02T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": "G",
+        "bpm": 92,
+        "tags": [],
+        "status": "active",
+        "stem": "adon olam",
+        "titleSpecificity": 0.8,
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null,
+        "siblingsInCatalog": 1
+      },
+      {
+        "fileId": "c-core-2",
+        "name": "Oseh Shalom",
+        "collection": null,
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": "2025-01-03T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": "D",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      }
+    ],
+    "total": 2,
+    "offset": 0,
+    "limit": 200,
+    "coverage": {
+      "total": 11,
+      "eligible": 10,
+      "scanned": 2,
+      "filteredOut": {
+        "byStatus": {
+          "archived": 2,
+          "duplicate": 1,
+          "orphaned": 1
+        },
+        "byCollection": {
+          "nava": 2,
+          "supplemental": 1,
+          "uploads": 1
+        },
+        "byOther": {
+          "non_chart": 1
+        }
+      }
+    },
+    "enrichmentCoverage": {
+      "byStatus": {
+        "pending": 0,
+        "review_pending": 0,
+        "enriched": 0,
+        "failed": 0,
+        "human_curated": 0,
+        "human_rejected": 0,
+        "unenriched": 2
+      },
+      "pendingEnrichmentCount": 2
+    }
+  },
+  "crc.list_library.supplemental": {
+    "rows": [
+      {
+        "fileId": "c-sup-1",
+        "name": "Hashkivenu (Shireinu)",
+        "collection": "supplemental",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": "Em",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      }
+    ],
+    "total": 1,
+    "offset": 0,
+    "limit": 200,
+    "coverage": {
+      "total": 11,
+      "eligible": 10,
+      "scanned": 1,
+      "filteredOut": {
+        "byStatus": {
+          "archived": 2,
+          "duplicate": 1,
+          "orphaned": 1
+        },
+        "byCollection": {
+          "core": 1,
+          "(none)": 1,
+          "nava": 2,
+          "uploads": 1
+        },
+        "byOther": {
+          "non_chart": 1
+        }
+      }
+    },
+    "enrichmentCoverage": {
+      "byStatus": {
+        "pending": 0,
+        "review_pending": 0,
+        "enriched": 0,
+        "failed": 0,
+        "human_curated": 0,
+        "human_rejected": 0,
+        "unenriched": 1
+      },
+      "pendingEnrichmentCount": 1
+    }
+  },
+  "crc.list_library.nava": {
+    "rows": [
+      {
+        "fileId": "c-nava-1",
+        "name": "Lakh Amar Libi",
+        "collection": "nava",
+        "mimeType": "application/pdf",
+        "fileSize": 120000,
+        "uploadedAt": "2025-03-01T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": "Am",
+        "bpm": null,
+        "tags": [
+          "nava"
+        ],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-nava-2",
+        "name": "Niggun Tishrei",
+        "collection": "nava",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": "2025-03-02T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": "Dm",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      }
+    ],
+    "total": 2,
+    "offset": 0,
+    "limit": 200,
+    "coverage": {
+      "total": 11,
+      "eligible": 10,
+      "scanned": 2,
+      "filteredOut": {
+        "byStatus": {
+          "archived": 2,
+          "duplicate": 1,
+          "orphaned": 1
+        },
+        "byCollection": {
+          "core": 1,
+          "(none)": 1,
+          "supplemental": 1,
+          "uploads": 1
+        },
+        "byOther": {
+          "non_chart": 1
+        }
+      }
+    },
+    "enrichmentCoverage": {
+      "byStatus": {
+        "pending": 0,
+        "review_pending": 0,
+        "enriched": 0,
+        "failed": 0,
+        "human_curated": 0,
+        "human_rejected": 0,
+        "unenriched": 2
+      },
+      "pendingEnrichmentCount": 2
+    }
+  },
+  "crc.list_library.uploads": {
+    "rows": [
+      {
+        "fileId": "c-up-1",
+        "name": "L'Cha Dodi (Nava)",
+        "collection": "uploads",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": "C",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      }
+    ],
+    "total": 1,
+    "offset": 0,
+    "limit": 200,
+    "coverage": {
+      "total": 11,
+      "eligible": 10,
+      "scanned": 1,
+      "filteredOut": {
+        "byStatus": {
+          "archived": 2,
+          "duplicate": 1,
+          "orphaned": 1
+        },
+        "byCollection": {
+          "core": 1,
+          "(none)": 1,
+          "nava": 2,
+          "supplemental": 1
+        },
+        "byOther": {
+          "non_chart": 1
+        }
+      }
+    },
+    "enrichmentCoverage": {
+      "byStatus": {
+        "pending": 0,
+        "review_pending": 0,
+        "enriched": 0,
+        "failed": 0,
+        "human_curated": 0,
+        "human_rejected": 0,
+        "unenriched": 1
+      },
+      "pendingEnrichmentCount": 1
+    }
+  },
+  "crc.list_library.audit": {
+    "rows": [
+      {
+        "fileId": "c-core-1",
+        "name": "Adon Olam (Klepper)",
+        "collection": "core",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": "2025-01-02T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": "G",
+        "bpm": 92,
+        "tags": [],
+        "status": "active",
+        "stem": "adon olam",
+        "titleSpecificity": 0.8,
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null,
+        "siblingsInCatalog": 1
+      },
+      {
+        "fileId": "c-core-arch",
+        "name": "Adon Olam (old)",
+        "collection": "core",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": "2024-01-01T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": null,
+        "bpm": null,
+        "tags": [],
+        "status": "archived",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-nava-arch",
+        "name": "Arbaim Shana (old)",
+        "collection": "nava",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": null,
+        "bpm": null,
+        "tags": [],
+        "status": "archived",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-sup-1",
+        "name": "Hashkivenu (Shireinu)",
+        "collection": "supplemental",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": "Em",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-up-1",
+        "name": "L'Cha Dodi (Nava)",
+        "collection": "uploads",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": "C",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-nava-1",
+        "name": "Lakh Amar Libi",
+        "collection": "nava",
+        "mimeType": "application/pdf",
+        "fileSize": 120000,
+        "uploadedAt": "2025-03-01T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": "Am",
+        "bpm": null,
+        "tags": [
+          "nava"
+        ],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-core-orph",
+        "name": "Lost Chart",
+        "collection": "core",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": null,
+        "bpm": null,
+        "tags": [],
+        "status": "orphaned",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-nava-2",
+        "name": "Niggun Tishrei",
+        "collection": "nava",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": "2025-03-02T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": "Dm",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-core-2",
+        "name": "Oseh Shalom",
+        "collection": null,
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": "2025-01-03T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": "D",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-core-mp3",
+        "name": "Oseh Shalom",
+        "collection": "core",
+        "mimeType": "audio/mpeg",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": null,
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "c-core-dup",
+        "name": "Oseh Shalom copy",
+        "collection": null,
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": "2025-02-01T00:00:00.000Z",
+        "uploadedBy": null,
+        "key": null,
+        "bpm": null,
+        "tags": [],
+        "status": "duplicate",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      }
+    ],
+    "total": 11,
+    "offset": 0,
+    "limit": 200,
+    "coverage": {
+      "total": 11,
+      "eligible": 11,
+      "scanned": 11,
+      "filteredOut": {
+        "byStatus": {},
+        "byCollection": {},
+        "byOther": {}
+      }
+    },
+    "enrichmentCoverage": {
+      "byStatus": {
+        "pending": 0,
+        "review_pending": 0,
+        "enriched": 0,
+        "failed": 0,
+        "human_curated": 0,
+        "human_rejected": 0,
+        "unenriched": 11
+      },
+      "pendingEnrichmentCount": 11
+    }
+  },
+  "crc.search_library.empty": [
+    {
+      "id": "c-core-1",
+      "title": "Adon Olam (Klepper)",
+      "orgId": "crc",
+      "fileName": "Adon Olam (Klepper)",
+      "status": "active",
+      "stem": "adon olam",
+      "titleSpecificity": 0.8,
+      "siblingsInCatalog": 1,
+      "collection": "core",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "c-sup-1",
+      "title": "Hashkivenu (Shireinu)",
+      "orgId": "crc",
+      "fileName": "Hashkivenu (Shireinu)",
+      "status": "active",
+      "collection": "supplemental",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "c-up-1",
+      "title": "L'Cha Dodi (Nava)",
+      "orgId": "crc",
+      "fileName": "L'Cha Dodi (Nava)",
+      "status": "active",
+      "collection": "uploads",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "c-nava-1",
+      "title": "Lakh Amar Libi",
+      "orgId": "crc",
+      "fileName": "Lakh Amar Libi",
+      "status": "active",
+      "collection": "nava",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "c-nava-2",
+      "title": "Niggun Tishrei",
+      "orgId": "crc",
+      "fileName": "Niggun Tishrei",
+      "status": "active",
+      "collection": "nava",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "c-core-2",
+      "title": "Oseh Shalom",
+      "orgId": "crc",
+      "fileName": "Oseh Shalom",
+      "status": "active",
+      "collection": "core",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    }
+  ],
+  "crc.search_library.adon": [
+    {
+      "id": "c-core-1",
+      "title": "Adon Olam (Klepper)",
+      "orgId": "crc",
+      "fileName": "Adon Olam (Klepper)",
+      "status": "active",
+      "stem": "adon olam",
+      "titleSpecificity": 0.8,
+      "siblingsInCatalog": 1,
+      "collection": "core",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    }
+  ],
+  "crc.search_library.lecha": [],
+  "crc.search_library.nava": [
+    {
+      "id": "c-nava-1",
+      "title": "Lakh Amar Libi",
+      "orgId": "crc",
+      "fileName": "Lakh Amar Libi",
+      "status": "active",
+      "collection": "nava",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "c-nava-2",
+      "title": "Niggun Tishrei",
+      "orgId": "crc",
+      "fileName": "Niggun Tishrei",
+      "status": "active",
+      "collection": "nava",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    }
+  ],
+  "crc.search_library.orphaned": [
+    {
+      "id": "c-core-1",
+      "title": "Adon Olam (Klepper)",
+      "orgId": "crc",
+      "fileName": "Adon Olam (Klepper)",
+      "status": "active",
+      "stem": "adon olam",
+      "titleSpecificity": 0.8,
+      "siblingsInCatalog": 1,
+      "collection": "core",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "c-sup-1",
+      "title": "Hashkivenu (Shireinu)",
+      "orgId": "crc",
+      "fileName": "Hashkivenu (Shireinu)",
+      "status": "active",
+      "collection": "supplemental",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "c-up-1",
+      "title": "L'Cha Dodi (Nava)",
+      "orgId": "crc",
+      "fileName": "L'Cha Dodi (Nava)",
+      "status": "active",
+      "collection": "uploads",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "c-nava-1",
+      "title": "Lakh Amar Libi",
+      "orgId": "crc",
+      "fileName": "Lakh Amar Libi",
+      "status": "active",
+      "collection": "nava",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "c-nava-2",
+      "title": "Niggun Tishrei",
+      "orgId": "crc",
+      "fileName": "Niggun Tishrei",
+      "status": "active",
+      "collection": "nava",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "c-core-2",
+      "title": "Oseh Shalom",
+      "orgId": "crc",
+      "fileName": "Oseh Shalom",
+      "status": "active",
+      "collection": "core",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "c-core-mp3",
+      "title": "Oseh Shalom",
+      "orgId": "crc",
+      "fileName": "Oseh Shalom",
+      "status": "active",
+      "collection": "core",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    }
+  ],
+  "crc.get_song": {
+    "c-core-1": {
+      "id": "c-core-1",
+      "title": "Adon Olam (Klepper)",
+      "orgId": "crc",
+      "fileName": "Adon Olam (Klepper)",
+      "status": "active",
+      "key": "G",
+      "bpm": 92,
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    "c-core-2": {
+      "id": "c-core-2",
+      "title": "Oseh Shalom",
+      "orgId": "crc",
+      "fileName": "Oseh Shalom",
+      "status": "active",
+      "key": "D",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    "c-core-arch": {
+      "id": "c-core-arch",
+      "title": "Adon Olam (old)",
+      "orgId": "crc",
+      "fileName": "Adon Olam (old)",
+      "status": "archived",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    "c-core-dup": {
+      "id": "c-core-dup",
+      "title": "Oseh Shalom copy",
+      "orgId": "crc",
+      "fileName": "Oseh Shalom copy",
+      "status": "duplicate",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    "c-core-mp3": {
+      "id": "c-core-mp3",
+      "title": "Oseh Shalom",
+      "orgId": "crc",
+      "fileName": "Oseh Shalom",
+      "status": "active",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    "c-sup-1": {
+      "id": "c-sup-1",
+      "title": "Hashkivenu (Shireinu)",
+      "orgId": "crc",
+      "fileName": "Hashkivenu (Shireinu)",
+      "status": "active",
+      "key": "Em",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    "c-nava-1": {
+      "id": "c-nava-1",
+      "title": "Lakh Amar Libi",
+      "orgId": "crc",
+      "fileName": "Lakh Amar Libi",
+      "status": "active",
+      "key": "Am",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    "c-nava-2": {
+      "id": "c-nava-2",
+      "title": "Niggun Tishrei",
+      "orgId": "crc",
+      "fileName": "Niggun Tishrei",
+      "status": "active",
+      "key": "Dm",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    "c-nava-arch": {
+      "id": "c-nava-arch",
+      "title": "Arbaim Shana (old)",
+      "orgId": "crc",
+      "fileName": "Arbaim Shana (old)",
+      "status": "archived",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    "c-up-1": {
+      "id": "c-up-1",
+      "title": "L'Cha Dodi (Nava)",
+      "orgId": "crc",
+      "fileName": "L'Cha Dodi (Nava)",
+      "status": "active",
+      "key": "C",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    "b-core-1": null,
+    "b-up-1": null
+  },
+  "crc.search_chart_text.metadata": {
+    "ok": true,
+    "scope": "metadata",
+    "query": "Libi",
+    "results": [
+      {
+        "chartId": "c-nava-1",
+        "title": "Lakh Amar Libi.pdf",
+        "field": "title",
+        "matchPosition": 10,
+        "snippet": "Lakh Amar Libi.pdf"
+      }
+    ],
+    "totalScanned": 13,
+    "capped": false
+  },
+  "crc.search_chart_text.chords": {
+    "ok": true,
+    "scope": "chords",
+    "query": "Am7",
+    "results": [
+      {
+        "chartId": "c-core-1",
+        "title": "Adon Olam (Klepper).pdf",
+        "field": "chordData",
+        "page": 1,
+        "matchPosition": 2,
+        "snippet": "G Am7"
+      },
+      {
+        "chartId": "c-nava-1",
+        "title": "Lakh Amar Libi.pdf",
+        "field": "chordData",
+        "page": 1,
+        "matchPosition": 0,
+        "snippet": "Am7 Dm"
+      }
+    ],
+    "totalScanned": 3,
+    "capped": false
+  },
+  "brotherslazaroff.list_library.default": {
+    "rows": [
+      {
+        "fileId": "b-core-1",
+        "name": "Adon Olam (BL)",
+        "collection": "core",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": "A",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "b-up-1",
+        "name": "Lecha Dodi Nigun (Nava)",
+        "collection": "uploads",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": "Dm",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      }
+    ],
+    "total": 2,
+    "offset": 0,
+    "limit": 200,
+    "coverage": {
+      "total": 2,
+      "eligible": 2,
+      "scanned": 2,
+      "filteredOut": {
+        "byStatus": {},
+        "byCollection": {},
+        "byOther": {}
+      }
+    },
+    "enrichmentCoverage": {
+      "byStatus": {
+        "pending": 0,
+        "review_pending": 0,
+        "enriched": 0,
+        "failed": 0,
+        "human_curated": 0,
+        "human_rejected": 0,
+        "unenriched": 2
+      },
+      "pendingEnrichmentCount": 2
+    }
+  },
+  "brotherslazaroff.list_library.core": {
+    "rows": [
+      {
+        "fileId": "b-core-1",
+        "name": "Adon Olam (BL)",
+        "collection": "core",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": "A",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      }
+    ],
+    "total": 1,
+    "offset": 0,
+    "limit": 200,
+    "coverage": {
+      "total": 2,
+      "eligible": 2,
+      "scanned": 1,
+      "filteredOut": {
+        "byStatus": {},
+        "byCollection": {
+          "uploads": 1
+        },
+        "byOther": {}
+      }
+    },
+    "enrichmentCoverage": {
+      "byStatus": {
+        "pending": 0,
+        "review_pending": 0,
+        "enriched": 0,
+        "failed": 0,
+        "human_curated": 0,
+        "human_rejected": 0,
+        "unenriched": 1
+      },
+      "pendingEnrichmentCount": 1
+    }
+  },
+  "brotherslazaroff.list_library.supplemental": {
+    "rows": [],
+    "total": 0,
+    "offset": 0,
+    "limit": 200,
+    "coverage": {
+      "total": 2,
+      "eligible": 2,
+      "scanned": 0,
+      "filteredOut": {
+        "byStatus": {},
+        "byCollection": {
+          "core": 1,
+          "uploads": 1
+        },
+        "byOther": {}
+      }
+    },
+    "enrichmentCoverage": {
+      "byStatus": {
+        "pending": 0,
+        "review_pending": 0,
+        "enriched": 0,
+        "failed": 0,
+        "human_curated": 0,
+        "human_rejected": 0,
+        "unenriched": 0
+      },
+      "pendingEnrichmentCount": 0
+    }
+  },
+  "brotherslazaroff.list_library.nava": {
+    "rows": [],
+    "total": 0,
+    "offset": 0,
+    "limit": 200,
+    "coverage": {
+      "total": 2,
+      "eligible": 2,
+      "scanned": 0,
+      "filteredOut": {
+        "byStatus": {},
+        "byCollection": {
+          "core": 1,
+          "uploads": 1
+        },
+        "byOther": {}
+      }
+    },
+    "enrichmentCoverage": {
+      "byStatus": {
+        "pending": 0,
+        "review_pending": 0,
+        "enriched": 0,
+        "failed": 0,
+        "human_curated": 0,
+        "human_rejected": 0,
+        "unenriched": 0
+      },
+      "pendingEnrichmentCount": 0
+    }
+  },
+  "brotherslazaroff.list_library.uploads": {
+    "rows": [
+      {
+        "fileId": "b-up-1",
+        "name": "Lecha Dodi Nigun (Nava)",
+        "collection": "uploads",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": "Dm",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      }
+    ],
+    "total": 1,
+    "offset": 0,
+    "limit": 200,
+    "coverage": {
+      "total": 2,
+      "eligible": 2,
+      "scanned": 1,
+      "filteredOut": {
+        "byStatus": {},
+        "byCollection": {
+          "core": 1
+        },
+        "byOther": {}
+      }
+    },
+    "enrichmentCoverage": {
+      "byStatus": {
+        "pending": 0,
+        "review_pending": 0,
+        "enriched": 0,
+        "failed": 0,
+        "human_curated": 0,
+        "human_rejected": 0,
+        "unenriched": 1
+      },
+      "pendingEnrichmentCount": 1
+    }
+  },
+  "brotherslazaroff.list_library.audit": {
+    "rows": [
+      {
+        "fileId": "b-core-1",
+        "name": "Adon Olam (BL)",
+        "collection": "core",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": "A",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      },
+      {
+        "fileId": "b-up-1",
+        "name": "Lecha Dodi Nigun (Nava)",
+        "collection": "uploads",
+        "mimeType": "application/pdf",
+        "fileSize": null,
+        "uploadedAt": null,
+        "uploadedBy": null,
+        "key": "Dm",
+        "bpm": null,
+        "tags": [],
+        "status": "active",
+        "enrichmentStatus": null,
+        "enrichmentConfidence": null,
+        "aiSuggestion": null,
+        "retryQueued": false,
+        "enrichmentRanAt": null
+      }
+    ],
+    "total": 2,
+    "offset": 0,
+    "limit": 200,
+    "coverage": {
+      "total": 2,
+      "eligible": 2,
+      "scanned": 2,
+      "filteredOut": {
+        "byStatus": {},
+        "byCollection": {},
+        "byOther": {}
+      }
+    },
+    "enrichmentCoverage": {
+      "byStatus": {
+        "pending": 0,
+        "review_pending": 0,
+        "enriched": 0,
+        "failed": 0,
+        "human_curated": 0,
+        "human_rejected": 0,
+        "unenriched": 2
+      },
+      "pendingEnrichmentCount": 2
+    }
+  },
+  "brotherslazaroff.search_library.empty": [
+    {
+      "id": "b-core-1",
+      "title": "Adon Olam (BL)",
+      "orgId": "brotherslazaroff",
+      "fileName": "Adon Olam (BL)",
+      "status": "active",
+      "collection": "core",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "b-up-1",
+      "title": "Lecha Dodi Nigun (Nava)",
+      "orgId": "brotherslazaroff",
+      "fileName": "Lecha Dodi Nigun (Nava)",
+      "status": "active",
+      "collection": "uploads",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    }
+  ],
+  "brotherslazaroff.search_library.adon": [
+    {
+      "id": "b-core-1",
+      "title": "Adon Olam (BL)",
+      "orgId": "brotherslazaroff",
+      "fileName": "Adon Olam (BL)",
+      "status": "active",
+      "collection": "core",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    }
+  ],
+  "brotherslazaroff.search_library.lecha": [
+    {
+      "id": "b-up-1",
+      "title": "Lecha Dodi Nigun (Nava)",
+      "orgId": "brotherslazaroff",
+      "fileName": "Lecha Dodi Nigun (Nava)",
+      "status": "active",
+      "collection": "uploads",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    }
+  ],
+  "brotherslazaroff.search_library.nava": [],
+  "brotherslazaroff.search_library.orphaned": [
+    {
+      "id": "b-core-1",
+      "title": "Adon Olam (BL)",
+      "orgId": "brotherslazaroff",
+      "fileName": "Adon Olam (BL)",
+      "status": "active",
+      "collection": "core",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    {
+      "id": "b-up-1",
+      "title": "Lecha Dodi Nigun (Nava)",
+      "orgId": "brotherslazaroff",
+      "fileName": "Lecha Dodi Nigun (Nava)",
+      "status": "active",
+      "collection": "uploads",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    }
+  ],
+  "brotherslazaroff.get_song": {
+    "c-core-1": null,
+    "c-core-2": null,
+    "c-core-arch": null,
+    "c-core-dup": null,
+    "c-core-mp3": null,
+    "c-sup-1": null,
+    "c-nava-1": null,
+    "c-nava-2": null,
+    "c-nava-arch": null,
+    "c-up-1": null,
+    "b-core-1": {
+      "id": "b-core-1",
+      "title": "Adon Olam (BL)",
+      "orgId": "brotherslazaroff",
+      "fileName": "Adon Olam (BL)",
+      "status": "active",
+      "key": "A",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    },
+    "b-up-1": {
+      "id": "b-up-1",
+      "title": "Lecha Dodi Nigun (Nava)",
+      "orgId": "brotherslazaroff",
+      "fileName": "Lecha Dodi Nigun (Nava)",
+      "status": "active",
+      "key": "Dm",
+      "enrichmentStatus": null,
+      "enrichmentConfidence": null,
+      "aiSuggestion": null,
+      "retryQueued": false,
+      "enrichmentRanAt": null
+    }
+  },
+  "brotherslazaroff.search_chart_text.metadata": {
+    "ok": true,
+    "scope": "metadata",
+    "query": "Libi",
+    "results": [],
+    "totalScanned": 13,
+    "capped": false
+  },
+  "brotherslazaroff.search_chart_text.chords": {
+    "ok": true,
+    "scope": "chords",
+    "query": "Am7",
+    "results": [
+      {
+        "chartId": "b-up-1",
+        "title": "Lecha Dodi Nigun (Nava).pdf",
+        "field": "chordData",
+        "page": 1,
+        "matchPosition": 0,
+        "snippet": "Am7"
+      }
+    ],
+    "totalScanned": 3,
+    "capped": false
+  }
+}
