@@ -351,6 +351,76 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "library_index",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "visibleToOrgs",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "collection",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "library_index",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "visibleToOrgs",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "collectionId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "library_index",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "visibleToOrgs",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "name",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "songs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "visibleToOrgs",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "collectionId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "songs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "visibleToOrgs",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "title",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

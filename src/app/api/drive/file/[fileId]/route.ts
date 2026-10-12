@@ -9,6 +9,7 @@ import { httpError, redactInProduction } from "@/lib/http/error-envelope"
 import { byteRangeResponse } from "@/lib/http/byte-range"
 import { selectUnauthHint } from "@/lib/http/caller-context"
 import { verifyBearer } from "@/lib/mcp/auth"
+import { chartCacheControl, chartLinkGate } from "@/lib/library/open-by-link"
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -62,6 +63,21 @@ export const GET = createApiHandler(async (ctx) => {
         if ("uid" in bearer) isTrusted = true
     }
     const origin = getAllowedOrigin(ctx.req)
+
+    // Multi-tenant phase 5: the host tenant's openable-by-link setting
+    // (library.openByLink, default true = today's behaviour, unchanged).
+    const gate = await chartLinkGate(ctx.req, ctx.auth, String(fileId ?? ""))
+    if (gate.mode === "refused") {
+        return httpError(
+            gate.status,
+            gate.status === 404 ? "file_not_found" : "unauthenticated",
+            gate.reason,
+            { fileId },
+            undefined,
+            { "Access-Control-Allow-Origin": origin, "Cache-Control": "no-store" },
+        )
+    }
+    if (gate.mode === "member") isTrusted = true
 
     try {
         // Cycle-1 F-021: existence check fires BEFORE the auth gate so a
@@ -145,7 +161,7 @@ export const GET = createApiHandler(async (ctx) => {
 
         const baseHeaders = {
             'Access-Control-Allow-Origin': origin,
-            'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+            'Cache-Control': chartCacheControl(gate),
             'Content-Type': result.contentType,
             'X-Served-From': result.source,
         }
@@ -169,7 +185,7 @@ export const GET = createApiHandler(async (ctx) => {
                 rangeHeader: ctx.req.headers.get('range'),
                 headers: {
                     'Access-Control-Allow-Origin': origin,
-                    'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+                    'Cache-Control': chartCacheControl(gate),
                     'X-Served-From': result.source,
                 },
             })

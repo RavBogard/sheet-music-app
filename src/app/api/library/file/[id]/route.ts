@@ -9,6 +9,7 @@ import { selectUnauthHint } from "@/lib/http/caller-context"
 import { verifyBearer } from "@/lib/mcp/auth"
 import { logger } from "@/lib/logger"
 import { allowedOriginsFromEnv } from "@/lib/http/cors-origins"
+import { chartCacheControl, chartLinkGate } from "@/lib/library/open-by-link"
 
 /**
  * Public chart-byte proxy keyed by library fileId — the sibling of
@@ -79,6 +80,21 @@ export const GET = createApiHandler(
             const bearer = await verifyBearer(ctx.req)
             if ("uid" in bearer) isTrusted = true
         }
+
+        // Multi-tenant phase 5: the host tenant's openable-by-link setting
+        // (library.openByLink, default true = everything above, unchanged).
+        const gate = await chartLinkGate(ctx.req, ctx.auth, id)
+        if (gate.mode === "refused") {
+            return httpError(
+                gate.status,
+                gate.status === 404 ? "file_not_found" : "unauthenticated",
+                gate.reason,
+                { fileId: id },
+                undefined,
+                { "Access-Control-Allow-Origin": origin, "Cache-Control": "no-store" },
+            )
+        }
+        if (gate.mode === "member") isTrusted = true
 
         try {
             // Resolve bytes by id shape — existence BEFORE the auth gate so a
@@ -153,7 +169,7 @@ export const GET = createApiHandler(
                 status: 200,
                 headers: {
                     'Access-Control-Allow-Origin': origin,
-                    'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+                    'Cache-Control': chartCacheControl(gate),
                     'Content-Type': contentType,
                     'X-Served-From': servedFrom,
                     ...extraHeaders,
