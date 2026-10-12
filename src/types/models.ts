@@ -1,3 +1,5 @@
+import type { KnownCollection } from "@/lib/library/collections"
+
 /** Firestore Timestamp — may come as raw object, with toDate() method, or as a Timestamp-like */
 export type FirestoreDate = string | Date | number | { seconds: number; nanoseconds?: number; toDate?: () => Date } | { toDate: () => Date }
 
@@ -17,7 +19,7 @@ export interface DriveFile {
     displayName?: string
     mimeType: string
     parents?: string[]
-    collection?: 'core' | 'supplemental' | 'uploads' | 'nava'
+    collection?: KnownCollection
     webContentLink?: string
     thumbnailLink?: string
     metadata?: {
@@ -157,7 +159,7 @@ export interface Setlist {
      */
     book?: string
     /**
-     * Wall-clock start time for THIS service, `HH:mm` America/Chicago.
+     * Wall-clock start time for THIS service, `HH:mm`, the tenant's local time.
      * Overrides the per-serviceType `defaultStartLocal` in the congregation
      * config. Read by `today.json`; absent means "use the config's default",
      * and if there is none, the emitted service simply carries no start time

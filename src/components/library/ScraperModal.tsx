@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Loader2, Link as LinkIcon, CheckCircle, Music, Globe, Search, Send, Bot, User } from "lucide-react"
 import { toast } from "sonner"
+import { useOrg } from "@/lib/org/org-context"
+import { coreSectionLabel } from "@/lib/songs/picker-scope"
 import { apiFetch } from "@/lib/api-client"
 import { useQueryClient } from "@tanstack/react-query"
 import { broadcastCacheInvalidation } from "@/lib/library-cache"
@@ -24,6 +26,7 @@ import { DialogDescription } from '@radix-ui/react-dialog'
 
 export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }: ScraperModalProps) {
     const queryClient = useQueryClient()
+    const org = useOrg()
     const [open, setOpen] = useState(false)
     const [url, setUrl] = useState("")
     const [rawText, setRawText] = useState("")
@@ -439,7 +442,7 @@ export function ScraperModal({ onUploadComplete, setlists = [], onAddToSetlist }
                                     onChange={(e) => setCollection(e.target.value)}
                                     className="w-full h-9 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                 >
-                                    <option value="crc">CRC Charts</option>
+                                    <option value="crc">{coreSectionLabel(org)}</option>
                                     <option value="supplemental">Shireinu</option>
                                     <option value="nava">Nava Tehilah</option>
                                     <option value="uploads">Uploads</option>

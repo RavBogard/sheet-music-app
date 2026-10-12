@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button"
 import { useLibraryStore } from "@/lib/library-store"
 import { useLibrary } from "@/hooks/use-library"
 import { DriveFile } from "@/types/models"
+import { useOrg } from "@/lib/org/org-context"
+import { orgString } from "@/lib/org/strings"
+import { coreSectionLabel } from "@/lib/songs/picker-scope"
 // C5D-014: Radix Tabs removed from SearchOverlay — same structural failure
 // as C4-004 on /library: `<Tabs><TabsList><TabsTrigger/>` auto-emits
 // `aria-controls="radix-...-content-{val}"` pointing at TabsContent panels
@@ -45,6 +48,7 @@ export function SearchOverlay({
     canAddToSetlist,
     onAddToSetlist,
 }: SearchOverlayProps) {
+    const org = useOrg()
     const [query, setQuery] = useState("")
     const [collection, setCollection] = useState<"core" | "supplemental" | "nava">("core")
     const inputRef = useRef<HTMLInputElement>(null)
@@ -120,7 +124,7 @@ export function SearchOverlay({
                     className="w-full max-w-sm mx-auto grid grid-cols-3 gap-1 p-1 rounded-md bg-muted/50"
                 >
                     {([
-                        { value: "core" as const, label: "CRC Charts" },
+                        { value: "core" as const, label: coreSectionLabel(org) },
                         { value: "supplemental" as const, label: "Shireinu" },
                         { value: "nava" as const, label: "Nava Tehilah" },
                     ]).map(({ value, label }) => {
@@ -195,7 +199,7 @@ export function SearchOverlay({
                                             </span>
                                         ) : (
                                             <span className="text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-md border border-blue-500/20 shrink-0 mt-0.5">
-                                                CRC
+                                                {orgString(org, "library.ownBadge")}
                                             </span>
                                         )}
                                     </div>

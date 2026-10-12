@@ -3,6 +3,11 @@ import { getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { BASE_URL } from "@/lib/constants"
+import { peekOrgConfig } from "@/lib/org/config-cache"
+import { codeOrgConfig } from "@/lib/org/config-code"
+import { getOrgConfig } from "@/lib/org/get-org-config"
+import { coerceOrgId } from "@/lib/org/registry"
+import { orgString } from "@/lib/org/strings"
 
 /**
  * GET /api/scheduling/calendar-feed/[token]
@@ -10,6 +15,10 @@ import { BASE_URL } from "@/lib/constants"
  * Public iCal (.ics) feed for a musician's schedule.
  * The token is a unique per-musician feed token stored in their profile.
  * No authentication required — the token acts as the credential.
+ *
+ * Multi-tenant phase 1: the calendar's identity (product name, calendar name,
+ * time zone, UIDs, location, filename) is the tenant of the host the link was
+ * served from (`x-org-id`); missing or unknown is crc.
  */
 export async function GET(
     req: NextRequest,
@@ -24,6 +33,14 @@ export async function GET(
         if (!token || token.length < 10) {
             return NextResponse.json({ error: 'Invalid token' }, { status: 400 })
         }
+
+        const org = coerceOrgId(req.headers.get('x-org-id'))
+        // Loading primes the synchronous orgString reads below.
+        const orgConfig = (await getOrgConfig(org).catch(() => null)) ?? peekOrgConfig(org) ?? codeOrgConfig(org) ?? codeOrgConfig('crc')!
+        const product = escapeICalText(orgString(org, 'feed.productName'))
+        const uidPrefix = orgString(org, 'feed.uidPrefix')
+        const uidDomain = orgString(org, 'feed.uidDomain')
+        const location = escapeICalText(orgString(org, 'feed.location'))
 
         const db = getFirestore()
 
@@ -65,11 +82,11 @@ export async function GET(
         const ical = [
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//CRC Music//Musician Schedule//EN',
+            `PRODID:-//${product}//Musician Schedule//EN`,
             'CALSCALE:GREGORIAN',
             'METHOD:PUBLISH',
-            `X-WR-CALNAME:CRC Music - ${escapeICalText(displayName)}`,
-            'X-WR-TIMEZONE:America/Chicago',
+            `X-WR-CALNAME:${escapeICalText(orgString(org, 'feed.calendarNamePrefix'))} - ${escapeICalText(displayName)}`,
+            `X-WR-TIMEZONE:${orgConfig.locale.timeZone}`,
         ]
 
         for (const a of assignments) {
@@ -93,13 +110,13 @@ export async function GET(
 
             ical.push(
                 'BEGIN:VEVENT',
-                `UID:crc-${a.id}@centralreform.live`,
+                `UID:${uidPrefix}-${a.id}@${uidDomain}`,
                 `DTSTAMP:${dtstamp}`,
                 `DTSTART:${formatICalDate(startDate)}`,
                 `DTEND:${formatICalDate(endDate)}`,
                 `SUMMARY:${escapeICalText(a.setlistName)}${escapeICalText(instrumentText)}`,
                 `DESCRIPTION:${description}`,
-                'LOCATION:Central Reform Congregation',
+                `LOCATION:${location}`,
                 `STATUS:${a.status === 'confirmed' ? 'CONFIRMED' : 'TENTATIVE'}`,
                 `URL:${baseUrl}/setlists/${a.setlistId}`,
                 'END:VEVENT',
@@ -114,7 +131,7 @@ export async function GET(
             status: 200,
             headers: {
                 'Content-Type': 'text/calendar; charset=utf-8',
-                'Content-Disposition': `attachment; filename="crc-schedule-${token.slice(0, 8)}.ics"`,
+                'Content-Disposition': `attachment; filename="${orgString(org, 'feed.filePrefix')}-${token.slice(0, 8)}.ics"`,
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
             },
         })

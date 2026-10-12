@@ -57,8 +57,9 @@ import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
 import { recomputeIndexNameFields } from "@/lib/library/recompute-index-name-fields"
 import { bareStem } from "@/lib/mcp/title-specificity"
 import { logger } from "@/lib/logger"
+import { KNOWN_COLLECTIONS } from "@/lib/library/collections"
 
-const ALLOWED_COLLECTIONS = ["core", "supplemental", "uploads", "nava"] as const
+const ALLOWED_COLLECTIONS = KNOWN_COLLECTIONS
 export type LibraryCollection = (typeof ALLOWED_COLLECTIONS)[number]
 
 // ─── Queue read shape ──────────────────────────────────────────────────────

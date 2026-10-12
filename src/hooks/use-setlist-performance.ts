@@ -22,6 +22,7 @@ import { MusicianProfile } from "@/types/models"
 import { toISOString } from "@/lib/firestore-helpers"
 import { applyTonight, eventDayOf, overridesApply, type OverridesDoc, type WithTonight } from "@/lib/performance/tonight"
 import { subscribeTonight as defaultSubscribeTonight } from "@/lib/performance/tonight-client"
+import { useOrg } from "@/lib/org/org-context"
 
 interface UseSetlistPerformanceReturn {
     /** The rows to show: the plan with tonight's swaps laid over it. */
@@ -30,7 +31,7 @@ interface UseSetlistPerformanceReturn {
     plannedTracks: SetlistTrack[]
     /** Tonight's overrides doc when it applies now, else null. */
     tonightOverrides: OverridesDoc | null
-    /** The service day (America/Chicago) or null when the setlist has none. */
+    /** The service day (tenant time zone) or null when the setlist has none. */
     serviceDay: string | null
     name: string
     serviceNotes: string | null
@@ -229,7 +230,7 @@ export function useSetlistPerformance(
     // TONIGHT-ONLY SWAPS (David's ask 4, 2026-09-22). An additive layer over
     // the rows above: the overrides doc can only change the chart fields of
     // rows the plan already has. Missing, unreadable, slow, from another
-    // service day, or past the day in America/Chicago → the plan, unchanged.
+    // service day, or past the day in the tenant's zone → the plan, unchanged.
     // Signed-in devices follow the doc live; a signed-out device has what the
     // server read on load (no anonymous realtime access).
     const subscribeTonight = opts.subscribeTonight ?? defaultSubscribeTonight
@@ -255,11 +256,15 @@ export function useSetlistPerformance(
         const t = setInterval(() => setNow(Date.now()), 60_000)
         return () => clearInterval(t)
     }, [])
-    const serviceDay = eventDayOf(setlistData?.eventDate ?? initial?.setlist?.eventDate)
-    const tonightOverrides = overridesApply(overridesDoc, serviceDay, now) ? overridesDoc : null
+    // Multi-tenant phase 1: the service day is a calendar day in the
+    // setlist's tenant's zone (the host tenant when the doc carries no orgId).
+    const hostOrg = useOrg()
+    const setlistOrg = setlistData?.orgId || initial?.setlist?.orgId || hostOrg
+    const serviceDay = eventDayOf(setlistData?.eventDate ?? initial?.setlist?.eventDate, setlistOrg)
+    const tonightOverrides = overridesApply(overridesDoc, serviceDay, now, setlistOrg) ? overridesDoc : null
     const tracks: WithTonight<SetlistTrack>[] = useMemo(
-        () => applyTonight(plannedTracks, tonightOverrides, serviceDay, now),
-        [plannedTracks, tonightOverrides, serviceDay, now],
+        () => applyTonight(plannedTracks, tonightOverrides, serviceDay, now, setlistOrg),
+        [plannedTracks, tonightOverrides, serviceDay, now, setlistOrg],
     )
 
     const name: string =

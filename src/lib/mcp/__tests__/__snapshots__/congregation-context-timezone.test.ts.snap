@@ -1,0 +1,70 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`get_congregation_context > golden: brotherslazaroff output apart from timeZone 1`] = `
+{
+  "congregation": {
+    "coreMusicians": [],
+    "description": "Digital Sheet Music Library for CRC Musicians",
+    "features": null,
+    "location": "St. Louis, MO",
+    "name": "Central Reform Congregation",
+    "rabbis": [],
+    "services": null,
+    "shortName": "CRC Music",
+    "stream": null,
+    "usingDefaults": true,
+  },
+  "historyCount": 1,
+  "leadHistory": [
+    {
+      "band": [],
+      "date": null,
+      "eventDate": "2026-06-05T23:00:00.000Z",
+      "name": "Fri",
+      "rabbi": null,
+      "serviceType": "friday_night",
+      "setlistId": "s1",
+      "songCount": null,
+      "trackCount": 0,
+    },
+  ],
+  "ok": true,
+}
+`;
+
+exports[`get_congregation_context > golden: crc output apart from timeZone 1`] = `
+{
+  "congregation": {
+    "coreMusicians": [],
+    "description": "Digital Sheet Music Library for CRC Musicians",
+    "features": null,
+    "location": "St. Louis, MO",
+    "name": "CRC",
+    "rabbis": [],
+    "services": {
+      "friday_night": {
+        "defaultStartLocal": "18:00",
+        "label": "Erev",
+      },
+    },
+    "shortName": "CRC Music",
+    "stream": null,
+    "usingDefaults": false,
+  },
+  "historyCount": 1,
+  "leadHistory": [
+    {
+      "band": [],
+      "date": null,
+      "eventDate": "2026-06-05T23:00:00.000Z",
+      "name": "Fri",
+      "rabbi": null,
+      "serviceType": "friday_night",
+      "setlistId": "s1",
+      "songCount": null,
+      "trackCount": 0,
+    },
+  ],
+  "ok": true,
+}
+`;

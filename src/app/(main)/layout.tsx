@@ -4,8 +4,7 @@ import { AuthedQueryProvider } from "@/components/authed-query-provider"
 import { LazyClientComponents } from "@/components/layout/LazyClientComponents"
 import { PageTransition } from "@/components/layout/PageTransition"
 import { getServerUser } from "@/lib/server-auth"
-import { headers } from "next/headers"
-import { coerceOrgId } from "@/lib/org/registry"
+import { requestOrg } from "@/lib/org/request-org"
 import { getOrgBranding } from "@/lib/org/branding"
 
 export default async function MainLayout({
@@ -18,7 +17,7 @@ export default async function MainLayout({
     // v11.1-01: resolve the host org's brand server-side (same x-org-id seam as
     // the root layout, src/app/layout.tsx) so the authed nav wordmark + logo are
     // host-correct on first paint — no "CRC Music"/`/logo.jpg` flash on broslaz.
-    const orgId = coerceOrgId((await headers()).get("x-org-id"))
+    const orgId = (await requestOrg()).orgId
     const branding = getOrgBranding(orgId)
 
     return (

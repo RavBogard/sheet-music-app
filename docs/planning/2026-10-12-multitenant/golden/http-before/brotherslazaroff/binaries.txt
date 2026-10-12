@@ -1,0 +1,5 @@
+/apple-icon?1912f0fc5163701c status=307 location=/login type=text/plain bytes=15 sha256=7c040f8633b8823d72ed63da9b3b2dfe9846e912c66a64c9433ec9c4815d76c2
+/favicon.ico?603d046c9a6fdfbb status=200 type=image/vnd.microsoft.icon bytes=25931 sha256=2b8ad2d33455a8f736fc3a8ebf8f0bdea8848ad4c0db48a2833bd0f9cd775932
+/icon?a401918052754c85 status=307 location=/login type=text/plain bytes=15 sha256=7c040f8633b8823d72ed63da9b3b2dfe9846e912c66a64c9433ec9c4815d76c2
+https://brotherslazaroff.live/opengraph-image?f2e911431ae8cc06 status=307 location=/login type=text/plain bytes=15 sha256=7c040f8633b8823d72ed63da9b3b2dfe9846e912c66a64c9433ec9c4815d76c2
+https://brotherslazaroff.live/twitter-image?bc6d9362bc893b7a status=307 location=/login type=text/plain bytes=15 sha256=7c040f8633b8823d72ed63da9b3b2dfe9846e912c66a64c9433ec9c4815d76c2

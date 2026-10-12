@@ -1,8 +1,16 @@
+import type { Metadata } from "next"
+import { requestOrg } from "@/lib/org/request-org"
+
 // C5D-007: changelog is public and indexable. Root noindex applies to
 // the authed app; legal/marketing pages override.
-export const metadata = {
-    title: "Changelog | CentralReform.live",
-    robots: { index: true, follow: true },
+// Multi-tenant phase 1: CRC and BL (legal.useCrcText) keep today's title;
+// other tenants get "Changelog" and the root template adds their name.
+export async function generateMetadata(): Promise<Metadata> {
+    const { config } = await requestOrg()
+    return {
+        title: config && !config.legal.useCrcText ? "Changelog" : "Changelog | CentralReform.live",
+        robots: { index: true, follow: true },
+    }
 }
 
 const versions = [

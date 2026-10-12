@@ -1,3 +1,4 @@
+import { peekOrgConfig } from "@/lib/org/config-cache"
 import type { OrgId } from "@/lib/org/types"
 
 /**
@@ -53,7 +54,7 @@ export type OrgBranding = {
     baseUrl: string
 }
 
-const BRANDING: Record<OrgId, OrgBranding> = {
+export const CODE_BRANDING: Record<OrgId, OrgBranding> = {
     crc: {
         shortName: "CRC Music",
         tagline: "",
@@ -97,8 +98,30 @@ const BRANDING: Record<OrgId, OrgBranding> = {
     },
 }
 
+/**
+ * Multi-tenant phase 1: the primed tenant config (getOrgConfig / OrgProvider)
+ * wins; the code table above is the fallback, so an unprimed render is
+ * unchanged. CRC's baseUrl still honours NEXT_PUBLIC_BASE_URL first.
+ */
 export function getOrgBranding(orgId: OrgId): OrgBranding {
-    return BRANDING[orgId] ?? BRANDING.crc
+    const cfg = peekOrgConfig(orgId)
+    if (!cfg) return CODE_BRANDING[orgId] ?? CODE_BRANDING.crc
+    const b = cfg.branding
+    return {
+        shortName: b.shortName,
+        tagline: b.tagline,
+        forceDark: b.forceDark,
+        appName: b.appName,
+        metaTitleDefault: b.metaTitleDefault,
+        metaTitleTemplate: b.metaTitleTemplate,
+        metaDescription: b.metaDescription,
+        ogTitle: b.ogTitle,
+        themeColor: b.themeColor,
+        logoUrl: b.logoUrl,
+        wordmarkUrl: b.wordmarkUrl,
+        manifestPath: b.manifestPath,
+        baseUrl: orgId === "crc" ? process.env.NEXT_PUBLIC_BASE_URL || b.baseUrl : b.baseUrl,
+    }
 }
 
 /**
@@ -123,7 +146,7 @@ export type EmailBranding = {
     headerImageHeightPx: number
 }
 
-const EMAIL_BRANDING: Record<OrgId, EmailBranding> = {
+export const CODE_EMAIL_BRANDING: Record<OrgId, EmailBranding> = {
     // CRC values are byte-identical to the prior hardcodes in email.ts
     // (from-name "CRC Music", header #1a1a2e, footer string, NO image).
     crc: {
@@ -145,5 +168,14 @@ const EMAIL_BRANDING: Record<OrgId, EmailBranding> = {
 }
 
 export function getEmailBranding(orgId: OrgId): EmailBranding {
-    return EMAIL_BRANDING[orgId] ?? EMAIL_BRANDING.crc
+    const cfg = peekOrgConfig(orgId)
+    if (!cfg) return CODE_EMAIL_BRANDING[orgId] ?? CODE_EMAIL_BRANDING.crc
+    const e = cfg.email
+    return {
+        fromName: e.fromName,
+        headerBg: e.headerBg,
+        footerText: e.footerText,
+        headerImagePath: e.headerImagePath,
+        headerImageHeightPx: e.headerImageHeightPx,
+    }
 }

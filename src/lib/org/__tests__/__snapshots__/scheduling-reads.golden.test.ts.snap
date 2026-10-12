@@ -1,0 +1,256 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`golden /api/scheduling/suggest-band > brotherslazaroff 1`] = `
+{
+  "coverageGap": [
+    "acoustic_guitar",
+    "electric_bass",
+    "hand_drums",
+    "piano",
+    "voice",
+  ],
+  "rabbiGuidance": null,
+  "success": true,
+  "suggestions": [
+    {
+      "email": "u3@x.test",
+      "instrumentKey": "drums",
+      "instrumentLabel": "drums",
+      "name": "Three",
+      "phone": null,
+      "reasons": [
+        "Played 1 of last 2 services",
+      ],
+      "schedulingTier": "core",
+      "score": 38,
+      "uid": "u3",
+    },
+    {
+      "email": "u4@x.test",
+      "instrumentKey": "acoustic_guitar",
+      "instrumentLabel": "Acoustic Guitar",
+      "name": "Four",
+      "phone": null,
+      "reasons": [
+        "Played 1 of last 2 services",
+        "Fills missing Acoustic Guitar slot",
+      ],
+      "schedulingTier": "guest",
+      "score": 32,
+      "uid": "u4",
+    },
+  ],
+}
+`;
+
+exports[`golden /api/scheduling/suggest-band > crc 1`] = `
+{
+  "coverageGap": [
+    "acoustic_guitar",
+    "electric_bass",
+    "hand_drums",
+    "piano",
+    "voice",
+  ],
+  "rabbiGuidance": "three or four",
+  "success": true,
+  "suggestions": [
+    {
+      "email": "u1@x.test",
+      "instrumentKey": "piano",
+      "instrumentLabel": "Piano / Keys",
+      "name": "One",
+      "phone": null,
+      "reasons": [
+        "Played 1 of last 1 services",
+        "Fills missing Piano / Keys slot",
+      ],
+      "schedulingTier": "core",
+      "score": 70,
+      "uid": "u1",
+    },
+    {
+      "email": "u4@x.test",
+      "instrumentKey": "acoustic_guitar",
+      "instrumentLabel": "Acoustic Guitar",
+      "name": "Four",
+      "phone": null,
+      "reasons": [
+        "Fills missing Acoustic Guitar slot",
+      ],
+      "schedulingTier": "guest",
+      "score": 29,
+      "uid": "u4",
+    },
+  ],
+}
+`;
+
+exports[`golden MCP list_pending_assignments + suggest_band > list_pending_assignments brotherslazaroff 1`] = `
+{
+  "all": {
+    "assignments": [
+      {
+        "assignmentId": "c4",
+        "autoConfirmed": false,
+        "instrument": "acoustic_guitar",
+        "musicianName": "Four",
+        "musicianUid": "u4",
+        "setlistId": "s9",
+        "setlistName": "BL Gig",
+        "status": "pending",
+      },
+    ],
+    "count": 1,
+    "ok": true,
+  },
+  "one": {
+    "assignments": [
+      {
+        "assignmentId": "c4",
+        "autoConfirmed": false,
+        "instrument": "acoustic_guitar",
+        "musicianName": "Four",
+        "musicianUid": "u4",
+        "setlistId": "s9",
+        "setlistName": "BL Gig",
+        "status": "pending",
+      },
+    ],
+    "count": 1,
+    "ok": true,
+  },
+}
+`;
+
+exports[`golden MCP list_pending_assignments + suggest_band > list_pending_assignments crc 1`] = `
+{
+  "all": {
+    "assignments": [
+      {
+        "assignmentId": "c7",
+        "autoConfirmed": true,
+        "instrument": "acoustic_guitar",
+        "musicianName": "Four",
+        "musicianUid": "u4",
+        "setlistId": "s2",
+        "setlistName": "Crc B",
+        "status": "pending",
+      },
+      {
+        "assignmentId": "c6",
+        "autoConfirmed": false,
+        "instrument": "bass",
+        "musicianName": "Two",
+        "musicianUid": "u2",
+        "setlistId": "s2",
+        "setlistName": "Crc B",
+        "status": "pending",
+      },
+    ],
+    "count": 2,
+    "ok": true,
+  },
+  "one": {
+    "assignments": [
+      {
+        "assignmentId": "c7",
+        "autoConfirmed": true,
+        "instrument": "acoustic_guitar",
+        "musicianName": "Four",
+        "musicianUid": "u4",
+        "setlistId": "s2",
+        "setlistName": "Crc B",
+        "status": "pending",
+      },
+    ],
+    "count": 1,
+    "ok": true,
+  },
+}
+`;
+
+exports[`golden MCP list_pending_assignments + suggest_band > suggest_band brotherslazaroff 1`] = `
+{
+  "coverageGap": [
+    "acoustic_guitar",
+    "electric_bass",
+    "hand_drums",
+    "piano",
+    "voice",
+  ],
+  "ok": true,
+  "rabbiGuidance": null,
+  "suggestions": [
+    {
+      "email": "u3@x.test",
+      "instrumentKey": "drums",
+      "instrumentLabel": null,
+      "name": "Three",
+      "phone": null,
+      "reasons": [
+        "Played 1 of last 2 services",
+      ],
+      "schedulingTier": "core",
+      "score": 38,
+      "uid": "u3",
+    },
+    {
+      "email": "u4@x.test",
+      "instrumentKey": "acoustic_guitar",
+      "instrumentLabel": "Acoustic Guitar",
+      "name": "Four",
+      "phone": null,
+      "reasons": [
+        "Played 1 of last 2 services",
+        "Fills missing Acoustic Guitar slot",
+      ],
+      "schedulingTier": "guest",
+      "score": 32,
+      "uid": "u4",
+    },
+  ],
+}
+`;
+
+exports[`golden MCP list_pending_assignments + suggest_band > suggest_band crc 1`] = `
+{
+  "coverageGap": [
+    "acoustic_guitar",
+    "hand_drums",
+    "piano",
+    "voice",
+  ],
+  "ok": true,
+  "rabbiGuidance": "three or four",
+  "suggestions": [
+    {
+      "email": "u1@x.test",
+      "instrumentKey": "piano",
+      "instrumentLabel": "Piano / Keys",
+      "name": "One",
+      "phone": null,
+      "reasons": [
+        "Played 1 of last 1 services",
+        "Fills missing Piano / Keys slot",
+      ],
+      "schedulingTier": "core",
+      "score": 70,
+      "uid": "u1",
+    },
+    {
+      "email": "u4@x.test",
+      "instrumentKey": "acoustic_guitar",
+      "instrumentLabel": "Acoustic Guitar",
+      "name": "Four",
+      "phone": null,
+      "reasons": [
+        "Fills missing Acoustic Guitar slot",
+      ],
+      "schedulingTier": "guest",
+      "score": 29,
+      "uid": "u4",
+    },
+  ],
+}
+`;

@@ -11,6 +11,7 @@ import {
 } from "@/lib/sms"
 import { sendPushToUsers } from "@/lib/push-send"
 import { rowOrg } from "@/lib/org/membership"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * Shared scheduling service module.
@@ -79,6 +80,8 @@ interface CreatedAssignment {
     musician: AssignServiceMusician
     assignmentId: string
     newSongs: { title: string; fileId: string }[]
+    /** The setlist's tenant, stamped on the assignment; brands the notifications. */
+    org: OrgId
 }
 
 type SetlistMusicianEntry = {
@@ -263,6 +266,7 @@ export async function assignMusiciansService(
                 return {
                     skipped: false as const,
                     assignmentId: newAssignmentRef.id,
+                    org: assignmentOrg,
                 }
             })
 
@@ -271,7 +275,7 @@ export async function assignMusiciansService(
                 continue
             }
 
-            created.push({ musician, assignmentId: txResult.assignmentId, newSongs })
+            created.push({ musician, assignmentId: txResult.assignmentId, newSongs, org: txResult.org })
         } catch (e) {
             logger.error(
                 `[Scheduling] Failed to assign ${musician.name}:`,
@@ -285,7 +289,7 @@ export async function assignMusiciansService(
 
     // Notification cascade — runs AFTER each musician's transaction commits.
     const baseUrl = BASE_URL
-    for (const { musician, assignmentId, newSongs } of created) {
+    for (const { musician, assignmentId, newSongs, org } of created) {
         const isCore = musician.schedulingTier === "core"
 
         const musicianDoc = await db.collection("users").doc(musician.uid).get()
@@ -307,6 +311,7 @@ export async function assignMusiciansService(
                 scheduleUrl: `${baseUrl}/schedule`,
                 assignmentId,
                 newSongs: newSongs.length > 0 ? newSongs : undefined,
+                org,
             })
                 .then((result) => {
                     if (result.ok) {
@@ -344,6 +349,7 @@ export async function assignMusiciansService(
                     newSongs.length > 0
                         ? newSongs.map((s) => s.title)
                         : undefined,
+                org,
             })
                 .then((result) => {
                     if (result.ok) {
@@ -565,6 +571,7 @@ export async function unassignAssignmentService(
             status: "cancelled",
             scheduleUrl: `${baseUrl}/schedule`,
             assignmentId,
+            org: rowOrg(assignment.orgId),
         }).catch((e) =>
             logger.warn(
                 `[Scheduling] Cancellation email failed for ${assignment.musicianEmail}:`,
@@ -579,6 +586,7 @@ export async function unassignAssignmentService(
             musicianName,
             setlistName: assignment.setlistName || "a service",
             eventDate: eventDateStr,
+            org: rowOrg(assignment.orgId),
         }).catch((e) =>
             logger.warn(
                 `[Scheduling] Cancellation SMS failed for ${assignment.musicianPhone}:`,

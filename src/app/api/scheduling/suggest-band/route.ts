@@ -6,6 +6,7 @@ import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { rankMusicians, REQUIRED_INSTRUMENTS, type MusicianCandidate } from "@/lib/musician-suggestions"
 import { coerceOrgId, congregationDocId } from "@/lib/org/registry"
 import { rowOrgIds, rowOrg } from "@/lib/org/membership"
+import { scopeRowsToTenant, scopeUsersToTenant } from "@/lib/org/tenant-query"
 
 const RECENT_WINDOW = 10
 
@@ -38,12 +39,15 @@ export const GET = createApiHandler(
         }
 
         try {
-            // Parallel fetch: users, recent confirmed assignments, congregation config
+            // Parallel fetch: users, recent confirmed assignments, congregation config.
+            // Multi-tenant phase 1: both reads are narrowed to this tenant in the
+            // query for every tenant but crc (whose untagged rows keep the legacy
+            // read + in-memory filter below until phase 2 stamps them).
             const [usersSnap, recentAssignmentsSnap, configSnap] = await Promise.all([
-                db.collection('users')
+                scopeUsersToTenant(db.collection('users') as FirebaseFirestore.Query, org)
                     .where('role', 'in', ['musician', 'band_leader', 'admin'])
                     .get(),
-                db.collection('scheduling_assignments')
+                scopeRowsToTenant(db.collection('scheduling_assignments') as FirebaseFirestore.Query, org)
                     .where('status', '==', 'confirmed')
                     .orderBy('assignedAt', 'desc')
                     .limit(RECENT_WINDOW * 20) // Over-fetch to get per-musician window

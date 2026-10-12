@@ -55,6 +55,11 @@ export interface LibraryRowCreatedEvent {
     contentHash: string
     /** Uploader uid — used to honor "never overwrite human-set fields". */
     uploaderUid: string
+    /**
+     * Multi-tenant phase 1: the chart's tenant, so AI enrichment uses that
+     * tenant's prompt. Absent = crc (rows with no orgId are crc).
+     */
+    orgId?: string
 }
 
 type LibraryRowCreatedHandler = (

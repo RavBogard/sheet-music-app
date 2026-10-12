@@ -832,8 +832,8 @@ export interface CloneSetlistFromTemplateArgs {
     /**
      * Date for the new event. See `clone_setlist`'s `newEventDate` for the
      * accepted string shapes — `parseEventDate` handles both date-only
-     * (`"2026-05-30"` → noon America/Chicago) and naive datetimes
-     * (`"2026-05-30T10:00"` → 10am America/Chicago = 15:00Z in May).
+     * (`"2026-05-30"` → noon tenant-local) and naive datetimes
+     * (`"2026-05-30T10:00"` → 10am tenant-local; for CRC, Chicago = 15:00Z in May).
      * Avoid `"...Z"` for CRC services unless you genuinely mean UTC zero.
      */
     newEventDate?: string | null
@@ -1039,7 +1039,7 @@ export async function cloneSetlistFromTemplate(
                 "Pass a YYYY-MM-DD or full ISO date string.",
             )
         }
-        setlistPayload.eventDate = toTimestamp(args.newEventDate)
+        setlistPayload.eventDate = toTimestamp(args.newEventDate, org)
     }
 
     if (cloneBook) setlistPayload.book = cloneBook

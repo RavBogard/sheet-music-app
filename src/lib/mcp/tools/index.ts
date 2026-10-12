@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { KNOWN_COLLECTIONS, LIBRARY_DISPLAY_ORDER } from "@/lib/library/collections"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import {
     listSetlists,
@@ -645,7 +646,7 @@ export function registerReadTools(server: McpServer): void {
                 "List the liturgy books (siddurim and machzorim) this system can reference. Returns each book's `slug` (use it for a setlist's `book` and for liturgyRef.book), title, `tier` ('feed' = generated from the Shirei Typst pipeline with stable unit ids; 'pagemap' = hand-verified page list for a legacy book), and page count. Call this before setting a setlist's book or resolving page numbers with lookup_book_page.",
             inputSchema: {},
         },
-        async () => jsonResult(listBooksTool()),
+        async (_args, extra) => jsonResult(listBooksTool(orgFrom(extra))),
     )
 
     server.registerTool(
@@ -790,7 +791,7 @@ export function registerReadTools(server: McpServer): void {
                         "If true, include non-chart artifacts (audio files, spreadsheets, Drive folders, dotfiles like .DS_Store) that the in-app library and list_library hide. Default false.",
                     ),
                 collection: z
-                    .enum(["core", "supplemental", "nava", "uploads", "all"])
+                    .enum([...LIBRARY_DISPLAY_ORDER, "all"] as const)
                     .optional()
                     .describe(
                         "Library collection to search (default 'all'). Same spelling as list_library. 'supplemental' is the collection the app labels \"Shireinu\" — pass it when the user says Shireinu. 'core' is the CRC Charts collection (every row not supplemental/nava/uploads, including legacy rows with no collection). 'nava' is Nava Tehila. Results stay limited to the caller's org either way.",
@@ -838,7 +839,7 @@ export function registerReadTools(server: McpServer): void {
                 "Browse the chart-file index alphabetically — every chart in the library, with its collection ('core' | 'supplemental' | 'nava' | 'uploads'), mimeType, file size, and upload metadata. Use this when the user wants to SEE the catalog (\"what's in core?\", \"show me every chart I've uploaded\"); use search_library for targeted lookup by title/key/BPM. Optional collection filter narrows to one section. Paged via offset+limit (default limit 50; values above 200 are silently clamped to 200). Returns rows + a total count so the caller can detect whether more pages exist. Default browse hides folders, audio files, dotfiles like .DS_Store, AND rows the dedupe pass has marked status:'duplicate' / Drive-side status:'orphaned' / soft-deleted status:'archived' — same hidden-set as search_library and the in-app /library catalog, so counts surfaced here match what Daniel sees in the browser. Pass includeNonCharts: true for raw artifacts (folders/audio/junk); pass includeNonChartHealthy: true to also include duplicate/orphaned/archived rows (audit/reconciliation only). Metadata only — to fetch chart bytes call download_chart, or to print a setlist's packet call generate_gig_packet. Cycle-3 DATA-002: response carries a uniform `coverage:{total, eligible, scanned, filteredOut:{byStatus, byCollection, byOther}}` field that matches the same shape returned by dedupe_library / backfill_library_index / reconcile_library — letting operators correlate scan totals across the four hygiene tools without spelunking into source.",
             inputSchema: {
                 collection: z
-                    .enum(["core", "supplemental", "uploads", "nava"])
+                    .enum(KNOWN_COLLECTIONS)
                     .optional()
                     .describe(
                         "Library section to browse. 'core' matches the in-app CRC Charts tab (every row that is not 'supplemental', 'nava' or 'uploads', including legacy rows with no collection field). 'nava' is the Nava Tehila corpus. Omit to list every chart across all collections.",
@@ -881,7 +882,7 @@ export function registerReadTools(server: McpServer): void {
         "get_congregation_context",
         {
             description:
-                "Get the congregation's standing context in one call so you don't have to be re-told it each authoring session: WHO the congregation is (name, location, the rabbi profiles, and the standing/core band roster) plus WHO has led recently. Use at the start of a weekly-setlist authoring session to ground yourself on the rabbis, the band, and the recent service cadence. Returns `congregation` (from the config/congregation doc; falls back to defaults with usingDefaults:true when absent) and `leadHistory` — the most-recent setlists each with the rabbi who led ('Led by'), the band that played, the service type, and dates. `historyLimit` (default 10, max 50) and `orderBy` ('eventDate' default = most-recent service day, or 'date' = doc write time) tune the history window. Also returns `services` (per-serviceType default start times, America/Chicago wall clock) and `stream` (the congregation's stream URL) — the two values the public today.json turns into a start time for the siddur reader and the stream overlays; both are null until an admin sets them with update_congregation_services. For the per-song Vocal Lead on a specific service, call get_setlist on that setlist id — this tool stays a single cheap read.",
+                "Get the congregation's standing context in one call so you don't have to be re-told it each authoring session: WHO the congregation is (name, location, the rabbi profiles, and the standing/core band roster) plus WHO has led recently. Use at the start of a weekly-setlist authoring session to ground yourself on the rabbis, the band, and the recent service cadence. Returns `congregation` (from the config/congregation doc; falls back to defaults with usingDefaults:true when absent) and `leadHistory` — the most-recent setlists each with the rabbi who led ('Led by'), the band that played, the service type, and dates. `historyLimit` (default 10, max 50) and `orderBy` ('eventDate' default = most-recent service day, or 'date' = doc write time) tune the history window. Also returns `timeZone` (the tenant's IANA time zone), `services` (per-serviceType default start times, wall clock in the tenant's local time) and `stream` (the congregation's stream URL) — the two values the public today.json turns into a start time for the siddur reader and the stream overlays; both are null until an admin sets them with update_congregation_services. For the per-song Vocal Lead on a specific service, call get_setlist on that setlist id — this tool stays a single cheap read.",
             inputSchema: {
                 historyLimit: z
                     .number()
@@ -1318,7 +1319,7 @@ export function registerWriteTools(server: McpServer): void {
         "update_congregation_services",
         {
             description:
-                "Set the congregation's per-service default start times and its stream URL — the two values the public `today.json` needs to say what time tonight's service begins. `services` is a FULL REPLACEMENT map keyed by the setlist's `templateType` (e.g. {\"friday_night\": {\"label\": \"Erev Shabbat\", \"defaultStartLocal\": \"18:00\"}}); `defaultStartLocal` is a 24-hour America/Chicago WALL CLOCK time, so 6pm is '18:00' in July and in January — never a UTC instant. `stream` is {url, leadMinutes?} (https only; leadMinutes defaults to 5, how far before the service the stream goes live) — pass null to clear it. Omit either key to leave it untouched. STAGE THEN CONFIRM: `dryRun` defaults to TRUE and returns `{before, after, diff, changed}` without writing; call again with `dryRun:false` to commit. Admin only — these values are published to the siddur reader and the stream overlays. Nothing is seeded: a service with no configured start time simply emits no start time, which is better than a guessed one. Read the current values with get_congregation_context.",
+                "Set the congregation's per-service default start times and its stream URL — the two values the public `today.json` needs to say what time tonight's service begins. `services` is a FULL REPLACEMENT map keyed by the setlist's `templateType` (e.g. {\"friday_night\": {\"label\": \"Erev Shabbat\", \"defaultStartLocal\": \"18:00\"}}); `defaultStartLocal` is a 24-hour WALL CLOCK time in the tenant's local time, so 6pm is '18:00' in July and in January — never a UTC instant. `stream` is {url, leadMinutes?} (https only; leadMinutes defaults to 5, how far before the service the stream goes live) — pass null to clear it. Omit either key to leave it untouched. STAGE THEN CONFIRM: `dryRun` defaults to TRUE and returns `{before, after, diff, changed}` without writing; call again with `dryRun:false` to commit. Admin only — these values are published to the siddur reader and the stream overlays. Nothing is seeded: a service with no configured start time simply emits no start time, which is better than a guessed one. Read the current values with get_congregation_context.",
             inputSchema: {
                 services: z
                     .record(
@@ -1335,7 +1336,7 @@ export function registerWriteTools(server: McpServer): void {
                             defaultStartLocal: z
                                 .string()
                                 .describe(
-                                    "24-hour America/Chicago wall-clock start, `HH:mm` (e.g. '18:00').",
+                                    "24-hour wall-clock start in the tenant's local time, `HH:mm` (e.g. '18:00').",
                                 ),
                         }),
                     )
@@ -1474,7 +1475,7 @@ export function registerWriteTools(server: McpServer): void {
                     .string()
                     .optional()
                     .describe(
-                        "Wall-clock start time for THIS service, 24-hour `HH:mm` in America/Chicago (e.g. '18:00' for 6pm). Overrides the per-serviceType default start held in the congregation config. Read by the public today.json that the siddur reader and the stream overlays use, so set it when a service starts at an unusual time.",
+                        "Wall-clock start time for THIS service, 24-hour `HH:mm` in the tenant's local time (e.g. '18:00' for 6pm). Overrides the per-serviceType default start held in the congregation config. Read by the public today.json that the siddur reader and the stream overlays use, so set it when a service starts at an unusual time.",
                     ),
                 lastSeenVersion: lastSeenVersionSchema.describe(
                     "Optional optimistic-concurrency gate: pass the setlist's `version` from your last get_setlist / list_setlists. The write rejects with `{error: 'stale_version', currentVersion, lastSeenVersion, hint, ...}` if it doesn't match — call get_setlist and retry.",
@@ -2600,7 +2601,7 @@ export function registerWriteTools(server: McpServer): void {
                     .optional()
                     .describe("Display title; non-empty when supplied."),
                 collection: z
-                    .enum(["core", "supplemental", "uploads", "nava"])
+                    .enum(KNOWN_COLLECTIONS)
                     .optional()
                     .describe(
                         "Library collection. Operator override is permitted here (David's-subfolder authority does NOT bind operator edits, only AI).",
@@ -3117,7 +3118,7 @@ export function registerMonitorTools(server: McpServer): void {
  * token uid (not Claude's egress IP).
  */
 const collectionSchema = z
-    .enum(["core", "supplemental", "uploads", "nava"])
+    .enum(KNOWN_COLLECTIONS)
     .optional()
     .describe(
         "Which library section to file the chart under. 'uploads' is the user-uploaded section (default). 'core' is the main CRC catalog — admins and band leaders may write to it. 'supplemental' is the Shireinu songbook and 'nava' is the Nava Tehila corpus — admins and band leaders may write to both. Musicians and canUpload-only callers should leave this unset or pass 'uploads'. NOTE: deleting from 'core', 'supplemental' or 'nava' still requires admin (delete_chart).",

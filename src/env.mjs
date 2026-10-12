@@ -103,6 +103,8 @@ export const env = createEnv({
         OVERLAYS_HISTORY_TOKEN: z.string().optional(),
         /** Org whose charts the public reader endpoint serves. Unset: DEFAULT_ORG_ID. */
         READER_MUSIC_ORG_ID: z.string().optional(),
+        /** Where tenant config is read: "code" (the tables in src/lib/org/config-code.ts) or "firestore" (orgs/{id}, code fallback for crc/BL). Unset: code. */
+        ORG_CONFIG_SOURCE: z.enum(["code", "firestore"]).optional(),
         /** Master switch for the public reader chart endpoint. Unset: off. */
         READER_PUBLIC_CHARTS_ENABLED: z.string().optional(),
         /** CORS allow-list for the public reader chart endpoint. */
@@ -181,6 +183,7 @@ export const env = createEnv({
         OVERLAYS_BASE_URL: process.env.OVERLAYS_BASE_URL,
         OVERLAYS_HISTORY_TOKEN: process.env.OVERLAYS_HISTORY_TOKEN,
         READER_MUSIC_ORG_ID: process.env.READER_MUSIC_ORG_ID,
+        ORG_CONFIG_SOURCE: process.env.ORG_CONFIG_SOURCE,
         READER_PUBLIC_CHARTS_ENABLED: process.env.READER_PUBLIC_CHARTS_ENABLED,
         READER_MUSIC_ALLOWED_ORIGINS: process.env.READER_MUSIC_ALLOWED_ORIGINS,
         RESEND_FROM_EMAIL_BROSLAZ: process.env.RESEND_FROM_EMAIL_BROSLAZ,

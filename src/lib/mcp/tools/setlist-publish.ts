@@ -18,6 +18,7 @@ import {
 import { getChartHealth } from "@/lib/file-fetcher"
 import { isTestUid } from "@/lib/test-isolation"
 import { rowOrg, rowOrgIds } from "@/lib/org/membership"
+import { orgString } from "@/lib/org/strings"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
@@ -1061,7 +1062,7 @@ export async function publishSetlist(
             try {
                 await sendSMS(
                     r.phone,
-                    `CRC Music: "${setlistName}" for ${eventDateStr} has been published. View it at ${origin}/perform/setlist/${args.setlistId}`,
+                    `${orgString(setlistOrg, "sms.publishPrefix")}: "${setlistName}" for ${eventDateStr} has been published. View it at ${origin}/perform/setlist/${args.setlistId}`,
                 )
                 result.delivery.sms.sent++
             } catch (err) {

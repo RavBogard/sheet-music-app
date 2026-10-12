@@ -25,6 +25,7 @@ import {
 } from "@/lib/library/review-queue"
 import type { EnrichmentOutput } from "@/lib/library/ai-enrichment"
 import { logger } from "@/lib/logger"
+import { KNOWN_COLLECTIONS } from "@/lib/library/collections"
 
 /**
  * Cycle-3 a5 — MCP-tool counterpart to a4's `/manage/library-review` admin UI.
@@ -60,7 +61,7 @@ import { logger } from "@/lib/logger"
 
 const ALLOWED_KINDS = ["enrichment", "import", "all"] as const
 const ALLOWED_STATUSES = ["review_pending", "failed"] as const
-const ALLOWED_COLLECTIONS = ["core", "supplemental", "uploads", "nava"] as const
+const ALLOWED_COLLECTIONS = KNOWN_COLLECTIONS
 const ALLOWED_EDIT_FIELDS = new Set([
     "title",
     "collection",

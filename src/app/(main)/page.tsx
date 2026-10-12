@@ -2,8 +2,7 @@ import { getServerUser, getServerCongregationConfig } from "@/lib/server-auth"
 import { getContextualGreeting } from "@/lib/greeting"
 import DashboardClient from "./DashboardClient"
 import { DEFAULT_SHORT_NAME } from "@/lib/constants"
-import { headers } from "next/headers"
-import { coerceOrgId } from "@/lib/org/registry"
+import { requestOrg } from "@/lib/org/request-org"
 import { getOrgBranding } from "@/lib/org/branding"
 
 /**
@@ -22,7 +21,7 @@ export default async function DashboardPage() {
     // (same seam the (main) layout uses for the nav) so the dashboard hero brand
     // is host-correct — broslaz no longer renders the CRC "/logo.jpg" + "CRC MUSIC"
     // lockup. The per-org congregation doc is read with the host org too.
-    const orgId = coerceOrgId((await headers()).get("x-org-id"))
+    const orgId = (await requestOrg()).orgId
     const branding = getOrgBranding(orgId)
 
     // These run in parallel on the server — adds ~50ms to TTFB but

@@ -1,3 +1,5 @@
+import { requestOrg } from "@/lib/org/request-org"
+import { PlatformSmsConsent } from "@/components/legal/PlatformLegal"
 import Link from "next/link"
 
 // C5D-007: SMS-consent must be carrier-discoverable (A2P review) and is
@@ -7,7 +9,15 @@ export const metadata = {
     robots: { index: true, follow: true },
 }
 
-export default function SmsConsentPage() {
+export default async function SmsConsentPage() {
+    // Multi-tenant phase 1: CRC's text for tenants with legal.useCrcText (CRC and
+    // Brothers Lazaroff); everyone else gets the platform-run version.
+    const { config } = await requestOrg()
+    if (config && !config.legal.useCrcText) return <PlatformSmsConsent config={config} />
+    return <CrcSmsConsent />
+}
+
+function CrcSmsConsent() {
     return (
         <div className="min-h-screen bg-background text-foreground">
             {/* Hero header */}

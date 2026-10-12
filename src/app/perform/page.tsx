@@ -1,10 +1,9 @@
 import { Suspense } from "react"
-import { headers } from "next/headers"
 import { PublicSetlistListing } from "@/components/performance/PublicSetlistListing"
 import { PublicSetlistSkeleton } from "@/components/performance/PublicSetlistSkeleton"
 import { selectVisiblePublicSetlists } from "@/components/performance/public-setlist-order"
 import { getAllSetlists } from "@/lib/server-setlists"
-import { coerceOrgId } from "@/lib/org/registry"
+import { requestOrg } from "@/lib/org/request-org"
 import { label } from "@/lib/org/vocab"
 import type { Setlist as ApiSetlist } from "@/types/api"
 import type { Setlist as FirebaseSetlist } from "@/lib/setlist-firebase"
@@ -20,7 +19,7 @@ import type { Setlist as FirebaseSetlist } from "@/lib/setlist-firebase"
 // body uses to scope the fetch. The `index:true` override is PRESERVED — this
 // public landing must stay crawlable.
 export async function generateMetadata() {
-    const org = coerceOrgId((await headers()).get("x-org-id"))
+    const org = (await requestOrg()).orgId
     return {
         title: label(org, "publicListingTitle"),
         robots: { index: true, follow: true },
@@ -87,7 +86,7 @@ async function PerformListing() {
     // them. `selectVisiblePublicSetlists` is the same shared primitive
     // the client useMemo invokes; running it here keeps wire bytes
     // byte-identical to the DOM-allowed slice.
-    const org = coerceOrgId((await headers()).get("x-org-id"))
+    const org = (await requestOrg()).orgId
     const raw = (await getAllSetlists({ limit: 50, org })) as unknown as FirebaseSetlist[]
     const initialSetlists = selectVisiblePublicSetlists(raw) as unknown as ApiSetlist[]
     return <PublicSetlistListing initialSetlists={initialSetlists} />

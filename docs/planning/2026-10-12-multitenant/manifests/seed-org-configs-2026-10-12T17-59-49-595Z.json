@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-12T17:59:49.595Z",
+  "projectId": "crcmusiccharts",
+  "docs": {
+    "crc": {
+      "existed": true,
+      "data": {
+        "createdAt": {
+          "__ts": "2026-06-08T20:12:51.763Z"
+        },
+        "domain": "centralreform.live",
+        "name": "Central Reform Congregation",
+        "id": "crc"
+      }
+    },
+    "brotherslazaroff": {
+      "existed": true,
+      "data": {
+        "createdAt": {
+          "__ts": "2026-06-08T20:12:51.976Z"
+        },
+        "domain": "brotherslazaroff.live",
+        "name": "Brothers Lazaroff",
+        "id": "brotherslazaroff"
+      }
+    }
+  }
+}

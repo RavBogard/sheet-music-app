@@ -79,9 +79,9 @@ export interface CloneSetlistArgs {
      *
      * Accepted shapes:
      *   - `"YYYY-MM-DD"` (date-only, recommended for whole-day services) —
-     *     anchored at noon America/Chicago.
+     *     anchored at noon in the tenant's time zone (America/Chicago for CRC).
      *   - `"YYYY-MM-DDTHH:MM"` / `"YYYY-MM-DDTHH:MM:SS"` (naive datetime) —
-     *     interpreted as America/Chicago wall-clock (the CRC service locale).
+     *     interpreted as the tenant's wall clock (locale.timeZone).
      *   - `"YYYY-MM-DDTHH:MM:SS-05:00"` (CDT) / `"-06:00"` (CST) — explicit
      *     offset, honored verbatim.
      *   - `"YYYY-MM-DDTHH:MM:SS.sssZ"` (UTC zero) — honored VERBATIM as 0Z.
@@ -284,7 +284,7 @@ export async function cloneSetlist(
                 "Pass a YYYY-MM-DD or full ISO date string.",
             )
         }
-        setlistPayload.eventDate = toTimestamp(args.newEventDate)
+        setlistPayload.eventDate = toTimestamp(args.newEventDate, org)
     }
 
     // Template + rabbi travel with the clone — they're attributes of the

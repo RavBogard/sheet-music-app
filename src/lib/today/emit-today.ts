@@ -97,6 +97,7 @@ export async function buildToday(
         services: readServicesFromConfig(config as Record<string, unknown> | null),
         stream: readStreamFromConfig(config as Record<string, unknown> | null),
         now,
+        org,
     })
     const wanted = new Set(shortlist.services.map((s) => s.setlistId))
     const folios = new Map<string, number | null>()
@@ -109,6 +110,7 @@ export async function buildToday(
         services: readServicesFromConfig(config as Record<string, unknown> | null),
         stream: readStreamFromConfig(config as Record<string, unknown> | null),
         now,
+        org,
     })
 }
 

@@ -16,6 +16,7 @@ import { DriveFile, SetlistTrack, TrackType } from '@/types/models'
 import { ServiceContext } from './liturgical-calendar'
 import { resolveSlotLiturgyRef, type SlotLiturgyRefs } from './books/slot-liturgy'
 import { mergeAlwaysRows } from './templates/always-rows'
+import { SERVICE_TYPE_CATALOG } from './templates/service-types'
 import Fuse from 'fuse.js'
 
 /** Wider context for template engine — accepts any template key as type, not just ServiceType */
@@ -360,22 +361,13 @@ export function getAllTemplateKeys(): string[] {
 /**
  * Template metadata for the template picker UI.
  */
-export const TEMPLATE_LABELS: Record<string, { label: string; category: 'regular' | 'holiday'; slotCount: number }> = {
-    friday_night: { label: 'Friday Night', category: 'regular', slotCount: FRIDAY_NIGHT_TEMPLATE.length },
-    shir_shabbat: { label: 'Shir Shabbat', category: 'regular', slotCount: SHIR_SHABBAT_TEMPLATE.length },
-    shabbat_morning: { label: 'Shabbat Morning', category: 'regular', slotCount: SHABBAT_MORNING_TEMPLATE.length },
-    bnei_mitzvah_saturday: { label: "B'nei Mitzvah Saturday", category: 'regular', slotCount: BNEI_MITZVAH_SATURDAY_TEMPLATE.length },
-    havdalah_bnei_mitzvah: { label: "Havdalah B'nei Mitzvah", category: 'regular', slotCount: HAVDALAH_BNEI_MITZVAH_TEMPLATE.length },
-    rosh_hashanah_evening: { label: 'Rosh Hashanah Evening', category: 'holiday', slotCount: ROSH_HASHANAH_EVENING_TEMPLATE.length },
-    rosh_hashanah_morning: { label: 'Rosh Hashanah Morning', category: 'holiday', slotCount: ROSH_HASHANAH_MORNING_TEMPLATE.length },
-    yom_kippur_kol_nidre: { label: 'Yom Kippur Kol Nidre', category: 'holiday', slotCount: YOM_KIPPUR_KOL_NIDRE_TEMPLATE.length },
-    yom_kippur_morning: { label: 'Yom Kippur Morning', category: 'holiday', slotCount: YOM_KIPPUR_MORNING_TEMPLATE.length },
-    yom_kippur_afternoon: { label: 'Yom Kippur Afternoon/Neilah', category: 'holiday', slotCount: YOM_KIPPUR_AFTERNOON_TEMPLATE.length },
-    sukkot: { label: 'Sukkot', category: 'holiday', slotCount: SUKKOT_TEMPLATE.length },
-    simchat_torah: { label: 'Simchat Torah', category: 'holiday', slotCount: SIMCHAT_TORAH_TEMPLATE.length },
-    passover: { label: 'Passover', category: 'holiday', slotCount: PASSOVER_TEMPLATE.length },
-    shavuot: { label: 'Shavuot', category: 'holiday', slotCount: SHAVUOT_TEMPLATE.length },
-}
+export const TEMPLATE_LABELS: Record<string, { label: string; category: 'regular' | 'holiday'; slotCount: number }> =
+    Object.fromEntries(
+        SERVICE_TYPE_CATALOG.map(({ key, label, category }) => [
+            key,
+            { label, category, slotCount: TEMPLATES[key]?.length ?? 0 },
+        ]),
+    )
 
 // ── Template Engine: Match Slots to Library Files ──
 

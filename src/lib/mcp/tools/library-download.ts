@@ -11,6 +11,8 @@ import { renderTextChartToPdf } from "@/lib/pdf/text-chart-pdf"
 import { renderServiceSheetPdf } from "@/lib/pdf/service-sheet-pdf"
 import { getRegistryEntry } from "@/lib/books/registry"
 import { isPrintRowMode, type PrintRowMode } from "@/lib/print/row-mode"
+import { rowOrg } from "@/lib/org/membership"
+import { orgString } from "@/lib/org/strings"
 
 /**
  * MCP chart-download tool — return one chart's bytes (base64) + mimeType so
@@ -354,7 +356,9 @@ export async function generateGigPacket(
     const packetTitle = `${setlistTitle} — Gig Packet`
     const mergedPdf = await PDFDocument.create()
     mergedPdf.setTitle(packetTitle)
-    mergedPdf.setSubject("CRC Music Books gig packet")
+    // Multi-tenant phase 1: the setlist's tenant (crc and brotherslazaroff:
+    // "CRC Music Books gig packet").
+    mergedPdf.setSubject(orgString(rowOrg(setlistData.orgId), "print.packetSubject"))
 
     // The order of service, ahead of the charts, when asked for. Rendered by
     // the rabbi-sheet renderer so the two documents cannot drift apart: one

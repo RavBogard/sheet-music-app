@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/lib/auth-context"
 import { useOrg } from "@/lib/org/org-context"
+import { rabbiSlotsFor } from "@/lib/org/tenant-lists"
 import { saveCustomTemplate, deleteCustomTemplate } from "@/lib/template-firebase"
 import { TEMPLATE_LABELS, type TemplateSlot } from "@/lib/liturgical-templates"
 import type { TrackType, DriveFile } from "@/types/models"
@@ -189,6 +190,7 @@ export function TemplateEditor({ templateKey, defaultSlots, customSlots, importe
                         onMove={(dir) => moveSlot(index, dir)}
                         onRemove={() => removeSlot(index)}
                         onPickSong={() => setPickingSlotIndex(index)}
+                        onlyForHint={rabbiSlotsFor(org)[0]?.key ?? ""}
                     />
                 ))}
             </div>
@@ -226,6 +228,7 @@ function SlotRow({
     onMove,
     onRemove,
     onPickSong,
+    onlyForHint,
 }: {
     slot: TemplateSlot
     index: number
@@ -236,6 +239,8 @@ function SlotRow({
     onMove: (direction: -1 | 1) => void
     onRemove: () => void
     onPickSong: () => void
+    /** A rabbi slot key of this tenant (liturgy.rabbiSlots), for the "Only For" hint. */
+    onlyForHint: string
 }) {
     const typeColor = TYPE_COLORS[slot.type ?? "song"] ?? TYPE_COLORS.song
 
@@ -426,7 +431,7 @@ function SlotRow({
                                         ? e.target.value.split(",").map(q => q.trim()).filter(Boolean)
                                         : undefined,
                                 })}
-                                placeholder="e.g., daniel_karen"
+                                placeholder={`e.g., ${onlyForHint}`}
                                 className="h-8 text-sm"
                             />
                         </div>

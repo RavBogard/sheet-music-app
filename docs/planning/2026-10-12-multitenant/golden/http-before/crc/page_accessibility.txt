@@ -1,0 +1,40 @@
+status=200
+html lang=en dir=null data-org=crc class=null
+body class=__variable_7a64e1 __variable_595310 __variable_fcafb2 antialiased
+title=Accessibility Statement | CRC Music | CRC Music
+link href=/apple-icon?1912f0fc5163701c rel=apple-touch-icon sizes=180x180 type=image/png
+link href=/favicon.ico?603d046c9a6fdfbb rel=icon sizes=16x16 type=image/x-icon
+link href=/icon?a401918052754c85 rel=icon sizes=512x512 type=image/png
+link href=/manifest.json rel=manifest
+meta charset=utf-8
+meta content= name=next-size-adjust
+meta content=#0F0F23 media=(prefers-color-scheme: dark) name=theme-color
+meta content=#f0f0f8 media=(prefers-color-scheme: light) name=theme-color
+meta content=1200 name=twitter:image:width
+meta content=1200 property=og:image:width
+meta content=630 name=twitter:image:height
+meta content=630 property=og:image:height
+meta content=CRC Music name=apple-mobile-web-app-title
+meta content=CRC Music name=twitter:title
+meta content=CRC Music property=og:site_name
+meta content=Central Reform Congregation — Digital Sheet Music Library name=twitter:image:alt
+meta content=Central Reform Congregation — Digital Sheet Music Library property=og:image:alt
+meta content=Central Reform Congregation — Music property=og:title
+meta content=Digital Sheet Music Library for Central Reform Congregation name=description
+meta content=Digital Sheet Music Library for Central Reform Congregation name=twitter:description
+meta content=Digital Sheet Music Library for Central Reform Congregation property=og:description
+meta content=default name=apple-mobile-web-app-status-bar-style
+meta content=https://centralreform.live/opengraph-image?f2e911431ae8cc06 property=og:image
+meta content=https://centralreform.live/twitter-image?bc6d9362bc893b7a name=twitter:image
+meta content=image/png name=twitter:image:type
+meta content=image/png property=og:image:type
+meta content=index, follow name=robots
+meta content=summary_large_image name=twitter:card
+meta content=website property=og:type
+meta content=width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover name=viewport
+meta content=yes name=mobile-web-app-capable
+--- body text ---
+Skip to main contentCRC MusicSetlistsSign InCRC MusicSearchSetlistSchedule A project of Rabbi Daniel Bogardv11.7.0•Changelog•Privacy•Terms•AccessibilityTry the new experience (beta)LegalAccessibility StatementLast updated: May 19, 2026Central Reform Congregation is committed to making the CRC Music web application accessible to musicians, congregants, and clergy of all abilities. We aim to meet or exceed the Web Content Accessibility Guidelines (WCAG) 2.1 Level AA across the app.What we're doing•Semantic HTML landmarks (<main>, <nav>, headings) on every route.•Accessible names on all icon-only buttons (aria-label) and form fields (<label> or aria-label, never placeholder-as-label).•WCAG 2.1 AA contrast on body text and interactive surfaces.•Pinch-zoom and user-scaling preserved on mobile (no maximum-scale=1 viewport lock).•Skip-link to main content on app-shell routes.•Keyboard support in Perform mode (chart navigation, transpose, metronome) and live regions for setlist mutations.•Automated axe-core sweeps run as part of our cowork audit cadence.Known limitationsWe track open accessibility findings on every release cycle. The PDF-render surface inside Perform mode is the area where assistive-technology support is most limited today; we're working to surface chart structure (sections, key, capo) outside the rendered image where possible.Report a barrierIf you encounter a part of the app you can't use with your assistive technology, please email music@centralreform.live. Include the page URL and a short description; we'll respond within a week.
+--- images ---
+img src=/logo.jpg alt=Central Reform Congregation logo
+img src=/logo.jpg alt=Central Reform Congregation logo

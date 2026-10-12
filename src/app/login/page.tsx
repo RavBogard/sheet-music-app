@@ -1,8 +1,8 @@
 import Image from "next/image"
-import { headers } from "next/headers"
 import { getServerCongregationConfig } from "@/lib/server-auth"
-import { DEFAULT_SHORT_NAME } from "@/lib/constants"
-import { coerceOrgId } from "@/lib/org/registry"
+import { requestOrg } from "@/lib/org/request-org"
+import { codeOrgConfig } from "@/lib/org/config-code"
+import { OrgLogo } from "@/components/nav/OrgLogo"
 import { getOrgBranding } from "@/lib/org/branding"
 import LoginClient from "./LoginClient"
 
@@ -27,9 +27,12 @@ export default async function LoginPage() {
     // branch below is unchanged (getServerCongregationConfig path). LoginClient,
     // the legal nav, and noscript are kept identical so auth + GDPR/SMS
     // compliance never regress per tenant.
-    const orgId = coerceOrgId((await headers()).get("x-org-id"))
+    const { orgId, config: orgConfig } = await requestOrg()
+    // Multi-tenant phase 1: an unconfigured org falls back to CRC's code config.
+    const tenant = orgConfig ?? codeOrgConfig(orgId) ?? codeOrgConfig("crc")!
     if (orgId === "brotherslazaroff") {
         const { shortName, tagline, wordmarkUrl } = getOrgBranding(orgId)
+        const bandLocation = tenant.branding.location
         return (
             <div className="min-h-screen bl-hero flex flex-col items-center justify-center p-4 relative overflow-hidden">
                 {/* Navy ambient glow over the photographic hero */}
@@ -84,7 +87,7 @@ export default async function LoginPage() {
                     </div>
 
                     <p className="text-xs text-muted-foreground">
-                        {shortName} &middot; St. Louis, MO
+                        {shortName}{bandLocation ? ` · ${bandLocation}` : null}
                     </p>
 
                     <nav aria-label="Legal" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -99,11 +102,15 @@ export default async function LoginPage() {
         )
     }
 
-    const config = await getServerCongregationConfig().catch(() => null)
-    const shortName = (config?.shortName as string | undefined) || DEFAULT_SHORT_NAME
-    const fullName = (config?.name as string | undefined) || "Central Reform Congregation"
-    const location = (config?.location as string | undefined) || "St. Louis, MO"
-    const logoUrl = (config?.logoUrl as string | undefined) || "/logo.jpg"
+    // Multi-tenant phase 1: the RESOLVED tenant's congregation doc (crc keeps
+    // the bare `config/congregation` doc), with the tenant's
+    // congregationDefaults as the fallback (CRC's are the former literals).
+    const defaults = tenant.congregationDefaults
+    const config = await getServerCongregationConfig(orgId).catch(() => null)
+    const shortName = (config?.shortName as string | undefined) || defaults.shortName
+    const fullName = (config?.name as string | undefined) || defaults.name
+    const location = (config?.location as string | undefined) || defaults.location
+    const logoUrl = (config?.logoUrl as string | undefined) || defaults.logoUrl
 
     return (
         <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
@@ -130,15 +137,20 @@ export default async function LoginPage() {
                             when the parser reaches this tag. The explicit
                             width/height also reserve the box, so the text
                             beneath no longer moves when it lands. */}
-                        <Image
-                            src={logoUrl}
-                            alt={shortName}
-                            width={96}
-                            height={96}
-                            priority
-                            sizes="96px"
-                            className="relative h-24 w-24 rounded-full border-2 border-border/60 object-cover shadow-lg shadow-brand/10"
-                        />
+                        {logoUrl ? (
+                            <Image
+                                src={logoUrl}
+                                alt={shortName}
+                                width={96}
+                                height={96}
+                                priority
+                                sizes="96px"
+                                className="relative h-24 w-24 rounded-full border-2 border-border/60 object-cover shadow-lg shadow-brand/10"
+                            />
+                        ) : (
+                            // A tenant with no logo gets the initials monogram.
+                            <OrgLogo logoUrl="" shortName={shortName} sizeClass="relative h-24 w-24 border-2 text-3xl shadow-lg shadow-brand/10" />
+                        )}
                     </div>
                     <div>
                         <h1 className="text-3xl font-semibold text-foreground font-display tracking-tight">{shortName}</h1>

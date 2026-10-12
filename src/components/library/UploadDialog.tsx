@@ -10,6 +10,8 @@ import { apiFetch } from "@/lib/api-client"
 import { useQueryClient } from "@tanstack/react-query"
 import { broadcastCacheInvalidation } from "@/lib/library-cache"
 import { toast } from "sonner"
+import { useOrg } from "@/lib/org/org-context"
+import { coreSectionLabel } from "@/lib/songs/picker-scope"
 
 const ACCEPTED_TYPES = ".pdf,.xml,.musicxml,.mxl,.mscz,.mscx,.txt"
 const MAX_SIZE_MB = 25
@@ -34,6 +36,7 @@ import { DialogDescription } from '@radix-ui/react-dialog'
 
 export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }: UploadDialogProps) {
     const { user } = useAuth()
+    const org = useOrg()
     const queryClient = useQueryClient()
     const [open, setOpen] = useState(false)
     const [file, setFile] = useState<File | null>(null)
@@ -315,7 +318,7 @@ export function UploadDialog({ onUploadComplete, setlists = [], onAddToSetlist }
                                         onChange={(e) => setCollection(e.target.value)}
                                         className="w-full h-9 px-3 rounded-md bg-muted/30 border border-border text-foreground text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
                                     >
-                                        <option value="crc">CRC Charts</option>
+                                        <option value="crc">{coreSectionLabel(org)}</option>
                                         <option value="supplemental">Shireinu</option>
                                         <option value="nava">Nava Tehilah</option>
                                         <option value="uploads">Uploads</option>
