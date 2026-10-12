@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { checkUpdatePrecondition } from '../init'
+import { checkUpdatePrecondition, stampTrackOrgForCommit } from '../init'
 
 /**
  * T1.3 (2026-05-12) — unit tests for the precondition helper that the
@@ -45,5 +45,46 @@ describe('checkUpdatePrecondition', () => {
     it('expected stamp 0 + remote undefined → fail', () => {
         const err = checkUpdatePrecondition(0, undefined)
         expect(err).not.toBeNull()
+    })
+})
+
+/**
+ * Multi-tenant phase 2 - the commit-time layer of track orgId stamping: a
+ * track that reaches the outbox without orgId (parent not in Dexie, or queued
+ * by a pre-P2 bundle) is stamped from the Firestore parent setlist.
+ */
+describe('stampTrackOrgForCommit', () => {
+    const read = (exists: boolean, orgId?: unknown) =>
+        vi.fn(async (_id: string) => (exists ? { exists: true, orgId } : { exists: false }))
+
+    it('stamps an unstamped track from its parent setlist', async () => {
+        const r = read(true, 'brotherslazaroff')
+        const out = await stampTrackOrgForCommit('tracks', { setlistId: 's1', title: 'x' }, r)
+        expect(out).toEqual({ setlistId: 's1', title: 'x', orgId: 'brotherslazaroff' })
+        expect(r).toHaveBeenCalledWith('s1')
+    })
+
+    it('parent without orgId -> crc', async () => {
+        expect((await stampTrackOrgForCommit('tracks', { setlistId: 's1' }, read(true))).orgId).toBe('crc')
+    })
+
+    it('keeps an existing orgId and does not read the parent', async () => {
+        const r = read(true, 'crc')
+        const p = { setlistId: 's1', orgId: 'brotherslazaroff' }
+        expect(await stampTrackOrgForCommit('tracks', p, r)).toBe(p)
+        expect(r).not.toHaveBeenCalled()
+    })
+
+    it('missing parent or a failed read leaves the payload unchanged', async () => {
+        const p = { setlistId: 's1' }
+        expect(await stampTrackOrgForCommit('tracks', p, read(false))).toBe(p)
+        expect(await stampTrackOrgForCommit('tracks', p, vi.fn(async () => { throw new Error('offline') }))).toBe(p)
+    })
+
+    it('other collections are untouched', async () => {
+        const r = read(true, 'brotherslazaroff')
+        const p = { setlistId: 's1' }
+        expect(await stampTrackOrgForCommit('setlists', p, r)).toBe(p)
+        expect(r).not.toHaveBeenCalled()
     })
 })

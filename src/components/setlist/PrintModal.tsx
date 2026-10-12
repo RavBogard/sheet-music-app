@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { SetlistTrack } from "@/types/models"
 import { useAuth } from "@/lib/auth-context"
 import { apiFetch } from "@/lib/api-client"
-import { subscribeToAllMusicianProfiles, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
+import { fetchTenantMusicianProfiles, INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { MusicianProfile } from "@/types/models"
 import { TrackPrintOptionsList, TrackTranspose } from "./TrackPrintOptionsList"
 import { PrintModeSelector, PrintMode } from "./PrintModeSelector"
@@ -100,10 +100,15 @@ export function PrintModal({ setlistName, tracks, onClose, setlistId, assignedMu
     // Musicians
     const [musicians, setMusicians] = useState<{ uid: string; displayName: string; profile: MusicianProfile }[]>([])
     useEffect(() => {
-        // No session → no roster subscription; the query would only be denied.
+        // No session → no roster read; the request would only be refused.
+        // Multi-tenant phase 2: the roster is the host tenant's, read through
+        // /api/tenant/people (below band leader it comes back empty, as before).
         if (!isSignedIn) return
-        const unsub = subscribeToAllMusicianProfiles(setMusicians)
-        return unsub
+        let cancelled = false
+        void fetchTenantMusicianProfiles().then((list) => {
+            if (!cancelled) setMusicians(list)
+        })
+        return () => { cancelled = true }
     }, [isSignedIn])
 
     // ── Print Mode ──

@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { useAuth } from "@/lib/auth-context"
 import { useOrg } from "@/lib/org/org-context"
 import { applyEdit } from "@/lib/local/write"
+import { rowOrg } from "@/lib/org/membership"
 import { createSetlistService } from "@/lib/setlist-firebase"
 import type { DriveFile, Setlist, SetlistTrack } from "@/types/models"
 
@@ -152,6 +153,8 @@ export function useAddToSetlist() {
             doc: {
               id: t.id,
               setlistId,
+              // Multi-tenant phase 2: the row carries its setlist's tenant.
+              orgId: rowOrg(setlist.orgId),
               songId: t.fileId,
               fileId: t.fileId,
               order: baseTrackCount + i,
@@ -274,6 +277,8 @@ export function useAddToSetlist() {
             doc: {
               id: t.id,
               setlistId,
+              // Multi-tenant phase 2: the row carries its setlist's tenant.
+              orgId: rowOrg(setlist.orgId),
               songId: t.fileId,
               fileId: t.fileId,
               order: baseTrackCount + i,

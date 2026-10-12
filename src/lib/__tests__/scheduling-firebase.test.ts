@@ -53,7 +53,6 @@ vi.mock('@/lib/api-client', () => ({
 
 import {
     subscribeToMyAssignments,
-    subscribeToSetlistAssignments,
     subscribeToAllUpcomingAssignments,
     subscribeToUpcomingSetlists,
     assignMusicians,
@@ -126,51 +125,13 @@ describe('subscribeToMyAssignments', () => {
     })
 })
 
-describe('subscribeToSetlistAssignments', () => {
-    it('calls query with correct where args', () => {
-        const cb = vi.fn()
-        subscribeToSetlistAssignments('setlist-1', cb)
-
-        expect(mockCollection).toHaveBeenCalledWith(expect.anything(), 'scheduling_assignments')
-        expect(mockWhere).toHaveBeenCalledWith('setlistId', '==', 'setlist-1')
-        expect(mockWhere).toHaveBeenCalledWith('status', 'in', ['pending', 'confirmed', 'declined'])
-        expect(mockOnSnapshot).toHaveBeenCalledTimes(1)
-    })
-
-    it('maps snapshot docs to assignment array', () => {
-        const cb = vi.fn()
-        subscribeToSetlistAssignments('setlist-1', cb)
-
-        capturedOnNext(makeSnapDocs([
-            { id: 'a1', data: { setlistId: 'setlist-1', status: 'confirmed' } },
-        ]))
-
-        expect(cb).toHaveBeenCalledWith([
-            expect.objectContaining({ id: 'a1', setlistId: 'setlist-1' }),
-        ])
-    })
-
-    it('calls callback with [] on error', () => {
-        const cb = vi.fn()
-        subscribeToSetlistAssignments('setlist-1', cb)
-
-        capturedOnError!(new Error('fail'))
-        expect(cb).toHaveBeenCalledWith([])
-    })
-
-    it('returns an unsubscribe function', () => {
-        const cb = vi.fn()
-        const unsub = subscribeToSetlistAssignments('setlist-1', cb)
-        expect(typeof unsub).toBe('function')
-    })
-})
-
 describe('subscribeToAllUpcomingAssignments', () => {
     it('calls query with correct where/orderBy args', () => {
         const cb = vi.fn()
         subscribeToAllUpcomingAssignments('crc', cb)
 
         expect(mockCollection).toHaveBeenCalledWith(expect.anything(), 'scheduling_assignments')
+        expect(mockWhere).toHaveBeenCalledWith('orgId', '==', 'crc')
         expect(mockWhere).toHaveBeenCalledWith('status', 'in', ['pending', 'confirmed'])
         expect(mockOrderBy).toHaveBeenCalledWith('assignedAt', 'desc')
     })
@@ -198,35 +159,36 @@ describe('subscribeToAllUpcomingAssignments', () => {
         expect(cb).toHaveBeenCalledWith([])
     })
 
-    it('v11-05-03: filters snapshot docs to the caller org (missing orgId → crc)', () => {
+    it('multi-tenant P2: the query itself is narrowed to the caller org (no in-memory filter)', () => {
         const cb = vi.fn()
         subscribeToAllUpcomingAssignments('brotherslazaroff', cb)
 
+        expect(mockWhere).toHaveBeenCalledWith('orgId', '==', 'brotherslazaroff')
+        const queryArgs = mockQuery.mock.calls.at(-1)!
+        expect(queryArgs.slice(1).map((c: { args: unknown[] }) => c.args[0])).toEqual(['orgId', 'status', 'assignedAt'])
+
+        // Whatever the query returns is passed through as-is.
         capturedOnNext(makeSnapDocs([
             { id: 'bl', data: { status: 'pending', orgId: 'brotherslazaroff' } },
-            { id: 'crc-stamped', data: { status: 'confirmed', orgId: 'crc' } },
-            { id: 'legacy', data: { status: 'pending' } }, // missing → crc, excluded for BL
         ]))
-
-        expect(cb).toHaveBeenCalledWith([
-            expect.objectContaining({ id: 'bl' }),
-        ])
+        expect(cb).toHaveBeenCalledWith([expect.objectContaining({ id: 'bl' })])
     })
 })
 
 describe('subscribeToUpcomingSetlists', () => {
     it('queries setlists collection with eventDate filter', () => {
         const cb = vi.fn()
-        subscribeToUpcomingSetlists(cb)
+        subscribeToUpcomingSetlists('crc', cb)
 
         expect(mockCollection).toHaveBeenCalledWith(expect.anything(), 'setlists')
+        expect(mockWhere).toHaveBeenCalledWith('orgId', '==', 'crc')
         expect(mockWhere).toHaveBeenCalledWith('eventDate', '>=', expect.anything())
         expect(mockOrderBy).toHaveBeenCalledWith('eventDate', 'asc')
     })
 
     it('maps snapshot docs to setlist array with id, name, eventDate', () => {
         const cb = vi.fn()
-        subscribeToUpcomingSetlists(cb)
+        subscribeToUpcomingSetlists('crc', cb)
 
         capturedOnNext(makeSnapDocs([
             { id: 's1', data: { name: 'Shabbat Service', eventDate: { seconds: 9999 } } },
@@ -241,7 +203,7 @@ describe('subscribeToUpcomingSetlists', () => {
 
     it('calls callback with [] on error', () => {
         const cb = vi.fn()
-        subscribeToUpcomingSetlists(cb)
+        subscribeToUpcomingSetlists('crc', cb)
 
         capturedOnError!(new Error('fail'))
         expect(cb).toHaveBeenCalledWith([])

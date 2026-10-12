@@ -8,6 +8,7 @@ import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useMonitorConnection } from "@/hooks/use-monitor-connection"
 import { useAuth } from "@/lib/auth-context"
 import { useCongregation } from "@/lib/congregation-store"
+import { useOrg } from "@/lib/org/org-context"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { QuickMonitorPanel } from "@/components/monitor/QuickMonitorPanel"
 import { Input } from "@/components/ui/input"
@@ -25,6 +26,7 @@ export function MobileTabBar(props: AppNavigationProps) {
     const pathname = usePathname()
     const router = useRouter()
     const { user, isMember } = useAuth()
+    const org = useOrg()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess({
         serverIsAdmin: props.serverIsAdmin,
         serverIsSoundEngineer: props.serverIsSoundEngineer
@@ -124,8 +126,10 @@ export function MobileTabBar(props: AppNavigationProps) {
         try {
             const db = await getDb()
             const now = new Date()
+            // Multi-tenant phase 2: this tenant's next gig only.
             const q = query(
                 collection(db, "setlists"),
+                where("orgId", "==", org),
                 where("eventDate", ">=", Timestamp.fromDate(now)),
                 orderBy("eventDate", "asc"),
                 limit(1),
@@ -139,7 +143,7 @@ export function MobileTabBar(props: AppNavigationProps) {
 
         // Priority 3: fallback
         router.push("/setlists")
-    }, [router, isAuthed])
+    }, [router, isAuthed, org])
 
     if (isPdfView) return null
 

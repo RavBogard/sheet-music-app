@@ -147,7 +147,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
         let cancelled = false
         setCloneSourceLoading(true)
         const service = createSetlistService(userIdRef.current)
-        service.findLastMatchingService(inferred, eventDate)
+        service.findLastMatchingService(inferred, eventDate, org)
             .then((source) => {
                 if (cancelled) return
                 setCloneSource(source)
@@ -159,7 +159,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
             .finally(() => { if (!cancelled) setCloneSourceLoading(false) })
 
         return () => { cancelled = true }
-    }, [eventDate])
+    }, [eventDate, org])
 
     const addSongsFromFiles = useCallback((files: DriveFile[]) => {
         const newTracks: SetlistTrack[] = files.map(f => ({

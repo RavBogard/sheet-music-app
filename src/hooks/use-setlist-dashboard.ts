@@ -254,7 +254,7 @@ export function useSetlistDashboard({
         const friendly = SERVICE_TYPE_LABELS[serviceType] ?? serviceType
         const toastId = toast.loading("Saving default…")
         try {
-            await setlistService.setDefaultForServiceType(serviceType, setlist.id)
+            await setlistService.setDefaultForServiceType(serviceType, setlist.id, org)
             toast.success(`Saved as default for ${friendly}`, { id: toastId })
         } catch {
             toast.error("Failed to save as default", { id: toastId })

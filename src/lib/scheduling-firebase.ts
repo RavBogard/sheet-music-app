@@ -12,7 +12,6 @@ import {
 } from 'firebase/firestore'
 import type { SchedulingAssignment } from '@/types/models'
 import { logger } from '@/lib/logger'
-import { rowOrg } from '@/lib/org/membership'
 import type { OrgId } from '@/lib/org/types'
 
 // ── Scheduling Assignments ──
@@ -46,40 +45,13 @@ export function subscribeToMyAssignments(
 }
 
 /**
- * Subscribe to all assignments for a specific setlist.
- */
-export function subscribeToSetlistAssignments(
-    setlistId: string,
-    callback: (assignments: SchedulingAssignment[]) => void
-): () => void {
-    return subscribeWithDb((db) => {
-        const q = query(
-            collection(db, 'scheduling_assignments'),
-            where('setlistId', '==', setlistId),
-            where('status', 'in', ['pending', 'confirmed', 'declined']),
-        )
-
-        return onSnapshot(q, (snap) => {
-            const assignments = snap.docs.map(d => ({
-                id: d.id,
-                ...d.data(),
-            } as SchedulingAssignment))
-            callback(assignments)
-        }, (err) => {
-            logger.warn('[Scheduling] Subscribe to setlist assignments failed:', err)
-            callback([])
-        })
-    })
-}
-
-/**
  * Get all assignments for upcoming services (band leader view).
  *
- * v11-05-03: org-scoped. The Web SDK query can't filter on the denormalized
- * `orgId` without a composite index (status-in + orderBy already), so we filter
- * membership IN-MEMORY in the snapshot mapper (rowOrg: missing → 'crc') — the
- * same CRC-safe-by-default pattern as the server roster reads. Pass the caller's
- * org from `useOrg()`; defaults to crc for any legacy caller.
+ * Multi-tenant phase 2: the query itself is narrowed to the tenant
+ * (`where('orgId','==',org)`, index `(orgId, status, assignedAt desc)`). The
+ * rules read `orgId` on this list, so an unconstrained query was refused for
+ * every band leader who is not an admin; now it is provable and returns the
+ * tenant's rows. Pass the caller's org from `useOrg()`.
  */
 export function subscribeToAllUpcomingAssignments(
     org: OrgId,
@@ -88,6 +60,7 @@ export function subscribeToAllUpcomingAssignments(
     return subscribeWithDb((db) => {
         const q = query(
             collection(db, 'scheduling_assignments'),
+            where('orgId', '==', org),
             where('status', 'in', ['pending', 'confirmed']),
             orderBy('assignedAt', 'desc'),
         )
@@ -95,7 +68,6 @@ export function subscribeToAllUpcomingAssignments(
         return onSnapshot(q, (snap) => {
             const assignments = snap.docs
                 .map(d => ({ id: d.id, ...d.data() } as SchedulingAssignment))
-                .filter(a => rowOrg(a.orgId) === org)
             callback(assignments)
         }, (err) => {
             logger.warn('[Scheduling] Subscribe to all assignments failed:', err)
@@ -105,10 +77,12 @@ export function subscribeToAllUpcomingAssignments(
 }
 
 /**
- * Subscribe to all public setlists with upcoming event dates.
+ * Subscribe to the tenant's setlists with upcoming event dates.
  * Used by the schedule page to show services even without assignments.
+ * Multi-tenant phase 2: narrowed to `org` (index `(orgId, eventDate)`).
  */
 export function subscribeToUpcomingSetlists(
+    org: OrgId,
     callback: (setlists: Array<{ id: string; name: string; eventDate: unknown }>) => void
 ): () => void {
     const now = new Date()
@@ -117,6 +91,7 @@ export function subscribeToUpcomingSetlists(
     return subscribeWithDb((db) => {
         const q = query(
             collection(db, 'setlists'),
+            where('orgId', '==', org),
             where('eventDate', '>=', Timestamp.fromDate(now)),
             orderBy('eventDate', 'asc'),
         )

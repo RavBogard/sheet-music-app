@@ -1,16 +1,48 @@
 import { getDb, auth, recoverFromFirestoreShutdown, subscribeWithDb } from "./firebase"
-import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, orderBy, Timestamp } from "firebase/firestore"
+import { doc, getDoc, setDoc, updateDoc, onSnapshot, Timestamp } from "firebase/firestore"
 import { User } from "firebase/auth"
 import { UserProfile, UserRole } from "@/types/models"
 import { logger } from "@/lib/logger"
 import { userProfileConverter } from "@/types/schemas"
+import { membershipId, type Membership, type TenantRole } from "@/lib/org/membership-types"
+import type { OrgId } from "@/lib/org/types"
 
 export type { UserProfile, UserRole }
+
+/**
+ * Multi-tenant phase 2: one person as `GET /api/tenant/people` returns them —
+ * the profile plus their membership in the host tenant (`role` is the role in
+ * that tenant, never a global one).
+ */
+export interface TenantPerson {
+    uid: string
+    displayName: string | null
+    email: string | null
+    photoURL: string | null
+    role: TenantRole
+    soundEngineer: boolean
+    canUpload: boolean
+    musicianProfile: Record<string, unknown> | null
+    createdAt: unknown
+    lastLoginAt: unknown
+    addedAt: unknown
+    requestedAt: unknown
+}
+
+export interface TenantPeopleResponse {
+    tenant: OrgId
+    people: TenantPerson[]
+    pendingCount: number
+}
 
 
 /**
  * Ensures a user profile exists in Firestore.
- * Creates one with 'pending' role if it doesn't exist.
+ *
+ * Multi-tenant phase 2: a new profile carries no `role` and no `orgIds` —
+ * access comes from memberships, which only the server writes (the client
+ * asks for one through POST /api/auth/join). The returned profile reads as
+ * 'pending' until then.
  */
 export async function ensureUserProfile(user: User): Promise<UserProfile> {
     const db = await getDb()
@@ -41,22 +73,17 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
         updateDoc(ref, updates).catch(() => { /* non-critical */ })
         return data
     } else {
-        const newProfile: UserProfile = {
+        const newDoc: Record<string, unknown> = {
             uid: user.uid,
             email: user.email || "",
             displayName: user.displayName || "Unknown",
-            photoURL: user.photoURL ?? undefined,
-            role: 'pending',
-            // v11.4-04 default-both: new accounts join both tenants (matches
-            // UserRow's MEMBERSHIP_TO_ORGIDS.both). Membership data only — does
-            // NOT grant cross-tenant READ (that's claim-based via callerOrgs).
-            orgIds: ['crc', 'brotherslazaroff'],
+            ...(user.photoURL ? { photoURL: user.photoURL } : {}),
             createdAt: Timestamp.now(),
             lastLoginAt: Timestamp.now()
         }
 
-        await setDoc(doc(db, "users", user.uid), { ...newProfile })
-        return newProfile
+        await setDoc(doc(db, "users", user.uid), newDoc)
+        return { ...newDoc, role: 'pending' } as unknown as UserProfile
     }
 }
 
@@ -82,8 +109,12 @@ export function subscribeToUserProfile(uid: string, callback: (profile: UserProf
             if (snap.exists()) {
                 const profile = snap.data()
                 if (!profile) return // Zod conversion failed, essentially treat as non-existent or ignore invalid state
-                // Compare meaningful fields only (skip lastLoginAt which changes every session)
-                const key = `${profile.uid}|${profile.role}|${profile.email}|${profile.displayName}|${profile.photoURL}`
+                // Compare meaningful fields only (skip lastLoginAt which changes every session).
+                // Multi-tenant phase 2: claimsUpdatedAt and soundEngineer are included —
+                // a membership change in another tenant can rebuild claims without
+                // changing the legacy role mirror, and the auth context must still
+                // see the new claimsUpdatedAt to refresh the token.
+                const key = `${profile.uid}|${profile.role}|${profile.email}|${profile.displayName}|${profile.photoURL}|${profile.soundEngineer ? 1 : 0}|${profile.claimsUpdatedAt?.toString() ?? ''}`
                 if (key !== lastProfile) {
                     lastProfile = key
                     callback(profile)
@@ -103,48 +134,104 @@ export function subscribeToUserProfile(uid: string, callback: (profile: UserProf
 }
 
 /**
- * Subscribe to ALL users (for Admin page)
+ * Multi-tenant phase 2: listen to my own membership in one tenant
+ * (`memberships/{org}__{uid}`; the rules let me read my own id even before it
+ * exists). `null` = no membership here. Errors (e.g. rules not yet deployed)
+ * are reported to `onError`; the caller decides the fallback.
  */
-/**
- * Subscribe to ALL users (for Admin page)
- */
-export function subscribeToAllUsers(callback: (users: UserProfile[]) => void, onError?: (error: Error) => void) {
+export function subscribeToMembership(
+    org: OrgId,
+    uid: string,
+    callback: (membership: Membership | null) => void,
+    onError?: (err: Error) => void,
+) {
     return subscribeWithDb((db) => {
-        // Build safety
         if (!db || Object.keys(db).length === 0) return () => { }
-
-        const collectionRef = collection(db, "users").withConverter(userProfileConverter)
-        const q = query(collectionRef, orderBy("createdAt", "desc"))
-        return onSnapshot(q, (snap) => {
-            const users = snap.docs.map(d => d.data()).filter(Boolean) as UserProfile[]
-            callback(users)
-        }, (error) => {
-            if (onError) onError(error)
-            else logger.error("Snapshot error:", error)
+        return onSnapshot(doc(db, "memberships", membershipId(org, uid)), (snap) => {
+            callback(snap.exists() ? (snap.data() as Membership) : null)
+        }, (err) => {
+            if (!recoverFromFirestoreShutdown(err)) {
+                logger.warn("[Users] Membership listener error:", err)
+            }
+            onError?.(err)
         })
     })
 }
 
+export interface JoinResult {
+    tenant: OrgId
+    role: TenantRole | null
+    created: boolean
+    claimsChanged: boolean
+}
+
 /**
- * Update a user's role (Admin only)
- * Calls the Secure API to set Custom Claims.
+ * Multi-tenant phase 2: ask the host tenant for a membership (POST
+ * /api/auth/join). The server creates a pending request when I have none and
+ * never changes an existing one. Throws on a non-OK response.
  */
-export async function updateUserRole(targetUid: string, newRole: UserRole, orgIds?: string[]) {
+export async function requestTenantJoin(): Promise<JoinResult> {
+    const { apiFetch } = await import("@/lib/api-client")
+    const res = await apiFetch("/api/auth/join", { method: "POST", body: "{}" })
+    if (!res.ok) {
+        const detail = await res.text().catch(() => "")
+        throw new Error(detail || `Join failed (${res.status})`)
+    }
+    const data = (await res.json()) as Partial<JoinResult>
+    return {
+        tenant: data.tenant as OrgId,
+        role: (data.role ?? null) as TenantRole | null,
+        created: data.created === true,
+        claimsChanged: data.claimsChanged === true,
+    }
+}
+
+/**
+ * Multi-tenant phase 2: the people of the host tenant (band leaders and up).
+ * Replaces the old whole-collection `users` listener, which the rules no
+ * longer allow. Throws on a non-OK response; callers decide whether an empty
+ * list is the right fallback.
+ */
+export async function fetchTenantPeople(): Promise<TenantPeopleResponse> {
+    const { apiFetch } = await import("@/lib/api-client")
+    const res = await apiFetch("/api/tenant/people", { method: "GET" })
+    if (!res.ok) {
+        const detail = await res.text().catch(() => "")
+        throw new Error(detail || `Request failed (${res.status})`)
+    }
+    const data = (await res.json()) as Partial<TenantPeopleResponse>
+    const people = Array.isArray(data.people) ? data.people : []
+    return {
+        tenant: data.tenant as OrgId,
+        people,
+        pendingCount: typeof data.pendingCount === "number"
+            ? data.pendingCount
+            : people.filter((p) => p.role === "pending").length,
+    }
+}
+
+/**
+ * Set a person's role in one tenant (admins of that tenant only).
+ * `newRole: null` removes them from the tenant; `'denied'` declines a request.
+ * `tenant` defaults to the host tenant on the server.
+ */
+export async function updateUserRole(
+    targetUid: string,
+    newRole: TenantRole | null,
+    opts?: { tenant?: OrgId },
+) {
     const user = auth.currentUser
     if (!user) throw new Error("Not authenticated")
 
     const token = await user.getIdToken()
 
-    // Call the API. v11.1-02-02: optional orgIds sets the target's org membership
-    // (CRC/broslaz/both) alongside the role — set-role requires newRole, so the
-    // membership control passes the user's CURRENT role unchanged + the new orgIds.
     const res = await fetch("/api/admin/set-role", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ targetUserId: targetUid, newRole, ...(orgIds ? { orgIds } : {}) })
+        body: JSON.stringify({ targetUserId: targetUid, newRole, ...(opts?.tenant ? { tenant: opts.tenant } : {}) })
     })
 
     if (!res.ok) {

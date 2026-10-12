@@ -2,22 +2,23 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type Mock }
 import "@testing-library/jest-dom/vitest"
 import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import React from "react"
 
 /**
- * v11.4-04 (D8 item 5): the admin "Band access" tri-state control is now shown
- * on EVERY non-pending row (not just leaders). Asserts:
- *  - AC-1: the control + badge render for a musician row (admin viewer); hidden for a non-admin.
- *  - AC-2: setting a musician to "Both" posts orgIds ['crc','brotherslazaroff'] via updateUserRole
- *    (which set-role writes to the user doc + Auth claim in lockstep).
+ * Multi-tenant phase 2: a People row speaks for ONE tenant (the host).
+ *  - the role select sets the role in that tenant (set-role with `tenant`);
+ *  - a request (`pending`) is approved with a role (default Member) or declined (`denied`);
+ *  - "Remove from {tenant}" ends the membership here (set-role newRole:null) after a confirmation;
+ *  - the old CRC / BL / Both band-access select is gone.
  */
 
 vi.mock("@/lib/users-firebase", () => ({ updateUserRole: vi.fn().mockResolvedValue(undefined) }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }))
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
-vi.mock("@/lib/notification-store", () => ({ notifyRoleChanged: vi.fn().mockResolvedValue(undefined) }))
 
 import { UserRow } from "./UserRow"
 import { updateUserRole } from "@/lib/users-firebase"
+import { OrgContext } from "@/lib/org/org-context"
 
 const mockUpdateUserRole = updateUserRole as unknown as Mock
 
@@ -37,62 +38,128 @@ beforeAll(() => {
     }
 })
 
-
-const musician: any = {
+const person = (over: Record<string, unknown> = {}) => ({
     uid: "m1",
     displayName: "Alex",
     email: "alex@example.com",
+    photoURL: null,
     role: "musician",
     soundEngineer: false,
-}
+    canUpload: false,
+    musicianProfile: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    lastLoginAt: null,
+    addedAt: null,
+    requestedAt: null,
+    ...over,
+})
 
-function renderRow(currentUserRole: string) {
-    return render(
-        <UserRow
-
-            user={musician as any}
-            currentUserUid="admin-uid"
-
-            currentUserRole={currentUserRole as any}
-        />,
+function renderRow(viewerRole: string, user = person(), org = "crc", onChanged = vi.fn()) {
+    render(
+        React.createElement(
+            OrgContext.Provider,
+            { value: org },
+            <UserRow
+                user={user as never}
+                currentUserUid="admin-uid"
+                currentUserRole={viewerRole}
+                onChanged={onChanged}
+            />,
+        ),
     )
+    return { onChanged }
 }
 
 beforeEach(() => mockUpdateUserRole.mockClear())
 afterEach(() => cleanup())
 
-describe("UserRow Band-access control (v11.4-04)", () => {
-    it("AC-1: shows the Band-access control + badge for a musician row when viewed by an admin", () => {
+describe("UserRow per-tenant role (multi-tenant P2)", () => {
+    it("has no CRC / BL / Both band-access control any more", () => {
         renderRow("admin")
-        // Desktop + mobile both render the control → at least one present.
-        expect(screen.getAllByLabelText(/Band access for Alex/).length).toBeGreaterThan(0)
-        // Default (no orgIds) → CRC badge.
-        expect(screen.getAllByText("CRC").length).toBeGreaterThan(0)
+        expect(screen.queryByLabelText(/Band access/)).toBeNull()
+        expect(screen.queryByText("CRC + BL")).toBeNull()
     })
 
-    it("AC-1 (negative): a non-admin viewer sees no Band-access control", () => {
-        renderRow("musician")
-        expect(screen.queryByLabelText(/Band access for Alex/)).toBeNull()
-    })
-
-    it("AC-2: setting Band access to 'Both' posts orgIds ['crc','brotherslazaroff']", async () => {
+    it("the role select sets the role in the host tenant", async () => {
         const user = userEvent.setup({ pointerEventsCheck: 0 })
-        renderRow("admin")
+        const { onChanged } = renderRow("admin", person(), "brotherslazaroff")
 
-        // Open the first Band-access select and choose "Both".
-        const trigger = screen.getAllByLabelText(/Band access for Alex/)[0]
-        await user.click(trigger)
-        const both = await screen.findByRole("option", { name: "Both" })
-        await user.click(both)
-
-        // Confirm in the dialog.
-        const confirm = await screen.findByRole("button", { name: "Update access" })
-        await user.click(confirm)
+        await user.click(screen.getAllByLabelText("Role for Alex")[0])
+        await user.click(await screen.findByRole("option", { name: "Band Leader" }))
+        await user.click(await screen.findByRole("button", { name: "Change Role" }))
 
         await waitFor(() => expect(mockUpdateUserRole).toHaveBeenCalledTimes(1))
-        expect(mockUpdateUserRole).toHaveBeenCalledWith("m1", "musician", [
-            "crc",
-            "brotherslazaroff",
-        ])
+        expect(mockUpdateUserRole).toHaveBeenCalledWith("m1", "band_leader", { tenant: "brotherslazaroff" })
+        expect(onChanged).toHaveBeenCalled()
+    })
+
+    it("role options are capped at the viewer's role in this tenant", async () => {
+        const user = userEvent.setup({ pointerEventsCheck: 0 })
+        renderRow("band_leader", person({ role: "member" }))
+        await user.click(screen.getAllByLabelText("Role for Alex")[0])
+        expect(await screen.findByRole("option", { name: "Band Leader" })).toBeTruthy()
+        expect(screen.queryByRole("option", { name: "Admin" })).toBeNull()
+    })
+})
+
+describe("UserRow requests (multi-tenant P2)", () => {
+    const pending = () => person({ uid: "p1", displayName: "Pat", role: "pending" })
+
+    it("approve defaults to Member", async () => {
+        const user = userEvent.setup({ pointerEventsCheck: 0 })
+        renderRow("admin", pending())
+        await user.click(screen.getAllByRole("button", { name: "Approve Pat as Member" })[0])
+        await waitFor(() => expect(mockUpdateUserRole).toHaveBeenCalledWith("p1", "member", { tenant: "crc" }))
+    })
+
+    it("approve as another role", async () => {
+        const user = userEvent.setup({ pointerEventsCheck: 0 })
+        renderRow("admin", pending())
+        await user.click(screen.getAllByLabelText("Approve Pat as")[0])
+        await user.click(await screen.findByRole("option", { name: "Musician" }))
+        await user.click(screen.getAllByRole("button", { name: "Approve Pat as Musician" })[0])
+        await waitFor(() => expect(mockUpdateUserRole).toHaveBeenCalledWith("p1", "musician", { tenant: "crc" }))
+    })
+
+    it("decline sets denied", async () => {
+        const user = userEvent.setup({ pointerEventsCheck: 0 })
+        renderRow("admin", pending())
+        await user.click(screen.getAllByRole("button", { name: "Decline Pat" })[0])
+        await waitFor(() => expect(mockUpdateUserRole).toHaveBeenCalledWith("p1", "denied", { tenant: "crc" }))
+    })
+
+    it("band leaders see no approve/decline controls (the role route is admin-only)", () => {
+        renderRow("band_leader", pending())
+        expect(screen.queryByRole("button", { name: /Approve Pat/ })).toBeNull()
+        expect(screen.queryByRole("button", { name: "Decline Pat" })).toBeNull()
+    })
+
+    it("a declined person shows as Denied", () => {
+        renderRow("admin", person({ role: "denied" }))
+        expect(screen.getAllByText("Denied").length).toBeGreaterThan(0)
+    })
+})
+
+describe("UserRow remove from tenant (multi-tenant P2)", () => {
+    it("asks first, then sets newRole null for this tenant", async () => {
+        const user = userEvent.setup({ pointerEventsCheck: 0 })
+        renderRow("admin", person(), "brotherslazaroff")
+
+        await user.click(screen.getAllByRole("button", { name: "Remove Alex from Brothers Lazaroff" })[0])
+        expect(mockUpdateUserRole).not.toHaveBeenCalled()
+        expect(await screen.findByText("Remove from Brothers Lazaroff?")).toBeTruthy()
+        await user.click(await screen.findByRole("button", { name: "Remove from Brothers Lazaroff" }))
+
+        await waitFor(() => expect(mockUpdateUserRole).toHaveBeenCalledWith("m1", null, { tenant: "brotherslazaroff" }))
+    })
+
+    it("is not offered to band leaders or on your own row", () => {
+        renderRow("band_leader")
+        expect(screen.queryByRole("button", { name: /Remove Alex from/ })).toBeNull()
+        cleanup()
+        render(
+            <UserRow user={person({ uid: "admin-uid" }) as never} currentUserUid="admin-uid" currentUserRole="admin" />,
+        )
+        expect(screen.queryByRole("button", { name: /Remove Alex from/ })).toBeNull()
     })
 })

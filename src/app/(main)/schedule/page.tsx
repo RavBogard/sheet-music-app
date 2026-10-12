@@ -44,7 +44,7 @@ export default function SchedulePage() {
             setLoadingAssignments(false)
         })
 
-        const unsubSetlists = subscribeToUpcomingSetlists((data) => {
+        const unsubSetlists = subscribeToUpcomingSetlists(orgId, (data) => {
             setUpcomingSetlists(data)
             setLoadingSetlists(false)
         })
