@@ -12,7 +12,12 @@ import { join, relative, sep } from "node:path"
  * one-off migrations under scripts/migrations (historical, never re-run).
  */
 const ROOT = join(__dirname, "..", "..", "..", "..")
-const ALLOWED = new Set(["src/lib/org/claims.ts"])
+const ALLOWED = new Set([
+    "src/lib/org/claims.ts",
+    // Throwaway probe accounts (uid test-mtprobe-*) get pre-phase-2 claims on
+    // purpose, so the probe can capture what each role saw before a rules change.
+    "scripts/dev/rules-persona-probe.mjs",
+])
 const SKIP_DIRS = new Set(["node_modules", ".next", ".git", ".archive", "dist", "coverage"])
 const CALL = /\.setCustomUserClaims\s*\(/
 
