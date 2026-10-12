@@ -75,6 +75,7 @@ describe('commitDocumentSetlist (real Firestore emulator)', () => {
         ]
 
         const result = await commitDocumentSetlist({
+            orgId: "crc",
             name: 'May 15th Shir Shabbat',
             ownerId: 'uid-commit-1',
             ownerName: 'Rabbi Daniel',
@@ -140,6 +141,7 @@ describe('commitDocumentSetlist (real Firestore emulator)', () => {
 
     it('AC-1: a structure with no sections puts every track in the ungrouped bucket', async () => {
         const result = await commitDocumentSetlist({
+            orgId: "crc",
             name: 'No Sections',
             ownerId: 'uid-commit-2',
             ownerName: 'Owner Two',

@@ -13,6 +13,7 @@ import {
     type ResolvedTrack,
 } from "@/lib/setlist-import/resolve"
 import { logger } from "@/lib/logger"
+import { coerceOrgId } from "@/lib/org/registry"
 import type { Setlist } from "@/types/models"
 
 // Explicit duration ceiling — parity with the sibling import routes (v70-08-04).
@@ -61,6 +62,8 @@ export const POST = createApiHandler(
             rabbi: body.rabbi,
             sections: body.sections as SetlistSection[],
             tracks: body.tracks as ResolvedTrack[],
+            // Multi-tenant phase 2 (W7): host tenant (proxy-set x-org-id).
+            orgId: coerceOrgId(ctx.req.headers.get("x-org-id")),
         })
 
         logger.info(

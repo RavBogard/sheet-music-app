@@ -146,7 +146,7 @@ export const POST = createApiHandler(
         const setlistName = setlist.name || 'Untitled Setlist'
 
         // Step 2: Record song usage (fire-and-forget)
-        const usagePromise = recordSongUsage(setlistId, setlistName, eventDate, tracks)
+        const usagePromise = recordSongUsage(setlistId, setlistName, eventDate, tracks, rowOrg(setlist.orgId))
             .catch(err => {
                 logger.warn('[NotifyBand] Song usage recording failed:', err)
                 return { recorded: 0, skipped: 0 }

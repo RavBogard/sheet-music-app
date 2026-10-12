@@ -40,6 +40,7 @@ describe('setlist-write (real Firestore emulator)', () => {
 
     it('AC-1: createSetlistServerSide writes the setlist doc + one tracks/{id} per track', async () => {
         const result = await createSetlistServerSide({
+            orgId: "crc",
             name: 'Shabbat Morning',
             ownerId: 'uid-1',
             ownerName: 'Rabbi Daniel',
@@ -112,6 +113,7 @@ describe('setlist-write (real Firestore emulator)', () => {
 
     it('AC-1: createSetlistServerSide omits eventDate / templateType / rabbi when not provided', async () => {
         const result = await createSetlistServerSide({
+            orgId: "crc",
             name: 'Minimal',
             ownerId: 'uid-2',
             ownerName: 'Someone',
@@ -140,6 +142,7 @@ describe('setlist-write (real Firestore emulator)', () => {
         // the calendar day is correct regardless of the runtime TZ AND the
         // stored time-of-day is the actual project-locale wall-clock noon.
         const result = await createSetlistServerSide({
+            orgId: "crc",
             name: 'Friday Night',
             ownerId: 'uid-tz',
             ownerName: 'Date Tester',
@@ -161,6 +164,7 @@ describe('setlist-write (real Firestore emulator)', () => {
         // service would surface as 5am in the iCal feed. parseEventDate now
         // interprets naive datetimes as America/Chicago wall-clock.
         const result = await createSetlistServerSide({
+            orgId: "crc",
             name: 'Saturday Morning',
             ownerId: 'uid-tz-2',
             ownerName: 'Date Tester',
@@ -176,6 +180,7 @@ describe('setlist-write (real Firestore emulator)', () => {
 
     it('AC-2: updateSetlistServerSide patches metadata; leaves tracks / trackCount / ownerId untouched', async () => {
         const created = await createSetlistServerSide({
+            orgId: "crc",
             name: 'Before',
             ownerId: 'uid-3',
             ownerName: 'Owner Three',

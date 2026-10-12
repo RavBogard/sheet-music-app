@@ -4,6 +4,7 @@ import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
+import { coerceOrgId } from "@/lib/org/registry"
 import {
     ParsedItemSchema,
     executeSetlistImport,
@@ -55,6 +56,8 @@ export const POST = createApiHandler(
             setName,
             uploaderUid: ctx.auth.uid,
             uploaderEmail: ctx.auth.email,
+            // Multi-tenant phase 2 (W5/W7): host tenant (proxy-set x-org-id).
+            orgId: coerceOrgId(ctx.req.headers.get("x-org-id")),
         })
 
         logger.info(

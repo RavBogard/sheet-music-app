@@ -3,6 +3,8 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { deleteStorageObjectAtPath } from "@/lib/firebase-storage"
 import { FieldValue } from "firebase-admin/firestore"
 import { logger } from "@/lib/logger"
+import { rowOrg } from "@/lib/org/membership"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * Bond-aware delete guard for `library/{fileId}.*` Storage bytes.
@@ -57,6 +59,13 @@ export interface SafelyDeleteOptions {
      * subtree throws.
      */
     exactPath?: string
+    /**
+     * Multi-tenant phase 2 (W10): tenant for the audit row. Optional — when
+     * absent the helper reads `library_index/{fileId}.orgId` (rowOrg, so a
+     * missing/unstamped row → 'crc'). Callers that already deleted the row
+     * should pass it.
+     */
+    orgId?: OrgId
 }
 
 export interface SafelyDeleteResult {
@@ -139,6 +148,22 @@ async function findLiveBondedTracks(
 }
 
 /**
+ * Best-effort read of `library_index/{fileId}.orgId` → rowOrg (missing row,
+ * unstamped row or read failure → 'crc', the CRC-safety default).
+ */
+async function readRowOrg(
+    db: FirebaseFirestore.Firestore,
+    fileId: string,
+): Promise<OrgId> {
+    try {
+        const snap = await db.collection("library_index").doc(fileId).get()
+        return rowOrg(snap.exists ? snap.data()?.orgId : undefined)
+    } catch {
+        return rowOrg(undefined)
+    }
+}
+
+/**
  * Write a row to `auditLogs` describing the delete operation. Best-effort
  * — audit-log failure must NEVER fail the delete (matches the
  * library_signals broadcast pattern in deleteChart). On audit failure we
@@ -154,6 +179,7 @@ async function writeAuditLog(
         bondedTrackIds: string[]
         callerUid: string | null
         paths: string[]
+        orgId: OrgId
     },
 ): Promise<void> {
     try {
@@ -204,6 +230,9 @@ export async function safelyDeleteLibraryObject(
     initAdmin()
     const db = getFirestore()
 
+    // Multi-tenant phase 2 (W10): the deleted row's tenant, for the audit row.
+    const orgId = opts.orgId ?? (await readRowOrg(db, fileId))
+
     const bondedTracks = await findLiveBondedTracks(db, fileId)
     if (bondedTracks.length > 0 && !opts.force) {
         logger.warn(
@@ -218,6 +247,7 @@ export async function safelyDeleteLibraryObject(
             bondedTrackIds: bondedTracks,
             callerUid: opts.callerUid ?? null,
             paths: [],
+            orgId,
         })
         return { deleted: false, refusedBecauseBonded: bondedTracks }
     }
@@ -258,6 +288,7 @@ export async function safelyDeleteLibraryObject(
                 bondedTrackIds: opts.force ? bondedTracks : [],
                 callerUid: opts.callerUid ?? null,
                 paths: attemptedPaths,
+                orgId,
             })
             throw err
         }
@@ -271,6 +302,7 @@ export async function safelyDeleteLibraryObject(
         bondedTrackIds: opts.force ? bondedTracks : [],
         callerUid: opts.callerUid ?? null,
         paths: attemptedPaths,
+        orgId,
     })
 
     return { deleted: true, deletedPaths: attemptedPaths }

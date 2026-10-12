@@ -28,6 +28,7 @@ import { z } from "zod"
 import type { Firestore } from "firebase-admin/firestore"
 import { processChartUpload } from "@/lib/library-upload"
 import { createSetlistServerSide } from "@/lib/setlist-write"
+import type { OrgId } from "@/lib/org/types"
 import { normalizeChartTitle } from "@/lib/library/normalize-chart-title"
 import { logger } from "@/lib/logger"
 
@@ -82,6 +83,11 @@ export interface ExecuteSetlistImportInput {
     setName: string
     uploaderUid: string
     uploaderEmail?: string | null
+    /**
+     * Multi-tenant phase 2 (W5/W7): the host tenant (the route's
+     * `coerceOrgId(x-org-id)`), stamped on uploaded charts and the setlist.
+     */
+    orgId: OrgId
 }
 
 export interface ExecuteSetlistImportResult {
@@ -98,7 +104,7 @@ export interface ExecuteSetlistImportResult {
 export async function executeSetlistImport(
     opts: ExecuteSetlistImportInput,
 ): Promise<ExecuteSetlistImportResult> {
-    const { db, items, setName, uploaderUid, uploaderEmail } = opts
+    const { db, items, setName, uploaderUid, uploaderEmail, orgId } = opts
     const resolvedTracks: Array<Record<string, unknown>> = []
     const importOutcomes: ImportOutcome[] = []
     let trackCounter = 0
@@ -213,6 +219,7 @@ export async function executeSetlistImport(
                     title: finalTitle,
                     uploaderUid,
                     uploaderEmail: uploaderEmail ?? undefined,
+                    orgId,
                     source: 'upload',
                     driveMetadata: { driveFileId: fileId },
                     // F-5: per-row catalog metadata. item.key and item.performer
@@ -287,6 +294,7 @@ export async function executeSetlistImport(
     // import carries no service date); the module itself does not default.
     const { setlistId } = await createSetlistServerSide({
         name: setName,
+        orgId,
         ownerId: uploaderUid,
         ownerName: uploaderEmail || "Unknown",
         eventDate: new Date(),

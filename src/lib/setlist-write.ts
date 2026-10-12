@@ -65,12 +65,11 @@ export interface CreateSetlistInput {
      */
     isTest?: boolean
     /**
-     * v11-01-02: tenant scope for this setlist AND every seeded track. Optional
-     * — existing callers omit it and get DEFAULT_ORG_ID ("crc"), so CRC
-     * behavior is unchanged. Phase v11-02 wires MCP callers to pass the
-     * bearer's org; this plan only adds the param + default.
+     * v11-01-02 / multi-tenant phase 2 (W7): tenant scope for this setlist AND
+     * every seeded track. REQUIRED — MCP passes the token org, web routes the
+     * host org (`coerceOrgId(x-org-id)`).
      */
-    orgId?: string
+    orgId: string
 }
 
 export interface CreateSetlistResult {
@@ -133,7 +132,7 @@ export async function createSetlistServerSide(
     const seedSongCount = input.tracks.filter((t) => isSongType(t.type)).length
     // v11-01-02: resolve the tenant once — the parent setlist AND every seeded
     // track carry the SAME orgId so a track can never mismatch its setlist.
-    const orgId = input.orgId ?? DEFAULT_ORG_ID
+    const orgId = input.orgId
     const setlistPayload: Record<string, unknown> = {
         id: setlistId,
         orgId,

@@ -162,7 +162,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
 
         // 3. Get existing docs with modifiedTime, storageCopiedAt, storageFailed for change detection
         const existingSnapshot = await db.collection('library_index')
-            .select('modifiedTime', 'storageCopiedAt', 'storageFailed').get()
+            .select('modifiedTime', 'storageCopiedAt', 'storageFailed', 'orgId').get()
         const existingDocs = new Map<string, {
             modifiedTime: string | null
             storageCopiedAt: string | null
@@ -297,7 +297,11 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                         ? { shortcutTargetId: file.shortcutDetails.targetId }
                         : {}),
                     lastSyncedAt: now,
-                    source: 'google_drive'
+                    source: 'google_drive',
+                    // Multi-tenant phase 2 (W6): admin Drive sync of CRC's
+                    // folder — new rows are CRC's. Existing rows keep theirs
+                    // (merge, field omitted).
+                    ...(existingDocs.has(file.id) ? {} : { orgId: 'crc' }),
                 }, { merge: true })
 
                 // v60-11-01: songs/* mirror. Skip empty/missing name (matches subscribe.ts:85 guard).
@@ -373,7 +377,7 @@ export async function syncLibraryIndex(): Promise<SyncStats> {
                     storageMimeRaw && storageMimeRaw !== 'application/vnd.google-apps.shortcut'
                         ? storageMimeRaw
                         : 'application/pdf'
-                await uploadToStorage(file.id, buffer, storageMime)
+                await uploadToStorage(file.id, buffer, storageMime, 'crc') // W11: CRC's Drive folder
 
                 // Mark as copied in Firestore
                 await db.collection('library_index').doc(file.id).update({

@@ -36,6 +36,8 @@ vi.mock('@/lib/rate-limit', () => ({
     checkRateLimit: vi.fn(() => null),
 }))
 
+vi.mock('@/lib/org/access', () => import('@/test-stubs/org-access-fake'))
+
 vi.mock('@/lib/logger', () => ({
     logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }))
