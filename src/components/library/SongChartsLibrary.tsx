@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useRef, useLayoutEffect, useCallback } from "react"
+import { useState, useMemo, useEffect, useRef, useLayoutEffect, useCallback, type ReactNode } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { ChevronLeft, Search, Music, CheckSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -25,6 +25,8 @@ import { logger } from "@/lib/logger"
 import { useLibrary } from "@/hooks/use-library"
 import { DriveFile } from "@/types/models"
 import type { OrgId } from "@/lib/org/types"
+import { KNOWN_COLLECTIONS, normalizeCollection, type KnownCollection } from "@/lib/library/collections"
+import { defaultPickerCollection, librarySections } from "@/lib/songs/picker-scope"
 import { cn } from "@/lib/utils"
 import { LibraryFilters, applyLibraryFilters, createEmptyFilters, LibraryFilterState } from "@/components/library/LibraryFilters"
 import { useAuth } from "@/lib/auth-context"
@@ -42,7 +44,7 @@ import { useAddToSetlist } from "@/hooks/use-add-to-setlist"
 import { AddToSetlistSheet } from "./AddToSetlistSheet"
 import { fetchUsageBatches, type UsageMap } from "@/lib/library/usage-batch"
 
-type LibraryTab = "core" | "supplemental" | "nava" | "uploads" | "audio"
+type LibraryTab = KnownCollection | "audio"
 
 /**
  * Debounce applied to the *filtering* only — never to the controlled input's
@@ -176,7 +178,10 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
     }, [initialLibrary, hydrate])
 
     // Automatically load the library on mount if needed
-    const [tab, setTab] = useState<LibraryTab>("core")
+    // Multi-tenant phase 1: the tenant's sections (config `library.collections`)
+    // and the one it opens on (`defaultCollection`, else its first section).
+    const sections = useMemo(() => librarySections(org), [org])
+    const [tab, setTab] = useState<LibraryTab>(() => defaultPickerCollection(org) ?? sections[0]?.id ?? "core")
 
     // v11.1-03: admin-only "All sites" escape hatch. Off → the library is
     // host-org filtered (server-side); on → the full cross-tenant pool is
@@ -251,30 +256,19 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
     // honest state while the batches are still landing (or after they failed).
     const recencyUsageMap = usageStatus === 'complete' ? usageMap : undefined
 
-    // Apply library filters (key, topic, recency) to chart files
-    // NOTE: 'core' is a NEGATIVE filter — every collection that gets its own
-    // tab must be excluded here too, or its rows leak into the CRC Charts tab.
-    const allFilteredCore = useMemo(
-        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection !== 'supplemental' && f.collection !== 'uploads' && f.collection !== 'nava'), libraryFilters, recencyUsageMap)),
-        [rawFiles, libraryFilters, recencyUsageMap]
-    )
+    // Apply library filters (key, topic, recency) to chart files, per
+    // collection. 'core' is every row that is not supplemental/nava/uploads
+    // (normalizeCollection), so a row with an unknown collection can never
+    // leak out of — or into — another section's tab.
+    const filteredByCollection = useMemo(() => {
+        const out = {} as Record<KnownCollection, DriveFile[]>
+        for (const c of KNOWN_COLLECTIONS) {
+            out[c] = dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => normalizeCollection(f.collection) === c), libraryFilters, recencyUsageMap))
+        }
+        return out
+    }, [rawFiles, libraryFilters, recencyUsageMap])
 
-    const allFilteredSupplemental = useMemo(
-        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection === 'supplemental'), libraryFilters, recencyUsageMap)),
-        [rawFiles, libraryFilters, recencyUsageMap]
-    )
-
-    const allFilteredNava = useMemo(
-        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection === 'nava'), libraryFilters, recencyUsageMap)),
-        [rawFiles, libraryFilters, recencyUsageMap]
-    )
-
-    const allFilteredUploads = useMemo(
-        () => dedupeChartsByStem(applyLibraryFilters(rawFiles.filter(f => f.collection === 'uploads'), libraryFilters, recencyUsageMap)),
-        [rawFiles, libraryFilters, recencyUsageMap]
-    )
-
-    const files = tab === "supplemental" ? allFilteredSupplemental : tab === "nava" ? allFilteredNava : tab === "uploads" ? allFilteredUploads : allFilteredCore
+    const files = tab === "audio" ? filteredByCollection.core : filteredByCollection[tab]
     const combinedItems = tab === "audio" ? audioFiles : files
 
     // Usage is fetched for the WHOLE chart catalog, not the currently-visible
@@ -488,18 +482,10 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                 >
                     {(
                         [
-                            // v11.1-03: org-neutral labels for non-crc tenants. CRC keeps
-                            // "CRC Charts" + the "Shireinu" (supplemental) tab byte-identical;
-                            // broslaz shows "Charts" and omits the CRC-specific Shireinu tab.
-                            // The "Nava Tehilah" tab is CRC-only on the same basis.
-                            { value: 'core' as const, label: `${org === 'crc' ? 'CRC Charts' : 'Charts'} (${allFilteredCore.length})`, icon: null },
-                            ...(org === 'crc'
-                                ? [
-                                    { value: 'supplemental' as const, label: `Shireinu (${allFilteredSupplemental.length})`, icon: null },
-                                    { value: 'nava' as const, label: `Nava Tehilah (${allFilteredNava.length})`, icon: null },
-                                ]
-                                : []),
-                            { value: 'uploads' as const, label: `Uploads (${allFilteredUploads.length})`, icon: null },
+                            // Multi-tenant phase 1: the tenant's sections, in its order, with its
+                            // labels (config `library.collections`). CRC: CRC Charts / Shireinu /
+                            // Nava Tehilah / Uploads; BL: Charts / Uploads — as before.
+                            ...sections.map(({ id, label }) => ({ value: id, label: `${label} (${filteredByCollection[id].length})`, icon: null as ReactNode })),
                             ...(hasAudio
                                 ? [{ value: 'audio' as const, label: `Audio (${audioFiles.length})`, icon: <Music className="w-3.5 h-3.5" /> }]
                                 : []),

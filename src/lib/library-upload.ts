@@ -14,6 +14,7 @@ import { safelyDeleteLibraryObject } from "@/lib/library/safely-delete-library-o
 import { processMuseScoreFile } from "@/lib/musescore-converter"
 import { levenshteinDistance } from "@/lib/string-utils"
 import { logger } from "@/lib/logger"
+import { KNOWN_COLLECTIONS, type KnownCollection } from "@/lib/library/collections"
 import { contentHashFor } from "@/lib/library/content-hash"
 import heicConvert from "heic-convert"
 import {
@@ -56,14 +57,10 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 export const MAX_CHART_UPLOAD_BYTES = 25 * 1024 * 1024 // 25 MB — matches HTTP route
 
-export type LibraryCollection = "core" | "supplemental" | "uploads" | "nava"
+/** One list, src/lib/library/collections.ts (multi-tenant phase 1). */
+export type LibraryCollection = KnownCollection
 
-export const ALLOWED_LIBRARY_COLLECTIONS: LibraryCollection[] = [
-    "core",
-    "supplemental",
-    "uploads",
-    "nava",
-]
+export const ALLOWED_LIBRARY_COLLECTIONS: LibraryCollection[] = [...KNOWN_COLLECTIONS]
 
 export interface ProcessChartUploadInput {
     buffer: Buffer
@@ -805,6 +802,8 @@ export async function processChartUpload(
             storagePath: realStoragePath,
             contentHash,
             uploaderUid: input.uploaderUid,
+            // Multi-tenant phase 1: the chart's tenant picks the AI prompt.
+            orgId,
         }
         emitLibraryRowCreated(event)
         stage("library-row-created:emitted", { hash: contentHash.slice(0, 8) })

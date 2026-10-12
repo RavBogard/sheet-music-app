@@ -2,6 +2,8 @@ import { CODE_BRANDING, CODE_EMAIL_BRANDING } from "@/lib/org/branding"
 import { OrgConfigSchema, type OrgConfig, type OrgConfigInput } from "@/lib/org/config-schema"
 import { STRING_BASE, interpolate, tokensFor, type StringKey } from "@/lib/org/strings-base"
 import type { OrgId } from "@/lib/org/types"
+import { CRC_RABBI_SLOTS, SERVICE_TYPE_CATALOG } from "@/lib/templates/service-types"
+import bookRegistry from "@/data/books/registry.json"
 
 /**
  * Multi-tenant phase 1 — the code tables, as tenant configs.
@@ -35,6 +37,19 @@ const CRC_LIBRARY_CONVENTIONS = `Library naming conventions (CRC music library):
   "klepper", "shireinu", "kavanah".
 
 If you're not sure of a field, return null / [] — do NOT guess.`
+
+/**
+ * Liturgy lists as every tenant saw them before phase 1: the whole template
+ * catalogue, every registered book, CRC's rabbi slots. Nothing filtered them by
+ * tenant, so BL's values are the same (frozen). No default-book-per-service
+ * table exists in the code, so defaultBookByService stays empty.
+ */
+const TODAY_LITURGY = {
+    books: (bookRegistry as Array<{ slug: string }>).map((b) => b.slug),
+    defaultBookByService: {},
+    serviceTypes: SERVICE_TYPE_CATALOG.map(({ key, label }) => ({ key, label, defaultStart: "" })),
+    rabbiSlots: CRC_RABBI_SLOTS.map((r) => ({ ...r, match: [...r.match] })),
+}
 
 /** The congregation-store / MCP DEFAULT_CONFIG values (both tenants saw CRC's). */
 const CRC_CONGREGATION_DEFAULTS = {
@@ -96,6 +111,7 @@ export const BL_FROZEN_CRC_KEYS: StringKey[] = [
     "profile.scheduleName",
     "library.ownBadge",
     "seo.baseUrl",
+    "library.coreSectionLabel",
     "ai.systemInstructionLead",
     "ai.libraryConventions",
 ]
@@ -134,7 +150,7 @@ const CRC: OrgConfigInput = {
         ],
         defaultCollection: "core",
     },
-    liturgy: { books: [], defaultBookByService: {}, serviceTypes: [] },
+    liturgy: TODAY_LITURGY,
     congregationDefaults: CRC_CONGREGATION_DEFAULTS,
     agentGuide: "",
     configVersion: 1,
@@ -187,7 +203,7 @@ const BL: OrgConfigInput = {
         ],
         defaultCollection: "",
     },
-    liturgy: { books: [], defaultBookByService: {}, serviceTypes: [] },
+    liturgy: TODAY_LITURGY,
     // Frozen: BL's signed-out pages fall back to CRC's congregation defaults today.
     congregationDefaults: CRC_CONGREGATION_DEFAULTS,
     agentGuide: "",

@@ -6,7 +6,9 @@ import { createSetlistService, type Setlist } from "@/lib/setlist-firebase"
 import { assignMusicians } from "@/lib/scheduling-firebase"
 import type { SetlistTrack, SetlistMusician, DriveFile } from "@/types/models"
 import { toast } from "sonner"
-import { getTemplate, buildSetlistFromTemplate, generateSetlistName, getAllTemplateKeys, TEMPLATE_LABELS } from "@/lib/liturgical-templates"
+import { getTemplate, buildSetlistFromTemplate, generateSetlistName, TEMPLATE_LABELS } from "@/lib/liturgical-templates"
+import { useOrg } from "@/lib/org/org-context"
+import { serviceTypeKeysFor } from "@/lib/org/tenant-lists"
 import { getFullServiceContext, getServiceContext, ServiceType } from "@/lib/liturgical-calendar"
 import { useLibraryStore } from "@/lib/library-store"
 import { useCustomTemplates } from "@/lib/template-firebase"
@@ -77,7 +79,10 @@ export function useCreationWizard(): UseCreationWizardReturn {
         [eventDate],
     )
 
-    const templateKeys = getAllTemplateKeys()
+    // Multi-tenant phase 1: the tenant's service types (liturgy.serviceTypes;
+    // the built-in catalogue when it lists none — what every tenant had).
+    const org = useOrg()
+    const templateKeys = useMemo(() => serviceTypeKeysFor(org), [org])
     const canCreate = useMemo(
         () => mode === 'clone' ? !!cloneSource : name.trim().length > 0,
         [mode, cloneSource, name],

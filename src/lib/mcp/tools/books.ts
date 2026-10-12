@@ -10,16 +10,25 @@
 import { listBooks } from "@/lib/books/registry"
 import { lookupBookPage, type BookMatch } from "@/lib/books/lookup"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
+import { bookSlugsFor } from "@/lib/org/tenant-lists"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 export interface ListBooksOk {
     ok: true
     books: Array<{ slug: string; title: string; tier: "feed" | "pagemap"; pages: number }>
 }
 
-export function listBooksTool(): ListBooksOk {
+/**
+ * Multi-tenant phase 1: the caller's tenant's books (liturgy.books), in
+ * registry order; every registered book when the tenant lists none.
+ */
+export function listBooksTool(orgId: OrgId = DEFAULT_ORG_ID): ListBooksOk {
+    const own = bookSlugsFor(orgId)
+    const books = own ? listBooks().filter((b) => own.includes(b.slug)) : listBooks()
     return {
         ok: true,
-        books: listBooks().map(({ slug, title, tier, pages }) => ({ slug, title, tier, pages })),
+        books: books.map(({ slug, title, tier, pages }) => ({ slug, title, tier, pages })),
     }
 }
 

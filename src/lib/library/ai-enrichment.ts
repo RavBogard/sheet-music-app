@@ -54,6 +54,10 @@ import { z } from "zod"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { downloadFromStoragePath } from "@/lib/firebase-storage"
 import { logger } from "@/lib/logger"
+import { orgString } from "@/lib/org/strings"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
+import { KNOWN_COLLECTIONS } from "@/lib/library/collections"
 import {
     onLibraryRowCreated,
     type LibraryRowCreatedEvent,
@@ -112,7 +116,7 @@ const MAX_RETRY_ATTEMPTS = 3
 /** Backoff schedule in minutes — `attempts` indexes into this list. */
 const BACKOFF_MINUTES = [5, 30, 120, 360]
 
-const ALLOWED_COLLECTIONS = ["core", "supplemental", "uploads", "nava"] as const
+const ALLOWED_COLLECTIONS = KNOWN_COLLECTIONS
 
 // ─── Output schema ─────────────────────────────────────────────────────────
 
@@ -273,30 +277,19 @@ const GEMINI_RESPONSE_SCHEMA: Schema = {
     ],
 }
 
-// ─── Library naming conventions (system-prompt block) ──────────────────────
+// ─── System instruction (tenant strings) ───────────────────────────────────
 
-const LIBRARY_CONVENTIONS = `Library naming conventions (CRC music library):
-
-- Reform Jewish liturgical music + supplemental.
-- Common naming: "Title (Composer)" or "Title (Arrangement)" — e.g.
-  "Shalom Rav (Frankel)", "Mi Chamocha (Klepper)".
-- Hebrew-Latin transliteration is the canonical form (NOT Hebrew script
-  on chart titles, even if the chart itself is in Hebrew).
-- Collections:
-    - core: high-frequency liturgical music (Shabbat liturgy, Hatzi
-      Kaddish, etc.) — used every week.
-    - supplemental: niggunim, holiday-specific, occasional repertoire.
-    - uploads: provisional landing zone; everything starts here unless
-      David routed it explicitly via Drive subfolder.
-- Tags are short, kebab-case, optional. Examples:
-  "friday-evening", "shabbat-morning", "high-holy-days", "frankel",
-  "klepper", "shireinu", "kavanah".
-
-If you're not sure of a field, return null / [] — do NOT guess.`
-
-const SYSTEM_INSTRUCTION = `You are an enrichment assistant for the Central Reform Congregation music library. You inspect a chart file plus its current library_index metadata and emit a structured enrichment report. You NEVER refuse — you always emit the JSON object. If you're uncertain, return low confidence, populate \`concerns\`, and set \`review_required: true\`. Do NOT fabricate fields you can't determine from the input.
-
-${LIBRARY_CONVENTIONS}`
+/**
+ * Multi-tenant phase 1: the lead paragraph and the library naming conventions
+ * are tenant strings (strings-base.ts `ai.systemInstructionLead`,
+ * `ai.libraryConventions`), for the chart's own org. CRC's text is
+ * byte-for-byte the SYSTEM_INSTRUCTION this module used to hard-code (golden:
+ * __tests__/ai-enrichment-prompt.golden.test.ts); BL keeps that same text
+ * (frozen). An event with no orgId is a crc chart.
+ */
+export function systemInstructionFor(orgId: OrgId = DEFAULT_ORG_ID): string {
+    return orgString(orgId, "ai.systemInstructionLead") + "\n\n" + orgString(orgId, "ai.libraryConventions")
+}
 
 // ─── Config + dependency injection ────────────────────────────────────────
 
@@ -568,7 +561,7 @@ export async function callGeminiForEnrichment(args: {
         model: AI_ENRICHMENT_MODEL,
         contents: [{ role: "user", parts: userParts }],
         config: {
-            systemInstruction: SYSTEM_INSTRUCTION,
+            systemInstruction: systemInstructionFor(event.orgId),
             responseMimeType: "application/json",
             responseSchema: GEMINI_RESPONSE_SCHEMA,
             maxOutputTokens: MAX_OUTPUT_TOKENS,

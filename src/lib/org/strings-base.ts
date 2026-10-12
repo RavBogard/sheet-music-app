@@ -70,6 +70,13 @@ export const STRING_BASE = {
 
     // ── Library ──
     "library.ownBadge": "{abbreviation}",
+    /**
+     * The core section's name on the surfaces that were never tenant-aware
+     * (search overlay toggle, upload / scraper section pickers). Only read
+     * where a tenant overrides it (BL, frozen); everyone else gets their
+     * configured core label (picker-scope.ts coreSectionLabel).
+     */
+    "library.coreSectionLabel": "{abbreviation} Charts",
 
     // ── AI enrichment prompt (Gemini) ──
     "ai.systemInstructionLead":

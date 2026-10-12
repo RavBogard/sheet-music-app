@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils"
 import { useCongregation } from "@/lib/congregation-store"
 import { useCreationWizard } from "@/hooks/use-creation-wizard"
 import { TEMPLATE_LABELS } from "@/lib/liturgical-templates"
+import { serviceTypeLabel } from "@/lib/org/tenant-lists"
 import { toDate } from "@/lib/firestore-helpers"
 import type { ServiceType } from "@/lib/liturgical-calendar"
 import { useOrg } from "@/lib/org/org-context"
@@ -231,7 +232,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                                             <SelectLabel>Regular services</SelectLabel>
                                             {regularTemplates.map(key => (
                                                 <SelectItem key={key} value={key}>
-                                                    {TEMPLATE_LABELS[key]?.label || key}
+                                                    {serviceTypeLabel(org, key)}
                                                 </SelectItem>
                                             ))}
                                         </SelectGroup>
@@ -241,7 +242,7 @@ export function CreationWizard({ open, onOpenChange, prefilledDate }: CreationWi
                                             <SelectLabel>Holiday services</SelectLabel>
                                             {holidayTemplates.map(key => (
                                                 <SelectItem key={key} value={key}>
-                                                    {TEMPLATE_LABELS[key]?.label || key}
+                                                    {serviceTypeLabel(org, key)}
                                                 </SelectItem>
                                             ))}
                                         </SelectGroup>
