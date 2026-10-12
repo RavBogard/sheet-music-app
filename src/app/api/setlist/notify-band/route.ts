@@ -40,6 +40,7 @@ import { emailAllMembers } from '@/lib/email'
 import { sendPushToUsers } from '@/lib/push-send'
 import { sendSMS } from '@/lib/sms'
 import { rowOrg } from '@/lib/org/membership'
+import { orgString } from '@/lib/org/strings'
 import { logger } from '@/lib/logger'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
@@ -286,7 +287,7 @@ export const POST = createApiHandler(
                     const phone = userData.musicianProfile?.phone || userData.phone
                     if (prefs.sms === true && phone) {
                         smsPromises.push(
-                            sendSMS(phone, `CRC Music: "${setlistName}" for ${eventDateStr} has been published. View it at ${origin}/perform/setlist/${setlistId}`)
+                            sendSMS(phone, `${orgString(org, 'sms.publishPrefix')}: "${setlistName}" for ${eventDateStr} has been published. View it at ${origin}/perform/setlist/${setlistId}`)
                                 .then(() => { smsResults.sent++ })
                                 .catch(err => {
                                     logger.warn(`[NotifyBand] SMS failed for ${musician.uid}:`, err)

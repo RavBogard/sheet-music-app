@@ -4,6 +4,7 @@ import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { sendSchedulingEmail } from "@/lib/email-scheduling"
 import { sendSchedulingReminderSMS } from "@/lib/sms"
+import { rowOrg } from "@/lib/org/membership"
 import { BASE_URL } from "@/lib/constants"
 import { env } from "@/env.mjs"
 import { captureException } from "@/lib/error-reporting"
@@ -114,6 +115,7 @@ export async function GET(req: Request) {
                     status: 'pending',
                     scheduleUrl: `${baseUrl}/schedule`,
                     assignmentId: doc.id,
+                    org: rowOrg(a.orgId),
                 })
                 if (result.ok) emailsSent++
             } catch (e) {
@@ -130,6 +132,7 @@ export async function GET(req: Request) {
                         eventDate: eventDateStr,
                         instrument: a.instrument,
                         scheduleUrl: `${baseUrl}/schedule`,
+                        org: rowOrg(a.orgId),
                     })
                     if (result.ok) smsSent++
                 } catch (e) {

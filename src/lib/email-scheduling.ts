@@ -10,6 +10,9 @@
 
 import { Resend } from 'resend'
 import { logger } from '@/lib/logger'
+import { DEFAULT_ORG_ID } from '@/lib/org/registry'
+import { orgString } from '@/lib/org/strings'
+import type { OrgId } from '@/lib/org/types'
 
 let resend: Resend | null = null
 
@@ -47,6 +50,8 @@ interface SchedulingEmailParams {
     scheduleUrl: string
     assignmentId: string
     newSongs?: { title: string; fileId: string }[]
+    /** Multi-tenant phase 1: the assignment's org → venue name, footer, from-name. Default crc. */
+    org?: OrgId
 }
 
 /**
@@ -55,6 +60,9 @@ interface SchedulingEmailParams {
 export async function sendSchedulingEmail(params: SchedulingEmailParams): Promise<{ ok: boolean; reason?: string }> {
     const client = getResend()
     if (!client) return { ok: false, reason: 'RESEND_API_KEY not configured' }
+
+    const org = params.org ?? DEFAULT_ORG_ID
+    const venueName = escapeHtml(orgString(org, 'email.venueName'))
 
     try {
         const instrumentText = params.instrument ? ` on <strong>${escapeHtml(params.instrument)}</strong>` : ''
@@ -89,8 +97,8 @@ export async function sendSchedulingEmail(params: SchedulingEmailParams): Promis
       <p style="margin:0 0 16px;color:#333;font-size:15px;">Hi ${escapeHtml(params.recipientName)},</p>
       <p style="margin:0 0 20px;color:#333;font-size:15px;">
         ${isCancelled
-            ? `Your assignment${instrumentText} for an upcoming service at Central Reform Congregation has been cancelled.`
-            : `You've been scheduled${instrumentText} for an upcoming service at Central Reform Congregation.`}
+            ? `Your assignment${instrumentText} for an upcoming service at ${venueName} has been cancelled.`
+            : `You've been scheduled${instrumentText} for an upcoming service at ${venueName}.`}
       </p>
 
       <div style="margin:0 0 24px;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
@@ -134,7 +142,7 @@ export async function sendSchedulingEmail(params: SchedulingEmailParams): Promis
   </tr>
   <tr>
     <td style="padding:16px 32px;background:#fafafa;border-top:1px solid #eee;">
-      <p style="margin:0;color:#999;font-size:12px;text-align:center;">CRC Music — Central Reform Congregation</p>
+      <p style="margin:0;color:#999;font-size:12px;text-align:center;">${escapeHtml(orgString(org, 'email.notificationFooter'))}</p>
     </td>
   </tr>
 </table>
@@ -142,7 +150,7 @@ export async function sendSchedulingEmail(params: SchedulingEmailParams): Promis
 </html>`
 
         const { error } = await client.emails.send({
-            from: `CRC Music <${getFromEmail()}>`,
+            from: `${orgString(org, 'email.notificationFromName')} <${getFromEmail()}>`,
             to: params.to,
             subject: isCancelled
                 ? `Assignment cancelled: ${params.setlistName}`

@@ -7,6 +7,7 @@ import {
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { orgString } from "@/lib/org/strings"
 import type { OrgId } from "@/lib/org/types"
 import { rowOrg, stampOrg } from "@/lib/mcp/org-context"
 import { houseChartHtml, type HouseChart } from "@/lib/chart-render/house-chart-html"
@@ -202,9 +203,20 @@ function validate(args: CreateChartArgs): RichErrorEnvelope | null {
     return null
 }
 
-/** What the server will file. HTML-shaped sources render to PDF; the rest are stored as-is. */
-function htmlFor(source: ChartSource): string | null {
-    if (source.kind === "chart") return houseChartHtml(source.chart)
+/**
+ * What the server will file. HTML-shaped sources render to PDF; the rest are stored as-is.
+ * Multi-tenant phase 1: a house chart's footer is the chart's tenant unless the
+ * chart sets its own (crc and brotherslazaroff: Central Reform Congregation /
+ * centralreform.live).
+ */
+function htmlFor(source: ChartSource, org: OrgId): string | null {
+    if (source.kind === "chart") {
+        return houseChartHtml({
+            ...source.chart,
+            footerLeft: source.chart.footerLeft ?? orgString(org, "chart.footerLeft"),
+            footerRight: source.chart.footerRight ?? orgString(org, "chart.footerRight"),
+        })
+    }
     if (source.kind === "html") return source.html
     return null
 }
@@ -239,7 +251,7 @@ export async function createChart(
     const limited = await checkUserRateLimit(uid, "upload", { bypass: isTrustedLeader(roles) })
     if (limited) return rateLimitEnvelope(limited.error)
 
-    const html = htmlFor(args.source)
+    const html = htmlFor(args.source, org)
 
     // ─── preview ────────────────────────────────────────────────────────
     if (args.mode === "preview") {

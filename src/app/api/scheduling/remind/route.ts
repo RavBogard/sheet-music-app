@@ -86,6 +86,7 @@ export const POST = createApiHandler(
                     status: 'pending',
                     scheduleUrl: `${baseUrl}/schedule`,
                     assignmentId: assignment.id,
+                    org,
                 })
                 if (result.ok) emailsSent++
             } catch (e) {
@@ -103,6 +104,7 @@ export const POST = createApiHandler(
                         eventDate: eventDateStr,
                         instrument: assignment.instrument,
                         scheduleUrl: `${baseUrl}/schedule`,
+                        org,
                     })
                     if (result.ok) smsSent++
                 } catch (e) {
