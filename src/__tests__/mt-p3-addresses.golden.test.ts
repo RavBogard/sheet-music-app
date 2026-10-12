@@ -163,7 +163,7 @@ const GOLDEN_ORIGINS: Array<[string, string]> = [
 
 describe("golden: OAuth protected-resource metadata", () => {
     it.each(GOLDEN_ORIGINS)("%s", async (host, origin) => {
-        const res = protectedResourceGET(metaReq(host, "/.well-known/oauth-protected-resource"))
+        const res = await protectedResourceGET(metaReq(host, "/.well-known/oauth-protected-resource"))
         expect(res.status).toBe(200)
         const body = await res.json()
         expect(body).toEqual({
@@ -175,7 +175,7 @@ describe("golden: OAuth protected-resource metadata", () => {
 
 describe("golden: OAuth authorization-server metadata", () => {
     it.each(GOLDEN_ORIGINS)("%s", async (host, origin) => {
-        const res = authServerGET(metaReq(host, "/.well-known/oauth-authorization-server"))
+        const res = await authServerGET(metaReq(host, "/.well-known/oauth-authorization-server"))
         expect(res.status).toBe(200)
         expect(res.headers.get("access-control-allow-origin")).toBe("*")
         const text = await res.text()
@@ -194,7 +194,7 @@ describe("golden: OAuth authorization-server metadata", () => {
     })
 
     it("no host headers → the CRC canonical origin", async () => {
-        const res = authServerGET(new Request("https://internal.vercel/.well-known/oauth-authorization-server"))
+        const res = await authServerGET(new Request("https://internal.vercel/.well-known/oauth-authorization-server"))
         const body = await res.json()
         expect(body.issuer).toBe("https://www.centralreform.live")
     })

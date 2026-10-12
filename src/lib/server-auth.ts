@@ -4,6 +4,7 @@ import { getAuth } from "firebase-admin/auth"
 import { getFirestore } from "firebase-admin/firestore"
 import { logger } from "@/lib/logger"
 import { coerceOrgId, congregationDocId, DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { primeTenantConfig } from "@/lib/org/org-exists"
 import { getTenantAccess } from "@/lib/org/access"
 import type { OrgId } from "@/lib/org/types"
 
@@ -46,6 +47,8 @@ export async function getServerUser(): Promise<ServerUser | null> {
         // Multi-tenant P2 (design §3.4): the role in the HOST tenant, from the
         // membership (legacy users-doc role while the person is unmigrated).
         const orgId = coerceOrgId((await headers()).get("x-org-id"))
+        // Multi-tenant phase 3: prime the host tenant's config (cached, never throws).
+        await primeTenantConfig(orgId)
         const db = getFirestore()
         const access = await getTenantAccess(decoded.uid, orgId, { db })
 

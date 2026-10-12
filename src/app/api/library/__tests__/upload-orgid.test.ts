@@ -117,8 +117,10 @@ describe("W5/W11 · /api/library/upload stamps the host tenant", () => {
         for (const call of mockUploadToStorage.mock.calls) expect(call[3]).toBe("brotherslazaroff")
     })
 
-    it("no / unknown host header → coerceOrgId → 'crc'", async () => {
-        const res = await POST(uploadReq("Chart.pdf", "application/pdf", "evil-org"))
+    // Multi-tenant phase 3: any well-formed id now passes coerceOrgId (the
+    // proxy is the only setter of x-org-id); a malformed value still → crc.
+    it("no / malformed host header → coerceOrgId → 'crc'", async () => {
+        const res = await POST(uploadReq("Chart.pdf", "application/pdf", "Evil Org!"))
         expect(res.status).toBe(201)
         expect(batchWrites.find((w) => w.collection === "library_index")?.data.orgId).toBe("crc")
         expect(batchWrites.find((w) => w.collection === "songs")?.data.orgId).toBe("crc")

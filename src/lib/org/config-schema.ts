@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { ORG_ID_MAX, ORG_ID_MIN, ORG_ID_PATTERN } from "@/lib/org/org-id"
 
 /**
  * Multi-tenant phase 1 — the ONE schema for a tenant's `orgs/{orgId}` document.
@@ -14,9 +15,9 @@ import { z } from "zod"
 /** Lowercase letters, digits and hyphens; never changes; the default subdomain. */
 export const OrgIdSchema = z
     .string()
-    .min(2)
-    .max(40)
-    .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "lowercase letters, digits and hyphens")
+    .min(ORG_ID_MIN)
+    .max(ORG_ID_MAX)
+    .regex(ORG_ID_PATTERN, "lowercase letters, digits and hyphens")
 
 /**
  * Fonts are a fixed menu because next/font resolves at build time. The key is

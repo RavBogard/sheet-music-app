@@ -3,6 +3,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore"
 import { hashToken, SETLIST_READER_PREFIX } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { primeTenantConfig } from "@/lib/org/org-exists"
 import type { OrgId } from "@/lib/org/types"
 
 /**
@@ -154,6 +155,10 @@ export async function verifyBearer(req: Request): Promise<VerifiedBearer | Respo
     // v11-02-01: resolve the bearer's tenant from the token doc, default crc.
     const orgId: OrgId =
         typeof data.orgId === "string" && data.orgId ? data.orgId : DEFAULT_ORG_ID
+    // Multi-tenant phase 3: prime the token tenant's config so tool handlers'
+    // synchronous orgString / getOrgBranding reads see a third tenant's values.
+    // Cached 60 s; never throws.
+    await primeTenantConfig(orgId)
 
     // Scoped-credential fields (setlist_reader). Absent on every existing
     // token doc → null, so the full-access path is unchanged.
