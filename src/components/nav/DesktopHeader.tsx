@@ -14,6 +14,7 @@ import { useLibraryStore } from "@/lib/library-store"
 import { useMusicStore } from "@/lib/store"
 import { useLibrary } from "@/hooks/use-library"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
+import { useFeature } from "@/lib/org/use-feature"
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem,
     DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -45,6 +46,9 @@ export function DesktopHeader(props: AppNavigationProps) {
         serverIsSoundEngineer: props.serverIsSoundEngineer
     })
     const congregation = useCongregation()
+    // Multi-tenant phase 6: the mixer (crc only) and Perform are tenant flags.
+    const mixerOn = useFeature("mixer")
+    const performOn = useFeature("perform")
 
     // Search
     const [searchQuery, setSearchQuery] = useState("")
@@ -59,13 +63,14 @@ export function DesktopHeader(props: AppNavigationProps) {
     // bounces unauth visitors to /login). Server flag prevents FOUC on
     // public routes inside the (main) group (e.g. /changelog).
     const isAuthed = !!user || !!props.serverIsAuthed
-    const setlistsHref = isAuthed ? "/setlists" : "/perform"
+    // With Perform off there is no public listing; /setlists sends a visitor to sign in.
+    const setlistsHref = isAuthed || !performOn ? "/setlists" : "/perform"
 
     const navLinks = [
         { label: "Setlists", href: setlistsHref, show: true },
         { label: "Schedule", href: "/schedule", show: isMusician },
         { label: "Library", href: "/library", show: isMember },
-        { label: "Monitor", href: "/monitor", show: hasMonitorAccess && congregation.features.monitor },
+        { label: "Monitor", href: "/monitor", show: mixerOn && hasMonitorAccess },
     ]
 
     const searchResults = searchQuery.length > 1

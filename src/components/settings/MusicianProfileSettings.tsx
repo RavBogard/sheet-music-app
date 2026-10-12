@@ -9,9 +9,12 @@ import { Input } from "@/components/ui/input"
 import { Guitar, Check, Phone, CalendarDays, Bell, Shield, Users, Star, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import type { SchedulingTier } from "@/types/models"
+import { useFeature } from "@/lib/org/use-feature"
 
 export function MusicianProfileSettings() {
     const { user } = useAuth()
+    // Multi-tenant phase 6: the Email toggle is for scheduling emails.
+    const schedulingEmailsOn = useFeature("schedulingEmails")
     const [profile, setProfile] = useState<MusicianProfile>({})
     const [saving, setSaving] = useState(false)
     const [generatingCal, setGeneratingCal] = useState(false)
@@ -267,7 +270,7 @@ export function MusicianProfileSettings() {
                             { key: 'email' as const, label: 'Email', desc: 'Assignment and reminder emails' },
                             { key: 'sms' as const, label: 'SMS', desc: 'Text message notifications' },
                             { key: 'push' as const, label: 'Push', desc: 'Browser push notifications' },
-                        ]).map(({ key, label, desc }) => (
+                        ]).filter(({ key }) => key !== 'email' || schedulingEmailsOn).map(({ key, label, desc }) => (
                             <div key={key} className="flex items-center justify-between py-1">
                                 <div>
                                     <span className="text-sm font-medium text-foreground">{label}</span>

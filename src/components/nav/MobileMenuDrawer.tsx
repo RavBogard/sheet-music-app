@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { useMonitorAccess } from "@/hooks/use-monitor-access"
 import { useCongregation } from "@/lib/congregation-store"
+import { useFeature } from "@/lib/org/use-feature"
 import {
     Sheet, SheetContent, SheetTitle,
 } from "@/components/ui/sheet"
@@ -34,6 +35,9 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
     const { user, profile, role, isMember, isBandLeader, isPlatformOwner, signOut } = useAuth()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const congregation = useCongregation()
+    // Multi-tenant phase 6: the mixer (crc only) and Perform are tenant flags.
+    const mixerOn = useFeature("mixer")
+    const performOn = useFeature("perform")
 
     // Tenant role from useAuth (multi-tenant phase 2)
     const isMusician = role === 'musician' || role === 'band_leader' || role === 'admin'
@@ -41,7 +45,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
     // UNAUTH-004: route Setlists → /perform on unauth (matches DesktopHeader
     // behavior). The drawer is hidden until the user taps the hamburger,
     // by which point client-side auth has resolved — no FOUC budget needed.
-    const setlistsHref = user ? "/setlists" : "/perform"
+    const setlistsHref = user || !performOn ? "/setlists" : "/perform"
 
     // Kept local (not @/lib/roles ROLE_LABELS) because this surface wants
     // ALL-CAPS stencil styling baked in — can be swapped to a `uppercase`
@@ -61,7 +65,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
         { label: "Setlists", href: setlistsHref, icon: ListMusic, show: true },
         { label: "Schedule", href: "/schedule", icon: CalendarDays, show: isMusician },
         { label: "Library", href: "/library", icon: Library, show: isMember },
-{ label: "Monitor", href: "/monitor", icon: Radio, show: hasMonitorAccess && congregation.features.monitor },
+        { label: "Monitor", href: "/monitor", icon: Radio, show: mixerOn && hasMonitorAccess },
     ]
 
     const secondaryItems: MenuItem[] = [

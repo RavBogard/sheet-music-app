@@ -10,10 +10,18 @@ import type { ReactElement } from "react"
  * Each surface is reduced to a fingerprint (the nav links and their targets,
  * the tab-bar buttons and where "Open setlist" goes, the Manage tabs, the
  * Perform toolbar's monitor buttons, the scheduling-notification toggles, the
- * gig-packet email button, the Drive sync card) and stored in the snapshot
- * beside this file. Rendering is per tenant (OrgProvider with the tenant's
- * compiled config) and per viewer (signed out, a musician, an admin with
- * mixer access).
+ * gig-packet email button, the Drive sync card). The capture taken on the
+ * unchanged code (commit 1fefde19, then a vitest snapshot) is
+ * `feature-surfaces.today.json` beside this file. Rendering is per tenant
+ * (OrgProvider with the tenant's compiled config) and per viewer (signed
+ * out, a musician, an admin with mixer access).
+ *
+ * After the flags were wired: CRC (every flag on) must render exactly the
+ * capture. Brothers Lazaroff must render the capture minus only what its own
+ * flags switch off (`withFlags` below lists, per flag, the exact UI each one
+ * removes) -- so whatever lane 1 sets BL's flags to, this test names every
+ * BL difference. A throwaway tenant with one flag off proves that flag's UI
+ * goes and nothing else does.
  */
 
 const h = vi.hoisted(() => ({
@@ -103,6 +111,9 @@ vi.mock("@/components/setlist/PrintModeSelector", () => ({ PrintModeSelector: ()
 vi.mock("@/components/setlist/PrintStats", () => ({ PrintStats: () => null }))
 
 import { OrgProvider } from "@/lib/org/org-context"
+import { OrgConfigSchema, type OrgFeatures } from "@/lib/org/config-schema"
+import { featuresOf } from "@/lib/org/features-client"
+import today from "./feature-surfaces.today.json"
 import { codeOrgConfig } from "@/lib/org/config-code"
 import type { OrgConfig } from "@/lib/org/config-schema"
 import { DesktopHeader } from "@/components/nav/DesktopHeader"
@@ -214,12 +225,111 @@ async function fingerprint(config: OrgConfig, v: Viewer): Promise<Record<string,
 const CRC = codeOrgConfig("crc")!
 const BL = codeOrgConfig("brotherslazaroff")!
 
-describe("phase 6 golden: flag-touched surfaces as they render today", () => {
-    for (const [name, config] of [["crc", CRC], ["brotherslazaroff", BL]] as const) {
-        for (const v of VIEWERS) {
-            it(`${name} / ${v}`, async () => {
-                expect(await fingerprint(config, v)).toMatchSnapshot()
-            })
-        }
+type Print = Record<string, unknown>
+const without = (list: unknown, item: string) => (list as string[]).filter((x) => x !== item)
+
+/**
+ * The capture with the UI of every switched-off flag taken away -- the whole
+ * list of what each flag removes from these surfaces.
+ */
+function withFlags(capture: Print, f: OrgFeatures): Print {
+    const out: Print = structuredClone(capture)
+    if (!f.mixer) {
+        out.desktopNav = without(out.desktopNav, "Monitor -> /monitor")
+        out.drawer = without(out.drawer, "Monitor -> /monitor")
+        out.tabBar = without(out.tabBar, "Monitor")
+        if (out.manageTabs) out.manageTabs = without(out.manageTabs, "Sound")
+        out.performMonitorButtons = 0
     }
+    if (!f.driveInbox && "librarySyncCard" in out) out.librarySyncCard = false
+    if (!f.schedulingEmails && out.schedulingNotificationToggles) {
+        out.schedulingNotificationToggles = without(out.schedulingNotificationToggles, "Email")
+    }
+    if (!f.notifyBand) out.emailPacketsButton = false
+    if (!f.perform) {
+        const relink = (l: string) => (l === "Setlists -> /perform" ? "Setlists -> /setlists" : l)
+        out.desktopNav = (out.desktopNav as string[]).map(relink)
+        out.drawer = (out.drawer as string[]).map(relink)
+        out.openSetlistGoesTo = "/setlists"
+    }
+    // todayFeed has no browser UI (the feed is a cron and a public file).
+    return out
+}
+
+const ALL_ON: OrgFeatures = { mixer: true, driveInbox: true, schedulingEmails: true, todayFeed: true, notifyBand: true, perform: true }
+const TODAY = today as Record<"crc" | "brotherslazaroff", Record<Viewer, Print>>
+
+function throwaway(features: Partial<OrgFeatures>, id = "throwaway"): OrgConfig {
+    return OrgConfigSchema.parse({ ...CRC, id, domains: { primary: `${id}.vercel.app`, aliases: [] }, features: { ...ALL_ON, ...features } })
+}
+
+describe("phase 6 golden: CRC renders exactly as before", () => {
+    for (const v of VIEWERS) {
+        it(`crc / ${v}`, async () => {
+            expect(featuresOf(CRC)).toEqual(ALL_ON)
+            expect(await fingerprint(CRC, v)).toEqual(TODAY.crc[v])
+        })
+    }
+})
+
+describe("phase 6 golden: Brothers Lazaroff renders as before minus only its own switched-off flags", () => {
+    for (const v of VIEWERS) {
+        it(`brotherslazaroff / ${v}`, async () => {
+            expect(await fingerprint(BL, v)).toEqual(withFlags(TODAY.brotherslazaroff[v], featuresOf(BL)))
+        })
+    }
+})
+
+describe("phase 6: each flag switched off on a throwaway tenant removes its UI", () => {
+    // A throwaway tenant has no mixer whatever its flag says (CRC-only data), so
+    // its all-on render is CRC's capture minus the mixer.
+    it("throwaway tenant, every flag on: CRC's surfaces minus the mixer", async () => {
+        for (const v of VIEWERS) {
+            expect(await fingerprint(throwaway({}), v)).toEqual(withFlags(TODAY.crc[v], { ...ALL_ON, mixer: false }))
+        }
+    })
+
+    it("mixer off on crc itself: Monitor link, Monitor tab, Sound tab and Perform monitor button go", async () => {
+        const p = await fingerprint(throwaway({ mixer: false }, "crc"), "admin")
+        expect(p.desktopNav).not.toContain("Monitor -> /monitor")
+        expect(p.drawer).not.toContain("Monitor -> /monitor")
+        expect(p.tabBar).not.toContain("Monitor")
+        expect(p.manageTabs).not.toContain("Sound")
+        expect(p.performMonitorButtons).toBe(0)
+        expect(p).toEqual(withFlags(TODAY.crc.admin, { ...ALL_ON, mixer: false }))
+    })
+
+    it("mixer flag on for a tenant other than crc still shows no mixer", async () => {
+        const p = await fingerprint(throwaway({ mixer: true }), "admin")
+        expect(p.desktopNav).not.toContain("Monitor -> /monitor")
+        expect(p.manageTabs).not.toContain("Sound")
+        expect(p.performMonitorButtons).toBe(0)
+    })
+
+    const cases: Array<[keyof OrgFeatures, (p: Print) => void]> = [
+        ["driveInbox", (p) => expect(p.librarySyncCard).toBe(false)],
+        ["schedulingEmails", (p) => expect(p.schedulingNotificationToggles).toEqual(["SMS", "Push"])],
+        ["notifyBand", (p) => expect(p.emailPacketsButton).toBe(false)],
+        ["todayFeed", () => {}],
+    ]
+    for (const [flag, gone] of cases) {
+        it(`${flag} off: its UI goes and nothing else changes`, async () => {
+            const f = { ...ALL_ON, mixer: false, [flag]: false }
+            for (const v of VIEWERS) {
+                const p = await fingerprint(throwaway({ [flag]: false }), v)
+                expect(p).toEqual(withFlags(TODAY.crc[v], f))
+                if (v === "admin") gone(p)
+            }
+        })
+    }
+
+    it("perform off: the public-listing nav link and the setlist button no longer lead into Perform", async () => {
+        for (const v of VIEWERS) {
+            const p = await fingerprint(throwaway({ perform: false }), v)
+            expect(p).toEqual(withFlags(TODAY.crc[v], { ...ALL_ON, mixer: false, perform: false }))
+            expect(p.desktopNav).not.toContain("Setlists -> /perform")
+            expect(p.drawer).not.toContain("Setlists -> /perform")
+            expect(p.openSetlistGoesTo).toBe("/setlists")
+        }
+    })
 })

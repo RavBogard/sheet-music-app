@@ -24,12 +24,9 @@ export interface CongregationConfig {
     description: string
     themeColor: string
     driveFolderId: string
-    features: {
-        monitor: boolean
-        ai: boolean
-        audio: boolean
-        collaboration: boolean
-    }
+    // Multi-tenant phase 6: the old `features` block (monitor, ai, audio,
+    // collaboration) is gone. Feature flags live in the tenant config
+    // (orgs/{id}.features) and are read with useFeature / hasFeature.
     printFooter: string
     defaultMusicians?: Array<{
         uid: string
@@ -79,12 +76,6 @@ export function defaultCongregationConfig(org: string | undefined = hostOrg()): 
         description: d.description,
         themeColor: d.themeColor,
         driveFolderId: "",
-        features: {
-            monitor: true,
-            ai: true,
-            audio: true,
-            collaboration: true,
-        },
         printFooter: orgString(tenant.id, "print.footer"),
     }
 }

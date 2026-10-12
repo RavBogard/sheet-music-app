@@ -14,11 +14,14 @@ import { DuplicateScanner } from "@/components/library/DuplicateScanner"
 import { PDFHealthScanner } from "@/components/library/PDFHealthScanner"
 import { useLibrary } from "@/hooks/use-library"
 import { useLibraryStore } from "@/lib/library-store"
+import { useFeature } from "@/lib/org/use-feature"
 
 export default function ManageClient({ serverIsAdmin }: { serverIsAdmin: boolean }) {
     const router = useRouter()
     const { refetch } = useLibrary()
     const allFiles = useLibraryStore(s => s.allFiles)
+    // Multi-tenant phase 6: the Sound tab is the mixer's (crc only).
+    const mixerOn = useFeature("mixer")
 
     const chartFiles = allFiles.filter(f =>
         f.mimeType?.includes('pdf') ||
@@ -55,10 +58,12 @@ export default function ManageClient({ serverIsAdmin }: { serverIsAdmin: boolean
                             <Database className="w-4 h-4" />
                             Library
                         </TabsTrigger>
-                        <TabsTrigger value="sound" className="min-h-11 gap-1.5">
-                            <Radio className="w-4 h-4" />
-                            Sound
-                        </TabsTrigger>
+                        {mixerOn && (
+                            <TabsTrigger value="sound" className="min-h-11 gap-1.5">
+                                <Radio className="w-4 h-4" />
+                                Sound
+                            </TabsTrigger>
+                        )}
                         {serverIsAdmin && (
                             <TabsTrigger value="audit" className="min-h-11 gap-1.5">
                                 <History className="w-4 h-4" />
@@ -96,11 +101,13 @@ export default function ManageClient({ serverIsAdmin }: { serverIsAdmin: boolean
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="sound" className="mt-6 space-y-8">
-                        <SectionErrorBoundary label="Sound System">
-                            <SoundSystemSection />
-                        </SectionErrorBoundary>
-                    </TabsContent>
+                    {mixerOn && (
+                        <TabsContent value="sound" className="mt-6 space-y-8">
+                            <SectionErrorBoundary label="Sound System">
+                                <SoundSystemSection />
+                            </SectionErrorBoundary>
+                        </TabsContent>
+                    )}
 
                     {serverIsAdmin && (
                         <TabsContent value="audit" className="mt-6">
