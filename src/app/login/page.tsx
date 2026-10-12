@@ -87,7 +87,8 @@ export default async function LoginPage() {
                     </div>
 
                     <p className="text-xs text-muted-foreground">
-                        {shortName}{bandLocation ? ` · ${bandLocation}` : null}
+                        {/* Production rendered no space before the dot (golden http-before); kept byte-identical. */}
+                        {shortName}{bandLocation ? `· ${bandLocation}` : null}
                     </p>
 
                     <nav aria-label="Legal" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">

@@ -66,7 +66,8 @@ describe("multi-tenant P1 golden: /login", () => {
         expect(html).toContain("bl-hero")
         expect(html).toContain('alt="Brothers Lazaroff"')
         expect(html).toContain("Songs &amp; setlists for the band")
-        expect(html).toContain("Brothers Lazaroff<!-- --> · St. Louis, MO")
+        // Production served "Brothers Lazaroff· St. Louis, MO" (no space; golden http-before), so the BL line keeps it.
+        expect(html).toContain("Brothers Lazaroff<!-- -->· St. Louis, MO")
         expect(congregationDoc.fn).not.toHaveBeenCalled()
         expect(html).toMatchSnapshot()
     })
@@ -102,7 +103,7 @@ describe("multi-tenant P1: /login reads the resolved tenant", () => {
         tenantState.configOverride = (cfg) => ({ ...cfg, branding: { ...cfg.branding, location: "Kirkwood, MO" } })
         try {
             const html = await render("brotherslazaroff")
-            expect(html).toContain("Brothers Lazaroff<!-- --> · Kirkwood, MO")
+            expect(html).toContain("Brothers Lazaroff<!-- -->· Kirkwood, MO")
         } finally {
             tenantState.configOverride = undefined
         }
