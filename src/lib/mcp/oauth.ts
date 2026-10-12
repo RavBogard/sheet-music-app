@@ -131,6 +131,12 @@ export interface AuthCodeData {
     codeChallenge: string
     redirectUri: string
     scope: string | null
+    /**
+     * Multi-tenant phase 4: the tenant of the address the person authorized
+     * through (x-org-id at /authorize). The token endpoint mints for this
+     * tenant only. Absent on codes issued before phase 4 (10-minute TTL).
+     */
+    orgId?: string | null
 }
 
 /** sha256(code), hex — codes are never stored in plaintext. */
@@ -150,6 +156,7 @@ export async function createAuthCode(data: AuthCodeData): Promise<string> {
         .doc(hashCode(code))
         .set({
             ...data,
+            orgId: data.orgId ?? null,
             createdAt: FieldValue.serverTimestamp(),
             expiresAt: Timestamp.fromMillis(Date.now() + AUTH_CODE_TTL_MS),
         })
@@ -181,6 +188,7 @@ export async function consumeAuthCode(code: string): Promise<AuthCodeData | null
         codeChallenge: d.codeChallenge as string,
         redirectUri: d.redirectUri as string,
         scope: (d.scope as string) ?? null,
+        orgId: typeof d.orgId === "string" && d.orgId ? d.orgId : null,
     }
 }
 

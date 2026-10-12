@@ -184,6 +184,13 @@ export const OrgConfigSchema = z.object({
     congregationDefaults: CongregationDefaultsSchema,
     /** Tenant text appended to the shared core MCP agent guide. */
     agentGuide: z.string().default(""),
+    /**
+     * Phase 4. "generated": the MCP instructions are generated facts + agentGuide
+     * + the shared core. "verbatim": agentGuide (or, when empty, the bundled
+     * .paul/AGENT-GUIDE.md) is served unchanged — CRC. Absent: verbatim for crc,
+     * generated otherwise (src/lib/mcp/agent-guide.ts agentGuideModeOf).
+     */
+    agentGuideMode: z.enum(["verbatim", "generated"]).optional(),
     /** Schema version of this document, bumped on breaking shape changes. */
     configVersion: z.literal(1).default(1),
 })
