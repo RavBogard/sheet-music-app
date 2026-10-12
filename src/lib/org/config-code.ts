@@ -152,7 +152,11 @@ const CRC: OrgConfigInput = {
     },
     liturgy: TODAY_LITURGY,
     congregationDefaults: CRC_CONGREGATION_DEFAULTS,
+    // CRC's guide is the bundled .paul/AGENT-GUIDE.md, served unchanged (phase 4
+    // golden). It stays out of this config so the 12 KB text is not handed to
+    // every browser page with the rest of the config.
     agentGuide: "",
+    agentGuideMode: "verbatim",
     configVersion: 1,
 }
 
@@ -206,7 +210,10 @@ const BL: OrgConfigInput = {
     liturgy: TODAY_LITURGY,
     // Frozen: BL's signed-out pages fall back to CRC's congregation defaults today.
     congregationDefaults: CRC_CONGREGATION_DEFAULTS,
+    // Phase 4: BL's connector gets the generated guide (facts from this config +
+    // the shared core); no BL-specific text is needed on top.
     agentGuide: "",
+    agentGuideMode: "generated",
     configVersion: 1,
 }
 

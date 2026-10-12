@@ -1,5 +1,3 @@
-import fs from "node:fs"
-import path from "node:path"
 import { createMcpHandler, withMcpAuth } from "mcp-handler"
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js"
 import { verifyBearer } from "@/lib/mcp/auth"
@@ -21,7 +19,8 @@ import {
 import { wrapWithValidationRemap } from "@/lib/mcp/zod-envelope-remap"
 import { withScopedBearer } from "@/lib/mcp/scoped-bearer-gate"
 import { forSurface, type Surface } from "@/lib/mcp/surfaces"
-import { logger } from "@/lib/logger"
+import { withoutTools } from "@/lib/mcp/tenant-tools"
+import { createTenantDispatcher } from "@/lib/mcp/tenant-dispatch"
 
 /**
  * The MCP handler, built once per surface — audit item (p).
@@ -37,28 +36,9 @@ import { logger } from "@/lib/logger"
  * the caller's rights.
  */
 
-/**
- * W-01 Task 6: surface `.paul/AGENT-GUIDE.md` to MCP clients via the server's
- * `instructions` field. Claude Desktop displays this on connect so the agent
- * knows the propose → confirm → commit policy without waiting for the operator
- * to spell it out. Read once at module load. Failure is non-fatal.
- */
-function loadAgentGuide(): string | undefined {
-    try {
-        const candidates = [
-            path.join(process.cwd(), ".paul", "AGENT-GUIDE.md"),
-            path.join(process.cwd(), "sheet-music-app", ".paul", "AGENT-GUIDE.md"),
-        ]
-        for (const p of candidates) {
-            if (fs.existsSync(p)) return fs.readFileSync(p, "utf8")
-        }
-    } catch (err) {
-        logger.warn("[mcp] failed to load AGENT-GUIDE.md for instructions", err)
-    }
-    return undefined
-}
-
-const agentGuide = loadAgentGuide()
+// W-01 Task 6's `.paul/AGENT-GUIDE.md` read moved to agent-guide.ts in
+// multi-tenant phase 4: authoring instructions are per tenant (CRC is still
+// served that file unchanged), chosen by tenant-dispatch.ts.
 
 /**
  * What an ops client reads on connect instead of the authoring guide. The
@@ -114,17 +94,18 @@ async function verifyToken(
 }
 
 /**
- * Build the route handlers for one surface.
- *
- * `basePath` is what mcp-handler appends `/mcp` to, so the authoring server is
- * `/api` → `/api/mcp` (unchanged, because that is the URL in Daniel's Claude
- * Desktop config and it must keep working), and ops is `/api/ops` →
- * `/api/ops/mcp`.
+ * Multi-tenant phase 4: one surface's mcp-handler with the given instructions,
+ * minus `dropTools` (a tenant's switched-off features; empty for crc, BL, ops).
  */
-export function buildMcpHandler(surface: Surface, basePath: string) {
-    const baseHandler = createMcpHandler(
+function createSurfaceHandler(
+    surface: Surface,
+    basePath: string,
+    instructions: string | undefined,
+    dropTools: ReadonlySet<string> = new Set(),
+) {
+    return createMcpHandler(
         (rawServer) => {
-            const server = forSurface(rawServer, surface)
+            const server = withoutTools(forSurface(rawServer, surface), dropTools)
             registerReadTools(server)
             registerWriteTools(server)
             registerMonitorTools(server)
@@ -143,14 +124,30 @@ export function buildMcpHandler(surface: Surface, basePath: string) {
                 name: surface === "ops" ? "centralreform-live-ops" : "centralreform-live",
                 version: "1.0.0",
             },
-            ...(surface === "ops"
-                ? { instructions: OPS_INSTRUCTIONS }
-                : agentGuide
-                  ? { instructions: agentGuide }
-                  : {}),
+            ...(instructions ? { instructions } : {}),
         },
         { basePath, disableSse: true, verboseLogs: false },
     )
+}
+
+/**
+ * Build the route handlers for one surface.
+ *
+ * `basePath` is what mcp-handler appends `/mcp` to, so the authoring server is
+ * `/api` → `/api/mcp` (unchanged, because that is the URL in Daniel's Claude
+ * Desktop config and it must keep working), and ops is `/api/ops` →
+ * `/api/ops/mcp`.
+ */
+export function buildMcpHandler(surface: Surface, basePath: string) {
+    // Multi-tenant phase 4: the authoring surface dispatches by the token's
+    // tenant (req.auth, set by withMcpAuth below) to a cached handler with that
+    // tenant's instructions and tool list. Ops keeps one handler.
+    const baseHandler =
+        surface === "authoring"
+            ? createTenantDispatcher((plan) =>
+                  createSurfaceHandler(surface, basePath, plan.instructions, plan.dropTools),
+              )
+            : createSurfaceHandler(surface, basePath, OPS_INSTRUCTIONS)
 
     // Multi-tenant phase 3: the 401 challenge's `resource_metadata` names the
     // request tenant's address (mcpPublicOrigin), the same origin the
