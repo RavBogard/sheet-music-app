@@ -12,6 +12,7 @@ import { makeReq } from "@/__tests__/api-test-helpers"
 
 const state = {
     openByLink: true as boolean,
+    closedOrgs: new Set<string>(),
     row: null as Record<string, unknown> | null,
     sessionUid: null as string | null,
     access: null as { role: string | null; po?: boolean } | null,
@@ -34,7 +35,7 @@ vi.mock("@/lib/file-fetcher", () => ({
     fetchFileById: vi.fn(async () => ({ buffer: new Uint8Array([37, 80, 68, 70]), contentType: "application/pdf", source: "firebase-storage" })),
 }))
 vi.mock("@/lib/org/get-org-config", () => ({
-    getOrgConfig: vi.fn(async () => ({ library: { openByLink: state.openByLink } })),
+    getOrgConfig: vi.fn(async (org: string) => ({ library: { openByLink: state.openByLink && !state.closedOrgs.has(org) } })),
 }))
 vi.mock("@/lib/org/access", () => ({
     getTenantAccess: vi.fn(async (uid: string, orgId: string) => ({
@@ -84,6 +85,7 @@ for (const r of routes) {
         beforeEach(() => {
             vi.clearAllMocks()
             state.openByLink = true
+            state.closedOrgs = new Set()
             state.row = { orgId: "crc" }
             state.sessionUid = null
             state.access = null
@@ -106,6 +108,30 @@ for (const r of routes) {
             it("a bare request without trust is still refused", async () => {
                 const res = await call({ "x-org-id": "crc" })
                 expect(res.status).toBe(401)
+            })
+        })
+
+        describe("the chart's owner has openByLink false, the host is open", () => {
+            beforeEach(() => {
+                state.closedOrgs = new Set(["nava-tehila"])
+                state.row = { orgId: "nava-tehila", visibleToOrgs: ["nava-tehila", "crc"] }
+            })
+            it("anon at another tenant's address is refused 401", async () => {
+                const res = await call({ "x-org-id": "crc", "sec-fetch-site": "same-origin" })
+                expect(res.status).toBe(401)
+            })
+            it("a member of a tenant the chart is shared with opens it, privately cached", async () => {
+                state.sessionUid = "u3"
+                state.access = { role: "member" }
+                const res = await call({ "x-org-id": "crc" })
+                expect(res.status).toBe(200)
+                expect(res.headers.get("cache-control")).toBe("private, max-age=86400")
+            })
+            it("a member of a tenant it is not shared with gets 404", async () => {
+                state.row = { orgId: "nava-tehila", visibleToOrgs: ["nava-tehila"] }
+                state.sessionUid = "u3"
+                state.access = { role: "member" }
+                expect((await call({ "x-org-id": "crc" })).status).toBe(404)
             })
         })
 

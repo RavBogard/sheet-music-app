@@ -8,7 +8,9 @@ import "server-only"
  * browser fetch, or an MCP bearer), whichever tenant owns it — setlists hold
  * charts by fileId and a texted link must open.
  *
- * When the HOST tenant (the address the request came to) sets it false, the
+ * A chart opens by link only when BOTH the host tenant (the address the
+ * request came to) and the chart's OWNER allow it: the owner decides about its
+ * own charts at every address. Otherwise the
  * bytes need a signed-in member (not pending) of the host tenant, and the chart
  * must be visible to the host tenant (visibility.ts: owner, or shared with it).
  * Signed in means a Firebase ID token, the `__session` cookie, or an MCP bearer
@@ -24,7 +26,7 @@ import type { OrgId } from "@/lib/org/types"
 import { getTenantAccess, hasTenantRole } from "@/lib/org/access"
 import { verifySessionCookieRequest } from "@/lib/drive-file-auth"
 import { verifyBearer } from "@/lib/mcp/auth"
-import { visibleTo, type VisibilityRow } from "@/lib/library/visibility"
+import { ownerOf, visibleTo, type VisibilityRow } from "@/lib/library/visibility"
 import { logger } from "@/lib/logger"
 
 export type LinkGate =
@@ -32,7 +34,7 @@ export type LinkGate =
     | { mode: "member"; orgId: OrgId; uid: string }
     | { mode: "refused"; status: 401 | 403 | 404; orgId: OrgId; reason: string }
 
-/** The host tenant's setting; an unreadable config keeps today's behaviour (open). */
+/** A tenant's setting (host or chart owner); an unreadable config keeps today's behaviour (open). */
 export async function hostOpensByLink(hostOrg: OrgId): Promise<boolean> {
     try {
         const c = await getOrgConfig(hostOrg)
@@ -79,7 +81,23 @@ async function memberUid(req: NextRequest, auth: AuthResult | undefined, hostOrg
  */
 export async function chartLinkGate(req: NextRequest, auth: AuthResult | undefined, fileId: string): Promise<LinkGate> {
     const hostOrg = coerceOrgId(req.headers.get("x-org-id"))
-    if (await hostOpensByLink(hostOrg)) return { mode: "open" }
+    let row: VisibilityRow | null = null
+    let rowRead = false
+    const readRow = async () => {
+        if (rowRead) return row
+        rowRead = true
+        try {
+            row = await chartRow(fileId)
+        } catch (e) {
+            logger.warn(`[open-by-link] chart row read for ${fileId} failed`, e)
+        }
+        return row
+    }
+    if (await hostOpensByLink(hostOrg)) {
+        // No row: the chart has no tenant record; it counts as crc's (the missing-orgId rule).
+        const owner = ownerOf((await readRow()) ?? {})
+        if (owner === hostOrg || (await hostOpensByLink(owner))) return { mode: "open" }
+    }
     const uid = await memberUid(req, auth, hostOrg)
     if (!uid) {
         return {
@@ -89,14 +107,7 @@ export async function chartLinkGate(req: NextRequest, auth: AuthResult | undefin
             reason: "This site's charts open only for its signed-in members. Sign in at this address to open the chart.",
         }
     }
-    let row: VisibilityRow | null = null
-    try {
-        row = await chartRow(fileId)
-    } catch (e) {
-        logger.warn(`[open-by-link] chart row read for ${fileId} failed`, e)
-    }
-    // No row: the chart has no tenant record; it counts as crc's (the missing-orgId rule).
-    if (!visibleTo(row ?? {}, hostOrg)) {
+    if (!visibleTo((await readRow()) ?? {}, hostOrg)) {
         return { mode: "refused", status: 404, orgId: hostOrg, reason: "No chart found for the given fileId." }
     }
     return { mode: "member", orgId: hostOrg, uid }
