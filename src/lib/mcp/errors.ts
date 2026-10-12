@@ -98,6 +98,9 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     not_a_test_uid: 403,
     not_authorized: 403,
     monitor_access_denied: 403,
+    // Multi-tenant phase 5: a chart another tenant owns and shares with the
+    // caller. Visible (the caller may use it), never writable by the caller.
+    not_owner: 403,
 
     // 404 — target does not exist
     not_found: 404,
@@ -134,6 +137,9 @@ export const ERROR_CODE_MAP: Record<string, number> = {
     // byte-identical AND UNBONDED). A conflict, not a bad argument: the
     // fileId is correct and the caller may re-issue it once the bonds move.
     mark_refused_row_is_bonded: 409,
+    // Multi-tenant phase 5: deleting a chart another tenant's upcoming setlist
+    // uses is refused; archive is allowed.
+    delete_refused_shared_in_use: 409,
     batch_rolled_back: 409, // v11.2-03-02 (BUG-3): atomic-batch collateral — a sibling row failed pre-validation
 
     // 422 — request is structurally valid but logically rejected
