@@ -790,3 +790,78 @@ describe("SongChartsLibrary — search filtering is debounced (Fix 2)", () => {
         expect(mockSetFilter).toHaveBeenCalledWith("")
     })
 })
+
+// ── Multi-tenant phase 1 golden (lane 3, surface 1) ──
+// The library section tabs per tenant, exactly as e0ad18b4 rendered them:
+// labels + counts in order, which tab opens, and which rows each tab shows.
+describe("P1 golden: library tabs per tenant", () => {
+    const tenantFiles: DriveFile[] = [
+        { id: "g-core", name: "Adon Olam.pdf", mimeType: "application/pdf" },
+        { id: "g-core2", name: "Barchu.pdf", mimeType: "application/pdf", collection: "core" },
+        { id: "g-legacy", name: "Kiddush.pdf", mimeType: "application/pdf", collection: "crc" as DriveFile["collection"] },
+        { id: "g-supp", name: "Niggun Alef.pdf", mimeType: "application/pdf", collection: "supplemental" },
+        { id: "g-supp2", name: "Niggun Bet.pdf", mimeType: "application/pdf", collection: "supplemental" },
+        { id: "g-nava", name: "Tehilim.pdf", mimeType: "application/pdf", collection: "nava" },
+        { id: "g-up", name: "Fresh Upload.pdf", mimeType: "application/pdf", collection: "uploads" },
+        { id: "g-audio", name: "Rehearsal.mp3", mimeType: "audio/mpeg" },
+    ]
+
+    function tabTexts(): string[] {
+        const group = screen.getByRole("group", { name: "Library section" })
+        return Array.from(group.querySelectorAll("button")).map((b) => b.textContent ?? "")
+    }
+    function pressedTab(): string | undefined {
+        const group = screen.getByRole("group", { name: "Library section" })
+        return Array.from(group.querySelectorAll("button")).find((b) => b.getAttribute("aria-pressed") === "true")?.textContent ?? undefined
+    }
+    function visibleRows(): string[] {
+        return screen.queryAllByTestId(/^file-row-/).map((el) => el.getAttribute("data-testid")!.replace("file-row-", "")).sort()
+    }
+    function rowsPerTab(): Record<string, string[]> {
+        const out: Record<string, string[]> = {}
+        for (const text of tabTexts()) {
+            const group = screen.getByRole("group", { name: "Library section" })
+            const btn = Array.from(group.querySelectorAll("button")).find((b) => b.textContent === text)!
+            fireEvent.click(btn)
+            out[text] = visibleRows()
+        }
+        return out
+    }
+
+    beforeEach(() => {
+        vi.useRealTimers()
+        vi.clearAllMocks()
+        resetApiFetch()
+        mockDisplayedFiles = tenantFiles
+        mockAllFiles = tenantFiles
+        mockInitialized = true
+        authState.isAdmin = false
+        authState.user = null
+    })
+
+    it("crc: CRC Charts / Shireinu / Nava Tehilah / Uploads / Audio, opens on CRC Charts", () => {
+        render(<SongChartsLibrary org="crc" />)
+        expect(tabTexts()).toEqual(["CRC Charts (3)", "Shireinu (2)", "Nava Tehilah (1)", "Uploads (1)", "Audio (1)"])
+        expect(pressedTab()).toBe("CRC Charts (3)")
+        expect(visibleRows()).toEqual(["g-core", "g-core2", "g-legacy"])
+        expect(rowsPerTab()).toEqual({
+            "CRC Charts (3)": ["g-core", "g-core2", "g-legacy"],
+            "Shireinu (2)": ["g-supp", "g-supp2"],
+            "Nava Tehilah (1)": ["g-nava"],
+            "Uploads (1)": ["g-up"],
+            "Audio (1)": ["g-audio"],
+        })
+    })
+
+    it("brotherslazaroff: Charts / Uploads / Audio, opens on Charts, no supplemental or nava tab", () => {
+        render(<SongChartsLibrary org="brotherslazaroff" />)
+        expect(tabTexts()).toEqual(["Charts (3)", "Uploads (1)", "Audio (1)"])
+        expect(pressedTab()).toBe("Charts (3)")
+        expect(visibleRows()).toEqual(["g-core", "g-core2", "g-legacy"])
+        expect(rowsPerTab()).toEqual({
+            "Charts (3)": ["g-core", "g-core2", "g-legacy"],
+            "Uploads (1)": ["g-up"],
+            "Audio (1)": ["g-audio"],
+        })
+    })
+})
