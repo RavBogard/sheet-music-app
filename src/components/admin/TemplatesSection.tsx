@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore"
 import { getDb } from "@/lib/firebase"
-import { getAllTemplateKeys, getDefaultTemplate, TEMPLATE_LABELS, convertSetlistToTemplate, type TemplateSlot } from "@/lib/liturgical-templates"
+import { getDefaultTemplate, TEMPLATE_LABELS, convertSetlistToTemplate, type TemplateSlot } from "@/lib/liturgical-templates"
+import { useOrg } from "@/lib/org/org-context"
+import { serviceTypeKeysFor } from "@/lib/org/tenant-lists"
 import { useCustomTemplates } from "@/lib/template-firebase"
 import { TemplateEditor } from "@/app/(main)/manage/templates/TemplateEditor"
 import { fetchTracksForSetlistClient } from "@/lib/client-tracks"
@@ -23,6 +25,7 @@ interface SetlistSummary {
 }
 
 export function TemplatesSection() {
+    const org = useOrg()
     const [selectedKey, setSelectedKey] = useState<string | null>(null)
     const { overrides, loading: templatesLoading } = useCustomTemplates()
     const [importedSlots, setImportedSlots] = useState<TemplateSlot[] | null>(null)
@@ -97,7 +100,8 @@ export function TemplatesSection() {
         )
     }
 
-    const templateKeys = getAllTemplateKeys()
+    // Multi-tenant phase 1: the tenant's service types (built-in catalogue when it lists none).
+    const templateKeys = serviceTypeKeysFor(org)
     const regularKeys = templateKeys.filter(k => TEMPLATE_LABELS[k]?.category === "regular")
     const holidayKeys = templateKeys.filter(k => TEMPLATE_LABELS[k]?.category === "holiday")
 

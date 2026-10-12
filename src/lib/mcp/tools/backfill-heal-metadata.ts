@@ -19,6 +19,7 @@ import {
     enrichLibraryRow,
 } from "@/lib/library/ai-enrichment"
 import { logger } from "@/lib/logger"
+import { rowOrg } from "@/lib/mcp/org-context"
 
 /**
  * One-time backfill tool — storage-recovery Lane B follow-up.
@@ -224,6 +225,7 @@ export async function backfillHealMetadata(
             buffer,
             uid,
             storagePath,
+            orgId: rowOrg(data.orgId),
         })
         // enrichLibraryRow is fail-open (never throws); await it so the pass
         // completes within the request lifetime. Inject the already-downloaded

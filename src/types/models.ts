@@ -1,3 +1,5 @@
+import type { KnownCollection } from "@/lib/library/collections"
+
 /** Firestore Timestamp — may come as raw object, with toDate() method, or as a Timestamp-like */
 export type FirestoreDate = string | Date | number | { seconds: number; nanoseconds?: number; toDate?: () => Date } | { toDate: () => Date }
 
@@ -17,7 +19,7 @@ export interface DriveFile {
     displayName?: string
     mimeType: string
     parents?: string[]
-    collection?: 'core' | 'supplemental' | 'uploads' | 'nava'
+    collection?: KnownCollection
     webContentLink?: string
     thumbnailLink?: string
     metadata?: {

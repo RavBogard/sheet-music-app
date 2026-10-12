@@ -7,6 +7,8 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } 
 import { DriveFile } from "@/types/models"
 import { isFileCached } from "@/lib/cache-utils"
 import { splitChartComposer } from "@/lib/library/chart-composer"
+import { useOrg } from "@/lib/org/org-context"
+import { orgString } from "@/lib/org/strings"
 
 interface LibraryFileRowProps {
     item: DriveFile
@@ -40,6 +42,7 @@ function getAudioCleanName(name: string) {
 }
 
 export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, onRename, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, onLongPress, usageInfo, canAddToSetlist, onAddToSetlist }: LibraryFileRowProps) {
+    const org = useOrg()
     const isFolder = item.mimeType?.includes('folder')
     const isAudio = isAudioMime(item)
     const [isCached, setIsCached] = useState(false)
@@ -203,7 +206,7 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
 
                                 {!isFolder && !isAudio && item.collection !== 'supplemental' && item.collection !== 'nava' && (
                                     <span className="text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md border border-blue-500/20">
-                                        CRC
+                                        {orgString(org, "library.ownBadge")}
                                     </span>
                                 )}
 

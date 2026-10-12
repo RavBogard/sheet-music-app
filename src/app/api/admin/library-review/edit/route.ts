@@ -16,6 +16,7 @@ import { requireAdmin } from "@/lib/http/admin-gate"
 import { zodFormatter } from "@/lib/mcp/error-envelopes"
 import { editEnrichment } from "@/lib/library/review-queue"
 import { logger } from "@/lib/logger"
+import { KNOWN_COLLECTIONS } from "@/lib/library/collections"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 30
@@ -23,7 +24,7 @@ export const maxDuration = 30
 const EditsSchema = z
     .object({
         title: z.string().min(1).optional(),
-        collection: z.enum(["core", "supplemental", "uploads", "nava"]).optional(),
+        collection: z.enum(KNOWN_COLLECTIONS).optional(),
         key: z.string().optional(),
         bpm: z.number().positive().nullable().optional(),
         leadMusician: z.string().optional(),

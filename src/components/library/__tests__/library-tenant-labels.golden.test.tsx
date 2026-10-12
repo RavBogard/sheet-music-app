@@ -140,3 +140,51 @@ describe("P1 golden: never-tenant-aware library labels (crc + brotherslazaroff)"
         })
     }
 })
+
+// ── Multi-tenant phase 1 (lane 3): a third tenant gets its own names ──
+describe("P1 tenant-driven: library labels for a third tenant", () => {
+    beforeEach(() => {
+        clearPrimedOrgConfigs()
+        libraryState.allFiles = searchFiles
+    })
+    afterEach(() => {
+        cleanup()
+        clearPrimedOrgConfigs()
+    })
+
+    it("SearchOverlay, UploadDialog and LibraryFileRow use its core label and badge", async () => {
+        const { primeTestOrg } = await import("@/lib/org/__tests__/test-org-config")
+        const cfg = primeTestOrg()
+        const { unmount } = inOrg("testshul", <SearchOverlay isOpen onClose={() => {}} onSelect={() => {}} />)
+        const group = screen.getByRole("group", { name: "Library collection" })
+        expect(group.querySelector("button")?.textContent).toBe("Our Charts")
+        expect(screen.getByText("Adon Olam").nextElementSibling?.textContent).toBe("TST")
+        unmount()
+
+        render(
+            <OrgProvider orgId="testshul" config={cfg}>
+                <UploadDialog />
+            </OrgProvider>,
+        )
+        fireEvent.click(screen.getByRole("button", { name: /upload/i }))
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement
+        fireEvent.change(input, { target: { files: [new File(["x"], "song.pdf", { type: "application/pdf" })] } })
+        const select = document.getElementById("upload-collection") as HTMLSelectElement
+        expect(select.options[0].textContent).toBe("Our Charts")
+        cleanup()
+
+        render(
+            <OrgProvider orgId="testshul" config={cfg}>
+                <LibraryFileRow
+                    item={{ id: "r", name: "Zemer.pdf", mimeType: "application/pdf" } as DriveFile}
+                    onClick={() => {}}
+                    isDigitizing={false}
+                    isAdmin={false}
+                    getCleanName={(n) => n.replace(/\.pdf$/, "")}
+                />
+            </OrgProvider>,
+        )
+        expect(screen.getByText("TST")).toBeDefined()
+        expect(screen.queryByText("CRC")).toBeNull()
+    })
+})

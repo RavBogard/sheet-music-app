@@ -239,6 +239,7 @@ export async function healChartBytes(
                 buffer,
                 uid,
                 storagePath,
+                orgId: rowOrg(rowData.orgId),
             }),
         )
     } catch (emitErr) {
@@ -329,6 +330,8 @@ export function buildHealRowCreatedEvent(args: {
     buffer: Buffer
     uid: string
     storagePath: string
+    /** The chart's tenant (multi-tenant phase 1: picks the AI prompt). Omitted = crc. */
+    orgId?: string
 }): LibraryRowCreatedEvent {
     const contentHash = createHash("sha256").update(args.buffer).digest("hex")
     return {
@@ -343,5 +346,6 @@ export function buildHealRowCreatedEvent(args: {
         storagePath: args.storagePath,
         contentHash,
         uploaderUid: args.uid,
+        ...(args.orgId ? { orgId: args.orgId } : {}),
     }
 }

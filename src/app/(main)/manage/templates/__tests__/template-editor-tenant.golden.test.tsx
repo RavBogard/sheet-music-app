@@ -43,3 +43,19 @@ describe("P1 golden: TemplateEditor rabbi-slot hint", () => {
         })
     }
 })
+
+// ── Multi-tenant phase 1 (lane 3): the hint names the tenant's own slot ──
+describe("P1 tenant-driven: TemplateEditor rabbi-slot hint", () => {
+    afterEach(() => {
+        cleanup()
+        clearPrimedOrgConfigs()
+    })
+
+    it("a third tenant's first rabbi slot key", async () => {
+        const { primeTestOrg } = await import("@/lib/org/__tests__/test-org-config")
+        const cfg = primeTestOrg({
+            liturgy: { ...codeOrgConfig("crc")!.liturgy, rabbiSlots: [{ key: "rav_cohen", label: "Rav Cohen", match: ["cohen"] }] },
+        })
+        expect(onlyForPlaceholder("testshul", cfg)).toBe("e.g., rav_cohen")
+    })
+})

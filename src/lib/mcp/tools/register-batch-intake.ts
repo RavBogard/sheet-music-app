@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { KNOWN_COLLECTIONS } from "@/lib/library/collections"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import {
     registerAppResource,
@@ -71,7 +72,7 @@ function uidFrom(extra: AuthExtra): string {
 // ─── shared schema fragments ─────────────────────────────────────────────────
 
 const collectionSchema = z
-    .enum(["core", "supplemental", "uploads", "nava"])
+    .enum(KNOWN_COLLECTIONS)
     .optional()
     .describe(
         "Which library section to file these charts under. 'uploads' is the user-uploaded section (default). 'core', 'supplemental' and 'nava' are curated catalogs — only admins and band leaders may write to them.",

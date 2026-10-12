@@ -59,3 +59,22 @@ describe("P1 golden: creation wizard service types", () => {
         })
     }
 })
+
+// ── Multi-tenant phase 1 (lane 3): a third tenant's own service types ──
+describe("P1 tenant-driven: creation wizard service types", () => {
+    afterEach(() => clearPrimedOrgConfigs())
+
+    it("offers only the tenant's service types, in its order", async () => {
+        const { primeTestOrg } = await import("@/lib/org/__tests__/test-org-config")
+        const cfg = primeTestOrg({
+            liturgy: {
+                ...codeOrgConfig("crc")!.liturgy,
+                serviceTypes: [
+                    { key: "shabbat_morning", label: "Shacharit", defaultStart: "" },
+                    { key: "friday_night", label: "Kabbalat Shabbat", defaultStart: "" },
+                ],
+            },
+        })
+        expect(keysFor("testshul", cfg)).toEqual(["shabbat_morning", "friday_night"])
+    })
+})

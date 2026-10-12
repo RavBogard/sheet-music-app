@@ -128,11 +128,25 @@ export const LibrarySchema = z.object({
 })
 
 export const LiturgySchema = z.object({
-    /** Book slugs this tenant sees. Empty = the shared books only. */
+    /**
+     * Book slugs this tenant sees (list_books), in registry order. Empty = every
+     * registered book, which is what every tenant saw before phase 1; which
+     * books count as "shared" for a new tenant is not decided yet.
+     */
     books: z.array(z.string()).default([]),
+    /** No code reads this yet: the book is chosen per setlist, there is no per-service default. */
     defaultBookByService: z.record(z.string(), z.string()).default({}),
+    /** Service types (template keys) the creation wizard and template list offer. Empty = the built-in catalogue. */
     serviceTypes: z
         .array(z.object({ key: z.string().min(1), label: z.string().min(1), defaultStart: z.string().default("") }))
+        .default([]),
+    /**
+     * Rabbi slot keys a template slot's `onlyFor` may name, with the words in a
+     * request that pick them (template-parser.ts). Empty = CRC's two slots,
+     * which is what every tenant had before phase 1.
+     */
+    rabbiSlots: z
+        .array(z.object({ key: z.string().min(1), label: z.string().min(1), match: z.array(z.string().min(1)).default([]) }))
         .default([]),
 })
 

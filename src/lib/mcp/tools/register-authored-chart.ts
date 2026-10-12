@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { KNOWN_COLLECTIONS } from "@/lib/library/collections"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { orgFrom, type AuthExtra } from "@/lib/mcp/org-context"
 import { isErrorEnvelope } from "./result-iserror"
@@ -78,7 +79,7 @@ const sourceSchema = z.discriminatedUnion("kind", [
 ])
 
 const collectionSchema = z
-    .enum(["core", "supplemental", "uploads", "nava"])
+    .enum(KNOWN_COLLECTIONS)
     .optional()
     .describe("Library section (default 'uploads'). 'core', 'supplemental' and 'nava' are curated — admins and band leaders only.")
 

@@ -1,8 +1,15 @@
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { rabbiSlotsFor } from "@/lib/org/tenant-lists"
+import type { OrgId } from "@/lib/org/types"
+
 /**
  * Map natural language service descriptions to template keys and rabbi identifiers.
  * Returns { templateKey, rabbi } or null if no template matches.
  */
-export function parseTemplateRequest(text: string): { templateKey: string; rabbi?: string; date?: Date } | null {
+export function parseTemplateRequest(
+    text: string,
+    orgId: OrgId = DEFAULT_ORG_ID,
+): { templateKey: string; rabbi?: string; date?: Date } | null {
     const lower = text.toLowerCase()
 
     // Extract date from message (e.g., "March 14", "for March 14th", "on 3/14")
@@ -21,25 +28,20 @@ export function parseTemplateRequest(text: string): { templateKey: string; rabbi
         }
     }
 
-    // Template matching with rabbi detection
-    // Order matters: more specific matches first
-    if (lower.includes('daniel') && lower.includes('friday')) {
-        return { templateKey: 'friday_night', rabbi: 'daniel_karen', date }
+    // Template matching with rabbi detection. The rabbi slots and the words
+    // that pick them are tenant config (liturgy.rabbiSlots; CRC's daniel_karen
+    // and randy when a tenant lists none). Order matters: every Friday match
+    // before any morning match, slots and words in their listed order.
+    const slots = rabbiSlotsFor(orgId)
+    if (lower.includes('friday')) {
+        for (const slot of slots) {
+            if (slot.match.some((w) => lower.includes(w.toLowerCase()))) return { templateKey: 'friday_night', rabbi: slot.key, date }
+        }
     }
-    if (lower.includes('karen') && lower.includes('friday')) {
-        return { templateKey: 'friday_night', rabbi: 'daniel_karen', date }
-    }
-    if (lower.includes('randy') && lower.includes('friday')) {
-        return { templateKey: 'friday_night', rabbi: 'randy', date }
-    }
-    if (lower.includes('daniel') && (lower.includes('saturday') || lower.includes('morning') || lower.includes('shabbat morning'))) {
-        return { templateKey: 'shabbat_morning', rabbi: 'daniel_karen', date }
-    }
-    if (lower.includes('karen') && (lower.includes('saturday') || lower.includes('morning'))) {
-        return { templateKey: 'shabbat_morning', rabbi: 'daniel_karen', date }
-    }
-    if (lower.includes('randy') && (lower.includes('saturday') || lower.includes('morning') || lower.includes('shabbat morning'))) {
-        return { templateKey: 'shabbat_morning', rabbi: 'randy', date }
+    if (lower.includes('saturday') || lower.includes('morning')) {
+        for (const slot of slots) {
+            if (slot.match.some((w) => lower.includes(w.toLowerCase()))) return { templateKey: 'shabbat_morning', rabbi: slot.key, date }
+        }
     }
 
     // Non-rabbi-specific templates

@@ -8,6 +8,7 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
+import type { KnownCollection } from "@/lib/library/collections"
 import {
     EMPTY_ENRICHMENT_PROJECTION,
     loadEnrichmentProjection,
@@ -307,7 +308,7 @@ export interface SearchLibraryArgs {
      * every row that is not supplemental/nava/uploads, including legacy rows
      * with no collection field. A row with no library_index entry is core.
      */
-    collection?: "core" | "supplemental" | "nava" | "uploads" | "all"
+    collection?: KnownCollection | "all"
 }
 
 /**
@@ -355,7 +356,7 @@ interface LibraryW02Fields {
     status?: string
     /** David's ask 2: library_index.collection, normalized the way
      *  list_library reads it (anything else is core). */
-    collection?: "core" | "supplemental" | "nava" | "uploads"
+    collection?: KnownCollection
 }
 
 /**
@@ -839,7 +840,7 @@ export const LIST_LIBRARY_MAX_LIMIT = 200
 export const LIST_LIBRARY_DEFAULT_LIMIT = 50
 
 export interface ListLibraryArgs {
-    collection?: "core" | "supplemental" | "uploads" | "nava"
+    collection?: KnownCollection
     limit?: number
     offset?: number
     includeNonCharts?: boolean

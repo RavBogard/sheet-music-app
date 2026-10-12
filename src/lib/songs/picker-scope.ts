@@ -16,18 +16,29 @@
  *      than hidden.
  */
 import { isJunkLibraryRow } from '@/lib/library/junk-filter'
+import {
+    LIBRARY_DISPLAY_ORDER,
+    isKnownCollection,
+    normalizeCollection,
+    type KnownCollection,
+} from '@/lib/library/collections'
 import type { LocalSong } from '@/lib/local/types'
 import { rowOrg } from '@/lib/org/membership'
+import { orgString } from '@/lib/org/strings'
+import { orgConfigSync } from '@/lib/org/tenant-lists'
 import type { OrgId } from '@/lib/org/types'
 
-export type PickerCollection = 'core' | 'supplemental' | 'nava' | 'uploads'
+export type PickerCollection = KnownCollection
 
-export const PICKER_COLLECTIONS: readonly PickerCollection[] = ['core', 'supplemental', 'nava', 'uploads']
+/** Library order (multi-tenant phase 1: from the one collection list, collections.ts). */
+export const PICKER_COLLECTIONS: readonly PickerCollection[] = LIBRARY_DISPLAY_ORDER
+
+export { normalizeCollection }
 
 const HIDDEN_STATUSES = new Set(['archived', 'duplicate', 'orphaned'])
 
-/** Same labels as the library page (SongChartsLibrary / SearchOverlay). */
-export function collectionLabel(org: OrgId, c: PickerCollection): string {
+/** What collectionLabel returned before phase 1; still the answer for a collection the tenant does not list. */
+function unlistedCollectionLabel(org: OrgId, c: PickerCollection): string {
     switch (c) {
         case 'core':
             return org === 'crc' ? 'CRC Charts' : 'Charts'
@@ -40,14 +51,42 @@ export function collectionLabel(org: OrgId, c: PickerCollection): string {
     }
 }
 
-/** The collection a picker opens on. */
-export function defaultPickerCollection(org: OrgId): PickerCollection | null {
-    return org === 'crc' ? 'core' : null
+/**
+ * Same labels as the library page (SongChartsLibrary / SearchOverlay): the
+ * tenant's `library.collections` label, else the pre-phase-1 label.
+ */
+export function collectionLabel(org: OrgId, c: PickerCollection): string {
+    return orgConfigSync(org).library.collections.find((x) => x.id === c)?.label ?? unlistedCollectionLabel(org, c)
 }
 
-/** library_index semantics: anything not supplemental/nava/uploads is core. */
-export function normalizeCollection(raw: unknown): PickerCollection {
-    return raw === 'supplemental' || raw === 'nava' || raw === 'uploads' ? raw : 'core'
+/**
+ * The library page's section tabs, in the tenant's order: its configured
+ * collections that the code knows (phase 5 adds per-tenant collections).
+ */
+export function librarySections(org: OrgId): Array<{ id: PickerCollection; label: string }> {
+    const out: Array<{ id: PickerCollection; label: string }> = []
+    for (const c of orgConfigSync(org).library.collections) {
+        if (isKnownCollection(c.id) && !out.some((x) => x.id === c.id)) out.push({ id: c.id, label: c.label })
+    }
+    return out
+}
+
+/** The collection a picker opens on (`library.defaultCollection`; "" = everything). */
+export function defaultPickerCollection(org: OrgId): PickerCollection | null {
+    const d = orgConfigSync(org).library.defaultCollection
+    return isKnownCollection(d) ? d : null
+}
+
+/**
+ * The core section's name on the surfaces that were never tenant-aware
+ * (search overlay toggle, upload and scraper section pickers). A tenant that
+ * overrides `library.coreSectionLabel` (BL: frozen "CRC Charts") gets that;
+ * every other tenant gets its configured core label, so CRC stays "CRC Charts".
+ */
+export function coreSectionLabel(org: OrgId): string {
+    return orgConfigSync(org).vocabulary.overrides['library.coreSectionLabel'] !== undefined
+        ? orgString(org, 'library.coreSectionLabel')
+        : collectionLabel(org, 'core')
 }
 
 export function isHiddenStatus(status: unknown): boolean {

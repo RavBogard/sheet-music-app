@@ -865,3 +865,46 @@ describe("P1 golden: library tabs per tenant", () => {
         })
     })
 })
+
+// ── Multi-tenant phase 1 (lane 3): a third tenant's tabs come from its config ──
+describe("P1 tenant-driven: library tabs", () => {
+    beforeEach(() => {
+        vi.useRealTimers()
+        vi.clearAllMocks()
+        resetApiFetch()
+        const files: DriveFile[] = [
+            { id: "t-core", name: "Adon Olam.pdf", mimeType: "application/pdf" },
+            { id: "t-supp", name: "Niggun.pdf", mimeType: "application/pdf", collection: "supplemental" },
+            { id: "t-up", name: "Fresh.pdf", mimeType: "application/pdf", collection: "uploads" },
+        ]
+        mockDisplayedFiles = files
+        mockAllFiles = files
+        mockInitialized = true
+        authState.isAdmin = false
+        authState.user = null
+    })
+    afterEach(async () => {
+        const { clearPrimedOrgConfigs } = await import("@/lib/org/config-cache")
+        clearPrimedOrgConfigs()
+    })
+
+    it("renders the tenant's sections, labels and order, and opens on its default", async () => {
+        const { primeTestOrg } = await import("@/lib/org/__tests__/test-org-config")
+        primeTestOrg({
+            library: {
+                collections: [
+                    { id: "uploads", label: "Inbox" },
+                    { id: "core", label: "Our Charts" },
+                ],
+                defaultCollection: "uploads",
+            },
+        })
+        render(<SongChartsLibrary org="testshul" />)
+        const group = screen.getByRole("group", { name: "Library section" })
+        const buttons = Array.from(group.querySelectorAll("button"))
+        expect(buttons.map((b) => b.textContent)).toEqual(["Inbox (1)", "Our Charts (1)"])
+        expect(buttons.find((b) => b.getAttribute("aria-pressed") === "true")?.textContent).toBe("Inbox (1)")
+        expect(screen.getByTestId("file-row-t-up")).toBeDefined()
+        expect(screen.queryByTestId("file-row-t-core")).toBeNull()
+    })
+})
