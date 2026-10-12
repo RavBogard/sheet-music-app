@@ -150,7 +150,7 @@ describe("P5 storage.rules — library/** by visibleTo", () => {
     for (const [p, path] of CAN) it(`${p} reads ${path}`, async () => void (await assertSucceeds(read(p, path))))
     for (const [p, path] of CANNOT) it(`${p} cannot read ${path}`, async () => void (await assertFails(read(p, path))))
     it("nobody writes library objects from the browser", async () => {
-        await assertFails(ctx(env, "aAdmin").storage().ref("library/sharedC.pdf").put(bytes))
-        await assertFails(ctx(env, "po").storage().ref("library/new.pdf").put(bytes))
+        await assertFails(ctx(env, "aAdmin").storage().ref("library/sharedC.pdf").put(bytes).then((t) => t))
+        await assertFails(ctx(env, "po").storage().ref("library/new.pdf").put(bytes).then((t) => t))
     })
 })

@@ -40,6 +40,8 @@ export interface VisibilityRow {
     collectionId?: unknown
     visibleToOrgs?: unknown
     libraryOrgs?: unknown
+    /** Rows are plain Firestore records; other fields pass through untouched. */
+    [field: string]: unknown
 }
 
 /** Row's owning tenant; missing/empty is crc (the pre-multi-tenant meaning). */
