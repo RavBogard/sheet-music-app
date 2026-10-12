@@ -1,3 +1,6 @@
+import { requestOrg } from "@/lib/org/request-org"
+import { PlatformPrivacyPolicy } from "@/components/legal/PlatformLegal"
+
 // C5D-007: legal pages are explicitly indexable. Root layout sets a
 // global noindex so authed surfaces stay out of search results; this
 // per-page override flips it back for the public legal disclosure
@@ -7,7 +10,15 @@ export const metadata = {
     robots: { index: true, follow: true },
 }
 
-export default function PrivacyPolicyPage() {
+export default async function PrivacyPolicyPage() {
+    // Multi-tenant phase 1: CRC's text for tenants with legal.useCrcText (CRC and
+    // Brothers Lazaroff); everyone else gets the platform-run version.
+    const { config } = await requestOrg()
+    if (config && !config.legal.useCrcText) return <PlatformPrivacyPolicy config={config} />
+    return <CrcPrivacyPolicy />
+}
+
+function CrcPrivacyPolicy() {
     return (
         <div className="min-h-screen bg-background text-foreground">
             {/* Hero header */}

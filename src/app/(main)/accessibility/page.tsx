@@ -1,9 +1,26 @@
-export const metadata = {
-    title: 'Accessibility Statement | CRC Music',
-    robots: { index: true, follow: true },
+import { requestOrg } from "@/lib/org/request-org"
+import { PlatformAccessibility } from "@/components/legal/PlatformLegal"
+import type { Metadata } from "next"
+
+// Multi-tenant phase 1: CRC's title for legal.useCrcText tenants (CRC and BL);
+// otherwise the root template adds the tenant's own name.
+export async function generateMetadata(): Promise<Metadata> {
+    const { config } = await requestOrg()
+    return {
+        title: config && !config.legal.useCrcText ? "Accessibility Statement" : 'Accessibility Statement | CRC Music',
+        robots: { index: true, follow: true },
+    }
 }
 
-export default function AccessibilityPage() {
+export default async function AccessibilityPage() {
+    // Multi-tenant phase 1: CRC's text for tenants with legal.useCrcText (CRC and
+    // Brothers Lazaroff); everyone else gets the platform-run version.
+    const { config } = await requestOrg()
+    if (config && !config.legal.useCrcText) return <PlatformAccessibility config={config} />
+    return <CrcAccessibility />
+}
+
+function CrcAccessibility() {
     return (
         <div className="min-h-screen bg-background text-foreground">
             {/* Hero header */}

@@ -1,4 +1,8 @@
+"use client"
+
 import { Music } from "lucide-react"
+import { useOrg } from "@/lib/org/org-context"
+import { orgString } from "@/lib/org/strings"
 
 /**
  * Cycle-3.5 P2-005 — SSR skeleton matching the post-hydration
@@ -7,12 +11,18 @@ import { Music } from "lucide-react"
  * centered spinner. Dimensions mirror the real card layout exactly
  * (rounded-2xl, p-4, font-semibold title shell, calendar+songs row)
  * to avoid CLS when the client-hydrated listing replaces it.
+ *
+ * Multi-tenant phase 1: a client component so it can read the tenant from
+ * <OrgProvider> both as the server page's Suspense fallback and inside
+ * PublicSetlistListing; the brand is `page.skeletonBrand` (BL frozen to
+ * "CRC Music").
  */
 export function PublicSetlistSkeleton({
     cards = 6,
 }: {
     cards?: number
 } = {}) {
+    const brand = orgString(useOrg(), "page.skeletonBrand")
     return (
         <div
             className="flex flex-col gap-4 px-4 pt-6 pb-20 max-w-2xl mx-auto w-full"
@@ -22,7 +32,7 @@ export function PublicSetlistSkeleton({
             <div className="flex items-center gap-3 mb-2">
                 <Music className="h-6 w-6 text-muted-foreground" />
                 <div>
-                    <h1 className="text-xl font-bold">CRC Music</h1>
+                    <h1 className="text-xl font-bold">{brand}</h1>
                     <p className="text-sm text-muted-foreground">Public setlists</p>
                 </div>
             </div>

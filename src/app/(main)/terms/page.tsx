@@ -1,3 +1,6 @@
+import { requestOrg } from "@/lib/org/request-org"
+import { PlatformTerms } from "@/components/legal/PlatformLegal"
+
 // C5D-007: legal pages are explicitly indexable; root noindex applies
 // to the authed app, this override exempts public legal disclosure.
 export const metadata = {
@@ -5,7 +8,15 @@ export const metadata = {
     robots: { index: true, follow: true },
 }
 
-export default function TermsPage() {
+export default async function TermsPage() {
+    // Multi-tenant phase 1: CRC's text for tenants with legal.useCrcText (CRC and
+    // Brothers Lazaroff); everyone else gets the platform-run version.
+    const { config } = await requestOrg()
+    if (config && !config.legal.useCrcText) return <PlatformTerms config={config} />
+    return <CrcTerms />
+}
+
+function CrcTerms() {
     return (
         <div className="min-h-screen bg-background text-foreground">
             {/* Hero header */}

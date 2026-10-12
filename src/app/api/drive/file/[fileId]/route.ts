@@ -3,6 +3,7 @@ import { checkRateLimit } from "@/lib/rate-limit"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { fetchFileById } from "@/lib/file-fetcher"
 import { logger } from "@/lib/logger"
+import { allowedOriginsFromEnv } from "@/lib/http/cors-origins"
 import { hasBrowserFetchMetadata } from "@/lib/drive-file-auth"
 import { httpError, redactInProduction } from "@/lib/http/error-envelope"
 import { byteRangeResponse } from "@/lib/http/byte-range"
@@ -12,7 +13,8 @@ import { verifyBearer } from "@/lib/mcp/auth"
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://centralreform.live,https://www.centralreform.live').split(',').map(s => s.trim())
+// Multi-tenant phase 1: unchanged default (CRC's origins only); see cors-origins.ts.
+const ALLOWED_ORIGINS = allowedOriginsFromEnv()
 const ALLOWED_HOSTNAMES = ALLOWED_ORIGINS.map(o => { try { return new URL(o).hostname } catch { return '' } }).filter(Boolean)
 
 function getAllowedOrigin(request: NextRequest): string {

@@ -53,6 +53,8 @@ const CRC_LITERALS: Record<StringKey, string> = {
     "page.skeletonBrand": "CRC Music",
     "profile.scheduleName": "your CRC schedule",
     "library.ownBadge": "CRC",
+    // robots.ts / sitemap.ts BASE_URL at e0ad18b4 (served on both hosts).
+    "seo.baseUrl": "https://centralreform.live",
     "ai.systemInstructionLead":
         "You are an enrichment assistant for the Central Reform Congregation music library. You inspect a chart file plus its current library_index metadata and emit a structured enrichment report. You NEVER refuse — you always emit the JSON object. If you're uncertain, return low confidence, populate `concerns`, and set `review_required: true`. Do NOT fabricate fields you can't determine from the input.",
     "ai.libraryConventions": `Library naming conventions (CRC music library):
