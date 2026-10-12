@@ -126,6 +126,13 @@ export const LibrarySchema = z.object({
     /** Library tabs in order. `id` is the row's `collection` value. */
     collections: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })).default([]),
     defaultCollection: z.string().default(""),
+    /**
+     * Phase 5: chart bytes at this address open for anyone holding the link
+     * (true, what every tenant has always done). false: /api/library/file and
+     * /api/drive/file serve a chart only to a signed-in member of this tenant,
+     * and only a chart this tenant can see (src/lib/library/open-by-link.ts).
+     */
+    openByLink: z.boolean().default(true),
 })
 
 export const LiturgySchema = z.object({

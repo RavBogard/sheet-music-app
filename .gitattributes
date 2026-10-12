@@ -7,3 +7,6 @@ scripts/setup-cowork-worktree.sh text eol=lf
 scripts/dev/test-setup-cowork-worktree.sh text eol=lf
 scripts/lib/cowork-warm-worktree.sh text eol=lf
 scripts/git-hooks/** text eol=lf
+
+# Multi-tenant phase 5: golden captures compared byte for byte by vitest file snapshots.
+**/__goldens__/*.json text eol=lf

@@ -155,6 +155,16 @@ export const PLATFORM_TOOLS: ReadonlySet<string> = new Set([
 
 export type Surface = "authoring" | "ops" | "platform"
 
+/**
+ * Multi-tenant phase 5: a platform tool NAME that also has a tenant-admin
+ * variant on the authoring surface (set_collection_sharing in
+ * src/lib/mcp/tools/collections-admin.ts: own collections only, never
+ * assignedTo). Only a registration whose config carries this marker passes the
+ * authoring filter under a platform name, so the platform tool itself still
+ * never registers on the authoring server.
+ */
+export const AUTHORING_VARIANT: unique symbol = Symbol.for("crl.mcp.authoringVariant")
+
 export function surfaceFor(toolName: string): Surface {
     if (PLATFORM_TOOLS.has(toolName)) return "platform"
     return OPS_TOOLS.has(toolName) ? "ops" : "authoring"
@@ -199,7 +209,12 @@ export function forSurface(server: McpServer, surface: Surface): McpServer {
             ) => unknown
             return function registerToolFiltered(this: unknown, ...args: unknown[]) {
                 const name = args[0]
-                if (typeof name === "string" && surfaceFor(name) !== surface) return undefined
+                if (
+                    typeof name === "string" &&
+                    surfaceFor(name) !== surface &&
+                    !(surface === "authoring" && (args[1] as Record<symbol, unknown> | undefined)?.[AUTHORING_VARIANT] === true)
+                )
+                    return undefined
                 // Multi-tenant phase 4: read-only bearers reach read tools only.
                 // The handler is the last argument; its last argument is the
                 // request extra carrying the verified token's kind.

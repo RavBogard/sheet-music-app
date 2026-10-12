@@ -23,7 +23,7 @@ import {
     type KnownCollection,
 } from '@/lib/library/collections'
 import type { LocalSong } from '@/lib/local/types'
-import { rowOrg } from '@/lib/org/membership'
+import { inLibraryOf, isSharedWith, type VisibilityRow } from '@/lib/library/visibility'
 import { orgString } from '@/lib/org/strings'
 import { orgConfigSync } from '@/lib/org/tenant-lists'
 import type { OrgId } from '@/lib/org/types'
@@ -93,8 +93,24 @@ export function isHiddenStatus(status: unknown): boolean {
     return typeof status === 'string' && HIDDEN_STATUSES.has(status)
 }
 
+/**
+ * Multi-tenant phase 5: the host tenant's LIBRARY (visibility.ts inLibraryOf —
+ * rows it owns plus collections the platform owner assigned to it). Identical to
+ * the old `orgId == host` test while every row is visible only to its owner.
+ */
 export function isPickableFor(s: LocalSong, org: OrgId): boolean {
-    if (rowOrg(s.orgId) !== org) return false
+    if (!inLibraryOf(s as LocalSong & VisibilityRow, org)) return false
+    if (isHiddenStatus(s.status)) return false
+    return !isJunkLibraryRow({ name: s.title, status: s.status })
+}
+
+/**
+ * Phase 5: a chart another tenant shares with the host tenant but that is not
+ * in its library — offered only behind that collection's opt-in chip.
+ */
+export function isPickableSharedFor(s: LocalSong, org: OrgId): boolean {
+    const row = s as LocalSong & VisibilityRow
+    if (!isSharedWith(row, org) || inLibraryOf(row, org)) return false
     if (isHiddenStatus(s.status)) return false
     return !isJunkLibraryRow({ name: s.title, status: s.status })
 }

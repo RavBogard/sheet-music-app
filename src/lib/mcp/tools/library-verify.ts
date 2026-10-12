@@ -1,4 +1,5 @@
 import { rowOrg } from "@/lib/mcp/org-context"
+import { visibleTo } from "@/lib/library/visibility"
 import { readTenantRole } from "@/lib/org/access"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
@@ -178,10 +179,11 @@ export async function getChartStatus(
      * means the row is treated as present-and-ours, which is the pre-M2
      * behaviour, not a cross-tenant read.
      */
+    // Phase 5: "ours" is VISIBLE — the caller's own row or one shared with it.
     const indexIsOurs =
         indexSnap !== null &&
         indexSnap.exists &&
-        rowOrg((indexSnap.data() as Record<string, unknown>).orgId) === org
+        visibleTo(indexSnap.data() as Record<string, unknown>, org)
     const hasIndexRow = indexSnap === null ? true : indexIsOurs
     const projected: ChartStatusHealth =
         health.status === "ok" && !hasIndexRow

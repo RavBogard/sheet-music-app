@@ -154,6 +154,7 @@ export { registerMintAdminBearerTools } from "./mint-admin-bearer"
 export { registerSetlistReaderBearerTools } from "./setlist-reader-bearer"
 export { registerBatchIntakeTools } from "./register-batch-intake"
 export { registerChartInboxTools } from "./register-chart-inbox"
+export { registerCollectionAdminTools } from "./collections-admin"
 export { registerAuthoredChartTools } from "./register-authored-chart"
 // v11-02-01: the caller-org resolution seam. v11-02-02 read tools consume it to
 // scope reads by tenant; re-exported so tools resolve org from the same import
@@ -760,7 +761,7 @@ export function registerReadTools(server: McpServer): void {
         "search_library",
         {
             description:
-                "Search the song library by title text, with optional musical key and BPM-range filters. Title matching normalizes underscores, hyphens, spaces, and diacritics, so query \"Shalom Rav\" matches catalog entries like \"Shalom_rav\" and \"shalom-rav (camp)\". BPMs are integers. Returns metadata only — never chart files. Pass an empty query (or omit it) to browse the first N library entries — useful for catalog discovery. Rows with `status: 'orphaned'` are hidden by default; pass includeOrphaned: true to see them (e.g. while triaging library hygiene). Non-chart artifacts (audio, spreadsheets, folders, dotfiles like .DS_Store) are hidden by default — same posture as list_library — pass includeNonCharts: true to see them (e.g. library-hygiene audits). Every result row carries `status` ('active' by default if the catalog row omits one). **Known limitation (C7I1-012, deferred):** Hebrew phonetic transliteration is NOT fuzzy-matched. Variant spellings of the same song (e.g. `Lechu Nranina` / `Lchu Neranena` / `Lekhu Neranena` for לכו נרננה) are treated as distinct substrings; only one will match a given catalog entry. Workaround: if a search returns 0 results, retry with 2–3 common transliteration variants (sub-stems like `Lechu` / `Lchu` / `Lekhu` typically suffice). A proper phonetic search layer (Levenshtein with Hebrew-aware weights OR Soundex-for-transliteration) is out of cycle-7 scope.",
+                "Search the song library by title text, with optional musical key and BPM-range filters. Title matching normalizes underscores, hyphens, spaces, and diacritics, so query \"Shalom Rav\" matches catalog entries like \"Shalom_rav\" and \"shalom-rav (camp)\". BPMs are integers. Returns metadata only — never chart files. Pass an empty query (or omit it) to browse the first N library entries — useful for catalog discovery. Rows with `status: 'orphaned'` are hidden by default; pass includeOrphaned: true to see them (e.g. while triaging library hygiene). Non-chart artifacts (audio, spreadsheets, folders, dotfiles like .DS_Store) are hidden by default — same posture as list_library — pass includeNonCharts: true to see them (e.g. library-hygiene audits). Every result row carries `status` ('active' by default if the catalog row omits one) and `ownerOrgId` (the tenant that owns the chart; a chart another tenant owns can be used in your setlists but not changed). Default results are your own library; includeShared: true adds charts other tenants share with you. **Known limitation (C7I1-012, deferred):** Hebrew phonetic transliteration is NOT fuzzy-matched. Variant spellings of the same song (e.g. `Lechu Nranina` / `Lchu Neranena` / `Lekhu Neranena` for לכו נרננה) are treated as distinct substrings; only one will match a given catalog entry. Workaround: if a search returns 0 results, retry with 2–3 common transliteration variants (sub-stems like `Lechu` / `Lchu` / `Lekhu` typically suffice). A proper phonetic search layer (Levenshtein with Hebrew-aware weights OR Soundex-for-transliteration) is out of cycle-7 scope.",
             inputSchema: {
                 query: z
                     .string()
@@ -802,6 +803,18 @@ export function registerReadTools(server: McpServer): void {
                     .describe(
                         "If true, include rows whose chart bytes are dead — missing (404 in both Storage and Drive) or an unembeddable Google Drive shortcut — that are hidden by default. Surfaced rows carry chartHealth.bindable:false so you can triage/heal/re-bond them. Default false (binding such a row 404s in Perform mode, so search hides them).",
                     ),
+                includeShared: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Also return charts other tenants share with you (owner-tenant charts you can use but not change). Default false: your own library, exactly as before.",
+                    ),
+                collectionId: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "One collection by id, e.g. crc__nava (`<owner tenant>__<collection key>`). Combine with includeShared: true for a collection another tenant shares with you.",
+                    ),
             },
         },
         async (args, extra) =>
@@ -836,7 +849,7 @@ export function registerReadTools(server: McpServer): void {
         "list_library",
         {
             description:
-                "Browse the chart-file index alphabetically — every chart in the library, with its collection ('core' | 'supplemental' | 'nava' | 'uploads'), mimeType, file size, and upload metadata. Use this when the user wants to SEE the catalog (\"what's in core?\", \"show me every chart I've uploaded\"); use search_library for targeted lookup by title/key/BPM. Optional collection filter narrows to one section. Paged via offset+limit (default limit 50; values above 200 are silently clamped to 200). Returns rows + a total count so the caller can detect whether more pages exist. Default browse hides folders, audio files, dotfiles like .DS_Store, AND rows the dedupe pass has marked status:'duplicate' / Drive-side status:'orphaned' / soft-deleted status:'archived' — same hidden-set as search_library and the in-app /library catalog, so counts surfaced here match what Daniel sees in the browser. Pass includeNonCharts: true for raw artifacts (folders/audio/junk); pass includeNonChartHealthy: true to also include duplicate/orphaned/archived rows (audit/reconciliation only). Metadata only — to fetch chart bytes call download_chart, or to print a setlist's packet call generate_gig_packet. Cycle-3 DATA-002: response carries a uniform `coverage:{total, eligible, scanned, filteredOut:{byStatus, byCollection, byOther}}` field that matches the same shape returned by dedupe_library / backfill_library_index / reconcile_library — letting operators correlate scan totals across the four hygiene tools without spelunking into source.",
+                "Browse the chart-file index alphabetically — every chart in the library, with its collection ('core' | 'supplemental' | 'nava' | 'uploads'), mimeType, file size, and upload metadata. Use this when the user wants to SEE the catalog (\"what's in core?\", \"show me every chart I've uploaded\"); use search_library for targeted lookup by title/key/BPM. Optional collection filter narrows to one section. Paged via offset+limit (default limit 50; values above 200 are silently clamped to 200). Returns rows + a total count so the caller can detect whether more pages exist. Default browse hides folders, audio files, dotfiles like .DS_Store, AND rows the dedupe pass has marked status:'duplicate' / Drive-side status:'orphaned' / soft-deleted status:'archived' — same hidden-set as search_library and the in-app /library catalog, so counts surfaced here match what Daniel sees in the browser. Pass includeNonCharts: true for raw artifacts (folders/audio/junk); pass includeNonChartHealthy: true to also include duplicate/orphaned/archived rows (audit/reconciliation only). Metadata only — to fetch chart bytes call download_chart, or to print a setlist's packet call generate_gig_packet. Cycle-3 DATA-002: response carries a uniform `coverage:{total, eligible, scanned, filteredOut:{byStatus, byCollection, byOther}}` field that matches the same shape returned by dedupe_library / backfill_library_index / reconcile_library — letting operators correlate scan totals across the four hygiene tools without spelunking into source. Every row carries `ownerOrgId` (the tenant that owns it); includeShared: true adds charts other tenants share with you (usable, not changeable).",
             inputSchema: {
                 collection: z
                     .enum(KNOWN_COLLECTIONS)
@@ -871,6 +884,18 @@ export function registerReadTools(server: McpServer): void {
                     .optional()
                     .describe(
                         "If true, include rows the dedupe pass has marked status:'duplicate' / Drive-side status:'orphaned' that the in-app /library catalog hides. Default false — surfaced counts match what Daniel sees in the browser. Use only for audit/reconciliation flows.",
+                    ),
+                includeShared: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Also return charts other tenants share with you (owner-tenant charts you can use but not change). Default false: your own library, exactly as before.",
+                    ),
+                collectionId: z
+                    .string()
+                    .optional()
+                    .describe(
+                        "One collection by id, e.g. crc__nava (`<owner tenant>__<collection key>`). Combine with includeShared: true for a collection another tenant shares with you.",
                     ),
             },
         },

@@ -1,3 +1,4 @@
+import { __resetPlatformOwnerMemo } from "@/lib/org/access"
 import {
     afterAll,
     beforeAll,
@@ -20,7 +21,9 @@ import { editEnrichment } from "../tools/library-review"
  *          in place (bond/row id unchanged).
  *  - AC-2: a band_leader editing a row in ANOTHER org gets row_not_found, no write.
  *  - AC-3: a band_leader cannot edit `collection` (forbidden_field); an admin can.
- *  - AC-4: admin behavior is byte-identical — unscoped (any org), all fields.
+ *  - AC-4 (amended, multi-tenant phase 5): a TENANT admin is scoped like a band
+ *          leader (another tenant's row is row_not_found); only the platform
+ *          owner is unscoped — phase 2's rule for every other bypass.
  *  - Legacy: a row with no orgId resolves to crc (rowOrg default), so a crc leader
  *            can edit it and a broslaz leader cannot.
  *
@@ -126,14 +129,31 @@ describe("edit_library_entry / editEnrichment authz (emulator)", () => {
         expect((await db().collection("library_index").doc("li-crc").get()).data()?.collection).toBe("core")
     })
 
-    it("AC-4: admin is unscoped — edits a BL row from a crc connector context", async () => {
+    it("AC-4 (phase 5): a tenant admin cannot edit a BL row from a crc connector", async () => {
         const res = await editEnrichment(
             ADMIN,
             { rowId: "li-bl", edits: { tags: ["admin-curated"] }, ...realWrite },
-            CRC, // admin ignores the org wall
+            CRC,
         )
-        expect((res as { ok?: boolean }).ok).toBe(true)
-        expect(await tagsOf("li-bl")).toEqual(["admin-curated"])
+        expect(code(res)).toBe("row_not_found")
+        expect(await tagsOf("li-bl")).not.toEqual(["admin-curated"])
+    })
+
+    it("AC-4 (phase 5): the platform owner stays unscoped", async () => {
+        await db().collection("platform").doc("owners").set({ uids: [ADMIN] })
+        __resetPlatformOwnerMemo()
+        try {
+            const res = await editEnrichment(
+                ADMIN,
+                { rowId: "li-bl", edits: { tags: ["owner-curated"] }, ...realWrite },
+                CRC,
+            )
+            expect((res as { ok?: boolean }).ok).toBe(true)
+            expect(await tagsOf("li-bl")).toEqual(["owner-curated"])
+        } finally {
+            await db().collection("platform").doc("owners").delete()
+            __resetPlatformOwnerMemo()
+        }
     })
 
     it("Legacy (no orgId) resolves to crc: crc leader edits, bl leader denied", async () => {

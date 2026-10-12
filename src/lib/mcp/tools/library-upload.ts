@@ -38,6 +38,9 @@ import {
 } from "./uploader-roles"
 import { applySongMetadata } from "./song-metadata"
 import { rowOrg, stampOrg } from "@/lib/mcp/org-context"
+import { chartTitle, tenantDisplayName, writeAccess } from "@/lib/library/visibility-server"
+import { upcomingForeignUses } from "@/lib/library/shared-usage"
+import { notOwnerError } from "@/lib/mcp/not-owner"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 
@@ -776,7 +779,11 @@ export async function deleteChart(
     // v11-02-03: cross-tenant write wall — deny deleting another org's chart.
     // Return chart_not_found (not forbidden) BEFORE the uploader/curated checks
     // so a cross-tenant caller never learns the chart exists or who uploaded it.
-    if (rowOrg(indexData.orgId) !== org) {
+    // Phase 5: a chart another tenant SHARES with the caller is visible, so it
+    // gets the clear not_owner refusal instead; anything else stays not-found.
+    const access = await writeAccess(indexData, org, args.fileId, db)
+    if (access.kind === "not_owner") return notOwnerError(access, args.fileId)
+    if (access.kind !== "owned") {
         // Byte-identical to the absence branch above, by construction — see
         // the note on `notFoundHint`. Do not specialise this message.
         return richError(
@@ -818,6 +825,45 @@ export async function deleteChart(
         })
     }
 
+    // Phase 5: a chart another tenant's UPCOMING setlist uses is never deleted,
+    // whatever the caller's role — archiving keeps those setlists working.
+    // Past setlists of other tenants do not block (their rows were played).
+    const foreignUses = await upcomingForeignUses(db, args.fileId, org)
+    if (foreignUses.length > 0) {
+        const title = chartTitle(indexData, args.fileId)
+        const setlistIds = [...new Set(foreignUses.map((u) => u.setlistId))]
+        const names = new Map<string, string>()
+        for (const o of new Set(foreignUses.map((u) => u.orgId))) {
+            names.set(o, await tenantDisplayName(o, db))
+        }
+        const seen = new Set<string>()
+        const described: string[] = []
+        for (const u of foreignUses) {
+            if (seen.has(u.setlistId)) continue
+            seen.add(u.setlistId)
+            described.push(
+                `${names.get(u.orgId) ?? u.orgId}: ${u.name ?? u.setlistId}${u.day ? ` on ${u.day}` : ""}`,
+            )
+        }
+        const n = setlistIds.length
+        return richError(
+            "delete_refused_shared_in_use",
+            `${title} is in ${n} upcoming setlist${n === 1 ? "" : "s"} of other tenants (${described.join("; ")}). Archive it instead (mark_chart_status toStatus archived): the setlists keep working.`,
+            {
+                fileId: args.fileId,
+                uses: foreignUses.map((u) => ({
+                    setlistId: u.setlistId,
+                    orgId: u.orgId,
+                    tenantName: names.get(u.orgId) ?? u.orgId,
+                    name: u.name,
+                    day: u.day,
+                    trackId: u.trackId,
+                })),
+            },
+            "Call mark_chart_status with toStatus \"archived\" to retire it from your library without breaking the other tenants' setlists.",
+        )
+    }
+
     // chart_in_use guard — count ONLY tracks whose parent setlist still EXISTS.
     // Dangling tracks (parent `setlists/{setlistId}` deleted, or no setlistId)
     // are data-loss orphans that `remove_track` can't clear (it 404s on the
@@ -849,7 +895,12 @@ export async function deleteChart(
                 ),
             )
             for (const snap of parentSnaps) {
-                if (snap.exists) liveSetlistIds.add(snap.id)
+                // Phase 5: only the owner tenant's setlists bond here. Other
+                // tenants' upcoming uses were refused above; their PAST
+                // setlists do not hold the chart (counted as ignored below).
+                if (snap.exists && rowOrg(snap.data()?.orgId) === org) {
+                    liveSetlistIds.add(snap.id)
+                }
             }
         }
         const liveTracks = matched.filter(

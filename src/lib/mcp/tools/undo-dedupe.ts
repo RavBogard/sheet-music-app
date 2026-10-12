@@ -2,6 +2,8 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
+import { writeAccess } from "@/lib/library/visibility-server"
+import { notOwnerError } from "@/lib/mcp/not-owner"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import type { DedupeRunRecord, DedupeRunRow } from "./library"
@@ -345,14 +347,19 @@ async function planRunRestore(
         if (rowOrg(data.orgId) !== org) {
             // A restore must not cross tenants, for the same reason the scan
             // must not: L1-W3 found 7 of 8 groups in a live plan belonged to
-            // another org entirely.
+            // another org entirely. Phase 5: a row shared with the caller
+            // names its owner; a row it cannot see stays anonymous.
+            const access = await writeAccess(data, org, row.fileId, db)
             out.push({
                 fileId: row.fileId,
                 fromStatus: (data.status as string) ?? null,
                 toStatus: row.priorStatus ?? "active",
                 source: "run-record",
                 songMirrored: false,
-                skipped: "row belongs to another org",
+                skipped:
+                    access.kind === "not_owner"
+                        ? `row belongs to ${access.ownerName} (${access.ownerOrgId}); only that tenant can change it`
+                        : "row belongs to another org",
             })
             continue
         }
@@ -400,7 +407,11 @@ async function planRowRestore(
         )
     }
     const data = doc.data() as Record<string, unknown>
-    if (rowOrg(data.orgId) !== org) {
+    // Phase 5: a row shared with the caller gets the clear not_owner refusal;
+    // any other foreign row keeps the pre-phase-5 answer.
+    const access = await writeAccess(data, org, fileId, db)
+    if (access.kind === "not_owner") return notOwnerError(access, fileId)
+    if (access.kind !== "owned") {
         return richError(
             "forbidden_org",
             `Row \`${fileId}\` belongs to another org.`,

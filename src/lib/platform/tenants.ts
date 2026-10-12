@@ -20,6 +20,7 @@ import { defaultAddressCandidates, provisionDefaultAddress, type ProvisionResult
 import { changedTopKeys, deepMerge, diffValues, pick } from "@/lib/platform/diff"
 import { buildNewTenantConfig, type NewTenantConfigInput } from "@/lib/platform/new-tenant-config"
 import { logger } from "@/lib/logger"
+import { recomputeCollectionVisibility, type RecomputeResult } from "@/lib/library/visibility-job"
 
 /**
  * Multi-tenant phase 4: the platform owner's operations on tenants. ONE library
@@ -99,6 +100,8 @@ export interface CollectionRecord {
     /** Set by the platform owner; a tenant admin cannot remove it. */
     assignedTo: OrgId[]
     chartCount?: number
+    /** Phase 5: set when the collection's charts moved to another tenant (the nava move). */
+    movedTo?: string
 }
 
 export interface CreateTenantInput {
@@ -167,6 +170,10 @@ export interface PlatformDeps {
     revalidateConfig?: (orgId: OrgId) => void
     revalidateHosts?: () => Promise<void>
     now?: () => number
+    /** Phase 5: rewrite row visibility after a sharing change (default: the visibility job). */
+    recomputeVisibility?: (
+        collectionId: string,
+    ) => Promise<Pick<RecomputeResult, "rows" | "libraryIndexChanged" | "songsChanged" | "storageChanged" | "storageFailed">>
 }
 
 let overrides: PlatformDeps = {}
@@ -195,6 +202,9 @@ function deps() {
             }),
         revalidateHosts: overrides.revalidateHosts ?? revalidateHostList,
         now: overrides.now ?? Date.now,
+        recomputeVisibility:
+            overrides.recomputeVisibility ??
+            ((collectionId: string) => recomputeCollectionVisibility(collectionId, overrides.db ? { db: overrides.db, bucket: null } : {})),
     }
 }
 
@@ -810,6 +820,7 @@ function toCollection(id: string, d: Record<string, unknown>): CollectionRecord 
         sharedWith: list(d.sharedWith),
         assignedTo: list(d.assignedTo),
         ...(typeof d.chartCount === "number" ? { chartCount: d.chartCount } : {}),
+        ...(typeof d.movedTo === "string" && d.movedTo ? { movedTo: d.movedTo } : {}),
     }
 }
 
@@ -862,7 +873,7 @@ async function writeCollection(
     action: string,
     opts: WriteOpts,
     change: (c: CollectionRecord) => Promise<CollectionRecord> | CollectionRecord,
-): Promise<WriteResult<CollectionRecord>> {
+): Promise<CollectionWriteResult> {
     const { db } = deps()
     const dryRun = opts.dryRun !== false
     const before = await requireCollection(db, id)
@@ -894,7 +905,45 @@ async function writeCollection(
         before: recordFields(before),
         after: recordFields(after),
     })
-    return { dryRun: false, changed: true, ...base, auditId }
+    // Phase 5: the rows follow the record. A failure here leaves the record
+    // written and says so; applying again (idempotent) or the stamp script repairs it.
+    const visibility = await recomputeAfterWrite(id)
+    return { dryRun: false, changed: true, ...base, auditId, visibility, ...(visibility.error ? { warnings: [visibility.error] } : {}) }
+}
+
+/** Phase 5: what the visibility job did after a collection write. */
+export interface CollectionVisibilityRun {
+    rows: number
+    libraryIndexChanged: number
+    songsChanged: number
+    storageChanged: number
+    storageFailed: number
+    error?: string
+}
+
+/** Phase 5: run the visibility job after a collection write; never throws. */
+async function recomputeAfterWrite(collectionId: string): Promise<CollectionVisibilityRun> {
+    const { recomputeVisibility } = deps()
+    try {
+        const r = await recomputeVisibility(collectionId)
+        return {
+            rows: r.rows,
+            libraryIndexChanged: r.libraryIndexChanged,
+            songsChanged: r.songsChanged,
+            storageChanged: r.storageChanged,
+            storageFailed: r.storageFailed.length,
+        }
+    } catch (e) {
+        logger.error(`[platform] visibility recompute for ${collectionId} failed`, e)
+        return {
+            rows: 0,
+            libraryIndexChanged: 0,
+            songsChanged: 0,
+            storageChanged: 0,
+            storageFailed: 0,
+            error: `The sharing was saved, but updating the charts' visibility failed (${e instanceof Error ? e.message : String(e)}). Apply it again to retry.`,
+        }
+    }
 }
 
 async function assertTenantsExist(db: Firestore, ids: OrgId[]): Promise<void> {
@@ -908,7 +957,7 @@ export async function setCollectionSharing(
     collectionId: string,
     sharing: { visibility: CollectionRecord["visibility"]; sharedWith: OrgId[] },
     opts: WriteOpts,
-): Promise<WriteResult<CollectionRecord>> {
+): Promise<CollectionWriteResult> {
     const { db } = deps()
     if (!VISIBILITIES.includes(sharing?.visibility as never))
         throw new PlatformError("invalid", 'visibility is "private", "listed" or "all".')
@@ -922,7 +971,12 @@ export async function setCollectionSharing(
     }))
 }
 
-export async function assignCollection(collectionId: string, orgId: OrgId, assigned: boolean, opts: WriteOpts): Promise<WriteResult<CollectionRecord>> {
+export async function assignCollection(
+    collectionId: string,
+    orgId: OrgId,
+    assigned: boolean,
+    opts: WriteOpts,
+): Promise<CollectionWriteResult> {
     const { db } = deps()
     await assertTenantsExist(db, [orgId])
     return writeCollection(collectionId, "assign_collection", opts, (c) => {
@@ -932,6 +986,79 @@ export async function assignCollection(collectionId: string, orgId: OrgId, assig
         else set.delete(orgId)
         return { ...c, assignedTo: [...set].sort() }
     })
+}
+
+/** A collection write's result; `visibility` is set when the job ran (applied). */
+export type CollectionWriteResult = WriteResult<CollectionRecord> & { visibility?: CollectionVisibilityRun }
+
+// ── tenant-admin collection tools (phase 5, authoring MCP) ───────────────────
+
+const COLLECTION_KEY_RE = /^[a-z0-9][a-z0-9-]{0,39}$/
+
+/**
+ * A tenant admin creates a collection record owned by their own tenant:
+ * private, shared with nobody. Dry run by default (before null, after the
+ * record). Applying writes it, a platformAudit row, and runs the visibility
+ * job (rows whose legacy `collection` already derives to this id are stamped).
+ */
+export async function createCollection(
+    ownerOrgId: OrgId,
+    input: { key: string; label: string },
+    opts: WriteOpts,
+): Promise<CollectionWriteResult> {
+    const { db } = deps()
+    await requireTenant(db, ownerOrgId)
+    const key = String(input?.key ?? "").trim()
+    const label = String(input?.label ?? "").trim()
+    if (!COLLECTION_KEY_RE.test(key))
+        throw new PlatformError("invalid", "key is lowercase letters, digits and hyphens (up to 40), e.g. nava or high-holidays.")
+    if (!label) throw new PlatformError("invalid", "Give the collection a label (the name people see).")
+    const id = collectionDocId(ownerOrgId, key)
+    const existing = await db.collection("collections").doc(id).get()
+    if (existing.exists) throw new PlatformError("conflict", `Your tenant already has a collection "${key}" (${id}).`)
+    const after: CollectionRecord = { id, ownerOrgId, name: key, label, visibility: "private", sharedWith: [], assignedTo: [] }
+    const diff = diffValues({}, recordFields(after))
+    if (opts.dryRun !== false) return { dryRun: true, changed: true, before: null, after, diff }
+    await db.collection("collections").doc(id).create({
+        ownerOrgId,
+        name: key,
+        label,
+        visibility: "private",
+        sharedWith: [],
+        assignedTo: [],
+        createdAt: FieldValue.serverTimestamp(),
+        createdBy: opts.actor.uid,
+    })
+    const auditId = await recordPlatformAudit({
+        actorUid: opts.actor.uid,
+        actorEmail: opts.actor.email ?? null,
+        via: opts.actor.via,
+        action: "create_collection",
+        orgId: ownerOrgId,
+        before: null,
+        after: recordFields(after),
+    })
+    const visibility = await recomputeAfterWrite(id)
+    return { dryRun: false, changed: true, before: null, after, diff, auditId, visibility, ...(visibility.error ? { warnings: [visibility.error] } : {}) }
+}
+
+/**
+ * A tenant admin changes sharing on a collection their tenant OWNS. The
+ * platform owner's `assignedTo` is untouched (only assign_collection, platform
+ * owner only, changes it), so a tenant admin cannot cut off a tenant the
+ * platform owner assigned. Same dry-run / audit / visibility-job path.
+ */
+export async function setOwnCollectionSharing(
+    callerOrg: OrgId,
+    collectionId: string,
+    sharing: { visibility: CollectionRecord["visibility"]; sharedWith: OrgId[] },
+    opts: WriteOpts,
+): Promise<CollectionWriteResult> {
+    const { db } = deps()
+    const rec = await requireCollection(db, collectionId)
+    if (rec.ownerOrgId !== callerOrg)
+        throw new PlatformError("forbidden", `${collectionId} belongs to another tenant; you can change sharing only on your own tenant's collections.`)
+    return setCollectionSharing(collectionId, sharing, opts)
 }
 
 // ── view as ──────────────────────────────────────────────────────────────────

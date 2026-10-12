@@ -1,0 +1,423 @@
+{
+  "crc?all=true": {
+    "total": 9,
+    "files": [
+      {
+        "id": "c-core-1",
+        "name": "Adon Olam (Klepper).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-sup-1",
+        "name": "Hashkivenu (Shireinu).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "supplemental",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-up-1",
+        "name": "L'Cha Dodi (Nava).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "uploads",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-nava-1",
+        "name": "Lakh Amar Libi.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "nava",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-core-orph",
+        "name": "Lost Chart.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "orphaned",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-nava-2",
+        "name": "Niggun Tishrei.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "nava",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-core-dup",
+        "name": "Oseh Shalom copy.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "duplicate",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-core-mp3",
+        "name": "Oseh Shalom.mp3",
+        "mimeType": "audio/mpeg",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-core-2",
+        "name": "Oseh Shalom.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "active",
+        "orgId": "crc"
+      }
+    ]
+  },
+  "crc?all=true&collection=core": {
+    "total": 5,
+    "files": [
+      {
+        "id": "c-core-1",
+        "name": "Adon Olam (Klepper).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-core-orph",
+        "name": "Lost Chart.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "orphaned",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-core-dup",
+        "name": "Oseh Shalom copy.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "duplicate",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-core-mp3",
+        "name": "Oseh Shalom.mp3",
+        "mimeType": "audio/mpeg",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-core-2",
+        "name": "Oseh Shalom.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "active",
+        "orgId": "crc"
+      }
+    ]
+  },
+  "crc?all=true&collection=nava": {
+    "total": 2,
+    "files": [
+      {
+        "id": "c-nava-1",
+        "name": "Lakh Amar Libi.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "nava",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-nava-2",
+        "name": "Niggun Tishrei.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "nava",
+        "status": "active",
+        "orgId": "crc"
+      }
+    ]
+  },
+  "crc?all=true&collection=uploads": {
+    "total": 1,
+    "files": [
+      {
+        "id": "c-up-1",
+        "name": "L'Cha Dodi (Nava).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "uploads",
+        "status": "active",
+        "orgId": "crc"
+      }
+    ]
+  },
+  "crc?all=true&collection=supplemental": {
+    "total": 1,
+    "files": [
+      {
+        "id": "c-sup-1",
+        "name": "Hashkivenu (Shireinu).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "supplemental",
+        "status": "active",
+        "orgId": "crc"
+      }
+    ]
+  },
+  "crc?all=true&collection=all": {
+    "total": 9,
+    "files": [
+      {
+        "id": "c-core-1",
+        "name": "Adon Olam (Klepper).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-sup-1",
+        "name": "Hashkivenu (Shireinu).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "supplemental",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-up-1",
+        "name": "L'Cha Dodi (Nava).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "uploads",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-nava-1",
+        "name": "Lakh Amar Libi.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "nava",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-core-orph",
+        "name": "Lost Chart.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "orphaned",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-nava-2",
+        "name": "Niggun Tishrei.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "nava",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-core-dup",
+        "name": "Oseh Shalom copy.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "duplicate",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-core-mp3",
+        "name": "Oseh Shalom.mp3",
+        "mimeType": "audio/mpeg",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "active",
+        "orgId": "crc"
+      },
+      {
+        "id": "c-core-2",
+        "name": "Oseh Shalom.pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "active",
+        "orgId": "crc"
+      }
+    ]
+  },
+  "crc?all=true&status=archived": {
+    "total": 2,
+    "files": [
+      {
+        "id": "c-core-arch",
+        "name": "Adon Olam (old).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "archived",
+        "orgId": "crc",
+        "archivedAt": null,
+        "archivedBy": null
+      },
+      {
+        "id": "c-nava-arch",
+        "name": "Arbaim Shana (old).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "nava",
+        "status": "archived",
+        "orgId": "crc",
+        "archivedAt": null,
+        "archivedBy": null
+      }
+    ]
+  },
+  "brotherslazaroff?all=true": {
+    "total": 2,
+    "files": [
+      {
+        "id": "b-core-1",
+        "name": "Adon Olam (BL).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "active",
+        "orgId": "brotherslazaroff"
+      },
+      {
+        "id": "b-up-1",
+        "name": "Lecha Dodi Nigun (Nava).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "uploads",
+        "status": "active",
+        "orgId": "brotherslazaroff"
+      }
+    ]
+  },
+  "brotherslazaroff?all=true&collection=core": {
+    "total": 1,
+    "files": [
+      {
+        "id": "b-core-1",
+        "name": "Adon Olam (BL).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "active",
+        "orgId": "brotherslazaroff"
+      }
+    ]
+  },
+  "brotherslazaroff?all=true&collection=nava": {
+    "total": 0,
+    "files": []
+  },
+  "brotherslazaroff?all=true&collection=uploads": {
+    "total": 1,
+    "files": [
+      {
+        "id": "b-up-1",
+        "name": "Lecha Dodi Nigun (Nava).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "uploads",
+        "status": "active",
+        "orgId": "brotherslazaroff"
+      }
+    ]
+  },
+  "brotherslazaroff?all=true&collection=supplemental": {
+    "total": 0,
+    "files": []
+  },
+  "brotherslazaroff?all=true&collection=all": {
+    "total": 2,
+    "files": [
+      {
+        "id": "b-core-1",
+        "name": "Adon Olam (BL).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "core",
+        "status": "active",
+        "orgId": "brotherslazaroff"
+      },
+      {
+        "id": "b-up-1",
+        "name": "Lecha Dodi Nigun (Nava).pdf",
+        "mimeType": "application/pdf",
+        "modifiedTime": null,
+        "metadata": null,
+        "collection": "uploads",
+        "status": "active",
+        "orgId": "brotherslazaroff"
+      }
+    ]
+  },
+  "brotherslazaroff?all=true&status=archived": {
+    "total": 0,
+    "files": []
+  }
+}

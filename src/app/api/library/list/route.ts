@@ -6,6 +6,7 @@ import { httpError } from "@/lib/http/error-envelope"
 import { coerceOrgId } from "@/lib/org/registry"
 import { rowOrg } from "@/lib/org/membership"
 import { getServerUser } from "@/lib/server-auth"
+import { collectionIdOf, includedFor, ownerOf } from "@/lib/library/visibility"
 
 /**
  * Library List API — Optimized with pagination + ETag caching
@@ -16,6 +17,13 @@ import { getServerUser } from "@/lib/server-auth"
  *   GET /api/library/list?folderId=XXXX      → Files in folder
  *   GET /api/library/list?all=true           → Full dump for client-side search (cached)
  *   GET /api/library/list?status=archived   → Archived files only
+ *   GET /api/library/list?includeShared=true → also charts other tenants share with this site
+ *   GET /api/library/list?collectionId=XXXX  → one collection record (e.g. nava-tehila__nava)
+ *
+ * Multi-tenant phase 5: the default set is the host tenant's LIBRARY
+ * (visibility.ts inLibraryOf: rows it owns plus rows of collections the
+ * platform owner assigned to it). With every row visible only to its owner
+ * that is exactly the old orgId == host filter. Every file carries ownerOrgId.
  */
 export const GET = createApiHandler(
     async (ctx) => {
@@ -30,6 +38,8 @@ export const GET = createApiHandler(
         const statusFilter = url.searchParams.get("status") // 'archived' to show only archived
         const collectionFilter = url.searchParams.get("collection") // a KNOWN_COLLECTIONS id (lib/library/collections.ts) or 'all'
         const limitParam = Math.min(parseInt(url.searchParams.get("limit") || "200"), 500)
+        const includeShared = url.searchParams.get("includeShared") === "true"
+        const collectionIdFilter = url.searchParams.get("collectionId")
 
         // v11.1-03: host-org display filter. Default = the landing-page org
         // (x-org-id, Edge-resolved). An `allSites=true` opt-out is honored ONLY
@@ -91,7 +101,8 @@ export const GET = createApiHandler(
                 const data = doc.data()
                 // v11.1-03: host-org isolation (display-only) unless an admin
                 // opted into All-sites. Mirrors the MCP rowOrg filter pattern.
-                if (!allSites && rowOrg(data.orgId) !== hostOrg) return false
+                if (!allSites && !includedFor(data, hostOrg, includeShared)) return false
+                if (collectionIdFilter && collectionIdOf(data) !== collectionIdFilter) return false
 
                 const status = data.status
                 if (statusFilter === 'archived' && status !== 'archived') return false
@@ -122,6 +133,8 @@ export const GET = createApiHandler(
                     // David's ask 2: the pickers' admin "include other sites"
                     // group labels each row with its site.
                     orgId: rowOrg(data.orgId),
+                    // Phase 5: the owning tenant (a shared chart's is not the host).
+                    ownerOrgId: ownerOf(data),
                     ...(statusFilter === 'archived' ? {
                         archivedAt: data.archivedAt || null,
                         archivedBy: data.archivedBy || null,

@@ -1,7 +1,8 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
-import { rowOrg } from "@/lib/mcp/org-context"
+import { writeAccess } from "@/lib/library/visibility-server"
+import { notOwnerError } from "@/lib/mcp/not-owner"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import type { DedupeRunRecord, DedupeRunRow } from "./library"
@@ -179,7 +180,11 @@ export async function markChartStatus(
             )
         }
         const data = doc.data() as Record<string, unknown>
-        if (rowOrg(data.orgId) !== org) {
+        // Phase 5: writes stay OWNS. A row shared with the caller (visible,
+        // not owned) gets the clear "use it, don't change it" refusal.
+        const access = await writeAccess(data, org, fileId, db)
+        if (access.kind === "not_owner") return notOwnerError(access, fileId)
+        if (access.kind !== "owned") {
             // A mark must not cross tenants, for the same reason a scan must
             // not. Answered as an absence so the caller learns nothing about
             // another org's catalog.

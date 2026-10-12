@@ -2,6 +2,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import type { EnrichmentStatus } from "@/lib/library/enrichment-projection"
 import type { EnrichmentOutput } from "@/lib/library/ai-enrichment"
+import { rememberSongVisibility } from "@/lib/mcp/song-visibility"
 
 /**
  * Admin-SDK read helpers for the `songs/{id}` catalog — the MCP read tools'
@@ -17,6 +18,9 @@ export interface SongRecord {
      *  to "crc" in v11-01-03). Additive — non-MCP callers ignore it. MCP read
      *  tools filter on it; absent/empty is treated as the default org ("crc"). */
     orgId?: string
+    /** Multi-tenant phase 5: the owning tenant, set by search_library /
+     *  get_song (from the library_index row when joined, else the songs doc). */
+    ownerOrgId?: string
     /** Raw catalog title — the chart filename incl. extension (e.g.
      *  "Oseh Shalom.pdf"). Cached onto setlist tracks as `fileName`. */
     fileName?: string
@@ -134,6 +138,8 @@ function toSongRecord(id: string, data: Record<string, unknown>): SongRecord {
     // search_library / get_song has a consistent shape. Curated rows that
     // don't carry an explicit status are active by convention.
     rec.status = typeof data.status === "string" ? data.status : "active"
+    // Phase 5: the doc's visibility fields, off the wire (song-visibility.ts).
+    rememberSongVisibility(rec, data)
     return rec
 }
 

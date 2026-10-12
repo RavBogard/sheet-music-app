@@ -339,10 +339,23 @@ describe("MCP chunked-upload session tools (emulator)", () => {
         mockStagedExists.mockResolvedValueOnce([true])
         mockStagedDownload.mockResolvedValueOnce([Buffer.from("%PDF healed")])
 
-        const r = await finalizeChartUpload(
+        // Multi-tenant phase 5: replacing bytes is a write, so another tenant's
+        // caller is refused (it used to heal CRC's chart from a BL connector).
+        const cross = await finalizeChartUpload(
             ADMIN,
             { uploadSessionId: sessionId, targetFileId: ORPHAN },
             "brotherslazaroff",
+        )
+        expect(cross).toMatchObject({ ok: false })
+        expect((await db().collection("library_index").doc(ORPHAN).get()).data()?.status).toBe("orphaned")
+
+        const sessionId2 = await stageSession(ADMIN)
+        mockStagedExists.mockResolvedValueOnce([true])
+        mockStagedDownload.mockResolvedValueOnce([Buffer.from("%PDF healed")])
+        const r = await finalizeChartUpload(
+            ADMIN,
+            { uploadSessionId: sessionId2, targetFileId: ORPHAN },
+            "crc",
         )
         expect("ok" in r && r.ok).toBe(true)
         if (!("ok" in r) || !r.ok) return

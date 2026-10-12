@@ -409,6 +409,7 @@ export async function salvageChartBytes(
             resolved.buffer,
             resolved.mimeType,
             resolved.source,
+            org,
         )
         if (!("ok" in healed) || !healed.ok) return healed
 

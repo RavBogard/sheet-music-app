@@ -5,7 +5,7 @@ import {
     forbiddenRoleEnvelope,
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
-import { rowOrg } from "@/lib/mcp/org-context"
+import { ownerOf, visibleTo } from "@/lib/library/visibility"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { loadUploader } from "./uploader-roles"
@@ -79,6 +79,9 @@ export interface SearchChartTextMatch {
     snippet?: string
     /** Character offset of the match within `field` text. */
     matchPosition: number
+    /** Multi-tenant phase 5: the tenant that owns the chart (the caller's own
+     *  id for its own charts; another tenant's id for a chart shared with it). */
+    ownerOrgId?: string
 }
 
 export interface SearchChartTextResult {
@@ -159,8 +162,9 @@ export async function searchChartText(
                     break
                 }
                 const data = doc.data() as Record<string, unknown>
-                // v11-02-02: tenant isolation — skip other orgs' charts.
-                if (rowOrg(data.orgId) !== org) continue
+                // v11-02-02 / phase 5: tenant isolation — only charts the
+                // caller can SEE (its own, plus charts shared with it).
+                if (!visibleTo(data, org)) continue
                 const title = resolveTitle(data, doc.id)
                 const candidates: Array<{
                     field: SearchChartTextMatch["field"]
@@ -203,6 +207,7 @@ export async function searchChartText(
                             title,
                             field: c.field,
                             matchPosition: idx,
+                            ownerOrgId: ownerOf(data),
                             ...(includeSnippets
                                 ? {
                                       snippet: buildSnippet(
@@ -301,17 +306,20 @@ export async function searchChartText(
                 // v11-02-02: capture each parent chart's tenant so cross-tenant
                 // chord matches are dropped (the chordData doc itself carries no
                 // orgId — the parent library_index row does).
-                const orgByFileId = new Map<string, string>()
+                // Phase 5: visibility (own or shared), and the owner for the wire.
+                const ownerByFileId = new Map<string, string>()
                 for (const d of docs) {
                     if (!d.exists) continue
                     const pdata = d.data() as Record<string, unknown>
                     titleByFileId.set(d.id, resolveTitle(pdata, d.id))
-                    orgByFileId.set(d.id, rowOrg(pdata.orgId))
+                    if (visibleTo(pdata, org)) ownerByFileId.set(d.id, ownerOf(pdata))
                 }
                 for (const c of candidates) {
                     if (matches.has(c.fileId)) continue
-                    // v11-02-02: tenant isolation — only the caller's org.
-                    if (orgByFileId.get(c.fileId) !== org) continue
+                    // v11-02-02 / phase 5: only charts the caller can see; a
+                    // chord page whose parent row is missing stays dropped.
+                    const ownerOrgId = ownerByFileId.get(c.fileId)
+                    if (ownerOrgId === undefined) continue
                     if (matches.size >= limit) {
                         limitTruncated = true
                         break
@@ -322,6 +330,7 @@ export async function searchChartText(
                         field: "chordData",
                         ...(c.page !== undefined ? { page: c.page } : {}),
                         matchPosition: c.idx,
+                        ownerOrgId,
                         ...(includeSnippets
                             ? {
                                   snippet: buildSnippet(

@@ -12,6 +12,7 @@ import { renderServiceSheetPdf } from "@/lib/pdf/service-sheet-pdf"
 import { getRegistryEntry } from "@/lib/books/registry"
 import { isPrintRowMode, type PrintRowMode } from "@/lib/print/row-mode"
 import { rowOrg } from "@/lib/org/membership"
+import { visibleTo } from "@/lib/library/visibility"
 import { orgString } from "@/lib/org/strings"
 import { readTenantRole } from "@/lib/org/access"
 import type { OrgId } from "@/lib/org/types"
@@ -99,7 +100,10 @@ export async function downloadChart(
 
     const indexRef = db.collection("library_index").doc(args.fileId)
     const indexSnap = await indexRef.get()
-    if (!indexSnap.exists)
+    // Phase 5: the caller may download a chart it can SEE (its own, or one
+    // another tenant shares with it). Any other row answers exactly like a
+    // missing one, so a cross-tenant fileId learns nothing.
+    if (!indexSnap.exists || !visibleTo(indexSnap.data() as Record<string, unknown>, org))
         return richError(
             "chart_not_found",
             `Chart '${args.fileId}' was not found in library_index.`,

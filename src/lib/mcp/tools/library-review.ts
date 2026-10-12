@@ -1,7 +1,7 @@
 import "server-only"
 
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { readTenantRole } from "@/lib/org/access"
+import { isPlatformOwner, readTenantRole } from "@/lib/org/access"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import {
@@ -10,6 +10,9 @@ import {
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
+import { writeAccess } from "@/lib/library/visibility-server"
+import { recomputeRowVisibilitySafe } from "@/lib/library/visibility-job"
+import { notOwnerError } from "@/lib/mcp/not-owner"
 import {
     readReviewQueue,
     acceptEnrichment as acceptEnrichmentHelper,
@@ -728,10 +731,23 @@ export async function editEnrichment(
     // row_not_found so we never reveal it exists. Admins are unscoped — byte-
     // identical to the pre-H9 admin-only behavior. Legacy rows with no orgId
     // resolve via rowOrg(undefined) → DEFAULT_ORG_ID (crc).
-    const orgWall = (
+    //
+    // Phase 5: a row another tenant OWNS and SHARES with the caller's tenant
+    // (visible, not owned) is refused with `not_owner` for EVERY role, admins
+    // included — writes stay OWNS. Rows the caller cannot see keep the
+    // pre-phase-5 behaviour above, byte-identical.
+    const orgWall = async (
         data: FirebaseFirestore.DocumentData | undefined,
-    ): RichErrorEnvelope | null => {
-        if (gate.role === "admin" || org === undefined) return null
+    ): Promise<RichErrorEnvelope | null> => {
+        if (org === undefined) return null
+        const access = await writeAccess(data, org, args.rowId, gate.db)
+        if (access.kind === "not_owner") return notOwnerError(access, args.rowId)
+        // Phase 5 (security): only the PLATFORM OWNER is unscoped. A tenant
+        // admin used to edit any tenant's rows from its own connector (the H9
+        // "admins are unscoped" carve-out predates tenants); it now meets the
+        // same wall as a band leader, matching phase 2's rule that only the
+        // platform owner bypasses tenant checks.
+        if (await isPlatformOwner(uid, gate.db)) return null
         if (rowOrg(data?.orgId) !== org) {
             return richError(
                 "row_not_found",
@@ -759,7 +775,7 @@ export async function editEnrichment(
                     hintFor("row_not_found"),
                 )
             }
-            const wall = orgWall(snap.data())
+            const wall = await orgWall(snap.data())
             if (wall) return wall
             return {
                 ok: true as const,
@@ -782,7 +798,7 @@ export async function editEnrichment(
                     hintFor("row_not_found"),
                 )
             }
-            const wall = orgWall(snap.data())
+            const wall = await orgWall(snap.data())
             if (wall) return wall
             const result = await editEnrichmentHelper(
                 gate.db,
@@ -800,6 +816,9 @@ export async function editEnrichment(
                 rowId: args.rowId,
                 fields: Object.keys(edits),
             })
+            // Phase 5: a row moved between collections takes the new
+            // collection's visibility (collectionId, visibleToOrgs, Storage).
+            if (edits.collection !== undefined) await recomputeRowVisibilitySafe(args.rowId, { db: gate.db })
             return {
                 ok: true,
                 rowId: args.rowId,

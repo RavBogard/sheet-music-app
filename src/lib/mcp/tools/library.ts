@@ -1,4 +1,12 @@
 import { getAllSongs, getSongById, type SongRecord } from "@/lib/mcp/server-songs"
+import { songVisibilityOf, visibilityFieldsOf } from "@/lib/mcp/song-visibility"
+import {
+    collectionIdOf,
+    includedFor,
+    ownerOf,
+    visibleTo,
+    type VisibilityRow,
+} from "@/lib/library/visibility"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { getStorage } from "firebase-admin/storage"
 import { getChartHealth } from "@/lib/file-fetcher"
@@ -310,6 +318,15 @@ export interface SearchLibraryArgs {
      * with no collection field. A row with no library_index entry is core.
      */
     collection?: KnownCollection | "all"
+    /**
+     * Multi-tenant phase 5: also return charts other tenants share with the
+     * caller (it can use them, not change them). Default false: the caller's
+     * own library — its own rows plus collections assigned to it — exactly
+     * what search returned before shared collections.
+     */
+    includeShared?: boolean
+    /** Phase 5: one collection by record id (e.g. `crc__nava`). */
+    collectionId?: string
 }
 
 /**
@@ -358,6 +375,9 @@ interface LibraryW02Fields {
     /** David's ask 2: library_index.collection, normalized the way
      *  list_library reads it (anything else is core). */
     collection?: KnownCollection
+    /** Phase 5: the row's visibility fields (orgId, collection, collectionId,
+     *  visibleToOrgs, libraryOrgs). Join-only — never on the wire. */
+    visibility?: VisibilityRow
 }
 
 /**
@@ -465,6 +485,7 @@ async function loadLibraryW02Map(): Promise<Map<string, LibraryW02Fields>> {
                     data.collection === "uploads"
                         ? data.collection
                         : "core",
+                visibility: visibilityFieldsOf(data),
             })
         }
         return map
@@ -574,12 +595,27 @@ export async function searchLibrary(
     const q = normalizeForSearch(args.query)
     const key = args.key?.trim().toLowerCase()
     const limit = args.limit && args.limit > 0 ? Math.min(args.limit, 50) : 20
+    const includeShared = args.includeShared === true
 
     // Filter pass — same predicate as before, then join W-02 fields.
     const matches: SongRecord[] = all
         .filter((s) => {
-            // v11-02-02: tenant isolation — only the caller's org's songs.
-            if (rowOrg(s.orgId) !== org) return false
+            // v11-02-02 / phase 5: tenant isolation by VISIBILITY. Default:
+            // the caller's library (own rows + collections assigned to it);
+            // includeShared: everything it can see. The songs doc may lack
+            // the stamp its library_index twin carries, so either one
+            // admitting the row is enough.
+            const songVis = songVisibilityOf(s)
+            const idxVis = w02Map.get(s.id)?.visibility
+            if (
+                !includedFor(songVis, org, includeShared) &&
+                !(idxVis && includedFor(idxVis, org, includeShared))
+            ) {
+                return false
+            }
+            if (args.collectionId && collectionIdOf(idxVis ?? songVis) !== args.collectionId) {
+                return false
+            }
             // R-0904-live-cw-34 §1/§2: gate on `library_index.status`, the
             // source of truth, and fall back to the `songs` mirror ONLY when
             // the joined value is absent — either no library_index row, or a
@@ -642,11 +678,13 @@ export async function searchLibrary(
         })
         .map((s) => {
             const w02 = w02Map.get(s.id)
+            // Phase 5: the owning tenant, from the index row when joined.
+            const ownerOrgId = ownerOf(w02?.visibility ?? songVisibilityOf(s))
             if (!w02) {
                 // Row has no library_index — surface empty enrichment so the
                 // wire shape is consistent (callers can rely on the four
                 // AI-001 fields always being present).
-                return { ...s, ...EMPTY_ENRICHMENT_PROJECTION }
+                return { ...s, ...EMPTY_ENRICHMENT_PROJECTION, ownerOrgId }
             }
             // Promote enrichment projection onto the row's top-level so it
             // rides alongside the W-02 fields. The W-02 sub-object also
@@ -657,12 +695,14 @@ export async function searchLibrary(
             // spreading it would put `undefined` over a good songs value for
             // an index row carrying no status field — and assigned explicitly
             // from effectiveStatus(), the same derivation the filter read.
-            const { enrichment, status: _joinedStatus, ...rest } = w02
+            const { enrichment, status: _joinedStatus, visibility: _vis, ...rest } = w02
+            void _vis
             return {
                 ...s,
                 ...rest,
                 ...(enrichment ?? EMPTY_ENRICHMENT_PROJECTION),
                 status: effectiveStatus(s, w02Map),
+                ownerOrgId,
             }
         })
         // Cycle-1 F-007/F-024: hide non-chart artifacts by default.
@@ -800,9 +840,20 @@ export async function getSong(
 ): Promise<SongRecord | null> {
     const song = await getSongById(args.id)
     if (!song) return null
-    // v11-02-02: cross-tenant hard wall — return not-found for another org's
-    // song rather than leak its metadata.
-    if (rowOrg(song.orgId) !== org) return null
+    // Phase 5: the library_index twin may carry the visibility stamp the
+    // songs doc lacks. Fail-soft — a read miss falls back to the songs doc.
+    let idxVis: VisibilityRow | null = null
+    try {
+        initAdmin()
+        const idx = await getFirestore().collection("library_index").doc(args.id).get()
+        if (idx.exists) idxVis = visibilityFieldsOf(idx.data() ?? {})
+    } catch (err) {
+        logger.warn(`[mcp] get_song library_index visibility read failed for ${args.id}:`, err)
+    }
+    const songVis = songVisibilityOf(song)
+    // v11-02-02 / phase 5: cross-tenant wall by VISIBILITY — a chart the
+    // caller neither owns nor has shared with it reads as not-found (no leak).
+    if (!visibleTo(songVis, org) && !(idxVis && visibleTo(idxVis, org))) return null
     // Cycle-3 AI-001: project enrichment fields off the matching library_index
     // row so single-song reads carry the same AI state the bulk read tools
     // surface. Fail-soft — a library_index miss returns an empty projection
@@ -817,7 +868,7 @@ export async function getSong(
             err,
         )
     }
-    return { ...song, ...projection }
+    return { ...song, ...projection, ownerOrgId: ownerOf(idxVis ?? songVis) }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -853,6 +904,14 @@ export interface ListLibraryArgs {
      * caller-side counts match (e.g. `/library` "CRC Charts (162)" vs MCP 185).
      */
     includeNonChartHealthy?: boolean
+    /**
+     * Multi-tenant phase 5: also list charts other tenants share with the
+     * caller (usable, not changeable). Default false: the caller's library
+     * (own rows plus collections assigned to it), exactly as before.
+     */
+    includeShared?: boolean
+    /** Phase 5: one collection by record id (e.g. `crc__nava`). */
+    collectionId?: string
 }
 
 /**
@@ -885,6 +944,8 @@ export interface LibraryIndexEntry {
     bpm: number | null
     tags: string[]
     status: string
+    /** Multi-tenant phase 5: the tenant that owns the row. */
+    ownerOrgId: string
     // ─── W-02 trust-calibration fields ────────────────────────────────────
     stem?: string
     titleSpecificity?: number
@@ -1012,6 +1073,7 @@ function toLibraryEntry(
             ? data.tags.filter((t): t is string => typeof t === "string")
             : [],
         status: typeof data.status === "string" ? data.status : "active",
+        ownerOrgId: ownerOf(data),
         // W-02 fields — read directly from library_index since this tool
         // already has the row in hand. siblingsInCatalog is NOT denormalized
         // on the doc; listLibrary computes it post-fetch from the stem
@@ -1092,10 +1154,18 @@ export async function listLibrary(
                 return new Set<string>()
             }),
         ])
+        const includeShared = args.includeShared === true
+        // Phase 5: each kept row's collection record id, for `collectionId`.
+        const collectionIdById = new Map<string, string>()
         const all = snap.docs
-            // v11-02-02: tenant isolation — only the caller's org's library rows.
-            .filter((d) => rowOrg(d.data().orgId) === org)
-            .map((d) => toLibraryEntry(d.id, d.data(), retryIds.has(d.id)))
+            // v11-02-02 / phase 5: tenant isolation by VISIBILITY — the
+            // caller's library by default, everything it can see with
+            // includeShared.
+            .filter((d) => includedFor(d.data(), org, includeShared))
+            .map((d) => {
+                collectionIdById.set(d.id, collectionIdOf(d.data()))
+                return toLibraryEntry(d.id, d.data(), retryIds.has(d.id))
+            })
         attachSiblingCounts(all)
 
         // Cycle-3 DATA-002 — capture each filter pass's filteredOut so the
@@ -1156,7 +1226,7 @@ export async function listLibrary(
         // Historical library_index rows (the 101 CRC charts) carry
         // collection: null rather than "core", so strict-equality would hide
         // them from MCP under {collection: "core"} (CF2-D-1).
-        const filtered = args.collection
+        const byLegacyCollection = args.collection
             ? args.collection === "core"
                 ? chartHealthy.filter((e) => {
                       if (
@@ -1180,6 +1250,17 @@ export async function listLibrary(
                       return true
                   })
             : chartHealthy
+        // Phase 5: one collection record by id.
+        const filtered = args.collectionId
+            ? byLegacyCollection.filter((e) => {
+                  const cid = collectionIdById.get(e.fileId) ?? ""
+                  if (cid !== args.collectionId) {
+                      filteredOut.byCollection[cid] = (filteredOut.byCollection[cid] ?? 0) + 1
+                      return false
+                  }
+                  return true
+              })
+            : byLegacyCollection
 
         filtered.sort((a, b) =>
             a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),

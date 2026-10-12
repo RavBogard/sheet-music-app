@@ -1,5 +1,6 @@
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
+import { stampNewChartIfShared } from "@/lib/library/visibility-job"
 
 /**
  * v11-02-01: the single seam for resolving an MCP caller's tenant inside a tool
@@ -78,6 +79,8 @@ export async function stampOrg(
         any = true
     }
     if (any) await batch.commit()
+    // Multi-tenant phase 5: the tenant changed, so its collection may be shared.
+    if (indexSnap.exists) await stampNewChartIfShared(fileId, { db })
 }
 
 /**

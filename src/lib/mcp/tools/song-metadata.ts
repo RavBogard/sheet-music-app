@@ -2,7 +2,8 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
-import { rowOrg } from "@/lib/mcp/org-context"
+import { writeAccess, type WriteAccess } from "@/lib/library/visibility-server"
+import { notOwnerError } from "@/lib/mcp/not-owner"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import {
@@ -64,6 +65,12 @@ export interface ApplySongMetadataResult {
      * same-tenant or org-less calls.
      */
     tenantMismatch?: boolean
+    /**
+     * Multi-tenant phase 5: set (alongside tenantMismatch) when the chart is
+     * another tenant's but SHARED with the caller — visible, not writable.
+     * Callers surface the `not_owner` refusal instead of not-found.
+     */
+    notOwner?: Extract<WriteAccess, { kind: "not_owner" }>
 }
 
 function pickStr(v: unknown): string | null {
@@ -124,14 +131,20 @@ export async function applySongMetadata(
     // the chart exists, deny (no write) if it belongs to another tenant — prefer
     // the library_index orgId, fall back to songs. Returned as tenantMismatch so
     // the caller surfaces a not-found (never reveal the chart exists).
+    // Phase 5: still OWNS (writeAccess on the same preferred doc); a chart
+    // shared with the caller carries `notOwner` so the caller can say so.
     if (opts.org !== undefined && existed) {
-        const docOrg = indexSnap.exists
-            ? rowOrg(indexData.orgId)
-            : rowOrg(songData.orgId)
-        if (docOrg !== opts.org) {
+        const access = await writeAccess(
+            indexSnap.exists ? indexData : songData,
+            opts.org,
+            fileId,
+            db,
+        )
+        if (access.kind !== "owned") {
             return {
                 existed: true,
                 tenantMismatch: true,
+                ...(access.kind === "not_owner" ? { notOwner: access } : {}),
                 fieldsChanged: [],
                 songWritten: false,
                 indexWritten: false,
@@ -278,6 +291,9 @@ export async function updateSong(
         { key: args.key, bpm: args.bpm },
         { dryRun: args.dryRun, org },
     )
+    // Phase 5: a chart shared with the caller (visible, not owned) gets the
+    // clear refusal; everything else below stays not-found.
+    if (result.notOwner) return notOwnerError(result.notOwner, id)
     // v11-02-03: tenantMismatch (cross-tenant chart) is surfaced as not-found —
     // identical envelope to a genuinely-absent chart, so we never leak that the
     // id exists in another tenant.

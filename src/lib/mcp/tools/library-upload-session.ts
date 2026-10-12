@@ -432,7 +432,7 @@ export async function finalizeChartUpload(
                 "Verify the orphan fileId via the orphan-recovery manifest or list_library.",
             )
         }
-        const healed = await healChartBytes(db, uid, targetFileId, buffer, mimeType, "upload-session")
+        const healed = await healChartBytes(db, uid, targetFileId, buffer, mimeType, "upload-session", org)
         await stagedFile.delete().catch((err) => {
             logger.warn("[mcp] finalize_chart_upload (heal) staged cleanup failed", {
                 uploadSessionId: args.uploadSessionId,

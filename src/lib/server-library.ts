@@ -2,7 +2,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { z } from "zod"
 import type { OrgId } from "@/lib/org/types"
-import { rowOrg } from "@/lib/org/membership" // pure helper (firebase-admin-free)
+import { inLibraryOf } from "@/lib/library/visibility" // pure helper (firebase-admin-free)
 import { isJunkLibraryRow } from "@/lib/library/junk-filter" // pure (firebase-admin-free)
 
 const LibraryFileSchema = z.object({
@@ -58,8 +58,9 @@ export async function getServerLibraryLean(orgId?: OrgId): Promise<LibraryFile[]
         while (true) {
             let query = db.collection('library_index')
                 .orderBy('name')
-                // v11.1-03: project orgId too so we can host-filter when scoped.
-                .select('name', 'mimeType', 'orgId')
+                // v11.1-03: project orgId too so we can host-filter when scoped
+                // (phase 5: plus the visibility fields inLibraryOf reads).
+                .select('name', 'mimeType', 'orgId', 'libraryOrgs', 'visibleToOrgs')
                 .limit(limit)
 
             if (lastVisible) {
@@ -73,8 +74,10 @@ export async function getServerLibraryLean(orgId?: OrgId): Promise<LibraryFile[]
 
             snapshot.docs.forEach(doc => {
                 const data = doc.data()
-                // v11.1-03: host-org filter (display-only) when an org is passed.
-                if (orgId && rowOrg(data.orgId) !== orgId) return
+                // v11.1-03 / phase 5: host-org filter (display-only) when an org
+                // is passed — the org's default library (own rows + collections
+                // assigned to it).
+                if (orgId && !inLibraryOf(data, orgId)) return
                 // Minimal inline guard — the full LibraryFileSchema parse is
                 // unnecessary for two projected fields.
                 if (
@@ -139,7 +142,7 @@ export async function getServerLibrary(orgId?: OrgId) {
                 const data = doc.data()
                 // v11.1-03: host-org filter (display-only) when an org is passed.
                 // Unfiltered when omitted → existing callers byte-identical.
-                if (orgId && rowOrg(data.orgId) !== orgId) return
+                if (orgId && !inLibraryOf(data, orgId)) return
                 // v11.5-04-02: hide test/junk rows from the consumer browse
                 // surface (.DS_Store + audio/office artifacts, orphaned/
                 // duplicate/archived cruft, test-uid uploads). Real charts pass.
