@@ -10,6 +10,8 @@ import {
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
+import { writeAccess } from "@/lib/library/visibility-server"
+import { notOwnerError } from "@/lib/mcp/not-owner"
 import {
     readReviewQueue,
     acceptEnrichment as acceptEnrichmentHelper,
@@ -728,10 +730,18 @@ export async function editEnrichment(
     // row_not_found so we never reveal it exists. Admins are unscoped — byte-
     // identical to the pre-H9 admin-only behavior. Legacy rows with no orgId
     // resolve via rowOrg(undefined) → DEFAULT_ORG_ID (crc).
-    const orgWall = (
+    //
+    // Phase 5: a row another tenant OWNS and SHARES with the caller's tenant
+    // (visible, not owned) is refused with `not_owner` for EVERY role, admins
+    // included — writes stay OWNS. Rows the caller cannot see keep the
+    // pre-phase-5 behaviour above, byte-identical.
+    const orgWall = async (
         data: FirebaseFirestore.DocumentData | undefined,
-    ): RichErrorEnvelope | null => {
-        if (gate.role === "admin" || org === undefined) return null
+    ): Promise<RichErrorEnvelope | null> => {
+        if (org === undefined) return null
+        const access = await writeAccess(data, org, args.rowId, gate.db)
+        if (access.kind === "not_owner") return notOwnerError(access, args.rowId)
+        if (gate.role === "admin") return null
         if (rowOrg(data?.orgId) !== org) {
             return richError(
                 "row_not_found",
@@ -759,7 +769,7 @@ export async function editEnrichment(
                     hintFor("row_not_found"),
                 )
             }
-            const wall = orgWall(snap.data())
+            const wall = await orgWall(snap.data())
             if (wall) return wall
             return {
                 ok: true as const,
@@ -782,7 +792,7 @@ export async function editEnrichment(
                     hintFor("row_not_found"),
                 )
             }
-            const wall = orgWall(snap.data())
+            const wall = await orgWall(snap.data())
             if (wall) return wall
             const result = await editEnrichmentHelper(
                 gate.db,

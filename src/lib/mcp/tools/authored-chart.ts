@@ -9,7 +9,9 @@ import { logger } from "@/lib/logger"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { orgString } from "@/lib/org/strings"
 import type { OrgId } from "@/lib/org/types"
-import { rowOrg, stampOrg } from "@/lib/mcp/org-context"
+import { stampOrg } from "@/lib/mcp/org-context"
+import { writeAccess } from "@/lib/library/visibility-server"
+import { notOwnerError } from "@/lib/mcp/not-owner"
 import { houseChartHtml, type HouseChart } from "@/lib/chart-render/house-chart-html"
 import {
     isRenderFailure,
@@ -305,7 +307,11 @@ export async function createChart(
             )
         }
         const data = prevSnap.data() ?? {}
-        if (rowOrg(data.orgId) !== org) {
+        // Phase 5: revising is a WRITE (OWNS). A chart shared with the caller
+        // gets the clear not_owner refusal; any other foreign row as before.
+        const access = await writeAccess(data, org, args.revisionOf.trim(), db)
+        if (access.kind === "not_owner") return notOwnerError(access, args.revisionOf.trim())
+        if (access.kind !== "owned") {
             return richError(
                 "row_not_found",
                 `revisionOf ${args.revisionOf} is not in your organization.`,

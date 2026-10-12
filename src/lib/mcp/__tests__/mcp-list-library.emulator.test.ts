@@ -312,6 +312,8 @@ describe("MCP list_library (emulator)", () => {
             bpm: 96,
             tags: ["israeli", "shabbat"],
             status: "active",
+            // Multi-tenant phase 5: every row names its owning tenant.
+            ownerOrgId: "crc",
             // Cycle-3 AI-001: enrichment projection always present on every
             // row. Pre-NEW-3 rows (no enrichment fields seeded) surface the
             // empty projection.
