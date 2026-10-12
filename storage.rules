@@ -34,8 +34,26 @@ service firebase.storage {
         ? resource.metadata.orgId : 'crc';
     }
 
+    // Multi-tenant P5: shared collections. The visibility job stamps
+    // metadata.visibleTo, a comma list of every tenant that may read the chart
+    // (owner first). Without it the object's own tenant (objectOrg) is the
+    // list, which is phase 2's rule. A member (not pending) of any listed
+    // tenant reads; unrolled over the first 8 entries (rules have no loops).
+    function objectVisibleTo() {
+      return (resource.metadata != null
+              && resource.metadata.get('visibleTo', '') is string
+              && resource.metadata.get('visibleTo', '') != '')
+        ? resource.metadata.visibleTo.split(',') : [objectOrg()];
+    }
+    function seesAt(v, i) { return v.size() > i && atLeast(v[i], 'me'); }
+    function seesObject() {
+      let v = objectVisibleTo();
+      return seesAt(v, 0) || seesAt(v, 1) || seesAt(v, 2) || seesAt(v, 3)
+        || seesAt(v, 4) || seesAt(v, 5) || seesAt(v, 6) || seesAt(v, 7);
+    }
+
     match /library/{allPaths=**} {
-      allow read: if atLeast(objectOrg(), 'me');
+      allow read: if atLeast(objectOrg(), 'me') || seesObject();
       allow write: if false;
     }
     match /{allPaths=**} {

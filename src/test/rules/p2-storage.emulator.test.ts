@@ -2,7 +2,7 @@
 import { assertFails, assertSucceeds, type RulesTestEnvironment } from "@firebase/rules-unit-testing"
 import { afterAll, beforeAll, describe, it } from "vitest"
 
-import { A, B, ctx, makeEnv, type Persona } from "./personas"
+import { A, B, C, ctx, makeEnv, type Persona } from "./personas"
 
 /**
  * Multi-tenant phase 2 — storage.rules (design §4.3) against the Storage
@@ -89,5 +89,68 @@ describe("P2 storage.rules — library/** by object tenant", () => {
                 await assertFails(s.ref("library/b.pdf").delete())
             })
         }
+    })
+})
+
+// Phase 5 lives in this file, not its own: the Storage emulator holds one
+// rules set and one default bucket, so two Storage suites in parallel files
+// race on clearStorage().
+/**
+ * Multi-tenant phase 5 — storage.rules widened to shared visibility. An
+ * object's `visibleTo` metadata (comma list, written by the visibility job)
+ * lists every tenant that may read it; without it the phase-2 rule stands
+ * (metadata.orgId, missing = crc).
+ */
+describe("P5 storage.rules — library/** by visibleTo", () => {
+    let env: RulesTestEnvironment
+    const bytes = new Uint8Array([37, 80, 68, 70])
+
+    beforeAll(async () => {
+        env = await makeEnv("demo-p5-storage", { storage: true })
+        await env.clearStorage()
+        await env.withSecurityRulesDisabled(async (c) => {
+            const root = c.storage().ref()
+            const put = (p: string, md: Record<string, string>) => root.child(p).put(bytes, { contentType: "application/pdf", customMetadata: md })
+            await put("library/sharedC.pdf", { orgId: C, visibleTo: `${C},${A}` })
+            await put("library/privC.pdf", { orgId: C, visibleTo: C })
+            await put("library/ownA.pdf", { orgId: A, visibleTo: A })
+            await put("library/onlyOrgB.pdf", { orgId: B })
+            await put("library/legacy.pdf", {})
+            await put("library/unsharedNowC.pdf", { orgId: C, visibleTo: C })
+        })
+    }, 120_000)
+
+    afterAll(async () => {
+        await env.cleanup()
+    })
+
+    const read = (p: Persona, path: string) => ctx(env, p).storage().ref(path).getMetadata()
+
+    const CAN: Array<[Persona, string]> = [
+        ["aMe", "library/sharedC.pdf"],
+        ["aAdmin", "library/sharedC.pdf"],
+        ["dual", "library/sharedC.pdf"],
+        ["oldBL", "library/sharedC.pdf"],
+        ["po", "library/privC.pdf"],
+        ["aMe", "library/ownA.pdf"],
+        ["aMe", "library/legacy.pdf"],
+        ["bBL", "library/onlyOrgB.pdf"],
+    ]
+    const CANNOT: Array<[Persona, string]> = [
+        ["bBL", "library/sharedC.pdf"],
+        ["aPe", "library/sharedC.pdf"],
+        ["oldPending", "library/sharedC.pdf"],
+        ["signedOut", "library/sharedC.pdf"],
+        ["aMe", "library/privC.pdf"],
+        ["aAdmin", "library/unsharedNowC.pdf"],
+        ["bBL", "library/ownA.pdf"],
+        ["aMe", "library/onlyOrgB.pdf"],
+        ["bBL", "library/legacy.pdf"],
+    ]
+    for (const [p, path] of CAN) it(`${p} reads ${path}`, async () => void (await assertSucceeds(read(p, path))))
+    for (const [p, path] of CANNOT) it(`${p} cannot read ${path}`, async () => void (await assertFails(read(p, path))))
+    it("nobody writes library objects from the browser", async () => {
+        await assertFails(ctx(env, "aAdmin").storage().ref("library/sharedC.pdf").put(bytes))
+        await assertFails(ctx(env, "po").storage().ref("library/new.pdf").put(bytes))
     })
 })

@@ -255,9 +255,37 @@ service cloud.firestore {
     }
 
     // ── CATALOGUE ──────────────────────────────────────────────────────────
+    // ── Shared collections (multi-tenant P5) ───────────────────────────────
+    // Chart rows (songs, library_index) carry visibleToOrgs: the owner plus
+    // every tenant the row's collection is shared with or assigned to (the
+    // server job src/lib/library/visibility-job.ts writes it). A member (not
+    // pending) of any of those tenants may read the row; writes stay with the
+    // owner (orgId) as before. seenOrgs() is the caller's non-pending tenants,
+    // unrolled over the first 8 claim keys (rules have no loops); built from
+    // the token, so the query prover accepts
+    //   where('visibleToOrgs', 'array-contains', <tenant>)
+    // for a member of <tenant> and still refuses an unfiltered query.
+    function seenKey(ks, i) {
+      return ks.size() > i && request.auth.token.m[ks[i]] != 'pe' ? [ks[i]] : [];
+    }
+    function seenOrgs() {
+      let ks = request.auth.token.m.keys();
+      return seenKey(ks, 0).concat(seenKey(ks, 1)).concat(seenKey(ks, 2)).concat(seenKey(ks, 3))
+        .concat(seenKey(ks, 4)).concat(seenKey(ks, 5)).concat(seenKey(ks, 6)).concat(seenKey(ks, 7));
+    }
+    function legacySeenOrgs() {
+      return rank(legacyCode(legacyOrgs()[0])) >= 1 ? legacyOrgs() : [];
+    }
+    function sharedSees(d) {
+      return signedIn() && d.get('visibleToOrgs', []) is list
+        && d.get('visibleToOrgs', []).hasAny(hasM() ? seenOrgs() : legacySeenOrgs());
+    }
+    function sharedSeesList() {
+      return signedIn() && resource.data.visibleToOrgs.hasAny(hasM() ? seenOrgs() : legacySeenOrgs());
+    }
     match /songs/{songId} {
-      allow get: if atLeast(docOrg(), 'me');
-      allow list: if atLeast(listOrg(), 'me');
+      allow get: if atLeast(docOrg(), 'me') || sharedSees(resource.data);
+      allow list: if atLeast(listOrg(), 'me') || sharedSeesList();
       allow create: if newOrgSet() && atLeast(newOrg(), 'bl');
       allow update: if atLeast(docOrg(), 'bl') && orgKept();
       allow delete: if atLeast(docOrg(), 'bl');
@@ -269,8 +297,12 @@ service cloud.firestore {
       allow update: if atLeast(docOrg(), 'bl') && orgKept();
       allow delete: if atLeast(docOrg(), 'bl');
     }
+    // library_index: read by the same visibility as songs (P5; server-only
+    // before). Writes stay server-only.
     match /library_index/{fileId} {
-      allow read, write: if false;
+      allow get: if atLeast(docOrg(), 'me') || sharedSees(resource.data);
+      allow list: if atLeast(listOrg(), 'me') || sharedSeesList();
+      allow write: if false;
       match /chordData/{page} { allow read, write: if false; }
     }
     match /library_signals/{docId} {
