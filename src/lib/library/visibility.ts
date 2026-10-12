@@ -27,7 +27,25 @@
  *                Tehilah" tab after the nava move); otherwise a shared row,
  *                behind the opt-in chip for collectionIdOf(row).
  * firestore.rules allows the array-contains query for a member (not pending) of
- * <org>; unfiltered queries stay refused.
+ * <org>; unfiltered queries stay refused. Composite indexes exist for
+ * visibleToOrgs (array-contains) + collection / collectionId / name on
+ * library_index and + collectionId / title on songs.
+ *
+ * A library TAB (e.g. CRC's "Nava Tehilah", legacy key `nava`) lists
+ *   own rows      where orgId == <org> && collection == <key>        (as today)
+ *   plus          where visibleToOrgs array-contains <org> && collection == <key>,
+ *                 keeping rows with inLibraryOf(row, <org>) true.
+ * After the nava move CRC owns none of its nava rows (orgId is Nava's), so the
+ * second query is what keeps the tab full; libraryOrgs includes crc, so they
+ * count as CRC's library, not as an opt-in share. The server route
+ * /api/library/list (?collection=<key>) already applies this rule for the host
+ * tenant, and takes includeShared=true / collectionId=<id>; every file it
+ * returns carries ownerOrgId.
+ *
+ * Rows only exist with these fields after scripts/ops/multitenant/
+ * stamp-collection-visibility.ts has run (or a collection was shared); until
+ * then the array-contains query returns nothing and the own-row query is the
+ * whole library, exactly as today.
  */
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
