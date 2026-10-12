@@ -4,7 +4,9 @@ import { logger } from "@/lib/logger"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { getServerCongregationConfig } from "@/lib/server-auth"
 import { getAllSetlists } from "@/lib/server-setlists"
-import { DEFAULT_SHORT_NAME } from "@/lib/constants"
+import { getOrgConfig } from "@/lib/org/get-org-config"
+import { peekOrgConfig } from "@/lib/org/config-cache"
+import { codeOrgConfig } from "@/lib/org/config-code"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { readServicesFromConfig, readStreamFromConfig } from "@/lib/today/config"
@@ -47,13 +49,15 @@ const MAX_HISTORY_LIMIT = 50
 
 /** Minimal server-side identity fallback when `config/congregation` is absent.
  *  Mirrors the load-bearing fields of congregation-store's DEFAULT_CONFIG
- *  without importing the client (zustand/firebase-web) store. */
-const CONGREGATION_DEFAULTS = {
-    name: "Central Reform Congregation",
-    shortName: DEFAULT_SHORT_NAME,
-    location: "St. Louis, MO",
-    description: "Digital Sheet Music Library for CRC Musicians",
-} as const
+ *  without importing the client (zustand/firebase-web) store.
+ *  Multi-tenant phase 1: from the caller org's `congregationDefaults` (CRC's
+ *  are the former literals; Brothers Lazaroff is frozen to them). */
+async function congregationDefaultsFor(org: OrgId) {
+    const tenant =
+        (await getOrgConfig(org).catch(() => null)) ?? peekOrgConfig(org) ?? codeOrgConfig(DEFAULT_ORG_ID)!
+    const d = tenant.congregationDefaults
+    return { name: d.name, shortName: d.shortName, location: d.location, description: d.description }
+}
 
 export interface GetCongregationContextArgs {
     /** How many recent setlists to summarize in leadHistory. Default 10, max 50. */
@@ -217,9 +221,10 @@ export async function getCongregationContext(
         // services, not CRC's). Crc-safe — v11-01-03's backfill stamped every CRC
         // setlist with orgId='crc' and the (orgId,date) composite index backs the
         // equality-filter + orderBy pair (see getAllSetlists, server-setlists.ts).
-        const [configRaw, setlists] = await Promise.all([
+        const [configRaw, setlists, congregationDefaults] = await Promise.all([
             getServerCongregationConfig(org),
             getAllSetlists({ limit: historyLimit, orderBy, org }),
+            congregationDefaultsFor(org),
         ])
 
         const config = (configRaw as Record<string, unknown> | null) ?? null
@@ -252,16 +257,16 @@ export async function getCongregationContext(
         return {
             ok: true,
             congregation: {
-                name: asString(config?.name) ?? CONGREGATION_DEFAULTS.name,
+                name: asString(config?.name) ?? congregationDefaults.name,
                 shortName:
                     asString(config?.shortName) ??
-                    CONGREGATION_DEFAULTS.shortName,
+                    congregationDefaults.shortName,
                 location:
                     asString(config?.location) ??
-                    CONGREGATION_DEFAULTS.location,
+                    congregationDefaults.location,
                 description:
                     asString(config?.description) ??
-                    CONGREGATION_DEFAULTS.description,
+                    congregationDefaults.description,
                 rabbis: buildRabbiProfiles(config),
                 coreMusicians: buildCoreMusicians(config),
                 features,

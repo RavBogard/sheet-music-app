@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next'
-
-const BASE_URL = "https://centralreform.live"
+import { requestOrg } from '@/lib/org/request-org'
+import { orgString } from '@/lib/org/strings'
 
 // C5D-007: the prior `disallow: '/'` blanket-blocked every URL, including
 // the 5 legal/marketing pages we explicitly list in sitemap.ts and which
@@ -9,7 +9,12 @@ const BASE_URL = "https://centralreform.live"
 // public surface, disallow everything else. Per-page `noindex` meta is
 // scoped to authed routes by removing it from the global metadata in
 // layout.tsx and re-adding it on the auth-gated route groups.
-export default function robots(): MetadataRoute.Robots {
+//
+// Multi-tenant phase 1: the origin is the request tenant's `seo.baseUrl`
+// (https://{host}). Brothers Lazaroff is frozen to https://centralreform.live,
+// which is what both hosts served before.
+export default async function robots(): Promise<MetadataRoute.Robots> {
+    const BASE_URL = orgString((await requestOrg()).orgId, 'seo.baseUrl')
     return {
         rules: {
             userAgent: '*',

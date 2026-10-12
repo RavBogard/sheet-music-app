@@ -8,6 +8,7 @@ import { httpError, redactInProduction } from "@/lib/http/error-envelope"
 import { selectUnauthHint } from "@/lib/http/caller-context"
 import { verifyBearer } from "@/lib/mcp/auth"
 import { logger } from "@/lib/logger"
+import { allowedOriginsFromEnv } from "@/lib/http/cors-origins"
 
 /**
  * Public chart-byte proxy keyed by library fileId — the sibling of
@@ -29,7 +30,8 @@ import { logger } from "@/lib/logger"
  */
 export const dynamic = 'force-dynamic'
 
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://centralreform.live,https://www.centralreform.live').split(',').map(s => s.trim())
+// Multi-tenant phase 1: unchanged default (CRC's origins only); see cors-origins.ts.
+const ALLOWED_ORIGINS = allowedOriginsFromEnv()
 
 function getAllowedOrigin(request: NextRequest): string {
     const origin = request.headers.get('origin') || ''

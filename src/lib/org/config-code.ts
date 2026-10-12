@@ -95,6 +95,7 @@ export const BL_FROZEN_CRC_KEYS: StringKey[] = [
     "page.skeletonBrand",
     "profile.scheduleName",
     "library.ownBadge",
+    "seo.baseUrl",
     "ai.systemInstructionLead",
     "ai.libraryConventions",
 ]

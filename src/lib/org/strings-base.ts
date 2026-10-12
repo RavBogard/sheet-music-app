@@ -65,6 +65,9 @@ export const STRING_BASE = {
     "page.skeletonBrand": "{shortName}",
     "profile.scheduleName": "your {abbreviation} schedule",
 
+    // ── SEO: robots.txt / sitemap.xml origin ──
+    "seo.baseUrl": "https://{host}",
+
     // ── Library ──
     "library.ownBadge": "{abbreviation}",
 

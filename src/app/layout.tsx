@@ -7,6 +7,8 @@ import { OrgProvider } from "@/lib/org/org-context"
 import { coerceOrgId } from "@/lib/org/registry"
 import { getOrgBranding } from "@/lib/org/branding"
 import { getOrgConfig } from "@/lib/org/get-org-config"
+import { codeOrgConfig } from "@/lib/org/config-code"
+import type { FontKey } from "@/lib/org/config-schema"
 import { ClientProviders } from "@/components/client-providers"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { Toaster } from "sonner"
@@ -39,6 +41,22 @@ const zillaSlab = Zilla_Slab({
   subsets: ["latin"],
   preload: false,
 });
+
+/**
+ * Multi-tenant phase 1: the <body> font variables from the tenant's
+ * `branding.fontBody` / `branding.fontDisplay`. Only the fonts loaded above
+ * map to a variable; the Hebrew faces (rubik, heebo, frankRuhlLibre) arrive in
+ * phase 7 and fall back to the defaults until then. Righteous stays on every
+ * tenant as `--font-display`; a `zillaSlab` display font adds the Zilla Slab
+ * variable on top, exactly as Brothers Lazaroff had it.
+ */
+const BODY_FONT_VARIABLE: Partial<Record<FontKey, string>> = { poppins: poppins.variable };
+
+function bodyFontClassName(fontBody?: FontKey, fontDisplay?: FontKey): string {
+  const body = (fontBody && BODY_FONT_VARIABLE[fontBody]) || poppins.variable;
+  const extraDisplay = fontDisplay === "zillaSlab" ? ` ${zillaSlab.variable}` : "";
+  return `${body} ${geistMono.variable} ${righteous.variable}${extraDisplay} antialiased`;
+}
 
 // v11-04-02: per-tenant head metadata. Reads the Edge-resolved `x-org-id`
 // header (same seam the layout body uses for <html data-org>/forceDark) and
@@ -118,8 +136,13 @@ export default async function RootLayout({
   // dark so the `.dark[data-org="brotherslazaroff"]` navy tokens always apply.
   // CRC's forceDark is false → undefined → next-themes system behavior unchanged.
   const { forceDark } = getOrgBranding(orgId);
+  // Multi-tenant phase 1: language and direction from the tenant's locale.
+  // `dir` is emitted only for rtl, so an ltr tenant's <html> is unchanged.
+  const tenantConfig = orgConfig ?? codeOrgConfig(orgId);
+  const lang = tenantConfig?.locale.language ?? "en";
+  const dir = tenantConfig?.locale.direction === "rtl" ? "rtl" : undefined;
   return (
-    <html lang="en" data-org={orgId} suppressHydrationWarning>
+    <html lang={lang} {...(dir ? { dir } : {})} data-org={orgId} suppressHydrationWarning>
       <head>
         {/* Preconnect to auth domains — eliminates DNS+TLS handshake delay on sign-in */}
         <link rel="preconnect" href="https://accounts.google.com" />
@@ -128,7 +151,7 @@ export default async function RootLayout({
         <link rel="preconnect" href={`https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}`} />
       </head>
       <body
-        className={`${poppins.variable} ${geistMono.variable} ${righteous.variable}${orgId === "brotherslazaroff" ? ` ${zillaSlab.variable}` : ""} antialiased`}
+        className={bodyFontClassName(tenantConfig?.branding.fontBody, tenantConfig?.branding.fontDisplay)}
       >
         <a
           href="#main-content"

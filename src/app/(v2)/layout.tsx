@@ -1,5 +1,7 @@
 import type { Metadata } from "next"
 import { Geist } from "next/font/google"
+import { requestOrg } from "@/lib/org/request-org"
+import { orgString } from "@/lib/org/strings"
 
 const geist = Geist({
   variable: "--font-geist-sans",
@@ -7,11 +9,16 @@ const geist = Geist({
   weight: ["300", "400", "500", "600", "700"],
 })
 
-export const metadata: Metadata = {
-  title: {
-    template: "%s | CRC Music · v2 Beta",
-    default: "CRC Music · v2 Beta",
-  },
+// Multi-tenant phase 1: the title strings come from the tenant catalogue
+// (BL is frozen to the CRC text it has always shown here).
+export async function generateMetadata(): Promise<Metadata> {
+  const { orgId } = await requestOrg()
+  return {
+    title: {
+      template: orgString(orgId, "page.v2TitleTemplate"),
+      default: orgString(orgId, "page.v2TitleDefault"),
+    },
+  }
 }
 
 export default function V2Layout({ children }: { children: React.ReactNode }) {

@@ -1,7 +1,11 @@
+import type { Metadata } from "next"
 import { UnauthorizedState } from "@/components/ui/unauthorized-state"
+import { requestOrg } from "@/lib/org/request-org"
+import { orgString } from "@/lib/org/strings"
 
-export const metadata = {
-    title: 'Unauthorized | Central Reform Congregation',
+// Multi-tenant phase 1: tenant title (BL frozen to the CRC text).
+export async function generateMetadata(): Promise<Metadata> {
+    return { title: orgString((await requestOrg()).orgId, "page.unauthorizedTitle") }
 }
 
 export default function UnauthorizedPage() {
