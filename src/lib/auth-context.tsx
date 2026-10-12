@@ -1,5 +1,6 @@
 "use client"
 
+import { viewAsActiveInBrowser } from "@/lib/org/view-as"
 import { createContext, useContext, useEffect, useState, useMemo, useRef, ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import {
@@ -49,6 +50,8 @@ interface AuthContextType {
     /** My role in the host tenant (null = not a member here; treat as pending). */
     role: string | null
     isPlatformOwner: boolean
+    /** Platform owner viewing this tenant read-only ("View as this tenant"). */
+    readOnlyView: boolean
     /** My membership doc in the host tenant (null = none; undefined = not read yet). */
     membership: Membership | null | undefined
     signIn: () => Promise<void>
@@ -69,6 +72,7 @@ const AuthContext = createContext<AuthContextType>({
     orgId: "crc",
     role: null,
     isPlatformOwner: false,
+    readOnlyView: false,
     membership: undefined,
     signIn: async () => {},
     signOut: async () => { },
@@ -117,8 +121,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileRole: profile?.role,
         profileSoundEngineer: profile?.soundEngineer,
     })
-    const role = resolved.role
     const isPlatformOwner = resolved.isPlatformOwner
+    // Multi-tenant phase 4: "View as this tenant" — the platform owner sees the
+    // tenant as a member would (read-only); the proxy sets the cookie.
+    const [viewAsCookie, setViewAsCookie] = useState(false)
+    useEffect(() => { setViewAsCookie(viewAsActiveInBrowser()) }, [])
+    const readOnlyView = isPlatformOwner && viewAsCookie
+    const role = readOnlyView ? "member" : resolved.role
     // Derived roles — uses shared hierarchy from @/lib/roles
     const { isAdmin, isBandLeader, isMusician, isMember } = deriveRoles(role)
     const isSoundEngineer = resolved.isSoundEngineer
@@ -500,6 +509,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         orgId: org,
         role,
         isPlatformOwner,
+        readOnlyView,
         membership,
         signIn,
         signOut,
@@ -509,7 +519,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isMember,
         isSoundEngineer,
         canUpload,
-    }), [user, profile, cachedUser, effectiveLoading, org, role, isPlatformOwner, membership, isAdmin, isBandLeader, isMusician, isMember, isSoundEngineer, canUpload])
+    }), [user, profile, cachedUser, effectiveLoading, org, role, isPlatformOwner, readOnlyView, membership, isAdmin, isBandLeader, isMusician, isMember, isSoundEngineer, canUpload])
 
     return (
         <AuthContext.Provider value={value}>

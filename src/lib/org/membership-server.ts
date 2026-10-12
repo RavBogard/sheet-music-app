@@ -53,46 +53,55 @@ export async function getUserOrgIds(uid: string): Promise<OrgId[]> {
     }
 }
 
-/**
- * v11.1-02-01: the org a leader's MCP bearer should be stamped with, given the
- * tenant DOMAIN they connected Claude Desktop through. `requestedOrg` is the
- * proxy-resolved `x-org-id` (the host's org); the bearer is pinned to it ONLY
- * when the caller is actually a member (validated against their `orgIds` claim),
- * otherwise it falls back to their primary org (`orgs[0]`, default crc).
- *
- * This is the multi-org authoring seam (Daniel decision 2026-06-09): authoring
- * org = connection domain. It pins org at MINT time from the host, NOT from any
- * tool/request-body arg, so the v11-06-02 no-arg-injection invariant is fully
- * preserved. A leader can NEVER mint for an org outside their membership — a
- * crc-only user connecting on the broslaz host still mints crc (no escalation).
- * Never throws (getUserOrgIds is crc-safe).
- */
-export async function resolveMintOrg(
-    uid: string,
-    requestedOrg: OrgId | null | undefined,
-): Promise<OrgId> {
-    // Multi-tenant P2: the platform owner mints for the host it connected
-    // through. Everyone else: the host if they are an approved member there,
-    // else (kept in P2; phase 4 removes it) their first tenant.
-    if (requestedOrg) {
-        try {
-            const { isPlatformOwner } = await import("@/lib/org/access")
-            if (await isPlatformOwner(uid)) return requestedOrg
-        } catch {
-            // owner lookup failure → ordinary member rules
-        }
+/** The outcome of resolveMintOrg: the tenant to mint for, or a refusal. */
+export type MintOrgDecision =
+    | { ok: true; orgId: OrgId }
+    | { ok: false; orgId: OrgId; message: string }
+
+/** The refusal shown when a person is not a member of the tenant they connected through. */
+export function notAMemberMessage(tenantName: string): string {
+    return `This account isn't a member of ${tenantName}. Ask its admin for access.`
+}
+
+async function tenantDisplayName(orgId: OrgId): Promise<string> {
+    try {
+        const { getOrgConfig } = await import("@/lib/org/get-org-config")
+        return (await getOrgConfig(orgId))?.name ?? orgId
+    } catch {
+        return orgId
     }
-    const orgs = await getUserOrgIds(uid)
-    if (requestedOrg && orgs.includes(requestedOrg)) return requestedOrg
-    return orgs[0] ?? DEFAULT_ORG_ID
 }
 
 /**
- * v11-02b: the org a self-service MCP token defaults to for `uid` when no host
- * org is in play — the minting user's PRIMARY org from their `orgIds` claim
- * (first element; default crc). Equivalent to `resolveMintOrg(uid, null)`. Kept
- * as a named helper for callers that have no host context.
+ * The tenant an MCP bearer is minted for: the tenant of the ADDRESS the person
+ * connected through (`requestedOrg`, the proxy-resolved `x-org-id`), and only
+ * that tenant (multi-tenant phase 4). A person with no approved membership
+ * there (role not pending/denied; unmigrated people by their orgIds claim) is
+ * refused with a plain message; there is no fall-back to their first tenant,
+ * so a CRC-only account connecting through another tenant's address gets no
+ * token rather than a CRC one. The platform owner mints for the address's
+ * tenant. The tenant comes from the host, never from a request argument
+ * (v11-06-02). Never throws.
+ */
+export async function resolveMintOrg(uid: string, requestedOrg: OrgId): Promise<MintOrgDecision> {
+    try {
+        const { isPlatformOwner } = await import("@/lib/org/access")
+        if (await isPlatformOwner(uid)) return { ok: true, orgId: requestedOrg }
+    } catch {
+        // owner lookup failure → ordinary member rules
+    }
+    const orgs = await getUserOrgIds(uid)
+    if (orgs.includes(requestedOrg)) return { ok: true, orgId: requestedOrg }
+    return { ok: false, orgId: requestedOrg, message: notAMemberMessage(await tenantDisplayName(requestedOrg)) }
+}
+
+/**
+ * v11-02b: a person's PRIMARY tenant (first approved tenant, crc first; default
+ * crc). Not used to mint any more — minting is for the address's tenant only
+ * (resolveMintOrg) — kept for callers that need "where does this person
+ * mainly belong".
  */
 export async function getPrimaryOrgForMinting(uid: string): Promise<OrgId> {
-    return resolveMintOrg(uid, null)
+    const orgs = await getUserOrgIds(uid)
+    return orgs[0] ?? DEFAULT_ORG_ID
 }

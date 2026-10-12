@@ -22,6 +22,8 @@ export interface AppNavigationProps {
     // v11.1-05: optional horizontal brand wordmark. When set, the nav renders
     // this lockup image instead of the OrgLogo monogram + short-name text.
     serverWordmarkUrl?: string
+    // Multi-tenant phase 4: platform owner (server-resolved) -> Platform link.
+    serverIsPlatformOwner?: boolean
 }
 
 export function AppNavigation(props: AppNavigationProps) {

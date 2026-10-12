@@ -2,6 +2,8 @@ import { type NextRequest } from "next/server"
 import { initAdmin } from "@/lib/firebase-admin"
 import { getServerUser } from "@/lib/server-auth"
 import { getClient, createAuthCode } from "@/lib/mcp/oauth"
+import { resolveMintOrg } from "@/lib/org/membership-server"
+import { coerceOrgId } from "@/lib/org/registry"
 import { logger } from "@/lib/logger"
 
 /**
@@ -17,8 +19,11 @@ import { logger } from "@/lib/logger"
  *     redirect_uri with ?error=...
  *  3. Resolve the signed-in user via the __session cookie. If not signed in,
  *     bounce through /login?next=<this url> and come back.
- *  4. Auto-approve (no consent screen — confirmed with the owner): mint a
- *     single-use auth code bound to the PKCE challenge and redirect back.
+ *  4. Refuse (access_denied) when the user is not an approved member of the
+ *     address's tenant (multi-tenant phase 4; platform owner exempt).
+ *  5. Auto-approve (no consent screen — confirmed with the owner): mint a
+ *     single-use auth code bound to the PKCE challenge and the address's
+ *     tenant, and redirect back.
  */
 
 function errorPage(message: string): Response {
@@ -93,15 +98,32 @@ export async function GET(req: NextRequest): Promise<Response> {
         return Response.redirect(`${origin}/login?next=${encodeURIComponent(next)}`, 302)
     }
 
-    // 4. Auto-approve — mint a single-use code bound to the PKCE challenge.
+    // 4. Multi-tenant phase 4: the connector belongs to the tenant of THIS
+    // address (proxy-resolved x-org-id). Someone with no approved membership
+    // there is refused here, plainly, instead of being handed a token for
+    // another tenant they do belong to. Platform owner exempt.
+    const orgId = coerceOrgId(req.headers.get("x-org-id"))
+    const decision = await resolveMintOrg(user.uid, orgId)
+    if (!decision.ok) {
+        logger.warn("[mcp-oauth] authorization refused: not a member of the address's tenant", {
+            clientId,
+            uid: user.uid,
+            orgId,
+        })
+        return redirectWithError(redirectUri, "access_denied", state, decision.message)
+    }
+
+    // 5. Auto-approve — mint a single-use code bound to the PKCE challenge and
+    // to the address's tenant.
     const code = await createAuthCode({
         clientId,
         uid: user.uid,
         codeChallenge,
         redirectUri,
         scope,
+        orgId: decision.orgId,
     })
-    logger.info("[mcp-oauth] authorization granted", { clientId, uid: user.uid })
+    logger.info("[mcp-oauth] authorization granted", { clientId, uid: user.uid, orgId: decision.orgId })
 
     const u = new URL(redirectUri)
     u.searchParams.set("code", code)

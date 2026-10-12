@@ -31,6 +31,11 @@ export const POST = createApiHandler(
         }
         const tenant = coerceOrgId(ctx.req.headers.get("x-org-id"))
         const uid = ctx.auth.uid
+        // Multi-tenant phase 4: the platform owner is admin everywhere already;
+        // visiting a tenant's address must not file a join request there.
+        if (ctx.auth.po) {
+            return NextResponse.json({ tenant, role: "admin", created: false, claimsChanged: false })
+        }
         const db = getFirestore()
         const claimsBefore = canonicalClaims(ctx.auth.token ? stripTokenFields(ctx.auth.token as unknown as Record<string, unknown>) : {})
 

@@ -150,6 +150,25 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+    // Multi-tenant phase 4. Invitations (token stored hashed) and the
+    // platform activity log: server only, read through the platform owner's
+    // routes. Chart collections: readable by signed-in members of the owner
+    // tenant (member and up) or of a tenant it is shared with or assigned to,
+    // and by the platform owner; written by the server only.
+    match /invites/{inviteId} {
+      allow read, write: if false;
+    }
+    match /platformAudit/{entryId} {
+      allow read, write: if false;
+    }
+    match /collections/{collectionId} {
+      allow read: if signedIn() && (
+        po()
+        || atLeast(resource.data.ownerOrgId, 'me')
+        || (hasM() && request.auth.token.m.keys().hasAny(resource.data.get('sharedWith', []).concat(resource.data.get('assignedTo', []))))
+        || (!hasM() && legacyOrgs().hasAny(resource.data.get('sharedWith', []).concat(resource.data.get('assignedTo', [])))));
+      allow write: if false;
+    }
 
     // ── SETLISTS ───────────────────────────────────────────────────────────
     // R-0919-audit-2: get public (Perform links), list signed-in. Unchanged.

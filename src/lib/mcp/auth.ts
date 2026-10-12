@@ -1,6 +1,13 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { FieldValue, Timestamp } from "firebase-admin/firestore"
-import { hashToken, SETLIST_READER_PREFIX } from "@/lib/mcp/tokens"
+import {
+    hashToken,
+    PLATFORM_KIND,
+    PLATFORM_PREFIX,
+    SETLIST_READER_PREFIX,
+    VIEW_AS_KIND,
+    VIEW_AS_PREFIX,
+} from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import { primeTenantConfig } from "@/lib/org/org-exists"
@@ -53,13 +60,27 @@ export interface VerifiedBearer {
      * scoped-bearer gate is the only consumer today.
      */
     allowedTools: string[] | null
+    /**
+     * Multi-tenant phase 4: a "view as" bearer (kind "view_as") is read-only;
+     * write tools refuse it. Absent on every other token.
+     */
+    readOnly?: true
+}
+
+export interface VerifyBearerOptions {
+    /**
+     * Multi-tenant phase 4: which server is asking. Platform bearers
+     * (kind "platform", `crl_plat_`) verify ONLY for "platform"; every other
+     * kind verifies only elsewhere. Omitted = a tenant surface or route.
+     */
+    surface?: "platform"
 }
 
 function unauthorized(): Response {
     return new Response("Unauthorized", { status: 401 })
 }
 
-export async function verifyBearer(req: Request): Promise<VerifiedBearer | Response> {
+export async function verifyBearer(req: Request, opts: VerifyBearerOptions = {}): Promise<VerifiedBearer | Response> {
     const header = req.headers.get("authorization")
     if (!header?.startsWith("Bearer ")) return unauthorized()
     const raw = header.slice(7).trim()
@@ -180,6 +201,29 @@ export async function verifyBearer(req: Request): Promise<VerifiedBearer | Respo
         return unauthorized()
     }
 
+    // Multi-tenant phase 4: the same both-directions check for the platform
+    // and view-as prefixes, then keep each kind on its own surface.
+    if (
+        (kind === PLATFORM_KIND) !== raw.startsWith(PLATFORM_PREFIX) ||
+        (kind === VIEW_AS_KIND) !== raw.startsWith(VIEW_AS_PREFIX)
+    ) {
+        logger.warn("[mcp-auth] bearer rejected: kind/prefix mismatch", { tokenId: doc.id, kind })
+        return unauthorized()
+    }
+    if ((kind === PLATFORM_KIND) !== (opts.surface === "platform")) {
+        logger.warn("[mcp-auth] bearer rejected: wrong surface for this kind", {
+            tokenId: doc.id,
+            kind,
+            surface: opts.surface ?? "tenant",
+        })
+        return opts.surface === "platform"
+            ? new Response(
+                  "This is a tenant connector token. /api/platform/mcp accepts only a platform token (crl_plat_…) minted for the platform owner.",
+                  { status: 403 },
+              )
+            : unauthorized()
+    }
+
     return {
         uid: data.uid as string,
         tokenId: doc.id,
@@ -187,5 +231,7 @@ export async function verifyBearer(req: Request): Promise<VerifiedBearer | Respo
         orgId,
         kind,
         allowedTools,
+        // Present only when true, so every existing token's shape is unchanged.
+        ...(kind === VIEW_AS_KIND || data.readOnly === true ? { readOnly: true as const } : {}),
     }
 }

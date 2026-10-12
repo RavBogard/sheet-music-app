@@ -1,3 +1,4 @@
+import { VIEW_AS_COOKIE, VIEW_AS_PARAM } from '@/lib/org/view-as'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { SESSION_ROLE_COOKIE, verifyRoleCookie } from '@/lib/session-role'
@@ -89,7 +90,9 @@ const publicExactRoutes = [
 // /qr/*          — QR code sign-in flow (used *before* having a session)
 // /.well-known/* — OAuth discovery metadata; Claude Desktop/web fetch these
 //                  unauthenticated to find the MCP authorization server
-const publicPrefixes = ['/perform', '/qr', '/.well-known']
+// /invite/*      — tenant invitation links (multi-tenant phase 4): the page
+//                  signs the person in itself, like /qr
+const publicPrefixes = ['/perform', '/qr', '/.well-known', '/invite']
 
 // Vestigial paths — these used to be the catch-all defaults the proxy
 // matcher couldn't avoid, and Next.js answered them with either a 307→/login
@@ -200,6 +203,18 @@ export async function proxy(request: NextRequest) {
 
     const rewriteWithHeaders = (url: URL) =>
         withSecurityHeaders(NextResponse.rewrite(url, { request: { headers: requestHeaders } }))
+
+    // Multi-tenant phase 4: ?viewAs=1 / ?viewAs=0 switch the platform owner's
+    // read-only "View as this tenant" mode on this address (host-only cookie).
+    const viewAsParam = request.nextUrl.searchParams.get(VIEW_AS_PARAM)
+    if (viewAsParam === '1' || viewAsParam === '0') {
+        const clean = request.nextUrl.clone()
+        clean.searchParams.delete(VIEW_AS_PARAM)
+        const res = withSecurityHeaders(NextResponse.redirect(clean))
+        if (viewAsParam === '1') res.cookies.set(VIEW_AS_COOKIE, '1', { path: '/', sameSite: 'lax', secure: true })
+        else res.cookies.set(VIEW_AS_COOKIE, '', { path: '/', maxAge: 0 })
+        return res
+    }
 
     // Allow social media crawlers through so they can read OG meta tags.
     // These bots only fetch HTML <head> for link previews — no security risk.

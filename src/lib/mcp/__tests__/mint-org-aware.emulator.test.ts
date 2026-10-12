@@ -101,33 +101,51 @@ describe("MCP org-aware minting (emulator)", () => {
         expect(verified).toMatchObject({ uid: CRC_UID, orgId: "crc" })
     })
 
-    // ── v11.1-02-01: host-derived authoring org (authoring org = connection domain) ──
+    // ── v11.1-02-01 + multi-tenant phase 4: the token is for the ADDRESS's
+    // tenant only; no approved membership there → refused (no fall-back). ──
 
-    it("v11.1-02-01 AC-1: multi-org leader on the broslaz host mints brotherslazaroff", async () => {
-        // requestedOrg = the proxy-resolved x-org-id for brotherslazaroff.live
-        expect(await resolveMintOrg(MULTI_UID, "brotherslazaroff")).toBe("brotherslazaroff")
+    it("multi-org leader on the broslaz host mints brotherslazaroff", async () => {
+        expect(await resolveMintOrg(MULTI_UID, "brotherslazaroff")).toEqual({ ok: true, orgId: "brotherslazaroff" })
     })
 
-    it("v11.1-02-01 AC-3: multi-org leader on the crc host (or no host) mints crc", async () => {
-        expect(await resolveMintOrg(MULTI_UID, "crc")).toBe("crc")
-        // coerceOrgId(null/unknown) → crc; a member of crc → crc (primary)
-        expect(await resolveMintOrg(MULTI_UID, null)).toBe("crc")
+    it("multi-org leader on the crc host mints crc", async () => {
+        expect(await resolveMintOrg(MULTI_UID, "crc")).toEqual({ ok: true, orgId: "crc" })
     })
 
-    it("v11.1-02-01 AC-2: a crc-only user on the broslaz host CANNOT mint broslaz (no escalation)", async () => {
-        // Host org is brotherslazaroff but the user is not a member → fall back
-        // to their primary org. Never mints for an org outside membership.
-        expect(await resolveMintOrg(CRC_UID, "brotherslazaroff")).toBe("crc")
+    it("phase 4: a crc-only user on the broslaz host is REFUSED (not handed a crc token)", async () => {
+        expect(await resolveMintOrg(CRC_UID, "brotherslazaroff")).toEqual({
+            ok: false,
+            orgId: "brotherslazaroff",
+            message: "This account isn't a member of Brothers Lazaroff. Ask its admin for access.",
+        })
     })
 
-    it("v11.1-02-01 AC-2: a broslaz-only user on the crc host still mints broslaz (their only org)", async () => {
-        // Not a member of crc → host org rejected → fallback primary = broslaz.
-        expect(await resolveMintOrg(BL_UID, "crc")).toBe("brotherslazaroff")
+    it("phase 4: a broslaz-only user on the crc host is REFUSED", async () => {
+        expect(await resolveMintOrg(BL_UID, "crc")).toEqual({
+            ok: false,
+            orgId: "crc",
+            message: "This account isn't a member of Central Reform Congregation. Ask its admin for access.",
+        })
     })
 
-    it("v11.1-02-01 AC-1 end-to-end: broslaz-host mint → token doc orgId=brotherslazaroff → verifyBearer", async () => {
-        const org = await resolveMintOrg(MULTI_UID, "brotherslazaroff")
-        const { id, rawToken } = await createMcpToken(MULTI_UID, "Claude OAuth — broslaz", org)
+    it("phase 4: the platform owner mints for any address's tenant", async () => {
+        const db = getFirestore(app)
+        await db.collection("platform").doc("owners").set({ uids: [CRC_UID] })
+        const { __resetPlatformOwnerMemo } = await import("@/lib/org/access")
+        __resetPlatformOwnerMemo()
+        try {
+            expect(await resolveMintOrg(CRC_UID, "brotherslazaroff")).toEqual({ ok: true, orgId: "brotherslazaroff" })
+            expect(await resolveMintOrg(CRC_UID, "testshul")).toEqual({ ok: true, orgId: "testshul" })
+        } finally {
+            await db.collection("platform").doc("owners").delete()
+            __resetPlatformOwnerMemo()
+        }
+    })
+
+    it("end-to-end: broslaz-host mint → token doc orgId=brotherslazaroff → verifyBearer", async () => {
+        const d = await resolveMintOrg(MULTI_UID, "brotherslazaroff")
+        if (!d.ok) throw new Error("refused")
+        const { id, rawToken } = await createMcpToken(MULTI_UID, "Claude OAuth — broslaz", d.orgId)
 
         const doc = await getFirestore(app).collection("mcpTokens").doc(id).get()
         expect(doc.data()?.orgId).toBe("brotherslazaroff")
@@ -136,9 +154,10 @@ describe("MCP org-aware minting (emulator)", () => {
         expect(verified).toMatchObject({ uid: MULTI_UID, orgId: "brotherslazaroff" })
     })
 
-    it("v11.1-02-01 AC-3 end-to-end: crc-host mint for the same leader → token doc orgId=crc", async () => {
-        const org = await resolveMintOrg(MULTI_UID, "crc")
-        const { id, rawToken } = await createMcpToken(MULTI_UID, "Claude OAuth — crc", org)
+    it("end-to-end: crc-host mint for the same leader → token doc orgId=crc", async () => {
+        const d = await resolveMintOrg(MULTI_UID, "crc")
+        if (!d.ok) throw new Error("refused")
+        const { id, rawToken } = await createMcpToken(MULTI_UID, "Claude OAuth — crc", d.orgId)
 
         const doc = await getFirestore(app).collection("mcpTokens").doc(id).get()
         expect(doc.data()?.orgId).toBe("crc")

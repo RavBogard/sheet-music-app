@@ -101,6 +101,26 @@ describe("MCP OAuth flow (emulator)", () => {
         expect(await consumeAuthCode(code)).toBeNull()
     })
 
+    it("phase 4: the code carries the address's tenant; a code without one reads null", async () => {
+        const withOrg = await createAuthCode({
+            clientId: "crl_client_x",
+            uid: "user-1",
+            codeChallenge: "c",
+            redirectUri: "https://claude.ai/cb",
+            scope: null,
+            orgId: "brotherslazaroff",
+        })
+        expect((await consumeAuthCode(withOrg))?.orgId).toBe("brotherslazaroff")
+        const legacy = await createAuthCode({
+            clientId: "crl_client_x",
+            uid: "user-1",
+            codeChallenge: "c",
+            redirectUri: "https://claude.ai/cb",
+            scope: null,
+        })
+        expect((await consumeAuthCode(legacy))?.orgId).toBeNull()
+    })
+
     it("consumeAuthCode returns null for an unknown code", async () => {
         expect(await consumeAuthCode(randomBytes(32).toString("hex"))).toBeNull()
     })

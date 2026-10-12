@@ -107,6 +107,15 @@ export async function POST(req: NextRequest) {
         )
     }
 
+    // Multi-tenant phase 4: a read-only "View as this tenant" bearer never
+    // mints a session (a session can write).
+    if (verified.readOnly) {
+        return envelopeResponse(
+            richError("read_only_token", "A read-only (view-as) bearer cannot mint a session.", {}),
+            403,
+        )
+    }
+
     const { uid: bearerUid } = verified
 
     // UX-001 — optional `uid` body param routes to the admin-bearer

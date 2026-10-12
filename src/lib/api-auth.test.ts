@@ -98,6 +98,19 @@ describe('requireAuth', () => {
         else delete process.env.SUPER_ADMIN_UID
     })
 
+    it('view as this tenant: the platform owner writes are refused while the view-as cookie is set; reads pass', async () => {
+        mockVerify.mockResolvedValue({ uid: 'po-uid', email: 'po@test.com', po: true, m: {} } as never)
+        const write = new NextRequest('http://localhost/api/test', { method: 'POST', headers: { Authorization: 'Bearer t', cookie: 'a=1; __view_as=1' } })
+        await expect(requireAuth(write)).rejects.toBeInstanceOf(Response)
+        const read = new NextRequest('http://localhost/api/test', { headers: { Authorization: 'Bearer t', cookie: '__view_as=1' } })
+        expect((await requireAuth(read)).po).toBe(true)
+        const noCookie = new NextRequest('http://localhost/api/test', { method: 'POST', headers: { Authorization: 'Bearer t' } })
+        expect((await requireAuth(noCookie)).po).toBe(true)
+        // Someone else with the cookie is not affected (it only narrows the platform owner).
+        mockVerify.mockResolvedValue({ uid: 'u2', email: 'u@test.com', m: { crc: 'bl' } } as never)
+        expect((await requireAuth(write)).uid).toBe('u2')
+    })
+
     it('per tenant: an m-claim token is read for the host tenant (x-org-id)', async () => {
         mockVerify.mockResolvedValue({ uid: 'dual', m: { crc: 'bl', brotherslazaroff: 'ad' }, role: 'admin' } as never)
         const crcReq = new NextRequest('http://localhost/api/test', { headers: { Authorization: 'Bearer t', 'x-org-id': 'crc' } })
