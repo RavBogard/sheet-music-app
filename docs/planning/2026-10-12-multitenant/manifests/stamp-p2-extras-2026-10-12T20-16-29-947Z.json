@@ -1,0 +1,30 @@
+{
+  "kind": "stamp-p2-extras",
+  "at": "2026-10-12T20:16:29.947Z",
+  "projectId": "crcmusiccharts",
+  "parts": [
+    "defaults",
+    "admins"
+  ],
+  "stamps": [],
+  "docs": {
+    "before": [
+      {
+        "path": "config/admins",
+        "exists": true,
+        "data": {
+          "uids": [
+            "93Xn3DbS0bSNb8zmfzLyfOMX1Ai3"
+          ]
+        }
+      }
+    ],
+    "after": [
+      {
+        "path": "config/admins",
+        "exists": false,
+        "data": null
+      }
+    ]
+  }
+}

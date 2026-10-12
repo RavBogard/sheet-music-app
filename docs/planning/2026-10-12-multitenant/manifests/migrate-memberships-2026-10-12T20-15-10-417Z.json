@@ -1,0 +1,2516 @@
+{
+  "kind": "migrate-memberships",
+  "at": "2026-10-12T20:15:10.417Z",
+  "projectId": "crcmusiccharts",
+  "users": [
+    {
+      "uid": "20lL3BJwnwSvjZ3yOKjdgio4MjD3",
+      "email": "karyn.lisker@gmail.com",
+      "before": {
+        "claims": {
+          "role": "musician"
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1787841749,
+                358000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__20lL3BJwnwSvjZ3yOKjdgio4MjD3"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "3fOf76AratTG7hv0fIgLvFATbq72",
+      "email": "rav2be@gmail.com",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1775599487,
+                111000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__3fOf76AratTG7hv0fIgLvFATbq72",
+          "brotherslazaroff__3fOf76AratTG7hv0fIgLvFATbq72"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu",
+            "brotherslazaroff": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "6Ej2hgTrNTO74SiAB7RbSq35B5Q2",
+      "email": "karen@centralreform.org",
+      "before": {
+        "claims": {
+          "role": "admin",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "admin"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1788545077,
+                662000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__6Ej2hgTrNTO74SiAB7RbSq35B5Q2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "admin",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "ad"
+          },
+          "role": "admin",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "6PXdZ6W1MqY6NCO1QqCexfRZj3Q2",
+      "email": "michael@centralreform.org",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1781030070,
+                908000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__6PXdZ6W1MqY6NCO1QqCexfRZj3Q2",
+          "brotherslazaroff__6PXdZ6W1MqY6NCO1QqCexfRZj3Q2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu",
+            "brotherslazaroff": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "6gpjgStnu7UMh3m5dTSDeb3haui1",
+      "email": "blake.mickens614@gmail.com",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1777128140,
+                553000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__6gpjgStnu7UMh3m5dTSDeb3haui1",
+          "brotherslazaroff__6gpjgStnu7UMh3m5dTSDeb3haui1"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu",
+            "brotherslazaroff": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "7hMUGg0ezue1OLxvVx1FlokCnyZ2",
+      "email": "benjamminreece@gmail.com",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1771610734,
+                510000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__7hMUGg0ezue1OLxvVx1FlokCnyZ2",
+          "brotherslazaroff__7hMUGg0ezue1OLxvVx1FlokCnyZ2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu",
+            "brotherslazaroff": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "8MHZmxm4qhPyB5EbYpLARUD0xNp1",
+      "email": "ddreichenbach@gmail.com",
+      "before": {
+        "claims": {
+          "role": "musician"
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1784415899,
+                72000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__8MHZmxm4qhPyB5EbYpLARUD0xNp1"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "93Xn3DbS0bSNb8zmfzLyfOMX1A13",
+      "email": "daniel@centralreform.org",
+      "before": {
+        "claims": {
+          "role": "admin",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "admin"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1781040333,
+                410000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__93Xn3DbS0bSNb8zmfzLyfOMX1A13"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "admin",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "po": true,
+          "m": {
+            "crc": "ad"
+          },
+          "role": "admin",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "Bj2I6WmFLbMymFYfo89yOGpOPrG3",
+      "email": "itai@forte.co.il",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1774717962,
+                40000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__Bj2I6WmFLbMymFYfo89yOGpOPrG3",
+          "brotherslazaroff__Bj2I6WmFLbMymFYfo89yOGpOPrG3"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu",
+            "brotherslazaroff": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "DINwaB8627YefB3IOUpEIXtUezl1",
+      "email": "brodskydrew@gmail.com",
+      "before": {
+        "claims": {
+          "role": "admin",
+          "soundEngineer": true,
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "admin"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": true,
+            "value": true
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1781040013,
+                876000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__DINwaB8627YefB3IOUpEIXtUezl1"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "admin",
+            "soundEngineer": true
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "ad"
+          },
+          "se": [
+            "crc"
+          ],
+          "role": "admin",
+          "orgIds": [
+            "crc"
+          ],
+          "soundEngineer": true
+        }
+      }
+    },
+    {
+      "uid": "HTks9a8YRiVCQ5lVipUJcBsWjnB3",
+      "email": "davidlazaroff@gmail.com",
+      "before": {
+        "claims": {
+          "role": "admin",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "admin"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1781274725,
+                679000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__HTks9a8YRiVCQ5lVipUJcBsWjnB3",
+          "brotherslazaroff__HTks9a8YRiVCQ5lVipUJcBsWjnB3"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "admin",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "admin",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "ad",
+            "brotherslazaroff": "ad"
+          },
+          "role": "admin",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "JoZS86SHIvZ6G7UGcfbDwoYC3e83",
+      "email": "gulltrek@gmail.com",
+      "before": {
+        "claims": {
+          "role": "musician"
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1787841745,
+                528000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__JoZS86SHIvZ6G7UGcfbDwoYC3e83"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "M4R0vwHxbLUMVLXLmr3GkZ7coIy1",
+      "email": "communications@centralreform.org",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1775775021,
+                772000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__M4R0vwHxbLUMVLXLmr3GkZ7coIy1",
+          "brotherslazaroff__M4R0vwHxbLUMVLXLmr3GkZ7coIy1"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu",
+            "brotherslazaroff": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "MKWAhvYQRZU2K6PmYCr3AM5DcJr2",
+      "email": "ksusman@gmail.com",
+      "before": {
+        "claims": {
+          "role": "musician"
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1784415922,
+                995000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__MKWAhvYQRZU2K6PmYCr3AM5DcJr2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "N8jaz8ks8TZJ5NHXXZCbq05YQRS2",
+      "email": "lillipop725@gmail.com",
+      "before": {
+        "claims": {
+          "role": "member"
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "member"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1784415906,
+                824000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__N8jaz8ks8TZJ5NHXXZCbq05YQRS2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "member",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "me"
+          },
+          "role": "member",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "SvNOUNrjTOVEdpgqP9PLF7riOrS2",
+      "email": "andrewwarshauer@gmail.com",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1771610736,
+                988000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__SvNOUNrjTOVEdpgqP9PLF7riOrS2",
+          "brotherslazaroff__SvNOUNrjTOVEdpgqP9PLF7riOrS2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu",
+            "brotherslazaroff": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "Tc6ezs2WV0Pjx7PBf0xkcRO67oL2",
+      "email": "brynsentnor@gmail.com",
+      "before": {
+        "claims": {
+          "role": "band_leader",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "band_leader"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1789146820,
+                382000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__Tc6ezs2WV0Pjx7PBf0xkcRO67oL2",
+          "brotherslazaroff__Tc6ezs2WV0Pjx7PBf0xkcRO67oL2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "band_leader",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "band_leader",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "bl",
+            "brotherslazaroff": "bl"
+          },
+          "role": "band_leader",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "V5q4VFiE6HRxT5sV8h9jJJteqH72",
+      "email": "drew@centralreform.org",
+      "before": {
+        "claims": null,
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "pending"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": false
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__V5q4VFiE6HRxT5sV8h9jJJteqH72",
+          "brotherslazaroff__V5q4VFiE6HRxT5sV8h9jJJteqH72"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "pending",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "pending",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "pe",
+            "brotherslazaroff": "pe"
+          },
+          "role": "pending"
+        }
+      }
+    },
+    {
+      "uid": "XgSCiYt4QeQqAg1Iyz8vF8INSlk2",
+      "email": "koringel@larchmonttemple.org",
+      "before": {
+        "claims": {
+          "role": "musician"
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1784415895,
+                110000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__XgSCiYt4QeQqAg1Iyz8vF8INSlk2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "a8NIMPeiska4iyMQrv8d5ELcRKr2",
+      "email": "myles.pollack@gmail.com",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1774982242,
+                441000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__a8NIMPeiska4iyMQrv8d5ELcRKr2",
+          "brotherslazaroff__a8NIMPeiska4iyMQrv8d5ELcRKr2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu",
+            "brotherslazaroff": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "gIHr5d79ClZY1nqiTRkNsxOMON02",
+      "email": "samantharstinson@gmail.com",
+      "before": {
+        "claims": {
+          "role": "musician"
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1783367623,
+                926000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__gIHr5d79ClZY1nqiTRkNsxOMON02"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "gRWqLaYIFAUlXyFATzGbihEzzfL2",
+      "email": "crcmusic@centralreform.org",
+      "before": {
+        "claims": {
+          "role": "admin",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "admin"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1789929912,
+                253000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__gRWqLaYIFAUlXyFATzGbihEzzfL2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "admin",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "ad"
+          },
+          "role": "admin",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "jL4nJqpvjwaZ3qDEuN59FL1EauS2",
+      "email": "shiraberk@gmail.com",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1776209822,
+                767000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__jL4nJqpvjwaZ3qDEuN59FL1EauS2",
+          "brotherslazaroff__jL4nJqpvjwaZ3qDEuN59FL1EauS2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu",
+            "brotherslazaroff": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "jLozHK4fQVdBAyZgFAlbQepaiug1",
+      "email": "rabbi@templecav.org",
+      "before": {
+        "claims": null,
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "pending"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": false
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__jLozHK4fQVdBAyZgFAlbQepaiug1",
+          "brotherslazaroff__jLozHK4fQVdBAyZgFAlbQepaiug1"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "pending",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "pending",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "pe",
+            "brotherslazaroff": "pe"
+          },
+          "role": "pending"
+        }
+      }
+    },
+    {
+      "uid": "judIpOF9MDcbxsKPHOaM4zO9on83",
+      "email": "tara.hoisington@yahoo.com",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1779730971,
+                33000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__judIpOF9MDcbxsKPHOaM4zO9on83",
+          "brotherslazaroff__judIpOF9MDcbxsKPHOaM4zO9on83"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu",
+            "brotherslazaroff": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "lsZI14nIKVNzDNuLWKI9JHTHWBh2",
+      "email": "jakeweismanmusic@gmail.com",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1776974573,
+                691000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__lsZI14nIKVNzDNuLWKI9JHTHWBh2",
+          "brotherslazaroff__lsZI14nIKVNzDNuLWKI9JHTHWBh2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu",
+            "brotherslazaroff": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "r6UChcbqNwcuyp9nR08O4vIIczf1",
+      "email": "saulkaiserman@gmail.com",
+      "before": {
+        "claims": {
+          "role": "member"
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "member"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1784415912,
+                87000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__r6UChcbqNwcuyp9nR08O4vIIczf1"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "member",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "me"
+          },
+          "role": "member",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "test-mtprobe-blbandleader",
+      "email": "test-mtprobe-blbandleader@probe.invalid",
+      "before": {
+        "claims": {
+          "role": "band_leader",
+          "orgIds": [
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "band_leader"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": false
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "brotherslazaroff__test-mtprobe-blbandleader"
+        ],
+        "memberships": [
+          {
+            "orgId": "brotherslazaroff",
+            "role": "band_leader",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "brotherslazaroff": "bl"
+          },
+          "role": "band_leader",
+          "orgIds": [
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "test-mtprobe-blmusician",
+      "email": "test-mtprobe-blmusician@probe.invalid",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": false
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "brotherslazaroff__test-mtprobe-blmusician"
+        ],
+        "memberships": [
+          {
+            "orgId": "brotherslazaroff",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "brotherslazaroff": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "test-mtprobe-crcadmin",
+      "email": "test-mtprobe-crcadmin@probe.invalid",
+      "before": {
+        "claims": {
+          "role": "admin",
+          "orgIds": [
+            "crc"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "admin"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": false
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__test-mtprobe-crcadmin"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "admin",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "ad"
+          },
+          "role": "admin",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "test-mtprobe-crcbandleader",
+      "email": "test-mtprobe-crcbandleader@probe.invalid",
+      "before": {
+        "claims": {
+          "role": "band_leader",
+          "orgIds": [
+            "crc"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "band_leader"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": false
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__test-mtprobe-crcbandleader"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "band_leader",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "bl"
+          },
+          "role": "band_leader",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "test-mtprobe-crcmember",
+      "email": "test-mtprobe-crcmember@probe.invalid",
+      "before": {
+        "claims": {
+          "role": "member",
+          "orgIds": [
+            "crc"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "member"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": false
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__test-mtprobe-crcmember"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "member",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "me"
+          },
+          "role": "member",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "test-mtprobe-crcmusician",
+      "email": "test-mtprobe-crcmusician@probe.invalid",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "crc"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": false
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__test-mtprobe-crcmusician"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "test-mtprobe-crcpending",
+      "email": "test-mtprobe-crcpending@probe.invalid",
+      "before": {
+        "claims": {},
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "pending"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": false
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__test-mtprobe-crcpending"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "pending",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "pe"
+          },
+          "role": "pending"
+        }
+      }
+    },
+    {
+      "uid": "v0SOmze731gtYO9QYuzJdgMwedi1",
+      "email": "becky@centralreform.org",
+      "before": {
+        "claims": {
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1775307245,
+                979000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__v0SOmze731gtYO9QYuzJdgMwedi1",
+          "brotherslazaroff__v0SOmze731gtYO9QYuzJdgMwedi1"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          },
+          {
+            "orgId": "brotherslazaroff",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu",
+            "brotherslazaroff": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "wZ1BAJXt0lX0aUWHuozc8nF2GCY2",
+      "email": "engineer.brodsky@gmail.com",
+      "before": {
+        "claims": {
+          "role": "admin",
+          "orgIds": [
+            "crc",
+            "brotherslazaroff"
+          ]
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "admin"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": true,
+            "value": true
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1781040026,
+                446000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__wZ1BAJXt0lX0aUWHuozc8nF2GCY2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "admin",
+            "soundEngineer": true
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "ad"
+          },
+          "se": [
+            "crc"
+          ],
+          "role": "admin",
+          "orgIds": [
+            "crc"
+          ],
+          "soundEngineer": true
+        }
+      }
+    },
+    {
+      "uid": "wZOrhLlF2ERK9zPpg7hiDz2abWx2",
+      "email": "s1mstokar@gmail.com",
+      "before": {
+        "claims": {
+          "role": "member"
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "member"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1784433229,
+                912000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__wZOrhLlF2ERK9zPpg7hiDz2abWx2"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "member",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "me"
+          },
+          "role": "member",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    },
+    {
+      "uid": "wpgVcRzuMgUkt0MHih00LDt0THE3",
+      "email": "lazaroffjeff@gmail.com",
+      "before": {
+        "claims": {
+          "role": "musician"
+        },
+        "docExists": true,
+        "doc": {
+          "role": {
+            "present": true,
+            "value": "musician"
+          },
+          "orgIds": {
+            "present": true,
+            "value": [
+              "crc",
+              "brotherslazaroff"
+            ]
+          },
+          "soundEngineer": {
+            "present": false
+          },
+          "canUpload": {
+            "present": false
+          },
+          "claimsUpdatedAt": {
+            "present": true,
+            "value": {
+              "__ts": [
+                1784415915,
+                786000000
+              ]
+            }
+          },
+          "membershipsMigratedAt": {
+            "present": false
+          }
+        }
+      },
+      "after": {
+        "membershipIds": [
+          "crc__wpgVcRzuMgUkt0MHih00LDt0THE3"
+        ],
+        "memberships": [
+          {
+            "orgId": "crc",
+            "role": "musician",
+            "soundEngineer": false
+          }
+        ],
+        "claims": {
+          "m": {
+            "crc": "mu"
+          },
+          "role": "musician",
+          "orgIds": [
+            "crc"
+          ]
+        }
+      }
+    }
+  ]
+}
