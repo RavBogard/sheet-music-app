@@ -95,17 +95,55 @@ describe("POST /api/auth/sync-claims — Phase 9 drift repair", () => {
         expect(updateSpy).not.toHaveBeenCalled()
     })
 
-    it("syncs when profile='musician' and claim is missing (also mirrors orgIds=['crc'])", async () => {
+    it("multi-tenant P0: NEVER raises — profile='musician', claim missing → claim untouched, orgIds still mirrored", async () => {
         mockAuth("u-1")
         profileData = { role: "musician" } // no orgIds on doc yet
         existingClaims = undefined
         const res = await POST(req())
         expect(res.status).toBe(200)
         const json = await res.json()
-        expect(json).toEqual({ synced: true, role: "musician" })
-        expect(setCustomUserClaimsSpy).toHaveBeenCalledWith("u-1", { role: "musician" })
-        // v11-05-02: a claimless doc gets orgIds=['crc'] mirrored alongside the role sync.
+        expect(json.synced).toBe(false)
+        expect(setCustomUserClaimsSpy).not.toHaveBeenCalled()
+        // v11-05-02: a claimless doc still gets orgIds=['crc'] mirrored (claim → doc, never doc → claim).
         expect(updateSpy).toHaveBeenCalledWith({ claimsUpdatedAt: "SERVER_TS", orgIds: ["crc"] })
+    })
+
+    it("multi-tenant P0 precondition attack: pending user self-writes role 'admin' → claim is NOT raised", async () => {
+        mockAuth("u-attacker")
+        profileData = { role: "admin", orgIds: ["crc"] }
+        existingClaims = { role: "pending" }
+        const res = await POST(req())
+        expect(res.status).toBe(200)
+        const json = await res.json()
+        expect(json).toEqual({ synced: false, role: "pending", reason: "raise_refused" })
+        expect(setCustomUserClaimsSpy).not.toHaveBeenCalled()
+        expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    for (const [docRole, claimRole] of [
+        ["admin", "band_leader"],
+        ["admin", "musician"],
+        ["band_leader", "musician"],
+        ["musician", "member"],
+        ["member", undefined],
+    ] as const) {
+        it(`multi-tenant P0: doc '${docRole}' over claim '${claimRole ?? "none"}' is never raised`, async () => {
+            mockAuth("u-1")
+            profileData = { role: docRole, orgIds: ["crc"] }
+            existingClaims = claimRole ? { role: claimRole } : undefined
+            await POST(req())
+            expect(setCustomUserClaimsSpy).not.toHaveBeenCalled()
+        })
+    }
+
+    it("multi-tenant P0: lowering still syncs (doc 'musician', claim 'band_leader')", async () => {
+        mockAuth("u-1")
+        profileData = { role: "musician", orgIds: ["crc"] }
+        existingClaims = { role: "band_leader" }
+        const res = await POST(req())
+        expect(res.status).toBe(200)
+        expect(await res.json()).toEqual({ synced: true, role: "musician" })
+        expect(setCustomUserClaimsSpy).toHaveBeenCalledWith("u-1", { role: "musician" })
     })
 
     it("no-op when role AND orgIds already match", async () => {
@@ -164,7 +202,7 @@ describe("POST /api/auth/sync-claims — Phase 9 drift repair", () => {
     it("preserves existing unrelated claims (soundEngineer) when syncing role", async () => {
         mockAuth("u-1")
         profileData = { role: "musician" }
-        existingClaims = { soundEngineer: true }
+        existingClaims = { soundEngineer: true, role: "band_leader" }
         const res = await POST(req())
         expect(res.status).toBe(200)
         expect(setCustomUserClaimsSpy).toHaveBeenCalledWith("u-1", {

@@ -11,7 +11,10 @@ let verifyIdTokenImpl: () => Promise<unknown> = async () => ({
 })
 let createSessionCookieImpl: () => Promise<string> = async () => "firebase-session-cookie"
 
+let recordClaims: Record<string, unknown> | undefined = { role: "admin" }
+
 const mockAuthAdmin = {
+    getUser: vi.fn(async () => ({ customClaims: recordClaims })),
     verifyIdToken: vi.fn((token: string) => verifyIdTokenImpl()),
     createSessionCookie: vi.fn((token: string, opts: unknown) => createSessionCookieImpl()),
 }
@@ -67,6 +70,7 @@ describe("POST /api/auth/session", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         profileData = undefined
+        recordClaims = { role: "admin" }
         verifyIdTokenImpl = async () => ({
             uid: "u-1",
             iat: Math.floor(Date.now() / 1000),
@@ -117,5 +121,26 @@ describe("POST /api/auth/session", () => {
     it("returns 400 on missing idToken", async () => {
         const res = await POST(req({}))
         expect(res.status).toBe(400)
+    })
+    it("multi-tenant P0: never signs a role above the account's claims (self-written doc role 'admin', claim 'pending')", async () => {
+        profileData = { role: "admin" }
+        recordClaims = { role: "pending" }
+        const res = await POST(req())
+        expect(res.status).toBe(200)
+        const setCookie = res.headers.get("set-cookie") ?? ""
+        const match = setCookie.match(/__session_role=([^;]+)/)
+        const { verifyRoleCookie } = await import("@/lib/session-role")
+        const verified = await verifyRoleCookie(decodeURIComponent(match![1]))
+        expect(verified).toEqual({ uid: "u-1", role: "pending" })
+    })
+
+    it("multi-tenant P0: a lower document role still wins (demotion honoured)", async () => {
+        profileData = { role: "musician" }
+        recordClaims = { role: "band_leader" }
+        const res = await POST(req())
+        const setCookie = res.headers.get("set-cookie") ?? ""
+        const match = setCookie.match(/__session_role=([^;]+)/)
+        const { verifyRoleCookie } = await import("@/lib/session-role")
+        expect(await verifyRoleCookie(decodeURIComponent(match![1]))).toEqual({ uid: "u-1", role: "musician" })
     })
 })

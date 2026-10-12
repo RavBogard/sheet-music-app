@@ -4,6 +4,7 @@ import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import { getOrgIdsFromClaims, orgIdsEqual } from "@/lib/org/membership"
+import { roleLevel } from "@/lib/roles"
 
 /**
  * v4.3 Phase 9 — Self-service role-claim sync.
@@ -20,6 +21,11 @@ import { getOrgIdsFromClaims, orgIdsEqual } from "@/lib/org/membership"
  * Never accepts a role from the client — the client has no authority over
  * its own role. Never downgrades an existing claim when Firestore says
  * 'pending' (downgrade is an admin action via /api/admin/set-role).
+ *
+ * Multi-tenant P0 (2026-10-12): this route NEVER raises a claim. It used to
+ * copy any non-pending users/{uid}.role into the claim, and that document was
+ * self-writable — a pending account could make itself admin. It may now only
+ * keep or lower the role claim; raising is /api/admin/set-role's job alone.
  */
 
 type SyncResponse =
@@ -70,7 +76,20 @@ export const POST = createApiHandler(
         // differs from the claim. Admin-initiated changes are the only path to
         // set a role; we never downgrade a 'pending'/absent role here.
         const roleSyncable =
-            !!profileRole && profileRole !== "pending" && profileRole !== claimRole
+            !!profileRole &&
+            profileRole !== "pending" &&
+            profileRole !== claimRole &&
+            roleLevel(profileRole) >= 0 &&
+            roleLevel(profileRole) < roleLevel(claimRole)
+        if (
+            !!profileRole &&
+            profileRole !== "pending" &&
+            roleLevel(profileRole) > roleLevel(claimRole)
+        ) {
+            logger.warn(
+                `[sync-claims] uid=${uid} refused to raise role ${claimRole ?? "none"} → ${profileRole} from the user document`,
+            )
+        }
 
         // Nothing to write: role in sync (or unsettable) AND orgIds in sync.
         if (!roleSyncable && !orgIdsDrift) {
@@ -82,7 +101,9 @@ export const POST = createApiHandler(
                 }
                 return NextResponse.json(body)
             }
-            const body: SyncResponse = { synced: false, role: profileRole, reason: "already_synced" }
+            const reason =
+                roleLevel(profileRole) > roleLevel(claimRole) ? "raise_refused" : "already_synced"
+            const body: SyncResponse = { synced: false, role: claimRole ?? null, reason }
             return NextResponse.json(body)
         }
 

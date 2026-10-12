@@ -4,6 +4,7 @@ import { getAuth } from "firebase-admin/auth"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { isTestUid } from "@/lib/test-isolation"
 import { logger } from "@/lib/logger"
+import { capRoleToClaims } from "@/lib/roles"
 import {
     SESSION_ROLE_COOKIE,
     SESSION_ROLE_MAX_AGE,
@@ -81,8 +82,19 @@ export async function POST(req: NextRequest) {
             const snap = await db.collection("users").doc(decoded.uid).get()
             const r = snap.data()?.role
             if (typeof r === "string") firestoreRole = r
+            // Multi-tenant P0: never sign a role above what the account's
+            // claims grant (the stored claim, or the token's own claim).
+            if (firestoreRole) {
+                const rec = await auth.getUser(decoded.uid)
+                firestoreRole = capRoleToClaims(
+                    firestoreRole,
+                    rec.customClaims?.role as string | undefined,
+                    decoded.role as string | undefined,
+                )
+            }
         } catch (err) {
             logger.warn("[session] Firestore role read failed:", err)
+            firestoreRole = null
         }
 
         const response = NextResponse.json({ status: "ok" })

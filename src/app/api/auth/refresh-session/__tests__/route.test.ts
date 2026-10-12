@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vites
 import { makeReq } from "@/__tests__/api-test-helpers"
 
 let profileData: Record<string, unknown> | undefined = undefined
+let recordClaims: Record<string, unknown> | undefined = { role: "admin" }
 
 const mockFirestore = {
     collection: vi.fn(() => ({
@@ -16,7 +17,7 @@ const mockFirestore = {
 
 vi.mock("@/lib/firebase-admin", () => ({
     initAdmin: vi.fn().mockReturnValue(true),
-    getAuth: vi.fn(() => ({})),
+    getAuth: vi.fn(() => ({ getUser: async () => ({ customClaims: recordClaims }) })),
     getFirestore: vi.fn(() => mockFirestore),
     verifyIdToken: vi.fn(),
 }))
@@ -74,6 +75,7 @@ describe("POST /api/auth/refresh-session", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         profileData = undefined
+        recordClaims = { role: "admin" }
     })
 
     it("rejects unauthenticated", async () => {
@@ -116,5 +118,14 @@ describe("POST /api/auth/refresh-session", () => {
         const { verifyRoleCookie } = await import("@/lib/session-role")
         const verified = await verifyRoleCookie(raw)
         expect(verified).toEqual({ uid: "u-42", role: "musician" })
+    })
+    it("multi-tenant P0: never signs a role above the account's claims (doc 'admin', claim 'pending', token 'musician')", async () => {
+        mockAuth("u-1")
+        profileData = { role: "admin" }
+        recordClaims = { role: "pending" }
+        const res = await POST(req())
+        expect(res.status).toBe(200)
+        // token claim (musician) is the highest the account actually holds
+        expect((await res.json()).role).toBe("musician")
     })
 })

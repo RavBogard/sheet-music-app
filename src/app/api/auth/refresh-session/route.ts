@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+import { initAdmin, getFirestore, getAuth } from "@/lib/firebase-admin"
+import { capRoleToClaims } from "@/lib/roles"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
@@ -40,7 +41,18 @@ export const POST = createApiHandler(
             const snap = await db.collection("users").doc(uid).get()
             const r = snap.data()?.role
             if (typeof r === "string") role = r
+            // Multi-tenant P0: never sign a role above what the account's
+            // claims grant (the stored claim, or the token's own claim).
+            if (role) {
+                const rec = await getAuth().getUser(uid)
+                role = capRoleToClaims(
+                    role,
+                    rec.customClaims?.role as string | undefined,
+                    ctx.auth!.token?.role as string | undefined,
+                )
+            }
         } catch (err) {
+            role = null
             logger.warn("[refresh-session] Firestore read failed:", err)
         }
 

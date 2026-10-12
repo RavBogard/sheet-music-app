@@ -62,6 +62,30 @@ export function hasRole(userRole: string | null | undefined, minimumRole: UserRo
 }
 
 /**
+ * Numeric level of a role; unknown or missing roles rank below pending (-1).
+ */
+export function roleLevel(role: string | null | undefined): number {
+    if (!role) return -1
+    return role in ROLE_HIERARCHY ? ROLE_HIERARCHY[role] : -1
+}
+
+/**
+ * Multi-tenant P0: the role a server may act on when it reads users/{uid}.role.
+ * The document role is honoured only up to the highest role the account's
+ * claims actually grant; anything above that is capped to the claim. A role
+ * is never raised from the document. A missing document role stays missing.
+ */
+export function capRoleToClaims(
+    docRole: string | null | undefined,
+    ...claimRoles: (string | null | undefined)[]
+): string | null {
+    let best: string | null = null
+    for (const c of claimRoles) if (c && roleLevel(c) > roleLevel(best)) best = c
+    if (!docRole) return null
+    return roleLevel(docRole) <= roleLevel(best) ? docRole : best
+}
+
+/**
  * Derive all role booleans from a single role string.
  * This is the single source of truth for role derivation — used by auth-context.
  */

@@ -99,11 +99,47 @@ service cloud.firestore {
       return request.auth.token.soundEngineer == true;
     }
 
+    // Multi-tenant P0 (2026-10-12): users/{uid} is no longer fully
+    // self-writable. Before this, a pending account could write
+    // `role: 'admin'` into its own document and /api/auth/sync-claims raised
+    // the claim from it. A user may now CREATE its own document only as
+    // pending, and UPDATE only the profile fields the browser writes
+    // (ensureUserProfile, saveMusicianProfile, OnboardingCard, calendar feed
+    // token, welcome modal, push tokens). role, orgIds, m, po, soundEngineer
+    // and every other field are server-side (Admin SDK / set-role) only.
+    // orgIds is allowed on create solely as a subset of the old sign-up
+    // default so cached pre-P0 clients can still sign up; it grants nothing
+    // (membership is claim-based, and sync-claims overwrites it from the claim).
+    function selfProfileFields() {
+      return ['email', 'displayName', 'photoURL', 'lastLoginAt',
+              'musicianProfile', 'viewedWelcomeModal', 'fcmTokens'];
+    }
+    function selfEmailOk(data) {
+      return !('email' in data)
+        || data.email == ''
+        || data.email == request.auth.token.get('email', '');
+    }
+    function selfCreateOk(userId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['uid', 'role', 'orgIds', 'createdAt'].concat(selfProfileFields()))
+        && d.get('role', 'pending') == 'pending'
+        && d.get('uid', userId) == userId
+        && (!('orgIds' in d) || (d.orgIds is list && d.orgIds.hasOnly(['crc', 'brotherslazaroff'])))
+        && selfEmailOk(d);
+    }
+    function selfUpdateOk() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return changed.hasOnly(selfProfileFields())
+        && (!changed.hasAny(['email']) || selfEmailOk(request.resource.data));
+    }
+
     // USERS Collection
     match /users/{userId} {
       // Secure Rule: Own data, Leaders (for musician picker), or Admin
       allow read: if (isSignedIn() && request.auth.uid == userId) || isBandLeader() || isAdmin();
-      allow write: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+      allow create: if (isSignedIn() && request.auth.uid == userId && selfCreateOk(userId)) || isAdmin();
+      allow update: if (isSignedIn() && request.auth.uid == userId && selfUpdateOk()) || isAdmin();
+      allow delete: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
 
       // Legacy subcollections (if needed)
       match /setlists/{docId} {
