@@ -13,7 +13,69 @@ vi.mock('../../sync/init', () => ({
 import { getDb, resetDbForTests } from '../schema'
 import type { LocalTrack, OutboxRow } from '../types'
 import { WriteAtomicityError } from '../types'
-import { applyEdit } from '../write'
+import { applyEdit, withTrackOrg } from '../write'
+
+describe('applyEdit - multi-tenant P2 track orgId stamping', () => {
+    beforeEach(async () => {
+        await resetDbForTests()
+    })
+    afterEach(async () => {
+        await resetDbForTests()
+    })
+
+    async function seedParent(id: string, orgId?: string) {
+        await getDb().setlists.put({ id, updatedAt: 1, ownerId: 'u1', ...(orgId ? { orgId } : {}) })
+    }
+    async function outboxPayload(docId: string) {
+        const rows = await getDb().outbox.toArray()
+        return rows.find((r) => r.docId === docId)!.payload
+    }
+
+    it('grid add: a new track gets its Dexie parent setlist orgId (Dexie row and outbox agree)', async () => {
+        await seedParent('bl-1', 'brotherslazaroff')
+        await applyEdit({ op: 'set', collection: 'tracks', doc: { id: 't-add', setlistId: 'bl-1', order: 0 } })
+        const local = (await getDb().tracks.get('t-add')) as unknown as Record<string, unknown>
+        expect(local.orgId).toBe('brotherslazaroff')
+        expect((await outboxPayload('t-add')).orgId).toBe('brotherslazaroff')
+    })
+
+    it('a parent without orgId is crc', async () => {
+        await seedParent('c-1')
+        await applyEdit({ op: 'set', collection: 'tracks', doc: { id: 't-crc', setlistId: 'c-1', order: 0 } })
+        expect((await outboxPayload('t-crc')).orgId).toBe('crc')
+    })
+
+    it('duplicate row: a copy that already carries orgId keeps it', async () => {
+        await seedParent('bl-1', 'brotherslazaroff')
+        await applyEdit({
+            op: 'set',
+            collection: 'tracks',
+            doc: { id: 't-dup', setlistId: 'bl-1', order: 1, orgId: 'brotherslazaroff', title: 'copy' },
+        })
+        expect((await outboxPayload('t-dup')).orgId).toBe('brotherslazaroff')
+    })
+
+    it('duplicate row of an unstamped source row: stamped from the parent', async () => {
+        await seedParent('bl-1', 'brotherslazaroff')
+        await applyEdit({ op: 'set', collection: 'tracks', doc: { id: 't-dup2', setlistId: 'bl-1', order: 2, title: 'copy' } })
+        expect((await outboxPayload('t-dup2')).orgId).toBe('brotherslazaroff')
+    })
+
+    it('parent not in Dexie: left unstamped for the commit-time stamp (no guessing)', async () => {
+        await applyEdit({ op: 'set', collection: 'tracks', doc: { id: 't-orphan', setlistId: 'remote-only', order: 0 } })
+        expect((await outboxPayload('t-orphan')).orgId).toBeUndefined()
+    })
+
+    it('updates and non-track sets are untouched', async () => {
+        await seedParent('bl-1', 'brotherslazaroff')
+        await applyEdit({ op: 'set', collection: 'tracks', doc: { id: 't-u', setlistId: 'bl-1', order: 0 } })
+        await applyEdit({ op: 'update', collection: 'tracks', docId: 't-u', patch: { key: 'G' } })
+        const rows = await getDb().outbox.toArray()
+        expect(rows.find((r) => r.op === 'update')!.payload).toEqual({ key: 'G' })
+        const edited = await withTrackOrg({ op: 'set', collection: 'setlists', doc: { id: 's', updatedAt: 1, ownerId: 'u' } } as never, getDb())
+        expect((edited as unknown as { doc: Record<string, unknown> }).doc.orgId).toBeUndefined()
+    })
+})
 
 describe('applyEdit', () => {
     beforeEach(async () => {

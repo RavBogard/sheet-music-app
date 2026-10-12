@@ -1,20 +1,21 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, query, orderBy, limit, type Query, type DocumentData } from "firebase/firestore"
+import { collection, query, where, orderBy, limit, type Query, type DocumentData } from "firebase/firestore"
 import { getDb } from "@/lib/firebase"
 import { Shield, ArrowRight, Loader2 } from "lucide-react"
 import { useSafeFirestoreSync } from "@/hooks/use-safe-firestore-sync"
 import { cn } from "@/lib/utils"
 import { logger } from "@/lib/logger"
 import { SectionErrorBoundary } from "@/components/ui/SectionErrorBoundary"
+import { useOrg } from "@/lib/org/org-context"
 
 interface AuditLog {
     id: string
     action: string
     targetUserId: string
-    newRole: string
-    previousRole: string
+    newRole: string | null
+    previousRole: string | null
     actorUid: string
     actorEmail: string
     timestamp: any
@@ -23,6 +24,7 @@ interface AuditLog {
 export function AccessAuditLog() {
     const [logs, setLogs] = useState<AuditLog[]>([])
     const [loading, setLoading] = useState(true)
+    const org = useOrg()
 
     // Firestore SDK is lazy-loaded; resolve the query in an effect.
     // useSafeFirestoreSync tolerates `q === null` and renders loading:false.
@@ -31,14 +33,16 @@ export function AccessAuditLog() {
         let cancelled = false
         void getDb().then((db) => {
             if (cancelled) return
+            // Multi-tenant phase 2: this tenant's records only.
             setQ(query(
                 collection(db, "auditLogs"),
+                where("orgId", "==", org),
                 orderBy("timestamp", "desc"),
                 limit(20) // Only show the last 20 actions
             ))
         })
         return () => { cancelled = true }
-    }, [])
+    }, [org])
 
     const { data: rawLogs, loading: isLogsLoading, error: logsError } = useSafeFirestoreSync<any[]>(q)
 
@@ -79,13 +83,13 @@ export function AccessAuditLog() {
                                 </div>
                                 <div className="flex-1 space-y-1">
                                     <p className="text-foreground">
-                                        <span className="font-semibold">{log.actorEmail.split('@')[0]}</span> changed role for user <code className="text-xs bg-muted px-1 py-0.5 rounded">{log.targetUserId.slice(-6)}</code>
+                                        <span className="font-semibold">{(log.actorEmail || log.actorUid || '').split('@')[0]}</span> changed role for user <code className="text-xs bg-muted px-1 py-0.5 rounded">{(log.targetUserId || '').slice(-6)}</code>
                                     </p>
                                     <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-                                        <span className="line-through opacity-70">{log.previousRole}</span>
+                                        <span className="line-through opacity-70">{log.previousRole ?? '—'}</span>
                                         <ArrowRight className="w-3 h-3" />
                                         <span className={cn("font-medium", isPromotion ? "text-success" : "text-amber-500")}>
-                                            {log.newRole}
+                                            {log.newRole ?? '—'}
                                         </span>
                                     </div>
                                     <p className="text-[10px] text-muted-foreground/60 uppercase">
@@ -102,7 +106,7 @@ export function AccessAuditLog() {
     )
 }
 
-function getRoleWeight(role: string): number {
+function getRoleWeight(role: string | null): number {
     const w: Record<string, number> = { admin: 4, band_leader: 3, leader: 3, musician: 2, member: 1, pending: 0 }
-    return w[role] ?? -1
+    return role ? (w[role] ?? -1) : -1
 }

@@ -417,7 +417,8 @@ describe('useSetlistDashboard', () => {
         await result.current.handleSaveAsDefaultClick(setlist, 'shabbat_morning', mockEvent())
       })
 
-      expect(mockSetDefaultForServiceType).toHaveBeenCalledWith('shabbat_morning', 'setlistA')
+      // Multi-tenant P2: the tenant (crc outside an OrgProvider) picks the defaults doc.
+      expect(mockSetDefaultForServiceType).toHaveBeenCalledWith('shabbat_morning', 'setlistA', 'crc')
     })
 
     it('shows a success toast with the friendly service-type label on resolve', async () => {

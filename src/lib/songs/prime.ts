@@ -3,12 +3,14 @@
 // don't force a rewrite. Production call sites flipped at SetlistGridHydrator
 // + ChartBindDialog; the helper here no longer fires at runtime.
 
-import { collection, getDocs } from 'firebase/firestore'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 
 import { getDb as getFirestoreDb } from '@/lib/firebase'
 import { getDb, type LocalDb } from '@/lib/local/schema'
 import type { LocalSong } from '@/lib/local/types'
 import { logger } from '@/lib/logger'
+import { coerceOrgId } from '@/lib/org/registry'
+import type { OrgId } from '@/lib/org/types'
 
 /**
  * v53-02-01: minimal injection seam over Firestore's `getDocs(collection(db,
@@ -26,6 +28,14 @@ export interface PrimeSongsLibraryOptions {
     firestore?: PrimeAdapter
     /** Optional cap. When set, only the first N adapter rows are written. */
     limit?: number
+    /** Tenant whose songs are read by the default adapter (host org when omitted). */
+    org?: OrgId
+}
+
+function hostOrgId(): OrgId {
+    return coerceOrgId(
+        typeof document !== 'undefined' ? document.documentElement.dataset.org : undefined,
+    )
 }
 
 /**
@@ -33,15 +43,20 @@ export interface PrimeSongsLibraryOptions {
  * collection — NOT a snapshot listener. Cross-device freshness is deferred
  * to v5.4 per Harness Fidelity Gate waiver in v53-02-01-PLAN.md.
  */
-const defaultFirestoreAdapter: PrimeAdapter = {
-    async getAllSongs() {
-        const firestoreDb = await getFirestoreDb()
-        const snap = await getDocs(collection(firestoreDb, 'songs'))
-        return snap.docs.map((d) => ({
-            id: d.id,
-            data: d.data() as Partial<LocalSong>,
-        }))
-    },
+// Multi-tenant phase 2: reads only the tenant's songs (`where('orgId','==',org)`).
+export function firestoreSongsAdapter(org: OrgId): PrimeAdapter {
+    return {
+        async getAllSongs() {
+            const firestoreDb = await getFirestoreDb()
+            const snap = await getDocs(
+                query(collection(firestoreDb, 'songs'), where('orgId', '==', org)),
+            )
+            return snap.docs.map((d) => ({
+                id: d.id,
+                data: d.data() as Partial<LocalSong>,
+            }))
+        },
+    }
 }
 
 /**
@@ -59,7 +74,7 @@ export async function primeSongsLibrary(
     opts?: PrimeSongsLibraryOptions,
 ): Promise<{ written: number }> {
     const localDb = opts?.db ?? getDb()
-    const firestore = opts?.firestore ?? defaultFirestoreAdapter
+    const firestore = opts?.firestore ?? firestoreSongsAdapter(opts?.org ?? hostOrgId())
     const limit = opts?.limit
 
     try {

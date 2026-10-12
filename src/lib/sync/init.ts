@@ -14,6 +14,7 @@ import {
 import { auth, getDb as getFirestoreDb } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 import type { LocalCollection, OutboxRow } from '@/lib/local/types'
+import { rowOrg } from '@/lib/org/membership'
 
 import { CrossTabLock } from './cross-tab-lock'
 import { uploadRecentEditLog } from './edit-log-upload'
@@ -72,6 +73,32 @@ export function checkUpdatePrecondition(
     return `expected updatedAt=${expectedUpdatedAt}, remote=${remoteMs ?? 'undefined'}`
 }
 
+/**
+ * Multi-tenant phase 2: the second layer of track `orgId` stamping. applyEdit
+ * stamps a new track from its Dexie parent; a row that still has no `orgId`
+ * here (parent not in Dexie, or queued by a pre-P2 bundle) is stamped from the
+ * Firestore parent setlist (`setlists/{id}` get is public). When the parent
+ * cannot be read the payload goes out unchanged (the rules then resolve the
+ * tenant from the parent themselves). Exported for testing.
+ */
+export async function stampTrackOrgForCommit(
+    collection: LocalCollection,
+    payload: Record<string, unknown>,
+    readSetlistOrg: (setlistId: string) => Promise<{ exists: boolean; orgId?: unknown }>,
+): Promise<Record<string, unknown>> {
+    if (collection !== 'tracks') return payload
+    if (typeof payload.orgId === 'string' && payload.orgId.length > 0) return payload
+    const setlistId = payload.setlistId
+    if (typeof setlistId !== 'string' || setlistId.length === 0) return payload
+    try {
+        const parent = await readSetlistOrg(setlistId)
+        if (!parent.exists) return payload
+        return { ...payload, orgId: rowOrg(parent.orgId) }
+    } catch {
+        return payload
+    }
+}
+
 class ProductionFirestoreAdapter implements FirestoreAdapter {
     async commitOutboxRow(row: OutboxRow): Promise<CommitResult> {
         try {
@@ -79,8 +106,18 @@ class ProductionFirestoreAdapter implements FirestoreAdapter {
             switch (row.op) {
                 case 'set': {
                     const ref = doc(firestoreDb, row.collection, row.docId)
+                    const payload = await stampTrackOrgForCommit(
+                        row.collection,
+                        row.payload,
+                        async (setlistId) => {
+                            const snap = await getDoc(doc(firestoreDb, 'setlists', setlistId))
+                            return snap.exists()
+                                ? { exists: true, orgId: (snap.data() as { orgId?: unknown }).orgId }
+                                : { exists: false }
+                        },
+                    )
                     await setDoc(ref, {
-                        ...row.payload,
+                        ...payload,
                         updatedAt: serverTimestamp(),
                     })
                     // Cycle-9 Lane B: a track create through the grid editor

@@ -4,7 +4,7 @@ import { useState, useCallback } from "react"
 import { Loader2, Import } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore"
+import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore"
 import { getDb } from "@/lib/firebase"
 import { getDefaultTemplate, TEMPLATE_LABELS, convertSetlistToTemplate, type TemplateSlot } from "@/lib/liturgical-templates"
 import { useOrg } from "@/lib/org/org-context"
@@ -46,8 +46,10 @@ export function TemplatesSection() {
         setShowImportPicker(true)
         try {
             const db = await getDb()
+            // Multi-tenant phase 2: import only from this tenant's setlists.
             const q = query(
                 collection(db, "setlists"),
+                where("orgId", "==", org),
                 orderBy("date", "desc"),
                 limit(10),
             )

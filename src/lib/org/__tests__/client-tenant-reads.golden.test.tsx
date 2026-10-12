@@ -105,10 +105,14 @@ beforeEach(() => {
     h.queries.length = 0
     h.store = {
         templates: [
-            { id: "friday_night", data: { slots: SLOT("crc friday") } },
-            { id: "shabbat_morning", data: { slots: SLOT("crc morning") } },
+            // Multi-tenant phase 2 (step 0, stamp-p2-extras --only templates):
+            // every templates doc carries the orgId its id names (bare id → crc).
+            // Only the fixture DATA gained the stamp; the expected results are
+            // the original goldens, unchanged.
+            { id: "friday_night", data: { orgId: "crc", slots: SLOT("crc friday") } },
+            { id: "shabbat_morning", data: { orgId: "crc", slots: SLOT("crc morning") } },
             { id: "brotherslazaroff__friday_night", data: { orgId: "brotherslazaroff", slots: SLOT("bl friday") } },
-            { id: "brotherslazaroff_x__friday_night", data: { slots: SLOT("other tenant") } },
+            { id: "brotherslazaroff_x__friday_night", data: { orgId: "brotherslazaroff_x", slots: SLOT("other tenant") } },
             { id: "testshul__friday_night", data: { orgId: "testshul", slots: SLOT("testshul friday") } },
         ],
         setlists: [

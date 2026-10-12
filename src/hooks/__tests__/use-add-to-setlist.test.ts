@@ -237,6 +237,24 @@ describe('useAddToSetlist', () => {
       expect(data.hydrated).toBe(true)
     })
 
+    it('multi-tenant P2: every added track carries the setlist orgId (missing -> crc)', async () => {
+      const { result } = renderHook(() => useAddToSetlist())
+      const files = [makeDriveFile({ id: 'f1' }), makeDriveFile({ id: 'f2' })]
+
+      act(() => { result.current.openForSongs(files) })
+      await act(async () => {
+        await result.current.addToSetlist('bl-1', makeSetlist({ id: 'bl-1', orgId: 'brotherslazaroff' }))
+      })
+      expect(mockApplyEdit.mock.calls.map(([e]) => e.doc.orgId)).toEqual(['brotherslazaroff', 'brotherslazaroff'])
+
+      mockApplyEdit.mockClear()
+      act(() => { result.current.openForSongs([makeDriveFile({ id: 'f3' })]) })
+      await act(async () => {
+        await result.current.addToSetlist('c-1', makeSetlist({ id: 'c-1' }))
+      })
+      expect(mockApplyEdit.mock.calls[0][0].doc.orgId).toBe('crc')
+    })
+
     it('closes the sheet after adding', async () => {
       const { result } = renderHook(() => useAddToSetlist())
       const file = makeDriveFile()

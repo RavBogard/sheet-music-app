@@ -306,7 +306,7 @@ describe('useCreationWizard (single-step)', () => {
       // Allow the lookup promise to settle.
       await act(async () => { await Promise.resolve() })
 
-      expect(mockFindLastMatchingService).toHaveBeenCalledWith('friday_night', TARGET_FRIDAY)
+      expect(mockFindLastMatchingService).toHaveBeenCalledWith('friday_night', TARGET_FRIDAY, 'crc')
       expect(result.current.mode).toBe('clone')
       expect(result.current.cloneSource?.id).toBe('src-1')
       expect(result.current.canCreate).toBe(true) // clone mode doesn't need a name
