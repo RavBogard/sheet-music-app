@@ -26,7 +26,7 @@ import {
 } from "firebase/auth"
 
 export default function SettingsPage() {
-    const { user, profile, loading: authLoading, signOut } = useAuth()
+    const { user, profile, role, loading: authLoading, signOut } = useAuth()
     const { theme, setTheme } = useTheme()
     const router = useRouter()
     const [editingName, setEditingName] = useState(false)
@@ -164,7 +164,7 @@ export default function SettingsPage() {
                         <div className="text-xs font-mono bg-muted px-2.5 py-1 rounded-lg text-muted-foreground border border-border">
                             {(() => {
                                 const labels: Record<string, string> = { admin: 'ADMIN', band_leader: 'BAND LEADER', musician: 'MUSICIAN', member: 'MEMBER', leader: 'BAND LEADER', pending: 'PENDING' }
-                                return labels[profile?.role || ''] || profile?.role?.toUpperCase() || 'MEMBER'
+                                return labels[role ?? 'pending'] || role?.toUpperCase() || 'MEMBER'
                             })()}
                         </div>
                     </div>

@@ -48,6 +48,12 @@ vi.mock('@/lib/firebase', () => ({
     },
 }))
 
+// Pass-through by default (updateUserDisplayName's test asserts on global.fetch).
+const mockApiFetch = vi.fn((...args: unknown[]) => (global.fetch as unknown as (...a: unknown[]) => unknown)(...args))
+vi.mock('@/lib/api-client', () => ({
+    apiFetch: (...args: unknown[]) => mockApiFetch(...args),
+}))
+
 vi.mock('@/lib/logger', () => ({
     logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }))
@@ -67,7 +73,9 @@ vi.mock('@/types/schemas', () => ({
 import {
     ensureUserProfile,
     subscribeToUserProfile,
-    subscribeToAllUsers,
+    fetchTenantPeople,
+    subscribeToMembership,
+    requestTenantJoin,
     updateUserRole,
     updateUserDisplayName,
     markWelcomeModalViewed,
@@ -122,6 +130,22 @@ describe('ensureUserProfile', () => {
         expect(result.uid).toBe('user-1')
         expect(result.email).toBe('test@example.com')
         expect(mockSetDoc).toHaveBeenCalledTimes(1)
+    })
+
+    it('multi-tenant P2: a new profile doc carries no role and no orgIds', async () => {
+        mockGetDoc.mockResolvedValue(makeSnap(false))
+
+        await ensureUserProfile(makeUser())
+
+        const written = mockSetDoc.mock.calls[0][1] as Record<string, unknown>
+        expect(written).not.toHaveProperty('role')
+        expect(written).not.toHaveProperty('orgIds')
+        expect(Object.keys(written).sort()).toEqual(
+            expect.arrayContaining(['uid', 'email', 'displayName', 'createdAt', 'lastLoginAt']),
+        )
+        for (const k of Object.keys(written)) {
+            expect(['uid', 'email', 'displayName', 'photoURL', 'createdAt', 'lastLoginAt']).toContain(k)
+        }
     })
 
     it('updates lastLoginAt in background for existing profiles', async () => {
@@ -279,43 +303,48 @@ describe('subscribeToUserProfile', () => {
     })
 })
 
-describe('subscribeToAllUsers', () => {
-    it('calls onSnapshot with users collection ordered by createdAt desc', () => {
-        const cb = vi.fn()
-        subscribeToAllUsers(cb)
-
-        expect(mockOnSnapshot).toHaveBeenCalledTimes(1)
-        expect(mockCollection).toHaveBeenCalled()
-        expect(mockOrderBy).toHaveBeenCalledWith('createdAt', 'desc')
-        expect(mockQuery).toHaveBeenCalled()
-    })
-
-    it('maps snapshot docs to UserProfile array', () => {
-        const cb = vi.fn()
-        subscribeToAllUsers(cb)
-
-        latestOnNext({
-            docs: [
-                { data: () => ({ uid: 'u1', role: 'admin' }), id: 'u1' },
-                { data: () => ({ uid: 'u2', role: 'musician' }), id: 'u2' },
-            ],
+describe('fetchTenantPeople (multi-tenant P2)', () => {
+    it('GETs /api/tenant/people and returns people + pendingCount', async () => {
+        const people = [
+            { uid: 'u1', role: 'admin' },
+            { uid: 'u2', role: 'pending' },
+        ]
+        mockApiFetch.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ tenant: 'crc', people, pendingCount: 1 }),
         })
-
-        expect(cb).toHaveBeenCalledWith([
-            expect.objectContaining({ uid: 'u1', role: 'admin' }),
-            expect.objectContaining({ uid: 'u2', role: 'musician' }),
-        ])
+        const res = await fetchTenantPeople()
+        expect(mockApiFetch).toHaveBeenCalledWith('/api/tenant/people', expect.objectContaining({ method: 'GET' }))
+        expect(res).toEqual({ tenant: 'crc', people, pendingCount: 1 })
     })
 
-    it('calls onError callback on snapshot error', () => {
+    it('throws on a refused read (below band leader)', async () => {
+        mockApiFetch.mockResolvedValueOnce({ ok: false, status: 403, text: async () => 'Forbidden' })
+        await expect(fetchTenantPeople()).rejects.toThrow('Forbidden')
+    })
+})
+
+describe('subscribeToMembership (multi-tenant P2)', () => {
+    it('listens to memberships/{org}__{uid} and reports null when absent', () => {
         const cb = vi.fn()
-        const onErr = vi.fn()
-        subscribeToAllUsers(cb, onErr)
+        subscribeToMembership('brotherslazaroff', 'u1', cb)
+        expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'memberships', 'brotherslazaroff__u1')
+        latestOnNext({ exists: () => false, data: () => undefined })
+        expect(cb).toHaveBeenLastCalledWith(null)
+        latestOnNext({ exists: () => true, data: () => ({ role: 'musician', soundEngineer: false }) })
+        expect(cb).toHaveBeenLastCalledWith({ role: 'musician', soundEngineer: false })
+    })
+})
 
-        const error = new Error('snapshot failed')
-        latestOnError!(error)
-
-        expect(onErr).toHaveBeenCalledWith(error)
+describe('requestTenantJoin (multi-tenant P2)', () => {
+    it('POSTs /api/auth/join with no tenant or role in the body', async () => {
+        mockApiFetch.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ tenant: 'crc', role: 'pending', created: true, claimsChanged: true }),
+        })
+        const res = await requestTenantJoin()
+        expect(mockApiFetch).toHaveBeenCalledWith('/api/auth/join', { method: 'POST', body: '{}' })
+        expect(res).toEqual({ tenant: 'crc', role: 'pending', created: true, claimsChanged: true })
     })
 })
 
@@ -336,6 +365,13 @@ describe('updateUserRole', () => {
         }))
         const callHeaders = (global.fetch as any).mock.calls[0][1].headers
         expect(callHeaders.Authorization).toBe('Bearer mock-token')
+    })
+
+    it('multi-tenant P2: sends the tenant, and null to remove from it', async () => {
+        await updateUserRole('target-uid', null, { tenant: 'brotherslazaroff' })
+        expect(global.fetch).toHaveBeenCalledWith('/api/admin/set-role', expect.objectContaining({
+            body: JSON.stringify({ targetUserId: 'target-uid', newRole: null, tenant: 'brotherslazaroff' }),
+        }))
     })
 
     it('throws when not authenticated (no currentUser)', async () => {

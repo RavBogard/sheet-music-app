@@ -28,7 +28,7 @@ import { AppNavigationProps } from "./AppNavigation"
 export function DesktopHeader(props: AppNavigationProps) {
     const pathname = usePathname()
     const router = useRouter()
-    const { user, profile, isMember: authIsMember, isBandLeader: authIsBandLeader, signIn, signOut } = useAuth()
+    const { user, profile, role, isMember: authIsMember, isBandLeader: authIsBandLeader, signIn, signOut } = useAuth()
     
     // Use server overrides to prevent UI flashing
     const isMember = authIsMember || !!props.serverIsMember
@@ -49,8 +49,8 @@ export function DesktopHeader(props: AppNavigationProps) {
     const [showResults, setShowResults] = useState(false)
     const searchRef = useRef<HTMLDivElement>(null)
 
-    // A bit hacky to check profile?.role but we can use server roles as fallback
-    const isMusician = profile?.role === 'musician' || profile?.role === 'band_leader' || profile?.role === 'admin' || isBandLeader || !!props.serverIsAdmin
+    // Tenant role from useAuth (multi-tenant phase 2); server roles as fallback
+    const isMusician = role === 'musician' || role === 'band_leader' || role === 'admin' || isBandLeader || !!props.serverIsAdmin
 
     // UNAUTH-004: on unauth state the Setlists link points at /perform
     // (public gig-discovery surface) instead of /setlists (authed-only,
@@ -213,7 +213,7 @@ export function DesktopHeader(props: AppNavigationProps) {
                                     <div className="flex flex-col space-y-1">
                                         <p className="text-sm font-medium leading-none">{user?.displayName || "Musician"}</p>
                                         <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-                                        <p className="text-[10px] uppercase font-bold text-brand mt-1">{profile?.role || "Pending"}</p>
+                                        <p className="text-[10px] uppercase font-bold text-brand mt-1">{role || "Pending"}</p>
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator className="bg-border" />

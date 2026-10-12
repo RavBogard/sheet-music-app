@@ -20,12 +20,23 @@ import { logger } from "@/lib/logger"
 import { deriveRoles } from "@/lib/roles"
 import { syncSessionCookie } from "@/lib/session-cookie"
 import { repairDrift } from "@/lib/drift-repair"
+import { useOrg } from "@/lib/org/org-context"
+import type { OrgId } from "@/lib/org/types"
+import type { Membership } from "@/lib/org/membership-types"
+import {
+    claimsHaveM,
+    joinSessionKey,
+    membershipClaimDrifted,
+    resolveClientRole,
+} from "@/lib/org/client-role"
 
 interface CachedUser {
     displayName: string | null
     photoURL: string | null
     email: string | null
+    /** Role in the tenant the cache was written on (`orgId`); null elsewhere. */
     role: string | null
+    orgId?: string
 }
 
 interface AuthContextType {
@@ -33,6 +44,13 @@ interface AuthContextType {
     profile: UserProfile | null
     cachedUser: CachedUser | null
     loading: boolean
+    /** Multi-tenant phase 2: the host tenant this context speaks for. */
+    orgId: OrgId
+    /** My role in the host tenant (null = not a member here; treat as pending). */
+    role: string | null
+    isPlatformOwner: boolean
+    /** My membership doc in the host tenant (null = none; undefined = not read yet). */
+    membership: Membership | null | undefined
     signIn: () => Promise<void>
     signOut: () => Promise<void>
     isAdmin: boolean
@@ -48,6 +66,10 @@ const AuthContext = createContext<AuthContextType>({
     profile: null,
     cachedUser: null,
     loading: true,
+    orgId: "crc",
+    role: null,
+    isPlatformOwner: false,
+    membership: undefined,
     signIn: async () => {},
     signOut: async () => { },
     isAdmin: false,
@@ -60,9 +82,17 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const router = useRouter()
+    const org = useOrg()
+    const orgRef = useRef(org)
+    orgRef.current = org
     const [user, setUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [loading, setLoading] = useState(true)
+    // Multi-tenant phase 2: decoded ID-token claims (null until read for the
+    // current user) and my membership in the host tenant (undefined until the
+    // first snapshot; null = none).
+    const [claims, setClaims] = useState<Record<string, unknown> | null>(null)
+    const [membership, setMembership] = useState<Membership | null | undefined>(undefined)
     const lastClaimsUpdate = useRef<string | null>(null)
     const pushRegistered = useRef(false) // M5: prevent re-registration on every auth state change
 
@@ -71,14 +101,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (typeof window === 'undefined') return null
         try {
             const raw = localStorage.getItem('crc_cached_user')
-            return raw ? JSON.parse(raw) : null
+            if (!raw) return null
+            const parsed = JSON.parse(raw) as CachedUser
+            // The cached role belongs to the tenant it was written on.
+            if (parsed && parsed.orgId && parsed.orgId !== org) return { ...parsed, role: null }
+            return parsed
         } catch { return null }
     })
 
+    // Multi-tenant phase 2: po -> admin; token with `m` -> membership role in
+    // this tenant; token without `m` -> legacy profile role (unchanged).
+    const resolved = resolveClientRole({
+        claims,
+        membership,
+        profileRole: profile?.role,
+        profileSoundEngineer: profile?.soundEngineer,
+    })
+    const role = resolved.role
+    const isPlatformOwner = resolved.isPlatformOwner
     // Derived roles — uses shared hierarchy from @/lib/roles
-    const { isAdmin, isBandLeader, isMusician, isMember } = deriveRoles(profile?.role)
-    const isSoundEngineer = !!profile?.soundEngineer
+    const { isAdmin, isBandLeader, isMusician, isMember } = deriveRoles(role)
+    const isSoundEngineer = resolved.isSoundEngineer
     const canUpload = isAdmin || isBandLeader || isMusician || !!profile?.canUpload
+    // Hold `loading` until the token's claims are read and, for a token with
+    // `m`, until the membership's first snapshot, so the UI never flashes a
+    // legacy or pending role before the tenant role is known.
+    const roleLoading = !!user && (claims === null || (claimsHaveM(claims) && membership === undefined))
+    const effectiveLoading = loading || roleLoading
 
     useEffect(() => {
         // Build-time safety: If auth is mock (empty object), return
@@ -88,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         let unsubscribeProfile: (() => void) | null = null
+        let unsubscribeMembership: (() => void) | null = null
         let sessionReady = false
         let profileReady = false
         // Generation counter so a stale-by-the-time-the-dynamic-import-resolves
@@ -103,8 +153,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const myGen = ++callbackGen
             // Clean up previous profile subscription
             if (unsubscribeProfile) { unsubscribeProfile(); unsubscribeProfile = null }
+            if (unsubscribeMembership) { unsubscribeMembership(); unsubscribeMembership = null }
             sessionReady = false
             profileReady = false
+            setClaims(null)
+            setMembership(undefined)
 
             setUser(currentUser)
             if (currentUser) {
@@ -134,8 +187,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // cached by the runtime, so subsequent auth events resolve it
                 // synchronously — no perceptible latency penalty for returning
                 // users (99% of sign-ins per existing inline comment).
-                const { ensureUserProfile, subscribeToUserProfile } = await import("./users-firebase")
+                const {
+                    ensureUserProfile,
+                    subscribeToUserProfile,
+                    subscribeToMembership,
+                    requestTenantJoin,
+                } = await import("./users-firebase")
                 if (myGen !== callbackGen) return // a newer auth event has fired; abort
+
+                const hostOrg = orgRef.current
+
+                // Multi-tenant phase 2: read the token's claims (po / m / legacy).
+                const readClaims = () =>
+                    currentUser.getIdTokenResult()
+                        .then((res) => {
+                            if (myGen === callbackGen) setClaims({ ...(res.claims as Record<string, unknown>) })
+                        })
+                        .catch((err) => {
+                            logger.warn("[auth] getIdTokenResult failed", err)
+                            if (myGen === callbackGen) setClaims({})
+                        })
+                void readClaims()
+
+                // Multi-tenant phase 2: my membership in the host tenant. A
+                // listener error (rules not yet deployed) reads as "none"; it
+                // only matters for tokens that carry `m`.
+                unsubscribeMembership = subscribeToMembership(
+                    hostOrg,
+                    currentUser.uid,
+                    (m) => { if (myGen === callbackGen) setMembership(m) },
+                    () => { if (myGen === callbackGen) setMembership(null) },
+                )
+
+                // Multi-tenant phase 2: ask this tenant for a membership once
+                // per (host, uid) per session. The server makes a pending
+                // request when I have none and never changes an existing one;
+                // when that changes my claims, refresh the token and cookie.
+                let joinDue = true
+                try { joinDue = sessionStorage.getItem(joinSessionKey(hostOrg, currentUser.uid)) !== "1" } catch { /* private mode */ }
+                if (joinDue) {
+                    requestTenantJoin()
+                        .then(async (res) => {
+                            try { sessionStorage.setItem(joinSessionKey(hostOrg, currentUser.uid), "1") } catch { /* private mode */ }
+                            if (!res.created && !res.claimsChanged) return
+                            await currentUser.getIdToken(true)
+                            await syncSessionCookie(currentUser)
+                            await readClaims()
+                            router.refresh()
+                        })
+                        .catch((err) => logger.warn("[auth] join request failed", err))
+                }
 
                 // Start subscription IMMEDIATELY — for returning users (99% of sign-ins)
                 // this returns profile data just as fast as a getDoc, without blocking.
@@ -152,6 +253,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                             .then(() => syncSessionCookie(currentUser))
                             .then((ok) => {
                                 if (!ok) logger.warn("Session cookie re-sync after claims update failed")
+                                return readClaims()
                             })
                             .catch(err => logger.warn("Claims refresh failed:", err))
                     }
@@ -159,10 +261,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                     // v4.3 P10-03: Firestore↔claim↔cookie drift repair, now
                     // a retried + telemetry-tagged chain in src/lib/drift-repair.ts.
+                    // Multi-tenant phase 2: this legacy comparison applies only
+                    // to tokens without `m`; tokens with `m` compare against
+                    // the membership doc (effect below).
                     if (p?.role && p.role !== "pending") {
                         currentUser
                             .getIdTokenResult()
                             .then(async (res) => {
+                                if (claimsHaveM(res.claims as Record<string, unknown>)) return
                                 const claimRole = res.claims.role as string | undefined
                                 if (claimRole === p.role) return
                                 const summary = await repairDrift(currentUser)
@@ -180,15 +286,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     profileReady = true
                     if (sessionReady) setLoading(false)
 
-                    // Cache for instant greeting on next visit
+                    // Cache for instant greeting on next visit (the role is
+                    // written by the tenant-role effect below, keyed by org).
                     if (p) {
                         try {
+                            const prev = JSON.parse(localStorage.getItem('crc_cached_user') || 'null') as CachedUser | null
                             localStorage.setItem('crc_cached_user', JSON.stringify({
                                 displayName: p.displayName,
                                 photoURL: p.photoURL || null,
                                 email: p.email,
-                                role: p.role,
-                                soundEngineer: p.soundEngineer || false,
+                                role: prev && prev.orgId === hostOrg ? prev.role : null,
+                                orgId: hostOrg,
                             }))
                         } catch { /* quota exceeded or private browsing */ }
                     }
@@ -208,10 +316,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return () => {
             unsubscribeAuth()
             if (unsubscribeProfile) unsubscribeProfile()
+            if (unsubscribeMembership) unsubscribeMembership()
         }
     // router is stable across renders (next/navigation); safe to omit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
+
+    // Multi-tenant phase 2: drift repair for tokens with `m`. The token's
+    // m[org] must match the membership doc's role code. On mismatch, rebuild
+    // the claims (sync-claims) and refresh token + cookie, once per state so
+    // a persistent mismatch cannot loop.
+    const lastDriftKey = useRef<string | null>(null)
+    useEffect(() => {
+        if (!user || membership === undefined || !claimsHaveM(claims)) return
+        if (!membershipClaimDrifted(claims, org, membership)) return
+        const claimCode = String((claims?.m as Record<string, unknown>)?.[org] ?? '')
+        const key = `${user.uid}|${org}|${membership?.role ?? 'none'}|${claimCode}`
+        if (lastDriftKey.current === key) return
+        lastDriftKey.current = key
+        repairDrift(user)
+            .then(async (summary) => {
+                logger.info(
+                    `[drift] complete syncClaims=${summary.syncClaims} idToken=${summary.idTokenRefresh} cookie=${summary.sessionCookie} refresh=${summary.refreshSession}`,
+                )
+                const res = await user.getIdTokenResult()
+                setClaims({ ...(res.claims as Record<string, unknown>) })
+                router.refresh()
+            })
+            .catch((err) => logger.warn("[drift] membership repair failed", err))
+    // router is stable across renders (next/navigation); safe to omit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user, claims, membership, org])
+
+    // Multi-tenant phase 2: cache the tenant role (keyed by org) for the
+    // instant greeting on the next visit.
+    useEffect(() => {
+        if (!user || effectiveLoading) return
+        try {
+            const raw = localStorage.getItem('crc_cached_user')
+            if (!raw) return
+            const prev = JSON.parse(raw) as CachedUser
+            if (prev.role === role && prev.orgId === org) return
+            localStorage.setItem('crc_cached_user', JSON.stringify({ ...prev, role, orgId: org }))
+        } catch { /* quota exceeded or private browsing */ }
+    }, [user, effectiveLoading, role, org])
 
     // Refresh session cookie when user returns to the app.
     // The cookie expires after 14 days (Firebase max). Without refresh, mobile
@@ -348,7 +496,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         profile,
         cachedUser,
-        loading,
+        loading: effectiveLoading,
+        orgId: org,
+        role,
+        isPlatformOwner,
+        membership,
         signIn,
         signOut,
         isAdmin,
@@ -357,7 +509,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isMember,
         isSoundEngineer,
         canUpload,
-    }), [user, profile, cachedUser, loading, isAdmin, isBandLeader, isMusician, isMember, isSoundEngineer, canUpload])
+    }), [user, profile, cachedUser, effectiveLoading, org, role, isPlatformOwner, membership, isAdmin, isBandLeader, isMusician, isMember, isSoundEngineer, canUpload])
 
     return (
         <AuthContext.Provider value={value}>

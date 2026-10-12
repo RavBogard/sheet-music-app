@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { MonitorConfig, BusAssignment } from "@/types/monitor"
-import { subscribeToAllUsers, UserProfile } from "@/lib/users-firebase"
+import { fetchTenantPeople } from "@/lib/users-firebase"
 import { doc, updateDoc } from "firebase/firestore"
 import { getDb } from "@/lib/firebase"
 import { toast } from "sonner"
@@ -10,6 +10,14 @@ import { Users, X, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useMonitorStore } from "@/lib/monitor-store"
 import { useAuth } from "@/lib/auth-context"
+
+/** The fields of a person this panel shows and assigns. */
+interface RosterUser {
+    uid: string
+    email: string
+    displayName: string
+    role: string
+}
 
 interface BusAssignmentPanelProps {
     config: MonitorConfig
@@ -27,14 +35,18 @@ function getAssignments(raw: BusAssignment | BusAssignment[] | null | undefined)
  * Only active roles (admin, band_leader, musician) appear in the dropdown.
  */
 export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
-    const [users, setUsers] = useState<UserProfile[]>([])
+    const [users, setUsers] = useState<RosterUser[]>([])
     const [openDropdown, setOpenDropdown] = useState<number | null>(null)
 
     const buses = useMonitorStore(state => state.buses)
     const { user: currentUser } = useAuth()
 
     useEffect(() => {
-        const unsub = subscribeToAllUsers((all) => {
+        // Multi-tenant phase 2: the roster is the host tenant's people, read
+        // through /api/tenant/people (the mixer is CRC's; on another tenant's
+        // host this panel is not reachable). A refused read leaves only "me".
+        let cancelled = false
+        const build = (all: RosterUser[]) => {
             // Only show active roles — exclude member, pending, denied
             const activeRoles = ['admin', 'band_leader', 'musician']
             let filtered = all
@@ -47,13 +59,20 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
                     uid: currentUser.uid,
                     email: currentUser.email || '',
                     displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Me',
-                    role: 'musician' as const,
-                } as UserProfile, ...filtered]
+                    role: 'musician',
+                }, ...filtered]
             }
-
-            setUsers(filtered)
-        })
-        return unsub
+            if (!cancelled) setUsers(filtered)
+        }
+        fetchTenantPeople()
+            .then(({ people }) => build(people.map(p => ({
+                uid: p.uid,
+                email: p.email || '',
+                displayName: p.displayName || '',
+                role: p.role,
+            }))))
+            .catch(() => build([]))
+        return () => { cancelled = true }
     }, [currentUser])
 
     // Close dropdown when clicking outside
@@ -78,7 +97,7 @@ export function BusAssignmentPanel({ config }: BusAssignmentPanelProps) {
         }
     }, [config.busAssignments])
 
-    const addUser = useCallback((busIdx: number, user: UserProfile) => {
+    const addUser = useCallback((busIdx: number, user: RosterUser) => {
         const current = getAssignments(config.busAssignments?.[String(busIdx)])
         if (current.some(a => a.userId === user.uid)) return // already assigned
         const next = [...current, { userId: user.uid, userName: user.displayName || "Unknown" }]

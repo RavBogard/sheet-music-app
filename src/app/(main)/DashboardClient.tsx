@@ -42,7 +42,7 @@ export interface DashboardServerProps {
 
 export default function DashboardClient({ serverGreeting, serverShortName, serverLogoUrl = null, serverIsMember = false, serverIsBandLeader = false, serverIsAdmin = false, serverUid = null }: DashboardServerProps) {
     const router = useRouter()
-    const { user: authUser, profile, cachedUser, signIn, isMember: authIsMember, isBandLeader, loading: authLoading } = useAuth()
+    const { user: authUser, profile, role, cachedUser, signIn, isMember: authIsMember, isBandLeader, loading: authLoading } = useAuth()
     const congregation = useCongregation()
 
     // v11.2-05-01 (BUG-6): host-resolved hero brand. Server value wins (flash-free,
@@ -410,7 +410,7 @@ export default function DashboardClient({ serverGreeting, serverShortName, serve
                 {/* ── Onboarding (pending or approved — mutually exclusive) ── */}
                 {user && (
                     <OnboardingCard
-                        role={profile?.role}
+                        role={role ?? 'pending'}
                         isMember={isMember}
                         profile={profile}
                         congregationShortName={heroShortName}

@@ -31,11 +31,12 @@ interface MenuItem {
 
 export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) {
     const pathname = usePathname()
-    const { user, profile, isMember, isBandLeader, signOut } = useAuth()
+    const { user, profile, role, isMember, isBandLeader, signOut } = useAuth()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
     const congregation = useCongregation()
 
-    const isMusician = profile?.role === 'musician' || profile?.role === 'band_leader' || profile?.role === 'admin'
+    // Tenant role from useAuth (multi-tenant phase 2)
+    const isMusician = role === 'musician' || role === 'band_leader' || role === 'admin'
 
     // UNAUTH-004: route Setlists → /perform on unauth (matches DesktopHeader
     // behavior). The drawer is hidden until the user taps the hamburger,
@@ -120,7 +121,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                             </div>
                             <div className="mt-2">
                                 <span className="inline-block text-[10px] font-bold text-foreground uppercase tracking-wider bg-brand/10 px-2 py-0.5 rounded-md">
-                                    {roleLabels[profile?.role || ''] || 'MEMBER'}
+                                    {roleLabels[role ?? 'pending'] || 'MEMBER'}
                                 </span>
                             </div>
                         </div>
