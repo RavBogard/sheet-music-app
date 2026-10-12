@@ -38,7 +38,7 @@ Shipped: `6e076b33` (Vercel `dpl_B6N4RAoTFLCSK8TmG8oprKuhhJad`).
 
 - Lane 1 (host resolution): `f59e3912` (goldens first), `3f4b3f36`.
 - Lane 2 (provisioning): `96e5c84a`, `3bb57238` (`scripts/ops/multitenant/tenant-address.ts`).
-- Lead: `ee3d3bba`, plain host-list import and claims gate exemption for the persona probe.
+- Lead: `a7349add`, plain host-list import and claims gate exemption for the persona probe.
 - Merge to master: `6e076b33`.
 
 ## Decisions
