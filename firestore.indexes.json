@@ -421,6 +421,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "library_index",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "visibleToOrgs",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "orgId",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [
