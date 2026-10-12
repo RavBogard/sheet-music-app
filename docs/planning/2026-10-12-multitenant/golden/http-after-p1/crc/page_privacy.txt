@@ -1,0 +1,40 @@
+status=200
+html lang=en dir=null data-org=crc class=null
+body class=__variable_17ff94 __variable_191abf __variable_78f48a antialiased
+title=Privacy Policy | CRC Music
+link href=/apple-icon?1912f0fc5163701c rel=apple-touch-icon sizes=180x180 type=image/png
+link href=/favicon.ico?603d046c9a6fdfbb rel=icon sizes=16x16 type=image/x-icon
+link href=/icon?a401918052754c85 rel=icon sizes=512x512 type=image/png
+link href=/manifest.json rel=manifest
+meta charset=utf-8
+meta content= name=next-size-adjust
+meta content=#0F0F23 media=(prefers-color-scheme: dark) name=theme-color
+meta content=#f0f0f8 media=(prefers-color-scheme: light) name=theme-color
+meta content=1200 name=twitter:image:width
+meta content=1200 property=og:image:width
+meta content=630 name=twitter:image:height
+meta content=630 property=og:image:height
+meta content=CRC Music name=apple-mobile-web-app-title
+meta content=CRC Music name=twitter:title
+meta content=CRC Music property=og:site_name
+meta content=Central Reform Congregation — Digital Sheet Music Library name=twitter:image:alt
+meta content=Central Reform Congregation — Digital Sheet Music Library property=og:image:alt
+meta content=Central Reform Congregation — Music property=og:title
+meta content=Digital Sheet Music Library for Central Reform Congregation name=description
+meta content=Digital Sheet Music Library for Central Reform Congregation name=twitter:description
+meta content=Digital Sheet Music Library for Central Reform Congregation property=og:description
+meta content=default name=apple-mobile-web-app-status-bar-style
+meta content=https://centralreform.live/opengraph-image?f2e911431ae8cc06 property=og:image
+meta content=https://centralreform.live/twitter-image?bc6d9362bc893b7a name=twitter:image
+meta content=image/png name=twitter:image:type
+meta content=image/png property=og:image:type
+meta content=index, follow name=robots
+meta content=summary_large_image name=twitter:card
+meta content=website property=og:type
+meta content=width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover name=viewport
+meta content=yes name=mobile-web-app-capable
+--- body text ---
+Skip to main contentCRC MusicSetlistsSign InCRC MusicSearchSetlistSchedule A project of Rabbi Daniel Bogardv11.7.0•Changelog•Privacy•Terms•AccessibilityTry the new experience (beta)LegalPrivacy PolicyLast updated: February 23, 2026Central Reform Congregation (“CRC”, “we”, “us”, or “our”) operates the CRC Music web application (the “Service”). This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our Service.Information We CollectWe collect the following types of information:•Account Information: Your name, email address, and profile photo when you create an account or sign in.•Phone Number: If you choose to provide your phone number for SMS scheduling notifications.•Musician Profile Data: Your instrument preference, transposition settings, and scheduling availability.•Usage Data: Information about how you use the Service, including pages visited and features used.How We Use Your InformationWe use collected information to:•Provide and maintain the Service•Send scheduling notifications via email, SMS, and push notifications•Facilitate musician coordination and setlist management•Improve the ServiceSMS / Mobile MessagingIf you opt in to receive SMS notifications, we will send you text messages related to your scheduling assignments, reminders, and cancellations at Central Reform Congregation.Mobile information, including phone numbers, will not be shared with third parties for marketing or promotional purposes. Mobile information will only be shared with third parties as necessary to deliver the SMS messaging service (i.e., our SMS delivery provider, Twilio).Message frequency varies based on your scheduling activity. Message and data rates may apply. You may opt out of SMS notifications at any time through your profile settings or by replying STOP to any message.Data SharingWe do not sell, trade, or rent your personal information to third parties. We share information only in the following circumstances:•Service Providers: We use trusted third-party services (Firebase, Resend, Twilio) to operate the Service. These providers only have access to information necessary to perform their functions.•Within CRC: Band leaders and administrators may see your scheduling availability and contact information to coordinate services.•Legal Requirements: We may disclose information if required by law.Data SecurityWe use industry-standard security measures to protect your data, including encrypted connections (HTTPS), Firebase Authentication, and role-based access controls. However, no method of transmission over the Internet is 100% secure.Data RetentionWe retain your personal data only for as long as you maintain an account with the Service. You may request deletion of your account and associated data by contacting us.Your RightsYou have the right to:•Access the personal information we hold about you•Request correction of inaccurate information•Request deletion of your account and data•Opt out of SMS notifications at any time•Opt out of email notifications at any timeChildren's PrivacyThe Service is not intended for use by anyone under the age of 13. We do not knowingly collect personal information from children under 13.Changes to This PolicyWe may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the “Last updated” date.Contact UsIf you have any questions about this Privacy Policy, please contact Central Reform Congregation at music@centralreform.live.
+--- images ---
+img src=/logo.jpg alt=Central Reform Congregation logo
+img src=/logo.jpg alt=Central Reform Congregation logo

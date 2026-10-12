@@ -1,0 +1,11 @@
+status=200
+User-Agent: *
+Allow: /
+Allow: /perform
+Allow: /privacy
+Allow: /terms
+Allow: /sms-consent
+Allow: /changelog
+Disallow: /
+
+Sitemap: https://centralreform.live/sitemap.xml

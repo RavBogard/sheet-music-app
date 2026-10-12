@@ -1,0 +1,38 @@
+status=200
+html lang=en dir=null data-org=brotherslazaroff class=null
+body class=__variable_17ff94 __variable_191abf __variable_78f48a __variable_473389 antialiased
+title=Upcoming Shows & Sets | Brothers Lazaroff
+link href=/apple-icon?1912f0fc5163701c rel=apple-touch-icon sizes=180x180 type=image/png
+link href=/favicon.ico?603d046c9a6fdfbb rel=icon sizes=16x16 type=image/x-icon
+link href=/icon?a401918052754c85 rel=icon sizes=512x512 type=image/png
+link href=/manifest-brotherslazaroff.json rel=manifest
+meta charset=utf-8
+meta content= name=next-size-adjust
+meta content=#0F0F23 media=(prefers-color-scheme: dark) name=theme-color
+meta content=#f0f0f8 media=(prefers-color-scheme: light) name=theme-color
+meta content=1200 name=twitter:image:width
+meta content=1200 property=og:image:width
+meta content=630 name=twitter:image:height
+meta content=630 property=og:image:height
+meta content=Brothers Lazaroff name=apple-mobile-web-app-title
+meta content=Brothers Lazaroff name=twitter:title
+meta content=Brothers Lazaroff property=og:site_name
+meta content=Brothers Lazaroff property=og:title
+meta content=Central Reform Congregation — Digital Sheet Music Library name=twitter:image:alt
+meta content=Central Reform Congregation — Digital Sheet Music Library property=og:image:alt
+meta content=Songs & setlists for the band name=description
+meta content=Songs & setlists for the band name=twitter:description
+meta content=Songs & setlists for the band property=og:description
+meta content=default name=apple-mobile-web-app-status-bar-style
+meta content=https://brotherslazaroff.live/opengraph-image?f2e911431ae8cc06 property=og:image
+meta content=https://brotherslazaroff.live/twitter-image?bc6d9362bc893b7a name=twitter:image
+meta content=image/png name=twitter:image:type
+meta content=image/png property=og:image:type
+meta content=index, follow name=robots
+meta content=summary_large_image name=twitter:card
+meta content=website property=og:type
+meta content=width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover name=viewport
+meta content=yes name=mobile-web-app-capable
+--- body text ---
+Skip to main contentCRC MusicPublic setlistsBrothers LazaroffPublic setsorNext serviceHanukkah Hullabaloo — The Grandel — Dec 12Saturday, Dec 12PerformUpcomingHanukkah Hullabaloo — The Grandel — Dec 12Sat, Dec 12, 202626 songsPast showsLaz Grass @ Seeds' Faire and FareSat, Sep 26, 202611 songsSTL Style — Sept 19Sat, Sep 19, 202621 songsBrothers Lazaroff / Joe's ExperimentTue, Sep 8, 202612 songsAlbum Release Brunch at Jazz STL MATISun, Jul 19, 20260 songs
+--- images ---

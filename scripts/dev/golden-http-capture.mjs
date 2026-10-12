@@ -29,6 +29,9 @@ const TEXT = ["/robots.txt", "/sitemap.xml"]
 
 const slug = (p) => (p === "/" ? "root" : p.replace(/^\//, "").replace(/[^a-z0-9.-]+/gi, "_"))
 
+/** next/font class names are build hashes: an uncached rebuild of the same source renames them. */
+const fontHash = (v) => (v ?? "").replace(/__(variable|className)_[0-9a-f]{6}/g, "__$1_<H>")
+
 function normText(s) {
     return s
         .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?/g, "<DATE>")
@@ -47,8 +50,8 @@ function normHtml(html) {
             .replace(/[?&]v=[0-9a-f]{6,}/gi, "")
     const lines = []
     const htmlEl = d.documentElement
-    lines.push(`html lang=${htmlEl.getAttribute("lang")} dir=${htmlEl.getAttribute("dir")} data-org=${htmlEl.getAttribute("data-org")} class=${htmlEl.getAttribute("class")}`)
-    lines.push(`body class=${d.body?.getAttribute("class")}`)
+    lines.push(`html lang=${htmlEl.getAttribute("lang")} dir=${htmlEl.getAttribute("dir")} data-org=${htmlEl.getAttribute("data-org")} class=${fontHash(htmlEl.getAttribute("class"))}`)
+    lines.push(`body class=${fontHash(d.body?.getAttribute("class"))}`)
     lines.push(`title=${d.title}`)
     const head = []
     for (const el of d.head.querySelectorAll("meta, link")) {
@@ -135,8 +138,10 @@ function diff(a, b) {
         const files = new Set([...(existsSync(da) ? readdirSync(da) : []), ...(existsSync(db) ? readdirSync(db) : [])])
         for (const f of [...files].sort()) {
             // Checked-in goldens may come back with CRLF on Windows checkouts.
-            const fa = existsSync(join(da, f)) ? readFileSync(join(da, f), "utf8").replace(/\r\n/g, "\n") : "<missing>"
-            const fb = existsSync(join(db, f)) ? readFileSync(join(db, f), "utf8").replace(/\r\n/g, "\n") : "<missing>"
+            // Older captures kept raw font hashes, so mask them on both sides.
+            const norm = (t) => fontHash(t.replace(/\r\n/g, "\n"))
+            const fa = existsSync(join(da, f)) ? norm(readFileSync(join(da, f), "utf8")) : "<missing>"
+            const fb = existsSync(join(db, f)) ? norm(readFileSync(join(db, f), "utf8")) : "<missing>"
             if (fa === fb) continue
             bad++
             const la = fa.split("\n"), lb = fb.split("\n")
