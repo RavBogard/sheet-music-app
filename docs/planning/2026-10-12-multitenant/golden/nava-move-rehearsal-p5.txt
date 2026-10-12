@@ -1,0 +1,19 @@
+restore: 101 CRC setlists, nava tab 141 rows, CRC default 200, BL 81; bonded tracks not visible to CRC before: 0
+stamp: {"library_index":1123,"songs":1177,"objects":0,"sharedRows":0}
+PASS  stamp leaves every CRC/BL read identical
+move plan: {"library_index":142,"songs":142,"objects":0,"status:active":141,"status:duplicate":1}
+PASS  moved rows now owned by the new tenant  142 rows
+PASS  every CRC setlist reads back identically
+PASS  every bonded CRC track's chart row stays visible to CRC
+PASS  CRC nava tab lists the same rows  141 → 141
+PASS  CRC default library unchanged  200 → 200
+PASS  Brothers Lazaroff sees none of the moved rows
+PASS  CRC still reads a moved chart  upload-051e8eff-9baf-46b4-a0d7-1884396a5d32
+PASS  BL cannot read a moved chart
+PASS  CRC edit of a moved chart is refused  Yedid Nefesh (Rosenberg) belongs to Nava Tehila (rehearsal); you can use it but not change it.
+PASS  refused edit wrote nothing
+PASS  undo move: nothing skipped  []
+PASS  undo move returns to the stamped state
+PASS  undo stamp: nothing skipped  []
+PASS  undo both returns every document to the start
+PASS  reads after undo match the start
