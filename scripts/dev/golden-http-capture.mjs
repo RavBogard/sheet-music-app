@@ -134,8 +134,9 @@ function diff(a, b) {
         const da = join(a, org), db = join(b, org)
         const files = new Set([...(existsSync(da) ? readdirSync(da) : []), ...(existsSync(db) ? readdirSync(db) : [])])
         for (const f of [...files].sort()) {
-            const fa = existsSync(join(da, f)) ? readFileSync(join(da, f), "utf8") : "<missing>"
-            const fb = existsSync(join(db, f)) ? readFileSync(join(db, f), "utf8") : "<missing>"
+            // Checked-in goldens may come back with CRLF on Windows checkouts.
+            const fa = existsSync(join(da, f)) ? readFileSync(join(da, f), "utf8").replace(/\r\n/g, "\n") : "<missing>"
+            const fb = existsSync(join(db, f)) ? readFileSync(join(db, f), "utf8").replace(/\r\n/g, "\n") : "<missing>"
             if (fa === fb) continue
             bad++
             const la = fa.split("\n"), lb = fb.split("\n")

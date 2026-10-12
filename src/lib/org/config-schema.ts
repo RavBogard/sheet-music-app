@@ -83,6 +83,13 @@ export const LocaleSchema = z.object({
     timeZone: z.string().min(1),
     /** Hebcal parasha schedule. */
     calendar: z.enum(["diaspora", "israel"]).default("diaspora"),
+    /** Local hour (0-23) the daily scheduling reminder goes out. */
+    reminderLocalHour: z.number().int().min(0).max(23).default(5),
+    /**
+     * Pin the reminder to a UTC hour instead (CRC: 10, today's cron time, kept
+     * as-is rather than "fixed" to local 05:00 — CRC unchanged wins).
+     */
+    reminderUtcHour: z.number().int().min(0).max(23).nullable().default(null),
 })
 
 export const EmailSchema = z.object({

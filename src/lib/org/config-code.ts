@@ -120,7 +120,7 @@ const CRC: OrgConfigInput = {
         mode: "shul",
         overrides: { "ai.libraryConventions": CRC_LIBRARY_CONVENTIONS },
     },
-    locale: { language: "en", direction: "ltr", timeZone: "America/Chicago", calendar: "diaspora" },
+    locale: { language: "en", direction: "ltr", timeZone: "America/Chicago", calendar: "diaspora", reminderLocalHour: 5, reminderUtcHour: 10 },
     email: { ...crcEmail, fromAddress: "", replyTo: "" },
     legal: { operatorName: "Central Reform Congregation", contactEmail: "music@centralreform.live", useCrcText: true },
     features: { mixer: true, driveInbox: true, schedulingEmails: true, todayFeed: true, notifyBand: true, perform: true },
@@ -173,7 +173,7 @@ const BL: OrgConfigInput = {
         mode: "band",
         overrides: { ...BL_VOCAB, ...frozenCrcOverrides() } as Record<string, string>,
     },
-    locale: { language: "en", direction: "ltr", timeZone: "America/Chicago", calendar: "diaspora" },
+    locale: { language: "en", direction: "ltr", timeZone: "America/Chicago", calendar: "diaspora", reminderLocalHour: 5, reminderUtcHour: 10 },
     email: { ...blEmail, fromAddress: "", replyTo: "" },
     // Frozen: BL has always been served CRC's legal pages.
     legal: { operatorName: "Central Reform Congregation", contactEmail: "music@centralreform.live", useCrcText: true },
