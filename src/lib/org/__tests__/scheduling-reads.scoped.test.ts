@@ -10,13 +10,14 @@ import { scopeRowsToTenant, scopeUsersToTenant, readsUntaggedRows } from "@/lib/
  */
 
 let db: FakeFirestore
+// Multi-tenant P2: role reads go through @/lib/org/access (spec behaviour fake).
+vi.mock("@/lib/org/access", () => import("@/test-stubs/org-access-fake"))
 vi.mock("@/lib/firebase-admin", () => ({ initAdmin: () => true, getFirestore: () => db }))
 vi.mock("@/lib/api-wrapper", () => ({
     createApiHandler: (fn: (ctx: { req: Request }) => unknown) => (req: Request) => fn({ req }),
 }))
 vi.mock("@/lib/mcp/server-tracks-write", () => ({
     assertEditor: async () => ({ ok: true }),
-    readUserRole: async () => "admin",
 }))
 
 const day = (n: number) => new Date(Date.UTC(2026, 0, 1) + n * 86_400_000)
@@ -98,6 +99,7 @@ describe("MCP roster reads for a third tenant", () => {
             { field: "orgId", op: "==", value: "testshul" },
             { field: "orgId", op: "==", value: "testshul" },
         ])
-        expect(tenantFilters(db, "users")).toEqual([{ field: "orgIds", op: "array-contains", value: "testshul" }])
+        // Multi-tenant P2: the roster comes from listTenantMembers("testshul"),
+        // not a users query — the suggestion above proves the tenant scoping.
     })
 })

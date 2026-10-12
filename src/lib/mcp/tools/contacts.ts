@@ -64,7 +64,7 @@ export async function listContacts(
 ): Promise<ListContactsResult | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const editor = await assertEditor(db, callerUid)
+    const editor = await assertEditor(db, callerUid, org)
     if (!editor.ok) return editor
 
     const snap = await db.collection("contacts").where("orgId", "==", org).get()
@@ -110,7 +110,7 @@ export async function findContact(
 
     initAdmin()
     const db = getFirestore()
-    const editor = await assertEditor(db, callerUid)
+    const editor = await assertEditor(db, callerUid, org)
     if (!editor.ok) return editor
 
     const emailLower = email?.toLowerCase()
@@ -141,7 +141,7 @@ export async function createContact(
 ): Promise<CreateContactResult | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const editor = await assertEditor(db, callerUid)
+    const editor = await assertEditor(db, callerUid, org)
     if (!editor.ok) return editor
 
     const name = typeof args.name === "string" ? args.name.trim() : ""
@@ -205,7 +205,7 @@ export async function deleteContact(
 ): Promise<DeleteContactResult | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const editor = await assertEditor(db, callerUid)
+    const editor = await assertEditor(db, callerUid, org)
     if (!editor.ok) return editor
 
     const id = typeof args.id === "string" ? args.id.trim() : ""

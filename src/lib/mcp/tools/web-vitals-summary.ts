@@ -2,6 +2,9 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { Timestamp } from "firebase-admin/firestore"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { normalizeSurface } from "@/lib/web-vitals"
+import { readTenantRole } from "@/lib/org/access"
+import type { OrgId } from "@/lib/org/types"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 /**
  * Cycle-7-fixes Lane 4 sub-task I (C7I4-005) — admin-only read surface
@@ -66,12 +69,9 @@ const HARD_MAX_DOCS = 100_000
  */
 const DEFAULT_TOP_ROUTES = 25
 
-async function loadCallerRole(uid: string): Promise<string | undefined> {
-    const db = getFirestore()
-    const snap = await db.collection("users").doc(uid).get()
-    if (!snap.exists) return undefined
-    const data = snap.data() as Record<string, unknown> | undefined
-    return typeof data?.role === "string" ? data.role : undefined
+async function loadCallerRole(uid: string, org: OrgId): Promise<string | undefined> {
+    // Multi-tenant P2: the caller's role IN THE TOKEN TENANT (po reads admin).
+    return readTenantRole(getFirestore(), uid, org)
 }
 
 function percentile(values: number[], p: number): number | null {
@@ -87,10 +87,11 @@ function percentile(values: number[], p: number): number | null {
 export async function getWebVitalsSummary(
     callerUid: string,
     args: GetWebVitalsSummaryArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<GetWebVitalsSummaryResult | RichErrorEnvelope> {
     initAdmin()
 
-    const role = await loadCallerRole(callerUid)
+    const role = await loadCallerRole(callerUid, org)
     if (role !== "admin") {
         return richError(
             "forbidden",

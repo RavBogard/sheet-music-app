@@ -120,7 +120,7 @@ export async function searchChartText(
     initAdmin()
     const db = getFirestore()
 
-    const roles = await loadUploader(db, uid)
+    const roles = await loadUploader(db, uid, org)
     if (roles.role !== "admin" && roles.role !== "band_leader") {
         return forbiddenRoleEnvelope({
             callerRole: roles.role ?? null,

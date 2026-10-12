@@ -1,10 +1,8 @@
 import crypto from "crypto"
 import { FieldValue } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import {
-    assertEditor,
-    readUserRole,
-} from "@/lib/mcp/server-tracks-write"
+import { assertEditor } from "@/lib/mcp/server-tracks-write"
+import { readTenantRole } from "@/lib/org/access"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import {
@@ -121,8 +119,9 @@ async function ownerNameFor(db: DB, uid: string): Promise<string> {
 async function rateLimitGate(
     db: DB,
     uid: string,
+    org: OrgId,
 ): Promise<RichErrorEnvelope | null> {
-    const role = await readUserRole(db, uid)
+    const role = await readTenantRole(db, uid, org)
     const bypass = role === "admin" || role === "band_leader"
     const limited = await checkUserRateLimit(uid, "api", { bypass })
     if (limited) return richError("rate_limited", limited.error, undefined, undefined)
@@ -206,10 +205,10 @@ export async function listTemplates(
     initAdmin()
     const db = getFirestore()
 
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
 
-    const limit = await rateLimitGate(db, uid)
+    const limit = await rateLimitGate(db, uid, org)
     if (limit) return limit
 
     // v11-05-01: tenant wall — only this caller's org sees its templates.
@@ -278,9 +277,9 @@ export async function getTemplate(
     }
     initAdmin()
     const db = getFirestore()
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
-    const limit = await rateLimitGate(db, uid)
+    const limit = await rateLimitGate(db, uid, org)
     if (limit) return limit
 
     const snap = await db.collection(COLLECTION).doc(templateId).get()
@@ -378,9 +377,9 @@ export async function createTemplate(
     }
     initAdmin()
     const db = getFirestore()
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
-    const limit = await rateLimitGate(db, uid)
+    const limit = await rateLimitGate(db, uid, org)
     if (limit) return limit
 
     const templateId = crypto.randomUUID()
@@ -554,9 +553,9 @@ export async function updateTemplate(
     }
     initAdmin()
     const db = getFirestore()
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
-    const limit = await rateLimitGate(db, uid)
+    const limit = await rateLimitGate(db, uid, org)
     if (limit) return limit
 
     const ref = db.collection(COLLECTION).doc(args.templateId)
@@ -647,9 +646,9 @@ export async function deleteTemplate(
     }
     initAdmin()
     const db = getFirestore()
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
-    const limit = await rateLimitGate(db, uid)
+    const limit = await rateLimitGate(db, uid, org)
     if (limit) return limit
 
     const ref = db.collection(COLLECTION).doc(templateId)
@@ -723,9 +722,9 @@ export async function createTemplateFromSetlist(
     }
     initAdmin()
     const db = getFirestore()
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
-    const limit = await rateLimitGate(db, uid)
+    const limit = await rateLimitGate(db, uid, org)
     if (limit) return limit
 
     const setlistRef = db.collection("setlists").doc(args.setlistId)
@@ -917,9 +916,9 @@ export async function cloneSetlistFromTemplate(
     }
     initAdmin()
     const db = getFirestore()
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
-    const limit = await rateLimitGate(db, uid)
+    const limit = await rateLimitGate(db, uid, org)
     if (limit) return limit
 
     const templateRef = db.collection(COLLECTION).doc(args.templateId)

@@ -1954,7 +1954,7 @@ export function registerWriteTools(server: McpServer): void {
                     ),
             },
         },
-        async (args, extra) => jsonResult(await flagBond(uidFrom(extra), args)),
+        async (args, extra) => jsonResult(await flagBond(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -1967,7 +1967,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await reviewFlaggedBonds(uidFrom(extra), args)),
+            jsonResult(await reviewFlaggedBonds(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -1997,7 +1997,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await recordBondCorrection(uidFrom(extra), args)),
+            jsonResult(await recordBondCorrection(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2016,7 +2016,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await verifySetlistCharts(uidFrom(extra), args)),
+            jsonResult(await verifySetlistCharts(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2029,7 +2029,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await reviewChartBonds(uidFrom(extra), args)),
+            jsonResult(await reviewChartBonds(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2225,7 +2225,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await backfillSetlistTestFlag(uidFrom(extra), args)),
+            jsonResult(await backfillSetlistTestFlag(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2314,7 +2314,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await salvageChartBytes(uidFrom(extra), args)),
+            jsonResult(await salvageChartBytes(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2338,7 +2338,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await backfillHealMetadata(uidFrom(extra), args)),
+            jsonResult(await backfillHealMetadata(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2362,7 +2362,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await backfillTrackMimetype(uidFrom(extra), args)),
+            jsonResult(await backfillTrackMimetype(uidFrom(extra), args, orgFrom(extra))),
     )
 
     // library-bulk-archive-nonchart (Tier-1 P2 2026-05-27, data-health dh-20260527a
@@ -2412,7 +2412,7 @@ export function registerWriteTools(server: McpServer): void {
                 "Admin-only — read the current AI enrichment config (cycle-3 c2). Returns `{ok: true, autoApplyEnabled: boolean, threshold: number, subscriberActive: boolean, provider: 'gemini'|'anthropic'|null}` where `autoApplyEnabled` is the gate that lets the a3 subscriber auto-apply provider suggestions onto fresh library_index rows (false during the calibration phase forces every row into /manage/library-review) and `threshold` is the confidence floor below which any row enters review_pending regardless of the gate. `subscriberActive` is true when the active provider's API key is present in the environment (today: `GEMINI_API_KEY`). `provider` is the active provider discriminant — `'gemini'` post-a3-gemini-swap, `null` when no key is set; the union keeps `'anthropic'` as a forward-compat slot. Both Firestore-backed values live on the single doc `aiConfig/autoApplyEnabled` — this tool is the read counterpart of set_ai_auto_apply + set_ai_threshold. Defaults surface when the doc is missing or fields are out of range: autoApplyEnabled false, threshold 0.7 (Daniel-ratified per ADDENDUM-1). Read-only — no writes.",
             inputSchema: {},
         },
-        async (_args, extra) => jsonResult(await getAiConfig(uidFrom(extra))),
+        async (_args, extra) => jsonResult(await getAiConfig(uidFrom(extra), orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2441,7 +2441,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await setAiAutoApply(uidFrom(extra), args)),
+            jsonResult(await setAiAutoApply(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2472,7 +2472,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await setAiThreshold(uidFrom(extra), args)),
+            jsonResult(await setAiThreshold(uidFrom(extra), args, orgFrom(extra))),
     )
 
     // ─── Library review queue (cycle-3 a5) ───────────────────────────────
@@ -2510,7 +2510,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await listReviewQueue(uidFrom(extra), args)),
+            jsonResult(await listReviewQueue(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2528,7 +2528,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await getEnrichmentSuggestion(uidFrom(extra), args)),
+            jsonResult(await getEnrichmentSuggestion(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2558,7 +2558,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await acceptEnrichmentTool(uidFrom(extra), args)),
+            jsonResult(await acceptEnrichmentTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2578,7 +2578,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await rejectEnrichmentTool(uidFrom(extra), args)),
+            jsonResult(await rejectEnrichmentTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     // Cowork #4 — shared input schema for edit_enrichment + its edit_library_entry
@@ -2679,7 +2679,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await retryEnrichmentTool(uidFrom(extra), args)),
+            jsonResult(await retryEnrichmentTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2704,7 +2704,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await dismissFailureTool(uidFrom(extra), args)),
+            jsonResult(await dismissFailureTool(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2722,7 +2722,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await testDeleteStorageObject(uidFrom(extra), args)),
+            jsonResult(await testDeleteStorageObject(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -2746,7 +2746,7 @@ export function registerWriteTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await getCorrectionStats(uidFrom(extra), args)),
+            jsonResult(await getCorrectionStats(uidFrom(extra), args, orgFrom(extra))),
     )
 }
 
@@ -3280,7 +3280,7 @@ export function registerChartUploadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await requestChartUploadUrl(uidFrom(extra), args)),
+            jsonResult(await requestChartUploadUrl(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -3360,7 +3360,7 @@ export function registerChartUploadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await beginChunkedChartUpload(uidFrom(extra), args)),
+            jsonResult(await beginChunkedChartUpload(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -3389,7 +3389,7 @@ export function registerChartUploadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await appendChartUploadChunk(uidFrom(extra), args)),
+            jsonResult(await appendChartUploadChunk(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -3444,7 +3444,7 @@ export function registerChartUploadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await scrapeChartFromUrl(uidFrom(extra), args)),
+            jsonResult(await scrapeChartFromUrl(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -3557,7 +3557,7 @@ export function registerChartUploadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await downloadChart(uidFrom(extra), args)),
+            jsonResult(await downloadChart(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -3581,7 +3581,7 @@ export function registerChartUploadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await generateGigPacket(uidFrom(extra), args)),
+            jsonResult(await generateGigPacket(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -3605,7 +3605,7 @@ export function registerChartUploadTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await generateServiceSheet(uidFrom(extra), args)),
+            jsonResult(await generateServiceSheet(uidFrom(extra), args, orgFrom(extra))),
     )
 }
 
@@ -3709,7 +3709,7 @@ export function registerRosterTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await getMusicianProfile(uidFrom(extra), args)),
+            jsonResult(await getMusicianProfile(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -3866,7 +3866,7 @@ export function registerRosterTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await assignMusician(uidFrom(extra), args)),
+            jsonResult(await assignMusician(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -3897,7 +3897,7 @@ export function registerRosterTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await unassignMusician(uidFrom(extra), args)),
+            jsonResult(await unassignMusician(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -3968,7 +3968,7 @@ export function registerObservabilityTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await dumpCollectionSize(uidFrom(extra), args)),
+            jsonResult(await dumpCollectionSize(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -4014,7 +4014,7 @@ export function registerObservabilityTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await getWebVitalsSummary(uidFrom(extra), args)),
+            jsonResult(await getWebVitalsSummary(uidFrom(extra), args, orgFrom(extra))),
     )
 
     server.registerTool(
@@ -4035,6 +4035,6 @@ export function registerObservabilityTools(server: McpServer): void {
             },
         },
         async (args, extra) =>
-            jsonResult(await getAiSpendSummary(uidFrom(extra), args)),
+            jsonResult(await getAiSpendSummary(uidFrom(extra), args, orgFrom(extra))),
     )
 }

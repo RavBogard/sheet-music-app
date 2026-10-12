@@ -7,6 +7,8 @@ import {
     richError,
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
+import { getTenantAccess } from "@/lib/org/access"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * Admin-SDK helpers shared by the MCP monitor tools.
@@ -31,12 +33,20 @@ export interface MonitorUser {
     soundEngineer: boolean
 }
 
+/**
+ * Multi-tenant P2: the mixer belongs to the bridge tenant (CRC's X32), so the
+ * caller's mixer rights are read from their membership THERE — never from the
+ * MCP token's tenant. A CRC admin (e.g. David, admin of crc and BL) keeps the
+ * mixer from a BL token exactly as today; a BL-only member gets none. Phase 6
+ * moves the bridge tenant into tenant config.
+ */
+export const BRIDGE_ORG: OrgId = "crc"
+
 export async function loadMonitorUser(db: DB, uid: string): Promise<MonitorUser> {
-    const snap = await db.collection("users").doc(uid).get()
-    const d = snap.exists ? (snap.data() as Record<string, unknown>) : {}
+    const access = await getTenantAccess(uid, BRIDGE_ORG, { db })
     return {
-        role: typeof d.role === "string" ? d.role : undefined,
-        soundEngineer: d.soundEngineer === true,
+        role: access.effectiveRole ?? undefined,
+        soundEngineer: access.soundEngineer === true,
     }
 }
 

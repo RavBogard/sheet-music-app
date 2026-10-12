@@ -1,5 +1,8 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
+import { readTenantRole } from "@/lib/org/access"
+import type { OrgId } from "@/lib/org/types"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 /**
  * PGR-04 (2026-05-21) — admin-only read surface over the `aiSpend` sink
@@ -60,12 +63,9 @@ function round6(n: number): number {
     return Math.round(n * 1_000_000) / 1_000_000
 }
 
-async function loadCallerRole(uid: string): Promise<string | undefined> {
-    const db = getFirestore()
-    const snap = await db.collection("users").doc(uid).get()
-    if (!snap.exists) return undefined
-    const data = snap.data() as Record<string, unknown> | undefined
-    return typeof data?.role === "string" ? data.role : undefined
+async function loadCallerRole(uid: string, org: OrgId): Promise<string | undefined> {
+    // Multi-tenant P2: the caller's role IN THE TOKEN TENANT (po reads admin).
+    return readTenantRole(getFirestore(), uid, org)
 }
 
 /**
@@ -124,10 +124,11 @@ export function rollupSpend(
 export async function getAiSpendSummary(
     callerUid: string,
     args: GetAiSpendSummaryArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<GetAiSpendSummaryResult | RichErrorEnvelope> {
     initAdmin()
 
-    const role = await loadCallerRole(callerUid)
+    const role = await loadCallerRole(callerUid, org)
     if (role !== "admin") {
         return richError(
             "forbidden",

@@ -267,7 +267,7 @@ export async function openChartDropzone(
 ): Promise<OpenDropzoneResult | RichErrorEnvelope> {
     const store = db()
 
-    const roles = await loadUploader(store, uid)
+    const roles = await loadUploader(store, uid, org)
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const curated = curatedCatalogGate(roles, args.collection)
@@ -334,7 +334,7 @@ export async function requestBatchUploadUrls(
         )
 
     const store = db()
-    const roles = await loadUploader(store, uid)
+    const roles = await loadUploader(store, uid, org)
 
     const batch = await loadOwned(store, args.batchId, uid, org, roles)
     if (isRichError(batch)) return batch
@@ -460,7 +460,7 @@ export async function commitUploadBatch(
     args: { batchId: string },
 ): Promise<CommitBatchResult | RichErrorEnvelope> {
     const store = db()
-    const roles = await loadUploader(store, uid)
+    const roles = await loadUploader(store, uid, org)
 
     const batch = await loadOwned(store, args.batchId, uid, org, roles, {
         allowAdmin: true,
@@ -694,7 +694,7 @@ export async function appendBatchItemChunk(
         )
 
     const store = db()
-    const roles = await loadUploader(store, uid)
+    const roles = await loadUploader(store, uid, org)
 
     const batch = await loadOwned(store, batchId, uid, org, roles)
     if (isRichError(batch)) return batch
@@ -794,7 +794,7 @@ export async function getUploadBatch(
     args: GetUploadBatchArgs,
 ): Promise<GetBatchResult | RichErrorEnvelope> {
     const store = db()
-    const roles = await loadUploader(store, uid)
+    const roles = await loadUploader(store, uid, org)
 
     const batch = await loadOwned(store, args.batchId, uid, org, roles, {
         allowAdmin: true,
@@ -874,7 +874,7 @@ export async function resolveUploadItem(
         )
 
     const store = db()
-    const roles = await loadUploader(store, uid)
+    const roles = await loadUploader(store, uid, org)
 
     const batch = await loadOwned(store, batchId, uid, org, roles, {
         allowAdmin: true,
@@ -982,7 +982,7 @@ export async function listParkedUploads(
     args: { limit?: number },
 ): Promise<ParkedListResult | RichErrorEnvelope> {
     const store = db()
-    const roles = await loadUploader(store, uid)
+    const roles = await loadUploader(store, uid, org)
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const requested = Number(args?.limit)
@@ -1028,7 +1028,7 @@ export async function importDriveFolder(
 
     const store = db()
 
-    const roles = await loadUploader(store, uid)
+    const roles = await loadUploader(store, uid, org)
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const curated = curatedCatalogGate(roles, args.collection)

@@ -152,7 +152,7 @@ export async function uploadChart(
     initAdmin()
     const db = getFirestore()
 
-    const roles = await loadUploader(db, uid)
+    const roles = await loadUploader(db, uid, org)
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const curatedDenial = curatedCatalogGate(roles, args.collection)
@@ -199,6 +199,7 @@ export async function uploadChart(
         deriveFileName(args.title, args.mimeType)
 
     const result = await processChartUpload({
+        orgId: org,
         buffer,
         originalFileName: fileName,
         mimeType: args.mimeType,
@@ -517,7 +518,7 @@ export async function importChartFromDrive(
     initAdmin()
     const db = getFirestore()
 
-    const roles = await loadUploader(db, uid)
+    const roles = await loadUploader(db, uid, org)
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const curatedDenial = curatedCatalogGate(roles, args.collection)
@@ -652,6 +653,7 @@ export async function importChartFromDrive(
     const buffer = fetched.buffer
 
     const result = await processChartUpload({
+        orgId: org,
         buffer,
         originalFileName,
         mimeType,
@@ -726,7 +728,7 @@ export async function deleteChart(
     initAdmin()
     const db = getFirestore()
 
-    const roles = await loadUploader(db, uid)
+    const roles = await loadUploader(db, uid, org)
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const limited = await checkUserRateLimit(uid, "upload", {
@@ -999,6 +1001,7 @@ export interface ScrapeChartFromUrlArgs {
 export async function scrapeChartFromUrl(
     uid: string,
     args: ScrapeChartFromUrlArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<
     | { ok: true; title: string; artist: string; content: string }
     | RichErrorEnvelope
@@ -1012,7 +1015,7 @@ export async function scrapeChartFromUrl(
 
     initAdmin()
     const db = getFirestore()
-    const roles = await loadUploader(db, uid)
+    const roles = await loadUploader(db, uid, org)
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     // Scrape uses Gemini, so meter it under the 'ai' bucket to bound spend.
@@ -1078,7 +1081,7 @@ export async function saveScrapedChart(
 
     initAdmin()
     const db = getFirestore()
-    const roles = await loadUploader(db, uid)
+    const roles = await loadUploader(db, uid, org)
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const curatedDenial = curatedCatalogGate(roles, args.collection)
@@ -1096,6 +1099,7 @@ export async function saveScrapedChart(
         args.title.trim().replace(/[^a-z0-9]+/gi, "_").toLowerCase() + ".txt"
 
     const result = await processChartUpload({
+        orgId: org,
         buffer,
         originalFileName: fileName,
         mimeType: "text/plain",

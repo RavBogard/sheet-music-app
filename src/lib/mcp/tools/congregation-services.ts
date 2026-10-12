@@ -1,7 +1,7 @@
 import "server-only"
 
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { readUserRole } from "@/lib/mcp/server-tracks-write"
+import { readTenantRole } from "@/lib/org/access"
 import {
     forbiddenRoleEnvelope,
     richError,
@@ -74,8 +74,9 @@ export interface UpdateCongregationServicesResult {
 async function assertAdmin(
     db: DB,
     uid: string,
+    org: OrgId,
 ): Promise<{ ok: true } | RichErrorEnvelope> {
-    const role = await readUserRole(db, uid)
+    const role = await readTenantRole(db, uid, org)
     if (role === "admin") return { ok: true }
     return forbiddenRoleEnvelope({
         callerRole: role ?? null,
@@ -219,7 +220,7 @@ export async function updateCongregationServices(
     initAdmin()
     const db = getFirestore()
 
-    const admin = await assertAdmin(db, uid)
+    const admin = await assertAdmin(db, uid, org)
     if (!admin.ok) return admin
 
     if (args.services === undefined && args.stream === undefined) {

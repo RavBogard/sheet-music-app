@@ -5,6 +5,7 @@ import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import type { DedupeRunRecord, DedupeRunRow } from "./library"
+import { readTenantRole } from "@/lib/org/access"
 
 /**
  * W3 of the content-hash order — `undo_dedupe_group` (R-0903-live-cw-2 §5).
@@ -111,10 +112,8 @@ export async function undoDedupeGroup(
         // Admin gate, mirroring the whole admin-hygiene family. This tool
         // writes `library_index` and `songs`, and un-hiding a row is as much
         // a mutation as hiding one.
-        const userSnap = await db.collection("users").doc(uid).get()
-        const role = userSnap.exists
-            ? (userSnap.data()?.role as string | undefined)
-            : undefined
+        // Multi-tenant P2: the role IN THE TOKEN TENANT.
+        const role = await readTenantRole(db, uid, org)
         if (role !== "admin") {
             return richError(
                 "forbidden_role",
@@ -483,10 +482,8 @@ export async function seedLegacyDedupeRun(
         initAdmin()
         const db = getFirestore()
 
-        const userSnap = await db.collection("users").doc(uid).get()
-        const role = userSnap.exists
-            ? (userSnap.data()?.role as string | undefined)
-            : undefined
+        // Multi-tenant P2: the role IN THE TOKEN TENANT.
+        const role = await readTenantRole(db, uid, org)
         if (role !== "admin") {
             return richError(
                 "forbidden_role",

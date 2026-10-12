@@ -13,6 +13,9 @@ import { getRegistryEntry } from "@/lib/books/registry"
 import { isPrintRowMode, type PrintRowMode } from "@/lib/print/row-mode"
 import { rowOrg } from "@/lib/org/membership"
 import { orgString } from "@/lib/org/strings"
+import { readTenantRole } from "@/lib/org/access"
+import type { OrgId } from "@/lib/org/types"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 /**
  * MCP chart-download tool — return one chart's bytes (base64) + mimeType so
@@ -63,9 +66,10 @@ export interface DownloadChartResult {
 export async function readLeaderRole(
     db: FirebaseFirestore.Firestore,
     uid: string,
+    // Multi-tenant P2: the role in the token tenant.
+    org: OrgId,
 ): Promise<"admin" | "band_leader" | "other"> {
-    const snap = await db.collection("users").doc(uid).get()
-    const role = snap.exists ? (snap.data()?.role as string | undefined) : undefined
+    const role = await readTenantRole(db, uid, org)
     if (role === "admin") return "admin"
     if (role === "band_leader") return "band_leader"
     return "other"
@@ -74,6 +78,7 @@ export async function readLeaderRole(
 export async function downloadChart(
     uid: string,
     args: DownloadChartArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<DownloadChartResult | RichErrorEnvelope> {
     if (!args.fileId?.trim())
         return richError(
@@ -85,7 +90,7 @@ export async function downloadChart(
     initAdmin()
     const db = getFirestore()
 
-    const role = await readLeaderRole(db, uid)
+    const role = await readLeaderRole(db, uid, org)
     const bypass = role === "admin" || role === "band_leader"
 
     const limited = await checkUserRateLimit(uid, "api", { bypass })
@@ -295,6 +300,7 @@ export interface GenerateGigPacketResult {
 export async function generateGigPacket(
     uid: string,
     args: GenerateGigPacketArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<GenerateGigPacketResult | RichErrorEnvelope> {
     if (!args.setlistId?.trim()) {
         return richError(
@@ -307,7 +313,7 @@ export async function generateGigPacket(
     initAdmin()
     const db = getFirestore()
 
-    const role = await readLeaderRole(db, uid)
+    const role = await readLeaderRole(db, uid, org)
     const bypass = role === "admin" || role === "band_leader"
 
     const limited = await checkUserRateLimit(uid, "api", { bypass })

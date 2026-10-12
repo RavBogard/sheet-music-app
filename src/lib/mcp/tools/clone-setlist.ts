@@ -1,10 +1,8 @@
 import crypto from "crypto"
 import { FieldValue } from "firebase-admin/firestore"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import {
-    assertEditor,
-    readUserRole,
-} from "@/lib/mcp/server-tracks-write"
+import { assertEditor } from "@/lib/mcp/server-tracks-write"
+import { readTenantRole } from "@/lib/org/access"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
 import {
@@ -173,13 +171,13 @@ export async function cloneSetlist(
     const db = getFirestore()
 
     // Role gate — admin OR band_leader. Mirrors create_setlist.
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
 
     // Trusted-leader rate-limit bypass per
     // [[feedback_admin_rate_limit_bypass]]. assertEditor already proved the
-    // role; readUserRole is the cheap canonical fetch for the bypass flag.
-    const role = await readUserRole(db, uid)
+    // role; readTenantRole is the cheap canonical fetch for the bypass flag.
+    const role = await readTenantRole(db, uid, org)
     const bypass = role === "admin" || role === "band_leader"
     const limited = await checkUserRateLimit(uid, "api", { bypass })
     if (limited)

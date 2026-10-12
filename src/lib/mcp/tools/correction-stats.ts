@@ -6,7 +6,9 @@ import {
     readCorrectionStats,
     type CorrectionStats,
 } from "@/lib/library/correction-signals"
-import { readUserRole } from "@/lib/mcp/server-tracks-write"
+import { readTenantRole } from "@/lib/org/access"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import {
     forbiddenRoleEnvelope,
     richError,
@@ -57,10 +59,11 @@ export interface GetCorrectionStatsResult extends CorrectionStats {
 
 async function assertAdmin(
     uid: string,
+    org: OrgId,
 ): Promise<{ ok: true } | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const role = await readUserRole(db, uid)
+    const role = await readTenantRole(db, uid, org)
     if (role === "admin") return { ok: true }
     return forbiddenRoleEnvelope({
         callerRole: role ?? null,
@@ -85,8 +88,9 @@ function validateIso(label: string, value: string): RichErrorEnvelope | null {
 export async function getCorrectionStats(
     uid: string,
     args: GetCorrectionStatsArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<GetCorrectionStatsResult | RichErrorEnvelope> {
-    const gate = await assertAdmin(uid)
+    const gate = await assertAdmin(uid, org)
     if (!gate.ok) return gate
 
     if (args.since !== undefined) {

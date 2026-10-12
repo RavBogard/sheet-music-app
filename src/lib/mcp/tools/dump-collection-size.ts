@@ -1,6 +1,9 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { Timestamp } from "firebase-admin/firestore"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
+import { readTenantRole } from "@/lib/org/access"
+import type { OrgId } from "@/lib/org/types"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 /**
  * Admin-only Firestore collection sizing probe.
@@ -53,12 +56,9 @@ const HARD_MAX_DOCS = 200_000
  * surface area (any collection name) is broad and the estimate touches every
  * document.
  */
-async function loadCallerRole(uid: string): Promise<string | undefined> {
-    const db = getFirestore()
-    const snap = await db.collection("users").doc(uid).get()
-    if (!snap.exists) return undefined
-    const data = snap.data() as Record<string, unknown> | undefined
-    return typeof data?.role === "string" ? data.role : undefined
+async function loadCallerRole(uid: string, org: OrgId): Promise<string | undefined> {
+    // Multi-tenant P2: the caller's role IN THE TOKEN TENANT (po reads admin).
+    return readTenantRole(getFirestore(), uid, org)
 }
 
 function approxBytes(docId: string, data: Record<string, unknown>): number {
@@ -79,10 +79,11 @@ function approxBytes(docId: string, data: Record<string, unknown>): number {
 export async function dumpCollectionSize(
     callerUid: string,
     args: DumpCollectionSizeArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<DumpCollectionSizeResult | RichErrorEnvelope> {
     initAdmin()
 
-    const role = await loadCallerRole(callerUid)
+    const role = await loadCallerRole(callerUid, org)
     if (role !== "admin") {
         return richError(
             "forbidden",

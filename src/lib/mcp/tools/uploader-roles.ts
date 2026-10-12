@@ -4,6 +4,8 @@ import {
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
 import type { LibraryCollection } from "@/lib/library-upload"
+import { getTenantAccess } from "@/lib/org/access"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * Shared uploader role-gate helpers for the MCP chart/curation surface.
@@ -21,15 +23,24 @@ export interface UploaderRoles {
     email: string | undefined
 }
 
+/**
+ * Multi-tenant P2: the caller's role IN THE TOKEN TENANT (`org` =
+ * orgFrom(extra)). `canUpload` stays a global users-doc flag in P2; `email`
+ * is the profile email. Platform owner reads as admin (effectiveRole).
+ */
 export async function loadUploader(
     db: FirebaseFirestore.Firestore,
     uid: string,
+    org: OrgId,
 ): Promise<UploaderRoles> {
-    const snap = await db.collection("users").doc(uid).get()
+    const [access, snap] = await Promise.all([
+        getTenantAccess(uid, org, { db }),
+        db.collection("users").doc(uid).get(),
+    ])
     const d = snap.exists ? (snap.data() as Record<string, unknown>) : {}
     return {
-        role: typeof d.role === "string" ? d.role : undefined,
-        canUpload: d.canUpload === true,
+        role: access.effectiveRole ?? undefined,
+        canUpload: access.canUpload === true,
         email: typeof d.email === "string" ? d.email : undefined,
     }
 }

@@ -1,7 +1,9 @@
 import "server-only"
 
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { readUserRole } from "@/lib/mcp/server-tracks-write"
+import { readTenantRole } from "@/lib/org/access"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import {
     forbiddenRoleEnvelope,
     richError,
@@ -83,6 +85,7 @@ export type BackfillHealMetadataResult =
 export async function backfillHealMetadata(
     uid: string,
     args: BackfillHealMetadataArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<BackfillHealMetadataResult> {
     const dryRun = args?.dryRun !== false
     const fileId = args?.fileId
@@ -100,7 +103,7 @@ export async function backfillHealMetadata(
         initAdmin()
         const db = getFirestore()
 
-        const role = await readUserRole(db, uid)
+        const role = await readTenantRole(db, uid, org)
         if (role !== "admin") {
             return forbiddenRoleEnvelope({
                 callerRole: role ?? null,

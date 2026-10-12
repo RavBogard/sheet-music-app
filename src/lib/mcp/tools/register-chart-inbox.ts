@@ -145,7 +145,7 @@ export function registerChartInboxTools(server: McpServer): void {
             if (!folderId) return jsonResult(notConfigured(org))
 
             const store = db()
-            const roles = await loadUploader(store, uid)
+            const roles = await loadUploader(store, uid, org)
             if (!isUploadAllowed(roles)) return jsonResult(uploadForbidden(roles))
             const limited = await checkUserRateLimit(uid, "upload", {
                 bypass: isTrustedLeader(roles),

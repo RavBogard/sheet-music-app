@@ -226,7 +226,7 @@ export async function listServicePersonnel(
 
     initAdmin()
     const db = getFirestore()
-    const gate = await assertEditor(db, callerUid)
+    const gate = await assertEditor(db, callerUid, org)
     if (!gate.ok) return gate
 
     // 1. Resolve matched setlists.
