@@ -2,7 +2,8 @@ import "server-only"
 import type { Firestore } from "firebase-admin/firestore"
 import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
 import type { OrgId } from "@/lib/org/types"
-import { rowOrgIds } from "@/lib/org/membership"
+import { planLegacyMemberships, type MembershipOverrides } from "@/lib/org/legacy-membership-map"
+import { readOwners } from "@/lib/org/claims"
 import { capRoleToClaims } from "@/lib/roles"
 import {
     asTenantRole,
@@ -38,6 +39,8 @@ export interface TenantAccess {
     canUpload: boolean
     po: boolean
     source: "membership" | "legacy" | "none"
+    /** Added P2: users/{uid}.membershipsMigratedAt is set (no legacy fallback). */
+    migrated?: boolean
 }
 
 function adminDb(db?: Firestore): Firestore {
@@ -103,6 +106,7 @@ export async function getTenantAccess(
         canUpload,
         po,
         source,
+        migrated: !!user?.membershipsMigratedAt,
     }
 }
 
@@ -142,9 +146,12 @@ export function __resetPlatformOwnerMemo(): void {
 
 /**
  * Members of a tenant with their users/{uid} profile. Includes not-yet-migrated
- * people synthesised from the legacy users doc (role in each tenant of the doc's
- * orgIds, missing → crc — exactly what the rosters filtered on before phase 2),
- * marked `addedBy: "legacy"`. `roles` filters by membership role.
+ * people (users docs without membershipsMigratedAt), synthesised with the SAME
+ * rule the migration applies (planLegacyMemberships, includePending): approved
+ * people by their CLAIM orgIds (missing → crc), a legacy admin is admin of crc
+ * only unless a platform/membershipMigration override applies, never-approved
+ * accounts pending in doc ∪ claim orgIds. Those rows carry `addedBy: "legacy"`.
+ * `roles` filters by membership role.
  */
 export async function listTenantMembers(
     orgId: OrgId,
@@ -167,22 +174,59 @@ export async function listTenantMembers(
         if (wanted && !wanted.has(m.role)) continue
         out.push({ ...m, profile: profiles.get(m.uid) ?? null })
     }
-    for (const [uid, p] of profiles) {
-        if (seen.has(uid) || p.membershipsMigratedAt) continue
-        const role = asTenantRole(p.role)
-        if (!role || !rowOrgIds(p.orgIds).includes(orgId)) continue
-        if (wanted && !wanted.has(role)) continue
+
+    const unmigrated = [...profiles].filter(([uid, p]) => !seen.has(uid) && !p.membershipsMigratedAt)
+    if (unmigrated.length === 0) return out
+    const [claimsByUid, overrides, owners] = await Promise.all([
+        legacyClaimsOf(unmigrated.map(([uid]) => uid)),
+        readMigrationOverridesSafe(db),
+        readOwners(db).catch(() => [] as string[]),
+    ])
+    for (const [uid, p] of unmigrated) {
+        const plan = planLegacyMemberships({
+            uid,
+            claims: claimsByUid.get(uid) ?? null,
+            doc: p,
+            overrides,
+            owners,
+            includePending: true,
+        })
+        const pm = plan.memberships.find((m) => m.orgId === orgId)
+        if (!pm) continue
+        if (wanted && !wanted.has(pm.role)) continue
         out.push({
             uid,
             tenantId: orgId,
-            role,
-            soundEngineer: p.soundEngineer === true,
+            role: pm.role,
+            soundEngineer: pm.soundEngineer,
             addedBy: "legacy",
             addedAt: (p.createdAt as Membership["addedAt"]) ?? new Date(0),
             profile: p,
         })
     }
     return out
+}
+
+/** Auth custom claims for many uids (getUsers, 100 per call); missing → absent. */
+async function legacyClaimsOf(uids: string[]): Promise<Map<string, Record<string, unknown>>> {
+    const out = new Map<string, Record<string, unknown>>()
+    initAdmin()
+    const auth = getAuth()
+    for (let i = 0; i < uids.length; i += 100) {
+        const res = await auth.getUsers(uids.slice(i, i + 100).map((uid) => ({ uid })))
+        for (const u of res.users) out.set(u.uid, (u.customClaims ?? {}) as Record<string, unknown>)
+    }
+    return out
+}
+
+async function readMigrationOverridesSafe(db: Firestore): Promise<MembershipOverrides> {
+    try {
+        const snap = await db.collection("platform").doc("membershipMigration").get()
+        const ov = snap.exists ? snap.data()?.overrides : null
+        return ov && typeof ov === "object" ? (ov as MembershipOverrides) : {}
+    } catch {
+        return {}
+    }
 }
 
 /**

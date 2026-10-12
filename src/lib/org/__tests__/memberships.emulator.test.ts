@@ -158,17 +158,24 @@ describe("memberships (emulator)", () => {
         expect((await db().collection("memberships").doc("crc__t").get()).data()?.addedBy).toBe("test-account")
     })
 
-    it("listTenantMembers: memberships plus unmigrated legacy users, filtered by tenant and role", async () => {
+    it("listTenantMembers: memberships plus unmigrated people by the ruling-5 legacy map", async () => {
         await user("m1", { role: "musician", orgIds: ["crc", "brotherslazaroff"] }, { role: "musician", displayName: "M1" })
-        await user("legacyBL", { role: "band_leader" }, { role: "band_leader", orgIds: ["brotherslazaroff"] })
-        await user("legacyCRC", { role: "member" }, { role: "member" })
+        await user("legacyBL", { role: "band_leader", orgIds: ["brotherslazaroff"] }, { role: "band_leader" })
+        await user("docOnlyBL", { role: "member" }, { role: "member", orgIds: ["brotherslazaroff"] })
+        await user("oldAdmin", { role: "admin", orgIds: ["crc", "brotherslazaroff"] }, { role: "admin" })
+        await user(DAVID, { role: "admin", orgIds: ["crc", "brotherslazaroff"] }, { role: "admin" })
+        await user("signup", null, { role: "pending", orgIds: ["crc", "brotherslazaroff"] })
         await ensureMembershipsMigrated("m1")
         const bl = await listTenantMembers("brotherslazaroff")
         expect(bl.map((m) => `${m.uid}:${m.role}:${m.addedBy}`).sort()).toEqual([
+            `${DAVID}:admin:legacy`,
             "legacyBL:band_leader:legacy",
             "m1:musician:migration",
+            "signup:pending:legacy",
         ])
         expect(bl.find((m) => m.uid === "m1")?.profile?.displayName).toBe("M1")
+        const crcAdmins = await listTenantMembers("crc", { roles: ["admin"] })
+        expect(crcAdmins.map((m) => m.uid).sort()).toEqual([DAVID, "oldAdmin"].sort())
         const crcMus = await listTenantMembers("crc", { roles: ["musician"] })
         expect(crcMus.map((m) => m.uid)).toEqual(["m1"])
     })
