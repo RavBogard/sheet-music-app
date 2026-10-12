@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger"
 import { createApiHandler, apiError } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { httpError } from "@/lib/http/error-envelope"
-import { isKnownOrg } from "@/lib/org/registry"
+import { orgExists } from "@/lib/org/org-exists"
 import { getTenantAccess, hasTenantRole, listTenantMembers, type TenantAccess } from "@/lib/org/access"
 import { membershipId } from "@/lib/org/membership-types"
 import { ensureMembershipsMigrated, setMembership } from "@/lib/org/memberships-write"
@@ -39,7 +39,7 @@ export const POST = createApiHandler(
 
         const { targetUserId, newRole, orgIds } = ctx.body!
         const tenant = ctx.body!.tenant ?? ctx.auth.orgId
-        if (!isKnownOrg(tenant)) {
+        if (!(await orgExists(tenant))) {
             return apiError(`Unknown tenant '${tenant}'`, 400, "UNKNOWN_TENANT")
         }
 

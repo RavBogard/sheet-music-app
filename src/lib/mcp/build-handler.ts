@@ -3,6 +3,7 @@ import path from "node:path"
 import { createMcpHandler, withMcpAuth } from "mcp-handler"
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js"
 import { verifyBearer } from "@/lib/mcp/auth"
+import { mcpPublicOrigin } from "@/lib/mcp/public-origin"
 import {
     registerReadTools,
     registerWriteTools,
@@ -151,7 +152,11 @@ export function buildMcpHandler(surface: Surface, basePath: string) {
         { basePath, disableSse: true, verboseLogs: false },
     )
 
-    const authedHandler = withMcpAuth(baseHandler, verifyToken, { required: true })
+    // Multi-tenant phase 3: the 401 challenge's `resource_metadata` names the
+    // request tenant's address (mcpPublicOrigin), the same origin the
+    // .well-known metadata routes use.
+    const authedHandler = async (req: Request): Promise<Response> =>
+        withMcpAuth(baseHandler, verifyToken, { required: true, resourceUrl: await mcpPublicOrigin(req) })(req)
 
     // `setlist_reader` gate (read-only, long-lived `crl_read_` credentials).
     // Wrapped INSIDE the Zod remap so a refusal we emit here still flows

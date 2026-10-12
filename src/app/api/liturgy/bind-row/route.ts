@@ -4,7 +4,7 @@ import { createApiHandler, apiError } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { rowOrg } from "@/lib/mcp/org-context"
-import { resolveOrgIdByDomain } from "@/lib/org/registry"
+import { coerceOrgId } from "@/lib/org/registry"
 import { autoBindLiturgyRef } from "@/lib/liturgy/bind-on-type"
 import { logger } from "@/lib/logger"
 
@@ -45,7 +45,7 @@ export const POST = createApiHandler(
             return apiError("Server not ready", 500, "FIREBASE_NOT_INITIALIZED")
         }
         const db = getFirestore()
-        const org = resolveOrgIdByDomain(ctx.req.headers.get("host"))
+        const org = coerceOrgId(ctx.req.headers.get("x-org-id"))
         const { setlistId, trackId } = ctx.body!
 
         const setlistSnap = await db.collection("setlists").doc(setlistId).get()

@@ -15,7 +15,7 @@ import { createApiHandler, apiError } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { httpError } from "@/lib/http/error-envelope"
-import { isKnownOrg } from "@/lib/org/registry"
+import { orgExists } from "@/lib/org/org-exists"
 import { getTenantAccess, hasTenantRole } from "@/lib/org/access"
 import { membershipId, asTenantRole } from "@/lib/org/membership-types"
 import { ensureMembershipsMigrated, setMembership } from "@/lib/org/memberships-write"
@@ -34,7 +34,7 @@ export const POST = createApiHandler(
 
         const { targetUserId, soundEngineer } = ctx.body!
         const tenant = ctx.body!.tenant ?? ctx.auth.orgId
-        if (!isKnownOrg(tenant)) return apiError(`Unknown tenant '${tenant}'`, 400, "UNKNOWN_TENANT")
+        if (!(await orgExists(tenant))) return apiError(`Unknown tenant '${tenant}'`, 400, "UNKNOWN_TENANT")
 
         if (!initAdmin()) {
             return NextResponse.json(

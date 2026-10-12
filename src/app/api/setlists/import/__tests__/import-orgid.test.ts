@@ -120,14 +120,15 @@ describe("W7 · /api/setlists/import/commit-document stamps the host tenant", ()
         for (const t of tracks) expect(t.data.orgId).toBe("brotherslazaroff")
     })
 
-    it("unknown host value → coerceOrgId → 'crc'", async () => {
+    // Multi-tenant phase 3: a well-formed id passes coerceOrgId; malformed → crc.
+    it("malformed host value → coerceOrgId → 'crc'", async () => {
         const body = {
             name: "X",
             eventDate: "2026-10-16",
             sections: [],
             tracks: [{ title: "Song A", order: 0, missingChart: true, recordingCandidates: [] }],
         }
-        await call(COMMIT, ctx("not-a-tenant", body))
+        await call(COMMIT, ctx("Not A Tenant!", body))
         const { setlists, tracks } = setlistAndTracks()
         expect(setlists[0].data.orgId).toBe("crc")
         expect(tracks[0].data.orgId).toBe("crc")

@@ -119,6 +119,10 @@ export const env = createEnv({
         BRIDGE_SA_CLIENT_EMAIL: z.string().optional(),
         BRIDGE_SA_PRIVATE_KEY: z.string().optional(),
         BRIDGE_SA_PRIVATE_KEY_ID: z.string().optional(),
+        /** Multi-tenant phase 3: Vercel API access for tenant addresses (src/lib/platform/vercel.ts). Unset: provisioning refuses with config_missing. */
+        VERCEL_API_TOKEN: z.string().optional(),
+        VERCEL_PROJECT_ID: z.string().optional(),
+        VERCEL_TEAM_ID: z.string().optional(),
     },
     client: {
         NEXT_PUBLIC_FIREBASE_API_KEY: z.string().min(1, "Firebase API key is required"),
@@ -193,6 +197,9 @@ export const env = createEnv({
         BRIDGE_SA_CLIENT_EMAIL: process.env.BRIDGE_SA_CLIENT_EMAIL,
         BRIDGE_SA_PRIVATE_KEY: process.env.BRIDGE_SA_PRIVATE_KEY,
         BRIDGE_SA_PRIVATE_KEY_ID: process.env.BRIDGE_SA_PRIVATE_KEY_ID,
+        VERCEL_API_TOKEN: process.env.VERCEL_API_TOKEN,
+        VERCEL_PROJECT_ID: process.env.VERCEL_PROJECT_ID,
+        VERCEL_TEAM_ID: process.env.VERCEL_TEAM_ID,
         NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
         NEXT_PUBLIC_FIREBASE_VAPID_KEY: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
         NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,

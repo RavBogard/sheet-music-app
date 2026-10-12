@@ -98,9 +98,11 @@ describe("v11.7-06-01 · /api/recordings/upload · org-stamp from host", () => {
         expect(mockSet.mock.calls[0][0]).toMatchObject({ orgId: "crc" })
     })
 
-    // AC-1: unknown/garbage x-org-id → crc fallback (coerceOrgId guards isKnownOrg)
-    it("falls back to crc for an unknown org value", async () => {
-        const res = await POST(makeUploadReq("not-a-real-org"))
+    // AC-1: garbage x-org-id → crc fallback. Multi-tenant phase 3: coerceOrgId
+    // accepts any well-formed id (the proxy is the only setter), so the
+    // fallback case is now a malformed value.
+    it("falls back to crc for a malformed org value", async () => {
+        const res = await POST(makeUploadReq("Not A Real Org!"))
         expect(res.status).toBe(201)
         expect(mockSet.mock.calls[0][0]).toMatchObject({ orgId: "crc" })
     })
