@@ -3,113 +3,91 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if user is signed in
-    function isSignedIn() {
-      return request.auth != null;
+    // ── Identity (multi-tenant P2) ─────────────────────────────────────────
+    // Claims: po (platform owner), m {tenant: ad|bl|mu|me|pe}, se [tenant].
+    // Transition: a token without `m` is read through the legacy claims
+    // (role + orgIds, missing orgIds = ['crc']). Legacy admin is a tenant admin
+    // of its orgIds tenants, never a bypass. Only po bypasses tenant checks.
+    function signedIn() { return request.auth != null; }
+    function po() { return signedIn() && request.auth.token.get('po', false) == true; }
+    function hasM() { return signedIn() && request.auth.token.get('m', null) is map; }
+    function legacyOrgs() {
+      let o = request.auth.token.get('orgIds', []);
+      return (o is list && o.size() > 0) ? o : ['crc'];
+    }
+    function legacyCode(t) {
+      let r = request.auth.token.get('role', '');
+      return !(t in legacyOrgs()) ? ''
+        : r == 'admin' ? 'ad'
+        : r == 'band_leader' ? 'bl'
+        : r == 'musician' ? 'mu'
+        : r == 'member' ? 'me'
+        : r == 'pending' ? 'pe'
+        : '';
+    }
+    function code(t) {
+      return !signedIn() || !(t is string) ? ''
+        : hasM() ? request.auth.token.m.get(t, '')
+        : legacyCode(t);
+    }
+    function rank(c) {
+      return c == 'ad' ? 4 : c == 'bl' ? 3 : c == 'mu' ? 2 : c == 'me' ? 1 : c == 'pe' ? 0 : -1;
+    }
+    function atLeast(t, c) { return po() || rank(code(t)) >= rank(c); }
+    function se(t) {
+      return signedIn() && (hasM()
+        ? t in request.auth.token.get('se', [])
+        : (request.auth.token.get('soundEngineer', false) == true && t in legacyOrgs()));
     }
 
-    // Helper to check ownership
-    function isOwner(resource) {
-      return isSignedIn() && resource.data.ownerId == request.auth.uid;
+    // ── Documents ──────────────────────────────────────────────────────────
+    // Every tenant-owned doc carries orgId (stamped 2026-10-12). A missing
+    // orgId still means crc for reads/updates; creates must stamp it.
+    function docOrg() { return resource.data.get('orgId', 'crc'); }
+    // List (query) rules must not default a missing orgId: the query prover
+    // accepts an UNFILTERED query when any branch of the rule is satisfiable
+    // without a constraint on orgId (proved on the emulator: with
+    // get('orgId','crc'), or with ('orgId' in d) ? d.orgId : 'crc', a crc member
+    // listing songs unfiltered received every tenant's rows). Single-document
+    // get() is evaluated against the real document, so it keeps the default.
+    // Every tenant-owned row is stamped (2026-10-12), so a strict list rule
+    // hides nothing a constrained query should return.
+    function listOrg() { return resource.data.orgId; }
+    function newOrg() { return request.resource.data.get('orgId', ''); }
+    function newOrgSet() { return newOrg() is string && newOrg().size() > 0; }
+    function orgKept() {
+      return request.resource.data.get('orgId', null) == resource.data.get('orgId', null);
+    }
+    function isOwner() {
+      return signedIn() && resource.data.get('ownerId', '') == request.auth.uid;
+    }
+    function setlistOrgOf(setlistId) {
+      return get(/databases/$(database)/documents/setlists/$(setlistId)).data.get('orgId', 'crc');
+    }
+    // tracks: own orgId, else the parent setlist's (unstamped rows from
+    // pre-P2 bundles). The conditional is lazy: stamped rows cost no get().
+    function trackOrg(d) {
+      return ('orgId' in d) ? d.orgId : setlistOrgOf(d.setlistId);
+    }
+    // templates/{id}: "<tenant>__<key>"; a bare key is crc.
+    function templateOrgOfId(id) {
+      return id.matches('^[a-z0-9-]+__.+$') ? id.split('__')[0] : 'crc';
+    }
+    // config/<base> is crc; config/<base>__<tenant> is that tenant.
+    function cfgTenant(docId) {
+      return docId.matches('^[a-z]+__[a-z0-9-]+$') ? docId.split('__')[1] : 'crc';
+    }
+    function cfgIs(docId, base) {
+      return docId == base || docId.matches('^' + base + '__[a-z0-9-]+$');
     }
 
-    // Helper to check if the CURRENT user is an Admin
-    function isAdmin() {
-      // 1. Check Custom Claim (primary path)
-      // 2. Check config/admins document (bootstrap fallback, replaces hardcoded UID)
-      return request.auth.token.role == 'admin'
-          || request.auth.uid in get(/databases/$(database)/documents/config/admins).data.uids;
-    }
+    // ── Mixer (CRC-only; phase 6 moves bridgeOrg into tenant config) ───────
+    function bridgeOrg() { return 'crc'; }
+    function mixerReader()     { return atLeast(bridgeOrg(), 'me') || se(bridgeOrg()); }
+    function mixerOperator()   { return atLeast(bridgeOrg(), 'mu') || se(bridgeOrg()); }
+    function mixerPrivileged() { return atLeast(bridgeOrg(), 'ad') || (se(bridgeOrg()) && atLeast(bridgeOrg(), 'mu')); }
 
-    // Band Leader: Can Create/Edit/Publish Setlists, Manage People
-    function isBandLeader() {
-      return isAdmin() || request.auth.token.role == 'band_leader';
-    }
-
-    // v11-01-04 multi-tenant org scoping ───────────────────────────────────
-    // The caller's tenant memberships, mirroring getOrgIdsFromClaims
-    // (src/lib/org/membership.ts): a missing/empty `orgIds` claim → ['crc'].
-    // Every existing CRC user carries NO orgIds claim and MUST keep crc access.
-    // NOTE: use `.get('orgIds', [])` — a bare `request.auth.token.orgIds` THROWS
-    // ("Property orgIds is undefined") for the claimless CRC users, which would
-    // deny every CRC write (lock-out). `.get` returns the default instead.
-    function callerOrgs() {
-      return request.auth.token.get('orgIds', []) is list
-          && request.auth.token.get('orgIds', []).size() > 0
-        ? request.auth.token.get('orgIds', [])
-        : ['crc'];
-    }
-    // WRITE-ISOLATION (not write-requirement): a write may only set orgId to a
-    // tenant the caller belongs to. orgId-ABSENT writes are allowed (back-compat
-    // — in-app client write paths don't stamp orgId), so this never locks out
-    // CRC. Admins are exempt.
-    function orgCreateOk() {
-      return !('orgId' in request.resource.data)
-        || request.resource.data.orgId in callerOrgs()
-        || isAdmin();
-    }
-    // orgId is immutable across tenants on update (admins exempt). A write that
-    // omits orgId, or targets a legacy doc with no orgId, is allowed.
-    function orgUpdateOk() {
-      return !('orgId' in request.resource.data)
-        || !('orgId' in resource.data)
-        || request.resource.data.orgId == resource.data.orgId
-        || isAdmin();
-    }
-    // A tenant marker being immutable is not sufficient: without checking the
-    // existing row, a leader from another tenant could update or delete it
-    // while leaving orgId unchanged. Legacy unstamped rows belong to CRC for
-    // write authorization, matching the established claimless-CRC default.
-    function callerCanWriteExistingOrg() {
-      return isAdmin()
-        || (('orgId' in resource.data)
-          ? resource.data.orgId in callerOrgs()
-          : 'crc' in callerOrgs());
-    }
-    // v11-06-01 READ-ISOLATION: a tenant-scoped read is allowed only when the
-    // doc's orgId names a tenant the caller belongs to. orgId-ABSENT docs are
-    // allowed (back-compat / pre-stamp legacy rows → crc-safe; never locks out
-    // CRC, whose claimless leaders default to ['crc']). Admins exempt. Used to
-    // wall band_leader CLIENT reads that the app layer also filters (defense in
-    // depth — the rules wall survives an app-filter bypass).
-    function songOrgReadOk(res) {
-      return isAdmin()
-        || (('orgId' in res.data)
-          ? res.data.orgId in callerOrgs()
-          : 'crc' in callerOrgs());
-    }
-    function orgReadOk(res) {
-      return isAdmin()
-        || !('orgId' in res.data)
-        || res.data.orgId in callerOrgs();
-    }
-
-    // Musician: Band member — appears in picker, receives emails, performs
-    function isMusician() {
-      return isBandLeader() || request.auth.token.role == 'musician';
-    }
-
-    // Member: Community access — library + public setlists (no band features)
-    function isMember() {
-      return isMusician() || request.auth.token.role == 'member';
-    }
-
-    // Sound Engineer: Cross-cutting — can be any role, checked via custom claim
-    function isSoundEngineer() {
-      return request.auth.token.soundEngineer == true;
-    }
-
-    // Multi-tenant P0 (2026-10-12): users/{uid} is no longer fully
-    // self-writable. Before this, a pending account could write
-    // `role: 'admin'` into its own document and /api/auth/sync-claims raised
-    // the claim from it. A user may now CREATE its own document only as
-    // pending, and UPDATE only the profile fields the browser writes
-    // (ensureUserProfile, saveMusicianProfile, OnboardingCard, calendar feed
-    // token, welcome modal, push tokens). role, orgIds, m, po, soundEngineer
-    // and every other field are server-side (Admin SDK / set-role) only.
-    // orgIds is allowed on create solely as a subset of the old sign-up
-    // default so cached pre-P0 clients can still sign up; it grants nothing
-    // (membership is claim-based, and sync-claims overwrites it from the claim).
+    // ── USERS (profile only; roster reads go through /api/tenant/people) ───
     function selfProfileFields() {
       return ['email', 'displayName', 'photoURL', 'lastLoginAt',
               'musicianProfile', 'viewedWelcomeModal', 'fcmTokens'];
@@ -119,6 +97,9 @@ service cloud.firestore {
         || data.email == ''
         || data.email == request.auth.token.get('email', '');
     }
+    // role 'pending' and an orgIds subset are still accepted on create so
+    // cached pre-P2 bundles can sign up; neither grants anything (rights come
+    // from memberships, written by the server only).
     function selfCreateOk(userId) {
       let d = request.resource.data;
       return d.keys().hasOnly(['uid', 'role', 'orgIds', 'createdAt'].concat(selfProfileFields()))
@@ -132,373 +113,68 @@ service cloud.firestore {
       return changed.hasOnly(selfProfileFields())
         && (!changed.hasAny(['email']) || selfEmailOk(request.resource.data));
     }
-
-    // USERS Collection
     match /users/{userId} {
-      // Secure Rule: Own data, Leaders (for musician picker), or Admin
-      allow read: if (isSignedIn() && request.auth.uid == userId) || isBandLeader() || isAdmin();
-      allow create: if (isSignedIn() && request.auth.uid == userId && selfCreateOk(userId)) || isAdmin();
-      allow update: if (isSignedIn() && request.auth.uid == userId && selfUpdateOk()) || isAdmin();
-      allow delete: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+      allow get: if signedIn() && (request.auth.uid == userId || po());
+      allow list: if po();
+      allow create: if signedIn() && request.auth.uid == userId && selfCreateOk(userId);
+      allow update: if signedIn() && request.auth.uid == userId && selfUpdateOk();
+      allow delete: if signedIn() && request.auth.uid == userId;
 
-      // Legacy subcollections (if needed)
-      match /setlists/{docId} {
-        allow read, write: if isSignedIn() && request.auth.uid == userId;
-      }
-
-      // Per-user per-song transposition preferences
-      match /songPreferences/{fileId} {
-        allow read, write: if isSignedIn() && request.auth.uid == userId;
-      }
-
-      // D2: Chart annotations — private per-user per-song
-      match /annotations/{fileId} {
-        allow read, write: if isSignedIn() && request.auth.uid == userId;
-      }
-
-      // User preferences (monitor pinned channels, etc.)
-      match /preferences/{docId} {
-        allow read, write: if isSignedIn() && request.auth.uid == userId;
-      }
-
-      // Notifications — user reads own, server writes
+      match /setlists/{docId}        { allow read, write: if signedIn() && request.auth.uid == userId; }
+      match /songPreferences/{fileId} { allow read, write: if signedIn() && request.auth.uid == userId; }
+      match /annotations/{fileId}    { allow read, write: if signedIn() && request.auth.uid == userId; }
+      match /preferences/{docId}     { allow read, write: if signedIn() && request.auth.uid == userId; }
       match /notifications/{notifId} {
-        allow read: if isSignedIn() && request.auth.uid == userId;
-        allow update: if isSignedIn() && request.auth.uid == userId
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow update: if signedIn() && request.auth.uid == userId
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-        allow create: if isSignedIn() && (isAdmin() || isBandLeader()); // Server writes via admin SDK; client-side only for admin/leader
-        allow delete: if isSignedIn() && request.auth.uid == userId;
+        allow delete: if signedIn() && request.auth.uid == userId;
+        allow create: if false; // server writes (set-role, scheduling, …)
       }
     }
 
-    // SETLISTS Collection (The new root collection)
-    // v4.0: All setlists are public among band members — no private/public
-    // distinction for access control beyond role-gating.
-    match /setlists/{setlistId} {
-      // 1. READ: one document by id is public; listing the collection is not.
-      //
-      // R-0919-audit-2 (2026-09-19). `allow read: if true` at collection level
-      // grants BOTH `get` and `list`, and `list` is a whole-collection query —
-      // so anyone, signed out, could enumerate every setlist of every tenant
-      // in one request. Splitting the verb keeps the thing that surface
-      // actually needs and drops the thing nobody asked for:
-      //
-      //   get  — an anonymous /perform link carries a setlist id and reads
-      //          that one document. Old links keep working. This stays public
-      //          deliberately: a musician who cannot open the setlist they are
-      //          meant to play is a service-block.
-      //   list — the signed-out /perform landing used to subscribe to the
-      //          collection. It now renders the ISR page's server-rendered
-      //          slice instead (PublicSetlistListing), and paging goes through
-      //          /api/setlists/page, which is public and rate-limited.
-      //
-      // Applies to both tenants. Cross-tenant separation is a separate
-      // concern and is enforced on writes below.
-      allow get: if true;
-      allow list: if isSignedIn();
-
-      // 2. CREATE: Any signed-in user, must set ownerId to self
-      //    v11-01-04: + org-scope (orgId, if set, must be the caller's tenant).
-      allow create: if isSignedIn()
-                    && request.resource.data.ownerId == request.auth.uid
-                    && orgCreateOk();
-
-      // 3. UPDATE: Owner, Band Leader, or Admin; ownerId is immutable
-      //    except by admins (v4.4 SEC-008). v11-01-04: + orgId immutable across tenants.
-      allow update: if (isOwner(resource) || isBandLeader() || isAdmin())
-                    && (isAdmin() || request.resource.data.ownerId == resource.data.ownerId)
-                    && orgUpdateOk();
-
-      // 4. DELETE: Owner, Band Leader, or Admin
-      allow delete: if isOwner(resource) || isBandLeader() || isAdmin();
-
+    // ── MEMBERSHIPS / PLATFORM / ORGS ──────────────────────────────────────
+    match /memberships/{membershipId} {
+      // One's own record is readable even before it exists (client listener).
+      allow get: if signedIn() && (
+        membershipId.matches('^[a-z0-9-]+__' + request.auth.uid + '$')
+        || (resource != null && atLeast(resource.data.tenantId, 'bl')));
+      allow list: if signedIn() && (
+        resource.data.uid == request.auth.uid || atLeast(resource.data.tenantId, 'bl'));
+      allow write: if false;
     }
-
-    // TRACKS Collection (v5.0 top-level normalized track docs)
-    // v50-05-02 cutover writes here from SetlistGrid edits + lazy-hydration
-    // cascade. Tracks belong logically to a setlist (setlistId field);
-    // permissions are band-leader/admin-managed catalog rather than per-track
-    // ownership. ownerId is intentionally NOT carried on track docs, so the
-    // setlists ownerId pattern does not apply.
-    // v5h-01-02 fix (E): added to close the v5.0 save-loss bug — without
-    // this block, the default-deny fallback at the bottom rejected every
-    // tracks write with permission-denied.
-    // v60-12-01: Public READ enabled for the public perform view
-    // (centralreform.live → upcoming setlist → "Perform" link). Setlists
-    // themselves are already publicly readable (line 86); tracks are the
-    // natural extension of the same surface. Writes remain locked behind
-    // band-leader/admin authentication. Audit: 2026-05-13 — Daniel UAT
-    // reported "No tracks yet" on incognito perform view.
-    match /tracks/{trackId} {
-      // R-0919-audit-2: same split as `setlists` above, same reason. Reading
-      // one track by id stays public; querying the collection
-      // (`where("setlistId","==",…)`, which is what the Perform view needs)
-      // requires sign-in. Signed-out Perform gets those rows from
-      // /api/setlists/{setlistId}/tracks — public, rate-limited, Admin SDK,
-      // and scoped to the one setlist whose id the caller already has.
-      allow get: if true;
-      allow list: if isSignedIn();
-      // v11-01-04: + org-scope write isolation (read stays public for /perform).
-      allow create: if isSignedIn() && (isBandLeader() || isAdmin()) && orgCreateOk();
-      allow update: if isSignedIn() && (isBandLeader() || isAdmin()) && callerCanWriteExistingOrg() && orgUpdateOk();
-      allow delete: if isSignedIn() && (isBandLeader() || isAdmin()) && callerCanWriteExistingOrg();
+    match /platform/{docId} {
+      allow read, write: if false;
     }
-
-    // SONGS Collection (v5.0 first-class song catalog with sticky memory)
-    // v50-04 promoted songs/{id} to first-class with defaults: { key, lead,
-    // bpm } + recent[] history (cap 5). v50-05 propagates track edits back
-    // via propagateTrackEditToSong → applyEdit('update', 'songs', ...).
-    // v5h-01-02 fix (E): added alongside tracks for the same default-deny
-    // reason — sticky-memory writes were also being rejected silently.
-    match /songs/{songId} {
-      // David's ask 2 (2026-09-22): READ-ISOLATION by tenant. A member reads
-      // only songs of an org they belong to; an unstamped (legacy) doc is crc,
-      // matching rowOrg and callerCanWriteExistingOrg. Admins exempt. The
-      // pickers additionally query the HOST org only (membership alone never
-      // narrowed them: most accounts belong to both tenants).
-      allow read: if isMember() && songOrgReadOk(resource);
-      // v11-01-04: + org-scope write isolation.
-      allow create: if isSignedIn() && (isBandLeader() || isAdmin()) && orgCreateOk();
-      allow update: if isSignedIn() && (isBandLeader() || isAdmin()) && orgUpdateOk();
-      allow delete: if isSignedIn() && (isBandLeader() || isAdmin());
-    }
-
-    // RECORDINGS Collection (v70-02 — reference audio for songs)
-    // NEW top-level collection; songId is an optional FK to songs/{id}.
-    // Read: members (band-internal content — recordings are NOT part of the
-    //   public perform view, unlike tracks/*). Write: band-leader/admin.
-    // Mirrors the songs/{songId} permission shape.
-    match /recordings/{recordingId} {
-      allow read: if isMember();
-      // v11-01-04: + org-scope write isolation.
-      allow create: if isSignedIn() && (isBandLeader() || isAdmin()) && orgCreateOk();
-      allow update: if isSignedIn() && (isBandLeader() || isAdmin()) && orgUpdateOk();
-      allow delete: if isSignedIn() && (isBandLeader() || isAdmin());
-    }
-
-    // CONTACTS Collection (v11.4-03 — D8 item 3)
-    // A leader's address book of remembered ad-hoc recipients (people with NO
-    // account — name + email/phone). NOT member-facing (unlike recordings), so
-    // READ is leader/admin only and org-isolated. Primary write path is the MCP
-    // tools via the Admin SDK (bypasses these rules); the rules are the
-    // defense-in-depth wall for any client path. Org-scoped on every verb.
-    match /contacts/{contactId} {
-      allow read:   if isSignedIn() && isBandLeader() && orgReadOk(resource);
-      allow create: if isSignedIn() && isBandLeader() && orgCreateOk();
-      allow update: if isSignedIn() && isBandLeader() && orgUpdateOk();
-      allow delete: if isSignedIn() && isBandLeader() && orgReadOk(resource);
-    }
-
-    // ORGS Collection (v11-01 multi-tenant registry)
-    // One doc per tenant/band — { id, name, domain, createdAt }. Seeded by the
-    // v11-01-03 backfill via the Admin SDK. Read is public (non-sensitive
-    // metadata used for host→org routing in v11-03; err-public). Writes are
-    // server-only (Admin SDK bypasses these rules).
     match /orgs/{orgId} {
       allow read: if true;
       allow write: if false;
     }
 
-    // TASKS Collection
-    // Read: Any signed-in user can read tasks (to see them on setlists)
-    // Write: All writes go through the secure API routes using the Admin SDK
-    match /tasks/{taskId} {
-      allow read: if isSignedIn();
-      allow write: if false;
+    // ── SETLISTS ───────────────────────────────────────────────────────────
+    // R-0919-audit-2: get public (Perform links), list signed-in. Unchanged.
+    match /setlists/{setlistId} {
+      allow get: if true;
+      allow list: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.get('ownerId', '') == request.auth.uid
+        && newOrgSet()
+        && atLeast(newOrg(), 'me');
+      allow update: if signedIn()
+        && orgKept()
+        && (atLeast(docOrg(), 'bl') || (isOwner() && atLeast(docOrg(), 'me')))
+        && (request.resource.data.get('ownerId', null) == resource.data.get('ownerId', null)
+            || atLeast(docOrg(), 'ad'));
+      allow delete: if signedIn()
+        && (atLeast(docOrg(), 'bl') || (isOwner() && atLeast(docOrg(), 'me')));
     }
-
-    // LIVE SESSIONS — Real-time performer position broadcasting
-    // Read: Any signed-in user (musicians follow the leader)
-    // Write: Only the broadcaster can write/delete their own session doc
-    // Doc ID format: {setlistId}_{broadcasterId}
-    match /live_sessions/{sessionId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn()
-                            && request.resource.data.broadcasterId == request.auth.uid;
-      allow delete: if isSignedIn()
-                    && resource.data.broadcasterId == request.auth.uid;
-    }
-    
-    // PUBLIC SETLISTS (Legacy)
-    match /publicSetlists/{docId} {
-      allow read: if true;
-      allow write: if false; // Read-only archive
-    }
-
-    // LITURGICAL TEMPLATES — custom overrides for setlist templates
-    // Read: Any signed-in user (wizard needs to load custom templates)
-    // Write: Band leaders and admins (template editor)
-    match /templates/{templateId} {
-      allow read: if isSignedIn();
-      allow write: if isBandLeader();
-    }
-
-    // SETLIST TEMPLATES (cycle-6 Lane 2) — re-usable starting points
-    // for clone_setlist_from_template. Distinct from /templates above
-    // (which carries liturgical-content overrides for the wizard).
-    // Read + write restricted to band_leader + admin — templates are an
-    // authoring surface, not consumed by /perform; ordinary musicians +
-    // members have no read need. Server writes via Admin SDK still
-    // bypass these rules.
-    match /setlistTemplates/{templateId} {
-      allow read: if isSignedIn() && (isBandLeader() || isAdmin());
-      allow create: if isSignedIn() && (isBandLeader() || isAdmin());
-      allow update: if isSignedIn() && (isBandLeader() || isAdmin());
-      allow delete: if isSignedIn() && (isBandLeader() || isAdmin());
-    }
-
-    // CONGREGATION CONFIG (branding, feature flags)
-    match /config/congregation {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    // v11-06-01: PER-ORG CONGREGATION docs — config/congregation__{org} (the
-    // bare `congregation` doc is crc, matched above). The client congregation
-    // store onSnapshots config/congregation__{org}; without a rule these
-    // namespaced docs were DENY-by-default, breaking per-tenant branding reads.
-    // Same posture as the bare doc: public-read by design (any signed-in user),
-    // Admin-SDK-only writes. The regex guard limits this wildcard strictly to
-    // congregation docs so the other config docs (admins/monitor/featured/
-    // defaults — admins is intentionally write:false) are UNAFFECTED.
-    match /config/{congregationDoc} {
-      allow read: if isSignedIn()
-                  && congregationDoc.matches('congregation__[a-z0-9-]+');
-      allow write: if isAdmin()
-                   && congregationDoc.matches('congregation__[a-z0-9-]+');
-    }
-
-    // ADMIN BOOTSTRAP CONFIG (super-admin UIDs for isAdmin() fallback)
-    // Seeded via Firebase Admin SDK or console. isAdmin() reads this doc.
-    // Write locked to Admin SDK only — this doc is read by isAdmin() itself,
-    // so client-side writes would create a circular trust issue.
-    match /config/admins {
-      allow read: if isSignedIn();
-      allow write: if false;
-    }
-
-    // MONITOR CONFIGURATION
-    // Read: Any signed-in user (bridge verifies auth via custom claims)
-    // Write: Admins or sound engineers
-    // Bridge heartbeat writes server-side via admin SDK (bypasses rules)
-    match /config/monitor {
-      allow read: if isSignedIn();
-      allow write: if isAdmin()
-                   || isSoundEngineer();
-    }
-
-    // FEATURED SETLIST CONFIGURATION
-    // Read: Any signed-in user (everyone can see what's featured)
-    // Write: Admins and band leaders (they set the featured setlist)
-    match /config/featured {
-      allow read: if isSignedIn();
-      allow write: if isBandLeader();
-    }
-
-    // DEFAULT-TEMPLATE POINTERS (canonical setlists per service type)
-    // v52-05 (Track D Option C): admin-curated pointer doc.
-    // Shape: { shabbat_morning?: setlistId, friday_night?: setlistId, updatedAt, updatedBy }
-    // Read: any signed-in user (wizard's findLastMatchingService consults
-    //       the pointer when computing the Clone CTA — must work for everyone,
-    //       not just admins).
-    // Write: admins only — Daniel curates which setlist is the canonical
-    //        default for each service type. Phase 1 scope: shabbat_morning +
-    //        friday_night. Future expansion to all 11 ServiceType values
-    //        is additive (no schema migration; just new keys).
-    match /config/defaults {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    // LIBRARY INDEX — server-only (admin SDK)
-    // Sync engine, enrichment cron, and upload API all write via admin SDK.
-    // No client should read/write directly.
-    match /library_index/{fileId} {
-      allow read, write: if false;
-
-      // Chord data subcollection — server-only
-      match /chordData/{page} {
-        allow read, write: if false;
-      }
-    }
-
-    // LIBRARY SIGNALS — single doc bumped by every successful upload/delete
-    // through processChartUpload + delete_chart. Authenticated clients
-    // subscribe via onSnapshot to invalidate their React Query cache so
-    // MCP-driven uploads surface without a hard refresh. Writes are
-    // server-only (admin SDK).
-    match /library_signals/{docId} {
-      allow read: if isSignedIn();
-      allow write: if false;
-    }
-
-    // BOND CORRECTIONS — W-01/W-02 learning signal. The MCP
-    // record_bond_correction tool writes one doc per rabbi-correction event
-    // during batch-review of flagged bonds. The same MCP tool inline-
-    // aggregates picks into titleContextHints once correctedTo for a
-    // (stem, contextKey) pair hits 3 consistent picks (W-02 originally
-    // specified a Cloud Function for this; project has no Functions
-    // infrastructure so it runs inside the same Firestore transaction).
-    // All writes happen via the Admin SDK (MCP tool path); reads admin-only
-    // since the audit trail may include uid metadata.
-    match /bond_corrections/{id} {
-      allow read: if isAdmin();
-      allow write: if false; // server-only via Admin SDK
-    }
-
-    // TITLE CONTEXT HINTS — W-02 aggregated preference per (stem, contextKey).
-    // Read by any signed-in caller via search_library ranking; written only
-    // by record_bond_correction's inline aggregation (Admin SDK).
-    match /titleContextHints/{hintId} {
-      allow read: if isSignedIn();
-      allow write: if false; // server-only via Admin SDK
-    }
-
-    // BOND FLAGS — W-01 Task 4 batch-review queue. flag_bond upserts one
-    // doc per (setlistId, trackId) pair; review_flagged_bonds lists every
-    // open flag for a setlist; record_bond_correction deletes the doc on
-    // resolution. Writes happen via Admin SDK (MCP tool path); reads
-    // allowed for band-leader/admin since the queue is band-internal and
-    // a future admin UI may want to surface stale flags.
-    match /bond_flags/{flagId} {
-      allow read: if isBandLeader();
-      allow write: if false; // server-only via Admin SDK
-    }
-
-    // PROPOSAL STAGES — W-01 propose-then-confirm staging docs. The MCP
-    // propose_setlist_changes tool writes one doc per staged batch;
-    // commit_staged_changes reads + deletes it inside the commit
-    // transaction (one-shot). All writes happen via the Admin SDK (MCP
-    // tool path). Reads allowed for the band-leader/admin tier so a
-    // future admin debug UI can inspect open stages without an extra
-    // round-trip through the MCP server.
-    match /proposal_stages/{stageId} {
-      allow read: if isBandLeader();
-      allow write: if false; // server-only via Admin SDK
-    }
-
-    // SETLIST HISTORY (audit trail) — append-only from authenticated users, admin reads
     match /setlists/{setlistId}/history/{entryId} {
-      allow read: if isAdmin();
-      allow create: if isSignedIn();  // Append-only: users can log changes but never edit/delete
-      allow update, delete: if false; // Immutable once written
-    }
-
-    // TONIGHT-ONLY CHART SWAPS (David's ask 4, 2026-09-22).
-    // `setlists/{id}/performance/overrides` holds tonight's swaps, laid over
-    // the planned rows on every iPad; the plan (`tracks/*`) is never written.
-    // Read: signed-in only. Signed-out iPads get the overrides through the
-    // server-rendered frame and `/api/setlists/{id}/tracks` on reload — no
-    // anonymous realtime access. Write: band_leader/admin of the setlist's
-    // tenant, closed field set, and `rev` must advance by exactly one — the
-    // stale-write guard that makes two leaders' simultaneous swaps serialise.
-    // Delete is server-only (a cron may clear past service days).
-    function setlistOrgOf(setlistId) {
-      return get(/databases/$(database)/documents/setlists/$(setlistId)).data.get('orgId', 'crc');
+      allow read: if atLeast(setlistOrgOf(setlistId), 'ad');
+      allow create: if atLeast(setlistOrgOf(setlistId), 'me');
+      allow update, delete: if false;
     }
     function canLeadSetlist(setlistId) {
-      return isSignedIn() && isBandLeader()
-        && (isAdmin() || setlistOrgOf(setlistId) in callerOrgs());
+      return signedIn() && atLeast(setlistOrgOf(setlistId), 'bl');
     }
     function overridesShapeOk() {
       let d = request.resource.data;
@@ -510,7 +186,7 @@ service cloud.firestore {
         && d.updatedBy == request.auth.uid;
     }
     match /setlists/{setlistId}/performance/{docId} {
-      allow get: if isSignedIn() && docId == 'overrides';
+      allow get: if signedIn() && docId == 'overrides';
       allow list: if false;
       allow create: if docId == 'overrides' && canLeadSetlist(setlistId)
                     && overridesShapeOk() && request.resource.data.rev >= 1;
@@ -518,9 +194,6 @@ service cloud.firestore {
                     && overridesShapeOk() && request.resource.data.rev == resource.data.rev + 1;
       allow delete: if false;
     }
-    // One append-only record per swap / undo / reset. It must be written in
-    // the same commit as the overrides doc it describes (`getAfter` rev
-    // match), so the log cannot drift from what the iPads were shown.
     match /setlists/{setlistId}/performedDeviations/{eventId} {
       allow read: if canLeadSetlist(setlistId);
       allow create: if canLeadSetlist(setlistId)
@@ -536,124 +209,193 @@ service cloud.firestore {
                     && getAfter(/databases/$(database)/documents/setlists/$(setlistId)/performance/overrides).data.eventDay == request.resource.data.eventDay;
       allow update, delete: if false;
     }
-
-    // AUDIT LOGS — Server writes via Admin SDK, Admins read
-    match /auditLogs/{logId} {
-      allow read: if isAdmin();
-      allow write: if false; // Server-only via admin SDK
-    }
-
-    // EMAIL DELIVERY TRACKING — server writes, leaders/admins read
     match /setlists/{setlistId}/emailEvents/{eventId} {
-      allow read: if isBandLeader();
-      allow write: if false; // Server-only via admin SDK + webhooks
+      allow read: if atLeast(setlistOrgOf(setlistId), 'bl');
+      allow write: if false;
     }
 
-    // SONG USAGE TRACKING — server writes, members read
-    match /songUsage/{fileId} {
-      allow read: if isMember();
-      allow write: if false; // Server-only via admin SDK
+    // ── TRACKS ─────────────────────────────────────────────────────────────
+    match /tracks/{trackId} {
+      allow get: if true;
+      allow list: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.get('setlistId', '') is string
+        && request.resource.data.get('setlistId', '') != ''
+        && atLeast(trackOrg(request.resource.data), 'bl')
+        && (!('orgId' in request.resource.data)
+            || request.resource.data.orgId == setlistOrgOf(request.resource.data.setlistId));
+      allow update: if signedIn()
+        && atLeast(trackOrg(resource.data), 'bl')
+        && (('orgId' in resource.data)
+              ? request.resource.data.get('orgId', null) == resource.data.orgId
+              : (!('orgId' in request.resource.data)
+                  || request.resource.data.orgId == setlistOrgOf(resource.data.setlistId)))
+        && (request.resource.data.get('setlistId', '') == resource.data.get('setlistId', '')
+            || setlistOrgOf(request.resource.data.setlistId) == trackOrg(resource.data));
+      allow delete: if signedIn() && atLeast(trackOrg(resource.data), 'bl');
+    }
 
+    // ── CATALOGUE ──────────────────────────────────────────────────────────
+    match /songs/{songId} {
+      allow get: if atLeast(docOrg(), 'me');
+      allow list: if atLeast(listOrg(), 'me');
+      allow create: if newOrgSet() && atLeast(newOrg(), 'bl');
+      allow update: if atLeast(docOrg(), 'bl') && orgKept();
+      allow delete: if atLeast(docOrg(), 'bl');
+    }
+    match /recordings/{recordingId} {
+      allow get: if atLeast(docOrg(), 'me');
+      allow list: if atLeast(listOrg(), 'me');
+      allow create: if newOrgSet() && atLeast(newOrg(), 'bl');
+      allow update: if atLeast(docOrg(), 'bl') && orgKept();
+      allow delete: if atLeast(docOrg(), 'bl');
+    }
+    match /library_index/{fileId} {
+      allow read, write: if false;
+      match /chordData/{page} { allow read, write: if false; }
+    }
+    match /library_signals/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+    match /digitized_charts/{docId} {
+      allow read, write: if false;
+    }
+    match /songUsage/{fileId} {
+      allow get: if atLeast(docOrg(), 'me');
+      allow list: if atLeast(listOrg(), 'me');
+      allow write: if false;
       match /events/{eventId} {
-        allow read: if isMember();
+        allow read: if atLeast(get(/databases/$(database)/documents/songUsage/$(fileId)).data.get('orgId', 'crc'), 'me');
         allow write: if false;
       }
     }
 
-    // SCHEDULING ASSIGNMENTS — server writes via Admin SDK, musicians read own
-    // v11-06-01: a musician always reads their OWN assignment (their own data,
-    // any tenant). A band_leader's cross-tenant read is walled by orgReadOk —
-    // the client subscribeToAllUpcomingAssignments path is leader-facing, so a
-    // foreign-tenant leader must not see another tenant's schedule. orgId-absent
-    // (legacy) rows stay readable → crc-safe, no lock-out.
+    // ── AUTHORING ──────────────────────────────────────────────────────────
+    match /contacts/{contactId} {
+      allow get: if atLeast(docOrg(), 'bl');
+      allow list: if atLeast(listOrg(), 'bl');
+      allow create: if newOrgSet() && atLeast(newOrg(), 'bl');
+      allow update: if atLeast(docOrg(), 'bl') && orgKept();
+      allow delete: if atLeast(docOrg(), 'bl');
+    }
+    match /templates/{templateId} {
+      allow get: if atLeast(resource == null
+                             ? templateOrgOfId(templateId)
+                             : resource.data.get('orgId', templateOrgOfId(templateId)), 'me');
+      allow list: if atLeast(listOrg(), 'me');
+      allow create, update: if atLeast(templateOrgOfId(templateId), 'bl')
+        && request.resource.data.get('orgId', '') == templateOrgOfId(templateId);
+      allow delete: if atLeast(templateOrgOfId(templateId), 'bl');
+    }
+    match /setlistTemplates/{templateId} {
+      allow get: if atLeast(docOrg(), 'bl');
+      allow list: if atLeast(listOrg(), 'bl');
+      allow create: if newOrgSet() && atLeast(newOrg(), 'bl');
+      allow update: if atLeast(docOrg(), 'bl') && orgKept();
+      allow delete: if atLeast(docOrg(), 'bl');
+    }
+    match /bond_flags/{flagId} {
+      allow get: if atLeast(docOrg(), 'bl');
+      allow list: if atLeast(listOrg(), 'bl');
+      allow write: if false;
+    }
+    match /proposal_stages/{stageId} {
+      allow get: if atLeast(docOrg(), 'bl');
+      allow list: if atLeast(listOrg(), 'bl');
+      allow write: if false;
+    }
+    match /tasks/{taskId} {
+      allow get: if signedIn()
+        && (resource.data.get('assigneeId', '') == request.auth.uid || atLeast(docOrg(), 'me'));
+      allow list: if signedIn()
+        && (resource.data.get('assigneeId', '') == request.auth.uid || atLeast(listOrg(), 'me'));
+      allow write: if false;
+    }
+    match /live_sessions/{sessionId} {
+      allow get: if atLeast(docOrg(), 'me');
+      allow list: if atLeast(listOrg(), 'me');
+      allow create: if signedIn()
+        && request.resource.data.get('broadcasterId', '') == request.auth.uid
+        && newOrgSet() && atLeast(newOrg(), 'mu');
+      allow update: if signedIn()
+        && resource.data.get('broadcasterId', '') == request.auth.uid
+        && request.resource.data.get('broadcasterId', '') == request.auth.uid
+        && orgKept() && atLeast(docOrg(), 'mu');
+      allow delete: if signedIn() && resource.data.get('broadcasterId', '') == request.auth.uid;
+    }
+    match /publicSetlists/{docId} {
+      allow get: if true;
+      allow list: if po();
+      allow write: if false;
+    }
+
+    // ── SCHEDULING ─────────────────────────────────────────────────────────
     match /scheduling_assignments/{assignmentId} {
-      allow read: if isSignedIn()
-                  && (resource.data.musicianUid == request.auth.uid
-                      || (isBandLeader() && orgReadOk(resource)));
-      allow write: if false; // Server-only via Admin SDK
+      allow get: if signedIn()
+        && (resource.data.get('musicianUid', '') == request.auth.uid || atLeast(docOrg(), 'bl'));
+      allow list: if signedIn()
+        && (resource.data.get('musicianUid', '') == request.auth.uid || atLeast(listOrg(), 'bl'));
+      allow write: if false;
     }
-
-    // MUSICIAN AVAILABILITY (blockout dates) — musicians manage own, leaders read all
     match /musician_availability/{blockoutId} {
-      allow read: if isSignedIn()
-                  && (resource.data.musicianUid == request.auth.uid || isBandLeader());
-      allow create: if isSignedIn()
-                    && request.resource.data.musicianUid == request.auth.uid;
-      allow update, delete: if isSignedIn()
-                            && resource.data.musicianUid == request.auth.uid;
+      allow get: if signedIn()
+        && (resource.data.get('musicianUid', '') == request.auth.uid || atLeast(docOrg(), 'bl'));
+      allow list: if signedIn()
+        && (resource.data.get('musicianUid', '') == request.auth.uid || atLeast(listOrg(), 'bl'));
+      allow create: if signedIn()
+        && request.resource.data.get('musicianUid', '') == request.auth.uid
+        && newOrgSet() && atLeast(newOrg(), 'me');
+      allow update: if signedIn()
+        && resource.data.get('musicianUid', '') == request.auth.uid
+        && request.resource.data.get('musicianUid', '') == request.auth.uid
+        && orgKept();
+      allow delete: if signedIn() && resource.data.get('musicianUid', '') == request.auth.uid;
     }
-
-    // SCHEDULING HISTORY (analytics, append-only via Admin SDK)
-    // v11-06-01: band_leader read walled by orgReadOk (cross-tenant analytics
-    // isolation). orgId-absent rows stay readable → crc-safe; once history
-    // writes stamp orgId, cross-tenant history reads are fully walled too.
     match /scheduling_history/{entryId} {
-      allow read: if isBandLeader() && orgReadOk(resource);
-      allow write: if false; // Server-only via Admin SDK
+      allow get: if atLeast(docOrg(), 'bl');
+      allow list: if atLeast(listOrg(), 'bl');
+      allow write: if false;
     }
 
-    // QR SIGN-IN SESSIONS — server-only via admin SDK
-    // iPad creates via API, phone approves via API, iPad polls via API.
-    // No direct client reads/writes needed.
-    match /qr-sessions/{code} {
-      allow read, write: if false;
+    // ── CONFIG ─────────────────────────────────────────────────────────────
+    // congregation[__t]: branding, read by every signed-in user (unchanged).
+    // defaults[__t]: canonical setlist per service type, per tenant.
+    // featured[__t]: unused today; tenant-scoped for completeness.
+    // monitor: the CRC mixer. admins: retired (no grant → denied).
+    match /config/{docId} {
+      allow read: if signedIn() && (
+           cfgIs(docId, 'congregation')
+        || (cfgIs(docId, 'defaults') && atLeast(cfgTenant(docId), 'me'))
+        || (cfgIs(docId, 'featured') && atLeast(cfgTenant(docId), 'me'))
+        || (docId == 'monitor' && mixerReader()));
+      allow write: if signedIn() && (
+           (cfgIs(docId, 'congregation') && atLeast(cfgTenant(docId), 'ad'))
+        || (cfgIs(docId, 'defaults') && atLeast(cfgTenant(docId), 'ad'))
+        || (cfgIs(docId, 'featured') && atLeast(cfgTenant(docId), 'bl'))
+        || (docId == 'monitor' && mixerPrivileged()));
+    }
+    match /system/globalAlert {
+      allow read: if signedIn();
+      allow write: if po();
     }
 
-    // Bridge setup codes — server-only (Admin SDK)
-    match /bridge-setup-codes/{code} {
-      allow read, write: if false;
-    }
-
-    // Bridge redemption audit log — server-only (Admin SDK)
-    match /bridge-redemptions/{id} {
-      allow read, write: if false;
-    }
-
-    // MONITOR LIVE STATE — Firestore transport for mixer control
-    // Bridge writes state via Admin SDK (bypasses rules).
-    // Clients read state and write commands.
+    // ── MIXER ──────────────────────────────────────────────────────────────
     match /monitor-live/state {
-      allow read: if isSignedIn();
-      allow write: if false; // Bridge writes via Admin SDK only
+      allow read: if mixerReader();
+      allow write: if false;
     }
-
-    // Monitor commands — iPads write commands, bridge processes & deletes via Admin SDK.
-    // S05: schema-check `type` against known allowlist and shape-fields by type.
-    //
-    // monitor-fix-f1 (F1): the BRIDGE is the AUTHORITATIVE bus-ownership gate — it
-    // re-checks isCommandAuthorized against config/monitor.busAssignments before
-    // touching the X32. These rules enforce only the CHEAP, high-value half of authZ
-    // so the bridge is genuine defense-in-depth rather than the SOLE gate:
-    //   - real membership (isMember/isSoundEngineer, NOT bare isSignedIn) so a
-    //     pending/denied account can't enqueue any command;
-    //   - self-attribution (uid == auth.uid);
-    //   - the FOH matrix primitives gated to admin / sound-engineer in-rule
-    //     (no per-bus data lookup needed — matrix is the most dangerous primitive);
-    //   - a closed field set + per-field type checks.
-    // Per-bus ownership is intentionally NOT enforced here: it needs a CEL get() on
-    // config/monitor + array membership, which is awkward and costs a read per
-    // command — that check stays at the bridge.
-    // See .paul/research/monitor-audit-lane2-app-mcp-FINDINGS.md (F1/F7).
     match /monitor-live/commands/pending/{commandId} {
-      allow read: if false; // Bridge reads via Admin SDK
-      allow create: if (isMember() || isSoundEngineer())
+      allow read: if false;
+      allow create: if mixerOperator()
                     && request.resource.data.uid == request.auth.uid
                     && request.resource.data.createdAt is number
                     && request.resource.data.type in [
-                        'set_bus_master',
-                        'set_bus_on',
-                        'set_send_level',
-                        'set_send_on',
-                        'set_matrix_fader',
-                        'set_matrix_on'
+                        'set_bus_master', 'set_bus_on', 'set_send_level',
+                        'set_send_on', 'set_matrix_fader', 'set_matrix_on'
                     ]
-                    // FOH matrix outputs are admin / sound-engineer only.
-                    && (
-                        !(request.resource.data.type in ['set_matrix_fader', 'set_matrix_on'])
-                        || isAdmin() || isSoundEngineer()
-                    )
-                    // Closed field set — the only Web SDK writer
-                    // (src/lib/firestore-monitor-client.ts) writes exactly these keys.
+                    && (!(request.resource.data.type in ['set_matrix_fader', 'set_matrix_on'])
+                        || mixerPrivileged())
                     && request.resource.data.keys().hasOnly([
                         'type', 'uid', 'createdAt',
                         'busIndex', 'channelIndex', 'matrixIndex', 'value'
@@ -663,206 +405,43 @@ service cloud.firestore {
                     && (!('matrixIndex' in request.resource.data)  || request.resource.data.matrixIndex is int)
                     && (!('value' in request.resource.data)        || request.resource.data.value is number
                                                                      || request.resource.data.value is bool);
-      allow update, delete: if false; // Bridge deletes via Admin SDK
+      allow update, delete: if false;
     }
-
-    // Monitor command ACKS — the bridge's per-command verdict (applied /
-    // rejected+reason / timeout), written by the Admin SDK and read by the iPad
-    // that issued the command.
-    //
-    // R2: this match did not exist, so the deny-all fallback applied and NO
-    // client could ever read an ack. The bridge classified every failure
-    // precisely — `unauthorized`, `bridge-standby`, `superseded`, malformed, X32
-    // error — and every one of them reached the musician as the same wordless
-    // 2s spinner-then-revert. The only reader was the MCP `get_command_status`
-    // tool via the Admin SDK, i.e. Daniel, after the fact.
-    //
-    // Scoped exactly like the sibling `pending` match: real membership (NOT bare
-    // isSignedIn, so a pending/denied account reads nothing) plus
-    // self-attribution — a musician may read the verdicts on their OWN commands
-    // and no one else's. `uid` is stamped by the bridge's AckWriter from the
-    // originating command; an ack written without one (a pre-uid bridge) is
-    // therefore unreadable rather than world-readable, which is the safe
-    // direction to fail.
     match /monitor-live/commands/acks/{commandId} {
-      allow read: if (isMember() || isSoundEngineer())
-                  && resource.data.uid == request.auth.uid;
-      allow write: if false; // Bridge writes via Admin SDK only
-    }
-
-    // System-wide alerts (read by all signed-in users, written by admins).
-    match /system/globalAlert {
-      allow read:  if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    // MCP TOKENS — server-only (Admin SDK)
-    // Per-user bearer tokens for connecting Claude (Desktop / web / Code) to
-    // the MCP route. Only `sha256(rawToken)` is stored, never the raw token.
-    // Minted, listed, and revoked exclusively via /api/mcp/tokens routes
-    // (Admin SDK); verifyBearer reads here via Admin SDK. No client access.
-    match /mcpTokens/{tokenId} {
-      allow read, write: if false;
-    }
-
-    // MCP OAUTH — server-only (Admin SDK)
-    // OAuth front door for Claude Desktop / web. `mcpOAuthClients` holds
-    // dynamically-registered public PKCE clients; `mcpOAuthCodes` holds
-    // single-use, short-lived (~10 min) authorization codes, stored hashed.
-    // Both are written/read exclusively by the /api/mcp/oauth/* routes via the
-    // Admin SDK. No client access.
-    match /mcpOAuthClients/{clientId} {
-      allow read, write: if false;
-    }
-    match /mcpOAuthCodes/{codeHash} {
-      allow read, write: if false;
-    }
-
-    // MCP TEST USERS — server-only (Admin SDK)
-    // Admin/band_leader discovery index for headless test identities provisioned
-    // via the MCP `create_test_account` tool (or POST /api/mcp/oauth/mint-test-token).
-    // One doc per test user — id == test uid (`test-<role>-<8-hex>`). Carries
-    // role, soundEngineer, ttlExpiresAt, provisionedBy, mcpTokenId. The actual
-    // bearer hash lives in `mcpTokens` with kind: 'test'. Created/listed/
-    // deleted exclusively via the MCP tool path (Admin SDK). No client access.
-    match /mcpTestUsers/{testUid} {
-      allow read, write: if false;
-    }
-
-    // UPLOAD BATCHES — server-only (Admin SDK)
-    // One doc per batch chart intake run (`upload_batches/{batchId}`), holding
-    // the item map, per-item status and the parked-duplicate decisions. Every
-    // reader and writer is server-side: the MCP batch-intake tools, the Inngest
-    // import processor, and /api/cron/import-batches-resume — all Admin SDK,
-    // which bypasses these rules. The drop-zone iframe never touches Firestore
-    // directly; it goes through the MCP tools, which do their own owner/org
-    // checks. So the client surface is closed end-to-end: a doc names staged
-    // Storage paths and library rows a duplicate matched against, and nothing
-    // in the browser has any reason to read or forge one.
-    match /upload_batches/{batchId} {
-      allow read, write: if false;
-    }
-
-    // AI ENRICHMENT CONFIG (Cycle-3 NEW-3 — A3)
-    // Daniel flips `autoApplyEnabled` and (optionally) tunes `threshold`
-    // via Firebase Console; A4's review UI also reads this doc to render
-    // the calibration banner. Reads are admin-only (band leaders + above
-    // SHOULD NOT be able to discover the AI ramp state); writes are
-    // admin-only via Console or future admin MCP tool (out of A3 scope).
-    match /aiConfig/{configId} {
-      allow read: if isAdmin();
+      allow read: if mixerOperator() && resource.data.get('uid', '') == request.auth.uid;
       allow write: if false;
     }
 
-    // AI ENRICHMENT CACHE (Cycle-3 NEW-3 — A3)
-    // Server-only — keyed by SHA-256 of canonical chart bytes so re-enrichment
-    // of identical bytes (re-uploads, reconciliation replays) returns the
-    // same Sonnet output without burning tokens. Admin SDK writes via the
-    // ai-enrichment subscriber; no client reads.
-    match /aiEnrichmentCache/{contentHash} {
-      allow read, write: if false;
-    }
-
-    // AI ENRICHMENT RETRY QUEUE (Cycle-3 NEW-3 — A3)
-    // Server-only — drained by /api/cron/ai-enrich-retry every 30 min.
-    // Exponential backoff (5min, 30min, 2h, 6h) before a row exhausts
-    // attempts and lands on enrichmentStatus:'failed'. A4 reads via
-    // Admin SDK to render the review queue.
-    match /aiEnrichmentRetryQueue/{rowId} {
-      allow read, write: if false;
-    }
-
-    // AI CORRECTION SIGNALS (Cycle-3 c3) — observation infrastructure.
-    // One immutable doc per /manage/library-review action
-    // (accept/reject/edit/retry/dismiss). Server-only — writes happen
-    // exclusively via the review-queue handlers (Admin SDK) and reads via
-    // the aggregator + admin MCP tool (Admin SDK). The docs carry uid
-    // attribution and the raw aiSuggestion payload, so client access is
-    // closed end-to-end.
-    match /aiCorrectionSignals/{signalId} {
-      allow read, write: if false;
-    }
-
-    // AI CORRECTION STATS (Cycle-3 c3) — singleton aggregate.
-    // `aiCorrectionStats/latest` is rebuilt by /api/cron/aggregate-corrections
-    // every 6h and read by the admin MCP tool `get_correction_stats`. Both
-    // sides use the Admin SDK, but admins MAY read directly via Firebase
-    // Console for diagnostics. Writes are server-only.
-    match /aiCorrectionStats/{statsId} {
-      allow read: if isAdmin();
+    // ── AUDIT / SERVER-ONLY ────────────────────────────────────────────────
+    match /auditLogs/{logId} {
+      allow get: if atLeast(docOrg(), 'ad');
+      allow list: if atLeast(listOrg(), 'ad');
       allow write: if false;
     }
+    match /qr-sessions/{code}            { allow read, write: if false; }
+    match /bridge-setup-codes/{code}     { allow read, write: if false; }
+    match /bridge-redemptions/{id}       { allow read, write: if false; }
+    match /mcpTokens/{tokenId}           { allow read, write: if false; }
+    match /mcpOAuthClients/{clientId}    { allow read, write: if false; }
+    match /mcpOAuthCodes/{codeHash}      { allow read, write: if false; }
+    match /mcpTestUsers/{testUid}        { allow read, write: if false; }
+    match /upload_batches/{batchId}      { allow read, write: if false; }
+    match /aiEnrichmentCache/{h}         { allow read, write: if false; }
+    match /aiEnrichmentRetryQueue/{id}   { allow read, write: if false; }
+    match /aiCorrectionSignals/{id}      { allow read, write: if false; }
 
-    // CHART BOND ALERTS (Cycle-7-fixes Lane 3) — daily chart-bond health
-    // cron sink. /api/cron/verify-chart-bond-health enumerates upcoming
-    // published setlists, runs verify_setlist_charts on each, and writes
-    // here when aggregate ok% falls below 80% OR any individual setlist
-    // ok% falls below 70%. Reads are admin-only (operational alerts for
-    // Daniel pre-Friday-service); writes are server-only via Admin SDK.
-    match /chart_bond_alerts/{alertId} {
-      allow read: if isAdmin();
-      allow write: if false;
-    }
+    // Platform-wide operational records: platform owner only (was isAdmin()).
+    match /bond_corrections/{id}         { allow read: if po(); allow write: if false; }
+    match /titleContextHints/{hintId}    { allow read: if po(); allow write: if false; }
+    match /aiConfig/{configId}           { allow read: if po(); allow write: if false; }
+    match /aiCorrectionStats/{statsId}   { allow read: if po(); allow write: if false; }
+    match /chart_bond_alerts/{alertId}   { allow read: if po(); allow write: if false; }
+    match /webVitalsObservations/{id}    { allow read: if po(); allow write: if false; }
+    match /backups/{backupId}            { allow read: if po(); allow write: if false; }
+    match /aiSpend/{spendId}             { allow read: if po(); allow write: if false; }
+    match /dedupeRuns/{runId}            { allow read: if po(); allow write: if false; }
 
-    // WEB VITALS OBSERVATIONS (Cycle-3.5 P2-017) — Core Web Vitals
-    // field-data sink. Every visitor's browser POSTs LCP/CLS/INP/FCP/TTFB
-    // to /api/web-vitals on each page-load (via navigator.sendBeacon);
-    // the route validates the payload and writes here via the Admin SDK.
-    // Reads are admin-only — analytics surface for Daniel + cycle-4 cowork
-    // CWV probes; writes are server-only (the Admin SDK bypasses these
-    // rules so the public POST endpoint can persist without client auth).
-    match /webVitalsObservations/{observationId} {
-      allow read: if isAdmin();
-      allow write: if false;
-    }
-
-    // BACKUPS AUDIT (PGR-01) — per-run dated backup audit docs
-    // (backups/{YYYY-MM-DD}) written by /api/cron/backup via the Admin SDK.
-    // Reads are admin-only — staleness/observability surface for Daniel
-    // (a missing recent date = backups stopped; feeds PGR-03 alerting).
-    // Writes are server-only: the Admin SDK bypasses these rules, so a
-    // hard `false` keeps every client (admin included) from forging records.
-    match /backups/{backupId} {
-      allow read: if isAdmin();
-      allow write: if false;
-    }
-
-    // AI SPEND (PGR-04 — 2026-05-21) — per-enrichment token + estimated-USD
-    // sink written by src/lib/library/ai-enrichment.ts via the Admin SDK.
-    // Reads are admin-only (cost data is operator-facing, surfaced via the
-    // get_ai_spend_summary MCP tool — band leaders should NOT see it);
-    // writes are server-only (the Admin SDK bypasses these rules). Mirrors
-    // the webVitalsObservations / aiCorrectionSignals access shape.
-    match /aiSpend/{spendId} {
-      allow read: if isAdmin();
-      allow write: if false;
-    }
-
-    // DEDUPE RUNS (W2 of the content-hash order, R-0903-live-cw-2 §5) —
-    // the reversibility record for every `dedupe_library` real-run. Each doc
-    // is one run: its timestamp, threshold, which pass grouped each group,
-    // and per marked row `{fileId, priorStatus, canonicalFileId}`. Written
-    // BEFORE the status batches, so a crash can leave a record with no mark
-    // (a harmless no-op to undo) but never a mark with no record.
-    //
-    // This collection exists because 100 rows are marked `duplicate` today
-    // and NOTHING inside the system can reverse them — the 09-01 sweep's
-    // undo lives in a hand-written JSON file in another repository. Reads
-    // are admin-only (it names hidden rows and is the operator's undo
-    // surface, via `undo_dedupe_group`); writes are server-only, since the
-    // Admin SDK bypasses these rules and a hard `false` keeps every client
-    // — admin included — from forging or editing a reversibility record.
-    //
-    // A Vercel push does NOT deploy rules. Without this match the collection
-    // falls to the deny-all below and `undo_dedupe_group` would look built
-    // while leaving nothing reversible — this repo's own 19:4xZ finding.
-    match /dedupeRuns/{runId} {
-      allow read: if isAdmin();
-      allow write: if false;
-    }
-
-    // Deny-all fallback — any collection not explicitly matched above is locked.
-    // Prevents new collections from being accidentally accessible.
+    // Deny-all fallback.
     match /{document=**} {
       allow read, write: if false;
     }
