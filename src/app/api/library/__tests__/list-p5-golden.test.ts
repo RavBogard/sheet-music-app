@@ -70,3 +70,40 @@ describe('P5 golden — /api/library/list per host tenant', () => {
         await expect(JSON.stringify(out, null, 2)).toMatchFileSnapshot('./__goldens__/p5-library-list-route.json')
     })
 })
+
+describe('P5 /api/library/list — after the nava move and with a shared (not assigned) collection', () => {
+    const NAVA = 'nava-tehila'
+    const moved = (id: string) => (id.startsWith('c-nava') ? { orgId: NAVA, previousOrgId: 'crc', collectionId: `${NAVA}__nava`, visibleToOrgs: [NAVA, 'crc'], libraryOrgs: [NAVA, 'crc'] } : {})
+    const sharedBl = (id: string) => (id === 'b-up-1' ? { collectionId: 'brotherslazaroff__uploads', visibleToOrgs: ['brotherslazaroff', 'crc'], libraryOrgs: ['brotherslazaroff'] } : {})
+    const ids = async (host: string, q: string) => {
+        const res = await GET(makeReq(`/api/library/list?${q}`, { token: 'valid', headers: { 'x-org-id': host } }))
+        const json = await res.json()
+        return (json.files as Array<{ id: string; ownerOrgId: string }>)
+    }
+
+    it("CRC's Nava Tehilah tab and default list are unchanged; the rows now name Nava as owner", async () => {
+        docs = fixtureDocs((id) => ({ ...moved(id), ...sharedBl(id) }))
+        const nava = await ids('crc', 'all=true&collection=nava')
+        expect(nava.map((f) => f.id)).toEqual(['c-nava-1', 'c-nava-2'])
+        expect(nava.every((f) => f.ownerOrgId === NAVA)).toBe(true)
+        const all = await ids('crc', 'all=true')
+        expect(all.map((f) => f.id)).toEqual(['c-core-1', 'c-sup-1', 'c-up-1', 'c-nava-1', 'c-core-orph', 'c-nava-2', 'c-core-dup', 'c-core-mp3', 'c-core-2'])
+        const archived = await ids('crc', 'all=true&status=archived')
+        expect(archived.map((f) => f.id)).toEqual(['c-core-arch', 'c-nava-arch'])
+    })
+
+    it('a shared-but-not-assigned row appears only with includeShared, and collectionId filters', async () => {
+        docs = fixtureDocs((id) => ({ ...moved(id), ...sharedBl(id) }))
+        expect((await ids('crc', 'all=true')).some((f) => f.id === 'b-up-1')).toBe(false)
+        const withShared = await ids('crc', 'all=true&includeShared=true')
+        expect(withShared.find((f) => f.id === 'b-up-1')?.ownerOrgId).toBe('brotherslazaroff')
+        expect((await ids('crc', 'all=true&includeShared=true&collectionId=brotherslazaroff__uploads')).map((f) => f.id)).toEqual(['b-up-1'])
+        expect((await ids('crc', `all=true&collectionId=${NAVA}__nava`)).map((f) => f.id)).toEqual(['c-nava-1', 'c-nava-2'])
+    })
+
+    it('BL sees none of the moved rows; Nava sees them as its own', async () => {
+        docs = fixtureDocs((id) => ({ ...moved(id), ...sharedBl(id) }))
+        expect((await ids('brotherslazaroff', 'all=true&includeShared=true')).map((f) => f.id)).toEqual(['b-core-1', 'b-up-1'])
+        expect((await ids(NAVA, 'all=true')).map((f) => f.id)).toEqual(['c-nava-1', 'c-nava-2'])
+    })
+})
