@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 
 import { makeReq } from '@/__tests__/api-test-helpers'
-import { firebaseAdminMock, mockAuth, mockDoc, mockFirestore, mockWhere, mockUsersSnap } from '@/__tests__/mock-firebase-admin'
+import { firebaseAdminMock, mockAuth, mockDoc, mockFirestore, mockUsersSnap } from '@/__tests__/mock-firebase-admin'
 
 // ── Mocks ──
 
@@ -29,6 +29,14 @@ vi.mock('@/lib/song-usage', () => ({
     recordSongUsage: vi.fn(() => ({ recorded: 0, skipped: 0 })),
     getUsageSummaries: vi.fn(() => new Map()),
 }))
+
+// Multi-tenant phase 2: roster listings go through listTenantMembers. The fake
+// implements the spec; wrapped in vi.fn so tests can read the role filter.
+vi.mock('@/lib/org/access', async () => {
+    const fake = await import('@/test-stubs/org-access-fake')
+    return { ...fake, listTenantMembers: vi.fn(fake.listTenantMembers) }
+})
+import { listTenantMembers } from '@/lib/org/access'
 
 // ── Tests ──
 
@@ -243,10 +251,11 @@ describe('POST /api/setlist/email-packets', () => {
             body: { setlistId: 'test' },
         }))
 
-        const roleCall = mockWhere.mock.calls.find(
-            (c: unknown[]) => c[0] === 'role' && c[1] === 'in'
-        ) as unknown[] | undefined
-        expect(roleCall).toBeTruthy()
-        expect(roleCall![2]).not.toContain('member')
+        // Phase 2: the listing filters on the MEMBERSHIP role (listTenantMembers).
+        const calls = vi.mocked(listTenantMembers).mock.calls
+        expect(calls.length).toBeGreaterThan(0)
+        const roles = calls[0][1]?.roles
+        expect(roles).toBeTruthy()
+        expect(roles).not.toContain('member')
     })
 })

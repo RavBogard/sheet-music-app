@@ -14,6 +14,7 @@
 import { initAdmin, getFirestore } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
+import type { OrgId } from '@/lib/org/types'
 
 export interface SongUsageSummary {
     fileId: string
@@ -27,12 +28,17 @@ export interface SongUsageSummary {
 /**
  * Record song usage for all song tracks in a published setlist.
  * Fire-and-forget — errors logged, not thrown.
+ *
+ * Multi-tenant phase 2 (W4): `orgId` is the setlist's `rowOrg(orgId)`; it is
+ * stamped on the summary (merge) and on each event. Key collision across
+ * tenants sharing a fileId is a phase-5 concern.
  */
 export async function recordSongUsage(
     setlistId: string,
     setlistName: string,
     eventDate: Date,
-    tracks: Array<{ fileId?: string; title: string; key?: string; type?: string }>
+    tracks: Array<{ fileId?: string; title: string; key?: string; type?: string }>,
+    orgId: OrgId,
 ): Promise<{ recorded: number; skipped: number }> {
     initAdmin()
     const db = getFirestore()
@@ -51,6 +57,7 @@ export async function recordSongUsage(
             // Upsert summary
             batch.set(summaryRef, {
                 fileId: track.fileId,
+                orgId,
                 lastUsedDate: eventDate,
                 lastUsedSetlistId: setlistId,
                 lastUsedSetlistName: setlistName,
@@ -61,6 +68,7 @@ export async function recordSongUsage(
 
             // Append event
             batch.create(eventRef, {
+                orgId,
                 setlistId,
                 setlistName,
                 eventDate,

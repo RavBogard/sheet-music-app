@@ -1,23 +1,43 @@
 rules_version = '2';
 
-// Storage rules mirror firestore.rules isMember() semantics.
-// Storage cannot call Firestore, so the config/admins fallback does not apply here —
-// membership is resolved purely through the custom claim `role`.
+// Chart objects carry their tenant in custom metadata `orgId` (stamped
+// 2026-10-12; every library/ writer stamps it from P2 on). An object without
+// it is crc — what a missing tenant has always meant. The browser does not
+// read Storage today; every chart byte goes through /api/library/file/[id]
+// (Admin SDK, unaffected by these rules).
 service firebase.storage {
   match /b/{bucket}/o {
-
-    function isMember() {
-      return request.auth != null
-          && request.auth.token.role in ['member', 'musician', 'band_leader', 'admin'];
+    function signedIn() { return request.auth != null; }
+    function po() { return signedIn() && request.auth.token.get('po', false) == true; }
+    function hasM() { return signedIn() && request.auth.token.get('m', null) is map; }
+    function legacyOrgs() {
+      let o = request.auth.token.get('orgIds', []);
+      return (o is list && o.size() > 0) ? o : ['crc'];
+    }
+    function legacyCode(t) {
+      let r = request.auth.token.get('role', '');
+      return !(t in legacyOrgs()) ? ''
+        : r == 'admin' ? 'ad' : r == 'band_leader' ? 'bl'
+        : r == 'musician' ? 'mu' : r == 'member' ? 'me' : r == 'pending' ? 'pe' : '';
+    }
+    function code(t) {
+      return !signedIn() ? '' : hasM() ? request.auth.token.m.get(t, '') : legacyCode(t);
+    }
+    function rank(c) {
+      return c == 'ad' ? 4 : c == 'bl' ? 3 : c == 'mu' ? 2 : c == 'me' ? 1 : c == 'pe' ? 0 : -1;
+    }
+    function atLeast(t, c) { return po() || rank(code(t)) >= rank(c); }
+    function objectOrg() {
+      return (resource.metadata != null
+              && resource.metadata.get('orgId', '') is string
+              && resource.metadata.get('orgId', '') != '')
+        ? resource.metadata.orgId : 'crc';
     }
 
-    // Library files — members read, writes only via admin SDK server-side
     match /library/{allPaths=**} {
-      allow read: if isMember();
+      allow read: if atLeast(objectOrg(), 'me');
       allow write: if false;
     }
-
-    // Deny-all fallback — any path not explicitly matched above is locked.
     match /{allPaths=**} {
       allow read, write: if false;
     }

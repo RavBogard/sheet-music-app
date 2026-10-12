@@ -103,7 +103,7 @@ export async function mergeAlwaysRowsIntoTemplate(
 
     initAdmin()
     const db = getFirestore()
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
 
     const snap = await db.collection("setlistTemplates").doc(templateId).get()

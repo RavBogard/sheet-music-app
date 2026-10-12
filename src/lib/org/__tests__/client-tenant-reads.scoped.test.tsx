@@ -3,9 +3,10 @@ import { renderHook } from "@testing-library/react"
 import React from "react"
 
 /**
- * Multi-tenant phase 1 — the browser reads narrowed per tenant: a non-crc
- * tenant's template listener asks only for its own doc-id range; crc keeps the
- * whole-collection listener (bare keys); the setlist subscription with no org
+ * Multi-tenant phase 1/2 — the browser reads narrowed per tenant. Phase 2:
+ * every tenant's template listener (crc included) lists by the stamped
+ * `orgId` field, which the list rule can prove (the phase-1 doc-id range and
+ * crc's whole-collection read are gone). The setlist subscription with no org
  * is crc's, not every tenant's. The goldens prove the results are unchanged.
  */
 
@@ -30,9 +31,10 @@ vi.mock("firebase/firestore", () => {
             h.listened.push(q)
             let rows = h.docs
             for (const c of q.cs ?? []) {
-                if (!c.where || c.where[0] !== "__name__") continue
-                const [, op, v] = c.where
-                rows = rows.filter((r) => (op === ">=" ? r.id >= v : r.id < v))
+                if (!c.where) continue
+                const [f, op, v] = c.where
+                if (f === "__name__") rows = rows.filter((r) => (op === ">=" ? r.id >= v : r.id < v))
+                else if (op === "==") rows = rows.filter((r) => r.data[f] === v)
             }
             const snap = { docs: rows.map((r) => ({ id: r.id, data: () => r.data })), metadata: { fromCache: false } }
             if (typeof next === "function") next(snap)
@@ -59,16 +61,16 @@ vi.mock("@/types/schemas", () => ({ setlistConverter: {} }))
 vi.mock("@/lib/liturgical-templates", () => ({ generateSetlistName: vi.fn() }))
 
 import { OrgContext } from "@/lib/org/org-context"
-import { useCustomTemplates, orgTemplateIdRange } from "@/lib/template-firebase"
+import { useCustomTemplates } from "@/lib/template-firebase"
 import { createSetlistService } from "@/lib/setlist-firebase"
 
 beforeEach(() => {
     h.listened.length = 0
     h.docs = [
-        { id: "friday_night", data: { slots: [{ title: "crc" }] } },
-        { id: "testshul__friday_night", data: { slots: [{ title: "testshul" }] } },
-        { id: "testshul2__friday_night", data: { slots: [{ title: "testshul2" }] } },
-        { id: "testshul_x__friday_night", data: { slots: [{ title: "other" }] } },
+        { id: "friday_night", data: { orgId: "crc", slots: [{ title: "crc" }] } },
+        { id: "testshul__friday_night", data: { orgId: "testshul", slots: [{ title: "testshul" }] } },
+        { id: "testshul2__friday_night", data: { orgId: "testshul2", slots: [{ title: "testshul2" }] } },
+        { id: "testshul_x__friday_night", data: { orgId: "testshul_x", slots: [{ title: "other" }] } },
     ]
 })
 
@@ -79,27 +81,16 @@ function wrapper(org: string) {
 }
 
 describe("template override listener per tenant", () => {
-    it("range is null for crc and the tenant's prefix otherwise", () => {
-        expect(orgTemplateIdRange("crc")).toBeNull()
-        expect(orgTemplateIdRange("testshul")).toEqual({ start: "testshul__", end: "testshul__" })
-    })
-
-    it("a new tenant listens to its own id range only", () => {
-        const { result } = renderHook(() => useCustomTemplates(), { wrapper: wrapper("testshul") })
+    it.each(["testshul", "crc"])("%s lists its own docs by orgId", (org) => {
+        const { result } = renderHook(() => useCustomTemplates(), { wrapper: wrapper(org) })
         expect(h.listened).toEqual([
             {
                 kind: "q",
                 col: expect.objectContaining({ path: "templates" }),
-                cs: [{ where: ["__name__", ">=", "testshul__"] }, { where: ["__name__", "<", "testshul__"] }],
+                cs: [{ where: ["orgId", "==", org] }],
             },
         ])
-        expect(result.current.overrides).toEqual({ friday_night: [{ title: "testshul" }] })
-    })
-
-    it("crc keeps the whole-collection listener", () => {
-        const { result } = renderHook(() => useCustomTemplates(), { wrapper: wrapper("crc") })
-        expect(h.listened).toEqual([expect.objectContaining({ kind: "col", path: "templates" })])
-        expect(result.current.overrides).toEqual({ friday_night: [{ title: "crc" }] })
+        expect(result.current.overrides).toEqual({ friday_night: [{ title: org }] })
     })
 })
 

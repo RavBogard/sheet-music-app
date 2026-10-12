@@ -17,6 +17,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
  *    (no lock-out) — orgId-absent and orgId="crc" writes both succeed.
  *  - AC-2: a caller whose claim names a DIFFERENT tenant cannot write into crc;
  *    orgId is immutable across tenants on update (admins exempt).
+ *
+ * Multi-tenant P2 amendments (design §4.1): creates must stamp orgId (an
+ * unstamped TRACK create is still accepted when the caller leads the parent
+ * setlist's tenant, §10 Q1); the admin exemption is gone — only the platform
+ * owner (`po`) bypasses tenant checks, and nobody changes orgId from a client.
  *  - AC-3: reads are UNCHANGED (setlists/tracks public; songs/recordings member;
  *    orgs public-read, write-denied) — the err-public + no-lock-out invariant.
  *
@@ -110,14 +115,18 @@ describe("v11-01-04 firestore.rules org-scope", () => {
 
     // ─── AC-1: CRC users (no orgIds claim) keep FULL write access ──────────
 
-    it("AC-1: claimless CRC leader can create setlist with orgId='crc' AND with no orgId", async () => {
+    // Multi-tenant P2: creates must stamp orgId (every browser setlist writer
+    // does — createSetlist/duplicateSetlist/cloneSetlist, and saveAsTemplate
+    // after lane 4). An unstamped create is refused; reads/updates of a legacy
+    // unstamped row still treat it as crc.
+    it("AC-1: claimless CRC leader can create a setlist with orgId='crc'; an unstamped create is refused (P2)", async () => {
         const db = crcLeader()
         await assertSucceeds(
             db.collection("setlists").doc("sl-new-crc").set({
                 name: "New", ownerId: "crc-leader", orgId: "crc",
             }),
         )
-        await assertSucceeds(
+        await assertFails(
             db.collection("setlists").doc("sl-new-noorg").set({
                 name: "New2", ownerId: "crc-leader",
             }),
@@ -185,20 +194,40 @@ describe("v11-01-04 firestore.rules org-scope", () => {
         )
     })
 
-    it("AC-2: orgId is immutable across tenants on update (non-admin denied, admin allowed)", async () => {
+    // Multi-tenant P2: the admin exemption is gone. A tenant admin cannot move a
+    // row to another tenant, and neither can the platform owner from the
+    // browser — orgId is immutable for every client (design §4.1 orgKept());
+    // moving a row between tenants is an Admin-SDK operation.
+    it("AC-2: orgId is immutable across tenants on update (leader, tenant admin and po all denied)", async () => {
         await assertFails(
             blLeader().collection("setlists").doc("sl-crc").update({
                 orgId: "brotherslazaroff",
             }),
         )
-        await assertSucceeds(
+        await assertFails(
             adminCtx().collection("setlists").doc("sl-crc").update({
                 orgId: "brotherslazaroff",
             }),
         )
+        await assertFails(
+            testEnv.authenticatedContext("owner", { po: true }).firestore()
+                .collection("setlists").doc("sl-crc").update({ orgId: "brotherslazaroff" }),
+        )
+        // ...while po may otherwise edit any tenant's setlist.
+        await assertSucceeds(
+            testEnv.authenticatedContext("owner", { po: true }).firestore()
+                .collection("setlists").doc("sl-crc").update({ name: "po edit" }),
+        )
     })
 
     it("AC-2: a foreign leader cannot update or delete an existing crc track", async () => {
+        // P2: a stamped track create checks its orgId against the parent
+        // setlist's, so the BL setlist must exist.
+        await testEnv.withSecurityRulesDisabled(async (ctx) => {
+            await ctx.firestore().collection("setlists").doc("sl-bl").set({
+                name: "BL", ownerId: "bl-leader", orgId: "brotherslazaroff",
+            })
+        })
         const foreignTrack = blLeader().collection("tracks").doc("tk-crc")
         await assertFails(foreignTrack.update({ key: "F#" }))
         await assertFails(foreignTrack.delete())
@@ -389,17 +418,25 @@ describe("v11-01-04 firestore.rules org-scope", () => {
         // Residual recommendation (v11-06-03 AUDIT.md): add orgReadOk to
         // setlistTemplates for defense-in-depth once/if a client read path lands.
 
-        it("CHARACTERIZE: users is application-only scoped (band_leader rule read is cross-tenant by the picker design)", async () => {
-            // Documents the current rules behavior — a leader CAN read any user
-            // doc (no orgId field to scope). Isolation is enforced app-side.
-            await assertSucceeds(
+        // Multi-tenant P2 closed both characterized gaps at the rules layer:
+        //  - users: a user doc is readable by its owner and the platform owner
+        //    only; rosters come from GET /api/tenant/people (server-side).
+        //  - setlistTemplates: org-walled like every other tenant collection.
+        it("P2: users is walled — a leader cannot read another user's doc (rosters are server-side)", async () => {
+            await assertFails(
                 blLeader().collection("users").doc("crc-musician").get(),
+            )
+            await assertFails(
+                crcLeader().collection("users").doc("crc-musician").get(),
             )
         })
 
-        it("CHARACTERIZE: setlistTemplates is application-only scoped (no client read path; rules gate on role, not org)", async () => {
-            await assertSucceeds(
+        it("P2: setlistTemplates is org-walled — a BL leader cannot read a CRC template; a CRC leader can", async () => {
+            await assertFails(
                 blLeader().collection("setlistTemplates").doc("tpl-crc").get(),
+            )
+            await assertSucceeds(
+                crcLeader().collection("setlistTemplates").doc("tpl-crc").get(),
             )
         })
     })

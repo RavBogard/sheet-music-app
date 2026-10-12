@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/lib/auth-context"
+import { useOrg } from "@/lib/org/org-context"
 import { getDb } from "@/lib/firebase"
 import { collection, query, where, orderBy, limit, doc, getDoc, getDocFromCache, setDoc, documentId, getDocs, Timestamp, serverTimestamp, type Query, type DocumentData } from "firebase/firestore"
 import { toDate } from "@/lib/firestore-helpers"
@@ -43,6 +44,7 @@ export interface UpcomingSetlistWithPrep {
  */
 export function useUpcomingPrep() {
     const { user, isMember } = useAuth()
+    const org = useOrg()
     const [setlists, setSetlists] = useState<Setlist[]>([])
     const [songPrefs, setSongPrefs] = useState<Record<string, SongPref>>({})
     const [lastVisitedAt, setLastVisitedAt] = useState<Date | null>(null)
@@ -91,8 +93,10 @@ export function useUpcomingPrep() {
             now.setHours(0, 0, 0, 0)
             const nextWeek = new Date(now)
             nextWeek.setDate(nextWeek.getDate() + 7)
+            // Multi-tenant phase 2: this tenant's setlists only.
             setQ(query(
                 collection(db, 'setlists'),
+                where('orgId', '==', org),
                 where('eventDate', '>=', Timestamp.fromDate(now)),
                 where('eventDate', '<=', Timestamp.fromDate(nextWeek)),
                 orderBy('eventDate', 'asc'),
@@ -100,7 +104,7 @@ export function useUpcomingPrep() {
             ))
         })
         return () => { cancelled = true }
-    }, [user, isMember])
+    }, [user, isMember, org])
 
     const { data, loading: subLoading } = useSafeFirestoreSync<Setlist[]>(q)
 

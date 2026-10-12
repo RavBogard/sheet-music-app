@@ -1,21 +1,32 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { UserProfile, subscribeToAllUsers, updateUserRole, UserRole } from "@/lib/users-firebase"
+import { fetchTenantPeople, updateUserRole, type TenantPerson } from "@/lib/users-firebase"
 import { UserRow } from "@/components/admin/UserRow"
-import { notifyRoleChanged } from "@/lib/notification-store"
+import { useOrg } from "@/lib/org/org-context"
+import { ROLE_LABELS } from "@/lib/roles"
+import type { TenantRole } from "@/lib/org/membership-types"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Loader2, Search, FilterX } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 
-type FilterRole = 'all' | 'pending' | 'member' | 'musician' | 'band_leader' | 'admin'
+type FilterRole = 'all' | 'pending' | 'member' | 'musician' | 'band_leader' | 'admin' | 'denied'
 
+/** Re-read the list this often while the page is visible. */
+const REFRESH_MS = 30_000
+
+/**
+ * /manage People. Multi-tenant phase 2: lists the people of THIS tenant (the
+ * host) through GET /api/tenant/people, with each person's role here.
+ * "Requests" are people waiting for approval (`pending`).
+ */
 export function PeopleSection() {
-    const { user, profile, isAdmin, isBandLeader } = useAuth()
-    const [users, setUsers] = useState<UserProfile[]>([])
+    const { user, role: myRole, isAdmin, isBandLeader } = useAuth()
+    const org = useOrg()
+    const [users, setUsers] = useState<TenantPerson[]>([])
     const [usersLoading, setUsersLoading] = useState(true)
     const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
     const [bulkLoading, setBulkLoading] = useState(false)
@@ -27,19 +38,32 @@ export function PeopleSection() {
     // Band leaders and admins can see the people section
     const canManagePeople = isBandLeader
 
+    const mounted = useRef(true)
+    useEffect(() => () => { mounted.current = false }, [])
+
+    const reload = useCallback(async () => {
+        try {
+            const { people } = await fetchTenantPeople()
+            if (mounted.current) setUsers(people)
+        } catch {
+            // Keep the last list; a later refresh may succeed.
+        } finally {
+            if (mounted.current) setUsersLoading(false)
+        }
+    }, [])
+
     useEffect(() => {
         if (!canManagePeople) return
-        const unsub = subscribeToAllUsers(
-            (data) => { setUsers(data); setUsersLoading(false) },
-            () => setUsersLoading(false)
-        )
-        return unsub
-    }, [canManagePeople])
-
-
+        void reload()
+        const timer = setInterval(() => {
+            if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+            void reload()
+        }, REFRESH_MS)
+        return () => clearInterval(timer)
+    }, [canManagePeople, reload, org])
 
     const pendingCount = users.filter(u => u.role === "pending").length
-    const currentUserRole = (profile?.role || 'member') as UserRole
+    const currentUserRole = myRole || 'member'
 
     // Derived filtered users
     const filteredUsers = useMemo(() => {
@@ -80,8 +104,7 @@ export function PeopleSection() {
             let failed = 0
             for (const uid of uids) {
                 try {
-                    await updateUserRole(uid, role as UserRole)
-                    notifyRoleChanged(uid, role).catch(() => { })
+                    await updateUserRole(uid, role as TenantRole, { tenant: org })
                     success++
                 } catch {
                     failed++
@@ -96,6 +119,7 @@ export function PeopleSection() {
                 toast.error(`Failed to update ${failed} user${failed !== 1 ? 's' : ''}`)
             }
             clearSelection()
+            void reload()
         } finally {
             setBulkLoading(false)
         }
@@ -188,7 +212,7 @@ export function PeopleSection() {
                 </div>
 
                 <div className="flex items-center bg-card border border-border rounded-lg p-0.5 overflow-x-auto min-w-0 hide-scrollbar">
-                    {(['all', 'pending', 'member', 'musician', 'band_leader', 'admin'] as const).map((role) => (
+                    {(['all', 'pending', 'member', 'musician', 'band_leader', 'admin', 'denied'] as const).map((role) => (
                         <Button
                             key={role}
                             variant="ghost"
@@ -201,7 +225,10 @@ export function PeopleSection() {
                                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                             )}
                         >
-                            {role === 'band_leader' ? 'Leader' : role.charAt(0).toUpperCase() + role.slice(1)}
+                            {role === 'band_leader' ? 'Leader'
+                                : role === 'pending' ? 'Requests'
+                                : role === 'denied' ? ROLE_LABELS.denied
+                                : role.charAt(0).toUpperCase() + role.slice(1)}
                         </Button>
                     ))}
                 </div>
@@ -257,6 +284,7 @@ export function PeopleSection() {
                                     currentUserRole={currentUserRole}
                                     isSelected={selectedUsers.has(u.uid)}
                                     onSelect={() => toggleUserSelection(u.uid)}
+                                    onChanged={() => { void reload() }}
                                 />
                             ))
                         )}

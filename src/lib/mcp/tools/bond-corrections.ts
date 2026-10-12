@@ -6,6 +6,8 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
 import { searchLibrary } from "./library"
 import { rowOrg } from "@/lib/mcp/org-context"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import type { SongRecord } from "@/lib/mcp/server-songs"
 
 /**
@@ -69,6 +71,9 @@ export interface FlagBondResult {
 export async function flagBond(
     uid: string,
     args: FlagBondArgs,
+    // Multi-tenant P2 (W3): the caller's token tenant. The flag is refused on
+    // another tenant's track and stamped with this tenant.
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<FlagBondResult | RichErrorEnvelope> {
     if (!args.setlistId?.trim())
         return richError("invalid_argument", "setlistId must be a non-empty string.", {
@@ -89,7 +94,7 @@ export async function flagBond(
     initAdmin()
     const db = getFirestore()
 
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
 
     // Confirm the track still exists on the named setlist — guards against
@@ -119,6 +124,27 @@ export async function flagBond(
         )
     }
 
+    // Multi-tenant P2 (W3): cross-tenant wall. The track's own orgId, else its
+    // parent setlist's (an unstamped row from a pre-P2 bundle). Another
+    // tenant's track gets the SAME envelope as a missing setlist — never leak
+    // that the id exists in another tenant (mirrors loadEditableSetlist).
+    const trackData = trackSnap.data() as { orgId?: unknown }
+    let trackOrg: OrgId
+    if (typeof trackData.orgId === "string" && trackData.orgId) {
+        trackOrg = trackData.orgId
+    } else {
+        const parent = await db.collection("setlists").doc(args.setlistId).get()
+        trackOrg = rowOrg(parent.exists ? parent.data()?.orgId : undefined)
+    }
+    if (trackOrg !== org) {
+        return richError(
+            "setlist_not_found",
+            `Setlist '${args.setlistId}' was not found.`,
+            { setlistId: args.setlistId },
+            "Verify the id via list_setlists.",
+        )
+    }
+
     const flagId = `${args.setlistId}_${args.trackId}`
     const flaggedAt = new Date().toISOString()
     await db
@@ -131,6 +157,7 @@ export async function flagBond(
             reason: args.reason,
             flaggedAt,
             flaggedBy: uid,
+            orgId: org,
         })
     logger.info("[mcp] flag_bond", {
         setlistId: args.setlistId,
@@ -188,6 +215,7 @@ export interface ReviewFlaggedBondsResult {
 export async function reviewFlaggedBonds(
     uid: string,
     args: ReviewFlaggedBondsArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<ReviewFlaggedBondsResult | RichErrorEnvelope> {
     if (!args.setlistId?.trim())
         return richError("invalid_argument", "setlistId must be a non-empty string.", {
@@ -197,14 +225,18 @@ export async function reviewFlaggedBonds(
     initAdmin()
     const db = getFirestore()
 
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
 
     const setlistSnap = await db
         .collection("setlists")
         .doc(args.setlistId)
         .get()
-    if (!setlistSnap.exists)
+    // Multi-tenant P2: another tenant's setlist reads as not found.
+    if (
+        !setlistSnap.exists ||
+        rowOrg((setlistSnap.data() as Record<string, unknown>).orgId) !== org
+    )
         return richError(
             "setlist_not_found",
             `Setlist '${args.setlistId}' was not found.`,
@@ -352,6 +384,7 @@ export interface RecordBondCorrectionResult {
 export async function recordBondCorrection(
     uid: string,
     args: RecordBondCorrectionArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<RecordBondCorrectionResult | RichErrorEnvelope> {
     if (!args.setlistId?.trim())
         return richError("invalid_argument", "setlistId must be a non-empty string.", {
@@ -380,12 +413,16 @@ export async function recordBondCorrection(
     initAdmin()
     const db = getFirestore()
 
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
 
     const setlistRef = db.collection("setlists").doc(args.setlistId)
     const setlistSnap = await setlistRef.get()
-    if (!setlistSnap.exists)
+    // Multi-tenant P2: another tenant's setlist reads as not found.
+    if (
+        !setlistSnap.exists ||
+        rowOrg((setlistSnap.data() as Record<string, unknown>).orgId) !== org
+    )
         return richError(
             "setlist_not_found",
             `Setlist '${args.setlistId}' was not found.`,
@@ -419,8 +456,9 @@ export async function recordBondCorrection(
         hintId?: string
     }>(async (tx) => {
         // Re-read inside the tx so the increment lands atomically.
-        const [toSnap, hintSnap] = await Promise.all([
+        const [toSnap, fromSnap, hintSnap] = await Promise.all([
             tx.get(toIndexRef),
+            tx.get(fromIndexRef),
             contextKey && toStem
                 ? tx.get(
                       db
@@ -452,31 +490,27 @@ export async function recordBondCorrection(
             contextKey: contextKey ?? null,
             correctedAt,
             correctedBy: uid,
+            orgId: org,
         })
 
         // ── Bump library_index counters on both rows. Increment is safe
         // even if the row was created without `bondCorrectionHistory` —
         // Firestore Increment treats missing as 0.
-        tx.set(
-            fromIndexRef,
-            {
-                bondCorrectionHistory: {
-                    correctedAwayFrom: FieldValue.increment(1),
-                    lastCorrectionAt: correctedAt,
-                },
-            },
-            { merge: true },
-        )
-        tx.set(
-            toIndexRef,
-            {
-                bondCorrectionHistory: {
-                    correctedTo: FieldValue.increment(1),
-                    lastCorrectionAt: correctedAt,
-                },
-            },
-            { merge: true },
-        )
+        // Multi-tenant P2 (W9): update() guarded by existence — a correction
+        // naming a songId with no library_index row no longer creates an
+        // unstamped stub row. Dotted paths keep the rest of the map intact.
+        if (fromSnap.exists) {
+            tx.update(fromIndexRef, {
+                "bondCorrectionHistory.correctedAwayFrom": FieldValue.increment(1),
+                "bondCorrectionHistory.lastCorrectionAt": correctedAt,
+            })
+        }
+        if (toSnap.exists) {
+            tx.update(toIndexRef, {
+                "bondCorrectionHistory.correctedTo": FieldValue.increment(1),
+                "bondCorrectionHistory.lastCorrectionAt": correctedAt,
+            })
+        }
 
         // ── Delete the open flag (one-shot — re-flag if it surfaces again).
         tx.delete(flagRef)
@@ -509,6 +543,7 @@ export async function recordBondCorrection(
                     preferredFileId: args.toSongId,
                     picks: correctedToAfter,
                     lastUpdatedAt: correctedAt,
+                    orgId: org,
                 },
                 { merge: true },
             )

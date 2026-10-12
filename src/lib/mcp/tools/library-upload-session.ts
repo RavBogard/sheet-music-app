@@ -19,6 +19,14 @@ import { stampOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { logger } from "@/lib/logger"
+import {
+    loadUploader,
+    isUploadAllowed,
+    isTrustedLeader,
+    curatedCatalogGate,
+    uploadForbidden,
+    rateLimitEnvelope,
+} from "./uploader-roles"
 
 /**
  * Chunked / signed-URL chart upload for cowork agents (B-001 from the
@@ -64,76 +72,8 @@ import { logger } from "@/lib/logger"
 
 // Cycle-2 REG-001b: every error returns the canonical rich envelope.
 
-interface UploaderRoles {
-    role: string | undefined
-    canUpload: boolean
-    email: string | undefined
-}
-
-async function loadUploader(
-    db: FirebaseFirestore.Firestore,
-    uid: string,
-): Promise<UploaderRoles> {
-    const snap = await db.collection("users").doc(uid).get()
-    const d = snap.exists ? (snap.data() as Record<string, unknown>) : {}
-    return {
-        role: typeof d.role === "string" ? d.role : undefined,
-        canUpload: d.canUpload === true,
-        email: typeof d.email === "string" ? d.email : undefined,
-    }
-}
-
-function isUploadAllowed(roles: UploaderRoles): boolean {
-    if (roles.role === "admin") return true
-    if (roles.role === "band_leader") return true
-    if (roles.role === "musician") return true
-    return roles.canUpload
-}
-
-function isTrustedLeader(roles: UploaderRoles): boolean {
-    return roles.role === "admin" || roles.role === "band_leader"
-}
-
-function curatedCatalogGate(
-    roles: UploaderRoles,
-    collection: LibraryCollection | undefined,
-): RichErrorEnvelope | null {
-    if (
-        (collection === "core" ||
-            collection === "supplemental" ||
-            collection === "nava") &&
-        !isTrustedLeader(roles)
-    ) {
-        return forbiddenRoleEnvelope({
-            callerRole: roles.role ?? null,
-            requiredRoles: ["admin", "band_leader"],
-            message: `Writing to the '${collection}' catalog requires an admin or band leader account.`,
-            hint: "Pick collection: 'uploads' (default) or ask an admin/band leader to add this to the curated catalog.",
-            context: { collection },
-        })
-    }
-    return null
-}
-
-function uploadForbidden(roles: UploaderRoles): RichErrorEnvelope {
-    return forbiddenRoleEnvelope({
-        callerRole: roles.role ?? null,
-        requiredRoles: ["admin", "band_leader", "musician"],
-        message:
-            "Upload permission required. Ask an admin to enable uploads for your account.",
-        hint: "Ask an admin to add you as admin / band_leader / musician, or set canUpload on your user doc.",
-        context: { canUpload: roles.canUpload },
-    })
-}
-
-function rateLimitEnvelope(reason: string): RichErrorEnvelope {
-    return richError(
-        "rate_limited",
-        reason,
-        undefined,
-        "Retry after the cooldown window, or ask an admin to bypass via trusted-leader role.",
-    )
-}
+// Multi-tenant P2: the uploader gates are the shared ones (one copy, read in
+// the token tenant) — the local duplicate was deleted.
 
 const UPLOAD_SESSION_TTL_MS = 10 * 60 * 1000
 // M-12 (v11.5-04-03): the chunked inline flow ships bytes THROUGH MCP tool args
@@ -217,6 +157,7 @@ export interface RequestChartUploadUrlResult {
 export async function requestChartUploadUrl(
     uid: string,
     args: RequestChartUploadUrlArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<RequestChartUploadUrlResult | RichErrorEnvelope> {
     if (!args.title?.trim())
         return richError("invalid_argument", "title is required.", { field: "title" })
@@ -239,7 +180,7 @@ export async function requestChartUploadUrl(
     initAdmin()
     const db = getFirestore()
 
-    const roles = await loadUploader(db, uid)
+    const roles = await loadUploader(db, uid, org)
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const curatedDenial = curatedCatalogGate(roles, args.collection)
@@ -292,6 +233,8 @@ export async function requestChartUploadUrl(
             sizeBytes: args.sizeBytes ?? null,
             stagedPath: path,
             status: "awaiting-upload",
+            // Multi-tenant P2 (W12): the session's tenant.
+            orgId: org,
             createdAt: FieldValue.serverTimestamp(),
             expiresAt: new Date(expiresAtMs),
         })
@@ -334,11 +277,11 @@ export interface FinalizeChartUploadResult {
 export async function finalizeChartUpload(
     uid: string,
     args: FinalizeChartUploadArgs,
-    // v11.7-06-02: optional caller host org. When given, the NEW chart is
-    // org-stamped (heal mode returns earlier, so an existing chart is never
-    // re-tenanted). OPTIONAL/no-default on purpose — absent means "don't stamp"
-    // so the chunked-commit path (which stamps externally) isn't double-stamped.
-    org?: OrgId,
+    // Multi-tenant P2: the caller's token tenant. The uploader's role is read
+    // in it and the NEW chart is created in it (processChartUpload requires
+    // orgId; heal mode returns earlier, so an existing chart is never
+    // re-tenanted).
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<FinalizeChartUploadResult | RichErrorEnvelope> {
     if (!args.uploadSessionId?.trim()) {
         return richError(
@@ -392,7 +335,7 @@ export async function finalizeChartUpload(
         )
     }
 
-    const roles = await loadUploader(db, uid)
+    const roles = await loadUploader(db, uid, org)
     // Auth was checked on init; re-check here so a role change between
     // init and finalize doesn't sneak through.
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
@@ -539,6 +482,7 @@ export async function finalizeChartUpload(
         uploaderUid: uid,
         uploaderEmail: roles.email,
         force: args.force,
+        orgId: org,
     })
 
     // Clear the staged blob whether we succeeded or failed — the session
@@ -571,9 +515,11 @@ export async function finalizeChartUpload(
         resultFileId: result.fileId,
     })
 
-    // v11.7-06-02: org-stamp the NEW chart from the caller's host org (heal mode
+    // v11.7-06-02: org-stamp the NEW chart from the caller's org (heal mode
     // returned earlier, so this only ever stamps a freshly-created chart).
-    if (org) await stampOrg(db, result.fileId, org)
+    // Multi-tenant P2: processChartUpload already stamped orgId; kept as a
+    // no-op guard.
+    await stampOrg(db, result.fileId, org)
 
     return {
         ok: true,
@@ -648,6 +594,7 @@ export interface BeginChunkedChartUploadResult {
 export async function beginChunkedChartUpload(
     uid: string,
     args: BeginChunkedChartUploadArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<BeginChunkedChartUploadResult | RichErrorEnvelope> {
     if (!args.title?.trim())
         return richError("invalid_argument", "title is required.", { field: "title" })
@@ -659,7 +606,7 @@ export async function beginChunkedChartUpload(
     initAdmin()
     const db = getFirestore()
 
-    const roles = await loadUploader(db, uid)
+    const roles = await loadUploader(db, uid, org)
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const curatedDenial = curatedCatalogGate(roles, args.collection)
@@ -692,6 +639,8 @@ export async function beginChunkedChartUpload(
             stagedPath: stagedPath(uploadSessionId),
             mode: "chunked",
             status: "awaiting-chunks",
+            // Multi-tenant P2 (W12): the session's tenant.
+            orgId: org,
             totalChunks: args.totalChunks ?? null,
             // Per-index decoded byte sizes — keyed map so a retransmitted index
             // overwrites rather than double-counts toward the total cap.
@@ -729,6 +678,7 @@ export interface AppendChartUploadChunkResult {
 export async function appendChartUploadChunk(
     uid: string,
     args: AppendChartUploadChunkArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<AppendChartUploadChunkResult | RichErrorEnvelope> {
     if (!args.uploadSessionId?.trim())
         return richError("invalid_argument", "uploadSessionId is required.", {
@@ -794,7 +744,7 @@ export async function appendChartUploadChunk(
         )
 
     // Re-check role (revocation mid-flow); NOT separately rate-limited (see note).
-    const roles = await loadUploader(db, uid)
+    const roles = await loadUploader(db, uid, org)
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const decoded = decodeBase64Strict(args.dataBase64)
@@ -1034,10 +984,14 @@ export async function commitChunkedChartUpload(
         )
     }
 
-    const result = await finalizeChartUpload(uid, {
-        uploadSessionId: args.uploadSessionId,
-        force: args.force,
-    })
+    const result = await finalizeChartUpload(
+        uid,
+        {
+            uploadSessionId: args.uploadSessionId,
+            force: args.force,
+        },
+        org,
+    )
 
     // Best-effort: drop the chunk byte objects (finalize already cleared `raw`).
     await Promise.all(

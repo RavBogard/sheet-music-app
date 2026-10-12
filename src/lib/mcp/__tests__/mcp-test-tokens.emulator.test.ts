@@ -83,6 +83,7 @@ describe("MCP test tokens (emulator)", () => {
             "musician_availability",
             "qr-sessions",
             "config",
+            "memberships",
         ]
         await Promise.all(
             collections.map(async (c) => {
@@ -169,6 +170,19 @@ describe("MCP test tokens (emulator)", () => {
             role: "musician",
         })
         expect("token" in result).toBe(true)
+    })
+
+    it("multi-tenant phase 2: a crc band leader cannot place a test account in another tenant", async () => {
+        await db().collection("users").doc(LEADER_UID).set({ role: "band_leader", membershipsMigratedAt: new Date() })
+        await db().collection("memberships").doc(`crc__${LEADER_UID}`).set({
+            uid: LEADER_UID, tenantId: "crc", role: "band_leader", soundEngineer: false, addedBy: "test", addedAt: new Date(),
+        })
+        const refused = await provisionTestAccount(LEADER_UID, { role: "musician", orgIds: ["brotherslazaroff"] }, "crc")
+        expect("error" in refused && refused.error).toBe("forbidden_tenant")
+        const mixed = await provisionTestAccount(LEADER_UID, { role: "musician", orgIds: ["crc", "brotherslazaroff"] }, "crc")
+        expect("error" in mixed && mixed.error).toBe("forbidden_tenant")
+        const ok = await provisionTestAccount(LEADER_UID, { role: "musician", orgIds: ["crc"] }, "crc")
+        expect("token" in ok).toBe(true)
     })
 
     it("musician CANNOT mint — structured forbidden_role envelope", async () => {
@@ -1159,15 +1173,17 @@ describe("MCP test tokens (emulator)", () => {
         })
     })
 
-    it("orgIds omitted is byte-equivalent to crc default (no claim/field; token crc)", async () => {
+    it("orgIds omitted → a crc membership; claims rebuilt from it (multi-tenant P2); token crc", async () => {
         const result = await provisionTestAccount(ADMIN_UID, { role: "musician" })
         if ("error" in result) throw new Error("mint failed")
         expect(result.orgIds).toEqual(["crc"])
 
-        const userSnap = await db().collection("users").doc(result.uid).get()
-        expect(userSnap.data()?.orgIds).toBeUndefined() // no field written
+        // P2: claims come only from memberships (design §3.7), so the default
+        // path now carries m + the legacy orgIds mirror instead of no claim.
+        const memberships = await db().collection("memberships").where("uid", "==", result.uid).get()
+        expect(memberships.docs.map((d) => `${d.get("tenantId")}:${d.get("role")}`)).toEqual(["crc:musician"])
         const authUser = await getAuth().getUser(result.uid)
-        expect(authUser.customClaims?.orgIds).toBeUndefined() // no claim written
+        expect(authUser.customClaims).toEqual({ m: { crc: "mu" }, role: "musician", orgIds: ["crc"] })
         const tokenSnap = await db()
             .collection("mcpTokens")
             .where("testUid", "==", result.uid)

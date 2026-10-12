@@ -4,7 +4,8 @@ import { getAuth } from "firebase-admin/auth"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { isTestUid } from "@/lib/test-isolation"
 import { logger } from "@/lib/logger"
-import { capRoleToClaims } from "@/lib/roles"
+import { coerceOrgId } from "@/lib/org/registry"
+import { resolveSessionRole } from "@/lib/org/access"
 import {
     SESSION_ROLE_COOKIE,
     SESSION_ROLE_MAX_AGE,
@@ -73,27 +74,18 @@ export async function POST(req: NextRequest) {
             expiresIn: SESSION_MAX_AGE * 1000, // API expects milliseconds
         })
 
-        // v4.3 P9-02: read Firestore role and sign a companion cookie so
-        // the proxy has an authoritative role source independent of
-        // whatever claim the client's ID token happened to carry.
+        // v4.3 P9-02: sign a companion cookie so the proxy has an
+        // authoritative role source independent of whatever claim the
+        // client's ID token happened to carry. Multi-tenant P2: the role is
+        // the caller's role in the HOST tenant (membership; po → admin), and
+        // the cookie carries that tenant. Unmigrated people keep the P0 rule
+        // (users-doc role capped to their claims).
+        const org = coerceOrgId(req.headers.get("x-org-id"))
         let firestoreRole: string | null = null
         try {
-            const db = getFirestore()
-            const snap = await db.collection("users").doc(decoded.uid).get()
-            const r = snap.data()?.role
-            if (typeof r === "string") firestoreRole = r
-            // Multi-tenant P0: never sign a role above what the account's
-            // claims grant (the stored claim, or the token's own claim).
-            if (firestoreRole) {
-                const rec = await auth.getUser(decoded.uid)
-                firestoreRole = capRoleToClaims(
-                    firestoreRole,
-                    rec.customClaims?.role as string | undefined,
-                    decoded.role as string | undefined,
-                )
-            }
+            firestoreRole = await resolveSessionRole(decoded.uid, org, decoded.role as string | undefined)
         } catch (err) {
-            logger.warn("[session] Firestore role read failed:", err)
+            logger.warn("[session] role read failed:", err)
             firestoreRole = null
         }
 
@@ -106,7 +98,7 @@ export async function POST(req: NextRequest) {
             sameSite: "lax",
         })
 
-        const signed = await signRoleCookie(decoded.uid, firestoreRole)
+        const signed = await signRoleCookie(decoded.uid, firestoreRole, org)
         if (signed) {
             response.cookies.set(SESSION_ROLE_COOKIE, signed, {
                 maxAge: SESSION_ROLE_MAX_AGE,

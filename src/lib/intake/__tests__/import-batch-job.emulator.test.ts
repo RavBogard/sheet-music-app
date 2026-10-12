@@ -395,6 +395,8 @@ describe("import-batch-job (emulator)", () => {
         expect(mockProcessChartUpload).toHaveBeenCalledWith(
             expect.objectContaining({
                 source: "drive-sync",
+                // multi-tenant phase 2 (W5): the batch's tenant reaches PCU
+                orgId: ORG,
                 driveMetadata: {
                     driveFileId: "drive-1",
                     md5Checksum: "d41d8cd98f00b204e9800998ecf8427e",

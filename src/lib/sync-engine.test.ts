@@ -160,7 +160,8 @@ describe('Sync Engine — Storage Copy Integration', () => {
         expect(mockUploadToStorage).toHaveBeenCalledWith(
             'new-file-1',
             expect.any(Buffer),
-            'application/pdf'
+            'application/pdf',
+            'crc', // multi-tenant P2 (W11): CRC's Drive folder
         )
         expect(stats.copiedToStorage).toBe(1)
     })
@@ -179,7 +180,8 @@ describe('Sync Engine — Storage Copy Integration', () => {
         expect(mockUploadToStorage).toHaveBeenCalledWith(
             'failed-file',
             expect.any(Buffer),
-            'application/pdf'
+            'application/pdf',
+            'crc', // multi-tenant P2 (W11): CRC's Drive folder
         )
         expect(stats.retriedCopies).toBeGreaterThanOrEqual(1)
     })
@@ -236,7 +238,8 @@ describe('Sync Engine — Storage Copy Integration', () => {
         expect(mockUploadToStorage).toHaveBeenCalledWith(
             'modified-file',
             expect.any(Buffer),
-            'application/pdf'
+            'application/pdf',
+            'crc', // multi-tenant P2 (W11): CRC's Drive folder
         )
         expect(stats.copiedToStorage).toBeGreaterThanOrEqual(1)
     })
@@ -289,7 +292,8 @@ describe('Sync Engine — Storage Copy Integration', () => {
         expect(mockUploadToStorage).toHaveBeenCalledWith(
             'normal-file',
             expect.any(Buffer),
-            'application/pdf'
+            'application/pdf',
+            'crc', // multi-tenant P2 (W11): CRC's Drive folder
         )
     })
 
@@ -319,6 +323,7 @@ describe('Sync Engine — Storage Copy Integration', () => {
             'real',
             expect.any(Buffer),
             'application/pdf',
+            'crc', // multi-tenant P2 (W11): CRC's Drive folder
         )
     })
 })

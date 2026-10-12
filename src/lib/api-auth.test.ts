@@ -76,21 +76,37 @@ describe('requireAuth', () => {
         expect(result.isAdmin).toBe(false)
     })
 
-    it('grants admin to super admin UID regardless of role', async () => {
+    it('grants admin to the platform owner (po claim) regardless of role; SUPER_ADMIN_UID is retired', async () => {
         const originalUid = process.env.SUPER_ADMIN_UID
-        process.env.SUPER_ADMIN_UID = '93Xn3DbS0bSNb8zmfzLyfOMX1Ai3'
+        process.env.SUPER_ADMIN_UID = 'env-only-uid'
 
         mockVerify.mockResolvedValue({
-            uid: '93Xn3DbS0bSNb8zmfzLyfOMX1Ai3',
+            uid: '93Xn3DbS0bSNb8zmfzLyfOMX1A13',
             email: 'admin@test.com',
+            po: true,
+            m: {},
         } as never)
-
         const result = await requireAuth(makeReq('admin-token'), 'admin')
         expect(result.isAdmin).toBe(true)
+        expect(result.po).toBe(true)
 
-        // Cleanup
+        // The env var alone no longer grants anything.
+        mockVerify.mockResolvedValue({ uid: 'env-only-uid', email: 'x@test.com' } as never)
+        await expect(requireAuth(makeReq('t'), 'admin')).rejects.toBeInstanceOf(Response)
+
         if (originalUid) process.env.SUPER_ADMIN_UID = originalUid
         else delete process.env.SUPER_ADMIN_UID
+    })
+
+    it('per tenant: an m-claim token is read for the host tenant (x-org-id)', async () => {
+        mockVerify.mockResolvedValue({ uid: 'dual', m: { crc: 'bl', brotherslazaroff: 'ad' }, role: 'admin' } as never)
+        const crcReq = new NextRequest('http://localhost/api/test', { headers: { Authorization: 'Bearer t', 'x-org-id': 'crc' } })
+        const blReq = new NextRequest('http://localhost/api/test', { headers: { Authorization: 'Bearer t', 'x-org-id': 'brotherslazaroff' } })
+        const a = await requireAuth(crcReq)
+        expect(a).toMatchObject({ orgId: 'crc', role: 'band_leader', isAdmin: false, isBandLeader: true })
+        const b = await requireAuth(blReq)
+        expect(b).toMatchObject({ orgId: 'brotherslazaroff', role: 'admin', isAdmin: true })
+        await expect(requireAuth(crcReq, 'admin')).rejects.toBeInstanceOf(Response)
     })
 
     it('grants admin to user with admin role', async () => {

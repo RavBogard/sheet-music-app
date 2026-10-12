@@ -1,3 +1,4 @@
+import { listTenantMembers } from "@/lib/org/access"
 import { NextResponse } from "next/server"
 import { timingSafeEqual } from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -157,8 +158,10 @@ export async function GET(req: Request) {
         // person who can physically reach the venue PC can act on this.
         let adminUids: string[] = []
         try {
-            const admins = await db.collection("users").where("role", "==", "admin").get()
-            adminUids = admins.docs.map(d => d.id)
+            // Multi-tenant P2: the admins of the BRIDGE tenant (crc), from
+            // memberships (legacy users-doc role for anyone not yet migrated).
+            const admins = await listTenantMembers("crc", { roles: ["admin"], db })
+            adminUids = admins.map(m => m.uid)
         } catch (e) {
             logger.warn("[Cron/BridgeWatch] Admin lookup failed:", e)
         }

@@ -11,6 +11,8 @@ import {
     liftLegacyErrorEnvelope,
     type RichErrorEnvelope,
 } from "@/lib/mcp/error-envelopes"
+import { readTenantRole } from "@/lib/org/access"
+import { orgFrom } from "@/lib/mcp/org-context"
 
 /**
  * Programmatic admin-bearer minting for Claude Code agents.
@@ -73,12 +75,9 @@ const GENERIC_PURPOSE = new Set([
 
 const TOKEN_KIND = "minted_admin"
 
-async function loadCallerRole(uid: string): Promise<string | undefined> {
-    const db = getFirestore()
-    const snap = await db.collection(USERS).doc(uid).get()
-    if (!snap.exists) return undefined
-    const data = snap.data() as Record<string, unknown> | undefined
-    return typeof data?.role === "string" ? data.role : undefined
+async function loadCallerRole(uid: string, org: OrgId): Promise<string | undefined> {
+    // Multi-tenant P2: the caller's role IN THE TOKEN TENANT (po reads admin).
+    return readTenantRole(getFirestore(), uid, org)
 }
 
 /** Midnight-UTC (start of the current UTC day) in epoch millis. */
@@ -123,7 +122,7 @@ export async function mintAdminBearerCore(
 
     // 1. Role gate — admin only (NOT band_leader; minting admin credentials is
     // a strictly-admin capability).
-    const role = await loadCallerRole(caller.uid)
+    const role = await loadCallerRole(caller.uid, caller.orgId)
     if (role !== "admin") {
         return richError(
             "forbidden_role",
@@ -261,9 +260,10 @@ export interface ListMintedBearersResult {
 export async function listMintedBearersCore(
     callerUid: string,
     args: ListMintedBearersArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<ListMintedBearersResult | RichErrorEnvelope> {
     initAdmin()
-    const role = await loadCallerRole(callerUid)
+    const role = await loadCallerRole(callerUid, org)
     if (role !== "admin") {
         return richError(
             "forbidden_role",
@@ -353,9 +353,10 @@ export interface RevokeMintedBearerResult {
 export async function revokeMintedBearerCore(
     callerUid: string,
     args: RevokeMintedBearerArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<RevokeMintedBearerResult | RichErrorEnvelope> {
     initAdmin()
-    const role = await loadCallerRole(callerUid)
+    const role = await loadCallerRole(callerUid, org)
     if (role !== "admin") {
         return richError(
             "forbidden_role",
@@ -487,7 +488,7 @@ export function registerMintAdminBearerTools(server: McpServer): void {
             },
         },
         async (args, extra) => {
-            const result = await listMintedBearersCore(uidFrom(extra), args)
+            const result = await listMintedBearersCore(uidFrom(extra), args, orgFrom(extra))
             return jsonResult(result)
         },
     )
@@ -507,7 +508,7 @@ export function registerMintAdminBearerTools(server: McpServer): void {
             },
         },
         async (args, extra) => {
-            const result = await revokeMintedBearerCore(uidFrom(extra), args)
+            const result = await revokeMintedBearerCore(uidFrom(extra), args, orgFrom(extra))
             return jsonResult(result)
         },
     )

@@ -9,6 +9,7 @@ import {
     signRoleCookie,
 } from "@/lib/session-role"
 import { logger } from "@/lib/logger"
+import { coerceOrgId } from "@/lib/org/registry"
 import {
     provisionAdminTestSession,
     ADMIN_TEST_CLAIM,
@@ -143,6 +144,7 @@ export async function POST(req: NextRequest) {
     try {
         minted = await provisionAdminTestSession({
             ttlSec,
+            orgId: coerceOrgId(req.headers.get("x-org-id")),
             callerContext:
                 req.headers.get("x-forwarded-for") ??
                 req.headers.get("x-real-ip") ??
@@ -270,7 +272,7 @@ export async function POST(req: NextRequest) {
         path: "/",
         sameSite: "lax",
     })
-    const signed = await signRoleCookie(uid, "admin")
+    const signed = await signRoleCookie(uid, "admin", coerceOrgId(req.headers.get("x-org-id")))
     if (signed) {
         response.cookies.set(SESSION_ROLE_COOKIE, signed, {
             maxAge: SESSION_ROLE_MAX_AGE,

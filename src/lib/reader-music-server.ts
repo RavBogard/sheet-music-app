@@ -1,3 +1,4 @@
+import { getTenantAccess, hasTenantRole } from "@/lib/org/access"
 import { createHash } from "node:crypto"
 
 import { getAuth } from "firebase-admin/auth"
@@ -64,19 +65,29 @@ export async function authorizeReaderMusic(
     }
 
     const orgId = targetOrg()
-    const profileSnap = await getFirestore().collection("users").doc(decoded.uid).get()
+    const db = getFirestore()
+    const profileSnap = await db.collection("users").doc(decoded.uid).get()
     if (!profileSnap.exists) return { ok: false, kind: "forbidden" }
     const profile = profileSnap.data() ?? {}
-    // Custom claims are the role authority. A user may write their own profile
-    // document under the existing Firestore rules, so profile.role must never
-    // be accepted as an authorization fallback.
-    if (!ELIGIBLE_ROLES.has(String(decoded.role ?? ""))) {
-        return { ok: false, kind: "forbidden" }
-    }
-    // Claims are the authentication authority; the user row is an independent
-    // tenant wall so a stale/mis-scoped profile cannot enable the pilot.
-    if (!userInOrg(decoded, orgId) || !rowOrgIds(profile.orgIds).includes(orgId)) {
-        return { ok: false, kind: "forbidden" }
+    // Multi-tenant P2 (design §3.4): member or above IN THE TARGET TENANT, from
+    // the membership (po passes). While the person is unmigrated the pre-P2
+    // rule below applies unchanged.
+    const access = await getTenantAccess(decoded.uid, orgId, {
+        db,
+        legacyClaims: decoded as unknown as Record<string, unknown>,
+    })
+    if (access.po || access.source === "membership" || access.migrated) {
+        if (!hasTenantRole(access, "member")) return { ok: false, kind: "forbidden" }
+    } else {
+        // Legacy: custom claims are the role authority. A user may write their
+        // own profile document, so profile.role is never an authorization
+        // fallback; the user row is an independent tenant wall.
+        if (!ELIGIBLE_ROLES.has(String(decoded.role ?? ""))) {
+            return { ok: false, kind: "forbidden" }
+        }
+        if (!userInOrg(decoded, orgId) || !rowOrgIds(profile.orgIds).includes(orgId)) {
+            return { ok: false, kind: "forbidden" }
+        }
     }
 
     const readerMusicEnabled = profile.readerMusicEnabled === true

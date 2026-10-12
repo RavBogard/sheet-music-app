@@ -5,8 +5,9 @@ import { createApiHandler } from "@/lib/api-wrapper"
 import { INSTRUMENT_PRESETS } from "@/lib/musician-profile"
 import { rankMusicians, REQUIRED_INSTRUMENTS, type MusicianCandidate } from "@/lib/musician-suggestions"
 import { coerceOrgId, congregationDocId } from "@/lib/org/registry"
-import { rowOrgIds, rowOrg } from "@/lib/org/membership"
-import { scopeRowsToTenant, scopeUsersToTenant } from "@/lib/org/tenant-query"
+import { rowOrg } from "@/lib/org/membership"
+import { scopeRowsToTenant } from "@/lib/org/tenant-query"
+import { listTenantMembers } from "@/lib/org/access"
 
 const RECENT_WINDOW = 10
 
@@ -43,10 +44,10 @@ export const GET = createApiHandler(
             // Multi-tenant phase 1: both reads are narrowed to this tenant in the
             // query for every tenant but crc (whose untagged rows keep the legacy
             // read + in-memory filter below until phase 2 stamps them).
-            const [usersSnap, recentAssignmentsSnap, configSnap] = await Promise.all([
-                scopeUsersToTenant(db.collection('users') as FirebaseFirestore.Query, org)
-                    .where('role', 'in', ['musician', 'band_leader', 'admin'])
-                    .get(),
+            // Multi-tenant phase 2: the roster is the tenant's members whose
+            // MEMBERSHIP role is musician+ (not the global users.role).
+            const [members, recentAssignmentsSnap, configSnap] = await Promise.all([
+                listTenantMembers(org, { roles: ['musician', 'band_leader', 'admin'] }),
                 scopeRowsToTenant(db.collection('scheduling_assignments') as FirebaseFirestore.Query, org)
                     .where('status', '==', 'confirmed')
                     .orderBy('assignedAt', 'desc')
@@ -84,8 +85,13 @@ export const GET = createApiHandler(
             ).size
             const windowSize = Math.min(totalRecentServices, RECENT_WINDOW)
 
-            // v11-05-02: org membership filtered in-memory (rowOrgIds: missing → ['crc']).
-            const rosterDocs = usersSnap.docs.filter(d => rowOrgIds(d.data().orgIds).includes(org))
+            // Tenant members with a users profile, in the legacy users-query
+            // (doc-id) order. `data()` mirrors the old snapshot shape.
+            const rosterDocs = members
+                .filter(m => m.profile !== null)
+                .sort((a, b) => (a.uid < b.uid ? -1 : a.uid > b.uid ? 1 : 0))
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                .map(m => ({ id: m.uid, data: () => m.profile as Record<string, any> }))
 
             // Build candidates
             const candidates: MusicianCandidate[] = rosterDocs.map(d => {

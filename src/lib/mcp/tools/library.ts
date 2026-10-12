@@ -24,6 +24,7 @@ import type { HygieneCoverage } from "./reconcile-library"
 import { isNonChartArtifactShape } from "@/lib/library/junk-filter"
 import { libraryDisplayName } from "@/lib/library/display-name"
 import { isAllowedChartMime } from "@/lib/chart-heal"
+import { readTenantRole } from "@/lib/org/access"
 
 export { isNonChartArtifactShape }
 /**
@@ -1752,10 +1753,8 @@ export async function dedupeLibraryIndex(
         // songs/{id}; it is exclusively a maintenance affordance, never a
         // read-anywhere browse path. Mirrors backfill_library_index's gate so
         // the whole admin-hygiene family is uniform.
-        const userSnap = await db.collection("users").doc(uid).get()
-        const role = userSnap.exists
-            ? (userSnap.data()?.role as string | undefined)
-            : undefined
+        // Multi-tenant P2: the role IN THE TOKEN TENANT.
+        const role = await readTenantRole(db, uid, org)
         if (role !== "admin") {
             return richError(
                 "forbidden_role",
@@ -2593,10 +2592,8 @@ export async function backfillLibraryIndex(
         // Admin gate. Dry-run + real-run both require admin — this tool
         // exposes the entire library_index shape and is exclusively a
         // maintenance affordance, not a read-anywhere browse path.
-        const userSnap = await db.collection("users").doc(uid).get()
-        const role = userSnap.exists
-            ? (userSnap.data()?.role as string | undefined)
-            : undefined
+        // Multi-tenant P2: the role IN THE TOKEN TENANT.
+        const role = await readTenantRole(db, uid, org)
         if (role !== "admin") {
             return richError(
                 "forbidden_role",

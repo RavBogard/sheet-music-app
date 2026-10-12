@@ -1,6 +1,9 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
+// Multi-tenant P2: bridge/mixer role checks read the BRIDGE tenant's membership
+// (crc — the X32 is CRC's), never the MCP token tenant.
+import { BRIDGE_ORG } from "@/lib/mcp/server-monitor"
 import {
     computeStateAgeSeconds,
     isStateStale,
@@ -104,7 +107,7 @@ export async function getBridgeHealth(
         initAdmin()
         const db = getFirestore()
 
-        const gate = await assertEditor(db, uid)
+        const gate = await assertEditor(db, uid, BRIDGE_ORG)
         if (!gate.ok) return gate
 
         const config = await loadMonitorConfig(db)

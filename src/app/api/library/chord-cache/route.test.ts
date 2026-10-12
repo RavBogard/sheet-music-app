@@ -20,6 +20,7 @@ import { checkRateLimit } from "@/lib/rate-limit"
 const mockVerifyIdToken = vi.fn()
 const mockGet = vi.fn()
 const mockSet = vi.fn()
+const mockUpdate = vi.fn()
 
 // chord-cache route reads getFirestore from "firebase-admin/firestore".
 vi.mock("firebase-admin/firestore", () => {
@@ -29,6 +30,7 @@ vi.mock("firebase-admin/firestore", () => {
         doc: () => chain,
         get: (...a: unknown[]) => mockGet(...a),
         set: (...a: unknown[]) => mockSet(...a),
+        update: (...a: unknown[]) => mockUpdate(...a),
     })
     return { getFirestore: () => chain }
 })
@@ -64,6 +66,7 @@ describe("v11.3-01-02 · /api/library/chord-cache · anon read/persist (BUG-4)",
         mockVerifyIdToken.mockResolvedValue(null) // anon by default
         mockGet.mockResolvedValue({ exists: false, data: () => undefined })
         mockSet.mockResolvedValue(undefined)
+        mockUpdate.mockResolvedValue(undefined)
     })
 
     // AC-1: anon page read → 200 (not 401)
@@ -94,6 +97,7 @@ describe("v11.3-01-02 · /api/library/chord-cache · anon read/persist (BUG-4)",
 
     // AC-1: anon may persist the auto-detected native key (the H5 fix) → 200
     it("allows anon PATCH of an auto nativeKey → 200, written with source 'auto'", async () => {
+        mockGet.mockResolvedValue({ exists: true, data: () => ({ orgId: "crc" }) }) // W9: row exists
         const res = await PATCH(
             makeReq("/api/library/chord-cache", {
                 method: "PATCH",
@@ -101,8 +105,9 @@ describe("v11.3-01-02 · /api/library/chord-cache · anon read/persist (BUG-4)",
             }),
         )
         expect(res.status).toBe(200)
-        expect(mockSet).toHaveBeenCalledTimes(1)
-        const written = mockSet.mock.calls[0][0]
+        expect(mockUpdate).toHaveBeenCalledTimes(1)
+        expect(mockSet).not.toHaveBeenCalled()
+        const written = mockUpdate.mock.calls[0][0]
         expect(written).toMatchObject({ nativeKey: "G", nativeKeySource: "auto" })
         expect(written).not.toHaveProperty("chordsVerified")
     })
@@ -121,6 +126,7 @@ describe("v11.3-01-02 · /api/library/chord-cache · anon read/persist (BUG-4)",
 
     // AC-2b: anon cannot assert 'manual' provenance — coerced to 'auto'
     it("coerces an anon-supplied nativeKeySource 'manual' to 'auto'", async () => {
+        mockGet.mockResolvedValue({ exists: true, data: () => ({ orgId: "crc" }) }) // W9: row exists
         const res = await PATCH(
             makeReq("/api/library/chord-cache", {
                 method: "PATCH",
@@ -128,11 +134,12 @@ describe("v11.3-01-02 · /api/library/chord-cache · anon read/persist (BUG-4)",
             }),
         )
         expect(res.status).toBe(200)
-        expect(mockSet.mock.calls[0][0]).toMatchObject({ nativeKeySource: "auto" })
+        expect(mockUpdate.mock.calls[0][0]).toMatchObject({ nativeKeySource: "auto" })
     })
 
     // AC-3: authed musician keeps full PATCH (chordsVerified + manual provenance)
     it("allows an authed musician to set chordsVerified → 200, written", async () => {
+        mockGet.mockResolvedValue({ exists: true, data: () => ({ orgId: "crc" }) }) // W9: row exists
         mockVerifyIdToken.mockResolvedValue({ uid: "u1", role: "musician", email: "m@test" })
         const res = await PATCH(
             makeReq("/api/library/chord-cache", {
@@ -142,10 +149,11 @@ describe("v11.3-01-02 · /api/library/chord-cache · anon read/persist (BUG-4)",
             }),
         )
         expect(res.status).toBe(200)
-        expect(mockSet.mock.calls[0][0]).toMatchObject({ chordsVerified: true, chordsVerifiedBy: "u1" })
+        expect(mockUpdate.mock.calls[0][0]).toMatchObject({ chordsVerified: true, chordsVerifiedBy: "u1" })
     })
 
     it("honors a manual nativeKeySource for an authed musician", async () => {
+        mockGet.mockResolvedValue({ exists: true, data: () => ({ orgId: "crc" }) }) // W9: row exists
         mockVerifyIdToken.mockResolvedValue({ uid: "u1", role: "musician", email: "m@test" })
         const res = await PATCH(
             makeReq("/api/library/chord-cache", {
@@ -155,7 +163,7 @@ describe("v11.3-01-02 · /api/library/chord-cache · anon read/persist (BUG-4)",
             }),
         )
         expect(res.status).toBe(200)
-        expect(mockSet.mock.calls[0][0]).toMatchObject({ nativeKeySource: "manual" })
+        expect(mockUpdate.mock.calls[0][0]).toMatchObject({ nativeKeySource: "manual" })
     })
 
     // AC-4: the anon write is rate-limited via the shared `api` bucket
@@ -226,6 +234,48 @@ describe("v11.3-01-02 · /api/library/chord-cache · anon read/persist (BUG-4)",
             }),
         )
         expect(res.status).toBe(403)
+        expect(mockSet).not.toHaveBeenCalled()
+    })
+    // ── multi-tenant phase 2 (W9): metadata PATCH never mints a stub row ──────
+
+    it("W9: PATCH on a missing library_index row → 200, no stub created (no set, no update)", async () => {
+        // mockGet default = { exists: false }
+        const res = await PATCH(
+            makeReq("/api/library/chord-cache", {
+                method: "PATCH",
+                body: { fileId: "no-such-row", nativeKey: "G", lastUsedKey: "A" },
+            }),
+        )
+        expect(res.status).toBe(200)
+        expect(await res.json()).toEqual({ success: true })
+        expect(mockSet).not.toHaveBeenCalled()
+        expect(mockUpdate).not.toHaveBeenCalled()
+    })
+
+    it("W9: PATCH on an existing row → update() of only the patched fields", async () => {
+        mockGet.mockResolvedValue({ exists: true, data: () => ({ orgId: "crc", name: "X" }) })
+        const res = await PATCH(
+            makeReq("/api/library/chord-cache", {
+                method: "PATCH",
+                body: { fileId: "upload-x", lastUsedKey: "A", lastUsedTransposition: 2 },
+            }),
+        )
+        expect(res.status).toBe(200)
+        expect(mockSet).not.toHaveBeenCalled()
+        expect(mockUpdate).toHaveBeenCalledTimes(1)
+        expect(mockUpdate.mock.calls[0][0]).toEqual({ lastUsedKey: "A", lastUsedTransposition: 2 })
+    })
+
+    it("W9: a row deleted between the read and the write (NOT_FOUND) → 200, swallowed", async () => {
+        mockGet.mockResolvedValue({ exists: true, data: () => ({ orgId: "crc" }) })
+        mockUpdate.mockRejectedValueOnce(Object.assign(new Error("5 NOT_FOUND: No document to update"), { code: 5 }))
+        const res = await PATCH(
+            makeReq("/api/library/chord-cache", {
+                method: "PATCH",
+                body: { fileId: "upload-x", nativeKey: "G" },
+            }),
+        )
+        expect(res.status).toBe(200)
         expect(mockSet).not.toHaveBeenCalled()
     })
 })

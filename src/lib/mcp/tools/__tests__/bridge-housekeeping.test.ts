@@ -60,7 +60,7 @@ const batchSpy = vi.fn(() => ({
 const docGetSpy = vi.fn()
 const docSpy = vi.fn((_path: string) => ({ get: docGetSpy }))
 
-// User-role lookup. readUserRole hits db.collection("users").doc(uid).get();
+// User-role lookup. the tenant role read (org-access fake, legacy fallback) hits db.collection("users").doc(uid).get();
 // we share collectionLimitGet's spy queue for the housekeeping collection
 // paths, so users/{uid}.get() needs its OWN spy returning the role doc.
 const userRoleGet = vi.fn()
@@ -91,6 +91,8 @@ const mockDb = {
     batch: batchSpy,
 }
 
+// Multi-tenant P2: role reads go through @/lib/org/access (spec behaviour fake).
+vi.mock("@/lib/org/access", () => import("@/test-stubs/org-access-fake"))
 vi.mock("@/lib/firebase-admin", () => ({
     initAdmin: vi.fn(),
     getFirestore: vi.fn(() => mockDb),

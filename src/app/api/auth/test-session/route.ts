@@ -10,6 +10,8 @@ import {
 } from "@/lib/session-role"
 import { logger } from "@/lib/logger"
 import { selectUnauthHint } from "@/lib/http/caller-context"
+import { coerceOrgId } from "@/lib/org/registry"
+import { getTenantAccess } from "@/lib/org/access"
 
 /**
  * POST /api/auth/test-session
@@ -129,14 +131,14 @@ export async function POST(req: NextRequest) {
     let uid: string
     if (bodyTargetUid && bodyTargetUid !== bearerUid) {
         // ── Admin-bearer mint-on-behalf branch (UX-001) ─────────────────
-        // Read caller's role off users/{bearerUid}. The bearer doc itself
-        // doesn't carry role; the auth gate is the user doc.
+        // Multi-tenant P2: the caller must be admin in the BEARER's tenant
+        // (membership; po → admin; legacy users-doc role while unmigrated).
         const db = getFirestore()
         let callerRole: string | null = null
         try {
-            const callerSnap = await db.collection("users").doc(bearerUid).get()
-            const r = callerSnap.exists ? callerSnap.data()?.role : undefined
-            if (typeof r === "string") callerRole = r
+            const bearerOrg = coerceOrgId((verified as { orgId?: string }).orgId ?? req.headers.get("x-org-id"))
+            const access = await getTenantAccess(bearerUid, bearerOrg, { db })
+            callerRole = access.effectiveRole
         } catch (err) {
             logger.warn("[test-session] caller-role read failed", {
                 bearerUid,
@@ -299,14 +301,14 @@ export async function POST(req: NextRequest) {
         )
     }
 
+    // Multi-tenant P2: the session role is the role in the HOST tenant; the
+    // companion cookie carries that tenant.
+    const hostOrg = coerceOrgId(req.headers.get("x-org-id"))
     let role: string | null = null
     try {
-        const db = getFirestore()
-        const snap = await db.collection("users").doc(uid).get()
-        const r = snap.data()?.role
-        if (typeof r === "string") role = r
+        role = (await getTenantAccess(uid, hostOrg)).effectiveRole
     } catch (err) {
-        logger.warn("[test-session] users/{uid} role read failed", { uid, err })
+        logger.warn("[test-session] role read failed", { uid, err })
     }
 
     // META-003 — fresh customToken purely for the response body. The token
@@ -351,7 +353,7 @@ export async function POST(req: NextRequest) {
         path: "/",
         sameSite: "lax",
     })
-    const signed = await signRoleCookie(uid, role)
+    const signed = await signRoleCookie(uid, role, hostOrg)
     if (signed) {
         response.cookies.set(SESSION_ROLE_COOKIE, signed, {
             maxAge: SESSION_ROLE_MAX_AGE,

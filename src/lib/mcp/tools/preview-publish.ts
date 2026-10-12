@@ -2,6 +2,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { publishSetlist, type PublishSetlistResult } from "./setlist-publish"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { getTenantMembership } from "@/lib/org/access"
 import type { OrgId } from "@/lib/org/types"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { isSongType } from "@/lib/setlist-track-count"
@@ -219,7 +220,7 @@ export async function previewPublish(
     const recipientUids = published.recipients
         .map((r) => r.uid)
         .filter((u): u is string => typeof u === "string" && u.length > 0)
-    const breakdown = await loadRoleBreakdown(db, recipientUids)
+    const breakdown = await loadRoleBreakdown(db, recipientUids, org)
 
     // ── Flagged bonds awaiting batch review (Task 4's collection). Doc id
     // shape is `{setlistId}_{trackId}`, so prefix-range over docId pulls
@@ -359,15 +360,16 @@ function diffSnapshots(
 async function loadRoleBreakdown(
     db: FirebaseFirestore.Firestore,
     uids: string[],
+    org: OrgId,
 ): Promise<PreviewPublishResult["audience"]["breakdown"]> {
     const breakdown = { admin: 0, band_leader: 0, musician: 0, member: 0 }
     if (uids.length === 0) return breakdown
-    const docs = await Promise.all(
-        uids.map((uid) => db.collection("users").doc(uid).get()),
+    // Multi-tenant P2: each recipient's role IN THIS TENANT.
+    const roles = await Promise.all(
+        uids.map((uid) => getTenantMembership(uid, org, { db })),
     )
-    for (const doc of docs) {
-        if (!doc.exists) continue
-        const role = (doc.data() as { role?: string }).role
+    for (const a of roles) {
+        const role = a?.role
         if (role === "admin") breakdown.admin++
         else if (role === "band_leader") breakdown.band_leader++
         else if (role === "musician") breakdown.musician++

@@ -17,6 +17,8 @@ import { checkRateLimit } from "@/lib/rate-limit"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { FieldValue } from "firebase-admin/firestore"
 import { logger } from "@/lib/logger"
+import { coerceOrgId } from "@/lib/org/registry"
+import { listTenantMembers } from "@/lib/org/access"
 import { z } from "zod"
 
 const schema = z.object({
@@ -52,12 +54,15 @@ export const POST = createApiHandler(
         const db = getFirestore()
 
         // Fetch active member UIDs (Admin SDK bypasses Firestore rules).
-        const usersSnap = await db.collection('users')
-            .where('role', 'in', ['admin', 'band_leader', 'musician', 'member'])
-            .get()
+        // Multi-tenant phase 2: the host tenant's members by MEMBERSHIP role
+        // (not the global users.role), in the legacy doc-id order.
+        const org = coerceOrgId(ctx.req.headers.get("x-org-id"))
+        const members = await listTenantMembers(org, { roles: ['admin', 'band_leader', 'musician', 'member'] })
 
-        const recipientUids = usersSnap.docs
-            .map(d => d.id)
+        const recipientUids = members
+            .filter(m => m.profile !== null)
+            .map(m => m.uid)
+            .sort()
             .filter(uid => uid !== ctx.auth.uid)
 
         if (recipientUids.length === 0) {

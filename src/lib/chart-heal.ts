@@ -90,9 +90,17 @@ export async function healChartBytes(
 ): Promise<HealChartBytesOk | RichErrorEnvelope> {
     const storagePath = `library/${fileId}${inferChartExt(mimeType)}`
 
+    // ─── Read the row (tenant, title, collection) ───────────────────────────
+    // Drives the Storage object's tenant metadata (multi-tenant phase 2,
+    // W11), the dedup/search metadata recompute and the enrichment event.
+    // The callers already verified the row exists; we re-read here so the
+    // shared helper is self-contained (one cheap get per heal).
+    const rowSnap = await db.collection("library_index").doc(fileId).get()
+    const rowData = rowSnap.data() ?? {}
+
     // ─── Storage upload + read-verify ──────────────────────────────────────
     try {
-        await uploadToStorage(fileId, buffer, mimeType)
+        await uploadToStorage(fileId, buffer, mimeType, rowOrg(rowData.orgId))
     } catch (err) {
         return richError(
             "storage_upload_failed",
@@ -144,12 +152,8 @@ export async function healChartBytes(
         )
     }
 
-    // ─── Read the row for title + collection ───────────────────────────────
-    // Drives the dedup/search metadata recompute and the enrichment event.
-    // The callers already verified the row exists; we re-read here so the
-    // shared helper is self-contained (one cheap get per heal).
-    const rowSnap = await db.collection("library_index").doc(fileId).get()
-    const rowData = rowSnap.data() ?? {}
+    // ─── Row fields for title + collection ─────────────────────────────────
+    // (row read hoisted above the Storage upload — W11 needs its orgId.)
     const title =
         (typeof rowData.name === "string" && rowData.name) ||
         (typeof rowData.title === "string" && rowData.title) ||

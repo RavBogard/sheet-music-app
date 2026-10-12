@@ -2,7 +2,8 @@ import "server-only"
 
 import crypto from "crypto"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { assertEditor, readUserRole } from "@/lib/mcp/server-tracks-write"
+import { assertEditor } from "@/lib/mcp/server-tracks-write"
+import { readTenantRole } from "@/lib/org/access"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
@@ -181,10 +182,10 @@ export async function reconcileService(
 
     initAdmin()
     const db = getFirestore()
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
 
-    const role = await readUserRole(db, uid)
+    const role = await readTenantRole(db, uid, org)
     const limited = await checkUserRateLimit(uid, "api", {
         bypass: role === "admin" || role === "band_leader",
     })

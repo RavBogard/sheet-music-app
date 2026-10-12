@@ -13,6 +13,9 @@ import { generateRawToken, hashToken } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
 import { liftLegacyErrorEnvelope } from "@/lib/mcp/errors"
 import { isTestUid } from "@/lib/test-isolation"
+import { setMembership } from "@/lib/org/memberships-write"
+import { readTenantRole } from "@/lib/org/access"
+import { orgFrom } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID, ORGS, isKnownOrg } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 
@@ -69,14 +72,12 @@ type TestRole = z.infer<typeof TEST_ROLE>
 
 /** Trusted-leader gate (admin OR band_leader). Mirrors `library-upload`'s
  * gate so this surface composes the same way as the rest of MCP. */
-async function loadCallerRole(uid: string): Promise<{
+async function loadCallerRole(uid: string, org: OrgId): Promise<{
     role: string | undefined
     isTrustedLeader: boolean
 }> {
-    const db = getFirestore()
-    const snap = await db.collection(USERS).doc(uid).get()
-    const data = snap.exists ? (snap.data() as Record<string, unknown>) : {}
-    const role = typeof data.role === "string" ? data.role : undefined
+    // Multi-tenant phase 2: the caller's role in the tenant they are acting in.
+    const role = await readTenantRole(getFirestore(), uid, org)
     return {
         role,
         isTrustedLeader: role === "admin" || role === "band_leader",
@@ -167,10 +168,12 @@ export interface CreateTestAccountResult {
 export async function provisionTestAccount(
     callerUid: string,
     args: CreateTestAccountArgs,
+    /** The tenant the caller acts in (MCP token tenant / request host). Default crc. */
+    callerOrg: OrgId = DEFAULT_ORG_ID,
 ): Promise<CreateTestAccountResult | ReturnType<typeof envelope>> {
     initAdmin()
 
-    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
+    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid, callerOrg)
     if (!isTrustedLeader) {
         return envelope(
             "forbidden_role",
@@ -238,6 +241,20 @@ export async function provisionTestAccount(
         }
     }
     const resolvedOrgIds: OrgId[] = explicitOrgIds ?? [DEFAULT_ORG_ID]
+    // Multi-tenant phase 2: a test account may only be placed in tenants where
+    // the caller is band leader or above (the platform owner reads as admin
+    // everywhere), so no one provisions into a tenant they don't lead.
+    for (const o of resolvedOrgIds) {
+        const { isTrustedLeader: leadsThere } = o === callerOrg ? { isTrustedLeader } : await loadCallerRole(callerUid, o)
+        if (!leadsThere) {
+            return envelope(
+                "forbidden_tenant",
+                `create_test_account cannot place an account in '${o}': you are not a band leader or admin there.`,
+                { requestedOrgIds: resolvedOrgIds, refusedOrg: o },
+                "Request only tenants you lead.",
+            )
+        }
+    }
     const tokenOrgId: OrgId = resolvedOrgIds[0]
 
     const suffix = randomBytes(4).toString("hex")
@@ -277,13 +294,6 @@ export async function provisionTestAccount(
             { uid, detail: String((err as Error)?.message ?? err) },
         )
     }
-    await auth.setCustomUserClaims(uid, {
-        role: args.role,
-        ...(soundEngineer ? { soundEngineer: true } : {}),
-        // F-8: only stamp orgIds when explicitly requested — getOrgIdsFromClaims
-        // treats a missing claim as [crc], so the omitted path needs no claim.
-        ...(explicitOrgIds ? { orgIds: explicitOrgIds } : {}),
-    })
 
     // 2. Firestore user doc — picked up by every gate that reads users/{uid}.
     await db.collection(USERS).doc(uid).set({
@@ -300,6 +310,22 @@ export async function provisionTestAccount(
         createdAt: FieldValue.serverTimestamp(),
         ttlExpiresAt: Timestamp.fromMillis(expiresAtMs),
     })
+
+    // 2b. Multi-tenant P2: one membership per requested tenant (default crc),
+    //     written after the users doc so its migration marker and legacy
+    //     mirrors survive; claims are rebuilt from them (never a bare legacy
+    //     `role` claim — design §3.7). Claims become {m, role, orgIds[, se,
+    //     soundEngineer]}.
+    for (const org of resolvedOrgIds) {
+        await setMembership({
+            orgId: org,
+            uid,
+            role: args.role,
+            soundEngineer,
+            actorUid: callerUid,
+            reason: "test-account",
+        })
+    }
 
     // 3. Mint the bearer. Hashed-only persistence, raw is shown ONCE.
     const rawToken = generateRawToken()
@@ -419,7 +445,7 @@ export async function listTestAccountsCore(
     { accounts: TestAccountSummary[] } | ReturnType<typeof envelope>
 > {
     initAdmin()
-    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
+    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid, DEFAULT_ORG_ID) /* test-account housekeeping: crc admins (P2 parity) */
     if (!isTrustedLeader) {
         return envelope(
             "forbidden_role",
@@ -624,7 +650,7 @@ export async function revokeTestAccountCore(
     uid: string,
 ): Promise<RevokeTestAccountResult | ReturnType<typeof envelope>> {
     initAdmin()
-    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
+    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid, DEFAULT_ORG_ID) /* test-account housekeeping: crc admins (P2 parity) */
     if (!isTrustedLeader) {
         // Cycle-3 SEC-001: the refusal context used to carry `callerRole`
         // alongside (historically) the caller's real Firebase uid. The
@@ -895,7 +921,7 @@ async function planCleanupAllTestData(
     args: CleanupAllArgs,
 ): Promise<CleanupAllPlan | ReturnType<typeof envelope>> {
     initAdmin()
-    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
+    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid, DEFAULT_ORG_ID) /* test-account housekeeping: crc admins (P2 parity) */
     if (!isTrustedLeader) {
         return envelope(
             "forbidden_role",
@@ -948,7 +974,7 @@ export async function cleanupAllTestDataCore(
     args: CleanupAllArgs = {},
 ): Promise<CleanupAllResult | ReturnType<typeof envelope>> {
     initAdmin()
-    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
+    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid, DEFAULT_ORG_ID) /* test-account housekeeping: crc admins (P2 parity) */
     if (!isTrustedLeader) {
         return envelope(
             "forbidden_role",
@@ -1117,7 +1143,7 @@ export async function sweepOrphanTestDataCore(
     args: SweepOrphanTestDataArgs = {},
 ): Promise<SweepOrphanTestDataResult | ReturnType<typeof envelope>> {
     initAdmin()
-    const { role: callerRole } = await loadCallerRole(callerUid)
+    const { role: callerRole } = await loadCallerRole(callerUid, DEFAULT_ORG_ID) /* test-account housekeeping: crc admins (P2 parity) */
     if (callerRole !== "admin") {
         return envelope(
             "forbidden_role",
@@ -1470,7 +1496,7 @@ export function registerTestTokenTools(server: McpServer): void {
             inputSchema: createTestAccountSchema,
         },
         async (args, extra) => {
-            const result = await provisionTestAccount(uidFrom(extra), args)
+            const result = await provisionTestAccount(uidFrom(extra), args, orgFrom(extra))
             return jsonResult(result)
         },
     )

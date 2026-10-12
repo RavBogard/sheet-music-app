@@ -6,6 +6,7 @@ import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import type { DedupeRunRecord, DedupeRunRow } from "./library"
 import { findSetlistsReferencingChart } from "./setlists"
+import { readTenantRole } from "@/lib/org/access"
 
 /**
  * M1 of MARK-TOOL-AND-TENANT-WALL — the single-row mark
@@ -157,10 +158,8 @@ export async function markChartStatus(
 
         // Same admin gate as the rest of the hygiene family. This tool writes
         // a status; it is never a read-anywhere browse path.
-        const userSnap = await db.collection("users").doc(uid).get()
-        const role = userSnap.exists
-            ? (userSnap.data()?.role as string | undefined)
-            : undefined
+        // Multi-tenant P2: the role IN THE TOKEN TENANT.
+        const role = await readTenantRole(db, uid, org)
         if (role !== "admin") {
             return richError(
                 "forbidden_role",

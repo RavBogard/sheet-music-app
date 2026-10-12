@@ -64,10 +64,7 @@ const mockMusicians = [
     },
 ]
 vi.mock("@/lib/musician-profile", () => ({
-    subscribeToAllMusicianProfiles: mockSubscribe.mockImplementation((cb: (m: typeof mockMusicians) => void) => {
-        cb(mockMusicians)
-        return vi.fn() // unsubscribe
-    }),
+    fetchTenantMusicianProfiles: mockSubscribe.mockImplementation(async () => mockMusicians),
     INSTRUMENT_PRESETS: {
         guitar: { label: "Guitar", defaultTransposition: 0 },
         keyboard: { label: "Keyboard", defaultTransposition: 0 },

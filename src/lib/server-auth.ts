@@ -1,9 +1,10 @@
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { initAdmin } from "@/lib/firebase-admin"
 import { getAuth } from "firebase-admin/auth"
 import { getFirestore } from "firebase-admin/firestore"
 import { logger } from "@/lib/logger"
-import { congregationDocId, DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { coerceOrgId, congregationDocId, DEFAULT_ORG_ID } from "@/lib/org/registry"
+import { getTenantAccess } from "@/lib/org/access"
 import type { OrgId } from "@/lib/org/types"
 
 const COOKIE_NAME = "__session"
@@ -17,6 +18,10 @@ export interface ServerUser {
     isBandLeader: boolean
     isMember: boolean
     isSoundEngineer: boolean
+    /** Multi-tenant P2: the host tenant these role fields are for. */
+    orgId: OrgId
+    /** Multi-tenant P2: platform owner. */
+    po: boolean
 }
 
 /**
@@ -38,16 +43,17 @@ export async function getServerUser(): Promise<ServerUser | null> {
         initAdmin()
         const decoded = await getAuth().verifySessionCookie(sessionCookie, true)
 
-        // Fetch the Firestore profile for role info
+        // Multi-tenant P2 (design §3.4): the role in the HOST tenant, from the
+        // membership (legacy users-doc role while the person is unmigrated).
+        const orgId = coerceOrgId((await headers()).get("x-org-id"))
         const db = getFirestore()
-        const profileSnap = await db.collection("users").doc(decoded.uid).get()
-        const profile = profileSnap.exists ? profileSnap.data() : null
+        const access = await getTenantAccess(decoded.uid, orgId, { db })
 
-        const role = (profile?.role as string) || null
+        const role = access.effectiveRole ?? null
         const isAdmin = role === "admin"
         const isBandLeader = isAdmin || role === "band_leader"
         const isMember = isBandLeader || role === "musician" || role === "member"
-        const isSoundEngineer = !!profile?.soundEngineer
+        const isSoundEngineer = access.soundEngineer
 
         return {
             uid: decoded.uid,
@@ -58,6 +64,8 @@ export async function getServerUser(): Promise<ServerUser | null> {
             isBandLeader,
             isMember,
             isSoundEngineer,
+            orgId,
+            po: access.po,
         }
     } catch (error) {
         // Cookie expired, revoked, or invalid — treat as unauthenticated

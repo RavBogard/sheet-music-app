@@ -37,6 +37,15 @@ function hostOrgId(): OrgId {
     )
 }
 
+/**
+ * Multi-tenant phase 2: the default-pointer doc per tenant. crc keeps the
+ * original `config/defaults`; every other tenant has `config/defaults__<org>`
+ * so one tenant's wizard never reads another's pointers.
+ */
+export function defaultsDocId(org: OrgId): string {
+    return org === DEFAULT_ORG_ID ? "defaults" : `defaults__${org}`
+}
+
 /** Thrown when a write precondition (expectedUpdatedAt) doesn't match the remote doc. */
 export class StaleWriteError extends Error {
     remoteUpdatedAt: Timestamp | null
@@ -172,9 +181,13 @@ export function createSetlistService(userId: string | null, userName?: string | 
     // SetlistTrack becomes one `tracks/{id}` doc via applyEdit fanout.
     // `withoutUndo` because create-style flows are not user-undoable at
     // the engine level (deletion is the surface-level inverse).
+    // Multi-tenant phase 2: every seeded row carries the parent setlist's
+    // tenant (`orgId`), stamped here because the parent was just created
+    // directly in Firestore and is not yet in Dexie for applyEdit to look up.
     async function seedTopLevelTracks(
         setlistId: string,
         tracks: SetlistTrack[],
+        orgId: OrgId,
     ): Promise<void> {
         if (tracks.length === 0) return
         await Promise.all(
@@ -186,6 +199,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                         doc: stripUndefined({
                             ...t,
                             setlistId,
+                            orgId,
                             order: i,
                             type: t.type ?? "song",
                             ...(t.fileId ? { songId: t.fileId } : {}),
@@ -201,6 +215,9 @@ export function createSetlistService(userId: string | null, userName?: string | 
         async createSetlist(name: string, tracks: SetlistTrack[], additionalData: Partial<Setlist> = {}) {
             try {
                 const db = await getDb()
+                // v11-05-05: host-org default; an explicit additionalData.orgId
+                // wins (the in-app wizard passes none).
+                const orgId = rowOrg(additionalData.orgId ?? hostOrgId())
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), {
                     name,
                     date: serverTimestamp(),
@@ -215,12 +232,10 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     hydrated: true,
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
-                    // v11-05-05: host-org default; an explicit additionalData.orgId
-                    // wins via the spread below (the in-app wizard passes none).
-                    orgId: hostOrgId(),
-                    ...stripUndefined(additionalData as Record<string, unknown>)
+                    ...stripUndefined(additionalData as Record<string, unknown>),
+                    orgId,
                 });
-                await seedTopLevelTracks(docRef.id, tracks)
+                await seedTopLevelTracks(docRef.id, tracks, orgId)
                 logSetlistChange(docRef.id, 'created', userId || '', userName || 'Anonymous', { name, trackCount: tracks.length })
                 return docRef.id;
             } catch (e) {
@@ -295,8 +310,9 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     const data = await res.json().catch(() => ({}))
                     throw new Error(data?.error || `Delete failed (${res.status})`)
                 }
-
-                logSetlistChange(id, 'deleted', userId || '', userName || 'Anonymous')
+                // Multi-tenant phase 2: the 'deleted' history entry is written by
+                // the delete route before the cascade; a client write after the
+                // parent is gone would be refused.
             } catch (e) {
                 logger.error("Error deleting setlist:", e)
                 throw e
@@ -354,7 +370,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 }) as Record<string, unknown>
                 const db = await getDb()
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), copyData);
-                await seedTopLevelTracks(docRef.id, freshTracks)
+                await seedTopLevelTracks(docRef.id, freshTracks, rowOrg(setlistData.orgId))
                 return docRef.id;
             } catch (e) {
                 logger.error("Error duplicating setlist: ", e);
@@ -363,14 +379,14 @@ export function createSetlistService(userId: string | null, userName?: string | 
         },
 
         // v52-05: read the admin-curated default pointer for `serviceType`
-        // from `config/defaults`. Returns the setlistId stored at that key,
+        // from the tenant's defaults doc (`defaultsDocId(org)`). Returns the setlistId stored at that key,
         // or null when the doc is missing / the key is unset / the read
         // fails. Silent fallback semantics — caller is expected to fall
         // through to the legacy 20-most-recent query on null (Track D OQ Q5).
-        async getDefaultForServiceType(serviceType: ServiceType): Promise<string | null> {
+        async getDefaultForServiceType(serviceType: ServiceType, org: OrgId = hostOrgId()): Promise<string | null> {
             try {
                 const db = await getDb()
-                const ref = doc(db, 'config', 'defaults')
+                const ref = doc(db, 'config', defaultsDocId(org))
                 const snap = await getDoc(ref)
                 if (!snap.exists()) return null
                 const data = snap.data() as Record<string, unknown>
@@ -387,9 +403,9 @@ export function createSetlistService(userId: string | null, userName?: string | 
         // other service-type pointers are preserved. Firestore rules enforce
         // admin-only at the server (allow write: if isAdmin()); this method
         // does not gate client-side beyond what rules already enforce.
-        async setDefaultForServiceType(serviceType: ServiceType, setlistId: string): Promise<void> {
+        async setDefaultForServiceType(serviceType: ServiceType, setlistId: string, org: OrgId = hostOrgId()): Promise<void> {
             const db = await getDb()
-            const ref = doc(db, 'config', 'defaults')
+            const ref = doc(db, 'config', defaultsDocId(org))
             await setDoc(
                 ref,
                 {
@@ -409,12 +425,13 @@ export function createSetlistService(userId: string | null, userName?: string | 
         async findLastMatchingService(
             serviceType: ServiceType,
             beforeDate?: Date,
+            org: OrgId = hostOrgId(),
         ): Promise<Setlist | null> {
             // v52-05: consult config/defaults pointer first. Silent fallback
             // on missing / dangling / repurposed pointer — graceful degradation,
             // no error surface (Track D OQ Q5 lock).
             try {
-                const defaultId = await this.getDefaultForServiceType(serviceType)
+                const defaultId = await this.getDefaultForServiceType(serviceType, org)
                 if (defaultId) {
                     const db = await getDb()
                     const ref = doc(db, COLLECTION_PATH, defaultId).withConverter(setlistConverter)
@@ -424,6 +441,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                         if (
                             candidate &&
                             !candidate.isTemplate &&
+                            rowOrg(candidate.orgId) === org &&
                             setlistMatchesServiceType(candidate, serviceType)
                         ) {
                             return candidate
@@ -438,7 +456,8 @@ export function createSetlistService(userId: string | null, userName?: string | 
             try {
                 const db = await getDb()
                 const collectionRef = collection(db, COLLECTION_PATH).withConverter(setlistConverter)
-                const q = query(collectionRef, orderBy('date', 'desc'), limit(20))
+                // Multi-tenant phase 2: only this tenant's setlists.
+                const q = query(collectionRef, where('orgId', '==', org), orderBy('date', 'desc'), limit(20))
                 const snap = await getDocs(q)
                 for (const docSnap of snap.docs) {
                     const candidate = docSnap.data() as Setlist | null
@@ -502,7 +521,7 @@ export function createSetlistService(userId: string | null, userName?: string | 
                 }) as Record<string, unknown>
                 const db = await getDb()
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), cloneData)
-                await seedTopLevelTracks(docRef.id, freshTracks)
+                await seedTopLevelTracks(docRef.id, freshTracks, rowOrg(source.orgId))
 
                 logSetlistChange(docRef.id, 'cloned', userId || '', userName || 'Anonymous')
                 return docRef.id
@@ -552,10 +571,12 @@ export function createSetlistService(userId: string | null, userName?: string | 
                     templateType: 'other',
                     ownerId: userId,
                     ownerName: userName || "Anonymous",
+                    // Multi-tenant phase 2: a template stays in its source's tenant.
+                    orgId: rowOrg(source.orgId),
                 }) as Record<string, unknown>
                 const db = await getDb()
                 const docRef = await addDoc(collection(db, COLLECTION_PATH), templateData)
-                await seedTopLevelTracks(docRef.id, freshTracks)
+                await seedTopLevelTracks(docRef.id, freshTracks, rowOrg(source.orgId))
 
                 logSetlistChange(docRef.id, 'saved_as_template', userId || '', userName || 'Anonymous')
                 return docRef.id

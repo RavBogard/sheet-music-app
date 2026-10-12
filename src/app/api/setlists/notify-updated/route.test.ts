@@ -17,6 +17,9 @@ const firestoreWithBatch = {
         if (name === 'users') {
             return {
                 where: vi.fn(() => ({ get: vi.fn(async () => mockUsersSnap) })),
+                // Multi-tenant phase 2: listTenantMembers (fake) lists users
+                // for the legacy (unmigrated) fallback.
+                get: vi.fn(async () => mockUsersSnap),
                 doc: vi.fn(() => ({
                     collection: vi.fn(() => ({ doc: vi.fn(() => ({})) })),
                 })),
@@ -40,6 +43,8 @@ const checkRateLimit = vi.fn<(req: unknown, tier: unknown) => unknown>(() => nul
 vi.mock('@/lib/rate-limit', () => ({
     checkRateLimit: (req: unknown, tier: unknown) => checkRateLimit(req, tier),
 }))
+
+vi.mock('@/lib/org/access', () => import('@/test-stubs/org-access-fake'))
 
 vi.mock('@/lib/logger', () => ({
     logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },

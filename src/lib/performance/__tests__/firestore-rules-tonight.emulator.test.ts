@@ -55,6 +55,7 @@ describe("tonight-only swap rules", () => {
         testEnv.authenticatedContext("bl-lead", { role: "band_leader", orgIds: ["brotherslazaroff"] }).firestore()
     const musician = () => testEnv.authenticatedContext("crc-mus", { role: "musician" }).firestore()
     const admin = () => testEnv.authenticatedContext("admin", { role: "admin" }).firestore()
+    const po = () => testEnv.authenticatedContext("owner", { po: true }).firestore()
     const anon = () => testEnv.unauthenticatedContext().firestore()
 
     function plan(by: string, prior: OverridesDoc | null = null, to = "B") {
@@ -87,9 +88,16 @@ describe("tonight-only swap rules", () => {
         await assertSucceeds(write(leader(), "s-legacy", p.next, p.deviations))
     })
 
-    it("an admin may swap on either tenant", async () => {
+    // Multi-tenant P2: po exempt; tenant admin not.
+    it("the platform owner may swap on either tenant", async () => {
+        const p = plan("owner")
+        await assertSucceeds(write(po(), "s-bl", p.next, p.deviations))
+    })
+
+    it("a crc admin may swap on crc but not on another tenant", async () => {
         const p = plan("admin")
-        await assertSucceeds(write(admin(), "s-bl", p.next, p.deviations))
+        await assertSucceeds(write(admin(), "s-crc", p.next, p.deviations))
+        await assertFails(write(admin(), "s-bl", p.next, p.deviations))
     })
 
     it("a musician cannot swap", async () => {

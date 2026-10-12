@@ -114,7 +114,7 @@ async function processFile(inputDir: string, filename: string, db: FirebaseFires
     console.log(`Uploading ${finalName}... (ID: ${fileId})`)
     
     // Upload to Firebase Storage
-    await uploadToStorage(fileId, buffer, 'application/pdf')
+    await uploadToStorage(fileId, buffer, 'application/pdf', 'crc')
     
     // Save metadata to Firestore
     await db.collection('library_index').doc(fileId).set({

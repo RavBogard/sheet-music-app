@@ -5,6 +5,8 @@ import { initAdmin, getFirestore, getAuth } from "@/lib/firebase-admin"
 import { generateRawToken, hashToken } from "@/lib/mcp/tokens"
 import { logger } from "@/lib/logger"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
+import { setMembership } from "@/lib/org/memberships-write"
 
 /**
  * Admin-test-session provisioning core (Daniel-ratified 2026-05-27,
@@ -53,6 +55,8 @@ export const ADMIN_TEST_MAX_TTL_SEC = 2 * 60 * 60 // 2 hours hard cap
 export const ADMIN_TEST_CLAIM = "admin_test"
 
 export interface ProvisionAdminTestSessionArgs {
+    /** Multi-tenant P2: the tenant the test admin is admin of (default crc). */
+    orgId?: OrgId
     /** TTL in seconds; clamped to (0, ADMIN_TEST_MAX_TTL_SEC]. Default 1h. */
     ttlSec?: number
     /** Free-form provenance recorded in the audit row (e.g. caller IP). */
@@ -131,10 +135,7 @@ export async function provisionAdminTestSession(
             )}`,
         )
     }
-    await auth.setCustomUserClaims(uid, {
-        role: "admin",
-        [ADMIN_TEST_CLAIM]: true,
-    })
+    const orgId: OrgId = args.orgId ?? DEFAULT_ORG_ID
 
     // 2. users/{uid} doc — picked up by every gate that reads users/{uid}.
     //    isTestUser + ttlExpiresAt make it sweepable by cleanup_all_test_data.
@@ -149,6 +150,19 @@ export async function provisionAdminTestSession(
         ttlExpiresAt: Timestamp.fromMillis(expiresAtMs),
     })
 
+    // 2b. Multi-tenant P2: admin MEMBERSHIP in the tenant (never a bare legacy
+    //     `role` claim — design §3.7). setMembership rebuilds the claims
+    //     ({m:{<org>:'ad'}, role:'admin', orgIds, admin_test:true}); written after
+    //     the users doc so its migration marker and mirrors are not overwritten.
+    await setMembership({
+        orgId,
+        uid,
+        role: "admin",
+        actorUid: "admin-test-session-endpoint",
+        reason: "test-account",
+        extraClaims: { [ADMIN_TEST_CLAIM]: true },
+    })
+
     // 3. MCP bearer — hashed-only persistence, raw shown ONCE. ttlExpiresAt
     //    enforced by verifyBearer (1h) so the bearer dies with the session.
     const rawToken = generateRawToken()
@@ -158,8 +172,8 @@ export async function provisionAdminTestSession(
         label: `Admin test session${labelPart}`,
         kind: "admin_test",
         testUid: uid,
-        // v11-02-01: admin-test sessions act as crc (the only tenant they test today).
-        orgId: DEFAULT_ORG_ID,
+        // v11-02-01 / P2: the bearer acts in the tenant the test admin belongs to.
+        orgId,
         [ADMIN_TEST_CLAIM]: true,
         provisionedBy: "admin-test-session-endpoint",
         ttlExpiresAt: Timestamp.fromMillis(expiresAtMs),

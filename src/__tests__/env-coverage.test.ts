@@ -45,6 +45,7 @@ const EXEMPT: Record<string, string> = {
     NEXT_PUBLIC_PROBE_HARNESS_AUTH: "probe harness switch; PROBE_* family",
     FIRESTORE_EMULATOR_HOST: "set by the Firebase emulator",
     FIREBASE_AUTH_EMULATOR_HOST: "set by the Firebase emulator",
+    FIREBASE_STORAGE_EMULATOR_HOST: "set by the Firebase emulator",
     INTAKE_EXECUTOR: "intake harness, test-only",
     INTAKE_RUN_SECRET: "intake harness, test-only",
     INNGEST_EVENT_KEY: "test fixture only; no runtime Inngest client",

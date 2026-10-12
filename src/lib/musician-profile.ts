@@ -1,5 +1,5 @@
 import { getDb, auth, subscribeWithDb } from "./firebase"
-import { doc, updateDoc, onSnapshot, collection, query, where } from "firebase/firestore"
+import { doc, updateDoc, onSnapshot } from "firebase/firestore"
 import { MusicianProfile } from "@/types/models"
 import { logger } from "@/lib/logger"
 
@@ -95,33 +95,34 @@ export const ONBOARDING_INSTRUMENT_KEYS = [
     'other',
 ] as const
 
-/**
- * Subscribe to all users who have musician profiles set up.
- * Used by the "Print for..." feature in the gig packet generator.
- */
-export function subscribeToAllMusicianProfiles(
-    callback: (profiles: { uid: string; displayName: string; profile: MusicianProfile }[]) => void
-): () => void {
-    return subscribeWithDb((db) => {
-        if (!db || Object.keys(db).length === 0) return () => { }
+const PRINT_ROSTER_ROLES = new Set(["musician", "band_leader", "admin"])
 
-        const q = query(collection(db, "users"), where("role", "in", ["musician", "band_leader", "admin", "sound_engineer"]))
-        return onSnapshot(q, (snap) => {
-            const musicians = snap.docs
-                .map(d => {
-                    const data = d.data()
-                    return {
-                        uid: d.id,
-                        displayName: data.displayName || 'Unknown',
-                        profile: data.musicianProfile as MusicianProfile | undefined,
-                    }
-                })
-                .filter((m): m is { uid: string; displayName: string; profile: MusicianProfile } =>
-                    !!m.profile && !!m.profile.instrument
-                )
-            callback(musicians)
-        }, (err) => {
-            logger.error("[MusicianProfile] All profiles listener error:", err)
-        })
-    })
+/**
+ * The host tenant's musicians who have a musician profile set up.
+ * Used by the "Print for..." feature in the gig packet generator.
+ *
+ * Multi-tenant phase 2: read through GET /api/tenant/people (band leaders and
+ * up). Anyone below that gets an empty list, exactly as the old `users`
+ * listener was refused for them; the modal already handles an empty roster.
+ */
+export async function fetchTenantMusicianProfiles(): Promise<
+    { uid: string; displayName: string; profile: MusicianProfile }[]
+> {
+    try {
+        const { fetchTenantPeople } = await import("@/lib/users-firebase")
+        const { people } = await fetchTenantPeople()
+        return people
+            .filter((p) => PRINT_ROSTER_ROLES.has(p.role))
+            .map((p) => ({
+                uid: p.uid,
+                displayName: p.displayName || "Unknown",
+                profile: p.musicianProfile as unknown as MusicianProfile | undefined,
+            }))
+            .filter((m): m is { uid: string; displayName: string; profile: MusicianProfile } =>
+                !!m.profile && !!m.profile.instrument
+            )
+    } catch (err) {
+        logger.warn("[MusicianProfile] Roster read failed:", err)
+        return []
+    }
 }

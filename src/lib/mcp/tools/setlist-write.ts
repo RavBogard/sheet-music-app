@@ -6,13 +6,13 @@ import {
     updateSetlistServerSide,
     type SetlistMetadataPatch,
 } from "@/lib/setlist-write"
+import { readTenantRole } from "@/lib/org/access"
 import {
     assertEditor,
     loadEditableSetlist,
     addTrack,
     reorderTracks,
     removeTrack,
-    readUserRole,
     updateTrack,
     bulkUpdateTracks,
     bulkAddTracks,
@@ -161,7 +161,7 @@ export async function createSetlist(
     initAdmin()
     const db = getFirestore()
 
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
 
     // Task 7 (liturgy outlines Phase 3): reject an unknown book slug before
@@ -1249,9 +1249,9 @@ export async function deleteSetlist(
     initAdmin()
     const db = getFirestore()
 
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
-    const role = await readUserRole(db, uid)
+    const role = await readTenantRole(db, uid, org)
 
     const setlistRef = db.collection("setlists").doc(args.id)
 
@@ -1382,7 +1382,7 @@ export async function recomputeSetlistTrackCount(
     initAdmin()
     const db = getFirestore()
 
-    const role = await readUserRole(db, uid)
+    const role = await readTenantRole(db, uid, org)
     if (role !== "admin") {
         return richError(
             "forbidden_role",

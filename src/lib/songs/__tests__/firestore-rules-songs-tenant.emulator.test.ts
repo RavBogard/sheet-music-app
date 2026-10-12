@@ -15,9 +15,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
  * The chart pickers read songs/* straight from Firestore into Dexie. Before
  * this, `allow read: if isMember()` let a member of either tenant read every
  * song of both. Now a non-admin reads only its own tenants' songs; an
- * unstamped doc counts as crc (the claimless-CRC default the write rules
- * already use); admins are exempt. And the picker's own query — orgId ==
- * host org — must be provable, or every picker would be denied.
+ * unstamped doc counts as crc for a single-document read (the claimless-CRC
+ * default the write rules already use); only the platform owner (`po`) is
+ * exempt (multi-tenant P2: a tenant admin is not). And the picker's own query
+ * — orgId == host org — must be provable, or every picker would be denied.
  */
 describe("songs/* tenant read isolation", () => {
     let testEnv: RulesTestEnvironment
@@ -56,6 +57,7 @@ describe("songs/* tenant read isolation", () => {
     const bothMusician = () =>
         testEnv.authenticatedContext("both-mus", { role: "musician", orgIds: ["crc", "brotherslazaroff"] }).firestore()
     const admin = () => testEnv.authenticatedContext("admin", { role: "admin" }).firestore()
+    const po = () => testEnv.authenticatedContext("owner", { po: true }).firestore()
 
     it("a Brothers Lazaroff member cannot read a CRC song (stamped or legacy)", async () => {
         await assertFails(blMusician().collection("songs").doc("song-crc").get())
@@ -84,11 +86,25 @@ describe("songs/* tenant read isolation", () => {
         await assertFails(crcMusician().collection("songs").where("orgId", "==", "brotherslazaroff").get())
     })
 
-    it("a two-tenant member may query either site; an admin may read anything", async () => {
+    it("a two-tenant member may query either site", async () => {
         await assertSucceeds(bothMusician().collection("songs").where("orgId", "==", "brotherslazaroff").get())
         await assertSucceeds(bothMusician().collection("songs").where("orgId", "==", "crc").get())
-        await assertSucceeds(admin().collection("songs").doc("song-bl").get())
-        await assertSucceeds(admin().collection("songs").get())
+    })
+
+    // Multi-tenant P2: po exempt; tenant admin not. A legacy {role:'admin'}
+    // with no orgIds is a crc admin — it reads crc (and legacy) songs only.
+    it("po may read anything; a tenant admin reads only its own tenant", async () => {
+        await assertSucceeds(po().collection("songs").doc("song-bl").get())
+        await assertSucceeds(po().collection("songs").get())
+        await assertSucceeds(admin().collection("songs").doc("song-crc").get())
+        await assertSucceeds(admin().collection("songs").doc("song-legacy").get())
+        await assertFails(admin().collection("songs").doc("song-bl").get())
+        await assertFails(admin().collection("songs").get())
+    })
+
+    it("an unscoped query is refused even for a crc member (a list rule never defaults a missing orgId)", async () => {
+        await assertFails(crcMusician().collection("songs").get())
+        await assertFails(bothMusician().collection("songs").get())
     })
 
     it("signed-out readers still cannot read songs", async () => {

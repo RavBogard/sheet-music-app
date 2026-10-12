@@ -96,8 +96,9 @@ describe("orgId stamping at server create sites (emulator)", () => {
 
     // ─── AC-1: setlist + seeded tracks carry orgId ─────────────────────────
 
-    it("AC-1: createSetlistServerSide with no orgId → setlist + all seeded tracks carry 'crc'", async () => {
+    it("AC-1: createSetlistServerSide with orgId 'crc' → setlist + all seeded tracks carry 'crc'", async () => {
         const { setlistId } = await createSetlistServerSide({
+            orgId: "crc",
             name: "Shabbat Morning",
             ownerId: "uid-1",
             ownerName: "Rabbi Daniel",
@@ -202,8 +203,9 @@ describe("orgId stamping at server create sites (emulator)", () => {
 
     // ─── AC-3 (create-path half): library_index + songs carry orgId ────────
 
-    it("AC-3: processChartUpload with no orgId → library_index + songs both carry 'crc'", async () => {
+    it("AC-3: processChartUpload with orgId 'crc' → library_index + songs both carry 'crc'", async () => {
         const result = await processChartUpload({
+            orgId: "crc",
             buffer: Buffer.from("X: chord chart text", "utf-8"),
             originalFileName: "Test Chart.txt",
             mimeType: "text/plain",

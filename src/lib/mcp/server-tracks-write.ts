@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { rowOrg } from "@/lib/mcp/org-context"
+import { readTenantRole } from "@/lib/org/access"
 import {
     codeFor,
     forbiddenRoleEnvelope,
@@ -109,15 +110,6 @@ export interface WriteError {
     message?: string
 }
 
-/** Look up a user's role string — undefined when the user doc is missing. */
-export async function readUserRole(
-    db: DB,
-    uid: string,
-): Promise<string | undefined> {
-    const snap = await db.collection("users").doc(uid).get()
-    return snap.exists ? (snap.data()?.role as string | undefined) : undefined
-}
-
 /**
  * Cycle-2 REG-001b — write-tool role guard. Per Daniel's instruction
  * (2026-05-14) write access is role-based, not owner-based: any `admin`
@@ -129,8 +121,12 @@ export async function readUserRole(
 export async function assertEditor(
     db: DB,
     uid: string,
+    // Multi-tenant P2: the caller's role is read IN THIS TENANT (the MCP token
+    // tenant, orgFrom(extra)). Required so no caller can fall back to a
+    // tenant-blind read.
+    org: OrgId,
 ): Promise<{ ok: true } | ForbiddenRoleEnvelope> {
-    const role = await readUserRole(db, uid)
+    const role = await readTenantRole(db, uid, org)
     if (role === "admin" || role === "band_leader") return { ok: true }
     return forbiddenRoleEnvelope({
         callerRole: role ?? null,
@@ -163,7 +159,7 @@ export async function loadEditableSetlist(
     // bulk_update / bulk_add / reorder / remove).
     org: OrgId = DEFAULT_ORG_ID,
 ): Promise<LoadedSetlist | RichErrorEnvelope> {
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
     const snap = await db.collection("setlists").doc(setlistId).get()
     if (!snap.exists)

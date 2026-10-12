@@ -263,7 +263,7 @@ export async function updateSong(
     initAdmin()
     const db = getFirestore()
 
-    const roles = await loadUploader(db, uid)
+    const roles = await loadUploader(db, uid, org)
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
 
     const limited = await checkUserRateLimit(uid, "upload", {

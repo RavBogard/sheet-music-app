@@ -9,6 +9,9 @@ import {
     isAllowedChartMime,
     ALLOWED_CHART_MIME_PREFIXES,
 } from "@/lib/chart-heal"
+import { readTenantRole } from "@/lib/org/access"
+import type { OrgId } from "@/lib/org/types"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 /**
  * Cycle-3 DATA-001 (Daniel-ratified 2026-05-18T18:45Z, decisions.md item 3)
@@ -289,6 +292,7 @@ async function fetchFromDrive(
 export async function salvageChartBytes(
     uid: string,
     args: SalvageChartBytesArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<SalvageChartBytesResult> {
     const dryRun = args.dryRun !== false
     const force = args.force === true
@@ -307,10 +311,8 @@ export async function salvageChartBytes(
         initAdmin()
         const db = getFirestore()
 
-        const userSnap = await db.collection("users").doc(uid).get()
-        const role = userSnap.exists
-            ? (userSnap.data()?.role as string | undefined)
-            : undefined
+        // Multi-tenant P2: the role IN THE TOKEN TENANT.
+        const role = await readTenantRole(db, uid, org)
         if (role !== "admin") {
             return richError(
                 "forbidden_role",

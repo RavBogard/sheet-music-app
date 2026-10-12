@@ -1,35 +1,28 @@
 import { NextResponse } from "next/server"
-import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
+import { initAdmin, getAuth } from "@/lib/firebase-admin"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
-import { getOrgIdsFromClaims, orgIdsEqual } from "@/lib/org/membership"
-import { roleLevel } from "@/lib/roles"
+import { ensureMembershipsMigrated } from "@/lib/org/memberships-write"
+import { canonicalClaims, rebuildClaims } from "@/lib/org/claims"
 
 /**
- * v4.3 Phase 9 — Self-service role-claim sync.
+ * POST /api/auth/sync-claims — "rebuild my claims" (multi-tenant phase 2,
+ * design §3.4).
  *
- * The authoritative role lives at users/{uid}.role in Firestore. The auth
- * token's custom claim (`token.role`) is supposed to mirror it, but can
- * drift when a user's role was set only in Firestore (legacy data) or an
- * earlier setCustomUserClaims call silently failed.
+ * Any signed-in user may ask the server to recompute their own custom claims
+ * from their server-written memberships (migrating them on first touch). It
+ * cannot raise anything: claims are derived only from memberships and
+ * platform/owners, neither of which the browser can write. Idempotent; called
+ * by the client drift repair (src/lib/drift-repair.ts).
  *
- * This route lets any authenticated user ask the server to canonicalize
- * their own claim from their Firestore profile. Idempotent + safe to call
- * on every sign-in.
- *
- * Never accepts a role from the client — the client has no authority over
- * its own role. Never downgrades an existing claim when Firestore says
- * 'pending' (downgrade is an admin action via /api/admin/set-role).
- *
- * Multi-tenant P0 (2026-10-12): this route NEVER raises a claim. It used to
- * copy any non-pending users/{uid}.role into the claim, and that document was
- * self-writable — a pending account could make itself admin. It may now only
- * keep or lower the role claim; raising is /api/admin/set-role's job alone.
+ * Response shape kept from v4.3: { synced: true, role } when claims changed,
+ * { synced: false, role, reason: "already_synced" } otherwise. `role` is the
+ * legacy highest-role mirror (null when the account holds no role).
  */
 
 type SyncResponse =
-    | { synced: true; role: string }
+    | { synced: true; role: string | null }
     | { synced: false; role: string | null; reason?: string }
 
 export const POST = createApiHandler(
@@ -44,97 +37,25 @@ export const POST = createApiHandler(
             )
         }
         const uid = ctx.auth!.uid
-        const db = getFirestore()
-        const auth = getAuth()
 
-        const [userSnap, authUser] = await Promise.all([
-            db.collection("users").doc(uid).get(),
-            auth.getUser(uid),
-        ])
-
-        const profileRole: string | undefined = userSnap.data()?.role
-        const claimRole: string | undefined = authUser.customClaims?.role as
-            | string
-            | undefined
-
-        // v11-05-02: mirror the orgIds CLAIM onto users/{uid}.orgIds so roster
-        // queries can filter by `where('orgIds','array-contains',org)`. Claims are
-        // the source of truth; getOrgIdsFromClaims defaults a claimless user to
-        // ['crc'] (the CRC-safety invariant). This runs alongside the role sync
-        // and is independent of it — a user whose role is in sync may still need
-        // an orgIds mirror (e.g. right after an onboarding claim grant).
-        const claimOrgIds = getOrgIdsFromClaims(
-            authUser.customClaims as Record<string, unknown> | undefined,
-        )
-        const docOrgIds = userSnap.data()?.orgIds
-        const orgIdsDrift = !orgIdsEqual(
-            Array.isArray(docOrgIds) ? (docOrgIds as string[]) : undefined,
-            claimOrgIds,
-        )
-
-        // Role is settable only from a real (non-pending) Firestore role that
-        // differs from the claim. Admin-initiated changes are the only path to
-        // set a role; we never downgrade a 'pending'/absent role here.
-        const roleSyncable =
-            !!profileRole &&
-            profileRole !== "pending" &&
-            profileRole !== claimRole &&
-            roleLevel(profileRole) >= 0 &&
-            roleLevel(profileRole) < roleLevel(claimRole)
-        if (
-            !!profileRole &&
-            profileRole !== "pending" &&
-            roleLevel(profileRole) > roleLevel(claimRole)
-        ) {
-            logger.warn(
-                `[sync-claims] uid=${uid} refused to raise role ${claimRole ?? "none"} → ${profileRole} from the user document`,
-            )
-        }
-
-        // Nothing to write: role in sync (or unsettable) AND orgIds in sync.
-        if (!roleSyncable && !orgIdsDrift) {
-            if (!profileRole || profileRole === "pending") {
-                const body: SyncResponse = {
-                    synced: false,
-                    role: profileRole ?? null,
-                    reason: "no_profile_role",
-                }
-                return NextResponse.json(body)
-            }
-            const reason =
-                roleLevel(profileRole) > roleLevel(claimRole) ? "raise_refused" : "already_synced"
-            const body: SyncResponse = { synced: false, role: claimRole ?? null, reason }
-            return NextResponse.json(body)
-        }
-
-        // Write — spread existing claims (soundEngineer etc.) so role sync never
-        // clobbers them; mirror orgIds onto the doc only when it has drifted.
-        const { FieldValue } = await import("firebase-admin/firestore")
-        const docUpdate: Record<string, unknown> = {
-            claimsUpdatedAt: FieldValue.serverTimestamp(),
-        }
-        if (orgIdsDrift) docUpdate.orgIds = claimOrgIds
+        let result: Awaited<ReturnType<typeof rebuildClaims>>
+        let changed: boolean
         try {
-            if (roleSyncable) {
-                await auth.setCustomUserClaims(uid, {
-                    ...(authUser.customClaims ?? {}),
-                    role: profileRole,
-                })
-            }
-            await db.collection("users").doc(uid).update(docUpdate)
+            const before = canonicalClaims((await getAuth().getUser(uid)).customClaims ?? {})
+            await ensureMembershipsMigrated(uid)
+            result = await rebuildClaims(uid)
+            changed = canonicalClaims(result.claims) !== before
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e)
-            logger.error(`[sync-claims] uid=${uid} write failed: ${msg}`)
+            logger.error(`[sync-claims] uid=${uid} rebuild failed: ${msg}`)
             return NextResponse.json({ error: "Sync failed" }, { status: 500 })
         }
 
-        logger.info(
-            `[sync-claims] uid=${uid} role ${claimRole ?? "none"} → ${roleSyncable ? profileRole : "(unchanged)"}; orgIds ${orgIdsDrift ? `[${claimOrgIds.join(",")}]` : "(in sync)"}`,
-        )
-
-        const body: SyncResponse = roleSyncable
-            ? { synced: true, role: profileRole! }
-            : { synced: false, role: profileRole ?? null, reason: "orgids_synced" }
+        const role = typeof result.claims.role === "string" ? result.claims.role : null
+        logger.info(`[sync-claims] uid=${uid} claims ${changed ? "rebuilt" : "already in sync"} (${result.bytes} bytes)`)
+        const body: SyncResponse = changed
+            ? { synced: true, role }
+            : { synced: false, role, reason: "already_synced" }
         return NextResponse.json(body)
     },
     { requireAuth: true },

@@ -17,6 +17,7 @@ import { readLeaderRole, gigPacketBucket } from "./library-download"
 import { orgTimeZone } from "@/lib/org/locale"
 import { rowOrg } from "@/lib/org/membership"
 import type { OrgId } from "@/lib/org/types"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 /**
  * MCP generate_service_sheet tool (liturgy-outlines Phase 1-3, Task 11).
@@ -154,6 +155,7 @@ export interface GenerateServiceSheetOk {
 export async function generateServiceSheet(
     uid: string,
     args: GenerateServiceSheetArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<GenerateServiceSheetOk | RichErrorEnvelope> {
     if (!args.setlistId?.trim()) {
         return richError(
@@ -166,7 +168,7 @@ export async function generateServiceSheet(
     initAdmin()
     const db = getFirestore()
 
-    const role = await readLeaderRole(db, uid)
+    const role = await readLeaderRole(db, uid, org)
     const bypass = role === "admin" || role === "band_leader"
 
     const limited = await checkUserRateLimit(uid, "api", { bypass })

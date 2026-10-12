@@ -6,7 +6,8 @@ import { emailAllMembers } from "@/lib/email"
 import { sendPushToUsers } from "@/lib/push-send"
 import { sendSMS } from "@/lib/sms"
 import { recordSongUsage } from "@/lib/song-usage"
-import { assertEditor, readUserRole } from "@/lib/mcp/server-tracks-write"
+import { assertEditor } from "@/lib/mcp/server-tracks-write"
+import { getTenantMembership, listTenantMembers, readTenantRole, type TenantRole } from "@/lib/org/access"
 import {
     readLastModifiedAt,
     readVersion,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/mcp/error-envelopes"
 import { getChartHealth } from "@/lib/file-fetcher"
 import { isTestUid } from "@/lib/test-isolation"
-import { rowOrg, rowOrgIds } from "@/lib/org/membership"
+import { rowOrg } from "@/lib/org/membership"
 import { orgString } from "@/lib/org/strings"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
@@ -223,33 +224,32 @@ async function resolveDefaultRecipients(
     db: FirebaseFirestore.Firestore,
     callerUid: string,
     audience: "band" | "all",
-    // v11.2-02 (BUG-9): only members of the setlist's org. Mirrors the
-    // v11-05-02 roster pattern (roster.ts:229) — keep the role query, filter
-    // membership in-memory via rowOrgIds (missing orgIds → ['crc'], the
-    // CRC-safety default, so legacy CRC users stay in CRC's audience with no
-    // backfill). Without this the default audience was the ENTIRE users
-    // collection → a BL publish notified CRC's roster (the report's BUG-9).
+    // v11.2-02 (BUG-9): only members of the setlist's org. Without this the
+    // default audience was the ENTIRE users collection → a BL publish
+    // notified CRC's roster (the report's BUG-9). Multi-tenant P2: read from
+    // the tenant's memberships.
     orgScope: OrgId,
 ): Promise<ResolvedRecipient[]> {
     const roles =
         audience === "all"
             ? PUBLISH_AUDIENCE_ROLES_ALL
             : PUBLISH_AUDIENCE_ROLES_BAND
-    const snap = await db
-        .collection("users")
-        .where("role", "in", [...roles])
-        .get()
+    // Multi-tenant P2: the audience is the setlist tenant's members holding an
+    // audience role IN THAT TENANT (listTenantMembers), replacing the global
+    // `users.role` query + in-memory orgIds wall.
+    const members = await listTenantMembers(orgScope, {
+        roles: [...roles] as TenantRole[],
+    })
     const resolved: ResolvedRecipient[] = []
-    for (const doc of snap.docs) {
+    for (const m of members) {
+        const doc = { id: m.uid }
         if (doc.id === callerUid) continue
-        const data = doc.data() as Record<string, unknown>
+        const data = (m.profile ?? {}) as Record<string, unknown>
         // Cycle-5 C5C-005 — test-* uids + [TEST] displayName prefixes are
         // filtered from the default-audience derivation so a publish without
         // explicit `recipients` never fans out to autonomous-run test
         // accounts. Explicit `recipients: [...]` still allows test targets.
         if (isTestUserRow(doc.id, data)) continue
-        // v11.2-02 (BUG-9): tenant wall — only the setlist's org's members.
-        if (!rowOrgIds(data.orgIds).includes(orgScope)) continue
         const email = typeof data.email === "string" ? data.email : null
         const name =
             (typeof data.displayName === "string" && data.displayName) ||
@@ -301,13 +301,21 @@ async function resolveOverrideRecipients(
             }
         }
     }
+    // Multi-tenant P2: membership of the setlist's tenant, per uid.
+    const memberUids = new Set<string>()
+    await Promise.all(
+        uidLookups.map(async (uid) => {
+            const m = await getTenantMembership(uid, orgScope, { db })
+            if (m && m.role !== "denied") memberUids.add(uid)
+        }),
+    )
     for (const r of overrides) {
         if (r.uid === callerUid) continue
         const data = r.uid ? userDataByUid.get(r.uid) : undefined
         // v11.2-02 (BUG-9): drop a uid-bearing entry that is not a member of
-        // the setlist's org (rowOrgIds default ['crc'] for an unresolved/legacy
-        // doc). Email-only entries (no uid) bypass — operator-explicit.
-        if (r.uid && !rowOrgIds(data?.orgIds).includes(orgScope)) continue
+        // the setlist's tenant. Email-only entries (no uid) bypass —
+        // operator-explicit.
+        if (r.uid && !memberUids.has(r.uid)) continue
         const email =
             r.email ?? (typeof data?.email === "string" ? (data.email as string) : null)
         const name =
@@ -361,7 +369,7 @@ export async function publishSetlist(
     initAdmin()
     const db = getFirestore()
 
-    const editor = await assertEditor(db, callerUid)
+    const editor = await assertEditor(db, callerUid, org)
     if (!editor.ok) return editor
 
     const idempotencyKey = args.idempotencyKey?.trim()
@@ -420,7 +428,7 @@ export async function publishSetlist(
     // for the rate-limit bypass + audit. The setlist-ownership branch is moot
     // for MCP (every caller that got past assertEditor is already a trusted
     // leader) but kept for parity with the HTTP route's auth contract.
-    const role = await readUserRole(db, callerUid)
+    const role = await readTenantRole(db, callerUid, org)
     const bypass = role === "admin" || role === "band_leader"
     const limited = await checkUserRateLimit(callerUid, "api", { bypass })
     if (limited)
@@ -939,7 +947,7 @@ export async function publishSetlist(
         key: t.key,
         type: t.type,
     }))
-    void recordSongUsage(args.setlistId, setlistName, eventDate, usageTracks).catch(
+    void recordSongUsage(args.setlistId, setlistName, eventDate, usageTracks, setlistOrg).catch(
         (err) => logger.warn("[mcp notify_band] song-usage record failed", err),
     )
 

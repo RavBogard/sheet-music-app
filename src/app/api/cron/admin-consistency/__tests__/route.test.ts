@@ -160,9 +160,20 @@ const mockFirestore = {
             }
             return query
         }
+        // Multi-tenant P2 identity check: platform/owners, memberships, users.
+        if (name === "platform") {
+            return { doc: () => ({ get: async () => ({ exists: true, get: (k: string) => (k === "uids" ? adminUids : undefined), data: () => ({ uids: adminUids }) }) }) }
+        }
+        if (name === "memberships") {
+            return { get: async () => ({ docs: membershipRows.map((m) => ({ data: () => m })) }) }
+        }
+        if (name === "users") {
+            return { get: async () => ({ docs: [] as Array<{ id: string; get: (k: string) => unknown }> }) }
+        }
         return { doc: () => ({ get: async () => ({ data: () => undefined }) }) }
     }),
 }
+let membershipRows: Array<Record<string, unknown>> = []
 
 // ── Storage bucket mock — drive missing/present + outage cases ──────────────
 let bucketPresent: Set<string> = new Set()
@@ -185,10 +196,15 @@ const getUserMock = vi.fn(async (uid: string) => ({
     customClaims: { role: "admin" },
 }))
 
+const listUsersMock = vi.fn(async () => ({
+    users: await Promise.all(adminUids.map((uid) => getUserMock(uid))),
+    pageToken: undefined,
+}))
+
 vi.mock("@/lib/firebase-admin", () => ({
     initAdmin: vi.fn().mockReturnValue(true),
     getFirestore: vi.fn(() => mockFirestore),
-    getAuth: vi.fn(() => ({ getUser: getUserMock })),
+    getAuth: vi.fn(() => ({ getUser: getUserMock, listUsers: listUsersMock })),
 }))
 
 vi.mock("@/lib/logger", () => ({
@@ -220,6 +236,7 @@ beforeEach(() => {
     getUserMock.mockClear()
     getFilesMock.mockClear()
     adminUids = []
+    membershipRows = []
     storageBackupDoc = null
     storageBackupExists = false
     storageBackupReadThrows = false
@@ -357,12 +374,16 @@ describe("PGR-03 — storage backup staleness alarm", () => {
     })
 })
 
-describe("admin-claim drift (regression — existing v4.3 C02 behavior preserved)", () => {
-    it("returns drift=[] + storageBackupHealth when admins are consistent", async () => {
+describe("identity drift (multi-tenant P2 — replaces the config/admins check)", () => {
+    it("returns drift=[] + storageBackupHealth when owners and memberships match the claims", async () => {
         adminUids = ["uid-a", "uid-b"]
+        membershipRows = [
+            { uid: "uid-a", tenantId: "crc", role: "admin", soundEngineer: false },
+            { uid: "uid-b", tenantId: "crc", role: "admin", soundEngineer: false },
+        ]
         getUserMock.mockImplementation(async (uid) => ({
             uid,
-            customClaims: { role: "admin" },
+            customClaims: { po: true, m: { crc: "ad" }, role: "admin", orgIds: ["crc"] },
         }))
         storageBackupExists = true
         storageBackupDoc = { lastBackupAt: NOW - 10 * HOUR }
@@ -373,28 +394,36 @@ describe("admin-claim drift (regression — existing v4.3 C02 behavior preserved
         const json = (await res.json()) as {
             checked: number
             drift: unknown[]
+            unmigrated: string[]
             storageBackupHealth: { status: string }
         }
         expect(json.checked).toBe(2)
         expect(json.drift).toEqual([])
+        expect(json.unmigrated).toEqual(["uid-a", "uid-b"])
         expect(json.storageBackupHealth.status).toBe("present")
     })
 
-    it("captures admin-drift via captureMessage when a uid lacks the claim", async () => {
+    it("captures drift via captureMessage when an owner lacks po or m disagrees with memberships", async () => {
         adminUids = ["uid-good", "uid-bad"]
+        membershipRows = [
+            { uid: "uid-good", tenantId: "crc", role: "admin", soundEngineer: false },
+            { uid: "uid-bad", tenantId: "crc", role: "admin", soundEngineer: false },
+        ]
         getUserMock.mockImplementation(async (uid) =>
             uid === "uid-bad"
-                ? { uid, customClaims: { role: "member" } }
-                : { uid, customClaims: { role: "admin" } },
+                ? { uid, customClaims: { m: { crc: "me" }, role: "member" } }
+                : { uid, customClaims: { po: true, m: { crc: "ad" }, role: "admin" } },
         )
         const res = await GET(
             makeReq("/api/cron/admin-consistency", { token: SECRET }),
         )
         expect(res.status).toBe(200)
-        const json = (await res.json()) as { drift: Array<{ uid: string }> }
-        expect(json.drift).toHaveLength(1)
-        expect(json.drift[0].uid).toBe("uid-bad")
-        // captureMessage fires for drift (no level → default "warning")
+        const json = (await res.json()) as { drift: Array<{ uid: string; reason: string }> }
+        expect(json.drift.map((d) => d.uid)).toEqual(["uid-bad", "uid-bad"])
+        expect(json.drift.map((d) => d.reason)).toEqual([
+            "po claim missing",
+            'm={"crc":"me"} expected {"crc":"ad"}',
+        ])
         const driftCall = captureMessageMock.mock.calls.find((c) =>
             String(c[0]).includes("claim drift"),
         )

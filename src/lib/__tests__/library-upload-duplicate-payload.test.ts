@@ -58,6 +58,7 @@ import { processChartUpload } from "@/lib/library-upload"
 describe("processChartUpload duplicate payload", () => {
     it("carries matchedFileId/matchedTitle/score on an exact-duplicate 409", async () => {
         const result = await processChartUpload({
+            orgId: "crc",
             buffer: Buffer.from("x"),
             originalFileName: "Hashkivenu.txt",
             mimeType: "text/plain",

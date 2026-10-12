@@ -1,7 +1,7 @@
 import "server-only"
 
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { readUserRole } from "@/lib/mcp/server-tracks-write"
+import { readTenantRole } from "@/lib/org/access"
 import {
     richError,
     forbiddenRoleEnvelope,
@@ -157,7 +157,7 @@ export async function archiveNonChartArtifacts(
         // Admin-only — bulk catalog mutation. band_leader's standing scope is
         // mix + setlist authoring, not catalog soft-deletes. Mirrors the
         // bridge-housekeeping admin gate.
-        const role = await readUserRole(db, uid)
+        const role = await readTenantRole(db, uid, org)
         if (role !== "admin") {
             return forbiddenRoleEnvelope({
                 callerRole: role ?? null,

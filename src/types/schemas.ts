@@ -43,7 +43,9 @@ export const userProfileSchema = z.object({
     displayName: z.string().catch("Unknown User"),
     photoURL: z.string().nullish().catch(undefined).transform(v => v || undefined),
     viewedWelcomeModal: z.boolean().nullish().catch(undefined).transform(v => v ?? undefined),
-    role: userRoleSchema,
+    // Multi-tenant P2: new sign-ups no longer write `role` (rights come from
+    // server-written memberships); an absent role reads as 'pending'.
+    role: z.preprocess(v => (v === undefined || v === null ? 'pending' : v), userRoleSchema),
     soundEngineer: z.boolean().nullish().catch(undefined).transform(v => v ?? undefined),
     createdAt: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),
     lastLoginAt: firestoreTimestampSchema.nullish().catch(undefined).transform(v => v || undefined),

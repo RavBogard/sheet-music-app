@@ -38,7 +38,8 @@ export const GET = createApiHandler(
         const hostOrg = coerceOrgId(ctx.req.headers.get("x-org-id"))
         const wantsAllSites = url.searchParams.get("allSites") === "true"
         const su = wantsAllSites ? await getServerUser().catch(() => null) : null
-        const allSites = wantsAllSites && !!su?.isAdmin
+        // Multi-tenant phase 2: every site's rows are the platform owner's view only.
+        const allSites = wantsAllSites && !!su?.po
 
         if (!initAdmin()) {
             // Cycle-5 C5C-002 — rich envelope (was flat

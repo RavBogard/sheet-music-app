@@ -14,7 +14,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
  *
  * The /api/cron/backup route writes a dated audit doc per run via the Admin
  * SDK (which bypasses these rules). These rules pin the client-facing surface:
- *   - reads are admin-only (staleness/observability for Daniel; feeds PGR-03);
+ *   - reads are platform-owner-only (staleness/observability for Daniel; feeds
+ *     PGR-03). Multi-tenant P2: a tenant admin is not a bypass — backups are
+ *     platform-wide, so only the `po` claim reads them;
  *   - ALL client writes are denied (admin included) — only the server may
  *     write, so a hard `false` prevents forged backup records.
  *
@@ -81,9 +83,16 @@ describe('PGR-01 firestore.rules backups/{id}', () => {
         await assertFails(backups(db).doc('2026-05-21').get())
     })
 
-    it('D: admin (role claim) read is ALLOWED', async () => {
-        const db = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
+    it('D: platform owner (po claim) read is ALLOWED', async () => {
+        const db = testEnv.authenticatedContext('po-uid', { po: true, m: { crc: 'ad' } }).firestore()
         await assertSucceeds(backups(db).doc('2026-05-21').get())
+    })
+
+    it('D2: tenant admin read is DENIED — po exempt, tenant admin not (legacy role claim and m claim alike)', async () => {
+        const legacy = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
+        await assertFails(backups(legacy).doc('2026-05-21').get())
+        const tenant = testEnv.authenticatedContext('admin-uid', { m: { crc: 'ad' } }).firestore()
+        await assertFails(backups(tenant).doc('2026-05-21').get())
     })
 
     // ─── Writes: server-only (everyone denied, admin included) ───
@@ -98,8 +107,8 @@ describe('PGR-01 firestore.rules backups/{id}', () => {
         await assertFails(backups(db).doc('2026-05-22').set(auditDoc))
     })
 
-    it('G: admin write is DENIED (server-only — admin cannot forge a backup record)', async () => {
-        const db = testEnv.authenticatedContext('admin-uid', { role: 'admin' }).firestore()
+    it('G: po write is DENIED (server-only — not even the platform owner can forge a backup record)', async () => {
+        const db = testEnv.authenticatedContext('po-uid', { po: true }).firestore()
         await assertFails(backups(db).doc('2026-05-22').set(auditDoc))
     })
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { initAdmin, getFirestore, getAuth } from "@/lib/firebase-admin"
-import { capRoleToClaims } from "@/lib/roles"
+import { initAdmin } from "@/lib/firebase-admin"
+import { resolveSessionRole } from "@/lib/org/access"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { logger } from "@/lib/logger"
@@ -34,29 +34,19 @@ export const POST = createApiHandler(
             )
         }
         const uid = ctx.auth!.uid
-        const db = getFirestore()
+        // Multi-tenant P2: the role in the host tenant (ctx.auth.orgId);
+        // unmigrated people keep the P0 doc-role-capped-to-claims rule.
+        const org = ctx.auth!.orgId
 
         let role: string | null = null
         try {
-            const snap = await db.collection("users").doc(uid).get()
-            const r = snap.data()?.role
-            if (typeof r === "string") role = r
-            // Multi-tenant P0: never sign a role above what the account's
-            // claims grant (the stored claim, or the token's own claim).
-            if (role) {
-                const rec = await getAuth().getUser(uid)
-                role = capRoleToClaims(
-                    role,
-                    rec.customClaims?.role as string | undefined,
-                    ctx.auth!.token?.role as string | undefined,
-                )
-            }
+            role = await resolveSessionRole(uid, org, ctx.auth!.token?.role as string | undefined)
         } catch (err) {
             role = null
-            logger.warn("[refresh-session] Firestore read failed:", err)
+            logger.warn("[refresh-session] role read failed:", err)
         }
 
-        const signed = await signRoleCookie(uid, role)
+        const signed = await signRoleCookie(uid, role, org)
         const response = NextResponse.json({ ok: true, role })
         if (signed) {
             response.cookies.set(SESSION_ROLE_COOKIE, signed, {
