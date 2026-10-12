@@ -9,6 +9,7 @@ import { isFileCached } from "@/lib/cache-utils"
 import { splitChartComposer } from "@/lib/library/chart-composer"
 import { useOrg } from "@/lib/org/org-context"
 import { orgString } from "@/lib/org/strings"
+import { SHARED_COPY } from "@/lib/library/shared-collections"
 
 interface LibraryFileRowProps {
     item: DriveFile
@@ -27,6 +28,13 @@ interface LibraryFileRowProps {
     usageInfo?: { lastUsedDate: string; totalUses: number } | null
     canAddToSetlist?: boolean
     onAddToSetlist?: (item: DriveFile) => void
+    /**
+     * Multi-tenant phase 5: the chart is shared from another tenant. It can be
+     * viewed and added to setlists, never changed: Digitize, Rename and
+     * Archive are replaced by a disabled note. `badge` adds "From {owner}"
+     * (chip rows; a tenant's own section keeps its look).
+     */
+    sharedFrom?: { owner: string; badge: boolean }
 }
 
 function isAudioMime(item: DriveFile) {
@@ -41,7 +49,7 @@ function getAudioCleanName(name: string) {
         .replace(/-/g, ' ')
 }
 
-export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, onRename, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, onLongPress, usageInfo, canAddToSetlist, onAddToSetlist }: LibraryFileRowProps) {
+export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitize, onArchive, onRename, getCleanName, isPlaying, selectMode, isSelected, onToggleSelect, onLongPress, usageInfo, canAddToSetlist, onAddToSetlist, sharedFrom }: LibraryFileRowProps) {
     const org = useOrg()
     const isFolder = item.mimeType?.includes('folder')
     const isAudio = isAudioMime(item)
@@ -210,6 +218,16 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                                     </span>
                                 )}
 
+                                {sharedFrom?.badge && (
+                                    <span
+                                        data-testid="shared-owner-badge"
+                                        title={SHARED_COPY.readOnly(sharedFrom.owner)}
+                                        className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-md border border-border shrink-0"
+                                    >
+                                        {SHARED_COPY.fromOwner(sharedFrom.owner)}
+                                    </span>
+                                )}
+
                                 {isCached && !isFolder && (
                                     <span className="text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-500/20" title="This file is downloaded and available offline">
                                         <CheckCircle2 className="w-3 h-3" />
@@ -259,7 +277,13 @@ export function LibraryFileRow({ item, onClick, isDigitizing, isAdmin, onDigitiz
                     {isFolder ? "Open Folder" : isAudio ? "Play" : "Select / View"}
                 </ContextMenuItem>
 
-                {!isFolder && !isAudio && (
+                {!isFolder && !isAudio && sharedFrom && (
+                    <ContextMenuItem disabled title={SHARED_COPY.readOnly(sharedFrom.owner)}>
+                        <span className="text-xs text-muted-foreground">{SHARED_COPY.readOnly(sharedFrom.owner)}</span>
+                    </ContextMenuItem>
+                )}
+
+                {!isFolder && !isAudio && !sharedFrom && (
                     <>
                         {isAdmin && item.mimeType.includes("pdf") && onDigitize && (
                             <ContextMenuItem

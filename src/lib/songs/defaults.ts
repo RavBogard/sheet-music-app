@@ -5,6 +5,13 @@
 import { getDb } from '../local/schema'
 import type { SongDefaults, SongRecentEntry } from '../local/types'
 import { applyEdit } from '../local/write'
+import { isOwnedBy } from '../library/visibility'
+import { coerceOrgId } from '../org/registry'
+
+/** The site this page is on (set on <html data-org> by the root layout). */
+function hostOrgId(): string {
+    return coerceOrgId(typeof document !== 'undefined' ? document.documentElement.dataset.org : undefined)
+}
 
 export type TrackDefaults = SongDefaults
 
@@ -68,6 +75,10 @@ async function flushOne(songId: string): Promise<void> {
 
     const { pendingPatch, pendingSetlistId, clock } = entry
     const existing = await getDb().songs.get(songId)
+    // Multi-tenant phase 5: a chart shared from another tenant is used, never
+    // changed — its songs doc is the owner's, so its sticky defaults stay on
+    // this setlist's own track row and nothing is queued for the owner's doc.
+    if (existing && typeof existing.orgId === 'string' && !isOwnedBy(existing, hostOrgId())) return
     const mergedDefaults: SongDefaults = {
         ...(existing?.defaults ?? {}),
         ...(pendingPatch.key !== undefined ? { key: pendingPatch.key } : {}),

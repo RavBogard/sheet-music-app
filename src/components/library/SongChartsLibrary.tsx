@@ -43,8 +43,16 @@ import { useLibraryActions } from "./useLibraryActions"
 import { useAddToSetlist } from "@/hooks/use-add-to-setlist"
 import { AddToSetlistSheet } from "./AddToSetlistSheet"
 import { fetchUsageBatches, type UsageMap } from "@/lib/library/usage-batch"
+import { useSharedCollections } from "@/hooks/use-shared-collections"
+import { SHARED_COPY } from "@/lib/library/shared-collections"
+import { isOwnedBy, visibleTo } from "@/lib/library/visibility"
 
-type LibraryTab = KnownCollection | "audio"
+/** `shared:<collectionId>` is a collection another tenant shares, switched on by its chip. */
+type SharedTab = `shared:${string}`
+type LibraryTab = KnownCollection | "audio" | SharedTab
+
+const SHARED_TAB_PREFIX = "shared:"
+const isSharedTab = (t: LibraryTab): t is SharedTab => t.startsWith(SHARED_TAB_PREFIX)
 
 /**
  * Debounce applied to the *filtering* only — never to the controlled input's
@@ -268,7 +276,38 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
         return out
     }, [rawFiles, libraryFilters, recencyUsageMap])
 
-    const files = tab === "audio" ? filteredByCollection.core : filteredByCollection[tab]
+    // Phase 5: rows another tenant owns but this one may see (its own
+    // sections' shared rows, e.g. CRC's nava tab after the move) are read-only.
+    const isSharedRow = useCallback((f: DriveFile) => !isOwnedBy(f, org) && visibleTo(f, org), [org])
+    const sharedOwnerIds = useMemo(
+        () => [...new Set(allFiles.filter(isSharedRow).map(f => f.orgId ?? ""))].filter(Boolean),
+        [allFiles, isSharedRow],
+    )
+    const shared = useSharedCollections(sharedOwnerIds)
+    const onSharedChips = useMemo(() => shared.chips.filter(c => c.on), [shared.chips])
+    const filteredShared = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase()
+        const out = new Map<string, DriveFile[]>()
+        for (const c of onSharedChips) {
+            const rows = shared.chipRows.filter(f =>
+                f.collectionId === c.id && isChartFile(f) &&
+                (!q || (f.displayName ?? f.name).toLowerCase().includes(q)))
+            out.set(c.id, dedupeChartsByStem(applyLibraryFilters(rows, libraryFilters, undefined)))
+        }
+        return out
+    }, [onSharedChips, shared.chipRows, searchQuery, libraryFilters])
+    // A chip switched off takes its tab with it.
+    useEffect(() => {
+        if (isSharedTab(tab) && !onSharedChips.some(c => `${SHARED_TAB_PREFIX}${c.id}` === tab)) {
+            setTab(defaultPickerCollection(org) ?? sections[0]?.id ?? "core")
+        }
+    }, [tab, onSharedChips, org, sections])
+
+    const files = tab === "audio"
+        ? filteredByCollection.core
+        : isSharedTab(tab)
+            ? filteredShared.get(tab.slice(SHARED_TAB_PREFIX.length)) ?? []
+            : filteredByCollection[tab]
     const combinedItems = tab === "audio" ? audioFiles : files
 
     // Usage is fetched for the WHOLE chart catalog, not the currently-visible
@@ -489,6 +528,12 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                             ...(hasAudio
                                 ? [{ value: 'audio' as const, label: `Audio (${audioFiles.length})`, icon: <Music className="w-3.5 h-3.5" /> }]
                                 : []),
+                            // Phase 5: each switched-on shared collection, after the tenant's own.
+                            ...onSharedChips.map(c => ({
+                                value: `${SHARED_TAB_PREFIX}${c.id}` as LibraryTab,
+                                label: `${c.label} (${filteredShared.get(c.id)?.length ?? 0})`,
+                                icon: null as ReactNode,
+                            })),
                         ]
                     ).map(({ value, label, icon }) => {
                         const active = tab === value
@@ -507,6 +552,38 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                         )
                     })}
                 </div>
+
+                {/* Phase 5: collections other tenants share with this one.
+                    Off until switched on; remembered per user. */}
+                {shared.chips.length > 0 && (
+                    <div
+                        role="group"
+                        aria-label={SHARED_COPY.chipGroupLabel}
+                        className="max-w-xl mx-auto flex flex-wrap items-center justify-center gap-2"
+                    >
+                        <span className="text-xs text-muted-foreground">{SHARED_COPY.chipGroupLabel}:</span>
+                        {shared.chips.map(c => (
+                            <button
+                                key={c.id}
+                                type="button"
+                                aria-pressed={c.on}
+                                aria-label={SHARED_COPY.chipAria(c.label, c.owner)}
+                                data-testid="library-shared-chip"
+                                data-shared-collection={c.id}
+                                onClick={() => {
+                                    const turningOn = !c.on
+                                    shared.toggle(c.id)
+                                    if (turningOn) setTab(`${SHARED_TAB_PREFIX}${c.id}`)
+                                }}
+                                className="inline-flex items-center gap-1.5 min-h-11 rounded-full px-4 py-2 text-xs font-medium border border-dashed cursor-pointer transition-colors bg-muted/50 text-muted-foreground border-border hover:text-foreground aria-pressed:border-solid aria-pressed:bg-brand/15 aria-pressed:text-foreground aria-pressed:border-brand/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                            >
+                                {c.label}
+                                <span className="text-muted-foreground">{SHARED_COPY.fromOwner(c.owner)}</span>
+                            </button>
+                        ))}
+                        {shared.failed && <span role="status" className="text-xs text-muted-foreground">{SHARED_COPY.loadFailed}</span>}
+                    </div>
+                )}
 
                 {/* v11.1-03: admin-only "All sites" escape hatch — reveals the
                     full cross-tenant chart pool for authoring/binding. Off by
@@ -624,6 +701,9 @@ export function SongChartsLibrary({ onBack, onSelectFile, initialLibrary = [], o
                                             usageInfo={usageMap[item.id] ?? undefined}
                                             canAddToSetlist={addToSetlist.canAddToSetlist}
                                             onAddToSetlist={(item) => addToSetlist.openForSongs([item])}
+                                            sharedFrom={isSharedRow(item)
+                                                ? { owner: shared.owner(item.orgId ?? ""), badge: isSharedTab(tab) }
+                                                : undefined}
                                         />
                                     </div>
                                 )

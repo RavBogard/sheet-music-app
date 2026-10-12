@@ -4,6 +4,7 @@ import { subscribeWithDb, recoverFromFirestoreShutdown } from '@/lib/firebase'
 import { getDb, type LocalDb } from '@/lib/local/schema'
 import type { LocalSong } from '@/lib/local/types'
 import { logger } from '@/lib/logger'
+import { isOwnedBy, visibleTo } from '@/lib/library/visibility'
 import { rowOrg } from '@/lib/org/membership'
 import { DEFAULT_ORG_ID } from '@/lib/org/registry'
 import type { OrgId } from '@/lib/org/types'
@@ -64,7 +65,10 @@ export async function scopeLocalSongs(localDb: LocalDb, orgId: OrgId, uid: strin
     // First run on a device that predates the scope record: keep its cache
     // (an offline iPad could not refill it) and drop only foreign rows.
     if (!prior) await localDb.meta.put({ key: SONGS_SCOPE_META_KEY, value: scope })
-    const foreign = await localDb.songs.filter((s) => rowOrg(s.orgId) !== orgId).primaryKeys()
+    // Multi-tenant phase 5: a row another tenant shares with this one is not
+    // foreign — it stays cached (an offline iPad could not refill it). The
+    // shared-rows read drops it once it is no longer shared.
+    const foreign = await localDb.songs.filter((s) => !visibleTo(s, orgId)).primaryKeys()
     if (foreign.length) await localDb.songs.bulkDelete(foreign)
 }
 
@@ -127,9 +131,18 @@ export function subscribeSongsLibrary(
         if (!live) return
         for (const change of changes) {
             if (change.type === 'removed') {
-                void localDb.songs.delete(change.id).catch((err) => {
-                    logger.warn(`[subscribeSongsLibrary] delete ${change.id} failed`, err)
-                })
+                // A row that left this tenant's own query but is now shared
+                // back to it (the nava move) keeps its cached copy.
+                const id = change.id
+                void localDb.songs
+                    .get(id)
+                    .then((row) => {
+                        if (row && !isOwnedBy(row, orgId) && visibleTo(row, orgId)) return
+                        return localDb.songs.delete(id)
+                    })
+                    .catch((err) => {
+                        logger.warn(`[subscribeSongsLibrary] delete ${id} failed`, err)
+                    })
                 continue
             }
             const data = change.data ?? {}
