@@ -1,0 +1,865 @@
+{
+  "kind": "stamp-p2-extras",
+  "at": "2026-10-12T20:08:40.935Z",
+  "projectId": "crcmusiccharts",
+  "parts": [
+    "templates",
+    "auditLogs"
+  ],
+  "stamps": [
+    {
+      "collection": "templates",
+      "id": "friday_night",
+      "orgId": "crc"
+    },
+    {
+      "collection": "templates",
+      "id": "shabbat_morning",
+      "orgId": "crc"
+    },
+    {
+      "collection": "templates",
+      "id": "shir_shabbat",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "0B3KTp0lb6ijxNRAq5VK",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "0lDaJQHGNGuQXXDH8Vt6",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "14xgLqTjtdwt9puMSJ2u",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "1CQHaxDbtzKOzcw4jCgg",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "1WJZ8zWW8maktBhDb0sq",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "1pdQBE6dY4ZD3kYpkX6l",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "2BinQ6ySANuLTOJSC2f4",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "2nuVrVXaNuOwBvcJ5nT1",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "3A40POCWsAtYpJIKIcUU",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "3UYIoAOHXm2NE3KRkTXL",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "41xb2Qi78iz84IuudxIh",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "433GHC0k86qXmnePhqPP",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "4wMg0JMJZA6Ak2zBsEIR",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "5Vn0LaLt73NrIKBk5SkY",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "5XdVmqRIuMskmrh3RHlP",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "5hMEs0MW3sY3nH5pOwwk",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "60FIm9yuCDXN9T2tbKiP",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "6QywJeQxvJlTrN5YYruW",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "7YJ9yKx6cyWBcRSLNXt6",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "8BTYzBMt6EvS2871yf7H",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "8TXBRDFSTJvClLrKLpYH",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "8rpXl9NhNI14JPxcj8R3",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "9H7fCN3s3akQY5FC1GBu",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "9hNjIaocDljlsimMtFWr",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "9lctGKVbo5c7By92khRh",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "9pyfcgHazQ2g2d96RmUk",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "B6fs13jO36yKVLns8KY2",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "BEyGTSAkfMJzNFKSUBLl",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "BK7ppKbY6n8LueIS98WZ",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "BWr3tamSMpOPyrOOrYmN",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "BsVOkdpvcw4qvkF2wmNK",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "C0WA3rhHFPrdKpbbMnvh",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "CBAgXr4C7EaKJNDJeCvS",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "CBFi0uknxOsbExPslIHC",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "CvQJiwc3HzbHXUdRX7UJ",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "CzYmRsjgASPezsbHRhk7",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "E1jdpXON3q28y5Q9sWQU",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "FYNDq9OW8ru0QCjm9ccY",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "FsUMTWfbxHeG8GrfnVUo",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "Fwl6k8sqVlAaBOZh1Y5d",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "Hi81BDsdkG837mMzk7qX",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "IJXcCnu98JtXWSZvqrPn",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "ILPTkBcvZ6NbLkaReRNw",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "Id5z73qpmSEYiWhjr0x7",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "IttUgLO4J8q7U06Hv23E",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "JvocApzcMYvWwaCNNrI7",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "K1gTOjeEsRVAIEpj5Mpr",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "K1i8u4KHXNgPdQ0AFXLe",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "KPGaK6QnGX1PjnFnsfDV",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "Krao83nnc8wSiMvVW7le",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "KzsdttzmHEWlu0Dt0Iyc",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "L8wM8XfKNZPh3NwYBpFe",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "LNIIm0H6FKZqfqmtWSYZ",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "LR1lfK6a7gasxJul9O2R",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "MkjXRT0wTLK4328vqTmG",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "MoDq69wzRGfCDyZcxjhJ",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "N3i4nzs5puSQPMTT0nrY",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "NkDDxx38nw8FpNl0F0Kz",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "NkdoXV5Ql0QiDQDwbZSs",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "NyD11WfTorJh5UBlmWYa",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "Ocmqthpsm2XEi0Sq6hFC",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "Or1dSbxdlZLDo3wFNCbc",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "Q11KBUVhYcJ7Sh2ua64r",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "Q5TX2PUGlYgYuBWCkl4m",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "QDP9KU5B187OiblwTQ9p",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "QZEYJbcNmL3sdyTEqS95",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "QiBkuECyZ61U7IehFF1i",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "RYv49SsggUEmAlk7hkN3",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "Rai2TegCXHThNSLnzqGK",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "RfM4wDRom19u7r99zml5",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "Rn0RzMwxTx6a9QZD4BUi",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "SAMPmrSF3aijwqoftrCr",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "SgWyxWwCbrROovo6O5Gx",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "So3wHNrc1RnWtRU3VPn5",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "SrGciS4Mjb6DoM7Ou8LP",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "T0ny9YqhbumPgZrJeT3L",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "TTNOoKhZ186bUpY5cx3B",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "TilaZQzi0gZbQMYiPjim",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "U8QnVyn9w30sEEq8Xxro",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "UASTSqK8ukxlCWGsqinR",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "UX13jyobEOH1nnGKRRKh",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "UlG5YoPpQK1NeN9Xe651",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "UqBO67qeHJl2ljAwiCOS",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "VfIH33UETcoL5cbKspxr",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "W4hek4BXbNxDnocvZZ4a",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "WNwJPSRPGxMj9tYsCuvM",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "XlCFMuHGQZiSI6w7FntX",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "Y1oRq9oyHFRRNpiG5TKF",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "YNr89fu2ABp1EREz8Nyu",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "YoWAuosI8tTRFHMpT9Bu",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "ZJkwLSicZ4aJbHA4fsYX",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "Zmsx716OWRuhu16OkCvX",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "aFqPOrtoVueL1McgDDi5",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "aKaof7E5pfoBbeKSD7Ec",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "aVdDnu8ylvzpSN8b4Hmh",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "aWN0icMppYbpddsjE5zf",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "awsdj2kkGQpg5c53kMZY",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "b2CGDUvrp3KOXpsFM6la",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "bGZTrE0Yq5BTWhbsO3Op",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "bo2OK5qYSaTpkuX3h9E8",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "c1bAsMsAvSmBkraljhcn",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "cGP9Wxod1H53pEG6KEK7",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "cWevg5zupZiixcOPzZ3S",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "cbr6Wmfv2r4YGkPdTXGN",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "dFTXzF9H1ARe0Yth4WJq",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "dXDmIowednlnEafWhRcg",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "eCmclZSCcGH76630XhfM",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "em1fsPhuG1v58trAvCge",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "fZS2dSTI5EGwv55nzrAH",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "fmgeQdNamuI6dUywHhUd",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "fsPiEvQcXYDNWWoiCJvD",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "gYDeXPrNMVrdb29mygji",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "gb9ss5EQqbO3HZmAOdVZ",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "gh6XGrRd8IBDbLSc1jOO",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "hUUSPsmOdFrVKjXuwK7n",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "hZOCa9hk8b80gyQWEYVY",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "hlZmmAbCfGK5DGmDqq1c",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "hs7govi5pBLYu2iCnGq0",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "iPviHyALrkdZceZqTGqf",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "izJKTIBdLU01oX6qnmf8",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "j5kCnT4eRiJxxsme27TJ",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "j5yMpyzbZmMpoTH7bQng",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "j6A74MgtLu1Zud6Nl3tl",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "j6HnUYjkcJSFkkhHVExI",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "jIgV66qRydCrTqirCzHx",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "jVdNggIr2hMsMz3G5yMf",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "jVupg2F03c0T3KjNfibK",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "k2iJi66WZ0292d0xiO1S",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "k85omBVQ3o9hJODS3ofV",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "k8dcI80PELZs2QOVVgA7",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "ke9tMygMZs5pmhx44kHU",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "ks7PTos414V5OwqFMlMW",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "kvmNRh8wdZDV7XKksxk8",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "l7rUPItO1RifyRMQZDCI",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "m1ZzK6CRRclrwTlPM2Zf",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "m6xVfBrOObXeMrrXRFnZ",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "nbWCqQMEpauDR7066lgz",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "o2TX162L1HSes1BNP9QU",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "oSubXQpHCb5u9XmzDXh0",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "pyyqVZzsVQ7wKxaNY4f3",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "pzZuHIHMWa4zZXoNcwh6",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "qSJhGrBIVvEqwwOgR7jA",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "qcPiCF8C2QSHylRsUctx",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "qsIqS5KOtY5U9wzhI5Uc",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "quo1EQ95EUutWTMxoLBJ",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "r5H3sKgTWMokJDyT4r2d",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "rGLlxAvVuTY9xixitMVw",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "tCeQzru6YmDH303EDeie",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "uJIgC8FjuY24oIC3r9Sp",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "v5OLlcRi0DCF8eUR0eaZ",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "v6PyhBwggE1EkgI2FeYI",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "vFaMxGqbXmoYH35obFRw",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "vS8y51mzKB3RQWNfC6EU",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "vzn35PD2hVEhGyqttqpI",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "wid5nW9wcpyjxRJziX5S",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "wqCaKvnDa51bkM2MZ6yU",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "xCsvOCtLbd1Bk6axARro",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "xzZVTIX0q0Kte6Ar6Szn",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "y57IM5ilBZfjO5bGi2k3",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "yJJBhpcse67Y8e9PylJl",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "yPPyt4AH9lVw1sXeBONQ",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "yRPDZvs6kIjKcoyUL25O",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "ygPs0YvvQxCAaPMvdW8V",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "yoKAbMBMhFGGmN3GITsz",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "zDJ8a7qhnYgroKRw7mBr",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "zXpJAvg10VUp0T6SDBCs",
+      "orgId": "crc"
+    },
+    {
+      "collection": "auditLogs",
+      "id": "zvZZPQ4ck9WsDO1CboPV",
+      "orgId": "crc"
+    }
+  ],
+  "docs": {
+    "before": [],
+    "after": []
+  }
+}

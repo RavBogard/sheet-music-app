@@ -1,0 +1,17 @@
+{
+  "kind": "membership-seed",
+  "at": "2026-10-12T20:08:30.014Z",
+  "projectId": "crcmusiccharts",
+  "before": [
+    {
+      "path": "platform/owners",
+      "exists": false,
+      "data": null
+    },
+    {
+      "path": "platform/membershipMigration",
+      "exists": false,
+      "data": null
+    }
+  ]
+}
