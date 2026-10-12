@@ -152,3 +152,21 @@ export async function listTenantMembers(
     }
     return out
 }
+
+/**
+ * Tenant-aware membership (mirrors access.ts getTenantMembership): membership
+ * doc; migrated → null; unmigrated → legacy role in its users-doc tenants
+ * (missing → crc; a legacy admin is crc-only).
+ */
+export async function getTenantMembership(
+    uid: string,
+    orgId: OrgId,
+    opts?: { db?: DB },
+): Promise<{ role: TenantRole; soundEngineer: boolean } | null> {
+    const db = opts?.db ?? getFirestore()
+    const [m, u] = await Promise.all([readDoc(db, "memberships", `${orgId}__${uid}`), readDoc(db, "users", uid)])
+    if (m && typeof m.role === "string") return { role: m.role as TenantRole, soundEngineer: m.soundEngineer === true }
+    if (!u || u.membershipsMigratedAt || typeof u.role !== "string") return null
+    const tenants = u.role === "admin" ? ["crc"] : Array.isArray(u.orgIds) && u.orgIds.length ? (u.orgIds as string[]) : ["crc"]
+    return tenants.includes(orgId) ? { role: u.role as TenantRole, soundEngineer: u.soundEngineer === true } : null
+}

@@ -2,7 +2,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { publishSetlist, type PublishSetlistResult } from "./setlist-publish"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
-import { getTenantAccess } from "@/lib/org/access"
+import { getTenantMembership } from "@/lib/org/access"
 import type { OrgId } from "@/lib/org/types"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { isSongType } from "@/lib/setlist-track-count"
@@ -366,10 +366,10 @@ async function loadRoleBreakdown(
     if (uids.length === 0) return breakdown
     // Multi-tenant P2: each recipient's role IN THIS TENANT.
     const roles = await Promise.all(
-        uids.map((uid) => getTenantAccess(uid, org, { db })),
+        uids.map((uid) => getTenantMembership(uid, org, { db })),
     )
     for (const a of roles) {
-        const role = a.role
+        const role = a?.role
         if (role === "admin") breakdown.admin++
         else if (role === "band_leader") breakdown.band_leader++
         else if (role === "musician") breakdown.musician++

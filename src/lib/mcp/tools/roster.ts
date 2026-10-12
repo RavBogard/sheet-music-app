@@ -4,7 +4,7 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { checkUserRateLimit } from "@/lib/rate-limit"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
-import { getTenantAccess, listTenantMembers, readTenantRole } from "@/lib/org/access"
+import { getTenantMembership, listTenantMembers, readTenantRole } from "@/lib/org/access"
 import {
     richError,
     type RichErrorEnvelope,
@@ -197,13 +197,13 @@ async function loadUserMusicianRow(
     uid: string,
     org: OrgId,
 ): Promise<MusicianRow | null> {
-    const [snap, access] = await Promise.all([
+    const [snap, membership] = await Promise.all([
         db.collection("users").doc(uid).get(),
-        getTenantAccess(uid, org, { db }),
+        getTenantMembership(uid, org, { db }),
     ])
     if (!snap.exists) return null
-    if (!access.role || access.role === "denied") return null
-    return buildMusicianRow(uid, { ...(snap.data() ?? {}), role: access.role })
+    if (!membership || membership.role === "denied") return null
+    return buildMusicianRow(uid, { ...(snap.data() ?? {}), role: membership.role })
 }
 
 /**

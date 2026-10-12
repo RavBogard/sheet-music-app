@@ -178,14 +178,16 @@ export async function listTenantMembers(
     const unmigrated = [...profiles].filter(([uid, p]) => !seen.has(uid) && !p.membershipsMigratedAt)
     if (unmigrated.length === 0) return out
     const [claimsByUid, overrides, owners] = await Promise.all([
-        legacyClaimsOf(unmigrated.map(([uid]) => uid)),
+        legacyClaimsOf(unmigrated.map(([uid]) => uid)).catch(() => new Map<string, Record<string, unknown>>()),
         readMigrationOverridesSafe(db),
         readOwners(db).catch(() => [] as string[]),
     ])
     for (const [uid, p] of unmigrated) {
         const plan = planLegacyMemberships({
             uid,
-            claims: claimsByUid.get(uid) ?? null,
+            // An account with no Auth record (or an unreadable one) keeps what
+            // rosters read before phase 2: the users-doc role and tenants.
+            claims: claimsByUid.get(uid) ?? (typeof p.role === "string" ? { role: p.role, orgIds: p.orgIds } : null),
             doc: p,
             overrides,
             owners,
@@ -205,6 +207,49 @@ export async function listTenantMembers(
         })
     }
     return out
+}
+
+/**
+ * The person's membership in ONE tenant, tenant-aware even before the people
+ * migration: the membership doc when present; nothing once migrated; for an
+ * unmigrated person, the same plan listTenantMembers and the migration use
+ * (claim tenants; a legacy admin is crc-only unless overridden; no Auth record
+ * → users-doc role and tenants). Use this — not getTenantAccess, whose legacy
+ * path is tenant-blind for role parity — to ask "does this person belong to
+ * this tenant?" (recipient filters, cross-tenant profile walls, breakdowns).
+ */
+export async function getTenantMembership(
+    uid: string,
+    orgId: OrgId,
+    opts?: { db?: Firestore },
+): Promise<{ role: TenantRole; soundEngineer: boolean } | null> {
+    const db = adminDb(opts?.db)
+    const [memSnap, userSnap] = await Promise.all([
+        db.collection("memberships").doc(membershipId(orgId, uid)).get(),
+        db.collection("users").doc(uid).get(),
+    ])
+    if (memSnap.exists) {
+        const m = (memSnap.data() ?? {}) as Partial<Membership>
+        const role = asTenantRole(m.role)
+        return role ? { role, soundEngineer: m.soundEngineer === true } : null
+    }
+    const p = userSnap.exists ? ((userSnap.data() ?? {}) as Record<string, unknown>) : null
+    if (!p || p.membershipsMigratedAt) return null
+    const [claimsByUid, overrides, owners] = await Promise.all([
+        legacyClaimsOf([uid]).catch(() => new Map<string, Record<string, unknown>>()),
+        readMigrationOverridesSafe(db),
+        readOwners(db).catch(() => [] as string[]),
+    ])
+    const plan = planLegacyMemberships({
+        uid,
+        claims: claimsByUid.get(uid) ?? (typeof p.role === "string" ? { role: p.role, orgIds: p.orgIds } : null),
+        doc: p,
+        overrides,
+        owners,
+        includePending: true,
+    })
+    const pm = plan.memberships.find((m) => m.orgId === orgId)
+    return pm ? { role: pm.role, soundEngineer: pm.soundEngineer } : null
 }
 
 /** Auth custom claims for many uids (getUsers, 100 per call); missing → absent. */

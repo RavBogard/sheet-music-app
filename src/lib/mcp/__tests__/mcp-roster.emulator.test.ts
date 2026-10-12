@@ -462,12 +462,15 @@ describe("MCP roster tools — cycle-3 c1 (emulator)", () => {
 
     it("assign_musician: stamps the new assignment's orgId from its parent setlist (AC-1)", async () => {
         await seedSetlist("sl-bl", { eventDate: EVENT_DATE_ISO, orgId: "brotherslazaroff" })
+        // Multi-tenant phase 2: assigning on a BL setlist is a BL action (BL
+        // token) and the musician must belong to BL.
+        await seedUser(MUSICIAN, { role: "musician", orgIds: ["crc", "brotherslazaroff"] })
         const r = await assignMusician(ADMIN, {
             setlistId: "sl-bl",
             uid: MUSICIAN,
             dryRun: false,
             force: true,
-        })
+        }, "brotherslazaroff")
         if (!("ok" in r) || !r.ok) throw new Error("expected ok=true")
         const snap = await db()
             .collection("scheduling_assignments")

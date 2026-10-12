@@ -7,7 +7,7 @@ import { sendPushToUsers } from "@/lib/push-send"
 import { sendSMS } from "@/lib/sms"
 import { recordSongUsage } from "@/lib/song-usage"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
-import { getTenantAccess, listTenantMembers, readTenantRole, type TenantRole } from "@/lib/org/access"
+import { getTenantMembership, listTenantMembers, readTenantRole, type TenantRole } from "@/lib/org/access"
 import {
     readLastModifiedAt,
     readVersion,
@@ -305,8 +305,8 @@ async function resolveOverrideRecipients(
     const memberUids = new Set<string>()
     await Promise.all(
         uidLookups.map(async (uid) => {
-            const a = await getTenantAccess(uid, orgScope, { db })
-            if (a.role && a.role !== "denied") memberUids.add(uid)
+            const m = await getTenantMembership(uid, orgScope, { db })
+            if (m && m.role !== "denied") memberUids.add(uid)
         }),
     )
     for (const r of overrides) {

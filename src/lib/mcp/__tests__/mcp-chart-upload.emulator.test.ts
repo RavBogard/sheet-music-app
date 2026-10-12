@@ -242,6 +242,7 @@ describe("MCP chart-upload tools (emulator)", () => {
             expect.stringMatching(/^upload-/),
             expect.any(Buffer),
             "application/pdf",
+            "crc", // multi-tenant phase 2: the object's tenant metadata
         )
     })
 
@@ -1250,6 +1251,7 @@ describe("MCP chart-upload tools (emulator)", () => {
                 expect.stringMatching(/^upload-/),
                 expect.any(Buffer),
                 "application/pdf",
+                "crc", // multi-tenant phase 2: the object's tenant metadata
             )
         })
 
@@ -1279,6 +1281,7 @@ describe("MCP chart-upload tools (emulator)", () => {
                     expect.stringMatching(/^upload-/),
                     expect.any(Buffer),
                     "application/xml",
+                    "crc", // multi-tenant phase 2: the object's tenant metadata
                 )
             }
         })
@@ -1428,6 +1431,7 @@ describe("MCP chart-upload tools (emulator)", () => {
                 expect.stringMatching(/^upload-/),
                 expect.any(Buffer),
                 "application/pdf",
+                "crc", // multi-tenant phase 2: the object's tenant metadata
             )
         })
 
