@@ -244,7 +244,7 @@ export async function createChart(
 
     initAdmin()
     const db = getFirestore()
-    const roles = await loadUploader(db, uid)
+    const roles = await loadUploader(db, uid, org)
     if (!isUploadAllowed(roles)) return uploadForbidden(roles)
     const curatedDenial = curatedCatalogGate(roles, args.collection)
     if (curatedDenial) return curatedDenial
@@ -349,6 +349,7 @@ export async function createChart(
     }
 
     const result = await processChartUpload({
+        orgId: org,
         buffer,
         originalFileName: fileName,
         mimeType,

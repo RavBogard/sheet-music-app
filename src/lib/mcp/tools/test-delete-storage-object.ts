@@ -4,6 +4,9 @@ import { safelyDeleteLibraryObject } from "@/lib/library/safely-delete-library-o
 import { getStorage } from "firebase-admin/storage"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
+import { readTenantRole } from "@/lib/org/access"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * `__test_delete_storage_object` — cycle-3 GAP-002 instrumentation MCP tool.
@@ -64,10 +67,11 @@ export interface TestDeleteStorageObjectResult {
 async function readCallerRole(
     db: FirebaseFirestore.Firestore,
     uid: string,
+    org: OrgId,
 ): Promise<string | null> {
     try {
-        const snap = await db.collection("users").doc(uid).get()
-        const r = snap.exists ? snap.data()?.role : undefined
+        // Multi-tenant P2: the caller's role IN THE TOKEN TENANT.
+        const r = await readTenantRole(db, uid, org)
         return typeof r === "string" ? r : null
     } catch (err) {
         logger.warn("[mcp] __test_delete_storage_object caller-role read failed", {
@@ -81,6 +85,7 @@ async function readCallerRole(
 export async function testDeleteStorageObject(
     callerUid: string,
     args: TestDeleteStorageObjectArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<TestDeleteStorageObjectResult | RichErrorEnvelope> {
     if (!args.fileId?.trim())
         return richError(
@@ -102,7 +107,7 @@ export async function testDeleteStorageObject(
     initAdmin()
     const db = getFirestore()
 
-    const callerRole = await readCallerRole(db, callerUid)
+    const callerRole = await readCallerRole(db, callerUid, org)
     if (callerRole !== "admin") {
         return richError(
             "forbidden_role",

@@ -4,6 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit"
 import { getFirestore } from "@/lib/firebase-admin"
 import { sendSetlistEmail } from "@/lib/email"
 import { rowOrg } from "@/lib/org/membership"
+import { listTenantMembers } from "@/lib/org/access"
 import { logger } from "@/lib/logger"
 import { z } from "zod"
 import { getTracksForSetlist } from "@/lib/server-tracks"
@@ -47,14 +48,20 @@ export const POST = createApiHandler(
             return NextResponse.json({ error: 'Must be owner or leader' }, { status: 403 })
         }
 
-        // Load band members (musicians and above — not plain community members)
-        const usersSnap = await db.collection('users')
-            .where('role', 'in', ['admin', 'band_leader', 'musician'])
-            .get()
+        // Load band members (musicians and above — not plain community members).
+        // Multi-tenant phase 2: the setlist tenant's members by MEMBERSHIP role
+        // (not the global users.role), in the legacy doc-id order.
+        const roster = (await listTenantMembers(org, { roles: ['admin', 'band_leader', 'musician'] }))
+            .filter(m => m.profile !== null)
+            .sort((a, b) => (a.uid < b.uid ? -1 : a.uid > b.uid ? 1 : 0))
 
         interface MemberData { uid: string; email?: string; displayName?: string }
-        const members: MemberData[] = usersSnap.docs
-            .map(d => ({ uid: d.id, email: d.data().email, displayName: d.data().displayName }))
+        const members: MemberData[] = roster
+            .map(m => ({
+                uid: m.uid,
+                email: m.profile!.email as string | undefined,
+                displayName: m.profile!.displayName as string | undefined,
+            }))
             .filter(u => u.email && (!recipientUids || recipientUids.includes(u.uid)))
 
         // Build base URL from request

@@ -3,10 +3,8 @@ import "server-only"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { checkUserRateLimit } from "@/lib/rate-limit"
-import {
-    assertEditor,
-    readUserRole,
-} from "@/lib/mcp/server-tracks-write"
+import { assertEditor } from "@/lib/mcp/server-tracks-write"
+import { getTenantAccess, listTenantMembers, readTenantRole } from "@/lib/org/access"
 import {
     richError,
     type RichErrorEnvelope,
@@ -25,16 +23,13 @@ import {
 } from "@/lib/scheduling/assignment-service"
 import { DEFAULT_ORG_ID, congregationDocId } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
-import { rowOrgIds, rowOrg } from "@/lib/org/membership"
-import { scopeRowsToTenant, scopeUsersToTenant } from "@/lib/org/tenant-query"
+import { rowOrg } from "@/lib/org/membership"
+import { scopeRowsToTenant } from "@/lib/org/tenant-query"
 
 /**
- * v11-05-02: roster-list reads keep the existing `where('role','in',...)` query
- * and filter org membership IN-MEMORY via the doc's `orgIds` (rowOrgIds: missing
- * → ['crc'], the CRC-safety default). A legacy CRC user with no orgIds therefore
- * stays in CRC's roster with NO backfill — the backfill only tags BL members. We
- * filter in-memory (not `array-contains` in the query) to avoid a per-doc-stamp
- * hard dependency and any index/emulator fragility; rosters are small.
+ * Multi-tenant P2: roster-list reads come from the tenant's memberships
+ * (`listTenantMembers(org, {roles})`) and show the MEMBERSHIP role — no more
+ * `users where role in [...]` + in-memory `orgIds` wall (v11-05-02).
  */
 
 /**
@@ -173,13 +168,42 @@ function buildMusicianRow(
     }
 }
 
+/**
+ * Multi-tenant P2: the roster of tenant `org` — its members holding a roster
+ * role, each as `{uid, data}` where `data` is the users/{uid} profile with
+ * `role` replaced by the MEMBERSHIP role in this tenant (never the global
+ * users.role). Replaces `users where role in [...]` + the in-memory orgIds
+ * wall.
+ */
+const ROSTER_ROLES = ["musician", "band_leader", "admin"] as const
+
+async function tenantRoster(
+    org: OrgId,
+): Promise<Array<{ uid: string; data: FirebaseFirestore.DocumentData }>> {
+    const members = await listTenantMembers(org, { roles: [...ROSTER_ROLES] })
+    return members.map((m) => ({
+        uid: m.uid,
+        data: { ...(m.profile ?? {}), role: m.role },
+    }))
+}
+
+/**
+ * One person's musician row in tenant `org`: null when the user doesn't exist
+ * or holds no role in this tenant (cross-tenant wall — the same "not found" as
+ * an absent user). The row's `role` is the tenant role.
+ */
 async function loadUserMusicianRow(
     db: DB,
     uid: string,
+    org: OrgId,
 ): Promise<MusicianRow | null> {
-    const snap = await db.collection("users").doc(uid).get()
+    const [snap, access] = await Promise.all([
+        db.collection("users").doc(uid).get(),
+        getTenantAccess(uid, org, { db }),
+    ])
     if (!snap.exists) return null
-    return buildMusicianRow(uid, snap.data() ?? {})
+    if (!access.role || access.role === "denied") return null
+    return buildMusicianRow(uid, { ...(snap.data() ?? {}), role: access.role })
 }
 
 /**
@@ -226,23 +250,19 @@ export async function listMusicians(
 ): Promise<ListMusiciansResult | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const gate = await assertEditor(db, uid)
+    const gate = await assertEditor(db, uid, org)
     if (!gate.ok) return gate
 
     try {
-        const snap = await db
-            .collection("users")
-            .where("role", "in", ["musician", "band_leader", "admin"])
-            .get()
+        // Multi-tenant P2: tenant members with their tenant role.
+        const roster = await tenantRoster(org)
 
         const filterInstrument = args.instrument?.trim().toLowerCase()
         const filterTier = args.schedulingTier
 
         const rows: MusicianRow[] = []
-        for (const d of snap.docs) {
-            // v11-05-02: tenant wall — only members of the caller's org.
-            if (!rowOrgIds(d.data().orgIds).includes(org)) continue
-            const row = buildMusicianRow(d.id, d.data(), {
+        for (const d of roster) {
+            const row = buildMusicianRow(d.uid, d.data, {
                 allowProfileless: args.includeProfileless === true,
             })
             if (!row) continue
@@ -313,9 +333,9 @@ export interface FindUserResult {
  * get_musician_profile). Unlike list_musicians it does NOT drop instrument-less
  * users by default, so band leaders without a musicianProfile are discoverable.
  *
- * Tenant-scoped exactly like list_musicians (rowOrgIds wall — no cross-tenant
- * leakage), editor-gated via assertEditor. All filters run in-memory over the
- * by-role query (viable at current roster scale; no new index).
+ * Tenant-scoped exactly like list_musicians (the tenant's members only — no
+ * cross-tenant leakage), editor-gated via assertEditor. All filters run
+ * in-memory over the tenant roster (viable at current roster scale).
  */
 export async function findUser(
     uid: string,
@@ -324,7 +344,7 @@ export async function findUser(
 ): Promise<FindUserResult | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const gate = await assertEditor(db, uid)
+    const gate = await assertEditor(db, uid, org)
     if (!gate.ok) return gate
 
     const emailArg = args.email?.trim().toLowerCase()
@@ -333,16 +353,12 @@ export async function findUser(
     const allowProfileless = args.includeProfileless !== false
 
     try {
-        const snap = await db
-            .collection("users")
-            .where("role", "in", ["musician", "band_leader", "admin"])
-            .get()
+        // Multi-tenant P2: tenant members with their tenant role (no leakage).
+        const roster = await tenantRoster(org)
 
         const rows: MusicianRow[] = []
-        for (const d of snap.docs) {
-            // tenant wall — only members of the caller's org (no leakage).
-            if (!rowOrgIds(d.data().orgIds).includes(org)) continue
-            const row = buildMusicianRow(d.id, d.data(), { allowProfileless })
+        for (const d of roster) {
+            const row = buildMusicianRow(d.uid, d.data, { allowProfileless })
             if (!row) continue
             if (args.role && row.role !== args.role) continue
             if (emailArg && row.email.toLowerCase() !== emailArg) continue
@@ -387,6 +403,7 @@ export interface GetMusicianProfileResult {
 export async function getMusicianProfile(
     callerUid: string,
     args: GetMusicianProfileArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<GetMusicianProfileResult | RichErrorEnvelope> {
     if (!args?.uid || typeof args.uid !== "string") {
         return richError(
@@ -398,11 +415,11 @@ export async function getMusicianProfile(
     }
     initAdmin()
     const db = getFirestore()
-    const gate = await assertEditor(db, callerUid)
+    const gate = await assertEditor(db, callerUid, org)
     if (!gate.ok) return gate
 
     try {
-        const row = await loadUserMusicianRow(db, args.uid)
+        const row = await loadUserMusicianRow(db, args.uid, org)
         if (!row) {
             return richError(
                 "not_found",
@@ -534,7 +551,7 @@ export async function listMusiciansOnDate(
     }
     initAdmin()
     const db = getFirestore()
-    const gate = await assertEditor(db, callerUid)
+    const gate = await assertEditor(db, callerUid, org)
     if (!gate.ok) return gate
 
     try {
@@ -668,7 +685,7 @@ export async function listPendingAssignments(
 ): Promise<ListPendingAssignmentsResult | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const gate = await assertEditor(db, callerUid)
+    const gate = await assertEditor(db, callerUid, org)
     if (!gate.ok) return gate
 
     try {
@@ -750,7 +767,7 @@ export async function suggestMusicians(
     }
     initAdmin()
     const db = getFirestore()
-    const gate = await assertEditor(db, callerUid)
+    const gate = await assertEditor(db, callerUid, org)
     if (!gate.ok) return gate
 
     try {
@@ -767,15 +784,11 @@ export async function suggestMusicians(
             )
         }
 
-        const usersSnap = await db
-            .collection("users")
-            .where("role", "in", ["musician", "band_leader", "admin"])
-            .get()
+        // Multi-tenant P2: tenant members with their tenant role.
+        const roster = await tenantRoster(org)
         const musicians: MusicianRow[] = []
-        for (const d of usersSnap.docs) {
-            // v11-05-02: only members of the caller's org.
-            if (!rowOrgIds(d.data().orgIds).includes(org)) continue
-            const row = buildMusicianRow(d.id, d.data())
+        for (const d of roster) {
+            const row = buildMusicianRow(d.uid, d.data)
             if (row) musicians.push(row)
         }
 
@@ -879,7 +892,7 @@ export async function suggestBand(
     }
     initAdmin()
     const db = getFirestore()
-    const gate = await assertEditor(db, callerUid)
+    const gate = await assertEditor(db, callerUid, org)
     if (!gate.ok) return gate
 
     try {
@@ -904,12 +917,9 @@ export async function suggestBand(
             ? (setlistData.assignedUids as string[]).filter(Boolean)
             : []
 
-        const [usersSnap, recentSnap, configSnap] = await Promise.all([
-            // v11-05-02: roster scoped to caller org (membership filtered in-memory below).
-            // Multi-tenant phase 1: narrowed in the query for every tenant but crc.
-            scopeUsersToTenant(db.collection("users") as FirebaseFirestore.Query, org)
-                .where("role", "in", ["musician", "band_leader", "admin"])
-                .get(),
+        const [roster, recentSnap, configSnap] = await Promise.all([
+            // Multi-tenant P2: tenant members with their tenant role.
+            tenantRoster(org),
             // v11-05-03: play-count read scoped to caller org in-memory below
             // (rowOrg on each doc). Multi-tenant phase 1: queried by orgId for
             // every tenant but crc, whose untagged rows keep this read.
@@ -962,10 +972,8 @@ export async function suggestBand(
 
         const candidates: MusicianCandidate[] = []
         const selectedInstrumentKeys: string[] = []
-        for (const d of usersSnap.docs) {
-            // v11-05-02: only members of the caller's org.
-            if (!rowOrgIds(d.data().orgIds).includes(org)) continue
-            const row = buildMusicianRow(d.id, d.data())
+        for (const d of roster) {
+            const row = buildMusicianRow(d.uid, d.data)
             if (!row) continue
             candidates.push({
                 uid: row.uid,
@@ -1064,6 +1072,7 @@ export interface AssignMusicianResult {
 export async function assignMusician(
     callerUid: string,
     args: AssignMusicianArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<AssignMusicianResult | RichErrorEnvelope> {
     if (!args?.setlistId || typeof args.setlistId !== "string") {
         return richError(
@@ -1083,11 +1092,11 @@ export async function assignMusician(
     initAdmin()
     const db = getFirestore()
 
-    const gate = await assertEditor(db, callerUid)
+    const gate = await assertEditor(db, callerUid, org)
     if (!gate.ok) return gate
 
     // Trusted-leader rate-limit bypass per feedback_admin_rate_limit_bypass.
-    const role = await readUserRole(db, callerUid)
+    const role = await readTenantRole(db, callerUid, org)
     const bypass = role === "admin" || role === "band_leader"
     const limited = await checkUserRateLimit(callerUid, "api", { bypass })
     if (limited) {
@@ -1106,7 +1115,8 @@ export async function assignMusician(
         .collection("setlists")
         .doc(args.setlistId)
         .get()
-    if (!setlistSnap.exists) {
+    // Multi-tenant P2: another tenant's setlist reads as not found.
+    if (!setlistSnap.exists || rowOrg(setlistSnap.data()?.orgId) !== org) {
         return richError(
             "not_found",
             `Setlist '${args.setlistId}' was not found.`,
@@ -1142,7 +1152,7 @@ export async function assignMusician(
             ? (setlistData.templateType as string)
             : null
 
-    const musicianRow = await loadUserMusicianRow(db, args.uid)
+    const musicianRow = await loadUserMusicianRow(db, args.uid, org)
     if (!musicianRow) {
         return richError(
             "not_found",
@@ -1276,6 +1286,7 @@ export interface UnassignMusicianResult {
 export async function unassignMusician(
     callerUid: string,
     args: UnassignMusicianArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<UnassignMusicianResult | RichErrorEnvelope> {
     if (!args?.setlistId || typeof args.setlistId !== "string") {
         return richError(
@@ -1294,10 +1305,10 @@ export async function unassignMusician(
     initAdmin()
     const db = getFirestore()
 
-    const gate = await assertEditor(db, callerUid)
+    const gate = await assertEditor(db, callerUid, org)
     if (!gate.ok) return gate
 
-    const role = await readUserRole(db, callerUid)
+    const role = await readTenantRole(db, callerUid, org)
     const bypass = role === "admin" || role === "band_leader"
     const limited = await checkUserRateLimit(callerUid, "api", { bypass })
     if (limited) {
@@ -1316,7 +1327,8 @@ export async function unassignMusician(
         .collection("setlists")
         .doc(args.setlistId)
         .get()
-    if (!setlistSnap.exists) {
+    // Multi-tenant P2: another tenant's setlist reads as not found.
+    if (!setlistSnap.exists || rowOrg(setlistSnap.data()?.orgId) !== org) {
         return richError(
             "not_found",
             `Setlist '${args.setlistId}' was not found.`,

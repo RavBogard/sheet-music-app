@@ -4,6 +4,7 @@ import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
 import {
     assertMonitorAccess,
+    BRIDGE_ORG,
     coerceCommandAck,
     commandAckRef,
     computeBusAssignmentAdd,
@@ -180,7 +181,8 @@ export async function assignMonitorBus(
         initAdmin()
         const db = getFirestore()
 
-        const gate = await assertEditor(db, callerUid)
+        // Multi-tenant P2: bus assignment is a mixer decision — bridge tenant (crc).
+        const gate = await assertEditor(db, callerUid, BRIDGE_ORG)
         if (!gate.ok) return gate
 
         // Validate the assignee is a real user (admin-SDK lookup) + resolve the
@@ -305,7 +307,7 @@ export async function unassignMonitorBus(
         initAdmin()
         const db = getFirestore()
 
-        const gate = await assertEditor(db, callerUid)
+        const gate = await assertEditor(db, callerUid, BRIDGE_ORG)
         if (!gate.ok) return gate
 
         const config = await loadMonitorConfig(db)

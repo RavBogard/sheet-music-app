@@ -5,6 +5,8 @@ import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { assertEditor } from "@/lib/mcp/server-tracks-write"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * `backfill_track_mimetype` — heal the denormalized `mimeType` cache on legacy
@@ -152,6 +154,7 @@ interface Candidate {
 export async function backfillTrackMimetype(
     uid: string,
     args: BackfillTrackMimetypeArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<BackfillTrackMimetypeResult | RichErrorEnvelope> {
     const dryRun = args.dryRun !== false
     const force = args.force === true
@@ -162,7 +165,7 @@ export async function backfillTrackMimetype(
 
         // Trusted-leader gate — assertEditor returns the rich forbidden_role
         // envelope (assignable to RichErrorEnvelope) on refusal.
-        const editor = await assertEditor(db, uid)
+        const editor = await assertEditor(db, uid, org)
         if (!editor.ok) return editor
 
         // Full scan of the tracks collection. The candidate set is "bonded

@@ -7,6 +7,7 @@ import {
     type ProcessChartUploadResult,
 } from "@/lib/library-upload"
 import { uploadToStorage } from "@/lib/firebase-storage"
+import { rowOrg } from "@/lib/org/membership"
 import {
     recomputeIndexNameFields,
     type IndexNameFields,
@@ -329,6 +330,9 @@ async function handleNewFile(
         uploaderUid: "cron:drive-sync",
         uploaderEmail: "drive-sync@cron.internal",
         source: "drive-sync",
+        // Multi-tenant phase 2 (W5): the Drive inbox / sync folder is CRC's
+        // (phase 6 makes it per-tenant config). Shared by drive-sync/inbox.ts.
+        orgId: "crc",
         driveMetadata: {
             driveFileId: file.id!,
             modifiedTime: file.modifiedTime,
@@ -461,6 +465,7 @@ async function handleExistingFile(
                 buffer,
                 (typeof row.mimeType === "string" ? row.mimeType : file.mimeType) ??
                     "application/pdf",
+                rowOrg(row.orgId), // W11: the existing row's tenant
             )
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err)

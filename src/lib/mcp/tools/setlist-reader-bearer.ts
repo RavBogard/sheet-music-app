@@ -19,6 +19,8 @@ import {
     SETLIST_READER_KIND,
     SETLIST_READER_TOOLS,
 } from "@/lib/mcp/scoped-bearer"
+import { readTenantRole } from "@/lib/org/access"
+import { orgFrom } from "@/lib/mcp/org-context"
 
 /**
  * `setlist_reader` — a LONG-LIVED, READ-ONLY service credential.
@@ -78,12 +80,9 @@ const GENERIC_PURPOSE = new Set([
  * boundaries: the role gate is the security-critical line in both files and a
  * shared helper is a single edit away from silently loosening both.
  */
-async function loadCallerRole(uid: string): Promise<string | undefined> {
-    const db = getFirestore()
-    const snap = await db.collection(USERS).doc(uid).get()
-    if (!snap.exists) return undefined
-    const data = snap.data() as Record<string, unknown> | undefined
-    return typeof data?.role === "string" ? data.role : undefined
+async function loadCallerRole(uid: string, org: OrgId): Promise<string | undefined> {
+    // Multi-tenant P2: the caller's role IN THE TOKEN TENANT (po reads admin).
+    return readTenantRole(getFirestore(), uid, org)
 }
 
 /** Midnight-UTC (start of the current UTC day) in epoch millis. */
@@ -125,7 +124,7 @@ export async function mintSetlistReaderBearerCore(
     const db = getFirestore()
 
     // 1. Role gate — admin only.
-    const role = await loadCallerRole(caller.uid)
+    const role = await loadCallerRole(caller.uid, caller.orgId)
     if (role !== "admin") {
         return richError(
             "forbidden_role",
@@ -260,9 +259,10 @@ export interface ListSetlistReaderResult {
 export async function listSetlistReaderBearersCore(
     callerUid: string,
     args: ListSetlistReaderArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<ListSetlistReaderResult | RichErrorEnvelope> {
     initAdmin()
-    const role = await loadCallerRole(callerUid)
+    const role = await loadCallerRole(callerUid, org)
     if (role !== "admin") {
         return richError(
             "forbidden_role",
@@ -321,9 +321,10 @@ export interface RevokeSetlistReaderResult {
 export async function revokeSetlistReaderBearerCore(
     callerUid: string,
     args: RevokeSetlistReaderArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<RevokeSetlistReaderResult | RichErrorEnvelope> {
     initAdmin()
-    const role = await loadCallerRole(callerUid)
+    const role = await loadCallerRole(callerUid, org)
     if (role !== "admin") {
         return richError(
             "forbidden_role",
@@ -439,7 +440,7 @@ export function registerSetlistReaderBearerTools(server: McpServer): void {
             },
         },
         async (args, extra) => {
-            const result = await listSetlistReaderBearersCore(uidFrom(extra), args)
+            const result = await listSetlistReaderBearersCore(uidFrom(extra), args, orgFrom(extra))
             return jsonResult(result)
         },
     )
@@ -459,7 +460,7 @@ export function registerSetlistReaderBearerTools(server: McpServer): void {
             },
         },
         async (args, extra) => {
-            const result = await revokeSetlistReaderBearerCore(uidFrom(extra), args)
+            const result = await revokeSetlistReaderBearerCore(uidFrom(extra), args, orgFrom(extra))
             return jsonResult(result)
         },
     )

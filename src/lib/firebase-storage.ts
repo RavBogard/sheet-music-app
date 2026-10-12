@@ -11,6 +11,7 @@
 
 import { initAdmin } from './firebase-admin'
 import { getStorage } from 'firebase-admin/storage'
+import type { OrgId } from '@/lib/org/types'
 
 // ─── Discriminated Result Types ───
 
@@ -112,11 +113,16 @@ export async function fileExistsInStorage(fileId: string, mimeType?: string): Pr
  * Upload a file buffer to Firebase Storage.
  * Returns the public/signed URL for serving.
  * Throws on error (callers already handle throws).
+ *
+ * Multi-tenant phase 2 (W11): `orgId` (required) is written to the object's
+ * custom metadata (`metadata.metadata.orgId`) so storage rules and later
+ * phases can scope `library/**` objects by tenant.
  */
 export async function uploadToStorage(
     fileId: string,
     buffer: Buffer,
-    mimeType: string = 'application/pdf'
+    mimeType: string = 'application/pdf',
+    orgId: OrgId,
 ): Promise<string> {
     const bucket = getBucket()
     const path = getStoragePath(fileId, mimeType)
@@ -129,6 +135,7 @@ export async function uploadToStorage(
             metadata: {
                 driveFileId: fileId,
                 uploadedAt: new Date().toISOString(),
+                orgId,
             }
         }
     })

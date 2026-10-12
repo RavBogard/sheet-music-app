@@ -232,7 +232,7 @@ export async function proposeLiturgyBindings(
     }
     initAdmin()
     const db = getFirestore()
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
 
     const loaded = setlistId

@@ -1,10 +1,12 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { FieldValue } from "firebase-admin/firestore"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
-import {
-    assertEditor,
-    readUserRole,
-} from "@/lib/mcp/server-tracks-write"
+import { assertEditor } from "@/lib/mcp/server-tracks-write"
+import { readTenantRole } from "@/lib/org/access"
+import type { OrgId } from "@/lib/org/types"
+// Multi-tenant P2: bridge/mixer role checks read the BRIDGE tenant's membership
+// (crc — the X32 is CRC's), never the MCP token tenant.
+import { BRIDGE_ORG } from "@/lib/mcp/server-monitor"
 import { forbiddenRoleEnvelope } from "@/lib/mcp/error-envelopes"
 
 /**
@@ -73,8 +75,9 @@ const NOTES: Record<BridgeRecoveryResult["action"], string> = {
 async function assertAdmin(
     db: ReturnType<typeof getFirestore>,
     uid: string,
+    org: OrgId,
 ): Promise<{ ok: true } | ReturnType<typeof forbiddenRoleEnvelope>> {
-    const role = await readUserRole(db, uid)
+    const role = await readTenantRole(db, uid, org)
     if (role === "admin") return { ok: true }
     return forbiddenRoleEnvelope({
         callerRole: role ?? null,
@@ -89,14 +92,15 @@ async function dispatchBridgeControl(
     uid: string,
     action: BridgeRecoveryResult["action"],
     gate: RoleGate,
+    org: OrgId,
 ): Promise<BridgeRecoveryResult | RichErrorEnvelope> {
     try {
         initAdmin()
         const db = getFirestore()
         const check =
             gate === "admin"
-                ? await assertAdmin(db, uid)
-                : await assertEditor(db, uid)
+                ? await assertAdmin(db, uid, org)
+                : await assertEditor(db, uid, org)
         if (!check.ok) return check
 
         const nonce = crypto.randomUUID()
@@ -125,19 +129,19 @@ async function dispatchBridgeControl(
 }
 
 export function bridgeResync(uid: string) {
-    return dispatchBridgeControl(uid, "resync", "trusted-leader")
+    return dispatchBridgeControl(uid, "resync", "trusted-leader", BRIDGE_ORG)
 }
 
 export function bridgeReconnect(uid: string) {
-    return dispatchBridgeControl(uid, "reconnect", "trusted-leader")
+    return dispatchBridgeControl(uid, "reconnect", "trusted-leader", BRIDGE_ORG)
 }
 
 export function bridgeSelftest(uid: string) {
-    return dispatchBridgeControl(uid, "selftest", "trusted-leader")
+    return dispatchBridgeControl(uid, "selftest", "trusted-leader", BRIDGE_ORG)
 }
 
 export function bridgeRestart(uid: string) {
-    return dispatchBridgeControl(uid, "restart", "admin")
+    return dispatchBridgeControl(uid, "restart", "admin", BRIDGE_ORG)
 }
 
 /**

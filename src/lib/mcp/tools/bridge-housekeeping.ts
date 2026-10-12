@@ -1,7 +1,11 @@
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { forbiddenRoleEnvelope } from "@/lib/mcp/error-envelopes"
-import { readUserRole } from "@/lib/mcp/server-tracks-write"
+import { readTenantRole } from "@/lib/org/access"
+import type { OrgId } from "@/lib/org/types"
+// Multi-tenant P2: bridge/mixer role checks read the BRIDGE tenant's membership
+// (crc — the X32 is CRC's), never the MCP token tenant.
+import { BRIDGE_ORG } from "@/lib/mcp/server-monitor"
 
 /**
  * Bridge-housekeeping MCP wrappers (FINDINGS §4 Lane #7 — TOP-10 #9 + Feat-A1
@@ -95,8 +99,9 @@ async function assertAdmin(
     db: ReturnType<typeof getFirestore>,
     uid: string,
     toolName: string,
+    org: OrgId,
 ): Promise<{ ok: true } | ReturnType<typeof forbiddenRoleEnvelope>> {
-    const role = await readUserRole(db, uid)
+    const role = await readTenantRole(db, uid, org)
     if (role === "admin") return { ok: true }
     return forbiddenRoleEnvelope({
         callerRole: role ?? null,
@@ -143,7 +148,7 @@ export async function bridgeClearAcks(
     try {
         initAdmin()
         const db = getFirestore()
-        const check = await assertAdmin(db, uid, "bridge_clear_acks")
+        const check = await assertAdmin(db, uid, "bridge_clear_acks", BRIDGE_ORG)
         if (!check.ok) return check
 
         const cleared = await deleteSubcollection(db, ACKS_COLLECTION)
@@ -169,6 +174,7 @@ export async function bridgeClearPendingCommands(
             db,
             uid,
             "bridge_clear_pending_commands",
+            BRIDGE_ORG,
         )
         if (!check.ok) return check
 
@@ -191,7 +197,7 @@ export async function bridgeGetLog(
     try {
         initAdmin()
         const db = getFirestore()
-        const check = await assertAdmin(db, uid, "bridge_get_log")
+        const check = await assertAdmin(db, uid, "bridge_get_log", BRIDGE_ORG)
         if (!check.ok) return check
 
         const snap = await db.doc(BRIDGE_LOG_DOC).get()

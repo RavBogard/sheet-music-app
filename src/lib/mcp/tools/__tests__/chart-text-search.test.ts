@@ -153,6 +153,8 @@ const mockDb = {
     getAll: getAllMock,
 }
 
+// Multi-tenant P2: role reads go through @/lib/org/access (spec behaviour fake).
+vi.mock("@/lib/org/access", () => import("@/test-stubs/org-access-fake"))
 vi.mock("@/lib/firebase-admin", () => ({
     initAdmin: vi.fn(),
     getFirestore: vi.fn(() => mockDb),

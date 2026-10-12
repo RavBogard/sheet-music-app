@@ -196,6 +196,7 @@ describe("executeSetlistImport — F-3 + F-5 (emulator)", () => {
         driveFiles.set(driveId, makePdf(driveId))
 
         const result = await executeSetlistImport({
+            orgId: "crc",
             db: db(),
             setName: "F-3/F-5 shape test",
             uploaderUid: UPLOADER_UID,
@@ -254,6 +255,7 @@ describe("executeSetlistImport — F-3 + F-5 (emulator)", () => {
         driveFiles.set(driveId, makePdf(driveId))
 
         const result = await executeSetlistImport({
+            orgId: "crc",
             db: db(),
             setName: "F-5 defaults mirror test",
             uploaderUid: UPLOADER_UID,
@@ -325,6 +327,7 @@ describe("executeSetlistImport — F-3 + F-5 (emulator)", () => {
         driveFiles.set(idC, makePdf(idC))
 
         const result = await executeSetlistImport({
+            orgId: "crc",
             db: db(),
             setName: "F-3 dedup-mid-import test",
             uploaderUid: UPLOADER_UID,
@@ -407,6 +410,7 @@ describe("executeSetlistImport — F-3 + F-5 (emulator)", () => {
         driveFiles.set(idB, makePdf(idB))
 
         const result = await executeSetlistImport({
+            orgId: "crc",
             db: db(),
             setName: "F-3 emit test",
             uploaderUid: UPLOADER_UID,
@@ -462,6 +466,7 @@ describe("executeSetlistImport — F-3 + F-5 (emulator)", () => {
         driveFiles.set(idC, makePdf(idC))
 
         const result = await executeSetlistImport({
+            orgId: "crc",
             db: db(),
             setName: "drive-failed mid-import",
             uploaderUid: UPLOADER_UID,

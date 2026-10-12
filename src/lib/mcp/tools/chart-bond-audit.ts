@@ -3,6 +3,9 @@ import { checkUserRateLimit } from "@/lib/rate-limit"
 import { getTracksForSetlist } from "@/lib/server-tracks"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/error-envelopes"
 import { logger } from "@/lib/logger"
+import { readTenantRole } from "@/lib/org/access"
+import type { OrgId } from "@/lib/org/types"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 
 /**
  * setlist-fixes Lane B (Bug 1 + Bug 4 + UX-7) — catch WRONG/STALE bonds before
@@ -277,11 +280,10 @@ export function detectOccasionTokens(text: string): string[] {
 async function readLeaderRole(
     db: FirebaseFirestore.Firestore,
     uid: string,
+    // Multi-tenant P2: the role in the token tenant.
+    org: OrgId,
 ): Promise<"admin" | "band_leader" | "other"> {
-    const snap = await db.collection("users").doc(uid).get()
-    const role = snap.exists
-        ? (snap.data()?.role as string | undefined)
-        : undefined
+    const role = await readTenantRole(db, uid, org)
     if (role === "admin") return "admin"
     if (role === "band_leader") return "band_leader"
     return "other"
@@ -303,6 +305,7 @@ export interface ReviewChartBondsResult {
 export async function reviewChartBonds(
     uid: string,
     args: ReviewChartBondsArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<ReviewChartBondsResult | RichErrorEnvelope> {
     if (!args.setlistId?.trim())
         return richError(
@@ -314,7 +317,7 @@ export async function reviewChartBonds(
     initAdmin()
     const db = getFirestore()
 
-    const role = await readLeaderRole(db, uid)
+    const role = await readLeaderRole(db, uid, org)
     const bypass = role === "admin" || role === "band_leader"
     const limited = await checkUserRateLimit(uid, "api", { bypass })
     if (limited)

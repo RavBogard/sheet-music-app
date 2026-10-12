@@ -10,6 +10,7 @@ import { DriveClient } from "@/lib/google-drive"
 import { logger } from "@/lib/logger"
 import { isNonChartArtifactShape } from "./library"
 import { richError, type RichErrorEnvelope } from "@/lib/mcp/errors"
+import { readTenantRole } from "@/lib/org/access"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
@@ -214,6 +215,8 @@ interface Candidate {
     name: string
     currentStatus: string
     currentMimeType: string | null
+    /** Multi-tenant P2: the row's tenant (always the caller's — the scan is org-scoped). */
+    orgId: OrgId
 }
 
 async function loadAdminCandidates(
@@ -231,10 +234,8 @@ async function loadAdminCandidates(
     initAdmin()
     const db = getFirestore()
 
-    const userSnap = await db.collection("users").doc(uid).get()
-    const role = userSnap.exists
-        ? (userSnap.data()?.role as string | undefined)
-        : undefined
+    // Multi-tenant P2: admin IN THE TOKEN TENANT.
+    const role = await readTenantRole(db, uid, org)
     if (role !== "admin") {
         return {
             ok: false,
@@ -288,6 +289,7 @@ async function loadAdminCandidates(
             name,
             currentStatus: status,
             currentMimeType: mimeType,
+            orgId: rowOrg(data.orgId),
         })
     }
     return {
@@ -439,6 +441,7 @@ async function commitResolvedBytes(
     fileId: string,
     buffer: Buffer,
     mimeType: string,
+    orgId: OrgId,
     actorUid?: string,
 ): Promise<MirrorOutcome> {
     // Storage path mirrors `getStoragePath` extension logic (pdf/xml/audio);
@@ -453,7 +456,7 @@ async function commitResolvedBytes(
     const storagePath = `library/${fileId}${ext}`
 
     try {
-        await uploadToStorage(fileId, buffer, mimeType)
+        await uploadToStorage(fileId, buffer, mimeType, orgId)
     } catch (err) {
         return {
             ok: false,
@@ -589,7 +592,7 @@ async function mirrorRow(
     // tail (also used by the C9I3-002 shortcut-rebond heal path). actorUid
     // flows into the safely-delete-library-object audit row on any
     // compensating-delete (bond-aware-delete-guard contract).
-    return commitResolvedBytes(db, c.fileId, buffer, driveMimeType, actorUid)
+    return commitResolvedBytes(db, c.fileId, buffer, driveMimeType, c.orgId, actorUid)
 }
 
 /**
@@ -647,7 +650,7 @@ async function rebondRow(
             error: "Shortcut target returned empty bytes.",
         }
     }
-    const out = await commitResolvedBytes(db, c.fileId, buffer, targetMime, actorUid)
+    const out = await commitResolvedBytes(db, c.fileId, buffer, targetMime, c.orgId, actorUid)
     if (out.ok) return { ok: true, sizeBytes: out.sizeBytes }
     // commitResolvedBytes only fails transiently (upload/verify/merge); keep
     // the row in needsRebond so a re-run retries the heal.
@@ -805,9 +808,13 @@ async function commitOrphanBatch(
         const slice = writable.slice(i, i + BATCH_MAX)
         const batch = db.batch()
         for (const p of slice) {
+            // Multi-tenant P2 (W8/W9): the row was read moments ago by the
+            // org-scoped scan; stamping its tenant keeps a racing delete from
+            // leaving an unstamped stub behind (a batch update would instead
+            // fail the whole slice on one vanished row).
             batch.set(
                 db.collection("library_index").doc(p.candidate.fileId),
-                { status: "orphaned", orphanedAt: nowIso },
+                { status: "orphaned", orphanedAt: nowIso, orgId: p.candidate.orgId },
                 { merge: true },
             )
             // Mirror onto songs/{id} when present so search_library's
@@ -817,7 +824,7 @@ async function commitOrphanBatch(
             // shape there (verify_setlist_charts uses the same pattern).
             batch.set(
                 db.collection("songs").doc(p.candidate.fileId),
-                { status: "orphaned" },
+                { status: "orphaned", orgId: p.candidate.orgId },
                 { merge: true },
             )
         }

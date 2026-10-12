@@ -25,6 +25,8 @@ const mockDb = {
     collection: collectionSpy,
 }
 
+// Multi-tenant P2: role reads go through @/lib/org/access (spec behaviour fake).
+vi.mock("@/lib/org/access", () => import("@/test-stubs/org-access-fake"))
 vi.mock("@/lib/firebase-admin", () => ({
     initAdmin: vi.fn(),
     getFirestore: vi.fn(() => mockDb),
@@ -44,7 +46,7 @@ import {
 } from "../bridge-recovery"
 
 /**
- * Stub the users/{uid} role lookup that readUserRole performs via
+ * Stub the users/{uid} role lookup that the tenant role read (org-access fake) performs via
  * `db.collection("users").doc(uid).get()`. Returns a snap whose `.data().role`
  * is the value we want the gate to read.
  */

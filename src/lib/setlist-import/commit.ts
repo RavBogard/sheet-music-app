@@ -12,6 +12,7 @@ import {
     type ServerSetlistTrackInput,
 } from '@/lib/setlist-write'
 import type { Setlist } from '@/types/models'
+import type { OrgId } from '@/lib/org/types'
 
 import type { SetlistSection } from './extract-structure'
 import type { ResolvedTrack } from './resolve'
@@ -25,6 +26,8 @@ export interface CommitDocumentInput {
     rabbi?: string
     sections: SetlistSection[]
     tracks: ResolvedTrack[]
+    /** Multi-tenant phase 2 (W7): host tenant from the calling route. */
+    orgId: OrgId
 }
 
 /** Map a resolved track to a song-type ServerSetlistTrackInput, binding the
@@ -89,6 +92,7 @@ export async function commitDocumentSetlist(
     const tracks = flattenResolvedStructure(input.sections, input.tracks)
     return createSetlistServerSide({
         name: input.name,
+        orgId: input.orgId,
         ownerId: input.ownerId,
         ownerName: input.ownerName,
         eventDate: input.eventDate,

@@ -17,6 +17,7 @@ import {
     type HashFailureReason,
 } from "@/lib/library/content-hash"
 import type { HygieneCoverage } from "./reconcile-library"
+import { readTenantRole } from "@/lib/org/access"
 
 /**
  * W4 of the content-hash order (R-0903-live-cw-2 §3) — populate
@@ -176,10 +177,8 @@ export async function backfillContentHash(
         initAdmin()
         const db = getFirestore()
 
-        const userSnap = await db.collection("users").doc(uid).get()
-        const role = userSnap.exists
-            ? (userSnap.data()?.role as string | undefined)
-            : undefined
+        // Multi-tenant P2: the role IN THE TOKEN TENANT.
+        const role = await readTenantRole(db, uid, org)
         if (role !== "admin") {
             return richError(
                 "forbidden_role",

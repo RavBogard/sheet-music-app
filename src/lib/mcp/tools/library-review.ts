@@ -1,7 +1,9 @@
 import "server-only"
 
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { readUserRole } from "@/lib/mcp/server-tracks-write"
+import { readTenantRole } from "@/lib/org/access"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import {
     forbiddenRoleEnvelope,
     richError,
@@ -82,10 +84,11 @@ interface AdminGateOk {
 
 async function assertAdmin(
     uid: string,
+    org: OrgId,
 ): Promise<AdminGateOk | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const role = await readUserRole(db, uid)
+    const role = await readTenantRole(db, uid, org)
     if (role === "admin") return { ok: true, db }
     return forbiddenRoleEnvelope({
         callerRole: role ?? null,
@@ -111,10 +114,11 @@ interface EditorGateOk {
  */
 async function assertLibraryEditor(
     uid: string,
+    org: OrgId,
 ): Promise<EditorGateOk | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const role = await readUserRole(db, uid)
+    const role = await readTenantRole(db, uid, org)
     if (role === "admin" || role === "band_leader") {
         return { ok: true, db, role }
     }
@@ -196,8 +200,9 @@ export interface ListReviewQueueResult {
 export async function listReviewQueue(
     uid: string,
     args: ListReviewQueueArgs = {},
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<ListReviewQueueResult | RichErrorEnvelope> {
-    const gate = await assertAdmin(uid)
+    const gate = await assertAdmin(uid, org)
     if (!gate.ok) return gate
 
     const kind = args.kind ?? "all"
@@ -325,8 +330,9 @@ export interface GetEnrichmentSuggestionResult {
 export async function getEnrichmentSuggestion(
     uid: string,
     args: GetEnrichmentSuggestionArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<GetEnrichmentSuggestionResult | RichErrorEnvelope> {
-    const gate = await assertAdmin(uid)
+    const gate = await assertAdmin(uid, org)
     if (!gate.ok) return gate
 
     if (typeof args?.rowId !== "string" || !args.rowId.trim()) {
@@ -540,8 +546,9 @@ export interface AcceptEnrichmentArgs extends WriteCommon {
 export async function acceptEnrichment(
     uid: string,
     args: AcceptEnrichmentArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<WriteSuccessEnvelope | RichErrorEnvelope> {
-    const gate = await assertAdmin(uid)
+    const gate = await assertAdmin(uid, org)
     if (!gate.ok) return gate
     const bad = requireRowId(args?.rowId)
     if (bad) return bad
@@ -633,8 +640,9 @@ export interface RejectEnrichmentArgs extends WriteCommon {
 export async function rejectEnrichment(
     uid: string,
     args: RejectEnrichmentArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<WriteSuccessEnvelope | RichErrorEnvelope> {
-    const gate = await assertAdmin(uid)
+    const gate = await assertAdmin(uid, org)
     if (!gate.ok) return gate
     const bad = requireRowId(args?.rowId)
     if (bad) return bad
@@ -693,7 +701,7 @@ export async function editEnrichment(
     args: EditEnrichmentArgs,
     org?: string,
 ): Promise<WriteSuccessEnvelope | RichErrorEnvelope> {
-    const gate = await assertLibraryEditor(uid)
+    const gate = await assertLibraryEditor(uid, org ?? DEFAULT_ORG_ID)
     if (!gate.ok) return gate
     const bad = requireRowId(args?.rowId)
     if (bad) return bad
@@ -911,8 +919,9 @@ export interface RetryEnrichmentArgs extends WriteCommon {
 export async function retryEnrichment(
     uid: string,
     args: RetryEnrichmentArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<WriteSuccessEnvelope | RichErrorEnvelope> {
-    const gate = await assertAdmin(uid)
+    const gate = await assertAdmin(uid, org)
     if (!gate.ok) return gate
     const bad = requireRowId(args?.rowId)
     if (bad) return bad
@@ -995,8 +1004,9 @@ export interface DismissFailureArgs extends WriteCommon {
 export async function dismissFailure(
     uid: string,
     args: DismissFailureArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<WriteSuccessEnvelope | RichErrorEnvelope> {
-    const gate = await assertAdmin(uid)
+    const gate = await assertAdmin(uid, org)
     if (!gate.ok) return gate
     const bad = requireRowId(args?.rowId)
     if (bad) return bad

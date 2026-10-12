@@ -1,4 +1,5 @@
 import { rowOrg } from "@/lib/mcp/org-context"
+import { readTenantRole } from "@/lib/org/access"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
@@ -69,9 +70,10 @@ export interface GetChartStatusResult {
 async function readLeaderRole(
     db: FirebaseFirestore.Firestore,
     uid: string,
+    // Multi-tenant P2: the role in the token tenant (rate-limit bypass).
+    org: OrgId,
 ): Promise<"admin" | "band_leader" | "other"> {
-    const snap = await db.collection("users").doc(uid).get()
-    const role = snap.exists ? (snap.data()?.role as string | undefined) : undefined
+    const role = await readTenantRole(db, uid, org)
     if (role === "admin") return "admin"
     if (role === "band_leader") return "band_leader"
     return "other"
@@ -105,7 +107,7 @@ export async function getChartStatus(
     initAdmin()
     const db = getFirestore()
 
-    const role = await readLeaderRole(db, uid)
+    const role = await readLeaderRole(db, uid, org)
     const bypass = role === "admin" || role === "band_leader"
     const limited = await checkUserRateLimit(uid, "api", { bypass })
     if (limited)
@@ -280,6 +282,7 @@ export interface VerifySetlistChartsResult {
 export async function verifySetlistCharts(
     uid: string,
     args: VerifySetlistChartsArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<VerifySetlistChartsResult | RichErrorEnvelope> {
     if (!args.setlistId?.trim())
         return richError(
@@ -291,7 +294,7 @@ export async function verifySetlistCharts(
     initAdmin()
     const db = getFirestore()
 
-    const role = await readLeaderRole(db, uid)
+    const role = await readLeaderRole(db, uid, org)
     const bypass = role === "admin" || role === "band_leader"
     const limited = await checkUserRateLimit(uid, "api", { bypass })
     if (limited)
@@ -303,7 +306,12 @@ export async function verifySetlistCharts(
         )
 
     const setlistDoc = await db.collection("setlists").doc(args.setlistId).get()
-    if (!setlistDoc.exists)
+    // Multi-tenant P2: another tenant's setlist reads as not found (this tool
+    // can mark that tenant's catalog rows orphaned).
+    if (
+        !setlistDoc.exists ||
+        rowOrg((setlistDoc.data() as Record<string, unknown>).orgId) !== org
+    )
         return richError(
             "setlist_not_found",
             `Setlist '${args.setlistId}' was not found.`,
@@ -388,9 +396,15 @@ export async function verifySetlistCharts(
             ),
         )
         const existingFileIds: string[] = []
+        // Multi-tenant P2 (W8): each row's tenant, stamped onto a songs stub.
+        const rowOrgOf = new Map<string, OrgId>()
         for (let i = 0; i < missingFileIds.length; i++) {
             if (existingSnaps[i].exists) {
                 existingFileIds.push(missingFileIds[i])
+                rowOrgOf.set(
+                    missingFileIds[i],
+                    rowOrg(existingSnaps[i].data()?.orgId),
+                )
             } else {
                 phantomBonds++
             }
@@ -407,7 +421,7 @@ export async function verifySetlistCharts(
                 // exclusion sees it on either collection.
                 batch.set(
                     db.collection("songs").doc(fid),
-                    { status: "orphaned" },
+                    { status: "orphaned", orgId: rowOrgOf.get(fid) ?? rowOrg(undefined) },
                     { merge: true },
                 )
             }

@@ -13,12 +13,14 @@ import { FakeFirestore, type RecordedQuery } from "@/lib/org/__tests__/fake-admi
 
 let db: FakeFirestore
 vi.mock("@/lib/firebase-admin", () => ({ initAdmin: () => true, getFirestore: () => db }))
+// Multi-tenant phase 2: roster listings go through listTenantMembers (fake =
+// spec behaviour; these unmigrated users take the legacy users-doc fallback).
+vi.mock("@/lib/org/access", () => import("@/test-stubs/org-access-fake"))
 vi.mock("@/lib/api-wrapper", () => ({
     createApiHandler: (fn: (ctx: { req: Request }) => unknown) => (req: Request) => fn({ req }),
 }))
 vi.mock("@/lib/mcp/server-tracks-write", () => ({
     assertEditor: async () => ({ ok: true }),
-    readUserRole: async () => "admin",
 }))
 
 const T = (iso: string) => new Date(iso)

@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache"
 import { createApiHandler } from "@/lib/api-wrapper"
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
 import { checkRateLimit } from "@/lib/rate-limit"
+import { coerceOrgId } from "@/lib/org/registry"
 import {
     processChartUpload,
     type LibraryCollection,
@@ -87,6 +88,8 @@ export const POST = createApiHandler(async (ctx) => {
         tags,
         uploaderUid: ctx.auth.uid,
         uploaderEmail: ctx.auth.email,
+        // Multi-tenant phase 2 (W5): the host tenant (proxy-set x-org-id).
+        orgId: coerceOrgId(ctx.req.headers.get("x-org-id")),
     })
 
     if (!result.ok) {

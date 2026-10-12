@@ -207,6 +207,9 @@ async function importOneItem(
         collection: batch.defaults?.collection,
         tags: batch.defaults?.tags,
         uploaderUid: batch.ownerUid,
+        // Multi-tenant phase 2 (W5): the batch's tenant, stamped atomically
+        // with the row (the stampOrg below stays as a no-op guard).
+        orgId: batch.orgId,
         force,
         source: item.driveFileId ? "drive-sync" : "upload",
         driveMetadata: item.driveFileId

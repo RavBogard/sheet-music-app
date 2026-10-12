@@ -114,3 +114,17 @@ describe("testshul: publish SMS prefix reads tenant config", () => {
         )
     })
 })
+
+describe("multi-tenant phase 2 W4: song usage carries the setlist's tenant", () => {
+    it("passes rowOrg(setlist.orgId) to recordSongUsage (unstamped → crc)", async () => {
+        const { recordSongUsage } = await import("@/lib/song-usage")
+        const rec = vi.mocked(recordSongUsage)
+        rec.mockClear()
+        await notify("brotherslazaroff")
+        expect(rec).toHaveBeenCalledTimes(1)
+        expect(rec.mock.calls[0][4]).toBe("brotherslazaroff")
+        rec.mockClear()
+        await notify()
+        expect(rec.mock.calls[0][4]).toBe("crc")
+    })
+})

@@ -13,6 +13,8 @@ const h = vi.hoisted(() => ({
     saved: [] as Buffer[],
 }))
 
+// Multi-tenant P2: role reads go through @/lib/org/access (spec behaviour fake).
+vi.mock("@/lib/org/access", () => import("@/test-stubs/org-access-fake"))
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 vi.mock("@/lib/rate-limit", () => ({ checkUserRateLimit: vi.fn(async () => null) }))
 vi.mock("@/lib/server-tracks", () => ({

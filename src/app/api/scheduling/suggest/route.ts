@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { getFirestore } from "@/lib/firebase-admin"
 import { logger } from "@/lib/logger"
 import { createApiHandler } from "@/lib/api-wrapper"
+import { coerceOrgId } from "@/lib/org/registry"
+import { listTenantMembers } from "@/lib/org/access"
 
 /**
  * GET /api/scheduling/suggest?setlistId=xxx&instrument=Guitar&date=2026-03-15
@@ -24,15 +26,19 @@ export const GET = createApiHandler(
             )
         }
 
-        // 1. Get all musicians
-        const usersSnap = await db.collection('users')
-            .where('role', 'in', ['musician', 'band_leader', 'admin'])
-            .get()
+        // 1. Get all musicians — multi-tenant phase 2: the host tenant's
+        // members whose MEMBERSHIP role is musician+ (not the global users.role).
+        // Sorted by uid to keep the legacy users-query (doc-id) order.
+        const org = coerceOrgId(ctx.req.headers.get("x-org-id"))
+        const roster = (await listTenantMembers(org, { roles: ['musician', 'band_leader', 'admin'] }))
+            .filter(m => m.profile !== null)
+            .sort((a, b) => (a.uid < b.uid ? -1 : a.uid > b.uid ? 1 : 0))
 
-        const musicians = usersSnap.docs.map(d => {
-            const data = d.data()
+        const musicians = roster.map(m => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const data = m.profile as Record<string, any>
             return {
-                uid: d.id,
+                uid: m.uid,
                 name: data.displayName || data.email?.split('@')[0] || 'Unknown',
                 email: data.email || '',
                 instrumentKey: data.musicianProfile?.instrument || null,

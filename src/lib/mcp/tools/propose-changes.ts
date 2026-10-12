@@ -263,7 +263,9 @@ export async function proposeSetlistChanges(
         summary,
     }
 
-    await db.collection("proposal_stages").doc(stageId).set(stage)
+    // Multi-tenant P2 (W2): the stage doc carries the caller's tenant. Kept
+    // off the returned StageRecord so the tool's result shape is unchanged.
+    await db.collection("proposal_stages").doc(stageId).set({ ...stage, orgId: org })
     logger.info("[mcp] propose_setlist_changes staged", {
         stageId,
         setlistId: args.setlistId,
@@ -307,7 +309,7 @@ export async function commitStagedChanges(
     initAdmin()
     const db = getFirestore()
 
-    const editor = await assertEditor(db, uid)
+    const editor = await assertEditor(db, uid, org)
     if (!editor.ok) return editor
 
     const stageRef = db.collection("proposal_stages").doc(args.stageId)
@@ -593,6 +595,9 @@ export async function commitStagedChanges(
             if (row.kind === "new") {
                 tx.set(tracksColl.doc(row.id), {
                     ...row.payload,
+                    // Multi-tenant P2 (W1): a new track carries its parent
+                    // setlist's tenant (already checked == caller org above).
+                    orgId: rowOrg(setlistData.orgId),
                     order: i,
                     updatedAt: FieldValue.serverTimestamp(),
                 })

@@ -1,7 +1,9 @@
 import "server-only"
 
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { readUserRole } from "@/lib/mcp/server-tracks-write"
+import { readTenantRole } from "@/lib/org/access"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 import {
     forbiddenRoleEnvelope,
     richError,
@@ -118,10 +120,11 @@ export interface SetAiThresholdResult {
  */
 async function assertAdmin(
     uid: string,
+    org: OrgId,
 ): Promise<{ ok: true } | RichErrorEnvelope> {
     initAdmin()
     const db = getFirestore()
-    const role = await readUserRole(db, uid)
+    const role = await readTenantRole(db, uid, org)
     if (role === "admin") return { ok: true }
     return forbiddenRoleEnvelope({
         callerRole: role ?? null,
@@ -184,8 +187,9 @@ function detectAiProvider(): "gemini" | "anthropic" | null {
 
 export async function getAiConfig(
     uid: string,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<GetAiConfigResult | RichErrorEnvelope> {
-    const gate = await assertAdmin(uid)
+    const gate = await assertAdmin(uid, org)
     if (!gate.ok) return gate
     try {
         const db = getFirestore()
@@ -209,6 +213,7 @@ export async function getAiConfig(
 export async function setAiAutoApply(
     uid: string,
     args: SetAiAutoApplyArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<SetAiAutoApplyResult | RichErrorEnvelope> {
     if (typeof args?.enabled !== "boolean") {
         return richError(
@@ -218,7 +223,7 @@ export async function setAiAutoApply(
             "Pass `enabled: true` to enable auto-apply or `enabled: false` to force every row into review.",
         )
     }
-    const gate = await assertAdmin(uid)
+    const gate = await assertAdmin(uid, org)
     if (!gate.ok) return gate
 
     const dryRun = args.dryRun !== false
@@ -290,6 +295,7 @@ export async function setAiAutoApply(
 export async function setAiThreshold(
     uid: string,
     args: SetAiThresholdArgs,
+    org: OrgId = DEFAULT_ORG_ID,
 ): Promise<SetAiThresholdResult | RichErrorEnvelope> {
     if (typeof args?.value !== "number" || !Number.isFinite(args.value)) {
         return richError(
@@ -307,7 +313,7 @@ export async function setAiThreshold(
             "Confidence thresholds are normalized — a Sonnet self-assessed confidence of 0.7 means 70%.",
         )
     }
-    const gate = await assertAdmin(uid)
+    const gate = await assertAdmin(uid, org)
     if (!gate.ok) return gate
 
     const dryRun = args.dryRun !== false
