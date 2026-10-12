@@ -52,18 +52,22 @@ import type { OrgId } from "@/lib/org/types"
 import { normalizeCollection } from "@/lib/library/collections"
 
 /** The fields this module reads. Every one is optional (pre-phase-5 rows). */
-export interface VisibilityRow {
+/** The fields the visibility checks read. Typed rows (DriveFile, browser rows) fit this directly. */
+export interface VisibilityFields {
     orgId?: unknown
     collection?: unknown
     collectionId?: unknown
     visibleToOrgs?: unknown
     libraryOrgs?: unknown
+}
+
+export interface VisibilityRow extends VisibilityFields {
     /** Rows are plain Firestore records; other fields pass through untouched. */
     [field: string]: unknown
 }
 
 /** Row's owning tenant; missing/empty is crc (the pre-multi-tenant meaning). */
-export function ownerOf(row: VisibilityRow | null | undefined): OrgId {
+export function ownerOf(row: VisibilityFields | null | undefined): OrgId {
     const o = row?.orgId
     return typeof o === "string" && o ? o : DEFAULT_ORG_ID
 }
@@ -72,12 +76,12 @@ const orgList = (v: unknown): OrgId[] | null =>
     Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.length > 0) : null
 
 /** OWNS: the tenant may change this row (writes, deletes, byte replacements). */
-export function isOwnedBy(row: VisibilityRow | null | undefined, orgId: OrgId): boolean {
+export function isOwnedBy(row: VisibilityFields | null | undefined, orgId: OrgId): boolean {
     return ownerOf(row) === orgId
 }
 
 /** VISIBLE: the tenant may read and use this row (search, bind, download). */
-export function visibleTo(row: VisibilityRow | null | undefined, orgId: OrgId): boolean {
+export function visibleTo(row: VisibilityFields | null | undefined, orgId: OrgId): boolean {
     if (isOwnedBy(row, orgId)) return true
     const v = orgList(row?.visibleToOrgs)
     return v !== null && v.includes(orgId)
@@ -88,14 +92,14 @@ export function visibleTo(row: VisibilityRow | null | undefined, orgId: OrgId): 
  * includeShared) show this row. Owner, or a tenant the collection is assigned
  * to. Always a subset of visibleTo.
  */
-export function inLibraryOf(row: VisibilityRow | null | undefined, orgId: OrgId): boolean {
+export function inLibraryOf(row: VisibilityFields | null | undefined, orgId: OrgId): boolean {
     if (isOwnedBy(row, orgId)) return true
     const l = orgList(row?.libraryOrgs)
     return l !== null && l.includes(orgId) && visibleTo(row, orgId)
 }
 
 /** Shared with the tenant but not owned by it (the opt-in set includes these). */
-export function isSharedWith(row: VisibilityRow | null | undefined, orgId: OrgId): boolean {
+export function isSharedWith(row: VisibilityFields | null | undefined, orgId: OrgId): boolean {
     return !isOwnedBy(row, orgId) && visibleTo(row, orgId)
 }
 
@@ -109,14 +113,14 @@ export function collectionKeyId(ownerOrgId: OrgId, key: string): string {
  * the owner and the legacy `collection` string (missing or unknown = core, as
  * library_index has always read it).
  */
-export function collectionIdOf(row: VisibilityRow | null | undefined): string {
+export function collectionIdOf(row: VisibilityFields | null | undefined): string {
     const c = row?.collectionId
     if (typeof c === "string" && c) return c
     return collectionKeyId(ownerOf(row), normalizeCollection(row?.collection))
 }
 
 /** Which rows a read returns: the tenant's library (default) or everything it can see. */
-export function includedFor(row: VisibilityRow | null | undefined, orgId: OrgId, includeShared: boolean): boolean {
+export function includedFor(row: VisibilityFields | null | undefined, orgId: OrgId, includeShared: boolean): boolean {
     return includeShared ? visibleTo(row, orgId) : inLibraryOf(row, orgId)
 }
 

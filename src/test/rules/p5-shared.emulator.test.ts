@@ -158,3 +158,45 @@ describe("P5 rules — shared chart rows", () => {
         await assertFails(dbOf(env, "po").doc("library_index/shared1").update({ name: "x" }))
     })
 })
+
+/**
+ * The browser's shared-collection queries exactly as the pickers issue them
+ * (src/lib/library/shared-source.ts): collections by sharedWith/assignedTo,
+ * then library_index shared rows with `orgId != <own>`. A refusal there is
+ * swallowed as "nothing shared", so only this test would notice it.
+ */
+describe("P5 rules — browser shared-collection queries", () => {
+    let env: RulesTestEnvironment
+    beforeAll(async () => {
+        env = await makeEnv("demo-p5-shared-browser")
+        await env.clearFirestore()
+        await seedFixtures(env)
+        await env.withSecurityRulesDisabled(async (c) => {
+            const db = c.firestore()
+            await db.doc(`collections/${C}__nava`).set({ ownerOrgId: C, name: "nava", visibility: "listed", sharedWith: [A], assignedTo: [A] })
+            await db.doc(`collections/${C}__core`).set({ ownerOrgId: C, name: "core", visibility: "private", sharedWith: [], assignedTo: [] })
+            await db.doc("library_index/sharedN").set({ name: "N.pdf", orgId: C, collection: "nava", collectionId: `${C}__nava`, visibleToOrgs: [C, A], libraryOrgs: [C, A] })
+            await db.doc("library_index/ownA").set({ name: "A.pdf", orgId: A, visibleToOrgs: [A] })
+        })
+    }, 120_000)
+    afterAll(async () => {
+        await env.cleanup()
+    })
+
+    for (const field of ["sharedWith", "assignedTo"]) {
+        it(`aMe lists collections where ${field} array-contains crc`, async () => {
+            const snap = await assertSucceeds(dbOf(env, "aMe").collection("collections").where(field, "array-contains", A).get())
+            const ids = snap.docs.map((d) => d.id)
+            if (ids.join() !== `${C}__nava`) throw new Error(ids.join())
+        })
+        it(`bBL cannot list collections where ${field} array-contains crc`, async () =>
+            void (await assertFails(dbOf(env, "bBL").collection("collections").where(field, "array-contains", A).get())))
+    }
+    it("aMe lists library_index shared rows with orgId != crc", async () => {
+        const snap = await assertSucceeds(
+            dbOf(env, "aMe").collection("library_index").where("visibleToOrgs", "array-contains", A).where("orgId", "!=", A).get(),
+        )
+        const ids = snap.docs.map((d) => d.id)
+        if (ids.join() !== "sharedN") throw new Error(ids.join())
+    })
+})

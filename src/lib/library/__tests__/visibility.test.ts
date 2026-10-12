@@ -11,11 +11,12 @@ import {
     stampForCollection,
     storageVisibleTo,
     visibleTo,
+    type VisibilityRow,
 } from '@/lib/library/visibility'
 
 describe('visibility.ts (multi-tenant phase 5)', () => {
     const legacy = { orgId: 'crc', collection: 'nava' }
-    const unstamped = { title: 'no org' }
+    const unstamped = { title: 'no org' } as VisibilityRow
     const shared = { orgId: 'nava', collection: 'nava', visibleToOrgs: ['nava', 'crc'], libraryOrgs: ['nava'] }
     const assigned = { orgId: 'nava', collection: 'nava', visibleToOrgs: ['nava', 'crc'], libraryOrgs: ['nava', 'crc'] }
 

@@ -162,7 +162,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
     match /collections/{collectionId} {
-      allow read: if signedIn() && (
+      // list: written on the bare fields so the query prover accepts the
+      // browser's where('sharedWith'|'assignedTo', 'array-contains', <tenant>).
+      allow list: if signedIn() && (
+        po()
+        || atLeast(resource.data.ownerOrgId, 'me')
+        || resource.data.sharedWith.hasAny(hasM() ? seenOrgs() : legacySeenOrgs())
+        || resource.data.assignedTo.hasAny(hasM() ? seenOrgs() : legacySeenOrgs()));
+      allow get: if signedIn() && (
         po()
         || atLeast(resource.data.ownerOrgId, 'me')
         || (hasM() && request.auth.token.m.keys().hasAny(resource.data.get('sharedWith', []).concat(resource.data.get('assignedTo', []))))
