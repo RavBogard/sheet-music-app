@@ -83,6 +83,7 @@ describe("MCP test tokens (emulator)", () => {
             "musician_availability",
             "qr-sessions",
             "config",
+            "memberships",
         ]
         await Promise.all(
             collections.map(async (c) => {
@@ -169,6 +170,19 @@ describe("MCP test tokens (emulator)", () => {
             role: "musician",
         })
         expect("token" in result).toBe(true)
+    })
+
+    it("multi-tenant phase 2: a crc band leader cannot place a test account in another tenant", async () => {
+        await db().collection("users").doc(LEADER_UID).set({ role: "band_leader", membershipsMigratedAt: new Date() })
+        await db().collection("memberships").doc(`crc__${LEADER_UID}`).set({
+            uid: LEADER_UID, tenantId: "crc", role: "band_leader", soundEngineer: false, addedBy: "test", addedAt: new Date(),
+        })
+        const refused = await provisionTestAccount(LEADER_UID, { role: "musician", orgIds: ["brotherslazaroff"] }, "crc")
+        expect("error" in refused && refused.error).toBe("forbidden_tenant")
+        const mixed = await provisionTestAccount(LEADER_UID, { role: "musician", orgIds: ["crc", "brotherslazaroff"] }, "crc")
+        expect("error" in mixed && mixed.error).toBe("forbidden_tenant")
+        const ok = await provisionTestAccount(LEADER_UID, { role: "musician", orgIds: ["crc"] }, "crc")
+        expect("token" in ok).toBe(true)
     })
 
     it("musician CANNOT mint — structured forbidden_role envelope", async () => {

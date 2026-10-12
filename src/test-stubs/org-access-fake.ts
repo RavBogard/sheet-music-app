@@ -53,7 +53,7 @@ export async function isPlatformOwner(uid: string, db?: DB): Promise<boolean> {
 export async function getTenantAccess(
     uid: string,
     orgId: OrgId,
-    opts?: { db?: DB },
+    opts?: { db?: DB; legacyClaims?: Record<string, unknown> | null },
 ): Promise<TenantAccess> {
     const db = opts?.db ?? getFirestore()
     const [m, u, po] = await Promise.all([
@@ -68,10 +68,14 @@ export async function getTenantAccess(
         role = m.role as TenantRole
         soundEngineer = m.soundEngineer === true
         source = "membership"
-    } else if (u && !u.membershipsMigratedAt) {
-        role = typeof u.role === "string" ? (u.role as TenantRole) : null
-        soundEngineer = u.soundEngineer === true
-        source = "legacy"
+    } else if (!u?.membershipsMigratedAt) {
+        // Same as the real module: unmigrated → the token's legacy claims when
+        // the caller passes them (requireAuth), else the users-doc role.
+        const lc = opts?.legacyClaims
+        const src = lc ?? u
+        role = src && typeof src.role === "string" ? (src.role as TenantRole) : null
+        soundEngineer = src?.soundEngineer === true
+        source = role ? "legacy" : "none"
     }
     return {
         uid,

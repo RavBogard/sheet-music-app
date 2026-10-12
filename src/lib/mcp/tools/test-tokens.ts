@@ -241,6 +241,20 @@ export async function provisionTestAccount(
         }
     }
     const resolvedOrgIds: OrgId[] = explicitOrgIds ?? [DEFAULT_ORG_ID]
+    // Multi-tenant phase 2: a test account may only be placed in tenants where
+    // the caller is band leader or above (the platform owner reads as admin
+    // everywhere), so no one provisions into a tenant they don't lead.
+    for (const o of resolvedOrgIds) {
+        const { isTrustedLeader: leadsThere } = o === callerOrg ? { isTrustedLeader } : await loadCallerRole(callerUid, o)
+        if (!leadsThere) {
+            return envelope(
+                "forbidden_tenant",
+                `create_test_account cannot place an account in '${o}': you are not a band leader or admin there.`,
+                { requestedOrgIds: resolvedOrgIds, refusedOrg: o },
+                "Request only tenants you lead.",
+            )
+        }
+    }
     const tokenOrgId: OrgId = resolvedOrgIds[0]
 
     const suffix = randomBytes(4).toString("hex")
