@@ -25,7 +25,7 @@ describe("P2 storage.rules — library/** by object tenant", () => {
             await root.child("library/nested/dir/a2.pdf").put(bytes, { contentType: "application/pdf", customMetadata: { orgId: A } })
             await root.child("recordings/r.mp3").put(bytes, { contentType: "audio/mpeg", customMetadata: { orgId: A } })
         })
-    })
+    }, 120_000) // the full emulator run (~100 files) can starve the Storage emulator past the 30 s default
 
     afterAll(async () => {
         await env.cleanup()
