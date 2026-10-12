@@ -9,7 +9,7 @@
 import { useState, useEffect } from "react"
 import {
     doc, getDoc, setDoc, deleteDoc, onSnapshot,
-    collection, Timestamp,
+    collection, Timestamp, query, where, documentId,
 } from "firebase/firestore"
 import { getDb, subscribeWithDb } from "./firebase"
 import type { TemplateSlot } from "./liturgical-templates"
@@ -53,6 +53,19 @@ export function selectOrgOverrides(
         }
     }
     return result
+}
+
+/**
+ * Multi-tenant phase 1: the doc-id range holding one tenant's overrides
+ * (`${org}__…`), or null for crc. CRC's overrides sit on BARE keys, which no
+ * range can isolate from the prefixed ones, so crc keeps the whole-collection
+ * listener (and selectOrgOverrides' filter) until its keys are namespaced;
+ * every other tenant listens to its own range only.
+ */
+export function orgTemplateIdRange(org: OrgId): { start: string; end: string } | null {
+    if (org === DEFAULT_ORG_ID) return null
+    const start = `${org}__`
+    return { start, end: `${start}\uf8ff` }
 }
 
 export interface CustomTemplateDoc {
@@ -147,8 +160,15 @@ export function useCustomTemplates(): {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
+        const range = orgTemplateIdRange(org)
         const unsub = subscribeWithDb((db) => onSnapshot(
-            collection(db, COLLECTION),
+            range
+                ? query(
+                    collection(db, COLLECTION),
+                    where(documentId(), ">=", range.start),
+                    where(documentId(), "<", range.end),
+                )
+                : collection(db, COLLECTION),
             (snap) => {
                 const docs = snap.docs.map((d) => ({
                     id: d.id,

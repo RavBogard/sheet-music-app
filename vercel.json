@@ -24,7 +24,7 @@
         },
         {
             "path": "/api/cron/scheduling-reminder",
-            "schedule": "0 10 * * *"
+            "schedule": "0 * * * *"
         },
         {
             "path": "/api/cron/admin-consistency",

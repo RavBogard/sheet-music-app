@@ -26,6 +26,7 @@ import {
 import { DEFAULT_ORG_ID, congregationDocId } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import { rowOrgIds, rowOrg } from "@/lib/org/membership"
+import { scopeRowsToTenant, scopeUsersToTenant } from "@/lib/org/tenant-query"
 
 /**
  * v11-05-02: roster-list reads keep the existing `where('role','in',...)` query
@@ -671,9 +672,12 @@ export async function listPendingAssignments(
     if (!gate.ok) return gate
 
     try {
-        let q: FirebaseFirestore.Query = db
-            .collection("scheduling_assignments")
-            .where("status", "==", "pending")
+        // Multi-tenant phase 1: queried by orgId for every tenant but crc,
+        // whose untagged rows keep the status-only read + in-memory filter.
+        let q: FirebaseFirestore.Query = scopeRowsToTenant(
+            db.collection("scheduling_assignments") as FirebaseFirestore.Query,
+            org,
+        ).where("status", "==", "pending")
         if (args.uid) {
             q = q.where("musicianUid", "==", args.uid)
         }
@@ -902,14 +906,14 @@ export async function suggestBand(
 
         const [usersSnap, recentSnap, configSnap] = await Promise.all([
             // v11-05-02: roster scoped to caller org (membership filtered in-memory below).
-            db
-                .collection("users")
+            // Multi-tenant phase 1: narrowed in the query for every tenant but crc.
+            scopeUsersToTenant(db.collection("users") as FirebaseFirestore.Query, org)
                 .where("role", "in", ["musician", "band_leader", "admin"])
                 .get(),
             // v11-05-03: play-count read scoped to caller org in-memory below
-            // (rowOrg on each doc).
-            db
-                .collection("scheduling_assignments")
+            // (rowOrg on each doc). Multi-tenant phase 1: queried by orgId for
+            // every tenant but crc, whose untagged rows keep this read.
+            scopeRowsToTenant(db.collection("scheduling_assignments") as FirebaseFirestore.Query, org)
                 .where("status", "==", "confirmed")
                 .orderBy("assignedAt", "desc")
                 .limit(RECENT_WINDOW * 20)

@@ -107,10 +107,10 @@ export interface CreateSetlistArgs {
     name: string
     /**
      * Date for the new service. eventDate is a wall-clock-LOCAL concept
-     * (America/Chicago). Accepted shapes:
-     *   - `"YYYY-MM-DD"` (date-only — recommended) → noon America/Chicago.
-     *   - `"YYYY-MM-DDTHH:MM"` (naive datetime) → that wall clock in
-     *     America/Chicago (DST-aware).
+     * (the tenant's time zone; America/Chicago for CRC). Accepted shapes:
+     *   - `"YYYY-MM-DD"` (date-only — recommended) → noon tenant-local.
+     *   - `"YYYY-MM-DDTHH:MM"` (naive datetime) → that wall clock in the
+     *     tenant's zone (DST-aware).
      *   - `"...-05:00"` / `"...-06:00"` (explicit offset) → honored.
      *   - `"...Z"` (UTC zero) → honored verbatim — AVOID for CRC services;
      *     a 10am Saturday is `"2026-05-30T10:00"`, NOT `"...T10:00:00Z"`.
@@ -246,7 +246,7 @@ export async function createSetlist(
                         : isTestSetlist({ name: args.name, ownerId: uid }),
             }
             if (args.eventDate !== undefined) {
-                setlistPayload.eventDate = parseEventDate(args.eventDate)
+                setlistPayload.eventDate = parseEventDate(args.eventDate, org)
             }
             if (args.serviceType !== undefined) setlistPayload.templateType = args.serviceType
             if (args.rabbi !== undefined) setlistPayload.rabbi = args.rabbi
@@ -311,7 +311,7 @@ export interface UpdateSetlistArgs {
     id: string
     name?: string
     /**
-     * Replacement eventDate (wall-clock-LOCAL America/Chicago). See
+     * Replacement eventDate (wall-clock-LOCAL, the tenant's zone). See
      * `create_setlist`'s eventDate for accepted shapes. To recover a legacy
      * row whose stored eventDate was a UTC-zero trap, edit with the naive
      * wall-clock form: `update_setlist({id, eventDate: "2026-05-30T10:00"})`.
@@ -327,7 +327,7 @@ export interface UpdateSetlistArgs {
      */
     book?: string
     /**
-     * Wall-clock start for this one service, `HH:mm` America/Chicago. Overrides
+     * Wall-clock start for this one service, `HH:mm` tenant-local. Overrides
      * the per-serviceType default in the congregation config; read by
      * `today.json`.
      */
@@ -383,7 +383,7 @@ export async function updateSetlist(
                 "invalid_argument",
                 `startsAtLocal must be 24-hour HH:mm (got "${args.startsAtLocal}").`,
                 { startsAtLocal: args.startsAtLocal },
-                "Pass a wall-clock America/Chicago time, e.g. '18:00' for 6pm.",
+                "Pass a wall-clock time in the tenant's local time, e.g. '18:00' for 6pm.",
             )
         }
         patch.startsAtLocal = args.startsAtLocal
@@ -403,6 +403,7 @@ export async function updateSetlist(
         args.id,
         patch,
         args.lastSeenVersion,
+        org,
     )
     if (!updateResult.ok) {
         if (updateResult.error === "stale_version") {

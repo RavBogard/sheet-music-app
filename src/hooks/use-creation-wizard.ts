@@ -8,6 +8,7 @@ import type { SetlistTrack, SetlistMusician, DriveFile } from "@/types/models"
 import { toast } from "sonner"
 import { getTemplate, buildSetlistFromTemplate, generateSetlistName, getAllTemplateKeys, TEMPLATE_LABELS } from "@/lib/liturgical-templates"
 import { getFullServiceContext, getServiceContext, ServiceType } from "@/lib/liturgical-calendar"
+import { useOrg } from "@/lib/org/org-context"
 import { useLibraryStore } from "@/lib/library-store"
 import { useCustomTemplates } from "@/lib/template-firebase"
 
@@ -55,6 +56,8 @@ export interface UseCreationWizardReturn {
 export function useCreationWizard(): UseCreationWizardReturn {
     const router = useRouter()
     const { user } = useAuth()
+    // Multi-tenant phase 1: the parasha follows the tenant's calendar and zone.
+    const org = useOrg()
 
     const [creating, setCreating] = useState(false)
     const { overrides: customTemplates } = useCustomTemplates()
@@ -105,7 +108,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
             // generation when one is set; only fall back to today when the
             // user hasn't picked anything yet.
             const targetDate = eventDate ?? new Date()
-            const context = await getFullServiceContext(targetDate)
+            const context = await getFullServiceContext(targetDate, org)
             context.type = key as ServiceType
             setName(generateSetlistName(context))
             if (!eventDate) setEventDate(targetDate)
@@ -113,7 +116,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
             const label = TEMPLATE_LABELS[key]?.label || 'Service'
             setName(label)
         }
-    }, [eventDate])
+    }, [eventDate, org])
 
     // When eventDate changes, query for the most recent prior setlist of the
     // inferred service type so the wizard can surface a Clone CTA. The lookup
@@ -210,7 +213,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
                 const template = getTemplate(selectedTemplate, customTemplates)
                 if (template && eventDate) {
                     loadingId = toast.loading('Building setlist from template...')
-                    const baseContext = await getFullServiceContext(eventDate)
+                    const baseContext = await getFullServiceContext(eventDate, org)
                     baseContext.type = selectedTemplate as ServiceType
                     const context = rabbi ? { ...baseContext, rabbi } : baseContext
                     const { allFiles } = useLibraryStore.getState()
@@ -270,7 +273,7 @@ export function useCreationWizard(): UseCreationWizardReturn {
         } finally {
             setCreating(false)
         }
-    }, [user, creating, mode, cloneSource, name, tracks, eventDate, rabbi, musicians, selectedTemplate, router, customTemplates])
+    }, [user, creating, mode, cloneSource, name, tracks, eventDate, rabbi, musicians, selectedTemplate, router, customTemplates, org])
 
     return {
         selectedTemplate,

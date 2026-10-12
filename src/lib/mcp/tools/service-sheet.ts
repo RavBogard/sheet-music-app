@@ -14,6 +14,9 @@ import {
     type PrintRowMode,
 } from "@/lib/print/row-mode"
 import { readLeaderRole, gigPacketBucket } from "./library-download"
+import { orgTimeZone } from "@/lib/org/locale"
+import { rowOrg } from "@/lib/org/membership"
+import type { OrgId } from "@/lib/org/types"
 
 /**
  * MCP generate_service_sheet tool (liturgy-outlines Phase 1-3, Task 11).
@@ -66,11 +69,12 @@ function toStringOrUndef(v: unknown): string | undefined {
  * Timestamp-unwrap shape as `str()` in setlist-write.ts's get-back echo, but
  * formatted for a human reading it aloud rather than as an ISO string:
  * "September 4, 2026", matching setlist-publish.ts's existing en-US long-date
- * precedent. Pinned to America/Chicago (the CRC service locale, and the zone
- * parseEventDate anchors to) so a UTC-hosted serverless run can't print the
- * neighbouring day. A legacy string value is passed through verbatim.
+ * precedent. Pinned to the setlist's tenant zone (multi-tenant phase 1; the
+ * zone parseEventDate anchors to, America/Chicago for CRC) so a UTC-hosted
+ * serverless run can't print the neighbouring day. A legacy string value is
+ * passed through verbatim. Exported for its golden test.
  */
-export function toEventDateLabel(v: unknown): string | undefined {
+export function toEventDateLabel(v: unknown, org?: OrgId): string | undefined {
     if (typeof v === "string") return v.length > 0 ? v : undefined
     if (
         v &&
@@ -80,7 +84,7 @@ export function toEventDateLabel(v: unknown): string | undefined {
     ) {
         try {
             return (v as { toDate(): Date }).toDate().toLocaleDateString("en-US", {
-                timeZone: "America/Chicago",
+                timeZone: orgTimeZone(org),
                 month: "long",
                 day: "numeric",
                 year: "numeric",
@@ -187,7 +191,7 @@ export async function generateServiceSheet(
     const setlistData = setlistDoc.data() as Record<string, unknown>
     const setlistName =
         (typeof setlistData.name === "string" && setlistData.name) || args.setlistId
-    const eventDate = toEventDateLabel(setlistData.eventDate)
+    const eventDate = toEventDateLabel(setlistData.eventDate, rowOrg(setlistData.orgId))
     const rabbi = typeof setlistData.rabbi === "string" ? setlistData.rabbi : undefined
     const book = typeof setlistData.book === "string" ? setlistData.book : undefined
     const bookTitle = book ? getRegistryEntry(book)?.title : undefined

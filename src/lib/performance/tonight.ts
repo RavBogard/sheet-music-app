@@ -11,12 +11,18 @@
  * row identity, order and count come from the plan and nothing here can
  * change them (R11-b). An override is an ADDITIVE layer: when the overrides
  * doc is missing, unreadable, from another service date, or the service day
- * has passed in America/Chicago, the planned setlist renders exactly as it
- * would without this module.
+ * has passed in the tenant's time zone (multi-tenant phase 1; CRC is
+ * America/Chicago), the planned setlist renders exactly as it would without
+ * this module. Every date helper takes the tenant as an optional last
+ * argument; omitted means crc.
  *
  * Everything in this file is pure (no Firestore, no React) so the web, the
  * signed-out server route and `reconcile_service` all derive the same answer.
  */
+
+import { dayInZone, orgTimeZone } from "@/lib/org/locale"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
 
 /** One row's swap, keyed by track id in `OverridesDoc.rows`. */
 export interface RowOverride {
@@ -34,7 +40,7 @@ export interface RowOverride {
 /** `setlists/{id}/performance/overrides`. */
 export interface OverridesDoc {
     rows: Record<string, RowOverride>
-    /** The service day (`YYYY-MM-DD`, America/Chicago) the swaps are for. */
+    /** The service day (`YYYY-MM-DD`, tenant time zone) the swaps are for. */
     eventDay: string
     /** Bumped by exactly one on every write: the stale-write guard. */
     rev: number
@@ -81,16 +87,14 @@ export function deviationId(d: Pick<Deviation, "eventDay" | "rev" | "rowId">): s
 
 const DAY_RE = /^(\d{4})-(\d{2})-(\d{2})$/
 
-/** The `YYYY-MM-DD` calendar day an instant falls on in America/Chicago. */
+/** The `YYYY-MM-DD` calendar day an instant falls on in the tenant's zone. */
+export function orgDay(ms: number, org: OrgId = DEFAULT_ORG_ID): string {
+    return dayInZone(ms, orgTimeZone(org))
+}
+
+/** The `YYYY-MM-DD` calendar day an instant falls on for CRC. */
 export function chicagoDay(ms: number): string {
-    const parts = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "America/Chicago",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-    }).formatToParts(new Date(ms))
-    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ""
-    return `${get("year")}-${get("month")}-${get("day")}`
+    return orgDay(ms, DEFAULT_ORG_ID)
 }
 
 function validDay(s: string): boolean {
@@ -102,31 +106,31 @@ function validDay(s: string): boolean {
 }
 
 /**
- * The service day a setlist's `eventDate` names, in America/Chicago, or null.
+ * The service day a setlist's `eventDate` names, in the tenant's zone, or null.
  *
  * A date-only `YYYY-MM-DD` IS the day — it is never parsed as UTC midnight
- * (which would land on the previous Chicago day). Instants (ISO strings with a
- * time, epoch ms, Date, Firestore Timestamp shapes) are converted to the
- * Chicago calendar day they fall on. Anything else — missing, empty, garbage —
+ * (which would land on the previous day west of UTC). Instants (ISO strings
+ * with a time, epoch ms, Date, Firestore Timestamp shapes) are converted to
+ * the tenant's calendar day they fall on. Anything else — missing, empty, garbage —
  * is null, and a null day means NO override applies: a swap without a service
  * day would otherwise stay live forever.
  */
-export function eventDayOf(value: unknown): string | null {
+export function eventDayOf(value: unknown, org: OrgId = DEFAULT_ORG_ID): string | null {
     if (value == null) return null
     if (typeof value === "string") {
         const s = value.trim()
         if (!s) return null
         if (DAY_RE.test(s)) return validDay(s) ? s : null
         const ms = Date.parse(s)
-        return Number.isFinite(ms) ? chicagoDay(ms) : null
+        return Number.isFinite(ms) ? orgDay(ms, org) : null
     }
-    if (typeof value === "number") return Number.isFinite(value) ? chicagoDay(value) : null
-    if (value instanceof Date) return Number.isFinite(value.getTime()) ? chicagoDay(value.getTime()) : null
+    if (typeof value === "number") return Number.isFinite(value) ? orgDay(value, org) : null
+    if (value instanceof Date) return Number.isFinite(value.getTime()) ? orgDay(value.getTime(), org) : null
     if (typeof value === "object") {
         const v = value as { toMillis?: () => number; seconds?: number; _seconds?: number }
-        if (typeof v.toMillis === "function") return eventDayOf(v.toMillis())
+        if (typeof v.toMillis === "function") return eventDayOf(v.toMillis(), org)
         const secs = typeof v.seconds === "number" ? v.seconds : v._seconds
-        if (typeof secs === "number") return eventDayOf(secs * 1000)
+        if (typeof secs === "number") return eventDayOf(secs * 1000, org)
     }
     return null
 }
@@ -136,16 +140,17 @@ export function eventDayOf(value: unknown): string | null {
  *
  * All three must hold: the setlist has a service day; the doc was written for
  * THAT day (a setlist re-dated for a later service does not inherit old
- * swaps); and that day has not passed in America/Chicago.
+ * swaps); and that day has not passed in the tenant's time zone.
  */
 export function overridesApply(
     doc: OverridesDoc | null | undefined,
     setlistDay: string | null,
     nowMs: number,
+    org: OrgId = DEFAULT_ORG_ID,
 ): boolean {
     if (!doc || !setlistDay) return false
     if (doc.eventDay !== setlistDay) return false
-    return chicagoDay(nowMs) <= setlistDay
+    return orgDay(nowMs, org) <= setlistDay
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -231,8 +236,9 @@ export function applyTonight<T extends ChartRow>(
     doc: OverridesDoc | null | undefined,
     setlistDay: string | null,
     nowMs: number,
+    org: OrgId = DEFAULT_ORG_ID,
 ): WithTonight<T>[] {
-    if (!overridesApply(doc, setlistDay, nowMs)) return tracks
+    if (!overridesApply(doc, setlistDay, nowMs, org)) return tracks
     const rows = doc!.rows
     if (Object.keys(rows).length === 0) return tracks
     let changed = false

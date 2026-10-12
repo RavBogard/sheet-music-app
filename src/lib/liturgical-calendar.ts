@@ -8,6 +8,10 @@
  * - Next Shabbat computation
  */
 
+import { dayInZone, orgCalendar, orgTimeZone } from "@/lib/org/locale"
+import { DEFAULT_ORG_ID } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
+
 // ── Hebrew Date (shared with greeting.ts) ──
 
 export interface HebrewDate {
@@ -156,17 +160,21 @@ const parashaCache: Map<string, string> = new Map()
  * Fetch the Torah portion for a given date from Hebcal.
  * Caches results to avoid repeat API calls.
  * Returns null if API is unreachable (offline graceful degradation).
+ *
+ * Multi-tenant phase 1: the civil date is taken in the tenant's time zone and
+ * the schedule follows `locale.calendar` (`i=on` asks Hebcal for the Israel
+ * readings; Diaspora sends no flag, exactly as before). Omitted org → crc.
  */
-export async function getParasha(date: Date): Promise<string | null> {
-    const key = date.toISOString().split('T')[0]
+export async function getParasha(date: Date, org: OrgId = DEFAULT_ORG_ID): Promise<string | null> {
+    const calendar = orgCalendar(org)
+    const key = `${calendar}:${date.toISOString().split('T')[0]}`
     if (parashaCache.has(key)) return parashaCache.get(key)!
 
     try {
         // Hebcal Shabbat API — returns the parasha for the week containing this date
-        const y = date.getFullYear()
-        const m = String(date.getMonth() + 1).padStart(2, '0')
-        const d = String(date.getDate()).padStart(2, '0')
-        const url = `https://www.hebcal.com/shabbat?cfg=json&date=${y}-${m}-${d}&M=on&geo=none`
+        const day = dayInZone(date.getTime(), orgTimeZone(org))
+        const israel = calendar === 'israel' ? '&i=on' : ''
+        const url = `https://www.hebcal.com/shabbat?cfg=json&date=${day}&M=on&geo=none${israel}`
 
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), 4000)
@@ -193,8 +201,8 @@ export async function getParasha(date: Date): Promise<string | null> {
 /**
  * Get full service context with parasha (async).
  */
-export async function getFullServiceContext(date: Date): Promise<ServiceContext> {
+export async function getFullServiceContext(date: Date, org: OrgId = DEFAULT_ORG_ID): Promise<ServiceContext> {
     const ctx = getServiceContext(date)
-    ctx.parasha = await getParasha(date)
+    ctx.parasha = await getParasha(date, org)
     return ctx
 }

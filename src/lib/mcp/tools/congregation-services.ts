@@ -122,7 +122,7 @@ function validateServices(
                 "invalid_argument",
                 `Service '${key}': defaultStartLocal must be 24-hour HH:mm (got "${row.defaultStartLocal}").`,
                 { key, defaultStartLocal: row.defaultStartLocal },
-                "It is a wall-clock America/Chicago time: '18:00', not '6pm' and not a UTC instant.",
+                "It is a wall-clock time in the tenant's local time: '18:00', not '6pm' and not a UTC instant.",
             )
         }
         out[key] = {

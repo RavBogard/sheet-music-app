@@ -302,7 +302,7 @@ export function useSetlistDashboard({
                 let toastId: string | number | undefined
                 try {
                     toastId = toast.loading('Building setlist from template...')
-                    const context = await getFullServiceContext(date)
+                    const context = await getFullServiceContext(date, org)
                     context.type = templateType as ServiceType
                     const { allFiles } = useLibraryStore.getState()
                     const tracks = buildSetlistFromTemplate(template, allFiles, context)
@@ -351,7 +351,7 @@ export function useSetlistDashboard({
         let templateToastId: string | number | undefined
         try {
             templateToastId = toast.loading('Building setlist from template...')
-            const context = await getFullServiceContext(targetDate)
+            const context = await getFullServiceContext(targetDate, org)
             context.type = templateType as ServiceType
             const { allFiles } = useLibraryStore.getState()
             const tracks = buildSetlistFromTemplate(template, allFiles, context)

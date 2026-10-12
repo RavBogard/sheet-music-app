@@ -43,7 +43,7 @@ export interface TonightSwapSheetProps {
     track: WithTonight<SetlistTrack>
     /** The same row exactly as planned. */
     planned: SetlistTrack
-    /** The service day (America/Chicago). */
+    /** The service day (the tenant's time zone). */
     serviceDay: string
 }
 

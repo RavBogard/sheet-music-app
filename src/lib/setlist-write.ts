@@ -87,15 +87,15 @@ export type SetlistMetadataPatch = Partial<{
     serviceNotes: string
     /** Task 5 (liturgy outlines Phase 2) — see CreateSetlistInput.book. */
     book: string
-    /** `HH:mm` America/Chicago — see Setlist.startsAtLocal. */
+    /** `HH:mm`, tenant wall clock — see Setlist.startsAtLocal. */
     startsAtLocal: string
 }>
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 //
 // eventDate parsing delegates to `parseEventDate` (cycle-12 FU-c12-2),
-// which interprets naive datetime strings as America/Chicago wall-clock —
-// the locale every CRC service runs in. The previous in-line helper fell
+// which interprets naive datetime strings as the tenant's wall clock
+// (America/Chicago for CRC). The previous in-line helper fell
 // through to `new Date(value)`, which on Vercel UTC parsed naive inputs as
 // UTC and corrupted the wall-clock intent (cd2010f4 exemplar:
 // `"2026-05-30T10:00"` for 10am Saturday stored as 10am UTC = 5am CDT).
@@ -170,7 +170,7 @@ export async function createSetlistServerSide(
     // the CSV-import quirk of defaulting eventDate to serverTimestamp is not
     // carried into this shared module).
     if (input.eventDate !== undefined) {
-        setlistPayload.eventDate = toTimestamp(input.eventDate)
+        setlistPayload.eventDate = toTimestamp(input.eventDate, orgId)
     }
     if (input.serviceType !== undefined) {
         setlistPayload.templateType = input.serviceType
@@ -237,6 +237,11 @@ export async function updateSetlistServerSide(
     setlistId: string,
     patch: SetlistMetadataPatch,
     lastSeenVersion?: number,
+    /**
+     * Multi-tenant phase 1: the tenant whose wall clock a naive `eventDate`
+     * is read in. Omitted → crc (the CSV / doc-import callers are CRC).
+     */
+    org: string = DEFAULT_ORG_ID,
 ): Promise<UpdateSetlistResult> {
     if (!initAdmin()) {
         throw new Error(
@@ -262,7 +267,7 @@ export async function updateSetlistServerSide(
         mapped.templateType = patch.serviceType
     }
     if (patch.eventDate !== undefined) {
-        mapped.eventDate = toTimestamp(patch.eventDate)
+        mapped.eventDate = toTimestamp(patch.eventDate, org)
     }
     mapped.updatedAt = FieldValue.serverTimestamp()
     mapped.version = FieldValue.increment(1)

@@ -8,8 +8,7 @@ import {
     evaluateTodayFreshness,
     type OrgEmitOutcome,
 } from "./evaluate"
-import { ORGS } from "@/lib/org/registry"
-import type { OrgId } from "@/lib/org/types"
+import { cronTenantIds } from "@/lib/org/cron-tenants"
 import { logger } from "@/lib/logger"
 import { env } from "@/env.mjs"
 import { httpError } from "@/lib/http/error-envelope"
@@ -33,7 +32,9 @@ export const maxDuration = 60
  * ONLY path by which a setlist Daniel authored this afternoon reaches the
  * reader. A day of staleness was acceptable when publish was the live path; it
  * is not when this is. One run per org, each writing only its own
- * `public/today/<org>.json`.
+ * `public/today/<org>.json`. Multi-tenant phase 1: the orgs are the code
+ * tenants (crc, brotherslazaroff) plus, with ORG_CONFIG_SOURCE=firestore,
+ * every active `orgs/{id}` — see cronTenantIds.
  *
  * DOUBLE-START. Vercel can invoke a cron more than once for the same slot.
  * The repo has no shared lock to mirror — every other cron here relies on its
@@ -222,7 +223,7 @@ export async function GET(req: NextRequest) {
         // `{ok:false}` on failure, and since Publish was retired this cron is
         // the only writer — so its own return value is not enough to say the
         // reader is looking at fresh bytes. See `evaluate.ts`.
-        for (const org of Object.keys(ORGS) as OrgId[]) {
+        for (const org of await cronTenantIds()) {
             const res = await emitToday(org)
             if (!res.ok) {
                 outcomes.push({ org, ok: false, error: res.error })
