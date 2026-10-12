@@ -141,7 +141,7 @@ export async function planNavaMove(db: Firestore, bucket: Bucket | null, to: str
         targetCollectionBefore: tSnap.exists
             ? Object.fromEntries(["ownerOrgId", "name", "label", "visibility", "sharedWith", "assignedTo"].map((k) => [k, tSnap.get(k) ?? ABSENT]))
             : null,
-        targetCollectionAfter: { ownerOrgId: to, name: COLLECTION_KEY, label, ...sharing },
+        targetCollectionAfter: { name: COLLECTION_KEY, label, ...sharing },
         sourceCollectionId,
         sourceCollectionBefore: srcData ? { movedTo: srcData.movedTo ?? ABSENT, movedAt: srcData.movedAt ?? ABSENT } : null,
         docs,

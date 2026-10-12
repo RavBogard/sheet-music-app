@@ -68,7 +68,7 @@ describe("P5 create_collection / set_collection_sharing (tenant admin, emulator)
         expect(other).toMatchObject({ ok: false, error: { machine_code: "forbidden" } })
         const missing = await setCollectionSharingTool(ADMIN, null, "crc", { collectionId: "crc__nope", visibility: "private" })
         expect(missing).toMatchObject({ ok: false, error: { machine_code: "not_found" } })
-        expect((missing as { yourCollections: Array<{ id: string }> }).yourCollections.map((c) => c.id)).toContain("crc__nava")
+        expect((missing as unknown as { yourCollections: Array<{ id: string }> }).yourCollections.map((c) => c.id)).toContain("crc__nava")
     })
 
     it("the platform owner's assignment survives a tenant admin going private", async () => {
