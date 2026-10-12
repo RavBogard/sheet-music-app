@@ -1,0 +1,1179 @@
+{
+ "at": "2026-10-12T23:22:13.931Z",
+ "personas": {
+  "crcAdmin": {
+   "list setlists where orgId==crc": {
+    "ok": true,
+    "n": 101
+   },
+   "get setlist crc": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of crc setlist": {
+    "ok": true,
+    "n": 36
+   },
+   "list songs where orgId==crc": {
+    "ok": true,
+    "n": 300
+   },
+   "list library_index where orgId==crc": {
+    "ok": true,
+    "n": 300
+   },
+   "list setlistTemplates where orgId==crc": {
+    "ok": true,
+    "n": 4
+   },
+   "list contacts where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list recordings where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_assignments mine where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list templates where orgId==crc": {
+    "ok": true,
+    "n": 3
+   },
+   "storage read crc chart": {
+    "ok": true,
+    "status": 200
+   },
+   "create+delete setlist stamped crc": {
+    "ok": true,
+    "deleted": true
+   },
+   "list setlists where orgId==bl": {
+    "ok": true,
+    "n": 7
+   },
+   "get setlist bl": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of bl setlist": {
+    "ok": true,
+    "n": 11
+   },
+   "list songs where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list library_index where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list setlistTemplates where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list recordings where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments mine where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list templates where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "storage read bl chart": {
+    "ok": false,
+    "status": 403
+   },
+   "create+delete setlist stamped bl": {
+    "ok": false,
+    "status": 403
+   },
+   "list setlists (no filter)": {
+    "ok": true,
+    "n": 108
+   },
+   "list songs (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list users": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "get own user doc": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/congregation": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/defaults": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/monitor": {
+    "ok": true,
+    "exists": true
+   },
+   "get own crc membership": {
+    "ok": true,
+    "exists": false
+   },
+   "list mcpTokens": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   }
+  },
+  "crcBandLeader": {
+   "list setlists where orgId==crc": {
+    "ok": true,
+    "n": 101
+   },
+   "get setlist crc": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of crc setlist": {
+    "ok": true,
+    "n": 36
+   },
+   "list songs where orgId==crc": {
+    "ok": true,
+    "n": 300
+   },
+   "list library_index where orgId==crc": {
+    "ok": true,
+    "n": 300
+   },
+   "list setlistTemplates where orgId==crc": {
+    "ok": true,
+    "n": 4
+   },
+   "list contacts where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list recordings where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_assignments mine where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list templates where orgId==crc": {
+    "ok": true,
+    "n": 3
+   },
+   "storage read crc chart": {
+    "ok": true,
+    "status": 200
+   },
+   "create+delete setlist stamped crc": {
+    "ok": true,
+    "deleted": true
+   },
+   "list setlists where orgId==bl": {
+    "ok": true,
+    "n": 7
+   },
+   "get setlist bl": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of bl setlist": {
+    "ok": true,
+    "n": 11
+   },
+   "list songs where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list library_index where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list setlistTemplates where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list recordings where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments mine where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list templates where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "storage read bl chart": {
+    "ok": false,
+    "status": 403
+   },
+   "create+delete setlist stamped bl": {
+    "ok": false,
+    "status": 403
+   },
+   "list setlists (no filter)": {
+    "ok": true,
+    "n": 108
+   },
+   "list songs (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list users": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "get own user doc": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/congregation": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/defaults": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/monitor": {
+    "ok": true,
+    "exists": true
+   },
+   "get own crc membership": {
+    "ok": true,
+    "exists": false
+   },
+   "list mcpTokens": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   }
+  },
+  "crcMusician": {
+   "list setlists where orgId==crc": {
+    "ok": true,
+    "n": 101
+   },
+   "get setlist crc": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of crc setlist": {
+    "ok": true,
+    "n": 36
+   },
+   "list songs where orgId==crc": {
+    "ok": true,
+    "n": 300
+   },
+   "list library_index where orgId==crc": {
+    "ok": true,
+    "n": 300
+   },
+   "list setlistTemplates where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list recordings where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_assignments mine where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list templates where orgId==crc": {
+    "ok": true,
+    "n": 3
+   },
+   "storage read crc chart": {
+    "ok": true,
+    "status": 200
+   },
+   "create+delete setlist stamped crc": {
+    "ok": true,
+    "deleted": true
+   },
+   "list setlists where orgId==bl": {
+    "ok": true,
+    "n": 7
+   },
+   "get setlist bl": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of bl setlist": {
+    "ok": true,
+    "n": 11
+   },
+   "list songs where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list library_index where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list setlistTemplates where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list recordings where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments mine where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list templates where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "storage read bl chart": {
+    "ok": false,
+    "status": 403
+   },
+   "create+delete setlist stamped bl": {
+    "ok": false,
+    "status": 403
+   },
+   "list setlists (no filter)": {
+    "ok": true,
+    "n": 108
+   },
+   "list songs (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list users": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "get own user doc": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/congregation": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/defaults": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/monitor": {
+    "ok": true,
+    "exists": true
+   },
+   "get own crc membership": {
+    "ok": true,
+    "exists": false
+   },
+   "list mcpTokens": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   }
+  },
+  "crcMember": {
+   "list setlists where orgId==crc": {
+    "ok": true,
+    "n": 101
+   },
+   "get setlist crc": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of crc setlist": {
+    "ok": true,
+    "n": 36
+   },
+   "list songs where orgId==crc": {
+    "ok": true,
+    "n": 300
+   },
+   "list library_index where orgId==crc": {
+    "ok": true,
+    "n": 300
+   },
+   "list setlistTemplates where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list recordings where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_assignments mine where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list templates where orgId==crc": {
+    "ok": true,
+    "n": 3
+   },
+   "storage read crc chart": {
+    "ok": true,
+    "status": 200
+   },
+   "create+delete setlist stamped crc": {
+    "ok": true,
+    "deleted": true
+   },
+   "list setlists where orgId==bl": {
+    "ok": true,
+    "n": 7
+   },
+   "get setlist bl": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of bl setlist": {
+    "ok": true,
+    "n": 11
+   },
+   "list songs where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list library_index where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list setlistTemplates where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list recordings where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments mine where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list templates where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "storage read bl chart": {
+    "ok": false,
+    "status": 403
+   },
+   "create+delete setlist stamped bl": {
+    "ok": false,
+    "status": 403
+   },
+   "list setlists (no filter)": {
+    "ok": true,
+    "n": 108
+   },
+   "list songs (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list users": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "get own user doc": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/congregation": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/defaults": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/monitor": {
+    "ok": true,
+    "exists": true
+   },
+   "get own crc membership": {
+    "ok": true,
+    "exists": false
+   },
+   "list mcpTokens": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   }
+  },
+  "crcPending": {
+   "list setlists where orgId==crc": {
+    "ok": true,
+    "n": 101
+   },
+   "get setlist crc": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of crc setlist": {
+    "ok": true,
+    "n": 36
+   },
+   "list songs where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list library_index where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list setlistTemplates where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list recordings where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments mine where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list templates where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "storage read crc chart": {
+    "ok": false,
+    "status": 403
+   },
+   "create+delete setlist stamped crc": {
+    "ok": false,
+    "status": 403
+   },
+   "list setlists where orgId==bl": {
+    "ok": true,
+    "n": 7
+   },
+   "get setlist bl": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of bl setlist": {
+    "ok": true,
+    "n": 11
+   },
+   "list songs where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list library_index where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list setlistTemplates where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list recordings where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments mine where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list templates where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "storage read bl chart": {
+    "ok": false,
+    "status": 403
+   },
+   "create+delete setlist stamped bl": {
+    "ok": false,
+    "status": 403
+   },
+   "list setlists (no filter)": {
+    "ok": true,
+    "n": 108
+   },
+   "list songs (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list users": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "get own user doc": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/congregation": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/defaults": {
+    "ok": false,
+    "status": 403
+   },
+   "get config/monitor": {
+    "ok": false,
+    "status": 403
+   },
+   "get own crc membership": {
+    "ok": true,
+    "exists": false
+   },
+   "list mcpTokens": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   }
+  },
+  "blBandLeader": {
+   "list setlists where orgId==crc": {
+    "ok": true,
+    "n": 101
+   },
+   "get setlist crc": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of crc setlist": {
+    "ok": true,
+    "n": 36
+   },
+   "list songs where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list library_index where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list setlistTemplates where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list recordings where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments mine where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list templates where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "storage read crc chart": {
+    "ok": false,
+    "status": 403
+   },
+   "create+delete setlist stamped crc": {
+    "ok": false,
+    "status": 403
+   },
+   "list setlists where orgId==bl": {
+    "ok": true,
+    "n": 7
+   },
+   "get setlist bl": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of bl setlist": {
+    "ok": true,
+    "n": 11
+   },
+   "list songs where orgId==bl": {
+    "ok": true,
+    "n": 82
+   },
+   "list library_index where orgId==bl": {
+    "ok": true,
+    "n": 82
+   },
+   "list setlistTemplates where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "list contacts where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "list recordings where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_assignments mine where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "list templates where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "storage read bl chart": {
+    "ok": true,
+    "status": 200
+   },
+   "create+delete setlist stamped bl": {
+    "ok": true,
+    "deleted": true
+   },
+   "list setlists (no filter)": {
+    "ok": true,
+    "n": 108
+   },
+   "list songs (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list users": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "get own user doc": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/congregation": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/defaults": {
+    "ok": false,
+    "status": 403
+   },
+   "get config/monitor": {
+    "ok": false,
+    "status": 403
+   },
+   "get own crc membership": {
+    "ok": true,
+    "exists": false
+   },
+   "list mcpTokens": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   }
+  },
+  "blMusician": {
+   "list setlists where orgId==crc": {
+    "ok": true,
+    "n": 101
+   },
+   "get setlist crc": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of crc setlist": {
+    "ok": true,
+    "n": 36
+   },
+   "list songs where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list library_index where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list setlistTemplates where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list recordings where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments mine where orgId==crc": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list templates where orgId==crc": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "storage read crc chart": {
+    "ok": false,
+    "status": 403
+   },
+   "create+delete setlist stamped crc": {
+    "ok": false,
+    "status": 403
+   },
+   "list setlists where orgId==bl": {
+    "ok": true,
+    "n": 7
+   },
+   "get setlist bl": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of bl setlist": {
+    "ok": true,
+    "n": 11
+   },
+   "list songs where orgId==bl": {
+    "ok": true,
+    "n": 82
+   },
+   "list library_index where orgId==bl": {
+    "ok": true,
+    "n": 82
+   },
+   "list setlistTemplates where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list recordings where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_assignments mine where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "list scheduling_history where orgId==bl": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list templates where orgId==bl": {
+    "ok": true,
+    "n": 0
+   },
+   "storage read bl chart": {
+    "ok": true,
+    "status": 200
+   },
+   "create+delete setlist stamped bl": {
+    "ok": true,
+    "deleted": true
+   },
+   "list setlists (no filter)": {
+    "ok": true,
+    "n": 108
+   },
+   "list songs (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list contacts (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list scheduling_assignments (no filter)": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "list users": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   },
+   "get own user doc": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/congregation": {
+    "ok": true,
+    "exists": true
+   },
+   "get config/defaults": {
+    "ok": false,
+    "status": 403
+   },
+   "get config/monitor": {
+    "ok": false,
+    "status": 403
+   },
+   "get own crc membership": {
+    "ok": true,
+    "exists": false
+   },
+   "list mcpTokens": {
+    "ok": false,
+    "status": 403,
+    "code": "PERMISSION_DENIED"
+   }
+  },
+  "signedOut": {
+   "get setlist crc": {
+    "ok": true,
+    "exists": true
+   },
+   "get setlist bl": {
+    "ok": true,
+    "exists": true
+   },
+   "list tracks of crc setlist": {
+    "ok": false,
+    "status": 401,
+    "code": "UNAUTHENTICATED"
+   },
+   "list setlists (no filter)": {
+    "ok": false,
+    "status": 401,
+    "code": "UNAUTHENTICATED"
+   },
+   "storage read crc chart": {
+    "ok": false,
+    "status": 403
+   }
+  }
+ }
+}

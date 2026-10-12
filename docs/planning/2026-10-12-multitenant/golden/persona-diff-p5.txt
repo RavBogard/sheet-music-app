@@ -1,0 +1,12 @@
+crcAdmin       list library_index where orgId==crc                {"ok":false,"status":403,"code":"PERMISSION_DENIED"}  →  {"ok":true,"n":300}
+crcAdmin       get own crc membership                             {"ok":true,"exists":true}  →  {"ok":true,"exists":false}
+crcBandLeader  list library_index where orgId==crc                {"ok":false,"status":403,"code":"PERMISSION_DENIED"}  →  {"ok":true,"n":300}
+crcBandLeader  get own crc membership                             {"ok":true,"exists":true}  →  {"ok":true,"exists":false}
+crcMusician    list library_index where orgId==crc                {"ok":false,"status":403,"code":"PERMISSION_DENIED"}  →  {"ok":true,"n":300}
+crcMusician    get own crc membership                             {"ok":true,"exists":true}  →  {"ok":true,"exists":false}
+crcMember      list library_index where orgId==crc                {"ok":false,"status":403,"code":"PERMISSION_DENIED"}  →  {"ok":true,"n":300}
+crcMember      get own crc membership                             {"ok":true,"exists":true}  →  {"ok":true,"exists":false}
+crcPending     get own crc membership                             {"ok":true,"exists":true}  →  {"ok":true,"exists":false}
+blBandLeader   list library_index where orgId==bl                 {"ok":false,"status":403,"code":"PERMISSION_DENIED"}  →  {"ok":true,"n":82}
+blMusician     list library_index where orgId==bl                 {"ok":false,"status":403,"code":"PERMISSION_DENIED"}  →  {"ok":true,"n":82}
+11 difference(s)
