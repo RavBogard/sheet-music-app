@@ -1,7 +1,7 @@
 import "server-only"
 
 import { initAdmin, getFirestore } from "@/lib/firebase-admin"
-import { readTenantRole } from "@/lib/org/access"
+import { isPlatformOwner, readTenantRole } from "@/lib/org/access"
 import { DEFAULT_ORG_ID } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/lib/mcp/error-envelopes"
 import { rowOrg } from "@/lib/mcp/org-context"
 import { writeAccess } from "@/lib/library/visibility-server"
+import { recomputeRowVisibilitySafe } from "@/lib/library/visibility-job"
 import { notOwnerError } from "@/lib/mcp/not-owner"
 import {
     readReviewQueue,
@@ -741,7 +742,12 @@ export async function editEnrichment(
         if (org === undefined) return null
         const access = await writeAccess(data, org, args.rowId, gate.db)
         if (access.kind === "not_owner") return notOwnerError(access, args.rowId)
-        if (gate.role === "admin") return null
+        // Phase 5 (security): only the PLATFORM OWNER is unscoped. A tenant
+        // admin used to edit any tenant's rows from its own connector (the H9
+        // "admins are unscoped" carve-out predates tenants); it now meets the
+        // same wall as a band leader, matching phase 2's rule that only the
+        // platform owner bypasses tenant checks.
+        if (await isPlatformOwner(uid, gate.db)) return null
         if (rowOrg(data?.orgId) !== org) {
             return richError(
                 "row_not_found",
@@ -810,6 +816,9 @@ export async function editEnrichment(
                 rowId: args.rowId,
                 fields: Object.keys(edits),
             })
+            // Phase 5: a row moved between collections takes the new
+            // collection's visibility (collectionId, visibleToOrgs, Storage).
+            if (edits.collection !== undefined) await recomputeRowVisibilitySafe(args.rowId, { db: gate.db })
             return {
                 ok: true,
                 rowId: args.rowId,
