@@ -14,6 +14,8 @@ import { logger } from "@/lib/logger"
 import { liftLegacyErrorEnvelope } from "@/lib/mcp/errors"
 import { isTestUid } from "@/lib/test-isolation"
 import { setMembership } from "@/lib/org/memberships-write"
+import { readTenantRole } from "@/lib/org/access"
+import { orgFrom } from "@/lib/mcp/org-context"
 import { DEFAULT_ORG_ID, ORGS, isKnownOrg } from "@/lib/org/registry"
 import type { OrgId } from "@/lib/org/types"
 
@@ -70,14 +72,12 @@ type TestRole = z.infer<typeof TEST_ROLE>
 
 /** Trusted-leader gate (admin OR band_leader). Mirrors `library-upload`'s
  * gate so this surface composes the same way as the rest of MCP. */
-async function loadCallerRole(uid: string): Promise<{
+async function loadCallerRole(uid: string, org: OrgId): Promise<{
     role: string | undefined
     isTrustedLeader: boolean
 }> {
-    const db = getFirestore()
-    const snap = await db.collection(USERS).doc(uid).get()
-    const data = snap.exists ? (snap.data() as Record<string, unknown>) : {}
-    const role = typeof data.role === "string" ? data.role : undefined
+    // Multi-tenant phase 2: the caller's role in the tenant they are acting in.
+    const role = await readTenantRole(getFirestore(), uid, org)
     return {
         role,
         isTrustedLeader: role === "admin" || role === "band_leader",
@@ -168,10 +168,12 @@ export interface CreateTestAccountResult {
 export async function provisionTestAccount(
     callerUid: string,
     args: CreateTestAccountArgs,
+    /** The tenant the caller acts in (MCP token tenant / request host). Default crc. */
+    callerOrg: OrgId = DEFAULT_ORG_ID,
 ): Promise<CreateTestAccountResult | ReturnType<typeof envelope>> {
     initAdmin()
 
-    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
+    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid, callerOrg)
     if (!isTrustedLeader) {
         return envelope(
             "forbidden_role",
@@ -429,7 +431,7 @@ export async function listTestAccountsCore(
     { accounts: TestAccountSummary[] } | ReturnType<typeof envelope>
 > {
     initAdmin()
-    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
+    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid, DEFAULT_ORG_ID) /* test-account housekeeping: crc admins (P2 parity) */
     if (!isTrustedLeader) {
         return envelope(
             "forbidden_role",
@@ -634,7 +636,7 @@ export async function revokeTestAccountCore(
     uid: string,
 ): Promise<RevokeTestAccountResult | ReturnType<typeof envelope>> {
     initAdmin()
-    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
+    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid, DEFAULT_ORG_ID) /* test-account housekeeping: crc admins (P2 parity) */
     if (!isTrustedLeader) {
         // Cycle-3 SEC-001: the refusal context used to carry `callerRole`
         // alongside (historically) the caller's real Firebase uid. The
@@ -905,7 +907,7 @@ async function planCleanupAllTestData(
     args: CleanupAllArgs,
 ): Promise<CleanupAllPlan | ReturnType<typeof envelope>> {
     initAdmin()
-    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
+    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid, DEFAULT_ORG_ID) /* test-account housekeeping: crc admins (P2 parity) */
     if (!isTrustedLeader) {
         return envelope(
             "forbidden_role",
@@ -958,7 +960,7 @@ export async function cleanupAllTestDataCore(
     args: CleanupAllArgs = {},
 ): Promise<CleanupAllResult | ReturnType<typeof envelope>> {
     initAdmin()
-    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid)
+    const { isTrustedLeader, role: callerRole } = await loadCallerRole(callerUid, DEFAULT_ORG_ID) /* test-account housekeeping: crc admins (P2 parity) */
     if (!isTrustedLeader) {
         return envelope(
             "forbidden_role",
@@ -1127,7 +1129,7 @@ export async function sweepOrphanTestDataCore(
     args: SweepOrphanTestDataArgs = {},
 ): Promise<SweepOrphanTestDataResult | ReturnType<typeof envelope>> {
     initAdmin()
-    const { role: callerRole } = await loadCallerRole(callerUid)
+    const { role: callerRole } = await loadCallerRole(callerUid, DEFAULT_ORG_ID) /* test-account housekeeping: crc admins (P2 parity) */
     if (callerRole !== "admin") {
         return envelope(
             "forbidden_role",
@@ -1480,7 +1482,7 @@ export function registerTestTokenTools(server: McpServer): void {
             inputSchema: createTestAccountSchema,
         },
         async (args, extra) => {
-            const result = await provisionTestAccount(uidFrom(extra), args)
+            const result = await provisionTestAccount(uidFrom(extra), args, orgFrom(extra))
             return jsonResult(result)
         },
     )

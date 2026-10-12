@@ -37,7 +37,7 @@ export const POST = createApiHandler(
         const limited = await checkRateLimit(ctx.req, "api")
         if (limited) return limited
 
-        const result = await provisionTestAccount(ctx.auth.uid, ctx.body!)
+        const result = await provisionTestAccount(ctx.auth.uid, ctx.body!, ctx.auth.orgId)
         if ("error" in result) {
             // Mirror the MCP envelope shape on the HTTP path so a single
             // client can treat both paths identically.
