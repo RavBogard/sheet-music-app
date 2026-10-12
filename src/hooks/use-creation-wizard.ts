@@ -10,7 +10,6 @@ import { getTemplate, buildSetlistFromTemplate, generateSetlistName, TEMPLATE_LA
 import { useOrg } from "@/lib/org/org-context"
 import { serviceTypeKeysFor } from "@/lib/org/tenant-lists"
 import { getFullServiceContext, getServiceContext, ServiceType } from "@/lib/liturgical-calendar"
-import { useOrg } from "@/lib/org/org-context"
 import { useLibraryStore } from "@/lib/library-store"
 import { useCustomTemplates } from "@/lib/template-firebase"
 
@@ -58,7 +57,8 @@ export interface UseCreationWizardReturn {
 export function useCreationWizard(): UseCreationWizardReturn {
     const router = useRouter()
     const { user } = useAuth()
-    // Multi-tenant phase 1: the parasha follows the tenant's calendar and zone.
+    // Multi-tenant phase 1: the parasha follows the tenant's calendar and zone,
+    // and the template list is the tenant's.
     const org = useOrg()
 
     const [creating, setCreating] = useState(false)
@@ -84,7 +84,6 @@ export function useCreationWizard(): UseCreationWizardReturn {
 
     // Multi-tenant phase 1: the tenant's service types (liturgy.serviceTypes;
     // the built-in catalogue when it lists none — what every tenant had).
-    const org = useOrg()
     const templateKeys = useMemo(() => serviceTypeKeysFor(org), [org])
     const canCreate = useMemo(
         () => mode === 'clone' ? !!cloneSource : name.trim().length > 0,
