@@ -79,3 +79,16 @@ export async function stampOrg(
     }
     if (any) await batch.commit()
 }
+
+/**
+ * Multi-tenant phase 4: is the caller's bearer read-only? True for "View as
+ * this tenant" bearers (kind "view_as", minted by the platform owner, ≤ 60
+ * min). The central registration wrapper (`forSurface`, surfaces.ts) refuses
+ * every write tool for such a caller; tools never need to check this
+ * themselves.
+ */
+export function isReadOnlyToken(extra: AuthExtra | null | undefined): boolean {
+    const e = extra?.authInfo?.extra
+    if (!e) return false
+    return e.kind === "view_as" || e.readOnly === true
+}

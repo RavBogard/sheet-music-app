@@ -1,4 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
+import { isReadOnlyToken, type AuthExtra } from "@/lib/mcp/org-context"
+import { isReadTool } from "@/lib/mcp/tool-access"
 
 /**
  * Which MCP server a tool appears on — audit item (p).
@@ -126,10 +128,52 @@ export const OPS_TOOLS: ReadonlySet<string> = new Set([
     "revoke_setlist_reader_bearer",
 ])
 
-export type Surface = "authoring" | "ops"
+/**
+ * Multi-tenant phase 4: the platform owner's server, `/api/platform/mcp`.
+ * These 17 tools exist ONLY there (registered by src/lib/mcp/platform/), and
+ * that server registers nothing else. It accepts only platform bearers.
+ */
+export const PLATFORM_TOOLS: ReadonlySet<string> = new Set([
+    "list_tenants",
+    "get_tenant",
+    "create_tenant",
+    "update_tenant",
+    "set_tenant_features",
+    "add_tenant_domain",
+    "check_tenant_domain",
+    "remove_tenant_domain",
+    "list_tenant_members",
+    "set_tenant_member_role",
+    "remove_tenant_member",
+    "invite_tenant_admin",
+    "list_collections",
+    "set_collection_sharing",
+    "assign_collection",
+    "mint_tenant_view_bearer",
+    "list_platform_activity",
+])
+
+export type Surface = "authoring" | "ops" | "platform"
 
 export function surfaceFor(toolName: string): Surface {
+    if (PLATFORM_TOOLS.has(toolName)) return "platform"
     return OPS_TOOLS.has(toolName) ? "ops" : "authoring"
+}
+
+/**
+ * Multi-tenant phase 4: what a read-only ("View as this tenant") caller gets
+ * from a write tool. Same rich-error shape as every other refusal.
+ */
+export function readOnlyRefusal(toolName: string) {
+    const body = {
+        ok: false,
+        error: {
+            code: "FORBIDDEN",
+            machine_code: "read_only_token",
+            message: `${toolName} changes data, and this connection is "View as this tenant", which is read-only. Use your own connector to make changes.`,
+        },
+    }
+    return { content: [{ type: "text" as const, text: JSON.stringify(body, null, 2) }], isError: true as const }
 }
 
 /**
@@ -156,6 +200,18 @@ export function forSurface(server: McpServer, surface: Surface): McpServer {
             return function registerToolFiltered(this: unknown, ...args: unknown[]) {
                 const name = args[0]
                 if (typeof name === "string" && surfaceFor(name) !== surface) return undefined
+                // Multi-tenant phase 4: read-only bearers reach read tools only.
+                // The handler is the last argument; its last argument is the
+                // request extra carrying the verified token's kind.
+                const last = args.length - 1
+                if (typeof name === "string" && typeof args[last] === "function" && !isReadTool(name)) {
+                    const handler = args[last] as (...a: unknown[]) => unknown
+                    args = [...args]
+                    args[last] = function readOnlyGated(this: unknown, ...cbArgs: unknown[]) {
+                        if (isReadOnlyToken(cbArgs[cbArgs.length - 1] as AuthExtra)) return readOnlyRefusal(name)
+                        return handler.apply(this, cbArgs)
+                    }
+                }
                 return original.apply(target, args)
             }
         },
