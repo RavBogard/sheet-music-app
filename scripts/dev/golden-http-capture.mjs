@@ -30,7 +30,7 @@ const TEXT = ["/robots.txt", "/sitemap.xml"]
 const slug = (p) => (p === "/" ? "root" : p.replace(/^\//, "").replace(/[^a-z0-9.-]+/gi, "_"))
 
 /** next/font class names are build hashes: an uncached rebuild of the same source renames them. */
-const fontHash = (v) => (v ?? "").replace(/__(variable|className)_[0-9a-f]{6}/g, "__$1_<H>")
+const fontHash = (v) => (v == null ? v : v.replace(/__(variable|className)_[0-9a-f]{6}/g, "__$1_<H>"))
 
 function normText(s) {
     return s
