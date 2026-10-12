@@ -70,7 +70,7 @@ function toStringOrUndef(v: unknown): string | undefined {
  * parseEventDate anchors to) so a UTC-hosted serverless run can't print the
  * neighbouring day. A legacy string value is passed through verbatim.
  */
-function toEventDateLabel(v: unknown): string | undefined {
+export function toEventDateLabel(v: unknown): string | undefined {
     if (typeof v === "string") return v.length > 0 ? v : undefined
     if (
         v &&
