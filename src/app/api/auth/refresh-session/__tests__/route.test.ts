@@ -8,9 +8,14 @@ let profileData: Record<string, unknown> | undefined = undefined
 let recordClaims: Record<string, unknown> | undefined = { role: "admin" }
 
 const mockFirestore = {
-    collection: vi.fn(() => ({
+    // Multi-tenant P2: no memberships / platform docs here, so the caller is an
+    // unmigrated (legacy) account and the P0 doc-role-capped-to-claims rule applies.
+    collection: vi.fn((name: string) => ({
         doc: vi.fn(() => ({
-            get: async () => ({ data: () => profileData }),
+            get: async () =>
+                name === "users"
+                    ? { exists: profileData !== undefined, data: () => profileData }
+                    : { exists: false, data: () => undefined },
         })),
     })),
 }
@@ -117,7 +122,7 @@ describe("POST /api/auth/refresh-session", () => {
 
         const { verifyRoleCookie } = await import("@/lib/session-role")
         const verified = await verifyRoleCookie(raw)
-        expect(verified).toEqual({ uid: "u-42", role: "musician" })
+        expect(verified).toEqual({ uid: "u-42", role: "musician", org: "crc" })
     })
     it("multi-tenant P0: never signs a role above the account's claims (doc 'admin', claim 'pending', token 'musician')", async () => {
         mockAuth("u-1")

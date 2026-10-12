@@ -24,14 +24,20 @@ describe("session-role sign/verify", () => {
         const signed = await signRoleCookie("u-1", "musician")
         expect(signed).toBeTruthy()
         const verified = await verifyRoleCookie(signed)
-        expect(verified).toEqual({ uid: "u-1", role: "musician" })
+        expect(verified).toEqual({ uid: "u-1", role: "musician", org: null })
     })
 
     it("round-trips null role (no Firestore profile)", async () => {
         const { signRoleCookie, verifyRoleCookie } = await import("@/lib/session-role")
         const signed = await signRoleCookie("u-2", null)
         const verified = await verifyRoleCookie(signed)
-        expect(verified).toEqual({ uid: "u-2", role: null })
+        expect(verified).toEqual({ uid: "u-2", role: null, org: null })
+    })
+
+    it("multi-tenant P2: round-trips the org the role was signed for", async () => {
+        const { signRoleCookie, verifyRoleCookie } = await import("@/lib/session-role")
+        const signed = await signRoleCookie("u-3", "band_leader", "brotherslazaroff")
+        expect(await verifyRoleCookie(signed)).toEqual({ uid: "u-3", role: "band_leader", org: "brotherslazaroff" })
     })
 
     it("rejects tampered signature", async () => {

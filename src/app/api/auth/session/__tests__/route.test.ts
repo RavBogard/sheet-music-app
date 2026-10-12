@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vites
 import { makeReq } from "@/__tests__/api-test-helpers"
 
 let profileData: Record<string, unknown> | undefined = undefined
+let membershipData: Record<string, unknown> | undefined = undefined
 let verifyIdTokenImpl: () => Promise<unknown> = async () => ({
     uid: "u-1",
     iat: Math.floor(Date.now() / 1000),
@@ -20,9 +21,16 @@ const mockAuthAdmin = {
 }
 
 const mockFirestore = {
-    collection: vi.fn(() => ({
+    // Multi-tenant P2: no memberships / platform docs here, so the caller is an
+    // unmigrated (legacy) account and the P0 doc-role-capped-to-claims rule applies.
+    collection: vi.fn((name: string) => ({
         doc: vi.fn(() => ({
-            get: async () => ({ data: () => profileData }),
+            get: async () =>
+                name === "users"
+                    ? { exists: profileData !== undefined, data: () => profileData }
+                    : name === "memberships"
+                      ? { exists: membershipData !== undefined, data: () => membershipData }
+                      : { exists: false, data: () => undefined },
         })),
     })),
 }
@@ -70,6 +78,7 @@ describe("POST /api/auth/session", () => {
     beforeEach(() => {
         vi.clearAllMocks()
         profileData = undefined
+        membershipData = undefined
         recordClaims = { role: "admin" }
         verifyIdTokenImpl = async () => ({
             uid: "u-1",
@@ -90,7 +99,7 @@ describe("POST /api/auth/session", () => {
         const raw = decodeURIComponent(match![1])
         const { verifyRoleCookie } = await import("@/lib/session-role")
         const verified = await verifyRoleCookie(raw)
-        expect(verified).toEqual({ uid: "u-1", role: "musician" })
+        expect(verified).toEqual({ uid: "u-1", role: "musician", org: "crc" })
     })
 
     it("sets companion cookie with role=null when profile missing", async () => {
@@ -103,7 +112,7 @@ describe("POST /api/auth/session", () => {
         const raw = decodeURIComponent(match![1])
         const { verifyRoleCookie } = await import("@/lib/session-role")
         const verified = await verifyRoleCookie(raw)
-        expect(verified).toEqual({ uid: "u-1", role: null })
+        expect(verified).toEqual({ uid: "u-1", role: null, org: "crc" })
     })
 
     it("rejects stale idToken (iat > 5 min old) without setting cookies", async () => {
@@ -131,7 +140,7 @@ describe("POST /api/auth/session", () => {
         const match = setCookie.match(/__session_role=([^;]+)/)
         const { verifyRoleCookie } = await import("@/lib/session-role")
         const verified = await verifyRoleCookie(decodeURIComponent(match![1]))
-        expect(verified).toEqual({ uid: "u-1", role: "pending" })
+        expect(verified).toEqual({ uid: "u-1", role: "pending", org: "crc" })
     })
 
     it("multi-tenant P0: a lower document role still wins (demotion honoured)", async () => {
@@ -141,6 +150,32 @@ describe("POST /api/auth/session", () => {
         const setCookie = res.headers.get("set-cookie") ?? ""
         const match = setCookie.match(/__session_role=([^;]+)/)
         const { verifyRoleCookie } = await import("@/lib/session-role")
-        expect(await verifyRoleCookie(decodeURIComponent(match![1]))).toEqual({ uid: "u-1", role: "musician" })
+        expect(await verifyRoleCookie(decodeURIComponent(match![1]))).toEqual({ uid: "u-1", role: "musician", org: "crc" })
+    })
+
+    it("multi-tenant P2: signs the host tenant's membership role and carries the org", async () => {
+        profileData = { role: "admin", membershipsMigratedAt: "t" }
+        membershipData = { role: "musician", tenantId: "brotherslazaroff", uid: "u-1" }
+        const res = await POST(makeReq("/api/auth/session", {
+            method: "POST",
+            body: { idToken: "valid-id-token" },
+            headers: { "x-org-id": "brotherslazaroff" },
+        }))
+        expect(res.status).toBe(200)
+        const match = /__session_role=([^;]+)/.exec(res.headers.get("set-cookie") ?? "")
+        const { verifyRoleCookie } = await import("@/lib/session-role")
+        expect(await verifyRoleCookie(decodeURIComponent(match![1]))).toEqual({ uid: "u-1", role: "musician", org: "brotherslazaroff" })
+    })
+
+    it("multi-tenant P2: migrated with no membership in the host tenant → role null", async () => {
+        profileData = { role: "admin", membershipsMigratedAt: "t" }
+        const res = await POST(makeReq("/api/auth/session", {
+            method: "POST",
+            body: { idToken: "valid-id-token" },
+            headers: { "x-org-id": "brotherslazaroff" },
+        }))
+        const match = /__session_role=([^;]+)/.exec(res.headers.get("set-cookie") ?? "")
+        const { verifyRoleCookie } = await import("@/lib/session-role")
+        expect(await verifyRoleCookie(decodeURIComponent(match![1]))).toEqual({ uid: "u-1", role: null, org: "brotherslazaroff" })
     })
 })

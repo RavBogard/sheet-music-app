@@ -20,6 +20,10 @@ import {
     validateInboundRequestId,
 } from "@/lib/request-id"
 import { httpError } from "@/lib/http/error-envelope"
+import { coerceOrgId } from "@/lib/org/registry"
+import type { OrgId } from "@/lib/org/types"
+import { getTenantAccess, type TenantAccess } from "@/lib/org/access"
+import { asTenantRole, tenantRoleFromClaims } from "@/lib/org/membership-types"
 
 export type AuthRole = 'admin' | 'band_leader' | 'musician' | 'member'
 
@@ -31,10 +35,39 @@ export interface AuthResult {
     isAdmin: boolean
     isBandLeader: boolean
     isMusician: boolean
+    /** Multi-tenant P2: the host tenant (x-org-id) these role fields are for. */
+    orgId: OrgId
+    /** Multi-tenant P2: platform owner (platform/owners). */
+    po: boolean
+    /** Multi-tenant P2: the caller's access in `orgId`. */
+    access: TenantAccess
 }
 
-function getSuperAdminUid(): string | null {
-    return process.env.SUPER_ADMIN_UID || null
+/**
+ * Multi-tenant P2: degrade path when the membership read fails (Firestore
+ * outage, or a unit test's partial firebase-admin mock). Derives the tenant
+ * role from the verified ID token's own claims (§3.5 transition rule): po →
+ * admin, `m` → that tenant's code, else the legacy role claim — the exact
+ * pre-P2 behaviour. Never grants more than the token carries.
+ */
+function accessFromToken(decoded: DecodedIdToken, orgId: OrgId): TenantAccess {
+    const claims = decoded as unknown as Record<string, unknown>
+    const po = claims.po === true
+    const hasM = !!claims.m && typeof claims.m === "object"
+    const role = asTenantRole(tenantRoleFromClaims({ ...claims, po: false }, orgId))
+    let soundEngineer = false
+    if (hasM) soundEngineer = Array.isArray(claims.se) && (claims.se as unknown[]).includes(orgId)
+    else soundEngineer = claims.soundEngineer === true
+    return {
+        uid: decoded.uid,
+        orgId,
+        role,
+        effectiveRole: po ? "admin" : role,
+        soundEngineer,
+        canUpload: false,
+        po,
+        source: role ? "legacy" : "none",
+    }
 }
 
 /**
@@ -102,9 +135,22 @@ export async function requireAuth(
         )
     }
 
-    const userRole = (decoded.role as string) || undefined
-    const superAdminUid = getSuperAdminUid()
-    const isAdmin = (superAdminUid && decoded.uid === superAdminUid) || userRole === 'admin'
+    // Multi-tenant P2 (design §3.4): the role is the caller's role in the HOST
+    // tenant (x-org-id, set by the proxy), read from their membership. Not yet
+    // migrated → today's tenant-blind claim role (legacyClaims). The platform
+    // owner (platform/owners) is admin everywhere; SUPER_ADMIN_UID is retired.
+    const orgId = coerceOrgId(req.headers.get("x-org-id"))
+    let access: TenantAccess
+    try {
+        access = await getTenantAccess(decoded.uid, orgId, {
+            legacyClaims: decoded as unknown as Record<string, unknown>,
+        })
+    } catch (e) {
+        logger.warn("[api-auth] membership read failed; using token claims", { uid: decoded.uid, orgId, e })
+        access = accessFromToken(decoded, orgId)
+    }
+    const userRole = access.effectiveRole ?? undefined
+    const isAdmin = userRole === 'admin'
     const isBandLeader = isAdmin || userRole === 'band_leader'
     const isMusician = isBandLeader || userRole === 'musician'
 
@@ -133,6 +179,9 @@ export async function requireAuth(
         isAdmin,
         isBandLeader,
         isMusician,
+        orgId,
+        po: access.po,
+        access,
     }
 }
 

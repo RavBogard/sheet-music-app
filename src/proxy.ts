@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server'
 import { SESSION_ROLE_COOKIE, verifyRoleCookie } from '@/lib/session-role'
 import { httpError } from '@/lib/http/error-envelope'
 import { resolveOrgIdByDomain } from '@/lib/org/registry'
+import { tenantRoleFromClaims } from '@/lib/org/membership-types'
 
 // Base64Url decode for Edge Runtime without Buffer
 function decodeJwtPayload(token: string) {
@@ -272,15 +273,21 @@ export async function proxy(request: NextRequest) {
     // uid; otherwise fall back to whatever role claim the Firebase
     // session carries. See v4.3 P9-02.
     if (session && !isPublicRoute) {
-        let role: string | undefined = decodedSession?.role as string | undefined
+        // Multi-tenant P2: the role is the one held in THIS host's tenant.
+        // Session claims: po → admin; an `m` map → m[orgId]; no `m` (pre-P2
+        // token) → the legacy role claim, unchanged. A companion cookie is
+        // trusted only when it was signed for this host's org — a cookie
+        // minted on another tenant's host (or a pre-P2 cookie with no org)
+        // is ignored.
+        let role: string | undefined = tenantRoleFromClaims(decodedSession as Record<string, unknown> | null, orgId)
         let hasVerifiedCompanion = false
         if (roleCookie) {
             const verified = await verifyRoleCookie(roleCookie)
-            if (verified && verified.uid === decodedSession?.uid) {
+            if (verified && verified.uid === decodedSession?.uid && verified.org === orgId) {
                 role = verified.role ?? undefined
                 hasVerifiedCompanion = true
             }
-            // tampered, expired, or uid mismatch → ignore companion, fall through
+            // tampered, expired, uid mismatch or other tenant → ignore companion, fall through
         }
 
         // Only enforce the no-role / pending redirect when we have an

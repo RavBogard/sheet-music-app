@@ -30,9 +30,11 @@ vi.mock("@/lib/mcp/auth", () => ({
 vi.mock("@/lib/firebase-admin", () => ({
     initAdmin: () => true,
     verifyIdToken: (...args: unknown[]) => mockVerifyIdToken(...args),
+    // Multi-tenant P2: requireAuth also reads memberships/{org}__{uid},
+    // users/{uid} and platform/owners, so the doc mock answers per collection.
     getFirestore: () => ({
-        collection: () => ({
-            doc: () => ({ get: async () => mockGetDoc() }),
+        collection: (name: string) => ({
+            doc: () => ({ get: async () => mockGetDoc(name) }),
         }),
     }),
 }))
@@ -121,9 +123,12 @@ describe("print routes forward the setlist's prayer book", () => {
 
         it("resolves setlist.book to its display title", async () => {
             // The route reads the setlist doc first, then the user doc.
-            mockGetDoc
-                .mockResolvedValueOnce(setlistDoc({ name: "Shabbat Morning", book: SLUG }))
-                .mockResolvedValueOnce(setlistDoc({ displayName: "David Lazaroff" }))
+            mockGetDoc.mockImplementation(async (name: string) =>
+                name === "setlists"
+                    ? setlistDoc({ name: "Shabbat Morning", book: SLUG })
+                    : name === "users"
+                      ? setlistDoc({ displayName: "David Lazaroff" })
+                      : { exists: false, data: () => undefined })
 
             const res = await GET(
                 makeReq("/api/setlist/print/personal?setlistId=s1", { token: "firebase-id-token" }),
@@ -136,9 +141,12 @@ describe("print routes forward the setlist's prayer book", () => {
         })
 
         it("sends undefined — never a placeholder — when the setlist names no book", async () => {
-            mockGetDoc
-                .mockResolvedValueOnce(setlistDoc({ name: "Shabbat Morning" }))
-                .mockResolvedValueOnce(setlistDoc({ displayName: "David Lazaroff" }))
+            mockGetDoc.mockImplementation(async (name: string) =>
+                name === "setlists"
+                    ? setlistDoc({ name: "Shabbat Morning" })
+                    : name === "users"
+                      ? setlistDoc({ displayName: "David Lazaroff" })
+                      : { exists: false, data: () => undefined })
 
             await GET(
                 makeReq("/api/setlist/print/personal?setlistId=s1", { token: "firebase-id-token" }),

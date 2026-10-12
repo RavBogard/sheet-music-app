@@ -12,6 +12,8 @@ let mockProfileExists = true
 // ── Mocks ──
 
 vi.mock('next/headers', () => ({
+    // Multi-tenant P2: getServerUser reads the host tenant from x-org-id.
+    headers: vi.fn(async () => new Headers({ 'x-org-id': 'crc' })),
     cookies: vi.fn(async () => ({
         get: vi.fn((name: string) => {
             if (name === '__session' && mockCookieValue) return mockCookieValue
@@ -34,9 +36,13 @@ const mockDocGet = vi.fn(() => ({
 
 vi.mock('firebase-admin/firestore', () => ({
     getFirestore: vi.fn(() => ({
-        collection: vi.fn(() => ({
+        // Multi-tenant P2: memberships/platform docs are absent here, so the
+        // role comes from the users doc (legacy path, unmigrated person).
+        collection: vi.fn((name: string) => ({
             doc: vi.fn(() => ({
-                get: mockDocGet,
+                get: name === 'memberships' || name === 'platform'
+                    ? vi.fn(async () => ({ exists: false, data: () => undefined }))
+                    : mockDocGet,
             })),
         })),
     })),

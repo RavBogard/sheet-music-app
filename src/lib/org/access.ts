@@ -1,8 +1,9 @@
 import "server-only"
 import type { Firestore } from "firebase-admin/firestore"
-import { initAdmin, getFirestore } from "@/lib/firebase-admin"
+import { initAdmin, getAuth, getFirestore } from "@/lib/firebase-admin"
 import type { OrgId } from "@/lib/org/types"
 import { rowOrgIds } from "@/lib/org/membership"
+import { capRoleToClaims } from "@/lib/roles"
 import {
     asTenantRole,
     membershipId,
@@ -73,10 +74,13 @@ export async function getTenantAccess(
     let soundEngineer = false
     let source: TenantAccess["source"] = "none"
 
-    if (memSnap.exists) {
-        const m = (memSnap.data() ?? {}) as Record<string, unknown>
-        role = asTenantRole(m.role)
-        soundEngineer = m.soundEngineer === true && roleRank(role) >= roleRank("member")
+    // A membership doc without a valid role is treated as absent (server
+    // writes always carry one; this keeps a malformed doc from deciding).
+    const mem = memSnap.exists ? ((memSnap.data() ?? {}) as Record<string, unknown>) : null
+    const memRole = mem ? asTenantRole(mem.role) : null
+    if (mem && memRole) {
+        role = memRole
+        soundEngineer = mem.soundEngineer === true && roleRank(role) >= roleRank("member")
         source = "membership"
     } else if (!user?.membershipsMigratedAt) {
         const lc = opts?.legacyClaims
@@ -179,4 +183,23 @@ export async function listTenantMembers(
         })
     }
     return out
+}
+
+/**
+ * The role the `__session_role` companion cookie carries for `orgId`
+ * (design §3.4): the tenant role from the membership (po → admin). While the
+ * person is unmigrated (legacy source) the P0 rule still holds — the users-doc
+ * role, never above what the account's claims grant (stored or token claim).
+ */
+export async function resolveSessionRole(
+    uid: string,
+    orgId: OrgId,
+    tokenRole?: string | null,
+    opts?: { db?: Firestore },
+): Promise<string | null> {
+    const access = await getTenantAccess(uid, orgId, opts)
+    if (access.po || access.source !== "legacy") return access.effectiveRole
+    if (!access.role) return null
+    const rec = await getAuth().getUser(uid)
+    return capRoleToClaims(access.role, rec.customClaims?.role as string | undefined, tokenRole ?? undefined) ?? null
 }
