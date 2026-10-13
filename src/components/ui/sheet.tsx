@@ -6,6 +6,13 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useT } from "@/i18n/client"
+
+/** Screen-reader label of the X close button. */
+function CloseLabel() {
+    const t = useT()
+    return <span className="sr-only">{t("ui.close")}</span>
+}
 
 const Sheet = SheetPrimitive.Root
 
@@ -66,9 +73,9 @@ const SheetContent = React.forwardRef<
             {...props}
         >
             {children}
-            <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+            <SheetPrimitive.Close className="absolute end-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
                 <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
+                <CloseLabel />
             </SheetPrimitive.Close>
         </SheetPrimitive.Content>
     </SheetPortal>
@@ -81,7 +88,7 @@ const SheetHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
     <div
         className={cn(
-            "flex flex-col space-y-2 text-center sm:text-left",
+            "flex flex-col space-y-2 text-center sm:text-start",
             className
         )}
         {...props}

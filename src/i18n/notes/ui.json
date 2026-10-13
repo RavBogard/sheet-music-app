@@ -1,0 +1,19 @@
+{
+    "close": { "where": "Every dialog and side sheet: screen-reader label of the X close button", "who": "everyone", "maxLength": 20 },
+    "sectionFailed": { "where": "Manage pages and Perform overlays: heading when one section of the page crashed", "who": "leaders", "maxLength": 60, "context": "{label} is the section's name (passed in by the caller)" },
+    "retry": { "where": "Error boxes: button that re-renders the failed section", "who": "everyone", "maxLength": 12 },
+    "somethingWentWrong": { "where": "Error boxes: default heading when a part of the page crashed or failed to load", "who": "everyone", "maxLength": 40 },
+    "unexpectedRenderError": { "where": "Error box: default message when the crash carried no message", "who": "everyone", "maxLength": 60 },
+    "tryAgain": { "where": "Error boxes: retry button", "who": "everyone", "maxLength": 16 },
+    "couldNotLoad": { "where": "Error state (library, setlists): default message when data failed to load", "who": "everyone", "maxLength": 80 },
+    "keyPlaceholder": { "where": "Key picker (setlist grid, Perform): button text when no musical key is set", "who": "leaders", "maxLength": 6, "context": "the musical key of a song (C, G, Am...)" },
+    "major": { "where": "Key picker: toggle choosing major keys", "who": "leaders", "maxLength": 10, "context": "major (musical mode)" },
+    "minor": { "where": "Key picker: toggle choosing minor keys", "who": "leaders", "maxLength": 10, "context": "minor (musical mode)" },
+    "clear": { "where": "Key picker: button removing the song's key", "who": "leaders", "maxLength": 12 },
+    "tapTempoTitle": { "where": "Tap-tempo button: tooltip", "who": "leaders", "maxLength": 50, "context": "tempo = beats per minute" },
+    "tap": { "where": "Tap-tempo button: label before any tap", "who": "leaders", "maxLength": 8 },
+    "tapAgain": { "where": "Tap-tempo button: label after the first tap (keep tapping)", "who": "leaders", "maxLength": 8 },
+    "accessRestricted": { "where": "Unauthorized page: default heading", "who": "anyone with the link", "maxLength": 40 },
+    "noPermission": { "where": "Unauthorized page: default explanation", "who": "anyone with the link", "maxLength": 80 },
+    "returnToDashboard": { "where": "Unauthorized page: default back button", "who": "anyone with the link", "maxLength": 24 }
+}

@@ -35,10 +35,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/app/(main)/terms/*", // 58 strings, 1 files
 
-    "src/app/(v2)/v2/*", // 10 strings, 1 files
-
-    "src/app/*", // 8 strings, 3 files
-
     "src/app/api/admin/", // 4 strings, 3 files
 
     "src/app/api/ai/", // 5 strings, 4 files
@@ -65,8 +61,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/app/api/tenant/", // 1 strings, 1 files
 
-    "src/components/*", // 11 strings, 2 files
-
     "src/components/admin/*", // 136 strings, 6 files
 
     "src/components/admin/library/*", // 15 strings, 1 files
@@ -83,10 +77,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
 
     "src/components/library/*", // 205 strings, 11 files
 
-    "src/components/nav/*", // 38 strings, 6 files
-
-    "src/components/offline/*", // 4 strings, 1 files
-
     "src/components/setlist/*", // 177 strings, 11 files
 
     "src/components/setlist/grid/", // 120 strings, 23 files
@@ -96,10 +86,6 @@ export const NOT_YET_MIGRATED: readonly string[] = [
     "src/components/setlist/modals/*", // 34 strings, 4 files
 
     "src/components/setlist/wizard/*", // 18 strings, 1 files
-
-    "src/components/ui/*", // 14 strings, 6 files
-
-    "src/components/v2/*", // 9 strings, 2 files
 
     "src/hooks/*", // 46 strings, 7 files
 

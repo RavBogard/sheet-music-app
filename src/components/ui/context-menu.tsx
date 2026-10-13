@@ -5,6 +5,7 @@ import * as ContextMenuPrimitive from "@radix-ui/react-context-menu"
 import { Check, ChevronRight, Circle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
 
 const ContextMenu = ContextMenuPrimitive.Root
 
@@ -28,13 +29,13 @@ const ContextMenuSubTrigger = React.forwardRef<
         ref={ref}
         className={cn(
             "flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-zinc-100 focus:text-zinc-900 data-[state=open]:bg-zinc-100 data-[state=open]:text-zinc-900 dark:focus:bg-muted dark:focus:text-zinc-50 dark:data-[state=open]:bg-muted dark:data-[state=open]:text-zinc-50",
-            inset && "pl-8",
+            inset && "ps-8",
             className
         )}
         {...props}
     >
         {children}
-        <ChevronRight className="ml-auto h-4 w-4" />
+        <DirectionalIcon icon={ChevronRight} className="ms-auto h-4 w-4" />
     </ContextMenuPrimitive.SubTrigger>
 ))
 ContextMenuSubTrigger.displayName = ContextMenuPrimitive.SubTrigger.displayName
@@ -81,7 +82,7 @@ const ContextMenuItem = React.forwardRef<
         ref={ref}
         className={cn(
             "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-zinc-100 focus:text-zinc-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:focus:bg-muted dark:focus:text-zinc-50",
-            inset && "pl-8",
+            inset && "ps-8",
             className
         )}
         {...props}
@@ -96,13 +97,13 @@ const ContextMenuCheckboxItem = React.forwardRef<
     <ContextMenuPrimitive.CheckboxItem
         ref={ref}
         className={cn(
-            "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-zinc-100 focus:text-zinc-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:focus:bg-muted dark:focus:text-zinc-50",
+            "relative flex cursor-default select-none items-center rounded-sm py-1.5 ps-8 pe-2 text-sm outline-none focus:bg-zinc-100 focus:text-zinc-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:focus:bg-muted dark:focus:text-zinc-50",
             className
         )}
         checked={checked}
         {...props}
     >
-        <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        <span className="absolute start-2 flex h-3.5 w-3.5 items-center justify-center">
             <ContextMenuPrimitive.ItemIndicator>
                 <Check className="h-4 w-4" />
             </ContextMenuPrimitive.ItemIndicator>
@@ -120,12 +121,12 @@ const ContextMenuRadioItem = React.forwardRef<
     <ContextMenuPrimitive.RadioItem
         ref={ref}
         className={cn(
-            "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-zinc-100 focus:text-zinc-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:focus:bg-muted dark:focus:text-zinc-50",
+            "relative flex cursor-default select-none items-center rounded-sm py-1.5 ps-8 pe-2 text-sm outline-none focus:bg-zinc-100 focus:text-zinc-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:focus:bg-muted dark:focus:text-zinc-50",
             className
         )}
         {...props}
     >
-        <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        <span className="absolute start-2 flex h-3.5 w-3.5 items-center justify-center">
             <ContextMenuPrimitive.ItemIndicator>
                 <Circle className="h-2 w-2 fill-current" />
             </ContextMenuPrimitive.ItemIndicator>
@@ -145,7 +146,7 @@ const ContextMenuLabel = React.forwardRef<
         ref={ref}
         className={cn(
             "px-2 py-1.5 text-sm font-semibold text-zinc-950 dark:text-zinc-50",
-            inset && "pl-8",
+            inset && "ps-8",
             className
         )}
         {...props}
@@ -175,7 +176,7 @@ const ContextMenuShortcut = ({
     return (
         <span
             className={cn(
-                "ml-auto text-xs tracking-widest text-muted-foreground dark:text-muted-foreground",
+                "ms-auto text-xs tracking-widest text-muted-foreground dark:text-muted-foreground",
                 className
             )}
             {...props}

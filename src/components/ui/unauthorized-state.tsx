@@ -1,6 +1,10 @@
+"use client"
+
 import { ShieldAlert, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { DirectionalIcon } from "@/components/i18n/DirectionalIcon"
+import { useT } from "@/i18n/client"
 
 interface UnauthorizedStateProps {
     title?: string
@@ -9,12 +13,14 @@ interface UnauthorizedStateProps {
     actionHref?: string
 }
 
+// Phase 7: a client component (for useT); server pages render it with string props.
 export function UnauthorizedState({
-    title = "Access Restricted",
-    description = "You don't have permission to view this page.",
-    actionLabel = "Return to Dashboard",
+    title,
+    description,
+    actionLabel,
     actionHref = "/setlists"
 }: UnauthorizedStateProps) {
+    const t = useT()
     return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] px-4 text-center">
             <div className="h-20 w-20 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-6 ring-8 ring-destructive/5">
@@ -22,17 +28,17 @@ export function UnauthorizedState({
             </div>
             
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-2 text-foreground">
-                {title}
+                {title ?? t("ui.accessRestricted")}
             </h2>
             
             <p className="text-muted-foreground max-w-md mb-8">
-                {description}
+                {description ?? t("ui.noPermission")}
             </p>
             
             <Button asChild variant="default" className="gap-2">
                 <Link href={actionHref}>
-                    <ArrowLeft className="h-4 w-4" />
-                    {actionLabel}
+                    <DirectionalIcon icon={ArrowLeft} className="h-4 w-4" />
+                    {actionLabel ?? t("ui.returnToDashboard")}
                 </Link>
             </Button>
         </div>

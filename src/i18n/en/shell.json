@@ -1,0 +1,17 @@
+{
+    "$comment": "App shell: footer, error boundaries, global error, 404.",
+    "footerCredit": "A project of {author}",
+    "version": "v{version}",
+    "commitTitle": "Commit: {commit}",
+    "changelog": "Changelog",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "accessibility": "Accessibility",
+    "somethingWentWrong": "Something went wrong",
+    "criticalError": "The application encountered a critical error. Please reload the page.",
+    "reloadApplication": "Reload Application",
+    "tryAgain": "Try again",
+    "notFoundTitle": "Page Not Found",
+    "notFoundBody": "This page doesn't exist, or you may not have permission to view it.",
+    "backToHome": "Back to Home"
+}

@@ -1,0 +1,16 @@
+{
+    "$comment": "The opt-in v2 beta surface.",
+    "tryBeta": "Try the new experience (beta)",
+    "backToClassic": "Back to classic",
+    "footerBeta": "v2 beta",
+    "eyebrow": "v2 · Pro Performance Aesthetic",
+    "heroTitle": "CRC Music — concert‑stage pro",
+    "intro": "You’re in the v2 beta. New shell, dense rows, no album art. Routes migrate over here one at a time. Your existing setlists, library, and performance views still live in the classic UI.",
+    "welcomeBack": "Welcome back",
+    "showcaseNote": "This is a primitive showcase. Production pages are not migrated yet.",
+    "beta": "Beta",
+    "recentSetlistsDemo": "Recent setlists (demo)",
+    "demoListLabel": "Demo dense list of setlists",
+    "openClassicSetlists": "Open classic setlists",
+    "openClassicLibrary": "Open classic library"
+}

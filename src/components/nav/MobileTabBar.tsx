@@ -17,12 +17,14 @@ import { collection, query, where, orderBy, limit, getDocs, Timestamp } from "fi
 import { useLibraryStore } from "@/lib/library-store"
 import Fuse from "fuse.js"
 import type { DriveFile } from "@/types/models"
+import { useT } from "@/i18n/client"
 
 const SESSION_SETLIST_KEY = "lastOpenedSetlistId"
 
 import { AppNavigationProps } from "./AppNavigation"
 
 export function MobileTabBar(props: AppNavigationProps) {
+    const t = useT()
     const pathname = usePathname()
     const router = useRouter()
     const { user, isMember } = useAuth()
@@ -93,8 +95,8 @@ export function MobileTabBar(props: AppNavigationProps) {
     // Focus input when search popover opens
     useEffect(() => {
         if (searchOpen) {
-            const t = setTimeout(() => inputRef.current?.focus(), 100)
-            return () => clearTimeout(t)
+            const timer = setTimeout(() => inputRef.current?.focus(), 100)
+            return () => clearTimeout(timer)
         } else {
             setSearchQuery("")
         }
@@ -157,7 +159,7 @@ export function MobileTabBar(props: AppNavigationProps) {
     if (isPdfView) return null
 
     return (
-        <nav className={cn("fixed bottom-0 left-0 right-0 z-50 md:hidden pb-safe", keyboardOpen && "hidden")}>
+        <nav className={cn("fixed bottom-0 inset-x-0 z-50 md:hidden pb-safe", keyboardOpen && "hidden")}>
             <div className="absolute inset-0 material-thick border-t border-brand/10" />
 
             <div className="relative flex items-center justify-around h-16 sm:h-20 px-2">
@@ -165,7 +167,7 @@ export function MobileTabBar(props: AppNavigationProps) {
                 <Popover open={searchOpen} onOpenChange={setSearchOpen}>
                     <PopoverTrigger asChild>
                         <button
-                            aria-label="Search songs"
+                            aria-label={t("nav.searchSongs")}
                             className={cn(
                                 "flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 fluid-interaction group",
                                 searchOpen ? "text-brand" : "text-muted-foreground hover:text-brand/70"
@@ -186,7 +188,7 @@ export function MobileTabBar(props: AppNavigationProps) {
                                 "text-[11px] font-medium transition-colors",
                                 searchOpen ? "text-brand font-bold" : "text-muted-foreground"
                             )}>
-                                Search
+                                {t("nav.searchTab")}
                             </span>
                         </button>
                     </PopoverTrigger>
@@ -197,21 +199,21 @@ export function MobileTabBar(props: AppNavigationProps) {
                     >
                         <Input
                             ref={inputRef}
-                            placeholder="Search songs..."
-                            aria-label="Search songs"
+                            placeholder={t("nav.searchSongsPlaceholder")}
+                            aria-label={t("nav.searchSongs")}
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             className="mb-2"
                         />
                         {searchQuery.length >= 2 && searchResults.length === 0 && (
-                            <p className="text-sm text-muted-foreground px-1 py-2">No songs found</p>
+                            <p className="text-sm text-muted-foreground px-1 py-2">{t("nav.noSongsFound")}</p>
                         )}
                         {searchResults.length > 0 && (
                             <ul className="max-h-60 overflow-y-auto space-y-0.5">
                                 {searchResults.map(file => (
                                     <li key={file.id}>
                                         <button
-                                            className="w-full text-left px-2 py-2 rounded-md text-sm hover:bg-accent transition-colors truncate"
+                                            className="w-full text-start px-2 py-2 rounded-md text-sm hover:bg-accent transition-colors truncate"
                                             onClick={() => handleSearchSelect(file)}
                                         >
                                             {file.displayName || file.name}
@@ -225,7 +227,7 @@ export function MobileTabBar(props: AppNavigationProps) {
 
                 {/* Setlist button (center, primary) */}
                 <button
-                    aria-label="Open setlist"
+                    aria-label={t("nav.openSetlist")}
                     onClick={handleSetlistTap}
                     className="flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 fluid-interaction group text-muted-foreground hover:text-brand/70"
                 >
@@ -236,7 +238,7 @@ export function MobileTabBar(props: AppNavigationProps) {
                         <ListMusic className="w-7 h-7 text-brand stroke-[2.25px] transition-all duration-300" />
                     </div>
                     <span className="text-[11px] font-bold text-brand transition-colors">
-                        Setlist
+                        {t("nav.setlistTab")}
                     </span>
                 </button>
 
@@ -245,7 +247,7 @@ export function MobileTabBar(props: AppNavigationProps) {
                     const scheduleActive = pathname.startsWith("/schedule")
                     return (
                         <button
-                            aria-label="Schedule"
+                            aria-label={t("nav.schedule")}
                             onClick={() => router.push("/schedule")}
                             aria-current={scheduleActive ? "page" : undefined}
                             className={cn(
@@ -268,7 +270,7 @@ export function MobileTabBar(props: AppNavigationProps) {
                                 "text-[11px] font-medium transition-colors",
                                 scheduleActive ? "text-brand font-bold" : "text-muted-foreground"
                             )}>
-                                Schedule
+                                {t("nav.schedule")}
                             </span>
                         </button>
                     )
@@ -279,7 +281,7 @@ export function MobileTabBar(props: AppNavigationProps) {
                     <Popover open={monitorOpen} onOpenChange={setMonitorOpen}>
                         <PopoverTrigger asChild>
                             <button
-                                aria-label="Monitor"
+                                aria-label={t("nav.monitor")}
                                 className={cn(
                                     "flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 fluid-interaction group",
                                     monitorOpen ? "text-brand" : "text-muted-foreground hover:text-brand/70"
@@ -300,7 +302,7 @@ export function MobileTabBar(props: AppNavigationProps) {
                                     "text-[11px] font-medium transition-colors",
                                     monitorOpen ? "text-brand font-bold" : "text-muted-foreground"
                                 )}>
-                                    Monitor
+                                    {t("nav.monitor")}
                                 </span>
                             </button>
                         </PopoverTrigger>
@@ -316,7 +318,7 @@ export function MobileTabBar(props: AppNavigationProps) {
                     /* Placeholder for balanced layout when no monitor */
                     <div className="flex flex-1 flex-col items-center justify-center gap-1 h-full py-2 opacity-0 pointer-events-none">
                         <div className="w-14 h-10" />
-                        <span className="text-[11px]">&nbsp;</span>
+                        <span className="text-[11px]">{" "}</span>
                     </div>
                 )}
             </div>

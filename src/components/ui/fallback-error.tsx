@@ -3,13 +3,16 @@
 import { FallbackProps } from "react-error-boundary"
 import { AlertTriangle, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/i18n/client"
 
 interface FallbackErrorProps extends FallbackProps {
     title?: string
     compact?: boolean
 }
 
-export function FallbackError({ error, resetErrorBoundary, title = "Something went wrong", compact = false }: FallbackErrorProps) {
+export function FallbackError({ error, resetErrorBoundary, title: titleProp, compact = false }: FallbackErrorProps) {
+    const t = useT()
+    const title = titleProp ?? t("ui.somethingWentWrong")
     if (compact) {
         return (
             <div className="flex items-center justify-between p-3 bg-destructive/10 border border-destructive/20 rounded-md">
@@ -18,7 +21,7 @@ export function FallbackError({ error, resetErrorBoundary, title = "Something we
                     <span className="text-sm font-medium">{title}</span>
                 </div>
                 <Button size="sm" variant="ghost" onClick={resetErrorBoundary} className="h-7 px-2 text-xs">
-                    <RefreshCcw className="h-3 w-3 mr-1" /> Retry
+                    <RefreshCcw className="h-3 w-3 me-1" /> {t("ui.retry")}
                 </Button>
             </div>
         )
@@ -29,11 +32,11 @@ export function FallbackError({ error, resetErrorBoundary, title = "Something we
             <AlertTriangle className="h-8 w-8 text-destructive mb-3 opacity-80" />
             <h3 className="font-semibold text-zinc-200">{title}</h3>
             <p className="text-sm text-zinc-500 mt-1 max-w-sm">
-                {(error as Error).message || "An unexpected rendering error occurred."}
+                {(error as Error).message || t("ui.unexpectedRenderError")}
             </p>
             <Button size="sm" variant="secondary" onClick={resetErrorBoundary} className="mt-4 gap-2">
                 <RefreshCcw className="h-3.5 w-3.5" />
-                Try Again
+                {t("ui.tryAgain")}
             </Button>
         </div>
     )

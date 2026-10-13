@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/i18n/client"
 
 const NOTES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
 const QUALITIES = ["", "m"] as const // major, minor
@@ -14,6 +15,7 @@ interface KeyPickerProps {
 }
 
 export function KeyPicker({ value, onChange, className }: KeyPickerProps) {
+    const t = useT()
     const [open, setOpen] = useState(false)
 
     // Parse current key into note + quality, normalizing casing
@@ -56,7 +58,7 @@ export function KeyPicker({ value, onChange, className }: KeyPickerProps) {
                         hover:bg-muted transition-colors cursor-pointer text-sm
                         ${value ? "text-foreground" : "text-muted-foreground"} ${className || ""}`}
                 >
-                    {value || "Key"}
+                    {value || t("ui.keyPlaceholder")}
                 </button>
             </PopoverTrigger>
             <PopoverContent className="w-64 p-0" align="start">
@@ -72,7 +74,7 @@ export function KeyPicker({ value, onChange, className }: KeyPickerProps) {
                                     : "bg-muted text-muted-foreground hover:text-foreground"
                             }`}
                         >
-                            {q === "" ? "Major" : "Minor"}
+                            {q === "" ? t("ui.major") : t("ui.minor")}
                         </button>
                     ))}
                 </div>
@@ -104,7 +106,7 @@ export function KeyPicker({ value, onChange, className }: KeyPickerProps) {
                     className="w-full mt-2 text-xs text-muted-foreground"
                     onClick={() => { onChange(""); setOpen(false) }}
                 >
-                    Clear
+                    {t("ui.clear")}
                 </Button>
             </PopoverContent>
         </Popover>

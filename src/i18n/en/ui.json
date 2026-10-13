@@ -1,0 +1,20 @@
+{
+    "$comment": "Shared UI primitives (src/components/ui).",
+    "close": "Close",
+    "sectionFailed": "{label} failed to load",
+    "retry": "Retry",
+    "somethingWentWrong": "Something went wrong",
+    "unexpectedRenderError": "An unexpected rendering error occurred.",
+    "tryAgain": "Try Again",
+    "couldNotLoad": "We couldn't load this content. Please try again.",
+    "keyPlaceholder": "Key",
+    "major": "Major",
+    "minor": "Minor",
+    "clear": "Clear",
+    "tapTempoTitle": "Tap repeatedly to set tempo",
+    "tap": "Tap",
+    "tapAgain": "Tap...",
+    "accessRestricted": "Access Restricted",
+    "noPermission": "You don't have permission to view this page.",
+    "returnToDashboard": "Return to Dashboard"
+}

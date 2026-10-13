@@ -17,6 +17,7 @@ import {
     Sheet, SheetContent, SheetTitle,
 } from "@/components/ui/sheet"
 import buildInfo from "@/build-info.json"
+import { useI18n } from "@/i18n/client"
 
 interface MobileMenuDrawerProps {
     open: boolean
@@ -31,6 +32,7 @@ interface MenuItem {
 }
 
 export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) {
+    const { t, isRtl } = useI18n()
     const pathname = usePathname()
     const { user, profile, role, isMember, isBandLeader, isPlatformOwner, signOut } = useAuth()
     const { hasAccess: hasMonitorAccess } = useMonitorAccess()
@@ -51,32 +53,32 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
     // ALL-CAPS stencil styling baked in — can be swapped to a `uppercase`
     // CSS util plus the shared label if that styling changes.
     const roleLabels: Record<string, string> = {
-        admin: 'ADMIN',
-        band_leader: 'BAND LEADER',
-        musician: 'MUSICIAN',
-        member: 'MEMBER',
-        leader: 'BAND LEADER',
-        pending: 'PENDING',
+        admin: t("nav.roleBadge.admin"),
+        band_leader: t("nav.roleBadge.bandLeader"),
+        musician: t("nav.roleBadge.musician"),
+        member: t("nav.roleBadge.member"),
+        leader: t("nav.roleBadge.bandLeader"),
+        pending: t("nav.roleBadge.pending"),
     }
 
     // Primary nav items — things in the tab bar get listed here too for completeness
     const primaryItems: MenuItem[] = [
-        { label: "Dashboard", href: "/", icon: Home, show: true },
-        { label: "Setlists", href: setlistsHref, icon: ListMusic, show: true },
-        { label: "Schedule", href: "/schedule", icon: CalendarDays, show: isMusician },
-        { label: "Library", href: "/library", icon: Library, show: isMember },
-        { label: "Monitor", href: "/monitor", icon: Radio, show: mixerOn && hasMonitorAccess },
+        { label: t("nav.dashboard"), href: "/", icon: Home, show: true },
+        { label: t("nav.setlists"), href: setlistsHref, icon: ListMusic, show: true },
+        { label: t("nav.schedule"), href: "/schedule", icon: CalendarDays, show: isMusician },
+        { label: t("nav.library"), href: "/library", icon: Library, show: isMember },
+        { label: t("nav.monitor"), href: "/monitor", icon: Radio, show: mixerOn && hasMonitorAccess },
     ]
 
     const secondaryItems: MenuItem[] = [
-        { label: "Settings", href: "/settings", icon: Settings, show: !!user },
-        { label: "Manage", href: "/manage", icon: ShieldAlert, show: isBandLeader },
+        { label: t("nav.settings"), href: "/settings", icon: Settings, show: !!user },
+        { label: t("nav.manage"), href: "/manage", icon: ShieldAlert, show: isBandLeader },
         // Multi-tenant phase 4: platform owner only.
-        { label: "Platform", href: "/platform", icon: Building2, show: !!isPlatformOwner },
+        { label: t("nav.platform"), href: "/platform", icon: Building2, show: !!isPlatformOwner },
     ]
 
     const tertiaryItems: MenuItem[] = [
-        { label: "Changelog", href: "/changelog", icon: FileText, show: true },
+        { label: t("nav.changelog"), href: "/changelog", icon: FileText, show: true },
     ]
 
     const renderItem = (item: MenuItem) => {
@@ -91,7 +93,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                 className={cn(
                     "flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-colors",
                     isActive
-                        ? "bg-brand/10 text-foreground border-l-2 border-brand"
+                        ? "bg-brand/10 text-foreground border-s-2 border-brand"
                         : "text-muted-foreground hover:bg-brand/5 hover:text-foreground"
                 )}
             >
@@ -103,9 +105,10 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="left" className="w-[280px] p-0 bg-background/95 backdrop-blur-xl border-border" aria-describedby="menu-drawer-desc">
-                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-                <span id="menu-drawer-desc" className="sr-only">Main navigation menu for the application</span>
+            {/* Phase 7: the drawer slides in from the start side (the right on an rtl page). */}
+            <SheetContent side={isRtl ? "right" : "left"} className="w-[280px] p-0 bg-background/95 backdrop-blur-xl border-border" aria-describedby="menu-drawer-desc">
+                <SheetTitle className="sr-only">{t("nav.drawerTitle")}</SheetTitle>
+                <span id="menu-drawer-desc" className="sr-only">{t("nav.drawerDescription")}</span>
 
                 <div className="flex flex-col h-full">
                     {/* User Header */}
@@ -113,21 +116,21 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                         <div className="p-5 pb-4 border-b border-brand/10 bg-brand/5">
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10 border border-border">
-                                    <AvatarImage src={user.photoURL ?? undefined} alt="Profile" />
+                                    <AvatarImage src={user.photoURL ?? undefined} alt={t("nav.profilePhotoAlt")} />
                                     <AvatarFallback className="bg-muted">
                                         <User className="w-5 h-5 text-muted-foreground" />
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-sm font-semibold text-foreground truncate">
-                                        {profile?.displayName || user.displayName || "Musician"}
+                                        {profile?.displayName || user.displayName || t("nav.musicianFallback")}
                                     </p>
                                     <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                                 </div>
                             </div>
                             <div className="mt-2">
                                 <span className="inline-block text-[10px] font-bold text-foreground uppercase tracking-wider bg-brand/10 px-2 py-0.5 rounded-md">
-                                    {roleLabels[role ?? 'pending'] || 'MEMBER'}
+                                    {roleLabels[role ?? 'pending'] || t("nav.roleBadge.member")}
                                 </span>
                             </div>
                         </div>
@@ -170,11 +173,11 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                                 className="w-full justify-start gap-3 px-4 py-3 h-auto rounded-xl text-red-500 hover:bg-red-500/10 hover:text-red-500"
                             >
                                 <LogOut className="w-5 h-5 shrink-0" />
-                                Log Out
+                                {t("nav.logOutDrawer")}
                             </Button>
                         )}
                         <p className="text-center text-[10px] text-muted-foreground/40 mt-2">
-                            v{buildInfo.version} &middot; {buildInfo.commit?.slice(0, 7)}
+                            {t("nav.versionLine", { version: buildInfo.version, commit: buildInfo.commit?.slice(0, 7) })}
                         </p>
                     </div>
                 </div>
